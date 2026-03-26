@@ -118,7 +118,7 @@ impl ServiceSearch {
             group_futs.push(async move {
                 let mut msgs = srv2
                     .messages
-                    .get_many(channel_id, auth_user_id, &ids)
+                    .get_many(channel_id, Some(auth_user_id), &ids)
                     .await?;
                 let reply_ids: Vec<_> = msgs
                     .iter()
@@ -129,7 +129,7 @@ impl ServiceSearch {
                     .collect();
                 let replies = srv2
                     .messages
-                    .get_many(channel_id, auth_user_id, &reply_ids)
+                    .get_many(channel_id, Some(auth_user_id), &reply_ids)
                     .await?;
                 msgs.extend(replies);
                 srv2.messages

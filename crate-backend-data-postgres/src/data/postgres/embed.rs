@@ -15,7 +15,7 @@ impl DataEmbed for Postgres {
     async fn url_embed_queue_insert(
         &self,
         message_ref: Option<crate::types::MessageRef>,
-        user_id: UserId,
+        user_id: Option<UserId>,
         url: String,
     ) -> Result<Uuid> {
         let id = Uuid::now_v7();
@@ -23,7 +23,7 @@ impl DataEmbed for Postgres {
             "INSERT INTO url_embed_queue (id, message_ref, user_id, url) VALUES ($1, $2, $3, $4)",
             id,
             message_ref.map(|m| serde_json::to_value(m).unwrap()),
-            *user_id,
+            user_id.map(|u| *u),
             url
         )
         .execute(&self.pool)

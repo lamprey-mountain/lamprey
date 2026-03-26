@@ -112,7 +112,7 @@ impl NotificationActionCalculator {
             } => self
                 .state
                 .data()
-                .message_get(*channel_id, *message_id, self.user_id)
+                .message_get(*channel_id, *message_id)
                 .await
                 .ok(),
         };

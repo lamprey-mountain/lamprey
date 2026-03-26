@@ -637,7 +637,7 @@ impl ServiceChannels {
 
                 let system_message = srv
                     .messages
-                    .get(parent_id, system_message_id, auth.user.id)
+                    .get(parent_id, system_message_id, Some(auth.user.id))
                     .await?;
 
                 self.state
@@ -697,7 +697,7 @@ impl ServiceChannels {
 
         let source_message = srv
             .messages
-            .get(parent_channel_id, source_message_id, auth.user.id)
+            .get(parent_channel_id, source_message_id, Some(auth.user.id))
             .await?;
         if !source_message.latest_version.message_type.is_threadable() {
             return Err(Error::BadStatic(
@@ -785,7 +785,7 @@ impl ServiceChannels {
 
             let system_message = srv
                 .messages
-                .get(parent_channel_id, system_message_id, auth.user.id)
+                .get(parent_channel_id, system_message_id, Some(auth.user.id))
                 .await?;
             self.state
                 .broadcast_channel(
@@ -1235,9 +1235,7 @@ impl ServiceChannels {
                     mentions: Default::default(),
                 })
                 .await?;
-            let rename_message = data
-                .message_get(thread_id, rename_message_id, auth.user.id)
-                .await?;
+            let rename_message = data.message_get(thread_id, rename_message_id).await?;
             self.state
                 .broadcast_channel(
                     thread_id,
@@ -1267,9 +1265,7 @@ impl ServiceChannels {
                     mentions: Default::default(),
                 })
                 .await?;
-            let icon_message = data
-                .message_get(thread_id, icon_message_id, auth.user.id)
-                .await?;
+            let icon_message = data.message_get(thread_id, icon_message_id).await?;
             self.state
                 .broadcast_channel(
                     thread_id,
@@ -1300,9 +1296,7 @@ impl ServiceChannels {
                     mentions: Default::default(),
                 })
                 .await?;
-            let move_message = data
-                .message_get(thread_id, move_message_id, auth.user.id)
-                .await?;
+            let move_message = data.message_get(thread_id, move_message_id).await?;
             self.state
                 .broadcast_channel(
                     thread_id,

@@ -135,19 +135,23 @@ impl Connection {
                     .state
                     .session()
                     .ok_or::<Error>(SyncError::Unauthenticated.into())?;
-                let user_id = session.user_id().ok_or(Error::UnauthSession)?;
                 let srv = self.s.services();
+
+                // Support optional user_id for public room access
+                let user_id = session.user_id();
 
                 // FIXME: validate that *exactly* one of room_id or thread_id is provided
 
                 let target = if let Some(room_id) = room_id {
-                    let perms = srv.perms.for_room(user_id, room_id).await?;
+                    let perms = srv.perms.for_room2(user_id, room_id).await?;
+                    // For SERVER_ROOM_ID, require authentication
                     if room_id == SERVER_ROOM_ID {
+                        let _uid = user_id.ok_or(Error::UnauthSession)?;
                         perms.ensure(Permission::ServerOversee)?;
                     }
                     Some(MemberListTarget::Room(room_id))
                 } else if let Some(thread_id) = thread_id {
-                    let perms = srv.perms.for_channel(user_id, thread_id).await?;
+                    let perms = srv.perms.for_channel2(user_id, thread_id).await?;
                     perms.ensure(Permission::ChannelView)?;
                     Some(MemberListTarget::Channel(thread_id))
                 } else {
@@ -205,7 +209,10 @@ impl Connection {
             .state
             .session()
             .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+
+        // Document presence requires authentication
         let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+
         let srv = self.s.services();
         let perms = srv.perms.for_channel(user_id, channel_id).await?;
         perms.ensure(Permission::ChannelView)?;
@@ -576,13 +583,13 @@ impl Connection {
                 MessageSync::MessageCreate { message } => MessageSync::MessageCreate {
                     message: srv
                         .messages
-                        .get(message.channel_id, message.id, session.user_id().unwrap())
+                        .get(message.channel_id, message.id, session.user_id())
                         .await?,
                 },
                 MessageSync::MessageUpdate { message } => MessageSync::MessageUpdate {
                     message: srv
                         .messages
-                        .get(message.channel_id, message.id, session.user_id().unwrap())
+                        .get(message.channel_id, message.id, session.user_id())
                         .await?,
                 },
                 MessageSync::VoiceState {

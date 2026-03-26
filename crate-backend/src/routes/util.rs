@@ -121,6 +121,15 @@ impl AuthRelaxed2 {
         })
     }
 
+    /// Ensure this session has an associated user
+    pub fn ensure_has_user(&self) -> Result<&User, Error> {
+        self.user.as_ref().ok_or_else(|| Error::UnauthSession)
+    }
+
+    pub fn ensure_scopes(&self, scopes: &[Scope]) -> Result<(), Error> {
+        self.scopes.ensure_all(scopes).map_err(Into::into)
+    }
+
     pub fn ensure_sudo(&self) -> Result<(), Error> {
         match &self.session.status {
             SessionStatus::Unauthorized => Err(Error::UnauthSession),

@@ -48,16 +48,12 @@ impl ServiceMessages {
         &self,
         thread_id: ChannelId,
         message_id: MessageId,
-        user_id: UserId,
+        user_id: Option<UserId>,
     ) -> Result<Message> {
-        let mut message = self
-            .state
-            .data()
-            .message_get(thread_id, message_id, user_id)
-            .await?;
+        let mut message = self.state.data().message_get(thread_id, message_id).await?;
         self.state.presign_message(&mut message).await?;
 
-        self.populate_all(thread_id, Some(user_id), std::slice::from_mut(&mut message))
+        self.populate_all(thread_id, user_id, std::slice::from_mut(&mut message))
             .await?;
 
         Ok(message)
@@ -66,20 +62,20 @@ impl ServiceMessages {
     pub async fn get_many(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
+        user_id: Option<UserId>,
         message_ids: &[MessageId],
     ) -> Result<Vec<Message>> {
         let mut messages = self
             .state
             .data()
-            .message_get_many(channel_id, message_ids, user_id)
+            .message_get_many(channel_id, message_ids)
             .await?;
 
         for message in &mut messages {
             self.state.presign_message(message).await?;
         }
 
-        self.populate_all(channel_id, Some(user_id), &mut messages)
+        self.populate_all(channel_id, user_id, &mut messages)
             .await?;
 
         Ok(messages)
@@ -97,12 +93,15 @@ impl ServiceMessages {
     fn handle_url_embed(
         &self,
         message: Message,
-        user_id: UserId,
+        user_id: Option<UserId>,
         content: String,
     ) -> impl Future<Output = ()> + Send + 'static {
         let s = self.state.clone();
         let srv = s.services();
         async move {
+            let Some(user_id) = user_id else {
+                return;
+            };
             let links: Vec<_> = LinkFinder::new().links(&content).collect();
             for link in links {
                 if let Some(url) = link.as_str().parse::<Url>().ok() {
@@ -114,7 +113,7 @@ impl ServiceMessages {
                                 message_id: message.id,
                                 version_id: message.latest_version.version_id,
                             }),
-                            user_id,
+                            Some(user_id),
                             url,
                         )
                         .await
@@ -290,7 +289,7 @@ impl ServiceMessages {
             .await?;
 
         let mut message = self
-            .get_message_for_edit(thread_id, message_id, user_id, is_webhook)
+            .get_message_for_edit(thread_id, message_id, Some(user_id), is_webhook)
             .await?;
 
         if !message.latest_version.message_type.is_editable() {
@@ -333,7 +332,7 @@ impl ServiceMessages {
             thread_id,
             version_id,
             content.as_ref(),
-            user_id,
+            Some(user_id),
             can_embed,
         )
         .await?;
@@ -382,7 +381,7 @@ impl ServiceMessages {
         &self,
         thread_id: ChannelId,
         message_id: MessageId,
-        user_id: UserId,
+        user_id: Option<UserId>,
         is_webhook: bool,
     ) -> Result<Message> {
         match self.get(thread_id, message_id, user_id).await {
@@ -611,16 +610,14 @@ impl ServiceMessages {
         thread_id: ChannelId,
         version_id: MessageVerId,
         content: Option<&String>,
-        user_id: UserId,
+        user_id: Option<UserId>,
         can_embed: bool,
     ) -> Result<()> {
         let data = self.state.data();
-        let ver = data
-            .message_version_get(thread_id, version_id, user_id)
-            .await?;
+        let ver = data.message_version_get(thread_id, version_id).await?;
         message.latest_version = ver;
 
-        self.populate_all(thread_id, Some(user_id), std::slice::from_mut(message))
+        self.populate_all(thread_id, user_id, std::slice::from_mut(message))
             .await?;
 
         if let Some(content) = content {
@@ -940,11 +937,7 @@ impl ServiceMessages {
         let res = self
             .state
             .data()
-            .message_list(
-                channel_id,
-                user_id.unwrap_or(Uuid::nil().into()),
-                pagination,
-            )
+            .message_list(channel_id, pagination)
             .await?;
         self.process_message_list(channel_id, user_id, res).await
     }
@@ -952,53 +945,50 @@ impl ServiceMessages {
     pub async fn list_deleted(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
+        user_id: Option<UserId>,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let res = self
             .state
             .data()
-            .message_list_deleted(channel_id, user_id, pagination)
+            .message_list_deleted(channel_id, pagination)
             .await?;
-        self.process_message_list(channel_id, Some(user_id), res)
-            .await
+        self.process_message_list(channel_id, user_id, res).await
     }
 
     pub async fn list_removed(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
+        user_id: Option<UserId>,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let res = self
             .state
             .data()
-            .message_list_removed(channel_id, user_id, pagination)
+            .message_list_removed(channel_id, pagination)
             .await?;
-        self.process_message_list(channel_id, Some(user_id), res)
-            .await
+        self.process_message_list(channel_id, user_id, res).await
     }
 
     pub async fn list_all(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
+        user_id: Option<UserId>,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let res = self
             .state
             .data()
-            .message_list_all(channel_id, user_id, pagination)
+            .message_list_all(channel_id, pagination)
             .await?;
-        self.process_message_list(channel_id, Some(user_id), res)
-            .await
+        self.process_message_list(channel_id, user_id, res).await
     }
 
     pub async fn list_context(
         &self,
         channel_id: ChannelId,
         message_id: MessageId,
-        user_id: UserId,
+        user_id: Option<UserId>,
         query: ContextQuery,
     ) -> Result<ContextResponse> {
         let s = &self.state;
@@ -1024,9 +1014,9 @@ impl ServiceMessages {
         };
 
         let (before_res, after_res, message_res) = tokio::join!(
-            data.message_list(channel_id, user_id, before_q),
-            data.message_list(channel_id, user_id, after_q),
-            data.message_get(channel_id, message_id, user_id)
+            data.message_list(channel_id, before_q),
+            data.message_list(channel_id, after_q),
+            data.message_get(channel_id, message_id)
         );
 
         let before = before_res?;
@@ -1040,8 +1030,7 @@ impl ServiceMessages {
             .chain(after.items)
             .collect();
 
-        self.populate_all(channel_id, Some(user_id), &mut items)
-            .await?;
+        self.populate_all(channel_id, user_id, &mut items).await?;
 
         for item in &mut items {
             s.presign_message(item).await?;
@@ -1059,13 +1048,13 @@ impl ServiceMessages {
         &self,
         channel_id: ChannelId,
         message_id: MessageId,
-        user_id: UserId,
+        user_id: Option<UserId>,
         pagination: PaginationQuery<MessageVerId>,
     ) -> Result<PaginationResponse<MessageVersion>> {
         let s = &self.state;
         let data = s.data();
         let mut res = data
-            .message_version_list(channel_id, message_id, user_id, pagination)
+            .message_version_list(channel_id, message_id, pagination)
             .await?;
 
         for message in &mut res.items {
@@ -1079,13 +1068,11 @@ impl ServiceMessages {
         &self,
         channel_id: ChannelId,
         version_id: MessageVerId,
-        user_id: UserId,
+        user_id: Option<UserId>,
     ) -> Result<MessageVersion> {
         let s = &self.state;
         let data = s.data();
-        let mut message = data
-            .message_version_get(channel_id, version_id, user_id)
-            .await?;
+        let mut message = data.message_version_get(channel_id, version_id).await?;
         s.presign_message_version(&mut message).await?;
         Ok(message)
     }
@@ -1283,13 +1270,13 @@ impl ServiceMessages {
             .await?;
 
         // 4. Post-processing & Cache updates
-        let mut message = self.get(thread_id, message_id, user_id).await?;
+        let mut message = self.get(thread_id, message_id, Some(user_id)).await?;
         message.latest_version.mentions = mentions.clone();
         self.ensure_thread_membership(thread_id, user_id, chan.room_id)
             .await?;
 
         if let Some(c) = content {
-            self.spawn_url_unfurling(message.clone(), user_id, c, can_embed || is_webhook);
+            self.spawn_url_unfurling(message.clone(), Some(user_id), c, can_embed || is_webhook);
         }
 
         // 5. Broadcast & Notify
@@ -1573,7 +1560,7 @@ impl ServiceMessages {
     fn spawn_url_unfurling(
         &self,
         message: Message,
-        user_id: UserId,
+        user_id: Option<UserId>,
         content: String,
         can_embed: bool,
     ) {

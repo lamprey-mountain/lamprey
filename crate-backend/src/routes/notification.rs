@@ -64,11 +64,7 @@ async fn inbox_get(
     let mut messages = Vec::new();
     for notif in &notifications.items {
         if let (Some(channel_id), Some(message_id)) = (notif.channel_id(), notif.ty.message_id()) {
-            if let Ok(mut message) = s
-                .data()
-                .message_get(channel_id, message_id, auth.user.id)
-                .await
-            {
+            if let Ok(mut message) = s.data().message_get(channel_id, message_id).await {
                 s.presign_message(&mut message).await?;
                 messages.push(message);
             }

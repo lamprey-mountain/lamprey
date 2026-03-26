@@ -830,9 +830,8 @@ impl ServiceAutomod {
 
                     match data.message_create(message_create).await {
                         Ok(msg_id) => {
-                            if let Ok(mut message) = data
-                                .message_get(*alert_channel_id, msg_id, AUTOMOD_USER_ID)
-                                .await
+                            if let Ok(mut message) =
+                                data.message_get(*alert_channel_id, msg_id).await
                             {
                                 if let Err(e) = self.state.presign_message(&mut message).await {
                                     warn!("Failed to presign automod alert: {}", e);

@@ -13,7 +13,7 @@ use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
-use crate::routes::util::Auth;
+use crate::routes::util::{Auth, AuthRelaxed2};
 use crate::routes2;
 use crate::types::{DbMessageCreate, MessageSync, Permission};
 use crate::{error::Result, Error, ServerState};
@@ -69,18 +69,21 @@ async fn message_create(
 /// Message context
 #[handler(routes::message_context)]
 async fn message_context(
-    auth: Auth,
+    auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
     req: routes::message_context::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+
+    let user_id = auth.user.as_ref().map(|u| u.id);
+
+    let perms = srv.perms.for_channel2(user_id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
 
     let res = srv
         .messages
-        .list_context(req.channel_id, req.message_id, auth.user.id, req.context)
+        .list_context(req.channel_id, req.message_id, user_id, req.context)
         .await?;
 
     Ok(Json(res))
@@ -89,17 +92,20 @@ async fn message_context(
 /// Messages list
 #[handler(routes::message_list)]
 async fn message_list(
-    auth: Auth,
+    auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
     req: routes::message_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+
+    let user_id = auth.user.as_ref().map(|u| u.id);
+
+    let perms = srv.perms.for_channel2(user_id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
     let res = srv
         .messages
-        .list(req.channel_id, Some(auth.user.id), req.pagination)
+        .list(req.channel_id, user_id, req.pagination)
         .await?;
     Ok(Json(res))
 }
@@ -107,17 +113,20 @@ async fn message_list(
 /// Message get
 #[handler(routes::message_get)]
 async fn message_get(
-    auth: Auth,
+    auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
     req: routes::message_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+
+    let user_id = auth.user.as_ref().map(|u| u.id);
+
+    let perms = srv.perms.for_channel2(user_id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
     let message = srv
         .messages
-        .get(req.channel_id, req.message_id, auth.user.id)
+        .get(req.channel_id, req.message_id, user_id)
         .await?;
     Ok(Json(message))
 }
@@ -174,9 +183,7 @@ async fn message_delete(
 
     let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
-    let message = data
-        .message_get(req.channel_id, req.message_id, auth.user.id)
-        .await?;
+    let message = data.message_get(req.channel_id, req.message_id).await?;
     if !message.latest_version.message_type.is_deletable() {
         return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessage).into());
     }
@@ -235,17 +242,20 @@ async fn message_delete(
 /// Message version list
 #[handler(routes::message_version_list)]
 async fn message_version_list(
-    auth: Auth,
+    auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
     req: routes::message_version_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+
+    let user_id = auth.user.as_ref().map(|u| u.id);
+
+    let perms = srv.perms.for_channel2(user_id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
     let res = srv
         .messages
-        .list_versions(req.channel_id, req.message_id, auth.user.id, req.pagination)
+        .list_versions(req.channel_id, req.message_id, user_id, req.pagination)
         .await?;
     Ok(Json(res))
 }
@@ -253,17 +263,20 @@ async fn message_version_list(
 /// Message version get
 #[handler(routes::message_version_get)]
 async fn message_version_get(
-    auth: Auth,
+    auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
     req: routes::message_version_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+
+    let user_id = auth.user.as_ref().map(|u| u.id);
+
+    let perms = srv.perms.for_channel2(user_id, req.channel_id).await?;
     perms.ensure(Permission::ChannelView)?;
     let message = srv
         .messages
-        .get_version(req.channel_id, req.version_id, auth.user.id)
+        .get_version(req.channel_id, req.version_id, user_id)
         .await?;
     Ok(Json(message))
 }
@@ -291,16 +304,14 @@ async fn message_version_delete(
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
 
-    let message = data
-        .message_get(req.channel_id, req.message_id, auth.user.id)
-        .await?;
+    let message = data.message_get(req.channel_id, req.message_id).await?;
 
     if message.latest_version.version_id == req.version_id {
         return Err(ApiError::from_code(ErrorCode::CannotDeleteLatestMessageVersion).into());
     }
 
     let version = data
-        .message_version_get(req.channel_id, req.version_id, auth.user.id)
+        .message_version_get(req.channel_id, req.version_id)
         .await?;
 
     if !version.message_type.is_deletable() {
@@ -391,7 +402,7 @@ async fn message_moderate(
     if !req.moderate.delete.is_empty() {
         perms.ensure(Permission::MessageDelete)?;
         for id in &req.moderate.delete {
-            let message = data.message_get(req.channel_id, *id, auth.user.id).await?;
+            let message = data.message_get(req.channel_id, *id).await?;
             if !message.latest_version.message_type.is_deletable() {
                 return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessage).into());
             }
@@ -404,7 +415,7 @@ async fn message_moderate(
     if !req.moderate.remove.is_empty() {
         perms.ensure(Permission::MessageRemove)?;
         for id in &req.moderate.remove {
-            let message = data.message_get(req.channel_id, *id, auth.user.id).await?;
+            let message = data.message_get(req.channel_id, *id).await?;
             if !message.latest_version.message_type.is_deletable() {
                 return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessage).into());
             }
@@ -557,9 +568,7 @@ async fn message_pin(
         .message_pin_create(req.channel_id, req.message_id)
         .await?;
 
-    let message = data
-        .message_get(req.channel_id, req.message_id, auth.user.id)
-        .await?;
+    let message = data.message_get(req.channel_id, req.message_id).await?;
 
     s.broadcast_channel(
         req.channel_id,
@@ -588,9 +597,7 @@ async fn message_pin(
             mentions: Default::default(),
         })
         .await?;
-    let mut notice_message = data
-        .message_get(req.channel_id, notice_message_id, auth.user.id)
-        .await?;
+    let mut notice_message = data.message_get(req.channel_id, notice_message_id).await?;
 
     let user_id = auth.user.id;
     let tm = data.thread_member_get(req.channel_id, user_id).await;
@@ -665,10 +672,7 @@ async fn message_unpin(
         .message_pin_delete(req.channel_id, req.message_id)
         .await?;
 
-    let message = s
-        .data()
-        .message_get(req.channel_id, req.message_id, auth.user.id)
-        .await?;
+    let message = s.data().message_get(req.channel_id, req.message_id).await?;
 
     s.broadcast_channel(
         req.channel_id,
@@ -744,10 +748,7 @@ async fn message_pins_reorder(
         .await?;
 
     for item in req.reorder.messages {
-        let message = s
-            .data()
-            .message_get(req.channel_id, item.id, auth.user.id)
-            .await?;
+        let message = s.data().message_get(req.channel_id, item.id).await?;
         s.broadcast_channel(
             req.channel_id,
             auth.user.id,
@@ -830,7 +831,7 @@ async fn message_list_deleted(
     perms.ensure(Permission::MessageDelete)?;
     let res = srv
         .messages
-        .list_deleted(req.channel_id, auth.user.id, req.pagination)
+        .list_deleted(req.channel_id, Some(auth.user.id), req.pagination)
         .await?;
     Ok(Json(res))
 }
@@ -848,7 +849,7 @@ async fn message_list_removed(
     perms.ensure(Permission::MessageRemove)?;
     let res = srv
         .messages
-        .list_removed(req.channel_id, auth.user.id, req.pagination)
+        .list_removed(req.channel_id, Some(auth.user.id), req.pagination)
         .await?;
     Ok(Json(res))
 }

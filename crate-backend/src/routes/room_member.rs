@@ -20,6 +20,7 @@ use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
+use crate::routes::util::AuthRelaxed2;
 use crate::types::UserIdReq;
 use crate::{routes2, ServerState};
 
@@ -29,20 +30,22 @@ use crate::error::{Error, Result};
 /// Room member list
 #[handler(routes::room_member_list)]
 async fn room_member_list(
-    auth: Auth,
+    auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
     req: routes::room_member_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
-    let perms = s
-        .services()
-        .perms
-        .for_room(auth.user.id, req.room_id)
-        .await?;
+    let srv = s.services();
 
-    // extra permission check to prevent returning the entire list of registered users
+    let user_id = auth.user.as_ref().map(|u| u.id);
+
+    let perms = srv.perms.for_room2(user_id, req.room_id).await?;
+
+    // Extra permission check to prevent returning the entire list of registered users
+    // For SERVER_ROOM_ID, require authentication
     if req.room_id == SERVER_ROOM_ID {
+        let _user = auth.ensure_has_user()?;
         perms.ensure(Permission::ServerOversee)?;
     }
 
@@ -53,21 +56,24 @@ async fn room_member_list(
 /// Room member get
 #[handler(routes::room_member_get)]
 async fn room_member_get(
-    auth: Auth,
+    auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
     req: routes::room_member_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
+
+    let user_id = auth.user.as_ref().map(|u| u.id);
+
     let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
+        UserIdReq::UserSelf => {
+            // Self requires authentication
+            let user = auth.ensure_has_user()?;
+            user.id
+        }
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let _perms = s
-        .services()
-        .perms
-        .for_room(auth.user.id, req.room_id)
-        .await?;
+    let _perms = s.services().perms.for_room2(user_id, req.room_id).await?;
     let res = d.room_member_get(req.room_id, target_user_id).await?;
     Ok(Json(res))
 }
