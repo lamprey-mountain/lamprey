@@ -9,7 +9,7 @@ import {
 } from "solid-js";
 import type { User } from "sdk";
 import { Modal } from "./mod";
-import { useApi, useMessages2 } from "@/api";
+import { useApi2, useMessages2, useUsers2 } from "@/api";
 import { Avatar } from "../User";
 import { renderReactionKey } from "../emoji";
 
@@ -19,7 +19,8 @@ interface ModalReactionsProps {
 }
 
 export const ModalReactions = (props: ModalReactionsProps) => {
-	const api = useApi();
+	const api2 = useApi2();
+	const users2 = useUsers2();
 	const messagesService = useMessages2();
 	const message = messagesService.use(() => props.message_id);
 
@@ -44,7 +45,7 @@ export const ModalReactions = (props: ModalReactionsProps) => {
 		() => ({ reaction: selectedReaction(), after: afterCursor() }),
 		async ({ reaction, after }) => {
 			if (!reaction) return null;
-			return await api.reactions.list(
+			return await api2.reactions.list(
 				props.channel_id,
 				props.message_id,
 				reaction,
@@ -117,7 +118,7 @@ export const ModalReactions = (props: ModalReactionsProps) => {
 				<div class="users">
 					<For each={reactors()}>
 						{(reactor) => {
-							const user = api.users.fetch(() => reactor.user_id);
+							const user = users2.use(() => reactor.user_id);
 							return (
 								<div class="user">
 									<Avatar user={user()} />

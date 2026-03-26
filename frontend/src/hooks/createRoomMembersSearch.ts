@@ -1,10 +1,10 @@
 import { createResource, createSignal } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 
 export function creaeRoomMembersSearch(
 	room_id: () => string,
 ) {
-	const api = useApi();
+	const api2 = useApi2();
 
 	// TODO: debounce queries
 	// TODO: react to sync events
@@ -13,7 +13,7 @@ export function creaeRoomMembersSearch(
 	const [search] = createResource(
 		() => [searchQuery(), room_id()!] as const,
 		async ([query, room_id]) => {
-			const { data } = await api.client.http.GET(
+			const { data } = await api2.client.http.GET(
 				"/api/v1/room/{room_id}/member/search",
 				{
 					params: { path: { room_id }, query },

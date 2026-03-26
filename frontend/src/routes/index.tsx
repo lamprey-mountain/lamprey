@@ -1,7 +1,7 @@
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { Navigate, RouteSectionProps } from "@solidjs/router";
 import type { ParentProps, VoidProps } from "solid-js";
-import { useApi, useChannels2, useRooms2 } from "@/api";
+import { useApi2, useChannels2, useRooms2 } from "@/api";
 import { useCtx } from "../context.ts";
 import { type ChannelSearch } from "../context.ts";
 import { flags } from "../flags.ts";
@@ -151,7 +151,7 @@ const RoomSidebar = (props: { room: RoomT }) => {
 export const RouteRoom = (p: ParentProps<RouteSectionProps>) => {
 	const { t } = useCtx();
 	const ctx = useCtx();
-	const api = useApi();
+	const api2 = useApi2();
 	const rooms = useRooms2();
 	const room = rooms.use(() => p.params.room_id);
 
@@ -191,7 +191,7 @@ export const RouteRoom = (p: ParentProps<RouteSectionProps>) => {
 
 export const RouteRoomSettings = (p: ParentProps<RouteSectionProps>) => {
 	const { t } = useCtx();
-	const api = useApi();
+	const api2 = useApi2();
 	const rooms = useRooms2();
 	const room = rooms.use(() => p.params.room_id);
 	const title = () =>
@@ -365,7 +365,7 @@ const ChannelSidebar = (props: {
 export const RouteChannel = (p: ParentProps<RouteSectionProps>) => {
 	const { t } = useCtx();
 	const ctx = useCtx();
-	const api = useApi();
+	const api2 = useApi2();
 	const rooms = useRooms2();
 	const channels2 = useChannels2();
 	const channel = channels2.use(() => p.params.channel_id);
@@ -557,8 +557,8 @@ export const RouteInvite = (p: ParentProps<RouteSectionProps>) => {
 };
 
 export const RouteUser = (p: ParentProps<RouteSectionProps>) => {
-	const api = useApi();
-	const user = api.users.fetch(() => p.params.user_id);
+	const api2 = useApi2();
+	const user = api2.users.fetch(() => p.params.user_id);
 
 	return (
 		<LayoutDefault

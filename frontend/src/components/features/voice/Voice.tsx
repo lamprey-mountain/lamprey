@@ -16,7 +16,7 @@ import iconScreenshare from "../../../assets/screenshare.png";
 import iconSettings from "../../../assets/settings.png";
 import iconMusic from "../../../assets/music.png";
 import iconExit from "../../../assets/exit.png";
-import { useApi, useChannels2, useRooms2 } from "@/api";
+import { useApi2, useChannels2, useRooms2 } from "@/api";
 import { ToggleIcon } from "../../../atoms/ToggleIcon.tsx";
 import { useVoice } from "./voice-provider.tsx";
 import { useConfig } from "../../../config.tsx";
@@ -28,24 +28,25 @@ import { useCtx } from "../../../context.ts";
 import { md } from "../../../markdown_utils.tsx";
 import { getColor } from "../../../colors.ts";
 import { useChannel } from "../../../channelctx.tsx";
-import { AvatarWithStatus } from "../../../User.tsx";
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import { AvatarWithStatus } from "../../../User.tsx";
 
 export const Voice = (p: { channel: Channel }) => {
 	const config = useConfig();
-	const api = useApi();
+	const api2 = useApi2();
 	const [voice, actions] = useVoice();
 	const ctx = useCtx();
 	const [ch, chUpdate] = useChannel()!;
+	const currentUser = useCurrentUser();
 
 	createEffect(on(() => p.channel.id, (tid) => {
 		if (!voice.threadId || voice.threadId !== tid) actions.connect(tid);
 	}));
 
 	const getName = (uid: string) => {
-		const user = api.users.fetch(() => uid);
+		const user = api2.users.fetch(() => uid);
 		const room_member = p.channel.room_id
-			? api.room_members.fetch(() => p.channel.room_id!, () => uid)
+			? api2.room_members.fetch(() => p.channel.room_id!, () => uid)
 			: null;
 		const rm = room_member?.();
 		return ((rm as any)?.membership === "Join" && rm?.override_name) ||
@@ -59,7 +60,7 @@ export const Voice = (p: { channel: Channel }) => {
 			hasStream.add(s.user_id);
 		}
 		const users = [];
-		for (const state of api.voiceStates.values()) {
+		for (const state of api2.voiceStates.values()) {
 			if (
 				(state as any).thread_id === p.channel.id &&
 				!hasStream.has(state.user_id)
@@ -180,7 +181,7 @@ export const Voice = (p: { channel: Channel }) => {
 							</For>
 							<For each={getUsersWithoutStreams()}>
 								{(uid) => {
-									const user = api.users.fetch(() => uid);
+									const user = api2.users.fetch(() => uid);
 									return (
 										<div
 											class="stream"
@@ -260,9 +261,9 @@ export const Voice = (p: { channel: Channel }) => {
 };
 
 export const VoiceTray = () => {
-	const api = useApi();
+	const api2 = useApi2();
 	const channels2 = useChannels2();
-	const api2 = useRooms2();
+	const rooms2 = useRooms2();
 	const currentUser = useCurrentUser();
 	const [voice, actions] = useVoice();
 	const threadData = voice.threadId
@@ -271,13 +272,12 @@ export const VoiceTray = () => {
 	const thread = () => threadData?.();
 	const roomData = () => {
 		const t = thread();
-		return t?.room_id ? api2.use(() => t.room_id!) : null;
+		return t?.room_id ? rooms2.use(() => t.room_id!) : null;
 	};
 	const room = () => roomData()?.();
-	const user = () => currentUser();
 
 	const calcConnectedDuration = () => {
-		const joinedAt = api.voiceState()?.joined_at;
+		const joinedAt = api2.voiceState?.joined_at;
 		if (joinedAt) {
 			return (Date.now() - Date.parse(joinedAt));
 		} else {

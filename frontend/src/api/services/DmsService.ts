@@ -39,7 +39,7 @@ export class DmsService extends BaseService<Channel> {
 					},
 				})
 			);
-			const data = result.data as Pagination<Channel>;
+			const data = result as Pagination<Channel>;
 
 			this.upsertBulk(data.items);
 

@@ -1,6 +1,6 @@
 import { createResource, createSignal, For, Show } from "solid-js";
 import { leadingAndTrailing, throttle } from "@solid-primitives/scheduled";
-import { useApi, useMessages2 } from "@/api";
+import { useApi2, useMessages2 } from "@/api";
 import { useCtx } from "./context.ts";
 import { MessageView } from "./components/features/chat/Message.tsx";
 import { flags } from "./flags.ts";
@@ -86,7 +86,7 @@ export const Debug = () => {
 
 const Search = () => {
 	const ctx = useCtx();
-	const api = useApi();
+	const api2 = useApi2();
 	const messagesService = useMessages2();
 	const [searchQuery, setSearchQueryRaw] = createSignal<string>("");
 	const setSearchQuery = leadingAndTrailing(throttle, setSearchQueryRaw, 300);
@@ -119,12 +119,12 @@ const Search = () => {
 };
 
 const InviteView = () => {
-	const api = useApi();
+	const api2 = useApi2();
 	const [inviteCode, setInviteCodeRaw] = createSignal<string>("");
 	const setInviteCode = leadingAndTrailing(throttle, setInviteCodeRaw, 300);
 	const [invite] = createResource(inviteCode, async (code) => {
 		if (!code) return null;
-		const data = await api.invites.fetch(() => code);
+		const data = await api2.invites.fetch(code);
 		return data;
 	});
 
@@ -147,7 +147,7 @@ const InviteView = () => {
 };
 
 const UrlEmbedDbg = () => {
-	const api = useApi();
+	const api2 = useApi2();
 	let url: string;
 	const [data, setData] = createSignal<Embed | null>(null);
 	const [error, setError] = createSignal<{ error: string } | null>(null);
@@ -155,7 +155,7 @@ const UrlEmbedDbg = () => {
 	async function generate(e: SubmitEvent) {
 		e.preventDefault();
 		if (!url) return;
-		const { data, error } = await api.client.http.POST(
+		const { data, error } = await api2.client.http.POST(
 			"/api/v1/debug/embed-url",
 			{
 				body: { url },

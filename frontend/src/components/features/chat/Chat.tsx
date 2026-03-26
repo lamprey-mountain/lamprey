@@ -8,7 +8,7 @@ import {
 	type TimelineItemT,
 } from "./Messages.tsx";
 import { Input } from "./Input.tsx";
-import { useApi, useMessages2 } from "@/api";
+import { useApi2, useMessages2 } from "@/api";
 import { throttle } from "@solid-primitives/scheduled";
 import type { MessageListAnchor } from "@/api/services/MessagesService.ts";
 import { uuidv7 } from "uuidv7";
@@ -26,7 +26,7 @@ type ChatProps = {
 };
 
 export const ChatMain = (props: ChatProps) => {
-	const api = useApi();
+	const api2 = useApi2();
 	const messagesService = useMessages2();
 	const { t } = useCtx();
 	const { markChannelRead } = useReadTracking();
@@ -261,7 +261,7 @@ export const ChatMain = (props: ChatProps) => {
 	const currentUser = useCurrentUser();
 	const getTyping = () => {
 		const user_id = currentUser()?.id;
-		const user_ids = [...api.typing.get(props.channel.id)?.values() ?? []]
+		const user_ids = [...api2.typing.get(props.channel.id)?.values() ?? []]
 			.filter((i) => i !== user_id);
 		return user_ids;
 	};

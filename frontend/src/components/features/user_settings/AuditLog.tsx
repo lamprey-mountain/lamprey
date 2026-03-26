@@ -1,5 +1,5 @@
 import { createResource, For, Show, type VoidProps } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { getTimestampFromUUID, type User } from "sdk";
 import {
 	formatAuditLogEntry,
@@ -11,12 +11,12 @@ import { ReactiveSet } from "@solid-primitives/set";
 import { Time } from "../../../atoms/Time.tsx";
 
 export function AuditLog(props: VoidProps<{ user: User }>) {
-	const api = useApi();
+	const api2 = useApi2();
 	const collapsed = new ReactiveSet();
 
 	// FIXME: return newest records first
 	const [log] = createResource(async () => {
-		const { data } = await api.client.http.GET(
+		const { data } = await api2.client.http.GET(
 			"/api/v1/user/{user_id}/audit-logs",
 			{
 				params: { path: { user_id: "@self" } },

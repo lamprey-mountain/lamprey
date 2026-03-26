@@ -30,7 +30,7 @@ import { useDocument } from "../../../contexts/document.tsx";
 import { useModals } from "../../../contexts/modal.tsx";
 import { TextSelection } from "prosemirror-state";
 import { useChannel } from "../../../contexts/channel.tsx";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import type { HistoryPagination } from "sdk";
 import * as Y from "yjs";
 import { base64UrlDecode } from "./editor-utils.ts";
@@ -544,7 +544,7 @@ const DocumentMain = (
 		editor: () => Editor | null;
 	},
 ) => {
-	const api = useApi();
+	const api2 = useApi2();
 	const [ch, setCh] = useChannel()!;
 	const [diffLoading, setDiffLoading] = createSignal(false);
 	const [history, setHistory] = createSignal<HistoryPagination | null>(null);
@@ -591,10 +591,10 @@ const DocumentMain = (
 	createEffect(
 		on(() => props.channel.id, async (channelId) => {
 			setEditState(null);
-			api.documents.clearChannelCache(channelId);
+			api2.documents.clearChannelCache(channelId);
 
 			try {
-				const data = await api.documents.history(channelId, channelId, {
+				const data = await api2.documents.history(channelId, channelId, {
 					limit: 50,
 					by_author: false,
 					by_changes: 100,
@@ -687,7 +687,7 @@ const DocumentMain = (
 		const targetRevision = isPreview ? previewRevision() : currentRevision();
 		const revisionId = `${props.channel.id}@${afterSeq}`;
 
-		const cachedSerdoc = api.documents.revisionCache.get(revisionId);
+		const cachedSerdoc = api2.documents.revisionCache.get(revisionId);
 		const hasCache = cachedSerdoc !== undefined;
 
 		if (targetRevision === afterSeq && hasCache) return;
@@ -697,7 +697,7 @@ const DocumentMain = (
 		try {
 			let newSerdoc: any = cachedSerdoc;
 			if (!newSerdoc) {
-				newSerdoc = await api.documents.getRevisionContent(
+				newSerdoc = await api2.documents.getRevisionContent(
 					props.channel.id,
 					revisionId,
 				);
@@ -715,9 +715,9 @@ const DocumentMain = (
 			let oldSerdoc: any = null;
 			if (beforeSeq > 0) {
 				const prevRevisionId = `${props.channel.id}@${beforeSeq}`;
-				oldSerdoc = api.documents.revisionCache.get(prevRevisionId) ?? null;
+				oldSerdoc = api2.documents.revisionCache.get(prevRevisionId) ?? null;
 				if (!oldSerdoc) {
-					oldSerdoc = await api.documents.getRevisionContent(
+					oldSerdoc = await api2.documents.getRevisionContent(
 						props.channel.id,
 						prevRevisionId,
 					);
@@ -797,7 +797,7 @@ const DocumentMain = (
 				const newBranchName = `restored-${
 					new Date().toISOString().slice(0, 10)
 				}`;
-				await api.client.http.POST(
+				await api2.client.http.POST(
 					"/api/v1/document/{channel_id}/branch/{parent_id}/fork",
 					{
 						params: {
@@ -904,7 +904,7 @@ const DocumentMain = (
 			return;
 		}
 
-		const serdoc = api.documents.revisionCache.get(
+		const serdoc = api2.documents.revisionCache.get(
 			`${props.channel.id}@${seq}`,
 		);
 		console.log("[TOC] serdoc from cache:", serdoc);

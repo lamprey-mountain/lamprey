@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import { Dropdown, MultiDropdown } from "../atoms/Dropdown";
 import { Modal } from "./mod";
-import { useApi, useChannels2, useRooms2 } from "@/api";
+import { useApi2, useRoles2, useRooms2 } from "@/api";
 import { Time } from "sdk";
 import {
 	calculatePermissions,
@@ -21,7 +21,8 @@ interface ModalInviteCreateProps {
 }
 
 export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
-	const api = useApi();
+	const api2 = useApi2();
+	const roles2 = useRoles2();
 	const [expiry, setExpiry] = createSignal<number | null>(null);
 	const [maxUses, setMaxUses] = createSignal<number | null>(null);
 	const [selectedRoleIds, setSelectedRoleIds] = createSignal<string[]>([]);
@@ -29,8 +30,8 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 	const [creating, setCreating] = createSignal(false);
 	const currentUser = useCurrentUser();
 
-	const api2 = useRooms2();
-	const roles = api.roles.list(() => props.room_id as string);
+	const rooms2 = useRooms2();
+	const roles = roles2.useList(() => props.room_id as string);
 
 	const currentUserId = () => currentUser()?.id;
 
@@ -39,9 +40,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 		const userId = currentUserId();
 		if (!roomId || !userId) return false;
 		const permissionContext: PermissionContext = {
-			api,
-			channels: useChannels2(),
-			rooms: api2,
+			api: api2,
 			room_id: roomId,
 			channel_id: props.channel_id,
 		};
@@ -51,7 +50,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 		);
 		const hasRoleApply = permissions.has("RoleApply") ||
 			permissions.has("Admin");
-		const room = api2.use(() => roomId)();
+		const room = rooms2.use(() => roomId)();
 		const isOwner = room?.owner_id === userId;
 		return { canApply: hasRoleApply, rank, isOwner };
 	});
@@ -85,7 +84,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 		};
 
 		if (props.channel_id) {
-			const { data, error } = await api.client.http.POST(
+			const { data, error } = await api2.client.http.POST(
 				"/api/v1/channel/{channel_id}/invite",
 				{
 					params: { path: { channel_id: props.channel_id } },
@@ -98,7 +97,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 			}
 			if (error) console.error(error);
 		} else if (props.room_id) {
-			const { data, error } = await api.client.http.POST(
+			const { data, error } = await api2.client.http.POST(
 				"/api/v1/room/{room_id}/invite",
 				{
 					params: { path: { room_id: props.room_id } },

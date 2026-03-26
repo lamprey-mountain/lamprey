@@ -4,7 +4,7 @@ import { Checkbox } from "../../../icons";
 import { notificationPermission } from "../../../notification";
 import { useCtx } from "../../../context";
 import { Dropdown } from "../../../atoms/Dropdown";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 
 type NotifAction = "Notify" | "Watching" | "Ignore";
@@ -26,7 +26,7 @@ function urlBase64ToUint8Array(base64String: string) {
 
 export function Notifications(_props: VoidProps<{ user: User }>) {
 	const ctx = useCtx();
-	const api = useApi();
+	const api2 = useApi2();
 	const { t } = useCtx();
 
 	// TODO: option to disable mention sound
@@ -62,7 +62,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 					}
 
 					const registration = await navigator.serviceWorker.ready;
-					const serverInfo = await api.client.http.GET("/api/v1/server/@self")
+					const serverInfo = await api2.client.http.GET("/api/v1/server/@self")
 						.then((res) => res.data);
 
 					const vapidKey = serverInfo && typeof serverInfo === "object" &&
@@ -85,7 +85,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 					});
 
 					const subJson = subscription.toJSON();
-					await api.push.register({
+					await api2.push.register({
 						endpoint: subJson.endpoint!,
 						keys: {
 							p256dh: subJson.keys!.p256dh!,
@@ -103,7 +103,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 					if (subscription) {
 						await subscription.unsubscribe();
 					}
-					await api.push.delete();
+					await api2.push.delete();
 				} catch (e) {
 					console.error("Failed to unsubscribe from push notifications", e);
 				}

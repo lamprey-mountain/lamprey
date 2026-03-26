@@ -8,7 +8,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { useCtx } from "../../../context.ts";
 import { useMenu } from "../../../contexts/mod.tsx";
 import type { RoomT } from "../../../types.ts";
@@ -24,7 +24,7 @@ import { useModals } from "../../../contexts/modal";
 export function Bots(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
-	const api = useApi();
+	const api2 = useApi2();
 	const [, modalCtl] = useModals();
 
 	const editRolesClear = () => setEditRoles();
@@ -32,7 +32,7 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 	onCleanup(() => document.removeEventListener("click", editRolesClear));
 
 	const [integrations] = createResource(async () => {
-		const { data } = await api.client.http.GET(
+		const { data } = await api2.client.http.GET(
 			"/api/v1/room/{room_id}/integration",
 			{ params: { path: { room_id: props.room.id } } },
 		);
@@ -42,7 +42,7 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 	const removeRole = (user_id: string, role_id: string) => () => {
 		modalCtl.confirm("really remove?", (conf) => {
 			if (!conf) return;
-			api.client.http.DELETE(
+			api2.client.http.DELETE(
 				"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 				{ params: { path: { room_id: props.room.id, role_id, user_id } } },
 			);
@@ -76,14 +76,14 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 				<ul>
 					<For each={integrations()!.items}>
 						{({ member: i }) => {
-							const user = api.users.fetch(() => i.user_id);
+							const user = users2.cache.get(i.user_id);
 							const name = () =>
 								((i as any).membership === "Join" ? i.override_name : null) ??
-									user()?.name;
+									user?.name;
 							return (
 								<li>
 									<div class="profile">
-										<Avatar user={user()} />
+										<Avatar user={user} />
 										<div>
 											<h3 class="name">{name()}</h3>
 											<ul class="roles">
@@ -91,16 +91,13 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 													each={(i as any).membership === "Join" ? i.roles : []}
 												>
 													{(role_id) => {
-														const role = api.roles.fetch(
-															() => props.room.id,
-															() => role_id,
-														);
+														const role = roles2.cache.get(role_id);
 														return (
 															<li>
 																<button
 																	onClick={removeRole(i.user_id, role_id)}
 																>
-																	{role()?.name ?? "unknown role"}
+																	{role?.name ?? "unknown role"}
 																</button>
 															</li>
 														);
@@ -174,9 +171,9 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 const EditRoles = (
 	props: { x: number; y: number; user_id: string; room: RoomT },
 ) => {
-	const api = useApi();
-	const roles = api.roles.list(() => props.room.id);
-	const member = api.room_members.fetch(
+	const api2 = useApi2();
+	const roles = api2.roles.list(() => props.room.id);
+	const member = api2.room_members.fetch(
 		() => props.room.id,
 		() => props.user_id,
 	);
@@ -211,7 +208,7 @@ const EditRoles = (
 			const role_id = r.id;
 			const user_id = member()!.user_id;
 			if (e.target!.checked) {
-				api.client.http.PUT(
+				api2.client.http.PUT(
 					"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 					{
 						params: {
@@ -224,7 +221,7 @@ const EditRoles = (
 					},
 				);
 			} else {
-				api.client.http.DELETE(
+				api2.client.http.DELETE(
 					"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 					{
 						params: {

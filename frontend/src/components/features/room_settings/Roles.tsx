@@ -8,7 +8,7 @@ import {
 	Switch,
 	type VoidProps,
 } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
 import { useCtx } from "../../../context.ts";
 import type { RoomT } from "../../../types.ts";
 import type { Pagination, Permission, Role, RoomMember, User } from "sdk";
@@ -50,29 +50,36 @@ function isDirty(a: Role, b: Role): boolean {
 }
 
 export function Roles(props: VoidProps<{ room: RoomT }>) {
-	const api = useApi();
-	const roles = api.roles.list(() => props.room.id);
+	const api2 = useApi2();
+	const roles2 = useRoles2();
 	const [, modalCtl] = useModals();
 
 	const [localRoles, setLocalRoles] = createStore<Role[]>([]);
 	const [isOrderDirty, setIsOrderDirty] = createSignal(false);
 
+	// Get roles for this room from cache
+	const roomRoles = createMemo(() => {
+		const roles: Role[] = [];
+		for (const role of roles2.cache.values()) {
+			if (role.room_id === props.room.id) {
+				roles.push(role);
+			}
+		}
+		return roles.sort((a, b) => b.position - a.position);
+	});
+
 	createEffect(() => {
-		if (roles()) {
-			const sortedRoles = [...roles()!.items].sort((a, b) =>
-				b.position - a.position
-			);
+		const sortedRoles = roomRoles();
+		if (sortedRoles.length > 0) {
 			setLocalRoles(sortedRoles);
 		}
 	});
 
 	createEffect(() => {
-		if (!roles()?.items) {
+		const originalSorted = roomRoles();
+		if (originalSorted.length === 0) {
 			return;
 		}
-		const originalSorted = [...roles()!.items].sort((a, b) =>
-			b.position - a.position
-		);
 		if (originalSorted.length !== localRoles.length) {
 			setIsOrderDirty(true);
 			return;
@@ -89,7 +96,7 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 	const createRole = () => {
 		modalCtl.prompt("role name?", (name) => {
 			if (!name) return;
-			api.client.http.POST("/api/v1/room/{room_id}/role", {
+			api2.client.http.POST("/api/v1/room/{room_id}/role", {
 				params: { path: { room_id: props.room.id } },
 				body: { name },
 			});
@@ -97,7 +104,7 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 	};
 
 	const saveOrder = () => {
-		api.client.http.PATCH("/api/v1/room/{room_id}/role", {
+		api2.client.http.PATCH("/api/v1/room/{room_id}/role", {
 			params: { path: { room_id: props.room.id } },
 			body: {
 				roles: localRoles
@@ -112,12 +119,10 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 	};
 
 	const cancelOrder = () => {
-		if (roles()) {
-			const sortedRoles = [...roles()!.items].sort((a, b) =>
-				b.position - a.position
-			);
-			setLocalRoles(sortedRoles);
-		}
+		const sortedRoles = [...roomRoles()].sort((a, b) =>
+			b.position - a.position
+		);
+		setLocalRoles(sortedRoles);
 	};
 
 	const [search, setSearch] = createSignal("");
@@ -146,7 +151,7 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 							create role
 						</button>
 					</header>
-					<Show when={roles()} fallback="loading...">
+					<Show when={roomRoles().length > 0} fallback="loading...">
 						<RoleList
 							search={search()}
 							roles={localRoles}
@@ -155,7 +160,7 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 						/>
 					</Show>
 				</div>
-				<Show when={api.roles.cache.has(edit.role.id!)}>
+				<Show when={roles2.cache.has(edit.role.id!)}>
 					<Resizable
 						storageKey="role-editor-width"
 						initialWidth={400}
@@ -383,23 +388,33 @@ const RoleList = (
 };
 
 const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
-	const api = useApi();
+	const api2 = useApi2();
+	const roles2 = useRoles2();
+	const users2 = useUsers2();
+	const roomMembers2 = useRoomMembers2();
 	const ctx = useCtx();
 	const [, modalCtl] = useModals();
 	const [activeTab, setActiveTab] = createSignal<"role" | "members">("role");
 	const [memberSearch, setMemberSearch] = createSignal("");
 
-	const members = api.roles.memberList(
-		() => props.room.id,
-		() => props.edit.role.id!,
-	);
+	// Get members with this role from cache
+	const members = createMemo(() => {
+		const roleId = props.edit.role.id!;
+		const memberList: RoomMember[] = [];
+		for (const member of roomMembers2.cache.values()) {
+			if (member.room_id === props.room.id && member.roles.includes(roleId)) {
+				memberList.push(member);
+			}
+		}
+		return { items: memberList };
+	});
 
 	const filteredMembers = createMemo(() => {
 		const search = memberSearch().toLowerCase();
 		const allMembers = members()?.items ?? [];
 		if (!search) return allMembers;
 		return allMembers.filter((m) => {
-			const user = api.users.cache.get(m.user_id);
+			const user = users2.cache.get(m.user_id);
 			const name = user?.name ?? m.user_id;
 			return name.toLowerCase().includes(search);
 		});
@@ -409,18 +424,18 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 		// TODO: make this modal nicer
 		modalCtl.prompt("user id to add", (user_id) => {
 			if (!user_id) return;
-			api.roles.addMember(props.room.id, props.edit.role.id!, user_id);
+			roles2.addMember(props.room.id, props.edit.role.id!, user_id);
 		});
 	};
 
 	const removeMember = (user_id: string) => {
-		api.roles.removeMember(props.room.id, props.edit.role.id!, user_id);
+		roles2.removeMember(props.room.id, props.edit.role.id!, user_id);
 	};
 
 	const deleteRole = (role_id: string) => () => {
 		modalCtl.confirm("are you sure?", (confirmed) => {
 			if (!confirmed) return;
-			api.client.http.DELETE("/api/v1/room/{room_id}/role/{role_id}", {
+			api2.client.http.DELETE("/api/v1/room/{room_id}/role/{role_id}", {
 				params: { path: { room_id: props.room.id, role_id } },
 			});
 		});
@@ -430,11 +445,11 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 		if (
 			!isDirty(
 				props.edit.role as Role,
-				api.roles.cache.get(props.edit.role.id!)!,
+				roles2.cache.get(props.edit.role.id!)!,
 			)
 		) return;
 		const r = props.edit.role as Role;
-		api.client.http.PATCH("/api/v1/room/{room_id}/role/{role_id}", {
+		api2.client.http.PATCH("/api/v1/room/{room_id}/role/{role_id}", {
 			params: { path: { room_id: props.room.id, role_id: r.id } },
 			body: {
 				name: r.name,
@@ -461,7 +476,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 				<button
 					disabled={!isDirty(
 						props.edit.role as Role,
-						api.roles.cache.get(props.edit.role.id!)!,
+						roles2.cache.get(props.edit.role.id!)!,
 					)}
 					onClick={saveRole}
 				>
@@ -582,7 +597,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 					<ul class="members-list">
 						<For each={filteredMembers()}>
 							{(member) => {
-								const user = api.users.fetch(() => member.user_id);
+								const user = users2.use(() => member.user_id);
 								return (
 									<li class="member-item">
 										<Avatar user={user()} pad={4} />

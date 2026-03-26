@@ -4,6 +4,7 @@ import type {
 	ChannelType,
 	Permission,
 	PermissionOverwrite,
+	Role,
 } from "sdk";
 import {
 	batch,
@@ -16,7 +17,7 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { createStore, produce } from "solid-js/store";
-import { useApi, useRooms2 } from "@/api";
+import { useApi2, useRoles2, useRooms2 } from "@/api";
 import { PermissionSelector } from "../../../components/PermissionSelector";
 import { OverwriteDropdown } from "../../../components/OverwriteDropdown";
 import { permissions } from "../../../permissions.ts";
@@ -90,10 +91,13 @@ const createDefaultOverwrite = (id: string): PermissionOverwrite => ({
 });
 
 export function Permissions(props: VoidProps<{ channel: Channel }>) {
-	const api = useApi();
-	const api2 = useRooms2();
-	const roles = api.roles.list(() => props.channel.room_id ?? "");
-	const room = api2.use(() => props.channel.room_id ?? "");
+	const api2 = useApi2();
+	const rooms2 = useRooms2();
+	const roles2 = useRoles2();
+	const roles = [...roles2.cache.values()].filter((r) =>
+		r.room_id === props.channel.room_id
+	);
+	const room = rooms2.use(() => props.channel.room_id ?? "");
 
 	const [overwrites, setOverwrites] = createStore(
 		structuredClone(props.channel.permission_overwrites),
@@ -257,7 +261,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		const putPromises = dirtyIds.map((id) => {
 			const overwrite = overwrites.find((o) => o.id === id);
 			if (overwrite) {
-				return api.client.http.PUT(
+				return api2.client.http.PUT(
 					"/api/v1/channel/{channel_id}/permission/{overwrite_id}",
 					{
 						params: {
@@ -278,7 +282,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		}).filter((p) => p !== null) as Promise<unknown>[];
 
 		const deletePromises = deletedIds.map((id) =>
-			api.client.http.DELETE(
+			api2.client.http.DELETE(
 				"/api/v1/channel/{channel_id}/permission/{overwrite_id}",
 				{
 					params: {
@@ -318,10 +322,10 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		if (isEveryoneRole(id, props.channel.room_id!)) {
 			return "@everyone";
 		}
-		const role = roles()?.items.find((r) => r.id === id);
+		const role = roles.find((r: Role) => r.id === id);
 		if (role) return role.name;
 
-		const user = api.users.cache.get(id);
+		const user = api2.users.cache.get(id);
 		if (user) return user.name;
 
 		return null;

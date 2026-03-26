@@ -20,7 +20,7 @@ import { ModalBan } from "./ModalBan.tsx";
 import { ModalTimeout } from "./ModalTimeout.tsx";
 import { ModalCameraPreview } from "./ModalCameraPreview.tsx";
 import { ModalRoomCreate } from "./ModalRoomCreate";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 
 export const Modal = (
 	props: ParentProps & { onKeyDown?: (e: KeyboardEvent) => void },
@@ -45,7 +45,7 @@ export const Modal = (
 };
 
 export function getModal(modal: ContextModal) {
-	const api = useApi();
+	const api2 = useApi2();
 	switch ((modal as any).type) {
 		case "alert": {
 			return <ModalAlert text={(modal as any).text} />;
@@ -145,7 +145,7 @@ export function getModal(modal: ContextModal) {
 		case "kick": {
 			return (
 				<ModalKick
-					api={api}
+					api={api2}
 					room_id={(modal as any).room_id}
 					user_id={(modal as any).user_id}
 				/>
@@ -154,7 +154,7 @@ export function getModal(modal: ContextModal) {
 		case "ban": {
 			return (
 				<ModalBan
-					api={api}
+					api={api2}
 					room_id={(modal as any).room_id}
 					user_id={(modal as any).user_id}
 				/>
@@ -163,7 +163,7 @@ export function getModal(modal: ContextModal) {
 		case "timeout": {
 			return (
 				<ModalTimeout
-					api={api}
+					api={api2}
 					room_id={(modal as any).room_id}
 					user_id={(modal as any).user_id}
 				/>

@@ -1,23 +1,25 @@
 import { For, Show, type VoidProps } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2, useInvites2, useUsers2 } from "@/api";
 import type { RoomT } from "../../../types.ts";
 import { Avatar } from "../../../User.tsx";
 import { Time } from "../../../atoms/Time.tsx";
 import { Copyable } from "../../../utils/general";
 
 export function Invites(props: VoidProps<{ room: RoomT }>) {
-	const api = useApi();
+	const api2 = useApi2();
+	const invites2 = useInvites2();
+	const users2 = useUsers2();
 
-	const invites = api.invites.list_server();
+	const invites = invites2.useServerList();
 
 	const createInvite = () => {
-		api.client.http.POST("/api/v1/server/invite", {
+		api2.client.http.POST("/api/v1/server/invite", {
 			body: {},
 		});
 	};
 
 	const deleteInvite = (code: string) => {
-		api.client.http.DELETE("/api/v1/invite/{invite_code}", {
+		api2.client.http.DELETE("/api/v1/invite/{invite_code}", {
 			params: {
 				path: { invite_code: code },
 			},
@@ -39,9 +41,11 @@ export function Invites(props: VoidProps<{ room: RoomT }>) {
 						<div class="expires">expires</div>
 					</header>
 					<ul>
-						<For each={invites()!.items}>
-							{(i) => {
-								const user = api.users.fetch(() => i.creator_id);
+						<For each={invites()!.state.ids}>
+							{(code) => {
+								const i = invites2.cache.get(code);
+								if (!i) return null;
+								const user = users2.use(() => i.creator_id);
 								const creatorName = () => user()?.name || "unknown";
 								return (
 									<li class="invite">
@@ -56,7 +60,7 @@ export function Invites(props: VoidProps<{ room: RoomT }>) {
 											</div>
 										</div>
 										<div class="uses">
-											<span class="mono">{(i as any).uses}</span>
+											<span class="mono">{(i as any).uses ?? 0}</span>
 											<span class="dim">/</span>
 											<span class="mono">
 												{(i as any).max_uses ?? "\u221e"}

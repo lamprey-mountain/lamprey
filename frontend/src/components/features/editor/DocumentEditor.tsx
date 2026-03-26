@@ -10,7 +10,7 @@ import {
 } from "y-prosemirror";
 import { keymap } from "prosemirror-keymap";
 import { md } from "../../../markdown_utils.tsx";
-import { useApi, useChannels2 } from "@/api";
+import { useApi2, useChannels2 } from "@/api";
 import { MessageSync } from "sdk";
 import { cursorPlugin } from "./editor-cursors.ts";
 import {
@@ -63,7 +63,7 @@ export const createEditor = (
 	createReadonlyState: (content: string) => any;
 	createReadonlyStateFromHtml: (html: string) => any;
 } => {
-	const api = useApi();
+	const api2 = useApi2();
 	const channels2 = useChannels2();
 	const toolbarPlugin = createToolbarPlugin();
 	const [isSubscribed, setIsSubscribed] = createSignal(false);
@@ -85,7 +85,7 @@ export const createEditor = (
 		ydoc.on("update", (update, origin) => {
 			if (origin && origin.key === "server") return;
 
-			api.client.send({
+			api2.client.send({
 				type: "DocumentEdit",
 				channel_id: currentChannelId(),
 				branch_id: currentBranchId(),
@@ -118,7 +118,7 @@ export const createEditor = (
 		}
 	};
 
-	api.events.on("sync", onSync);
+	api2.events.on("sync", onSync);
 
 	const createState = () => {
 		let type = ydoc.get("doc", Y.XmlFragment);
@@ -147,7 +147,7 @@ export const createEditor = (
 			plugins: [
 				ySyncPlugin(type, { mapping }),
 				cursorPlugin(
-					api,
+					api2,
 					currentChannelId(),
 					currentBranchId(),
 					isSubscribed,
@@ -195,7 +195,7 @@ export const createEditor = (
 	const editor = createBaseEditor({
 		schema,
 		createState: () => createState(),
-		nodeViews: createEditorNodeViews(api, channels2, { currentChannelId }),
+		nodeViews: createEditorNodeViews(api2, channels2, { currentChannelId }),
 	});
 
 	const subscribe = (channelId: string, branchId: string) => {
@@ -220,7 +220,7 @@ export const createEditor = (
 		setCurrentBranchId(branchId);
 		setIsSubscribed(false);
 
-		api.client.send({
+		api2.client.send({
 			type: "DocumentSubscribe",
 			channel_id: channelId,
 			branch_id: branchId,

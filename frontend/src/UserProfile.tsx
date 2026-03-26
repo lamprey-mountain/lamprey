@@ -1,15 +1,15 @@
 import { createResource, For } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { UserView } from "./User";
 import { type UserWithRelationship } from "sdk";
 
 export function UserProfile(props: { user: UserWithRelationship }) {
-	const api = useApi();
+	const api2 = useApi2();
 
 	const [mutualRooms] = createResource(
 		() => props.user.id,
 		async (user_id) => {
-			const { data } = await api.client.http.GET(
+			const { data } = await api2.client.http.GET(
 				"/api/v1/user/{user_id}/room",
 				{
 					params: { path: { user_id } },

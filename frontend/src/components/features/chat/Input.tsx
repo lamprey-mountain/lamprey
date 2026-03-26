@@ -4,7 +4,13 @@ import { type Attachment, useCtx } from "../../../context.ts";
 import type { MessageT, ThreadT } from "../../../types.ts";
 import { createEditor } from "../editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";
-import { useApi, useApi2, useChannels2, useMessages2 } from "@/api";
+import {
+	useApi2,
+	useChannels2,
+	useMessages2,
+	useRoomMembers2,
+	useUsers2,
+} from "@/api";
 import { leading, throttle } from "@solid-primitives/scheduled";
 import {
 	createEffect,
@@ -33,9 +39,10 @@ type InputProps = {
 };
 
 export function Input(props: InputProps) {
-	const api = useApi();
 	const channels2 = useChannels2();
 	const messagesService = useMessages2();
+	const users2 = useUsers2();
+	const roomMembers2 = useRoomMembers2();
 	const store = useApi2();
 	const [ch, chUpdate] = useChannel()!;
 	const submit = useMessageSubmit(props.channel.id);
@@ -65,26 +72,22 @@ export function Input(props: InputProps) {
 	}, 8000);
 
 	const getName = (user_id: string) => {
-		const user = api.users.fetch(() => user_id);
+		const user = users2.cache.get(user_id);
 		const room_id = props.channel.room_id;
 		if (!room_id) {
-			return user()?.name;
+			return user?.name;
 		}
 
-		const member = api.room_members.fetch(
-			() => room_id,
-			() => user_id,
-		);
-
-		const m = member();
+		const member = roomMembers2.cache.get(`${room_id}:${user_id}`);
+		const m = member;
 		return (((m as any)?.membership as any) === "Join" && m?.override_name) ??
-			user()?.name;
+			user?.name;
 	};
 	const fmt = new (Intl as any).ListFormat();
 
 	const typingUsers = createMemo(() => {
 		const user_id = currentUser()?.id;
-		const user_ids = [...api.typing.get(props.channel.id)?.values() ?? []]
+		const user_ids = [...store.typing.get(props.channel.id)?.values() ?? []]
 			.filter((i) => i !== user_id);
 		return user_ids;
 	});
@@ -490,23 +493,21 @@ export function RenderUploadItem(
 }
 
 const InputReply = (props: { thread: ThreadT; reply: MessageT }) => {
-	const api = useApi();
+	const users2 = useUsers2();
+	const roomMembers2 = useRoomMembers2();
 	const tip = createTooltip({ tip: () => "remove reply" });
 	const [_ch, chUpdate] = useChannel()!;
 	const getName = (user_id: string) => {
-		const user = api.users.fetch(() => user_id);
+		const user = users2.cache.get(user_id);
 		const room_id = props.thread.room_id;
 		if (!room_id) {
-			return user()?.name;
+			return user?.name;
 		}
-		const member = api.room_members.fetch(
-			() => room_id,
-			() => user_id,
-		);
+		const member = roomMembers2.cache.get(`${room_id}:${user_id}`);
 
-		const m = member();
+		const m = member;
 		return (((m as any)?.membership as any) === "Join" && m?.override_name) ??
-			user()?.name;
+			user?.name;
 	};
 
 	const getNameNullable = (user_id?: string) => {

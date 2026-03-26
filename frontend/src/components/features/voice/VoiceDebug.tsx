@@ -12,11 +12,11 @@ import { getAttributeDescription, parseSessionDescription } from "./rtc-util";
 import { useVoice } from "./voice-provider";
 import { ReactiveMap } from "@solid-primitives/map";
 import { Copyable } from "../../../utils/general";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 
 export const VoiceDebug = (props: { onClose: () => void }) => {
 	const [voice] = useVoice();
-	const api = useApi();
+	const api2 = useApi2();
 
 	const [tab, setTab] = createSignal("streams");
 	const [localSdp, setLocalSdp] = createSignal<RTCSessionDescription | null>(
@@ -45,7 +45,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 	);
 
 	const voiceStates = createMemo(() => {
-		return [...api.voiceStates.values()].filter((i) =>
+		return [...api2.voiceStates.values()].filter((i) =>
 			(i as any).thread_id === voice.threadId
 		);
 	});

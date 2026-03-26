@@ -1,16 +1,16 @@
 import { createResource, createSignal, For, onCleanup } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { Time } from "../../../atoms/Time";
 import { Copyable } from "../../../utils/general";
 import type { Scope } from "sdk";
 import fuzzysort from "fuzzysort";
 
 export function Connections() {
-	const api = useApi();
+	const api2 = useApi2();
 	const [connecting, setConnecting] = createSignal(false);
 
 	const [connections, { refetch }] = createResource(async () => {
-		const { data } = await api.client.http.GET(
+		const { data } = await api2.client.http.GET(
 			"/api/v1/user/{user_id}/connection",
 			{ params: { path: { user_id: "@self" } } },
 		);
@@ -18,11 +18,14 @@ export function Connections() {
 	});
 
 	const deauthorize = async (id: string) => {
-		await api.client.http.DELETE("/api/v1/user/{user_id}/connection/{app_id}", {
-			params: {
-				path: { app_id: id, user_id: "@self" },
+		await api2.client.http.DELETE(
+			"/api/v1/user/{user_id}/connection/{app_id}",
+			{
+				params: {
+					path: { app_id: id, user_id: "@self" },
+				},
 			},
-		});
+		);
 		refetch();
 	};
 

@@ -27,7 +27,7 @@ export class NotificationService {
 				const channel = this.store.channels.get(m.channel_id);
 				if (channel?.room_id) {
 					const room_member = this.store.roomMembers.get(
-						this.store.roomMembers.getKey(channel.room_id, me.id),
+						`${channel.room_id}:${me.id}`,
 					);
 					if (room_member && mentions.roles) {
 						for (const role of mentions.roles) {

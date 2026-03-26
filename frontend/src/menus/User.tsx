@@ -1,6 +1,6 @@
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { For, Match, Show, Switch } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
 import { useCtx } from "../context.ts";
 import { useMenu } from "../contexts/mod.tsx";
 import { usePermissions } from "../hooks/usePermissions.ts";
@@ -23,12 +23,15 @@ type UserMenuProps = {
 export function UserMenu(props: UserMenuProps) {
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
-	const api = useApi();
+	const api2 = useApi2();
+	const users2 = useUsers2();
+	const roomMembers2 = useRoomMembers2();
+	const roles2 = useRoles2();
 	const navigate = useNavigate();
 	const currentUser = useCurrentUser();
-	const user = api.users.fetch(() => props.user_id);
+	const user = users2.use(() => props.user_id);
 	const room_member = props.room_id
-		? api.room_members.fetch(() => props.room_id!, () => props.user_id)
+		? roomMembers2.use(() => `${props.room_id!}:${props.user_id}`)
 		: () => null;
 	const self_id = () => currentUser()?.id;
 
@@ -46,30 +49,30 @@ export function UserMenu(props: UserMenuProps) {
 	const canModerate = () => permissions().rank > targetPerms().rank;
 
 	const userVoiceStates = () =>
-		[...api.voiceStates.values()].filter((s) => s.user_id === props.user_id);
+		[...api2.voiceStates.values()].filter((s) => s.user_id === props.user_id);
 	const connectedToVoice = () => userVoiceStates().length;
 	const [voice, voiceActions] = useVoice();
 
 	const sendFriendRequest = () => {
-		api.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
+		api2.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
 			params: { path: { target_id: props.user_id } },
 		});
 	};
 
 	const removeFriend = () => {
-		api.client.http.DELETE("/api/v1/user/@self/friend/{target_id}", {
+		api2.client.http.DELETE("/api/v1/user/@self/friend/{target_id}", {
 			params: { path: { target_id: props.user_id } },
 		});
 	};
 
 	const blockUser = () => {
-		api.client.http.PUT("/api/v1/user/@self/block/{target_id}", {
+		api2.client.http.PUT("/api/v1/user/@self/block/{target_id}", {
 			params: { path: { target_id: props.user_id } },
 		});
 	};
 
 	const unblockUser = () => {
-		api.client.http.DELETE("/api/v1/user/@self/block/{target_id}", {
+		api2.client.http.DELETE("/api/v1/user/@self/block/{target_id}", {
 			params: { path: { target_id: props.user_id } },
 		});
 	};
@@ -89,7 +92,7 @@ export function UserMenu(props: UserMenuProps) {
 	};
 
 	const kickThread = () => {
-		api.client.http.DELETE(
+		api2.client.http.DELETE(
 			"/api/v1/thread/{thread_id}/member/{user_id}",
 			{
 				params: {
@@ -124,7 +127,7 @@ export function UserMenu(props: UserMenuProps) {
 		if (user()?.webhook) {
 			modalCtl.prompt("new name", (name) => {
 				if (name === null) return;
-				api.client.http.PATCH("/api/v1/webhook/{webhook_id}", {
+				api2.client.http.PATCH("/api/v1/webhook/{webhook_id}", {
 					params: {
 						path: {
 							webhook_id: props.user_id,
@@ -138,7 +141,7 @@ export function UserMenu(props: UserMenuProps) {
 		} else {
 			modalCtl.prompt("new nickname", (nick) => {
 				if (nick === null) return;
-				api.client.http.PATCH("/api/v1/room/{room_id}/member/{user_id}", {
+				api2.client.http.PATCH("/api/v1/room/{room_id}/member/{user_id}", {
 					params: {
 						path: {
 							room_id: props.room_id!,
@@ -161,7 +164,7 @@ export function UserMenu(props: UserMenuProps) {
 	};
 
 	const disconnect = () => {
-		api.client.http.DELETE(
+		api2.client.http.DELETE(
 			"/api/v1/voice/{thread_id}/member/{user_id}" as any,
 			{
 				params: {
@@ -175,20 +178,20 @@ export function UserMenu(props: UserMenuProps) {
 	};
 
 	const openDm = () => {
-		api.client.http.POST("/api/v1/user/@self/dm/{target_id}", {
+		api2.client.http.POST("/api/v1/user/@self/dm/{target_id}", {
 			params: { path: { target_id: props.user_id } },
 		});
 	};
 
 	const mute = () => {
-		api.client.http.PATCH("/api/v1/room/{room_id}/member/{user_id}", {
+		api2.client.http.PATCH("/api/v1/room/{room_id}/member/{user_id}", {
 			params: { path: { room_id: props.room_id!, user_id: props.user_id } },
 			body: { mute: !room_member()?.mute },
 		});
 	};
 
 	const deafen = () => {
-		api.client.http.PATCH("/api/v1/room/{room_id}/member/{user_id}", {
+		api2.client.http.PATCH("/api/v1/room/{room_id}/member/{user_id}", {
 			params: { path: { room_id: props.room_id!, user_id: props.user_id } },
 			body: { deaf: !room_member()?.deaf },
 		});
@@ -197,7 +200,7 @@ export function UserMenu(props: UserMenuProps) {
 	const suspendUser = () => {
 		modalCtl.prompt("suspend reason", (reason) => {
 			if (!reason) return;
-			api.client.http.POST("/api/v1/user/{user_id}/suspend", {
+			api2.client.http.POST("/api/v1/user/{user_id}/suspend", {
 				params: {
 					path: {
 						user_id: props.user_id,
@@ -214,7 +217,7 @@ export function UserMenu(props: UserMenuProps) {
 	const unsuspendUser = () => {
 		modalCtl.prompt("unsuspend reason", (reason) => {
 			if (!reason) return;
-			api.client.http.DELETE("/api/v1/user/{user_id}/suspend", {
+			api2.client.http.DELETE("/api/v1/user/{user_id}/suspend", {
 				params: {
 					path: {
 						user_id: props.user_id,
@@ -232,7 +235,7 @@ export function UserMenu(props: UserMenuProps) {
 			"Are you sure you want to delete this user? This action cannot be undone.",
 			(confirmed) => {
 				if (!confirmed) return;
-				api.client.http.DELETE("/api/v1/user/{user_id}", {
+				api2.client.http.DELETE("/api/v1/user/{user_id}", {
 					params: {
 						path: {
 							user_id: props.user_id,
@@ -243,7 +246,7 @@ export function UserMenu(props: UserMenuProps) {
 		);
 	};
 
-	const roles = api.roles.list(() => props.room_id as string);
+	const roles = roles2.useList(() => props.room_id as string);
 
 	const RoleSubmenu = () => (
 		<Submenu content="roles">
@@ -255,7 +258,7 @@ export function UserMenu(props: UserMenuProps) {
 								e.stopPropagation();
 								if (room_member()?.roles.includes(role.id!)) {
 									console.log("remove role");
-									api.client.http.DELETE(
+									api2.client.http.DELETE(
 										"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 										{
 											params: {
@@ -269,7 +272,7 @@ export function UserMenu(props: UserMenuProps) {
 									);
 								} else {
 									console.log("add role");
-									api.client.http.PUT(
+									api2.client.http.PUT(
 										"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 										{
 											params: {

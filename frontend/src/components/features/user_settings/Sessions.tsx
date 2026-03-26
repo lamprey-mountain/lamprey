@@ -1,5 +1,5 @@
 import { createResource, For, Show, type VoidProps } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { useCtx } from "../../../context.ts";
 import { useModals } from "../../../contexts/modal";
 import type { Pagination, SessionT, UserT } from "../../../types.ts";
@@ -18,7 +18,7 @@ function parseUA(ua: string) {
 
 export function Sessions(props: VoidProps<{ user: UserT }>) {
 	const ctx = useCtx();
-	const api = useApi();
+	const api2 = useApi2();
 	const [, modalctl] = useModals();
 
 	// FIXME: live update sessions
@@ -92,7 +92,7 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 							<li
 								class="session"
 								classList={{
-									current: s.id === api.session()?.id,
+									current: s.id === api2.session()?.id,
 									sudo: isSudoActive(s),
 								}}
 							>
@@ -122,7 +122,7 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 								</div>
 								<div class="dim">
 									<Copyable>{s.id}</Copyable>
-									<Show when={s.id === api.session()?.id}>
+									<Show when={s.id === api2.session()?.id}>
 										{" (current)"}
 									</Show>
 								</div>

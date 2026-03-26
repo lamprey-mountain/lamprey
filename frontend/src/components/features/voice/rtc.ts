@@ -1,5 +1,5 @@
 import { createSignal, untrack } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { SignallingMessage, TrackMetadata } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createEmitter } from "@solid-primitives/event-bus";
@@ -41,7 +41,7 @@ const RTC_CONFIG: RTCConfiguration = {
 
 export const createVoiceClient = () => {
 	let conn = new RTCPeerConnection(RTC_CONFIG);
-	const api = useApi();
+	const api2 = useApi2();
 	const transceivers = new Map<string, RTCRtpTransceiver>();
 	const remoteStreams: Array<RemoteStream> = [];
 	const localStreams: Array<LocalStream> = [];
@@ -230,13 +230,13 @@ export const createVoiceClient = () => {
 	}
 
 	async function drainSendQueue() {
-		const currentUser = api.users.cache.get("@self");
+		const currentUser = api2.users.cache.get("@self");
 		const user_id = currentUser?.id;
 		if (!user_id) return;
 		for (const payload of sendQueue) {
 			if (!ready && payload.type !== "VoiceState") return;
 			console.log("[rtc:signal] send", payload.type, payload);
-			api.client.send({
+			api2.client.send({
 				type: "VoiceDispatch",
 				user_id,
 				payload,
@@ -245,11 +245,11 @@ export const createVoiceClient = () => {
 		sendQueue.splice(0, sendQueue.length);
 	}
 
-	api.events.on("ready", () => {
+	api2.events.on("ready", () => {
 		drainSendQueue();
 	});
 
-	api.events.on("sync", async ([e]) => {
+	api2.events.on("sync", async ([e]) => {
 		if (e.type === "VoiceState") {
 			if (!e.state) {
 				console.log("[rtc:stream] clean up tracks from", e.user_id);
@@ -260,7 +260,7 @@ export const createVoiceClient = () => {
 				}
 			}
 		} else if (e.type === "VoiceDispatch") {
-			if (!api.voiceState()) return;
+			if (!api2.voiceState) return;
 
 			const msg = e.payload as SignallingMessage;
 			if (msg.type === "Answer") {
@@ -318,7 +318,7 @@ export const createVoiceClient = () => {
 				console.log("[rtc:signal] remote ICE candidate", msg.candidate);
 				await conn.addIceCandidate({ candidate: msg.candidate });
 			} else if (msg.type === "Have") {
-				const currentUser = api.users.cache.get("@self");
+				const currentUser = api2.users.cache.get("@self");
 				const user_id = currentUser!.id;
 				const ruid = msg.user_id;
 				if (ruid === user_id) {
@@ -408,7 +408,7 @@ export const createVoiceClient = () => {
 		conn,
 		state: rtcState,
 		connect(thread_id: string) {
-			const existing = api.voiceState();
+			const existing = api2.voiceState;
 			if (existing) {
 				console.warn(
 					"[rtc:signal] already have a voice state, not resetting first",
@@ -433,7 +433,7 @@ export const createVoiceClient = () => {
 			});
 		},
 		createStream(key: string) {
-			const currentUser = api.users.cache.get("@self");
+			const currentUser = api2.users.cache.get("@self");
 			const user_id = currentUser!.id;
 			const existing = localStreams.find((i) =>
 				i.key === key && i.user_id === user_id
@@ -476,7 +476,7 @@ export const createVoiceClient = () => {
 		events,
 		transceivers,
 		updateIndicators(indicators: Indicators) {
-			const existing = untrack(() => api.voiceState());
+			const existing = untrack(() => api2.voiceState);
 			if (!existing) return;
 			const unchanged = existing.self_deaf === indicators.self_deaf &&
 				existing.self_mute === indicators.self_mute &&

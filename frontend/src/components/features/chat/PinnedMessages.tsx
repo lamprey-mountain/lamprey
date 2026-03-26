@@ -1,6 +1,6 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import type { Channel } from "sdk";
-import { useApi, useMessages2 } from "@/api";
+import { useMessages2 } from "@/api";
 import { MessageView } from "./Message.tsx";
 import type { Message } from "sdk";
 
@@ -9,7 +9,6 @@ type PinnedMessagesProps = {
 };
 
 export function PinnedMessages(props: PinnedMessagesProps) {
-	const api = useApi();
 	const messagesService = useMessages2();
 	const pinnedMessages = messagesService.listPinned(() => props.channel.id);
 

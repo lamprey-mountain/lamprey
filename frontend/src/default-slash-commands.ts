@@ -1,5 +1,5 @@
 import { Channel } from "sdk";
-import type { Api } from "@/api";
+import type { RootStore } from "@/api/core/Store";
 import type { ChannelsService } from "@/api/services/ChannelsService";
 import type { ChatCtx } from "./context";
 import { type Command, SlashCommands } from "./contexts/slash-commands";
@@ -29,8 +29,6 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const checker = createPermissionChecker(
 					{
 						api,
-						channels,
-						rooms: store.rooms,
 						room_id,
 						channel_id: channel.id,
 					},
@@ -59,8 +57,6 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const checker = createPermissionChecker(
 					{
 						api,
-						channels,
-						rooms: store.rooms,
 						room_id,
 						channel_id: channel.id,
 					},
@@ -96,7 +92,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					(channel.type === "ThreadPublic" ||
 						channel.type === "ThreadPrivate") &&
 					checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+						{ api, room_id, channel_id: channel.id },
 						self_id,
 						"ThreadManage",
 					)
@@ -114,7 +110,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					(channel.type !== "ThreadPublic" &&
 						channel.type !== "ThreadPrivate") ||
 					!checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id },
+						{ api, room_id, channel_id },
 						self_id,
 						"ThreadManage",
 					)
@@ -144,7 +140,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					(channel.type === "ThreadPublic" ||
 						channel.type === "ThreadPrivate") &&
 					checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+						{ api, room_id, channel_id: channel.id },
 						self_id,
 						"ThreadManage",
 					)
@@ -162,7 +158,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					(channel.type !== "ThreadPublic" &&
 						channel.type !== "ThreadPrivate") ||
 					!checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id },
+						{ api, room_id, channel_id },
 						self_id,
 						"ThreadManage",
 					)
@@ -191,7 +187,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					channel.type === "ThreadPrivate";
 				if (!isThread) return false;
 				return checkPermission(
-					{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+					{ api, room_id, channel_id: channel.id },
 					self_id,
 					"ThreadManage",
 				);
@@ -213,7 +209,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id },
+						{ api, room_id, channel_id },
 						self_id,
 						"ThreadManage",
 					)
@@ -240,7 +236,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					channel.type === "ThreadPrivate";
 				if (!isThread) return false;
 				return checkPermission(
-					{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+					{ api, room_id, channel_id: channel.id },
 					self_id,
 					"ThreadManage",
 				);
@@ -262,7 +258,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id },
+						{ api, room_id, channel_id },
 						self_id,
 						"ThreadManage",
 					)
@@ -296,7 +292,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const permission = isThread ? "ThreadManage" : "ChannelManage";
 				if (isThread && channel.creator_id === self_id) return true;
 				return checkPermission(
-					{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+					{ api, room_id, channel_id: channel.id },
 					self_id,
 					permission,
 				);
@@ -315,7 +311,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id },
+						{ api, room_id, channel_id },
 						self_id,
 						permission,
 					)
@@ -354,7 +350,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				if (isThread && channel.creator_id === self_id) return true;
 				const permission = isThread ? "ThreadManage" : "ChannelManage";
 				return checkPermission(
-					{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+					{ api, room_id, channel_id: channel.id },
 					self_id,
 					permission,
 				);
@@ -373,7 +369,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id },
+						{ api, room_id, channel_id },
 						self_id,
 						permission,
 					)
@@ -406,7 +402,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const self_id = currentUser?.id;
 				if (!self_id || !room_id) return false;
 				return checkPermission(
-					{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+					{ api, room_id, channel_id: channel.id },
 					self_id,
 					"MemberNickname",
 				);
@@ -422,7 +418,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+						{ api, room_id, channel_id: channel.id },
 						self_id,
 						"MemberNickname",
 					)
@@ -462,7 +458,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const self_id = currentUser?.id;
 				if (!self_id || !room_id) return false;
 				return checkPermission(
-					{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+					{ api, room_id, channel_id: channel.id },
 					self_id,
 					"MemberBan",
 				);
@@ -478,7 +474,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+						{ api, room_id, channel_id: channel.id },
 						self_id,
 						"MemberBan",
 					)
@@ -520,7 +516,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const self_id = currentUser?.id;
 				if (!self_id || !room_id) return false;
 				return checkPermission(
-					{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+					{ api, room_id, channel_id: channel.id },
 					self_id,
 					"MemberKick",
 				);
@@ -536,7 +532,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+						{ api, room_id, channel_id: channel.id },
 						self_id,
 						"MemberKick",
 					)
@@ -574,7 +570,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const self_id = currentUser?.id;
 				if (!self_id) return false;
 				return checkPermission(
-					{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+					{ api, room_id, channel_id: channel.id },
 					self_id,
 					"MessageCreate",
 				);
@@ -589,7 +585,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+						{ api, room_id, channel_id: channel.id },
 						self_id,
 						"MessageCreate",
 					)
@@ -665,7 +661,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const self_id = currentUser?.id;
 				if (!self_id) return false;
 				return checkPermission(
-					{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+					{ api, room_id, channel_id: channel.id },
 					self_id,
 					"MessageCreate",
 				);
@@ -680,7 +676,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+						{ api, room_id, channel_id: channel.id },
 						self_id,
 						"MessageCreate",
 					)
@@ -725,7 +721,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const self_id = currentUser?.id;
 				if (!self_id || !room_id) return false;
 				return checkPermission(
-					{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+					{ api, room_id, channel_id: channel.id },
 					self_id,
 					"MemberTimeout",
 				);
@@ -741,7 +737,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+						{ api, room_id, channel_id: channel.id },
 						self_id,
 						"MemberTimeout",
 					)
@@ -786,7 +782,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const self_id = currentUser?.id;
 				if (!self_id) return false;
 				return checkPermission(
-					{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+					{ api, room_id, channel_id: channel.id },
 					self_id,
 					"ChannelManage",
 				);
@@ -801,7 +797,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+						{ api, room_id, channel_id: channel.id },
 						self_id,
 						"ChannelManage",
 					)
@@ -825,8 +821,8 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 			description: "Leave a room",
 			options: [],
 			canUse: (api, room_id, channel) => !!room_id, // Can only leave if in a room
-			execute: async (ctx, api, channel_id, args) => {
-				const channel = channels.cache.get(channel_id);
+			execute: async (ctx, api, channels2, channel_id, args) => {
+				const channel = channels2.cache.get(channel_id);
 				if (!channel) return;
 				const { room_id } = channel;
 				if (!room_id) return;
@@ -858,7 +854,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					channel.type === "ThreadPrivate";
 				if (!isThread) return false;
 				return checkPermission(
-					{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+					{ api, room_id, channel_id: channel.id },
 					self_id,
 					"ThreadLock",
 				);
@@ -880,7 +876,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+						{ api, room_id, channel_id: channel.id },
 						self_id,
 						"ThreadLock",
 					)
@@ -916,7 +912,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					channel.type === "ThreadPrivate";
 				if (!isThread) return false;
 				return checkPermission(
-					{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+					{ api, room_id, channel_id: channel.id },
 					self_id,
 					"ThreadLock",
 				);
@@ -938,7 +934,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 
 				if (
 					!checkPermission(
-						{ api, rooms: store.rooms, room_id, channel_id: channel.id },
+						{ api, room_id, channel_id: channel.id },
 						self_id,
 						"ThreadLock",
 					)

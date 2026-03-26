@@ -1,4 +1,5 @@
 export const colors = {
+	// various ui parts
 	magenta: "oklch(80.6% 0.15 299.2)",
 	red: "oklch(74.03% 0.1759 13.16)",
 	yellow: "oklch(85.39% 0.1187 92.43)",
@@ -6,6 +7,7 @@ export const colors = {
 	// reserved for api and service layer
 	orange: "oklch(80.7% 0.1273 50.56)",
 
+	// various logic
 	green: "oklch(85.53% 0.1395 130.14)",
 	cyan: "oklch(80.21% 0.1086 199.72)",
 	teal: "oklch(80% 0.128 168)",
@@ -114,5 +116,5 @@ logger.config("api/audit_log", { color: colors.orange });
 logger.config("api/rooms", { color: colors.orange });
 logger.config("idb", { color: colors.yellow });
 logger.config("timeline", { color: colors.red });
-// logger.config("user_popout", { color: colors.red });
-// logger.config("permissions", { color: colors.green });
+logger.config("member_list", { color: colors.red });
+logger.config("permissions", { color: colors.green });

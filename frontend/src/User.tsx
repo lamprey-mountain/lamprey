@@ -5,7 +5,7 @@ import type {
 	ThreadMember,
 	UserWithRelationship,
 } from "sdk";
-import { useApi } from "@/api";
+import { useApi2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
 import {
 	createEffect,
 	createSignal,
@@ -41,12 +41,9 @@ type UserProps = {
 const EditRoles = (
 	props: { x: number; y: number; user_id: string; room_id: string },
 ) => {
-	const api = useApi();
-	const roles = api.roles.list(() => props.room_id);
-	const member = api.room_members.fetch(
-		() => props.room_id,
-		() => props.user_id,
-	);
+	const api2 = useApi2();
+	const roomMembers2 = useRoomMembers2();
+	const member = roomMembers2.use(() => `${props.room_id}:${props.user_id}`);
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
 	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
 	const [menuFloating, setMenuFloating] = createStore({
@@ -94,7 +91,7 @@ const EditRoles = (
 			const role_id = r.id;
 			const user_id = member()!.user_id;
 			if (e.target!.checked) {
-				api.client.http.PUT(
+				api2.client.http.PUT(
 					"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 					{
 						params: {
@@ -107,7 +104,7 @@ const EditRoles = (
 					},
 				);
 			} else {
-				api.client.http.DELETE(
+				api2.client.http.DELETE(
 					"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 					{
 						params: {
@@ -123,7 +120,9 @@ const EditRoles = (
 		};
 
 	const getRoles = () =>
-		(roles()?.items ?? []).filter((r) => r.id !== props.room_id);
+		[...api2.roles.cache.values()].filter((r) =>
+			r.room_id === props.room_id && r.id !== props.room_id
+		);
 
 	const currentUser = useCurrentUser();
 	const self_id = () => currentUser()?.id;
@@ -168,7 +167,7 @@ const EditRoles = (
 };
 
 export function UserView(props: UserProps) {
-	const api = useApi();
+	const api2 = useApi2();
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
 	const nav = useNavigate();
@@ -204,19 +203,19 @@ export function UserView(props: UserProps) {
 	};
 
 	const sendFriendRequest = () => {
-		api.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
+		api2.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
 			params: { path: { target_id: props.user.id } },
 		});
 	};
 
 	const removeFriend = async () => {
-		await api.client.http.DELETE("/api/v1/user/@self/friend/{target_id}", {
+		await api2.client.http.DELETE("/api/v1/user/@self/friend/{target_id}", {
 			params: { path: { target_id: props.user.id } },
 		});
 	};
 
 	const openDm = async () => {
-		const { data } = await api.client.http.POST(
+		const { data } = await api2.client.http.POST(
 			"/api/v1/user/@self/dm/{target_id}",
 			{
 				params: { path: { target_id: props.user.id } },
@@ -258,7 +257,7 @@ export function UserView(props: UserProps) {
 			},
 		};
 
-		api.client.http.PUT("/api/v1/preferences/user/{user_id}", {
+		api2.client.http.PUT("/api/v1/preferences/user/{user_id}", {
 			params: { path: { user_id: props.user.id } },
 			body: newConfig,
 		});
@@ -340,11 +339,8 @@ export function UserView(props: UserProps) {
 						<ul>
 							<For each={room_member()!.roles}>
 								{(role_id) => {
-									const role = api.roles.fetch(
-										() => room_member()!.room_id,
-										() => role_id,
-									);
-									return <li>{role()?.name ?? "role"}</li>;
+									const role = api2.roles.cache.get(role_id);
+									return <li>{role?.name ?? "role"}</li>;
 								}}
 							</For>
 							<Show when={hasPermission("RoleApply")}>

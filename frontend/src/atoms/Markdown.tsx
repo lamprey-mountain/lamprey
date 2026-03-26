@@ -11,7 +11,13 @@ import {
 	Switch,
 	useContext,
 } from "solid-js";
-import { useApi, useChannels2 } from "@/api";
+import {
+	useApi2,
+	useChannels2,
+	useRoles2,
+	useRoomMembers2,
+	useUsers2,
+} from "@/api";
 import { md } from "../markdown_utils";
 import { useNavigate } from "@solidjs/router";
 import { useUserPopout } from "../contexts/mod";
@@ -29,15 +35,13 @@ const MarkdownContext = createContext<{ channel?: Channel }>();
 
 function UserMention(props: { id: string }) {
 	const ctx = useContext(MarkdownContext);
-	const api = useApi();
+	const users2 = useUsers2();
+	const roomMembers2 = useRoomMembers2();
 	const { userView, setUserView } = useUserPopout();
-	const user = api.users.fetch(() => props.id);
+	const user = users2.use(() => props.id);
 	const room_member = createMemo(() => {
 		if (!ctx?.channel?.room_id) return null;
-		return api.room_members.fetch(
-			() => ctx.channel!.room_id!,
-			() => props.id,
-		)();
+		return roomMembers2.cache.get(`${ctx.channel!.room_id!}:${props.id}`);
 	});
 
 	return (
@@ -66,10 +70,10 @@ function UserMention(props: { id: string }) {
 
 function RoleMention(props: { id: string }) {
 	const ctx = useContext(MarkdownContext);
-	const api = useApi();
+	const roles2 = useRoles2();
 	const role = createMemo(() => {
 		if (!ctx?.channel?.room_id) return null;
-		return api.roles.fetch(() => ctx.channel!.room_id!, () => props.id)();
+		return roles2.cache.get(props.id);
 	});
 
 	return <span class="mention mention-role">@{role()?.name ?? "..."}</span>;

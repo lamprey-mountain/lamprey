@@ -35,4 +35,10 @@ export class UsersService extends BaseService<UserWithRelationship> {
 			this.cache.set("@self", updatedUser);
 		}
 	}
+
+	async createGuest(name: string): Promise<void> {
+		await this.retryWithBackoff(() =>
+			this.client.http.POST("/api/v1/guest", { body: { name } })
+		);
+	}
 }

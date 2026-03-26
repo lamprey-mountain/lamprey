@@ -1,5 +1,5 @@
 import { createEffect, Show } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2, useInvites2 } from "@/api";
 import { useCtx } from "./context.ts";
 import { md } from "./markdown_utils.tsx";
 import { useNavigate } from "@solidjs/router";
@@ -11,10 +11,11 @@ const Title = (props: { title?: string }) => {
 };
 
 export const RouteInviteInner = (props: { code: string }) => {
-	const api = useApi();
+	const api2 = useApi2();
+	const invites2 = useInvites2();
 	const ctx = useCtx();
 	const nav = useNavigate();
-	const invite = api.invites.fetch(() => props.code);
+	const invite = invites2.use(() => props.code);
 
 	const name = () => {
 		const i = invite();

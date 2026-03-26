@@ -1,5 +1,5 @@
 import { For, Show, type VoidProps } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2, useInvites2, useUsers2 } from "@/api";
 import type { Channel } from "sdk";
 import type { InviteWithMetadata } from "sdk";
 import { Avatar } from "../../../User.tsx";
@@ -7,12 +7,14 @@ import { Time } from "../../../atoms/Time.tsx";
 import { Copyable } from "../../../utils/general";
 
 export function Invites(props: VoidProps<{ channel: Channel }>) {
-	const api = useApi();
+	const api2 = useApi2();
+	const invites2 = useInvites2();
+	const users2 = useUsers2();
 
-	const invites = api.invites.list_channel(() => props.channel.id);
+	const invites = invites2.useChannelList(() => props.channel.id);
 
 	const createInvite = () => {
-		api.client.http.POST("/api/v1/channel/{channel_id}/invite", {
+		api2.client.http.POST("/api/v1/channel/{channel_id}/invite", {
 			params: {
 				path: { channel_id: props.channel.id },
 			},
@@ -21,7 +23,7 @@ export function Invites(props: VoidProps<{ channel: Channel }>) {
 	};
 
 	const deleteInvite = (code: string) => {
-		api.client.http.DELETE("/api/v1/invite/{invite_code}", {
+		api2.client.http.DELETE("/api/v1/invite/{invite_code}", {
 			params: {
 				path: { invite_code: code },
 			},
@@ -43,9 +45,11 @@ export function Invites(props: VoidProps<{ channel: Channel }>) {
 						<div class="expires">expires</div>
 					</header>
 					<ul>
-						<For each={invites()!.items as InviteWithMetadata[]}>
-							{(i) => {
-								const user = api.users.fetch(() => i.creator_id);
+						<For each={invites()!.state.ids}>
+							{(code) => {
+								const i = invites2.cache.get(code);
+								if (!i) return null;
+								const user = users2.use(() => i.creator_id);
 								const creatorName = () => user()?.name || "unknown";
 								return (
 									<li class="invite">
@@ -60,9 +64,11 @@ export function Invites(props: VoidProps<{ channel: Channel }>) {
 											</div>
 										</div>
 										<div class="uses">
-											<span class="mono">{i.uses}</span>
+											<span class="mono">{(i as any).uses}</span>
 											<span class="dim">/</span>
-											<span class="mono">{i.max_uses ?? "\u221e"}</span>
+											<span class="mono">
+												{(i as any).max_uses ?? "\u221e"}
+											</span>
 										</div>
 										<div class="expires">
 											<Show

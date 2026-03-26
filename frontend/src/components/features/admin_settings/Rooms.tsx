@@ -1,5 +1,5 @@
 import { createSignal, For, Show } from "solid-js";
-import { useApi, useRooms2 } from "@/api";
+import { useApi2, useRooms2 } from "@/api";
 import { Avatar } from "../../../User.tsx";
 import { Time } from "../../../atoms/Time.tsx";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
@@ -7,13 +7,13 @@ import { getThumbFromId } from "../../../media/util.tsx";
 import { getTimestampFromUUID } from "sdk";
 
 export function Rooms() {
-	const api = useApi();
-	const api2 = useRooms2();
-	const rooms = api2.useListAll();
+	const api2 = useApi2();
+	const rooms2 = useRooms2();
+	const rooms = rooms2.useListAll();
 
 	const fetchMore = () => {
 		if (rooms.has_more) {
-			api2.fetchListAll(rooms.cursor);
+			rooms2.fetchListAll(rooms.cursor);
 		}
 	};
 
@@ -39,7 +39,7 @@ export function Rooms() {
 				<ul>
 					<For each={rooms.ids}>
 						{(id) => {
-							const room = api2.get(id);
+							const room = rooms2.cache.get(id);
 							if (!room) return null;
 							return (
 								<li>

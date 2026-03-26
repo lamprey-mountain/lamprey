@@ -24,7 +24,14 @@ import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { useCtx } from "./context";
 import { useMenu, useUserPopout } from "./contexts/mod.tsx";
-import { useApi, useChannels2, useMessages2 } from "@/api";
+import {
+	useApi2,
+	useChannels2,
+	useMessages2,
+	useRoomMembers2,
+	useThreads2,
+	useUsers2,
+} from "@/api";
 import { ReactiveSet } from "@solid-primitives/set";
 import { Time } from "./atoms/Time";
 import { A, useNavigate } from "@solidjs/router";
@@ -109,19 +116,17 @@ function AttachmentView(props: MediaProps) {
 }
 
 const InputReply = (props: { thread: Channel; reply: Message }) => {
-	const api = useApi();
+	const users2 = useUsers2();
+	const roomMembers2 = useRoomMembers2();
 	const tip = createTooltip({ tip: () => "remove reply" });
 	const [_ch, chUpdate] = useChannel()!;
 	const getName = (user_id: string) => {
-		const user = api.users.fetch(() => user_id);
+		const user = users2.use(() => user_id);
 		const room_id = props.thread.room_id;
 		if (!room_id) {
 			return user()?.name;
 		}
-		const member = api.room_members.fetch(
-			() => room_id,
-			() => user_id,
-		);
+		const member = roomMembers2.use(() => `${room_id}:${user_id}`);
 
 		const m = member();
 		return ((m as any)?.membership === "Join" && (m as any)?.override_name) ??
@@ -154,8 +159,8 @@ const InputReply = (props: { thread: Channel; reply: Message }) => {
 
 export const Forum2 = (props: { channel: Channel }) => {
 	const ctx = useCtx();
-	const api = useApi();
 	const channels2 = useChannels2();
+	const threads2 = useThreads2();
 	const nav = useNavigate();
 	const [, modalctl] = useModals();
 	const room_id = () => props.channel.room_id!;
@@ -194,38 +199,31 @@ export const Forum2 = (props: { channel: Channel }) => {
 		}
 	});
 
-	const fetchMore = () => {
-		const filter = threadFilter();
-		if (filter === "active") {
-			return api.threads.listForChannel(forum_id);
-		} else if (filter === "archived") {
-			return api.threads.listArchivedForChannel(forum_id);
-		} else if (filter === "removed") {
-			return api.threads.listRemovedForChannel(forum_id);
-		}
-	};
+	// Call the appropriate hook based on filter at component level
+	const activeThreads = threads2.useListForChannel(forum_id);
+	const archivedThreads = threads2.useListArchivedForChannel(forum_id);
+	const removedThreads = threads2.useListRemovedForChannel(forum_id);
 
-	const threadsResource = createMemo(fetchMore);
+	const getThreadsList = () => {
+		const filter = threadFilter();
+		if (filter === "active") return activeThreads;
+		if (filter === "archived") return archivedThreads;
+		if (filter === "removed") return removedThreads;
+		return activeThreads;
+	};
 
 	const [bottom, setBottom] = createSignal<Element | undefined>();
 
-	createIntersectionObserver(
-		() => (bottom() ? [bottom()!] : []),
-		(entries) => {
-			for (const entry of entries) {
-				if (entry.isIntersecting) fetchMore();
-			}
-		},
-	);
+	// TODO: Implement proper pagination for threads
 
 	const getThreads = () => {
-		const items = threadsResource()?.()?.items;
-		if (!items) return [];
+		const list = getThreadsList()?.();
+		if (!list) return [];
+		const items = list.state.ids.map((id) => channels2.cache.get(id)).filter((
+			t,
+		): t is Channel => t !== undefined && t.parent_id === props.channel.id);
 		// sort descending by id
-		return [...items].filter((t) => t.parent_id === props.channel.id).sort((
-			a,
-			b,
-		) => {
+		return [...items].sort((a, b) => {
 			if (sortBy() === "new") {
 				return a.id < b.id ? 1 : -1;
 			} else if (sortBy() === "activity") {
@@ -522,8 +520,8 @@ export const Forum2 = (props: { channel: Channel }) => {
 };
 
 function EditorUserMention(props: { id: string }) {
-	const api = useApi();
-	const user = api.users.fetch(() => props.id);
+	const users2 = useUsers2();
+	const user = users2.use(() => props.id);
 	return <span class="mention-user">@{user()?.name ?? props.id}</span>;
 }
 
@@ -535,7 +533,6 @@ function EditorChannelMention(props: { id: string }) {
 
 export const Forum2Thread = (props: { channel: Channel }) => {
 	const ctx = useCtx();
-	const api = useApi();
 	const channels2 = useChannels2();
 	const messagesService = useMessages2();
 	const [ch, chUpdate] = useChannel()!;
@@ -1007,7 +1004,6 @@ function CommentEditor(
 	props: { message: Message; channel: Channel },
 ) {
 	const ctx = useCtx();
-	const api = useApi();
 	const messagesService = useMessages2();
 	const [ch, chUpdate] = useChannel()!;
 	const [draft, setDraft] = createSignal(
@@ -1121,7 +1117,7 @@ const Comment = (
 ) => {
 	const message = () => props.node.message;
 	const children = () => props.node.children;
-	const api = useApi();
+	const api2 = useApi2();
 	const [ch, chUpdate] = useChannel()!;
 
 	const collapsed = () => props.collapsed.has(message().id);
@@ -1185,7 +1181,7 @@ const Comment = (
 		},
 		async (data) => {
 			if (!data) return "(no content)";
-			return await api.stripMarkdownAndResolveMentions(
+			return await api2.stripMarkdownAndResolveMentions(
 				data.content,
 				data.channel_id,
 				data.mentions,

@@ -1,6 +1,6 @@
 // the context menu for messages
 
-import { useApi, useChannels2, useMessages2 } from "@/api";
+import { useApi2, useChannels2, useMessages2 } from "@/api";
 import { useCtx } from "../context.ts";
 import { Item, Menu, Separator } from "./Parts.tsx";
 import { useModals } from "../contexts/modal";
@@ -19,7 +19,7 @@ type MessageMenuProps = {
 
 export function MessageMenu(props: MessageMenuProps) {
 	const ctx = useCtx();
-	const api = useApi();
+	const api2 = useApi2();
 	const channels2 = useChannels2();
 	const messagesService = useMessages2();
 	const { markThreadRead } = useReadTracking();
@@ -80,7 +80,7 @@ export function MessageMenu(props: MessageMenuProps) {
 	function deleteMessage() {
 		modalCtl.confirm("really delete?", (conf) => {
 			if (!conf) return;
-			api.client.http.DELETE(
+			api2.client.http.DELETE(
 				"/api/v1/channel/{channel_id}/message/{message_id}",
 				{
 					params: {

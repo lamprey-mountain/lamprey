@@ -1,29 +1,29 @@
 import { For } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 
 export function ServerInfo() {
-	const api = useApi();
+	const api2 = useApi2();
 
 	const purgeCache = (target: string) => {
-		api.client.http.POST("/api/v1/admin/purge-cache", {
+		api2.client.http.POST("/api/v1/admin/purge-cache", {
 			body: { targets: [target as any] },
 		});
 	};
 
 	const gcDry = (target: string) => {
-		api.client.http.POST("/api/v1/admin/collect-garbage", {
+		api2.client.http.POST("/api/v1/admin/collect-garbage", {
 			body: { targets: [target as any], async: false, mode: "Dry" },
 		});
 	};
 
 	const gcMark = (target: string) => {
-		api.client.http.POST("/api/v1/admin/collect-garbage", {
+		api2.client.http.POST("/api/v1/admin/collect-garbage", {
 			body: { targets: [target as any], async: false, mode: "Mark" },
 		});
 	};
 
 	const gcSweep = (target: string) => {
-		api.client.http.POST("/api/v1/admin/collect-garbage", {
+		api2.client.http.POST("/api/v1/admin/collect-garbage", {
 			body: { targets: [target as any], async: false, mode: "Sweep" },
 		});
 	};

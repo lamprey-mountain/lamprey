@@ -7,7 +7,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi, useChannels2 } from "@/api";
+import { useApi2, useChannels2 } from "@/api";
 import type { Channel, Tag } from "sdk";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { usePermissions } from "../../../hooks/usePermissions.ts";
@@ -16,7 +16,7 @@ import icEdit from "../../../assets/edit.png";
 import icDelete from "../../../assets/delete.png";
 
 export function Tags(props: VoidProps<{ channel: Channel }>) {
-	const api = useApi();
+	const api2 = useApi2();
 	const channels2 = useChannels2();
 	const [, modalCtl] = useModals();
 	const currentUser = useCurrentUser();
@@ -27,7 +27,7 @@ export function Tags(props: VoidProps<{ channel: Channel }>) {
 	);
 
 	const [tags, { refetch }] = createResource(async () => {
-		const { data } = await api.client.http.GET(
+		const { data } = await api2.client.http.GET(
 			"/api/v1/channel/{channel_id}/tag",
 			{ params: { path: { channel_id: props.channel.id } } },
 		);

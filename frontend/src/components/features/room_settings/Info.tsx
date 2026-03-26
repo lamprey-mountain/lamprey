@@ -9,7 +9,7 @@ import { useCtx } from "../../../context.ts";
 import type { RoomT } from "../../../types.ts";
 import { getThumbFromId, getUrl } from "../../../media/util.tsx";
 import { createUpload } from "sdk";
-import { useApi, useChannels2 } from "@/api";
+import { useApi2, useChannels2 } from "@/api";
 import { Checkbox } from "../../../icons";
 import { useModals } from "../../../contexts/modal";
 import { RoomIcon } from "../../../User.tsx";
@@ -24,16 +24,16 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 
 	let avatarInputEl!: HTMLInputElement;
 
-	const api = useApi();
+	const api2 = useApi2();
 	const [roomIcon, setRoomIcon] = createSignal(props.room.icon);
 
 	const setAvatarFile = async (f: File) => {
 		await createUpload({
-			client: api.client,
+			client: api2.client,
 			file: f,
 			onComplete(media) {
 				setRoomIcon(media.id);
-				api.client.http.PATCH("/api/v1/room/{room_id}", {
+				api2.client.http.PATCH("/api/v1/room/{room_id}", {
 					params: { path: { room_id: props.room.id } },
 					body: { icon: media.id },
 				});
@@ -47,7 +47,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 
 	const removeAvatar = async () => {
 		setRoomIcon(null);
-		await api.client.http.PATCH("/api/v1/room/{room_id}", {
+		await api2.client.http.PATCH("/api/v1/room/{room_id}", {
 			params: { path: { room_id: props.room.id } },
 			body: { icon: null },
 		});
@@ -99,7 +99,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		if (description.trim() !== "") {
 			body.description = description;
 		}
-		ctx.client.http.PATCH("/api/v1/room/{room_id}", {
+		api2.client.http.PATCH("/api/v1/room/{room_id}", {
 			params: { path: { room_id: props.room.id } },
 			body,
 		});

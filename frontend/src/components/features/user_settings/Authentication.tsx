@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import { type User } from "sdk";
 import { useCtx } from "../../../context";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { useModals } from "../../../contexts/modal";
 import { Modal } from "../../../modals/mod";
 
@@ -60,21 +60,24 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 }
 
 function Email(_props: VoidProps<{ user: User }>) {
-	const api = useApi();
+	const api2 = useApi2();
 	const [, modalctl] = useModals();
 
 	// TODO: use props.user.emails when sync events are implemented
 	const [emails, { refetch }] = createResource(async () => {
-		const { data } = await api.client.http.GET("/api/v1/user/{user_id}/email", {
-			params: { path: { user_id: "@self" } },
-		});
+		const { data } = await api2.client.http.GET(
+			"/api/v1/user/{user_id}/email",
+			{
+				params: { path: { user_id: "@self" } },
+			},
+		);
 		return data;
 	});
 
 	function addEmail() {
 		modalctl.prompt("email?", (email: string | null) => {
 			if (!email) return;
-			api.client.http.PUT("/api/v1/user/{user_id}/email/{addr}", {
+			api2.client.http.PUT("/api/v1/user/{user_id}/email/{addr}", {
 				params: { path: { user_id: "@self", addr: email } },
 			}).then(refetch);
 		});
@@ -83,14 +86,14 @@ function Email(_props: VoidProps<{ user: User }>) {
 	function deleteEmail(email: string) {
 		modalctl.confirm("delete email?", (conf: boolean) => {
 			if (!conf) return;
-			api.client.http.DELETE("/api/v1/user/{user_id}/email/{addr}", {
+			api2.client.http.DELETE("/api/v1/user/{user_id}/email/{addr}", {
 				params: { path: { user_id: "@self", addr: email } },
 			}).then(refetch);
 		});
 	}
 
 	function resendVerification(email: string) {
-		api.client.http.POST(
+		api2.client.http.POST(
 			"/api/v1/user/{user_id}/email/{addr}/resend-verification",
 			{
 				params: { path: { user_id: "@self", addr: email } },
@@ -142,12 +145,12 @@ function Email(_props: VoidProps<{ user: User }>) {
 }
 
 function Oauth() {
-	const api = useApi();
+	const api2 = useApi2();
 
 	// TODO: dont use debug route for this
 	// add something to sync i guess
 	const [oauthProviders] = createResource(async () => {
-		const { data } = await api.client.http.GET("/api/v1/debug/info");
+		const { data } = await api2.client.http.GET("/api/v1/debug/info");
 		return (data && "features" in data && data.features &&
 				"oauth" in data.features &&
 				data.features.oauth && "providers" in data.features.oauth)
@@ -157,12 +160,12 @@ function Oauth() {
 
 	const [enabledOauthProviders, { refetch: refetchOauthProviders }] =
 		createResource(async () => {
-			const { data } = await api.client.http.GET("/api/v1/auth");
+			const { data } = await api2.client.http.GET("/api/v1/auth");
 			return data?.oauth_providers;
 		});
 
 	const connectOauth = async (id: string) => {
-		const url = await api.auth.oauthUrl(id);
+		const url = await api2.auth.oauthUrl(id);
 		const popup = globalThis.open(url, "oauth_popup");
 		// NOTE: do i want to open as a window?
 		// const popup = globalThis.open(url, "oauth_popup", "width=600,height=800");
@@ -198,7 +201,7 @@ function Oauth() {
 	};
 
 	const disconnectOauth = async (id: string) => {
-		await api.client.http.DELETE("/api/v1/auth/oauth/{provider}", {
+		await api2.client.http.DELETE("/api/v1/auth/oauth/{provider}", {
 			params: { path: { provider: id } },
 		});
 		refetchOauthProviders();

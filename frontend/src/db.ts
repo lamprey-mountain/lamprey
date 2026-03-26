@@ -16,7 +16,7 @@ import {
 	UserT,
 } from "./types.ts";
 import type { RevisionContent } from "@/api/services/DocumentsService.ts";
-import type { ThreadMember } from "sdk";
+import type { EmojiCustom, Invite, ThreadMember, Webhook } from "sdk";
 
 export interface ApiDB extends DBSchema {
 	user: {
@@ -64,6 +64,42 @@ export interface ApiDB extends DBSchema {
 		value: IDBMessageRange;
 		key: string;
 		indexes: { channel_id: string };
+	};
+	dm: {
+		value: ChannelT;
+		key: string;
+	};
+	invite: {
+		value: Invite;
+		key: string;
+	};
+	webhook: {
+		value: Webhook;
+		key: string;
+	};
+	emoji: {
+		value: EmojiCustom;
+		key: string;
+	};
+	notification: {
+		value: any;
+		key: string;
+	};
+	push: {
+		value: any;
+		key: string;
+	};
+	room_ban: {
+		value: any;
+		key: [string, string];
+	};
+	tag: {
+		value: any;
+		key: string;
+	};
+	audit_log: {
+		value: any;
+		key: string;
 	};
 }
 
@@ -121,6 +157,23 @@ export const migrations: Array<Migration> = [
 		migrate(db) {
 			const ranges = db.createObjectStore("message_ranges", { keyPath: "id" });
 			ranges.createIndex("channel_id", "channel_id");
+		},
+	},
+	{
+		description:
+			"add stores for DMs, invites, webhooks, emoji, and other resources",
+		migrate(db) {
+			db.createObjectStore("dm", { keyPath: "id" });
+			db.createObjectStore("invite", { keyPath: "code" });
+			db.createObjectStore("webhook", { keyPath: "id" });
+			db.createObjectStore("emoji", { keyPath: "id" });
+			db.createObjectStore("notification", { keyPath: "id" });
+			db.createObjectStore("push", { keyPath: "id" });
+			db.createObjectStore("room_ban", {
+				keyPath: ["room_id", "user_id"],
+			});
+			db.createObjectStore("tag", { keyPath: "id" });
+			db.createObjectStore("audit_log", { keyPath: "id" });
 		},
 	},
 ];

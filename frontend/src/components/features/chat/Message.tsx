@@ -20,7 +20,13 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { useApi, useChannels2, useMessages2 } from "@/api";
+import {
+	useApi2,
+	useChannels2,
+	useMessages2,
+	useRoomMembers2,
+	useUsers2,
+} from "@/api";
 import { useCtx } from "../../../context.ts";
 import { useMenu, useUserPopout } from "../../../contexts/mod.tsx";
 import { useModals } from "../../../contexts/modal";
@@ -287,7 +293,7 @@ export function MessageThread(
 }
 
 export function MessageView(props: MessageProps) {
-	const api = useApi();
+	const api2 = useApi2();
 	const channels2 = useChannels2();
 	const messagesService = useMessages2();
 	const ctx = useCtx();
@@ -735,7 +741,8 @@ export function MessageView(props: MessageProps) {
 			);
 		} else if (props.message.latest_version.type === "DefaultMarkdown") {
 			const [arrow_width, set_arrow_width] = createSignal(0);
-			const user = api.users.fetch(() => props.message.author_id);
+			const users2 = useUsers2();
+			const user = users2.use(() => props.message.author_id);
 			const set_w = (e: HTMLElement) => {
 				onMount(() => {
 					set_arrow_width(
@@ -924,7 +931,6 @@ type ReplyProps = {
 
 function ReplyView(props: ReplyProps) {
 	const ctx = useCtx();
-	const api = useApi();
 	const channels2 = useChannels2();
 	const messagesService = useMessages2();
 	const { setUserView } = useUserPopout();
@@ -1057,23 +1063,22 @@ export function AttachmentView(
 }
 
 export function Author(props: { message: Message; thread?: Channel }) {
-	const api = useApi();
+	const roomMembers2 = useRoomMembers2();
+	const users2 = useUsers2();
 	const { userView, setUserView } = useUserPopout();
-	const room_member = props.thread?.room_id
-		? api.room_members.fetch(
-			() => props.thread!.room_id!,
-			() => props.message.author_id,
-		)
-		: () => null;
-	const user = api.users.fetch(() => props.message.author_id);
+	const room_member = () =>
+		props.thread?.room_id
+			? roomMembers2.cache.get(
+				`${props.thread!.room_id!}:${props.message.author_id}`,
+			)
+			: null;
+	const user = () => users2.cache.get(props.message.author_id);
 
 	function name() {
 		let name;
-		const rm = room_member?.();
-		if (rm) name ??= rm.override_name;
+		if (room_member()) name ??= room_member()!.override_name;
 
-		const us = user();
-		name ??= us?.name;
+		if (user()) name ??= user()!.name;
 
 		return name;
 	}
@@ -1104,23 +1109,20 @@ export function Author(props: { message: Message; thread?: Channel }) {
 }
 
 function Actor(props: { user_id: string; thread: Channel }) {
-	const api = useApi();
-	const room_member = props.thread.room_id
-		? api.room_members.fetch(
-			() => props.thread.room_id!,
-			() => props.user_id,
-		)
-		: () => null;
-	const user = api.users.fetch(() => props.user_id);
+	const roomMembers2 = useRoomMembers2();
+	const users2 = useUsers2();
+	const room_member = () =>
+		props.thread.room_id
+			? roomMembers2.cache.get(`${props.thread.room_id!}:${props.user_id}`)
+			: null;
+	const user = () => users2.cache.get(props.user_id);
 
 	function name() {
 		let name;
 
-		const rm = room_member?.();
-		if (rm) name ??= rm.override_name;
+		if (room_member()) name ??= room_member()!.override_name;
 
-		const us = user();
-		name ??= us?.name;
+		if (user()) name ??= user()!.name;
 
 		return name;
 	}
@@ -1133,9 +1135,9 @@ function Actor(props: { user_id: string; thread: Channel }) {
 }
 
 export const MessageToolbar = (props: { message: Message }) => {
+	const api2 = useApi2();
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
-	const api = useApi();
 	const messagesService = useMessages2();
 	const [showReactionPicker, setShowReactionPicker] = createSignal(false);
 	let reactionButtonRef: HTMLButtonElement | undefined;
@@ -1147,6 +1149,19 @@ export const MessageToolbar = (props: { message: Message }) => {
 		return false;
 	};
 
+	const addReaction = (emoji: string) => {
+		const existing = props.message.reactions?.find((r) =>
+			areReactionKeysEqual(r.key, { type: "Text", content: emoji })
+		);
+		if (!existing || !existing.self) {
+			api2.reactions.add(
+				props.message.channel_id,
+				props.message.id,
+				`t:${emoji}`,
+			);
+		}
+	};
+
 	createEffect(() => {
 		if (showReactionPicker()) {
 			ctx.setPopout({
@@ -1156,16 +1171,7 @@ export const MessageToolbar = (props: { message: Message }) => {
 				props: {
 					selected: (emoji: string | null, keepOpen: boolean) => {
 						if (emoji) {
-							const existing = props.message.reactions?.find((r) =>
-								areReactionKeysEqual(r.key, { type: "Text", content: emoji })
-							);
-							if (!existing || !existing.self) {
-								api.reactions.add(
-									props.message.channel_id,
-									props.message.id,
-									`t:${emoji}`,
-								);
-							}
+							addReaction(emoji);
 						}
 						if (!keepOpen) setShowReactionPicker(false);
 					},

@@ -1,19 +1,20 @@
 import { createSignal, For, Show } from "solid-js";
-import { useApi } from "@/api";
+import { useInbox2 } from "@/api";
 import type { Channel, Message, Notification, Room } from "sdk";
 import { A } from "@solidjs/router";
 import { Time } from "./atoms/Time.tsx";
 import { MessageView } from "./components/features/chat/Message.tsx";
-import type { NotificationPagination } from "@/api/inbox.ts";
+import type { NotificationPagination } from "@/api/services/InboxService.ts";
 
 export const Inbox = () => {
-	const api = useApi();
+	const inbox2 = useInbox2();
 	const [params, setParams] = createSignal({
 		include_read: false,
 		room_id: [],
 		thread_id: [],
 	});
-	const [inboxItems, { refetch }] = api.inbox.list(params);
+	const inboxResult = inbox2.useList(params);
+	const inboxItems = inboxResult.resource;
 	const [selected, setSelected] = createSignal<string[]>([]);
 
 	const getMessageIdsFromNotifIds = (notifIds: string[]) => {
@@ -28,16 +29,16 @@ export const Inbox = () => {
 
 	const handleMarkSelectedRead = async () => {
 		if (selected().length === 0) return;
-		await api.inbox.markRead(getMessageIdsFromNotifIds(selected()));
+		await inbox2.markRead(getMessageIdsFromNotifIds(selected()));
 		setSelected([]);
-		refetch();
+		inboxResult.refetch();
 	};
 
 	const handleMarkSelectedUnread = async () => {
 		if (selected().length === 0) return;
-		await api.inbox.markUnread(getMessageIdsFromNotifIds(selected()));
+		await inbox2.markUnread(getMessageIdsFromNotifIds(selected()));
 		setSelected([]);
-		refetch();
+		inboxResult.refetch();
 	};
 
 	const toggleSelection = (notifId: string, isSelected: boolean) => {
@@ -101,7 +102,7 @@ export const Inbox = () => {
 								allData={inboxItems()}
 								selected={selected().includes(it.id)}
 								onSelect={toggleSelection}
-								refetch={refetch}
+								refetch={inboxResult.refetch}
 								include_read={params().include_read}
 							/>
 						)}
@@ -122,7 +123,7 @@ const NotificationItem = (
 		include_read: boolean;
 	},
 ) => {
-	const api = useApi();
+	const inbox2 = useInbox2();
 	const thread = () => {
 		const threadId = (props.notification as any).thread_id as
 			| string
@@ -142,12 +143,12 @@ const NotificationItem = (
 	};
 
 	const handleMarkRead = async () => {
-		await api.inbox.markRead([props.notification.message_id]);
+		await inbox2.markRead([props.notification.message_id]);
 		props.refetch();
 	};
 
 	const handleMarkUnread = async () => {
-		await api.inbox.markUnread([props.notification.message_id]);
+		await inbox2.markUnread([props.notification.message_id]);
 		props.refetch();
 	};
 

@@ -1,5 +1,6 @@
 import {
 	Client,
+	Message,
 	MessageEnvelope,
 	MessageReady,
 	MessageSync,
@@ -29,11 +30,22 @@ import { TagsService } from "../services/TagsService";
 import { ThreadsService } from "../services/ThreadsService";
 import { WebhooksService } from "../services/WebhooksService";
 import { AuditLogService } from "../services/AuditLogService";
+import { InboxService } from "../services/InboxService";
+import { DocumentsService } from "../services/DocumentsService";
 import { Emitter } from "@solid-primitives/event-bus";
 import type { IDBPDatabase } from "idb";
+import { ReactiveMap } from "@solid-primitives/map";
+import type { UserWithRelationship, VoiceState } from "sdk";
+import {
+	stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal,
+} from "../../notification-util.ts";
 
 export class RootStore {
 	client: Client;
+	private _events: Emitter<{
+		sync: [MessageSync, MessageEnvelope];
+		ready: MessageReady;
+	}>;
 	rooms: RoomsService;
 	channels: ChannelsService;
 	users: UsersService;
@@ -56,6 +68,10 @@ export class RootStore {
 	threads: ThreadsService;
 	webhooks: WebhooksService;
 	auditLog: AuditLogService;
+	inbox: InboxService;
+	documents: DocumentsService;
+	voiceStates: ReactiveMap<string, VoiceState>;
+	typing: ReactiveMap<string, Set<string>>;
 
 	session: Accessor<Session | null>;
 	setSession: (s: Session | null) => void;
@@ -63,6 +79,48 @@ export class RootStore {
 	preferences?: Accessor<Preferences>;
 	setPreferences?: (p: Preferences) => void;
 	setServerPreferences?: (p: Preferences) => void;
+
+	// Backwards compatibility aliases
+	get room_members() {
+		return this.roomMembers;
+	}
+	get thread_members() {
+		return this.threadMembers;
+	}
+	get room_bans() {
+		return this.roomBans;
+	}
+	get audit_logs() {
+		return this.auditLog;
+	}
+	get room_analytics() {
+		return this.roomAnalytics;
+	}
+	get voiceState(): VoiceState | null {
+		const session = this.session();
+		if (!session || session.status === "Unauthorized") return null;
+		const userId = (session as any).user_id;
+		if (!userId) return null;
+		return this.voiceStates.get(userId) ?? null;
+	}
+
+	stripMarkdownAndResolveMentions(
+		content: string,
+		thread_id: string,
+		mentions?: Message["latest_version"]["mentions"],
+	): Promise<string> {
+		return stripMarkdownAndResolveMentionsOriginal(
+			content,
+			thread_id,
+			this,
+			mentions,
+		);
+	}
+
+	// Backwards compatibility - events are accessed via store directly
+	get events() {
+		return this._events;
+	}
 
 	constructor(
 		client: Client,
@@ -76,6 +134,7 @@ export class RootStore {
 		getDb?: () => IDBPDatabase<unknown> | undefined,
 	) {
 		this.client = client;
+		this._events = events;
 		this.preferences = preferences;
 		this.setPreferences = setPreferences;
 		this.setServerPreferences = setServerPreferences;
@@ -106,14 +165,44 @@ export class RootStore {
 		this.threads = new ThreadsService(this, getDb);
 		this.webhooks = new WebhooksService(this, getDb);
 		this.auditLog = new AuditLogService(this, getDb);
+		this.inbox = new InboxService(this, getDb);
+		this.documents = new DocumentsService(this, getDb);
+		this.voiceStates = new ReactiveMap();
+		this.typing = new ReactiveMap();
 
-		events.on("sync", ([msg, raw]) => this.handleSync(msg, raw));
-		events.on("ready", (msg) => this.handleReady(msg));
+		this._events.on("sync", ([msg, raw]) => this.handleSync(msg, raw));
+		this._events.on("ready", (msg) => this.handleReady(msg));
 	}
 
 	handleReady(msg: MessageReady) {
+		storeLog.info("Ready message received", {
+			session: msg.session,
+			has_user: !!msg.user,
+			user_id: msg.user?.id,
+		});
 		this.setSession(msg.session);
 		if (msg.user) {
+			// Set @self alias first using session user_id
+			const userId = (msg.session as any)?.user_id;
+			storeLog.debug("Setting @self alias", {
+				userId,
+				session_user_id: (msg.session as any)?.user_id,
+			});
+			if (userId) {
+				const userWithRelationship: UserWithRelationship = {
+					...msg.user,
+					relationship: {
+						note: null,
+						relation: null,
+						petname: null,
+					},
+				};
+				this.users.cache.set("@self", userWithRelationship);
+				storeLog.info("@self alias set", {
+					"@self": this.users.cache.get("@self"),
+					cache_size: this.users.cache.size,
+				});
+			}
 			this.users.upsert(msg.user);
 		}
 	}
@@ -233,6 +322,12 @@ export class RootStore {
 			}
 		} else if (msg.type === "MemberListSync") {
 			this.memberLists.handleSync(msg);
+		} else if (msg.type === "VoiceState") {
+			if (msg.state) {
+				this.voiceStates.set(msg.user_id, msg.state);
+			} else {
+				this.voiceStates.delete(msg.user_id);
+			}
 		}
 	}
 }

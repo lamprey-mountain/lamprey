@@ -6,12 +6,11 @@ import { ReactiveMap } from "@solid-primitives/map";
 import { createResource } from "solid-js";
 import * as i18n from "@solid-primitives/i18n";
 import type en from "../i18n/en.tsx";
-import { createApi } from "@/api";
 import { useMouseTracking } from "./useMouseTracking.ts";
 import { SlashCommands } from "../contexts/slash-commands";
 import { registerDefaultSlashCommands } from "../default-slash-commands.ts";
 import { useLocation } from "@solidjs/router";
-import type { ChatCtx, Data, Events, MediaCtx } from "../context.ts";
+import type { ChatCtx, Data, Events, MediaCtx, Popout } from "../context.ts";
 import type { ThreadsViewData } from "../context.ts";
 import type { Config } from "../config.tsx";
 import { flags } from "../flags.ts";
@@ -133,7 +132,6 @@ export function useChatClient(config: Config) {
 		setServerPreferences,
 		() => db() as IDBPDatabase<unknown> | undefined,
 	);
-	const api = createApi(client, events, { preferences, setPreferences, store });
 
 	const cs = from(client.state);
 	createEffect(() => {
@@ -166,8 +164,8 @@ export function useChatClient(config: Config) {
 
 	createEffect(() => {
 		const config = preferences();
-		if (!api.preferencesLoaded() || !config) return;
-		if (api.session()?.status !== "Authorized") return;
+		if (!store.preferences || !config) return;
+		if (store.session()?.status !== "Authorized") return;
 
 		localStorage.setItem("preferences", JSON.stringify(config));
 
@@ -176,7 +174,7 @@ export function useChatClient(config: Config) {
 		if (
 			!serverPrefs || JSON.stringify(config) !== JSON.stringify(serverPrefs)
 		) {
-			api.users.setPreferences(config);
+			store.users.setPreferences(config);
 		}
 	});
 
@@ -215,7 +213,7 @@ export function useChatClient(config: Config) {
 		channel_contexts: new ReactiveMap(),
 		room_contexts: new ReactiveMap(),
 		document_contexts: new ReactiveMap(),
-		api,
+		store,
 	};
 
 	createEffect(() => {
@@ -237,17 +235,17 @@ export function useChatClient(config: Config) {
 		if (TOKEN) {
 			client.start(TOKEN);
 		} else {
-			api.tempCreateSession();
+			store.tempCreateSession();
 		}
 	});
 
 	if (!client.opts.token) {
 		queueMicrotask(() => {
-			api.tempCreateSession();
+			store.tempCreateSession();
 		});
 	}
 
-	api.ctx = ctx;
+	store.ctx = ctx;
 
-	return { client, api, ctx, preferences, setPreferences, store };
+	return { client, ctx, preferences, setPreferences, store };
 }

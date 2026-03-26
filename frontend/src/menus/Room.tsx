@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import { createResource, createSignal, Show } from "solid-js";
 import { timeAgo } from "../atoms/Time.tsx";
-import { useApi, useRooms2 } from "@/api";
+import { useApi2, useRooms2 } from "@/api";
 import { useCtx } from "../context.ts";
 import { usePermissions } from "../hooks/usePermissions.ts";
 import { useModals } from "../contexts/modal";
@@ -13,10 +13,10 @@ import { useCurrentUser } from "../contexts/currentUser.tsx";
 // the context menu for rooms
 export function RoomMenu(props: { room_id: string }) {
 	const ctx = useCtx();
-	const api = useApi();
-	const api2 = useRooms2();
+	const api2 = useApi2();
+	const rooms2 = useRooms2();
 	const nav = useNavigate();
-	const room = api2.use(() => props.room_id);
+	const room = rooms2.use(() => props.room_id);
 	const [, modalctl] = useModals();
 
 	const currentUser = useCurrentUser();
@@ -55,7 +55,7 @@ export function RoomMenu(props: { room_id: string }) {
 
 	return (
 		<Menu>
-			<Item onClick={() => api.rooms.markRead(props.room_id)}>
+			<Item onClick={() => rooms2.markRead(props.room_id)}>
 				mark as read
 			</Item>
 			<Item onClick={copyLink}>copy link</Item>
@@ -115,8 +115,8 @@ export function RoomMenu(props: { room_id: string }) {
 }
 
 function RoomNotificationMenu(props: { room: import("sdk").Room }) {
-	const api = useApi();
-	const api2 = useRooms2();
+	const api2 = useApi2();
+	const rooms2 = useRooms2();
 	const roomConfig = () => props.room.preferences;
 
 	const setNotifs = (notifs: Partial<import("sdk").NotifsRoom>) => {
@@ -128,11 +128,11 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 			...current,
 			notifs: { ...current.notifs, ...notifs },
 		};
-		api2.cache.set(props.room.id, {
+		rooms2.cache.set(props.room.id, {
 			...props.room,
 			preferences: newConfig as any,
 		});
-		api.client.http.PUT("/api/v1/preferences/room/{room_id}", {
+		api2.client.http.PUT("/api/v1/preferences/room/{room_id}", {
 			params: { path: { room_id: props.room.id } },
 			body: newConfig as any,
 		});

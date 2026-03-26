@@ -10,7 +10,7 @@ import icEmojiObjects from "../assets/emoji-objects.png";
 import icEmojiPeople from "../assets/emoji-people.png";
 import icEmojiPlaces from "../assets/emoji-places.png";
 import icEmojiSymbols from "../assets/emoji-symbols.png";
-import { useApi, useRooms2 } from "@/api";
+import { useApi2, useEmoji2, useRooms2 } from "@/api";
 import { getThumbFromId } from "../media/util";
 import { RoomIcon } from "../User";
 import type { EmojiCustom, Room } from "sdk";
@@ -113,23 +113,24 @@ type EmojiPickerProps = {
 };
 
 export const EmojiPicker = (props: EmojiPickerProps) => {
-	const api = useApi();
-	const api2 = useRooms2();
+	const api2 = useApi2();
+	const rooms2 = useRooms2();
+	const emoji2 = useEmoji2();
 	const [search, setSearch] = createSignal("");
 	const [hover, setHover] = createSignal<UnifiedEmoji>();
 
-	const rooms = api2.useList();
+	const rooms = rooms2.useList();
 	const standardGroups = createMemo(() => parseEmoji());
 
 	const [customGroupsResource] = createResource(
 		() => rooms.ids,
 		async (roomIds) => {
-			await api.emoji.listAllCustom(roomIds);
+			await emoji2.listAllCustom(roomIds);
 			return roomIds
-				.map((id) => api2.get(id))
+				.map((id) => rooms2.cache.get(id))
 				.filter((r): r is Room => r !== undefined)
 				.map((room) => {
-					const emojis = [...api.emoji.cache.values()].filter((e) => {
+					const emojis = [...emoji2.cache.values()].filter((e) => {
 						if (e.owner?.owner === "Room") {
 							return e.owner.room_id === room.id;
 						}

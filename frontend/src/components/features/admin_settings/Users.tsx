@@ -1,5 +1,5 @@
-import { createSignal, For, Show } from "solid-js";
-import { useApi } from "@/api";
+import { createMemo, createSignal, For, Show } from "solid-js";
+import { useUsers2 } from "@/api";
 import { Avatar } from "../../../User.tsx";
 import { Time } from "../../../atoms/Time.tsx";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
@@ -11,13 +11,11 @@ import { UserMenu } from "../../../menus/User.tsx";
 export function Users() {
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
-	const api = useApi();
-	const users = api.users.list();
+	const users2 = useUsers2();
+	const users = createMemo(() => [...users2.cache.values()]);
 
 	const fetchMore = () => {
-		if (users()?.has_more) {
-			api.users.list();
-		}
+		// Users are loaded from cache, no pagination needed
 	};
 
 	const [bottom, setBottom] = createSignal<Element | undefined>();
@@ -38,9 +36,9 @@ export function Users() {
 				<div class="name">name</div>
 				<div class="joined">registered</div>
 			</header>
-			<Show when={users()}>
+			<Show when={users().length > 0}>
 				<ul>
-					<For each={users()!.items}>
+					<For each={users()}>
 						{(user) => (
 							<li>
 								<div class="profile">

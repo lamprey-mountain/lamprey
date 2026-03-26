@@ -2,7 +2,7 @@ import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { useCtx } from "../../../context.ts";
 import { createTooltip } from "../../../atoms/Tooltip.tsx";
 import type { Message } from "sdk";
-import { useApi } from "@/api";
+import { useReactions2 } from "@/api";
 import icReactionAdd from "../../../assets/reaction-add.png";
 import { renderReactionKey } from "../../../emoji";
 
@@ -12,7 +12,7 @@ type ReactionsProps = {
 
 export const Reactions = (props: ReactionsProps) => {
 	const ctx = useCtx();
-	const api = useApi();
+	const reactions2 = useReactions2();
 	const [showPicker, setShowPicker] = createSignal(false);
 	let addEl: HTMLDivElement | undefined;
 
@@ -35,9 +35,9 @@ export const Reactions = (props: ReactionsProps) => {
 	const handleClick = (key: any, self: boolean) => {
 		const param = reactionKeyToParam(key);
 		if (self) {
-			api.reactions.delete(props.message.channel_id, props.message.id, param);
+			reactions2.remove(props.message.channel_id, props.message.id, param);
 		} else {
-			api.reactions.add(props.message.channel_id, props.message.id, param);
+			reactions2.add(props.message.channel_id, props.message.id, param);
 		}
 	};
 
@@ -55,7 +55,7 @@ export const Reactions = (props: ReactionsProps) => {
 								r.key.type === "Text" && r.key.content === emoji
 							);
 							if (!existing || !existing.self) {
-								api.reactions.add(
+								reactions2.add(
 									props.message.channel_id,
 									props.message.id,
 									`t:${emoji}`,

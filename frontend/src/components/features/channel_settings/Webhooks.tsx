@@ -7,7 +7,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi, useChannels2 } from "@/api";
+import { useApi2, useChannels2, useUsers2 } from "@/api";
 import { useCtx } from "../../../context.ts";
 import type { Channel } from "sdk";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
@@ -23,13 +23,14 @@ import { useModals } from "../../../contexts/modal";
 import fuzzysort from "fuzzysort";
 
 export function Webhooks(props: VoidProps<{ channel: Channel }>) {
-	const api = useApi();
+	const api2 = useApi2();
+	const users2 = useUsers2();
 	const config = useConfig();
 	const channels2 = useChannels2();
 	const [, modalCtl] = useModals();
 
 	const [webhooks, { refetch }] = createResource(async () => {
-		const { data } = await api.client.http.GET(
+		const { data } = await api2.client.http.GET(
 			"/api/v1/channel/{channel_id}/webhook",
 			{ params: { path: { channel_id: props.channel.id } } },
 		);
@@ -41,7 +42,7 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 			"Are you sure you want to delete this webhook?",
 			(conf) => {
 				if (!conf) return;
-				api.client.http.DELETE(
+				api2.client.http.DELETE(
 					"/api/v1/webhook/{webhook_id}",
 					{ params: { path: { webhook_id } } },
 				).then(() => {
@@ -78,7 +79,7 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 	const create = () => {
 		modalCtl.prompt("New webhook name?", async (name) => {
 			if (!name) return;
-			await api.client.http.POST("/api/v1/channel/{channel_id}/webhook", {
+			await api2.client.http.POST("/api/v1/channel/{channel_id}/webhook", {
 				params: { path: { channel_id: props.channel.id } },
 				body: {
 					name,
@@ -106,7 +107,7 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 				<ul>
 					<For each={filteredWebhooks()}>
 						{(i) => {
-							const creator = api.users.fetch(() => i.creator_id as string);
+							const creator = users2.use(() => i.creator_id as string);
 							const [name, setName] = createSignal(i.name);
 							const [avatar, setAvatar] = createSignal<
 								string | null | undefined
@@ -139,7 +140,7 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 								console.log(channel_id);
 								if (!channel_id) return;
 								return;
-								await api.client.http.PATCH("/api/v1/webhook/{webhook_id}", {
+								await api2.client.http.PATCH("/api/v1/webhook/{webhook_id}", {
 									params: { path: { webhook_id: i.id } },
 									body: {
 										name: name(),
@@ -155,11 +156,11 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 
 							const setAvatarFile = async (f: File) => {
 								await createUpload({
-									client: api.client,
+									client: api2.client,
 									file: f,
 									onComplete(media) {
 										setAvatar(media.id);
-										api.client.http.PATCH("/api/v1/webhook/{webhook_id}", {
+										api2.client.http.PATCH("/api/v1/webhook/{webhook_id}", {
 											params: { path: { webhook_id: i.id } },
 											body: {
 												avatar: media.id,
@@ -175,7 +176,7 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 
 							const removeAvatar = async () => {
 								setAvatar(null);
-								await api.client.http.PATCH("/api/v1/webhook/{webhook_id}", {
+								await api2.client.http.PATCH("/api/v1/webhook/{webhook_id}", {
 									params: { path: { webhook_id: i.id } },
 									body: {
 										avatar: null,

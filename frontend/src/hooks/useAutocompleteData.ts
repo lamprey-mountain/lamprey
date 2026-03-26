@@ -1,6 +1,14 @@
 import { createEffect, createMemo, createSignal } from "solid-js";
 import { useAutocomplete } from "../contexts/autocomplete";
-import { useApi, useApi2, useChannels2, useRoles2 } from "@/api";
+import {
+	useApi2,
+	useChannels2,
+	useEmoji2,
+	useRoles2,
+	useRoomMembers2,
+	useThreadMembers2,
+	useUsers2,
+} from "@/api";
 import { go } from "fuzzysort";
 import { type Channel, type EmojiCustom, type User } from "sdk";
 import type { Role } from "sdk";
@@ -11,10 +19,14 @@ import { useCurrentUser } from "../contexts/currentUser";
 import type { AutocompleteMentionItem } from "../contexts/autocomplete";
 
 export const useAutocompleteData = () => {
-	const api = useApi();
+	const api2 = useApi2();
 	const channels2 = useChannels2();
 	const store = useApi2();
 	const rolesApi = useRoles2();
+	const threadMembers2 = useThreadMembers2();
+	const roomMembers2 = useRoomMembers2();
+	const users2 = useUsers2();
+	const emoji2 = useEmoji2();
 	const currentUser = useCurrentUser();
 	const { state, setResults } = useAutocomplete();
 
@@ -47,9 +59,9 @@ export const useAutocompleteData = () => {
 			const channel = channels2.cache.get(kind.channelId);
 			const roomId = kind.roomId ?? channel?.room_id;
 
-			const threadMembers = api.thread_members.list(() => kind.channelId)();
+			const threadMembers = threadMembers2.useList(() => kind.channelId)();
 			const roomMembers = roomId
-				? api.room_members.list(() => roomId)()
+				? roomMembers2.useList(() => roomId)()
 				: undefined;
 
 			const userIds = new Set<string>();
@@ -58,7 +70,7 @@ export const useAutocompleteData = () => {
 
 			// Build user list from cache or use member data as fallback
 			const users = [...userIds].map((id) => {
-				const cachedUser = api.users.cache.get(id);
+				const cachedUser = users2.cache.get(id);
 				if (cachedUser && cachedUser.id) {
 					return cachedUser;
 				}
@@ -95,7 +107,7 @@ export const useAutocompleteData = () => {
 			const combined: (EmojiCustom | EmojiData)[] = [];
 			if (roomId) {
 				// Get custom emoji from cache for this room
-				const roomEmoji = [...api.emoji.cache.values()].filter(
+				const roomEmoji = [...emoji2.cache.values()].filter(
 					(e) => e.owner?.owner === "Room" && e.owner.room_id === roomId,
 				);
 				combined.push(...roomEmoji);
@@ -113,7 +125,7 @@ export const useAutocompleteData = () => {
 			const filteredCommands = allCommands.filter((cmd) => {
 				if (cmd.canUse) {
 					return cmd.canUse(
-						api,
+						api2,
 						channel?.room_id ?? undefined,
 						channel!,
 						store,

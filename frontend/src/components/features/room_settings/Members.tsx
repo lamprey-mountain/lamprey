@@ -1,13 +1,14 @@
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
 import {
 	createEffect,
+	createMemo,
 	createSignal,
 	For,
 	onCleanup,
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
 import { useCtx } from "../../../context.ts";
 import { useMenu } from "../../../contexts/mod.tsx";
 import type { RoomT } from "../../../types.ts";
@@ -23,8 +24,21 @@ import { useModals } from "../../../contexts/modal";
 export function Members(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
-	const api = useApi();
-	const members = api.room_members.list(() => props.room.id);
+	const api2 = useApi2();
+	const roomMembers2 = useRoomMembers2();
+	const users2 = useUsers2();
+	const roles2 = useRoles2();
+
+	// Get member IDs for this room from cache
+	const memberIds = createMemo(() => {
+		const ids: string[] = [];
+		for (const [key] of roomMembers2.cache.entries()) {
+			if (key.startsWith(`${props.room.id}:`)) {
+				ids.push(key);
+			}
+		}
+		return ids;
+	});
 
 	const editRolesClear = () => setEditRoles();
 	document.addEventListener("click", editRolesClear);
@@ -34,22 +48,21 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 		const [, modalCtl] = useModals();
 		modalCtl.confirm("really remove?", (conf) => {
 			if (!conf) return;
-			api.client.http.DELETE(
+			api2.client.http.DELETE(
 				"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 				{ params: { path: { room_id: props.room.id, role_id, user_id } } },
 			);
 		});
 	};
 
-	const fetchMore = () => {
-		api.room_members.list(() => props.room.id);
-	};
-
 	const [bottom, setBottom] = createSignal<Element | undefined>();
 
 	createIntersectionObserver(() => bottom() ? [bottom()!] : [], (entries) => {
 		for (const entry of entries) {
-			if (entry.isIntersecting) fetchMore();
+			if (entry.isIntersecting) {
+				// Trigger a re-fetch by accessing the cache
+				roomMembers2.cache.size;
+			}
 		}
 	});
 
@@ -64,11 +77,13 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 				<div class="name">name</div>
 				<div class="joined">joined</div>
 			</header>
-			<Show when={members()}>
+			<Show when={memberIds().length > 0}>
 				<ul>
-					<For each={members()!.items}>
-						{(i) => {
-							const user = api.users.fetch(() => i.user_id);
+					<For each={memberIds()}>
+						{(id) => {
+							const i = roomMembers2.cache.get(id);
+							if (!i) return null;
+							const user = users2.use(() => i.user_id);
 							const name = () => (i.override_name ?? user()?.name);
 							return (
 								<li>
@@ -79,16 +94,13 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 											<ul class="roles">
 												<For each={i.roles}>
 													{(role_id) => {
-														const role = api.roles.fetch(
-															() => props.room.id,
-															() => role_id,
-														);
+														const role = roles2.cache.get(role_id);
 														return (
 															<li>
 																<button
 																	onClick={removeRole(i.user_id, role_id)}
 																>
-																	{role()?.name ?? "unknown role"}
+																	{role?.name ?? "unknown role"}
 																</button>
 															</li>
 														);
@@ -162,12 +174,10 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 const EditRoles = (
 	props: { x: number; y: number; user_id: string; room: RoomT },
 ) => {
-	const api = useApi();
-	const roles = api.roles.list(() => props.room.id);
-	const member = api.room_members.fetch(
-		() => props.room.id,
-		() => props.user_id,
-	);
+	const api2 = useApi2();
+	const roles2 = useRoles2();
+	const roomMembers2 = useRoomMembers2();
+	const member = roomMembers2.cache.get(`${props.room.id}:${props.user_id}`);
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
 	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
 
@@ -197,9 +207,9 @@ const EditRoles = (
 	const handleChecked =
 		(r: Role) => (e: InputEvent & { target: HTMLInputElement }) => {
 			const role_id = r.id;
-			const user_id = member()!.user_id;
+			const user_id = member!.user_id;
 			if (e.target!.checked) {
-				api.client.http.PUT(
+				api2.client.http.PUT(
 					"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 					{
 						params: {
@@ -212,7 +222,7 @@ const EditRoles = (
 					},
 				);
 			} else {
-				api.client.http.DELETE(
+				api2.client.http.DELETE(
 					"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 					{
 						params: {
@@ -228,7 +238,9 @@ const EditRoles = (
 		};
 
 	const getRoles = () =>
-		(roles()?.items ?? []).filter((r) => r.id !== r.room_id);
+		[...roles2.cache.values()].filter((r) =>
+			r.room_id === props.room.id && r.id !== r.room_id
+		);
 
 	const currentUser = useCurrentUser();
 	const self_id = () => currentUser()?.id;
@@ -249,24 +261,27 @@ const EditRoles = (
 			onClick={(e) => e.stopImmediatePropagation()}
 		>
 			<For each={getRoles()}>
-				{(r) => (
-					<label
-						classList={{ disabled: r.position >= permissions().rank }}
-					>
-						<input
-							type="checkbox"
-							checked={member()!.roles.includes(r.id)}
-							onInput={handleChecked(r)}
-							disabled={r.position >= permissions().rank}
-						/>
-						<div>
-							<div classList={{ has: member()!.roles.includes(r.id) }}>
-								{r.name}
+				{(r) => {
+					const memberRoles = member?.roles ?? [];
+					return (
+						<label
+							classList={{ disabled: r.position >= permissions().rank }}
+						>
+							<input
+								type="checkbox"
+								checked={memberRoles.includes(r.id)}
+								onInput={handleChecked(r)}
+								disabled={r.position >= permissions().rank}
+							/>
+							<div>
+								<div classList={{ has: memberRoles.includes(r.id) }}>
+									{r.name}
+								</div>
+								<div class="dim">{r.description}</div>
 							</div>
-							<div class="dim">{r.description}</div>
-						</div>
-					</label>
-				)}
+						</label>
+					);
+				}}
 			</For>
 		</menu>
 	);

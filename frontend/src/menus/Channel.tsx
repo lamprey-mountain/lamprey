@@ -1,5 +1,5 @@
 import { useNavigate } from "@solidjs/router";
-import { useApi, useChannels2 } from "@/api";
+import { useApi2, useChannels2, useTags2, useThreadMembers2 } from "@/api";
 import { useCtx } from "../context.ts";
 import { usePermissions } from "../hooks/usePermissions.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
@@ -22,8 +22,10 @@ import { useCurrentUser } from "../contexts/currentUser.tsx";
 // the context menu for channels
 export function ChannelMenu(props: { channel_id: string }) {
 	const ctx = useCtx();
-	const api = useApi();
+	const api2 = useApi2();
 	const channels2 = useChannels2();
+	const threadMembers2 = useThreadMembers2();
+	const tags2 = useTags2();
 	const { markThreadRead, markCategoryRead } = useReadTracking();
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
@@ -46,7 +48,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 		channel()?.type === "ThreadPublic" || channel()?.type === "ThreadPrivate" ||
 		channel()?.type === "ThreadForum2";
 
-	const self_channel_member = api.thread_members.fetch(
+	const self_channel_member = threadMembers2.use(
 		() => props.channel_id,
 		self_id,
 	);
@@ -141,7 +143,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 	}, async (forumId) => {
 		if (!forumId) return [];
 		try {
-			const result = await api.tags.list(forumId, false);
+			const result = await tags2.list(forumId, false);
 			return result.items;
 		} catch (e) {
 			console.error("Failed to fetch tags:", e);
@@ -162,7 +164,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 			}
 			try {
 				// FIXME: throttle
-				const result = await api.tags.search(forumId, query, false);
+				const result = await tags2.search(forumId, query, false);
 				return result.items;
 			} catch (e) {
 				console.error("Failed to search tags:", e);
@@ -302,7 +304,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 }
 
 function ChannelNotificationMenu(props: { channel: Channel }) {
-	const api = useApi();
+	const api2 = useApi2();
 	const channels2 = useChannels2();
 	const channelConfig = () => props.channel.preferences;
 
@@ -323,7 +325,7 @@ function ChannelNotificationMenu(props: { channel: Channel }) {
 			...props.channel,
 			preferences: newConfig as any,
 		});
-		api.client.http.PUT("/api/v1/preferences/channel/{thread_id}" as any, {
+		api2.client.http.PUT("/api/v1/preferences/channel/{thread_id}" as any, {
 			params: { path: { thread_id: (props.channel as any).id } },
 			body: newConfig as any,
 		});

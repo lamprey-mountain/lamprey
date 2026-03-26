@@ -1,6 +1,14 @@
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
-import { useApi, useChannels2, useMessages2, useRoles2 } from "@/api";
+import {
+	useApi2,
+	useChannels2,
+	useMessages2,
+	useRoles2,
+	useRoomMembers2,
+	useThreadMembers2,
+	useUsers2,
+} from "@/api";
 import { useCtx } from "../../../context";
 import type { RoomT, ThreadT } from "../../../types";
 import type { ChannelSearch } from "../../../context";
@@ -315,14 +323,10 @@ const AutocompleteDropdown = (props: {
 	onSelect: (node: Node) => void;
 	onSelectFilter: (text: string) => void;
 }) => {
-	const api = useApi();
 	const channels2 = useChannels2();
-	const threadMembers = api.thread_members.list(
-		() => (props.channel?.id as any),
-	);
-	const roomMembers = api.room_members.list(() =>
-		(props.channel?.room_id as any) ?? props.room?.id ?? ""
-	);
+	const threadMembers2 = useThreadMembers2();
+	const roomMembers2 = useRoomMembers2();
+	const users2 = useUsers2();
 	const roomThreads = () =>
 		[...channels2.cache.values()].filter(
 			(c) =>
@@ -334,15 +338,31 @@ const AutocompleteDropdown = (props: {
 		[...roles.cache.values()].filter((r) => r.room_id === roomId())
 	);
 
+	const threadMemberIds = () => {
+		const threadId = props.channel?.id as any;
+		if (!threadId) return [];
+		return [...threadMembers2.cache.entries()]
+			.filter(([key]) => key.startsWith(`${threadId}:`))
+			.map(([, member]) => member.user_id);
+	};
+
+	const roomMemberIds = () => {
+		const rid = (props.channel?.room_id as any) ?? props.room?.id ?? "";
+		if (!rid) return [];
+		return [...roomMembers2.cache.entries()]
+			.filter(([key]) => key.startsWith(`${rid}:`))
+			.map(([, member]) => member.user_id);
+	};
+
 	const authorSuggestions = createMemo(() => {
 		const query = props.filter.query.toLowerCase();
-		const tm = threadMembers()?.items.map((m) => m.user_id) ?? [];
-		const rm = roomMembers()?.items.map((m) => m.user_id) ?? [];
+		const tm = threadMemberIds();
+		const rm = roomMemberIds();
 		const all_user_ids = [...new Set([...tm, ...rm])];
 
 		if (!query) return all_user_ids.slice(0, 10);
 
-		const users = all_user_ids.map((id) => api.users.cache.get(id)).filter(
+		const users = all_user_ids.map((id) => users2.cache.get(id)).filter(
 			Boolean,
 		) as User[];
 		return users
@@ -357,7 +377,7 @@ const AutocompleteDropdown = (props: {
 
 	const threadSuggestions = createMemo(() => {
 		const query = props.filter.query.toLowerCase();
-		const threads = roomThreads()?.items ?? [];
+		const threads = roomThreads() ?? [];
 		if (!query) return threads.slice(0, 10);
 		return threads
 			.filter(
@@ -397,11 +417,11 @@ const AutocompleteDropdown = (props: {
 	const mentionsSuggestions = createMemo(() => {
 		const query = props.filter.query.toLowerCase();
 
-		const tm = threadMembers()?.items.map((m) => m.user_id) ?? [];
-		const rm = roomMembers()?.items.map((m) => m.user_id) ?? [];
+		const tm = threadMemberIds();
+		const rm = roomMemberIds();
 		const all_user_ids = [...new Set([...tm, ...rm])];
 		const users = (
-			all_user_ids.map((id) => api.users.cache.get(id)).filter(
+			all_user_ids.map((id) => users2.cache.get(id)).filter(
 				Boolean,
 			) as User[]
 		)
@@ -435,7 +455,7 @@ const AutocompleteDropdown = (props: {
 	});
 
 	const onAuthorSelect = (user_id: string) => {
-		const user = api.users.cache.get(user_id);
+		const user = users2.cache.get(user_id);
 		if (!user) return;
 		const node = schema.nodes.author.create({ id: user.id, name: user.name });
 		props.onSelect(node);
@@ -518,7 +538,7 @@ const AutocompleteDropdown = (props: {
 					<ul>
 						<For each={authorSuggestions()}>
 							{(user_id) => {
-								const user = api.users.cache.get(user_id);
+								const user = users2.cache.get(user_id);
 								return (
 									<li
 										class="autocomplete-item"
@@ -703,7 +723,8 @@ function autocompletePlugin(
 export const SearchInput = (
 	props: { channel?: ThreadT; room?: RoomT; autofocus?: boolean },
 ) => {
-	const api = useApi();
+	const api2 = useApi2();
+	const users2 = useUsers2();
 	const messagesService = useMessages2();
 	const [dropdownRef, setDropdownRef] = createSignal<HTMLDivElement>();
 	const [activeFilter, setActiveFilter] = createSignal<
@@ -973,12 +994,12 @@ export const SearchInput = (
 			const [, type, id] = filterMatch;
 			let node: Node | null = null;
 			if (type === "author") {
-				const user = api.users.cache.get(id);
+				const user = users2.cache.get(id);
 				if (user) {
 					node = schema.nodes.author.create({ id: user.id, name: user.name });
 				}
 			} else if (type === "thread") {
-				const threads = roomThreads()?.items ?? [];
+				const threads = roomThreads() ?? [];
 				const thread = threads.find((t) => t.id === id);
 				if (thread) {
 					node = schema.nodes.thread.create({

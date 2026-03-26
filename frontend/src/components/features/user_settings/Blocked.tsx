@@ -1,6 +1,6 @@
 import { For, Show, type VoidProps } from "solid-js";
 import { type Pagination, type RelationshipWithUserId, type User } from "sdk";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { createResource } from "solid-js";
 import { Avatar } from "../../../User.tsx";
 import { useCtx } from "../../../context.ts";
@@ -12,8 +12,8 @@ function BlockedUserEntry(
 		onUnblock: (userId: string) => void;
 	},
 ) {
-	const api = useApi();
-	const user = api.users.fetch(() => props.relationship.user_id);
+	const api2 = useApi2();
+	const user = api2.users.fetch(() => props.relationship.user_id);
 
 	return (
 		<Show when={user()}>
@@ -29,11 +29,11 @@ function BlockedUserEntry(
 }
 
 export function Blocked(_props: VoidProps<{ user: User }>) {
-	const api = useApi();
+	const api2 = useApi2();
 	const [, modalCtl] = useModals();
 
 	const [blockedUsers, { refetch }] = createResource(async () => {
-		const { data, error } = await api.client.http.GET(
+		const { data, error } = await api2.client.http.GET(
 			"/api/v1/user/{user_id}/block",
 			{
 				params: {
@@ -53,7 +53,7 @@ export function Blocked(_props: VoidProps<{ user: User }>) {
 			"Are you sure you want to unblock this user?",
 			async (confirmed) => {
 				if (confirmed) {
-					await api.client.http.DELETE(
+					await api2.client.http.DELETE(
 						"/api/v1/user/@self/block/{target_id}",
 						{
 							params: { path: { target_id: userId } },

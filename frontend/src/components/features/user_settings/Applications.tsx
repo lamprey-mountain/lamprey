@@ -10,7 +10,7 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { type Application, createUpload, type Room, type User } from "sdk";
-import { useApi, useRooms2 } from "@/api";
+import { useApi2, useRooms2 } from "@/api";
 import { Copyable } from "../../../utils/general";
 import { createStore, reconcile } from "solid-js/store";
 import { useCtx } from "../../../context.ts";
@@ -29,11 +29,11 @@ import fuzzysort from "fuzzysort";
 // TODO: in create session and rotate oauth token, make the secret Copyable
 
 const SessionList = (props: { appId: string }) => {
-	const api = useApi();
+	const api2 = useApi2();
 	const [, modalctl] = useModals();
 
 	const [sessions, { refetch }] = createResource(async () => {
-		const { data } = await api.client.http.GET("/api/v1/session", {
+		const { data } = await api2.client.http.GET("/api/v1/session", {
 			headers: { "x-puppet-id": props.appId },
 		});
 		return data?.items ?? [];
@@ -44,7 +44,7 @@ const SessionList = (props: { appId: string }) => {
 			"Are you sure you want to revoke this session?",
 			async (confirmed) => {
 				if (confirmed) {
-					await api.client.http.DELETE("/api/v1/session/{session_id}", {
+					await api2.client.http.DELETE("/api/v1/session/{session_id}", {
 						params: { path: { session_id: sessionId } },
 					});
 					refetch();
@@ -56,7 +56,7 @@ const SessionList = (props: { appId: string }) => {
 	const renameSession = (sessionId: string) => {
 		modalctl.prompt("New session name?", async (name) => {
 			if (name === null) return;
-			await api.client.http.PATCH("/api/v1/session/{session_id}", {
+			await api2.client.http.PATCH("/api/v1/session/{session_id}", {
 				params: { path: { session_id: sessionId } },
 				body: { name: name || null },
 			});
@@ -113,13 +113,13 @@ function useAppEditor(initial: Application | null) {
 }
 
 export function Applications(_props: VoidProps<{ user: User }>) {
-	const api = useApi();
+	const api2 = useApi2();
 	const [, modalctl] = useModals();
 
 	async function create() {
 		modalctl.prompt("New app name?", async (name) => {
 			if (!name) return;
-			await api.client.http.POST("/api/v1/app", {
+			await api2.client.http.POST("/api/v1/app", {
 				body: {
 					name,
 					bridge: null,
@@ -131,7 +131,7 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 	}
 
 	const [list, { refetch }] = createResource(async () => {
-		const { data } = await api.client.http.GET("/api/v1/app", {
+		const { data } = await api2.client.http.GET("/api/v1/app", {
 			params: { query: { limit: 100 } },
 		});
 		return data;
@@ -165,7 +165,7 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 				if (
 					originalApp && JSON.stringify(app) !== JSON.stringify(originalApp)
 				) {
-					return api.client.http.PATCH("/api/v1/app/{app_id}", {
+					return api2.client.http.PATCH("/api/v1/app/{app_id}", {
 						params: { path: { app_id: app.id } },
 						body: {
 							name: app.name,
@@ -190,7 +190,7 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 
 	const [, modalCtl] = useModals();
 	const rotateSecret = async (app_id: string) => {
-		const { data } = await api.client.http.POST(
+		const { data } = await api2.client.http.POST(
 			"/api/v1/app/{app_id}/rotate-secret",
 			{
 				params: { path: { app_id } },
@@ -209,7 +209,7 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 	onCleanup(() => document.removeEventListener("click", InviteAppClear));
 
 	const createSession = async (app_id: string) => {
-		const { data } = await api.client.http.POST(
+		const { data } = await api2.client.http.POST(
 			"/api/v1/app/{app_id}/session",
 			{
 				params: { path: { app_id } },
@@ -351,7 +351,7 @@ const AppEditor = (
 		refetch: () => void;
 	},
 ) => {
-	const api = useApi();
+	const api2 = useApi2();
 	const [, modalCtl] = useModals();
 	const [activeTab, setActiveTab] = createSignal<
 		"overview" | "oauth" | "sessions"
@@ -363,7 +363,7 @@ const AppEditor = (
 	const deleteApp = (app_id: string) => () => {
 		modalCtl.confirm("are you sure?", (confirmed) => {
 			if (!confirmed) return;
-			api.client.http.DELETE("/api/v1/app/{app_id}", {
+			api2.client.http.DELETE("/api/v1/app/{app_id}", {
 				params: { path: { app_id } },
 			});
 			props.edit.setApp({ id: null } as unknown as Application);
@@ -379,7 +379,7 @@ const AppEditor = (
 		const originalApp = props.apps[index];
 
 		if (JSON.stringify(app) !== JSON.stringify(originalApp)) {
-			api.client.http.PATCH("/api/v1/app/{app_id}", {
+			api2.client.http.PATCH("/api/v1/app/{app_id}", {
 				params: { path: { app_id: app.id } },
 				body: {
 					name: props.edit.name(),
@@ -398,7 +398,7 @@ const AppEditor = (
 
 	const setAvatarFile = async (f: File) => {
 		await createUpload({
-			client: api.client,
+			client: api2.client,
 			file: f,
 			onComplete(media) {
 				props.edit.setAvatar(media.id);
@@ -724,11 +724,11 @@ const AppEditor = (
 const InviteToRoom = (
 	props: { x: number; y: number; app: Application },
 ) => {
-	const api = useApi();
-	const api2 = useRooms2();
-	const rooms = api2.useList();
+	const api2 = useApi2();
+	const rooms2 = useRooms2();
+	const rooms = rooms2.useList();
 	const roomItems = () =>
-		rooms.ids.map((id) => api2.get(id) ?? null).filter((r): r is Room =>
+		rooms.ids.map((id) => rooms2.cache.get(id) ?? null).filter((r): r is Room =>
 			r !== null
 		);
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
@@ -758,7 +758,7 @@ const InviteToRoom = (
 	});
 
 	const inviteToRoom = (room_id: string) => {
-		api.client.http.POST("/api/v1/app/{app_id}/invite", {
+		api2.client.http.POST("/api/v1/app/{app_id}/invite", {
 			params: { path: { app_id: props.app.id } },
 			body: { room_id },
 		});

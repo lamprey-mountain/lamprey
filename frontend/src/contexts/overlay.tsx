@@ -27,7 +27,7 @@ import {
 	useUserPopout,
 } from "./mod.tsx";
 import { FormattingToolbar } from "./FormattingToolbar.tsx";
-import { useApi } from "@/api";
+import { useApi2, useRoomMembers2, useThreadMembers2, useUsers2 } from "@/api";
 import {
 	ChannelMenu,
 	FolderMenu,
@@ -49,7 +49,10 @@ export function OverlayProvider(props: ParentProps) {
 	const { state: autocompleteState } = useAutocomplete();
 	const { userView } = useUserPopout();
 	const { toolbar, hideToolbar } = useFormattingToolbar();
-	const api = useApi();
+	const api2 = useApi2();
+	const users2 = useUsers2();
+	const roomMembers2 = useRoomMembers2();
+	const threadMembers2 = useThreadMembers2();
 	const [modals] = useModals();
 	const { popup: calendarPopup, closePopup: closeCalendarPopup } =
 		useCalendarPopup();
@@ -302,12 +305,12 @@ export function OverlayProvider(props: ParentProps) {
 	const userViewData = createMemo(() => {
 		const uv = userView();
 		if (!uv) return null;
-		const user = api.users.fetch(() => uv.user_id);
+		const user = users2.use(() => uv.user_id);
 		const room_member = uv.room_id
-			? api.room_members.fetch(() => uv.room_id!, () => uv.user_id)
+			? roomMembers2.use(() => `${uv.room_id!}:${uv.user_id}`)
 			: () => null;
 		const thread_member = uv.channel_id
-			? api.thread_members.fetch(() => uv.channel_id!, () => uv.user_id)
+			? threadMembers2.use(() => `${uv.channel_id!}:${uv.user_id}`)
 			: () => null;
 		return { user, room_member, thread_member };
 	});

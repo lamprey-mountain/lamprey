@@ -3,7 +3,7 @@ import { createMemo, createSignal, For, Show } from "solid-js";
 import { useCtx } from "./context.ts";
 import { Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
-import { useApi, useChannels2 } from "@/api";
+import { useChannels2 } from "@/api";
 import { createEditor } from "./components/features/editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import { EditorState } from "prosemirror-state";
@@ -18,7 +18,6 @@ import { useModals } from "./contexts/modal";
 import { useMessageSubmit } from "./hooks/useMessageSubmit.ts";
 
 export const Category = (props: { channel: Channel }) => {
-	const api = useApi();
 	const channels2 = useChannels2();
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
@@ -158,7 +157,6 @@ const QuickCreate = (
 	props: { channel: Channel },
 ) => {
 	const ctx = useCtx();
-	const api = useApi();
 	const channels2 = useChannels2();
 	const n = useNavigate();
 	const [ch, chUpdate] = useChannel()!;

@@ -6,7 +6,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { getTimestampFromUUID, type Room } from "sdk";
 import {
 	formatAuditLogEntry,
@@ -19,17 +19,17 @@ import { ReactiveSet } from "@solid-primitives/set";
 import { Dropdown } from "../../../atoms/Dropdown.tsx";
 
 export function AuditLog(props: VoidProps<{ room: Room }>) {
-	const api = useApi();
-	const log = api.audit_logs.fetch(() => props.room.id);
+	const api2 = useApi2();
+	const log = api2.audit_logs.fetch(() => props.room.id);
 	const [members, setMembers] = createSignal<any[]>([]);
 	const collapsed = new ReactiveSet();
 
 	createEffect(() => {
-		const roomMembers = api.room_members.list(() => props.room.id);
+		const roomMembers = api2.room_members.list(() => props.room.id);
 		const items = roomMembers()?.items;
 		if (items) {
 			const userList = items.map((member) => {
-				const user = api.users.cache.get(member.user_id);
+				const user = api2.users.cache.get(member.user_id);
 				return {
 					item: member.user_id,
 					label: member.override_name || user?.name || member.user_id,

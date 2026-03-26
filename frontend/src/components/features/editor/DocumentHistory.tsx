@@ -1,6 +1,6 @@
 import { createEffect, createSignal, For, on, Show } from "solid-js";
 import type { Channel } from "sdk";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import type { HistoryPagination } from "sdk";
 import { Time } from "../../../atoms/Time.tsx";
 import { useChannel } from "../../../contexts/channel.tsx";
@@ -79,7 +79,7 @@ const AvatarWithTooltip = (props: { user: any; name: string }) => {
 };
 
 export const DocumentHistory = (props: DocumentHistoryProps) => {
-	const api = useApi();
+	const api2 = useApi2();
 	const [, setCh] = useChannel()!;
 	const [history, setHistory] = createSignal<HistoryPagination | null>(null);
 	const [loading, setLoading] = createSignal(false);
@@ -89,7 +89,7 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 		setLoading(true);
 		setError(null);
 		try {
-			const data = await api.documents.history(
+			const data = await api2.documents.history(
 				props.channel.id,
 				props.branchId,
 				{

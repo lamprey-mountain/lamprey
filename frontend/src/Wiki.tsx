@@ -11,7 +11,7 @@ import { Portal } from "solid-js/web";
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { useCtx } from "./context";
-import { useApi, useChannels2 } from "@/api";
+import { useApi2, useChannels2 } from "@/api";
 import { Time } from "./atoms/Time";
 import { useModals } from "./contexts/modal";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
@@ -27,7 +27,7 @@ import { useCurrentUser } from "./contexts/currentUser.tsx";
 
 export const Wiki = (props: { channel: Channel }) => {
 	const ctx = useCtx();
-	const api = useApi();
+	const api2 = useApi2();
 	const channels2 = useChannels2();
 	const [, modalctl] = useModals();
 	const room_id = () => props.channel.room_id!;
@@ -70,11 +70,11 @@ export const Wiki = (props: { channel: Channel }) => {
 		const filter = documentFilter();
 		// Assuming threads API handles generic child channels or we use it for documents too
 		if (filter === "active") {
-			return api.threads.listForChannel(wiki_id);
+			return api2.threads.useListForChannel(wiki_id);
 		} else if (filter === "archived") {
-			return api.threads.listArchivedForChannel(wiki_id);
+			return api2.threads.useListArchivedForChannel(wiki_id);
 		} else if (filter === "removed") {
-			return api.threads.listRemovedForChannel(wiki_id);
+			return api2.threads.useListRemovedForChannel(wiki_id);
 		}
 	};
 
@@ -92,8 +92,11 @@ export const Wiki = (props: { channel: Channel }) => {
 	);
 
 	const getDocuments = () => {
-		const items = documentsResource()?.()?.items;
-		if (!items) return [];
+		const list = documentsResource()?.();
+		if (!list) return [];
+		const items = list.state.ids.map((id) => channels2.cache.get(id)).filter((
+			t,
+		): t is Channel => t !== undefined);
 		// sort descending by id
 		return [...items].filter((t) => t.parent_id === props.channel.id).sort((
 			a,

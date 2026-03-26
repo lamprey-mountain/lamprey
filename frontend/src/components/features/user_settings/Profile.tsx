@@ -1,6 +1,6 @@
 import { createSignal, Show, type VoidProps } from "solid-js";
 import { createUpload, type User } from "sdk";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { useCtx } from "../../../context";
 import { Copyable } from "../../../utils/general";
 import { useModals } from "../../../contexts/modal";
@@ -10,7 +10,7 @@ import { Savebar } from "../../../atoms/Savebar";
 // TODO(#753): allow uploading banner
 
 export function Profile(props: VoidProps<{ user: User }>) {
-	const api = useApi();
+	const api2 = useApi2();
 	const ctx = useCtx();
 	const [, modalCtl] = useModals();
 
@@ -44,7 +44,7 @@ export function Profile(props: VoidProps<{ user: User }>) {
 
 	const setAvatarFile = async (f: File) => {
 		await createUpload({
-			client: api.client,
+			client: api2.client,
 			file: f,
 			onComplete(media) {
 				setEditingAvatar(media.id);

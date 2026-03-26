@@ -1,5 +1,4 @@
 import { Channel } from "sdk";
-import type { Api } from "@/api";
 import type { ChannelsService } from "@/api/services/ChannelsService";
 import type { ChatCtx } from "../context.ts";
 import { createContext, type ParentProps, useContext } from "solid-js";
@@ -18,7 +17,7 @@ export type Command = {
 	description: string;
 	options: CommandOption[];
 	canUse?: (
-		api: Api,
+		api: RootStore,
 		channels: ChannelsService,
 		room_id: string | undefined,
 		channel: Channel,
@@ -26,7 +25,7 @@ export type Command = {
 	) => boolean;
 	execute: (
 		ctx: ChatCtx,
-		api: Api,
+		api: RootStore,
 		channels: ChannelsService,
 		channel_id: string,
 		args: string[],
@@ -51,7 +50,7 @@ export class SlashCommands {
 
 	async run(
 		ctx: ChatCtx,
-		api: Api,
+		api: RootStore,
 		channels: ChannelsService,
 		channel_id: string,
 		text: string,

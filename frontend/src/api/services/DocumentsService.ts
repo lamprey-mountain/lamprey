@@ -1,7 +1,6 @@
 import { BaseService } from "../core/Service";
 import type { HistoryPagination, User, UserWithRelationship } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
-import type { Api } from "@/api";
 
 export type RevisionContent = {
 	data?: {
@@ -23,7 +22,6 @@ export type RevisionContent = {
 };
 
 export class DocumentsService extends BaseService<RevisionContent> {
-	api: Api = null as unknown as Api;
 	protected cacheName = "document";
 
 	revisionCache = new Map<string, RevisionContent>();
@@ -53,7 +51,7 @@ export class DocumentsService extends BaseService<RevisionContent> {
 
 		try {
 			const data = await this.retryWithBackoff<RevisionContent>(() =>
-				this.api.client.http.GET(
+				this.client.http.GET(
 					"/api/v1/document/{channel_id}/revision/{revision_id}/content",
 					{
 						params: {
@@ -94,7 +92,7 @@ export class DocumentsService extends BaseService<RevisionContent> {
 		},
 	): Promise<HistoryPagination> {
 		const data = await this.retryWithBackoff<HistoryPagination>(() =>
-			this.api.client.http.GET(
+			this.client.http.GET(
 				"/api/v1/document/{channel_id}/branch/{branch_id}/history",
 				{
 					params: {
@@ -115,25 +113,15 @@ export class DocumentsService extends BaseService<RevisionContent> {
 					until: null,
 				},
 			};
-			this.api.users.cache.set(user.id, userWithRelationship);
+			this.store.users.cache.set(user.id, userWithRelationship);
 		}
 
 		for (const member of data.room_members) {
-			let cache = this.api.room_members.cache.get(member.room_id);
-			if (!cache) {
-				cache = new ReactiveMap();
-				this.api.room_members.cache.set(member.room_id, cache);
-			}
-			cache.set(member.user_id, member);
+			this.store.roomMembers.upsert(member);
 		}
 
 		for (const member of data.thread_members) {
-			let cache = this.api.thread_members.cache.get(member.thread_id);
-			if (!cache) {
-				cache = new ReactiveMap();
-				this.api.thread_members.cache.set(member.thread_id, cache);
-			}
-			cache.set(member.user_id, member);
+			this.store.threadMembers.upsert(member);
 		}
 
 		return data;
@@ -144,7 +132,7 @@ export class DocumentsService extends BaseService<RevisionContent> {
 		branch_id: string,
 	): Promise<ArrayBuffer> {
 		return await this.retryWithBackoff<ArrayBuffer>(() =>
-			this.api.client.http.GET(
+			this.client.http.GET(
 				"/api/v1/document/{channel_id}/branch/{branch_id}/crdt",
 				{
 					params: {

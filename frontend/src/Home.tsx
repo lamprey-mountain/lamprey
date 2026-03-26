@@ -1,13 +1,26 @@
 import { createSignal, Show } from "solid-js";
 import { A } from "@solidjs/router";
 import { useCtx } from "./context.ts";
-import { useApi } from "@/api";
+import {
+	useApi2,
+	useAuth2,
+	useDms2,
+	useInvites2,
+	useRooms2,
+	useSessions2,
+	useUsers2,
+} from "@/api";
 import { useModals } from "./contexts/modal";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { flags } from "./flags.ts";
 
 export const Home = () => {
-	const api = useApi();
+	const api2 = useApi2();
+	const auth2 = useAuth2();
+	const rooms2 = useRooms2();
+	const invites2 = useInvites2();
+	const sessions2 = useSessions2();
+	const users2 = useUsers2();
 	const user = useCurrentUser();
 	const [email, setEmail] = createSignal("");
 	const [password, setPassword] = createSignal("");
@@ -19,7 +32,7 @@ export const Home = () => {
 			type: "room_create",
 			cont: (data: { name: string; public: boolean } | null) => {
 				if (!data) return;
-				api.rooms.create({ name: data.name, public: data.public });
+				rooms2.create({ name: data.name, public: data.public });
 			},
 		});
 	}
@@ -27,22 +40,22 @@ export const Home = () => {
 	function useInvite() {
 		modalctl.prompt("invite code?", (invite_code: string | null) => {
 			if (!invite_code) return;
-			api.invites.use(invite_code);
+			invites2.accept(invite_code);
 		});
 	}
 
 	async function loginDiscord() {
-		const url = await api.auth.oauthUrl("discord");
+		const url = await auth2.oauthUrl("discord");
 		globalThis.open(url);
 	}
 
 	async function loginGithub() {
-		const url = await api.auth.oauthUrl("github");
+		const url = await auth2.oauthUrl("github");
 		globalThis.open(url);
 	}
 
 	async function logout() {
-		await api.sessions.delete("@self");
+		await sessions2.deleteSession("@self");
 		localStorage.clear();
 		location.reload(); // TODO: less hacky logout
 	}
@@ -60,7 +73,7 @@ export const Home = () => {
 			return;
 		}
 
-		api.auth.passwordLogin({
+		auth2.passwordLogin({
 			type: "Email",
 			email: email(),
 			password: password(),
@@ -70,7 +83,7 @@ export const Home = () => {
 	async function createGuest() {
 		modalctl.prompt("name?", (name) => {
 			if (!name) return;
-			api.users.createGuest(name).then(() => {
+			users2.createGuest(name).then(() => {
 				location.reload();
 			});
 		});
@@ -81,7 +94,7 @@ export const Home = () => {
 			<h2>home</h2>
 			<p>welcome to lamprey mountain, the internet's finest asylum</p>
 			<p>work in progress. expect bugs and missing polish.</p>
-			<Show when={api.session()?.status === "Unauthorized"}>
+			<Show when={api2.session()?.status === "Unauthorized"}>
 				<div class="auth border">
 					<section class="form-wrapper">
 						<form onSubmit={handleAuthSubmit}>
@@ -128,7 +141,7 @@ export const Home = () => {
 				<br />
 				<button onClick={createGuest}>create guest</button>
 			</Show>
-			<Show when={api.session() && api.session()?.status !== "Unauthorized"}>
+			<Show when={api2.session() && api2.session()?.status !== "Unauthorized"}>
 				<button onClick={logout}>logout</button>
 			</Show>
 			<br />

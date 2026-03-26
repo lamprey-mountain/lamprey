@@ -12,7 +12,7 @@ import {
 import { useCtx } from "./context.ts";
 import { useModals } from "./contexts/modal.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 
 const tabs: Array<{
@@ -68,7 +68,7 @@ const tabs: Array<{
 
 export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 	const ctx = useCtx();
-	const api = useApi();
+	const api2 = useApi2();
 	const [, modalCtl] = useModals();
 	const currentUser = useCurrentUser();
 	const user_id = () => currentUser()?.id;
@@ -87,7 +87,7 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 					`Are you sure you want to remove "${props.channel.name}"?`,
 					(confirmed) => {
 						if (confirmed) {
-							ctx.client.http.DELETE("/api/v1/channel/{channel_id}/remove", {
+							api2.client.http.DELETE("/api/v1/channel/{channel_id}/remove", {
 								params: { path: { channel_id: props.channel.id } },
 							}).then(() => {
 								// assuming channel has room_id

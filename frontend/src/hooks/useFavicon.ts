@@ -5,7 +5,7 @@ import { useApi, useApi2, useChannels2 } from "@/api";
 import { generateFavicon } from "../drawing.ts";
 
 export function useFavicon() {
-	const api = useApi();
+	const api2 = useApi2();
 	const channels2 = useChannels2();
 	const store = useApi2();
 	const location = useLocation();

@@ -8,7 +8,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { useCtx } from "../../../context.ts";
 import type { Room } from "sdk";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
@@ -24,12 +24,12 @@ import fuzzysort from "fuzzysort";
 
 export function Automod(props: VoidProps<{ room: Room }>) {
 	const ctx = useCtx();
-	const api = useApi();
+	const api2 = useApi2();
 	const [, modalCtl] = useModals();
 	const currentUser = useCurrentUser();
 
 	const [rules, { refetch }] = createResource(async () => {
-		const { data } = await api.client.http.GET(
+		const { data } = await api2.client.http.GET(
 			"/api/v1/room/{room_id}/automod/rule",
 			{ params: { path: { room_id: props.room.id } } },
 		);
@@ -41,7 +41,7 @@ export function Automod(props: VoidProps<{ room: Room }>) {
 			"Are you sure you want to delete this rule?",
 			(conf) => {
 				if (!conf) return;
-				api.client.http.DELETE(
+				api2.client.http.DELETE(
 					"/api/v1/room/{room_id}/automod/rule/{rule_id}",
 					{ params: { path: { room_id: props.room.id, rule_id } } },
 				).then(() => {
@@ -111,7 +111,7 @@ export function Automod(props: VoidProps<{ room: Room }>) {
 							});
 
 							const updateRule = async () => {
-								await api.client.http.PATCH(
+								await api2.client.http.PATCH(
 									"/api/v1/room/{room_id}/automod/rule/{rule_id}",
 									{
 										params: { path: { room_id: props.room.id, rule_id: i.id } },

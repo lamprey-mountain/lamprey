@@ -1,7 +1,7 @@
 import { type AuditLogChange, type AuditLogEntry } from "sdk";
 import { ChangeObject, diffArrays } from "diff";
 import { JSX, untrack } from "solid-js";
-import { useApi, useChannels2, useRooms2 } from "@/api";
+import { useApi2, useChannels2, useRoomMembers2, useRooms2 } from "@/api";
 import { useCtx } from "./context";
 
 const MERGE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
@@ -86,7 +86,7 @@ function getTimestampFromUUID(uuid: string): Date {
 }
 
 const resolveName = (
-	api: ReturnType<typeof useApi>,
+	api2: ReturnType<typeof useApi2>,
 	channels2: ReturnType<typeof useChannels2>,
 	room_id: string,
 	id: string | undefined,
@@ -97,9 +97,10 @@ const resolveName = (
 
 	switch (type) {
 		case "user": {
-			const member = api.room_members.cache.get(room_id)?.get(id);
+			const roomMembers2 = useRoomMembers2();
+			const member = roomMembers2.cache.get(`${room_id}:${id}`);
 			if (member?.override_name) return member.override_name;
-			const user = api.users.cache.get(id);
+			const user = api2.users.cache.get(id);
 			if (user) return user.name;
 			return metadataName ?? id;
 		}
@@ -108,16 +109,15 @@ const resolveName = (
 			return chan?.name ?? metadataName ?? id;
 		}
 		case "role": {
-			const role = api.roles.cache.get(id);
+			const role = api2.roles.cache.get(id);
 			return role?.name ?? metadataName ?? id;
 		}
 		case "webhook": {
-			const webhook = api.webhooks.cache.get(id);
+			const webhook = api2.webhooks.cache.get(id);
 			return webhook?.name ?? metadataName ?? id;
 		}
 		case "room": {
-			const rooms = useRooms2();
-			const room = rooms.cache.get(id);
+			const room = api2.rooms.cache.get(id);
 			return room?.name ?? metadataName ?? id;
 		}
 	}
@@ -136,13 +136,13 @@ export function formatAuditLogEntry(
 	ent: AuditLogEntry | MergedAuditLogEntry,
 ): string {
 	const { t } = useCtx();
-	const api = useApi();
+	const api2 = useApi2();
 	const channels2 = useChannels2();
 
 	const firstEntry = "entries" in ent ? ent.entries[0] : ent;
 
 	const actor = resolveName(
-		api,
+		api2,
 		channels2,
 		room_id,
 		firstEntry.user_id,
@@ -152,7 +152,7 @@ export function formatAuditLogEntry(
 	const params: any = {
 		actor,
 		channel_name: resolveName(
-			api,
+			api2,
 			channels2,
 			room_id,
 			(ent as any).metadata?.channel_id,
@@ -160,7 +160,7 @@ export function formatAuditLogEntry(
 			(ent as any).metadata?.channel_name,
 		),
 		role_name: resolveName(
-			api,
+			api2,
 			channels2,
 			room_id,
 			(ent as any).metadata?.role_id,
@@ -168,7 +168,7 @@ export function formatAuditLogEntry(
 			(ent as any).metadata?.role_name,
 		),
 		webhook_name: resolveName(
-			api,
+			api2,
 			channels2,
 			room_id,
 			(ent as any).metadata?.webhook_id,
@@ -176,7 +176,7 @@ export function formatAuditLogEntry(
 			(ent as any).metadata?.webhook_name,
 		),
 		room_name: resolveName(
-			api,
+			api2,
 			channels2,
 			room_id,
 			(ent as any).metadata?.room_id,
@@ -184,7 +184,7 @@ export function formatAuditLogEntry(
 			(ent as any).metadata?.room_name,
 		),
 		thread_name: resolveName(
-			api,
+			api2,
 			channels2,
 			room_id,
 			(ent as any).metadata?.thread_id,
@@ -192,7 +192,7 @@ export function formatAuditLogEntry(
 			(ent as any).metadata?.thread_name,
 		),
 		target: resolveName(
-			api,
+			api2,
 			channels2,
 			room_id,
 			(ent as any).metadata?.user_id || (ent as any).metadata?.overwrite_id,
@@ -200,7 +200,8 @@ export function formatAuditLogEntry(
 			(ent as any).metadata?.target_name,
 		),
 		bot_name: resolveName(
-			api,
+			api2,
+			channels2,
 			room_id,
 			(ent as any).metadata?.bot_id,
 			"user",
@@ -223,12 +224,12 @@ export function formatChanges(
 	ent: AuditLogEntry | MergedAuditLogEntry,
 ): Array<JSX.Element> {
 	const formatted: Array<JSX.Element> = [];
-	const api = useApi();
+	const api2 = useApi2();
 	const channels2 = useChannels2();
 	const { t } = useCtx();
 
 	const channelName = resolveName(
-		api,
+		api2,
 		channels2,
 		room_id,
 		(ent as any).metadata?.channel_id,
@@ -241,13 +242,13 @@ export function formatChanges(
 		case "ReactionPurge":
 		case "PermissionOverwriteDelete": {
 			formatted.push(
-				<li>{t("audit_log.changes.in_channel", channelName)}</li>,
+				<li>{t("audit_log.changes.in_channel", { name: channelName })}</li>,
 			);
 			break;
 		}
 		case "MessageDeleteBulk": {
 			formatted.push(
-				<li>{t("audit_log.changes.in_channel", channelName)}</li>,
+				<li>{t("audit_log.changes.in_channel", { name: channelName })}</li>,
 			);
 			formatted.push(
 				<li>
@@ -262,7 +263,9 @@ export function formatChanges(
 		case "InviteDelete": {
 			formatted.push(
 				<li>
-					{t("audit_log.changes.invite_deleted", (ent as any).metadata?.code)}
+					{t("audit_log.changes.invite_deleted", {
+						invite_code: (ent as any).metadata?.code,
+					})}
 				</li>,
 			);
 			break;
@@ -270,7 +273,7 @@ export function formatChanges(
 		case "PermissionOverwriteSet": {
 			const overwriteType = (ent as any).metadata?.type ?? "unknown";
 			const overwriteName = resolveName(
-				api,
+				api2,
 				channels2,
 				room_id,
 				(ent as any).metadata?.overwrite_id,
@@ -292,7 +295,15 @@ export function formatChanges(
 				<li>
 					{t(
 						"audit_log.changes.role_added",
-						resolveName(api, room_id, ent.metadata.role_id, "role"),
+						{
+							role_name: resolveName(
+								api2,
+								channels2,
+								room_id,
+								ent.metadata.role_id,
+								"role",
+							),
+						},
 					)}
 				</li>,
 			);
@@ -303,7 +314,15 @@ export function formatChanges(
 				<li>
 					{t(
 						"audit_log.changes.role_removed",
-						resolveName(api, room_id, ent.metadata.role_id, "role"),
+						{
+							role_name: resolveName(
+								api2,
+								channels2,
+								room_id,
+								ent.metadata.role_id,
+								"role",
+							),
+						},
 					)}
 				</li>,
 			);
@@ -314,7 +333,15 @@ export function formatChanges(
 				<li>
 					{t(
 						"audit_log.changes.bot_added",
-						resolveName(api, room_id, ent.metadata.bot_id, "user"),
+						{
+							bot_name: resolveName(
+								api2,
+								channels2,
+								room_id,
+								ent.metadata.bot_id,
+								"user",
+							),
+						},
 					)}
 				</li>,
 			);
@@ -325,7 +352,15 @@ export function formatChanges(
 				<li>
 					{t(
 						"audit_log.changes.user_kicked",
-						resolveName(api, room_id, ent.metadata.user_id, "user"),
+						{
+							user_name: resolveName(
+								api2,
+								channels2,
+								room_id,
+								ent.metadata.user_id,
+								"user",
+							),
+						},
 					)}
 				</li>,
 			);
@@ -336,7 +371,15 @@ export function formatChanges(
 				<li>
 					{t(
 						"audit_log.changes.user_banned",
-						resolveName(api, room_id, ent.metadata.user_id, "user"),
+						{
+							user_name: resolveName(
+								api2,
+								channels2,
+								room_id,
+								ent.metadata.user_id,
+								"user",
+							),
+						},
 					)}
 				</li>,
 			);
@@ -347,7 +390,15 @@ export function formatChanges(
 				<li>
 					{t(
 						"audit_log.changes.user_unbanned",
-						resolveName(api, room_id, ent.metadata.user_id, "user"),
+						{
+							user_name: resolveName(
+								api2,
+								channels2,
+								room_id,
+								ent.metadata.user_id,
+								"user",
+							),
+						},
 					)}
 				</li>,
 			);
@@ -358,7 +409,15 @@ export function formatChanges(
 				<li>
 					{t(
 						"audit_log.changes.user_added_to_thread",
-						resolveName(api, room_id, ent.metadata.user_id, "user"),
+						{
+							user_name: resolveName(
+								api2,
+								channels2,
+								room_id,
+								ent.metadata.user_id,
+								"user",
+							),
+						},
 					)}
 				</li>,
 			);
@@ -366,12 +425,15 @@ export function formatChanges(
 				<li>
 					{t(
 						"audit_log.changes.to_thread",
-						resolveName(
-							api,
-							room_id,
-							ent.metadata.thread_id,
-							"channel",
-						),
+						{
+							channel_name: resolveName(
+								api2,
+								channels2,
+								room_id,
+								ent.metadata.thread_id,
+								"channel",
+							),
+						},
 					)}
 				</li>,
 			);
@@ -382,7 +444,15 @@ export function formatChanges(
 				<li>
 					{t(
 						"audit_log.changes.user_removed_from_thread",
-						resolveName(api, room_id, ent.metadata.user_id, "user"),
+						{
+							user_name: resolveName(
+								api2,
+								channels2,
+								room_id,
+								ent.metadata.user_id,
+								"user",
+							),
+						},
 					)}
 				</li>,
 			);
@@ -390,12 +460,15 @@ export function formatChanges(
 				<li>
 					{t(
 						"audit_log.changes.to_thread",
-						resolveName(
-							api,
-							room_id,
-							ent.metadata.thread_id,
-							"channel",
-						),
+						{
+							channel_name: resolveName(
+								api2,
+								channels2,
+								room_id,
+								ent.metadata.thread_id,
+								"channel",
+							),
+						},
 					)}
 				</li>,
 			);
@@ -414,7 +487,7 @@ export function formatChanges(
 			if (ent.type === "RoleUpdate" && c.key === "allow") {
 				formatted.push(
 					...renderPermissionDiff(
-						api,
+						api2,
 						room_id,
 						(c.old ?? []) as Array<string>,
 						(c.new ?? []) as Array<string>,
@@ -425,7 +498,7 @@ export function formatChanges(
 			} else if (ent.type === "RoleUpdate" && c.key === "deny") {
 				formatted.push(
 					...renderPermissionDiff(
-						api,
+						api2,
 						room_id,
 						(c.old ?? []) as Array<string>,
 						(c.new ?? []) as Array<string>,
@@ -436,7 +509,7 @@ export function formatChanges(
 			} else if (ent.type === "PermissionOverwriteSet" && c.key === "allow") {
 				formatted.push(
 					...renderPermissionDiff(
-						api,
+						api2,
 						room_id,
 						(c.old ?? []) as Array<string>,
 						(c.new ?? []) as Array<string>,
@@ -447,7 +520,7 @@ export function formatChanges(
 			} else if (ent.type === "PermissionOverwriteSet" && c.key === "deny") {
 				formatted.push(
 					...renderPermissionDiff(
-						api,
+						api2,
 						room_id,
 						(c.old ?? []) as Array<string>,
 						(c.new ?? []) as Array<string>,
@@ -502,7 +575,7 @@ export function formatChanges(
 						<li>
 							{t(
 								"audit_log.changes.role_added",
-								resolveName(api, room_id, r, "role"),
+								resolveName(api2, channels2, room_id, r, "role"),
 							)}
 						</li>,
 					);
@@ -512,7 +585,7 @@ export function formatChanges(
 						<li>
 							{t(
 								"audit_log.changes.role_removed",
-								resolveName(api, room_id, r, "role"),
+								resolveName(api2, channels2, room_id, r, "role"),
 							)}
 						</li>,
 					);
@@ -541,7 +614,7 @@ export function formatChanges(
 }
 
 function renderPermissionDiff(
-	api: ReturnType<typeof useApi>,
+	api2: ReturnType<typeof useApi2>,
 	room_id: string,
 	oldValues: Array<string>,
 	newValues: Array<string>,

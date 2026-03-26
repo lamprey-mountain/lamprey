@@ -58,7 +58,7 @@ export function createClient(opts: ClientOptions): Client {
 		opts.onMessage?.(msg);
 		switch (msg.op) {
 			case "Ping": {
-				send({ type: "Pong" });
+				send({ type: "Pong" }, true);
 				break;
 			}
 			case "Sync": {

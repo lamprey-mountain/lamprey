@@ -19,7 +19,7 @@ import * as Admin from "./components/features/admin_settings/mod.tsx";
 import { Permission, SERVER_ROOM_ID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useCtx } from "./context.ts";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { useModals } from "./contexts/modal.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { flags } from "./flags.ts";
@@ -209,7 +209,7 @@ function groupTabsByCategory(
 
 export const RoomSettings = (props: { room: RoomT; page: string }) => {
 	const ctx = useCtx();
-	const api = useApi();
+	const api2 = useApi2();
 	const [, modalCtl] = useModals();
 	const currentUser = useCurrentUser();
 	const user_id = () => currentUser()?.id;
@@ -235,7 +235,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 					`Are you sure you want to delete "${props.room.name}"?`,
 					(confirmed) => {
 						if (confirmed) {
-							ctx.client.http.DELETE("/api/v1/room/{room_id}", {
+							api2.client.http.DELETE("/api/v1/room/{room_id}", {
 								params: { path: { room_id: props.room.id } },
 							}).then(() => {
 								nav("/");

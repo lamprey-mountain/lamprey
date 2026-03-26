@@ -1,18 +1,20 @@
 import { For, Show, type VoidProps } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2, useInvites2, useRoomMembers2, useUsers2 } from "@/api";
 import type { RoomT } from "../../../types.ts";
-import type { InviteWithMetadata } from "sdk";
 import { Avatar } from "../../../User.tsx";
 import { Time } from "../../../atoms/Time.tsx";
 import { Copyable } from "../../../utils/general";
 
 export function Invites(props: VoidProps<{ room: RoomT }>) {
-	const api = useApi();
+	const api2 = useApi2();
+	const invites2 = useInvites2();
+	const users2 = useUsers2();
+	const roomMembers2 = useRoomMembers2();
 
-	const invites = api.invites.list_room(() => props.room.id);
+	const invites = invites2.useRoomList(() => props.room.id);
 
 	const createInvite = () => {
-		api.client.http.POST("/api/v1/room/{room_id}/invite", {
+		api2.client.http.POST("/api/v1/room/{room_id}/invite", {
 			params: {
 				path: { room_id: props.room.id },
 			},
@@ -21,7 +23,7 @@ export function Invites(props: VoidProps<{ room: RoomT }>) {
 	};
 
 	const deleteInvite = (code: string) => {
-		api.client.http.DELETE("/api/v1/invite/{invite_code}", {
+		api2.client.http.DELETE("/api/v1/invite/{invite_code}", {
 			params: {
 				path: { invite_code: code },
 			},
@@ -35,7 +37,7 @@ export function Invites(props: VoidProps<{ room: RoomT }>) {
 			<br />
 			<br />
 			<div class="invites">
-				<Show when={!invites.loading} fallback="loading...">
+				<Show when={invites()} fallback="loading...">
 					<header>
 						<div class="code">code</div>
 						<div class="creator">creator</div>
@@ -43,14 +45,17 @@ export function Invites(props: VoidProps<{ room: RoomT }>) {
 						<div class="expires">expires</div>
 					</header>
 					<ul>
-						<For each={invites()!.items as InviteWithMetadata[]}>
-							{(i) => {
-								const user = api.users.fetch(() => i.creator_id);
-								const rm = api.room_members.fetch(() => props.room.id, () =>
-									i.creator_id);
+						<For each={invites()!.state.ids}>
+							{(code) => {
+								const invite = invites2.cache.get(code);
+								if (!invite) return null;
+								const i = invite;
+								const user = users2.cache.get(i.creator_id);
+								const rm = roomMembers2.cache.get(
+									`${props.room.id}:${i.creator_id}`,
+								);
 								const creatorName = () => {
-									const r = rm();
-									return r?.override_name || user()?.name || "unknown";
+									return rm?.override_name || user?.name || "unknown";
 								};
 								return (
 									<li class="invite">
@@ -65,9 +70,11 @@ export function Invites(props: VoidProps<{ room: RoomT }>) {
 											</div>
 										</div>
 										<div class="uses">
-											<span class="mono">{i.uses}</span>
+											<span class="mono">{(i as any).uses ?? 0}</span>
 											<span class="dim">/</span>
-											<span class="mono">{i.max_uses ?? "\u221e"}</span>
+											<span class="mono">
+												{(i as any).max_uses ?? "\u221e"}
+											</span>
 										</div>
 										<div class="expires">
 											<Show

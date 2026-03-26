@@ -1,19 +1,21 @@
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { useApi } from "@/api";
+import { useApi2, useDms2, useUsers2 } from "@/api";
 import { AvatarWithStatus } from "./User";
 import type { RelationshipType } from "sdk";
 
 type FilterType = "all" | "online" | "incoming" | "outgoing";
 
 export const Friends = () => {
-	const api = useApi();
+	const api2 = useApi2();
+	const users2 = useUsers2();
+	const dms2 = useDms2();
 	const navigate = useNavigate();
 	const [filter, setFilter] = createSignal<FilterType>("all");
 
 	const [friends] = createResource(async () => {
-		const { data } = await api.client.http.GET(
+		const { data } = await api2.client.http.GET(
 			"/api/v1/user/{user_id}/friend",
 			{ params: { path: { user_id: "@self" } } },
 		);
@@ -21,7 +23,7 @@ export const Friends = () => {
 	});
 
 	const [pending] = createResource(async () => {
-		const { data } = await api.client.http.GET(
+		const { data } = await api2.client.http.GET(
 			"/api/v1/user/{user_id}/friend/pending",
 			{ params: { path: { user_id: "@self" } } },
 		);
@@ -31,7 +33,7 @@ export const Friends = () => {
 	const sendRequest = () => {
 		const target_id = prompt("target_id");
 		if (!target_id) return;
-		api.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
+		api2.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
 			params: { path: { target_id } },
 		});
 	};
@@ -46,7 +48,7 @@ export const Friends = () => {
 			return items.filter((i) => i.relation === "Outgoing");
 		} else if (currentFilter === "online") {
 			return items.filter((i) => {
-				const user = api.users.cache.get(i.user_id);
+				const user = users2.cache.get(i.user_id);
 				return user?.presence?.status !== "Offline";
 			});
 		}
@@ -101,12 +103,14 @@ export const Friends = () => {
 };
 
 const Friend = (props: { user_id: string }) => {
-	const api = useApi();
+	const api2 = useApi2();
+	const users2 = useUsers2();
+	const dms2 = useDms2();
 	const navigate = useNavigate();
-	const user = api.users.fetch(() => props.user_id);
+	const user = users2.use(() => props.user_id);
 
 	const openDm = async () => {
-		const { data } = await api.client.http.POST(
+		const { data } = await api2.client.http.POST(
 			"/api/v1/user/@self/dm/{target_id}",
 			{ params: { path: { target_id: props.user_id } } },
 		);

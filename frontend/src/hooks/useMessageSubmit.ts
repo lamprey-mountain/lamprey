@@ -4,7 +4,7 @@ import { useApi, useApi2, useChannels2 } from "@/api";
 
 export function useMessageSubmit(channel_id: string) {
 	const ctx = useCtx();
-	const api = useApi();
+	const api2 = useApi2();
 	const channels2 = useChannels2();
 	const store = useApi2();
 	const channelContext = useChannel();
@@ -20,7 +20,7 @@ export function useMessageSubmit(channel_id: string) {
 		const dest = target_channel_id ?? channel_id;
 
 		if (text.startsWith("/")) {
-			await ctx.slashCommands.run(ctx, api, channels2, dest, text, store);
+			await ctx.slashCommands.run(ctx, api2, channels2, dest, text, store);
 			return true;
 		}
 

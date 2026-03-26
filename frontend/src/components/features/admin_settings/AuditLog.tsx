@@ -1,6 +1,11 @@
 import { For, Show, type VoidProps } from "solid-js";
-import { useApi } from "@/api";
-import { getTimestampFromUUID, type Room, SERVER_ROOM_ID } from "sdk";
+import { useApi2, useAuditLog2 } from "@/api";
+import {
+	type AuditLogEntry,
+	getTimestampFromUUID,
+	type Room,
+	SERVER_ROOM_ID,
+} from "sdk";
 import {
 	formatAuditLogEntry,
 	formatChanges,
@@ -12,8 +17,9 @@ import { ReactiveSet } from "@solid-primitives/set";
 import { Dropdown } from "../../../atoms/Dropdown.tsx";
 
 export function AuditLog(props: VoidProps<{ room: Room }>) {
-	const api = useApi();
-	const log = api.audit_logs.fetch(() => SERVER_ROOM_ID);
+	const api2 = useApi2();
+	const auditLog2 = useAuditLog2();
+	const log = auditLog2.useList(() => SERVER_ROOM_ID);
 	const collapsed = new ReactiveSet();
 
 	return (
@@ -44,7 +50,13 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 			</Show>
 			<Show when={log()}>
 				<ul class="room-settings-audit-log">
-					<For each={mergeAuditLogEntries(log()!.items)}>
+					<For
+						each={mergeAuditLogEntries(
+							log()!.state.ids.map((id) => auditLog2.cache.get(id)).filter((
+								e,
+							): e is AuditLogEntry => e !== undefined),
+						)}
+					>
 						{(mergedEntry) => {
 							const firstEntry = mergedEntry.entries[0];
 							const ts = () => getTimestampFromUUID(firstEntry.id);

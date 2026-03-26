@@ -7,15 +7,15 @@ import {
 	type VoidProps,
 } from "solid-js";
 import type { RoomT } from "../../../types.ts";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { useCtx } from "../../../context.ts";
 import { formatBytes } from "../../../media/util.tsx";
 import { DateRangePicker } from "../../../atoms/Daterangepicker.tsx";
 import { Dropdown } from "../../../atoms/Dropdown.tsx";
-import type { Aggregation } from "@/api/room_analytics.ts";
+import type { Aggregation } from "@/api/services/RoomAnalyticsService.ts";
 
 export function Metrics(props: VoidProps<{ room: RoomT }>) {
-	const api = useApi();
+	const api2 = useApi2();
 
 	const [aggregation, setAggregation] = createSignal<Aggregation>("Daily");
 	const [dateRange, setDateRange] = createSignal({
@@ -43,22 +43,22 @@ export function Metrics(props: VoidProps<{ room: RoomT }>) {
 
 	const [analyticsOverview] = createResource(
 		refreshData,
-		(args) => api.room_analytics.getOverview(args.room_id, args),
+		(args) => api2.room_analytics.getOverview(args.room_id, args),
 	);
 
 	const [analyticsMembersCount] = createResource(
 		refreshData,
-		(args) => api.room_analytics.getMembersCount(args.room_id, args),
+		(args) => api2.room_analytics.getMembersCount(args.room_id, args),
 	);
 
 	const [analyticsMembersJoin] = createResource(
 		refreshData,
-		(args) => api.room_analytics.getMembersJoin(args.room_id, args),
+		(args) => api2.room_analytics.getMembersJoin(args.room_id, args),
 	);
 
 	const [analyticsMembersLeave] = createResource(
 		refreshData,
-		(args) => api.room_analytics.getMembersLeave(args.room_id, args),
+		(args) => api2.room_analytics.getMembersLeave(args.room_id, args),
 	);
 
 	const onZoom = (startBucket: string, endBucket: string) => {

@@ -122,52 +122,49 @@ export const AppProviders: Component<ParentProps<{ resolved: boolean }>> = (
 	props,
 ) => {
 	const config = useConfig();
-	const { client, api, ctx, store } = useChatClient(config);
+	const { client, ctx, store } = useChatClient(config);
 
 	// TEMP: debugging
 	(globalThis as any).ctx = ctx;
 	(globalThis as any).client = client;
-	(globalThis as any).api = api;
 	(globalThis as any).store = store;
 	(globalThis as any).flags = flags;
 
 	return (
-		<api.Provider>
-			<RootStoreContext.Provider value={store}>
-				<CurrentUserProvider>
-					<chatctx.Provider value={ctx}>
-						<ReadTrackingProvider
-							api={api}
-							channels2={store.channels}
-							channel_contexts={ctx.channel_contexts}
-							dataUpdate={ctx.dataUpdate}
-						>
-							<MemberListProvider>
-								<ModalsProvider>
-									<UploadsProvider ctx={ctx}>
-										<VoiceProvider>
-											<SlashCommandsProvider value={ctx.slashCommands}>
-												<MenuProvider>
-													<AutocompleteProvider>
-														<FormattingToolbarProvider>
-															<UserPopoutProvider>
-																<CalendarPopupProvider>
-																	<AppShell>{props.children}</AppShell>
-																</CalendarPopupProvider>
-															</UserPopoutProvider>
-														</FormattingToolbarProvider>
-													</AutocompleteProvider>
-												</MenuProvider>
-											</SlashCommandsProvider>
-										</VoiceProvider>
-									</UploadsProvider>
-								</ModalsProvider>
-							</MemberListProvider>
-						</ReadTrackingProvider>
-					</chatctx.Provider>
-				</CurrentUserProvider>
-			</RootStoreContext.Provider>
-		</api.Provider>
+		<RootStoreContext.Provider value={store}>
+			<CurrentUserProvider>
+				<chatctx.Provider value={ctx}>
+					<ReadTrackingProvider
+						api={store}
+						channels2={store.channels}
+						channel_contexts={ctx.channel_contexts}
+						dataUpdate={ctx.dataUpdate}
+					>
+						<MemberListProvider>
+							<ModalsProvider>
+								<UploadsProvider ctx={ctx}>
+									<VoiceProvider>
+										<SlashCommandsProvider value={ctx.slashCommands}>
+											<MenuProvider>
+												<AutocompleteProvider>
+													<FormattingToolbarProvider>
+														<UserPopoutProvider>
+															<CalendarPopupProvider>
+																<AppShell>{props.children}</AppShell>
+															</CalendarPopupProvider>
+														</UserPopoutProvider>
+													</FormattingToolbarProvider>
+												</AutocompleteProvider>
+											</MenuProvider>
+										</SlashCommandsProvider>
+									</VoiceProvider>
+								</UploadsProvider>
+							</ModalsProvider>
+						</MemberListProvider>
+					</ReadTrackingProvider>
+				</chatctx.Provider>
+			</CurrentUserProvider>
+		</RootStoreContext.Provider>
 	);
 };
 

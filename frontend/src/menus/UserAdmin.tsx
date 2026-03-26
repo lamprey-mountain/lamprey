@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { useCtx } from "../context.ts";
 import { Item, Menu, Separator } from "./Parts.tsx";
 import { useModals } from "../contexts/modal";
@@ -10,8 +10,8 @@ type UserAdminMenuProps = {
 
 export function UserAdminMenu(props: UserAdminMenuProps) {
 	const ctx = useCtx();
-	const api = useApi();
-	const user = api.users.fetch(() => props.user_id);
+	const api2 = useApi2();
+	const user = api2.users.fetch(() => props.user_id);
 	const [, modalCtl] = useModals();
 
 	const copyUserId = () => navigator.clipboard.writeText(props.user_id);
@@ -20,7 +20,7 @@ export function UserAdminMenu(props: UserAdminMenuProps) {
 	const suspendUser = () => {
 		modalCtl.prompt("suspend reason", (reason) => {
 			if (!reason) return;
-			api.client.http.POST("/api/v1/user/{user_id}/suspend", {
+			api2.client.http.POST("/api/v1/user/{user_id}/suspend", {
 				params: {
 					path: {
 						user_id: props.user_id,
@@ -37,7 +37,7 @@ export function UserAdminMenu(props: UserAdminMenuProps) {
 	const unsuspendUser = () => {
 		modalCtl.prompt("unsuspend reason", (reason) => {
 			if (!reason) return;
-			api.client.http.DELETE("/api/v1/user/{user_id}/suspend", {
+			api2.client.http.DELETE("/api/v1/user/{user_id}/suspend", {
 				params: {
 					path: {
 						user_id: props.user_id,
@@ -55,7 +55,7 @@ export function UserAdminMenu(props: UserAdminMenuProps) {
 			"Are you sure you want to delete this user? This action cannot be undone.",
 			(confirmed) => {
 				if (!confirmed) return;
-				api.client.http.DELETE("/api/v1/user/{user_id}", {
+				api2.client.http.DELETE("/api/v1/user/{user_id}", {
 					params: {
 						path: {
 							user_id: props.user_id,

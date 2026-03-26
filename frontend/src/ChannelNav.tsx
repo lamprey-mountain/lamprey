@@ -9,7 +9,14 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { useApi, useChannels2, useRooms2, useUsers2 } from "@/api";
+import {
+	useApi2,
+	useChannels2,
+	useDms2,
+	useRoomMembers2,
+	useRooms2,
+	useUsers2,
+} from "@/api";
 import { useConfig } from "./config";
 import { flags } from "./flags";
 import { useCtx } from "./context";
@@ -41,7 +48,8 @@ function setLastViewedChannel(roomId: string, channelId: string): void {
 
 export const ChannelNav = (props: { room_id?: string }) => {
 	const config = useConfig();
-	const api = useApi();
+	const api2 = useApi2();
+	const dms2 = useDms2();
 	const rooms2 = useRooms2();
 	const channels2 = useChannels2();
 	const users2 = useUsers2();
@@ -84,13 +92,11 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		Set<string>
 	>(new Set());
 
-	createEffect(() => {
-		if (!props.room_id) {
-			api.dms.list();
-		}
-	});
+	// Load DMs when not in a room
+	const dms = !props.room_id ? dms2.useList() : null;
 
 	const room = props.room_id ? rooms2.use(() => props.room_id!) : () => null;
+	const roomMembers2 = useRoomMembers2();
 
 	const canViewChannel = (channel: Channel): boolean => {
 		if (!props.room_id || !currentUserId()) {
@@ -98,9 +104,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		}
 
 		const permissionContext: PermissionContext = {
-			api,
-			channels: channels2,
-			rooms: rooms2,
+			api: api2,
 			room_id: props.room_id,
 			channel_id: channel.id,
 		};
@@ -398,17 +402,20 @@ export const ChannelNav = (props: { room_id?: string }) => {
 			if (!toChannel || toChannel.type !== "Voice") return;
 
 			// Move the user to the target voice channel
-			api.client.http.POST("/api/v1/voice/{channel_id}/member/{user_id}/move", {
-				params: {
-					path: {
-						channel_id: dragInfo.channelId!,
-						user_id: dragInfo.id,
+			api2.client.http.POST(
+				"/api/v1/voice/{channel_id}/member/{user_id}/move",
+				{
+					params: {
+						path: {
+							channel_id: dragInfo.channelId!,
+							user_id: dragInfo.id,
+						},
+					},
+					body: {
+						target_id: toChannel.id,
 					},
 				},
-				body: {
-					target_id: toChannel.id,
-				},
-			});
+			);
 			return;
 		}
 
@@ -575,7 +582,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 			}
 		}
 
-		api.client.http.PATCH("/api/v1/room/{room_id}/channel", {
+		api2.client.http.PATCH("/api/v1/room/{room_id}/channel", {
 			params: { path: { room_id: props.room_id! } },
 			body: {
 				channels: body,
@@ -762,20 +769,20 @@ export const ChannelNav = (props: { room_id?: string }) => {
 													</ul>
 												</Show>
 												<For
-													each={[...api.voiceStates.values()].filter((i) =>
+													each={[...api2.voiceStates.values()].filter((i) =>
 														i.channel_id === channel.id
 													).sort((a, b) =>
 														Date.parse(a.joined_at) - Date.parse(b.joined_at)
 													)}
 												>
 													{(s) => {
-														const user = users2.use(() => s.user_id);
-														const room_member = props.room_id
-															? api.room_members.fetch(
-																() => props.room_id!,
-																() => s.user_id,
-															)
-															: () => null;
+														const user = () => users2.cache.get(s.user_id);
+														const room_member = () =>
+															props.room_id
+																? roomMembers2.cache.get(
+																	`${props.room_id!}:${s.user_id}`,
+																)
+																: null;
 														const name = () =>
 															room_member()?.override_name || user()?.name ||
 															"unknown user";
@@ -823,7 +830,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 };
 
 export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
-	const api = useApi();
+	const api2 = useApi2();
 	const channels2 = useChannels2();
 	const rooms2 = useRooms2();
 	const nav = useNavigate();
@@ -869,9 +876,7 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 		}
 
 		const permissionContext: PermissionContext = {
-			api,
-			channels: channels2,
-			rooms: rooms2,
+			api: api2,
 			room_id: props.room_id,
 			channel_id: props.channel.id,
 		};

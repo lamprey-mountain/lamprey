@@ -6,7 +6,7 @@ import { useUserPopout } from "./contexts/mod.tsx";
 import { useModals } from "./contexts/modal";
 import { type Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
-import { useApi, useChannels2 } from "@/api";
+import { useChannels2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
 import { AvatarWithStatus, ChannelIcon } from "./User.tsx";
 import { Time } from "./atoms/Time.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
@@ -16,7 +16,9 @@ import { useMemberList } from "./contexts/memberlist.tsx";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 
 export const RoomMembers = (props: { room: RoomT }) => {
-	const api = useApi();
+	const roles2 = useRoles2();
+	const roomMembers2 = useRoomMembers2();
+	const users2 = useUsers2();
 	const memberLists = useMemberList();
 	const room_id = () => props.room.id;
 	const list = () => memberLists.get(room_id());
@@ -48,7 +50,7 @@ export const RoomMembers = (props: { room: RoomT }) => {
 	});
 
 	const getGroupName = (group: any) => {
-		const role = api.roles.cache.get(group.id);
+		const role = roles2.cache.get(group.id);
 		return role?.name ?? group.id;
 	};
 
@@ -105,12 +107,12 @@ export const RoomMembers = (props: { room: RoomT }) => {
 									: (
 										(() => {
 											const member = () =>
-												api.room_members.cache.get(room_id())?.get(
-													row.item.user.id,
+												roomMembers2.cache.get(
+													`${room_id()}:${row.item.user.id}`,
 												) ??
 													row.item.room_member;
 											const user = () =>
-												api.users.cache.get(row.item.user.id) ?? row.item.user;
+												users2.cache.get(row.item.user.id) ?? row.item.user;
 
 											const ctx = useCtx();
 											const { userView, setUserView } = useUserPopout();
@@ -170,7 +172,6 @@ export const RoomMembers = (props: { room: RoomT }) => {
 // TODO: show invite button
 export const RoomHome = (props: { room: RoomT }) => {
 	const ctx = useCtx();
-	const api = useApi();
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
 	const room_id = () => props.room.id;

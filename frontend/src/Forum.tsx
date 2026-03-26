@@ -3,7 +3,7 @@ import { useCtx } from "./context.ts";
 import { useModals } from "./contexts/modal";
 import { Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
-import { useApi, useChannels2 } from "@/api";
+import { useChannels2, useThreads2 } from "@/api";
 import { ChannelIcon } from "./User";
 import { createEditor } from "./components/features/editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";
@@ -21,8 +21,8 @@ import { useMessageSubmit } from "./hooks/useMessageSubmit.ts";
 
 export const Forum = (props: { channel: Channel }) => {
 	const ctx = useCtx();
-	const api = useApi();
 	const channels2 = useChannels2();
+	const threads2 = useThreads2();
 	const nav = useNavigate();
 	const [, modalctl] = useModals();
 	const room_id = () => props.channel.room_id!;
@@ -30,35 +30,31 @@ export const Forum = (props: { channel: Channel }) => {
 
 	const [threadFilter, setThreadFilter] = createSignal("active");
 
-	const fetchMore = () => {
-		const filter = threadFilter();
-		if (filter === "active") {
-			return api.threads.listForChannel(forum_id);
-		} else if (filter === "archived") {
-			return api.threads.listArchivedForChannel(forum_id);
-		} else if (filter === "removed") {
-			return api.threads.listRemovedForChannel(forum_id);
-		}
-	};
+	// Call the appropriate hook based on filter at component level
+	const activeThreads = threads2.useListForChannel(forum_id);
+	const archivedThreads = threads2.useListArchivedForChannel(forum_id);
+	const removedThreads = threads2.useListRemovedForChannel(forum_id);
 
-	const threadsResource = createMemo(fetchMore);
+	const getThreadsList = () => {
+		const filter = threadFilter();
+		if (filter === "active") return activeThreads;
+		if (filter === "archived") return archivedThreads;
+		if (filter === "removed") return removedThreads;
+		return activeThreads;
+	};
 
 	const [bottom, setBottom] = createSignal<Element | undefined>();
 
-	createIntersectionObserver(() => bottom() ? [bottom()!] : [], (entries) => {
-		for (const entry of entries) {
-			if (entry.isIntersecting) fetchMore();
-		}
-	});
+	// TODO: Implement proper pagination for threads
 
 	const getThreads = () => {
-		const items = threadsResource()?.()?.items;
-		if (!items) return [];
+		const list = getThreadsList()?.();
+		if (!list) return [];
+		const items = list.state.ids.map((id) => channels2.cache.get(id)).filter((
+			t,
+		): t is Channel => t !== undefined && t.parent_id === props.channel.id);
 		// sort descending by id
-		return [...items].filter((t) => t.parent_id === props.channel.id).sort((
-			a,
-			b,
-		) => (a.id < b.id ? 1 : -1));
+		return [...items].sort((a, b) => (a.id < b.id ? 1 : -1));
 	};
 
 	function createThread(room_id: string) {
@@ -186,7 +182,6 @@ const QuickCreate = (
 	props: { channel: Channel },
 ) => {
 	const ctx = useCtx();
-	const api = useApi();
 	const channels2 = useChannels2();
 	const n = useNavigate();
 	const [ch, chUpdate] = useChannel()!;

@@ -1,7 +1,7 @@
 import type { Channel } from "sdk";
 import { createSignal, For, onMount, Show, type VoidProps } from "solid-js";
 import { useCtx } from "../../../context.ts";
-import { useApi, useChannels2 } from "@/api";
+import { useApi2, useChannels2 } from "@/api";
 import { useModals } from "../../../contexts/modal";
 import { Checkbox } from "../../../icons";
 import {
@@ -37,7 +37,7 @@ const slowmodePresets: DurationPreset[] = [
 
 export function Info(props: VoidProps<{ channel: Channel }>) {
 	const ctx = useCtx();
-	const api = useApi();
+	const api2 = useApi2();
 	const channels2 = useChannels2();
 	const [, modalctl] = useModals();
 	const [editingNsfw, setEditingNsfw] = createSignal(props.channel.nsfw);
@@ -82,11 +82,11 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 
 	const setIconFile = async (f: File) => {
 		await createUpload({
-			client: api.client,
+			client: api2.client,
 			file: f,
 			onComplete(media) {
 				setEditingIcon(media.id);
-				api.client.http.PATCH("/api/v1/channel/{channel_id}", {
+				api2.client.http.PATCH("/api/v1/channel/{channel_id}", {
 					params: { path: { channel_id: props.channel.id } },
 					body: { icon: media.id },
 				});
@@ -100,7 +100,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 
 	const removeIcon = async () => {
 		setEditingIcon(null);
-		await api.client.http.PATCH("/api/v1/channel/{channel_id}", {
+		await api2.client.http.PATCH("/api/v1/channel/{channel_id}", {
 			params: { path: { channel_id: props.channel.id } },
 			body: { icon: null },
 		});

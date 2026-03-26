@@ -1,5 +1,5 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
-import { useApi, useChannels2 } from "@/api";
+import { useChannels2, useThreads2 } from "@/api";
 import { useCtx } from "../../../context.ts";
 import { ChannelIcon } from "../../../User.tsx";
 import { useNavigate } from "@solidjs/router";
@@ -7,20 +7,27 @@ import type { Channel } from "sdk";
 import { useModals } from "../../../contexts/modal.tsx";
 
 export const ThreadPopout = (props: { channel_id: string }) => {
-	const api = useApi();
+	const threads2 = useThreads2();
 	const channels2 = useChannels2();
 	const ctx = useCtx();
 	const navigate = useNavigate();
 	const [search, setSearch] = createSignal("");
 
-	const activeThreads = api.threads.listForChannel(() => props.channel_id);
-	const archivedThreads = api.threads.listArchivedForChannel(
+	const activeThreads = threads2.useListForChannel(() => props.channel_id);
+	const archivedThreads = threads2.useListArchivedForChannel(
 		() => props.channel_id,
 	);
 
 	const sortedThreads = createMemo(() => {
-		const active = activeThreads()?.items ?? [];
-		const archived = archivedThreads()?.items ?? [];
+		const activeList = activeThreads()?.state.ids ?? [];
+		const archivedList = archivedThreads()?.state.ids ?? [];
+
+		const active = activeList.map((id) => channels2.cache.get(id)).filter((
+			t,
+		): t is Channel => t !== undefined);
+		const archived = archivedList.map((id) => channels2.cache.get(id)).filter((
+			t,
+		): t is Channel => t !== undefined);
 
 		const query = search().toLowerCase();
 		const filter = (t: Channel) => t.name.toLowerCase().includes(query);

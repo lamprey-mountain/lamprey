@@ -1,6 +1,4 @@
-import { type Api, useChannels2, useRooms2 } from "@/api";
-import { type RoomsService } from "@/api/services/RoomsService";
-import { type ChannelsService } from "@/api/services/ChannelsService";
+import { type RootStore } from "@/api";
 import type {
 	Channel,
 	Permission,
@@ -9,11 +7,12 @@ import type {
 	Room,
 	RoomMember,
 } from "sdk";
+import { logger } from "./logger";
+
+const permLog = logger.for("permissions");
 
 export interface PermissionContext {
-	api: Api;
-	channels: ChannelsService;
-	rooms: RoomsService;
+	api: RootStore;
 	room_id?: string;
 	channel_id?: string;
 }
@@ -169,6 +168,8 @@ export function calculatePermissions(
 	ctx: PermissionContext,
 	user_id: string,
 ): ResolvedPermissions {
+	permLog.debug("calculating permissions", { ctx, user_id });
+
 	if (!ctx.room_id) {
 		// For non-room channels (DMs, GDMS), we'll allow some basic permissions
 		const defaultPermissions: Permission[] = [
@@ -190,6 +191,9 @@ export function calculatePermissions(
 			"VoiceSpeak",
 			"VoiceVideo",
 		];
+		permLog.debug("no room_id, returning default permissions", {
+			defaultPermissions,
+		});
 		return {
 			permissions: new Set(defaultPermissions),
 			rank: 0,
@@ -199,11 +203,17 @@ export function calculatePermissions(
 		};
 	}
 
-	const rooms = useRooms2();
-	const room = rooms.cache.get(ctx.room_id!);
+	const room = ctx.api.rooms.cache.get(ctx.room_id!);
+	permLog.debug("room lookup", {
+		room_id: ctx.room_id,
+		found: !!room,
+		owner_id: room?.owner_id,
+	});
+
 	if (room?.owner_id === user_id) {
 		// owners have full permissions (ViewChannel and Admin)
 		const ownerPerms = new Set<Permission>(adminPerms);
+		permLog.debug("user is room owner, returning full permissions");
 		return {
 			permissions: ownerPerms,
 			rank: Infinity,
@@ -213,18 +223,25 @@ export function calculatePermissions(
 		};
 	}
 
-	const member = ctx.api.room_members.fetch(
-		() => ctx.room_id!,
-		() => user_id,
-	)();
-	const rolesResource = ctx.api.roles.list(() => ctx.room_id!);
+	const member = ctx.api.roomMembers.cache.get(`${ctx.room_id!}:${user_id}`);
+	const roles = [...ctx.api.roles.cache.values()].filter((r) =>
+		r.room_id === ctx.room_id
+	);
+
+	permLog.debug("member and roles lookup", {
+		member_found: !!member,
+		member_roles: member?.roles,
+		roles_count: roles.length,
+	});
 
 	// handle non-members
-	if (!room || !member || !rolesResource) {
+	if (!room || !member) {
+		permLog.debug("user is not a member or room not found", {
+			has_room: !!room,
+			has_member: !!member,
+		});
 		if (room?.public) {
-			const everyoneRole = rolesResource()?.items.find((r) =>
-				r.id === ctx.room_id
-			);
+			const everyoneRole = roles.find((r) => r.id === ctx.room_id);
 			if (everyoneRole) {
 				const perms = new Set<Permission>();
 				for (const p of everyoneRole.allow) {
@@ -235,6 +252,11 @@ export function calculatePermissions(
 				}
 				// Apply lurker restrictions for non-members
 				const restricted = applyLurkerRestrictions(perms);
+				permLog.debug("public room, returning lurker permissions", {
+					everyone_allow: everyoneRole.allow,
+					everyone_deny: everyoneRole.deny,
+					resulting_perms: [...restricted],
+				});
 				return {
 					permissions: restricted,
 					rank: 0,
@@ -244,17 +266,9 @@ export function calculatePermissions(
 				};
 			}
 		}
-		return {
-			permissions: new Set(),
-			rank: 0,
-			timedOut: false,
-			quarantined: false,
-			lurker: false,
-		};
-	}
-
-	const roles = rolesResource()?.items;
-	if (!roles) {
+		permLog.warn(
+			"user has no permissions (not a member, room not public or no everyone role)",
+		);
 		return {
 			permissions: new Set(),
 			rank: 0,
@@ -276,6 +290,8 @@ export function calculatePermissions(
 		}
 	}
 
+	permLog.debug("role permissions collected", { allowed, denied });
+
 	const perms = new Set<Permission>();
 
 	const addPerm = (p: Permission) => {
@@ -293,8 +309,14 @@ export function calculatePermissions(
 		addPerm(p);
 	}
 
+	permLog.debug("permissions after allowed", {
+		count: perms.size,
+		has_message_create: perms.has("MessageCreate"),
+	});
+
 	if (perms.has("Admin")) {
 		const rank = calculateRank(roles, member.roles);
+		permLog.debug("user has admin, returning full permissions");
 		return {
 			permissions: perms,
 			rank,
@@ -308,6 +330,11 @@ export function calculatePermissions(
 		perms.delete(p);
 	}
 
+	permLog.debug("permissions after denied", {
+		count: perms.size,
+		has_message_create: perms.has("MessageCreate"),
+	});
+
 	// Check if user is timed out
 	const isTimedOut = member.timeout_until
 		? new Date(member.timeout_until).getTime() > Date.now()
@@ -316,6 +343,7 @@ export function calculatePermissions(
 	// Apply timeout restrictions
 	if (isTimedOut) {
 		const restricted = applyTimedOutRestrictions(perms);
+		permLog.debug("user is timed out, applying restrictions");
 		return {
 			permissions: restricted,
 			rank: calculateRank(roles, member.roles),
@@ -328,6 +356,7 @@ export function calculatePermissions(
 	// Apply quarantine restrictions
 	if (member.quarantined) {
 		const restricted = applyQuarantinedRestrictions(perms);
+		permLog.debug("user is quarantined, applying restrictions");
 		return {
 			permissions: restricted,
 			rank: calculateRank(roles, member.roles),
@@ -338,10 +367,19 @@ export function calculatePermissions(
 	}
 
 	if (ctx.channel_id) {
+		permLog.debug("applying channel permissions", {
+			channel_id: ctx.channel_id,
+		});
 		applyChannelPermissions(perms, ctx, member);
 	}
 
 	const rank = calculateRank(roles, member.roles);
+
+	permLog.debug("final permissions", {
+		count: perms.size,
+		has_message_create: perms.has("MessageCreate"),
+		rank,
+	});
 
 	return {
 		permissions: perms,
@@ -374,11 +412,11 @@ function applyChannelPermissions(
 	ctx: PermissionContext,
 	member: RoomMember,
 ) {
-	const channel = ctx.channels.cache.get(ctx.channel_id!);
+	const channel = ctx.api.channels.cache.get(ctx.channel_id!);
 	if (!channel) return;
 
 	if (channel.parent_id) {
-		const parentChannel = ctx.channels.cache.get(channel.parent_id!);
+		const parentChannel = ctx.api.channels.cache.get(channel.parent_id!);
 		if (parentChannel) {
 			applyChannelOverwrites(perms, parentChannel, member, ctx.room_id!);
 		}

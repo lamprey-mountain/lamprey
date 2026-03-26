@@ -1,7 +1,7 @@
 import { createSignal, onMount, Show } from "solid-js";
 import { Checkbox } from "../icons";
 import { Modal } from "./mod";
-import { useApi } from "@/api";
+import { useApi2 } from "@/api";
 import { useModals } from "../contexts/modal";
 import { useCtx } from "../context";
 import { getThumbFromId } from "../media/util";
@@ -13,7 +13,7 @@ type ModalAttachmentProps = {
 };
 
 export const ModalAttachment = (props: ModalAttachmentProps) => {
-	const api = useApi();
+	const api2 = useApi2();
 	const [, modalCtl] = useModals();
 	const ctx = useCtx();
 	const [filename, setFilename] = createSignal("");
@@ -48,7 +48,7 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 		if (!att) return;
 
 		if (att.status === "uploaded") {
-			api.client.http.PATCH("/api/v1/media/{media_id}", {
+			api2.client.http.PATCH("/api/v1/media/{media_id}", {
 				params: { path: { media_id: att.media.id } },
 				body: {
 					alt: alt() || null,

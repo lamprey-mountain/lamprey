@@ -82,4 +82,19 @@ export class RoomMembersService extends BaseService<RoomMember> {
 			ranges,
 		});
 	}
+
+	async search(
+		room_id: string,
+		query: string,
+	): Promise<{ room_members: RoomMember[]; users: any[] }> {
+		const result = await this.retryWithBackoff<any>(() =>
+			this.client.http.GET("/api/v1/room/{room_id}/member/search", {
+				params: {
+					path: { room_id },
+					query: { query },
+				},
+			})
+		);
+		return result.data;
+	}
 }

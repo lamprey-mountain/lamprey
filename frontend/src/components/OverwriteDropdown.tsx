@@ -9,7 +9,7 @@ import {
 import { Portal } from "solid-js/web";
 import { autoUpdate, flip, offset } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
-import { useApi } from "@/api";
+import { useApi2, useRoles2, useRoomMembers2 } from "@/api";
 import { createKeybinds } from "../keybinds.tsx";
 import type { Role, RoomMemberSearchResponse, User } from "sdk";
 import { throttle } from "@solid-primitives/scheduled";
@@ -26,14 +26,18 @@ export function OverwriteDropdown(props: {
 	onSelect: (id: string, type: "Role" | "User") => void;
 	excludeIds?: string[];
 }) {
-	const api = useApi();
+	const api2 = useApi2();
+	const roles2 = useRoles2();
+	const roomMembers2 = useRoomMembers2();
 	const [shown, setShown] = createSignal(false);
 	const [query, setQuery] = createSignal("");
 	const [inputEl, setInputEl] = createSignal<HTMLInputElement>();
 	const [dropdownEl, setDropdownEl] = createSignal<HTMLDivElement>();
 	const [hoveredIndex, setHoveredIndex] = createSignal(0);
 
-	const roles = api.roles.list(() => props.room_id);
+	const roles = [...roles2.cache.values()].filter((r) =>
+		r.room_id === props.room_id
+	);
 	const [memberResults, setMemberResults] = createSignal<
 		RoomMemberSearchResponse
 	>({ room_members: [], users: [] });
@@ -41,8 +45,13 @@ export function OverwriteDropdown(props: {
 	const throttledSearch = throttle(
 		async (q: string) => {
 			if (q.length > 0) {
-				const results = await api.room_members.search(props.room_id, q);
-				setMemberResults(results);
+				try {
+					const results = await roomMembers2.search(props.room_id, q);
+					setMemberResults(results);
+				} catch (e) {
+					console.error("Member search failed:", e);
+					setMemberResults({ room_members: [], users: [] });
+				}
 			} else {
 				setMemberResults({ room_members: [], users: [] });
 			}
@@ -58,17 +67,17 @@ export function OverwriteDropdown(props: {
 		const q = query().toLowerCase();
 		const exclude = new Set(props.excludeIds || []);
 
-		const roleOptions: OverwriteOption[] = (roles()?.items || [])
-			.filter((r) =>
+		const roleOptions: OverwriteOption[] = roles
+			.filter((r: Role) =>
 				r.id !== props.room_id && // exclude @everyone
 				!exclude.has(r.id) &&
 				r.name.toLowerCase().includes(q)
 			)
-			.map((r) => ({ id: r.id, name: r.name, type: "Role" }));
+			.map((r: Role) => ({ id: r.id, name: r.name, type: "Role" as const }));
 
 		const userOptions: OverwriteOption[] = memberResults().users
-			.filter((u) => !exclude.has(u.id))
-			.map((u) => ({ id: u.id, name: u.name, type: "User" }));
+			.filter((u: User) => !exclude.has(u.id))
+			.map((u: User) => ({ id: u.id, name: u.name, type: "User" as const }));
 
 		return [...roleOptions, ...userOptions];
 	});

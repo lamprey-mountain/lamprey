@@ -8,7 +8,7 @@ import {
 	useContext,
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import { useApi } from "@/api";
+import { useApi2, useUsers2 } from "@/api";
 import { createVoiceClient } from "../components/features/voice/rtc";
 import { ReactiveMap } from "@solid-primitives/map";
 // @ts-ignore
@@ -54,7 +54,8 @@ const voiceLog = logger.for("voice");
 const rtcLog = logger.for("rtc");
 
 export const VoiceProvider = (props: ParentProps) => {
-	const api = useApi();
+	const api2 = useApi2();
+	const users2 = useUsers2();
 	const vad = createVoiceActivityDetection();
 	const [state, update] = createStore<VoiceProviderState>({
 		muted: true,
@@ -94,8 +95,8 @@ export const VoiceProvider = (props: ParentProps) => {
 		});
 	});
 
-	api.events.on("sync", async ([e]) => {
-		const currentUser = api.users.cache.get("@self");
+	api2.events.on("sync", async ([e]) => {
+		const currentUser = users2.cache.get("@self");
 		const user_id = currentUser?.id;
 		if (!user_id) return;
 

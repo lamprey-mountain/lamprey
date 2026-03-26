@@ -6,7 +6,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi } from "@/api";
+import { useApi2, useRoomBans2, useUsers2 } from "@/api";
 import { useCtx } from "../../../context.ts";
 import type { RoomT } from "../../../types.ts";
 import { Role, RoomMember, RoomMemberOrigin } from "sdk";
@@ -20,23 +20,24 @@ import { createTooltip } from "../../../atoms/Tooltip.tsx";
 
 export function Bans(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
-	const api = useApi();
-	const bans = api.room_bans.list(() => props.room.id);
-
-	const fetchMore = () => {
-		api.room_bans.list(() => props.room.id);
-	};
+	const api2 = useApi2();
+	const roomBans2 = useRoomBans2();
+	const users2 = useUsers2();
+	const bans = roomBans2.useList(() => props.room.id);
 
 	const [bottom, setBottom] = createSignal<Element | undefined>();
 
 	createIntersectionObserver(() => bottom() ? [bottom()!] : [], (entries) => {
 		for (const entry of entries) {
-			if (entry.isIntersecting) fetchMore();
+			if (entry.isIntersecting && bans()?.state.has_more) {
+				// Trigger refetch for pagination (TODO: implement proper pagination)
+				bans()?.refetch();
+			}
 		}
 	});
 
 	const unban = (user_id: string) => {
-		api.client.http.DELETE("/api/v1/room/{room_id}/ban/{user_id}", {
+		api2.client.http.DELETE("/api/v1/room/{room_id}/ban/{user_id}", {
 			params: { path: { room_id: props.room.id, user_id } },
 		});
 	};
@@ -52,12 +53,14 @@ export function Bans(props: VoidProps<{ room: RoomT }>) {
 			</header>
 			<Show when={bans()}>
 				<ul>
-					<For each={bans()!.items}>
-						{(i) => {
-							const user = api.users.fetch(() => i.user_id);
+					<For each={bans()!.state.ids}>
+						{(id) => {
+							const ban = roomBans2.cache.get(id);
+							if (!ban) return null;
+							const user = users2.use(() => ban.user_id);
 							const name = () => user()?.name;
 							const { content: tipContent } = createTooltip({
-								tip: () => i.reason,
+								tip: () => ban.reason,
 							});
 							return (
 								<li>
@@ -68,18 +71,18 @@ export function Bans(props: VoidProps<{ room: RoomT }>) {
 										</div>
 									</div>
 									<div class="created">
-										<Time date={new Date(i.created_at)} />
+										<Time date={new Date(ban.created_at)} />
 									</div>
 									<div class="expires">
-										<Show when={i.expires_at}>
+										<Show when={ban.expires_at}>
 											{(exp) => <Time date={new Date(exp())} />}
 										</Show>
 									</div>
 									<div class="reason">
-										{i.reason}
+										{ban.reason}
 									</div>
 									<button
-										onClick={[unban, i.user_id]}
+										onClick={[unban, ban.user_id]}
 									>
 										unban
 									</button>

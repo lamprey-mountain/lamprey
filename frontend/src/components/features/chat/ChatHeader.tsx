@@ -1,7 +1,7 @@
 import { createSignal, Match, Show, Switch } from "solid-js";
 import type { Channel } from "sdk";
 import { useCtx } from "../../../context.ts";
-import { useApi, useChannels2, useMessages2 } from "@/api";
+import { useChannels2, useMessages2 } from "@/api";
 import { useChannel } from "../../../channelctx.tsx";
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
 import { useModals } from "../../../contexts/modal.tsx";
@@ -23,7 +23,6 @@ export const ChatHeader = (
 	props: ChatHeaderProps,
 ) => {
 	const ctx = useCtx();
-	const api = useApi();
 	const channels2 = useChannels2();
 	const messagesService = useMessages2();
 	const [channelState, setChannelState] = useChannel()!;

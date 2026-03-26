@@ -1,7 +1,13 @@
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { createVirtualizer } from "@tanstack/solid-virtual";
 import type { Channel, Role, RoomMember, User } from "sdk";
-import { useApi } from "@/api";
+import {
+	useApi2,
+	useRoles2,
+	useRoomMembers2,
+	useThreadMembers2,
+	useUsers2,
+} from "@/api";
 import { AvatarWithStatus } from "../../../User.tsx";
 import { useCtx } from "../../../context.ts";
 import { useUserPopout } from "../../../contexts/mod.tsx";
@@ -9,7 +15,11 @@ import { ReactiveMap } from "@solid-primitives/map";
 import { useMemberList } from "../../../contexts/memberlist.tsx";
 
 export const ThreadMembers = (props: { thread: Channel }) => {
-	const api = useApi();
+	const api2 = useApi2();
+	const roles2 = useRoles2();
+	const threadMembers2 = useThreadMembers2();
+	const users2 = useUsers2();
+	const roomMembers2 = useRoomMembers2();
 	const memberLists = useMemberList();
 	const thread_id = () => props.thread.id;
 	const room_id = () => props.thread.room_id;
@@ -43,7 +53,7 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 
 	const getGroupName = (group: any) => {
 		if (typeof group.id === "string") {
-			const role = api.roles.cache.get(group.id);
+			const role = roles2.cache.get(group.id);
 			return role?.name ?? group.id;
 		}
 		return JSON.stringify(group.id);
@@ -102,21 +112,18 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 									: (
 										(() => {
 											const member = () =>
-												api.thread_members.cache.get(thread_id())?.get(
-													row.item.user.id,
-												) ?? row.item.thread_member;
+												threadMembers2.cache.get(
+													`${thread_id()}:${row.item.user.id}`,
+												) ??
+													row.item.thread_member;
 											const user = () =>
-												(api.users.cache.get(row.item.user.id) ??
+												(users2.cache.get(row.item.user.id) ??
 													row.item.user) as User;
-											const userIdSig = () => user().id;
 											const room_member = props.thread.room_id
-												? api.room_members.fetch(
-													() =>
-														room_id() as string,
-													userIdSig,
+												? roomMembers2.cache.get(
+													`${room_id() as string}:${row.item.user.id}`,
 												)
-												: () =>
-													null;
+												: null;
 											// Thread member display - end
 											const ctx = useCtx();
 											const { userView, setUserView } = useUserPopout();
