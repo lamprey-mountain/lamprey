@@ -20,11 +20,9 @@ const banReasons = [
 
 export const ModalBan = (props: ModalBanProps) => {
 	const [, modalCtl] = useModals();
-	const user = props.api.users.fetch(() => props.user_id!);
-	const room_member = props.api.room_members.fetch(
-		() => props.room_id,
-		() => props.user_id!,
-	);
+	const user = () => props.api.users.cache.get(props.user_id!);
+	const room_member = () =>
+		props.api.room_members.cache.get(`${props.room_id}:${props.user_id}`);
 	const [reason, setReason] = createSignal("");
 	const [duration, setDuration] = createSignal<number | "forever" | null>(
 		"forever",

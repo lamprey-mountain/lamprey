@@ -45,9 +45,9 @@ const tabs: Array<{
 		name: "tags",
 		path: "tags",
 		component: Tags,
-		permissionCheck: (p) => p.has("TagManage"),
+		permissionCheck: (p) => p.has("RoleManage"),
 		channelTypes: ["Forum", "Forum2"],
-		// permissionCheck: (p) => p.has("TagManage") || p.has("ChannelManage"),
+		// permissionCheck: (p) => p.has("RoleManage") || p.has("ChannelManage"),
 	},
 	{
 		name: "webhooks",

@@ -181,10 +181,14 @@ export class RootStore {
 		this.setSession(msg.session);
 		if (msg.user) {
 			// Set @self alias first using session user_id
-			const userId = msg.session.user_id;
+			const userId = msg.session.status === "Unauthorized"
+				? undefined
+				: msg.session.user_id;
 			storeLog.debug("Setting @self alias", {
 				userId,
-				session_user_id: msg.session.user_id,
+				session_user_id: msg.session.status === "Unauthorized"
+					? undefined
+					: msg.session.user_id,
 			});
 			if (userId) {
 				const userWithRelationship: UserWithRelationship = {
@@ -284,12 +288,15 @@ export class RootStore {
 			}
 		} else if (msg.type === "MessageCreate") {
 			const m = msg.message;
-			if (raw.op === "Sync") m.nonce = raw.nonce;
+			if (raw.op === "Sync") (m as any).nonce = raw.nonce;
 			this.messages.handleMessageCreate(m);
 			this.notifications.handleMessageCreate(m);
 
 			const session = this.session();
-			const isOwnMessage = m.author_id === session?.user_id;
+			const sessionUserId = session?.status === "Unauthorized"
+				? undefined
+				: session?.user_id;
+			const isOwnMessage = m.author_id === sessionUserId;
 			if (isOwnMessage) {
 				const channel = this.channels.cache.get(m.channel_id);
 				if (channel) {
@@ -308,7 +315,10 @@ export class RootStore {
 		} else if (msg.type === "MessageDelete") {
 			this.messages.handleMessageDelete(msg.channel_id, msg.message_id);
 		} else if (msg.type === "PreferencesGlobal") {
-			if (msg.user_id === this.session()?.user_id) {
+			const sessionUserId = this.session()?.status === "Unauthorized"
+				? undefined
+				: this.session()?.user_id;
+			if (msg.user_id === sessionUserId) {
 				this.preferences.cache.set("@self", msg.config);
 				this.preferences._loaded = true;
 			}

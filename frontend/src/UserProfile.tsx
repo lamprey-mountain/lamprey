@@ -12,7 +12,10 @@ export function UserProfile(props: { user: UserWithRelationship }) {
 			const { data } = await api2.client.http.GET(
 				"/api/v1/user/{user_id}/room",
 				{
-					params: { path: { user_id } },
+					params: {
+						path: { user_id },
+						query: { pagination: {} },
+					},
 				},
 			);
 			return data;

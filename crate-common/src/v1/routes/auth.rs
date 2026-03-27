@@ -220,7 +220,7 @@ pub mod auth_password_set {
 /// Auth password exec
 #[endpoint(
     post,
-    path = "/auth/password/exec",
+    path = "/auth/password",
     tags = ["auth"],
     scopes = [Full],
     audit_log_events = ["AuthUpdate"],

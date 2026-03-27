@@ -295,6 +295,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 						room_id: props.room.id,
 						user_id: user()!.id,
 					},
+					query: { soft: false },
 				},
 			});
 		});

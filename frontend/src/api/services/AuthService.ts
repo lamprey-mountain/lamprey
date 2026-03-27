@@ -32,7 +32,7 @@ export class AuthService extends BaseService<never> {
 	}
 
 	async createTempSession(): Promise<Session> {
-		return await this.retryWithBackoff<{ data: Session }>(() =>
+		return await this.retryWithBackoff(() =>
 			this.client.http.POST("/api/v1/session", {
 				body: {},
 			})

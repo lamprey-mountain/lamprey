@@ -195,7 +195,7 @@ pub mod room_member_search_advanced {
 
 /// Room ban create
 #[endpoint(
-    post,
+    put,
     path = "/room/{room_id}/ban/{user_id}",
     tags = ["room_member"],
     scopes = [Full],

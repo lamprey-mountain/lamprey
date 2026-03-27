@@ -284,7 +284,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 					</Match>
 				</Switch>
 			</Show>
-			<Show when={hasPermission("ThreadLock")}>
+			<Show when={hasPermission("ThreadManage")}>
 				<Item onClick={toggleLock}>
 					{channel()?.locked ? "unlock" : "lock"}
 				</Item>

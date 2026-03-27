@@ -91,7 +91,7 @@ export function Tags(props: VoidProps<{ channel: Channel }>) {
 					aria-label="search tags"
 					onInput={(e) => setSearch(e.target.value)}
 				/>
-				<Show when={perms.has("TagManage")}>
+				<Show when={perms.has("RoleManage")}>
 					<button type="button" class="primary big" onClick={openCreateModal}>
 						create tag
 					</button>
@@ -134,7 +134,7 @@ export function Tags(props: VoidProps<{ channel: Channel }>) {
 											</div>
 										</div>
 									</div>
-									<Show when={perms.has("TagManage")}>
+									<Show when={perms.has("RoleManage")}>
 										<TagToolbar
 											onEdit={() => openEditModal(tag)}
 											onDelete={deleteTag(tag.id)}

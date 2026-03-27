@@ -199,8 +199,8 @@ export const RouteRoomSettings = (p: ParentProps<RouteSectionProps>) => {
 	return (
 		<>
 			<Title title={title()} />
-			<Show when={room()}>
-				<RoomSettings room={room()!} page={p.params.page} />
+			<Show when={room() && p.params.page}>
+				<RoomSettings room={room()!} page={p.params.page!} />
 			</Show>
 		</>
 	);
@@ -215,8 +215,8 @@ export const RouteChannelSettings = (p: ParentProps<RouteSectionProps>) => {
 	return (
 		<>
 			<Title title={title()} />
-			<Show when={channel()}>
-				<ChannelSettings channel={channel()!} page={p.params.page} />
+			<Show when={channel() && p.params.page}>
+				<ChannelSettings channel={channel()!} page={p.params.page!} />
 			</Show>
 		</>
 	);
@@ -442,7 +442,7 @@ export const RouteChannel = (p: ParentProps<RouteSectionProps>) => {
 		if (!ch) return t("loading");
 		if (ch.type === "Dm") {
 			const user_id = currentUser()?.id;
-			return ch.recipients.find((i) => i.id !== user_id)?.name ??
+			return ch.recipients?.find((i) => i.id !== user_id)?.name ??
 				"dm";
 		}
 
@@ -558,7 +558,7 @@ export const RouteInvite = (p: ParentProps<RouteSectionProps>) => {
 
 export const RouteUser = (p: ParentProps<RouteSectionProps>) => {
 	const api2 = useApi2();
-	const user = api2.users.fetch(() => p.params.user_id);
+	const user = () => api2.users.cache.get(p.params.user_id);
 
 	return (
 		<LayoutDefault

@@ -643,7 +643,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 			slowmodeShake();
 			return false;
 		}
-		submit(text, bypassSlowmode());
+		submit(text, bypassSlowmode);
 		localStorage.removeItem(storageKey());
 		return true;
 	};
@@ -753,7 +753,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 
 	const locked = () => {
 		return !perms.has("MessageCreate") ||
-			((props.channel.locked as any) && !perms.has("ThreadLock"));
+			((props.channel.locked as any) && !perms.has("ThreadManage"));
 	};
 
 	const [remainingTime, setRemainingTime] = createSignal(0);

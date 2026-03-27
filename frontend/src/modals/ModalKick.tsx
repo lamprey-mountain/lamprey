@@ -19,11 +19,9 @@ const kickReasons = [
 
 export const ModalKick = (props: ModalKickProps) => {
 	const [, modalCtl] = useModals();
-	const user = props.api.users.fetch(() => props.user_id);
-	const room_member = props.api.room_members.fetch(
-		() => props.room_id,
-		() => props.user_id,
-	);
+	const user = () => props.api.users.cache.get(props.user_id);
+	const room_member = () =>
+		props.api.room_members.cache.get(`${props.room_id}:${props.user_id}`);
 	const [reason, setReason] = createSignal("");
 
 	const handleKick = async () => {
@@ -36,6 +34,7 @@ export const ModalKick = (props: ModalKickProps) => {
 							room_id: props.room_id,
 							user_id: props.user_id,
 						},
+						query: { soft: false },
 					},
 					headers: {
 						"X-Reason": reason() || undefined,

@@ -49,7 +49,7 @@ const tabs: Array<
 		name: "analytics",
 		path: "analytics",
 		component: Analytics,
-		permissionCheck: (p) => p.has("ViewAnalytics"),
+		permissionCheck: (p) => p.has("AnalyticsView"),
 	},
 	{ name: "emoji", path: "emoji", component: Emoji },
 	{ category: "integrations" },
@@ -92,7 +92,7 @@ const tabs: Array<
 		name: "audit log",
 		path: "logs",
 		component: AuditLog,
-		permissionCheck: (p) => p.has("ViewAuditLog"),
+		permissionCheck: (p) => p.has("AuditLogView"),
 	},
 	{
 		name: "delete room",
@@ -171,7 +171,7 @@ const adminTabs: Array<
 		name: "audit log",
 		path: "logs",
 		component: Admin.AuditLog,
-		permissionCheck: (p) => p.has("ViewAuditLog"),
+		permissionCheck: (p) => p.has("AuditLogView"),
 	},
 ];
 

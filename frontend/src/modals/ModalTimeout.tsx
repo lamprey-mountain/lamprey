@@ -20,11 +20,9 @@ const timeoutReasons = [
 
 export const ModalTimeout = (props: ModalTimeoutProps) => {
 	const [, modalCtl] = useModals();
-	const user = props.api.users.fetch(() => props.user_id);
-	const room_member = props.api.room_members.fetch(
-		() => props.room_id,
-		() => props.user_id,
-	);
+	const user = () => props.api.users.cache.get(props.user_id);
+	const room_member = () =>
+		props.api.room_members.cache.get(`${props.room_id}:${props.user_id}`);
 	const [duration, setDuration] = createSignal<number | null>(3600);
 	const [reason, setReason] = createSignal("");
 	const [loading, setLoading] = createSignal(false);

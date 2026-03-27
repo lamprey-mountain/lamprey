@@ -30,7 +30,7 @@ export class RolesService extends BaseService<Role> {
 		return data;
 	}
 
-	protected upsert(role: Role) {
+	upsert(role: Role) {
 		super.upsert(role);
 
 		const r = this.rolesByRoom.get(role.room_id) ?? new ReactiveSet();
@@ -38,7 +38,7 @@ export class RolesService extends BaseService<Role> {
 		this.rolesByRoom.set(role.room_id, r);
 	}
 
-	protected delete(role_id: string) {
+	delete(role_id: string) {
 		const role = this.cache.get(role_id);
 		if (role) {
 			this.rolesByRoom.get(role.room_id)?.delete(role_id);

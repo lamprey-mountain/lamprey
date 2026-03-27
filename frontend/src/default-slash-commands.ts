@@ -856,7 +856,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				return checkPermission(
 					{ api, room_id, channel_id: channel.id },
 					self_id,
-					"ThreadLock",
+					"ThreadManage",
 				);
 			},
 			execute: async (ctx, api, channels, channel_id, args, store) => {
@@ -878,7 +878,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					!checkPermission(
 						{ api, room_id, channel_id: channel.id },
 						self_id,
-						"ThreadLock",
+						"ThreadManage",
 					)
 				) {
 					console.error("Insufficient permissions to lock thread.");
@@ -914,7 +914,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				return checkPermission(
 					{ api, room_id, channel_id: channel.id },
 					self_id,
-					"ThreadLock",
+					"ThreadManage",
 				);
 			},
 			execute: async (ctx, api, channels, channel_id, args, store) => {
@@ -936,7 +936,7 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					!checkPermission(
 						{ api, room_id, channel_id: channel.id },
 						self_id,
-						"ThreadLock",
+						"ThreadManage",
 					)
 				) {
 					console.error("Insufficient permissions to unlock thread.");

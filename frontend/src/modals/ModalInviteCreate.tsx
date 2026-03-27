@@ -31,7 +31,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 	const currentUser = useCurrentUser();
 
 	const rooms2 = useRooms2();
-	const roles = roles2.useList(() => props.room_id as string);
+	const roles = () => roles2.listByRoom(props.room_id as string);
 
 	const currentUserId = () => currentUser()?.id;
 

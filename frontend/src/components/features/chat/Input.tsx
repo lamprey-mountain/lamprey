@@ -219,7 +219,7 @@ export function Input(props: InputProps) {
 
 	const locked = () => {
 		return !perms.has("MessageCreate") ||
-			(props.channel.locked && !perms.has("ThreadLock"));
+			(props.channel.locked && !perms.has("ThreadManage"));
 	};
 
 	const bypassSlowmode = () =>

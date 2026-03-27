@@ -180,7 +180,7 @@ pub mod invite_update {
 /// Invite use
 #[endpoint(
     post,
-    path = "/invite/{invite_code}/use",
+    path = "/invite/{invite_code}",
     tags = ["invite"],
     scopes = [Full],
     response(OK, description = "success"),

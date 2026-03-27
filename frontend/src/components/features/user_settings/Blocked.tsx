@@ -34,10 +34,9 @@ export function Blocked(_props: VoidProps<{ user: User }>) {
 
 	const [blockedUsers, { refetch }] = createResource(async () => {
 		const { data, error } = await api2.client.http.GET(
-			"/api/v1/user/{user_id}/block",
+			"/api/v1/user/@self/block",
 			{
 				params: {
-					path: { user_id: "@self" },
 					query: { limit: 100 },
 				},
 			},

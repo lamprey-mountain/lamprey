@@ -156,12 +156,12 @@ const UrlEmbedDbg = () => {
 		e.preventDefault();
 		if (!url) return;
 		const { data, error } = await api2.client.http.POST(
-			"/api/v1/debug/embed-url",
+			"/api/v1/unfurler/debug",
 			{
 				body: { url },
 			},
 		);
-		setData(data ?? null);
+		setData(data?.embeds[0] ?? null);
 		setError(error ?? null);
 	}
 

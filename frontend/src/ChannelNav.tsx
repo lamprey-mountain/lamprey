@@ -114,7 +114,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 			currentUserId()!,
 		);
 
-		return permissions.has("ViewChannel");
+		return permissions.has("ChannelView");
 	};
 
 	const categories = createMemo<
@@ -848,7 +848,7 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 	const otherUser = createMemo(() => {
 		if (props.channel.type === "Dm") {
 			const selfId = user()?.id;
-			return props.channel.recipients.find((i) => i.id !== selfId);
+			return props.channel.recipients?.find((i) => i.id !== selfId);
 		}
 		return undefined;
 	});

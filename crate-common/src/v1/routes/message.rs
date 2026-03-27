@@ -317,7 +317,7 @@ pub mod message_migrate {
 /// Message pin
 #[endpoint(
     put,
-    path = "/channel/{channel_id}/message/{message_id}/pin",
+    path = "/channel/{channel_id}/pin/{message_id}",
     tags = ["message"],
     scopes = [Full],
     permissions = [MessagePin],
@@ -341,7 +341,7 @@ pub mod message_pin {
 /// Message unpin
 #[endpoint(
     delete,
-    path = "/channel/{channel_id}/message/{message_id}/pin",
+    path = "/channel/{channel_id}/pin/{message_id}",
     tags = ["message"],
     scopes = [Full],
     permissions = [MessagePin],
