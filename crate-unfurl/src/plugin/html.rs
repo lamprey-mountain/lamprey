@@ -63,6 +63,7 @@ impl UnfurlPlugin for HtmlStreamPlugin {
             }
 
             tokenizer.end();
+            drop(tokenizer);
 
             Rc::try_unwrap(shared_data).unwrap().into_inner()
         });
