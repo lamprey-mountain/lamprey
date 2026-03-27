@@ -14,15 +14,12 @@ import icChanDocument1 from "../assets/channel-document-1.png";
 import icChanWiki1 from "../assets/channel-wiki-1.png";
 import icChanNsfw from "../assets/channel-nsfw.png";
 import { Channel } from "sdk";
-import { useApi2 } from "@/api";
 import { cyrb53, LCG } from "../rng";
 import { AvatarWithStatus } from "./UserAvatar";
 
 export const ChannelIcon = (
 	props: { channel: Channel; animate?: boolean; style?: string },
 ) => {
-	const api2 = useApi2();
-
 	const icon = () => {
 		const rand = LCG(cyrb53(props.channel.id));
 		function rnd<T>(arr: T[]): T {

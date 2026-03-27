@@ -120,6 +120,9 @@ export type RoomAnalyticsMembersLeave =
 	components["schemas"]["RoomAnalyticsMembersLeave"];
 export type RoomAnalyticsOverview =
 	components["schemas"]["RoomAnalyticsOverview"];
+export type AutomodTrigger = components["schemas"]["AutomodTrigger"];
+export type AutomodAction = components["schemas"]["AutomodAction"];
+export type AutomodTarget = components["schemas"]["AutomodTarget"];
 
 // TODO: use openai schema
 export type MessageSearch = {

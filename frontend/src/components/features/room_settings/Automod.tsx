@@ -1,34 +1,43 @@
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
 import {
 	createEffect,
+	createMemo,
 	createResource,
 	createSignal,
 	For,
-	onCleanup,
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi2 } from "@/api";
-import { useCtx } from "../../../context.ts";
-import type { Room } from "sdk";
-import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
-import { Time } from "../../../atoms/Time.tsx";
-import { usePermissions } from "../../../hooks/usePermissions.ts";
-import {
-	type AutomodRule,
-	type AutomodRuleCreate,
-	getTimestampFromUUID,
-} from "sdk";
+import { useApi2, useChannels2 } from "@/api";
+import type { AutomodRule as SdkAutomodRule, Room } from "sdk";
 import { useModals } from "../../../contexts/modal";
 import fuzzysort from "fuzzysort";
+import { uuidv7 } from "uuidv7";
+import { Savebar } from "@/atoms/Savebar.tsx";
+import { createStore } from "solid-js/store";
+import { AutomodRule } from "../automod_editor/AutomodRule.tsx";
+import { usePermissions } from "@/hooks/usePermissions.ts";
+
+// clean = not touched, data is straight from the server
+// draft = not yet created
+// edited = rule exists on server, has unsaved changes
+export type RuleState = "clean" | "draft" | "edited";
+
+export type UiAutomodRule = SdkAutomodRule & { state: RuleState };
 
 export function Automod(props: VoidProps<{ room: Room }>) {
-	const ctx = useCtx();
 	const api2 = useApi2();
+	const channels2 = useChannels2();
 	const [, modalCtl] = useModals();
 	const currentUser = useCurrentUser();
 
-	const [rules, { refetch }] = createResource(async () => {
+	const roomChannels = createMemo(() => {
+		return [...channels2.cache.values()].filter(
+			(c) => c.room_id === props.room.id,
+		);
+	});
+
+	const [rules, { refetch }] = createResource<UiAutomodRule[]>(async () => {
 		const { data } = await api2.client.http.GET(
 			"/api/v1/room/{room_id}/automod/rule",
 			{ params: { path: { room_id: props.room.id } } },
@@ -51,24 +60,17 @@ export function Automod(props: VoidProps<{ room: Room }>) {
 		);
 	};
 
-	const fetchMore = () => {
-		// TODO: make this work
-	};
-
-	const [bottom, setBottom] = createSignal<Element | undefined>();
-
-	createIntersectionObserver(() => bottom() ? [bottom()!] : [], (entries) => {
-		for (const entry of entries) {
-			if (entry.isIntersecting) fetchMore();
-		}
-	});
-
 	const [search, setSearch] = createSignal("");
+	const [draftRules, setDraftRules] = createStore<UiAutomodRule[]>([]);
+	const [ruleStates, setRuleStates] = createSignal<Record<string, RuleState>>(
+		{},
+	);
 
 	const filteredRules = () => {
 		const query = search();
-		if (!query) return rules()!;
-		const results = fuzzysort.go(query, rules()!, {
+		const allRules = [...(rules() || []), ...draftRules];
+		if (!query) return allRules;
+		const results = fuzzysort.go(query, allRules, {
 			key: "name",
 			threshold: -10000,
 		});
@@ -76,14 +78,107 @@ export function Automod(props: VoidProps<{ room: Room }>) {
 	};
 
 	const create = () => {
-		// TODO: show a automod rule "skeleton" ui, make user enter in name, triggers, actions, etc
+		const draftRule: UiAutomodRule = {
+			id: uuidv7(),
+			room_id: props.room.id,
+			name: "New Rule",
+			enabled: false,
+			trigger: {
+				type: "TextKeywords",
+				keywords: [],
+				allow: [],
+			},
+			actions: [],
+			except_roles: [],
+			except_channels: [],
+			except_nsfw: false,
+			include_everyone: false,
+			target: "Content",
+			state: "draft",
+		};
+		setDraftRules([...draftRules, draftRule]);
+		setRuleStates({ ...ruleStates(), [draftRule.id]: "draft" });
+	};
+
+	createEffect(() => {
+		// console.log("new draft rules", JSON.parse(JSON.stringify(draftRules)));
+	});
+
+	const updateRule = () => {
+		// TODO
+	};
+
+	const setRuleState = (ruleId: string, state: RuleState) => {
+		setRuleStates({ ...ruleStates(), [ruleId]: state });
+	};
+
+	const hasUnsavedChanges = () => {
+		const states = ruleStates();
+		return Object.values(states).some((s) => s === "draft" || s === "edited");
 	};
 
 	const user_id = () => currentUser()?.id;
 	const perms = usePermissions(user_id, () => props.room.id, () => undefined);
 
+	const handleSave = async () => {
+		const states = ruleStates();
+		const draftRulesToSave = draftRules;
+
+		for (const [ruleId, state] of Object.entries(states)) {
+			if (state === "draft") {
+				const rule = draftRulesToSave.find((r) => r.id === ruleId);
+				if (rule) {
+					// Clean arrays before saving
+					const cleanedRule = {
+						...rule,
+						trigger: {
+							...rule.trigger,
+							keywords: (rule.trigger as any).keywords?.filter((k: string) =>
+								k.trim() !== ""
+							),
+							deny: (rule.trigger as any).deny?.filter((d: string) =>
+								d.trim() !== ""
+							),
+							allow: (rule.trigger as any).allow?.filter((a: string) =>
+								a.trim() !== ""
+							),
+							hostnames: (rule.trigger as any).hostnames?.filter((h: string) =>
+								h.trim() !== ""
+							),
+						},
+					};
+					await api2.client.http.POST(
+						"/api/v1/room/{room_id}/automod/rule",
+						{
+							params: { path: { room_id: props.room.id } },
+							body: cleanedRule,
+						},
+					);
+				}
+			} else if (state === "edited") {
+				const rule = filteredRules().find((r) => r.id === ruleId);
+				if (rule) {
+					await api2.client.http.PATCH(
+						"/api/v1/room/{room_id}/automod/rule/{rule_id}",
+						{
+							params: { path: { room_id: props.room.id, rule_id: ruleId } },
+							body: {
+								name: rule.name,
+								enabled: rule.enabled,
+							},
+						},
+					);
+				}
+			}
+		}
+
+		setRuleStates({});
+		setDraftRules([]);
+		await refetch();
+	};
+
 	return (
-		<div class="room-settings-integrations">
+		<div class="room-settings-automod">
 			<h2>automod</h2>
 			<Show when={perms.has("RoomManage")}>
 				<header class="applications-header">
@@ -98,89 +193,34 @@ export function Automod(props: VoidProps<{ room: Room }>) {
 					</button>
 				</header>
 			</Show>
-			<Show when={rules()}>
-				<ul>
-					<For each={filteredRules()}>
-						{(i) => {
-							const [name, setName] = createSignal(i.name);
-							const [enabled, setEnabled] = createSignal(i.enabled);
-
-							createEffect(() => {
-								setName(i.name);
-								setEnabled(i.enabled);
-							});
-
-							const updateRule = async () => {
-								await api2.client.http.PATCH(
-									"/api/v1/room/{room_id}/automod/rule/{rule_id}",
-									{
-										params: { path: { room_id: props.room.id, rule_id: i.id } },
-										body: {
-											name: name(),
-											enabled: enabled(),
-										},
-									},
-								);
-							};
-
-							return (
-								<li>
-									<details>
-										<summary>
-											<div style="display: flex; align-items: top; gap: 8px;">
-												<div>
-													<h3 class="name">{name()}</h3>
-													<div>
-														created on{" "}
-														<Time date={getTimestampFromUUID(i.id)} />
-													</div>
-												</div>
-											</div>
-										</summary>
-										<div class="info">
-											<div style="display: flex;flex: 1; gap: 8px">
-												<div style="flex: 1;">
-													<h3 class="dim">name</h3>
-													<input
-														type="text"
-														value={name()}
-														onInput={(e) => setName(e.target.value)}
-														onBlur={updateRule}
-													/>
-												</div>
-												<div style="flex: 1;">
-													{/* TODO: use fancy checkbox here */}
-													<h3 class="dim">enabled</h3>
-													<input
-														type="checkbox"
-														checked={enabled()}
-														onChange={(e) => {
-															setEnabled(e.target.checked);
-															updateRule();
-														}}
-													/>
-												</div>
-											</div>
-											{/* TODO: configure rule triggers */}
-											{/* TODO: configure rule actions */}
-											{/* TODO: configure rule exceptions */}
-											<div style="margin-top: 8px; display: flex; gap: 8px">
-												<button
-													onClick={removeRule(i.id)}
-													class="danger"
-												>
-													delete
-												</button>
-											</div>
-										</div>
-									</details>
-								</li>
-							);
-						}}
+			<Show when={filteredRules()?.length} fallback="no rules">
+				<ul class="automod-rules-list">
+					<For each={filteredRules()} fallback="no items">
+						{(rule) => (
+							<AutomodRule
+								rule={rule}
+								ruleStates={ruleStates()}
+								setRuleState={setRuleState}
+								draftRules={draftRules}
+								setDraftRules={setDraftRules}
+								onUpdate={updateRule}
+								onDelete={removeRule(rule.id)}
+								room_id={props.room.id}
+								channels={roomChannels}
+							/>
+						)}
 					</For>
 				</ul>
-				<div ref={setBottom}></div>
 			</Show>
+			<Savebar
+				onSave={handleSave}
+				onCancel={() => {
+					setDraftRules([]);
+					setRuleStates({});
+					refetch();
+				}}
+				show={hasUnsavedChanges()}
+			/>
 		</div>
 	);
 }
