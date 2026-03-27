@@ -17,6 +17,7 @@ import { RoomMembersService } from "../services/RoomMembersService";
 import { ThreadMembersService } from "../services/ThreadMembersService";
 import { MessagesService } from "../services/MessagesService";
 import { NotificationService } from "../services/NotificationService";
+import { PreferencesService } from "../services/PreferencesService";
 export { MemberListService } from "../services/MemberListService";
 import { MemberListService } from "../services/MemberListService";
 import { InvitesService } from "../services/InvitesService";
@@ -74,15 +75,12 @@ export class RootStore {
 	auditLog: AuditLogService;
 	inbox: InboxService;
 	documents: DocumentsService;
+	preferences: PreferencesService;
 	voiceStates: ReactiveMap<string, VoiceState>;
 	typing: ReactiveMap<string, Set<string>>;
 
 	session: Accessor<Session | null>;
 	setSession: (s: Session | null) => void;
-
-	preferences?: Accessor<Preferences>;
-	setPreferences?: (p: Preferences) => void;
-	setServerPreferences?: (p: Preferences) => void;
 
 	// Backwards compatibility aliases
 	get room_members() {
@@ -132,45 +130,41 @@ export class RootStore {
 			sync: [MessageSync, MessageEnvelope];
 			ready: MessageReady;
 		}>,
-		preferences?: Accessor<Preferences>,
-		setPreferences?: (p: Preferences) => void,
-		setServerPreferences?: (p: Preferences) => void,
 		getDb?: () => IDBPDatabase<unknown> | undefined,
 	) {
 		this.client = client;
 		this._events = events;
-		this.preferences = preferences;
-		this.setPreferences = setPreferences;
-		this.setServerPreferences = setServerPreferences;
 
 		const [session, setSession] = createSignal<Session | null>(null);
 		this.session = session;
 		this.setSession = setSession;
 
-		this.rooms = new RoomsService(this, getDb);
+		this.auditLog = new AuditLogService(this, getDb);
+		this.auth = new AuthService(this, getDb);
 		this.channels = new ChannelsService(this, getDb);
-		this.users = new UsersService(this, getDb);
-		this.roles = new RolesService(this, getDb);
-		this.sessions = new SessionsService(this, getDb);
-		this.roomMembers = new RoomMembersService(this, getDb);
-		this.threadMembers = new ThreadMembersService(this, getDb);
+		this.dms = new DmsService(this, getDb);
+		this.documents = new DocumentsService(this, getDb);
+		this.emoji = new EmojiService(this, getDb);
+		this.inbox = new InboxService(this, getDb);
+		this.invites = new InvitesService(this, getDb);
+		this.memberLists = new MemberListService(this);
 		this.messages = new MessagesService(this, getDb);
 		this.notifications = new NotificationService(this);
-		this.memberLists = new MemberListService(this);
-		this.invites = new InvitesService(this, getDb);
-		this.auth = new AuthService(this, getDb);
-		this.dms = new DmsService(this, getDb);
-		this.emoji = new EmojiService(this, getDb);
+		this.preferences = new PreferencesService(this);
 		this.push = new PushService(this, getDb);
 		this.reactions = new ReactionsService(this, getDb);
+		this.roles = new RolesService(this, getDb);
 		this.roomAnalytics = new RoomAnalyticsService(this, getDb);
 		this.roomBans = new RoomBansService(this, getDb);
+		this.roomMembers = new RoomMembersService(this, getDb);
+		this.rooms = new RoomsService(this, getDb);
+		this.sessions = new SessionsService(this, getDb);
 		this.tags = new TagsService(this, getDb);
+		this.threadMembers = new ThreadMembersService(this, getDb);
 		this.threads = new ThreadsService(this, getDb);
+		this.users = new UsersService(this, getDb);
 		this.webhooks = new WebhooksService(this, getDb);
-		this.auditLog = new AuditLogService(this, getDb);
-		this.inbox = new InboxService(this, getDb);
-		this.documents = new DocumentsService(this, getDb);
+
 		this.voiceStates = new ReactiveMap();
 		this.typing = new ReactiveMap();
 
@@ -228,11 +222,9 @@ export class RootStore {
 			for (const member of msg.room_members) {
 				this.roomMembers.upsert(member);
 			}
-			if (msg.config && this.setPreferences) {
-				this.setPreferences(msg.config);
-			}
-			if (msg.config && this.setServerPreferences) {
-				this.setServerPreferences(msg.config);
+			if (msg.config) {
+				this.preferences.cache.set("@self", msg.config);
+				this.preferences._loaded = true;
 			}
 		} else if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
 			this.rooms.upsert(msg.room);
@@ -316,13 +308,9 @@ export class RootStore {
 		} else if (msg.type === "MessageDelete") {
 			this.messages.handleMessageDelete(msg.channel_id, msg.message_id);
 		} else if (msg.type === "PreferencesGlobal") {
-			if (
-				msg.user_id === this.session()?.user_id && this.setPreferences
-			) {
-				this.setPreferences(msg.config);
-				if (this.setServerPreferences) {
-					this.setServerPreferences(msg.config);
-				}
+			if (msg.user_id === this.session()?.user_id) {
+				this.preferences.cache.set("@self", msg.config);
+				this.preferences._loaded = true;
 			}
 		} else if (msg.type === "MemberListSync") {
 			this.memberLists.handleSync(msg);

@@ -82,7 +82,6 @@ export type Popout = {
 import type { ChannelContextT } from "./channelctx";
 import type { RoomContextT } from "./contexts/room.tsx";
 import { DocumentContextT } from "./contexts/document.tsx";
-import type { Api } from "@/api";
 import type { SetStoreFunction } from "solid-js/store";
 
 // TODO: split apart this massive context into more granular contexts
@@ -112,7 +111,6 @@ export type ChatCtx = {
 	channel_contexts: ReactiveMap<string, ChannelContextT>;
 	room_contexts: ReactiveMap<string, RoomContextT>;
 	document_contexts: ReactiveMap<string, DocumentContextT>;
-	api: Api;
 };
 
 export type CursorStats = {

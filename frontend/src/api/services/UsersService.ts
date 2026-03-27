@@ -41,4 +41,10 @@ export class UsersService extends BaseService<UserWithRelationship> {
 			this.client.http.POST("/api/v1/guest", { body: { name } })
 		);
 	}
+
+	async setPreferences(body: any): Promise<void> {
+		await this.retryWithBackoff(() =>
+			this.client.http.PUT("/api/v1/preferences", { body })
+		);
+	}
 }

@@ -17,51 +17,7 @@ import { flags } from "../flags.ts";
 import { RootStore } from "@/api/core/Store.ts";
 import { colors, logger } from "../logger.ts";
 import { DBSchema, type IDBPDatabase, openDB } from "idb";
-import {
-	ChannelT,
-	MediaT,
-	MemberT,
-	MessageT,
-	RoleT,
-	RoomT,
-	SessionT,
-	UserT,
-} from "../types.ts";
-import type { RevisionContent } from "@/api/services/DocumentsService.ts";
-import type { ThreadMember } from "sdk";
 import { ApiDB, migrations } from "../db.ts";
-
-function loadSavedPreferences(): Preferences | null {
-	const c = localStorage.getItem("preferences");
-	if (!c) return null;
-	return JSON.parse(c);
-}
-
-const DEFAULT_PREFERENCES: Preferences = {
-	frontend: {
-		desktop_notifs: "yes",
-		push_notifs: "yes",
-		tts_notifs: "no",
-		message_style: "cozy",
-	},
-	notifs: {
-		messages: "Nothing",
-		threads: "Nothing",
-		reactions: "Dms",
-		tts: "Nothing",
-	},
-	privacy: {
-		friends: {
-			pause_until: null,
-			allow_everyone: true,
-			allow_mutual_friend: true,
-			allow_mutual_room: true,
-		},
-		dms: true,
-		rpc: true,
-		exif: true,
-	},
-};
 
 export function useChatClient(config: Config) {
 	const events = createEmitter<{
@@ -96,13 +52,6 @@ export function useChatClient(config: Config) {
 		},
 	});
 
-	const [preferences, setPreferences] = createSignal<Preferences>(
-		loadSavedPreferences() ?? DEFAULT_PREFERENCES,
-	);
-	const [serverPreferences, setServerPreferences] = createSignal<
-		Preferences | null
-	>(null);
-
 	const [db, setDb] = createSignal<IDBPDatabase<ApiDB> | undefined>();
 
 	(async () => {
@@ -127,9 +76,6 @@ export function useChatClient(config: Config) {
 	const store = new RootStore(
 		client,
 		events,
-		preferences,
-		setPreferences,
-		setServerPreferences,
 		() => db() as IDBPDatabase<unknown> | undefined,
 	);
 
@@ -162,22 +108,6 @@ export function useChatClient(config: Config) {
 	const slashCommands = new SlashCommands();
 	registerDefaultSlashCommands(slashCommands);
 
-	createEffect(() => {
-		const config = preferences();
-		if (!store.preferences || !config) return;
-		if (store.session()?.status !== "Authorized") return;
-
-		localStorage.setItem("preferences", JSON.stringify(config));
-
-		// Only send to server if preferences differ from what server has
-		const serverPrefs = serverPreferences();
-		if (
-			!serverPrefs || JSON.stringify(config) !== JSON.stringify(serverPrefs)
-		) {
-			store.users.setPreferences(config);
-		}
-	});
-
 	const [recentChannels, setRecentChannels] = createSignal([] as string[]);
 
 	const [cursorStats, setCursorStats] = createSignal<
@@ -188,7 +118,6 @@ export function useChatClient(config: Config) {
 		client,
 		data,
 		dataUpdate: update,
-
 		t: i18n.translator(() => dict()) as i18n.Translator<
 			i18n.Flatten<typeof en>
 		>,
@@ -202,8 +131,8 @@ export function useChatClient(config: Config) {
 		setRecentChannels,
 		currentMedia,
 		setCurrentMedia,
-		preferences,
-		setPreferences,
+		preferences: () => store.preferences.useRead(),
+		setPreferences: (p: Preferences) => store.preferences.put(p),
 		scrollToChatList: (pos: number) => {
 			console.log("scrollToChatList called with position:", pos);
 		},
@@ -247,5 +176,5 @@ export function useChatClient(config: Config) {
 
 	store.ctx = ctx;
 
-	return { client, ctx, preferences, setPreferences, store };
+	return { client, ctx, store };
 }

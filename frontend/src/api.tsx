@@ -14,6 +14,7 @@ export type { RoomAnalyticsService } from "./api/services/RoomAnalyticsService";
 export type { ChannelsService } from "./api/services/ChannelsService";
 export type { MessagesService } from "./api/services/MessagesService";
 export type { NotificationService } from "./api/services/NotificationService";
+export type { PreferencesService } from "./api/services/PreferencesService";
 
 // Re-export other types
 export type { MemberList } from "./api/services/MemberListService";
@@ -120,6 +121,10 @@ export function useAuditLog2() {
 
 export function useInbox2() {
 	return useApi2().inbox;
+}
+
+export function usePreferences2() {
+	return useApi2().preferences;
 }
 
 export type Listing<T> = {
