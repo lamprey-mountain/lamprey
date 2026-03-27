@@ -24,6 +24,14 @@ export class DmsService extends BaseService<Channel> {
 		cursor?: string,
 	): Promise<void> {
 		if (list.state.isLoading || !list.state.has_more) return;
+
+		// return empty list if session is logged out
+		const session = this.store.session();
+		if (!session || session.status === "Unauthorized") {
+			list.setLoading(false);
+			return;
+		}
+
 		list.setLoading(true);
 
 		try {
@@ -47,7 +55,7 @@ export class DmsService extends BaseService<Channel> {
 			const nextCursor = data.items.at(-1)?.last_version_id ?? undefined;
 			list.appendPage(newIds, data.has_more, nextCursor);
 		} catch (e) {
-			log.error(String(e));
+			log.error("while fetching dms", e);
 			list.setError(e);
 			throw e;
 		}

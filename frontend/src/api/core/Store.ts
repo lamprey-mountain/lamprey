@@ -322,4 +322,11 @@ export class RootStore {
 			}
 		}
 	}
+
+	async tempCreateSession() {
+		const session = await this.auth.createTempSession();
+		localStorage.setItem("token", session.token);
+		this.setSession(session);
+		this.client.start(session.token);
+	}
 }

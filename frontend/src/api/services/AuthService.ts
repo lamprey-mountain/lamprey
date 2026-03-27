@@ -1,3 +1,4 @@
+import { Session } from "sdk";
 import { BaseService } from "../core/Service";
 
 export class AuthService extends BaseService<never> {
@@ -26,6 +27,14 @@ export class AuthService extends BaseService<never> {
 		await this.retryWithBackoff(() =>
 			this.client.http.POST("/api/v1/auth/password", {
 				body,
+			})
+		);
+	}
+
+	async createTempSession(): Promise<Session> {
+		return await this.retryWithBackoff<{ data: Session }>(() =>
+			this.client.http.POST("/api/v1/session", {
+				body: {},
 			})
 		);
 	}

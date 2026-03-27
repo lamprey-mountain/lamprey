@@ -72,6 +72,10 @@ export class PreferencesService extends BaseService<Preferences> {
 
 	/** reactively read permissions */
 	useRead() {
+		return this.read();
+	}
+
+	read() {
 		return this.cache.get("@self") ?? DEFAULT_PREFERENCES;
 	}
 

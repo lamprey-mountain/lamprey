@@ -46,7 +46,7 @@ export class NotificationService {
 		// or just read from the legacy location if available?
 		// Or better, let's inject a preferences accessor into RootStore.
 
-		const preferences = this.store.preferences?.();
+		const preferences = this.store.preferences.read();
 		if (!preferences) return;
 
 		if (
