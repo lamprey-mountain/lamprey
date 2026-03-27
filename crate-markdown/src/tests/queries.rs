@@ -57,7 +57,7 @@ fn test_extract_mentions_user() {
     let mentions: Vec<_> = ast.mentions().collect();
     assert_eq!(mentions.len(), 1);
     match &mentions[0] {
-        MentionId::User(uuid) => assert_eq!(uuid, &expected_uuid),
+        MentionId::User(uuid) => assert_eq!(**uuid, expected_uuid),
         _ => panic!("Expected User mention"),
     }
 }
@@ -72,7 +72,7 @@ fn test_extract_mentions_emoji() {
     assert_eq!(mentions.len(), 1);
     match &mentions[0] {
         MentionId::Emoji { id, name, animated } => {
-            assert_eq!(id, &expected_uuid);
+            assert_eq!(**id, expected_uuid);
             assert_eq!(name, "smile");
             assert!(!animated);
         }
@@ -90,7 +90,7 @@ fn test_extract_mentions_animated_emoji() {
     assert_eq!(mentions.len(), 1);
     match &mentions[0] {
         MentionId::Emoji { id, name, animated } => {
-            assert_eq!(id, &expected_uuid);
+            assert_eq!(**id, expected_uuid);
             assert_eq!(name, "wave");
             assert!(animated);
         }
@@ -122,9 +122,9 @@ fn test_extract_mentions_collect() {
 
     let mentions: MentionIds = ast.mentions().collect();
     assert_eq!(mentions.users.len(), 1);
-    assert_eq!(mentions.users[0], user_uuid);
+    assert_eq!(*mentions.users[0], user_uuid);
     assert_eq!(mentions.emojis.len(), 1);
-    assert_eq!(mentions.emojis[0].0, emoji_uuid);
+    assert_eq!(*mentions.emojis[0].0, emoji_uuid);
     assert!(mentions.everyone);
 }
 
@@ -137,7 +137,7 @@ fn test_extract_mentions_role() {
     let mentions: Vec<_> = ast.mentions().collect();
     assert_eq!(mentions.len(), 1);
     match &mentions[0] {
-        MentionId::Role(uuid) => assert_eq!(uuid, &expected_uuid),
+        MentionId::Role(uuid) => assert_eq!(**uuid, expected_uuid),
         _ => panic!("Expected Role mention"),
     }
 }
@@ -151,7 +151,7 @@ fn test_extract_mentions_channel() {
     let mentions: Vec<_> = ast.mentions().collect();
     assert_eq!(mentions.len(), 1);
     match &mentions[0] {
-        MentionId::Channel(uuid) => assert_eq!(uuid, &expected_uuid),
+        MentionId::Channel(uuid) => assert_eq!(**uuid, expected_uuid),
         _ => panic!("Expected Channel mention"),
     }
 }
@@ -170,12 +170,12 @@ fn test_extract_mentions_all_types() {
 
     let mentions: MentionIds = ast.mentions().collect();
     assert_eq!(mentions.users.len(), 1);
-    assert_eq!(mentions.users[0], user_uuid);
+    assert_eq!(*mentions.users[0], user_uuid);
     assert_eq!(mentions.roles.len(), 1);
-    assert_eq!(mentions.roles[0], role_uuid);
+    assert_eq!(*mentions.roles[0], role_uuid);
     assert_eq!(mentions.channels.len(), 1);
-    assert_eq!(mentions.channels[0], channel_uuid);
+    assert_eq!(*mentions.channels[0], channel_uuid);
     assert_eq!(mentions.emojis.len(), 1);
-    assert_eq!(mentions.emojis[0].0, emoji_uuid);
+    assert_eq!(*mentions.emojis[0].0, emoji_uuid);
     assert!(mentions.everyone);
 }

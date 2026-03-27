@@ -1,15 +1,17 @@
 use lamprey_common::v1::types::EmojiId;
 use uuid::Uuid;
 
-use crate::ast::Ast;
-use crate::events::{Event, EventFilter};
+use crate::ast::{Ast, AstNode, Emoji};
 use crate::render::MarkdownReader;
 
-/// A reader that filters out disallowed custom emoji.
+/// A reader that filters out disallowed custom emoji while preserving all other markdown formatting.
 ///
 /// This reader filters out custom emoji (`<:name:uuid>` or `<a:name:uuid>`) that are not in the
 /// allowed list. Disallowed emoji are converted to `:name:` format (name only, no UUID).
-/// Allowed emoji are preserved in their original `<:name:uuid>` format.
+/// Allowed emoji are preserved in their original `<:name:uuid>` or `<a:name:uuid>` format.
+///
+/// All other markdown formatting (bold, italic, blockquotes, headings, mentions, links, etc.)
+/// is preserved exactly as in the original source.
 ///
 /// # Example
 /// ```
@@ -36,64 +38,55 @@ impl StripEmojiReader {
         StripEmojiReader { allowed }
     }
 
-    /// Read text from an AST, filtering out disallowed emoji.
+    /// Read markdown from an AST, filtering out disallowed emoji while preserving all other formatting.
     ///
-    /// Allowed emoji are preserved as `<:name:uuid>`.
+    /// This method uses the AST to identify emoji nodes and builds the output by replacing only
+    /// those specific emoji strings. All other markdown (bold, italic, headings, blockquotes,
+    /// lists, links, mentions, code blocks, inline code, etc.) is preserved byte-for-byte.
+    ///
+    /// This approach correctly handles emoji in code blocks and inline code - they are NOT stripped
+    /// because the AST correctly identifies them as code content, not emoji nodes.
+    ///
+    /// Allowed emoji are preserved as `<:name:uuid>` or `<a:name:uuid>`.
     /// Disallowed emoji are converted to `:name:` format.
     pub fn read(&self, ast: &Ast) -> String {
-        let mut result = String::new();
-        let mut current_emoji_name: Option<String> = None;
-        let mut current_emoji_uuid: Option<String> = None;
+        let source = ast.source();
+        let mut result = source.to_string();
 
-        for event in ast.events() {
-            match event {
-                Event::Start(crate::events::Tag::Emoji {
-                    animated: _,
-                    name,
-                    uuid,
-                }) => {
-                    current_emoji_name = Some(name.to_string());
-                    current_emoji_uuid = Some(uuid.to_string());
-                }
-                Event::End(crate::events::Tag::Emoji {
-                    animated: _,
-                    name: _,
-                    uuid: _,
-                }) => {
-                    // Process the emoji we just collected
-                    if let (Some(name_str), Some(uuid_str)) =
-                        (current_emoji_name.take(), current_emoji_uuid.take())
-                    {
-                        // Check if this emoji is allowed
-                        let is_allowed = Uuid::parse_str(&uuid_str)
-                            .ok()
-                            .map(|uuid| EmojiId::from(uuid))
-                            .map(|id| self.allowed.contains(&id))
-                            .unwrap_or(false);
+        // Collect all emoji that need to be replaced (disallowed only)
+        let replacements: Vec<_> = ast
+            .syntax()
+            .descendants()
+            .filter_map(|node| Emoji::cast(node.clone()))
+            .filter_map(|emoji| {
+                let name = emoji.name();
+                let uuid = emoji.uuid();
 
-                        if is_allowed {
-                            // Preserve original format <:name:uuid> or <a:name:uuid>
-                            // Note: animated info is lost in End event, use Start event if needed
-                            result.push_str(&format!("<:{}:{}>", name_str, uuid_str));
-                        } else {
-                            // Convert to :name: format
-                            result.push_str(&format!(":{}:", name_str));
-                        }
-                    }
+                // Check if this emoji is allowed
+                let is_allowed = Uuid::parse_str(&uuid)
+                    .ok()
+                    .map(|uuid| EmojiId::from(uuid))
+                    .map(|id| {
+                        let result = self.allowed.contains(&id);
+                        result
+                    })
+                    .unwrap_or(false);
+
+                if is_allowed {
+                    None // Skip allowed emoji
+                } else {
+                    // Get the full emoji text from the syntax node
+                    let emoji_text = emoji.syntax_node().text().to_string();
+                    let name_str = name.to_string();
+                    let replacement = format!(":{}:", name_str);
+                    Some((emoji_text, replacement))
                 }
-                Event::Text(text) => {
-                    // Only output text if we're not inside an emoji
-                    // (emoji text is handled by Start/End events)
-                    if current_emoji_name.is_none() {
-                        result.push_str(&text);
-                    }
-                }
-                Event::Code(code) => {
-                    result.push_str(&code);
-                }
-                // Skip Start/End tags for other elements
-                _ => {}
-            }
+            })
+            .collect();
+
+        // Apply replacements
+        for (original, replacement) in replacements {
+            result = result.replace(&original, &replacement);
         }
 
         result
