@@ -329,15 +329,17 @@
 	padding-top: 4px;
 	background-color: $bg-100;
 
-	& > ul {
+	& > .room-list {
+		display: flex;
 		flex-direction: column;
 		align-items: center;
+		width: 100%;
 	}
 
 	.room-item,
 	.home-item {
 		min-height: 48px;
-		width: 48px;
+		width: 100%;
 		margin-top: 4px;
 		border-radius: 4px;
 		display: flex;
@@ -366,12 +368,12 @@
 			translate: 0 -50%;
 			height: 8px;
 			width: 8px;
-			background-color: $fg-100;
+			background: $fg-400;
 			border-radius: 50%;
 			z-index: 1;
 		}
 
-		&.home-item, &.no-icon {
+		&.home-item > a, &.no-icon > a {
 			background: #2a2a2a;
 		}
 
@@ -380,17 +382,22 @@
 		}
 
 		& .avatar {
-			height: 48px;
-			width: 48px;
+			height: 42px;
+			width: 42px;
 			background: none;
 		}
 
+		& svg.avatar {
+			// svgs have spacing for the mention indicator
+			transform: scale(1.125);
+		}
+
 		& a {
-			padding: 0;
+			margin: 0 8px;
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			width: 100%;
+			width: 64px;
 		}
 	}
 

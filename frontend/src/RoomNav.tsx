@@ -573,7 +573,7 @@ export const RoomNav = () => {
 	return (
 		<Show when={flags.has("two_tier_nav")}>
 			<nav id="room-nav">
-				<ul>
+				<ul class="room-list">
 					<li class="home-item">
 						<A href="/" end>
 							<img src={icHome} class="icon" />
