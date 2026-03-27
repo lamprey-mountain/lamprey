@@ -4,7 +4,7 @@ use common::v1::types::{
     voice::VoiceStateScreenshare,
     ChannelId, ConnectionId, SessionToken, UserId,
 };
-use std::{collections::VecDeque, sync::Arc};
+use std::sync::Arc;
 
 use common::v1::types::error::{ApiError, ErrorCode, SyncError};
 use common::v1::types::presence::Presence;
@@ -17,7 +17,14 @@ use common::v1::types::{
 use tokio::time::Instant;
 use tracing::{debug, error, trace, warn};
 
-use crate::sync::{permissions::AuthCheck, transport::TransportSink};
+pub mod connection_queue;
+pub mod permissions;
+pub mod transport;
+pub mod util;
+
+use crate::sync::{
+    connection_queue::ConnectionQueue, permissions::AuthCheck, transport::TransportSink,
+};
 use crate::ServerState;
 use crate::{
     error::{Error, Result},
@@ -28,18 +35,12 @@ use crate::{
     sync::util::{ConnectionState, Timeout, HEARTBEAT_TIME, MAX_QUEUE_LEN},
 };
 
-pub mod permissions;
-pub mod transport;
-pub mod util;
-
 type WsMessage = axum::extract::ws::Message;
 
 pub struct Connection {
     state: ConnectionState,
     s: Arc<ServerState>,
-    queue: VecDeque<(Option<u64>, MessageEnvelope)>,
-    seq_server: u64,
-    seq_client: u64,
+    queue: ConnectionQueue,
     id: ConnectionId,
     pub member_list: MemberListSyncer,
     pub document: Box<DocumentSyncer>,
@@ -53,9 +54,7 @@ impl Connection {
 
         Self {
             state: ConnectionState::Unauthed,
-            queue: VecDeque::new(),
-            seq_server: 0,
-            seq_client: 0,
+            queue: ConnectionQueue::new(MAX_QUEUE_LEN),
             id,
             member_list,
             document: Box::new(s.services().documents.create_syncer(id)),
@@ -82,13 +81,7 @@ impl Connection {
     }
 
     pub fn rewind(&mut self, seq: u64) -> Result<()> {
-        let is_still_valid = self.queue.iter().any(|(s, _)| s.is_some_and(|s| s >= seq));
-        if is_still_valid {
-            self.seq_client = seq;
-            Ok(())
-        } else {
-            Err(SyncError::InvalidSeq.into())
-        }
+        self.queue.rewind(seq)
     }
 
     #[tracing::instrument(level = "debug", skip(self, transport, timeout), fields(id = self.get_id().to_string()))]
@@ -260,12 +253,9 @@ impl Connection {
                     if session.id == recon_session.id {
                         debug!("session id matches, resuming");
                         conn.rewind(r.seq)?;
-                        conn.push(
-                            MessageEnvelope {
-                                payload: types::MessagePayload::Resumed,
-                            },
-                            None,
-                        );
+                        conn.queue.push(MessageEnvelope {
+                            payload: types::MessagePayload::Resumed,
+                        });
                         std::mem::swap(self, &mut conn);
                         tracing::debug!("rehydrating syncer: {}", self.get_id());
                         return Ok(());
@@ -305,30 +295,30 @@ impl Connection {
             None
         };
 
-        let msg = MessageEnvelope {
-            payload: types::MessagePayload::Ready {
-                user: user.map(Box::new),
-                application,
-                session: session.clone(),
-                conn: self.get_id(),
-                seq: 0,
-            },
+        let ready = types::MessagePayload::Ready {
+            user: user.map(Box::new),
+            application: application.clone(),
+            session: session.clone(),
+            conn: self.get_id(),
+            seq: 0,
         };
 
-        self.queue.push_front((Some(0), msg));
-        self.seq_server += 1;
+        debug!("send ready {ready:?}");
+
+        self.queue.push(types::MessageEnvelope { payload: ready });
 
         if let Some(user_id) = session.user_id() {
             // send ambient data (rooms, channels, roles, etc.)
             let ambient = srv.cache.generate_ambient_message(user_id).await?;
-            self.push_sync(ambient, None);
+            debug!("send ambient");
+            self.queue.push_sync(ambient, None);
 
             // send typing states
             let typing_states = srv.channels.typing_list();
             for (channel_id, typing_user_id, until) in typing_states {
                 if let Ok(perms) = srv.perms.for_channel(user_id, channel_id).await {
                     if perms.has(Permission::ChannelView) {
-                        self.push_sync(
+                        self.queue.push_sync(
                             MessageSync::ChannelTyping {
                                 channel_id,
                                 user_id: typing_user_id,
@@ -351,7 +341,7 @@ impl Connection {
                         if !is_ours {
                             voice_state.session_id = None;
                         }
-                        self.push_sync(
+                        self.queue.push_sync(
                             MessageSync::VoiceState {
                                 user_id: voice_state.user_id,
                                 state: Some(voice_state),
@@ -563,9 +553,7 @@ impl Connection {
         };
 
         match &self.state {
-            ConnectionState::Disconnected { .. }
-                if self.seq_server > self.seq_client + MAX_QUEUE_LEN as u64 =>
-            {
+            ConnectionState::Disconnected { .. } if !self.queue.can_resume() => {
                 self.s.services.connections.live.remove(&self.id);
                 return Err(Error::BadStatic("expired session"));
             }
@@ -635,49 +623,15 @@ impl Connection {
                 }
                 m => m,
             };
-            self.push_sync(msg, nonce);
+            self.queue.push_sync(msg, nonce);
         }
 
         Ok(())
-    }
-
-    fn push_sync(&mut self, sync: MessageSync, nonce: Option<String>) {
-        let seq = self.seq_server;
-        let msg = MessageEnvelope {
-            payload: types::MessagePayload::Sync {
-                data: Box::new(sync),
-                seq,
-                nonce,
-            },
-        };
-        self.push(msg, Some(seq));
-        self.seq_server += 1;
-    }
-
-    fn push(&mut self, msg: MessageEnvelope, seq: Option<u64>) {
-        self.queue.push_front((seq, msg));
-        self.queue.truncate(MAX_QUEUE_LEN);
     }
 
     #[tracing::instrument(level = "debug", skip(self, transport), fields(id = self.get_id().to_string()))]
     pub async fn drain(&mut self, transport: &mut dyn TransportSink) -> Result<()> {
-        let last_seen = self.seq_client;
-        let mut high_water_mark = last_seen;
-
-        let queue = &self.queue;
-
-        for (seq, msg) in queue.iter().rev() {
-            if seq.is_none_or(|s| s > last_seen) {
-                transport.send(msg.clone()).await?;
-
-                if let Some(seq) = *seq {
-                    high_water_mark = high_water_mark.max(seq);
-                }
-            }
-        }
-        self.seq_client = high_water_mark;
-        self.queue.retain(|(seq, _)| seq.is_some());
-        Ok(())
+        self.queue.drain(transport, self.id).await
     }
 
     pub fn get_id(&self) -> ConnectionId {

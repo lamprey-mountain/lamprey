@@ -38,8 +38,6 @@ use super::{
     RoomMember, Session, SessionId, SessionToken, TagId, User, UserId,
 };
 
-// TODO: encode binary data as base64 for json, binary for msgpack
-
 // TODO: include nonce/seq for MessageClient too, so theres some way to associate an error response to a request
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
@@ -1241,6 +1239,20 @@ impl MessageSync {
             Self::DocumentBranchDelete { channel_id, .. } => Some(*channel_id),
             Self::MediaProcessed { .. } => None,
             Self::MediaUpdate { .. } => None,
+        }
+    }
+}
+
+impl MessagePayload {
+    /// short human readable name for this payload, without content
+    pub fn name(&self) -> &str {
+        match self {
+            MessagePayload::Ping => "Ping",
+            MessagePayload::Sync { .. } => "Sync",
+            MessagePayload::Error { .. } => "Error",
+            MessagePayload::Ready { .. } => "Ready",
+            MessagePayload::Resumed => "Resumed",
+            MessagePayload::Reconnect { .. } => "Reconnect",
         }
     }
 }

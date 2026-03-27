@@ -151,7 +151,7 @@ impl TransportSink for WebsocketSink {
 }
 
 impl WebsocketReceiver {
-    fn into_stream(mut self) -> TransportStream {
+    fn into_stream(self) -> TransportStream {
         Box::pin(stream::unfold(self, |mut recv| async move {
             if let Some(msg) = recv.inbox.pop_front() {
                 return Some((Ok(TransportEvent::Message(msg)), recv));
