@@ -121,6 +121,11 @@ impl<'a> ParseContext<'a> {
     fn parse_inline(&mut self, end: usize) -> usize {
         while self.pos < end {
             let Some(tok) = self.peek() else {
+                // Unknown token - emit as Text to preserve source coverage
+                if let Some(range) = self.current_range() {
+                    self.builder
+                        .token(SyntaxKind::Text.into(), self.text_for_range(range));
+                }
                 self.bump();
                 continue;
             };
@@ -391,12 +396,14 @@ impl<'a> ParseContext<'a> {
                         && self.token_at_is(self.pos + 2, TokenKind::AngleClose)
                     {
                         self.builder.start_node(SyntaxKind::AngleBracketLink.into());
+                        self.builder.token(SyntaxKind::Text.into(), "<");
                         if let Some(range) = self.range_at(self.pos + 1) {
                             self.builder.token(
                                 SyntaxKind::LinkDestination.into(),
                                 self.text_for_range(range),
                             );
                         }
+                        self.builder.token(SyntaxKind::Text.into(), ">");
                         self.builder.finish_node();
                         self.pos += 3;
                         continue;
@@ -413,11 +420,12 @@ impl<'a> ParseContext<'a> {
                             self.bump();
                             self.parse_link_text(link_end.text_close);
                             self.builder.token(SyntaxKind::Text.into(), "]");
+                            self.bump(); // Move past ]
                             self.builder.finish_node(); // LinkText
                                                         // Add destination
                             self.builder.start_node(SyntaxKind::LinkDestination.into());
                             self.builder.token(SyntaxKind::Text.into(), "(");
-                            self.bump();
+                            self.bump(); // Move past (
                             self.parse_link_dest(link_end.paren_close);
                             self.builder.token(SyntaxKind::Text.into(), ")");
                             self.builder.finish_node(); // LinkDestination
@@ -503,10 +511,8 @@ impl<'a> ParseContext<'a> {
                 continue;
             };
 
-            self.builder.token(
-                SyntaxKind::LinkDestination.into(),
-                self.text_for_range(range),
-            );
+            self.builder
+                .token(SyntaxKind::Text.into(), self.text_for_range(range));
             self.bump();
         }
         self.pos
@@ -941,6 +947,11 @@ impl<'a> ParseContext<'a> {
     fn parse_blocks(&mut self) {
         while !self.is_eof() {
             let Some(token) = self.peek() else {
+                // Unknown token - emit as Text to preserve source coverage
+                if let Some(range) = self.current_range() {
+                    self.builder
+                        .token(SyntaxKind::Text.into(), self.text_for_range(range));
+                }
                 self.bump();
                 continue;
             };
@@ -1402,8 +1413,14 @@ fn find_affected_blocks(
     let mut blocks_after = Vec::new();
     let mut affected_blocks = Vec::new();
 
-    // Collect all blocks and categorize them
-    for child in old_root.children_with_tokens() {
+    // Get the Document node (child of Root) and iterate over its children
+    // Root only contains Document, so we need to traverse into Document to get actual blocks
+    let document = old_root
+        .children()
+        .find(|n| n.kind() == SyntaxKind::Document.into())
+        .unwrap_or_else(|| old_root.clone());
+
+    for child in document.children_with_tokens() {
         let start: usize = child.text_range().start().into();
         let end: usize = child.text_range().end().into();
 

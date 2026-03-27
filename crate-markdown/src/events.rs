@@ -203,8 +203,10 @@ impl<'a> EventIterator<'a> {
         let mut stack = Vec::new();
 
         // Start with document children
+        // Reverse children so that pop() returns them in forward order
         if let Some(doc) = ast.document() {
-            let children: Vec<_> = doc.syntax_node().children().collect();
+            let mut children: Vec<_> = doc.syntax_node().children().collect();
+            children.reverse();
             stack.push(IterState::Document {
                 remaining: children,
             });
@@ -275,14 +277,14 @@ impl<'a> EventIterator<'a> {
                     if child_idx < children.len() {
                         let child = children[child_idx].clone();
                         child_idx += 1;
-                        // Push child state first, then Paragraph state
-                        // This ensures child is processed before we continue with Paragraph
-                        self.push_state_for_node_or_text(child);
+                        // Push Paragraph state first, then child state
+                        // This ensures child is processed before we continue with Paragraph (DFS order)
                         self.stack.push(IterState::Paragraph {
                             node,
                             pos,
                             child_idx,
                         });
+                        self.push_state_for_node_or_text(child);
                     } else {
                         return Some(Event::End(Tag::Paragraph));
                     }
@@ -305,19 +307,18 @@ impl<'a> EventIterator<'a> {
 
                     let children: Vec<_> = node
                         .syntax_node()
-                        .children()
-                        .filter(|n| n.kind() != SyntaxKind::HeaderMarker)
+                        .children_with_tokens()
                         .collect();
 
-                    if child_idx - 1 < children.len() {
-                        let child = children[child_idx - 1].clone();
+                    if child_idx < children.len() {
+                        let child = children[child_idx].clone();
                         child_idx += 1;
                         self.stack.push(IterState::Header {
                             node,
                             level,
                             child_idx,
                         });
-                        self.push_state_for_node(child);
+                        self.push_state_for_node_or_text(child);
                     } else {
                         return Some(Event::End(Tag::Header(level)));
                     }
@@ -363,11 +364,10 @@ impl<'a> EventIterator<'a> {
                     let children: Vec<_> = node
                         .syntax_node()
                         .children_with_tokens()
-                        .filter(|n| !matches!(n, NodeOrToken::Node(node) if node.kind() == SyntaxKind::ListMarker))
                         .collect();
 
-                    if child_idx - 1 < children.len() {
-                        let child = children[child_idx - 1].clone();
+                    if child_idx < children.len() {
+                        let child = children[child_idx].clone();
                         child_idx += 1;
                         self.stack.push(IterState::ListItem { node, child_idx });
                         self.push_state_for_node_or_text(child);
@@ -389,15 +389,14 @@ impl<'a> EventIterator<'a> {
 
                     let children: Vec<_> = node
                         .syntax_node()
-                        .children()
-                        .filter(|n| n.kind() != SyntaxKind::BlockQuoteMarker)
+                        .children_with_tokens()
                         .collect();
 
-                    if child_idx - 1 < children.len() {
-                        let child = children[child_idx - 1].clone();
+                    if child_idx < children.len() {
+                        let child = children[child_idx].clone();
                         child_idx += 1;
                         self.stack.push(IterState::BlockQuote { node, child_idx });
-                        self.push_state_for_node(child);
+                        self.push_state_for_node_or_text(child);
                     } else {
                         return Some(Event::End(Tag::BlockQuote));
                     }
@@ -434,11 +433,10 @@ impl<'a> EventIterator<'a> {
                     let children: Vec<_> = node
                         .syntax_node()
                         .children_with_tokens()
-                        .filter(|n| !matches!(n, NodeOrToken::Token(t) if t.kind() == SyntaxKind::StrongDelimiter))
                         .collect();
 
-                    if child_idx - 1 < children.len() {
-                        let child = children[child_idx - 1].clone();
+                    if child_idx < children.len() {
+                        let child = children[child_idx].clone();
                         child_idx += 1;
                         self.stack.push(IterState::Strong { node, child_idx });
                         self.push_state_for_node_or_text(child);
@@ -460,11 +458,10 @@ impl<'a> EventIterator<'a> {
                     let children: Vec<_> = node
                         .syntax_node()
                         .children_with_tokens()
-                        .filter(|n| !matches!(n, NodeOrToken::Token(t) if t.kind() == SyntaxKind::EmphasisDelimiter))
                         .collect();
 
-                    if child_idx - 1 < children.len() {
-                        let child = children[child_idx - 1].clone();
+                    if child_idx < children.len() {
+                        let child = children[child_idx].clone();
                         child_idx += 1;
                         self.stack.push(IterState::Emphasis { node, child_idx });
                         self.push_state_for_node_or_text(child);
@@ -487,11 +484,10 @@ impl<'a> EventIterator<'a> {
                     let children: Vec<_> = node
                         .syntax_node()
                         .children_with_tokens()
-                        .filter(|n| !matches!(n, NodeOrToken::Token(t) if t.kind() == SyntaxKind::StrikethroughDelimiter))
                         .collect();
 
-                    if child_idx - 1 < children.len() {
-                        let child = children[child_idx - 1].clone();
+                    if child_idx < children.len() {
+                        let child = children[child_idx].clone();
                         child_idx += 1;
                         self.stack
                             .push(IterState::Strikethrough { node, child_idx });
@@ -504,10 +500,12 @@ impl<'a> EventIterator<'a> {
                 Some(IterState::InlineCode { node, emitted }) => {
                     self.stack.pop();
                     if !emitted {
-                        let code = node.code();
-                        return Some(Event::Code(code.into()));
+                        self.stack.push(IterState::InlineCode { node, emitted: true });
+                        return Some(Event::Start(Tag::InlineCode));
                     }
-                    return Some(Event::Start(Tag::InlineCode));
+                    self.pending.push(Event::End(Tag::InlineCode));
+                    let code = node.code();
+                    return Some(Event::Code(code.into()));
                 }
 
                 Some(IterState::Link {
@@ -564,6 +562,7 @@ impl<'a> EventIterator<'a> {
                         });
                         return Some(Event::Start(Tag::Autolink));
                     }
+                    self.pending.push(Event::End(Tag::Autolink));
                     let url = node.url();
                     return Some(Event::Text(url.into()));
                 }
@@ -577,6 +576,7 @@ impl<'a> EventIterator<'a> {
                         });
                         return Some(Event::Start(Tag::AngleBracketLink));
                     }
+                    self.pending.push(Event::End(Tag::AngleBracketLink));
                     let url = node.url();
                     return Some(Event::Text(url.into()));
                 }
@@ -590,6 +590,7 @@ impl<'a> EventIterator<'a> {
                         });
                         return Some(Event::Start(Tag::Mention));
                     }
+                    self.pending.push(Event::End(Tag::Mention));
                     let uuid = node.uuid();
                     return Some(Event::Text(uuid.into()));
                 }
@@ -603,7 +604,11 @@ impl<'a> EventIterator<'a> {
                     if !emitted {
                         let name = node.name();
                         let uuid = node.uuid();
-                        let animated = name.starts_with('a');
+                        // Check for animated emoji by looking for 'a' marker token
+                        let animated = node.syntax_node().children_with_tokens().any(|n| {
+                            n.into_token()
+                                .map_or(false, |t| t.kind() == SyntaxKind::EmojiMarker && t.text() == "a")
+                        });
                         self.stack.push(IterState::Emoji {
                             node,
                             emitted: true,
@@ -627,7 +632,11 @@ impl<'a> EventIterator<'a> {
                     }
                     let name = node.name();
                     let uuid = node.uuid();
-                    let animated = name.starts_with('a');
+                    // Check for animated emoji by looking for 'a' marker token
+                    let animated = node.syntax_node().children_with_tokens().any(|n| {
+                        n.into_token()
+                            .map_or(false, |t| t.kind() == SyntaxKind::EmojiMarker && t.text() == "a")
+                    });
                     return Some(Event::End(Tag::Emoji {
                         animated,
                         name: Cow::Owned(name),
@@ -656,27 +665,9 @@ impl<'a> EventIterator<'a> {
             }
             NodeOrToken::Token(token) => {
                 let text = token.text();
-                match token.kind() {
-                    SyntaxKind::Text => {
-                        // Check for newlines
-                        if text.contains('\n') {
-                            let mut parts = text.split('\n').peekable();
-                            while let Some(part) = parts.next() {
-                                if !part.is_empty() {
-                                    self.pending.push(Event::Text(Cow::Owned(part.to_string())));
-                                }
-                                if parts.peek().is_some() {
-                                    self.pending.push(Event::SoftBreak);
-                                }
-                            }
-                        } else if text.trim().is_empty() {
-                            self.pending.push(Event::Text(Cow::Borrowed(" ")));
-                        } else {
-                            self.pending.push(Event::Text(Cow::Owned(text.to_string())));
-                        }
-                    }
-                    _ => {}
-                }
+                // Treat all tokens (Text, markers, etc.) as first-class text events for lossless round-tripping
+                // This includes whitespace which is stored as Text in the syntax tree
+                self.pending.push(Event::Text(Cow::Owned(text.to_string())));
             }
         }
     }
@@ -827,6 +818,7 @@ impl<'a> Iterator for EventIterator<'a> {
 pub struct MergeTextIterator<'a, I> {
     inner: I,
     pending_text: Option<String>,
+    pending_event: Option<Event<'a>>,
     _marker: std::marker::PhantomData<&'a ()>,
 }
 
@@ -835,6 +827,7 @@ impl<'a, I: Iterator<Item = Event<'a>>> MergeTextIterator<'a, I> {
         Self {
             inner,
             pending_text: None,
+            pending_event: None,
             _marker: std::marker::PhantomData,
         }
     }
@@ -848,6 +841,11 @@ impl<'a, I: Iterator<Item = Event<'a>>> Iterator for MergeTextIterator<'a, I> {
     type Item = Event<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        // Return pending event first if we have one
+        if let Some(event) = self.pending_event.take() {
+            return Some(event);
+        }
+
         loop {
             match self.inner.next() {
                 Some(Event::Text(t)) => match &mut self.pending_text {
@@ -857,6 +855,8 @@ impl<'a, I: Iterator<Item = Event<'a>>> Iterator for MergeTextIterator<'a, I> {
                 Some(event) => {
                     if let Some(text) = self.flush_pending() {
                         self.pending_text = None;
+                        // Store the non-text event for next iteration
+                        self.pending_event = Some(event);
                         return Some(text);
                     }
                     return Some(event);

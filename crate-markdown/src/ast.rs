@@ -528,8 +528,15 @@ impl Link {
             .children()
             .find(|n| n.kind() == SyntaxKind::LinkText)
             .map(|n| {
-                let text = n.text().to_string();
-                text.trim_matches(|c| c == '[' || c == ']').to_string()
+                let mut text = n.text().to_string();
+                // Only strip first and last character to preserve URLs with parentheses
+                if text.starts_with('[') {
+                    text = text[1..].to_string();
+                }
+                if text.ends_with(']') {
+                    text = text[..text.len() - 1].to_string();
+                }
+                text
             })
             .unwrap_or_default()
     }
@@ -540,8 +547,15 @@ impl Link {
             .children()
             .find(|n| n.kind() == SyntaxKind::LinkDestination)
             .map(|n| {
-                let text = n.text().to_string();
-                text.trim_matches(|c| c == '(' || c == ')').to_string()
+                let mut text = n.text().to_string();
+                // Only strip first and last character to preserve URLs with parentheses
+                if text.starts_with('(') {
+                    text = text[1..].to_string();
+                }
+                if text.ends_with(')') {
+                    text = text[..text.len() - 1].to_string();
+                }
+                text
             })
             .unwrap_or_default()
     }
@@ -615,8 +629,15 @@ impl AstNode for AngleBracketLink {
 impl AngleBracketLink {
     /// Get the URL.
     pub fn url(&self) -> String {
-        let text = self.0.text().to_string();
-        text.trim_matches(|c| c == '<' || c == '>').to_string()
+        let mut text = self.0.text().to_string();
+        // Only strip first and last character
+        if text.starts_with('<') {
+            text = text[1..].to_string();
+        }
+        if text.ends_with('>') {
+            text = text[..text.len() - 1].to_string();
+        }
+        text
     }
 
     /// Get the underlying syntax node.
@@ -751,7 +772,8 @@ impl Escape {
     pub fn escaped_char(&self) -> Option<char> {
         self.0
             .children_with_tokens()
-            .find_map(|n| n.into_token())
+            .filter_map(|n| n.into_token())
+            .find(|t| t.kind() == SyntaxKind::EscapedChar)
             .and_then(|t| t.text().chars().next())
     }
 }
@@ -953,8 +975,14 @@ impl<'a> Iterator for LinksIter<'a> {
                 }
                 SyntaxKind::AngleBracketLink => {
                     let text = node.text().to_string();
-                    // Strip < and >
-                    let dest = text.trim_matches(|c| c == '<' || c == '>');
+                    // Strip < and > (only first and last char)
+                    let mut dest = text.as_str();
+                    if dest.starts_with('<') {
+                        dest = &dest[1..];
+                    }
+                    if dest.ends_with('>') {
+                        dest = &dest[..dest.len() - 1];
+                    }
                     return Some(LinkRef {
                         dest: std::borrow::Cow::Owned(dest.to_string()),
                         text: None,
@@ -968,16 +996,26 @@ impl<'a> Iterator for LinksIter<'a> {
                     for child in node.children() {
                         match child.kind() {
                             SyntaxKind::LinkText => {
-                                let t = child.text().to_string();
-                                // Strip [ and ]
-                                let trimmed = t.trim_matches(|c| c == '[' || c == ']');
-                                text = Some(std::borrow::Cow::Owned(trimmed.to_string()));
+                                let mut t = child.text().to_string();
+                                // Strip [ and ] (only first and last char)
+                                if t.starts_with('[') {
+                                    t = t[1..].to_string();
+                                }
+                                if t.ends_with(']') {
+                                    t = t[..t.len() - 1].to_string();
+                                }
+                                text = Some(std::borrow::Cow::Owned(t));
                             }
                             SyntaxKind::LinkDestination => {
-                                let t = child.text().to_string();
-                                // Strip ( and )
-                                let trimmed = t.trim_matches(|c| c == '(' || c == ')');
-                                dest = Some(std::borrow::Cow::Owned(trimmed.to_string()));
+                                let mut t = child.text().to_string();
+                                // Strip ( and ) (only first and last char)
+                                if t.starts_with('(') {
+                                    t = t[1..].to_string();
+                                }
+                                if t.ends_with(')') {
+                                    t = t[..t.len() - 1].to_string();
+                                }
+                                dest = Some(std::borrow::Cow::Owned(t));
                             }
                             _ => {}
                         }
@@ -1096,8 +1134,8 @@ impl<'a> Iterator for MentionsIter<'a> {
                         });
                     }
                 }
-                SyntaxKind::Paragraph => {
-                    // Check for @everyone in paragraph text
+                SyntaxKind::Paragraph | SyntaxKind::Header | SyntaxKind::ListItem | SyntaxKind::BlockQuote => {
+                    // Check for @everyone in text content
                     if node.text().to_string().contains("@everyone") {
                         return Some(MentionId::Everyone);
                     }
