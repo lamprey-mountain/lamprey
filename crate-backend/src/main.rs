@@ -97,6 +97,68 @@ mod frontend;
         common::v1::types::document::serialized::Serdoc,
         common::v1::types::document::serialized::SerdocRoot,
         common::v1::types::document::serialized::SerdocBlock,
+        // ack types
+        common::v1::types::ack::AckBulk,
+        common::v1::types::ack::AckBulkItem,
+        // session types
+        types::SessionToken,
+        // auth types
+        common::v1::types::auth::WebauthnAuthenticator,
+        common::v1::types::auth::TotpRecoveryCode,
+        // reaction types
+        common::v1::types::reaction::ReactionListItem,
+        // message types
+        common::v1::types::message::PinsReorderItem,
+        // push types
+        common::v1::types::push::PushCreateKeys,
+        // room template types
+        common::v1::types::room_template::RoomTemplate,
+        common::v1::types::room_template::RoomTemplateCode,
+        common::v1::types::room_template::RoomTemplateSnapshot,
+        common::v1::types::room_template::RoomTemplateChannel,
+        common::v1::types::room_template::RoomTemplateRole,
+        // search types
+        common::v1::types::search::FilterRange<Time>,
+        common::v1::types::search::FilterRange<MessageId>,
+        common::v1::types::search::RoomSearchOrderField,
+        common::v1::types::search::MessageSearchOrderField,
+        common::v1::types::search::ChannelSearchOrderField,
+        common::v1::types::search::Order,
+        // room analytics types
+        common::v1::types::room_analytics::Aggregation,
+        common::v1::types::room_analytics::RoomAnalyticsInvitesOrigin,
+        // application/integration types
+        common::v1::types::application::Integration,
+        // moderation types
+        common::v1::types::moderation::ReportReason,
+        common::v1::types::moderation::ReportDestination,
+        // server types
+        common::v1::types::server::ServerAutomodList,
+        common::v1::types::server::ServerMediaScanner,
+        // federation types
+        common::v1::types::federation::ServerKey,
+        // user connection types
+        common::v1::types::user_connection::ConnectionMetadata,
+        common::v1::types::user_connection::ConnectionValue,
+        common::v1::types::user_connection::ConnectionVisibility,
+        // user relationship types
+        types::Relationship,
+        common::v1::types::user::Ignore,
+        common::v1::types::user::RelationshipType,
+        // room member types
+        types::RoomMemberOrigin,
+        // harvest types
+        common::v1::types::harvest::Harvest,
+        common::v1::types::harvest::HarvestCreate,
+        common::v1::types::harvest::HarvestStatus,
+        // auth password types
+        common::v1::types::auth::PasswordExec,
+        common::v1::types::auth::PasswordExecIdent,
+        // user search types
+        common::v1::types::user::UserSearch,
+        common::v1::types::user::UserSearchSortField,
+        // relationship types
+        common::v1::types::user::RelationshipWithUserId,
     )),
     info(
         title = "api doccery",
