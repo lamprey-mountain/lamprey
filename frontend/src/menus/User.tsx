@@ -251,7 +251,9 @@ export function UserMenu(props: UserMenuProps) {
 	const RoleSubmenu = () => (
 		<Submenu content="roles">
 			<Show when={roles()} fallback="loading roles...">
-				<For each={roles()?.items?.filter((r) => r.id !== r.room_id) || []}>
+				<For
+					each={roles()?.items?.filter((r: any) => r.id !== r.room_id) || []}
+				>
 					{(role) => (
 						<Item
 							onClick={(e) => {
@@ -310,7 +312,8 @@ export function UserMenu(props: UserMenuProps) {
 					)}
 				</For>
 				<Show
-					when={!(roles()?.items?.filter((r) => r.id !== r.room_id)?.length ??
+					when={!(roles()?.items?.filter((r: any) => r.id !== r.room_id)
+						?.length ??
 						0)}
 				>
 					<div>no roles</div>
@@ -320,7 +323,7 @@ export function UserMenu(props: UserMenuProps) {
 	);
 
 	const hasRoles = () =>
-		(roles()?.items?.filter((r) => r.id !== r.room_id)?.length ?? 0) > 0;
+		(roles()?.items?.filter((r: any) => r.id !== r.room_id)?.length ?? 0) > 0;
 	const hasAnyPermission = (checks: Array<() => boolean>) =>
 		checks.some((c) => c());
 

@@ -62,9 +62,9 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 		const { canApply, rank, isOwner } = canApplyRoles() as any;
 		if (!canApply) return [];
 		return roleItems
-			.filter((r) => r.id !== roomId)
-			.filter((r) => isOwner || rank > r.position)
-			.map((r) => ({
+			.filter((r: any) => r.id !== roomId)
+			.filter((r: any) => isOwner || rank > r.position)
+			.map((r: any) => ({
 				item: r.id,
 				label: r.name,
 			}));

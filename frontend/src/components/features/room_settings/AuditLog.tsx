@@ -28,7 +28,7 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 		const roomMembers = api2.room_members.list(() => props.room.id);
 		const items = roomMembers()?.items;
 		if (items) {
-			const userList = items.map((member) => {
+			const userList = items.map((member: any) => {
 				const user = api2.users.cache.get(member.user_id);
 				return {
 					item: member.user_id,

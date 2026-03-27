@@ -864,7 +864,7 @@ const DocumentMain = (
 		const doc = state.doc;
 		const result: { level: number; text: string }[] = [];
 
-		doc.descendants((node) => {
+		doc.descendants((node: any) => {
 			if (node.isBlock) {
 				const textContent = node.textContent;
 				if (textContent) {
@@ -973,7 +973,7 @@ const DocumentMain = (
 		};
 
 		const originalDispatch = view.dispatch.bind(view);
-		view.dispatch = function (tr) {
+		view.dispatch = function (tr: any) {
 			originalDispatch(tr);
 			if (tr.docChanged) {
 				console.log("[TOC] doc changed, updating headings");
@@ -1002,7 +1002,7 @@ const DocumentMain = (
 		const doc = state.doc;
 		let targetPos = -1;
 
-		doc.descendants((node, pos) => {
+		doc.descendants((node: any, pos: number) => {
 			if (targetPos !== -1) return false;
 
 			if (node.isBlock) {
@@ -1023,7 +1023,7 @@ const DocumentMain = (
 
 						// Iterate over the block's inline children to map string offset -> PM offset properly
 						// (Required because custom Atoms like @mentions take 1 position but have N characters of text)
-						node.forEach((child) => {
+						node.forEach((child: any) => {
 							if (strOffset >= stringIndex) return;
 
 							const childTextLen = child.textContent.length;

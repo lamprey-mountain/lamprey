@@ -1062,7 +1062,7 @@ export const SearchInput = (
 					}),
 				],
 			}),
-		handleKeyDown: (view, event) => {
+		handleKeyDown: (view: any, event: KeyboardEvent) => {
 			if (event.key === "Enter" && !event.shiftKey) {
 				handleSubmit();
 				setActiveFilter(null);
@@ -1071,7 +1071,7 @@ export const SearchInput = (
 			return false;
 		},
 		handleDOMEvents: {
-			focus: (view) => {
+			focus: (view: any) => {
 				const { state } = view;
 				const { selection } = state;
 				if (!selection.empty) {

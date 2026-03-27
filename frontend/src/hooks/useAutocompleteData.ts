@@ -65,8 +65,8 @@ export const useAutocompleteData = () => {
 				: undefined;
 
 			const userIds = new Set<string>();
-			threadMembers?.items.forEach((m) => userIds.add(m.user_id));
-			roomMembers?.items.forEach((m) => userIds.add(m.user_id));
+			threadMembers?.items.forEach((m: any) => userIds.add(m.user_id));
+			roomMembers?.items.forEach((m: any) => userIds.add(m.user_id));
 
 			// Build user list from cache or use member data as fallback
 			const users = [...userIds].map((id) => {
@@ -76,8 +76,10 @@ export const useAutocompleteData = () => {
 				}
 				// Fallback: create a minimal user object from the member data
 				// Find the member to get any available name info
-				const member = threadMembers?.items.find((m) => m.user_id === id) ||
-					roomMembers?.items.find((m) => m.user_id === id);
+				const member = threadMembers?.items.find((m: any) =>
+					m.user_id === id
+				) ||
+					roomMembers?.items.find((m: any) => m.user_id === id);
 				return {
 					id: id,
 					name: member?.override_name || id,
@@ -231,7 +233,7 @@ export const useAutocompleteData = () => {
 
 	// NOTE: this is kind of ugly, maybe i should remove it?
 	createEffect(() => {
-		setResults(filtered().map((i) => i.obj));
+		setResults(filtered().map((i: any) => i.obj));
 	});
 
 	return {
