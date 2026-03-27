@@ -314,17 +314,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path?: never;
@@ -1808,16 +1802,13 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					query: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						from_time?: null | components["schemas"]["Time"];
-						/** Format: int32 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-						to_time?: null | components["schemas"]["Time"];
-					};
+				query?: {
+					limit?: number | null;
+					from?: null | components["schemas"]["Id"];
+					to?: null | components["schemas"]["Id"];
+					dir?: null | components["schemas"]["PaginationDirection"];
+					from_time?: null | components["schemas"]["Time"];
+					to_time?: null | components["schemas"]["Time"];
 				};
 				header?: never;
 				path?: never;
@@ -1856,16 +1847,13 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					query: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						from_time?: null | components["schemas"]["Time"];
-						/** Format: int32 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-						to_time?: null | components["schemas"]["Time"];
-					};
+				query?: {
+					limit?: number | null;
+					from?: null | components["schemas"]["Id"];
+					to?: null | components["schemas"]["Id"];
+					dir?: null | components["schemas"]["PaginationDirection"];
+					from_time?: null | components["schemas"]["Time"];
+					to_time?: null | components["schemas"]["Time"];
 				};
 				header?: never;
 				path: {
@@ -2319,11 +2307,9 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					query: {
-						/** @description whether to include user and member */
-						include_member?: boolean;
-					};
+				query?: {
+					/** @description whether to include user and member */
+					include_member?: boolean;
 				};
 				header?: never;
 				path: {
@@ -2452,11 +2438,9 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					query: {
-						/** @description whether to include user and member */
-						include_member?: boolean;
-					};
+				query?: {
+					/** @description whether to include user and member */
+					include_member?: boolean;
 				};
 				header?: never;
 				path: {
@@ -3204,17 +3188,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -3264,13 +3242,10 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					context: {
-						/** Format: int32 */
-						limit?: number | null;
-						to_end?: null | components["schemas"]["Id"];
-						to_start?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					to_start?: null | components["schemas"]["Id"];
+					to_end?: null | components["schemas"]["Id"];
+					limit?: number | null;
 				};
 				header?: never;
 				path: {
@@ -3320,17 +3295,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["InviteCode"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["InviteCode"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -3440,11 +3409,8 @@ export interface paths {
 		get: {
 			parameters: {
 				query: {
-					search: {
-						/** Format: int32 */
-						limit?: number | null;
-						query: string;
-					};
+					query: string;
+					limit?: number | null;
 				};
 				header?: never;
 				path: {
@@ -3498,17 +3464,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -3702,17 +3662,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -3812,17 +3766,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -4058,17 +4006,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -4417,17 +4359,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -4683,17 +4619,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -5041,34 +4971,17 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					replies: {
-						/**
-						 * Format: int32
-						 * @description how many replies to fetch per branch
-						 */
-						breadth?: number | null;
-						/**
-						 * Format: int32
-						 * @description which parent message to fetch replies from, where 0 is the message itself, 1 is its parent, and so on.
-						 */
-						context?: number | null;
-						/**
-						 * Format: int32
-						 * @description how deeply to fetch replies
-						 */
-						depth?: number;
-					};
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					/** @description how deeply to fetch replies */
+					depth?: number;
+					/** @description how many replies to fetch per branch */
+					breadth?: number | null;
+					/** @description which parent message to fetch replies from, where 0 is the message itself, 1 is its parent, and so on. */
+					context?: number | null;
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -5117,34 +5030,17 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					replies: {
-						/**
-						 * Format: int32
-						 * @description how many replies to fetch per branch
-						 */
-						breadth?: number | null;
-						/**
-						 * Format: int32
-						 * @description which parent message to fetch replies from, where 0 is the message itself, 1 is its parent, and so on.
-						 */
-						context?: number | null;
-						/**
-						 * Format: int32
-						 * @description how deeply to fetch replies
-						 */
-						depth?: number;
-					};
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					/** @description how deeply to fetch replies */
+					depth?: number;
+					/** @description how many replies to fetch per branch */
+					breadth?: number | null;
+					/** @description which parent message to fetch replies from, where 0 is the message itself, 1 is its parent, and so on. */
+					context?: number | null;
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -5193,23 +5089,15 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					list: {
-						/** @description deny, allow, require tag to be archived
-						 *
-						 *     default: deny */
-						archived?: boolean | null;
-					};
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					/** @description deny, allow, require tag to be archived
+					 *
+					 *     default: deny */
+					archived?: boolean | null;
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -5316,23 +5204,15 @@ export interface paths {
 		get: {
 			parameters: {
 				query: {
-					search: {
-						/** @description deny, allow, require tag to be archived
-						 *
-						 *     default: deny */
-						archived?: boolean | null;
-						query: string;
-					};
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+					query: string;
+					/** @description deny, allow, require tag to be archived
+					 *
+					 *     default: deny */
+					archived?: boolean | null;
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -5431,8 +5311,8 @@ export interface paths {
 		 */
 		delete: {
 			parameters: {
-				query: {
-					force: boolean;
+				query?: {
+					force?: boolean;
 				};
 				header?: never;
 				path: {
@@ -5528,17 +5408,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -5765,17 +5639,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -5815,17 +5683,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -5873,17 +5735,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -6358,23 +6214,15 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					query: {
-						/** @description only include branches with these states
-						 *
-						 *     defaults to only Active */
-						state?: components["schemas"]["DocumentBranchState"][];
-					};
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					/** @description only include branches with these states
+					 *
+					 *     defaults to only Active */
+					state?: components["schemas"]["DocumentBranchState"][];
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -6651,10 +6499,8 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					params: {
-						sv?: null | components["schemas"]["DocumentStateVector"];
-					};
+				query?: {
+					sv?: null | components["schemas"]["DocumentStateVector"];
 				};
 				header?: never;
 				path: {
@@ -6729,30 +6575,19 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					query: {
-						/** @description split group whenever author changes */
-						by_author?: boolean | null;
-						/**
-						 * Format: int32
-						 * @description every n changes
-						 */
-						by_changes?: number | null;
-						/** @description split group whenever a tag is created */
-						by_tag?: boolean | null;
-						/**
-						 * Format: int32
-						 * @description every n seconds
-						 */
-						by_time?: number | null;
-						/** @description continue listing history from here */
-						cursor?: string | null;
-						/**
-						 * Format: int32
-						 * @description the maximum number of items to return.
-						 */
-						limit?: number | null;
-					};
+				query?: {
+					/** @description split group whenever author changes */
+					by_author?: boolean | null;
+					/** @description split group whenever a tag is created */
+					by_tag?: boolean | null;
+					/** @description every n seconds */
+					by_time?: number | null;
+					/** @description every n changes */
+					by_changes?: number | null;
+					/** @description continue listing history from here */
+					cursor?: string | null;
+					/** @description the maximum number of items to return. */
+					limit?: number | null;
 				};
 				header?: never;
 				path: {
@@ -7215,19 +7050,11 @@ export interface paths {
 		get: {
 			parameters: {
 				query: {
-					search: {
-						query: string;
-					};
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+					query: string;
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path?: never;
@@ -7422,25 +7249,17 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
-					params: {
-						/** @description only include notifications from these channels */
-						channel_id?: components["schemas"]["Id"][];
-						/** @description include messages marked as read too */
-						include_read?: boolean;
-						/** @description only include notifications from these rooms */
-						room_id?: components["schemas"]["Id"][];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
+					/** @description only include notifications from these rooms */
+					room_id?: components["schemas"]["Id"][];
+					/** @description only include notifications from these channels */
+					channel_id?: components["schemas"]["Id"][];
+					/** @description include messages marked as read too */
+					include_read?: boolean;
 				};
 				header?: never;
 				path?: never;
@@ -8057,17 +7876,14 @@ export interface paths {
 		get: {
 			parameters: {
 				query: {
-					params: {
-						client_id: components["schemas"]["Id"];
-						code_challenge?: string | null;
-						code_challenge_method?: string | null;
-						prompt?: string | null;
-						/** Format: uri */
-						redirect_uri?: string | null;
-						response_type: string;
-						scope: string;
-						state?: string | null;
-					};
+					response_type: string;
+					client_id: components["schemas"]["Id"];
+					scope: string;
+					state?: string | null;
+					redirect_uri?: string | null;
+					prompt?: string | null;
+					code_challenge?: string | null;
+					code_challenge_method?: string | null;
 				};
 				header?: never;
 				path?: never;
@@ -8099,17 +7915,14 @@ export interface paths {
 		post: {
 			parameters: {
 				query: {
-					params: {
-						client_id: components["schemas"]["Id"];
-						code_challenge?: string | null;
-						code_challenge_method?: string | null;
-						prompt?: string | null;
-						/** Format: uri */
-						redirect_uri?: string | null;
-						response_type: string;
-						scope: string;
-						state?: string | null;
-					};
+					response_type: string;
+					client_id: components["schemas"]["Id"];
+					scope: string;
+					state?: string | null;
+					redirect_uri?: string | null;
+					prompt?: string | null;
+					code_challenge?: string | null;
+					code_challenge_method?: string | null;
 				};
 				header?: never;
 				path?: never;
@@ -8909,17 +8722,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path?: never;
@@ -9052,17 +8859,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["RoomTemplateCode"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["RoomTemplateCode"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path?: never;
@@ -9675,19 +9476,13 @@ export interface paths {
 		get: {
 			parameters: {
 				query: {
-					params: {
-						aggregate: components["schemas"]["Aggregation"];
-						end?: null | components["schemas"]["Time"];
-						/**
-						 * Format: int32
-						 * @description limit between 1..1024, default to 10
-						 */
-						limit?: number | null;
-						start?: null | components["schemas"]["Time"];
-					};
-					channel_params: {
-						channel_id?: null | components["schemas"]["Id"];
-					};
+					start?: null | components["schemas"]["Time"];
+					end?: null | components["schemas"]["Time"];
+					aggregate: components["schemas"]["Aggregation"];
+					/** @description limit between 1..1024, default to 10 */
+					limit?: number | null;
+					/** @description return only analytics for this channel, otherwise return data points for everything */
+					channel_id?: null | components["schemas"]["Id"];
 				};
 				header?: never;
 				path: {
@@ -9741,16 +9536,11 @@ export interface paths {
 		get: {
 			parameters: {
 				query: {
-					params: {
-						aggregate: components["schemas"]["Aggregation"];
-						end?: null | components["schemas"]["Time"];
-						/**
-						 * Format: int32
-						 * @description limit between 1..1024, default to 10
-						 */
-						limit?: number | null;
-						start?: null | components["schemas"]["Time"];
-					};
+					start?: null | components["schemas"]["Time"];
+					end?: null | components["schemas"]["Time"];
+					aggregate: components["schemas"]["Aggregation"];
+					/** @description limit between 1..1024, default to 10 */
+					limit?: number | null;
 				};
 				header?: never;
 				path: {
@@ -9804,16 +9594,11 @@ export interface paths {
 		get: {
 			parameters: {
 				query: {
-					params: {
-						aggregate: components["schemas"]["Aggregation"];
-						end?: null | components["schemas"]["Time"];
-						/**
-						 * Format: int32
-						 * @description limit between 1..1024, default to 10
-						 */
-						limit?: number | null;
-						start?: null | components["schemas"]["Time"];
-					};
+					start?: null | components["schemas"]["Time"];
+					end?: null | components["schemas"]["Time"];
+					aggregate: components["schemas"]["Aggregation"];
+					/** @description limit between 1..1024, default to 10 */
+					limit?: number | null;
 				};
 				header?: never;
 				path: {
@@ -9865,16 +9650,11 @@ export interface paths {
 		get: {
 			parameters: {
 				query: {
-					params: {
-						aggregate: components["schemas"]["Aggregation"];
-						end?: null | components["schemas"]["Time"];
-						/**
-						 * Format: int32
-						 * @description limit between 1..1024, default to 10
-						 */
-						limit?: number | null;
-						start?: null | components["schemas"]["Time"];
-					};
+					start?: null | components["schemas"]["Time"];
+					end?: null | components["schemas"]["Time"];
+					aggregate: components["schemas"]["Aggregation"];
+					/** @description limit between 1..1024, default to 10 */
+					limit?: number | null;
 				};
 				header?: never;
 				path: {
@@ -9926,16 +9706,11 @@ export interface paths {
 		get: {
 			parameters: {
 				query: {
-					params: {
-						aggregate: components["schemas"]["Aggregation"];
-						end?: null | components["schemas"]["Time"];
-						/**
-						 * Format: int32
-						 * @description limit between 1..1024, default to 10
-						 */
-						limit?: number | null;
-						start?: null | components["schemas"]["Time"];
-					};
+					start?: null | components["schemas"]["Time"];
+					end?: null | components["schemas"]["Time"];
+					aggregate: components["schemas"]["Aggregation"];
+					/** @description limit between 1..1024, default to 10 */
+					limit?: number | null;
 				};
 				header?: never;
 				path: {
@@ -9989,16 +9764,11 @@ export interface paths {
 		get: {
 			parameters: {
 				query: {
-					params: {
-						aggregate: components["schemas"]["Aggregation"];
-						end?: null | components["schemas"]["Time"];
-						/**
-						 * Format: int32
-						 * @description limit between 1..1024, default to 10
-						 */
-						limit?: number | null;
-						start?: null | components["schemas"]["Time"];
-					};
+					start?: null | components["schemas"]["Time"];
+					end?: null | components["schemas"]["Time"];
+					aggregate: components["schemas"]["Aggregation"];
+					/** @description limit between 1..1024, default to 10 */
+					limit?: number | null;
 				};
 				header?: never;
 				path: {
@@ -10059,27 +9829,19 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
-					filter: {
-						/** @description only return audit log entries with these statuses
-						 *
-						 *     defaults to only `Success` */
-						status?: components["schemas"]["AuditLogEntryStatus"][];
-						/** @description only return audit log entries with these types */
-						type?: string[];
-						/** @description only return audit log entries from these users */
-						user_id?: components["schemas"]["Id"][];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
+					/** @description only return audit log entries from these users */
+					user_id?: components["schemas"]["Id"][];
+					/** @description only return audit log entries with these types */
+					type?: string[];
+					/** @description only return audit log entries with these statuses
+					 *
+					 *     defaults to only `Success` */
+					status?: components["schemas"]["AuditLogEntryStatus"][];
 				};
 				header?: never;
 				path: {
@@ -10464,17 +10226,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -10679,17 +10435,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -10958,18 +10708,12 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					parent_id?: string;
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					parent_id?: null | components["schemas"]["Id"];
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -11019,17 +10763,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -11247,17 +10985,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -11306,17 +11038,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["InviteCode"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["InviteCode"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -11423,17 +11149,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -11482,11 +11202,8 @@ export interface paths {
 		get: {
 			parameters: {
 				query: {
-					search: {
-						/** Format: int32 */
-						limit?: number | null;
-						query: string;
-					};
+					query: string;
+					limit?: number | null;
 				};
 				header?: never;
 				path: {
@@ -12123,17 +11840,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -12334,7 +12045,7 @@ export interface paths {
 		delete: {
 			parameters: {
 				query?: {
-					fallback_role_id?: string;
+					fallback_role_id?: null | components["schemas"]["Id"];
 				};
 				header?: never;
 				path: {
@@ -12436,17 +12147,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -12924,17 +12629,11 @@ export interface paths {
 		 */
 		post: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path?: never;
@@ -13140,17 +12839,11 @@ export interface paths {
 		 */
 		post: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path?: never;
@@ -13417,17 +13110,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["InviteCode"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["InviteCode"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path?: never;
@@ -13749,17 +13436,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path?: never;
@@ -13997,17 +13678,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -14206,17 +13881,8 @@ export interface paths {
 		get: {
 			parameters: {
 				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
-					filter?: "guest" | "registered" | "bot" | "puppet";
+					pagination: components["schemas"]["PaginationQuery_Id"];
+					filter?: null | components["schemas"]["UserListFilter"];
 				};
 				header?: never;
 				path?: never;
@@ -14340,17 +14006,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path?: never;
@@ -14763,17 +14423,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path?: never;
@@ -14821,17 +14475,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path?: never;
@@ -15021,17 +14669,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path?: never;
@@ -15351,27 +14993,19 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
-					filter: {
-						/** @description only return audit log entries with these statuses
-						 *
-						 *     defaults to only `Success` */
-						status?: components["schemas"]["AuditLogEntryStatus"][];
-						/** @description only return audit log entries with these types */
-						type?: string[];
-						/** @description only return audit log entries from these users */
-						user_id?: components["schemas"]["Id"][];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
+					/** @description only return audit log entries from these users */
+					user_id?: components["schemas"]["Id"][];
+					/** @description only return audit log entries with these types */
+					type?: string[];
+					/** @description only return audit log entries with these statuses
+					 *
+					 *     defaults to only `Success` */
+					status?: components["schemas"]["AuditLogEntryStatus"][];
 				};
 				header?: never;
 				path: {
@@ -15434,17 +15068,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -15570,17 +15198,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -15867,17 +15489,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["InviteCode"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["InviteCode"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -16033,17 +15649,11 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: {
-						dir?: null | components["schemas"]["PaginationDirection"];
-						from?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int32
-						 * @description The maximum number of items to return.
-						 */
-						limit?: number | null;
-						to?: null | components["schemas"]["Id"];
-					};
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
 				};
 				header?: never;
 				path: {
@@ -16367,13 +15977,11 @@ export interface paths {
 		 */
 		delete: {
 			parameters: {
-				query: {
-					params: {
-						/** @description if people are still connected to this channel, try to forcibly disconnect them
-						 *
-						 *     requires VoiceDisconnect permission */
-						force?: boolean;
-					};
+				query?: {
+					/** @description if people are still connected to this channel, try to forcibly disconnect them
+					 *
+					 *     requires VoiceDisconnect permission */
+					force?: boolean;
 				};
 				header?: never;
 				path: {
@@ -17100,30 +16708,19 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query: {
-					query: {
-						/** @description split group whenever author changes */
-						by_author?: boolean | null;
-						/**
-						 * Format: int32
-						 * @description every n changes
-						 */
-						by_changes?: number | null;
-						/** @description split group whenever a tag is created */
-						by_tag?: boolean | null;
-						/**
-						 * Format: int32
-						 * @description every n seconds
-						 */
-						by_time?: number | null;
-						/** @description continue listing history from here */
-						cursor?: string | null;
-						/**
-						 * Format: int32
-						 * @description the maximum number of items to return.
-						 */
-						limit?: number | null;
-					};
+				query?: {
+					/** @description split group whenever author changes */
+					by_author?: boolean | null;
+					/** @description split group whenever a tag is created */
+					by_tag?: boolean | null;
+					/** @description every n seconds */
+					by_time?: number | null;
+					/** @description every n changes */
+					by_changes?: number | null;
+					/** @description continue listing history from here */
+					cursor?: string | null;
+					/** @description the maximum number of items to return. */
+					limit?: number | null;
 				};
 				header?: never;
 				path: {
