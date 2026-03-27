@@ -18108,6 +18108,16 @@ export interface components {
 			target: components["schemas"]["AutomodTarget"];
 			trigger: components["schemas"]["AutomodTrigger"];
 		};
+		AutomodRuleCreate: {
+			actions: components["schemas"]["AutomodAction"][];
+			except_channels?: components["schemas"]["Id"][];
+			except_nsfw?: boolean;
+			except_roles?: components["schemas"]["Id"][];
+			include_everyone?: boolean;
+			name: string;
+			target: components["schemas"]["AutomodTarget"];
+			trigger: components["schemas"]["AutomodTrigger"];
+		};
 		AutomodRuleExecution: {
 			/** @description deduplicated list of all of the actions that were taken */
 			actions: components["schemas"]["AutomodAction"][];
@@ -20334,6 +20344,27 @@ export interface components {
 			 */
 			to?: string;
 		};
+		PaginationResponse_Message: {
+			cursor?: string | null;
+			has_more: boolean;
+			items: {
+				/** @description the id of who sent this message */
+				author_id: components["schemas"]["Id"];
+				channel_id: components["schemas"]["Id"];
+				/** @description when this message was created */
+				created_at: components["schemas"]["Time"];
+				deleted_at?: null | components["schemas"]["Time"];
+				id: components["schemas"]["Id"];
+				latest_version: components["schemas"]["MessageVersion"];
+				pinned?: null | components["schemas"]["Pinned"];
+				reactions?: components["schemas"]["ReactionCounts"];
+				removed_at?: null | components["schemas"]["Time"];
+				room_id?: null | components["schemas"]["Id"];
+				thread?: null | components["schemas"]["Channel"];
+			}[];
+			/** Format: int64 */
+			total: number;
+		};
 		PaginationResponse_Webhook: {
 			cursor?: string | null;
 			has_more: boolean;
@@ -20575,9 +20606,19 @@ export interface components {
 			/** @description the user who created this puppet */
 			owner_id: components["schemas"]["Id"];
 		};
+		PushCreate: {
+			endpoint: string;
+			keys: components["schemas"]["PushCreateKeys"];
+		};
 		PushCreateKeys: {
 			auth: string;
 			p256dh: string;
+		};
+		PushInfo: {
+			/** @description the endpoint that web push payloads are sent to */
+			endpoint: string;
+			/** @description the server's vapid key */
+			server_key: string;
 		};
 		/** @description the total reaction counts for a key */
 		ReactionCount: {
@@ -20711,6 +20752,16 @@ export interface components {
 			name: string;
 			sticky?: boolean;
 		};
+		RolePatch: {
+			allow?: components["schemas"]["Permission"][] | null;
+			deny?: components["schemas"]["Permission"][] | null;
+			description?: string | null;
+			hoist?: boolean | null;
+			is_mentionable?: boolean | null;
+			is_self_applicable?: boolean | null;
+			name?: string | null;
+			sticky?: boolean | null;
+		};
 		RoleReorderItem: {
 			/** Format: int64 */
 			position: number;
@@ -20772,6 +20823,28 @@ export interface components {
 			version_id: string;
 			welcome_channel_id?: null | components["schemas"]["Id"];
 		};
+		RoomAnalyticsChannel: {
+			/** @description The bucket for this data point. */
+			bucket: components["schemas"]["Time"];
+			channel_id: components["schemas"]["Id"];
+			/** Format: int64 */
+			media_count: number;
+			/** Format: int64 */
+			media_size: number;
+			/** Format: int64 */
+			message_count: number;
+		};
+		RoomAnalyticsInvites: {
+			/** @description The bucket for this data point. */
+			bucket: components["schemas"]["Time"];
+			/** @description where this member came from */
+			origin: components["schemas"]["RoomAnalyticsInvitesOrigin"];
+			/**
+			 * Format: int64
+			 * @description number of times this invite was used
+			 */
+			uses: number;
+		};
 		RoomAnalyticsInvitesOrigin: {
 			code: components["schemas"]["InviteCode"];
 			/** @enum {string} */
@@ -20790,6 +20863,52 @@ export interface components {
 		} | {
 			/** @enum {string} */
 			type: "Other";
+		};
+		RoomAnalyticsMembersCount: {
+			/** @description The bucket for this data point. */
+			bucket: components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description Total number of members in this room.
+			 */
+			count: number;
+		};
+		RoomAnalyticsMembersJoin: {
+			/** @description The bucket for this data point. */
+			bucket: components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description Total number of members who joined this room.
+			 */
+			count: number;
+		};
+		RoomAnalyticsMembersLeave: {
+			/** @description The bucket for this data point. */
+			bucket: components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description Total number of members who left this room.
+			 */
+			count: number;
+		};
+		RoomAnalyticsOverview: {
+			/** @description The bucket for this data point. */
+			bucket: components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description number of files sent
+			 */
+			media_count: number;
+			/**
+			 * Format: int64
+			 * @description number of files sent
+			 */
+			media_size: number;
+			/**
+			 * Format: int64
+			 * @description number of messages sent
+			 */
+			message_count: number;
 		};
 		/** @description represents a restriction on who can join the room */
 		RoomBan: {
@@ -20847,6 +20966,10 @@ export interface components {
 		} | {
 			/** @enum {string} */
 			type: "PublicJoin";
+		};
+		RoomMemberSearchResponse: {
+			room_members: components["schemas"]["RoomMember"][];
+			users: components["schemas"]["User"][];
 		};
 		/** @description An update to a room */
 		RoomPatch: {
@@ -21143,6 +21266,19 @@ export interface components {
 			 */
 			total_thread_count: number;
 		};
+		TagCreate: {
+			color?: null | components["schemas"]["Color"];
+			description?: string | null;
+			name: string;
+			restricted?: boolean;
+		};
+		TagPatch: {
+			archived?: boolean | null;
+			color?: null | components["schemas"]["Color"];
+			description?: string | null;
+			name?: string | null;
+			restricted?: boolean | null;
+		};
 		TestPermissionsRequest: {
 			channel_id?: null | components["schemas"]["Id"];
 			room_id: components["schemas"]["Id"];
@@ -21272,6 +21408,9 @@ export interface components {
 			channel_id: components["schemas"]["Id"];
 			creator_id: components["schemas"]["Id"];
 			room_id?: null | components["schemas"]["Id"];
+		};
+		UserWithRelationship: components["schemas"]["User"] & {
+			relationship: components["schemas"]["Relationship"];
 		};
 		Voice: Record<string, never>;
 		/** @description voice config the local user can set on someone else */
