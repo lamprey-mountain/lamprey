@@ -3,7 +3,7 @@ import * as oapi from "openapi-fetch";
 import type { paths } from "./schema.d.ts";
 import { MessageEnvelope, MessageReady, MessageSync } from "./types.ts";
 import { createObservable, Observer } from "./observable.ts";
-import { pack, unpack, unpackMultiple } from "msgpackr";
+import { pack, unpack, Unpackr, UnpackrStream } from "msgpackr";
 export * from "./observable.ts";
 
 export type ClientState = "stopped" | "connecting" | "connected" | "ready";
@@ -135,6 +135,8 @@ export function createClient(opts: ClientOptions): Client {
 
 	function flushQueue() {
 		while (queue.length > 0 && state.get() === "ready") {
+			// TODO: can state can change from ready to something else (eg. disconnected)
+			// between the while condition and send function state.get()?
 			send(queue.shift()!);
 		}
 	}
@@ -147,7 +149,7 @@ export function createClient(opts: ClientOptions): Client {
 		ws.binaryType = "arraybuffer";
 
 		const streamProcessor = opts.compress
-			? createDecompressor(opts.format ?? "json", handleMessage)
+			? createDecompressor(opts.format ?? "json", handleMessage, opts.onError)
 			: null;
 
 		ws.addEventListener("message", (e) => {
@@ -219,34 +221,138 @@ export const UUID_MAX = "ffffffff-ffff-ffff-ffff-ffffffffffff";
 function createDecompressor(
 	format: "json" | "msgpack",
 	onMessage: (msg: MessageEnvelope) => void,
+	onError?: (err: Error) => void,
 ) {
 	const stream = new DecompressionStream("deflate");
-	const writer = stream.writable.getWriter();
-	const reader = stream.readable.getReader();
-	let buffer = new Uint8Array(0);
+	const deserializer = format === "json"
+		? new JsonStream()
+		: new MsgpackStream();
+	const reader = stream.readable.pipeThrough(deserializer).getReader();
 
 	(async () => {
-		while (true) {
-			const { value, done } = await reader.read();
-			if (done) break;
-
-			const newBuf = new Uint8Array(buffer.length + value.length);
-			newBuf.set(buffer);
-			newBuf.set(value, buffer.length);
-			try {
-				if (format === "json") {
-					const msg = JSON.parse(new TextDecoder().decode(newBuf));
-					onMessage(msg);
-				} else {
-					const msgs = unpackMultiple(newBuf);
-					msgs.forEach(onMessage);
-				}
-				buffer = new Uint8Array(0);
-			} catch {
-				buffer = newBuf;
+		try {
+			while (true) {
+				const { value, done } = await reader.read();
+				if (done) break;
+				if (value) onMessage(value);
 			}
+		} catch (err) {
+			onError?.(err as Error);
 		}
 	})();
 
-	return writer;
+	return stream.writable.getWriter();
+}
+
+export class MsgpackStream extends TransformStream<Uint8Array, any> {
+	constructor() {
+		const unpacker = new Unpackr({
+			mapsAsObjects: true,
+		});
+
+		let buffer = new Uint8Array(0);
+
+		super({
+			transform(chunk, controller) {
+				const combined = new Uint8Array(buffer.length + chunk.length);
+				combined.set(buffer);
+				combined.set(chunk, buffer.length);
+				buffer = combined;
+
+				let consumedUntil = 0;
+
+				try {
+					unpacker.unpackMultiple(buffer, (value, _start, end) => {
+						controller.enqueue(value);
+						if (end !== undefined) {
+							consumedUntil = end;
+						} else console.warn("no end!");
+					});
+
+					buffer = buffer.slice(consumedUntil);
+				} catch (e) {
+					// if it throws, we have a partial message
+					if (consumedUntil > 0) {
+						buffer = buffer.slice(consumedUntil);
+					}
+				}
+			},
+			flush() {
+				buffer = new Uint8Array(0);
+			},
+		});
+	}
+}
+
+export class JsonStream extends TransformStream<Uint8Array, any> {
+	constructor() {
+		const decoder = new TextDecoder();
+		let buffer = "";
+
+		super({
+			transform(chunk, controller) {
+				buffer += decoder.decode(chunk, { stream: true });
+
+				while (true) {
+					const endIdx = findJsonEnd(buffer);
+					if (endIdx === -1) break;
+
+					const raw = buffer.slice(0, endIdx);
+					try {
+						const obj = JSON.parse(raw);
+						controller.enqueue(obj);
+					} catch (e) {
+						console.error("Failed to parse JSON segment:", e);
+					}
+
+					buffer = buffer.slice(endIdx).trimStart();
+				}
+			},
+			flush(controller) {
+				const final = decoder.decode();
+				if (final.trim()) {
+					try {
+						controller.enqueue(JSON.parse(final));
+					} catch {}
+				}
+			},
+		});
+	}
+}
+
+/**
+ * Finds the end of the first complete JSON object in a string.
+ * Returns -1 if the object is incomplete.
+ */
+function findJsonEnd(str: string): number {
+	let braces = 0;
+	let inString = false;
+	let escaped = false;
+	let started = false;
+
+	for (let i = 0; i < str.length; i++) {
+		const char = str[i];
+		if (escaped) {
+			escaped = false;
+			continue;
+		}
+		if (char === "\\") {
+			escaped = true;
+			continue;
+		}
+		if (char === '"') {
+			inString = !inString;
+			continue;
+		}
+		if (inString) continue;
+
+		if (char === "{") {
+			braces++;
+			started = true;
+		} else if (char === "}") {
+			braces--;
+			if (started && braces === 0) return i + 1;
+		}
+	}
+	return -1;
 }
