@@ -95,6 +95,6 @@ export class RoomMembersService extends BaseService<RoomMember> {
 				},
 			})
 		);
-		return result.data;
+		return result;
 	}
 }

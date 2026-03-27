@@ -9,7 +9,7 @@ import {
 import { Portal } from "solid-js/web";
 import { autoUpdate, flip, offset } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
-import { useApi2, useRoles2, useRoomMembers2 } from "@/api";
+import { useRoles2, useRoomMembers2 } from "@/api";
 import { createKeybinds } from "../keybinds.tsx";
 import type { Role, RoomMemberSearchResponse, User } from "sdk";
 import { throttle } from "@solid-primitives/scheduled";
@@ -26,7 +26,6 @@ export function OverwriteDropdown(props: {
 	onSelect: (id: string, type: "Role" | "User") => void;
 	excludeIds?: string[];
 }) {
-	const api2 = useApi2();
 	const roles2 = useRoles2();
 	const roomMembers2 = useRoomMembers2();
 	const [shown, setShown] = createSignal(false);
