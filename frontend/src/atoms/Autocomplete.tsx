@@ -65,10 +65,16 @@ export const Autocomplete = () => {
 								>
 									<div class="mention-user">
 										<Avatar
-											user={(result.obj as AutocompleteMentionItem & { user: User }).user}
+											user={(result.obj as AutocompleteMentionItem & {
+												user: User;
+											}).user}
 											pad={0}
 										/>
-										<span>{(result.obj as AutocompleteMentionItem & { name: string }).name}</span>
+										<span>
+											{(result.obj as AutocompleteMentionItem & {
+												name: string;
+											}).name}
+										</span>
 									</div>
 								</Match>
 								<Match
@@ -77,7 +83,11 @@ export const Autocomplete = () => {
 								>
 									<div class="mention-role">
 										<span class="role-badge">#</span>
-										<span>{(result.obj as AutocompleteMentionItem & { name: string }).name}</span>
+										<span>
+											{(result.obj as AutocompleteMentionItem & {
+												name: string;
+											}).name}
+										</span>
 									</div>
 								</Match>
 								<Match

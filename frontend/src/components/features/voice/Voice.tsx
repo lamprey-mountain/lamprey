@@ -49,7 +49,8 @@ export const Voice = (p: { channel: Channel }) => {
 		const room_member = p.channel.room_id
 			? api2.room_members.use(() => `${p.channel.room_id}!:${uid}`)
 			: null;
-		return ((room_member?.()?.membership === "Join" && room_member?.()?.override_name) ||
+		return ((room_member?.()?.membership === "Join" &&
+			room_member?.()?.override_name) ||
 			uid);
 	};
 

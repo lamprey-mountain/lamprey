@@ -51,12 +51,16 @@ export const createEditorNodeViews = (
 					});
 					const user = api.users.use(userId);
 					const roomMember = channel()
-						? api.room_members.use(() => `${channel()!.room_id}!:${getUserId()}`)
+						? api.room_members.use(() =>
+							`${channel()!.room_id}!:${getUserId()}`
+						)
 						: null;
 					const name = createMemo(() => {
 						const id = getUserId();
 						if (!id) return "..."; // Placeholder while loading/missing
-						if (roomMember?.()?.override_name) return roomMember()!.override_name;
+						if (roomMember?.()?.override_name) {
+							return roomMember()!.override_name;
+						}
 						if (user()?.name) return user()!.name;
 						return id;
 					});
