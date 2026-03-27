@@ -70,23 +70,25 @@ export const ChannelIcon = (
 					)}
 			>
 				<svg class="icon" viewBox="0 0 64 64" style={props.style}>
-					<mask id="nsfw">
-						<rect
-							width={64}
-							height={64}
-							x={0}
-							y={0}
-							fill="white"
-						/>
-						<rect
-							rx={4}
-							width={32}
-							height={32}
-							x={32}
-							y={0}
-							fill="black"
-						/>
-					</mask>
+					<defs>
+						<mask id="nsfw">
+							<rect
+								width="64"
+								height="64"
+								x="0"
+								y="0"
+								fill="white"
+							/>
+							<rect
+								rx="4"
+								width="32"
+								height="32"
+								x="32"
+								y="0"
+								fill="black"
+							/>
+						</mask>
+					</defs>
 					<image
 						mask={props.channel.nsfw ? "url(#nsfw)" : undefined}
 						href={icon()}
@@ -113,16 +115,18 @@ export const ChannelIconGdm = (
 			role="img"
 			style={{ "--pad": `${pad()}px` }}
 		>
-			<mask id="thread-icon-mask">
-				<rect
-					rx="6"
-					width={size}
-					height={size}
-					x={pad()}
-					y={pad()}
-					fill="white"
-				/>
-			</mask>
+			<defs>
+				<mask id="thread-icon-mask">
+					<rect
+						rx="6"
+						width={size}
+						height={size}
+						x={pad()}
+						y={pad()}
+						fill="white"
+					/>
+				</mask>
+			</defs>
 			<g mask="url(#thread-icon-mask)">
 				<rect
 					width={size}
