@@ -1152,46 +1152,6 @@ export interface paths {
 				};
 			};
 		};
-		post?: never;
-		/**
-		 * Auth password delete
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
-		 *
-		 *     Remove password authentication
-		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
-		};
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/password/exec": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
 		/**
 		 * Auth password exec
 		 * @description <div class="markdown-alert-scope-required">Full</div>
@@ -1221,7 +1181,31 @@ export interface paths {
 				};
 			};
 		};
-		delete?: never;
+		/**
+		 * Auth password delete
+		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
+		 *
+		 *     Remove password authentication
+		 */
+		delete: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -4014,74 +3998,6 @@ export interface paths {
 		};
 		trace?: never;
 	};
-	"/api/v1/channel/{channel_id}/message/{message_id}/pin": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/**
-		 * Message pin
-		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessagePin</div>
-		 */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
-		};
-		post?: never;
-		/**
-		 * Message unpin
-		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessageUnpin</div>
-		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
-		};
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/channel/{channel_id}/message/{message_id}/reaction": {
 		parameters: {
 			query?: never;
@@ -4842,6 +4758,74 @@ export interface paths {
 				};
 			};
 		};
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/pin/{message_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Message pin
+		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessagePin</div>
+		 */
+		put: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					message_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		post?: never;
+		/**
+		 * Message unpin
+		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessageUnpin</div>
+		 */
+		delete: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					message_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		options?: never;
+		head?: never;
+		patch?: never;
 		trace?: never;
 	};
 	"/api/v1/channel/{channel_id}/ratelimit": {
@@ -7798,7 +7782,30 @@ export interface paths {
 			};
 		};
 		put?: never;
-		post?: never;
+		/**
+		 * Invite use
+		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					invite_code: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
 		/**
 		 * Invite delete
 		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
@@ -7886,45 +7893,6 @@ export interface paths {
 				};
 			};
 		};
-		trace?: never;
-	};
-	"/api/v1/invite/{invite_code}/use": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Invite use
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					invite_code: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
 		trace?: never;
 	};
 	"/api/v1/media": {
@@ -10632,14 +10600,13 @@ export interface paths {
 				};
 			};
 		};
-		put?: never;
 		/**
 		 * Room ban create
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberBan</div>
 		 */
-		post: {
+		put: {
 			parameters: {
 				query?: never;
 				header?: never;
@@ -10666,6 +10633,7 @@ export interface paths {
 				};
 			};
 		};
+		post?: never;
 		/**
 		 * Room ban delete
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
@@ -16731,12 +16699,13 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
+		put?: never;
 		/**
 		 * Voice state move
 		 * @description <div class="markdown-alert-permission-required">VoiceMove</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 */
-		put: {
+		post: {
 			parameters: {
 				query?: never;
 				header?: never;
@@ -16790,7 +16759,6 @@ export interface paths {
 				};
 			};
 		};
-		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
