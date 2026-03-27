@@ -65,6 +65,7 @@ mod frontend;
         types::Message,
         types::RoomMember,
         types::Role,
+        types::RolePatch,
         // utoipa seems to forget to add these types specifically
         types::UserIdReq,
         ApplicationIdReq,
@@ -72,6 +73,7 @@ mod frontend;
         types::UserListFilter,
         MessageSync,
         PaginationQuery<MessageId>,
+        common::v1::types::pagination::PaginationResponse<types::Message>,
         types::emoji::EmojiCustom,
         types::emoji::EmojiOwner,
         types::reaction::ReactionKey,
@@ -110,6 +112,8 @@ mod frontend;
         // message types
         common::v1::types::message::PinsReorderItem,
         // push types
+        common::v1::types::push::PushCreate,
+        common::v1::types::push::PushInfo,
         common::v1::types::push::PushCreateKeys,
         // room template types
         common::v1::types::room_template::RoomTemplate,
@@ -127,11 +131,27 @@ mod frontend;
         // room analytics types
         common::v1::types::room_analytics::Aggregation,
         common::v1::types::room_analytics::RoomAnalyticsInvitesOrigin,
+        common::v1::types::room_analytics::RoomAnalyticsChannel,
+        common::v1::types::room_analytics::RoomAnalyticsInvites,
+        common::v1::types::room_analytics::RoomAnalyticsMembersCount,
+        common::v1::types::room_analytics::RoomAnalyticsMembersJoin,
+        common::v1::types::room_analytics::RoomAnalyticsMembersLeave,
+        common::v1::types::room_analytics::RoomAnalyticsOverview,
         // application/integration types
         common::v1::types::application::Integration,
         // moderation types
         common::v1::types::moderation::ReportReason,
         common::v1::types::moderation::ReportDestination,
+        // automod types
+        common::v1::types::automod::AutomodRule,
+        common::v1::types::automod::AutomodRuleCreate,
+        common::v1::types::automod::AutomodTrigger,
+        common::v1::types::automod::AutomodAction,
+        common::v1::types::automod::AutomodTarget,
+        // tag types
+        common::v1::types::tag::Tag,
+        common::v1::types::tag::TagCreate,
+        common::v1::types::tag::TagPatch,
         // server types
         common::v1::types::server::ServerAutomodList,
         common::v1::types::server::ServerMediaScanner,
@@ -147,6 +167,7 @@ mod frontend;
         common::v1::types::user::RelationshipType,
         // room member types
         types::RoomMemberOrigin,
+        common::v1::types::room_member::RoomMemberSearchResponse,
         // harvest types
         common::v1::types::harvest::Harvest,
         common::v1::types::harvest::HarvestCreate,
@@ -159,6 +180,7 @@ mod frontend;
         common::v1::types::user::UserSearchSortField,
         // relationship types
         common::v1::types::user::RelationshipWithUserId,
+        common::v1::types::user::UserWithRelationship,
     )),
     info(
         title = "api doccery",
