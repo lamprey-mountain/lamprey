@@ -837,22 +837,18 @@ fn build_openapi_ext_fn(
                 });
             }
             FieldKind::Query(rename) => {
-                let name = rename.clone().unwrap_or_else(|| f.ident.to_string());
+                let _name = rename.clone().unwrap_or_else(|| f.ident.to_string());
                 let ty = &f.ty;
-                let (schema_ty, required) = if let Some(inner) = extract_inner_option_type(ty) {
-                    (inner, quote! { ::utoipa::openapi::Required::False })
-                } else {
-                    (ty, quote! { ::utoipa::openapi::Required::True })
-                };
+                // For #[query] structs implementing IntoParams, call into_params() to expand
+                // This flattens nested query structs like PaginationQuery into flat parameters
                 params_stream.extend(quote! {
-                    op = op.parameter(
-                        ::utoipa::openapi::path::ParameterBuilder::new()
-                            .name(#name)
-                            .parameter_in(::utoipa::openapi::path::ParameterIn::Query)
-                            .required(#required)
-                            .schema(Some(<#schema_ty as ::utoipa::PartialSchema>::schema()))
-                            .build()
+                    // Call into_params() on the query struct type to expand it into flat parameters
+                    let query_params = <#ty as ::utoipa::IntoParams>::into_params(
+                        || Some(::utoipa::openapi::path::ParameterIn::Query)
                     );
+                    for param in query_params {
+                        op = op.parameter(param);
+                    }
                 });
             }
             FieldKind::Header(rename) => {

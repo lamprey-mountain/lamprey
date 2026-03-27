@@ -11,7 +11,7 @@ use lamprey_macros::endpoint;
 pub mod voice_state_get {
     use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::voice::VoiceState;
-    use crate::v1::types::{ChannelId};
+    use crate::v1::types::ChannelId;
 
     pub struct Request {
         #[path]

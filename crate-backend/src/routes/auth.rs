@@ -56,13 +56,15 @@ async fn auth_oauth_redirect(
         .get(&req.provider)
         .ok_or(Error::Unimplemented)?;
 
-    let state =
-        Uuid::parse_str(&req.params.state).map_err(|_| ApiError::from_code(ErrorCode::InvalidData))?;
+    let state = Uuid::parse_str(&req.params.state)
+        .map_err(|_| ApiError::from_code(ErrorCode::InvalidData))?;
 
     match req.provider.as_str() {
         "discord" => {
-            let (oauth_token, session_id) =
-                srv.oauth.exchange_code_for_token(state, req.params.code).await?;
+            let (oauth_token, session_id) = srv
+                .oauth
+                .exchange_code_for_token(state, req.params.code)
+                .await?;
             let u = srv.oauth.discord_get_user(oauth_token.access_token).await?;
             debug!("new discord user {:?}", u);
             let user_id = match data
@@ -194,8 +196,10 @@ async fn auth_oauth_redirect(
             Ok(Html(include_str!("../oauth.html")))
         }
         "github" => {
-            let (oauth_token, session_id) =
-                srv.oauth.exchange_code_for_token(state, req.params.code).await?;
+            let (oauth_token, session_id) = srv
+                .oauth
+                .exchange_code_for_token(state, req.params.code)
+                .await?;
             let u = srv.oauth.github_get_user(oauth_token.access_token).await?;
             debug!("new github user {:?}", u);
             let user_id = match data

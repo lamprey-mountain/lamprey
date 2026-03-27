@@ -125,8 +125,8 @@ pub mod room_member_update {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod room_member_delete {
-    use crate::v1::types::room_member::RoomMemberDeleteQuery;
     use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::room_member::RoomMemberDeleteQuery;
     use crate::v1::types::RoomId;
 
     pub struct Request {
@@ -361,12 +361,18 @@ pub mod room_prune_begin {
 pub mod room_ban_search {
     use crate::v1::types::{PaginationQuery, PaginationResponse, RoomBan, RoomId, UserId};
 
+    #[derive(Debug, serde::Deserialize)]
+    #[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
+    pub struct BanSearchQuery {
+        pub query: String,
+    }
+
     pub struct Request {
         #[path]
         pub room_id: RoomId,
 
         #[query]
-        pub query: String,
+        pub search: BanSearchQuery,
 
         #[query]
         pub pagination: PaginationQuery<UserId>,
