@@ -1,4 +1,3 @@
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import {
 	useApi2,
@@ -9,7 +8,6 @@ import {
 	useThreadMembers2,
 	useUsers2,
 } from "@/api";
-import { useCtx } from "../../../context";
 import type { RoomT, ThreadT } from "../../../types";
 import type { ChannelSearch } from "../../../context";
 import { User } from "sdk";
@@ -229,6 +227,86 @@ function serializeToQuery(state: EditorState): string {
 		});
 	});
 	return query.trim().replace(/\s+/g, " ");
+}
+
+function parseQueryToNodes(
+	query: string,
+	users2: ReturnType<typeof useUsers2>,
+	roomThreads: () => ThreadT[],
+): { nodes: Node[]; text: string } {
+	const nodes: Node[] = [];
+	let textBuffer = "";
+
+	// Regex to match filter patterns: filter:value or "quoted text"
+	const tokenRegex =
+		/(author|thread|before|after|has|pinned|mentions):(\S+)|"([^"]*)"/g;
+	let lastIndex = 0;
+	let match;
+
+	while ((match = tokenRegex.exec(query)) !== null) {
+		// Add text before this match
+		const textBefore = query.slice(lastIndex, match.index);
+		if (textBefore) {
+			textBuffer += textBefore;
+		}
+
+		if (match[1]) {
+			// Flush text buffer
+			if (textBuffer) {
+				nodes.push(schema.text(textBuffer));
+				textBuffer = "";
+			}
+
+			const filterType = match[1];
+			const value = match[2];
+
+			if (filterType === "author") {
+				const user = users2.cache.get(value);
+				if (user) {
+					nodes.push(
+						schema.nodes.author.create({ id: user.id, name: user.name }),
+					);
+				} else {
+					textBuffer += ` author:${value}`;
+				}
+			} else if (filterType === "thread") {
+				const thread = roomThreads().find((t) => t.id === value);
+				if (thread) {
+					nodes.push(
+						schema.nodes.thread.create({ id: thread.id, name: thread.name }),
+					);
+				} else {
+					textBuffer += ` thread:${value}`;
+				}
+			} else if (filterType === "before") {
+				nodes.push(schema.nodes.before.create({ date: value }));
+			} else if (filterType === "after") {
+				nodes.push(schema.nodes.after.create({ date: value }));
+			} else if (filterType === "has") {
+				nodes.push(schema.nodes.has.create({ value }));
+			} else if (filterType === "pinned") {
+				nodes.push(schema.nodes.pinned.create({ value }));
+			} else if (filterType === "mentions") {
+				nodes.push(schema.nodes.mentions.create({ id: value, name: value }));
+			}
+		} else if (match[3]) {
+			// Quoted text - keep as text but include quotes
+			textBuffer += match[0];
+		}
+
+		lastIndex = tokenRegex.lastIndex;
+	}
+
+	// Add remaining text
+	if (lastIndex < query.length) {
+		textBuffer += query.slice(lastIndex);
+	}
+
+	if (textBuffer) {
+		nodes.push(schema.text(textBuffer));
+	}
+
+	return { nodes, text: textBuffer };
 }
 
 function dateToBoundaryUUID(
@@ -769,6 +847,21 @@ export const SearchInput = (
 		}
 	};
 
+	// Clear editor when search is cleared
+	createEffect(() => {
+		const search = currentSearch();
+		const view = editor.view;
+
+		if (!view) return;
+
+		// Clear editor when search is cleared or when there's no search
+		if (!search && view.state.doc.content.size > 0) {
+			const tr = view.state.tr.delete(0, view.state.doc.content.size);
+			tr.setMeta("skipAutocomplete", true);
+			view.dispatch(tr);
+		}
+	});
+
 	const handleSubmit = async () => {
 		if (!editor.view) return;
 		const queryString = serializeToQuery(editor.view.state);
@@ -981,6 +1074,7 @@ export const SearchInput = (
 			editor.view.dispatch(tr);
 			editor.view.focus();
 		}
+		setActiveFilter(null);
 	};
 
 	const insertFilter = (text: string) => {
@@ -1017,6 +1111,19 @@ export const SearchInput = (
 				const tr = editor.view.state.tr.replaceWith(start, from, node);
 				editor.view.dispatch(tr);
 				editor.view.focus();
+				setActiveFilter(null);
+				return;
+			}
+		}
+
+		// Check if this is a full query string from history (may contain multiple filters)
+		if (text.match(/\b(author|thread|before|after|has|pinned|mentions):\S+/)) {
+			const { nodes } = parseQueryToNodes(text, users2, roomThreads);
+			if (nodes.length > 0) {
+				const tr = editor.view.state.tr.replaceWith(start, from, ...nodes);
+				editor.view.dispatch(tr);
+				editor.view.focus();
+				setActiveFilter(null);
 				return;
 			}
 		}
@@ -1024,13 +1131,31 @@ export const SearchInput = (
 		const tr = editor.view.state.tr.insertText(text, start, from);
 		editor.view.dispatch(tr);
 		editor.view.focus();
+		setActiveFilter(null);
 	};
 
 	const editor = createBaseEditor({
 		schema: (schema as any),
-		createState: (schema) =>
-			EditorState.create({
+		createState: (schema) => {
+			// Parse initial search query from history into nodes
+			let docContent: any = null;
+			const initialSearch = currentSearch();
+			if (initialSearch?.query) {
+				const { nodes } = parseQueryToNodes(
+					initialSearch.query,
+					users2,
+					roomThreads,
+				);
+				if (nodes.length > 0) {
+					docContent = schema.nodes.doc.create(undefined, [
+						schema.nodes.paragraph.create(undefined, nodes),
+					]);
+				}
+			}
+
+			return EditorState.create({
 				schema: (schema as any),
+				doc: docContent,
 				plugins: [
 					history(),
 					keymap({
@@ -1075,7 +1200,8 @@ export const SearchInput = (
 						},
 					}),
 				],
-			}),
+			});
+		},
 		handleDOMEvents: {
 			focus: (view: any) => {
 				const { state } = view;
@@ -1121,19 +1247,6 @@ export const SearchInput = (
 			},
 		},
 		autofocus: props.autofocus ?? !!currentSearch(),
-	});
-
-	createEffect(() => {
-		if (!currentSearch()) {
-			if (editor.view && editor.view.state.doc.textContent.length > 0) {
-				const tr = editor.view.state.tr.delete(
-					0,
-					editor.view.state.doc.content.size,
-				);
-				tr.setMeta("skipAutocomplete", true);
-				editor.view.dispatch(tr);
-			}
-		}
 	});
 
 	return (
