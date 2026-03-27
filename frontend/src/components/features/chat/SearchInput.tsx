@@ -836,7 +836,7 @@ export const SearchInput = (
 		const queryParts: string[] = [];
 
 		if (textQuery) {
-			queryParts.push(textQuery);
+			queryParts.push(`+(${textQuery})`);
 		}
 
 		if (filters.author_ids) {
@@ -934,6 +934,8 @@ export const SearchInput = (
 				queryParts.push(`+(${mentionSubquery.join(" ")})`);
 			}
 		}
+
+		console.log("search input calculated query parts", queryParts);
 
 		const body: {
 			query?: string;
@@ -1060,16 +1062,20 @@ export const SearchInput = (
 						if (filter && editor.view && !editor.view.hasFocus()) return;
 						setActiveFilter(filter);
 					}),
+					new Plugin({
+						props: {
+							handleKeyDown(_view, event) {
+								if (event.key === "Enter" && !event.shiftKey) {
+									handleSubmit();
+									setActiveFilter(null);
+									return true;
+								}
+								return false;
+							},
+						},
+					}),
 				],
 			}),
-		handleKeyDown: (view: any, event: KeyboardEvent) => {
-			if (event.key === "Enter" && !event.shiftKey) {
-				handleSubmit();
-				setActiveFilter(null);
-				return true;
-			}
-			return false;
-		},
 		handleDOMEvents: {
 			focus: (view: any) => {
 				const { state } = view;
