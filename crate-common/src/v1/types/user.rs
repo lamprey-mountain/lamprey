@@ -253,7 +253,7 @@ pub struct UserWithRelationship {
     pub relationship: Relationship,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Diff)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -294,12 +294,6 @@ pub enum RelationshipType {
 
     /// blocked
     Block,
-}
-
-impl Diff<Relationship> for RelationshipPatch {
-    fn changes(&self, other: &Relationship) -> bool {
-        self.relation.changes(&other.relation) || self.ignore.changes(&other.ignore)
-    }
 }
 
 impl User {

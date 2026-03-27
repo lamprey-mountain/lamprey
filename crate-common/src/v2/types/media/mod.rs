@@ -328,7 +328,7 @@ impl TryFrom<String> for HashType {
 }
 
 /// An update to a piece of media
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, lamprey_macros::Diff)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -575,12 +575,6 @@ mod val {
                 Err(v)
             }
         }
-    }
-}
-
-impl Diff<Media> for MediaPatch {
-    fn changes(&self, other: &Media) -> bool {
-        self.alt.changes(&other.alt) || self.filename.changes(&other.filename)
     }
 }
 

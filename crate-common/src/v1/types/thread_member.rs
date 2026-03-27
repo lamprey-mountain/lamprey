@@ -33,7 +33,7 @@ pub struct ThreadMemberPut {
     // remove?
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Diff)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -66,10 +66,4 @@ pub struct ChannelMemberSearchResponse {
     ///
     /// will only be populated if this is a thread
     pub thread_members: Vec<ThreadMember>,
-}
-
-impl Diff<ThreadMember> for ThreadMemberPatch {
-    fn changes(&self, _other: &ThreadMember) -> bool {
-        false
-    }
 }

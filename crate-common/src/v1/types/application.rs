@@ -160,7 +160,7 @@ pub struct ApplicationCreate {
     pub oauth_confidential: Option<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Diff)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -233,14 +233,3 @@ pub struct Bridge {
 
 // TEMP: compatability
 pub use super::oauth::{Scope, Scopes};
-
-impl Diff<Application> for ApplicationPatch {
-    fn changes(&self, other: &Application) -> bool {
-        self.name.changes(&other.name)
-            || self.description.changes(&other.description)
-            || self.bridge.changes(&other.bridge)
-            || self.public.changes(&other.public)
-            || self.oauth_redirect_uris.changes(&other.oauth_redirect_uris)
-            || self.oauth_confidential.changes(&other.oauth_confidential)
-    }
-}

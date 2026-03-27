@@ -92,7 +92,7 @@ pub struct RoomMemberPut {
     pub timeout_until: Option<Time>,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Diff)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -325,17 +325,4 @@ pub struct RoomMemberSearchAdvanced {
 pub struct RoomMemberSearchResponse {
     pub room_members: Vec<RoomMember>,
     pub users: Vec<User>,
-}
-
-impl Diff<RoomMember> for RoomMemberPatch {
-    fn changes(&self, other: &RoomMember) -> bool {
-        self.override_name.changes(&other.override_name)
-            || self
-                .override_description
-                .changes(&other.override_description)
-            || self.mute.changes(&other.mute)
-            || self.deaf.changes(&other.deaf)
-            || self.roles.changes(&other.roles)
-            || self.timeout_until.changes(&other.timeout_until)
-    }
 }

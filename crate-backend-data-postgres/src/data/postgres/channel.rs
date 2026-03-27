@@ -245,7 +245,8 @@ impl DataChannel for Postgres {
         if patch.archived == Some(false)
             || patch
                 .auto_archive_duration
-                .changes(&thread.auto_archive_duration)
+                .as_ref()
+                .is_some_and(|val| val != &thread.auto_archive_duration)
         {
             let now = time::OffsetDateTime::now_utc();
             let now = PrimitiveDateTime::new(now.date(), now.time());

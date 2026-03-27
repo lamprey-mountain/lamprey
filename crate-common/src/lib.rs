@@ -5,6 +5,9 @@ pub mod v1;
 // since everything has breaking changes everywhere anyways maybe i'll merge this into v1
 pub mod v2;
 
+/// various utilities
+pub mod util;
+
 // TODO: use Ptr types?
 // also consider letting consumers configure between String and Box<str>
 #[cfg(feature = "ptr_arc")]

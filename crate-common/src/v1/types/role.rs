@@ -119,7 +119,7 @@ pub struct RoleCreate {
     // pub color: Color,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Diff)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -190,19 +190,6 @@ pub struct RoleReorder {
 pub struct RoleReorderItem {
     pub role_id: RoleId,
     pub position: u64,
-}
-
-impl Diff<Role> for RolePatch {
-    fn changes(&self, other: &Role) -> bool {
-        self.name.changes(&other.name)
-            || self.description.changes(&other.description)
-            || self.is_self_applicable.changes(&other.is_self_applicable)
-            || self.is_mentionable.changes(&other.is_mentionable)
-            || self.allow.changes(&other.allow)
-            || self.deny.changes(&other.deny)
-            || self.hoist.changes(&other.hoist)
-            || self.sticky.changes(&other.sticky)
-    }
 }
 
 impl Role {

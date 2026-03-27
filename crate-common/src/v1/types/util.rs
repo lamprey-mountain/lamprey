@@ -8,25 +8,7 @@ pub mod truncate;
 // TEMP: pub use here for compatibility
 pub use super::audit_logs::AuditLogChange;
 pub use super::misc::Time;
-
-// NOTE: maybe i should use associated types instead of generics
-pub trait Diff<T> {
-    /// whether this patch would change the other resource
-    fn changes(&self, other: &T) -> bool;
-    // fn apply(self, other: T) -> T;
-}
-
-impl<T: PartialEq> Diff<T> for T {
-    fn changes(&self, other: &T) -> bool {
-        self != other
-    }
-}
-
-impl<T: PartialEq> Diff<T> for Option<T> {
-    fn changes(&self, other: &T) -> bool {
-        self.as_ref().is_some_and(|s| s.changes(other))
-    }
-}
+pub use crate::util::Diff;
 
 pub fn deserialize_default_true<'de, D>(deserializer: D) -> std::result::Result<bool, D::Error>
 where

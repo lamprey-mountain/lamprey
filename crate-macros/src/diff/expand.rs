@@ -50,6 +50,9 @@ pub fn expand_diff_derive(
     // Extract field comparison logic
     let field_checks = generate_field_checks(data_struct);
 
+    // Generate apply method
+    let field_applies = generate_field_applies(data_struct);
+
     // Split generics for impl
     let (impl_generics, ty_generics, _where_clause) = generics.split_for_impl();
 
@@ -57,11 +60,18 @@ pub fn expand_diff_derive(
     let diff_where_clause = generate_diff_where_clause(generics, data_struct);
 
     quote! {
-        impl #impl_generics crate::v1::types::util::Diff<#target_ty> for #struct_ident #ty_generics
+        impl #impl_generics crate::v1::types::util::Diff for #struct_ident #ty_generics
         #diff_where_clause
         {
-            fn changes(&self, other: &#target_ty) -> bool {
+            type Target = #target_ty;
+
+            fn changes(&self, other: &Self::Target) -> bool {
                 #field_checks
+            }
+
+            fn apply(self, mut other: Self::Target) -> Self::Target {
+                #field_applies
+                other
             }
         }
     }
@@ -117,26 +127,118 @@ fn generate_field_checks(data_struct: &DataStruct) -> TokenStream {
     }
 }
 
+/// Generate the field apply code.
+fn generate_field_applies(data_struct: &DataStruct) -> TokenStream {
+    let fields = match &data_struct.fields {
+        syn::Fields::Named(fields) => &fields.named,
+        syn::Fields::Unnamed(fields) => &fields.unnamed,
+        syn::Fields::Unit => return quote! {},
+    };
+
+    let mut applies = Vec::new();
+
+    for (index, field) in fields.iter().enumerate() {
+        // Parse field attributes
+        let field_attr = match DiffFieldAttr::from_field(&field) {
+            Ok(attr) => attr,
+            Err(e) => {
+                return e.write_errors().into();
+            }
+        };
+
+        // Skip fields marked with #[diff(skip)]
+        if field_attr.skip {
+            continue;
+        }
+
+        let field_ident = field
+            .ident
+            .as_ref()
+            .map(|ident| quote! { #ident })
+            .unwrap_or_else(|| {
+                let index = syn::Index::from(index);
+                quote! { #index }
+            });
+
+        let field_ty = &field.ty;
+
+        // Generate apply code based on field type
+        let apply = generate_field_apply(&field_ident, field_ty);
+        applies.push(apply);
+    }
+
+    quote! {
+        #(#applies)*
+    }
+}
+
 /// Generate comparison code for a single field.
 fn generate_field_check(field_ident: &TokenStream, field_ty: &syn::Type) -> TokenStream {
     // Check if the field type is Option<T>
-    if extract_option_inner(field_ty).is_some() {
-        // For Option<T>, only check if Some
-        quote! {
-            if let Some(ref val) = self.#field_ident {
-                if val.changes(&other.#field_ident) {
-                    return true;
+    if let Some(inner_ty) = extract_option_inner(field_ty) {
+        // For Option<T>, check if the inner value changes
+        // Need to handle nested Option<Option<T>> pattern
+        if is_option_type(inner_ty) {
+            // Option<Option<T>> pattern - compare inner Option<T> with target's Option<T>
+            quote! {
+                if let Some(ref val) = self.#field_ident {
+                    if val != &other.#field_ident {
+                        return true;
+                    }
+                }
+            }
+        } else {
+            // Option<T> pattern - compare T with T
+            quote! {
+                if let Some(ref val) = self.#field_ident {
+                    if val != &other.#field_ident {
+                        return true;
+                    }
                 }
             }
         }
     } else {
         // For direct types, compare directly
         quote! {
-            if self.#field_ident.changes(&other.#field_ident) {
+            if self.#field_ident != other.#field_ident {
                 return true;
             }
         }
     }
+}
+
+/// Generate apply code for a single field.
+fn generate_field_apply(field_ident: &TokenStream, field_ty: &syn::Type) -> TokenStream {
+    // Check if the field type is Option<T>
+    if let Some(inner_ty) = extract_option_inner(field_ty) {
+        // For Option<T>: if Some, replace the field
+        // Need to handle nested Option<Option<T>> pattern
+        if is_option_type(inner_ty) {
+            // Option<Option<T>> pattern - assign the inner Option<T>
+            // self.field: Option<Option<T>>, other.field: Option<T>
+            quote! {
+                if let Some(val) = self.#field_ident {
+                    other.#field_ident = val;
+                }
+            }
+        } else {
+            // Option<T> pattern - unwrap_or to get T
+            // self.field: Option<T>, other.field: T
+            quote! {
+                other.#field_ident = self.#field_ident.unwrap_or(other.#field_ident);
+            }
+        }
+    } else {
+        // For direct types (shouldn't happen for patches, but handle anyway)
+        quote! {
+            other.#field_ident = self.#field_ident;
+        }
+    }
+}
+
+/// Check if a type is Option<T>
+fn is_option_type(ty: &syn::Type) -> bool {
+    extract_option_inner(ty).is_some()
 }
 
 /// Extract the inner type from an Option<T>.
@@ -194,7 +296,7 @@ fn generate_diff_where_clause(
             let ident = &type_param.ident;
             where_clause
                 .predicates
-                .push(syn::parse_quote! { #ident: crate::v1::types::util::Diff<#ident> });
+                .push(syn::parse_quote! { #ident: crate::v1::types::util::Diff });
         }
     }
 

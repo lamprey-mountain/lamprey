@@ -818,57 +818,203 @@ pub struct ChannelReorderItem {
     pub parent_id: Option<Option<ChannelId>>,
 }
 
-impl Diff<Channel> for ChannelPatch {
+impl Diff for ChannelPatch {
+    type Target = Channel;
+
     fn changes(&self, other: &Channel) -> bool {
-        self.name.changes(&other.name)
-            || self.description.changes(&other.description)
-            || self.url.changes(&other.url)
-            || self.icon.changes(&other.icon)
-            || self.tags.changes(&other.tags)
-            || self.nsfw.changes(&other.nsfw)
-            || self.bitrate.changes(&other.bitrate)
-            || self.user_limit.changes(&other.user_limit)
-            || self.owner_id.changes(&other.owner_id)
-            || self.ty.changes(&other.ty)
-            || self.parent_id.changes(&other.parent_id)
-            || self.locked.changes(&other.locked)
-            || self.invitable.changes(&other.invitable)
-            || self.archived.is_some_and(|a| a != other.is_archived())
-            || self
-                .auto_archive_duration
-                .changes(&other.auto_archive_duration)
-            || self
-                .default_auto_archive_duration
-                .changes(&other.default_auto_archive_duration)
-            || self.slowmode_thread.changes(&other.slowmode_thread)
-            || self.slowmode_message.changes(&other.slowmode_message)
-            || self
-                .default_slowmode_message
-                .changes(&other.default_slowmode_message)
-            || match (&self.document, &other.document) {
-                (None, _) => false,
-                (Some(_), None) => {
-                    // WARN: this should be invalid!
-                    false
-                }
-                (Some(a), Some(b)) => a.changes(b),
+        // Option<String> vs String
+        if let Some(ref val) = self.name {
+            if val != &other.name {
+                return true;
             }
-            || match (&self.wiki, &other.wiki) {
-                (None, _) => false,
-                (Some(_), None) => {
-                    // WARN: this should be invalid!
-                    false
-                }
-                (Some(a), Some(b)) => a.changes(b),
+        }
+        // Option<Option<String>> vs Option<String>
+        if let Some(ref val) = self.description {
+            if val != &other.description {
+                return true;
             }
-            || match (&self.calendar, &other.calendar) {
-                (None, _) => false,
-                (Some(_), None) => {
-                    // WARN: this should be invalid!
-                    false
-                }
-                (Some(a), Some(b)) => a.changes(b),
+        }
+        if let Some(ref val) = self.url {
+            if val != &other.url {
+                return true;
             }
+        }
+        if let Some(ref val) = self.icon {
+            if val != &other.icon {
+                return true;
+            }
+        }
+        // Option<Vec<T>> vs Option<Vec<T>>
+        if self.tags != other.tags {
+            return true;
+        }
+        // Option<bool> vs bool
+        if let Some(val) = self.nsfw {
+            if val != other.nsfw {
+                return true;
+            }
+        }
+        if let Some(ref val) = self.bitrate {
+            if val != &other.bitrate {
+                return true;
+            }
+        }
+        if let Some(ref val) = self.user_limit {
+            if val != &other.user_limit {
+                return true;
+            }
+        }
+        if let Some(ref val) = self.owner_id {
+            if val != &other.owner_id {
+                return true;
+            }
+        }
+        // Option<ChannelType> vs ChannelType
+        if let Some(val) = self.ty {
+            if val != other.ty {
+                return true;
+            }
+        }
+        if let Some(ref val) = self.parent_id {
+            if val != &other.parent_id {
+                return true;
+            }
+        }
+        if let Some(ref val) = self.locked {
+            if val != &other.locked {
+                return true;
+            }
+        }
+        if let Some(val) = self.invitable {
+            if val != other.invitable {
+                return true;
+            }
+        }
+        // archived is special
+        if self.archived.is_some_and(|a| a != other.is_archived()) {
+            return true;
+        }
+        if let Some(ref val) = self.auto_archive_duration {
+            if val != &other.auto_archive_duration {
+                return true;
+            }
+        }
+        if let Some(ref val) = self.default_auto_archive_duration {
+            if val != &other.default_auto_archive_duration {
+                return true;
+            }
+        }
+        if let Some(ref val) = self.slowmode_thread {
+            if val != &other.slowmode_thread {
+                return true;
+            }
+        }
+        if let Some(ref val) = self.slowmode_message {
+            if val != &other.slowmode_message {
+                return true;
+            }
+        }
+        if let Some(ref val) = self.default_slowmode_message {
+            if val != &other.default_slowmode_message {
+                return true;
+            }
+        }
+        if match (&self.document, &other.document) {
+            (None, _) => false,
+            (Some(_), None) => {
+                // WARN: this should be invalid!
+                false
+            }
+            (Some(a), Some(b)) => a.changes(b),
+        } {
+            return true;
+        }
+        if match (&self.wiki, &other.wiki) {
+            (None, _) => false,
+            (Some(_), None) => {
+                // WARN: this should be invalid!
+                false
+            }
+            (Some(a), Some(b)) => a.changes(b),
+        } {
+            return true;
+        }
+        if match (&self.calendar, &other.calendar) {
+            (None, _) => false,
+            (Some(_), None) => {
+                // WARN: this should be invalid!
+                false
+            }
+            (Some(a), Some(b)) => a.changes(b),
+        } {
+            return true;
+        }
+        false
+    }
+
+    fn apply(self, mut other: Self::Target) -> Self::Target {
+        other.name = self.name.unwrap_or(other.name);
+        if let Some(val) = self.description {
+            other.description = val;
+        }
+        if let Some(val) = self.url {
+            other.url = val;
+        }
+        if let Some(val) = self.icon {
+            other.icon = val;
+        }
+        other.tags = self.tags.or(other.tags);
+        other.nsfw = self.nsfw.unwrap_or(other.nsfw);
+        if let Some(val) = self.bitrate {
+            other.bitrate = val;
+        }
+        if let Some(val) = self.user_limit {
+            other.user_limit = val;
+        }
+        if let Some(val) = self.owner_id {
+            other.owner_id = val;
+        }
+        other.ty = self.ty.unwrap_or(other.ty);
+        if let Some(val) = self.parent_id {
+            other.parent_id = val;
+        }
+        if let Some(val) = self.locked {
+            other.locked = val;
+        }
+        other.invitable = self.invitable.unwrap_or(other.invitable);
+        // NOTE: archived is special - it sets archived_at based on the bool value
+        // this requires special handling beyond simple field assignment
+        if let Some(val) = self.auto_archive_duration {
+            other.auto_archive_duration = val;
+        }
+        if let Some(val) = self.default_auto_archive_duration {
+            other.default_auto_archive_duration = val;
+        }
+        if let Some(val) = self.slowmode_thread {
+            other.slowmode_thread = val;
+        }
+        if let Some(val) = self.slowmode_message {
+            other.slowmode_message = val;
+        }
+        if let Some(val) = self.default_slowmode_message {
+            other.default_slowmode_message = val;
+        }
+        if let Some(patch) = self.document {
+            if let Some(orig) = other.document {
+                other.document = Some(patch.apply(orig));
+            }
+        }
+        if let Some(patch) = self.wiki {
+            if let Some(orig) = other.wiki {
+                other.wiki = Some(patch.apply(orig));
+            }
+        }
+        if let Some(patch) = self.calendar {
+            if let Some(orig) = other.calendar {
+                other.calendar = Some(patch.apply(orig));
+            }
+        }
+        other
     }
 }
 

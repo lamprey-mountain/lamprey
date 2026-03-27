@@ -527,7 +527,12 @@ async fn room_member_update(
         }
     }
 
-    if req.patch.timeout_until.changes(&start.timeout_until) {
+    if req
+        .patch
+        .timeout_until
+        .as_ref()
+        .is_some_and(|val| val != &start.timeout_until)
+    {
         perms.ensure(Permission::MemberTimeout)?;
         let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
         let other_rank = srv.perms.get_user_rank(req.room_id, target_user_id).await?;
@@ -578,7 +583,12 @@ async fn room_member_update(
         .await?;
     srv.perms.invalidate_room(target_user_id, req.room_id).await;
 
-    if req.patch.timeout_until.changes(&start.timeout_until) {
+    if req
+        .patch
+        .timeout_until
+        .as_ref()
+        .is_some_and(|val| val != &start.timeout_until)
+    {
         srv.perms
             .update_timeout_task(
                 target_user_id,

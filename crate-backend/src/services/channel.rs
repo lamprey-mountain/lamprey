@@ -870,15 +870,24 @@ impl ServiceChannels {
 
         if patch
             .auto_archive_duration
-            .changes(&chan_old.auto_archive_duration)
+            .as_ref()
+            .is_some_and(|val| val != &chan_old.auto_archive_duration)
             || patch
                 .default_auto_archive_duration
-                .changes(&chan_old.default_auto_archive_duration)
-            || patch.slowmode_thread.changes(&chan_old.slowmode_thread)
-            || patch.slowmode_message.changes(&chan_old.slowmode_message)
+                .as_ref()
+                .is_some_and(|val| val != &chan_old.default_auto_archive_duration)
+            || patch
+                .slowmode_thread
+                .as_ref()
+                .is_some_and(|val| val != &chan_old.slowmode_thread)
+            || patch
+                .slowmode_message
+                .as_ref()
+                .is_some_and(|val| val != &chan_old.slowmode_message)
             || patch
                 .default_slowmode_message
-                .changes(&chan_old.default_slowmode_message)
+                .as_ref()
+                .is_some_and(|val| val != &chan_old.default_slowmode_message)
         {
             if !perms.has(Permission::ThreadManage) && !perms.has(Permission::ChannelManage) {
                 return Err(Error::MissingPermissions);

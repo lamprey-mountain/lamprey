@@ -543,46 +543,162 @@ pub struct DocumentArchivedPatch {
     pub reason: Option<Option<String>>,
 }
 
-impl Diff<DocumentArchived> for DocumentArchivedPatch {
-    fn changes(&self, other: &DocumentArchived) -> bool {
-        self.reason.changes(&other.reason)
+impl Diff for DocumentArchivedPatch {
+    type Target = DocumentArchived;
+
+    fn changes(&self, other: &Self::Target) -> bool {
+        // self.reason: Option<Option<String>>, other.reason: Option<String>
+        if let Some(ref val) = self.reason {
+            if val != &other.reason {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn apply(self, mut other: Self::Target) -> Self::Target {
+        if let Some(val) = self.reason {
+            other.reason = val;
+        }
+        other
     }
 }
 
-impl Diff<DocumentPublished> for DocumentPublishedPatch {
-    fn changes(&self, other: &DocumentPublished) -> bool {
-        self.revision.changes(&other.revision) || self.unlisted.changes(&other.unlisted)
+impl Diff for DocumentPublishedPatch {
+    type Target = DocumentPublished;
+
+    fn changes(&self, other: &Self::Target) -> bool {
+        // self.revision: Option<Option<DocumentRevisionId>>, other.revision: Option<DocumentRevisionId>
+        if let Some(ref val) = self.revision {
+            if val != &other.revision {
+                return true;
+            }
+        }
+        // self.unlisted: Option<bool> vs other.unlisted: bool
+        if let Some(val) = self.unlisted {
+            if val != other.unlisted {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn apply(self, mut other: Self::Target) -> Self::Target {
+        if let Some(val) = self.revision {
+            other.revision = val;
+        }
+        other.unlisted = self.unlisted.unwrap_or(other.unlisted);
+        other
     }
 }
 
-impl Diff<Document> for DocumentPatch {
-    fn changes(&self, other: &Document) -> bool {
-        self.draft.changes(&other.draft)
-            || self.template.changes(&other.template)
-            || self.slug.changes(&other.slug)
-            // TODO: figure out if i can simplify this
-            || (match (&self.archived, &other.archived) {
-                (None, _) => false,
-                (Some(None), None) => false,
-                (Some(None), Some(_)) => true,
-                (Some(Some(a)), Some(b)) => a.changes(b),
-                (Some(Some(_)), None) => true,
-            })
-            || (match (&self.published, &other.published) {
-                (None, _) => false,
-                (Some(None), None) => false,
-                (Some(None), Some(_)) => true,
-                (Some(Some(a)), Some(b)) => a.changes(b),
-                (Some(Some(_)), None) => true,
-            })
+impl Diff for DocumentPatch {
+    type Target = Document;
+
+    fn changes(&self, other: &Self::Target) -> bool {
+        // draft: Option<bool> vs bool
+        if let Some(val) = self.draft {
+            if val != other.draft {
+                return true;
+            }
+        }
+        // template: Option<bool> vs bool
+        if let Some(val) = self.template {
+            if val != other.template {
+                return true;
+            }
+        }
+        // slug: Option<Option<String>> vs Option<String>
+        if let Some(ref val) = self.slug {
+            if val != &other.slug {
+                return true;
+            }
+        }
+        // archived: Option<Option<DocumentArchivedPatch>> vs Option<DocumentArchived>
+        if match (&self.archived, &other.archived) {
+            (None, _) => false,
+            (Some(None), None) => false,
+            (Some(None), Some(_)) => true,
+            (Some(Some(a)), Some(b)) => a.changes(b),
+            (Some(Some(_)), None) => true,
+        } {
+            return true;
+        }
+        // published: Option<Option<DocumentPublishedPatch>> vs Option<DocumentPublished>
+        if match (&self.published, &other.published) {
+            (None, _) => false,
+            (Some(None), None) => false,
+            (Some(None), Some(_)) => true,
+            (Some(Some(a)), Some(b)) => a.changes(b),
+            (Some(Some(_)), None) => true,
+        } {
+            return true;
+        }
+        false
+    }
+
+    fn apply(self, mut other: Self::Target) -> Self::Target {
+        if let Some(val) = self.draft {
+            other.draft = val;
+        }
+        if let Some(val) = self.template {
+            other.template = val;
+        }
+        if let Some(val) = self.slug {
+            other.slug = val;
+        }
+        // archived: Option<Option<DocumentArchivedPatch>> -> Option<DocumentArchived>
+        if let Some(Some(patch)) = self.archived {
+            if let Some(orig) = other.archived {
+                other.archived = Some(patch.apply(orig));
+            }
+        }
+        // published: Option<Option<DocumentPublishedPatch>> -> Option<DocumentPublished>
+        if let Some(Some(patch)) = self.published {
+            if let Some(orig) = other.published {
+                other.published = Some(patch.apply(orig));
+            }
+        }
+        other
     }
 }
 
-impl Diff<Wiki> for WikiPatch {
-    fn changes(&self, other: &Wiki) -> bool {
-        self.allow_indexing.changes(&other.allow_indexing)
-            || self.page_index.changes(&other.page_index)
-            || self.page_notfound.changes(&other.page_notfound)
+impl Diff for WikiPatch {
+    type Target = Wiki;
+
+    fn changes(&self, other: &Self::Target) -> bool {
+        // allow_indexing: Option<bool> vs bool
+        if let Some(val) = self.allow_indexing {
+            if val != other.allow_indexing {
+                return true;
+            }
+        }
+        // page_index: Option<Option<ChannelId>> vs Option<ChannelId>
+        if let Some(ref val) = self.page_index {
+            if val != &other.page_index {
+                return true;
+            }
+        }
+        // page_notfound: Option<Option<ChannelId>> vs Option<ChannelId>
+        if let Some(ref val) = self.page_notfound {
+            if val != &other.page_notfound {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn apply(self, mut other: Self::Target) -> Self::Target {
+        if let Some(val) = self.allow_indexing {
+            other.allow_indexing = val;
+        }
+        if let Some(val) = self.page_index {
+            other.page_index = val;
+        }
+        if let Some(val) = self.page_notfound {
+            other.page_notfound = val;
+        }
+        other
     }
 }
 

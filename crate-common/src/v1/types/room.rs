@@ -188,7 +188,7 @@ pub struct RoomCreate {
 }
 
 /// An update to a room
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Diff)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -249,16 +249,3 @@ pub struct TransferOwnership {
 
 // TODO: move
 pub use super::search::RoomSearchRequest as SearchRooms;
-
-impl Diff<Room> for RoomPatch {
-    fn changes(&self, other: &Room) -> bool {
-        self.name.changes(&other.name)
-            || self.description.changes(&other.description)
-            || self.icon.changes(&other.icon)
-            || self.banner.changes(&other.banner)
-            || self.public.changes(&other.public)
-            || self.welcome_channel_id.changes(&other.welcome_channel_id)
-            || self.afk_channel_id.changes(&other.afk_channel_id)
-            || self.afk_channel_timeout.changes(&other.afk_channel_timeout)
-    }
-}

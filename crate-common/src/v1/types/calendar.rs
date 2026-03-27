@@ -574,7 +574,7 @@ pub struct CalendarEventParticipantPut {
     pub status: CalendarRsvpStatus,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Diff)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -582,10 +582,4 @@ pub struct CalendarPatch {
     #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub color: Option<Option<Color>>,
     pub default_timezone: Option<Timezone>,
-}
-
-impl Diff<Calendar> for CalendarPatch {
-    fn changes(&self, other: &Calendar) -> bool {
-        self.default_timezone.changes(&other.default_timezone) || self.color.changes(&other.color)
-    }
 }

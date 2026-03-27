@@ -841,67 +841,110 @@ pub struct ContextResponse {
     pub has_before: bool,
 }
 
-impl Diff<Message> for MessagePatch {
+impl Diff for MessagePatch {
+    type Target = Message;
+
     fn changes(&self, other: &Message) -> bool {
         match &other.latest_version.message_type {
             MessageType::DefaultMarkdown(m) => {
-                self.content.changes(&m.content)
-                    || self.reply_id.changes(&m.reply_id)
-                    || self.embeds.is_some()
-                    || self.metadata.changes(&m.metadata)
-                    || self.attachments.as_ref().is_some_and(|a| {
-                        a.len() != m.attachments.len()
-                            || a.iter().zip(&m.attachments).any(|(a, b)| {
-                                if a.spoiler != b.spoiler {
-                                    return true;
-                                }
+                // content: Option<Option<String>> vs Option<String>
+                if let Some(ref val) = self.content {
+                    if val != &m.content {
+                        return true;
+                    }
+                }
+                // reply_id: Option<Option<MessageId>> vs Option<MessageId>
+                if let Some(ref val) = self.reply_id {
+                    if val != &m.reply_id {
+                        return true;
+                    }
+                }
+                if self.embeds.is_some() {
+                    return true;
+                }
+                // metadata: Option<Option<MessageMetadata>> vs Option<MessageMetadata>
+                if let Some(ref val) = self.metadata {
+                    if val != &m.metadata {
+                        return true;
+                    }
+                }
+                if self.attachments.as_ref().is_some_and(|a| {
+                    a.len() != m.attachments.len()
+                        || a.iter().zip(&m.attachments).any(|(a, b)| {
+                            if a.spoiler != b.spoiler {
+                                return true;
+                            }
 
-                                match (&a.ty, &b.ty) {
-                                    (
-                                        MessageAttachmentCreateType::Media {
-                                            media,
-                                            alt,
-                                            filename,
-                                        },
-                                        MessageAttachmentType::Media {
-                                            media: existing_media,
-                                        },
-                                    ) => {
-                                        match media {
-                                            MediaReference::Media { media_id } => {
-                                                if *media_id != existing_media.id {
-                                                    return true;
-                                                }
+                            match (&a.ty, &b.ty) {
+                                (
+                                    MessageAttachmentCreateType::Media {
+                                        media,
+                                        alt,
+                                        filename,
+                                    },
+                                    MessageAttachmentType::Media {
+                                        media: existing_media,
+                                    },
+                                ) => {
+                                    match media {
+                                        MediaReference::Media { media_id } => {
+                                            if *media_id != existing_media.id {
+                                                return true;
                                             }
-                                            // if we're not referencing the media by id, we're uploading/downloading it
-                                            _ => return true,
                                         }
+                                        // if we're not referencing the media by id, we're uploading/downloading it
+                                        _ => return true,
+                                    }
 
-                                        alt.changes(&existing_media.alt)
-                                            || filename
-                                                .as_ref()
-                                                .is_some_and(|f| f != &existing_media.filename)
-                                    }
-                                    #[cfg(feature = "feat_message_forwarding")]
-                                    (
-                                        MessageAttachmentCreateType::Forward {
-                                            channel_id,
-                                            message_id,
-                                        },
-                                        MessageAttachmentType::Forward { snapshot },
-                                    ) => {
-                                        *channel_id != snapshot.channel_id
-                                            || *message_id != snapshot.message_id
-                                    }
-                                    #[allow(unreachable_patterns)]
-                                    _ => true,
+                                    // alt: Option<Option<String>> vs existing_media.alt: Option<String>
+                                    (if let Some(ref alt_val) = alt {
+                                        alt_val != &existing_media.alt
+                                    } else {
+                                        false
+                                    }) || filename
+                                        .as_ref()
+                                        .is_some_and(|f| f != &existing_media.filename)
                                 }
-                            })
-                    })
+                                #[cfg(feature = "feat_message_forwarding")]
+                                (
+                                    MessageAttachmentCreateType::Forward {
+                                        channel_id,
+                                        message_id,
+                                    },
+                                    MessageAttachmentType::Forward { snapshot },
+                                ) => {
+                                    *channel_id != snapshot.channel_id
+                                        || *message_id != snapshot.message_id
+                                }
+                                #[allow(unreachable_patterns)]
+                                _ => true,
+                            }
+                        })
+                }) {
+                    return true;
+                }
+                false
             }
             // this edit is invalid!
             _ => false,
         }
+    }
+
+    fn apply(self, mut other: Self::Target) -> Self::Target {
+        if let MessageType::DefaultMarkdown(ref mut m) = other.latest_version.message_type {
+            if let Some(val) = self.content {
+                m.content = val;
+            }
+            if let Some(val) = self.reply_id {
+                m.reply_id = val;
+            }
+            // TODO: handle embeds apply
+            if let Some(val) = self.metadata {
+                m.metadata = val;
+            }
+            // Note: attachments apply requires From<MessageAttachmentCreate> for MessageAttachment
+        }
+        other
     }
 }
 
