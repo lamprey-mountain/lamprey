@@ -125,6 +125,7 @@ pub mod room_member_update {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod room_member_delete {
+    use crate::v1::types::room_member::RoomMemberDeleteQuery;
     use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::RoomId;
 
@@ -136,7 +137,7 @@ pub mod room_member_delete {
         pub user_id: UserIdReq,
 
         #[query]
-        pub soft: bool,
+        pub query: RoomMemberDeleteQuery,
     }
 
     pub struct Response {}

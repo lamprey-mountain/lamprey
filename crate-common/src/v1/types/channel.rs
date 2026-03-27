@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 #[cfg(feature = "validator")]
 use validator::Validate;
@@ -1366,4 +1366,13 @@ impl ChannelType {
             (_, _) => false,
         }
     }
+}
+
+/// Query parameters for channel list removed
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct ChannelListRemovedQuery {
+    pub parent_id: Option<ChannelId>,
 }

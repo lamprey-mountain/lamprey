@@ -265,7 +265,7 @@ async fn channel_list_removed(
     let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
     perms.ensure(Permission::ChannelManage)?;
     let mut res = data
-        .channel_list_removed(req.room_id, req.pagination, req.parent_id)
+        .channel_list_removed(req.room_id, req.pagination, req.query.parent_id)
         .await?;
 
     let mut items = Vec::new();

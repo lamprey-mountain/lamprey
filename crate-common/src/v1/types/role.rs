@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 #[cfg(feature = "validator")]
 use validator::Validate;
@@ -61,12 +61,12 @@ pub struct Role {
     pub member_count: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[cfg_attr(feature = "validator", derive(Validate))]
 pub struct RoleDeleteQuery {
-    #[serde(default)]
-    pub force: bool,
+    pub fallback_role_id: Option<RoleId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

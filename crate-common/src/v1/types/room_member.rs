@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 #[cfg(feature = "validator")]
 use validator::Validate;
@@ -325,4 +325,13 @@ pub struct RoomMemberSearchAdvanced {
 pub struct RoomMemberSearchResponse {
     pub room_members: Vec<RoomMember>,
     pub users: Vec<User>,
+}
+
+/// Query parameters for room member delete
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct RoomMemberDeleteQuery {
+    pub soft: bool,
 }

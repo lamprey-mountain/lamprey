@@ -122,6 +122,7 @@ pub mod channel_list {
     response(OK, body = PaginationResponse<Channel>, description = "List removed room threads success"),
 )]
 pub mod channel_list_removed {
+    use crate::v1::types::channel::ChannelListRemovedQuery;
     use crate::v1::types::{Channel, ChannelId, PaginationQuery, PaginationResponse, RoomId};
 
     pub struct Request {
@@ -129,7 +130,7 @@ pub mod channel_list_removed {
         pub room_id: RoomId,
 
         #[query]
-        pub parent_id: Option<ChannelId>,
+        pub query: ChannelListRemovedQuery,
 
         #[query]
         pub pagination: PaginationQuery<ChannelId>,

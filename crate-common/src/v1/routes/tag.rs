@@ -73,6 +73,7 @@ pub mod tag_update {
     response(NO_CONTENT, description = "Delete tag success"),
 )]
 pub mod tag_delete {
+    use crate::v1::types::tag::TagDeleteQuery;
     use crate::v1::types::{ChannelId, TagId};
 
     pub struct Request {
@@ -83,7 +84,7 @@ pub mod tag_delete {
         pub tag_id: TagId,
 
         #[query]
-        pub force: bool,
+        pub query: TagDeleteQuery,
     }
 
     pub struct Response {}

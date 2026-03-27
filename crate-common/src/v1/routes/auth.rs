@@ -36,15 +36,14 @@ pub struct OauthInitResponse {
     response(OK, description = "success; responds with html + javascript"),
 )]
 pub mod auth_oauth_redirect {
+    use crate::v1::types::auth::AuthOauthRedirectParams;
+
     pub struct Request {
         #[path]
         pub provider: String,
 
         #[query]
-        pub state: String,
-
-        #[query]
-        pub code: String,
+        pub params: AuthOauthRedirectParams,
     }
 
     pub struct Response {}

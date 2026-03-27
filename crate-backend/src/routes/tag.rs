@@ -109,7 +109,7 @@ async fn tag_delete(
 
     let tag = s.data().tag_get(req.tag_id).await?;
 
-    if tag.total_thread_count > 0 && !req.force {
+    if tag.total_thread_count > 0 && !req.query.force {
         return Ok(StatusCode::CONFLICT.into_response());
     }
 

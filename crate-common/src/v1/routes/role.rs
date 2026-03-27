@@ -72,6 +72,7 @@ pub mod role_update {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod role_delete {
+    use crate::v1::types::role::RoleDeleteQuery;
     use crate::v1::types::{RoleId, RoomId};
 
     pub struct Request {
@@ -82,7 +83,7 @@ pub mod role_delete {
         pub role_id: RoleId,
 
         #[query]
-        pub fallback_role_id: Option<RoleId>,
+        pub query: RoleDeleteQuery,
     }
 
     pub struct Response {}

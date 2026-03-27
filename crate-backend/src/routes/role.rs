@@ -194,7 +194,7 @@ async fn role_delete(
     if rank <= role.position && room.owner_id != Some(auth.user.id) {
         return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
     }
-    if role.member_count == 0 || req.fallback_role_id.is_some() {
+    if role.member_count == 0 || req.query.fallback_role_id.is_some() {
         d.role_delete(req.room_id, req.role_id).await?;
 
         let al = auth.audit_log(req.room_id);

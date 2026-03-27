@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::v1::types::{email::EmailAddr, util::Time, UserId};
@@ -167,4 +167,14 @@ impl AuthState {
         // though this will come later, since there are some tricky nuances
         self.has_totp || !self.authenticators.is_empty()
     }
+}
+
+/// Query parameters for oauth redirect callback
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct AuthOauthRedirectParams {
+    pub state: String,
+    pub code: String,
 }
