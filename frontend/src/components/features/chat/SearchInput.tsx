@@ -1,4 +1,11 @@
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	onCleanup,
+	Show,
+} from "solid-js";
 import {
 	useApi2,
 	useChannels2,
@@ -13,174 +20,79 @@ import type { ChannelSearch } from "../../../context";
 import { User } from "sdk";
 import { UUID } from "uuidv7";
 import { EditorState, Plugin } from "prosemirror-state";
-import { Decoration, DecorationSet } from "prosemirror-view";
+import { Decoration, DecorationSet, EditorView } from "prosemirror-view";
 import { Node, Schema } from "prosemirror-model";
 import { keymap } from "prosemirror-keymap";
 import { history, redo, undo } from "prosemirror-history";
 import { Portal } from "solid-js/web";
-import { autoUpdate, flip, offset } from "@floating-ui/dom";
+import { autoUpdate, flip, offset, size } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import icSearch from "../../../assets/search.png";
 import { useChannel } from "../../../channelctx";
 import { RoomSearch, useRoom } from "../../../contexts/room";
 import { createEditor as createBaseEditor } from "../editor/mod.tsx";
 
+const createFilterNode = (
+	name: string,
+	valueKey: "id" | "value" | "date" = "value",
+	hasNameAttr: boolean = false,
+) => ({
+	group: "inline",
+	inline: true,
+	atom: true,
+	attrs: {
+		[valueKey]: { default: "" },
+		...(hasNameAttr ? { name: { default: "" } } : {}),
+		negated: { default: false },
+	},
+	toDOM: (node: Node) => {
+		const displayValue = hasNameAttr ? node.attrs.name : node.attrs[valueKey];
+		return [
+			"span",
+			{
+				class: `filter-${name}${node.attrs.negated ? " filter-negated" : ""}`,
+				...(valueKey === "id" ? { "data-id": node.attrs.id } : {}),
+			},
+			[
+				"span",
+				{ class: "filter-prefix" },
+				node.attrs.negated ? `-${name}:` : `${name}:`,
+			],
+			["span", { class: "filter-value" }, displayValue],
+		];
+	},
+	parseDOM: [
+		{
+			tag: `span.filter-${name}`,
+			getAttrs: (dom: HTMLElement) => ({
+				[valueKey]: valueKey === "id"
+					? dom.dataset.id
+					: dom.querySelector(".filter-value")?.textContent ?? "",
+				...(hasNameAttr
+					? { name: dom.querySelector(".filter-value")?.textContent ?? "" }
+					: {}),
+				negated: dom.classList.contains("filter-negated"),
+			}),
+		},
+	],
+});
+
 const schema = new Schema({
 	nodes: {
-		doc: {
-			content: "paragraph",
-		},
+		doc: { content: "paragraph" },
 		paragraph: {
 			content: "inline*",
 			group: "block",
 			toDOM: () => ["p", 0],
 		},
-		text: {
-			group: "inline",
-		},
-		author: {
-			group: "inline",
-			inline: true,
-			atom: true,
-			attrs: { id: { default: "" }, name: { default: "" } },
-			toDOM: (node) => [
-				"span",
-				{ class: "filter-author", "data-id": node.attrs.id },
-				["span", { class: "filter-prefix" }, "author:"],
-				["span", { class: "filter-value" }, node.attrs.name],
-			],
-			parseDOM: [
-				{
-					tag: "span.filter-author",
-					getAttrs: (dom: HTMLElement) => ({
-						id: dom.dataset.id,
-						name: dom.textContent?.replace(/^author:/, "") ?? "",
-					}),
-				},
-			],
-		},
-		thread: {
-			group: "inline",
-			inline: true,
-			atom: true,
-			attrs: { id: { default: "" }, name: { default: "" } },
-			toDOM: (node) => [
-				"span",
-				{ class: "filter-thread", "data-id": node.attrs.id },
-				["span", { class: "filter-prefix" }, "thread:"],
-				["span", { class: "filter-value" }, node.attrs.name],
-			],
-			parseDOM: [
-				{
-					tag: "span.filter-thread",
-					getAttrs: (dom: HTMLElement) => ({
-						id: dom.dataset.id,
-						name: dom.textContent?.replace(/^thread:/, "") ?? "",
-					}),
-				},
-			],
-		},
-		before: {
-			group: "inline",
-			inline: true,
-			atom: true,
-			attrs: { date: { default: "" } },
-			toDOM: (node) => [
-				"span",
-				{ class: "filter-before" },
-				["span", { class: "filter-prefix" }, "before:"],
-				["span", { class: "filter-value" }, node.attrs.date],
-			],
-			parseDOM: [
-				{
-					tag: "span.filter-before",
-					getAttrs: (dom: HTMLElement) => ({
-						date: dom.textContent?.replace(/^before:/, "") ?? "",
-					}),
-				},
-			],
-		},
-		after: {
-			group: "inline",
-			inline: true,
-			atom: true,
-			attrs: { date: { default: "" } },
-			toDOM: (node) => [
-				"span",
-				{ class: "filter-after" },
-				["span", { class: "filter-prefix" }, "after:"],
-				["span", { class: "filter-value" }, node.attrs.date],
-			],
-			parseDOM: [
-				{
-					tag: "span.filter-after",
-					getAttrs: (dom: HTMLElement) => ({
-						date: dom.textContent?.replace(/^after:/, "") ?? "",
-					}),
-				},
-			],
-		},
-		has: {
-			group: "inline",
-			inline: true,
-			atom: true,
-			attrs: { value: { default: "" } },
-			toDOM: (node) => [
-				"span",
-				{ class: "filter-has" },
-				["span", { class: "filter-prefix" }, "has:"],
-				["span", { class: "filter-value" }, node.attrs.value],
-			],
-			parseDOM: [
-				{
-					tag: "span.filter-has",
-					getAttrs: (dom: HTMLElement) => ({
-						value: dom.textContent?.replace(/^has:/, "") ?? "",
-					}),
-				},
-			],
-		},
-		pinned: {
-			group: "inline",
-			inline: true,
-			atom: true,
-			attrs: { value: { default: "" } },
-			toDOM: (node) => [
-				"span",
-				{ class: "filter-pinned" },
-				["span", { class: "filter-prefix" }, "pinned:"],
-				["span", { class: "filter-value" }, node.attrs.value],
-			],
-			parseDOM: [
-				{
-					tag: "span.filter-pinned",
-					getAttrs: (dom: HTMLElement) => ({
-						value: dom.textContent?.replace(/^pinned:/, "") ?? "",
-					}),
-				},
-			],
-		},
-		mentions: {
-			group: "inline",
-			inline: true,
-			atom: true,
-			attrs: { id: { default: "" }, name: { default: "" } },
-			toDOM: (node) => [
-				"span",
-				{ class: "filter-mentions", "data-id": node.attrs.id },
-				["span", { class: "filter-prefix" }, "mentions:"],
-				["span", { class: "filter-value" }, node.attrs.name],
-			],
-			parseDOM: [
-				{
-					tag: "span.filter-mentions",
-					getAttrs: (dom: HTMLElement) => ({
-						id: dom.dataset.id,
-						name: dom.textContent?.replace(/^mentions:/, "") ?? "",
-					}),
-				},
-			],
-		},
+		text: { group: "inline" },
+		author: createFilterNode("author", "id", true),
+		channel: createFilterNode("channel", "id", true),
+		before: createFilterNode("before", "date"),
+		after: createFilterNode("after", "date"),
+		has: createFilterNode("has", "value"),
+		pinned: createFilterNode("pinned", "value"),
+		mentions: createFilterNode("mentions", "id", true),
 	},
 });
 
@@ -198,8 +110,10 @@ function getRecentSearches(): string[] {
 
 function addRecentSearch(query: string) {
 	if (!query.trim()) return;
+	const normalizedQuery = query.trim().replace(/\s+/g, " ");
 	let searches = getRecentSearches();
-	searches = [query, ...searches.filter((s) => s !== query)].slice(0, 10);
+	searches = [normalizedQuery, ...searches.filter((s) => s !== normalizedQuery)]
+		.slice(0, 10);
 	localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
 }
 
@@ -209,104 +123,136 @@ function serializeToQuery(state: EditorState): string {
 		node.forEach((inlineNode) => {
 			if (inlineNode.isText) {
 				query += inlineNode.text;
-			} else if (inlineNode.type.name === "author") {
-				query += ` author:${inlineNode.attrs.id} `;
-			} else if (inlineNode.type.name === "thread") {
-				query += ` thread:${inlineNode.attrs.id} `;
-			} else if (inlineNode.type.name === "before") {
-				query += ` before:${inlineNode.attrs.date} `;
-			} else if (inlineNode.type.name === "after") {
-				query += ` after:${inlineNode.attrs.date} `;
-			} else if (inlineNode.type.name === "has") {
-				query += ` has:${inlineNode.attrs.value} `;
-			} else if (inlineNode.type.name === "pinned") {
-				query += ` pinned:${inlineNode.attrs.value} `;
-			} else if (inlineNode.type.name === "mentions") {
-				query += ` mentions:${inlineNode.attrs.id} `;
+			} else {
+				const type = inlineNode.type.name;
+				const negated = inlineNode.attrs.negated ? "-" : "";
+				if (type === "author" || type === "channel" || type === "mentions") {
+					query += ` ${negated}${type}:${inlineNode.attrs.id} `;
+				} else if (type === "before" || type === "after") {
+					query += ` ${negated}${type}:${inlineNode.attrs.date} `;
+				} else if (type === "has" || type === "pinned") {
+					query += ` ${negated}${type}:${inlineNode.attrs.value} `;
+				}
 			}
 		});
 	});
 	return query.trim().replace(/\s+/g, " ");
 }
 
+function parseSearchQuery(query: string) {
+	const tokens: {
+		type: "filter" | "negated-filter";
+		filterType: string;
+		value: string;
+		from: number;
+		to: number;
+		negated: boolean;
+	}[] = [];
+
+	const filterRegex =
+		/(-?)(author|channel|before|after|has|pinned|mentions):(\S*)/g;
+	let match;
+
+	while ((match = filterRegex.exec(query)) !== null) {
+		const isNegated = !!match[1];
+		tokens.push({
+			type: isNegated ? "negated-filter" : "filter",
+			filterType: match[2],
+			value: match[3],
+			from: match.index,
+			to: match.index + match[0].length,
+			negated: isNegated,
+		});
+	}
+
+	return tokens;
+}
+
 function parseQueryToNodes(
 	query: string,
 	users2: ReturnType<typeof useUsers2>,
 	roomThreads: () => ThreadT[],
-): { nodes: Node[]; text: string } {
+): Node[] {
 	const nodes: Node[] = [];
 	let textBuffer = "";
 
-	// Regex to match filter patterns: filter:value or "quoted text"
 	const tokenRegex =
-		/(author|thread|before|after|has|pinned|mentions):(\S+)|"([^"]*)"/g;
+		/(-?)(author|channel|before|after|has|pinned|mentions):(\S*)|"([^"]*)"/g;
 	let lastIndex = 0;
 	let match;
 
 	while ((match = tokenRegex.exec(query)) !== null) {
-		// Add text before this match
 		const textBefore = query.slice(lastIndex, match.index);
-		if (textBefore) {
-			textBuffer += textBefore;
-		}
+		if (textBefore) textBuffer += textBefore;
 
-		if (match[1]) {
-			// Flush text buffer
+		if (match[2]) {
 			if (textBuffer) {
 				nodes.push(schema.text(textBuffer));
 				textBuffer = "";
 			}
 
-			const filterType = match[1];
-			const value = match[2];
+			const isNegated = !!match[1];
+			const filterType = match[2];
+			const value = match[3];
 
 			if (filterType === "author") {
 				const user = users2.cache.get(value);
 				if (user) {
 					nodes.push(
-						schema.nodes.author.create({ id: user.id, name: user.name }),
+						schema.nodes.author.create({
+							id: user.id,
+							name: user.name,
+							negated: isNegated,
+						}),
 					);
 				} else {
-					textBuffer += ` author:${value}`;
+					textBuffer += `${isNegated ? "-" : ""}author:${value}`;
 				}
-			} else if (filterType === "thread") {
+			} else if (filterType === "channel") {
 				const thread = roomThreads().find((t) => t.id === value);
 				if (thread) {
 					nodes.push(
-						schema.nodes.thread.create({ id: thread.id, name: thread.name }),
+						schema.nodes.channel.create({
+							id: thread.id,
+							name: thread.name,
+							negated: isNegated,
+						}),
 					);
 				} else {
-					textBuffer += ` thread:${value}`;
+					textBuffer += `${isNegated ? "-" : ""}channel:${value}`;
 				}
 			} else if (filterType === "before") {
-				nodes.push(schema.nodes.before.create({ date: value }));
+				nodes.push(
+					schema.nodes.before.create({ date: value, negated: isNegated }),
+				);
 			} else if (filterType === "after") {
-				nodes.push(schema.nodes.after.create({ date: value }));
+				nodes.push(
+					schema.nodes.after.create({ date: value, negated: isNegated }),
+				);
 			} else if (filterType === "has") {
-				nodes.push(schema.nodes.has.create({ value }));
+				nodes.push(schema.nodes.has.create({ value, negated: isNegated }));
 			} else if (filterType === "pinned") {
-				nodes.push(schema.nodes.pinned.create({ value }));
+				nodes.push(schema.nodes.pinned.create({ value, negated: isNegated }));
 			} else if (filterType === "mentions") {
-				nodes.push(schema.nodes.mentions.create({ id: value, name: value }));
+				nodes.push(
+					schema.nodes.mentions.create({
+						id: value,
+						name: value,
+						negated: isNegated,
+					}),
+				);
 			}
-		} else if (match[3]) {
-			// Quoted text - keep as text but include quotes
+		} else if (match[4] !== undefined) {
 			textBuffer += match[0];
 		}
 
 		lastIndex = tokenRegex.lastIndex;
 	}
 
-	// Add remaining text
-	if (lastIndex < query.length) {
-		textBuffer += query.slice(lastIndex);
-	}
+	if (lastIndex < query.length) textBuffer += query.slice(lastIndex);
+	if (textBuffer) nodes.push(schema.text(textBuffer));
 
-	if (textBuffer) {
-		nodes.push(schema.text(textBuffer));
-	}
-
-	return { nodes, text: textBuffer };
+	return nodes;
 }
 
 function dateToBoundaryUUID(
@@ -322,7 +268,6 @@ function dateToBoundaryUUID(
 			const unixTsMs = date.getTime();
 			return UUID.fromFieldsV7(unixTsMs, 0, 0, 0).toString();
 		} else {
-			// end
 			date.setUTCHours(23, 59, 59, 999);
 			const unixTsMs = date.getTime();
 			const randA = 0xfff;
@@ -353,15 +298,27 @@ function syntaxHighlightingPlugin() {
 
 					if (node.isText) {
 						const text = node.text!;
+
+						const tokens = parseSearchQuery(text);
+						for (const token of tokens) {
+							const from = pos + token.from;
+							const to = pos + token.to;
+							const negatedClass = token.negated ? " filter-negated" : "";
+							decorations.push(
+								Decoration.inline(from, to, {
+									class:
+										`filter-token filter-${token.filterType}${negatedClass}`,
+								}),
+							);
+						}
+
 						const phraseRegex = /"([^"]*)"/g;
 						let match;
 						while ((match = phraseRegex.exec(text))) {
 							const from = pos + match.index;
 							const to = from + match[0].length;
 							decorations.push(
-								Decoration.inline(from, to, {
-									class: "filter-phrase",
-								}),
+								Decoration.inline(from, to, { class: "filter-phrase" }),
 							);
 							decorations.push(
 								Decoration.inline(from, from + 1, { class: "syn" }),
@@ -377,14 +334,20 @@ function syntaxHighlightingPlugin() {
 						while ((match = negationRegex.exec(text))) {
 							const from = pos + match.index + (match[1]?.length ?? 0);
 							const to = from + match[0].length - (match[1]?.length ?? 0);
-							decorations.push(
-								Decoration.inline(from, to, {
-									class: "filter-negation",
-								}),
-							);
-							decorations.push(
-								Decoration.inline(from, from + 1, { class: "syn" }),
-							);
+							const negatedText = match[0].trimStart();
+
+							if (
+								!negatedText.match(
+									/^-(author|channel|before|after|has|pinned|mentions):/,
+								)
+							) {
+								decorations.push(
+									Decoration.inline(from, to, { class: "filter-negation" }),
+								);
+								decorations.push(
+									Decoration.inline(from, from + 1, { class: "syn" }),
+								);
+							}
 						}
 					}
 				});
@@ -395,22 +358,29 @@ function syntaxHighlightingPlugin() {
 }
 
 const AutocompleteDropdown = (props: {
-	filter: { type: string; query: string };
+	filter: { type: string; query: string; negated?: boolean };
 	channel?: ThreadT;
 	room?: RoomT;
 	onSelect: (node: Node) => void;
 	onSelectFilter: (text: string) => void;
+	hoveredIndex?: number;
+	setHoveredIndex?: (index: number) => void;
+	onItemsChange?: (
+		items: { rawValue?: string; onSelect: () => void; isSeparator?: boolean }[],
+		selectItem: (idx: number) => void,
+	) => void;
 }) => {
 	const channels2 = useChannels2();
 	const threadMembers2 = useThreadMembers2();
 	const roomMembers2 = useRoomMembers2();
 	const users2 = useUsers2();
-	const roomThreads = () =>
-		[...channels2.cache.values()].filter(
-			(c) =>
-				c.room_id === ((props.channel?.room_id as any) ?? props.room?.id ?? ""),
-		);
 	const roles = useRoles2();
+
+	const roomThreads = () =>
+		[...channels2.cache.values()].filter((c) =>
+			c.room_id === ((props.channel?.room_id as any) ?? props.room?.id ?? "")
+		);
+
 	const roomId = () => props.channel?.room_id ?? props.room?.id ?? null;
 	const roomRoles = createMemo(() =>
 		[...roles.cache.values()].filter((r) => r.room_id === roomId())
@@ -433,49 +403,34 @@ const AutocompleteDropdown = (props: {
 	};
 
 	const authorSuggestions = createMemo(() => {
-		const query = props.filter.query.toLowerCase();
-		const tm = threadMemberIds();
-		const rm = roomMemberIds();
-		const all_user_ids = [...new Set([...tm, ...rm])];
+    if (props.filter.type !== "author") return [];
 
+		const query = props.filter.query.toLowerCase();
+		const all_user_ids = [
+			...new Set([...threadMemberIds(), ...roomMemberIds()]),
+		];
 		if (!query) return all_user_ids.slice(0, 10);
 
 		const users = all_user_ids.map((id) => users2.cache.get(id)).filter(
 			Boolean,
 		) as User[];
-		return users
-			.filter(
-				(u) =>
-					u.name.toLowerCase().includes(query) ||
-					u.id.toLowerCase().includes(query),
-			)
-			.map((u) => u.id)
-			.slice(0, 10);
+		return users.filter((u) =>
+			u.name.toLowerCase().includes(query) || u.id.toLowerCase().includes(query)
+		).map((u) => u.id).slice(0, 10);
 	});
 
-	const threadSuggestions = createMemo(() => {
+	const channelSuggestions = createMemo(() => {
 		const query = props.filter.query.toLowerCase();
 		const threads = roomThreads() ?? [];
 		if (!query) return threads.slice(0, 10);
-		return threads
-			.filter(
-				(t) =>
-					t.name.toLowerCase().includes(query) ||
-					t.id.toLowerCase().includes(query),
-			)
-			.slice(0, 10);
+		return threads.filter((t) =>
+			t.name.toLowerCase().includes(query) || t.id.toLowerCase().includes(query)
+		).slice(0, 10);
 	});
 
 	const hasFilterSuggestions = createMemo(() => {
 		const query = props.filter.query.toLowerCase();
-		const options = [
-			"attachment",
-			"image",
-			"audio",
-			"video",
-			"link",
-			"embed",
-		];
+		const options = ["attachment", "image", "audio", "video", "link", "embed"];
 		if (!query) return options;
 		return options.filter((o) => o.toLowerCase().includes(query));
 	});
@@ -494,34 +449,29 @@ const AutocompleteDropdown = (props: {
 	};
 	const mentionsSuggestions = createMemo(() => {
 		const query = props.filter.query.toLowerCase();
+		const all_user_ids = [
+			...new Set([...threadMemberIds(), ...roomMemberIds()]),
+		];
 
-		const tm = threadMemberIds();
-		const rm = roomMemberIds();
-		const all_user_ids = [...new Set([...tm, ...rm])];
-		const users = (
-			all_user_ids.map((id) => users2.cache.get(id)).filter(
-				Boolean,
-			) as User[]
-		)
-			.filter(
-				(u) =>
-					u.name.toLowerCase().includes(query) ||
-					u.id.toLowerCase().includes(query),
+		const users = (all_user_ids.map((id) =>
+			users2.cache.get(id)
+		).filter(Boolean) as User[])
+			.filter((u) =>
+				u.name.toLowerCase().includes(query) ||
+				u.id.toLowerCase().includes(query)
 			)
-			.map(
-				(u) =>
-					({ id: `user-${u.id}`, name: u.name, type: "user" }) as Mentionable,
+			.map((u) =>
+				({ id: `user-${u.id}`, name: u.name, type: "user" }) as Mentionable
 			);
 
-		const roles = (roomRoles() ?? [])
+		const _roles = (roomRoles() ?? [])
 			.filter((r) => r.name.toLowerCase().includes(query))
-			.map(
-				(r) =>
-					({
-						id: `role-${r.id}`,
-						name: r.name,
-						type: "role" as const,
-					}) as Mentionable,
+			.map((r) =>
+				({
+					id: `role-${r.id}`,
+					name: r.name,
+					type: "role" as const,
+				}) as Mentionable
 			);
 
 		const special: Mentionable[] = [
@@ -529,45 +479,56 @@ const AutocompleteDropdown = (props: {
 			{ id: "everyone-thread", name: "@thread", type: "special" as const },
 		].filter((s) => (s.name as any).toLowerCase().includes(query));
 
-		return [...users, ...roles, ...special].slice(0, 10);
+		return [...users, ..._roles, ...special].slice(0, 10);
 	});
 
 	const onAuthorSelect = (user_id: string) => {
 		const user = users2.cache.get(user_id);
 		if (!user) return;
-		const node = schema.nodes.author.create({ id: user.id, name: user.name });
-		props.onSelect(node);
+		props.onSelect(
+			schema.nodes.author.create({
+				id: user.id,
+				name: user.name,
+				negated: props.filter.negated,
+			}),
+		);
 	};
 
-	const onThreadSelect = (thread: ThreadT) => {
-		const node = schema.nodes.thread.create({
-			id: thread.id,
-			name: thread.name,
-		});
-		props.onSelect(node);
+	const onChannelSelect = (thread: ThreadT) => {
+		props.onSelect(
+			schema.nodes.channel.create({
+				id: thread.id,
+				name: thread.name,
+				negated: props.filter.negated,
+			}),
+		);
 	};
 
 	const onHasSelect = (value: string) => {
-		const node = schema.nodes.has.create({ value });
-		props.onSelect(node);
+		props.onSelect(
+			schema.nodes.has.create({ value, negated: props.filter.negated }),
+		);
 	};
 
 	const onPinnedSelect = (value: string) => {
-		const node = schema.nodes.pinned.create({ value });
-		props.onSelect(node);
+		props.onSelect(
+			schema.nodes.pinned.create({ value, negated: props.filter.negated }),
+		);
 	};
 
 	const onMentionsSelect = (mentionable: Mentionable) => {
-		const node = schema.nodes.mentions.create({
-			id: mentionable.id,
-			name: mentionable.name,
-		});
-		props.onSelect(node);
+		props.onSelect(
+			schema.nodes.mentions.create({
+				id: mentionable.id,
+				name: mentionable.name,
+				negated: props.filter.negated,
+			}),
+		);
 	};
 
 	const allFilterSuggestions = [
 		"author:",
-		"thread:",
+		"channel:",
 		"before:",
 		"after:",
 		"has:",
@@ -576,8 +537,16 @@ const AutocompleteDropdown = (props: {
 	];
 	const filterSuggestions = createMemo(() => {
 		const query = props.filter.query.toLowerCase();
-		if (!query) return allFilterSuggestions;
-		return allFilterSuggestions.filter((f) => f.toLowerCase().includes(query));
+		const negated = props.filter.negated;
+		if (!query) {
+			return negated
+				? allFilterSuggestions.map((f) => "-" + f)
+				: allFilterSuggestions;
+		}
+
+		return allFilterSuggestions
+			.filter((f) => f.toLowerCase().includes(query))
+			.map((f) => negated ? "-" + f : f);
 	});
 
 	const recentSearches = createMemo(() => {
@@ -587,19 +556,210 @@ const AutocompleteDropdown = (props: {
 		return [];
 	});
 
+	const formatRecentSearch = (query: string) => {
+		const parts: (string | { type: string; value: string })[] = [];
+		let lastIndex = 0;
+		const tokens = parseSearchQuery(query);
+
+		const phraseRegex = /"([^"]*)"/g;
+		const phrases: { from: number; to: number; text: string }[] = [];
+		let match;
+		while ((match = phraseRegex.exec(query)) !== null) {
+			phrases.push({
+				from: match.index,
+				to: match.index + match[0].length,
+				text: match[0],
+			});
+		}
+
+		const negationRegex = /(^|\s)-\S+/g;
+		const negations: { from: number; to: number; text: string }[] = [];
+		while ((match = negationRegex.exec(query)) !== null) {
+			const from = match.index + (match[1]?.length ?? 0);
+			const to = from + match[0].length - (match[1]?.length ?? 0);
+			const text = match[0].trimStart();
+
+			if (!text.match(/^-(author|channel|before|after|has|pinned|mentions):/)) {
+				negations.push({ from, to, text });
+			}
+		}
+
+		type Segment = {
+			from: number;
+			to: number;
+			type: string;
+			value: string;
+			filterType?: string;
+			negated?: boolean;
+		};
+		const segments: Segment[] = [];
+
+		for (const token of tokens) {
+			const negationPrefixLen = token.negated ? 1 : 0;
+			const filterNameStart = token.from + negationPrefixLen;
+			const filterNameEnd = filterNameStart + token.filterType.length;
+			const colonEnd = filterNameEnd + 1;
+
+			if (token.negated) {
+				segments.push({
+					from: token.from,
+					to: filterNameStart,
+					type: "filter-syntax",
+					value: "-",
+				});
+			}
+
+			segments.push({
+				from: filterNameStart,
+				to: filterNameEnd,
+				type: "filter-name",
+				value: token.filterType,
+				filterType: token.filterType,
+				negated: token.negated,
+			});
+
+			segments.push({
+				from: filterNameEnd,
+				to: colonEnd,
+				type: "filter-syntax",
+				value: ":",
+				filterType: token.filterType,
+				negated: token.negated,
+			});
+
+			if (token.value) {
+				segments.push({
+					from: colonEnd,
+					to: token.to,
+					type: "filter-value",
+					value: token.value,
+					filterType: token.filterType,
+					negated: token.negated,
+				});
+			}
+		}
+
+		for (const phrase of phrases) {
+			segments.push({
+				from: phrase.from,
+				to: phrase.from + 1,
+				type: "filter-syntax",
+				value: '"',
+			});
+			if (phrase.text.length > 2) {
+				segments.push({
+					from: phrase.from + 1,
+					to: phrase.to - 1,
+					type: "filter-phrase-content",
+					value: phrase.text.slice(1, -1),
+				});
+			}
+			if (phrase.text.length > 1) {
+				segments.push({
+					from: phrase.to - 1,
+					to: phrase.to,
+					type: "filter-syntax",
+					value: '"',
+				});
+			}
+		}
+
+		for (const negation of negations) {
+			segments.push({
+				from: negation.from,
+				to: negation.from + 1,
+				type: "filter-syntax",
+				value: "-",
+			});
+			segments.push({
+				from: negation.from + 1,
+				to: negation.to,
+				type: "filter-negation-content",
+				value: negation.text.slice(1),
+			});
+		}
+
+		segments.sort((a, b) => a.from - b.from);
+
+		const merged: Segment[] = [];
+		for (const seg of segments) {
+			const overlaps = merged.find((m) =>
+				!(seg.to <= m.from || seg.from >= m.to)
+			);
+			if (!overlaps) {
+				merged.push(seg);
+			} else if (
+				seg.type.startsWith("filter-") && !overlaps.type.startsWith("filter-")
+			) {
+				const idx = merged.indexOf(overlaps);
+				merged.splice(idx, 1, seg);
+			}
+		}
+		merged.sort((a, b) => a.from - b.from);
+
+		let pos = 0;
+		for (const seg of merged) {
+			if (seg.from > pos) parts.push(query.slice(pos, seg.from));
+
+			if (seg.type === "filter-name") {
+				parts.push({ type: "filter-name", value: seg.value });
+			} else if (seg.type === "filter-syntax") {
+				parts.push({ type: "filter-syntax", value: seg.value });
+			} else if (seg.type === "filter-value") {
+				const { filterType, value, negated } = seg;
+				if (filterType === "author") {
+					const user = users2.cache.get(value);
+					parts.push({
+						type: negated ? "filter-negated-value" : "filter-value",
+						value: user?.name ?? value,
+					});
+				} else if (filterType === "channel") {
+					const thread = roomThreads().find((t) => t.id === value);
+					parts.push({
+						type: negated ? "filter-negated-value" : "filter-value",
+						value: thread?.name ?? value,
+					});
+				} else if (filterType === "mentions") {
+					let displayName = value;
+					if (value.startsWith("user-")) {
+						const user = users2.cache.get(value.replace("user-", ""));
+						displayName = user?.name ?? value.replace("user-", "");
+					} else if (value.startsWith("role-")) {
+						const role = roomRoles().find((r) =>
+							r.id === value.replace("role-", "")
+						);
+						displayName = role?.name ?? value.replace("role-", "");
+					} else if (value === "everyone-room") displayName = "@room";
+					else if (value === "everyone-thread") displayName = "@thread";
+
+					parts.push({
+						type: negated ? "filter-negated-value" : "filter-value",
+						value: displayName,
+					});
+				} else {
+					parts.push({
+						type: negated ? "filter-negated-value" : "filter-value",
+						value,
+					});
+				}
+			} else if (seg.type === "filter-phrase-content") {
+				parts.push({ type: "filter-phrase-content", value: seg.value });
+			} else if (seg.type === "filter-negation-content") {
+				parts.push({ type: "filter-negation-content", value: seg.value });
+			}
+
+			pos = seg.to;
+		}
+
+		if (pos < query.length) parts.push(query.slice(pos));
+		return parts;
+	};
+
 	const hasSuggestions = createMemo(() => {
-		if (props.filter.type === "author") {
-			return authorSuggestions().length > 0;
-		}
-		if (props.filter.type === "thread") {
-			return threadSuggestions().length > 0;
-		}
-		if (props.filter.type === "has") {
-			return hasFilterSuggestions().length > 0;
-		}
-		if (props.filter.type === "pinned") {
-			return pinnedSuggestions().length > 0;
-		}
+		if (props.filter.type === "author") return authorSuggestions().length > 0;
+		if (props.filter.type === "channel") return channelSuggestions().length > 0;
+		if (props.filter.type === "has") return hasFilterSuggestions().length > 0;
+		if (props.filter.type === "pinned") return pinnedSuggestions().length > 0;
 		if (props.filter.type === "mentions") {
 			return mentionsSuggestions().length > 0;
 		}
@@ -609,189 +769,209 @@ const AutocompleteDropdown = (props: {
 		return false;
 	});
 
+	const items = createMemo(() => {
+		const type = props.filter.type;
+		type LabelPart = string | { type: string; value: string };
+		const result: {
+			id: string;
+			label: string | LabelPart[];
+			rawValue?: string;
+			onSelect: () => void;
+			isSeparator?: boolean;
+		}[] = [];
+
+		if (type === "author") {
+			authorSuggestions().forEach((user_id) => {
+				const user = users2.cache.get(user_id);
+				result.push({
+					id: `author-${user_id}`,
+					label: user?.name ?? user_id,
+					onSelect: () => onAuthorSelect(user_id),
+				});
+			});
+		} else if (type === "channel") {
+			channelSuggestions().forEach((thread) => {
+				result.push({
+					id: `channel-${thread.id}`,
+					label: thread.name,
+					onSelect: () => onChannelSelect(thread),
+				});
+			});
+		} else if (type === "has") {
+			hasFilterSuggestions().forEach((value) => {
+				result.push({
+					id: `has-${value}`,
+					label: value,
+					onSelect: () => onHasSelect(value),
+				});
+			});
+		} else if (type === "pinned") {
+			pinnedSuggestions().forEach((value) => {
+				result.push({
+					id: `pinned-${value}`,
+					label: value,
+					onSelect: () => onPinnedSelect(value),
+				});
+			});
+		} else if (type === "mentions") {
+			mentionsSuggestions().forEach((mentionable) => {
+				result.push({
+					id: `mentions-${mentionable.id}`,
+					label: mentionable.name,
+					onSelect: () => onMentionsSelect(mentionable),
+				});
+			});
+		} else if (type === "filter") {
+			filterSuggestions().forEach((filter) => {
+				result.push({
+					id: `filter-${filter}`,
+					label: filter,
+					onSelect: () => props.onSelectFilter(filter),
+				});
+			});
+			const searches = recentSearches();
+			if (searches.length > 0) {
+				result.push({
+					id: "recent-separator",
+					label: "",
+					onSelect: () => {},
+					isSeparator: true,
+				});
+				searches.forEach((search, idx) => {
+					result.push({
+						id: `recent-${idx}`,
+						label: formatRecentSearch(search),
+						rawValue: search,
+						onSelect: () => props.onSelectFilter(search),
+					});
+				});
+			}
+		}
+
+		return result;
+	});
+
+	const handleSelect = (idx: number) => {
+		const its = items();
+		const item = its[idx];
+		if (item && !item.isSeparator) item.onSelect();
+	};
+
+	createEffect(() => props.onItemsChange?.(items(), handleSelect));
+
 	return (
 		<Show when={hasSuggestions()}>
 			<div class="search-autocomplete">
-				<Show when={props.filter.type === "author"}>
-					<ul>
-						<For each={authorSuggestions()}>
-							{(user_id) => {
-								const user = users2.cache.get(user_id);
-								return (
+				<ul>
+					<For each={items()}>
+						{(item, idx) => {
+							const isHovered = () => idx() === (props.hoveredIndex ?? 0);
+							const isSeparator = () => item.isSeparator;
+							const renderLabel = () => {
+								const label = item.label;
+								if (Array.isArray(label)) {
+									return label.map((part) => (typeof part === "string"
+										? <span>{part}</span>
+										: <span class={part.type}>{part.value}</span>)
+									);
+								}
+								return label;
+							};
+
+							return (
+								<Show
+									when={!isSeparator()}
+									fallback={
+										<li class="autocomplete-separator">Recent Searches</li>
+									}
+								>
 									<li
+										id={item.id}
 										class="autocomplete-item"
+										classList={{ hovered: isHovered() }}
 										onMouseDown={(e) => {
 											e.preventDefault();
-											onAuthorSelect(user_id);
+											item.onSelect();
 										}}
+										onMouseEnter={() => props.setHoveredIndex?.(idx())}
 									>
-										<b>{user?.name}</b>
+										{renderLabel()}
 									</li>
-								);
-							}}
-						</For>
-					</ul>
-				</Show>
-				<Show when={props.filter.type === "thread"}>
-					<ul>
-						<For each={threadSuggestions()}>
-							{(thread) => (
-								<li
-									class="autocomplete-item"
-									onMouseDown={(e) => {
-										e.preventDefault();
-										onThreadSelect(thread);
-									}}
-								>
-									<b>{thread.name}</b>
-								</li>
-							)}
-						</For>
-					</ul>
-				</Show>
-				<Show when={props.filter.type === "has"}>
-					<ul>
-						<For each={hasFilterSuggestions()}>
-							{(value) => (
-								<li
-									class="autocomplete-item"
-									onMouseDown={(e) => {
-										e.preventDefault();
-										onHasSelect(value);
-									}}
-								>
-									<b>{value}</b>
-								</li>
-							)}
-						</For>
-					</ul>
-				</Show>
-				<Show when={props.filter.type === "pinned"}>
-					<ul>
-						<For each={pinnedSuggestions()}>
-							{(value) => (
-								<li
-									class="autocomplete-item"
-									onMouseDown={(e) => {
-										e.preventDefault();
-										onPinnedSelect(value);
-									}}
-								>
-									<b>{value}</b>
-								</li>
-							)}
-						</For>
-					</ul>
-				</Show>
-				<Show when={props.filter.type === "mentions"}>
-					<ul>
-						<For each={mentionsSuggestions()}>
-							{(mentionable) => (
-								<li
-									class="autocomplete-item"
-									onMouseDown={(e) => {
-										e.preventDefault();
-										onMentionsSelect(mentionable);
-									}}
-								>
-									<b>{mentionable.name}</b>
-								</li>
-							)}
-						</For>
-					</ul>
-				</Show>
-				<Show when={props.filter.type === "filter"}>
-					<ul>
-						<For each={filterSuggestions()}>
-							{(filter) => (
-								<li
-									class="autocomplete-item"
-									onMouseDown={(e) => {
-										e.preventDefault();
-										props.onSelectFilter(filter);
-									}}
-								>
-									<b>{filter}</b>
-								</li>
-							)}
-						</For>
-						<Show when={recentSearches().length > 0}>
-							<li
-								class="dim"
-								style="margin-top: 8px; font-size: 0.8em; text-transform: uppercase; font-weight: bold;"
-							>
-								Recent Searches
-							</li>
-							<For each={recentSearches()}>
-								{(search) => (
-									<li
-										class="autocomplete-item"
-										onMouseDown={(e) => {
-											e.preventDefault();
-											props.onSelectFilter(search);
-										}}
-									>
-										{search}
-									</li>
-								)}
-							</For>
-						</Show>
-					</ul>
-				</Show>
+								</Show>
+							);
+						}}
+					</For>
+				</ul>
 			</div>
 		</Show>
 	);
 };
 
+function getFilterFromSelection(
+	state: EditorState,
+): { type: string; query: string; negated?: boolean } | null {
+	const { selection } = state;
+	if (!selection.empty) return null;
+
+	const $pos = state.doc.resolve(selection.from);
+	const nodeBefore = $pos.nodeBefore;
+
+	if (!nodeBefore) return { type: "filter", query: "" };
+	if (!nodeBefore.isText) return null;
+
+	const textBeforeCursor = nodeBefore.text!;
+
+	const tokens = parseSearchQuery(textBeforeCursor);
+	const lastToken = tokens[tokens.length - 1];
+	if (lastToken && lastToken.to === textBeforeCursor.length) {
+		return {
+			type: lastToken.filterType,
+			query: lastToken.value,
+			negated: lastToken.negated,
+		};
+	}
+
+	const partialFilterMatch = textBeforeCursor.match(
+		/(-?)(author|channel|before|after|has|pinned|mentions):$/,
+	);
+	if (partialFilterMatch) {
+		return {
+			type: partialFilterMatch[2],
+			query: "",
+			negated: !!partialFilterMatch[1],
+		};
+	}
+
+	if (textBeforeCursor.match(/\s$/)) return { type: "filter", query: "" };
+
+	const wordMatch = textBeforeCursor.match(/(\S+)$/);
+	if (wordMatch) {
+		const word = wordMatch[1];
+		const cleanWord = word.startsWith("-") ? word.slice(1) : word;
+		if (cleanWord.includes(":")) return null;
+
+		return { type: "filter", query: cleanWord, negated: word.startsWith("-") };
+	}
+
+	return { type: "filter", query: "" };
+}
+
 function autocompletePlugin(
-	setFilter: (filter: { type: string; query: string } | null) => void,
+	setFilter: (
+		filter: { type: string; query: string; negated?: boolean } | null,
+	) => void,
 ) {
 	return new Plugin({
 		state: {
 			init: () => null,
-			apply: (tr, value) => {
+			apply: (tr, value, _oldState, newState) => {
 				if (tr.getMeta("skipAutocomplete")) {
 					setFilter(null);
 					return null;
 				}
+				if (!tr.docChanged && !tr.selectionSet) return value;
 
-				const { selection } = tr;
-				if (!selection.empty) {
-					setFilter(null);
-					return null;
-				}
-
-				const text = tr.doc.textContent;
-				const cursorPos = selection.from;
-				const textBeforeCursor = text.slice(0, cursorPos);
-
-				const filterMatch = textBeforeCursor.match(
-					/\b(author|thread|has|pinned|mentions):(\S*)$/,
-				);
-				if (filterMatch) {
-					setFilter({ type: filterMatch[1], query: filterMatch[2] });
-					return null;
-				}
-
-				// Only suggest at the end of a word/input
-				if (text.slice(cursorPos).match(/^\S/)) {
-					setFilter(null);
-					return null;
-				}
-
-				const wordMatch = textBeforeCursor.match(/(\S+)$/);
-				if (wordMatch) {
-					const word = wordMatch[1];
-					if (word.includes(":")) {
-						setFilter(null);
-						return null;
-					}
-					setFilter({ type: "filter", query: word });
-				} else {
-					// Empty or ends with space
-					setFilter({ type: "filter", query: "" });
-				}
-
+				setFilter(getFilterFromSelection(newState));
 				return null;
 			},
 		},
@@ -801,36 +981,45 @@ function autocompletePlugin(
 export const SearchInput = (
 	props: { channel?: ThreadT; room?: RoomT; autofocus?: boolean },
 ) => {
-	const api2 = useApi2();
 	const users2 = useUsers2();
 	const messagesService = useMessages2();
 	const [dropdownRef, setDropdownRef] = createSignal<HTMLDivElement>();
 	const [activeFilter, setActiveFilter] = createSignal<
-		{
-			type: string;
-			query: string;
-		} | null
+		{ type: string; query: string; negated?: boolean } | null
 	>(null);
-
+	const [hoveredIndex, setHoveredIndex] = createSignal<number>(0);
 	const [editorRef, setEditorRef] = createSignal<HTMLElement>();
+	const [userNavigated, setUserNavigated] = createSignal(false);
 
-	const position = useFloating(
-		editorRef,
-		dropdownRef,
-		{
-			whileElementsMounted: autoUpdate,
-			middleware: [offset(4), flip()],
-			placement: "bottom-start",
-		},
-	);
+	let currentItemsRef: {
+		items: { rawValue?: string; onSelect: () => void; isSeparator?: boolean }[];
+		selectItem: (idx: number) => void;
+	} | null = null;
+
+	const position = useFloating(editorRef, dropdownRef, {
+		whileElementsMounted: autoUpdate,
+		middleware: [
+			offset(4),
+			flip(),
+			size({
+				padding: 16,
+				apply({ availableHeight, elements }) {
+					Object.assign(elements.floating.style, {
+						maxHeight: `${Math.max(0, availableHeight)}px`,
+					});
+				},
+			}),
+		],
+		placement: "bottom-start",
+	});
 
 	const channelCtx = useChannel();
 	const roomCtx = useRoom();
-
 	const channels2 = useChannels2();
+
 	const roomThreads = () =>
-		[...channels2.cache.values()].filter(
-			(c) => c.room_id === (props.channel?.room_id ?? props.room?.id ?? ""),
+		[...channels2.cache.values()].filter((c) =>
+			c.room_id === (props.channel?.room_id ?? props.room?.id ?? "")
 		);
 
 	const currentSearch = () => {
@@ -840,21 +1029,15 @@ export const SearchInput = (
 	};
 
 	const updateSearch = (val: ChannelSearch | RoomSearch | undefined) => {
-		if (props.channel && channelCtx) {
-			channelCtx[1]("search", val as any);
-		} else if (props.room && roomCtx) {
-			roomCtx[1]("search", val as any);
-		}
+		if (props.channel && channelCtx) channelCtx[1]("search", val as any);
+		else if (props.room && roomCtx) roomCtx[1]("search", val as any);
 	};
 
-	// Clear editor when search is cleared
 	createEffect(() => {
 		const search = currentSearch();
 		const view = editor.view;
-
 		if (!view) return;
 
-		// Clear editor when search is cleared or when there's no search
 		if (!search && view.state.doc.content.size > 0) {
 			const tr = view.state.tr.delete(0, view.state.doc.content.size);
 			tr.setMeta("skipAutocomplete", true);
@@ -872,52 +1055,86 @@ export const SearchInput = (
 
 		addRecentSearch(queryString);
 
-		// Extract filters directly from editor state using node IDs
 		const filters: {
 			author_ids?: string[];
+			not_author_ids?: string[];
 			thread_ids?: string[];
+			not_thread_ids?: string[];
 			before?: string;
 			after?: string;
 			has?: string[];
+			not_has?: string[];
 			pinned?: string;
 			mentions_ids?: string[];
-			mentions_everyone?: boolean;
+			not_mentions_ids?: string[];
 		} = {};
 
 		const textQueryParts: string[] = [];
+		const negatedTextQueryParts: string[] = [];
 
 		editor.view.state.doc.forEach((node) => {
 			node.forEach((inlineNode) => {
 				if (inlineNode.isText) {
-					textQueryParts.push(inlineNode.text!);
-				} else if (inlineNode.type.name === "author") {
-					if (!filters.author_ids) filters.author_ids = [];
-					filters.author_ids.push(inlineNode.attrs.id);
-				} else if (inlineNode.type.name === "thread") {
-					if (!filters.thread_ids) filters.thread_ids = [];
-					filters.thread_ids.push(inlineNode.attrs.id);
-				} else if (inlineNode.type.name === "before") {
-					filters.before = inlineNode.attrs.date;
-				} else if (inlineNode.type.name === "after") {
-					filters.after = inlineNode.attrs.date;
-				} else if (inlineNode.type.name === "has") {
-					if (!filters.has) filters.has = [];
-					filters.has.push(inlineNode.attrs.value);
-				} else if (inlineNode.type.name === "pinned") {
-					filters.pinned = inlineNode.attrs.value;
-				} else if (inlineNode.type.name === "mentions") {
-					if (!filters.mentions_ids) filters.mentions_ids = [];
-					filters.mentions_ids.push(inlineNode.attrs.id);
+					const text = inlineNode.text?.trim();
+					if (text) {
+						const words = text.split(/\s+/);
+						for (const word of words) {
+							if (word.startsWith("-") && word.length > 1) {
+								negatedTextQueryParts.push(word.slice(1));
+							} else if (word) textQueryParts.push(word);
+						}
+					}
+				} else {
+					const type = inlineNode.type.name;
+					const negated = inlineNode.attrs.negated;
+
+					if (type === "author") {
+						if (negated) {
+							if (!filters.not_author_ids) filters.not_author_ids = [];
+							filters.not_author_ids.push(inlineNode.attrs.id);
+						} else {
+							if (!filters.author_ids) filters.author_ids = [];
+							filters.author_ids.push(inlineNode.attrs.id);
+						}
+					} else if (type === "channel") {
+						if (negated) {
+							if (!filters.not_thread_ids) filters.not_thread_ids = [];
+							filters.not_thread_ids.push(inlineNode.attrs.id);
+						} else {
+							if (!filters.thread_ids) filters.thread_ids = [];
+							filters.thread_ids.push(inlineNode.attrs.id);
+						}
+					} else if (type === "before") {
+						filters.before = inlineNode.attrs.date;
+					} else if (type === "after") {
+						filters.after = inlineNode.attrs.date;
+					} else if (type === "has") {
+						if (negated) {
+							if (!filters.not_has) filters.not_has = [];
+							filters.not_has.push(inlineNode.attrs.value);
+						} else {
+							if (!filters.has) filters.has = [];
+							filters.has.push(inlineNode.attrs.value);
+						}
+					} else if (type === "pinned") {
+						filters.pinned = inlineNode.attrs.value;
+					} else if (type === "mentions") {
+						if (negated) {
+							if (!filters.not_mentions_ids) filters.not_mentions_ids = [];
+							filters.not_mentions_ids.push(inlineNode.attrs.id);
+						} else {
+							if (!filters.mentions_ids) filters.mentions_ids = [];
+							filters.mentions_ids.push(inlineNode.attrs.id);
+						}
+					}
 				}
 			});
 		});
 
 		const textQuery = textQueryParts.join(" ");
-
-		const existing = currentSearch();
-		const searchState: any = {
+		const searchState: ChannelSearch = {
 			query: queryString,
-			results: existing?.results ?? null,
+			results: currentSearch()?.results ?? null,
 			loading: true,
 			author: filters.author_ids,
 			before: filters.before,
@@ -928,18 +1145,22 @@ export const SearchInput = (
 
 		const queryParts: string[] = [];
 
-		if (textQuery) {
-			queryParts.push(`+(${textQuery})`);
+		if (textQuery.trim()) queryParts.push(`+(${textQuery.trim()})`);
+		if (negatedTextQueryParts.length) {
+			queryParts.push(`-(${negatedTextQueryParts.join(" ")})`);
 		}
 
-		if (filters.author_ids) {
+		if (filters.author_ids?.length) {
 			queryParts.push(`+author_id: IN [${filters.author_ids.join(" ")}]`);
+		}
+		if (filters.not_author_ids?.length) {
+			queryParts.push(`-author_id: IN [${filters.not_author_ids.join(" ")}]`);
 		}
 
 		if (props.channel) {
 			if (props.channel.type === "Dm" || props.channel.type === "Gdm") {
 				queryParts.push(`+channel_id:${props.channel.id}`);
-			} else if (filters.thread_ids) {
+			} else if (filters.thread_ids?.length) {
 				queryParts.push(`+channel_id: IN [${filters.thread_ids.join(" ")}]`);
 				if (props.channel.room_id) {
 					queryParts.push(`+room_id:${props.channel.room_id}`);
@@ -953,6 +1174,10 @@ export const SearchInput = (
 			queryParts.push(`+room_id:${props.room.id}`);
 		}
 
+		if (filters.not_thread_ids?.length) {
+			queryParts.push(`-channel_id: IN [${filters.not_thread_ids.join(" ")}]`);
+		}
+
 		if (filters.before && filters.after) {
 			const from_uuid = dateToBoundaryUUID(filters.after, "start");
 			const to_uuid = dateToBoundaryUUID(filters.before, "end");
@@ -961,42 +1186,48 @@ export const SearchInput = (
 			}
 		} else if (filters.after) {
 			const from_uuid = dateToBoundaryUUID(filters.after, "start");
-			if (from_uuid) {
-				queryParts.push(`+created_at:[${from_uuid} TO *]`);
-			}
+			if (from_uuid) queryParts.push(`+created_at:[${from_uuid} TO *]`);
 		} else if (filters.before) {
 			const to_uuid = dateToBoundaryUUID(filters.before, "end");
-			if (to_uuid) {
-				queryParts.push(`+created_at:[* TO ${to_uuid}]`);
+			if (to_uuid) queryParts.push(`+created_at:[* TO ${to_uuid}]`);
+		}
+
+		const mapHas = (hasVals: string[]) => {
+			const hasSubquery: string[] = [];
+			if (hasVals.includes("attachment")) {
+				hasSubquery.push(`metadata_fast.has_attachment:true`);
+			}
+			if (hasVals.includes("image")) {
+				hasSubquery.push(`metadata_fast.has_image:true`);
+			}
+			if (hasVals.includes("audio")) {
+				hasSubquery.push(`metadata_fast.has_audio:true`);
+			}
+			if (hasVals.includes("video")) {
+				hasSubquery.push(`metadata_fast.has_video:true`);
+			}
+			if (hasVals.includes("link")) {
+				hasSubquery.push(`metadata_fast.has_link:true`);
+			}
+			if (hasVals.includes("embed")) {
+				hasSubquery.push(`metadata_fast.has_embed:true`);
+			}
+			return hasSubquery;
+		};
+
+		if (filters.has?.length) {
+			const hasSubquery = mapHas(filters.has);
+			if (hasSubquery.length === 1) queryParts.push(`+${hasSubquery[0]}`);
+			else if (hasSubquery.length > 1) {
+				queryParts.push(`+(${hasSubquery.join(" ")})`);
 			}
 		}
 
-		if (filters.has) {
-			const hasSubquery: string[] = [];
-
-			if (filters.has.includes("attachment")) {
-				hasSubquery.push(`metadata_fast.has_attachment:true`);
-			}
-			if (filters.has.includes("image")) {
-				hasSubquery.push(`metadata_fast.has_image:true`);
-			}
-			if (filters.has.includes("audio")) {
-				hasSubquery.push(`metadata_fast.has_audio:true`);
-			}
-			if (filters.has.includes("video")) {
-				hasSubquery.push(`metadata_fast.has_video:true`);
-			}
-			if (filters.has.includes("link")) {
-				hasSubquery.push(`metadata_fast.has_link:true`);
-			}
-			if (filters.has.includes("embed")) {
-				hasSubquery.push(`metadata_fast.has_embed:true`);
-			}
-
-			if (hasSubquery.length === 1) {
-				queryParts.push(`+${hasSubquery[0]}`);
-			} else if (hasSubquery.length > 1) {
-				queryParts.push(`+(${hasSubquery.join(" ")})`);
+		if (filters.not_has?.length) {
+			const notHasSubquery = mapHas(filters.not_has);
+			if (notHasSubquery.length === 1) queryParts.push(`-${notHasSubquery[0]}`);
+			else if (notHasSubquery.length > 1) {
+				queryParts.push(`-(${notHasSubquery.join(" ")})`);
 			}
 		}
 
@@ -1004,23 +1235,26 @@ export const SearchInput = (
 			queryParts.push(`+metadata_fast.pinned:${filters.pinned}`);
 		}
 
-		if (filters.mentions_ids) {
+		const mapMentions = (mentions: string[]) => {
 			const mentionSubquery: string[] = [];
-
-			for (const mentionId of filters.mentions_ids) {
+			for (const mentionId of mentions) {
 				if (mentionId.startsWith("user-")) {
-					const user_id = mentionId.replace("user-", "");
-					mentionSubquery.push(`metadata_fast.mentions_user:${user_id}`);
+					mentionSubquery.push(
+						`metadata_fast.mentions_user:${mentionId.replace("user-", "")}`,
+					);
 				} else if (mentionId.startsWith("role-")) {
-					const role_id = mentionId.replace("role-", "");
-					mentionSubquery.push(`metadata_fast.mentions_role:${role_id}`);
+					mentionSubquery.push(
+						`metadata_fast.mentions_role:${mentionId.replace("role-", "")}`,
+					);
 				} else if (
 					mentionId === "everyone-room" || mentionId === "everyone-thread"
-				) {
-					mentionSubquery.push(`metadata_fast.mentions_everyone:true`);
-				}
+				) mentionSubquery.push(`metadata_fast.mentions_everyone:true`);
 			}
+			return mentionSubquery;
+		};
 
+		if (filters.mentions_ids?.length) {
+			const mentionSubquery = mapMentions(filters.mentions_ids);
 			if (mentionSubquery.length === 1) {
 				queryParts.push(`+${mentionSubquery[0]}`);
 			} else if (mentionSubquery.length > 1) {
@@ -1028,120 +1262,169 @@ export const SearchInput = (
 			}
 		}
 
-		console.log("search input calculated query parts", queryParts);
+		if (filters.not_mentions_ids?.length) {
+			const notMentionSubquery = mapMentions(filters.not_mentions_ids);
+			if (notMentionSubquery.length === 1) {
+				queryParts.push(`-${notMentionSubquery[0]}`);
+			} else if (notMentionSubquery.length > 1) {
+				queryParts.push(`-(${notMentionSubquery.join(" ")})`);
+			}
+		}
 
-		const body: {
-			query?: string;
-			sort_order?: "asc" | "desc";
-			sort_field?: "Created" | "Relevancy";
-			limit?: number;
-			offset?: number;
-			include_nsfw?: boolean;
-		} = {
+		const body = {
 			query: queryParts.join(" ") || undefined,
-			sort_order: "desc",
-			sort_field: "Created",
+			sort_order: "desc" as const,
+			sort_field: "Created" as const,
 			limit: 100,
 		};
 
 		const res = await messagesService.search(body);
-		if (res) {
-			updateSearch({
-				...searchState,
-				results: res,
-				loading: false,
-			});
-		} else {
-			updateSearch({
-				...searchState,
-				results: null,
-				loading: false,
-			});
-		}
+		updateSearch({ ...searchState, results: res || null, loading: false });
 	};
 
 	const insertNode = (node: Node) => {
-		if (!editor.view) return;
-		const { from } = editor.view.state.selection;
-		const textBefore = editor.view.state.doc.textBetween(0, from, "\0");
-		const filterMatch = textBefore.match(
-			/\b(author|thread|has|pinned|mentions):(\S*)$/,
+		const view = editor.view;
+		if (!view) return;
+		const { from } = view.state.selection;
+		const textBefore = view.state.doc.textBetween(
+			Math.max(0, from - 100),
+			from,
+			" ",
 		);
-		if (filterMatch) {
-			const matchText = filterMatch[0];
-			const start = from - matchText.length;
-			const tr = editor.view.state.tr.replaceWith(start, from, node);
-			editor.view.dispatch(tr);
-			editor.view.focus();
+
+		const match = textBefore.match(
+			/-?(author|channel|before|after|has|pinned|mentions):(\S*)$/,
+		);
+		if (match) {
+			const start = from - match[0].length;
+			const tr = view.state.tr.replaceWith(start, from, node);
+			tr.insertText(" ", tr.mapping.map(from));
+			view.dispatch(tr);
 		}
+
 		setActiveFilter(null);
+		setHoveredIndex(0);
+		view.focus();
 	};
 
 	const insertFilter = (text: string) => {
-		if (!editor.view) return;
-		const { from } = editor.view.state.selection;
-		const textBefore = editor.view.state.doc.textBetween(0, from, " ");
-		const wordMatch = textBefore.match(/(\S+)$/);
-		const start = wordMatch ? from - wordMatch[0].length : from;
+		requestAnimationFrame(() => {
+			const view = editor.view;
+			if (!view || !view.state || !view.dom?.isConnected) return;
 
-		// Check if this is a filter with ID (from search history)
-		const filterMatch = text.match(/^(author|thread|mentions):(\S+)$/);
-		if (filterMatch) {
-			const [, type, id] = filterMatch;
-			let node: Node | null = null;
-			if (type === "author") {
-				const user = users2.cache.get(id);
-				if (user) {
-					node = schema.nodes.author.create({ id: user.id, name: user.name });
+			try {
+				const { from } = view.state.selection;
+				const $pos = view.state.doc.resolve(from);
+				const nodeBefore = $pos.nodeBefore;
+				const textBefore = nodeBefore?.isText ? nodeBefore.text! : "";
+
+				const wordMatch = textBefore.match(/(\S+)$/);
+				const start = wordMatch ? from - wordMatch[0].length : from;
+
+				const isNegatedSuggestion = text.startsWith("-");
+				const cleanText = isNegatedSuggestion ? text.slice(1) : text;
+
+				const recent = getRecentSearches();
+				if (
+					recent.includes(text) && cleanText.length > 0 &&
+					!isNegatedSuggestion &&
+					!cleanText.match(/^(author|channel|mentions):/)
+				) {
+					const nodes = parseQueryToNodes(text, users2, roomThreads);
+					const tr = view.state.tr.delete(0, view.state.doc.content.size);
+					if (nodes.length > 0) tr.insert(0, nodes);
+					view.dispatch(tr);
+
+					setActiveFilter(null);
+					setHoveredIndex(0);
+					setTimeout(() => {
+						if (editor.view?.dom?.isConnected) {
+							handleSubmit();
+							editor.view.focus();
+						}
+					}, 50);
+					return;
 				}
-			} else if (type === "thread") {
-				const threads = roomThreads() ?? [];
-				const thread = threads.find((t) => t.id === id);
-				if (thread) {
-					node = schema.nodes.thread.create({
-						id: thread.id,
-						name: thread.name,
-					});
+
+				const filterMatch = cleanText.match(
+					/^(author|channel|mentions):(\S*)$/,
+				);
+				if (filterMatch) {
+					const [, type, id] = filterMatch;
+					let node: Node | null = null;
+
+					if (type === "author") {
+						const user = users2.cache.get(id);
+						if (user) {
+							node = schema.nodes.author.create({
+								id: user.id,
+								name: user.name,
+								negated: isNegatedSuggestion,
+							});
+						}
+					} else if (type === "channel") {
+						const thread = roomThreads()?.find((t) => t.id === id);
+						if (thread) {
+							node = schema.nodes.channel.create({
+								id: thread.id,
+								name: thread.name,
+								negated: isNegatedSuggestion,
+							});
+						}
+					} else if (type === "mentions") {
+						node = schema.nodes.mentions.create({
+							id,
+							name: id,
+							negated: isNegatedSuggestion,
+						});
+					}
+
+					if (node) {
+						const tr = view.state.tr.replaceWith(start, from, node);
+						tr.insertText(" ", tr.mapping.map(from));
+						view.dispatch(tr);
+
+						setActiveFilter(null);
+						setHoveredIndex(0);
+						setTimeout(() => {
+							if (editor.view?.dom?.isConnected) editor.view.focus();
+						}, 10);
+						return;
+					}
 				}
-			} else if (type === "mentions") {
-				// mentions can be user-{id}, role-{id}, or special
-				node = schema.nodes.mentions.create({ id, name: id });
-			}
-			if (node) {
-				const tr = editor.view.state.tr.replaceWith(start, from, node);
-				editor.view.dispatch(tr);
-				editor.view.focus();
-				setActiveFilter(null);
-				return;
-			}
-		}
 
-		// Check if this is a full query string from history (may contain multiple filters)
-		if (text.match(/\b(author|thread|before|after|has|pinned|mentions):\S+/)) {
-			const { nodes } = parseQueryToNodes(text, users2, roomThreads);
-			if (nodes.length > 0) {
-				const tr = editor.view.state.tr.replaceWith(start, from, ...nodes);
-				editor.view.dispatch(tr);
-				editor.view.focus();
-				setActiveFilter(null);
-				return;
+				const tr = view.state.tr.insertText(text, start, from);
+				view.dispatch(tr);
+				setTimeout(() => {
+					if (editor.view?.dom?.isConnected) editor.view.focus();
+				}, 10);
+			} catch (e) {
+				console.warn("insertFilter error:", e);
 			}
-		}
-
-		const tr = editor.view.state.tr.insertText(text, start, from);
-		editor.view.dispatch(tr);
-		editor.view.focus();
-		setActiveFilter(null);
+		});
 	};
 
+	createEffect(() => {
+		activeFilter();
+		setHoveredIndex(0);
+	});
+
+	createEffect(() => {
+		if (!activeFilter()) return;
+		const items = dropdownRef()?.querySelectorAll(".autocomplete-item");
+		if (items && items[hoveredIndex()]) {
+			items[hoveredIndex()].scrollIntoView({ block: "nearest" });
+		}
+	});
+
 	const editor = createBaseEditor({
-		schema: (schema as any),
+		schema: schema as any,
 		createState: (schema) => {
-			// Parse initial search query from history into nodes
-			let docContent: any = null;
+			let docContent: Node | null = null;
 			const initialSearch = currentSearch();
+
 			if (initialSearch?.query) {
-				const { nodes } = parseQueryToNodes(
+				const nodes = parseQueryToNodes(
 					initialSearch.query,
 					users2,
 					roomThreads,
@@ -1154,33 +1437,13 @@ export const SearchInput = (
 			}
 
 			return EditorState.create({
-				schema: (schema as any),
+				schema: schema as any,
 				doc: docContent,
 				plugins: [
 					history(),
 					keymap({
 						"Ctrl-z": undo,
 						"Ctrl-Shift-z": redo,
-						"Escape": () => {
-							if (!editor.view) return false;
-							const { state } = editor.view;
-							if (state.doc.textContent.length > 0) {
-								const tr = state.tr.delete(0, state.doc.content.size);
-								editor.view.dispatch(tr);
-								handleSubmit();
-								return true;
-							}
-
-							if (currentSearch()) {
-								updateSearch(undefined);
-							} else {
-								const chatInput = document.querySelector(
-									".chat .ProseMirror",
-								) as HTMLInputElement | null;
-								chatInput?.focus();
-							}
-							return true;
-						},
 					}),
 					syntaxHighlightingPlugin(),
 					autocompletePlugin((filter) => {
@@ -1190,10 +1453,83 @@ export const SearchInput = (
 					new Plugin({
 						props: {
 							handleKeyDown(_view, event) {
-								if (event.key === "Enter" && !event.shiftKey) {
-									handleSubmit();
-									setActiveFilter(null);
-									return true;
+								const filterActive = activeFilter();
+
+								const items = currentItemsRef?.items || [];
+								const hasSelectableItems = items.length > 0 &&
+									items.some((i) => !i.isSeparator);
+
+								if (filterActive && hasSelectableItems) {
+									if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+										setUserNavigated(true);
+										event.preventDefault();
+										setHoveredIndex((prev) => {
+											const max = items.length - 1;
+											let next = event.key === "ArrowDown"
+												? (prev >= max ? 0 : prev + 1)
+												: (prev <= 0 ? max : prev - 1);
+
+											if (items[next]?.isSeparator) {
+												next = event.key === "ArrowDown"
+													? (next >= max ? 0 : next + 1)
+													: (next <= 0 ? max : next - 1);
+											}
+											return next;
+										});
+										return true;
+									}
+
+									if (event.key === "Enter" || event.key === "Tab") {
+										if (
+											event.key === "Enter" &&
+											filterActive.type === "filter" &&
+											!userNavigated()
+										) {
+											return false;
+										}
+
+										event.preventDefault();
+										if (currentItemsRef) {
+											currentItemsRef.selectItem(hoveredIndex());
+										}
+										return true;
+									}
+
+									if (event.key === "Escape") {
+										event.preventDefault();
+										setActiveFilter(null);
+										return true;
+									}
+								} else {
+									if (event.key === "Enter" && !event.shiftKey) {
+										event.preventDefault();
+										handleSubmit();
+										return true;
+									}
+									if (event.key === "Escape") {
+										event.preventDefault();
+										const { state } = _view;
+										if (
+											state.doc.textContent.length > 0 ||
+											state.doc.childCount > 1 ||
+											(state.doc.firstChild &&
+												state.doc.firstChild.childCount > 0)
+										) {
+											const tr = state.tr.delete(0, state.doc.content.size);
+											_view.dispatch(tr);
+											handleSubmit();
+										} else {
+											if (currentSearch()) {
+												updateSearch(undefined);
+											} else {
+												const chatInput = document.querySelector(
+													".chat .ProseMirror",
+												) as HTMLInputElement | null;
+												chatInput?.focus();
+											}
+										}
+										return true;
+									}
 								}
 								return false;
 							},
@@ -1203,45 +1539,11 @@ export const SearchInput = (
 			});
 		},
 		handleDOMEvents: {
-			focus: (view: any) => {
-				const { state } = view;
-				const { selection } = state;
-				if (!selection.empty) {
-					return false;
-				}
-
-				const text = state.doc.textContent;
-				const cursorPos = selection.from;
-				const textBeforeCursor = text.slice(0, cursorPos);
-
-				const filterMatch = textBeforeCursor.match(
-					/\b(author|thread|has|pinned|mentions):(\S*)$/,
-				);
-				if (filterMatch) {
-					setActiveFilter({ type: filterMatch[1], query: filterMatch[2] });
-					return false;
-				}
-
-				// Only suggest at the end of a word/input
-				if (text.slice(cursorPos).match(/^\S/)) {
-					return false;
-				}
-
-				const wordMatch = textBeforeCursor.match(/(\S+)$/);
-				if (wordMatch) {
-					const word = wordMatch[1];
-					if (word.includes(":")) {
-						return false;
-					}
-					setActiveFilter({ type: "filter", query: word });
-				} else {
-					// Empty or ends with space
-					setActiveFilter({ type: "filter", query: "" });
-				}
+			focus: (view: EditorView) => {
+				setActiveFilter(getFilterFromSelection(view.state));
 				return false;
 			},
 			blur: () => {
-				// Use a small delay to allow click events on the dropdown to register
 				setTimeout(() => setActiveFilter(null), 150);
 				return false;
 			},
@@ -1272,6 +1574,11 @@ export const SearchInput = (
 							room={props.room}
 							onSelect={insertNode}
 							onSelectFilter={insertFilter}
+							hoveredIndex={hoveredIndex()}
+							setHoveredIndex={setHoveredIndex}
+							onItemsChange={(its, selectItem) => {
+								currentItemsRef = { items: its, selectItem };
+							}}
 						/>
 					</div>
 				</Show>

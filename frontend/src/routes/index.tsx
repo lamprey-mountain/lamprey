@@ -199,7 +199,7 @@ export const RouteRoomSettings = (p: ParentProps<RouteSectionProps>) => {
 	return (
 		<>
 			<Title title={title()} />
-			<Show when={room() && p.params.page}>
+			<Show when={room()}>
 				<RoomSettings room={room()!} page={p.params.page!} />
 			</Show>
 		</>
@@ -215,7 +215,7 @@ export const RouteChannelSettings = (p: ParentProps<RouteSectionProps>) => {
 	return (
 		<>
 			<Title title={title()} />
-			<Show when={channel() && p.params.page}>
+			<Show when={channel()}>
 				<ChannelSettings channel={channel()!} page={p.params.page!} />
 			</Show>
 		</>

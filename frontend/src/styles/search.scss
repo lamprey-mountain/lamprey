@@ -18,17 +18,59 @@
 	background: $bg-100;
 	border: solid $sep-500 1px;
 	padding: 8px;
-	/* z-index: 1; */
-	/* width: 100%; */
+	max-height: inherit;
+	overflow-y: auto;
+	z-index: 1;
+	width: 100%;
 
 	& ul li.autocomplete-item {
 		cursor: pointer;
 		padding: 2px 4px;
 		border-radius: 2px;
 
-		&:hover {
+		&:hover,
+		&.hovered {
 			background-color: #fff1;
 		}
+
+		& span {
+			pointer-events: none;
+
+			&.filter-name {
+				color: $fg-300;
+			}
+
+			&.filter-syntax {
+				color: $fg-500;
+			}
+
+			&.filter-value {
+				color: $color-blue;
+			}
+
+			&.filter-negated-value {
+				color: $color-orange;
+			}
+
+			&.filter-phrase-content {
+				color: $fg-300;
+			}
+
+			&.filter-negation-content {
+				text-decoration: line-through;
+				color: $fg-500;
+			}
+		}
+	}
+
+	& ul li.autocomplete-separator {
+		margin-top: 8px;
+		font-size: 0.8em;
+		text-transform: uppercase;
+		font-weight: bold;
+		color: $fg-500;
+		cursor: default;
+		pointer-events: none;
 	}
 }
 
@@ -52,7 +94,48 @@
 		color: $fg-500;
 	}
 
-	& .filter-thread {
+	& .filter-token,
+	& .filter-atom {
+		background: $bg-150;
+		padding: 0 2px;
+		border-radius: 2px;
+		position: relative;
+
+		&.filter-negated {
+			&::before {
+				content: "-";
+				position: absolute;
+				left: -8px;
+				color: $fg-500;
+			}
+
+			.filter-value {
+				color: $color-orange;
+			}
+		}
+	}
+
+	& .filter-channel,
+	& .filter-author,
+	& .filter-before,
+	& .filter-after,
+	& .filter-has,
+	& .filter-pinned,
+	& .filter-mentions {
+		background: $bg-150;
+		padding: 0 2px;
+		border-radius: 2px;
+	}
+
+	& .filter-prefix {
+		color: $fg-300;
+	}
+
+	& .filter-value {
+		color: $color-blue;
+	}
+
+	& .filter-channel {
 		background: $bg-150;
 		padding: 0 2px;
 		border-radius: 2px;
