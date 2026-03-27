@@ -310,13 +310,13 @@ export default {
 			name: "Send friend requests",
 			description: "Can send friend requests",
 		},
-		MessageMove: {
-			name: "Move messages",
-			description: "(unimplemented) Move messages between channels",
-		},
 		MessageRemove: {
 			name: "Remove messages",
 			description: "Remove and restore messages",
+		},
+		MessageMove: {
+			name: "Move messages",
+			description: "(unimplemented) Move messages between channels",
 		},
 		RoomCreate: {
 			name: "Create rooms",

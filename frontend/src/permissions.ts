@@ -393,6 +393,18 @@ export const permissions: Array<Perm> = [
 		moderator: false,
 	},
 	{
+		id: "MessageMove",
+		group: "messages",
+		types: ["Room", "Server"],
+		moderator: true,
+	},
+	{
+		id: "MessageRemove",
+		group: "messages",
+		types: ["Room", "Server"],
+		moderator: true,
+	},
+	{
 		id: "ServerMetrics",
 		group: "server",
 		types: ["Server"],

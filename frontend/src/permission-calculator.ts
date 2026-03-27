@@ -29,14 +29,14 @@ export interface ResolvedPermissions {
  * Check if a permission is allowed for timed out users
  */
 function isAllowedForTimedOut(perm: Permission): boolean {
-	return perm === "ViewChannel" || perm === "ViewAuditLog";
+	return perm === "ChannelView" || perm === "AuditLogView";
 }
 
 /**
  * Check if a permission is allowed for quarantined users
  */
 function isAllowedForQuarantined(perm: Permission): boolean {
-	return perm === "ViewChannel" || perm === "ViewAuditLog" ||
+	return perm === "ChannelView" || perm === "AuditLogView" ||
 		perm === "MemberNickname";
 }
 
@@ -44,7 +44,7 @@ function isAllowedForQuarantined(perm: Permission): boolean {
  * Check if a permission is allowed for lurkers (non-members in public rooms)
  */
 function isAllowedForLurker(perm: Permission): boolean {
-	return perm === "ViewChannel" || perm === "ViewAuditLog";
+	return perm === "ChannelView" || perm === "AuditLogView";
 }
 
 /**
@@ -90,7 +90,7 @@ const adminPerms: Permission[] = [
 	"Admin",
 	"ApplicationCreate",
 	"ApplicationManage",
-	"BypassSlowmode",
+	"ChannelSlowmodeBypass",
 	"CalendarEventCreate",
 	"CalendarEventManage",
 	"CalendarEventRsvp",
@@ -104,10 +104,10 @@ const adminPerms: Permission[] = [
 	"EmojiUseExternal",
 	"FriendCreate",
 	"IntegrationsManage",
+	"IntegrationsBridge",
 	"InviteCreate",
 	"InviteManage",
 	"MemberBan",
-	"MemberBridge",
 	"MemberKick",
 	"MemberNickname",
 	"MemberNicknameManage",
@@ -122,36 +122,30 @@ const adminPerms: Permission[] = [
 	"MessagePin",
 	"MessageRemove",
 	"ReactionAdd",
-	"ReactionPurge",
+	"ReactionManage",
 	"RoleApply",
 	"RoleManage",
 	"RoomCreate",
+	"RoomEdit",
 	"RoomManage",
-	"RoomManageServer",
 	"ServerMaintenance",
 	"ServerMetrics",
 	"ServerOversee",
-	"ServerReports",
-	"TagApply",
-	"TagManage",
 	"ThreadCreatePrivate",
 	"ThreadCreatePublic",
 	"ThreadEdit",
-	"ThreadLock",
 	"ThreadManage",
 	"CallUpdate",
-	"RoomForceJoin",
 	"RoomJoin",
-	"UserDeleteSelf",
+	"RoomJoinForce",
 	"UserManage",
-	"UserProfile",
-	"ViewAnalytics",
-	"ViewAuditLog",
-	"ViewChannel",
+	"UserManageSelf",
+	"UserProfileSelf",
+	"AnalyticsView",
+	"AuditLogView",
+	"ChannelView",
 	"VoiceBroadcast",
-	"VoiceConnect",
 	"VoiceDeafen",
-	"VoiceDisconnect",
 	"VoiceMove",
 	"VoiceMute",
 	"VoicePriority",
@@ -182,12 +176,10 @@ export function calculatePermissions(
 			"MessageMove",
 			"MessagePin",
 			"ReactionAdd",
-			"TagApply",
 			"ThreadCreatePublic",
 			"ThreadCreatePrivate",
 			"ChannelEdit",
-			"ViewAuditLog",
-			"VoiceConnect",
+			"AuditLogView",
 			"VoiceSpeak",
 			"VoiceVideo",
 		];
@@ -466,9 +458,10 @@ function applyChannelOverwrites(
 	const addPerm = (p: Permission) => {
 		if (p === "Admin") {
 			const adminPerms: Permission[] = [
+				"Admin",
 				"ApplicationCreate",
 				"ApplicationManage",
-				"BypassSlowmode",
+				"ChannelSlowmodeBypass",
 				"CalendarEventCreate",
 				"CalendarEventManage",
 				"CalendarEventRsvp",
@@ -482,10 +475,10 @@ function applyChannelOverwrites(
 				"EmojiUseExternal",
 				"FriendCreate",
 				"IntegrationsManage",
+				"IntegrationsBridge",
 				"InviteCreate",
 				"InviteManage",
 				"MemberBan",
-				"MemberBridge",
 				"MemberKick",
 				"MemberNickname",
 				"MemberNicknameManage",
@@ -500,36 +493,30 @@ function applyChannelOverwrites(
 				"MessagePin",
 				"MessageRemove",
 				"ReactionAdd",
-				"ReactionPurge",
+				"ReactionManage",
 				"RoleApply",
 				"RoleManage",
 				"RoomCreate",
+				"RoomEdit",
 				"RoomManage",
-				"RoomManageServer",
 				"ServerMaintenance",
 				"ServerMetrics",
 				"ServerOversee",
-				"ServerReports",
-				"TagApply",
-				"TagManage",
 				"ThreadCreatePrivate",
 				"ThreadCreatePublic",
 				"ThreadEdit",
-				"ThreadLock",
 				"ThreadManage",
 				"CallUpdate",
-				"RoomForceJoin",
 				"RoomJoin",
-				"UserDeleteSelf",
+				"RoomJoinForce",
 				"UserManage",
-				"UserProfile",
-				"ViewAnalytics",
-				"ViewAuditLog",
-				"ViewChannel",
+				"UserManageSelf",
+				"UserProfileSelf",
+				"AnalyticsView",
+				"AuditLogView",
+				"ChannelView",
 				"VoiceBroadcast",
-				"VoiceConnect",
 				"VoiceDeafen",
-				"VoiceDisconnect",
 				"VoiceMove",
 				"VoiceMute",
 				"VoicePriority",
@@ -672,7 +659,7 @@ export function canUseCommand(
 			return checker.has("MemberTimeout");
 		case "lock":
 		case "unlock":
-			return checker.has("ThreadLock");
+			return checker.has("ThreadManage");
 		case "name-room":
 		case "desc-room":
 			return checker.has("RoomManage");
@@ -694,7 +681,5 @@ export function canUseLockedChannel(
 ): boolean {
 	const checker = createPermissionChecker(ctx, user_id);
 	return checker.has("ThreadManage") ||
-		checker.has("ChannelManage") ||
-		checker.has("ThreadLock") ||
-		checker.permissions.has("LockedBypass" as Permission);
+		checker.has("ChannelManage");
 }
