@@ -9,6 +9,7 @@ use crate::v1::types::{
 /// emitted by backend, handled by the sfu
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub enum SfuCommand {
     Ready {
         sfu_id: SfuId,
@@ -56,6 +57,7 @@ pub enum SfuEvent {
 /// permissions that the sfu needs to know about
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct SfuPermissions {
     /// corresponds to VoiceSpeak
     pub speak: bool,
@@ -70,6 +72,7 @@ pub struct SfuPermissions {
 /// channel config that the sfu needs to know about
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct SfuChannel {
     pub id: ChannelId,
     pub name: String,

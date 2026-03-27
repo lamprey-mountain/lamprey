@@ -11,15 +11,15 @@ use lamprey_macros::endpoint;
     response(NO_CONTENT, description = "success"),
 )]
 pub mod permission_set {
-    use crate::v1::types::{ChannelId, PermissionOverwriteSet};
-    use uuid::Uuid;
+    use crate::v1::types::{ChannelId, PermissionOverwriteId, PermissionOverwriteSet};
 
+    #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
     pub struct Request {
         #[path]
         pub channel_id: ChannelId,
 
         #[path]
-        pub overwrite_id: Uuid,
+        pub overwrite_id: PermissionOverwriteId,
 
         #[json]
         pub overwrite: PermissionOverwriteSet,
@@ -39,15 +39,15 @@ pub mod permission_set {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod permission_remove {
-    use crate::v1::types::ChannelId;
-    use uuid::Uuid;
+    use crate::v1::types::{ChannelId, PermissionOverwriteId};
 
+    #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
     pub struct Request {
         #[path]
         pub channel_id: ChannelId,
 
         #[path]
-        pub overwrite_id: Uuid,
+        pub overwrite_id: PermissionOverwriteId,
     }
 
     pub struct Response {}

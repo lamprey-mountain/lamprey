@@ -26,7 +26,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     let response_struct = find_struct(items, "Response")?;
 
     let req_fields = extract_fields(request_struct)?;
-    let _resp_fields = extract_fields(response_struct)?;
+    let resp_fields = extract_fields(response_struct)?;
 
     // Validate: at most one json/form field
     let json_count = req_fields
@@ -81,6 +81,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     let extract_fn = build_extract_fn(&req_fields, &args.path)?;
     let encode_fn = build_encode_fn(response_struct)?;
     let meta_fn = build_meta_fn(&args, &mod_attrs)?;
+    let openapi_ext_fn = build_openapi_ext_fn(&req_fields, &resp_fields)?;
 
     // Preserve all original items except Request/Response structs
     let preserved_items: Vec<_> = items
@@ -108,6 +109,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
             #extract_fn
             #encode_fn
             #meta_fn
+            #openapi_ext_fn
 
             #(#preserved_items)*
         }
@@ -686,4 +688,206 @@ fn build_path_match_pattern(template: &str) -> syn::Result<(TokenStream, TokenSt
     let bindings = quote! { #(#bindings),* };
 
     Ok((pattern, bindings))
+}
+
+// ---------------------------------------------------------------------------
+// OpenAPI Extension Function
+// ---------------------------------------------------------------------------
+
+fn extract_inner_option_type(ty: &syn::Type) -> Option<&syn::Type> {
+    if let syn::Type::Path(tp) = ty {
+        if let Some(segment) = tp.path.segments.last() {
+            if segment.ident == "Option" {
+                if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+                    if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
+                        return Some(inner_ty);
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+fn build_openapi_ext_fn(
+    req_fields: &[EndpointField],
+    resp_fields: &[EndpointField],
+) -> syn::Result<TokenStream> {
+    let mut req_body_stream = quote! {};
+
+    // 1. Generate Request Body Documentation
+    if let Some(f) = req_fields
+        .iter()
+        .find(|f| matches!(f.kind, FieldKind::Json))
+    {
+        let ty = &f.ty;
+        let (schema_ty, required) = if let Some(inner) = extract_inner_option_type(ty) {
+            (inner, quote! { ::utoipa::openapi::Required::False })
+        } else {
+            (ty, quote! { ::utoipa::openapi::Required::True })
+        };
+        req_body_stream = quote! {
+            op = op.request_body(Some(
+                ::utoipa::openapi::request_body::RequestBodyBuilder::new()
+                    .content(
+                        "application/json",
+                        ::utoipa::openapi::ContentBuilder::new()
+                            .schema(Some(<#schema_ty as ::utoipa::PartialSchema>::schema()))
+                            .build()
+                    )
+                    .required(Some(#required))
+                    .build()
+            ));
+        };
+    } else if let Some(f) = req_fields
+        .iter()
+        .find(|f| matches!(f.kind, FieldKind::Form))
+    {
+        let ty = &f.ty;
+        let (schema_ty, required) = if let Some(inner) = extract_inner_option_type(ty) {
+            (inner, quote! { ::utoipa::openapi::Required::False })
+        } else {
+            (ty, quote! { ::utoipa::openapi::Required::True })
+        };
+        req_body_stream = quote! {
+            op = op.request_body(Some(
+                ::utoipa::openapi::request_body::RequestBodyBuilder::new()
+                    .content(
+                        "application/x-www-form-urlencoded",
+                        ::utoipa::openapi::ContentBuilder::new()
+                            .schema(Some(<#schema_ty as ::utoipa::PartialSchema>::schema()))
+                            .build()
+                    )
+                    .required(Some(#required))
+                    .build()
+            ));
+        };
+    } else if req_fields.iter().any(|f| matches!(f.kind, FieldKind::Body)) {
+        req_body_stream = quote! {
+            op = op.request_body(Some(
+                ::utoipa::openapi::request_body::RequestBodyBuilder::new()
+                    .content(
+                        "application/octet-stream",
+                        ::utoipa::openapi::ContentBuilder::new()
+                            .schema(Some(::utoipa::openapi::schema::ObjectBuilder::new()
+                                .schema_type(::utoipa::openapi::schema::Type::String)
+                                .format(Some(::utoipa::openapi::schema::SchemaFormat::KnownFormat(
+                                    ::utoipa::openapi::schema::KnownFormat::Binary
+                                )))
+                                .build()
+                            ))
+                            .build()
+                    )
+                    .required(Some(::utoipa::openapi::Required::True))
+                    .build()
+            ));
+        };
+    }
+
+    // 2. Generate Basic 200 Response
+    let mut resp_stream = quote! {};
+    if let Some(f) = resp_fields
+        .iter()
+        .find(|f| matches!(f.kind, FieldKind::Json))
+    {
+        let ty = &f.ty;
+        let schema_ty = extract_inner_option_type(ty).unwrap_or(ty);
+        resp_stream = quote! {
+            op = op.response(
+                "200",
+                ::utoipa::openapi::ResponseBuilder::new()
+                    .description("Success")
+                    .content(
+                        "application/json",
+                        ::utoipa::openapi::ContentBuilder::new()
+                            .schema(Some(<#schema_ty as ::utoipa::PartialSchema>::schema()))
+                            .build()
+                    )
+                    .build()
+            );
+        };
+    } else {
+        resp_stream = quote! {
+            op = op.response(
+                "200",
+                ::utoipa::openapi::ResponseBuilder::new()
+                    .description("Success")
+                    .build()
+            );
+        };
+    }
+
+    // 3. Add Path, Query, and Header Parameters automatically
+    let mut params_stream = quote! {};
+    for f in req_fields {
+        match &f.kind {
+            FieldKind::Path(rename) => {
+                let name = rename.clone().unwrap_or_else(|| f.ident.to_string());
+                let ty = &f.ty;
+                let schema_ty = extract_inner_option_type(ty).unwrap_or(ty);
+                params_stream.extend(quote! {
+                    op = op.parameter(
+                        ::utoipa::openapi::path::ParameterBuilder::new()
+                            .name(#name)
+                            .parameter_in(::utoipa::openapi::path::ParameterIn::Path)
+                            .required(::utoipa::openapi::Required::True)
+                            .schema(Some(<#schema_ty as ::utoipa::PartialSchema>::schema()))
+                            .build()
+                    );
+                });
+            }
+            FieldKind::Query(rename) => {
+                let name = rename.clone().unwrap_or_else(|| f.ident.to_string());
+                let ty = &f.ty;
+                let (schema_ty, required) = if let Some(inner) = extract_inner_option_type(ty) {
+                    (inner, quote! { ::utoipa::openapi::Required::False })
+                } else {
+                    (ty, quote! { ::utoipa::openapi::Required::True })
+                };
+                params_stream.extend(quote! {
+                    op = op.parameter(
+                        ::utoipa::openapi::path::ParameterBuilder::new()
+                            .name(#name)
+                            .parameter_in(::utoipa::openapi::path::ParameterIn::Query)
+                            .required(#required)
+                            .schema(Some(<#schema_ty as ::utoipa::PartialSchema>::schema()))
+                            .build()
+                    );
+                });
+            }
+            FieldKind::Header(rename) => {
+                let name = rename
+                    .clone()
+                    .unwrap_or_else(|| f.ident.to_string().replace('_', "-"));
+                let ty = &f.ty;
+                let (schema_ty, required) = if let Some(inner) = extract_inner_option_type(ty) {
+                    (inner, quote! { ::utoipa::openapi::Required::False })
+                } else {
+                    (ty, quote! { ::utoipa::openapi::Required::True })
+                };
+                params_stream.extend(quote! {
+                    op = op.parameter(
+                        ::utoipa::openapi::path::ParameterBuilder::new()
+                            .name(#name)
+                            .parameter_in(::utoipa::openapi::path::ParameterIn::Header)
+                            .required(#required)
+                            .schema(Some(<#schema_ty as ::utoipa::PartialSchema>::schema()))
+                            .build()
+                    );
+                });
+            }
+            _ => {}
+        }
+    }
+
+    Ok(quote! {
+        pub fn update_operation(
+            mut op: ::utoipa::openapi::path::OperationBuilder
+        ) -> ::utoipa::openapi::path::OperationBuilder {
+            #req_body_stream
+            #resp_stream
+            #params_stream
+            op
+        }
+    })
 }

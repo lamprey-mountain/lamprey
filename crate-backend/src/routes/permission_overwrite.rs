@@ -51,13 +51,13 @@ async fn permission_set(
             PermissionOverwriteType::Role => {
                 let role = s
                     .data()
-                    .role_select(room_id, req.overwrite_id.into())
+                    .role_select(room_id, (*req.overwrite_id).into())
                     .await?;
                 role.position
             }
             PermissionOverwriteType::User => {
                 srv.perms
-                    .get_user_rank(room_id, req.overwrite_id.into())
+                    .get_user_rank(room_id, (*req.overwrite_id).into())
                     .await?
             }
         };
@@ -72,7 +72,7 @@ async fn permission_set(
     let existing = channel
         .permission_overwrites
         .iter()
-        .find(|o| o.ty == req.overwrite.ty && o.id == req.overwrite_id);
+        .find(|o| o.ty == req.overwrite.ty && o.id == *req.overwrite_id);
 
     if existing.is_none()
         && channel.permission_overwrites.len() >= crate::consts::MAX_PERMISSION_OVERWRITES as usize
@@ -105,7 +105,7 @@ async fn permission_set(
     srv.perms
         .permission_overwrite_upsert(
             req.channel_id,
-            req.overwrite_id,
+            *req.overwrite_id,
             req.overwrite.ty.clone(),
             req.overwrite.allow.clone(),
             req.overwrite.deny.clone(),
@@ -119,7 +119,7 @@ async fn permission_set(
         let audit_log_entry = if existing.is_some() {
             AuditLogEntryType::PermissionOverwriteUpdate {
                 channel_id: req.channel_id,
-                overwrite_id: req.overwrite_id,
+                overwrite_id: *req.overwrite_id,
                 ty: req.overwrite.ty,
                 changes: Changes::new()
                     .change(
@@ -137,7 +137,7 @@ async fn permission_set(
         } else {
             AuditLogEntryType::PermissionOverwriteCreate {
                 channel_id: req.channel_id,
-                overwrite_id: req.overwrite_id,
+                overwrite_id: *req.overwrite_id,
                 ty: req.overwrite.ty,
                 changes: Changes::new()
                     .add("allow", &req.overwrite.allow)
@@ -181,7 +181,7 @@ async fn permission_remove(
     let existing = if let Some(existing) = channel
         .permission_overwrites
         .iter()
-        .find(|o| o.id == req.overwrite_id)
+        .find(|o| o.id == *req.overwrite_id)
     {
         if let Some(room_id) = channel.room_id {
             let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
@@ -189,13 +189,13 @@ async fn permission_remove(
                 PermissionOverwriteType::Role => {
                     let role = s
                         .data()
-                        .role_select(room_id, req.overwrite_id.into())
+                        .role_select(room_id, (*req.overwrite_id).into())
                         .await?;
                     role.position
                 }
                 PermissionOverwriteType::User => {
                     srv.perms
-                        .get_user_rank(room_id, req.overwrite_id.into())
+                        .get_user_rank(room_id, (*req.overwrite_id).into())
                         .await?
                 }
             };
@@ -221,7 +221,7 @@ async fn permission_remove(
     };
 
     srv.perms
-        .permission_overwrite_delete(req.channel_id, req.overwrite_id)
+        .permission_overwrite_delete(req.channel_id, *req.overwrite_id)
         .await?;
     srv.channels.invalidate(req.channel_id).await;
     let channel = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
@@ -230,7 +230,7 @@ async fn permission_remove(
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::PermissionOverwriteDelete {
             channel_id: req.channel_id,
-            overwrite_id: req.overwrite_id,
+            overwrite_id: *req.overwrite_id,
             ty: existing.ty,
         })
         .await?;

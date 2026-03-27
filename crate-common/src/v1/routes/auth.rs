@@ -23,6 +23,7 @@ pub mod auth_oauth_init {
 
 /// Oauth init response
 #[derive(Debug, serde::Serialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct OauthInitResponse {
     pub url: url::Url,
 }
@@ -84,6 +85,7 @@ pub mod auth_login {
     use serde::Deserialize;
 
     #[derive(Debug, Deserialize)]
+    #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
     pub struct LoginRequest {
         pub username: String,
         pub password: String,

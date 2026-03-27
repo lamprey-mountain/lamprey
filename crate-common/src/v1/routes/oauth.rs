@@ -79,6 +79,7 @@ pub mod oauth_introspect {
     use serde::Deserialize;
 
     #[derive(Debug, Deserialize)]
+    #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
     pub struct IntrospectForm {
         pub token: String,
     }
@@ -124,6 +125,7 @@ pub mod oauth_revoke {
     use serde::Deserialize;
 
     #[derive(Debug, Deserialize)]
+    #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
     pub struct RevokeForm {
         pub token: String,
     }

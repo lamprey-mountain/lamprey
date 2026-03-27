@@ -291,6 +291,7 @@ genid!(Harvest);
 genid!(DocumentBranch);
 genid!(DocumentTag);
 genid!(Connection);
+genid!(PermissionOverwrite);
 
 #[cfg(feature = "feat_interaction")]
 genid!(Interaction, "00000000-0000-0000-0000-00interaction");

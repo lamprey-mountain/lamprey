@@ -135,7 +135,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
                 for tag in meta.tags_full {
                     op = op.tag(*tag);
                 }
-                op.build()
+                #endpoint_mod::update_operation(op).build()
             }
         }
     })
