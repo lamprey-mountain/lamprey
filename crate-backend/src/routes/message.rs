@@ -767,12 +767,37 @@ async fn message_pins_reorder(
     Ok(StatusCode::OK)
 }
 
-/// Message replies list
-#[handler(routes::message_replies_list)]
-async fn message_replies_list(
+/// Message reply roots
+#[handler(routes::message_reply_roots)]
+async fn message_reply_roots(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::message_replies_list::Request,
+    req: routes::message_reply_roots::Request,
+) -> Result<impl IntoResponse> {
+    req.replies.validate()?;
+    auth.ensure_scopes(&[Scope::Full])?;
+    let srv = s.services();
+    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+    perms.ensure(Permission::ChannelView)?;
+    let res = srv
+        .messages
+        .list_replies(
+            req.channel_id,
+            None,
+            auth.user.id,
+            req.replies,
+            req.pagination,
+        )
+        .await?;
+    Ok(Json(res))
+}
+
+/// Message reply list
+#[handler(routes::message_reply_list)]
+async fn message_reply_list(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::message_reply_list::Request,
 ) -> Result<impl IntoResponse> {
     req.replies.validate()?;
     auth.ensure_scopes(&[Scope::Full])?;
@@ -862,7 +887,8 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(message_version_list))
         .routes(routes2!(message_version_get))
         .routes(routes2!(message_version_delete))
-        .routes(routes2!(message_replies_list))
+        .routes(routes2!(message_reply_roots))
+        .routes(routes2!(message_reply_list))
         .routes(routes2!(message_moderate))
         .routes(routes2!(message_migrate))
         .routes(routes2!(message_pin))
