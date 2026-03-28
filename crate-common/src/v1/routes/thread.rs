@@ -244,7 +244,7 @@ pub mod thread_create_from_message {
 )]
 pub mod thread_list_room {
     use crate::v1::types::thread::ThreadListRoom;
-    use crate::v1::types::{ChannelId, RoomId};
+    use crate::v1::types::RoomId;
 
     pub struct Request {
         #[path]

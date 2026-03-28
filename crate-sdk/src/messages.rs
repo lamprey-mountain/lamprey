@@ -34,7 +34,7 @@ pub struct TimelineMetadata {
 }
 
 impl TimelineMetadata {
-    pub fn contains(&self, message_id: MessageId) -> bool {
+    pub fn contains(&self, _message_id: MessageId) -> bool {
         todo!("check if self.start <= message_id <= self.end")
     }
 }

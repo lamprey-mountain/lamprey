@@ -55,7 +55,7 @@ pub mod session_list {
 )]
 pub mod session_update {
     use crate::v1::types::misc::SessionIdReq;
-    use crate::v1::types::{Session, SessionId, SessionPatch};
+    use crate::v1::types::{Session, SessionPatch};
 
     pub struct Request {
         #[path]
@@ -82,7 +82,6 @@ pub mod session_update {
 )]
 pub mod session_delete {
     use crate::v1::types::misc::SessionIdReq;
-    use crate::v1::types::SessionId;
 
     pub struct Request {
         #[path]
@@ -102,7 +101,7 @@ pub mod session_delete {
 )]
 pub mod session_get {
     use crate::v1::types::misc::SessionIdReq;
-    use crate::v1::types::{Session, SessionId};
+    use crate::v1::types::Session;
 
     pub struct Request {
         #[path]
@@ -126,7 +125,7 @@ pub mod session_get {
 )]
 pub mod session_status_set {
     use crate::v1::types::misc::SessionIdReq;
-    use crate::v1::types::{Session, SessionId, SessionStatus};
+    use crate::v1::types::{Session, SessionStatus};
 
     pub struct Request {
         #[path]

@@ -5,7 +5,7 @@ use common::v1::types::document::{
 };
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::misc::Color;
-use common::v1::types::util::{Diff, Time};
+use common::v1::types::util::Time;
 use common::v1::types::{ChannelReorder, RoomVerId};
 use sqlx::{query, query_file_as, query_scalar, Acquire};
 use time::PrimitiveDateTime;

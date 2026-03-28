@@ -10,7 +10,6 @@ use crate::{
     bridge::messages::BridgeMessage,
     bridge_common::{Globals, PortalConfig},
     db::Data,
-    discord,
     portal::Portal,
 };
 

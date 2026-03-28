@@ -55,7 +55,6 @@ pub mod app_list {
 pub mod app_get {
     use crate::v1::types::application::Application;
     use crate::v1::types::misc::ApplicationIdReq;
-    use crate::v1::types::ApplicationId;
 
     pub struct Request {
         #[path]
@@ -79,7 +78,6 @@ pub mod app_get {
 pub mod app_patch {
     use crate::v1::types::application::{Application, ApplicationPatch};
     use crate::v1::types::misc::ApplicationIdReq;
-    use crate::v1::types::ApplicationId;
 
     pub struct Request {
         #[path]
@@ -205,7 +203,6 @@ pub mod puppet_ensure {
 pub mod app_rotate_secret {
     use crate::v1::types::application::Application;
     use crate::v1::types::misc::ApplicationIdReq;
-    use crate::v1::types::ApplicationId;
 
     pub struct Request {
         #[path]

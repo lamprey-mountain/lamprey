@@ -1,17 +1,12 @@
-use std::{collections::HashSet, ops::ControlFlow, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 use common::v1::types::{ChannelId, MessageSync, PaginationDirection, PaginationQuery};
 use dashmap::DashSet;
-use kameo::{
-    actor::{ActorRef, Spawn},
-    prelude::{Context, Message},
-    Actor,
-};
-use lamprey_backend_core::Error;
+use kameo::{actor::Spawn, Actor};
 use tantivy::Term;
 use tokio::task::JoinSet;
 use tokio_stream::StreamExt;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 use uuid::Uuid;
 
 use crate::{

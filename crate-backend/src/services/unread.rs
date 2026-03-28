@@ -87,7 +87,7 @@ impl ServiceUnread {
     }
 
     /// acknowledge a bunch of channels at once
-    pub async fn ack_bulk(&self, user_id: UserId, acks: AckBulk) -> Result<()> {
+    pub async fn ack_bulk(&self, _user_id: UserId, _acks: AckBulk) -> Result<()> {
         let js = self.state.jetstream.as_ref().unwrap();
         let kv = js
             .create_key_value(async_nats::jetstream::kv::Config {
@@ -109,7 +109,7 @@ impl ServiceUnread {
         let key = "channel-id-here";
         // let key = "channelid:userid";
 
-        atomic_update(&kv, key, |mut metadata: ChannelReadMetadata| {
+        atomic_update(&kv, key, |metadata: ChannelReadMetadata| {
             // metadata.last_message_id = Some(new_last_message_id);
             // metadata.message_count = Some(metadata.message_count.unwrap_or(0) + 1);
             metadata
@@ -145,7 +145,7 @@ async fn atomic_update<T: Default + Serialize + DeserializeOwned, F: Fn(T) -> T>
             Ok(_) => return Ok(()),
             Err(e) if e.kind() == UpdateErrorKind::WrongLastRevision => continue,
             // Err(e) => return Err(e.into()),
-            Err(e) => panic!("FIXME: add nats error to error enum"),
+            Err(_e) => panic!("FIXME: add nats error to error enum"),
         }
     }
 }

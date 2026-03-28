@@ -238,7 +238,7 @@ impl Connection {
         token: SessionToken,
         reconnect: Option<SyncResume>,
         presence: Option<Presence>,
-        transport: &mut dyn TransportSink,
+        _transport: &mut dyn TransportSink,
     ) -> Result<()> {
         let srv = self.s.services();
         let session = srv

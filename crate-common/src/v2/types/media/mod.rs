@@ -12,9 +12,8 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::{
-    search::Order,
-    util::{Diff, Time},
-    ChannelId, EmbedId, MediaId, MessageId, MessageVerId, Mime, RoomId, UserId,
+    search::Order, util::Time, ChannelId, EmbedId, MediaId, MessageId, MessageVerId, Mime, RoomId,
+    UserId,
 };
 
 pub mod proxy;

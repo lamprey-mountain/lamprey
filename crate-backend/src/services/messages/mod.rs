@@ -1041,7 +1041,7 @@ impl ServiceMessages {
         &self,
         channel_id: ChannelId,
         message_id: MessageId,
-        user_id: Option<UserId>,
+        _user_id: Option<UserId>,
         pagination: PaginationQuery<MessageVerId>,
     ) -> Result<PaginationResponse<MessageVersion>> {
         let s = &self.state;
@@ -1061,7 +1061,7 @@ impl ServiceMessages {
         &self,
         channel_id: ChannelId,
         version_id: MessageVerId,
-        user_id: Option<UserId>,
+        _user_id: Option<UserId>,
     ) -> Result<MessageVersion> {
         let s = &self.state;
         let data = s.data();

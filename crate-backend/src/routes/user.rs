@@ -509,7 +509,9 @@ async fn user_list(
         .check()?;
 
     let data = s.data();
-    let mut users = data.user_list(req.query.pagination, req.query.filter).await?;
+    let mut users = data
+        .user_list(req.query.pagination, req.query.filter)
+        .await?;
 
     for user in &mut users.items {
         user.emails = Some(data.user_email_list(user.id).await?);

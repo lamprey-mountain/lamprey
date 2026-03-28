@@ -10,7 +10,7 @@ use crate::{
     data::DataNotification,
     error::Result,
     gen_paginate,
-    types::{DbNotification, DbNotificationType, RoomId, UserId},
+    types::{DbNotification, DbNotificationType, UserId},
 };
 
 use super::Postgres;

@@ -141,7 +141,7 @@ async fn room_member_add(
 
             let d = s.data();
             let existing = d.room_member_get(req.room_id, target_user_id).await;
-            let mut perms = if existing.is_ok() {
+            let perms = if existing.is_ok() {
                 // User already exists, get their actual permissions
                 s.services()
                     .perms
@@ -274,7 +274,7 @@ async fn room_member_add(
         }
     }
 
-    let mut perms = s
+    let perms = s
         .services()
         .perms
         .for_room3(Some(auth.user.id), req.room_id)
@@ -506,7 +506,7 @@ async fn room_member_update(
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let mut perms = s
+    let perms = s
         .services()
         .perms
         .for_room3(Some(auth.user.id), req.room_id)

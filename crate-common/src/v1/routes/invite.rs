@@ -31,7 +31,7 @@ pub mod invite_delete {
     response(OK, body = InviteWithMetadata, description = "success with metadata"),
 )]
 pub mod invite_resolve {
-    use crate::v1::types::{Invite, InviteCode, InviteWithMetadata};
+    use crate::v1::types::{Invite, InviteCode};
 
     pub struct Request {
         #[path]
