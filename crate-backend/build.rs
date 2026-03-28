@@ -1,4 +1,4 @@
-use vergen_gix::{BuildBuilder, CargoBuilder, Emitter, GixBuilder, RustcBuilder};
+use vergen_gix::{CargoBuilder, Emitter, GixBuilder, RustcBuilder};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=../crate-backend-data-postgres/migrations");

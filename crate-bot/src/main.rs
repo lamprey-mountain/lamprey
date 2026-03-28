@@ -193,7 +193,7 @@ impl Handle {
                 Err(err) => err.to_string(),
             };
             let resp = MessageCreate {
-                content: Some(resp.into()),
+                content: Some(resp),
                 attachments: vec![],
                 metadata: None,
                 reply_id: Some(message.id),

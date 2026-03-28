@@ -65,7 +65,7 @@ impl StripEmojiReader {
                 // Check if this emoji is allowed
                 let is_allowed = Uuid::parse_str(&uuid)
                     .ok()
-                    .map(|uuid| EmojiId::from(uuid))
+                    .map(EmojiId::from)
                     .map(|id| {
                         let result = self.allowed.contains(&id);
                         result

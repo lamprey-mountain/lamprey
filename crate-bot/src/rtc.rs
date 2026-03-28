@@ -117,7 +117,7 @@ impl Player {
                     self.pending = Some(pending);
                     self.emitter
                         .send(PlayerEvent::Signalling(SignallingMessage::Offer {
-                            sdp: SessionDescription(offer.to_sdp_string().into()),
+                            sdp: SessionDescription(offer.to_sdp_string()),
                             tracks: vec![TrackMetadata {
                                 mid: TrackId(mid.to_string()),
                                 kind: MediaKind::Audio,

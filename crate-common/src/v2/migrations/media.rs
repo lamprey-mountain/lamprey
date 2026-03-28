@@ -3,14 +3,14 @@ use std::collections::HashMap;
 use crate::v1::types::media::{MediaV0 as V1Media, MediaV0WithAdmin as V1MediaWithAdmin};
 use crate::v2::types::media::{Media, MediaMetadata, MediaStatus};
 
-impl Into<V1Media> for Media {
-    fn into(self) -> V1Media {
+impl From<Media> for V1Media {
+    fn from(val: Media) -> Self {
         V1Media {
-            id: self.id,
-            filename: self.filename,
-            alt: self.alt,
+            id: val.id,
+            filename: val.filename,
+            alt: val.alt,
             source: crate::v1::types::MediaTrack {
-                info: match self.metadata {
+                info: match val.metadata {
                     MediaMetadata::Image { width, height } => {
                         crate::v1::types::MediaTrackInfo::Image(crate::v1::types::Image {
                             height,
@@ -43,9 +43,9 @@ impl Into<V1Media> for Media {
                     }
                     MediaMetadata::File => crate::v1::types::MediaTrackInfo::Other,
                 },
-                size: self.size,
-                mime: self.content_type,
-                source: if let Some(source_url) = self.source_url {
+                size: val.size,
+                mime: val.content_type,
+                source: if let Some(source_url) = val.source_url {
                     crate::v1::types::TrackSource::Downloaded { source_url }
                 } else {
                     crate::v1::types::TrackSource::Uploaded
@@ -55,15 +55,15 @@ impl Into<V1Media> for Media {
     }
 }
 
-impl Into<Media> for V1Media {
-    fn into(self) -> Media {
-        let s = self.source;
+impl From<V1Media> for Media {
+    fn from(val: V1Media) -> Self {
+        let s = val.source;
         Media {
-            id: self.id,
+            id: val.id,
             // WARNING: the database is going to need to correctly populate `status`
             status: MediaStatus::Consumed,
-            filename: self.filename,
-            alt: self.alt,
+            filename: val.filename,
+            alt: val.alt,
             size: s.size,
             content_type: s.mime.clone(),
             source_url: match s.source {
@@ -124,14 +124,14 @@ impl Into<Media> for V1Media {
     }
 }
 
-impl Into<Media> for V1MediaWithAdmin {
-    fn into(self) -> Media {
-        let user_id = self.user_id;
-        let deleted_at = self.deleted_at;
+impl From<V1MediaWithAdmin> for Media {
+    fn from(val: V1MediaWithAdmin) -> Self {
+        let user_id = val.user_id;
+        let deleted_at = val.deleted_at;
         Media {
             user_id: Some(user_id),
             deleted_at,
-            ..self.inner.into()
+            ..val.inner.into()
         }
     }
 }

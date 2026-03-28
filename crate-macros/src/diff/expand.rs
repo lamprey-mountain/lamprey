@@ -89,10 +89,10 @@ fn generate_field_checks(data_struct: &DataStruct) -> TokenStream {
 
     for (index, field) in fields.iter().enumerate() {
         // Parse field attributes
-        let field_attr = match DiffFieldAttr::from_field(&field) {
+        let field_attr = match DiffFieldAttr::from_field(field) {
             Ok(attr) => attr,
             Err(e) => {
-                return e.write_errors().into();
+                return e.write_errors();
             }
         };
 
@@ -139,10 +139,10 @@ fn generate_field_applies(data_struct: &DataStruct) -> TokenStream {
 
     for (index, field) in fields.iter().enumerate() {
         // Parse field attributes
-        let field_attr = match DiffFieldAttr::from_field(&field) {
+        let field_attr = match DiffFieldAttr::from_field(field) {
             Ok(attr) => attr,
             Err(e) => {
-                return e.write_errors().into();
+                return e.write_errors();
             }
         };
 

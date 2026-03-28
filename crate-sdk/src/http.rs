@@ -495,7 +495,7 @@ impl Http {
         let text = res.text().await?;
         serde_json::from_str(&text).with_context(|| {
             error!(response_body = %text, "failed to decode response body");
-            format!("failed to decode response body for message_create_with_timestamp")
+            "failed to decode response body for message_create_with_timestamp".to_string()
         })
     }
 }

@@ -197,7 +197,7 @@ impl Portal {
                 let bytes = a.download().await?;
                 debug!("downloaded attachment");
                 let media = ly
-                    .media_upload(a.filename.to_owned(), bytes.into(), user_id)
+                    .media_upload(a.filename.to_owned(), bytes, user_id)
                     .await?;
                 debug!("reuploaded attachment");
                 globals
@@ -404,7 +404,7 @@ impl Portal {
                 }
                 let bytes = att.download().await?;
                 let media = ly
-                    .media_upload(att.filename.to_owned(), bytes.into(), user_id)
+                    .media_upload(att.filename.to_owned(), bytes, user_id)
                     .await?;
                 self.globals
                     .insert_attachment(AttachmentMetadata {
@@ -494,7 +494,7 @@ impl Portal {
                     .map(|m| {
                         m.nick
                             .as_deref()
-                            .unwrap_or_else(|| &m.user.display_name())
+                            .unwrap_or_else(|| m.user.display_name())
                             .to_owned()
                     })
                     .unwrap_or_else(|| user_id.to_string()),
@@ -546,7 +546,7 @@ impl Portal {
                     .map(|m| {
                         m.nick
                             .as_deref()
-                            .unwrap_or_else(|| &m.user.display_name())
+                            .unwrap_or_else(|| m.user.display_name())
                             .to_owned()
                     })
                     .unwrap_or_else(|| user_id.to_string()),

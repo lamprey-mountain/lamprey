@@ -163,7 +163,7 @@ impl StripEmoji {
     fn is_allowed(&self, uuid_str: &str) -> bool {
         Uuid::parse_str(uuid_str)
             .ok()
-            .map(|uuid| EmojiId::from(uuid))
+            .map(EmojiId::from)
             .map(|id| self.allowed.contains(&id))
             .unwrap_or(false)
     }
@@ -182,9 +182,9 @@ impl Transformation for StripEmoji {
         for child in node.children_with_tokens() {
             match child {
                 NodeOrToken::Token(tok) => {
-                    if tok.kind() == SyntaxKind::EmojiMarker.into() && tok.text() == "a" {
+                    if tok.kind() == SyntaxKind::EmojiMarker && tok.text() == "a" {
                         // Animated marker - we don't need to track this since we're stripping
-                    } else if tok.kind() == SyntaxKind::Text.into() {
+                    } else if tok.kind() == SyntaxKind::Text {
                         let text = tok.text();
                         // Check if it's a UUID (36 chars with 4 dashes)
                         if text.len() == 36 && text.chars().filter(|c| *c == '-').count() == 4 {

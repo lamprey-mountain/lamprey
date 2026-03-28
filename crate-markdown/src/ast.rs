@@ -831,9 +831,7 @@ impl Ast {
 
     /// Get the document node.
     pub fn document(&self) -> Option<Document> {
-        self.syntax()
-            .children()
-            .find_map(|node| Document::cast(node))
+        self.syntax().children().find_map(Document::cast)
     }
 
     /// Iterate over all block-level elements in the document.

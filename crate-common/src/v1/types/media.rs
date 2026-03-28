@@ -55,8 +55,8 @@ pub struct MediaV0WithAdmin {
     pub deleted_at: Option<Time>,
 }
 
-impl Into<MediaV0> for MediaV0WithAdmin {
-    fn into(self) -> MediaV0 {
-        self.inner
+impl From<MediaV0WithAdmin> for MediaV0 {
+    fn from(val: MediaV0WithAdmin) -> Self {
+        val.inner
     }
 }

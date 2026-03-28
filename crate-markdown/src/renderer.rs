@@ -158,7 +158,7 @@ fn collect_code_content(node: &SyntaxNode<MyLang>) -> String {
     for child in node.children_with_tokens() {
         match child {
             NodeOrToken::Token(tok) => {
-                if tok.kind() == SyntaxKind::Text.into() {
+                if tok.kind() == SyntaxKind::Text {
                     result.push_str(tok.text());
                 }
             }
@@ -176,7 +176,7 @@ fn extract_emoji_name(node: &SyntaxNode<MyLang>) -> Option<String> {
     use crate::parser::SyntaxKind;
 
     for child in node.children() {
-        if child.kind() == SyntaxKind::EmojiName.into() {
+        if child.kind() == SyntaxKind::EmojiName {
             return Some(child.text().to_string());
         }
     }

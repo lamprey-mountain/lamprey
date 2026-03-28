@@ -1423,7 +1423,7 @@ fn find_affected_blocks(
     // Root only contains Document, so we need to traverse into Document to get actual blocks
     let document = old_root
         .children()
-        .find(|n| n.kind() == SyntaxKind::Document.into())
+        .find(|n| n.kind() == SyntaxKind::Document)
         .unwrap_or_else(|| old_root.clone());
 
     for child in document.children_with_tokens() {
@@ -1573,7 +1573,7 @@ fn parse_block_region(builder: &mut GreenNodeBuilder, source: &str, _region_star
     // Copy Document's children (the actual blocks) into the outer builder
     if let Some(doc) = temp_root
         .children()
-        .find(|n| n.kind() == SyntaxKind::Document.into())
+        .find(|n| n.kind() == SyntaxKind::Document)
     {
         for child in doc.children_with_tokens() {
             match child {
