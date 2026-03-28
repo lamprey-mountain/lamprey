@@ -954,6 +954,7 @@ pub struct LinksIter<'a> {
     nodes: std::iter::Peekable<
         std::boxed::Box<dyn Iterator<Item = rowan::SyntaxNode<crate::parser::MyLang>> + 'a>,
     >,
+    #[allow(dead_code)]
     source: &'a str,
 }
 
@@ -1042,6 +1043,7 @@ pub struct MentionsIter<'a> {
     nodes: std::iter::Peekable<
         std::boxed::Box<dyn Iterator<Item = rowan::SyntaxNode<crate::parser::MyLang>> + 'a>,
     >,
+    #[allow(dead_code)]
     source: &'a str,
 }
 
@@ -1134,7 +1136,10 @@ impl<'a> Iterator for MentionsIter<'a> {
                         });
                     }
                 }
-                SyntaxKind::Paragraph | SyntaxKind::Header | SyntaxKind::ListItem | SyntaxKind::BlockQuote => {
+                SyntaxKind::Paragraph
+                | SyntaxKind::Header
+                | SyntaxKind::ListItem
+                | SyntaxKind::BlockQuote => {
                     // Check for @everyone in text content
                     if node.text().to_string().contains("@everyone") {
                         return Some(MentionId::Everyone);

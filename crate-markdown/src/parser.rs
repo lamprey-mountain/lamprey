@@ -11,6 +11,7 @@ struct ParseContext<'a> {
     source: &'a str,
     tokens: &'a [(Result<TokenKind, ()>, Range<usize>)],
     pos: usize,
+    #[allow(dead_code)]
     inline_mapping: Option<&'a HashMap<usize, usize>>,
 }
 
@@ -67,6 +68,7 @@ impl<'a> ParseContext<'a> {
     }
 
     /// Get the text of the current token.
+    #[allow(dead_code)]
     fn current_text(&self) -> Option<&'a str> {
         let range = self.current_range()?;
         self.source.get(range.start..range.end)
@@ -83,11 +85,13 @@ impl<'a> ParseContext<'a> {
     }
 
     /// Get current token position.
+    #[allow(dead_code)]
     fn pos(&self) -> usize {
         self.pos
     }
 
     /// Set current token position.
+    #[allow(dead_code)]
     fn set_pos(&mut self, pos: usize) {
         self.pos = pos;
     }
@@ -558,6 +562,7 @@ impl<'a> ParseContext<'a> {
     fn find_closing_emphasis(&self) -> Option<usize> {
         for (i, (token_result, _)) in self.tokens.iter().enumerate().skip(self.pos + 1) {
             if let Ok(token) = token_result {
+                // Skip ** (Strong) tokens, only match single * (Emphasis)
                 if *token == TokenKind::Emphasis {
                     return Some(i);
                 }
@@ -695,6 +700,7 @@ impl<'a> ParseContext<'a> {
     }
 
     /// List type for parsing
+    #[allow(dead_code)]
     fn list_type_at(&self, pos: usize) -> Option<ListType> {
         if self.token_at_is(pos, TokenKind::Dash) {
             Some(ListType::Bullet)
