@@ -116,8 +116,10 @@ pub struct EventIterator<'a> {
     /// Stack of nodes being traversed
     stack: Vec<IterState<'a>>,
     /// Source text for extracting content
+    #[allow(dead_code)]
     source: &'a str,
     /// Whether we've emitted the initial Document start
+    #[allow(dead_code)]
     started: bool,
     /// Pending events to emit before continuing traversal
     pending: Vec<Event<'a>>,
@@ -191,6 +193,7 @@ enum IterState<'a> {
         emitted: bool,
         text_emitted: bool,
     },
+    #[allow(dead_code)]
     Text {
         text: Cow<'a, str>,
         emitted: bool,
@@ -305,10 +308,7 @@ impl<'a> EventIterator<'a> {
                         return Some(Event::Start(Tag::Header(level)));
                     }
 
-                    let children: Vec<_> = node
-                        .syntax_node()
-                        .children_with_tokens()
-                        .collect();
+                    let children: Vec<_> = node.syntax_node().children_with_tokens().collect();
 
                     if child_idx < children.len() {
                         let child = children[child_idx].clone();
@@ -361,10 +361,7 @@ impl<'a> EventIterator<'a> {
                         return Some(Event::Start(Tag::ListItem));
                     }
 
-                    let children: Vec<_> = node
-                        .syntax_node()
-                        .children_with_tokens()
-                        .collect();
+                    let children: Vec<_> = node.syntax_node().children_with_tokens().collect();
 
                     if child_idx < children.len() {
                         let child = children[child_idx].clone();
@@ -387,10 +384,7 @@ impl<'a> EventIterator<'a> {
                         return Some(Event::Start(Tag::BlockQuote));
                     }
 
-                    let children: Vec<_> = node
-                        .syntax_node()
-                        .children_with_tokens()
-                        .collect();
+                    let children: Vec<_> = node.syntax_node().children_with_tokens().collect();
 
                     if child_idx < children.len() {
                         let child = children[child_idx].clone();
@@ -430,10 +424,7 @@ impl<'a> EventIterator<'a> {
                         return Some(Event::Start(Tag::Strong));
                     }
 
-                    let children: Vec<_> = node
-                        .syntax_node()
-                        .children_with_tokens()
-                        .collect();
+                    let children: Vec<_> = node.syntax_node().children_with_tokens().collect();
 
                     if child_idx < children.len() {
                         let child = children[child_idx].clone();
@@ -455,10 +446,7 @@ impl<'a> EventIterator<'a> {
                         return Some(Event::Start(Tag::Emphasis));
                     }
 
-                    let children: Vec<_> = node
-                        .syntax_node()
-                        .children_with_tokens()
-                        .collect();
+                    let children: Vec<_> = node.syntax_node().children_with_tokens().collect();
 
                     if child_idx < children.len() {
                         let child = children[child_idx].clone();
@@ -481,10 +469,7 @@ impl<'a> EventIterator<'a> {
                         return Some(Event::Start(Tag::Strikethrough));
                     }
 
-                    let children: Vec<_> = node
-                        .syntax_node()
-                        .children_with_tokens()
-                        .collect();
+                    let children: Vec<_> = node.syntax_node().children_with_tokens().collect();
 
                     if child_idx < children.len() {
                         let child = children[child_idx].clone();
@@ -500,7 +485,10 @@ impl<'a> EventIterator<'a> {
                 Some(IterState::InlineCode { node, emitted }) => {
                     self.stack.pop();
                     if !emitted {
-                        self.stack.push(IterState::InlineCode { node, emitted: true });
+                        self.stack.push(IterState::InlineCode {
+                            node,
+                            emitted: true,
+                        });
                         return Some(Event::Start(Tag::InlineCode));
                     }
                     self.pending.push(Event::End(Tag::InlineCode));
@@ -606,8 +594,9 @@ impl<'a> EventIterator<'a> {
                         let uuid = node.uuid();
                         // Check for animated emoji by looking for 'a' marker token
                         let animated = node.syntax_node().children_with_tokens().any(|n| {
-                            n.into_token()
-                                .map_or(false, |t| t.kind() == SyntaxKind::EmojiMarker && t.text() == "a")
+                            n.into_token().map_or(false, |t| {
+                                t.kind() == SyntaxKind::EmojiMarker && t.text() == "a"
+                            })
                         });
                         self.stack.push(IterState::Emoji {
                             node,
@@ -622,7 +611,7 @@ impl<'a> EventIterator<'a> {
                     }
                     if !text_emitted {
                         let name = node.name();
-                        let uuid = node.uuid();
+                        let _uuid = node.uuid();
                         self.stack.push(IterState::Emoji {
                             node,
                             emitted: true,
@@ -634,8 +623,9 @@ impl<'a> EventIterator<'a> {
                     let uuid = node.uuid();
                     // Check for animated emoji by looking for 'a' marker token
                     let animated = node.syntax_node().children_with_tokens().any(|n| {
-                        n.into_token()
-                            .map_or(false, |t| t.kind() == SyntaxKind::EmojiMarker && t.text() == "a")
+                        n.into_token().map_or(false, |t| {
+                            t.kind() == SyntaxKind::EmojiMarker && t.text() == "a"
+                        })
                     });
                     return Some(Event::End(Tag::Emoji {
                         animated,
@@ -870,6 +860,7 @@ impl<'a, I: Iterator<Item = Event<'a>>> Iterator for MergeTextIterator<'a, I> {
 /// Iterator adapter that yields (Event, TextRange) pairs.
 pub struct EventWithSpanIterator<'a> {
     inner: EventIterator<'a>,
+    #[allow(dead_code)]
     current_span: Option<TextRange>,
 }
 
