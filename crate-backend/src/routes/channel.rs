@@ -12,7 +12,7 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
 use common::v1::types::{
     AuditLogEntryType, ChannelType, RelationshipType, RoomCreate, RoomMemberOrigin, RoomType,
-    ThreadMemberPut,
+    ThreadMemberPut, SERVER_ROOM_ID,
 };
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
@@ -74,9 +74,11 @@ async fn channel_create_dm(
     let srv = s.services();
     let data = s.data();
     srv.perms
-        .for_server(auth.user.id)
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
         .await?
-        .ensure(Permission::DmCreate)?;
+        .ensure_view()?
+        .needs(Permission::DmCreate)
+        .check()?;
     match req.channel.ty {
         ChannelType::Dm => {
             let Some(recipients) = &req.channel.recipients else {
@@ -213,12 +215,12 @@ async fn channel_get(
 
     let user_id = auth.user.as_ref().map(|u| u.id);
 
-    let perms = s
-        .services()
+    s.services()
         .perms
-        .for_channel2(user_id, req.channel_id)
-        .await?;
-    perms.ensure(Permission::ChannelView)?;
+        .for_channel3(user_id, req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
     let channel = s.services().channels.get(req.channel_id, user_id).await?;
     Ok(Json(channel))
 }
@@ -236,7 +238,11 @@ async fn channel_list(
 
     let user_id = auth.user.as_ref().map(|u| u.id);
 
-    let _perms = srv.perms.for_room2(user_id, req.room_id).await?;
+    srv.perms
+        .for_room3(user_id, req.room_id)
+        .await?
+        .ensure_view()?
+        .check()?;
     let channels = data.channel_list(req.room_id).await?;
     let ids: Vec<_> = channels.iter().map(|t| t.id).collect();
     let channels = srv.channels.get_many(&ids, user_id).await?;
@@ -264,8 +270,12 @@ async fn channel_list_removed(
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::ChannelManage)?;
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelManage)
+        .check()?;
     let mut res = data
         .channel_list_removed(req.room_id, req.pagination, req.query.parent_id)
         .await?;
@@ -274,7 +284,7 @@ async fn channel_list_removed(
     for item in res.items {
         if srv
             .perms
-            .for_channel(auth.user.id, item.id)
+            .for_channel3(Some(auth.user.id), item.id)
             .await?
             .has(Permission::ChannelView)
         {
@@ -309,7 +319,12 @@ async fn channel_reorder(
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
-    let _perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelManage)
+        .check()?;
 
     let al = auth.audit_log(req.room_id);
 
@@ -319,14 +334,22 @@ async fn channel_reorder(
         let channel_data = srv.channels.get(channel.id, None).await?;
         channels_old.insert(channel_data.id, channel_data.clone());
 
-        let perms_chan = srv.perms.for_channel(auth.user.id, channel.id).await?;
-        perms_chan.ensure(Permission::ChannelView)?;
-        perms_chan.ensure(Permission::ChannelManage)?;
+        srv.perms
+            .for_channel3(Some(auth.user.id), channel.id)
+            .await?
+            .ensure_view()?
+            .needs(Permission::ChannelView)
+            .needs(Permission::ChannelManage)
+            .check()?;
 
         if let Some(Some(parent_id)) = channel.parent_id {
-            let perms_parent = srv.perms.for_channel(auth.user.id, parent_id).await?;
-            perms_chan.ensure(Permission::ChannelView)?;
-            perms_parent.ensure(Permission::ChannelManage)?;
+            srv.perms
+                .for_channel3(Some(auth.user.id), parent_id)
+                .await?
+                .ensure_view()?
+                .needs(Permission::ChannelView)
+                .needs(Permission::ChannelManage)
+                .check()?;
 
             let parent_data = srv.channels.get(parent_id, None).await?;
             if !channel_data.ty.can_be_in(Some(parent_data.ty)) {
@@ -382,8 +405,11 @@ async fn channel_update(
     let srv = s.services();
     let chan_pre = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if let Some(room_id) = chan_pre.room_id {
-        let room_perms = srv.perms.for_room(auth.user.id, room_id).await?;
-        room_perms.ensure_view()?;
+        let _room_perms = srv
+            .perms
+            .for_room3(Some(auth.user.id), room_id)
+            .await?
+            .ensure_view()?;
     }
 
     let chan = srv
@@ -415,8 +441,11 @@ async fn channel_ack(
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
     let version_id = req.ack.version_id;
     let message_id = if let Some(message_id) = req.ack.message_id {
         message_id
@@ -460,12 +489,17 @@ async fn channel_remove(
     let srv = s.services();
 
     let chan_before = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
     if chan_before.is_thread() {
-        perms.ensure(Permission::ThreadManage)?;
+        perms.needs(Permission::ThreadManage);
     } else {
-        perms.ensure(Permission::ChannelManage)?;
+        perms.needs(Permission::ChannelManage);
     }
+    perms.check()?;
 
     if let Some(room_id) = chan_before.room_id {
         let al = auth.audit_log(room_id);
@@ -547,12 +581,17 @@ async fn channel_restore(
             }
         }
 
-        let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+        let mut perms = srv
+            .perms
+            .for_channel3(Some(auth.user.id), req.channel_id)
+            .await?
+            .ensure_view()?;
         if channel.is_thread() {
-            perms.ensure(Permission::ThreadManage)?;
+            perms.needs(Permission::ThreadManage);
         } else {
-            perms.ensure(Permission::ChannelManage)?;
+            perms.needs(Permission::ChannelManage);
         }
+        perms.check()?;
         let chan_before = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
         if !chan_before.is_removed() {
             return Ok(StatusCode::NO_CONTENT);
@@ -580,12 +619,17 @@ async fn channel_restore(
         )
         .await?;
     } else {
-        let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+        let mut perms = srv
+            .perms
+            .for_channel3(Some(auth.user.id), req.channel_id)
+            .await?
+            .ensure_view()?;
         if channel.is_thread() {
-            perms.ensure(Permission::ThreadManage)?;
+            perms.needs(Permission::ThreadManage);
         } else {
-            perms.ensure(Permission::ChannelManage)?;
+            perms.needs(Permission::ChannelManage);
         }
+        perms.check()?;
         let chan_before = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
         if !chan_before.is_removed() {
             return Ok(StatusCode::NO_CONTENT);
@@ -606,13 +650,17 @@ async fn channel_typing(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-    perms.ensure(Permission::MessageCreate)?;
+    let perms_vis = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?;
+    let mut perms = perms_vis.ensure_view()?;
+    perms.needs(Permission::MessageCreate);
     let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
-    perms.ensure_unlocked()?;
+    perms.needs_unlocked();
+    perms.check()?;
     let until = time::OffsetDateTime::now_utc() + time::Duration::seconds(10);
     srv.channels
         .typing_set(req.channel_id, auth.user.id, until)
@@ -779,7 +827,10 @@ async fn channel_transfer_ownership(
         .thread_member_get(req.channel_id, target_user_id)
         .await?;
 
-    let _perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+    let _perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?;
     let thread_start = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if thread_start.owner_id != Some(auth.user.id) {
         return Err(ApiError::from_code(ErrorCode::NotThreadOwner).into());
@@ -816,7 +867,11 @@ async fn channel_ratelimit_update(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+    let perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
 
     if !perms.has(Permission::ChannelManage)
         && !perms.has(Permission::ThreadManage)
@@ -905,7 +960,11 @@ async fn channel_ratelimit_delete(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+    let perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
 
     if !perms.has(Permission::ChannelManage)
         && !perms.has(Permission::ThreadManage)
@@ -967,7 +1026,11 @@ async fn channel_ratelimit_delete_all(
 
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
+    let perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
 
     if !perms.has(Permission::ChannelManage)
         && !perms.has(Permission::ThreadManage)

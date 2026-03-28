@@ -15,6 +15,7 @@ use validator::Validate;
 use crate::error::{Error, Result};
 use crate::routes::util::Auth;
 use crate::{routes2, ServerState};
+use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 /// Room template create
 #[handler(routes::room_template_create)]
@@ -27,12 +28,14 @@ async fn room_template_create(
     auth.user.ensure_unsuspended()?;
     req.template.validate()?;
 
-    let perms = s
+    let mut perms: Permissions2<CheckPermissions> = s
         .services()
         .perms
-        .for_room(auth.user.id, req.template.room_id)
-        .await?;
-    perms.ensure(Permission::RoomEdit)?;
+        .for_room3(Some(auth.user.id), req.template.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::RoomEdit);
+    perms.check()?;
 
     let template = s
         .services()
@@ -140,12 +143,14 @@ async fn room_template_sync(
             ErrorCode::UnknownRoomTemplate,
         )))?;
 
-    let perms = s
+    let mut perms: Permissions2<CheckPermissions> = s
         .services()
         .perms
-        .for_room(auth.user.id, source_room_id)
-        .await?;
-    perms.ensure(Permission::RoomEdit)?;
+        .for_room3(Some(auth.user.id), source_room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::RoomEdit);
+    perms.check()?;
 
     let updated = s.services().room_templates.sync(req.code).await?;
     Ok(Json(updated))

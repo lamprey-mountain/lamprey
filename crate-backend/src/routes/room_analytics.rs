@@ -26,8 +26,13 @@ async fn room_analytics_members_count(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::AnalyticsView)?;
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::AnalyticsView);
+    perms.check()?;
 
     let datapoints = data
         .room_analytics_members_count(req.room_id, req.params)
@@ -44,12 +49,14 @@ async fn room_analytics_members_join(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    let perms = s
+    let mut perms = s
         .services()
         .perms
-        .for_room(auth.user.id, req.room_id)
-        .await?;
-    perms.ensure(Permission::AnalyticsView)?;
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::AnalyticsView);
+    perms.check()?;
     let res = s
         .data()
         .room_analytics_members_join(req.room_id, req.params)
@@ -66,12 +73,14 @@ async fn room_analytics_members_leave(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    let perms = s
+    let mut perms = s
         .services()
         .perms
-        .for_room(auth.user.id, req.room_id)
-        .await?;
-    perms.ensure(Permission::AnalyticsView)?;
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::AnalyticsView);
+    perms.check()?;
     let res = s
         .data()
         .room_analytics_members_leave(req.room_id, req.params)
@@ -88,12 +97,14 @@ async fn room_analytics_channels(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    let perms = s
+    let mut perms = s
         .services()
         .perms
-        .for_room(auth.user.id, req.room_id)
-        .await?;
-    perms.ensure(Permission::AnalyticsView)?;
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::AnalyticsView);
+    perms.check()?;
     let res = s
         .data()
         .room_analytics_channels(req.room_id, req.params, req.channel_params)
@@ -112,12 +123,14 @@ async fn room_analytics_overview(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    let perms = s
+    let mut perms = s
         .services()
         .perms
-        .for_room(auth.user.id, req.room_id)
-        .await?;
-    perms.ensure(Permission::AnalyticsView)?;
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::AnalyticsView);
+    perms.check()?;
     let res = s
         .data()
         .room_analytics_overview(req.room_id, req.params)
@@ -129,11 +142,18 @@ async fn room_analytics_overview(
 #[handler(routes::room_analytics_invites)]
 async fn room_analytics_invites(
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::room_analytics_invites::Request,
+    State(s): State<Arc<ServerState>>,
+    req: routes::room_analytics_invites::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
+    s.services()
+        .perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::AnalyticsView)
+        .check()?;
 
     Ok(Error::Unimplemented)
 }

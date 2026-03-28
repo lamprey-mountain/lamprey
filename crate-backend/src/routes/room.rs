@@ -70,10 +70,15 @@ async fn room_create(
     req.room.validate()?;
 
     let srv = s.services();
-    let perms = srv.perms.for_server(auth.user.id).await?;
+    let perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?
+        .needs(Permission::RoomCreate)
+        .check()?;
 
     tracing::debug!("server perms for {}: {:?}", auth.user.id, perms);
-    perms.ensure(Permission::RoomCreate)?;
 
     let icon = req.room.icon;
     if let Some(media_id) = icon {
@@ -119,8 +124,11 @@ async fn room_get(
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)));
     }
 
-    let perms = srv.perms.for_room2(user_id, req.room_id).await?;
-    perms.ensure_view()?;
+    srv.perms
+        .for_room3(user_id, req.room_id)
+        .await?
+        .ensure_view()?
+        .check()?;
 
     check_cache(&req.if_none_match, &room.version_id)?;
     let headers = build_cache_headers(&room.version_id)?;
@@ -139,7 +147,7 @@ async fn room_list(
     let srv = s.services();
     let is_admin = srv
         .perms
-        .for_server(auth.user.id)
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
         .await?
         .has(Permission::RoomManage);
 
@@ -167,8 +175,12 @@ async fn room_search(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_server(auth.user.id).await?;
-    perms.ensure(Permission::RoomManage)?;
+    srv.perms
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?
+        .needs(Permission::RoomManage)
+        .check()?;
 
     Ok(Error::Unimplemented)
 }
@@ -183,12 +195,13 @@ async fn room_edit(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     req.patch.validate()?;
-    let perms = s
-        .services()
-        .perms
-        .for_room(auth.user.id, req.room_id)
-        .await?;
-    perms.ensure(Permission::RoomEdit)?;
+    let srv = s.services();
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::RoomEdit)
+        .check()?;
 
     let room = s
         .services()
@@ -251,7 +264,11 @@ async fn room_delete(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_server(auth.user.id).await?;
+    let perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?;
     let is_admin = perms.has(Permission::RoomManage);
 
     let room = srv.rooms.get(req.room_id, None).await?;
@@ -310,8 +327,12 @@ async fn room_undelete(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_server(auth.user.id).await?;
-    perms.ensure(Permission::RoomManage)?;
+    srv.perms
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?
+        .needs(Permission::RoomManage)
+        .check()?;
 
     data.room_undelete(req.room_id).await?;
     srv.rooms.reload(req.room_id).await?;
@@ -344,12 +365,13 @@ async fn room_audit_logs(
     req: routes::room_audit_logs::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Rooms])?;
-    let perms = s
-        .services()
-        .perms
-        .for_room(auth.user.id, req.room_id)
-        .await?;
-    perms.ensure(Permission::AuditLogView)?;
+    let srv = s.services();
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::AuditLogView)
+        .check()?;
     let logs = s
         .services()
         .audit_logs
@@ -367,11 +389,12 @@ async fn room_ack(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Rooms])?;
     let data = s.data();
-    let _perms = s
-        .services()
-        .perms
-        .for_room(auth.user.id, req.room_id)
-        .await?;
+    let srv = s.services();
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .check()?;
 
     let updated_unreads = data
         .unread_put_all_in_room(auth.user.id, req.room_id)
@@ -406,7 +429,11 @@ async fn room_transfer_ownership(
 
     data.room_member_get(req.room_id, target_user_id).await?;
 
-    let _perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .check()?;
     let room_start = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
     if room_start.owner_id != Some(auth.user.id) {
         return Err(ApiError::from_code(ErrorCode::NotRoomOwner).into());
@@ -431,7 +458,11 @@ async fn room_integration_list(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Rooms])?;
     let srv = s.services();
-    let _perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .check()?;
     let data = s.data();
     let ids = data.room_bot_list(req.room_id, req.pagination).await?;
     let mut integrations = vec![];
@@ -468,8 +499,12 @@ async fn room_quarantine(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_server(auth.user.id).await?;
-    perms.ensure(Permission::RoomManage)?;
+    srv.perms
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?
+        .needs(Permission::RoomManage)
+        .check()?;
 
     let room = srv.rooms.get(req.room_id, None).await?;
 
@@ -509,9 +544,12 @@ async fn room_unquarantine(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_server(auth.user.id).await?;
-
-    perms.ensure(Permission::RoomManage)?;
+    srv.perms
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?
+        .needs(Permission::RoomManage)
+        .check()?;
 
     let room = srv.rooms.get(req.room_id, None).await?;
 

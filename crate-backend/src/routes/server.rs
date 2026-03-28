@@ -9,7 +9,7 @@ use common::v1::types::server::{
     ServerAuth, ServerAuthOauth, ServerFeatures, ServerInfo, ServerMedia, ServerModeration,
     ServerRegistration, ServerVersion, ServerVoice, ServerVoiceSfu, ServerWebPush,
 };
-use common::v1::types::Permission;
+use common::v1::types::{Permission, SERVER_ROOM_ID};
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
@@ -17,6 +17,7 @@ use crate::{routes2, ServerState};
 
 use super::util::Auth;
 use crate::error::Result;
+use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 /// Server information
 #[handler(routes::server_info)]
@@ -87,8 +88,13 @@ async fn server_voice(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_server(auth.user.id).await?;
-    perms.ensure_server(Permission::Admin)?;
+    let mut perms: Permissions2<CheckPermissions> = srv
+        .perms
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::Admin);
+    perms.check()?;
 
     Ok(Json(vec![] as Vec<ServerVoiceSfu>))
 }

@@ -29,10 +29,12 @@ async fn ack_bulk(
     let mut valid_acks = Vec::new();
 
     for ack in req.ack.acks {
-        let perms = srv.perms.for_channel(auth.user.id, ack.channel_id).await?;
-        if !perms.has(Permission::ChannelView) {
-            continue;
-        }
+        srv.perms
+            .for_channel3(Some(auth.user.id), ack.channel_id)
+            .await?
+            .ensure_view()?
+            .needs(Permission::ChannelView)
+            .check()?;
 
         if ack.message_id.is_none() {
             continue;

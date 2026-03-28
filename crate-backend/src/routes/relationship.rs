@@ -8,7 +8,7 @@ use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Time;
 use common::v1::types::{
-    AuditLogEntryType, MessageSync, Permission, RelationshipPatch, RelationshipType,
+    AuditLogEntryType, MessageSync, Permission, RelationshipPatch, RelationshipType, SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use lamprey_macros::handler;
@@ -17,6 +17,7 @@ use utoipa_axum::router::OpenApiRouter;
 use crate::error::{Error, Result};
 use crate::routes::util::Auth;
 use crate::{routes2, ServerState};
+use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 /// Friend list
 ///
@@ -112,10 +113,13 @@ async fn friend_add(
         }
         (_, Some(RelationshipType::Block)) => return Err(Error::Blocked),
         (None, None) => {
-            srv.perms
-                .for_server(auth.user.id)
+            let mut perms: Permissions2<CheckPermissions> = srv
+                .perms
+                .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
                 .await?
-                .ensure(Permission::FriendCreate)?;
+                .ensure_view()?;
+            perms.needs(Permission::FriendCreate);
+            perms.check()?;
 
             let target_prefs = srv.cache.preferences_get(req.target_id).await?;
             let friends_prefs = &target_prefs.privacy.friends;

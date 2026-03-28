@@ -274,6 +274,12 @@ pub enum MemberState {
     },
 }
 
+impl Default for MemberState {
+    fn default() -> Self {
+        Self::Lurker
+    }
+}
+
 pub struct Permissions2<S: CheckState> {
     /// if the user can view this resource
     pub visible: bool,
@@ -295,6 +301,18 @@ pub struct Permissions2Metadata {
     pub channel_locked: bool,
     pub channel_slowmode_thread_active: bool,
     pub channel_slowmode_message_active: bool,
+}
+
+impl Default for Permissions2Metadata {
+    fn default() -> Self {
+        Self {
+            rank: 0,
+            member_state: MemberState::default(),
+            channel_locked: false,
+            channel_slowmode_thread_active: false,
+            channel_slowmode_message_active: false,
+        }
+    }
 }
 
 impl ResourceContext {
@@ -322,6 +340,12 @@ pub enum ResourceContext {
 }
 
 pub struct CheckVisibility;
+
+impl Default for CheckVisibility {
+    fn default() -> Self {
+        Self
+    }
+}
 
 #[derive(Default)]
 pub struct CheckPermissions {
@@ -452,7 +476,8 @@ impl Permissions2<CheckPermissions> {
         self
     }
 
-    pub fn check(self) -> Result<Self> {
+    /// evaluate all the configured checks, returning an Err if any of them fail.
+    pub fn check(&self) -> Result<()> {
         if self.state.locked {
             return Err(Error::ApiError(ApiError::from_code(
                 ErrorCode::ThreadLocked,
@@ -468,7 +493,7 @@ impl Permissions2<CheckPermissions> {
         }
 
         if self.state.missing == PermissionBits::default() {
-            Ok(self)
+            Ok(())
         } else {
             Err(Error::ApiError(ApiError {
                 required_permissions: self.state.missing.to_vec(),

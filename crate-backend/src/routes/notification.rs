@@ -8,7 +8,7 @@ use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::notifications::{Notification, NotificationPagination, NotificationType};
 use common::v1::types::util::Time;
-use common::v1::types::{NotificationId, Permission};
+use common::v1::types::NotificationId;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
@@ -40,9 +40,15 @@ async fn inbox_get(
 
     let srv = s.services();
 
+    // Verify channel access before returning channel data
     let mut channels = Vec::new();
     for thread_id in channel_ids {
         if let Ok(thread) = srv.channels.get(thread_id, Some(auth.user.id)).await {
+            srv.perms
+                .for_channel3(Some(auth.user.id), thread_id)
+                .await?
+                .ensure_view()?
+                .check()?;
             channels.push(thread);
         }
     }
@@ -94,12 +100,12 @@ async fn inbox_post(
     req: routes::inbox_post::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let perms = s
-        .services()
+    s.services()
         .perms
-        .for_channel(auth.user.id, req.notification.channel_id)
-        .await?;
-    perms.ensure(Permission::ChannelView)?;
+        .for_channel3(Some(auth.user.id), req.notification.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
 
     let room_id = s
         .services()
@@ -136,6 +142,15 @@ async fn inbox_mark_read(
     req: routes::inbox_mark_read::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
+    // Verify channel access for each notification being marked read
+    let srv = s.services();
+    for channel_id in &req.mark_read.channel_ids {
+        srv.perms
+            .for_channel3(Some(auth.user.id), *channel_id)
+            .await?
+            .ensure_view()?
+            .check()?;
+    }
     s.data()
         .notification_mark_read(auth.user.id, req.mark_read)
         .await?;
@@ -150,6 +165,15 @@ async fn inbox_mark_unread(
     req: routes::inbox_mark_unread::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
+    // Verify channel access for each notification being marked unread
+    let srv = s.services();
+    for channel_id in &req.mark_unread.channel_ids {
+        srv.perms
+            .for_channel3(Some(auth.user.id), *channel_id)
+            .await?
+            .ensure_view()?
+            .check()?;
+    }
     s.data()
         .notification_mark_unread(auth.user.id, req.mark_unread)
         .await?;
@@ -166,6 +190,17 @@ async fn inbox_flush(
     req: routes::inbox_flush::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
+    // Verify channel access for each notification being flushed
+    let srv = s.services();
+    if let Some(channel_ids) = &req.flush.channel_ids {
+        for channel_id in channel_ids {
+            srv.perms
+                .for_channel3(Some(auth.user.id), *channel_id)
+                .await?
+                .ensure_view()?
+                .check()?;
+        }
+    }
     s.data().notification_flush(auth.user.id, req.flush).await?;
     Ok(StatusCode::OK)
 }

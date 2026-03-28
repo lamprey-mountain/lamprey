@@ -64,8 +64,13 @@ async fn role_update(
         }
     }
 
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::RoleManage)?;
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::RoleManage);
+
     let start_role = d.role_select(req.room_id, req.role_id).await?;
 
     let mut json = req.patch;
@@ -107,7 +112,7 @@ async fn role_update(
         let old_allow_set: HashSet<Permission> = start_role.allow.iter().cloned().collect();
 
         for p in new_allow_set.symmetric_difference(&old_allow_set) {
-            perms.ensure(*p)?;
+            perms.needs(*p);
         }
     }
     if let Some(new_deny) = &json.deny {
@@ -115,9 +120,11 @@ async fn role_update(
         let old_deny_set: HashSet<Permission> = start_role.deny.iter().cloned().collect();
 
         for p in new_deny_set.symmetric_difference(&old_deny_set) {
-            perms.ensure(*p)?;
+            perms.needs(*p);
         }
     }
+    perms.check()?;
+
     d.role_update(req.room_id, req.role_id, json.clone())
         .await?;
     let end_role = d.role_select(req.room_id, req.role_id).await?;
@@ -186,8 +193,14 @@ async fn role_delete(
         }
     }
 
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::RoleManage)?;
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::RoleManage);
+    perms.check()?;
+
     let role = d.role_select(req.room_id, req.role_id).await?;
     let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
     let room = srv.rooms.get(req.room_id, None).await?;
@@ -237,7 +250,7 @@ async fn role_get(
     let _perms = s
         .services()
         .perms
-        .for_room(auth.user.id, req.room_id)
+        .for_room3(Some(auth.user.id), req.room_id)
         .await?;
     let role = d.role_select(req.room_id, req.role_id).await?;
     Ok(Json(role))
@@ -252,7 +265,7 @@ async fn role_list(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let _perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
+    let _perms = srv.perms.for_room3(Some(auth.user.id), req.room_id).await?;
     let roles = srv.role.list(req.room_id).await?;
     Ok(Json(roles))
 }
@@ -269,7 +282,7 @@ async fn role_member_list(
     let _perms = s
         .services()
         .perms
-        .for_room(auth.user.id, req.room_id)
+        .for_room3(Some(auth.user.id), req.room_id)
         .await?;
     let res = d.role_member_list(req.role_id, req.pagination).await?;
     Ok(Json(res))
@@ -300,8 +313,13 @@ async fn role_member_add(
         }
     }
 
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::RoleApply)?;
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::RoleApply);
+    perms.check()?;
 
     let role = d.role_select(req.room_id, req.role_id).await?;
     let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
@@ -355,8 +373,13 @@ async fn role_member_remove(
         }
     }
 
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::RoleApply)?;
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::RoleApply);
+    perms.check()?;
 
     let role = d.role_select(req.room_id, req.role_id).await?;
     let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
@@ -410,8 +433,13 @@ async fn role_member_bulk_patch(
         }
     }
 
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::RoleApply)?;
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::RoleApply);
+    perms.check()?;
 
     let role = d.role_select(req.room_id, req.role_id).await?;
     let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
@@ -511,8 +539,13 @@ async fn role_reorder(
         }
     }
 
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::RoleManage)?;
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::RoleManage);
+    perms.check()?;
 
     let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
     let room = srv.rooms.get(req.room_id, None).await?;

@@ -29,6 +29,13 @@ async fn tag_create(
     req.tag.validate()?;
 
     let srv = s.services();
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelEdit)
+        .check()?;
+
     let tag = srv
         .tag
         .create(req.channel_id, &auth, req.tag, req.idempotency_key)
@@ -48,8 +55,12 @@ async fn tag_update(
     auth.user.ensure_unsuspended()?;
     req.patch.validate()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelEdit)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelEdit)
+        .check()?;
 
     let tag_channel_id = s.data().tag_get_forum_id(req.tag_id).await?;
     if req.channel_id != tag_channel_id {
@@ -99,8 +110,12 @@ async fn tag_delete(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelEdit)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelEdit)
+        .check()?;
 
     let tag_channel_id = s.data().tag_get_forum_id(req.tag_id).await?;
     if req.channel_id != tag_channel_id {
@@ -151,8 +166,12 @@ async fn tag_list(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelView)
+        .check()?;
 
     let tags = s
         .data()
@@ -170,8 +189,12 @@ async fn tag_get(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelView)
+        .check()?;
 
     let tag = s.data().tag_get(req.tag_id).await?;
     Ok(Json(tag))
@@ -186,8 +209,12 @@ async fn tag_search(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelView)
+        .check()?;
 
     let tags = s
         .data()

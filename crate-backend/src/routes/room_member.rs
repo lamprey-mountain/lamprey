@@ -21,8 +21,8 @@ use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
 use crate::routes::util::AuthRelaxed2;
-use crate::types::UserIdReq;
-use crate::{routes2, ServerState};
+use crate::{routes2, types::UserIdReq, ServerState};
+use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 use super::util::Auth;
 use crate::error::{Error, Result};
@@ -40,14 +40,19 @@ async fn room_member_list(
 
     let user_id = auth.user.as_ref().map(|u| u.id);
 
-    let perms = srv.perms.for_room2(user_id, req.room_id).await?;
+    let mut perms = srv
+        .perms
+        .for_room3(user_id, req.room_id)
+        .await?
+        .ensure_view()?;
 
     // Extra permission check to prevent returning the entire list of registered users
-    // For SERVER_ROOM_ID, require authentication
+    // For SERVER_ROOM_ID, require ServerOversee
     if req.room_id == SERVER_ROOM_ID {
+        perms.needs(Permission::ServerOversee);
         let _user = auth.ensure_has_user()?;
-        perms.ensure(Permission::ServerOversee)?;
     }
+    perms.check()?;
 
     let res = d.room_member_list(req.room_id, req.pagination).await?;
     Ok(Json(res))
@@ -73,7 +78,11 @@ async fn room_member_get(
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let _perms = s.services().perms.for_room2(user_id, req.room_id).await?;
+    let srv = s.services();
+    srv.perms
+        .for_room3(user_id, req.room_id)
+        .await?
+        .ensure_view()?;
     let res = d.room_member_get(req.room_id, target_user_id).await?;
     Ok(Json(res))
 }
@@ -132,29 +141,31 @@ async fn room_member_add(
 
             let d = s.data();
             let existing = d.room_member_get(req.room_id, target_user_id).await;
-            let perms = if existing.is_ok() {
+            let mut perms = if existing.is_ok() {
                 // User already exists, get their actual permissions
                 s.services()
                     .perms
-                    .for_room(auth.user.id, req.room_id)
+                    .for_room3(Some(auth.user.id), req.room_id)
                     .await?
             } else {
                 // User doesn't exist yet, get default room permissions
-                s.services().perms.default_for_room(req.room_id).await?
+                // Use for_room3 to get the new system type
+                s.services().perms.default_for_room3(req.room_id).await?
             };
+            let mut perms: Permissions2<CheckPermissions> = perms.ensure_view()?;
 
             if let Ok(start) = &existing {
                 // already exists
                 if req.member.mute.is_some_and(|m| m != start.mute) {
-                    perms.ensure(Permission::VoiceMute)?;
+                    perms.needs(Permission::VoiceMute);
                 }
                 if req.member.deaf.is_some_and(|m| m != start.deaf) {
-                    perms.ensure(Permission::VoiceDeafen)?;
+                    perms.needs(Permission::VoiceDeafen);
                 }
                 if req.member.override_name.is_some()
                     && req.member.override_name != start.override_name
                 {
-                    perms.ensure(Permission::MemberNickname)?;
+                    perms.needs(Permission::MemberNickname);
                 }
                 if let Some(r) = &mut req.member.roles {
                     // TODO: let users add self applicable roles to themselves
@@ -166,13 +177,13 @@ async fn room_member_add(
             } else {
                 // joining for the first time
                 if req.member.mute == Some(true) {
-                    perms.ensure(Permission::VoiceMute)?;
+                    perms.needs(Permission::VoiceMute);
                 }
                 if req.member.deaf == Some(true) {
-                    perms.ensure(Permission::VoiceDeafen)?;
+                    perms.needs(Permission::VoiceDeafen);
                 }
                 if req.member.override_name.is_some() {
-                    perms.ensure(Permission::MemberNickname)?;
+                    perms.needs(Permission::MemberNickname);
                 }
                 if let Some(r) = &mut req.member.roles {
                     // TODO: let users add self applicable roles to themselves
@@ -263,12 +274,14 @@ async fn room_member_add(
         }
     }
 
-    let perms = s
+    let mut perms = s
         .services()
         .perms
-        .for_room(auth.user.id, req.room_id)
+        .for_room3(Some(auth.user.id), req.room_id)
         .await?;
-    perms.ensure(Permission::IntegrationsBridge)?;
+    let mut perms: Permissions2<CheckPermissions> = perms.ensure_view()?;
+    perms.needs(Permission::IntegrationsBridge);
+    perms.check()?;
     let auth_user = srv.users.get(auth.user.id, None).await?;
     let target_user = srv.users.get(target_user_id, None).await?;
     let Some(puppet) = target_user.puppet else {
@@ -295,20 +308,20 @@ async fn room_member_add(
 
     if let Ok(start) = &existing {
         if req.member.mute.is_some_and(|m| m != start.mute) {
-            perms.ensure(Permission::VoiceMute)?;
+            perms.needs(Permission::VoiceMute);
         }
 
         if req.member.deaf.is_some_and(|m| m != start.deaf) {
-            perms.ensure(Permission::VoiceDeafen)?;
+            perms.needs(Permission::VoiceDeafen);
         }
 
         if req.member.override_name.is_some() && req.member.override_name != start.override_name {
-            perms.ensure(Permission::MemberNicknameManage)?;
+            perms.needs(Permission::MemberNicknameManage);
         }
 
         if let Some(r) = &mut req.member.roles {
             r.sort();
-            perms.ensure(Permission::RoleApply)?;
+            perms.needs(Permission::RoleApply);
             let old = HashSet::<RoleId>::from_iter(start.roles.iter().copied());
             let new = HashSet::<RoleId>::from_iter(r.iter().copied());
             let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
@@ -333,20 +346,20 @@ async fn room_member_add(
         }
     } else {
         if req.member.mute == Some(true) {
-            perms.ensure(Permission::VoiceMute)?;
+            perms.needs(Permission::VoiceMute);
         }
 
         if req.member.deaf == Some(true) {
-            perms.ensure(Permission::VoiceDeafen)?;
+            perms.needs(Permission::VoiceDeafen);
         }
 
         if req.member.override_name.is_some() {
-            perms.ensure(Permission::MemberNicknameManage)?;
+            perms.needs(Permission::MemberNicknameManage);
         }
 
         if let Some(r) = &mut req.member.roles {
             r.sort();
-            perms.ensure(Permission::RoleApply)?;
+            perms.needs(Permission::RoleApply);
             let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
             for role_id in r {
                 let role = d.role_select(req.room_id, *role_id).await?;
@@ -493,11 +506,12 @@ async fn room_member_update(
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let perms = s
+    let mut perms = s
         .services()
         .perms
-        .for_room(auth.user.id, req.room_id)
+        .for_room3(Some(auth.user.id), req.room_id)
         .await?;
+    let mut perms: Permissions2<CheckPermissions> = perms.ensure_view()?;
     let srv = s.services();
 
     // FIXME: allow editing self nickname (override_name)
@@ -515,10 +529,10 @@ async fn room_member_update(
         return Ok(Json(start));
     }
     if req.patch.mute.is_some_and(|m| m != start.mute) {
-        perms.ensure(Permission::VoiceMute)?;
+        perms.needs(Permission::VoiceMute);
     }
     if req.patch.deaf.is_some_and(|m| m != start.deaf) {
-        perms.ensure(Permission::VoiceDeafen)?;
+        perms.needs(Permission::VoiceDeafen);
     }
     if req
         .patch
@@ -527,9 +541,9 @@ async fn room_member_update(
         .is_some_and(|m| m != &start.override_name)
     {
         if target_user_id == auth.user.id {
-            perms.ensure(Permission::MemberNickname)?;
+            perms.needs(Permission::MemberNickname);
         } else {
-            perms.ensure(Permission::MemberNicknameManage)?;
+            perms.needs(Permission::MemberNicknameManage);
         }
     }
 
@@ -539,7 +553,7 @@ async fn room_member_update(
         .as_ref()
         .is_some_and(|val| val != &start.timeout_until)
     {
-        perms.ensure(Permission::MemberTimeout)?;
+        perms.needs(Permission::MemberTimeout);
         let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
         let other_rank = srv.perms.get_user_rank(req.room_id, target_user_id).await?;
         let room = srv.rooms.get(req.room_id, None).await?;
@@ -551,7 +565,7 @@ async fn room_member_update(
     // TODO: run futures concurrently
     if let Some(r) = &mut req.patch.roles {
         r.sort();
-        perms.ensure(Permission::RoleApply)?;
+        perms.needs(Permission::RoleApply);
         let old = HashSet::<RoleId>::from_iter(start.roles.iter().copied());
         let new = HashSet::<RoleId>::from_iter(r.iter().copied());
         let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
@@ -584,6 +598,8 @@ async fn room_member_update(
                 .await?;
         }
     }
+
+    perms.check()?;
 
     d.room_member_patch(req.room_id, target_user_id, req.patch.clone())
         .await?;
@@ -688,10 +704,16 @@ async fn room_member_delete(
         }
     }
 
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
     if target_user_id != auth.user.id {
-        perms.ensure(Permission::MemberKick)?;
+        perms.needs(Permission::MemberKick);
     }
+    perms.check()?;
+
     if req.room_id == SERVER_ROOM_ID {
         return Err(ApiError::from_code(ErrorCode::CannotKickFromServerRoom).into());
     }
@@ -744,16 +766,18 @@ async fn room_member_search(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
-    let perms = s
+    let mut perms = s
         .services()
         .perms
-        .for_room(auth.user.id, req.room_id)
-        .await?;
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
 
     // extra permission check to prevent returning the entire list of registered users
     if req.room_id == SERVER_ROOM_ID {
-        perms.ensure(Permission::ServerOversee)?;
+        perms.needs(Permission::ServerOversee);
     }
+    perms.check()?;
 
     let limit = req.search.limit.unwrap_or(10).min(100);
 
@@ -781,16 +805,18 @@ async fn room_member_search_advanced(
     auth.ensure_scopes(&[Scope::Full])?;
     req.search.validate()?;
     let d = s.data();
-    let perms = s
+    let mut perms = s
         .services()
         .perms
-        .for_room(auth.user.id, req.room_id)
-        .await?;
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
 
     // extra permission check to prevent returning the entire list of registered users
     if req.room_id == SERVER_ROOM_ID {
-        perms.ensure(Permission::ServerOversee)?;
+        perms.needs(Permission::ServerOversee);
     }
+    perms.check()?;
 
     let res = d
         .room_member_search_advanced(req.room_id, req.search)
@@ -823,13 +849,15 @@ async fn room_prune_begin(
         }
     }
 
-    let perms = s
+    let mut perms = s
         .services()
         .perms
-        .for_room(auth.user.id, req.room_id)
-        .await?;
-    perms.ensure(Permission::MemberKick)?;
-    perms.ensure(Permission::RoomEdit)?;
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::MemberKick);
+    perms.needs(Permission::RoomEdit);
+    perms.check()?;
 
     Ok(Error::Unimplemented)
 }
@@ -859,8 +887,13 @@ async fn room_ban_create(
         }
     }
 
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::MemberBan)?;
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::MemberBan);
+    perms.check()?;
     if req.room_id == SERVER_ROOM_ID {
         return Err(ApiError::from_code(ErrorCode::CannotKickFromServerRoom).into());
     }
@@ -942,8 +975,12 @@ async fn room_ban_bulk_create(
         }
     }
 
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::MemberBan)?;
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::MemberBan)
+        .check()?;
     if req.room_id == SERVER_ROOM_ID {
         return Err(ApiError::from_code(ErrorCode::CannotKickFromServerRoom).into());
     }
@@ -1021,8 +1058,12 @@ async fn room_ban_delete(
         }
     }
 
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::MemberBan)?;
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::MemberBan)
+        .check()?;
 
     d.room_ban_delete(req.room_id, target_user_id).await?;
     srv.perms.invalidate_room(target_user_id, req.room_id).await;
@@ -1061,12 +1102,13 @@ async fn room_ban_get(
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let perms = s
-        .services()
+    s.services()
         .perms
-        .for_room(auth.user.id, req.room_id)
-        .await?;
-    perms.ensure(Permission::MemberBan)?;
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::MemberBan)
+        .check()?;
     let res = d.room_ban_get(req.room_id, target_user_id).await?;
     Ok(Json(res))
 }
@@ -1080,12 +1122,13 @@ async fn room_ban_list(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
-    let perms = s
-        .services()
+    s.services()
         .perms
-        .for_room(auth.user.id, req.room_id)
-        .await?;
-    perms.ensure(Permission::MemberBan)?;
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::MemberBan)
+        .check()?;
     let res = d.room_ban_list(req.room_id, req.pagination).await?;
     let cursor = res.items.last().map(|i| i.user_id.to_string());
     let res = PaginationResponse {

@@ -44,8 +44,11 @@ async fn calendar_event_list(
     req.query.validate()?;
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
 
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -70,9 +73,12 @@ async fn calendar_event_create(
     auth.ensure_scopes(&[Scope::Full])?;
     req.event.validate()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-    perms.ensure(Permission::CalendarEventCreate)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::CalendarEventCreate)
+        .check()?;
 
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -121,8 +127,11 @@ async fn calendar_event_get(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
 
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -147,8 +156,11 @@ async fn calendar_event_update(
     auth.ensure_scopes(&[Scope::Full])?;
     req.patch.validate()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
 
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -161,10 +173,11 @@ async fn calendar_event_update(
     }
 
     if old_event.creator_id == Some(auth.user.id) {
-        perms.ensure(Permission::CalendarEventCreate)?;
+        perms.needs(Permission::CalendarEventCreate);
     } else {
-        perms.ensure(Permission::CalendarEventManage)?;
+        perms.needs(Permission::CalendarEventManage);
     }
+    perms.check()?;
 
     let updated_event = s
         .data()
@@ -212,8 +225,11 @@ async fn calendar_event_delete(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
 
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -225,10 +241,11 @@ async fn calendar_event_delete(
         return Err(ApiError::from_code(ErrorCode::UnknownCalendarEvent).into());
     }
     if event.creator_id == Some(auth.user.id) {
-        perms.ensure(Permission::CalendarEventCreate)?;
+        perms.needs(Permission::CalendarEventCreate);
     } else {
-        perms.ensure(Permission::CalendarEventManage)?;
+        perms.needs(Permission::CalendarEventManage);
     }
+    perms.check()?;
 
     s.data().calendar_event_delete(req.event_id).await?;
 
@@ -271,8 +288,11 @@ async fn calendar_event_rsvp_list(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
 
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -326,8 +346,11 @@ async fn calendar_event_rsvp_get(
     };
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
 
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -360,9 +383,12 @@ async fn calendar_event_rsvp_put(
     };
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-    perms.ensure(Permission::CalendarEventRsvp)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::CalendarEventRsvp)
+        .check()?;
 
     if auth.user.id != user_id {
         return Err(ApiError::from_code(ErrorCode::CannotRsvpOtherPeople).into());
@@ -440,13 +466,17 @@ async fn calendar_event_rsvp_delete(
 
     let srv = s.services();
 
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
     if auth.user.id != user_id {
-        perms.ensure(Permission::CalendarEventManage)?;
+        perms.needs(Permission::CalendarEventManage);
     } else {
-        perms.ensure(Permission::CalendarEventRsvp)?;
+        perms.needs(Permission::CalendarEventRsvp);
     }
+    perms.check()?;
 
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -499,8 +529,11 @@ async fn calendar_overwrite_list(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
 
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -525,8 +558,11 @@ async fn calendar_overwrite_get(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
 
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -555,9 +591,12 @@ async fn calendar_overwrite_update(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-    perms.ensure(Permission::CalendarEventManage)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::CalendarEventManage)
+        .check()?;
 
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -645,9 +684,12 @@ async fn calendar_overwrite_delete(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-    perms.ensure(Permission::CalendarEventManage)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::CalendarEventManage)
+        .check()?;
 
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -710,8 +752,11 @@ async fn calendar_overwrite_rsvp_list(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
 
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if !chan.ty.has_calendar() {
@@ -765,9 +810,13 @@ async fn calendar_overwrite_rsvp_put(
     };
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-    perms.ensure(Permission::CalendarEventRsvp)?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::ChannelView);
+    perms.needs(Permission::CalendarEventRsvp);
 
     if auth.user.id != user_id {
         return Err(ApiError::from_code(ErrorCode::CannotRsvpOtherPeople).into());
@@ -847,12 +896,16 @@ async fn calendar_overwrite_rsvp_delete(
 
     let srv = s.services();
 
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::ChannelView);
     if auth.user.id != user_id {
-        perms.ensure(Permission::CalendarEventManage)?;
+        perms.needs(Permission::CalendarEventManage);
     } else {
-        perms.ensure(Permission::CalendarEventRsvp)?;
+        perms.needs(Permission::CalendarEventRsvp);
     }
 
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;

@@ -26,8 +26,12 @@ async fn automod_rule_list(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::RoomEdit)?;
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::RoomEdit)
+        .check()?;
 
     let rules = s.data().automod_rule_list(req.room_id).await?;
     Ok(Json(rules))
@@ -45,8 +49,12 @@ async fn automod_rule_create(
     req.rule.validate()?;
 
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::RoomEdit)?;
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::RoomEdit)
+        .check()?;
 
     let rule = s
         .data()
@@ -85,8 +93,13 @@ async fn automod_rule_get(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::RoomEdit)?;
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::RoomEdit);
+    perms.check()?;
 
     let rule = s.data().automod_rule_get(req.rule_id).await?;
     if rule.room_id != req.room_id {
@@ -110,8 +123,12 @@ async fn automod_rule_update(
     req.rule.validate()?;
 
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::RoomEdit)?;
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::RoomEdit)
+        .check()?;
 
     let old = s.data().automod_rule_get(req.rule_id).await?;
     if old.room_id != req.room_id {
@@ -163,8 +180,12 @@ async fn automod_rule_delete(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::RoomEdit)?;
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::RoomEdit)
+        .check()?;
 
     let rule = s.data().automod_rule_get(req.rule_id).await?;
     if rule.room_id != req.room_id {
@@ -210,8 +231,12 @@ async fn automod_rule_test(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::RoomEdit)?;
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::RoomEdit)
+        .check()?;
 
     let result = srv
         .automod

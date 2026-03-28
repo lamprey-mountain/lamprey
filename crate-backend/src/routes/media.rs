@@ -14,7 +14,7 @@ use common::v2::types::media::{
 };
 use common::{
     v1::types::error::{ApiError, ErrorCode},
-    v1::types::{application::Scope, sync::MessageSync, Permission},
+    v1::types::{application::Scope, sync::MessageSync, Permission, SERVER_ROOM_ID},
 };
 use futures_util::StreamExt;
 use tokio::io::AsyncWriteExt;
@@ -27,6 +27,7 @@ use crate::types::MediaId;
 use crate::ServerState;
 
 use super::util::Auth;
+use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 /// Media create
 ///
@@ -403,7 +404,11 @@ async fn media_get(
 ) -> Result<impl IntoResponse> {
     let media = s.data().media_select(media_id).await?;
     if media.deleted_at.is_some() {
-        let perms = s.services().perms.for_server(auth.user.id).await?;
+        let perms = s
+            .services()
+            .perms
+            .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+            .await?;
         if !perms.has(Permission::Admin) {
             return Err(Error::ApiError(ApiError::from_code(
                 ErrorCode::UnknownMedia,
@@ -448,7 +453,11 @@ async fn media_check(
     }
     let media = s.data().media_select(media_id).await?;
     if media.deleted_at.is_some() {
-        let perms = s.services().perms.for_server(auth.user.id).await?;
+        let perms = s
+            .services()
+            .perms
+            .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+            .await?;
         if !perms.has(Permission::Admin) {
             return Err(Error::ApiError(ApiError::from_code(
                 ErrorCode::UnknownMedia,
@@ -537,8 +546,13 @@ async fn media_search(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_server(auth.user.id).await?;
-    perms.ensure(Permission::Admin)?;
+    let mut perms: Permissions2<CheckPermissions> = srv
+        .perms
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::Admin);
+    perms.check()?;
     Ok(Error::Unimplemented)
 }
 

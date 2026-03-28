@@ -30,6 +30,13 @@ async fn emoji_create(
     req.emoji.validate()?;
 
     let srv = s.services();
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::EmojiManage)
+        .check()?;
+
     let emoji = srv
         .emoji
         .create(req.room_id, &auth, req.emoji, req.idempotency_key)
@@ -48,6 +55,17 @@ async fn emoji_get(
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let emoji = data.emoji_get(req.emoji_id).await?;
+
+    // Check permission based on emoji ownership
+    if let Some(EmojiOwner::Room { room_id }) = emoji.owner {
+        s.services()
+            .perms
+            .for_room3(Some(auth.user.id), room_id)
+            .await?
+            .ensure_view()?
+            .check()?;
+    }
+
     Ok(Json(emoji))
 }
 
@@ -63,8 +81,12 @@ async fn emoji_delete(
     let srv = s.services();
     let data = s.data();
     let emoji = data.emoji_get(req.emoji_id).await?;
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::EmojiManage)?;
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::EmojiManage)
+        .check()?;
     data.emoji_delete(req.emoji_id).await?;
 
     let al = auth.audit_log(req.room_id);
@@ -102,9 +124,13 @@ async fn emoji_update(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
     let data = s.data();
-    perms.ensure(Permission::EmojiManage)?;
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::EmojiManage)
+        .check()?;
 
     let emoji_before = data.emoji_get(req.emoji_id).await?;
     if !req.patch.changes(&emoji_before) {
@@ -146,7 +172,11 @@ async fn emoji_list(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
-    let _perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .check()?;
 
     let emoji = data.emoji_list(req.room_id, req.pagination).await?;
     Ok(Json(emoji))
@@ -188,6 +218,12 @@ async fn emoji_lookup(
 
     match original_owner {
         Some(EmojiOwner::Room { room_id }) => {
+            s.services()
+                .perms
+                .for_room3(Some(auth.user.id), room_id)
+                .await?
+                .ensure_view()?
+                .check()?;
             if data.room_member_get(room_id, auth.user.id).await.is_ok() {
                 emoji.owner = original_owner;
                 emoji.creator_id = original_creator_id;

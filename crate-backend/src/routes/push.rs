@@ -10,7 +10,7 @@ use common::v1::types::push::PushInfo;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::types::PushData;
+use crate::types::{Permission, PushData};
 use crate::{routes2, Error, ServerState};
 
 use super::util::Auth;
@@ -25,6 +25,13 @@ async fn push_register(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
+    let srv = s.services();
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), common::v1::types::SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::Admin);
     let data = s.data();
 
     let push_data = PushData {
@@ -56,6 +63,13 @@ async fn push_delete(
     _req: routes::push_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
+    let srv = s.services();
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), common::v1::types::SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::Admin);
     s.data().push_delete(auth.session.id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -68,6 +82,13 @@ async fn push_get(
     _req: routes::push_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
+    let srv = s.services();
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), common::v1::types::SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::Admin);
     let data = s.data();
     let push = data.push_get(auth.session.id).await?;
     let config_internal = data

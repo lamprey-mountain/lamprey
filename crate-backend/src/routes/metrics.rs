@@ -23,12 +23,14 @@ pub async fn get_metrics(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let perms = s
+    let mut perms = s
         .services()
         .perms
-        .for_room(auth.user.id, SERVER_ROOM_ID)
-        .await?;
-    perms.ensure(Permission::ServerMetrics)?;
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::ServerMetrics);
+    perms.check()?;
 
     let metrics = s.data().get_metrics().await?;
 

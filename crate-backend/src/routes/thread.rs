@@ -31,12 +31,12 @@ async fn thread_member_list(
     req: routes::thread_member_list::Request,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
-    let perms = s
-        .services()
+    s.services()
         .perms
-        .for_channel(auth.user.id, req.thread_id)
-        .await?;
-    perms.ensure(Permission::ChannelView)?;
+        .for_channel3(Some(auth.user.id), req.thread_id)
+        .await?
+        .ensure_view()?
+        .check()?;
     let res = d.thread_member_list(req.thread_id, req.pagination).await?;
     Ok(Json(res))
 }
@@ -53,12 +53,12 @@ async fn thread_member_get(
         UserIdReq::UserId(id) => id,
     };
     let d = s.data();
-    let perms = s
-        .services()
+    s.services()
         .perms
-        .for_channel(auth.user.id, req.thread_id)
-        .await?;
-    perms.ensure(Permission::ChannelView)?;
+        .for_channel3(Some(auth.user.id), req.thread_id)
+        .await?
+        .ensure_view()?
+        .check()?;
     let res = d.thread_member_get(req.thread_id, target_user_id).await?;
     Ok(Json(res))
 }
@@ -78,20 +78,24 @@ async fn thread_member_add(
     };
     let d = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.thread_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.thread_id)
+        .await?
+        .ensure_view()?;
     let thread = srv.channels.get(req.thread_id, Some(auth.user.id)).await?;
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
     if target_user_id != auth.user.id {
         if !thread.invitable {
-            perms.ensure(Permission::MemberKick)?;
+            perms.needs(Permission::MemberKick);
         }
     }
     if !thread.ty.has_members() {
         return Err(ApiError::from_code(ErrorCode::CannotEditThreadMemberList).into());
     }
-    perms.ensure_unlocked()?;
+    perms.needs_unlocked();
+    perms.check()?;
 
     if thread.ty == ChannelType::Gdm {
         let is_joining = d
@@ -194,19 +198,23 @@ async fn thread_member_delete(
     };
     let d = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.thread_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.thread_id)
+        .await?
+        .ensure_view()?;
     let thread = srv.channels.get(req.thread_id, Some(auth.user.id)).await?;
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
     if target_user_id != auth.user.id {
-        perms.ensure(Permission::MemberKick)?;
+        perms.needs(Permission::MemberKick);
     }
 
     if !thread.ty.has_members() {
         return Err(ApiError::from_code(ErrorCode::CannotEditThreadMemberList).into());
     }
-    perms.ensure_unlocked()?;
+    perms.needs_unlocked();
+    perms.check()?;
 
     d.thread_member_leave(req.thread_id, target_user_id).await?;
 
@@ -277,8 +285,13 @@ async fn thread_list(
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::ChannelView);
+    perms.check()?;
 
     let include_all = perms.has(Permission::ThreadManage);
     let mut res = data
@@ -302,8 +315,13 @@ async fn thread_list_archived(
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::ChannelView);
+    perms.check()?;
 
     let include_all = perms.has(Permission::ThreadManage);
     let mut res = data
@@ -327,8 +345,13 @@ async fn thread_list_removed(
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ThreadManage)?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::ThreadManage);
+    perms.check()?;
 
     let mut res = data
         .thread_list_removed(auth.user.id, req.pagination, req.channel_id, true)
@@ -423,7 +446,6 @@ async fn thread_list_room(
     let srv = s.services();
     let user_id = auth.user.id;
 
-    let _perms = srv.perms.for_room(user_id, req.room_id).await?;
     let snapshot = srv.cache.load_room(req.room_id, false).await?;
 
     let mut filtered_thread_ids = vec![];
@@ -432,7 +454,7 @@ async fn thread_list_room(
         let thread_channel = &thread.thread;
         let thread_id = thread_channel.id;
 
-        let perms = srv.perms.for_channel(user_id, thread_id).await?;
+        let perms = srv.perms.for_channel3(Some(user_id), thread_id).await?;
         let can_view = if thread_channel.ty == ChannelType::ThreadPublic {
             perms.has(Permission::ChannelView)
         } else {
@@ -463,8 +485,11 @@ async fn thread_activity(
 
     let srv = s.services();
 
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
 
     let res = srv
         .messages
@@ -484,14 +509,18 @@ async fn channel_member_search(
     let _d = s.data();
     let srv = s.services();
 
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
 
     let chan = srv.channels.get(req.channel_id, None).await?;
 
     if chan.room_id == Some(SERVER_ROOM_ID) {
-        perms.ensure(Permission::ServerOversee)?;
+        perms.needs(Permission::ServerOversee);
     }
+    perms.check()?;
 
     let _limit = req.search.limit.unwrap_or(10).min(100);
 

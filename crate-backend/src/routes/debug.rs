@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::types::SERVER_ROOM_ID;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::application::Scope;
@@ -433,25 +434,26 @@ async fn debug_test_permissions(
     auth.user.ensure_unsuspended()?;
 
     // check that the user has permissions for the room
-    let _ = s
-        .services()
+    s.services()
         .perms
-        .for_room(auth.user.id, json.room_id)
-        .await?;
+        .for_room3(Some(auth.user.id), json.room_id)
+        .await?
+        .ensure_view()?
+        .check()?;
 
     let permissions = if let Some(channel_id) = json.channel_id {
         s.services()
             .perms
-            .for_channel(json.user_id, channel_id)
+            .for_channel3(Some(json.user_id), channel_id)
             .await?
     } else {
         s.services()
             .perms
-            .for_room(json.user_id, json.room_id)
+            .for_room3(Some(json.user_id), json.room_id)
             .await?
     };
 
-    let mut permissions_vec: Vec<Permission> = permissions.into_iter().collect();
+    let mut permissions_vec: Vec<Permission> = permissions.bits.to_vec();
     permissions_vec.sort();
 
     let response = TestPermissionsResponse {
@@ -548,8 +550,13 @@ async fn debug_health() -> Result<impl IntoResponse> {
 async fn debug_ready(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Auth])?;
     let srv = s.services();
-    let perms = srv.perms.for_server(auth.user.id).await?;
-    perms.ensure(Permission::Admin)?;
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::Admin);
+    perms.check()?;
 
     let database_ok = s.data().check_database().await.is_ok();
 
@@ -594,8 +601,13 @@ async fn debug_ready(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<im
 async fn debug_doctor(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Auth])?;
     let srv = s.services();
-    let perms = srv.perms.for_server(auth.user.id).await?;
-    perms.ensure(Permission::Admin)?;
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::Admin);
+    perms.check()?;
 
     Ok(Json(CheckDoctorResponse {
         ok: true,

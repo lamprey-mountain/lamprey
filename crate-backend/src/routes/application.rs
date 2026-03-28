@@ -37,9 +37,11 @@ async fn app_create(
 
     let srv = s.services();
     srv.perms
-        .for_server(auth.user.id)
+        .for_room3(Some(auth.user.id), common::v1::types::SERVER_ROOM_ID)
         .await?
-        .ensure(Permission::ApplicationCreate)?;
+        .ensure_view()?
+        .needs(Permission::ApplicationCreate)
+        .check()?;
 
     let al = auth.audit_log(auth.user.id.into_inner().into());
     let json = req.application;
@@ -285,8 +287,12 @@ async fn app_invite_bot(
     }
 
     let srv = s.services();
-    let perms = srv.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::IntegrationsManage)?;
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::IntegrationsManage)
+        .check()?;
 
     let bot_user_id: UserId = app.id.into_inner().into();
 

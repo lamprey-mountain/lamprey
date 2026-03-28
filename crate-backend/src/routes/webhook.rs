@@ -26,6 +26,7 @@ use crate::{
     types::{ChannelId, RoomId},
     ServerState,
 };
+use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 mod discord;
 mod github;
@@ -83,12 +84,13 @@ async fn webhook_list_channel(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
     let chan = srv.channels.get(channel_id, None).await?;
-    let _room_id = chan
-        .room_id
-        .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
-    perms.ensure(Permission::IntegrationsManage)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::IntegrationsManage)
+        .check()?;
 
     chan.ensure_has_text()?;
 
@@ -120,8 +122,14 @@ async fn webhook_list_room(
     Query(pagination): Query<PaginationQuery<WebhookId>>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
-    perms.ensure(Permission::IntegrationsManage)?;
+    let mut perms: Permissions2<CheckPermissions> = s
+        .services()
+        .perms
+        .for_room3(Some(auth.user.id), room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::IntegrationsManage);
+    perms.check()?;
 
     let webhooks = s.data().webhook_list_room(room_id, pagination).await?;
 
@@ -147,15 +155,16 @@ async fn webhook_get(
     let webhook = s.data().webhook_get(webhook_id).await?;
 
     let srv = s.services();
-    let perms = srv
-        .perms
-        .for_channel(auth.user.id, webhook.channel_id)
-        .await?;
     let chan = srv.channels.get(webhook.channel_id, None).await?;
     let _room_id = chan
         .room_id
         .ok_or(ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
-    perms.ensure(Permission::IntegrationsManage)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), webhook.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::IntegrationsManage)
+        .check()?;
 
     chan.ensure_has_text()?;
 
@@ -204,12 +213,17 @@ async fn webhook_delete(
     let srv = s.services();
     let webhook = s.data().webhook_get(webhook_id).await?;
     let channel_id = webhook.channel_id;
-    let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+    let mut perms: Permissions2<CheckPermissions> = srv
+        .perms
+        .for_channel3(Some(auth.user.id), channel_id)
+        .await?
+        .ensure_view()?;
     let chan = srv.channels.get(channel_id, None).await?;
     let room_id = chan
         .room_id
         .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
-    perms.ensure(Permission::IntegrationsManage)?;
+    perms.needs(Permission::IntegrationsManage);
+    perms.check()?;
 
     chan.ensure_has_text()?;
 
@@ -283,8 +297,14 @@ async fn webhook_update(
     let room_id = before_webhook
         .room_id
         .ok_or_else(|| ApiError::from_code(ErrorCode::WebhookNotInRoom))?;
-    let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
-    perms.ensure(Permission::IntegrationsManage)?;
+    let mut perms: Permissions2<CheckPermissions> = s
+        .services()
+        .perms
+        .for_room3(Some(auth.user.id), room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::IntegrationsManage);
+    perms.check()?;
 
     let updated_webhook = s.data().webhook_update(webhook_id, json.clone()).await?;
 

@@ -15,6 +15,7 @@ use utoipa_axum::router::OpenApiRouter;
 use crate::error::Result;
 use crate::routes::util::Auth;
 use crate::{routes2, ServerState};
+use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 /// Permission overwrite
 #[handler(routes::permission_set)]
@@ -34,16 +35,20 @@ async fn permission_set(
     }
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-    perms.ensure(Permission::RoleManage)?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::ChannelView);
+    perms.needs(Permission::RoleManage);
     let channel = srv.channels.get(req.channel_id, None).await?;
     if channel.is_thread() {
         return Err(ApiError::from_code(ErrorCode::CannotSetPermissionsOnThisChannelType).into());
     }
     channel.ensure_unarchived()?;
     channel.ensure_unremoved()?;
-    perms.ensure_unlocked()?;
+    perms.needs_unlocked();
 
     if let Some(room_id) = channel.room_id {
         let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
@@ -87,20 +92,21 @@ async fn permission_set(
         let jd: HashSet<Permission> = req.overwrite.deny.iter().cloned().collect();
 
         for p in ea.symmetric_difference(&ja) {
-            perms.ensure(*p)?;
+            perms.needs(*p);
         }
 
         for p in ed.symmetric_difference(&jd) {
-            perms.ensure(*p)?;
+            perms.needs(*p);
         }
     } else {
         for p in &req.overwrite.allow {
-            perms.ensure(*p)?;
+            perms.needs(*p);
         }
         for p in &req.overwrite.deny {
-            perms.ensure(*p)?;
+            perms.needs(*p);
         }
     }
+    perms.check()?;
 
     srv.perms
         .permission_overwrite_upsert(
@@ -169,14 +175,18 @@ async fn permission_remove(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-    perms.ensure(Permission::RoleManage)?;
+    let mut perms: Permissions2<CheckPermissions> = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::ChannelView);
+    perms.needs(Permission::RoleManage);
 
     let channel = srv.channels.get(req.channel_id, None).await?;
     channel.ensure_unarchived()?;
     channel.ensure_unremoved()?;
-    perms.ensure_unlocked()?;
+    perms.needs_unlocked();
 
     let existing = if let Some(existing) = channel
         .permission_overwrites
@@ -210,11 +220,12 @@ async fn permission_remove(
         }
 
         for p in &existing.allow {
-            perms.ensure(*p)?;
+            perms.needs(*p);
         }
         for p in &existing.deny {
-            perms.ensure(*p)?;
+            perms.needs(*p);
         }
+        perms.check()?;
         existing
     } else {
         return Ok(StatusCode::NO_CONTENT.into_response());

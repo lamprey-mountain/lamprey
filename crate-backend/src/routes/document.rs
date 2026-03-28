@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use axum::body::Bytes;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
@@ -8,9 +7,7 @@ use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::document::serialized::Serdoc;
-use common::v1::types::document::{
-    DocumentBranchState, DocumentRevisionId, DocumentTagPatch, HistoryPagination,
-};
+use common::v1::types::document::{DocumentBranchState, DocumentRevisionId, HistoryPagination};
 use common::v1::types::{MessageSync, Permission};
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
@@ -31,8 +28,12 @@ async fn wiki_history(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelView)
+        .check()?;
 
     let summary = srv
         .documents
@@ -73,8 +74,12 @@ async fn document_branch_list(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelView)
+        .check()?;
 
     let branches = data
         .document_branch_paginate(req.channel_id, auth.user.id, req.query, req.pagination)
@@ -94,8 +99,12 @@ async fn document_branch_get(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelView)
+        .check()?;
 
     let branch = data
         .document_branch_get(req.channel_id, req.branch_id)
@@ -125,8 +134,12 @@ async fn document_branch_update(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::DocumentEdit)?;
+    let perms = &srv.perms;
+    let mut perms = perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::DocumentEdit);
 
     let branch_before = data
         .document_branch_get(req.channel_id, req.branch_id)
@@ -140,8 +153,9 @@ async fn document_branch_update(
                 ),
             ));
         }
-        perms.ensure(Permission::ThreadManage)?;
+        perms.needs(Permission::ThreadManage);
     }
+    perms.check()?;
 
     data.document_branch_update(req.channel_id, req.branch_id, req.patch)
         .await?;
@@ -170,8 +184,12 @@ async fn document_branch_close(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::DocumentEdit)?;
+    let perms = &srv.perms;
+    let mut perms = perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::DocumentEdit);
 
     let branch = data
         .document_branch_get(req.channel_id, req.branch_id)
@@ -193,8 +211,9 @@ async fn document_branch_close(
                 ),
             ));
         }
-        perms.ensure(Permission::ThreadManage)?;
+        perms.needs(Permission::ThreadManage);
     }
+    perms.check()?;
 
     data.document_branch_set_state(req.channel_id, req.branch_id, DocumentBranchState::Closed)
         .await?;
@@ -225,9 +244,13 @@ async fn document_branch_fork(
     let data = s.data();
     let user_id = auth.user.id;
 
-    let perms = srv.perms.for_channel(user_id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-    perms.ensure(Permission::DocumentEdit)?;
+    let perms = &srv.perms;
+    let mut perms = perms
+        .for_channel3(Some(user_id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::ChannelView);
+    perms.needs(Permission::DocumentEdit);
 
     let parent_branch = data
         .document_branch_get(req.channel_id, req.parent_id)
@@ -277,8 +300,12 @@ async fn document_branch_merge(
     let data = s.data();
     let user_id = auth.user.id;
 
-    let perms = srv.perms.for_channel(user_id, req.channel_id).await?;
-    perms.ensure(Permission::DocumentEdit)?;
+    let perms = &srv.perms;
+    let mut perms = perms
+        .for_channel3(Some(user_id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::DocumentEdit);
 
     let branch = data
         .document_branch_get(req.channel_id, req.branch_id)
@@ -293,7 +320,7 @@ async fn document_branch_merge(
     }
 
     if branch.creator_id != user_id {
-        perms.ensure(Permission::ThreadManage)?;
+        perms.needs(Permission::ThreadManage);
     }
 
     if branch.default {
@@ -365,8 +392,12 @@ async fn document_tag_create(
     let data = s.data();
     let srv = s.services();
 
-    let perms = srv.perms.for_channel(user_id, req.channel_id).await?;
-    perms.ensure(Permission::DocumentEdit)?;
+    let perms = &srv.perms;
+    let mut perms = perms
+        .for_channel3(Some(user_id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::DocumentEdit);
 
     let (branch_id, revision_seq) = match req.tag.revision {
         common::v1::types::document::DocumentRevisionId::Branch { branch_id: _ } => {
@@ -426,8 +457,11 @@ async fn document_tag_list(
     let data = s.data();
     let srv = s.services();
 
-    let perms = srv.perms.for_channel(user_id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(user_id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
 
     let tags = data
         .document_tag_list_by_document(req.channel_id, user_id)
@@ -446,8 +480,11 @@ async fn document_tag_get(
     let user_id = auth.user.id;
     let srv = s.services();
 
-    let perms = srv.perms.for_channel(user_id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(user_id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
 
     let data = s.data();
     let tag = data.document_tag_get(req.tag_id).await?;
@@ -480,8 +517,12 @@ async fn document_tag_update(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_channel(user_id, req.channel_id).await?;
-    perms.ensure(Permission::DocumentEdit)?;
+    let perms = &srv.perms;
+    let mut perms = perms
+        .for_channel3(Some(user_id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::DocumentEdit);
 
     let tag = data.document_tag_get(req.tag_id).await?;
 
@@ -497,8 +538,10 @@ async fn document_tag_update(
     }
 
     if tag.creator_id != Some(user_id) {
-        perms.ensure(Permission::ThreadManage)?;
+        perms.needs(Permission::ThreadManage);
     }
+
+    perms.check()?;
 
     data.document_tag_update(req.tag_id, req.tag.summary, req.tag.description)
         .await?;
@@ -527,8 +570,12 @@ async fn document_tag_delete(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_channel(user_id, req.channel_id).await?;
-    perms.ensure(Permission::DocumentEdit)?;
+    let perms = &srv.perms;
+    let mut perms = perms
+        .for_channel3(Some(user_id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::DocumentEdit);
 
     let tag = data.document_tag_get(req.tag_id).await?;
 
@@ -544,8 +591,10 @@ async fn document_tag_delete(
     }
 
     if tag.creator_id != Some(user_id) {
-        perms.ensure(Permission::ThreadManage)?;
+        perms.needs(Permission::ThreadManage);
     }
+
+    perms.check()?;
 
     let branch_id = tag.branch_id;
 
@@ -571,8 +620,12 @@ async fn document_history(
     let srv = s.services();
     let data = s.data();
 
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelView)
+        .check()?;
 
     let branch = data
         .document_branch_get(req.channel_id, req.branch_id)
@@ -623,8 +676,12 @@ async fn document_crdt_diff(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelView)
+        .check()?;
 
     let branch = data
         .document_branch_get(req.channel_id, req.branch_id)
@@ -661,8 +718,12 @@ async fn document_crdt_apply(
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::DocumentEdit)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::DocumentEdit)
+        .check()?;
 
     let branch = data
         .document_branch_get(req.channel_id, req.branch_id)
@@ -698,8 +759,12 @@ async fn document_content_get(
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelView)
+        .check()?;
 
     let (branch_id, seq) = match req.revision_id {
         DocumentRevisionId::Branch { branch_id } => (branch_id, None),
@@ -746,8 +811,12 @@ async fn document_content_put(
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
     let data = s.data();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::DocumentEdit)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::DocumentEdit)
+        .check()?;
 
     let branch = data
         .document_branch_get(req.channel_id, req.branch_id)

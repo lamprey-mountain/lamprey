@@ -92,6 +92,17 @@ impl ServicePermissions {
         Ok(perms2.into())
     }
 
+    /// calculate the permissions a user has in a room, returning Permissions2<CheckVisibility>
+    pub async fn for_room3(
+        &self,
+        user_id: Option<UserId>,
+        room_id: RoomId,
+    ) -> Result<Permissions2<CheckVisibility>> {
+        let srv = self.state.services();
+        let calc = srv.cache.permissions(room_id, true).await?;
+        Ok(calc.query2(user_id, None)?)
+    }
+
     /// calculate the permissions a user has on this server
     pub async fn for_server(&self, user_id: UserId) -> Result<Permissions> {
         self.for_room(user_id, SERVER_ROOM_ID).await
@@ -320,6 +331,31 @@ impl ServicePermissions {
         let mut p = Permissions::builder();
         p.perms = perms;
         Ok(p.build())
+    }
+
+    /// Get default room permissions for the new system
+    pub async fn default_for_room3(
+        &self,
+        room_id: RoomId,
+    ) -> Result<Permissions2<CheckVisibility>> {
+        let data = self.state.data();
+
+        let everyone_role_id = room_id.into_inner().into();
+        let role = data.role_select(room_id, everyone_role_id).await?;
+        use lamprey_backend_core::types::permission::{
+            CheckVisibility, PermissionBits, Permissions2,
+        };
+        let mut bits = PermissionBits::default();
+        bits.add_all(role.allow.into());
+        bits.remove_all(role.deny.into());
+
+        Ok(Permissions2 {
+            visible: true,
+            context: ResourceContext::Room(room_id),
+            bits,
+            metadata: Default::default(),
+            state: CheckVisibility::default(),
+        })
     }
 
     /// Check if target user allows DMs from source user

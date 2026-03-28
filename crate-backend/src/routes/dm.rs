@@ -32,18 +32,17 @@ async fn dm_init(
     let data = s.data();
 
     srv.perms
-        .for_server(auth.user.id)
+        .for_room3(Some(auth.user.id), crate::types::SERVER_ROOM_ID)
         .await?
-        .ensure(Permission::DmCreate)?;
+        .ensure_view()?
+        .needs(Permission::DmCreate)
+        .check()?;
 
     // you can't dm webhooks
     let target_user = data.user_get(req.target_id).await?;
     if !target_user.can_dm() {
         return Err(ApiError::from_code(ErrorCode::CannotDmThisUser).into());
     }
-
-    let perms = srv.perms.for_server(auth.user.id).await?;
-    perms.ensure(Permission::DmCreate)?;
 
     let target_allows_dms = srv
         .perms

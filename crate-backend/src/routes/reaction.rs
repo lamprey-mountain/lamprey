@@ -28,8 +28,11 @@ async fn reaction_list(
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
     let list = data
         .reaction_list(
             req.channel_id,
@@ -59,9 +62,13 @@ async fn reaction_add(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-    perms.ensure(Permission::ReactionAdd)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs_unlocked()
+        .needs(Permission::ReactionAdd)
+        .check()?;
 
     if auth.user.id != user_id {
         return Err(ApiError::from_code(ErrorCode::CannotActOnBehalfOfOthers).into());
@@ -74,7 +81,6 @@ async fn reaction_add(
         .await?;
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
-    perms.ensure_unlocked()?;
 
     let data = s.data();
     data.reaction_put(
@@ -124,13 +130,20 @@ async fn reaction_remove(
     };
 
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs_unlocked();
+
     if auth.user.id == user_id {
-        perms.ensure(Permission::ReactionAdd)?;
+        perms.needs(Permission::ReactionAdd);
     } else {
-        perms.ensure(Permission::ReactionManage)?;
+        perms.needs(Permission::ReactionManage);
     }
+
+    perms.check()?;
 
     let chan = s
         .services()
@@ -139,7 +152,6 @@ async fn reaction_remove(
         .await?;
     chan.ensure_unarchived()?;
     chan.ensure_unremoved()?;
-    perms.ensure_unlocked()?;
 
     let data = s.data();
     data.reaction_delete(
@@ -197,14 +209,18 @@ async fn reaction_remove_emoji(
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-    perms.ensure(Permission::ReactionManage)?;
+
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs_unlocked()
+        .needs(Permission::ReactionManage)
+        .check()?;
 
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     chan.ensure_unarchived()?;
     chan.ensure_unremoved()?;
-    perms.ensure_unlocked()?;
 
     data.reaction_delete_key(req.channel_id, req.message_id, req.reaction_key.clone())
         .await?;
@@ -254,14 +270,18 @@ async fn reaction_remove_all(
     auth.ensure_scopes(&[Scope::Full])?;
     let data = s.data();
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-    perms.ensure(Permission::ReactionManage)?;
+
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs_unlocked()
+        .needs(Permission::ReactionManage)
+        .check()?;
 
     let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
-    perms.ensure_unlocked()?;
 
     data.reaction_delete_all(req.channel_id, req.message_id)
         .await?;

@@ -25,6 +25,7 @@ use crate::routes::auth::fetch_auth_state;
 use crate::{routes2, Error, ServerState};
 
 use super::util::Auth;
+use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 /// Invite delete
 #[handler(routes::invite_delete)]
@@ -42,111 +43,130 @@ async fn invite_delete(
             room,
             channel,
             roles,
-        } => (
-            s.services()
+        } => {
+            let has_perm = s
+                .services()
                 .perms
-                .for_room(auth.user.id, room.id)
+                .for_room3(Some(auth.user.id), room.id)
                 .await?
-                .has(Permission::InviteManage),
-            InviteTargetId::Room {
-                room_id: room.id,
-                channel_id: channel.as_ref().map(|t| t.id),
-                role_ids: roles.iter().map(|r| r.id).collect(),
-            },
-        ),
-        InviteTarget::Gdm { channel } => (
-            s.services()
+                .ensure_view()?
+                .needs(Permission::InviteManage)
+                .check()
+                .is_ok();
+            (
+                has_perm,
+                InviteTargetId::Room {
+                    room_id: room.id,
+                    channel_id: channel.as_ref().map(|t| t.id),
+                    role_ids: roles.iter().map(|r| r.id).collect(),
+                },
+            )
+        }
+        InviteTarget::Gdm { channel } => {
+            let has_perm = s
+                .services()
                 .perms
-                .for_channel(auth.user.id, channel.id)
+                .for_channel3(Some(auth.user.id), channel.id)
                 .await?
-                .has(Permission::InviteManage),
-            InviteTargetId::Gdm {
-                channel_id: channel.id,
-            },
-        ),
-        InviteTarget::Server => (
-            s.services()
+                .ensure_view()?
+                .needs(Permission::InviteManage)
+                .check()
+                .is_ok();
+            (
+                has_perm,
+                InviteTargetId::Gdm {
+                    channel_id: channel.id,
+                },
+            )
+        }
+        InviteTarget::Server => {
+            let has_perm = s
+                .services()
                 .perms
-                .for_server(auth.user.id)
+                .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
                 .await?
-                .has(Permission::InviteManage),
-            InviteTargetId::Server,
-        ),
+                .ensure_view()?
+                .needs(Permission::InviteManage)
+                .check()
+                .is_ok();
+            (has_perm, InviteTargetId::Server)
+        }
         InviteTarget::User { user } => (false, InviteTargetId::User { user_id: user.id }),
     };
     let can_delete = auth.user.id == invite.invite.creator_id || has_perm;
-    if can_delete {
-        d.invite_delete(req.invite_code.clone()).await?;
-        let room_id = match id_target {
-            InviteTargetId::Room { room_id, .. } => Some(room_id),
-            InviteTargetId::Gdm { .. } => None,
-            InviteTargetId::Server => Some(SERVER_ROOM_ID),
-            InviteTargetId::User { user_id } => Some((*user_id).into()),
+    if !can_delete {
+        return Err(Error::MissingPermissions);
+    }
+    d.invite_delete(req.invite_code.clone()).await?;
+    let room_id = match id_target {
+        InviteTargetId::Room { room_id, .. } => Some(room_id),
+        InviteTargetId::Gdm { .. } => None,
+        InviteTargetId::Server => Some(SERVER_ROOM_ID),
+        InviteTargetId::User { user_id } => Some((*user_id).into()),
+    };
+    if let Some(room_id) = room_id {
+        let role_ids = match &invite.invite.target {
+            InviteTarget::Room { roles, .. } => {
+                Some(roles.iter().map(|r| r.id).collect::<Vec<_>>())
+            }
+            _ => None,
         };
-        if let Some(room_id) = room_id {
-            let role_ids = match &invite.invite.target {
-                InviteTarget::Room { roles, .. } => {
-                    Some(roles.iter().map(|r| r.id).collect::<Vec<_>>())
-                }
-                _ => None,
-            };
 
-            let al = auth.audit_log(room_id);
-            al.commit_success(AuditLogEntryType::InviteDelete {
-                code: req.invite_code.clone(),
-                changes: Changes::new()
-                    .remove("description", &invite.invite.description)
-                    .remove("role_ids", &role_ids)
-                    .build(),
-            })
-            .await?;
-        }
-        match id_target {
-            InviteTargetId::Room { room_id, .. } => {
-                s.broadcast_room(
-                    room_id,
-                    auth.user.id,
-                    MessageSync::InviteDelete {
-                        code: req.invite_code,
-                        target: id_target,
-                        creator_id: invite.invite.creator_id,
-                    },
-                )
-                .await?;
-            }
-            InviteTargetId::Gdm { channel_id } => {
-                s.broadcast_channel(
-                    channel_id,
-                    auth.user.id,
-                    MessageSync::InviteDelete {
-                        code: req.invite_code,
-                        target: id_target,
-                        creator_id: invite.invite.creator_id,
-                    },
-                )
-                .await?;
-            }
-            InviteTargetId::Server => {
-                s.broadcast_room(
-                    SERVER_ROOM_ID,
-                    auth.user.id,
-                    MessageSync::InviteDelete {
-                        code: req.invite_code,
-                        target: id_target,
-                        creator_id: invite.invite.creator_id,
-                    },
-                )
-                .await?;
-            }
-            InviteTargetId::User { .. } => {
-                s.broadcast(MessageSync::InviteDelete {
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::InviteDelete {
+            code: req.invite_code.clone(),
+            changes: Changes::new()
+                .remove("description", &invite.invite.description)
+                .remove("role_ids", &role_ids)
+                .build(),
+        })
+        .await?;
+    }
+    match id_target {
+        InviteTargetId::Room { room_id, .. } => {
+            s.broadcast_room(
+                room_id,
+                auth.user.id,
+                MessageSync::InviteDelete {
                     code: req.invite_code,
                     target: id_target,
                     creator_id: invite.invite.creator_id,
-                })?;
-            }
-        };
-    }
+                },
+            )
+            .await?;
+        }
+        InviteTargetId::Gdm { channel_id } => {
+            s.broadcast_channel(
+                channel_id,
+                auth.user.id,
+                MessageSync::InviteDelete {
+                    code: req.invite_code,
+                    target: id_target,
+                    creator_id: invite.invite.creator_id,
+                },
+            )
+            .await?;
+        }
+        InviteTargetId::Server => {
+            s.broadcast_room(
+                SERVER_ROOM_ID,
+                auth.user.id,
+                MessageSync::InviteDelete {
+                    code: req.invite_code,
+                    target: id_target,
+                    creator_id: invite.invite.creator_id,
+                },
+            )
+            .await?;
+        }
+        InviteTargetId::User { .. } => {
+            s.broadcast(MessageSync::InviteDelete {
+                code: req.invite_code,
+                target: id_target,
+                creator_id: invite.invite.creator_id,
+            })?;
+        }
+    };
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -165,18 +185,30 @@ async fn invite_resolve(
         return Ok(Json(invite).into_response());
     }
     let should_strip = match &invite.invite.target {
-        InviteTarget::Room { room, .. } => {
-            let perms = s.perms.for_room(auth.user.id, room.id).await?;
-            !perms.has(Permission::InviteManage)
-        }
-        InviteTarget::Gdm { channel } => {
-            let perms = s.perms.for_channel(auth.user.id, channel.id).await?;
-            !perms.has(Permission::InviteManage)
-        }
-        InviteTarget::Server => {
-            let perms = s.perms.for_server(auth.user.id).await?;
-            !perms.has(Permission::InviteManage)
-        }
+        InviteTarget::Room { room, .. } => s
+            .perms
+            .for_room3(Some(auth.user.id), room.id)
+            .await?
+            .ensure_view()?
+            .needs(Permission::InviteManage)
+            .check()
+            .is_err(),
+        InviteTarget::Gdm { channel } => s
+            .perms
+            .for_channel3(Some(auth.user.id), channel.id)
+            .await?
+            .ensure_view()?
+            .needs(Permission::InviteManage)
+            .check()
+            .is_err(),
+        InviteTarget::Server => s
+            .perms
+            .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+            .await?
+            .ensure_view()?
+            .needs(Permission::InviteManage)
+            .check()
+            .is_err(),
         InviteTarget::User { user: _ } => auth.user.id != invite.invite.creator_id,
     };
     if should_strip {
@@ -213,8 +245,13 @@ async fn invite_use(
     }
     match &invite.invite.target {
         InviteTarget::Room { room, roles, .. } => {
-            let perms = srv.perms.for_server(auth.user.id).await?;
-            perms.ensure(Permission::RoomJoin)?;
+            let mut perms: Permissions2<CheckPermissions> = srv
+                .perms
+                .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+                .await?
+                .ensure_view()?;
+            perms.needs(Permission::RoomJoin);
+            perms.check()?;
 
             if let Ok(ban) = d.room_ban_get(room.id, auth.user.id).await {
                 if let Some(expires_at) = ban.expires_at {
@@ -297,8 +334,13 @@ async fn invite_use(
             }
         }
         InviteTarget::Gdm { channel } => {
-            let perms = srv.perms.for_server(auth.user.id).await?;
-            perms.ensure(Permission::RoomJoin)?;
+            let mut perms: Permissions2<CheckPermissions> = srv
+                .perms
+                .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+                .await?
+                .ensure_view()?;
+            perms.needs(Permission::RoomJoin);
+            perms.check()?;
 
             d.thread_member_put(channel.id, auth.user.id, Default::default())
                 .await?;
@@ -405,8 +447,14 @@ async fn invite_room_create(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let d = s.data();
-    let perms = s.services.perms.for_room(auth.user.id, req.room_id).await?;
-    perms.ensure(Permission::InviteCreate)?;
+    let mut perms: Permissions2<CheckPermissions> = s
+        .services
+        .perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::InviteCreate);
+    perms.check()?;
 
     if req.room_id == SERVER_ROOM_ID {
         return Err(ApiError::from_code(ErrorCode::CannotCreateInviteForServerRoom).into());
@@ -414,7 +462,7 @@ async fn invite_room_create(
 
     if let Some(role_ids) = &req.invite.role_ids {
         if !role_ids.is_empty() {
-            perms.ensure(Permission::RoleApply)?;
+            perms.needs(Permission::RoleApply);
             let rank = s
                 .services()
                 .perms
@@ -489,14 +537,22 @@ async fn invite_room_list(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
-    let perms = s.services.perms.for_room(auth.user.id, req.room_id).await?;
+    let has_manage = s
+        .services
+        .perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::InviteManage)
+        .check()
+        .is_ok();
 
     let res = d.invite_list_room(req.room_id, req.pagination).await?;
     let items: Vec<_> = res
         .items
         .into_iter()
         .map(|i| {
-            if i.invite.creator_id != auth.user.id && !perms.has(Permission::InviteManage) {
+            if i.invite.creator_id != auth.user.id && !has_manage {
                 InviteWithPotentialMetadata::Invite(i.strip_metadata())
             } else {
                 InviteWithPotentialMetadata::InviteWithMetadata(i)
@@ -537,8 +593,14 @@ async fn invite_channel_create(
         // anyone can create invites for a gdm
         None
     } else if let Some(room_id) = channel.room_id {
-        let perms = s.services.perms.for_room(auth.user.id, room_id).await?;
-        perms.ensure(Permission::InviteCreate)?;
+        let mut perms: Permissions2<CheckPermissions> = s
+            .services
+            .perms
+            .for_room3(Some(auth.user.id), room_id)
+            .await?
+            .ensure_view()?;
+        perms.needs(Permission::InviteCreate);
+        perms.check()?;
         Some(room_id)
     } else {
         return Err(ApiError::from_code(ErrorCode::ChannelNotInRoomOrGdm).into());
@@ -552,8 +614,14 @@ async fn invite_channel_create(
     if let Some(role_ids) = &req.invite.role_ids {
         if !role_ids.is_empty() {
             if let Some(room_id) = room_id {
-                let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
-                perms.ensure(Permission::RoleApply)?;
+                let mut perms: Permissions2<CheckPermissions> = s
+                    .services()
+                    .perms
+                    .for_room3(Some(auth.user.id), room_id)
+                    .await?
+                    .ensure_view()?;
+                perms.needs(Permission::RoleApply);
+                perms.check()?;
                 let rank = s
                     .services()
                     .perms
@@ -629,9 +697,12 @@ async fn invite_channel_list(
     } else if let Some(room_id) = channel.room_id {
         s.services
             .perms
-            .for_room(auth.user.id, room_id)
+            .for_room3(Some(auth.user.id), room_id)
             .await?
-            .has(Permission::InviteManage)
+            .ensure_view()?
+            .needs(Permission::InviteManage)
+            .check()
+            .is_ok()
     } else {
         false
     };
@@ -683,36 +754,45 @@ async fn invite_update(
             room,
             channel,
             roles,
-        } => (
-            s.services()
+        } => {
+            let perms = s
+                .services()
                 .perms
-                .for_room(auth.user.id, room.id)
-                .await?
-                .has(Permission::InviteManage),
-            InviteTargetId::Room {
-                room_id: room.id,
-                channel_id: channel.as_ref().map(|t| t.id),
-                role_ids: roles.iter().map(|r| r.id).collect(),
-            },
-        ),
-        InviteTarget::Gdm { channel } => (
-            s.services()
+                .for_room3(Some(auth.user.id), room.id)
+                .await?;
+            let has_perm = perms.has(Permission::InviteManage);
+            (
+                has_perm,
+                InviteTargetId::Room {
+                    room_id: room.id,
+                    channel_id: channel.as_ref().map(|t| t.id),
+                    role_ids: roles.iter().map(|r| r.id).collect(),
+                },
+            )
+        }
+        InviteTarget::Gdm { channel } => {
+            let perms = s
+                .services()
                 .perms
-                .for_channel(auth.user.id, channel.id)
-                .await?
-                .has(Permission::InviteManage),
-            InviteTargetId::Gdm {
-                channel_id: channel.id,
-            },
-        ),
-        InviteTarget::Server => (
-            s.services()
+                .for_channel3(Some(auth.user.id), channel.id)
+                .await?;
+            let has_perm = perms.has(Permission::InviteManage);
+            (
+                has_perm,
+                InviteTargetId::Gdm {
+                    channel_id: channel.id,
+                },
+            )
+        }
+        InviteTarget::Server => {
+            let perms = s
+                .services()
                 .perms
-                .for_server(auth.user.id)
-                .await?
-                .has(Permission::InviteManage),
-            InviteTargetId::Server,
-        ),
+                .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+                .await?;
+            let has_perm = perms.has(Permission::InviteManage);
+            (has_perm, InviteTargetId::Server)
+        }
         InviteTarget::User { user } => (
             auth.user.id == start_invite.invite.creator_id,
             InviteTargetId::User { user_id: user.id },
@@ -731,8 +811,14 @@ async fn invite_update(
                 _ => None,
             };
             if let Some(room_id) = room_id {
-                let perms = s.services().perms.for_room(auth.user.id, room_id).await?;
-                perms.ensure(Permission::RoleApply)?;
+                let mut perms: Permissions2<CheckPermissions> = s
+                    .services()
+                    .perms
+                    .for_room3(Some(auth.user.id), room_id)
+                    .await?
+                    .ensure_view()?;
+                perms.needs(Permission::RoleApply);
+                perms.check()?;
                 let rank = s
                     .services()
                     .perms
@@ -819,8 +905,13 @@ async fn invite_server_create(
         return Err(ApiError::from_code(ErrorCode::GuestsCannotCreateServerInvites).into());
     }
 
-    let perms = srv.perms.for_server(user.id).await?;
-    perms.ensure(Permission::InviteCreate)?;
+    let mut perms: Permissions2<CheckPermissions> = srv
+        .perms
+        .for_room3(Some(user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::InviteCreate);
+    perms.check()?;
 
     let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         .chars()
@@ -875,8 +966,15 @@ async fn invite_server_list(
         return Err(ApiError::from_code(ErrorCode::GuestsCannotListServerInvites).into());
     }
 
-    let perms = srv.perms.for_server(user.id).await?;
-    let res = if perms.has(Permission::InviteManage) {
+    let has_manage = srv
+        .perms
+        .for_room3(Some(user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?
+        .needs(Permission::InviteManage)
+        .check()
+        .is_ok();
+    let res = if has_manage {
         d.invite_list_server(req.pagination).await?
     } else {
         d.invite_list_server_by_creator(user.id, req.pagination)

@@ -17,6 +17,7 @@ use crate::routes::util::{Auth, AuthRelaxed2};
 use crate::routes2;
 use crate::types::{DbMessageCreate, MessageSync, Permission};
 use crate::{error::Result, Error, ServerState};
+use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 /// Message create
 #[handler(routes::message_create)]
@@ -78,9 +79,12 @@ async fn message_context(
 
     let user_id = auth.user.as_ref().map(|u| u.id);
 
-    let perms = srv.perms.for_channel2(user_id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
-
+    srv.perms
+        .for_channel3(user_id, req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelView)
+        .check()?;
     let res = srv
         .messages
         .list_context(req.channel_id, req.message_id, user_id, req.context)
@@ -101,8 +105,12 @@ async fn message_list(
 
     let user_id = auth.user.as_ref().map(|u| u.id);
 
-    let perms = srv.perms.for_channel2(user_id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(user_id, req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelView)
+        .check()?;
     let res = srv
         .messages
         .list(req.channel_id, user_id, req.pagination)
@@ -122,8 +130,12 @@ async fn message_get(
 
     let user_id = auth.user.as_ref().map(|u| u.id);
 
-    let perms = srv.perms.for_channel2(user_id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(user_id, req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelView)
+        .check()?;
     let message = srv
         .messages
         .get(req.channel_id, req.message_id, user_id)
@@ -141,8 +153,13 @@ async fn message_edit(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure_unlocked()?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs_unlocked();
+
     let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
@@ -181,21 +198,19 @@ async fn message_delete(
 
     let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
 
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+
     let message = data.message_get(req.channel_id, req.message_id).await?;
     if !message.latest_version.message_type.is_deletable() {
         return Err(ApiError::from_code(ErrorCode::CantDeleteThatMessage).into());
     }
     let is_author = message.author_id == auth.user.id;
-    if !perms.has_or(Permission::MessageDelete, is_author) {
-        return Err(Error::ApiError(ApiError {
-            required_permissions: vec![Permission::MessageDelete],
-            ..ApiError::from_code(ErrorCode::MissingPermissions)
-        }));
-    }
-
-    if message.author_id != auth.user.id {
+    if !is_author {
+        perms.needs(Permission::MessageDelete);
         if let Some(room_id) = thread.room_id {
             let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
             if room.security.require_mfa {
@@ -211,7 +226,8 @@ async fn message_delete(
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
     thread.ensure_has_text()?;
-    perms.ensure_unlocked()?;
+    perms.needs_unlocked();
+    perms.check()?;
 
     data.message_delete(req.channel_id, req.message_id).await?;
     data.media_link_delete_all(req.message_id.into_inner())
@@ -251,8 +267,12 @@ async fn message_version_list(
 
     let user_id = auth.user.as_ref().map(|u| u.id);
 
-    let perms = srv.perms.for_channel2(user_id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(user_id, req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelView)
+        .check()?;
     let res = srv
         .messages
         .list_versions(req.channel_id, req.message_id, user_id, req.pagination)
@@ -272,8 +292,12 @@ async fn message_version_get(
 
     let user_id = auth.user.as_ref().map(|u| u.id);
 
-    let perms = srv.perms.for_channel2(user_id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(user_id, req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelView)
+        .check()?;
     let message = srv
         .messages
         .get_version(req.channel_id, req.version_id, user_id)
@@ -297,9 +321,13 @@ async fn message_version_delete(
 
     thread.ensure_has_text()?;
 
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure_unlocked()?;
-    perms.ensure(Permission::ChannelView)?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::ChannelView);
+    perms.needs_unlocked();
 
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
@@ -319,7 +347,7 @@ async fn message_version_delete(
     }
 
     let is_author = message.author_id == auth.user.id;
-    if !perms.has_or(Permission::MessageDelete, is_author) {
+    if !perms.has(Permission::MessageDelete) && !is_author {
         return Err(Error::ApiError(ApiError {
             required_permissions: vec![Permission::MessageDelete],
             ..ApiError::from_code(ErrorCode::MissingPermissions)
@@ -389,18 +417,22 @@ async fn message_moderate(
 
     let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
 
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let mut perms = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::ChannelView);
+    perms.needs_unlocked();
 
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
 
     thread.ensure_has_text()?;
-    perms.ensure_unlocked()?;
 
     let mut needs_mfa = false;
     if !req.moderate.delete.is_empty() {
-        perms.ensure(Permission::MessageDelete)?;
+        perms.needs(Permission::MessageDelete);
         for id in &req.moderate.delete {
             let message = data.message_get(req.channel_id, *id).await?;
             if !message.latest_version.message_type.is_deletable() {
@@ -413,7 +445,7 @@ async fn message_moderate(
     }
 
     if !req.moderate.remove.is_empty() {
-        perms.ensure(Permission::MessageRemove)?;
+        perms.needs(Permission::MessageRemove);
         for id in &req.moderate.remove {
             let message = data.message_get(req.channel_id, *id).await?;
             if !message.latest_version.message_type.is_deletable() {
@@ -424,9 +456,11 @@ async fn message_moderate(
     }
 
     if !req.moderate.restore.is_empty() {
-        perms.ensure(Permission::MessageRemove)?;
+        perms.needs(Permission::MessageRemove);
         needs_mfa = true;
     }
+
+    perms.check()?;
 
     if needs_mfa {
         if let Some(room_id) = thread.room_id {
@@ -494,7 +528,7 @@ async fn message_moderate(
     }
 
     if !req.moderate.restore.is_empty() {
-        perms.ensure(Permission::MessageRemove)?;
+        perms.needs(Permission::MessageRemove);
         data.message_restore_bulk(req.channel_id, &req.moderate.restore)
             .await?;
 
@@ -557,8 +591,12 @@ async fn message_pin(
         }
     }
 
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::MessagePin)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::MessagePin)
+        .check()?;
 
     thread.ensure_has_text()?;
     thread.ensure_unarchived()?;
@@ -661,8 +699,12 @@ async fn message_unpin(
         }
     }
 
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::MessagePin)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::MessagePin)
+        .check()?;
 
     thread.ensure_has_text()?;
     thread.ensure_unarchived()?;
@@ -702,8 +744,12 @@ async fn message_pins_list(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelView)
+        .check()?;
     let res = srv
         .messages
         .list_pins(req.channel_id, auth.user.id, req.pagination)
@@ -736,8 +782,12 @@ async fn message_pins_reorder(
         }
     }
 
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::MessagePin)?;
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::MessagePin)
+        .check()?;
 
     thread.ensure_has_text()?;
     thread.ensure_unarchived()?;
@@ -778,8 +828,12 @@ async fn message_reply_roots(
     req.replies.validate()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let mut perms: Permissions2<CheckPermissions> = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::ChannelView);
     let res = srv
         .messages
         .list_replies(
@@ -803,8 +857,12 @@ async fn message_reply_list(
     req.replies.validate()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::ChannelView)?;
+    let mut perms: Permissions2<CheckPermissions> = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::ChannelView);
     let res = srv
         .messages
         .list_replies(
@@ -827,29 +885,16 @@ async fn message_list_deleted(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::MessageDelete)?;
+    let mut perms: Permissions2<CheckPermissions> = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::ChannelView);
+    perms.needs(Permission::MessageDelete);
     let res = srv
         .messages
         .list_deleted(req.channel_id, Some(auth.user.id), req.pagination)
-        .await?;
-    Ok(Json(res))
-}
-
-/// Message list removed
-#[handler(routes::message_list_removed)]
-async fn message_list_removed(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-    req: routes::message_list_removed::Request,
-) -> Result<impl IntoResponse> {
-    auth.ensure_scopes(&[Scope::Full])?;
-    let srv = s.services();
-    let perms = srv.perms.for_channel(auth.user.id, req.channel_id).await?;
-    perms.ensure(Permission::MessageRemove)?;
-    let res = srv
-        .messages
-        .list_removed(req.channel_id, Some(auth.user.id), req.pagination)
         .await?;
     Ok(Json(res))
 }
@@ -862,6 +907,29 @@ pub async fn message_list_atom(
     _req: routes::message_list_atom::Request,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
+}
+
+/// Message list removed
+#[handler(routes::message_list_removed)]
+async fn message_list_removed(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::message_list_removed::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
+    let srv = s.services();
+    let mut perms: Permissions2<CheckPermissions> = srv
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::ChannelView);
+    perms.needs(Permission::MessageRemove);
+    let res = srv
+        .messages
+        .list_removed(req.channel_id, Some(auth.user.id), req.pagination)
+        .await?;
+    Ok(Json(res))
 }
 
 /// Nudge (TODO)
