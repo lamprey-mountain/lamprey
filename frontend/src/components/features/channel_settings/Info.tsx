@@ -14,6 +14,8 @@ import { Savebar } from "../../../atoms/Savebar";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 import { createEditor } from "../editor/Editor.tsx";
 import { EditorState } from "prosemirror-state";
+import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
+import { useAutocomplete } from "../../../contexts/autocomplete";
 
 const slowmodePresets: DurationPreset[] = [
 	{ label: "disabled", seconds: null as any },
@@ -66,9 +68,14 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 
 	let iconInputEl!: HTMLInputElement;
 
+	const toolbar = useFormattingToolbar();
+	const autocomplete = useAutocomplete();
+
 	const editor = createEditor({
 		channelId: () => props.channel.id ?? "",
 		roomId: () => props.channel.room_id ?? "",
+		toolbar,
+		autocomplete,
 		initialContent: props.channel.description as string | undefined,
 	});
 

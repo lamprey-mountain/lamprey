@@ -67,6 +67,10 @@ type ViewInstance = {
 	placeholderPlugin: ReturnType<typeof createPlaceholderPlugin>;
 	props: EditorViewProps;
 	pendingUpdate?: boolean;
+	lastOnSubmit: EditorViewProps["onSubmit"];
+	lastSubmitOnEnter: EditorViewProps["submitOnEnter"];
+	lastOnUpload: EditorViewProps["onUpload"];
+	lastPlaceholder: EditorViewProps["placeholder"];
 };
 
 const viewInstances = new WeakMap<EditorView, ViewInstance>();
@@ -77,19 +81,19 @@ function scheduleUpdate(instance: ViewInstance, newProps: EditorViewProps) {
 
 	queueMicrotask(() => {
 		instance.pendingUpdate = false;
-		const { view, placeholderPlugin, props: prevProps } = instance;
+		const { view, placeholderPlugin } = instance;
 		if (view.isDestroyed) return;
 
-		const needsUpdate = prevProps.onSubmit !== newProps.onSubmit ||
-			prevProps.submitOnEnter !== newProps.submitOnEnter ||
-			prevProps.onUpload !== newProps.onUpload ||
-			prevProps.placeholder !== newProps.placeholder;
+		const needsUpdate = instance.lastOnSubmit !== newProps.onSubmit ||
+			instance.lastSubmitOnEnter !== newProps.submitOnEnter ||
+			instance.lastOnUpload !== newProps.onUpload ||
+			instance.lastPlaceholder !== newProps.placeholder;
 
 		if (needsUpdate) {
 			const tr = view.state.tr;
 			tr.setMeta(submitPluginKey, {
 				onSubmit: newProps.onSubmit,
-				submitOnEnter: newProps.submitOnEnter,
+				submitOnEnter: newProps.submitOnEnter ?? true,
 			});
 			tr.setMeta(pastePluginKey, {
 				onUpload: newProps.onUpload,
@@ -100,6 +104,10 @@ function scheduleUpdate(instance: ViewInstance, newProps: EditorViewProps) {
 			view.dispatch(tr);
 
 			instance.props = newProps;
+			instance.lastOnSubmit = newProps.onSubmit;
+			instance.lastSubmitOnEnter = newProps.submitOnEnter ?? true;
+			instance.lastOnUpload = newProps.onUpload;
+			instance.lastPlaceholder = newProps.placeholder;
 		}
 	});
 }
@@ -121,8 +129,14 @@ export const createEditor = (opts: EditorOptions) => {
 			return view;
 		},
 		View(props: EditorViewProps) {
+			let placeholderPlugin:
+				| ReturnType<typeof createPlaceholderPlugin>
+				| undefined;
+			let initialized = false;
+			let lastDisabled = props.disabled ?? false;
+
 			onMount(() => {
-				const placeholderPlugin = createPlaceholderPlugin();
+				placeholderPlugin = createPlaceholderPlugin();
 				view = new EditorView(editorRef!, {
 					domParser: DOMParser.fromSchema(schema),
 					state: opts.createState(schema),
@@ -132,11 +146,6 @@ export const createEditor = (opts: EditorOptions) => {
 					dispatchTransaction(tr) {
 						const newState = view!.state.apply(tr);
 						view!.updateState(newState);
-						console.log(
-							"editor new doc",
-							newState.doc.toJSON(),
-							newState.selection.toJSON(),
-						);
 						props.onChange?.(newState);
 					},
 				});
@@ -159,7 +168,16 @@ export const createEditor = (opts: EditorOptions) => {
 				}
 				view.dispatch(tr);
 
-				viewInstances.set(view, { view, placeholderPlugin, props });
+				viewInstances.set(view, {
+					view,
+					placeholderPlugin,
+					props,
+					lastOnSubmit: props.onSubmit,
+					lastSubmitOnEnter: props.submitOnEnter ?? true,
+					lastOnUpload: props.onUpload,
+					lastPlaceholder: props.placeholder,
+				});
+				initialized = true;
 			});
 
 			onCleanup(() => {
@@ -171,12 +189,16 @@ export const createEditor = (opts: EditorOptions) => {
 
 			// Update props on every render - queued via microtask to avoid
 			// dispatching during render
-			if (view) {
+			if (initialized && view) {
 				const instance = viewInstances.get(view);
 				if (instance) {
-					view.setProps({
-						editable: () => !(props.disabled ?? false),
-					});
+					// Only update if props actually changed
+					if (lastDisabled !== (props.disabled ?? false)) {
+						lastDisabled = props.disabled ?? false;
+						view.setProps({
+							editable: () => !lastDisabled,
+						});
+					}
 					scheduleUpdate(instance, props);
 				}
 			}

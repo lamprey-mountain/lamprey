@@ -64,6 +64,8 @@ import type { SetStoreFunction } from "solid-js/store";
 import type { ChannelState } from "../../../contexts/channel";
 import { useConfig } from "../../../config.tsx";
 import { useAppConfig } from "../../../hooks/useAppConfig.ts";
+import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
+import { useAutocomplete } from "../../../contexts/autocomplete";
 
 type MessageProps = {
 	message: MessageT;
@@ -123,9 +125,14 @@ function MessageEditor(
 		return <div class="message-editor">Error: No channel context</div>;
 	}
 
+	const toolbar = useFormattingToolbar();
+	const autocomplete = useAutocomplete();
+
 	const editor = createEditor({
 		channelId: () => props.message.channel_id ?? "",
 		roomId: () => props.message.room_id ?? "",
+		toolbar,
+		autocomplete,
 		initialContent: draft(),
 		initialSelection: ch.editingMessage
 			?.selection,

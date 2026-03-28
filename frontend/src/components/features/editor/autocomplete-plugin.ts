@@ -1,8 +1,8 @@
 import { Plugin, PluginKey, TextSelection } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import { ReferenceElement } from "@floating-ui/dom";
-import { useAutocomplete } from "../../../contexts/autocomplete";
 import type { AutocompleteKind } from "../../../contexts/autocomplete";
+import type { AutocompleteContext } from "../../../contexts/autocomplete";
 
 export const autocompleteKey = new PluginKey("autocomplete");
 
@@ -86,11 +86,10 @@ function getAutocompleteType(char: string): AutocompleteKind["type"] | null {
 }
 
 export function createAutocompletePlugin(
+	autocomplete: AutocompleteContext,
 	channelId: () => string,
 	roomId: () => string,
 ): Plugin {
-	const autocomplete = useAutocomplete();
-
 	const handleTrigger = (
 		view: EditorView,
 		triggerChar: string,

@@ -11,6 +11,8 @@ import {
 import { keymap } from "prosemirror-keymap";
 import { md } from "../../../markdown_utils.tsx";
 import { useApi2, useChannels2 } from "@/api";
+import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
+import { useAutocomplete } from "../../../contexts/autocomplete";
 import { MessageSync } from "sdk";
 import { cursorPlugin } from "./editor-cursors.ts";
 import {
@@ -82,7 +84,9 @@ export const createEditor = (
 } => {
 	const api2 = useApi2();
 	const channels2 = useChannels2();
-	const toolbarPlugin = createToolbarPlugin();
+	const toolbar = useFormattingToolbar();
+	const autocomplete = useAutocomplete();
+	const toolbarPlugin = createToolbarPlugin(toolbar);
 	const [isSubscribed, setIsSubscribed] = createSignal(false);
 	const [currentChannelId, setCurrentChannelId] = createSignal(
 		"no channel id!",
@@ -93,6 +97,7 @@ export const createEditor = (
 		opts.diffMarks ?? [],
 	);
 	const autocompletePlugin = createAutocompletePlugin(
+		autocomplete,
 		currentChannelId,
 		() => currentRoomId(),
 	);

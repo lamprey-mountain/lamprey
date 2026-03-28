@@ -28,6 +28,8 @@ import { EmojiButton } from "../../../atoms/EmojiButton.tsx";
 import { Channel } from "sdk";
 import icDelete from "../../../assets/delete.png";
 import icEdit from "../../../assets/edit.png";
+import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
+import { useAutocomplete } from "../../../contexts/autocomplete";
 import { useChannel } from "../../../channelctx.tsx";
 import { useMessageSubmit } from "../../../hooks/useMessageSubmit.ts";
 import { useUploads } from "../../../contexts/uploads.tsx";
@@ -151,9 +153,14 @@ export function Input(props: InputProps) {
 		}
 	};
 
+	const toolbar = useFormattingToolbar();
+	const autocomplete = useAutocomplete();
+
 	const editor = createEditor({
 		channelId: () => props.channel.id ?? "",
 		roomId: () => props.channel.room_id ?? "",
+		toolbar,
+		autocomplete,
 		keymap: {
 			ArrowUp: (state) => {
 				if (state.doc.textContent.length > 0) {

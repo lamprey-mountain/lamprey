@@ -14,6 +14,8 @@ import { useFloating } from "solid-floating-ui";
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { createEditor } from "./DocumentEditor.tsx";
 import type { DiffMark } from "./diff-plugin.ts";
+import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
+import { useAutocomplete } from "../../../contexts/autocomplete";
 import icBranchDefault from "../../../assets/edit.png";
 import icBranchPrivate from "../../../assets/edit.png";
 import icBranchNew from "../../../assets/edit.png";
@@ -608,9 +610,14 @@ const DocumentMain = (
 		}),
 	);
 
+	const toolbar = useFormattingToolbar();
+	const autocomplete = useAutocomplete();
+
 	const ed = createEditor({
 		channelId: () => props.channel.id,
 		roomId: () => props.channel.room_id,
+		toolbar,
+		autocomplete,
 		diffMode: () => mode() !== "edit",
 	});
 

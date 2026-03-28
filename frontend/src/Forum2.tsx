@@ -62,6 +62,8 @@ import {
 import { createStore } from "solid-js/store";
 import { useMessageSubmit } from "./hooks/useMessageSubmit";
 import { createEditor } from "./components/features/editor/Editor";
+import { useFormattingToolbar } from "./contexts/formatting-toolbar";
+import { useAutocomplete } from "./contexts/autocomplete";
 import type { EditorState } from "prosemirror-state";
 
 import { Resizable } from "./atoms/Resizable";
@@ -648,9 +650,14 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		return true;
 	};
 
+	const toolbar = useFormattingToolbar();
+	const autocomplete = useAutocomplete();
+
 	const editor = createEditor({
 		channelId: () => props.channel.id,
 		roomId: () => props.channel.room_id!,
+		toolbar,
+		autocomplete,
 		initialContent: (() => {
 			const draft = localStorage.getItem(storageKey());
 			if (!draft) return "";
@@ -1006,6 +1013,8 @@ function CommentEditor(
 	const ctx = useCtx();
 	const messagesService = useMessages2();
 	const [ch, chUpdate] = useChannel()!;
+	const toolbar = useFormattingToolbar();
+	const autocomplete = useAutocomplete();
 	const [draft, setDraft] = createSignal(
 		props.message.latest_version.type === "DefaultMarkdown"
 			? props.message.latest_version.content ?? ""
@@ -1037,6 +1046,8 @@ function CommentEditor(
 	const editor = createEditor({
 		channelId: () => props.message.channel_id,
 		roomId: () => props.message.room_id!,
+		toolbar,
+		autocomplete,
 		initialContent: draft(),
 		initialSelection: "end",
 	});

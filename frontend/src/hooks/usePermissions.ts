@@ -75,12 +75,10 @@ export function usePermissions(
 		return result;
 	});
 
-	const has = (wants: Permission) =>
-		createMemo(() => {
-			const perms = permissions().permissions;
-			const result = perms.has("Admin") || perms.has(wants);
-			return result;
-		});
+	const has = (wants: Permission) => {
+		const perms = permissions().permissions;
+		return perms.has("Admin") || perms.has(wants);
+	};
 
 	return { permissions, has };
 }

@@ -17,6 +17,8 @@ import { Savebar } from "../../../atoms/Savebar";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 import { createEditor } from "../editor/Editor.tsx";
 import { EditorState } from "prosemirror-state";
+import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
+import { useAutocomplete } from "../../../contexts/autocomplete";
 
 export function Info(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
@@ -66,9 +68,14 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		undefined,
 	);
 
+	const toolbar = useFormattingToolbar();
+	const autocomplete = useAutocomplete();
+
 	const editor = createEditor({
 		channelId: () => props.room.id,
 		roomId: () => props.room.id,
+		toolbar,
+		autocomplete,
 		initialContent: props.room.description as string | undefined,
 	});
 

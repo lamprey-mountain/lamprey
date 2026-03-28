@@ -1,10 +1,9 @@
 import { Plugin, PluginKey } from "prosemirror-state";
-import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
+import type { FormattingToolbarContextT } from "../../../contexts/formatting-toolbar";
 
 export const toolbarKey = new PluginKey("toolbar");
 
-export function createToolbarPlugin(): Plugin {
-	const tb = useFormattingToolbar();
+export function createToolbarPlugin(tb: FormattingToolbarContextT): Plugin {
 	return new Plugin({
 		key: toolbarKey,
 		view(_editorView) {

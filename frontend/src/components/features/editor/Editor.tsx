@@ -47,10 +47,16 @@ type EditorProps = {
 };
 
 export const createEditor = (
-	opts: EditorProps & { channelId: () => string; roomId?: () => string },
+	opts: EditorProps & {
+		channelId: () => string;
+		roomId?: () => string;
+		toolbar?: any;
+		autocomplete?: any;
+	},
 ) => {
-	const toolbarPlugin = createToolbarPlugin();
+	const toolbarPlugin = createToolbarPlugin(opts.toolbar!);
 	const autocompletePlugin = createAutocompletePlugin(
+		opts.autocomplete!,
 		opts.channelId,
 		opts.roomId ?? (() => ""),
 	);

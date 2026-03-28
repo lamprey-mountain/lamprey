@@ -18,6 +18,8 @@ import { useChannel } from "./channelctx.tsx";
 import { useUploads } from "./contexts/uploads.tsx";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { useMessageSubmit } from "./hooks/useMessageSubmit.ts";
+import { useFormattingToolbar } from "./contexts/formatting-toolbar";
+import { useAutocomplete } from "./contexts/autocomplete";
 
 export const Forum = (props: { channel: Channel }) => {
 	const ctx = useCtx();
@@ -187,10 +189,14 @@ const QuickCreate = (
 	const [ch, chUpdate] = useChannel()!;
 	const uploads = useUploads();
 	const submit = useMessageSubmit(props.channel.id);
+	const toolbar = useFormattingToolbar();
+	const autocomplete = useAutocomplete();
 
 	const editor = createEditor({
 		channelId: () => props.channel.id,
 		roomId: () => props.channel.room_id!,
+		toolbar,
+		autocomplete,
 	});
 
 	function uploadFile(e: InputEvent) {
