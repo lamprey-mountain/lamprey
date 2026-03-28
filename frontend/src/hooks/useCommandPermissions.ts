@@ -20,11 +20,11 @@ export function canUseCommand(
 	return checkCommandPermission(
 		{
 			api,
-			channels: useChannels2(),
+			channels: useChannels2() as any,
 			rooms: useRooms2(),
 			room_id,
 			channel_id: channel?.id,
-		},
+		} as any,
 		self_id,
 		commandName,
 		channel,

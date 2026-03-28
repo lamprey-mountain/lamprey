@@ -246,7 +246,7 @@ export function UserMenu(props: UserMenuProps) {
 		);
 	};
 
-	const roles = roles2.useList(() => props.room_id as string);
+	const roles = (roles2 as any).useList(() => props.room_id as string);
 
 	const RoleSubmenu = () => (
 		<Submenu content="roles">
@@ -444,7 +444,9 @@ export function UserMenu(props: UserMenuProps) {
 							{room_member()?.deaf ? "room undeafen" : "room deafen"}
 						</Item>
 					</Show>
-					<Show when={hasPermission("VoiceDisconnect") && connectedToVoice()}>
+					<Show
+						when={hasPermission("VoiceDisconnect" as any) && connectedToVoice()}
+					>
 						<Item onClick={disconnect}>disconnect</Item>
 					</Show>
 					<Show when={hasPermission("VoiceMove") && connectedToVoice()}>

@@ -130,6 +130,7 @@ export const useAutocompleteData = () => {
 				if (cmd.canUse) {
 					return cmd.canUse(
 						api2,
+						channels2,
 						channel?.room_id ?? undefined,
 						channel!,
 						store,

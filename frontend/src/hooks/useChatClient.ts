@@ -121,7 +121,7 @@ export function useChatClient(config: Config) {
 		t: i18n.translator(() => dict()) as i18n.Translator<
 			i18n.Flatten<typeof en>
 		>,
-		events,
+		events: events as any,
 		popout,
 		setPopout,
 		threadsView,
@@ -132,7 +132,7 @@ export function useChatClient(config: Config) {
 		currentMedia,
 		setCurrentMedia,
 		preferences: () => store.preferences.useRead(),
-		setPreferences: (p: Preferences) => store.preferences.put(p),
+		setPreferences: ((p: Preferences) => store.preferences.put(p)) as any,
 		scrollToChatList: (pos: number) => {
 			console.log("scrollToChatList called with position:", pos);
 		},
@@ -142,7 +142,6 @@ export function useChatClient(config: Config) {
 		channel_contexts: new ReactiveMap(),
 		room_contexts: new ReactiveMap(),
 		document_contexts: new ReactiveMap(),
-		store,
 	};
 
 	createEffect(() => {
@@ -174,7 +173,7 @@ export function useChatClient(config: Config) {
 		});
 	}
 
-	store.ctx = ctx;
+	(store as any).ctx = ctx;
 
 	return { client, ctx, store };
 }

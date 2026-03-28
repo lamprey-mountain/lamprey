@@ -68,8 +68,7 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 					const att = atts[idx];
 					const updatedAtt: Attachment = {
 						...att,
-						media: media as any,
-					};
+					} as Attachment;
 					chUpdate("attachments", [
 						...atts.slice(0, idx),
 						updatedAtt,

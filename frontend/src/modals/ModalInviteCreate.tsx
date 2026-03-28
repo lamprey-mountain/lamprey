@@ -56,7 +56,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 	});
 
 	const availableRoles = createMemo(() => {
-		const roleItems = roles()?.items;
+		const roleItems = (roles() as any)?.items;
 		const roomId = props.room_id;
 		if (!roleItems || !roomId) return [];
 		const { canApply, rank, isOwner } = canApplyRoles() as any;

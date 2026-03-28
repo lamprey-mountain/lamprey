@@ -648,11 +648,11 @@ const RolePermissionSelector = (
 			}
 
 			if (!searchQuery) return true;
-			const name = t(`permissions.${perm.id}.name`) ?? perm.id;
-			const description = t(`permissions.${perm.id}.description`) ?? "";
+			const name = t(`permissions.${perm.id}.name` as any) ?? perm.id;
+			const description = t(`permissions.${perm.id}.description` as any) ?? "";
 			return (
-				name.toLowerCase().includes(searchQuery) ||
-				description.toLowerCase().includes(searchQuery) ||
+				(name as string).toLowerCase().includes(searchQuery) ||
+				(description as string).toLowerCase().includes(searchQuery) ||
 				perm.id.toLowerCase().includes(searchQuery)
 			);
 		});

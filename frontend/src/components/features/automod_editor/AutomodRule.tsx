@@ -99,8 +99,8 @@ export function AutomodRule(props: {
 	const updateTriggerValue = (key: string, val: any) => {
 		props.setDraftRules(
 			(r) => r.id === props.rule.id,
-			"trigger", // Go to the trigger object
-			key, // Update the specific field (e.g., 'keywords' or 'list')
+			"trigger" as any,
+			key as any,
 			val,
 		);
 	};
@@ -125,9 +125,9 @@ export function AutomodRule(props: {
 	const updateActionValue = (idx: number, key: string, val: any) => {
 		props.setDraftRules(
 			(r) => r.id === props.rule.id,
-			"actions",
+			"actions" as any,
 			idx,
-			key,
+			key as any,
 			val,
 		);
 	};
@@ -155,8 +155,8 @@ export function AutomodRule(props: {
 
 		props.setDraftRules(
 			(r) => r.id === props.rule.id,
-			"actions",
-			(actions) => [...(actions || []), newAction],
+			"actions" as any,
+			(actions) => [...(actions || []), newAction as any],
 		);
 	};
 

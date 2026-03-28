@@ -39,7 +39,7 @@ const createFilterNode = (
 	name: string,
 	valueKey: "id" | "value" | "date" = "value",
 	hasNameAttr: boolean = false,
-) => ({
+): any => ({
 	group: "inline",
 	inline: true,
 	atom: true,
@@ -62,7 +62,7 @@ const createFilterNode = (
 				node.attrs.negated ? `-${name}:` : `${name}:`,
 			],
 			["span", { class: "filter-value" }, displayValue],
-		];
+		] as any;
 	},
 	parseDOM: [
 		{
@@ -1137,7 +1137,7 @@ export const SearchInput = (
 		const textQuery = textQueryParts.join(" ");
 		const searchState: ChannelSearch = {
 			query: queryString,
-			results: currentSearch()?.results ?? null,
+			results: (currentSearch()?.results as any) ?? null,
 			loading: true,
 			author: filters.author_ids,
 			before: filters.before,
@@ -1400,12 +1400,12 @@ export const SearchInput = (
 				if (
 					text.match(/\b(author|thread|before|after|has|pinned|mentions):\S+/)
 				) {
-					const { nodes } = parseQueryToNodes(text, users2, roomThreads);
+					const nodes = parseQueryToNodes(text, users2, roomThreads);
 					if (nodes.length > 0) {
 						const tr = editor.view.state.tr.replaceWith(
 							start,
 							from,
-							...nodes as any,
+							nodes as any,
 						);
 						editor.view.dispatch(tr);
 						editor.view.focus();
@@ -1435,7 +1435,7 @@ export const SearchInput = (
 	const editor = createBaseEditor({
 		schema: schema as any,
 		createState: (schema) => {
-			let docContent: Node | null = null;
+			let docContent: Node | undefined = undefined;
 			const initialSearch = currentSearch();
 
 			if (initialSearch?.query) {
