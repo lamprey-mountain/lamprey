@@ -8,6 +8,8 @@ use common::v2::types::message::{Message, MessageType};
 use tantivy::schema::{OwnedValue, Schema};
 use tantivy::TantivyDocument;
 
+use crate::services::messages::links;
+
 pub trait IndexDefinition {
     /// get the tantivy schema for this index
     fn schema(&self) -> &Schema;
@@ -192,17 +194,14 @@ pub fn tantivy_document_from_message(
     let mut has_links = false;
     if let MessageType::DefaultMarkdown(ref m) = message.latest_version.message_type {
         if let Some(ref content) = m.content {
-            let finder = linkify::LinkFinder::new();
             let mut hostnames = Vec::new();
-            for link in finder.links(content) {
-                if let Ok(url) = url::Url::parse(link.as_str()) {
-                    if let Some(host) = url.host_str() {
-                        // reverse the hostname (e.g., "foobar.example.com" -> "com.example.foobar")
-                        // this is so that searching "example.com" can return results for "foobar.example.com" if needed
-                        let reversed_hostname = host.split('.').rev().collect::<Vec<_>>().join(".");
-                        hostnames.push(reversed_hostname.into());
-                        has_links = true;
-                    }
+            for url in links::extract_links(content) {
+                if let Some(host) = url.host_str() {
+                    // reverse the hostname (e.g., "foobar.example.com" -> "com.example.foobar")
+                    // this is so that searching "example.com" can return results for "foobar.example.com" if needed
+                    let reversed_hostname = host.split('.').rev().collect::<Vec<_>>().join(".");
+                    hostnames.push(reversed_hostname.into());
+                    has_links = true;
                 }
             }
             if !hostnames.is_empty() {

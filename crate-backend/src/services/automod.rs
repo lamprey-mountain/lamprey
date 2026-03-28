@@ -16,10 +16,9 @@ use common::{
     v2::types::message::Message,
 };
 use dashmap::DashMap;
-use linkify::{LinkFinder, LinkKind};
 use tracing::{error, warn};
-use url::Url;
 
+use crate::services::messages::links;
 use crate::{types::DbMessageCreate, Result, ServerStateInner};
 
 pub struct ServiceAutomod {
@@ -417,14 +416,7 @@ impl AutomodRuleset {
                     whitelist,
                 } => {
                     let mut triggered = false;
-                    for link in LinkFinder::new().links(text) {
-                        if !matches!(link.kind(), LinkKind::Url) {
-                            continue;
-                        }
-
-                        let Ok(url) = Url::from_str(link.as_str()) else {
-                            continue;
-                        };
+                    for url in links::extract_links(text) {
                         let Some(host) = url.host_str() else {
                             continue;
                         };
@@ -450,7 +442,7 @@ impl AutomodRuleset {
                             }
                             let m = &mut result.matches[0];
 
-                            let link_str = link.as_str().to_string();
+                            let link_str = url.to_string();
                             if !m.matches.contains(&link_str) {
                                 m.matches.push(link_str);
                             }

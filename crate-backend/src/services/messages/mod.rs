@@ -27,8 +27,6 @@ use common::v2::types::message::{
     MessageVersion,
 };
 use http::StatusCode;
-use linkify::LinkFinder;
-use url::Url;
 use validator::Validate;
 
 use crate::routes::util::Auth;
@@ -36,6 +34,7 @@ use crate::services::notifications::preferences::NotificationAction;
 use crate::types::{DbMessageCreate, DbMessageUpdate, MediaLinkType, MentionsIds, MessageVerId};
 use crate::{Error, Result, ServerStateInner};
 
+pub mod links;
 pub mod mentions;
 
 pub struct ServiceMessages {
@@ -103,24 +102,21 @@ impl ServiceMessages {
         let s = self.state.clone();
         let srv = s.services();
         async move {
-            let links: Vec<_> = LinkFinder::new().links(&content).collect();
-            for link in links {
-                if let Some(url) = link.as_str().parse::<Url>().ok() {
-                    if let Err(e) = srv
-                        .embed
-                        .queue(
-                            Some(crate::types::MessageRef {
-                                thread_id: message.channel_id,
-                                message_id: message.id,
-                                version_id: message.latest_version.version_id,
-                            }),
-                            user_id,
-                            url,
-                        )
-                        .await
-                    {
-                        error!("Failed to queue embed generation: {:?}", e);
-                    }
+            for url in links::extract_links(&content) {
+                if let Err(e) = srv
+                    .embed
+                    .queue(
+                        Some(crate::types::MessageRef {
+                            thread_id: message.channel_id,
+                            message_id: message.id,
+                            version_id: message.latest_version.version_id,
+                        }),
+                        user_id,
+                        url,
+                    )
+                    .await
+                {
+                    error!("Failed to queue embed generation: {:?}", e);
                 }
             }
         }
