@@ -128,7 +128,7 @@ export const RoomMembers = (props: { room: RoomT }) => {
 											const [hovered, setHovered] = createSignal(false);
 											function name() {
 												let name: string | undefined | null = null;
-												if (member()?.membership === "Join") {
+												if (member()) {
 													name ??= member()!.override_name;
 												}
 												name ??= user()?.name;

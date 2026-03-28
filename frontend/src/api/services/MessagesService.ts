@@ -619,7 +619,7 @@ export class MessagesService extends BaseService<Message> {
 	handleMessageCreate(m: Message) {
 		batch(() => {
 			this.upsert(m);
-			const nonce = (m as any).nonce;
+			const nonce = m.nonce;
 			if (nonce) this.cache.delete(nonce);
 
 			const ranges = this._ranges.get(m.channel_id);
@@ -629,7 +629,7 @@ export class MessagesService extends BaseService<Message> {
 				const isLive = range === ranges.live;
 				const alreadyContains = range.contains(m.id);
 				const hasNonce = nonce && range.items.some(
-					(i) => (i as any).nonce === nonce || i.id === nonce,
+					(i) => i.nonce === nonce || i.id === nonce,
 				);
 
 				if (isLive || alreadyContains || hasNonce) {
@@ -679,12 +679,14 @@ export class MessagesService extends BaseService<Message> {
 
 	async send(channel_id: string, body: MessageSendReq): Promise<Message> {
 		const id = uuidv7();
+		const session = this.store.session();
+		const user_id = session && "user_id" in session ? session.user_id : "";
 
 		// TODO: move local = ... into a function
-		const local = ({
+		const local = {
 			id,
 			channel_id,
-			author_id: (this.store.session() as any)?.user_id ?? "",
+			author_id: user_id,
 			created_at: new Date().toISOString(),
 			latest_version: {
 				version_id: id,
@@ -697,7 +699,7 @@ export class MessagesService extends BaseService<Message> {
 			},
 			nonce: id,
 			is_local: true,
-		} as unknown) as Message;
+		} as unknown as Message;
 
 		batch(() => {
 			this.upsert(local);

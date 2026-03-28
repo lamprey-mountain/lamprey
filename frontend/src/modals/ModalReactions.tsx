@@ -7,7 +7,7 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import type { User, ReactionCount, ReactionKey } from "sdk";
+import type { ReactionCount, ReactionKey, User } from "sdk";
 import { Modal } from "./mod";
 import { useApi2, useMessages2, useUsers2 } from "@/api";
 import { Avatar } from "../User";
@@ -34,7 +34,9 @@ export const ModalReactions = (props: ModalReactionsProps) => {
 	const message = messagesService.use(() => props.message_id);
 
 	const reactions = () => message()?.reactions ?? [];
-	const [selectedReaction, setSelectedReaction] = createSignal<ReactionKey | null>(
+	const [selectedReaction, setSelectedReaction] = createSignal<
+		ReactionKey | null
+	>(
 		null,
 	);
 

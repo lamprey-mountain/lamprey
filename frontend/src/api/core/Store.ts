@@ -288,7 +288,9 @@ export class RootStore {
 			}
 		} else if (msg.type === "MessageCreate") {
 			const m = msg.message;
-			if (raw.op === "Sync") (m as any).nonce = raw.nonce;
+			if (raw.op === "Sync" && raw.nonce) {
+				(m as any).nonce = raw.nonce;
+			}
 			this.messages.handleMessageCreate(m);
 			this.notifications.handleMessageCreate(m);
 
@@ -337,9 +339,10 @@ export class RootStore {
 	async tempCreateSession() {
 		const session = await this.auth.createTempSession();
 		if (session.status !== "Unauthorized") {
-			localStorage.setItem("token", (session as any).token);
+			const sessionWithToken = session as Session & { token: string };
+			localStorage.setItem("token", sessionWithToken.token);
 			this.setSession(session);
-			this.client.start((session as any).token);
+			this.client.start(sessionWithToken.token);
 		}
 	}
 }

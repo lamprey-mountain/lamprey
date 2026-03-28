@@ -38,7 +38,7 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 		for (const t of active) {
 			// FIXME: populate thread_member for joined threads
 			if (filter(t)) {
-				if ((t.thread_member as any)?.membership === "Join") {
+				if (t.thread_member) {
 					joined.push(t);
 				} else {
 					notJoined.push(t);

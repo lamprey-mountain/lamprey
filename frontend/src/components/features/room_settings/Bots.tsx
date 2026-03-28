@@ -77,9 +77,7 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 					<For each={integrations()!.items}>
 						{({ member: i }) => {
 							const user = api2.users.cache.get(i.user_id);
-							const name = () =>
-								((i as any).membership === "Join" ? i.override_name : null) ??
-									user?.name;
+							const name = () => (i.override_name ?? user?.name);
 							return (
 								<li>
 									<div class="profile">
@@ -88,7 +86,7 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 											<h3 class="name">{name()}</h3>
 											<ul class="roles">
 												<For
-													each={(i as any).membership === "Join" ? i.roles : []}
+													each={i.roles ?? []}
 												>
 													{(role_id) => {
 														const role = api2.roles.cache.get(role_id);

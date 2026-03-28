@@ -1,4 +1,5 @@
 import type {
+	Channel,
 	PreferencesUser,
 	Role,
 	RoomMember,
@@ -49,7 +50,7 @@ const EditRoles = (
 	const [menuFloating, setMenuFloating] = createStore({
 		x: 0,
 		y: 0,
-		strategy: "absolute" as const,
+		strategy: "absolute",
 	});
 
 	createEffect(() => {
@@ -79,7 +80,7 @@ const EditRoles = (
 					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
 					placement: "right-start",
 				}).then(({ x, y, strategy }) => {
-					setMenuFloating({ x, y, strategy: strategy as any });
+					setMenuFloating({ x, y, strategy });
 				});
 			},
 		);
@@ -184,7 +185,7 @@ export function UserView(props: UserProps) {
 		let name = null;
 
 		const rm = props.room_member;
-		if ((rm as any)?.membership === "Join") name ??= rm?.override_name;
+		if (rm) name ??= rm.override_name;
 
 		name ??= props.user.name;
 		return name;
@@ -195,10 +196,11 @@ export function UserView(props: UserProps) {
 			setMenu({
 				type: "user",
 				user_id: props.user.id,
-				room_id: (props.room_member as any)?.room_id,
+				room_id: props.room_member?.room_id,
 				x: e.clientX,
 				y: e.clientY,
-			} as any);
+				admin: false,
+			});
 		});
 	};
 
@@ -222,7 +224,8 @@ export function UserView(props: UserProps) {
 			},
 		);
 		if (data) {
-			nav(`/thread/${(data as any).id}`);
+			const channel = data as Channel;
+			nav(`/thread/${channel.id}`);
 		}
 	};
 
@@ -331,7 +334,7 @@ export function UserView(props: UserProps) {
 					</div>
 				</Show>
 
-				<Show when={(room_member() as any)?.membership === "Join"}>
+				<Show when={room_member()}>
 					<div class="roles">
 						<h3 class="dim">
 							Roles

@@ -209,8 +209,7 @@ function groupTabsByCategory(
 			currentGroup = { category: tab.category, items: [] };
 			groups.push(currentGroup);
 		} else if (currentGroup) {
-			const isVisible =
-				(!tab.permissionCheck || tab.permissionCheck(perms)) &&
+			const isVisible = (!tab.permissionCheck || tab.permissionCheck(perms)) &&
 				(!tab.ownerOnly || room.owner_id === user_id());
 			if (isVisible) {
 				currentGroup.items.push(tab);
@@ -234,7 +233,9 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 	);
 	const currentTabs = () => props.room.id === SERVER_ROOM_ID ? adminTabs : tabs;
 	const currentTab = () =>
-		currentTabs().find((i): i is PageTab => isPageTab(i) && i.path === (props.page ?? ""));
+		currentTabs().find((i): i is PageTab =>
+			isPageTab(i) && i.path === (props.page ?? "")
+		);
 
 	const groupedTabs = createMemo(() =>
 		groupTabsByCategory(currentTabs(), perms, user_id, props.room)
@@ -270,8 +271,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 		<div class="settings">
 			<header>
 				{props.room.id === SERVER_ROOM_ID ? "admin settings" : "room settings"}
-				: {currentTab()?.name}{" "}
-				<A href={`/room/${props.room.id}`}>back</A>
+				: {currentTab()?.name} <A href={`/room/${props.room.id}`}>back</A>
 			</header>
 			<nav>
 				<ul>

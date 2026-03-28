@@ -69,11 +69,13 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 			const i18nKey = isOverwriteContext()
 				? "permission_overwrites"
 				: "permissions";
-			const name = (t as any)(`${i18nKey}.${p.id}.name`) ?? p.id;
-			const description = (t as any)(`${i18nKey}.${p.id}.description`) ?? "";
+			const name = String(t(`${i18nKey}.${p.id}.name` as any) ?? p.id);
+			const description = String(
+				t(`${i18nKey}.${p.id}.description` as any) ?? "",
+			);
 			return (
-				(name as any).toLowerCase().includes(searchTerm) ||
-				(description as any).toLowerCase().includes(searchTerm) ||
+				name.toLowerCase().includes(searchTerm) ||
+				description.toLowerCase().includes(searchTerm) ||
 				p.id.toLowerCase().includes(searchTerm)
 			);
 		});
@@ -145,7 +147,9 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 					{({ group, perms }) => {
 						return (
 							<div class="permission-group">
-								<h3>{(t as any)(`permissions_group.${group}`) ?? group}</h3>
+								<h3>
+									{String(t(`permissions_group.${group}` as any) ?? group)}
+								</h3>
 								<ul>
 									<For each={perms}>
 										{(p) => {
@@ -155,14 +159,22 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 											const [isExpanded, setIsExpanded] = createSignal(false);
 
 											const name = isOverwriteContext()
-												? ((t as any)(`permission_overwrites.${p.id}.name`) ??
-													p.id)
-												: ((t as any)(`permissions.${p.id}.name`) ?? p.id);
+												? (String(
+													t(`permission_overwrites.${p.id}.name` as any) ??
+														p.id,
+												))
+												: (String(
+													t(`permissions.${p.id}.name` as any) ?? p.id,
+												));
 											const description = isOverwriteContext()
-												? ((t as any)(
-													`permission_overwrites.${p.id}.description`,
-												) ?? "")
-												: ((t as any)(`permissions.${p.id}.description`) ?? "");
+												? (String(
+													t(
+														`permission_overwrites.${p.id}.description` as any,
+													) ?? "",
+												))
+												: (String(
+													t(`permissions.${p.id}.description` as any) ?? "",
+												));
 
 											return (
 												<li class="permission-item">

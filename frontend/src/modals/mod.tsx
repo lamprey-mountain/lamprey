@@ -47,19 +47,27 @@ export const Modal = (
 export type { ModalType };
 
 // Type guard functions for modal type discrimination
-function isAlert(modal: ModalType): modal is Extract<ModalType, { type: "alert" }> {
+function isAlert(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "alert" }> {
 	return modal.type === "alert";
 }
 
-function isConfirm(modal: ModalType): modal is Extract<ModalType, { type: "confirm" }> {
+function isConfirm(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "confirm" }> {
 	return modal.type === "confirm";
 }
 
-function isPrompt(modal: ModalType): modal is Extract<ModalType, { type: "prompt" }> {
+function isPrompt(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "prompt" }> {
 	return modal.type === "prompt";
 }
 
-function isMedia(modal: ModalType): modal is Extract<ModalType, { type: "media" }> {
+function isMedia(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "media" }> {
 	return modal.type === "media";
 }
 
@@ -75,7 +83,9 @@ function isResetPassword(
 	return modal.type === "reset_password";
 }
 
-function isPalette(modal: ModalType): modal is Extract<ModalType, { type: "palette" }> {
+function isPalette(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "palette" }> {
 	return modal.type === "palette";
 }
 
@@ -103,7 +113,9 @@ function isViewReactions(
 	return modal.type === "view_reactions";
 }
 
-function isPrivacy(modal: ModalType): modal is Extract<ModalType, { type: "privacy" }> {
+function isPrivacy(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "privacy" }> {
 	return modal.type === "privacy";
 }
 
@@ -131,11 +143,15 @@ function isChannelTopic(
 	return modal.type === "channel_topic";
 }
 
-function isLink(modal: ModalType): modal is Extract<ModalType, { type: "link" }> {
+function isLink(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "link" }> {
 	return modal.type === "link";
 }
 
-function isKick(modal: ModalType): modal is Extract<ModalType, { type: "kick" }> {
+function isKick(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "kick" }> {
 	return modal.type === "kick";
 }
 
@@ -143,7 +159,9 @@ function isBan(modal: ModalType): modal is Extract<ModalType, { type: "ban" }> {
 	return modal.type === "ban";
 }
 
-function isTimeout(modal: ModalType): modal is Extract<ModalType, { type: "timeout" }> {
+function isTimeout(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "timeout" }> {
 	return modal.type === "timeout";
 }
 

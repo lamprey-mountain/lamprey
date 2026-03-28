@@ -2,12 +2,14 @@ import { useCurrentUser } from "./contexts/currentUser.tsx";
 // TODO: refactor out duplicated code from here and Message.tsx
 
 import {
-	type Attachment,
 	Channel,
 	getTimestampFromUUID,
 	type Media,
 	Message,
+	MessageVersion,
+	type RoomMember,
 } from "sdk";
+import type { Attachment } from "./context";
 import {
 	createEffect,
 	createMemo,
@@ -78,6 +80,45 @@ import { useUploads } from "./contexts/uploads";
 import { Match, Switch } from "solid-js";
 import icDelete from "./assets/delete.png";
 
+// Type guard for RoomMember with override_name
+function hasOverrideName(
+	m: RoomMember | undefined,
+): m is RoomMember & { override_name: string } {
+	return m !== undefined && "override_name" in m;
+}
+
+// Type guard for Channel with last_version_id
+function hasLastVersionId(
+	ch: Channel,
+): ch is Channel & { last_version_id: string } {
+	return "last_version_id" in ch;
+}
+
+// Type guard for Message with DefaultMarkdown type
+function isDefaultMarkdown(
+	msg: Message,
+): msg is Message & {
+	latest_version: MessageVersion & {
+		type: "DefaultMarkdown";
+		content?: string | null;
+	};
+} {
+	return msg.latest_version.type === "DefaultMarkdown";
+}
+
+// Type guard for uploading attachment
+function isUploadingAttachment(
+	att: Attachment,
+): att is Attachment & {
+	status: "uploading";
+	file: File;
+	progress: number;
+	paused: boolean;
+	local_id: string;
+} {
+	return "status" in att && att.status === "uploading";
+}
+
 function AttachmentView(props: MediaProps) {
 	const b = () => props.media.content_type.split("/")[0];
 	const ty = () => props.media.content_type.split(";")[0];
@@ -131,8 +172,7 @@ const InputReply = (props: { thread: Channel; reply: Message }) => {
 		const member = roomMembers2.use(() => `${room_id}:${user_id}`);
 
 		const m = member();
-		return ((m as any)?.membership === "Join" && (m as any)?.override_name) ??
-			user()?.name;
+		return (hasOverrideName(m) && m.override_name) ?? user()?.name;
 	};
 
 	const getNameNullable = (user_id?: string) => {
@@ -230,8 +270,8 @@ export const Forum2 = (props: { channel: Channel }) => {
 				return a.id < b.id ? 1 : -1;
 			} else if (sortBy() === "activity") {
 				// activity
-				const tA = (a as any).last_version_id ?? a.id;
-				const tB = (b as any).last_version_id ?? b.id;
+				const tA = hasLastVersionId(a) ? a.last_version_id : a.id;
+				const tB = hasLastVersionId(b) ? b.last_version_id : b.id;
 				return tA < tB ? 1 : -1;
 			}
 			return 0;
@@ -484,7 +524,9 @@ export const Forum2 = (props: { channel: Channel }) => {
 													{thread.message_count} message(s) &bull; last msg{" "}
 													<Time
 														date={getTimestampFromUUID(
-															(thread as any).last_version_id ?? thread.id,
+															hasLastVersionId(thread)
+																? thread.last_version_id
+																: thread.id,
 														)}
 													/>
 												</div>
@@ -760,7 +802,8 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 
 	const locked = () => {
 		return !perms.has("MessageCreate") ||
-			((props.channel.locked as any) && !perms.has("ThreadManage"));
+			(("locked" in props.channel && !!props.channel.locked) &&
+				!perms.has("ThreadManage"));
 	};
 
 	const [remainingTime, setRemainingTime] = createSignal(0);
@@ -866,7 +909,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 									{(att) => (
 										<RenderUploadItem
 											thread_id={props.channel.id}
-											att={att as any}
+											att={att}
 										/>
 									)}
 								</For>
@@ -1146,8 +1189,9 @@ const Comment = (
 	};
 
 	const canEditMessage = () => {
-		return (message() as any).type === "DefaultMarkdown" &&
-			!message().is_local &&
+		const msg = message();
+		return msg.latest_version.type === "DefaultMarkdown" &&
+			!msg.is_local &&
 			isOwnMessage();
 	};
 
@@ -1272,15 +1316,21 @@ const Comment = (
 							<CommentEditor message={message()} channel={props.channel} />
 						}
 					>
-						<Markdown
-							content={(message().latest_version as any).type ===
-									"DefaultMarkdown"
-								? (message().latest_version as any).content ?? ""
-								: ""}
-							channel_id={message().channel_id}
-							class="content"
-							ref={contentEl}
-						/>
+						{(() => {
+							const msg = message();
+							const version = msg.latest_version;
+							const content = version.type === "DefaultMarkdown"
+								? version.content ?? ""
+								: "";
+							return (
+								<Markdown
+									content={content}
+									channel_id={msg.channel_id}
+									class="content"
+									ref={contentEl}
+								/>
+							);
+						})()}
 						<div style="padding: 0 8px">
 							{(() => {
 								const version = message().latest_version;
@@ -1339,18 +1389,21 @@ export function RenderUploadItem(
 ) {
 	const ctx = useCtx();
 	const uploads = useUploads();
-	const thumbUrl = URL.createObjectURL((props.att as any).file);
-	onCleanup(() => {
-		URL.revokeObjectURL(thumbUrl);
-	});
+	const thumbUrl = isUploadingAttachment(props.att)
+		? URL.createObjectURL(props.att.file)
+		: "";
+	if (thumbUrl) {
+		onCleanup(() => {
+			URL.revokeObjectURL(thumbUrl);
+		});
+	}
 
 	function renderInfo(att: Attachment) {
-		const a = att as any;
-		if (a.status === "uploading") {
-			if (a.progress === 1) {
+		if (isUploadingAttachment(att)) {
+			if (att.progress === 1) {
 				return `processing`;
 			} else {
-				const percent = (a.progress * 100).toFixed(2);
+				const percent = (att.progress * 100).toFixed(2);
 				return `${percent}%`;
 			}
 		} else {
@@ -1359,9 +1412,8 @@ export function RenderUploadItem(
 	}
 
 	function getProgress(att: Attachment) {
-		const a = att as any;
-		if (a.status === "uploading") {
-			return a.progress;
+		if (isUploadingAttachment(att)) {
+			return att.progress;
 		} else {
 			return 1;
 		}
@@ -1372,11 +1424,15 @@ export function RenderUploadItem(
 	}
 
 	function pause() {
-		uploads.pause((props.att as any).local_id);
+		if (isUploadingAttachment(props.att)) {
+			uploads.pause(props.att.local_id);
+		}
 	}
 
 	function resume() {
-		uploads.resume((props.att as any).local_id);
+		if (isUploadingAttachment(props.att)) {
+			uploads.resume(props.att.local_id);
+		}
 	}
 
 	return (
@@ -1390,7 +1446,9 @@ export function RenderUploadItem(
 					</svg>
 					<div style="display: flex">
 						<div style="flex: 1;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">
-							{(props.att as any).file.name}
+							{isUploadingAttachment(props.att)
+								? props.att.file.name
+								: "uploaded"}
 							<span style="color:#888;margin-left:.5ex">
 								{renderInfo(props.att)}
 							</span>
@@ -1398,19 +1456,22 @@ export function RenderUploadItem(
 						<menu>
 							<Switch>
 								<Match
-									when={(props.att as any).status === "uploading" &&
-										(props.att as any).paused}
+									when={isUploadingAttachment(props.att) &&
+										props.att.paused}
 								>
 									<button onClick={resume}>
 										⬆️
 									</button>
 								</Match>
-								<Match when={(props.att as any).status === "uploading"}>
+								<Match when={isUploadingAttachment(props.att)}>
 									<button onClick={pause}>⏸️</button>
 								</Match>
 							</Switch>
 							<button
-								onClick={() => removeAttachment((props.att as any).local_id)}
+								onClick={() =>
+									removeAttachment(
+										isUploadingAttachment(props.att) ? props.att.local_id : "",
+									)}
 							>
 								<img class="icon" src={icDelete} />
 							</button>

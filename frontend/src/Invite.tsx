@@ -4,11 +4,42 @@ import { useCtx } from "./context.ts";
 import { md } from "./markdown_utils.tsx";
 import { useNavigate } from "@solidjs/router";
 import { getThumbFromId } from "./media/util.tsx";
+import type { InviteTarget } from "sdk";
 
 const Title = (props: { title?: string }) => {
 	createEffect(() => (document.title = props.title ?? ""));
 	return undefined;
 };
+
+// Type guard functions for InviteTarget
+function isRoomTarget(
+	target: InviteTarget,
+): target is Extract<InviteTarget, { type: "Room" }> {
+	return target.type === "Room";
+}
+
+function isGdmTarget(
+	target: InviteTarget,
+): target is Extract<InviteTarget, { type: "Gdm" }> {
+	return target.type === "Gdm";
+}
+
+function isServerTarget(
+	target: InviteTarget,
+): target is Extract<InviteTarget, { type: "Server" }> {
+	return target.type === "Server";
+}
+
+function isUserTarget(
+	target: InviteTarget,
+): target is Extract<InviteTarget, { type: "User" }> {
+	return target.type === "User";
+}
+
+function getRoomFromTarget(target: InviteTarget | undefined) {
+	if (target && isRoomTarget(target)) return target.room;
+	return undefined;
+}
 
 export const RouteInviteInner = (props: { code: string }) => {
 	const api2 = useApi2();
@@ -20,17 +51,16 @@ export const RouteInviteInner = (props: { code: string }) => {
 	const name = () => {
 		const i = invite();
 		if (!i) return "unknown";
-		switch (((i as any).target.type as any)) {
+		const target = i.target;
+		switch (target.type) {
 			case "Room":
-				return ((i as any).target.room as any)?.name;
-			case "Thread":
-				return ((i as any).target.thread as any)?.name;
+				return target.room?.name;
 			case "Gdm":
-				return ((i as any).target.channel as any)?.name;
+				return target.channel?.name;
 			case "Server":
 				return "a server";
 			case "User":
-				return ((i as any).target.user as any)?.name;
+				return target.user?.name;
 			default:
 				return "unknown";
 		}
@@ -39,7 +69,7 @@ export const RouteInviteInner = (props: { code: string }) => {
 	const titleText = () => {
 		const i = invite();
 		if (!i) return "invite";
-		const targetType = i.target.type as any;
+		const targetType = i.target.type;
 		if (targetType === "User") {
 			return `${name()} sent a friend request`;
 		}
@@ -49,10 +79,8 @@ export const RouteInviteInner = (props: { code: string }) => {
 	const joinName = () => {
 		const i = invite();
 		if (!i) return "join";
-		switch ((i.target.type as any)) {
+		switch (i.target.type) {
 			case "Room":
-				return "join";
-			case "Thread":
 				return "join";
 			case "Server":
 				return "register";
@@ -70,15 +98,20 @@ export const RouteInviteInner = (props: { code: string }) => {
 		const target = invite()!.target;
 		switch (target.type) {
 			case "User":
-				return nav(`/user/${target.user.id}`);
+				if (isUserTarget(target)) return nav(`/user/${target.user.id}`);
+				break;
 			case "Room":
-				return nav(
-					target.channel
-						? `/channel/${target.channel.id}`
-						: `/room/${target.room.id}`,
-				);
+				if (isRoomTarget(target)) {
+					return nav(
+						target.channel
+							? `/channel/${target.channel.id}`
+							: `/room/${target.room.id}`,
+					);
+				}
+				break;
 			case "Gdm":
-				return nav(`/channel/${target.channel.id}`);
+				if (isGdmTarget(target)) return nav(`/channel/${target.channel.id}`);
+				break;
 			case "Server":
 				return nav("/");
 		}
@@ -87,6 +120,13 @@ export const RouteInviteInner = (props: { code: string }) => {
 	const reject = () => {
 		nav("/");
 	};
+
+	const target = () => invite()?.target;
+	const room = () => target() && getRoomFromTarget(target());
+	const roomIcon = () => room()?.icon;
+	const roomDescription = () => room()?.description ?? "";
+	const roomMemberCount = () => room()?.member_count ?? 0;
+	const roomOnlineCount = () => room()?.online_count ?? 0;
 
 	return (
 		<>
@@ -99,12 +139,9 @@ export const RouteInviteInner = (props: { code: string }) => {
 						</h3>
 						<div class="box">
 							<div style="display:flex;">
-								<Show when={(invite()?.target as any)?.room?.icon}>
+								<Show when={roomIcon()}>
 									<img
-										src={getThumbFromId(
-											(invite()?.target as any)?.room?.icon,
-											64,
-										)}
+										src={getThumbFromId(roomIcon()!, 64)}
 										class="avatar"
 									/>
 								</Show>
@@ -112,20 +149,14 @@ export const RouteInviteInner = (props: { code: string }) => {
 									<div style="font-size: 1.3rem;font-weight: bold">
 										{name()}
 									</div>
-									<Show when={(invite()?.target as any)?.type === "Room"}>
+									<Show when={target()?.type === "Room"}>
 										<div
 											class="markdown"
-											innerHTML={md(
-												((invite()?.target as any)?.room?.description ??
-													"") as string,
-											) as string}
+											innerHTML={md(roomDescription()) as string}
 										>
 										</div>
 										<div class="dim">
-											{(invite()?.target as any)?.room?.member_count ?? 0}{" "}
-											members,{" "}
-											{(invite()?.target as any)?.room?.online_count ?? 0}{" "}
-											online
+											{roomMemberCount()} members, {roomOnlineCount()} online
 										</div>
 									</Show>
 									<div style="display:flex;justify-content:end;gap:4px">

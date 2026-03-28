@@ -117,7 +117,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 	};
 
 	const joinOrLeaveChannel = () => {
-		if ((self_channel_member() as any)?.membership === "Leave") {
+		if (!self_channel_member()) {
 			ctx.client.http.PUT("/api/v1/thread/{thread_id}/member/{user_id}", {
 				params: {
 					path: { thread_id: props.channel_id, user_id: "@self" },
@@ -193,9 +193,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 			</Show>
 			<Show when={channel() && isThread()}>
 				<Item onClick={joinOrLeaveChannel}>
-					{(self_channel_member() as any)?.membership === "Leave"
-						? "join"
-						: "leave"}
+					{self_channel_member() ? "leave" : "join"}
 				</Item>
 			</Show>
 			<Separator />

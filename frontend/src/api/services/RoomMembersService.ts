@@ -28,30 +28,12 @@ export class RoomMembersService extends BaseService<RoomMember> {
 		const [room_id, user_id] = id.split(":");
 		if (!room_id || !user_id) throw new Error("Invalid composite ID");
 
-		try {
-			const data = await this.retryWithBackoff<RoomMember>(() =>
-				this.client.http.GET("/api/v1/room/{room_id}/member/{user_id}", {
-					params: { path: { room_id, user_id } },
-				})
-			);
-			return data;
-		} catch (error: unknown) {
-			const err = error as { error?: string };
-			if (err?.error === "not found") {
-				// Placeholder
-				return {
-					membership: "Leave" as const,
-					room_id,
-					user_id,
-					mute: false,
-					deaf: false,
-					roles: [] as string[],
-					joined_at: new Date().toISOString(),
-					quarantined: false,
-				};
-			}
-			throw error;
-		}
+		const data = await this.retryWithBackoff<RoomMember>(() =>
+			this.client.http.GET("/api/v1/room/{room_id}/member/{user_id}", {
+				params: { path: { room_id, user_id } },
+			})
+		);
+		return data;
 	}
 
 	override upsert(item: RoomMember) {
@@ -61,6 +43,19 @@ export class RoomMembersService extends BaseService<RoomMember> {
 			this.db.put(this.cacheName, item).catch((e) => {
 				console.warn(`Failed to write to ${this.cacheName}`, {
 					key: [item.room_id, item.user_id],
+					error: e,
+				});
+			});
+		}
+	}
+
+	override delete(id: string) {
+		this.cache.delete(id);
+
+		if (this.db && this.cacheName) {
+			this.db.delete(this.cacheName, this.getDbKey(id)).catch((e) => {
+				console.warn(`Failed to delete from ${this.cacheName}`, {
+					key: id,
 					error: e,
 				});
 			});

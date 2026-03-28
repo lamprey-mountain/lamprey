@@ -21,16 +21,10 @@ export type Role = components["schemas"]["Role"];
 export type Invite = components["schemas"]["Invite"];
 export type InviteWithMetadata = components["schemas"]["InviteWithMetadata"];
 export type Session = components["schemas"]["Session"];
-export type RoomMember = components["schemas"]["RoomMember"] & {
-	/** @description membership status (client-side only, not in canonical schema) */
-	membership?: "Join" | "Leave" | "Pending";
-};
+export type RoomMember = components["schemas"]["RoomMember"];
 export type RoomMemberSearchResponse =
 	components["schemas"]["RoomMemberSearchResponse"];
-export type ThreadMember = components["schemas"]["ThreadMember"] & {
-	/** @description membership status (client-side only, not in canonical schema) */
-	membership?: "Join" | "Leave" | "Pending";
-};
+export type ThreadMember = components["schemas"]["ThreadMember"];
 export type Media = components["schemas"]["Media"];
 export type MessageCreate = components["schemas"]["MessageCreate"];
 export type PaginationResponseMessage =
@@ -124,6 +118,7 @@ export type AutomodTrigger = components["schemas"]["AutomodTrigger"];
 export type AutomodAction = components["schemas"]["AutomodAction"];
 export type AutomodTarget = components["schemas"]["AutomodTarget"];
 export type ReactionCount = components["schemas"]["ReactionCount"];
+export type InviteTarget = components["schemas"]["InviteTarget"];
 
 // TODO: use openai schema
 export type MessageSearch = {

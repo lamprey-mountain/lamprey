@@ -82,8 +82,7 @@ export function Input(props: InputProps) {
 
 		const member = roomMembers2.cache.get(`${room_id}:${user_id}`);
 		const m = member;
-		return (((m as any)?.membership as any) === "Join" && m?.override_name) ??
-			user?.name;
+		return (m?.override_name) ?? user?.name;
 	};
 	const fmt = new (Intl as any).ListFormat();
 
@@ -512,8 +511,7 @@ const InputReply = (props: { thread: ThreadT; reply: MessageT }) => {
 		const member = roomMembers2.cache.get(`${room_id}:${user_id}`);
 
 		const m = member;
-		return (((m as any)?.membership as any) === "Join" && m?.override_name) ??
-			user?.name;
+		return (m?.override_name) ?? user?.name;
 	};
 
 	const getNameNullable = (user_id?: string) => {

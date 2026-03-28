@@ -40,25 +40,24 @@ export class ThreadMembersService extends BaseService<ThreadMember> {
 		const [thread_id, user_id] = id.split(":");
 		if (!thread_id || !user_id) throw new Error("Invalid composite ID");
 
-		try {
-			const data = await this.retryWithBackoff<ThreadMember>(() =>
-				this.client.http.GET("/api/v1/thread/{thread_id}/member/{user_id}", {
-					params: { path: { thread_id, user_id } },
-				})
-			);
-			return data;
-		} catch (error: unknown) {
-			const err = error as { error?: string };
-			if (err?.error === "not found") {
-				// Placeholder
-				return {
-					membership: "Leave" as const,
-					thread_id,
-					user_id,
-					joined_at: new Date().toISOString(),
-				};
-			}
-			throw error;
+		const data = await this.retryWithBackoff<ThreadMember>(() =>
+			this.client.http.GET("/api/v1/thread/{thread_id}/member/{user_id}", {
+				params: { path: { thread_id, user_id } },
+			})
+		);
+		return data;
+	}
+
+	override delete(id: string) {
+		this.cache.delete(id);
+
+		if (this.db && this.cacheName) {
+			this.db.delete(this.cacheName, this.getDbKey(id)).catch((e) => {
+				console.warn(`Failed to delete from ${this.cacheName}`, {
+					key: id,
+					error: e,
+				});
+			});
 		}
 	}
 
