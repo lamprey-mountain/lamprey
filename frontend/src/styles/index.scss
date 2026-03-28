@@ -4237,6 +4237,18 @@ img.custom-emoji {
 	vertical-align: -0.1em;
 }
 
+.markdown.emoji-only {
+	font-size: 1.5rem !important;
+	line-height: 1.5;
+
+	& .emoji,
+	& img.emoji,
+	& img.custom-emoji {
+		width: 1.5em !important;
+		height: 1.5em !important;
+	}
+}
+
 .room-settings-automod {
 	.automod-rules-list {
 		display: flex;

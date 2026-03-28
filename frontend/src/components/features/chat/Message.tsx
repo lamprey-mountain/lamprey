@@ -58,6 +58,7 @@ import icMemberJoin from "../../../assets/member-join.png";
 import icPin from "../../../assets/pin.png";
 import icThread from "../../../assets/threads.png";
 import { Markdown } from "../../../atoms/Markdown.tsx";
+import { countEmojiOnly } from "../../../markdown_utils.tsx";
 import { openThread } from "../../../utils/channel";
 import type { SetStoreFunction } from "solid-js/store";
 import type { ChannelState } from "../../../contexts/channel";
@@ -88,12 +89,15 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 			? props.message.latest_version.content ?? ""
 			: "";
 
+	const emojiCount = () => countEmojiOnly(content());
+	const isEmojiOnly = () => emojiCount() > 0 && emojiCount() <= 20;
+
 	return (
 		<Markdown
 			content={content()}
 			channel_id={props.message.channel_id}
 			class="body"
-			classList={{ local: props.message.is_local }}
+			classList={{ local: props.message.is_local, "emoji-only": isEmojiOnly() }}
 		>
 			<Show when={props.message.id !== props.message.latest_version.version_id}>
 				<span class="edited" onClick={viewHistory}>(edited)</span>
