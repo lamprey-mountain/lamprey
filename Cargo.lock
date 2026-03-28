@@ -3567,7 +3567,6 @@ dependencies = [
  "lamprey-markdown",
  "lamprey-unfurl",
  "lettre",
- "linkify",
  "mediatype",
  "minijinja",
  "moka",
