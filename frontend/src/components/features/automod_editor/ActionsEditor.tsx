@@ -6,7 +6,7 @@ import { ChannelPicker } from "../../../atoms/ChannelPicker.tsx";
 export interface ActionsEditorProps {
 	target: AutomodTarget;
 	actions: AutomodAction[];
-	updateActionValue: (idx: number, key: string, val: any) => void;
+	updateActionValue: (idx: number, key: string, val: unknown) => void;
 	updateActionType: (idx: number, type: AutomodAction["type"]) => void;
 	addAction: () => void;
 	removeAction: (idx: number) => void;
@@ -18,7 +18,7 @@ export interface ActionsEditorProps {
 
 function BlockFields(props: {
 	action: AutomodAction & { type: "Block" };
-	update: (key: string, val: any) => void;
+	update: (key: string, val: unknown) => void;
 }) {
 	return (
 		<label>
@@ -35,7 +35,7 @@ function BlockFields(props: {
 
 function TimeoutFields(props: {
 	action: AutomodAction & { type: "Timeout" };
-	update: (key: string, val: any) => void;
+	update: (key: string, val: unknown) => void;
 }) {
 	// Convert ms to minutes for a better UX
 	const mins = () => Math.floor(props.action.duration / 60000);
@@ -54,7 +54,7 @@ function TimeoutFields(props: {
 
 function SendAlertFields(props: {
 	action: AutomodAction & { type: "SendAlert" };
-	update: (key: string, val: any) => void;
+	update: (key: string, val: unknown) => void;
 	room_id: string;
 	channels: () => Channel[];
 }) {
@@ -90,7 +90,7 @@ function ActionItem(props: {
 	index: number;
 	target: AutomodTarget;
 	onUpdateType: (type: AutomodAction["type"]) => void;
-	onUpdateValue: (key: string, val: any) => void;
+	onUpdateValue: (key: string, val: unknown) => void;
 	onRemove: () => void;
 	room_id: string;
 	channels: () => Channel[];

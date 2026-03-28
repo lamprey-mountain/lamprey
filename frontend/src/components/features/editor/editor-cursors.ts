@@ -121,15 +121,19 @@ export const cursorPlugin = (
 							});
 						});
 
-						// FIXME: there may be multiple editors
-						(widget as any)._floating_cleanup = cleanup;
+						// Store cleanup function on widget DOM element
+						(widget as HTMLElement & { _floating_cleanup?: () => void })
+							._floating_cleanup = cleanup;
 
 						return widget;
 					}, {
 						key: userId,
 						destroy(dom) {
-							if ((dom as any)._floating_cleanup) {
-								(dom as any)._floating_cleanup();
+							const domEl = dom as HTMLElement & {
+								_floating_cleanup?: () => void;
+							};
+							if (domEl._floating_cleanup) {
+								domEl._floating_cleanup();
 							}
 						},
 					}));
@@ -139,7 +143,8 @@ export const cursorPlugin = (
 			},
 		},
 		view(view) {
-			const onSync = ([msg]: any) => {
+			const onSync = (payload: any) => {
+				const [msg] = payload;
 				if (
 					msg.type === "DocumentPresence" && msg.channel_id === channelId &&
 					msg.branch_id === branchId

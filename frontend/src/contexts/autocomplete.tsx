@@ -16,7 +16,7 @@ export type AutocompleteState = {
 	reference: ReferenceElement | null;
 	query: string;
 	kind: AutocompleteKind | null;
-	items: any[]; // The filtered results
+	items: AutocompleteItem[]; // The filtered results
 	activeIndex: number;
 };
 
@@ -27,7 +27,7 @@ export type AutocompleteContext = {
 	updateQuery: (query: string) => void;
 	setReference: (ref: ReferenceElement) => void;
 	setIndex: (index: number) => void;
-	setResults: (items: any[]) => void;
+	setResults: (items: AutocompleteItem[]) => void;
 	navigate: (direction: "up" | "down") => void;
 	select: () => void;
 };
@@ -59,6 +59,12 @@ export type AutocompleteMentionItem =
 	| { type: "user"; user_id: string; name: string; user: User }
 	| { type: "role"; role_id: string; name: string }
 	| { type: "everyone"; mention_type: "everyone" };
+
+export type AutocompleteItem =
+	| AutocompleteMentionItem
+	| { type: "channel"; channel_id: string; name: string }
+	| { type: "emoji"; id: string; name: string; char?: string }
+	| { type: "command"; command: string };
 
 const AutocompleteContext = createContext<AutocompleteContext>();
 
@@ -100,7 +106,7 @@ export const AutocompleteProvider: ParentComponent = (props) => {
 	const select = () => {
 		const item = state.items[state.activeIndex];
 		if (item && state.kind) {
-			(state.kind.onSelect as any)(item as any);
+			(state.kind.onSelect as any)(item);
 			hide();
 		}
 	};

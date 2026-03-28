@@ -61,7 +61,7 @@ function createSelect<T>() {
 		const list = filtered();
 		const currentHovered = getHovered();
 		if (!list.some((i) => i.obj === currentHovered)) {
-			setHovered((list[0]?.obj ?? null) as any);
+			setHovered(() => list[0]?.obj ?? null);
 		}
 	});
 
@@ -75,14 +75,14 @@ function createSelect<T>() {
 			const list = filtered();
 			if (list.length === 0) return;
 			const idx = list.findIndex((i) => i.obj === getHovered()!);
-			setHovered((list[(idx + 1) % list.length]?.obj ?? null) as any);
+			setHovered(() => list[(idx + 1) % list.length]?.obj ?? null);
 		},
 		prev() {
 			const list = filtered();
 			if (list.length === 0) return;
 			const idx = list.findIndex((i) => i.obj === getHovered()!);
 			setHovered(
-				(list[(list.length + idx - 1) % list.length]?.obj ?? null) as any,
+				() => (list[(list.length + idx - 1) % list.length]?.obj ?? null),
 			);
 		},
 	} as const;

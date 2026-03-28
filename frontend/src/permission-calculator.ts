@@ -617,9 +617,9 @@ export function canUseCommand(
 	ctx: PermissionContext,
 	user_id: string,
 	commandName: string,
-	channel: any,
+	channel: import("sdk").Channel | undefined,
 ): boolean {
-	const channelType = channel?.ty;
+	const channelType = channel?.type;
 
 	switch (commandName) {
 		// only usable in threads

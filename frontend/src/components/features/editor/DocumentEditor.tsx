@@ -71,16 +71,20 @@ type EditorProps = {
 export const createEditor = (
 	opts: EditorProps,
 ): {
-	schema: any;
-	setState: (state?: any) => void;
+	schema: import("prosemirror-model").Schema;
+	setState: (state?: import("prosemirror-state").EditorState) => void;
 	focus: () => void;
-	view: any;
+	view: import("prosemirror-view").EditorView | undefined;
 	View: (props: any) => any;
 	subscribe: (channelId: string, branchId: string) => void;
 	isSubscribed: () => boolean;
-	setDiffMarks: (marks: any) => void;
-	createReadonlyState: (content: string) => any;
-	createReadonlyStateFromHtml: (html: string) => any;
+	setDiffMarks: (marks: DiffMark[]) => void;
+	createReadonlyState: (
+		content: string,
+	) => import("prosemirror-state").EditorState;
+	createReadonlyStateFromHtml: (
+		html: string,
+	) => import("prosemirror-state").EditorState;
 } => {
 	const api2 = useApi2();
 	const channels2 = useChannels2();

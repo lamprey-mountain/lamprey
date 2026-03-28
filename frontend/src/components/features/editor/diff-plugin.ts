@@ -1,5 +1,6 @@
 import { Plugin, PluginKey } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
+import type { Transaction } from "prosemirror-state";
 
 export type DiffMark =
 	| { from: number; to: number; type: "insertion" }
@@ -70,8 +71,8 @@ export function createDiffPlugin(
 }
 
 export function setDiffMarks(
-	tr: any,
+	tr: Transaction,
 	marks: DiffMark[],
-): any {
+): Transaction {
 	return tr.setMeta(diffPluginKey, { marks });
 }

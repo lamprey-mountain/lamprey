@@ -80,7 +80,7 @@ export function AutomodRule(props: {
 		}
 	};
 
-	const updateNested = (path: string, value: any) => {
+	const updateNested = (path: string, value: unknown) => {
 		props.setRuleState(
 			props.rule.id,
 			props.rule.state === "draft" ? "draft" : "edited",
@@ -96,7 +96,7 @@ export function AutomodRule(props: {
 		}
 	};
 
-	const updateTriggerValue = (key: string, val: any) => {
+	const updateTriggerValue = (key: string, val: unknown) => {
 		props.setDraftRules(
 			(r) => r.id === props.rule.id,
 			"trigger" as any,
@@ -107,7 +107,7 @@ export function AutomodRule(props: {
 
 	const updateTriggerType = (type: AutomodTrigger["type"]) => {
 		// Define the default structure for each trigger type
-		const defaults: Record<string, any> = {
+		const defaults: Record<string, unknown> = {
 			TextKeywords: { type: "TextKeywords", keywords: [], allow: [] },
 			TextRegex: { type: "TextRegex", deny: [], allow: [] },
 			TextLinks: { type: "TextLinks", hostnames: [], whitelist: false },
@@ -118,11 +118,11 @@ export function AutomodRule(props: {
 		props.setDraftRules(
 			(r) => r.id === props.rule.id,
 			"trigger",
-			defaults[type], // This replaces the whole trigger object ONLY when switching types
+			defaults[type] as any, // This replaces the whole trigger object ONLY when switching types
 		);
 	};
 
-	const updateActionValue = (idx: number, key: string, val: any) => {
+	const updateActionValue = (idx: number, key: string, val: unknown) => {
 		props.setDraftRules(
 			(r) => r.id === props.rule.id,
 			"actions" as any,

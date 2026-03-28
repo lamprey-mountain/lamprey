@@ -13,8 +13,8 @@ import { chatctx, useCtx } from "../context.ts";
 import { useModals } from "../contexts/modal";
 import { useMenu } from "../contexts/menu.tsx";
 
-function isSeparator(child: any): boolean {
-	return (child as HTMLElement)?.classList.contains("menu-separator");
+function isSeparator(child: JSX.Element): boolean {
+	return (child as HTMLElement)?.classList?.contains("menu-separator") ?? false;
 }
 
 export function Menu(props: ParentProps<{ submenu?: boolean }>) {
@@ -26,7 +26,7 @@ export function Menu(props: ParentProps<{ submenu?: boolean }>) {
 		const flat = resolved.toArray();
 		if (flat.length === 0) return flat;
 
-		const result: any[] = [];
+		const result: JSX.Element[] = [];
 		let prevWasSeparator = false;
 
 		for (const child of flat) {

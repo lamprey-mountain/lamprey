@@ -1,4 +1,4 @@
-import { RoomMember } from "sdk";
+import { RoomMember, User } from "sdk";
 import { BaseService } from "../core/Service";
 import { Accessor, createEffect, createResource, Resource } from "solid-js";
 import { ReactiveMap } from "@solid-primitives/map";
@@ -35,8 +35,9 @@ export class RoomMembersService extends BaseService<RoomMember> {
 				})
 			);
 			return data;
-		} catch (error: any) {
-			if (error?.error === "not found") {
+		} catch (error: unknown) {
+			const err = error as { error?: string };
+			if (err?.error === "not found") {
 				// Placeholder
 				return {
 					membership: "Leave" as const,
@@ -90,8 +91,10 @@ export class RoomMembersService extends BaseService<RoomMember> {
 	async search(
 		room_id: string,
 		query: string,
-	): Promise<{ room_members: RoomMember[]; users: any[] }> {
-		const result = await this.retryWithBackoff<any>(() =>
+	): Promise<{ room_members: RoomMember[]; users: User[] }> {
+		const result = await this.retryWithBackoff<
+			{ room_members: RoomMember[]; users: User[] }
+		>(() =>
 			this.client.http.GET("/api/v1/room/{room_id}/member/search", {
 				params: {
 					path: { room_id },

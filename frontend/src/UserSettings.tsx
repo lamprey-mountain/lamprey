@@ -1,4 +1,4 @@
-import { createMemo, For, Match, Show, Switch } from "solid-js";
+import { createMemo, For, Show, Switch } from "solid-js";
 import { A } from "@solidjs/router";
 import { Dynamic } from "solid-js/web";
 import {
@@ -19,7 +19,36 @@ import {
 } from "./components/features/user_settings/mod.tsx";
 import type { User } from "sdk";
 
-const tabs = [
+// Tab type definitions with proper discriminated unions
+type CategoryTab = { category: string };
+
+type PageTab = {
+	name: string;
+	path: string;
+	component: any;
+	noPad?: boolean;
+};
+
+type TabItem = CategoryTab | PageTab;
+
+// Helper for type-safe matching with SolidJS Switch/Match
+function matches<S extends TabItem>(
+	e: TabItem,
+	predicate: (e: TabItem) => e is S,
+): S | false {
+	return predicate(e) ? e : false;
+}
+
+// Type guard function
+function isCategoryTab(tab: TabItem): tab is CategoryTab {
+	return "category" in tab;
+}
+
+function isPageTab(tab: TabItem): tab is PageTab {
+	return "path" in tab;
+}
+
+const tabs: TabItem[] = [
 	{ category: "account" },
 	{ name: "profile", path: "", component: Profile },
 	{ name: "authentication", path: "authentication", component: Authentication },
@@ -44,10 +73,9 @@ const tabs = [
 	},
 ];
 
-type TabItem = typeof tabs[number];
 type GroupedTab = {
 	category: string;
-	items: Exclude<TabItem, { category: string }>[];
+	items: PageTab[];
 };
 
 function groupTabsByCategory(tabs: TabItem[]): GroupedTab[] {
@@ -55,11 +83,11 @@ function groupTabsByCategory(tabs: TabItem[]): GroupedTab[] {
 	let currentGroup: GroupedTab | null = null;
 
 	for (const tab of tabs) {
-		if ("category" in tab) {
-			currentGroup = { category: (tab.category as any), items: [] };
+		if (isCategoryTab(tab)) {
+			currentGroup = { category: tab.category, items: [] };
 			groups.push(currentGroup);
-		} else {
-			(currentGroup as any)?.items?.push(tab);
+		} else if (currentGroup) {
+			currentGroup.items.push(tab);
 		}
 	}
 
@@ -67,7 +95,10 @@ function groupTabsByCategory(tabs: TabItem[]): GroupedTab[] {
 }
 
 export const UserSettings = (props: { user: User; page: string }) => {
-	const currentTab = () => tabs.find((i) => i.path === (props.page ?? ""))!;
+	const currentTab = (): PageTab | undefined => {
+		const tab = tabs.find((i) => isPageTab(i) && i.path === (props.page ?? ""));
+		return tab && isPageTab(tab) ? tab : undefined;
+	};
 	const groupedTabs = createMemo(() => groupTabsByCategory(tabs));
 
 	return (

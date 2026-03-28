@@ -54,8 +54,8 @@ function UserMention(props: { id: string }) {
 					setUserView(null);
 				} else {
 					setUserView({
-						user_id: (props.id as any),
-						room_id: (ctx?.channel?.room_id as any),
+						user_id: props.id,
+						room_id: ctx?.channel?.room_id ?? undefined,
 						channel_id: ctx?.channel?.id,
 						ref: currentTarget,
 						source: "message",
@@ -134,7 +134,7 @@ function CodeBlock(props: { text: string; lang?: string }) {
 		if (!preview() && ref) {
 			import("highlight.js").then(({ default: hljs }) => {
 				if (ref) {
-					delete (ref as any).dataset.highlighted;
+					delete ref.dataset.highlighted;
 					hljs.highlightElement(ref);
 				}
 			});
@@ -381,7 +381,16 @@ function DynamicHeading(props: { depth: number; tokens: Token[] }) {
 	);
 }
 
-function MentionToken(props: { token: any }) {
+type MentionTokenProps = {
+	token: {
+		mention_type: "user" | "role" | "channel" | "emoji";
+		id: string;
+		name?: string;
+		animated?: boolean;
+	};
+};
+
+function MentionToken(props: MentionTokenProps) {
 	return (
 		<Switch>
 			<Match when={props.token.mention_type === "user"}>
@@ -396,7 +405,7 @@ function MentionToken(props: { token: any }) {
 			<Match when={props.token.mention_type === "emoji"}>
 				<CustomEmoji
 					id={props.token.id}
-					name={props.token.name}
+					name={props.token.name ?? "emoji"}
 					animated={props.token.animated}
 				/>
 			</Match>

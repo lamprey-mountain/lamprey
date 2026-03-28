@@ -1,5 +1,5 @@
 export async function fetchWithRetry<T>(
-	fn: () => Promise<{ data?: T; error?: any; response: Response }>,
+	fn: () => Promise<{ data?: T; error?: unknown; response: Response }>,
 	retries = 3,
 	delay = 1000,
 ): Promise<T> {
@@ -7,7 +7,7 @@ export async function fetchWithRetry<T>(
 		let res;
 		try {
 			res = await fn();
-		} catch (e) {
+		} catch (e: unknown) {
 			if (i === retries - 1) throw e;
 			await new Promise((r) => setTimeout(r, delay * Math.pow(2, i)));
 			continue;

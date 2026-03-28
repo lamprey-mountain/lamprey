@@ -20,7 +20,9 @@ type DocumentHistoryProps = {
 	selectedSeq: ChangesetSelection | null;
 };
 
-const AvatarWithTooltip = (props: { user: any; name: string }) => {
+const AvatarWithTooltip = (
+	props: { user?: import("sdk").User; name: string },
+) => {
 	let wrap: HTMLDivElement | undefined;
 	let tipEl: HTMLDivElement | undefined;
 	const [visible, setVisible] = createSignal(false);

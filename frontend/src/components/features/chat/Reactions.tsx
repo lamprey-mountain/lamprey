@@ -1,7 +1,7 @@
 import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { useCtx } from "../../../context.ts";
 import { createTooltip } from "../../../atoms/Tooltip.tsx";
-import type { Message } from "sdk";
+import type { Message, ReactionKey } from "sdk";
 import { useReactions2 } from "@/api";
 import icReactionAdd from "../../../assets/reaction-add.png";
 import { renderReactionKey } from "../../../emoji";
@@ -16,23 +16,28 @@ export const Reactions = (props: ReactionsProps) => {
 	const [showPicker, setShowPicker] = createSignal(false);
 	let addEl: HTMLDivElement | undefined;
 
-	const reactionKeyToParam = (key: any): string => {
+	const reactionKeyToParam = (key: ReactionKey): string => {
 		if (key.type === "Text") {
 			return `t:${key.content}`;
 		} else if (key.type === "Custom") {
-			return `c:${key.id}`;
+			return `c:${(key as ReactionKey & { type: "Custom" }).id}`;
 		}
 		return "";
 	};
 
-	const areKeysEqual = (a: any, b: any): boolean => {
+	const areKeysEqual = (a: ReactionKey, b: ReactionKey): boolean => {
 		if (a.type !== b.type) return false;
-		if (a.type === "Text") return a.content === b.content;
-		if (a.type === "Custom") return a.id === b.id;
+		if (a.type === "Text") {
+			return a.content === (b as ReactionKey & { type: "Text" }).content;
+		}
+		if (a.type === "Custom") {
+			return (a as ReactionKey & { type: "Custom" }).id ===
+				(b as ReactionKey & { type: "Custom" }).id;
+		}
 		return false;
 	};
 
-	const handleClick = (key: any, self: boolean) => {
+	const handleClick = (key: ReactionKey, self: boolean) => {
 		const param = reactionKeyToParam(key);
 		if (self) {
 			reactions2.remove(props.message.channel_id, props.message.id, param);

@@ -20,8 +20,8 @@ export function formatTime(time: number): string {
 
 /** in seconds */
 export const getDuration = (m: Media) => {
-	const metadata = m.metadata as any;
-	if (metadata.type === "Audio" || metadata.type === "Video") {
+	const metadata = m.metadata as { type?: string; duration?: number } | null;
+	if (metadata?.type === "Audio" || metadata?.type === "Video") {
 		return metadata.duration ?? 0;
 	} else {
 		return 0;
@@ -29,8 +29,8 @@ export const getDuration = (m: Media) => {
 };
 
 export const getWidth = (m: Media) => {
-	const metadata = m.metadata as any;
-	if (metadata.type === "Video" || metadata.type === "Image") {
+	const metadata = m.metadata as { type?: string; width?: number } | null;
+	if (metadata?.type === "Video" || metadata?.type === "Image") {
 		return metadata.width ?? 0;
 	} else {
 		return 0;
@@ -38,8 +38,8 @@ export const getWidth = (m: Media) => {
 };
 
 export const getHeight = (m: Media) => {
-	const metadata = m.metadata as any;
-	if (metadata.type === "Video" || metadata.type === "Image") {
+	const metadata = m.metadata as { type?: string; height?: number } | null;
+	if (metadata?.type === "Video" || metadata?.type === "Image") {
 		return metadata.height ?? 0;
 	} else {
 		return 0;

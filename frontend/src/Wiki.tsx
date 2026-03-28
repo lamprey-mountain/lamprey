@@ -117,11 +117,13 @@ export const Wiki = (props: { channel: Channel }) => {
 	function createDocument(room_id: string) {
 		modalctl.prompt("name?", (name) => {
 			if (!name) return;
-			channels2.create(room_id, {
-				name,
-				parent_id: props.channel.id,
-				type: "Document" as any,
-			} as any);
+			channels2.create(
+				room_id,
+				{
+					name,
+					parent_id: props.channel.id,
+				} as { name: string; parent_id: string } & Record<string, unknown>,
+			);
 		});
 	}
 

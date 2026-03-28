@@ -28,6 +28,14 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 		return ch.attachments.find((a) => a.local_id === props.local_id);
 	};
 
+	const thumbnailUrl = () => {
+		const att = attachment();
+		if (att?.status === "uploaded") {
+			return `url(${getThumbFromId(att.media.id, 64)})`;
+		}
+		return "none";
+	};
+
 	onMount(() => {
 		const att = attachment();
 		if (att) {
@@ -100,9 +108,7 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 				<h2>attachment</h2>
 				<div
 					style="height:70px;width:100px;background-size:cover;background-position:center;border-radius:4px;margin:8px 0"
-					style:background-image={attachment()?.status === "uploaded"
-						? `url(${getThumbFromId((attachment() as any).media.id, 64)})`
-						: "none"}
+					style:background-image={thumbnailUrl()}
 				>
 				</div>
 				<label style="display:block;margin:4px 0">

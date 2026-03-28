@@ -13,7 +13,7 @@ import {
 import type { Token, Tokens } from "marked";
 import { md } from "../../../markdown_utils.tsx";
 
-let hljs: any = null;
+let hljs: typeof import("highlight.js").default | null = null;
 import("highlight.js").then((m) => {
 	hljs = m.default;
 });
@@ -60,23 +60,31 @@ function getHighlightDecorations(
 		});
 		let currentPos = offset;
 
-		const walk = (node: any) => {
+		const walk = (node: unknown) => {
 			if (typeof node === "string") {
 				currentPos += node.length;
-			} else if (node.scope) {
-				const start = currentPos;
-				(node.children || []).forEach(walk);
-				decos.push({
-					attrs: { class: `hljs-${node.scope.replace(/\./g, " hljs-")}` },
-					start,
-					end: currentPos,
-				});
-			} else if (node.children) {
-				node.children.forEach(walk);
+			} else {
+				const nodeObj = node as { scope?: string; children?: unknown[] };
+				if (nodeObj.scope) {
+					const start = currentPos;
+					(nodeObj.children || []).forEach(walk);
+					decos.push({
+						attrs: { class: `hljs-${nodeObj.scope.replace(/\./g, " hljs-")}` },
+						start,
+						end: currentPos,
+					});
+				} else if (nodeObj.children) {
+					nodeObj.children.forEach(walk);
+				}
 			}
 		};
 
-		highlighted._emitter.root.children.forEach(walk);
+		// highlighted structure varies by hljs version
+		const root = (highlighted as any)._emitter?.root ||
+			(highlighted as any).value;
+		if (root?.children) {
+			root.children.forEach(walk);
+		}
 	} catch (e) {
 		// ignore highlight errors
 	}
@@ -103,7 +111,7 @@ const DECORATION_STRATEGIES: Record<string, (token: any) => DecorationDef[]> = {
 		{ attrs: SYN, start: t.raw.length - 2, end: t.raw.length },
 	],
 
-	spoiler: (t: any) => [
+	spoiler: (t: Tokens.Text) => [
 		{ attrs: SYN, start: 0, end: 2 },
 		{ attrs: { class: "spoiler-preview" }, start: 2, end: t.raw.length - 2 },
 		{ attrs: SYN, start: t.raw.length - 2, end: t.raw.length },

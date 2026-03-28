@@ -233,8 +233,12 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 		return results.map((r) => r.obj);
 	};
 
-	const updateApp = (index: number, field: keyof Application, value: any) => {
-		setApps(index, field, value);
+	const updateApp = (
+		index: number,
+		field: keyof Application,
+		value: unknown,
+	) => {
+		setApps(index, field, value as any);
 	};
 
 	const edit = useAppEditor(null);
@@ -341,7 +345,11 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 const AppEditor = (
 	props: {
 		edit: AppEditState;
-		updateApp: (index: number, field: keyof Application, value: any) => void;
+		updateApp: (
+			index: number,
+			field: keyof Application,
+			value: unknown,
+		) => void;
 		apps: Application[];
 		rotateSecret: (app_id: string) => Promise<void>;
 		createSession: (app_id: string) => Promise<void>;

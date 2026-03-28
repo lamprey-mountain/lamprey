@@ -3,6 +3,7 @@ import { useApi2 } from "@/api";
 import { useCtx } from "../context.ts";
 import { Item, Menu, Separator } from "./Parts.tsx";
 import { useModals } from "../contexts/modal";
+import type { UserWithRelationship } from "sdk";
 
 type UserAdminMenuProps = {
 	user_id: string;
@@ -11,17 +12,16 @@ type UserAdminMenuProps = {
 export function UserAdminMenu(props: UserAdminMenuProps) {
 	const ctx = useCtx();
 	const api2 = useApi2();
-	const user = api2.users.fetch(props.user_id) as any;
+	const user = api2.users.use(() => props.user_id);
 	const [, modalCtl] = useModals();
 
 	const copyUserId = () => navigator.clipboard.writeText(props.user_id);
-	const logToConsole = () =>
-		console.log(JSON.parse(JSON.stringify((user as any)())));
+	const logToConsole = () => console.log(JSON.parse(JSON.stringify(user())));
 
 	const suspendUser = () => {
-		modalCtl.prompt("suspend reason", (reason: any) => {
+		modalCtl.prompt("suspend reason", (reason: string | null) => {
 			if (!reason) return;
-			api2.client.http.POST("/api/v1/user/{user_id}/suspend" as any, {
+			api2.client.http.POST("/api/v1/user/{user_id}/suspend", {
 				params: {
 					path: {
 						user_id: props.user_id,
@@ -36,9 +36,9 @@ export function UserAdminMenu(props: UserAdminMenuProps) {
 	};
 
 	const unsuspendUser = () => {
-		modalCtl.prompt("unsuspend reason", (reason: any) => {
+		modalCtl.prompt("unsuspend reason", (reason: string | null) => {
 			if (!reason) return;
-			api2.client.http.DELETE("/api/v1/user/{user_id}/suspend" as any, {
+			api2.client.http.DELETE("/api/v1/user/{user_id}/suspend", {
 				params: {
 					path: {
 						user_id: props.user_id,

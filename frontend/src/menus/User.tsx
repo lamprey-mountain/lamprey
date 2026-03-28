@@ -246,13 +246,13 @@ export function UserMenu(props: UserMenuProps) {
 		);
 	};
 
-	const roles = (roles2 as any).useList(() => props.room_id as string);
+	const roles = () => roles2.listByRoom(props.room_id!);
 
 	const RoleSubmenu = () => (
 		<Submenu content="roles">
-			<Show when={roles()} fallback="loading roles...">
+			<Show when={roles().length > 0} fallback="loading roles...">
 				<For
-					each={roles()?.items?.filter((r: any) => r.id !== r.room_id) || []}
+					each={roles().filter((r) => r.id !== r.room_id)}
 				>
 					{(role) => (
 						<Item
@@ -311,19 +311,14 @@ export function UserMenu(props: UserMenuProps) {
 						</Item>
 					)}
 				</For>
-				<Show
-					when={!(roles()?.items?.filter((r: any) => r.id !== r.room_id)
-						?.length ??
-						0)}
-				>
+				<Show when={roles().filter((r) => r.id !== r.room_id).length === 0}>
 					<div>no roles</div>
 				</Show>
 			</Show>
 		</Submenu>
 	);
 
-	const hasRoles = () =>
-		(roles()?.items?.filter((r: any) => r.id !== r.room_id)?.length ?? 0) > 0;
+	const hasRoles = () => roles().filter((r) => r.id !== r.room_id).length > 0;
 	const hasAnyPermission = (checks: Array<() => boolean>) =>
 		checks.some((c) => c());
 

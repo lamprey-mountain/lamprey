@@ -324,7 +324,7 @@ export class RootStore {
 				this.preferences._loaded = true;
 			}
 		} else if (msg.type === "MemberListSync") {
-			this.memberLists.handleSync(msg);
+			this.memberLists.handleSync(msg as any);
 		} else if (msg.type === "VoiceState") {
 			if (msg.state) {
 				this.voiceStates.set(msg.user_id, msg.state);

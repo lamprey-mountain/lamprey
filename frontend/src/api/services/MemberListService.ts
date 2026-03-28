@@ -24,7 +24,25 @@ export class MemberListService {
 
 	constructor(private store: RootStore) {}
 
-	handleSync(msg: any) {
+	handleSync(msg: {
+		type: "MemberListSync";
+		room_id?: string | null;
+		channel_id?: string | null;
+		ops: Array<{
+			type: string;
+			position?: number;
+			items?: Array<string>;
+			users?: Array<User>;
+			room_members?: Array<RoomMember>;
+			thread_members?: Array<ThreadMember>;
+			user_id?: string;
+			user?: User;
+			room_member?: RoomMember;
+			thread_member?: ThreadMember;
+			count?: number;
+		}>;
+		groups: MemberListGroup[];
+	}) {
 		if (msg.type === "MemberListSync") {
 			const { room_id, channel_id: thread_id, ops, groups } = msg;
 			const id = thread_id ?? room_id;
@@ -78,32 +96,37 @@ export class MemberListService {
 						}
 					}
 
-					const items = op.items.map((user_id: string) => {
-						const user = this.store.users.get(user_id);
-						const room_member = room_id
-							? this.store.roomMembers.get(`${room_id}:${user_id}`)
-							: null;
-						const thread_member = thread_id
-							? this.store.threadMembers.get(`${thread_id}:${user_id}`)
-							: null;
+					if (op.items) {
+						const items = op.items.map((user_id) => {
+							const user = this.store.users.get(user_id);
+							const room_member = room_id
+								? this.store.roomMembers.get(`${room_id}:${user_id}`)
+								: null;
+							const thread_member = thread_id
+								? this.store.threadMembers.get(`${thread_id}:${user_id}`)
+								: null;
 
-						if (!user) {
-							memberListLog.warn("MemberListSync: user not found", { user_id });
-						}
+							if (!user) {
+								memberListLog.warn("MemberListSync: user not found", {
+									user_id,
+								});
+							}
 
-						return {
-							user: user!,
-							room_member: room_member ?? null,
-							thread_member: thread_member ?? null,
-						};
-					});
-					newItems.splice(Number(op.position), items.length, ...items);
+							return {
+								user: user!,
+								room_member: room_member ?? null,
+								thread_member: thread_member ?? null,
+							};
+						});
+						newItems.splice(Number(op.position), items.length, ...items);
+					}
 				} else if (op.type === "Insert") {
 					memberListLog.debug("MemberListSync op: Insert", {
 						position: op.position,
 						user_id: op.user_id,
 					});
 					const user_id = op.user_id;
+					if (!user_id) continue;
 					if (op.user) {
 						this.store.users.upsert(op.user);
 					}

@@ -58,7 +58,7 @@ function highlightedCodeBlock(turndownService: TurndownService) {
 
 function strikethrough(turndownService: TurndownService) {
 	turndownService.addRule("strikethrough", {
-		filter: ["del", "s", "strike" as any],
+		filter: ["del", "s", "strike"] as any,
 		replacement: (content: string) => `~~${content}~~`,
 	});
 }

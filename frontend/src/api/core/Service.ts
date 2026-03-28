@@ -50,7 +50,7 @@ export abstract class BaseService<T> {
 	 * Automatically extracts data from the response and throws on error.
 	 */
 	protected async retryWithBackoff<T>(
-		fn: () => Promise<{ data?: T; error?: any; response: Response }>,
+		fn: () => Promise<{ data?: T; error?: unknown; response: Response }>,
 		retries = 3,
 		baseDelay = 1000,
 	): Promise<T> {
@@ -58,11 +58,12 @@ export abstract class BaseService<T> {
 			let res;
 			try {
 				res = await fn();
-			} catch (e: any) {
+			} catch (e: unknown) {
 				// Don't retry on client errors (4xx except 429)
+				const error = e as { response?: { status?: number } };
 				if (
-					e?.response?.status && e.response.status < 500 &&
-					e.response.status !== 429
+					error?.response?.status && error.response.status < 500 &&
+					error.response.status !== 429
 				) {
 					throw e;
 				}

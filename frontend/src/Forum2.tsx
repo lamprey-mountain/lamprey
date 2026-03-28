@@ -919,7 +919,10 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	);
 };
 
-const ThreadLog = (props: { comments: any; commentTree: any }) => {
+const ThreadLog = (props: {
+	comments: { items: Array<{ id: string }> } | undefined;
+	commentTree: Array<unknown>;
+}) => {
 	const comments = () => props.comments;
 	const commentTree = () => props.commentTree;
 

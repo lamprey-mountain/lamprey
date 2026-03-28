@@ -7,7 +7,7 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import type { User } from "sdk";
+import type { User, ReactionCount, ReactionKey } from "sdk";
 import { Modal } from "./mod";
 import { useApi2, useMessages2, useUsers2 } from "@/api";
 import { Avatar } from "../User";
@@ -18,6 +18,15 @@ interface ModalReactionsProps {
 	message_id: string;
 }
 
+const reactionKeyToParam = (key: ReactionKey): string => {
+	if (key.type === "Text") {
+		return `t:${key.content}`;
+	} else if (key.type === "Custom") {
+		return `c:${key.id}`;
+	}
+	return "";
+};
+
 export const ModalReactions = (props: ModalReactionsProps) => {
 	const api2 = useApi2();
 	const users2 = useUsers2();
@@ -25,14 +34,14 @@ export const ModalReactions = (props: ModalReactionsProps) => {
 	const message = messagesService.use(() => props.message_id);
 
 	const reactions = () => message()?.reactions ?? [];
-	const [selectedReaction, setSelectedReaction] = createSignal<string | null>(
+	const [selectedReaction, setSelectedReaction] = createSignal<ReactionKey | null>(
 		null,
 	);
 
 	createEffect(() => {
 		const r = reactions();
 		if (r.length > 0 && selectedReaction() === null) {
-			setSelectedReaction((r[0] as any).key);
+			setSelectedReaction(r[0].key);
 		}
 	});
 
@@ -48,7 +57,7 @@ export const ModalReactions = (props: ModalReactionsProps) => {
 			return await api2.reactions.list(
 				props.channel_id,
 				props.message_id,
-				reaction,
+				reactionKeyToParam(reaction),
 				{ limit: 50, after: after },
 			);
 		},
@@ -99,7 +108,7 @@ export const ModalReactions = (props: ModalReactionsProps) => {
 				<div class="reactions">
 					<For each={reactions()}>
 						{(reaction) => {
-							const key = (reaction as any).key;
+							const key = reaction.key;
 							return (
 								<button
 									onClick={() => setSelectedReaction(key)}
@@ -109,7 +118,7 @@ export const ModalReactions = (props: ModalReactionsProps) => {
 										style="display:contents"
 										innerHTML={renderReactionKey(key)}
 									/>
-									<div>{(reaction as any).count}</div>
+									<div>{reaction.count}</div>
 								</button>
 							);
 						}}

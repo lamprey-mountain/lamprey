@@ -183,8 +183,8 @@ export const PopupEventEditor = (props: {
 		});
 	});
 
-	const handleChange = (field: string, value: any) => {
-		setFormData(field as any, value);
+	const handleChange = (field: string, value: unknown) => {
+		setFormData(field as keyof typeof formData, value as any);
 	};
 
 	return (
@@ -601,9 +601,11 @@ export const Calendar = (props: { channel: Channel }) => {
 	);
 };
 
+type EventMap = Map<number, string[]>;
+
 const CalendarMonth = (props: {
 	channel: Channel;
-	events: any;
+	events: EventMap;
 	date: Date;
 	onDayClick: (day: number, el: HTMLElement) => void;
 	onEventClick: (eventName: string, day: number, el: HTMLElement) => void;
@@ -701,7 +703,7 @@ const CalendarMonth = (props: {
 	);
 };
 
-const CalendarWeek = (props: { channel: Channel; events: any }) => {
+const CalendarWeek = (props: { channel: Channel; events: EventMap }) => {
 	return (
 		<div class="week-view">
 			<p>Week view coming soon...</p>
@@ -709,7 +711,7 @@ const CalendarWeek = (props: { channel: Channel; events: any }) => {
 	);
 };
 
-const CalendarTimeline = (props: { channel: Channel; events: any }) => {
+const CalendarTimeline = (props: { channel: Channel; events: EventMap }) => {
 	return (
 		<div class="timeline-view">
 			<p>Timeline view coming soon...</p>

@@ -2,15 +2,16 @@ import { getOwner, runWithOwner, VoidComponent } from "solid-js";
 import { render } from "solid-js/web";
 import { getEmojiUrl } from "../../../media/util.tsx";
 import { getTwemoji, getTwemojiUrl } from "../../../emoji.ts";
+import type { Node } from "prosemirror-model";
 
 export const createNodeViews = () => {
 	const owner = getOwner();
 
-	return function <T extends Record<string, any>>(
-		propsFn: (node: any) => T,
+	return function <T extends Record<string, unknown>>(
+		propsFn: (node: Node) => T,
 		Component: VoidComponent<T>,
 	) {
-		return (node: any) => {
+		return (node: Node) => {
 			const dom = document.createElement("span");
 			dom.classList.add("node-view-wrapper");
 
@@ -26,7 +27,7 @@ export const createNodeViews = () => {
 
 			return {
 				dom,
-				update: (newNode: any) => {
+				update: (newNode: Node) => {
 					// Update props when the node changes
 					currentProps = propsFn(newNode);
 					// Note: We don't re-render here to avoid creating new computations.

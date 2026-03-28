@@ -16,7 +16,10 @@ import { type Command, useSlashCommands } from "../contexts/slash-commands";
 import { type EmojiData, emojiResource } from "../emoji";
 import { usePermissions } from "./usePermissions";
 import { useCurrentUser } from "../contexts/currentUser";
-import type { AutocompleteMentionItem } from "../contexts/autocomplete";
+import type {
+	AutocompleteItem,
+	AutocompleteMentionItem,
+} from "../contexts/autocomplete";
 
 export const useAutocompleteData = () => {
 	const api2 = useApi2();
@@ -65,10 +68,15 @@ export const useAutocompleteData = () => {
 				: undefined;
 
 			const userIds = new Set<string>();
-			(threadMembers as any)?.items?.forEach((m: any) =>
-				userIds.add(m.user_id)
-			);
-			(roomMembers as any)?.items?.forEach((m: any) => userIds.add(m.user_id));
+			// Access ids from PaginatedList state and fetch members from cache
+			threadMembers?.state.ids.forEach((id: string) => {
+				const member = threadMembers2.cache.get(id);
+				if (member?.user_id) userIds.add(member.user_id);
+			});
+			roomMembers?.state.ids.forEach((id: string) => {
+				const member = roomMembers2.cache.get(id);
+				if (member?.user_id) userIds.add(member.user_id);
+			});
 
 			// Build user list from cache or use member data as fallback
 			const users = [...userIds].map((id) => {
@@ -78,13 +86,20 @@ export const useAutocompleteData = () => {
 				}
 				// Fallback: create a minimal user object from the member data
 				// Find the member to get any available name info
-				const member = (threadMembers as any)?.items?.find((m: any) =>
-					m.user_id === id
-				) ||
-					(roomMembers as any)?.items?.find((m: any) => m.user_id === id);
+				const threadMember = threadMembers?.state.ids
+					.map((id: string) => threadMembers2.cache.get(id))
+					.find((m) => m?.user_id === id);
+				const roomMember = roomMembers?.state.ids
+					.map((id: string) => roomMembers2.cache.get(id))
+					.find((m) => m?.user_id === id);
+				const member = threadMember || roomMember;
+				// override_name only exists on RoomMember, not ThreadMember
+				const name = "override_name" in (member ?? {})
+					? (member as any)?.override_name
+					: undefined;
 				return {
 					id: id,
-					name: member?.override_name || id,
+					name: name || id,
 				} as User;
 			});
 			setAllUsers(users);
@@ -221,22 +236,38 @@ export const useAutocompleteData = () => {
 				limit: 10,
 				all: true,
 			}) as any;
-			return results;
+			return results.map((r: any) => ({
+				obj: {
+					type: "emoji" as const,
+					id: r.obj.id,
+					name: "name" in r.obj ? r.obj.name : "",
+					char: "char" in r.obj ? r.obj.char : undefined,
+				},
+				score: r.score,
+				hits: r.hits,
+			}));
 		} else if (type === "command") {
 			const results = go(query, allCommands(), {
 				key: "name",
 				limit: 10,
 				all: true,
 			}) as any;
-			return results;
+			return results.map((r: any) => ({
+				obj: {
+					type: "command" as const,
+					command: r.obj.name,
+				},
+				score: r.score,
+				hits: r.hits,
+			}));
 		}
 
-		return [] as any;
+		return [];
 	});
 
 	// NOTE: this is kind of ugly, maybe i should remove it?
 	createEffect(() => {
-		setResults(filtered().map((i: any) => i.obj));
+		setResults(filtered().map((i: any) => i.obj as AutocompleteItem));
 	});
 
 	return {

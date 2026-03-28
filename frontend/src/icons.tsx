@@ -1,3 +1,4 @@
+import type { JSX } from "solid-js";
 import { Show } from "solid-js";
 import icCheck1 from "./assets/check-1.png";
 import icCheck2 from "./assets/check-2.png";
@@ -45,7 +46,7 @@ export const RadioDot = (props: { checked?: boolean }) => {
 };
 
 export const Checkmark = (
-	props: { seed: string; class?: string; style?: any },
+	props: { seed: string; class?: string; style?: JSX.CSSProperties },
 ) => {
 	return (
 		<img
@@ -57,7 +58,7 @@ export const Checkmark = (
 };
 
 export const XMark = (
-	props: { seed: string; class?: string; style?: any },
+	props: { seed: string; class?: string; style?: JSX.CSSProperties },
 ) => {
 	return (
 		<img

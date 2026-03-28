@@ -1,4 +1,11 @@
-import { Channel, ChannelPatch } from "sdk";
+import {
+	Channel,
+	ChannelPatch,
+	type ChannelType,
+	type Tag,
+	type TagCreate,
+	type TagPatch,
+} from "sdk";
 import { BaseService } from "../core/Service";
 
 export class ChannelsService extends BaseService<Channel> {
@@ -123,7 +130,7 @@ export class ChannelsService extends BaseService<Channel> {
 	async createThreadFromMessage(
 		channel_id: string,
 		message_id: string,
-		body: { name: string; type?: import("sdk").ChannelType },
+		body: { name: string; type?: ChannelType },
 	): Promise<Channel> {
 		const data = await this.retryWithBackoff<Channel>(() =>
 			this.client.http.POST(
@@ -140,8 +147,8 @@ export class ChannelsService extends BaseService<Channel> {
 
 	async createTag(
 		channel_id: string,
-		body: import("sdk").TagCreate,
-	): Promise<import("sdk").Tag> {
+		body: TagCreate,
+	): Promise<Tag> {
 		return await this.retryWithBackoff(() =>
 			this.client.http.POST(
 				"/api/v1/channel/{channel_id}/tag",
@@ -156,8 +163,8 @@ export class ChannelsService extends BaseService<Channel> {
 	async updateTag(
 		channel_id: string,
 		tag_id: string,
-		body: import("sdk").TagPatch,
-	): Promise<import("sdk").Tag> {
+		body: TagPatch,
+	): Promise<Tag> {
 		return await this.retryWithBackoff(() =>
 			this.client.http.PATCH(
 				"/api/v1/channel/{channel_id}/tag/{tag_id}",

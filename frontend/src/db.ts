@@ -16,7 +16,17 @@ import {
 	UserT,
 } from "./types.ts";
 import type { RevisionContent } from "@/api/services/DocumentsService.ts";
-import type { EmojiCustom, Invite, ThreadMember, Webhook } from "sdk";
+import type {
+	AuditLogEntry,
+	EmojiCustom,
+	Invite,
+	Notification,
+	RoomBan,
+	Tag,
+	ThreadMember,
+	Webhook,
+} from "sdk";
+import type { PushInfo } from "sdk";
 
 export interface ApiDB extends DBSchema {
 	user: {
@@ -82,23 +92,23 @@ export interface ApiDB extends DBSchema {
 		key: string;
 	};
 	notification: {
-		value: any;
+		value: Notification;
 		key: string;
 	};
 	push: {
-		value: any;
+		value: PushInfo;
 		key: string;
 	};
 	room_ban: {
-		value: any;
+		value: RoomBan;
 		key: [string, string];
 	};
 	tag: {
-		value: any;
+		value: Tag;
 		key: string;
 	};
 	audit_log: {
-		value: any;
+		value: AuditLogEntry;
 		key: string;
 	};
 }

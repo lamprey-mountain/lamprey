@@ -23,10 +23,12 @@ export class AuthService extends BaseService<never> {
 		return result.data.url;
 	}
 
-	async passwordLogin(body: any): Promise<void> {
+	async passwordLogin(
+		body: { email: string; password: string; type: "Email" },
+	): Promise<void> {
 		await this.retryWithBackoff(() =>
 			this.client.http.POST("/api/v1/auth/password", {
-				body,
+				body: body as any,
 			})
 		);
 	}

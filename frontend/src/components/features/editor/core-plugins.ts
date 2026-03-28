@@ -1,4 +1,6 @@
 import { Plugin, PluginKey, TextSelection } from "prosemirror-state";
+import type { EditorState, Transaction } from "prosemirror-state";
+import type { EditorView } from "prosemirror-view";
 import { initTurndownService } from "../../../turndown.ts";
 import { convertEmojiInText } from "./emoji-plugin.ts";
 import { schema } from "./schema.ts";
@@ -84,7 +86,7 @@ export function createPastePlugin() {
 	});
 }
 
-function isInsideCodeBlock(state: any): boolean {
+function isInsideCodeBlock(state: EditorState): boolean {
 	const { $from } = state.selection;
 	for (let d = $from.depth; d > 0; d--) {
 		if ($from.node(d).type.name === "code_block") return true;
@@ -110,7 +112,10 @@ export function createSubmitPlugin() {
 				const { onSubmit, submitOnEnter } =
 					submitPluginKey.getState(view.state) || {};
 
-				const submitCommand = (viewState: any, dispatch: any) => {
+				const submitCommand = (
+					viewState: EditorState,
+					dispatch: (tr: Transaction) => void,
+				) => {
 					const res = onSubmit?.(serializeToMarkdown(viewState.doc).trim());
 					if (res instanceof Promise) {
 						res.then((shouldClear) => {

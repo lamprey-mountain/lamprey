@@ -1,10 +1,25 @@
-import { Command, Plugin, PluginKey, TextSelection } from "prosemirror-state";
-import { DOMSerializer } from "prosemirror-model";
+import {
+	Command,
+	EditorState,
+	Plugin,
+	PluginKey,
+	TextSelection,
+	type Transaction,
+} from "prosemirror-state";
+import { DOMSerializer, ResolvedPos } from "prosemirror-model";
 import { liftTarget } from "prosemirror-transform";
 import { schema } from "./schema.ts";
 import { serializeToMarkdown } from "./export-utils.ts";
 
-function getLineBoundaries($pos: any) {
+interface LineBounds {
+	start: number;
+	end: number;
+	text: string;
+	isFirstLine: boolean;
+	isLastLine: boolean;
+}
+
+function getLineBoundaries($pos: ResolvedPos): LineBounds {
 	const parent = $pos.parent;
 	const text = parent.textBetween(0, parent.content.size, null, "\n");
 	const offset = $pos.parentOffset;
@@ -22,7 +37,7 @@ function getLineBoundaries($pos: any) {
 	};
 }
 
-function isolateLine(tr: any, bounds: any) {
+function isolateLine(tr: Transaction, bounds: LineBounds): number {
 	console.log("editor split", bounds);
 
 	if (!bounds.isLastLine) {
@@ -181,7 +196,7 @@ export function createMarkdownInputRulesPlugin() {
 				return false;
 			},
 
-			clipboardTextSerializer: (slice) => serializeToMarkdown(slice as any),
+			clipboardTextSerializer: (slice) => serializeToMarkdown(slice.content),
 			clipboardSerializer: DOMSerializer.fromSchema(schema),
 		},
 	});

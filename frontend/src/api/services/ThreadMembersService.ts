@@ -47,11 +47,12 @@ export class ThreadMembersService extends BaseService<ThreadMember> {
 				})
 			);
 			return data;
-		} catch (error: any) {
-			if (error?.error === "not found") {
+		} catch (error: unknown) {
+			const err = error as { error?: string };
+			if (err?.error === "not found") {
 				// Placeholder
 				return {
-					membership: "Leave" as any,
+					membership: "Leave" as const,
 					thread_id,
 					user_id,
 					joined_at: new Date().toISOString(),

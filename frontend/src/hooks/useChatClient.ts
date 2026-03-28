@@ -1,6 +1,13 @@
 import { createEffect, createSignal, from, onCleanup } from "solid-js";
 import { createStore } from "solid-js/store";
-import { createClient, type Preferences, Room } from "sdk";
+import {
+	createClient,
+	type MessageEnvelope,
+	type MessageReady,
+	type MessageSync,
+	type Preferences,
+	Room,
+} from "sdk";
 import { createEmitter } from "@solid-primitives/event-bus";
 import { ReactiveMap } from "@solid-primitives/map";
 import { createResource } from "solid-js";
@@ -21,8 +28,8 @@ import { ApiDB, migrations } from "../db.ts";
 
 export function useChatClient(config: Config) {
 	const events = createEmitter<{
-		sync: [import("sdk").MessageSync, import("sdk").MessageEnvelope];
-		ready: import("sdk").MessageReady;
+		sync: [MessageSync, MessageEnvelope];
+		ready: MessageReady;
 	}>();
 	const useMsgpack = flags.has("msgpack");
 	const useDeflate = flags.has("sync_deflate");
@@ -45,7 +52,7 @@ export function useChatClient(config: Config) {
 			syncLog.error("error", error.message, error);
 		},
 		onSync(msg, raw) {
-			events.emit("sync", [msg, raw as import("sdk").MessageEnvelope]);
+			events.emit("sync", [msg, raw as MessageEnvelope]);
 		},
 		onReady(msg) {
 			events.emit("ready", msg);

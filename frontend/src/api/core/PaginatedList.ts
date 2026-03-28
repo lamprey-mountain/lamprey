@@ -8,9 +8,11 @@ export type ListState = {
 	error?: unknown;
 };
 
+type SetStateArg = Partial<ListState> | ((prev: ListState) => ListState);
+
 export class PaginatedList {
 	public state: ListState;
-	private setState: (setter: any) => void;
+	private setState: (arg: SetStateArg) => void;
 
 	constructor(initialState?: Partial<ListState>) {
 		const [state, setState] = createStore<ListState>({

@@ -3,6 +3,7 @@ import {
 	createEffect,
 	For,
 	from,
+	type JSX,
 	type ParentProps,
 	Show,
 } from "solid-js";
@@ -59,39 +60,39 @@ import { flags } from "./flags.ts";
 const App: Component = () => {
 	return (
 		<Router root={AppBootstrap}>
-			<Route path="/" component={RouteHome as any} />
-			<Route path="/inbox" component={RouteInbox as any} />
-			<Route path="/friends" component={RouteFriends as any} />
-			<Route path="/settings/:page?" component={RouteSettings as any} />
-			<Route path="/room/:room_id" component={RouteRoom as any} />
+			<Route path="/" component={RouteHome} />
+			<Route path="/inbox" component={RouteInbox} />
+			<Route path="/friends" component={RouteFriends} />
+			<Route path="/settings/:page?" component={RouteSettings} />
+			<Route path="/room/:room_id" component={RouteRoom} />
 			<Route
 				path="/room/:room_id/settings/:page?"
-				component={RouteRoomSettings as any}
+				component={RouteRoomSettings}
 			/>
 			<Route
 				path="/channel/:channel_id/settings/:page?"
-				component={RouteChannelSettings as any}
+				component={RouteChannelSettings}
 			/>
-			<Route path="/channel/:channel_id" component={RouteChannel as any} />
+			<Route path="/channel/:channel_id" component={RouteChannel} />
 			<Route
 				path="/channel/:channel_id/message/:message_id"
-				component={RouteChannel as any}
+				component={RouteChannel}
 			/>
 			<Route
 				path="/thread/:channel_id/settings/:page?"
-				component={RouteChannelSettings as any}
+				component={RouteChannelSettings}
 			/>
-			<Route path="/thread/:channel_id" component={RouteChannel as any} />
+			<Route path="/thread/:channel_id" component={RouteChannel} />
 			<Route
 				path="/thread/:channel_id/message/:message_id"
-				component={RouteChannel as any}
+				component={RouteChannel}
 			/>
-			<Route path="/debug" component={Debug as any} />
-			<Route path="/feed" component={RouteFeed as any} />
-			<Route path="/invite/:code" component={RouteInvite as any} />
-			<Route path="/verify-email" component={RouteVerifyEmail as any} />
-			<Route path="/user/:user_id" component={RouteUser as any} />
-			<Route path="/authorize" component={RouteAuthorize as any} />
+			<Route path="/debug" component={Debug} />
+			<Route path="/feed" component={RouteFeed} />
+			<Route path="/invite/:code" component={RouteInvite} />
+			<Route path="/verify-email" component={RouteVerifyEmail} />
+			<Route path="/user/:user_id" component={RouteUser} />
+			<Route path="/authorize" component={RouteAuthorize} />
 			<Route path="*404" component={RouteNotFound} />
 		</Router>
 	);
@@ -255,7 +256,7 @@ const Title = (props: { title?: string }) => {
 	return undefined;
 };
 
-function RouteSettings(p: RouteSectionProps) {
+function RouteSettings(p: RouteSectionProps): JSX.Element {
 	const { t } = useCtx();
 	const user = useCurrentUser();
 	createEffect(() => {

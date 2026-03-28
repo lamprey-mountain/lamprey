@@ -5,7 +5,7 @@ import {
 	type ParentProps,
 	useContext,
 } from "solid-js";
-import { createUpload, type Media } from "sdk";
+import { createUpload, type Media, type MessageSync } from "sdk";
 import type { Attachment, ChatCtx } from "../context";
 import type { ReactiveMap } from "@solid-primitives/map";
 import { useModals } from "./modal";
@@ -44,7 +44,9 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 						status: "uploaded",
 						media,
 						local_id: pending.local_id,
-						spoiler: (atts[idx] as any).spoiler,
+						spoiler: atts[idx].status === "uploading"
+							? atts[idx].spoiler
+							: false,
 					};
 					chUpdate("attachments", [
 						...atts.slice(0, idx),
@@ -78,12 +80,11 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 			}
 		};
 
-		props.ctx.events.on("sync", (event: any) => {
-			const [msg] = event;
+		props.ctx.events.on("sync", (msg: MessageSync) => {
 			if (msg.type === "MediaProcessed") {
-				handleMediaProcessed((msg as any).media);
+				handleMediaProcessed(msg.media);
 			} else if (msg.type === "MediaUpdate") {
-				handleMediaUpdate((msg as any).media);
+				handleMediaUpdate(msg.media);
 			}
 		});
 	});

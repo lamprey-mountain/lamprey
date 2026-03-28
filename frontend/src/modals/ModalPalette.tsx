@@ -86,13 +86,9 @@ export const ModalPalette = () => {
 	});
 
 	const recentChannels = createMemo(() => {
-		return ctx.recentChannels().slice(1).map((i: any) =>
-			channels2.cache.get(i)!
-		)
-			.filter((channel: any) => channel.type !== "Category")
-			.map((
-				thread: any,
-			) => ({
+		return ctx.recentChannels().slice(1).map((i) => channels2.cache.get(i)!)
+			.filter((channel) => channel.type !== "Category")
+			.map((thread) => ({
 				type: "thread" as const,
 				id: thread.id,
 				name: thread.name,
@@ -122,7 +118,7 @@ export const ModalPalette = () => {
 
 	const channelsWithDrafts = createMemo(() => {
 		const draftChannels: Array<{
-			channel: any;
+			channel: Channel;
 			draftTimestamp: number;
 		}> = [];
 

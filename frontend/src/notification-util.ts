@@ -1,9 +1,25 @@
 import type { Message } from "sdk";
+import type { Client } from "sdk";
+import type { ReactiveMap } from "@solid-primitives/map";
+import type { Channel, Role, User } from "sdk";
+
+interface NotificationApi {
+	users: {
+		cache: ReactiveMap<string, User>;
+	};
+	channels: {
+		cache: ReactiveMap<string, Channel>;
+	};
+	roles: {
+		cache: ReactiveMap<string, Role>;
+	};
+	client: Client;
+}
 
 export async function stripMarkdownAndResolveMentions(
 	content: string,
 	thread_id: string,
-	api: any,
+	api: NotificationApi,
 	mentions?: Message["mentions"],
 ) {
 	const { users, channels, roles, client } = api;
@@ -15,9 +31,7 @@ export async function stripMarkdownAndResolveMentions(
 	processedContent = processedContent.replace(
 		userMentionRegex,
 		(match, userId) => {
-			const mentioned = (mentions?.users as any[])?.find((u) =>
-				u.id === userId
-			);
+			const mentioned = mentions?.users?.find((u) => u.id === userId);
 			if (mentioned) return `@${mentioned.resolved_name}`;
 			const user = users.cache.get(userId);
 			return user ? `@${user.name}` : match; // Keep original if user not found
@@ -30,9 +44,7 @@ export async function stripMarkdownAndResolveMentions(
 	processedContent = processedContent.replace(
 		channelMentionRegex,
 		(match, channelId) => {
-			const mentioned = (mentions?.channels as any[])?.find((c) =>
-				c.id === channelId
-			);
+			const mentioned = mentions?.channels?.find((c) => c.id === channelId);
 			if (mentioned) return `#${mentioned.name}`;
 			const channel = channels.cache.get(channelId);
 			return channel ? `#${channel.name}` : match; // Keep original if channel not found

@@ -90,7 +90,7 @@ export const Document = (
 
 const DocumentHeader = (
 	props: DocumentProps & {
-		editor: any;
+		editor: () => { view: import("prosemirror-view").EditorView };
 	},
 ) => {
 	const [doc, update] = useDocument();
@@ -105,7 +105,7 @@ const DocumentHeader = (
 	};
 
 	const applyFormat = (wrap: string) => {
-		const view = props.editor?.view;
+		const view = props.editor?.().view;
 		if (!view) return;
 
 		const { from, to } = view.state.selection;
@@ -133,7 +133,7 @@ const DocumentHeader = (
 
 	const openLinkModal = () => {
 		if (props.editor) {
-			modalCtl.open({ type: "link", editor: props.editor });
+			modalCtl.open({ type: "link", editor: props.editor().view });
 		}
 	};
 
@@ -651,7 +651,7 @@ const DocumentMain = (
 		if (selection === null) return;
 
 		// Save edit state before switching to readonly (only if not already saved)
-		if (editState() === null) {
+		if (editState() === null && ed.view) {
 			setEditState(ed.view.state);
 		}
 
@@ -698,7 +698,7 @@ const DocumentMain = (
 		if (!hasCache) setDiffLoading(true);
 
 		try {
-			let newSerdoc: any = cachedSerdoc;
+			let newSerdoc: Serdoc = cachedSerdoc;
 			if (!newSerdoc) {
 				newSerdoc = await api2.documents.getRevisionContent(
 					props.channel.id,
@@ -715,7 +715,7 @@ const DocumentMain = (
 			) return;
 
 			// Fetch previous revision for diff
-			let oldSerdoc: any = null;
+			let oldSerdoc: Serdoc = null;
 			if (beforeSeq > 0) {
 				const prevRevisionId = `${props.channel.id}@${beforeSeq}`;
 				oldSerdoc = api2.documents.revisionCache.get(prevRevisionId) ?? null;
@@ -867,7 +867,7 @@ const DocumentMain = (
 		const doc = state.doc;
 		const result: { level: number; text: string }[] = [];
 
-		doc.descendants((node: any) => {
+		doc.descendants((node: import("prosemirror-model").Node) => {
 			if (node.isBlock) {
 				const textContent = node.textContent;
 				if (textContent) {
@@ -976,7 +976,7 @@ const DocumentMain = (
 		};
 
 		const originalDispatch = view.dispatch.bind(view);
-		view.dispatch = function (tr: any) {
+		view.dispatch = function (tr: import("prosemirror-state").Transaction) {
 			originalDispatch(tr);
 			if (tr.docChanged) {
 				console.log("[TOC] doc changed, updating headings");
@@ -1005,7 +1005,7 @@ const DocumentMain = (
 		const doc = state.doc;
 		let targetPos = -1;
 
-		doc.descendants((node: any, pos: number) => {
+		doc.descendants((node: import("prosemirror-model").Node, pos: number) => {
 			if (targetPos !== -1) return false;
 
 			if (node.isBlock) {
@@ -1026,7 +1026,7 @@ const DocumentMain = (
 
 						// Iterate over the block's inline children to map string offset -> PM offset properly
 						// (Required because custom Atoms like @mentions take 1 position but have N characters of text)
-						node.forEach((child: any) => {
+						node.forEach((child: import("prosemirror-model").Node) => {
 							if (strOffset >= stringIndex) return;
 
 							const childTextLen = child.textContent.length;
@@ -1226,7 +1226,30 @@ function mapTextPosToPMPos(
 	return posMap[textPos] ?? maxPos;
 }
 
-function computeDiffMarks(oldSerdoc: any, newSerdoc: any): DiffMark[] {
+type Serdoc =
+	| {
+		data?: {
+			root?: {
+				blocks?: Array<{
+					Markdown?: {
+						content?: string;
+					};
+				}>;
+			};
+		};
+		root?: {
+			blocks?: Array<{
+				Markdown?: {
+					content?: string;
+				};
+			}>;
+		};
+	}
+	| string
+	| null
+	| undefined;
+
+function computeDiffMarks(oldSerdoc: Serdoc, newSerdoc: Serdoc): DiffMark[] {
 	const oldDoc = serdocToProseMirrorDoc(oldSerdoc);
 	const newDoc = serdocToProseMirrorDoc(newSerdoc);
 
@@ -1266,14 +1289,20 @@ function computeDiffMarks(oldSerdoc: any, newSerdoc: any): DiffMark[] {
 	return marks;
 }
 
-function serdocToProseMirrorDoc(serdoc: any) {
+function serdocToProseMirrorDoc(serdoc: Serdoc) {
 	try {
-		const doc = serdoc?.data ?? serdoc;
+		const doc =
+			typeof serdoc === "object" && serdoc !== null && "data" in serdoc
+				? serdoc.data
+				: serdoc;
 		if (!doc) return null;
 
-		if (doc?.root?.blocks) {
+		if (
+			typeof doc === "object" && doc !== null && "root" in doc &&
+			(doc as any).root?.blocks
+		) {
 			const htmlParts: string[] = [];
-			for (const block of doc.root.blocks) {
+			for (const block of (doc as any).root.blocks) {
 				if (block.Markdown?.content) {
 					htmlParts.push(block.Markdown.content);
 				}
@@ -1299,14 +1328,20 @@ function serdocToProseMirrorDoc(serdoc: any) {
 	}
 }
 
-function serdocToHtml(serdoc: any): string {
+function serdocToHtml(serdoc: Serdoc): string {
 	try {
-		const doc = serdoc?.data ?? serdoc;
+		const doc =
+			typeof serdoc === "object" && serdoc !== null && "data" in serdoc
+				? serdoc.data
+				: serdoc;
 		if (!doc) return "<p></p>";
 
-		if (doc?.root?.blocks) {
+		if (
+			typeof doc === "object" && doc !== null && "root" in doc &&
+			(doc as any).root?.blocks
+		) {
 			const htmlParts: string[] = [];
-			for (const block of doc.root.blocks) {
+			for (const block of (doc as any).root.blocks) {
 				if (block.Markdown?.content) {
 					htmlParts.push(block.Markdown.content);
 				}

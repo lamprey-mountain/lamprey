@@ -10,14 +10,18 @@ export class NotificationService {
 	async handleMessageCreate(m: Message) {
 		const me = this.store.users.get("@self");
 		let is_mentioned = false;
-		const mentions = (m.latest_version as any).mentions;
+		const mentions = (m.latest_version as any).mentions as {
+			users?: Array<{ id: string }>;
+			everyone?: boolean;
+			roles?: Array<{ id: string }>;
+		} | undefined;
 
 		// Determine if mentioned
 		if (
 			me && m.author_id !== me.id &&
 			(m.latest_version as any).type === "DefaultMarkdown" && mentions
 		) {
-			if (mentions.users?.some((u: any) => u.id === me.id)) {
+			if (mentions.users?.some((u) => u.id === me.id)) {
 				is_mentioned = true;
 			}
 			if (!is_mentioned && mentions.everyone) {

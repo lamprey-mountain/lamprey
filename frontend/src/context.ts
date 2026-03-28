@@ -8,6 +8,7 @@ import type {
 	Client,
 	Media,
 	MessageReady,
+	MessageSearch,
 	MessageSync,
 	Preferences,
 	Upload,
@@ -59,7 +60,7 @@ export type AttachmentCreateT = {
 
 export type ChannelSearch = {
 	query: string;
-	results: import("sdk").MessageSearch | null;
+	results: MessageSearch | null;
 	loading: boolean;
 	author?: string[];
 	before?: string;
@@ -75,7 +76,7 @@ export type ThreadsViewData = {
 export type Popout = {
 	id?: string;
 	ref?: HTMLElement;
-	props?: any;
+	props?: Record<string, unknown>;
 	placement?: Placement;
 };
 

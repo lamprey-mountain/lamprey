@@ -1,4 +1,6 @@
 import { type Command, EditorState, TextSelection } from "prosemirror-state";
+import type { FormattingToolbarContextT } from "../../../contexts/formatting-toolbar.tsx";
+import type { AutocompleteContext } from "../../../contexts/autocomplete.tsx";
 import { DOMParser } from "prosemirror-model";
 import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
@@ -50,8 +52,8 @@ export const createEditor = (
 	opts: EditorProps & {
 		channelId: () => string;
 		roomId?: () => string;
-		toolbar?: any;
-		autocomplete?: any;
+		toolbar?: FormattingToolbarContextT;
+		autocomplete?: AutocompleteContext;
 	},
 ) => {
 	const toolbarPlugin = createToolbarPlugin(opts.toolbar!);

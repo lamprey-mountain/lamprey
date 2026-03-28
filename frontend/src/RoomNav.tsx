@@ -640,16 +640,16 @@ export const RoomNav = () => {
 										</div>
 									)}
 								</Match>
-								<Match when={item.type === "view"} keyed>
-									{(view: any) => (
+								<Match when={item.type === "view"}>
+									{(view: { name: string }) => (
 										<li
 											class="menu-room"
-											data-id={`view-${(view as any)?.name}`}
+											data-id={`view-${view.name}`}
 											data-type="view"
 										>
 											<A href="#" class="nav">
 												<div class="avatar">
-													{(view as any)?.name?.substring?.(0, 2)}
+													{view.name?.substring?.(0, 2)}
 												</div>
 											</A>
 										</li>

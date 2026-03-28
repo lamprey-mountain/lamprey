@@ -15,16 +15,16 @@ import { usePermissions } from "./hooks/usePermissions.ts";
 import { useApi2 } from "@/api";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 
+type PermissionCheck = (p: ReturnType<typeof usePermissions>) => boolean;
+
 const tabs: Array<{
 	name: string;
 	path: string;
 	noPad?: boolean;
-	// TODO: fix type errors
-	// component: Component,
-	component: any;
+	component: Component<any> | null;
 	action?: "remove";
 	style?: string;
-	permissionCheck?: (p: Set<Permission>) => boolean;
+	permissionCheck?: PermissionCheck;
 	channelTypes?: string[];
 }> = [
 	{ name: "info", path: "", component: Info },
@@ -119,19 +119,19 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 							<Show
 								when={(!tab.channelTypes ||
 									tab.channelTypes.includes(props.channel.type)) &&
-									(!tab.permissionCheck || tab.permissionCheck(perms as any))}
+									(!tab.permissionCheck || tab.permissionCheck(perms))}
 							>
 								<Switch>
 									<Match when={tab.action}>
 										<li>
 											<button
 												class="action"
-												onClick={() => handleAction(tab.action as any)}
+												onClick={() => handleAction(tab.action!)}
 												classList={{
 													"danger": tab.style === "danger",
 												}}
 											>
-												{tab.name as any}
+												{tab.name}
 											</button>
 										</li>
 									</Match>
@@ -151,9 +151,9 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 				</ul>
 			</nav>
 			<main classList={{ padded: !currentTab()?.noPad }}>
-				<Show when={currentTab()} fallback="unknown page">
+				<Show when={currentTab()?.component} fallback="unknown page">
 					<Dynamic
-						component={currentTab()?.component}
+						component={currentTab()!.component!}
 						channel={props.channel}
 					/>
 				</Show>

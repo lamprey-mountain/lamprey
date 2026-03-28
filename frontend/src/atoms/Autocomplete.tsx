@@ -37,62 +37,57 @@ export const Autocomplete = () => {
 							}}
 						>
 							<Switch>
-								<Match when={"char" in result.obj}>
+								<Match when={"char" in (result.obj as any)}>
 									<span
-										innerHTML={getTwemoji((result.obj as EmojiData).char)}
+										innerHTML={getTwemoji((result.obj as any).char)}
 									>
 									</span>
 								</Match>
 								<Match
-									when={state.kind?.type === "emoji" && !("char" in result.obj)}
+									when={state.kind?.type === "emoji" &&
+										!("char" in (result.obj as any))}
 								>
 									<img
-										src={getEmojiUrl((result.obj as EmojiCustom).id)}
+										src={getEmojiUrl((result.obj as any).id)}
 										class="emoji-img"
 									/>
 								</Match>
 								<Match when={state.kind?.type === "command"}>
 									<div class="command">
-										<div class="name">/{(result.obj as Command).name}</div>
+										<div class="name">/{(result.obj as any).name}</div>
 										<div class="description dim">
-											{(result.obj as Command).description}
+											{(result.obj as any).description}
 										</div>
 									</div>
 								</Match>
 								<Match
 									when={state.kind?.type === "mention" &&
-										(result.obj as AutocompleteMentionItem).type === "user"}
+										(result.obj as any).type === "user"}
 								>
 									<div class="mention-user">
 										<Avatar
-											user={(result.obj as AutocompleteMentionItem & {
-												user: User;
-											}).user}
+											user={(result.obj as any).user}
 											pad={0}
 										/>
 										<span>
-											{(result.obj as AutocompleteMentionItem & {
-												name: string;
-											}).name}
+											{(result.obj as any).name}
 										</span>
 									</div>
 								</Match>
 								<Match
 									when={state.kind?.type === "mention" &&
-										(result.obj as AutocompleteMentionItem).type === "role"}
+										(result.obj as any).type === "role"}
 								>
 									<div class="mention-role">
 										<span class="role-badge">#</span>
 										<span>
-											{(result.obj as AutocompleteMentionItem & {
-												name: string;
-											}).name}
+											{(result.obj as any).name}
 										</span>
 									</div>
 								</Match>
 								<Match
 									when={state.kind?.type === "mention" &&
-										(result.obj as AutocompleteMentionItem).type === "everyone"}
+										(result.obj as any).type === "everyone"}
 								>
 									<div class="everyone-mention">
 										<span>@everyone</span>
@@ -106,9 +101,9 @@ export const Autocomplete = () => {
 									<span>{(result.obj as Channel).name}</span>
 								</Match>
 								<Match when={true}>
-									{"label" in result.obj
-										? result.obj.label ?? result.obj.name
-										: result.obj.name}
+									{"label" in (result.obj as any)
+										? (result.obj as any).label ?? (result.obj as any).name
+										: (result.obj as any).name}
 								</Match>
 							</Switch>
 						</div>

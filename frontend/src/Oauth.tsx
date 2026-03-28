@@ -1,10 +1,18 @@
 import { Location, RouteSectionProps, useNavigate } from "@solidjs/router";
 import { useCtx } from "./context";
-import { createResource, ErrorBoundary, For, Show, VoidProps } from "solid-js";
+import {
+	Component,
+	createResource,
+	ErrorBoundary,
+	For,
+	type JSX,
+	Show,
+	VoidProps,
+} from "solid-js";
 import { OauthInfo } from "sdk";
 import { Avatar } from "./User";
 
-export const RouteAuthorize = (p: RouteSectionProps) => {
+export const RouteAuthorize = (p: RouteSectionProps): JSX.Element => {
 	const ctx = useCtx();
 
 	const [data] = createResource(async () => {

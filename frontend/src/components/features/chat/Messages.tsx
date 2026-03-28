@@ -47,19 +47,23 @@ export const TimelineItem = (props: {
 			const is_mentioned = createMemo(() => {
 				const me = props.currentUser();
 				if (!me || props.item.type !== "message") return false;
-				const mentions = (props.item.message as any).mentions as any;
+				const mentions = (props.item.message as Message).mentions as {
+					users?: Array<{ id: string }>;
+					everyone?: boolean;
+					roles?: Array<{ id: string }>;
+				} | undefined;
 				if (!mentions) return false;
 
-				if (mentions.users.some((u: any) => u.id === me.id)) {
+				if (mentions.users?.some((u) => u.id === me.id)) {
 					return true;
 				}
 				if (mentions.everyone) {
 					return true;
 				}
 				const rm = room_member();
-				if (rm) {
+				if (rm && mentions.roles) {
 					for (const role of mentions.roles) {
-						if (rm.roles.some((r: any) => r.id === (role as any).id)) {
+						if (rm.roles.some((r) => r === role.id)) {
 							return true;
 						}
 					}

@@ -2,9 +2,10 @@ import { Modal } from "./mod";
 import { useModals } from "../contexts/modal.tsx";
 import { TextSelection } from "prosemirror-state";
 import { onMount } from "solid-js";
+import type { EditorView } from "prosemirror-view";
 
 interface ModalLinkProps {
-	editor: any;
+	editor: EditorView;
 }
 
 export const ModalLink = (props: ModalLinkProps) => {
@@ -25,7 +26,7 @@ export const ModalLink = (props: ModalLinkProps) => {
 			return;
 		}
 
-		const view = props.editor.view;
+		const view = props.editor;
 		if (!view) {
 			modalCtl.close();
 			return;

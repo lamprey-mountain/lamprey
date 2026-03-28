@@ -1,5 +1,5 @@
 import { onMount, type ParentProps } from "solid-js";
-import { type Modal as ContextModal, useCtx } from "../context.ts";
+import { type Modal as ModalType, useCtx } from "../context.ts";
 import { ModalResetPassword } from "../components/features/user_settings/mod.tsx";
 import { ModalPalette } from "./ModalPalette.tsx";
 import { ModalMessageEdits } from "./ModalMessageEdits.tsx";
@@ -44,145 +44,254 @@ export const Modal = (
 	);
 };
 
-export function getModal(modal: ContextModal) {
+export type { ModalType };
+
+// Type guard functions for modal type discrimination
+function isAlert(modal: ModalType): modal is Extract<ModalType, { type: "alert" }> {
+	return modal.type === "alert";
+}
+
+function isConfirm(modal: ModalType): modal is Extract<ModalType, { type: "confirm" }> {
+	return modal.type === "confirm";
+}
+
+function isPrompt(modal: ModalType): modal is Extract<ModalType, { type: "prompt" }> {
+	return modal.type === "prompt";
+}
+
+function isMedia(modal: ModalType): modal is Extract<ModalType, { type: "media" }> {
+	return modal.type === "media";
+}
+
+function isMessageEdits(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "message_edits" }> {
+	return modal.type === "message_edits";
+}
+
+function isResetPassword(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "reset_password" }> {
+	return modal.type === "reset_password";
+}
+
+function isPalette(modal: ModalType): modal is Extract<ModalType, { type: "palette" }> {
+	return modal.type === "palette";
+}
+
+function isChannelCreate(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "channel_create" }> {
+	return modal.type === "channel_create";
+}
+
+function isTagEditor(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "tag_editor" }> {
+	return modal.type === "tag_editor";
+}
+
+function isExportData(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "export_data" }> {
+	return modal.type === "export_data";
+}
+
+function isViewReactions(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "view_reactions" }> {
+	return modal.type === "view_reactions";
+}
+
+function isPrivacy(modal: ModalType): modal is Extract<ModalType, { type: "privacy" }> {
+	return modal.type === "privacy";
+}
+
+function isNotifications(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "notifications" }> {
+	return modal.type === "notifications";
+}
+
+function isAttachment(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "attachment" }> {
+	return modal.type === "attachment";
+}
+
+function isInviteCreate(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "invite_create" }> {
+	return modal.type === "invite_create";
+}
+
+function isChannelTopic(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "channel_topic" }> {
+	return modal.type === "channel_topic";
+}
+
+function isLink(modal: ModalType): modal is Extract<ModalType, { type: "link" }> {
+	return modal.type === "link";
+}
+
+function isKick(modal: ModalType): modal is Extract<ModalType, { type: "kick" }> {
+	return modal.type === "kick";
+}
+
+function isBan(modal: ModalType): modal is Extract<ModalType, { type: "ban" }> {
+	return modal.type === "ban";
+}
+
+function isTimeout(modal: ModalType): modal is Extract<ModalType, { type: "timeout" }> {
+	return modal.type === "timeout";
+}
+
+function isCameraPreview(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "camera_preview" }> {
+	return modal.type === "camera_preview";
+}
+
+function isRoomCreate(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "room_create" }> {
+	return modal.type === "room_create";
+}
+
+export function getModal(modal: ModalType) {
 	const api2 = useApi2();
-	switch ((modal as any).type) {
-		case "alert": {
-			return <ModalAlert text={(modal as any).text} />;
-		}
-		case "confirm": {
-			return (
-				<ModalConfirm text={(modal as any).text} cont={(modal as any).cont} />
-			);
-		}
-		case "prompt": {
-			return (
-				<ModalPrompt text={(modal as any).text} cont={(modal as any).cont} />
-			);
-		}
-		case "media": {
-			return <ModalMedia media={(modal as any).media} />;
-		}
-		case "message_edits": {
-			return (
-				<ModalMessageEdits
-					thread_id={(modal as any).channel_id}
-					message_id={(modal as any).message_id}
-				/>
-			);
-		}
-		case "reset_password": {
-			return <ModalResetPassword />;
-		}
-		case "palette": {
-			return <ModalPalette />;
-		}
-		case "channel_create": {
-			return (
-				<ModalChannelCreate
-					room_id={(modal as any).room_id}
-					cont={(modal as any).cont}
-				/>
-			);
-		}
-		case "tag_editor": {
-			return (
-				<ModalTagEditor
-					forumChannelId={(modal as any).forumChannelId}
-					tag={(modal as any).tag}
-					onSave={(modal as any).onSave}
-					onClose={(modal as any).onClose}
-				/>
-			);
-		}
-		case "export_data": {
-			return <ModalExportData />;
-		}
-		case "view_reactions": {
-			return (
-				<ModalReactions
-					channel_id={(modal as any).channel_id}
-					message_id={(modal as any).message_id}
-				/>
-			);
-		}
-		case "privacy": {
-			return <ModalPrivacy room_id={(modal as any).room_id} />;
-		}
-		case "notifications": {
-			return <ModalNotifications room_id={(modal as any).room_id} />;
-		}
-		case "attachment": {
-			return (
-				<ModalAttachment
-					channel_id={(modal as any).channel_id}
-					local_id={(modal as any).local_id}
-				/>
-			);
-		}
-		case "invite_create": {
-			return (
-				<ModalInviteCreate
-					channel_id={(modal as any).channel_id}
-					room_id={(modal as any).room_id}
-				/>
-			);
-		}
-		case "channel_topic": {
-			return (
-				<ModalChannelTopic
-					channel_id={(modal as any).channel_id}
-				/>
-			);
-		}
-		case "link": {
-			return (
-				<ModalLink
-					editor={(modal as any).editor}
-				/>
-			);
-		}
-		case "kick": {
-			return (
-				<ModalKick
-					api={api2}
-					room_id={(modal as any).room_id}
-					user_id={(modal as any).user_id}
-				/>
-			);
-		}
-		case "ban": {
-			return (
-				<ModalBan
-					api={api2}
-					room_id={(modal as any).room_id}
-					user_id={(modal as any).user_id}
-				/>
-			);
-		}
-		case "timeout": {
-			return (
-				<ModalTimeout
-					api={api2}
-					room_id={(modal as any).room_id}
-					user_id={(modal as any).user_id}
-				/>
-			);
-		}
-		case "camera_preview": {
-			return (
-				<ModalCameraPreview
-					stream={(modal as any).stream}
-				/>
-			);
-		}
-		case "room_create": {
-			return (
-				<ModalRoomCreate
-					cont={(modal as any).cont}
-				/>
-			);
-		}
+	if (isAlert(modal)) {
+		return <ModalAlert text={modal.text} />;
+	}
+	if (isConfirm(modal)) {
+		return <ModalConfirm text={modal.text} cont={modal.cont} />;
+	}
+	if (isPrompt(modal)) {
+		return <ModalPrompt text={modal.text} cont={modal.cont} />;
+	}
+	if (isMedia(modal)) {
+		return <ModalMedia media={modal.media} />;
+	}
+	if (isMessageEdits(modal)) {
+		return (
+			<ModalMessageEdits
+				thread_id={modal.channel_id}
+				message_id={modal.message_id}
+			/>
+		);
+	}
+	if (isResetPassword(modal)) {
+		return <ModalResetPassword />;
+	}
+	if (isPalette(modal)) {
+		return <ModalPalette />;
+	}
+	if (isChannelCreate(modal)) {
+		return (
+			<ModalChannelCreate
+				room_id={modal.room_id}
+				cont={modal.cont}
+			/>
+		);
+	}
+	if (isTagEditor(modal)) {
+		return (
+			<ModalTagEditor
+				forumChannelId={modal.forumChannelId}
+				tag={modal.tag}
+				onSave={modal.onSave}
+				onClose={modal.onClose}
+			/>
+		);
+	}
+	if (isExportData(modal)) {
+		return <ModalExportData />;
+	}
+	if (isViewReactions(modal)) {
+		return (
+			<ModalReactions
+				channel_id={modal.channel_id}
+				message_id={modal.message_id}
+			/>
+		);
+	}
+	if (isPrivacy(modal)) {
+		return <ModalPrivacy room_id={modal.room_id} />;
+	}
+	if (isNotifications(modal)) {
+		return <ModalNotifications room_id={modal.room_id} />;
+	}
+	if (isAttachment(modal)) {
+		return (
+			<ModalAttachment
+				channel_id={modal.channel_id}
+				local_id={modal.local_id}
+			/>
+		);
+	}
+	if (isInviteCreate(modal)) {
+		return (
+			<ModalInviteCreate
+				channel_id={modal.channel_id}
+				room_id={modal.room_id}
+			/>
+		);
+	}
+	if (isChannelTopic(modal)) {
+		return (
+			<ModalChannelTopic
+				channel_id={modal.channel_id}
+			/>
+		);
+	}
+	if (isLink(modal)) {
+		return (
+			<ModalLink
+				editor={modal.editor}
+			/>
+		);
+	}
+	if (isKick(modal)) {
+		return (
+			<ModalKick
+				api={api2}
+				room_id={modal.room_id}
+				user_id={modal.user_id}
+			/>
+		);
+	}
+	if (isBan(modal)) {
+		return (
+			<ModalBan
+				api={api2}
+				room_id={modal.room_id}
+				user_id={modal.user_id}
+			/>
+		);
+	}
+	if (isTimeout(modal)) {
+		return (
+			<ModalTimeout
+				api={api2}
+				room_id={modal.room_id}
+				user_id={modal.user_id}
+			/>
+		);
+	}
+	if (isCameraPreview(modal)) {
+		return (
+			<ModalCameraPreview
+				stream={modal.stream}
+			/>
+		);
+	}
+	if (isRoomCreate(modal)) {
+		return (
+			<ModalRoomCreate
+				cont={modal.cont}
+			/>
+		);
 	}
 }
 

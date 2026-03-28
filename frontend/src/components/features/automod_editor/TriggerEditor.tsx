@@ -4,7 +4,7 @@ import type { AutomodTrigger } from "sdk";
 
 export interface TriggerEditorProps {
 	trigger: AutomodTrigger;
-	updateTriggerValue: (key: string, val: any) => void;
+	updateTriggerValue: (key: string, val: unknown) => void;
 	updateTriggerType: (type: AutomodTrigger["type"]) => void;
 }
 
@@ -12,7 +12,7 @@ export interface TriggerEditorProps {
 
 function TextKeywordsFields(props: {
 	trigger: AutomodTrigger & { type: "TextKeywords" };
-	update: (key: string, val: any) => void;
+	update: (key: string, val: unknown) => void;
 }) {
 	const [keywordsRaw, setKeywordsRaw] = createSignal(
 		props.trigger.keywords?.join("\n") || "",
@@ -49,7 +49,7 @@ function TextKeywordsFields(props: {
 
 function TextRegexFields(props: {
 	trigger: AutomodTrigger & { type: "TextRegex" };
-	update: (key: string, val: any) => void;
+	update: (key: string, val: unknown) => void;
 }) {
 	const [denyRaw, setDenyRaw] = createSignal(
 		props.trigger.deny?.join("\n") || "",
@@ -113,7 +113,7 @@ function TextRegexFields(props: {
 
 function TextLinksFields(props: {
 	trigger: AutomodTrigger & { type: "TextLinks" };
-	update: (key: string, val: any) => void;
+	update: (key: string, val: unknown) => void;
 }) {
 	const [hostnamesRaw, setHostnamesRaw] = createSignal(
 		props.trigger.hostnames?.join("\n") || "",
@@ -160,7 +160,7 @@ function TextLinksFields(props: {
 
 function TextBuiltinFields(props: {
 	trigger: AutomodTrigger & { type: "TextBuiltin" };
-	update: (key: string, val: any) => void;
+	update: (key: string, val: unknown) => void;
 }) {
 	return (
 		<label>
@@ -176,7 +176,7 @@ function TextBuiltinFields(props: {
 
 function MediaScanFields(props: {
 	trigger: AutomodTrigger & { type: "MediaScan" };
-	update: (key: string, val: any) => void;
+	update: (key: string, val: unknown) => void;
 }) {
 	return (
 		<label>

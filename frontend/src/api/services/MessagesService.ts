@@ -2,8 +2,10 @@ import {
 	Media,
 	Message,
 	MessageCreate,
+	type MessageSearch,
 	Pagination,
 	PaginationQuery,
+	type UserWithRelationship,
 } from "sdk";
 import { BaseService } from "../core/Service";
 import {
@@ -714,9 +716,11 @@ export class MessagesService extends BaseService<Message> {
 				params: { path: { channel_id } },
 				body: {
 					...body,
-					attachments: body.attachments.map((a: any) => ({
+					attachments: body.attachments.map((
+						a: { media_id?: string; id?: string; spoiler?: boolean },
+					) => ({
 						type: "Media" as const,
-						media_id: a.media_id ?? a.id,
+						media_id: a.media_id ?? a.id!,
 						spoiler: a.spoiler ?? false,
 					})),
 				},
@@ -942,7 +946,7 @@ export class MessagesService extends BaseService<Message> {
 		);
 	}
 
-	async search(body: any): Promise<import("sdk").MessageSearch> {
+	async search(body: Record<string, unknown>): Promise<MessageSearch> {
 		const { data, error } = await this.client.http.POST(
 			"/api/v1/search/message",
 			{
@@ -954,12 +958,12 @@ export class MessagesService extends BaseService<Message> {
 		const { users, threads, room_members, thread_members, messages } = data;
 
 		for (const message of messages) {
-			this.upsert(message as import("sdk").Message);
+			this.upsert(message as Message);
 		}
 
 		if (users) {
 			for (const user of users) {
-				const userWithRelationship: import("sdk").UserWithRelationship = {
+				const userWithRelationship: UserWithRelationship = {
 					...user,
 					relationship: {
 						relation: null,
@@ -993,7 +997,7 @@ export class MessagesService extends BaseService<Message> {
 		return {
 			...data,
 			approximate_total: data.total,
-			messages: messages as import("sdk").Message[],
+			messages: messages as Message[],
 		};
 	}
 
@@ -1044,11 +1048,11 @@ export class MessagesService extends BaseService<Message> {
 	private mergeAfter(
 		ranges: MessageRanges,
 		range: MessageRange,
-		data: { items: any[]; has_more?: boolean },
+		data: { items: Message[]; has_more?: boolean },
 		has_more: boolean,
 		markFresh = false,
 	): MessageRange {
-		const newItems = (data.items as unknown) as Message[];
+		const newItems = data.items;
 		for (const item of newItems) this.upsert(item);
 
 		const merged = range.mergeMessages(newItems, markFresh);
@@ -1065,7 +1069,7 @@ export class MessagesService extends BaseService<Message> {
 	private mergeBefore(
 		ranges: MessageRanges,
 		range: MessageRange,
-		data: { items: any[]; has_more?: boolean },
+		data: { items: Message[]; has_more?: boolean },
 		has_more: boolean,
 		markFresh = false,
 	): MessageRange {

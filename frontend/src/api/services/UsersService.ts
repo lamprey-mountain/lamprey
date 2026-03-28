@@ -1,4 +1,4 @@
-import { User, UserWithRelationship } from "sdk";
+import { type Preferences, User, UserWithRelationship } from "sdk";
 import { BaseService } from "../core/Service";
 
 export class UsersService extends BaseService<UserWithRelationship> {
@@ -42,7 +42,7 @@ export class UsersService extends BaseService<UserWithRelationship> {
 		);
 	}
 
-	async setPreferences(body: any): Promise<void> {
+	async setPreferences(body: Preferences): Promise<void> {
 		await this.retryWithBackoff(() =>
 			this.client.http.PUT("/api/v1/preferences", { body })
 		);

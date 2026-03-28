@@ -4,19 +4,11 @@ import { useCtx } from "../context";
 import { RadioDot } from "../icons";
 import { flags } from "../flags";
 import { useModals } from "../contexts/modal";
-
-export type ChannelTypeOption =
-	| "Text"
-	| "Voice"
-	| "Category"
-	| "Forum"
-	| "Calendar"
-	| "Document"
-	| "Wiki";
+import type { ChannelTypeOption } from "../contexts/modal";
 
 interface ModalChannelCreateProps {
 	room_id: string;
-	cont: (data: { name: string; type: ChannelTypeOption }) => void;
+	cont: (data: { name: string; type: ChannelTypeOption } | null) => void;
 }
 
 export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
@@ -36,7 +28,7 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 	};
 
 	const handleCancel = () => {
-		props.cont(null as any);
+		props.cont(null);
 		modalCtl.close();
 	};
 
@@ -98,7 +90,7 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 									type="radio"
 									value={c.type}
 									checked={channelType() === c.type}
-									onInput={() => setChannelType(c.type as any)}
+									onInput={() => setChannelType(c.type as ChannelTypeOption)}
 								/>
 								<RadioDot checked={channelType() === c.type} />
 								<div>

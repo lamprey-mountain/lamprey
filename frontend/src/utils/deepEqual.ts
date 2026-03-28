@@ -1,4 +1,4 @@
-export function deepEqual(obj1: any, obj2: any): boolean {
+export function deepEqual(obj1: unknown, obj2: unknown): boolean {
 	if (obj1 === obj2) {
 		return true;
 	}
@@ -20,7 +20,13 @@ export function deepEqual(obj1: any, obj2: any): boolean {
 	}
 
 	for (const key of keys1) {
-		if (!keys2.includes(key) || !deepEqual(obj1[key], obj2[key])) {
+		if (
+			!keys2.includes(key) ||
+			!deepEqual(
+				(obj1 as Record<string, unknown>)[key],
+				(obj2 as Record<string, unknown>)[key],
+			)
+		) {
 			return false;
 		}
 	}

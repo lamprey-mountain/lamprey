@@ -9,7 +9,9 @@ const [notificationPermission_, setNotificationPermission] = createSignal<
 export const notificationPermission = notificationPermission_;
 
 if (typeof navigator !== "undefined" && navigator.permissions) {
-	navigator.permissions.query({ name: "notifications" } as any).then(
+	navigator.permissions.query(
+		{ name: "notifications" } as unknown as PermissionDescriptor,
+	).then(
 		(status) => {
 			setNotificationPermission(status.state);
 			status.addEventListener("change", () => {

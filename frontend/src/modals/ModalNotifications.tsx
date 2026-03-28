@@ -40,7 +40,7 @@ export const ModalNotifications = (props: ModalNotificationsProps) => {
 					<h3 class="dim">messages</h3>
 					<Dropdown
 						selected={messages()}
-						onSelect={(value) => value && setMessages(value as any)}
+						onSelect={(value) => value && setMessages(value as "Everything" | "Watching" | "Mentions" | "Nothing")}
 						options={[
 							// You will be notified for all messages.
 							{ item: "Everything", label: "everything" },
@@ -60,7 +60,7 @@ export const ModalNotifications = (props: ModalNotificationsProps) => {
 					<h3 class="dim">threads</h3>
 					<Dropdown
 						selected={threads()}
-						onSelect={(value) => value && setThreads(value as any)}
+						onSelect={(value) => value && setThreads(value as "Notify" | "Inbox" | "Nothing")}
 						options={[
 							// You will be notified whenever a new thread is created.
 							{ item: "Notify", label: "notify" },

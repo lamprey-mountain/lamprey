@@ -6,7 +6,7 @@ import { useModals } from "../contexts/modal";
 import { CheckboxOptionWithLabel } from "../atoms/CheckboxOption";
 
 interface ModalRoomCreateProps {
-	cont: (data: { name: string; public: boolean }) => void;
+	cont: (data: { name: string; public: boolean } | null) => void;
 }
 
 export const ModalRoomCreate = (props: ModalRoomCreateProps) => {
@@ -26,7 +26,7 @@ export const ModalRoomCreate = (props: ModalRoomCreateProps) => {
 	};
 
 	const handleCancel = () => {
-		props.cont(null as any);
+		props.cont(null);
 		modalCtl.close();
 	};
 

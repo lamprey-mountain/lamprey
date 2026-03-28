@@ -28,13 +28,17 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 		new ReactiveMap<string, boolean>(),
 	);
 
+	type Row =
+		| { type: "group"; group: import("sdk").MemberListGroup }
+		| {
+			type: "member";
+			item: import("@/api/services/MemberListService").MemberListItem;
+		};
+
 	const rows = createMemo(() => {
 		const l = list();
 		if (!l) return [];
-		const rows: (
-			| { type: "group"; group: any } // TODO: type group
-			| { type: "member"; item: any } // TODO: type member
-		)[] = [];
+		const rows: Row[] = [];
 		let offset = 0;
 		for (const group of l.groups) {
 			if (group.count === 0) continue;
@@ -51,7 +55,7 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 		return rows;
 	});
 
-	const getGroupName = (group: any) => {
+	const getGroupName = (group: import("sdk").MemberListGroup) => {
 		if (typeof group.id === "string") {
 			const role = roles2.cache.get(group.id);
 			return role?.name ?? group.id;

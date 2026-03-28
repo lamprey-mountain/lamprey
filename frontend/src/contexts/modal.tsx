@@ -2,6 +2,16 @@ import { createContext, ParentProps, useContext } from "solid-js";
 import { createStore } from "solid-js/store";
 import type { Media } from "sdk";
 import type { Tag } from "sdk";
+import type { EditorView } from "prosemirror-view";
+
+export type ChannelTypeOption =
+	| "Text"
+	| "Voice"
+	| "Category"
+	| "Forum"
+	| "Calendar"
+	| "Document"
+	| "Wiki";
 
 export type Modal =
 	| { type: "alert"; text: string }
@@ -34,7 +44,7 @@ export type Modal =
 		type: "channel_create";
 		room_id: string;
 		cont: (
-			data: { name: string; type: "Text" | "Voice" | "Category" } | null,
+			data: { name: string; type: ChannelTypeOption } | null,
 		) => void;
 	}
 	| {
@@ -76,7 +86,7 @@ export type Modal =
 	}
 	| {
 		type: "link";
-		editor: any;
+		editor: EditorView;
 	}
 	| {
 		type: "kick";
@@ -148,7 +158,8 @@ export const ModalsProvider = (p: ParentProps) => {
 	};
 
 	// TEMP: for debugging
-	(globalThis as any).modalctl = controller;
+	(globalThis as typeof globalThis & { modalctl: typeof controller }).modalctl =
+		controller;
 
 	return (
 		<ModalsContext.Provider value={[modals, controller]}>

@@ -16,6 +16,7 @@ import {
 	offset,
 	type ReferenceElement,
 	shift,
+	type Strategy,
 } from "@floating-ui/dom";
 import { Portal } from "solid-js/web";
 import { useCtx } from "../context.ts";
@@ -43,6 +44,8 @@ import { PopupEventEditor, useCalendarPopup } from "../Calendar.tsx";
 import { getModal } from "../modals/mod.tsx";
 import { Modal, useModals } from "./modal.tsx";
 
+type FloatingPosition = { x: number; y: number; strategy: Strategy };
+
 export function OverlayProvider(props: ParentProps) {
 	const ctx = useCtx();
 	const { menu } = useMenu();
@@ -58,17 +61,17 @@ export function OverlayProvider(props: ParentProps) {
 		useCalendarPopup();
 
 	const [toolbarRef, setToolbarRef] = createSignal<HTMLElement>();
-	const [toolbarFloating, setToolbarFloating] = createStore({
+	const [toolbarFloating, setToolbarFloating] = createStore<FloatingPosition>({
 		x: 0,
 		y: 0,
-		strategy: "fixed" as const,
+		strategy: "fixed",
 	});
 
 	const [popupRef, setPopupRef] = createSignal<HTMLElement>();
-	const [popupFloating, setPopupFloating] = createStore({
+	const [popupFloating, setPopupFloating] = createStore<FloatingPosition>({
 		x: 0,
 		y: 0,
-		strategy: "absolute" as const,
+		strategy: "absolute",
 	});
 
 	createEffect(() => {
@@ -88,7 +91,7 @@ export function OverlayProvider(props: ParentProps) {
 						shift({ padding: 8 }),
 					],
 				}).then(({ x, y, strategy }) => {
-					setToolbarFloating({ x, y, strategy: strategy as any });
+					setToolbarFloating({ x, y, strategy });
 				});
 			},
 		);
@@ -109,7 +112,7 @@ export function OverlayProvider(props: ParentProps) {
 					shift({ mainAxis: true, crossAxis: true, padding: 8 }),
 				],
 			}).then(({ x, y, strategy }) => {
-				setPopupFloating({ x, y, strategy: strategy as any });
+				setPopupFloating({ x, y, strategy });
 			});
 		});
 		onCleanup(cleanup);
@@ -117,10 +120,10 @@ export function OverlayProvider(props: ParentProps) {
 
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
 	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
-	const [menuFloating, setMenuFloating] = createStore({
+	const [menuFloating, setMenuFloating] = createStore<FloatingPosition>({
 		x: 0,
 		y: 0,
-		strategy: "absolute" as const,
+		strategy: "absolute",
 	});
 
 	createEffect(() => {
@@ -135,7 +138,7 @@ export function OverlayProvider(props: ParentProps) {
 					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
 					placement: "right-start",
 				}).then(({ x, y, strategy }) => {
-					setMenuFloating({ x, y, strategy: strategy as any });
+					setMenuFloating({ x, y, strategy });
 				});
 			},
 		);
@@ -143,10 +146,12 @@ export function OverlayProvider(props: ParentProps) {
 	});
 
 	const [autocompleteRef, setAutocompleteRef] = createSignal<HTMLElement>();
-	const [autocompleteFloating, setAutocompleteFloating] = createStore({
+	const [autocompleteFloating, setAutocompleteFloating] = createStore<
+		FloatingPosition
+	>({
 		x: 0,
 		y: 0,
-		strategy: "absolute" as const,
+		strategy: "absolute",
 	});
 
 	createEffect(() => {
@@ -161,7 +166,7 @@ export function OverlayProvider(props: ParentProps) {
 					middleware: [offset({ mainAxis: 8 })],
 					placement: "top-start",
 				}).then(({ x, y, strategy }) => {
-					setAutocompleteFloating({ x, y, strategy: strategy as any });
+					setAutocompleteFloating({ x, y, strategy });
 				});
 			},
 		);
@@ -169,11 +174,13 @@ export function OverlayProvider(props: ParentProps) {
 	});
 
 	const [userViewRef, setUserViewRef] = createSignal<HTMLElement>();
-	const [userViewFloating, setUserViewFloating] = createStore({
-		x: 0,
-		y: 0,
-		strategy: "absolute" as const,
-	});
+	const [userViewFloating, setUserViewFloating] = createStore<FloatingPosition>(
+		{
+			x: 0,
+			y: 0,
+			strategy: "absolute",
+		},
+	);
 
 	createEffect(() => {
 		const reference = userView()?.ref;
@@ -189,7 +196,7 @@ export function OverlayProvider(props: ParentProps) {
 						? "right-start"
 						: "left-start",
 				}).then(({ x, y, strategy }) => {
-					setUserViewFloating({ x, y, strategy: strategy as any });
+					setUserViewFloating({ x, y, strategy });
 				});
 			},
 		);
@@ -197,10 +204,12 @@ export function OverlayProvider(props: ParentProps) {
 	});
 
 	const [threadsViewRef, setThreadsViewRef] = createSignal<HTMLElement>();
-	const [threadsViewFloating, setThreadsViewFloating] = createStore({
+	const [threadsViewFloating, setThreadsViewFloating] = createStore<
+		FloatingPosition
+	>({
 		x: 0,
 		y: 0,
-		strategy: "absolute" as const,
+		strategy: "absolute",
 	});
 
 	createEffect(() => {
@@ -215,7 +224,7 @@ export function OverlayProvider(props: ParentProps) {
 					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
 					placement: "bottom-end",
 				}).then(({ x, y, strategy }) => {
-					setThreadsViewFloating({ x, y, strategy: strategy as any });
+					setThreadsViewFloating({ x, y, strategy });
 				});
 			},
 		);
@@ -223,10 +232,10 @@ export function OverlayProvider(props: ParentProps) {
 	});
 
 	const [popoutRef, setPopoutRef] = createSignal<HTMLElement>();
-	const [popoutFloating, setPopoutFloating] = createStore({
+	const [popoutFloating, setPopoutFloating] = createStore<FloatingPosition>({
 		x: 0,
 		y: 0,
-		strategy: "absolute" as const,
+		strategy: "absolute",
 	});
 
 	createEffect(() => {
@@ -241,7 +250,7 @@ export function OverlayProvider(props: ParentProps) {
 					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
 					placement: ctx.popout()?.placement ?? "top",
 				}).then(({ x, y, strategy }) => {
-					setPopoutFloating({ x, y, strategy: strategy as any });
+					setPopoutFloating({ x, y, strategy });
 				});
 			},
 		);
@@ -319,7 +328,7 @@ export function OverlayProvider(props: ParentProps) {
 		<>
 			{props.children}
 			<Portal mount={document.getElementById("overlay")!}>
-				<For each={modals}>{(modal) => getModal(modal as any)}</For>
+				<For each={modals}>{(modal) => getModal(modal as Modal)}</For>
 				<Show when={menu()}>
 					<div class="contextmenu">
 						<div
@@ -347,7 +356,11 @@ export function OverlayProvider(props: ParentProps) {
 							"z-index": 100,
 						}}
 					>
-						<EmojiPicker {...ctx.popout()?.props} />
+						<EmojiPicker
+							{...(ctx.popout()?.props as {
+								selected: (value: string | null, shiftKey: boolean) => void;
+							})}
+						/>
 					</div>
 				</Show>
 				<Show when={userViewData()?.user()}>

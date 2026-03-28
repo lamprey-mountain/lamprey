@@ -9,6 +9,7 @@ import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 import { Checkbox } from "../icons.tsx";
 import { CheckboxOption } from "../atoms/CheckboxOption";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
+import type { NotifsRoom, Room } from "sdk";
 
 // the context menu for rooms
 export function RoomMenu(props: { room_id: string }) {
@@ -115,12 +116,12 @@ export function RoomMenu(props: { room_id: string }) {
 	);
 }
 
-function RoomNotificationMenu(props: { room: import("sdk").Room }) {
+function RoomNotificationMenu(props: { room: Room }) {
 	const api2 = useApi2();
 	const rooms2 = useRooms2();
 	const roomConfig = () => props.room.preferences;
 
-	const setNotifs = (notifs: Partial<import("sdk").NotifsRoom>) => {
+	const setNotifs = (notifs: Partial<NotifsRoom>) => {
 		const current = roomConfig() ?? {
 			notifs: { mention_everyone: true, mention_roles: true },
 			frontend: {},

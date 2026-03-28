@@ -1,4 +1,4 @@
-import { Schema } from "prosemirror-model";
+import { type Node, Schema } from "prosemirror-model";
 import { Plugin, PluginKey } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 
@@ -11,7 +11,7 @@ const segmenter = (typeof (Intl as any).Segmenter !== "undefined")
 export const EMOJI_TEST = /\p{Emoji_Presentation}|\p{Extended_Pictographic}/u;
 
 export function convertEmojiInText(schema: Schema, text: string) {
-	const content: any[] = [];
+	const content: Node[] = [];
 	let textBuffer = "";
 	let hasEmoji = false;
 

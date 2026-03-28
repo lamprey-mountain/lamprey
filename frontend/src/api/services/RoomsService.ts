@@ -37,7 +37,7 @@ export class RoomsService extends BaseService<Room> {
 		return data;
 	}
 
-	async update(room_id: string, body: any): Promise<Room> {
+	async update(room_id: string, body: Record<string, unknown>): Promise<Room> {
 		const data = await this.retryWithBackoff<Room>(() =>
 			this.client.http.PATCH(
 				"/api/v1/room/{room_id}",

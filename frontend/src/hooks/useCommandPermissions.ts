@@ -1,8 +1,6 @@
-import type { ChannelType } from "sdk";
+import type { Channel, ChannelType } from "sdk";
 import type { Api } from "@/api";
-import { useChannels2 } from "@/api";
 import { canUseCommand as checkCommandPermission } from "../permission-calculator";
-import { useRooms2 } from "@/api";
 
 /**
  * Check if a command should be available based on channel type and permissions
@@ -10,7 +8,7 @@ import { useRooms2 } from "@/api";
 export function canUseCommand(
 	api: Api,
 	room_id: string | undefined,
-	channel: any,
+	channel: Channel | undefined,
 	commandName: string,
 ): boolean {
 	const self_id = api.users.cache.get("@self")?.id;
@@ -20,11 +18,9 @@ export function canUseCommand(
 	return checkCommandPermission(
 		{
 			api,
-			channels: useChannels2() as any,
-			rooms: useRooms2(),
 			room_id,
 			channel_id: channel?.id,
-		} as any,
+		},
 		self_id,
 		commandName,
 		channel,

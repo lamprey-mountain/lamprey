@@ -1,6 +1,6 @@
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { Navigate, RouteSectionProps } from "@solidjs/router";
-import type { ParentProps, VoidProps } from "solid-js";
+import type { Component, JSX, ParentProps, VoidProps } from "solid-js";
 import { useApi2, useChannels2, useRooms2 } from "@/api";
 import { useCtx } from "../context.ts";
 import { type ChannelSearch } from "../context.ts";
@@ -70,12 +70,12 @@ const Title = (props: { title?: string }) => {
 
 type LayoutDefaultProps = {
 	title?: string;
-	children?: any;
+	children?: JSX.Element;
 	showChannelNav?: boolean;
 	channelNavRoomId?: string;
 	showVoiceTray?: boolean;
 	showMembers?: boolean;
-	memberComponent?: any;
+	memberComponent?: JSX.Element;
 	showMembersWidth?: number;
 };
 
@@ -148,7 +148,7 @@ const RoomSidebar = (props: { room: RoomT }) => {
 	);
 };
 
-export const RouteRoom = (p: ParentProps<RouteSectionProps>) => {
+export const RouteRoom = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 	const { t } = useCtx();
 	const ctx = useCtx();
 	const api2 = useApi2();
@@ -189,7 +189,9 @@ export const RouteRoom = (p: ParentProps<RouteSectionProps>) => {
 	);
 };
 
-export const RouteRoomSettings = (p: ParentProps<RouteSectionProps>) => {
+export const RouteRoomSettings = (
+	p: ParentProps<RouteSectionProps>,
+): JSX.Element => {
 	const { t } = useCtx();
 	const api2 = useApi2();
 	const rooms = useRooms2();
@@ -206,7 +208,9 @@ export const RouteRoomSettings = (p: ParentProps<RouteSectionProps>) => {
 	);
 };
 
-export const RouteChannelSettings = (p: ParentProps<RouteSectionProps>) => {
+export const RouteChannelSettings = (
+	p: ParentProps<RouteSectionProps>,
+): JSX.Element => {
 	const { t } = useCtx();
 	const channels2 = useChannels2();
 	const channel = channels2.use(() => p.params.channel_id);
@@ -362,7 +366,9 @@ const ChannelSidebar = (props: {
 	);
 };
 
-export const RouteChannel = (p: ParentProps<RouteSectionProps>) => {
+export const RouteChannel = (
+	p: ParentProps<RouteSectionProps>,
+): JSX.Element => {
 	const { t } = useCtx();
 	const ctx = useCtx();
 	const api2 = useApi2();
@@ -517,7 +523,9 @@ export const RouteChannel = (p: ParentProps<RouteSectionProps>) => {
 	);
 };
 
-export const RouteHome = (_props: ParentProps<RouteSectionProps>) => {
+export const RouteHome = (
+	_props: ParentProps<RouteSectionProps>,
+): JSX.Element => {
 	const { t } = useCtx();
 	return (
 		<LayoutDefault
@@ -530,7 +538,9 @@ export const RouteHome = (_props: ParentProps<RouteSectionProps>) => {
 	);
 };
 
-export const RouteFeed = (_props: ParentProps<RouteSectionProps>) => {
+export const RouteFeed = (
+	_props: ParentProps<RouteSectionProps>,
+): JSX.Element => {
 	return (
 		<LayoutDefault
 			title="feed"
@@ -542,7 +552,7 @@ export const RouteFeed = (_props: ParentProps<RouteSectionProps>) => {
 	);
 };
 
-export const RouteInvite = (p: ParentProps<RouteSectionProps>) => {
+export const RouteInvite = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 	return (
 		<Show when={p.params.code}>
 			<LayoutDefault
@@ -556,7 +566,7 @@ export const RouteInvite = (p: ParentProps<RouteSectionProps>) => {
 	);
 };
 
-export const RouteUser = (p: ParentProps<RouteSectionProps>) => {
+export const RouteUser = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 	const api2 = useApi2();
 	const user = () => api2.users.cache.get(p.params.user_id!);
 
@@ -577,7 +587,7 @@ export const RouteUser = (p: ParentProps<RouteSectionProps>) => {
 	);
 };
 
-export function RouteInbox(p: RouteSectionProps) {
+export function RouteInbox(p: RouteSectionProps): JSX.Element {
 	return (
 		<LayoutDefault
 			title="inbox"
@@ -590,7 +600,7 @@ export function RouteInbox(p: RouteSectionProps) {
 	);
 }
 
-export function RouteFriends() {
+export function RouteFriends(): JSX.Element {
 	return (
 		<LayoutDefault
 			title="friends"
@@ -602,7 +612,7 @@ export function RouteFriends() {
 	);
 }
 
-export function RouteNotFound() {
+export function RouteNotFound(): JSX.Element {
 	const { t } = useCtx();
 
 	return (

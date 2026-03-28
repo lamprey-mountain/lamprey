@@ -56,15 +56,17 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 	});
 
 	const availableRoles = createMemo(() => {
-		const roleItems = (roles() as any)?.items;
+		const roleItems = roles();
 		const roomId = props.room_id;
 		if (!roleItems || !roomId) return [];
-		const { canApply, rank, isOwner } = canApplyRoles() as any;
+		const perms = canApplyRoles();
+		if (!perms) return [];
+		const { canApply, rank, isOwner } = perms;
 		if (!canApply) return [];
 		return roleItems
-			.filter((r: any) => r.id !== roomId)
-			.filter((r: any) => isOwner || rank > r.position)
-			.map((r: any) => ({
+			.filter((r) => r.id !== roomId)
+			.filter((r) => isOwner || rank > r.position)
+			.map((r) => ({
 				item: r.id,
 				label: r.name,
 			}));

@@ -24,25 +24,51 @@ import { useModals } from "./contexts/modal.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { flags } from "./flags.ts";
 
+// Tab type definitions with proper discriminated unions
+type CategoryTab = { category: string };
+
+type ActionTab = {
+	name: string;
+	action: "delete";
+	style?: "danger";
+	permissionCheck?: (p: ReturnType<typeof usePermissions>) => boolean;
+	ownerOnly?: boolean;
+};
+
+type PageTab = {
+	name: string;
+	path: string;
+	noPad?: boolean;
+	component: Component<any>;
+	permissionCheck?: (p: ReturnType<typeof usePermissions>) => boolean;
+	ownerOnly?: boolean;
+};
+
+type TabItem = CategoryTab | ActionTab | PageTab;
+
+// Helper for type-safe matching with SolidJS Switch/Match
+function matches<S extends TabItem>(
+	e: TabItem,
+	predicate: (e: TabItem) => e is S,
+): S | false {
+	return predicate(e) ? e : false;
+}
+
+// Type guard functions
+function isCategoryTab(tab: TabItem): tab is CategoryTab {
+	return "category" in tab;
+}
+
+function isActionTab(tab: TabItem): tab is ActionTab {
+	return "action" in tab;
+}
+
+function isPageTab(tab: TabItem): tab is PageTab {
+	return "path" in tab;
+}
+
 // TODO: more permission checks
-const tabs: Array<
-	{ category: string } | {
-		name: string;
-		path: string;
-		noPad?: boolean;
-		// TODO: fix type errors
-		// component: Component,
-		component: any;
-		permissionCheck?: (p: Set<Permission>) => boolean;
-		ownerOnly?: boolean;
-	} | {
-		name: string;
-		action: "delete";
-		style?: "danger";
-		permissionCheck?: (p: Set<Permission>) => boolean;
-		ownerOnly?: boolean;
-	}
-> = [
+const tabs: TabItem[] = [
 	{ category: "overview" },
 	{ name: "info", path: "", component: Info },
 	{
@@ -102,20 +128,9 @@ const tabs: Array<
 	},
 ];
 
-const todo = (what: string) => () => `todo: ${what}` as any as Component;
+const todo = (_what: string) => null as unknown as Component<any>;
 
-const adminTabs: Array<
-	{ category: string } | {
-		name: string;
-		path: string;
-		noPad?: boolean;
-		// TODO: fix type errors
-		// component: Component,
-		component: any;
-		permissionCheck?: (p: Set<Permission>) => boolean;
-		ownerOnly?: boolean;
-	}
-> = [
+const adminTabs: TabItem[] = [
 	{ category: "overview" },
 	{ name: "info", path: "", component: Admin.ServerInfo },
 
@@ -175,10 +190,9 @@ const adminTabs: Array<
 	},
 ];
 
-type TabItem = typeof tabs[number];
 type GroupedTab = {
 	category: string;
-	items: Exclude<TabItem, { category: string }>[];
+	items: (ActionTab | PageTab)[];
 };
 
 function groupTabsByCategory(
@@ -191,12 +205,12 @@ function groupTabsByCategory(
 	let currentGroup: GroupedTab | null = null;
 
 	for (const tab of tabs) {
-		if ("category" in tab) {
+		if (isCategoryTab(tab)) {
 			currentGroup = { category: tab.category, items: [] };
 			groups.push(currentGroup);
 		} else if (currentGroup) {
 			const isVisible =
-				(!tab.permissionCheck || tab.permissionCheck(perms as any)) &&
+				(!tab.permissionCheck || tab.permissionCheck(perms)) &&
 				(!tab.ownerOnly || room.owner_id === user_id());
 			if (isVisible) {
 				currentGroup.items.push(tab);
@@ -220,7 +234,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 	);
 	const currentTabs = () => props.room.id === SERVER_ROOM_ID ? adminTabs : tabs;
 	const currentTab = () =>
-		currentTabs().find((i: any) => i.path === (props.page ?? ""))!;
+		currentTabs().find((i): i is PageTab => isPageTab(i) && i.path === (props.page ?? ""));
 
 	const groupedTabs = createMemo(() =>
 		groupTabsByCategory(currentTabs(), perms, user_id, props.room)
@@ -256,7 +270,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 		<div class="settings">
 			<header>
 				{props.room.id === SERVER_ROOM_ID ? "admin settings" : "room settings"}
-				: {(currentTab() as any)?.name}{" "}
+				: {currentTab()?.name}{" "}
 				<A href={`/room/${props.room.id}`}>back</A>
 			</header>
 			<nav>
@@ -276,28 +290,31 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 								<For each={group.items}>
 									{(tab) => (
 										<Switch>
-											<Match when={(tab as any).action}>
-												<li>
-													<button
-														class="action"
-														onClick={() => handleAction((tab as any).action)}
-														classList={{
-															"danger": (tab as any).style === "danger",
-														}}
-													>
-														{tab.name}
-													</button>
-												</li>
+											<Match when={matches(tab, isActionTab)}>
+												{(item) => (
+													<li>
+														<button
+															class="action"
+															onClick={() => handleAction(item().action)}
+															classList={{
+																"danger": item().style === "danger",
+															}}
+														>
+															{item().name}
+														</button>
+													</li>
+												)}
 											</Match>
-											<Match when={true}>
-												<li>
-													<A
-														href={`/room/${props.room.id}/settings/${((tab as any)
-															.path as any)}`}
-													>
-														{(tab as any).name}
-													</A>
-												</li>
+											<Match when={matches(tab, isPageTab)}>
+												{(item) => (
+													<li>
+														<A
+															href={`/room/${props.room.id}/settings/${item().path}`}
+														>
+															{item().name}
+														</A>
+													</li>
+												)}
 											</Match>
 										</Switch>
 									)}
@@ -307,10 +324,10 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 					</For>
 				</ul>
 			</nav>
-			<main classList={{ padded: !((currentTab() as any).noPad as any) }}>
+			<main classList={{ padded: !currentTab()?.noPad }}>
 				<Show when={currentTab()} fallback="unknown page">
 					<Dynamic
-						component={(currentTab() as any)?.component}
+						component={currentTab()?.component}
 						room={props.room}
 					/>
 				</Show>

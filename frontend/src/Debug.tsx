@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from "solid-js";
+import { createResource, createSignal, For, type JSX, Show } from "solid-js";
 import { leadingAndTrailing, throttle } from "@solid-primitives/scheduled";
 import { useApi2, useMessages2 } from "@/api";
 import { useCtx } from "./context.ts";
@@ -17,7 +17,7 @@ const gitCommit = __VITE_GIT_COMMIT__;
 // @ts-ignore
 const gitDirty = __VITE_GIT_DIRTY__;
 
-export const Debug = () => {
+export const Debug = (): JSX.Element => {
 	return (
 		<div class="debug">
 			<h3>area 51</h3>

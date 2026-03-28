@@ -35,8 +35,9 @@ export class RoomBansService extends BaseService<RoomBan> {
 				})
 			);
 			return data;
-		} catch (error: any) {
-			if (error?.error === "not found") {
+		} catch (error: unknown) {
+			const err = error as { error?: string };
+			if (err?.error === "not found") {
 				// Return placeholder for non-existent ban
 				return {
 					room_id,

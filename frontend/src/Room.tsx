@@ -4,9 +4,10 @@ import type { RoomT } from "./types.ts";
 import { useCtx } from "./context.ts";
 import { useUserPopout } from "./contexts/mod.tsx";
 import { useModals } from "./contexts/modal";
-import { type Channel, getTimestampFromUUID } from "sdk";
+import { type Channel, getTimestampFromUUID, MemberListGroup } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useChannels2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
+import type { MemberListItem } from "@/api/services/MemberListService";
 import { AvatarWithStatus, ChannelIcon } from "./User.tsx";
 import { Time } from "./atoms/Time.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
@@ -26,13 +27,14 @@ export const RoomMembers = (props: { room: RoomT }) => {
 		new ReactiveMap<string, boolean>(),
 	);
 
+	type Row =
+		| { type: "group"; group: MemberListGroup }
+		| { type: "member"; item: MemberListItem };
+
 	const rows = createMemo(() => {
 		const l = list();
 		if (!l) return [];
-		const rows: (
-			| { type: "group"; group: any }
-			| { type: "member"; item: any }
-		)[] = [];
+		const rows: Row[] = [];
 		let offset = 0;
 		for (const group of l.groups) {
 			if (group.count === 0) continue;
@@ -49,9 +51,14 @@ export const RoomMembers = (props: { room: RoomT }) => {
 		return rows;
 	});
 
-	const getGroupName = (group: any) => {
-		const role = roles2.cache.get(group.id);
-		return role?.name ?? group.id;
+	const getGroupName = (group: MemberListGroup) => {
+		if (typeof group.id === "string") {
+			return group.id;
+		}
+		// Handle role-based group id
+		const roleId = Object.values(group.id)[0];
+		const role = roles2.cache.get(roleId);
+		return role?.name ?? roleId;
 	};
 
 	let parentRef!: HTMLDivElement;

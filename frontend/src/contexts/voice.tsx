@@ -346,8 +346,11 @@ export const VoiceProvider = (props: ParentProps) => {
 					audio.addEventListener("loadedmetadata", res, { once: true })
 				);
 				const stream: MediaStream = "captureStream" in audio
-					? (audio as any).captureStream()
-					: (audio as any).mozCaptureStream();
+					? (audio as HTMLAudioElement & { captureStream: () => MediaStream })
+						.captureStream()
+					: (audio as HTMLAudioElement & {
+						mozCaptureStream: () => MediaStream;
+					}).mozCaptureStream();
 				const track = stream.getAudioTracks()[0];
 				await musicTn.sender.replaceTrack(track);
 				musicTn.direction = "sendonly";

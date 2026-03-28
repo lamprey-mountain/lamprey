@@ -23,7 +23,7 @@ export class TagsService extends BaseService<Tag> {
 		channel_id: string,
 		archived?: boolean,
 	): Promise<PaginationResponse<Tag>> {
-		const params: any = {};
+		const params: Record<string, boolean> = {};
 		if (archived !== undefined) {
 			params.archived = archived;
 		}
@@ -49,16 +49,11 @@ export class TagsService extends BaseService<Tag> {
 		query: string,
 		archived?: boolean,
 	): Promise<PaginationResponse<Tag>> {
-		const params: any = { query };
-		if (archived !== undefined) {
-			params.archived = archived;
-		}
-
 		const data = await this.retryWithBackoff<PaginationResponse<Tag>>(() =>
 			this.client.http.GET("/api/v1/channel/{channel_id}/tag/search", {
 				params: {
 					path: { channel_id },
-					query: params,
+					query: { query, ...(archived !== undefined ? { archived } : {}) },
 				},
 			})
 		);
@@ -125,7 +120,7 @@ export class TagsService extends BaseService<Tag> {
 		tag_id: string,
 		force?: boolean,
 	): Promise<void> {
-		const params: any = {};
+		const params: Record<string, boolean> = {};
 		if (force) {
 			params.force = force;
 		}

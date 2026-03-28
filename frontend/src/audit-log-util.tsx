@@ -11,7 +11,7 @@ export interface MergedAuditLogEntry {
 	user_id: string;
 	type: string;
 	reason?: string | null;
-	metadata: any;
+	metadata: Record<string, unknown>;
 	changes?: AuditLogChange[];
 }
 
@@ -46,15 +46,15 @@ export function mergeAuditLogEntries(
 			if (currentTs - lastTs <= MERGE_WINDOW_MS) {
 				lastMerged.entries.push(entry);
 
-				if (
-					"metadata" in entry &&
-					"changes" in (entry as any).metadata &&
-					(entry as any).metadata.changes
-				) {
+				// Check if entry has metadata with changes
+				const entryWithMetadata = entry as {
+					metadata?: { changes?: import("sdk").AuditLogChange[] };
+				};
+				if (entryWithMetadata.metadata?.changes) {
 					if (!lastMerged.changes) {
 						lastMerged.changes = [];
 					}
-					lastMerged.changes.push(...(entry as any).metadata.changes);
+					lastMerged.changes.push(...entryWithMetadata.metadata.changes);
 				}
 
 				if (entry.reason) {
@@ -71,10 +71,11 @@ export function mergeAuditLogEntries(
 			user_id: entry.user_id,
 			type: entry.type,
 			reason: entry.reason,
-			metadata: (entry as any).metadata,
-			changes: "metadata" in entry && "changes" in (entry as any).metadata
-				? (entry as any).metadata.changes
-				: undefined,
+			metadata: (entry as { metadata?: Record<string, unknown> }).metadata ??
+				{},
+			changes:
+				(entry as { metadata?: { changes?: import("sdk").AuditLogChange[] } })
+					.metadata?.changes,
 		});
 	}
 
@@ -149,71 +150,77 @@ export function formatAuditLogEntry(
 		"user",
 	);
 
-	const params: any = {
+	// Helper to safely access metadata (some entry types don't have it)
+	const metadata = "metadata" in ent
+		? ent.metadata as Record<string, unknown> | undefined
+		: undefined;
+	const getMetadata = (key: string): unknown => metadata?.[key];
+
+	const params: Record<string, JSX.Element> = {
 		actor,
 		channel_name: resolveName(
 			api2,
 			channels2,
 			room_id,
-			(ent as any).metadata?.channel_id,
+			getMetadata("channel_id") as string | undefined,
 			"channel",
-			(ent as any).metadata?.channel_name,
+			getMetadata("channel_name") as string | undefined,
 		),
 		role_name: resolveName(
 			api2,
 			channels2,
 			room_id,
-			(ent as any).metadata?.role_id,
+			getMetadata("role_id") as string | undefined,
 			"role",
-			(ent as any).metadata?.role_name,
+			getMetadata("role_name") as string | undefined,
 		),
 		webhook_name: resolveName(
 			api2,
 			channels2,
 			room_id,
-			(ent as any).metadata?.webhook_id,
+			getMetadata("webhook_id") as string | undefined,
 			"webhook",
-			(ent as any).metadata?.webhook_name,
+			getMetadata("webhook_name") as string | undefined,
 		),
 		room_name: resolveName(
 			api2,
 			channels2,
 			room_id,
-			(ent as any).metadata?.room_id,
+			getMetadata("room_id") as string | undefined,
 			"room",
-			(ent as any).metadata?.room_name,
+			getMetadata("room_name") as string | undefined,
 		),
 		thread_name: resolveName(
 			api2,
 			channels2,
 			room_id,
-			(ent as any).metadata?.thread_id,
+			getMetadata("thread_id") as string | undefined,
 			"channel",
-			(ent as any).metadata?.thread_name,
+			getMetadata("thread_name") as string | undefined,
 		),
 		target: resolveName(
 			api2,
 			channels2,
 			room_id,
-			(ent as any).metadata?.user_id || (ent as any).metadata?.overwrite_id,
-			(ent as any).metadata?.type === "Role" ? "role" : "user",
-			(ent as any).metadata?.target_name,
+			(getMetadata("user_id") || getMetadata("overwrite_id")) as
+				| string
+				| undefined,
+			(getMetadata("type") as string) === "Role" ? "role" : "user",
+			getMetadata("target_name") as string | undefined,
 		),
 		bot_name: resolveName(
 			api2,
 			channels2,
 			room_id,
-			(ent as any).metadata?.bot_id,
+			getMetadata("bot_id") as string | undefined,
 			"user",
-			(ent as any).metadata?.bot_name,
+			getMetadata("bot_name") as string | undefined,
 		),
-		invite_code: (ent as any).metadata?.code ?? "unknown",
-		count: (ent as any).metadata?.message_ids?.length ?? 0,
+		invite_code: (getMetadata("code") as string) ?? "unknown",
+		count: (getMetadata("message_ids") as string[])?.length ?? 0,
 	};
 
-	const translated = (t as any)(`audit_log.${ent.type}`, params) as
-		| string
-		| undefined;
+	const translated = t(`audit_log.${ent.type}` as any, params);
 	if (!translated) return `${actor} - ${ent.type}`;
 
 	return interpolate(translated, params);
@@ -228,11 +235,12 @@ export function formatChanges(
 	const channels2 = useChannels2();
 	const { t } = useCtx();
 
+	const entWithMetadata = ent as { metadata?: Record<string, unknown> };
 	const channelName = resolveName(
 		api2,
 		channels2,
 		room_id,
-		(ent as any).metadata?.channel_id,
+		entWithMetadata.metadata?.channel_id as string | undefined,
 		"channel",
 	);
 
@@ -254,7 +262,7 @@ export function formatChanges(
 				<li>
 					{t(
 						"audit_log.changes.messages_deleted",
-						(ent as any).metadata?.message_ids?.length ?? 0,
+						(entWithMetadata.metadata?.message_ids as string[])?.length ?? 0,
 					)}
 				</li>,
 			);
@@ -264,27 +272,26 @@ export function formatChanges(
 			formatted.push(
 				<li>
 					{t("audit_log.changes.invite_deleted", {
-						invite_code: (ent as any).metadata?.code,
+						invite_code: entWithMetadata.metadata?.code as string | undefined,
 					})}
 				</li>,
 			);
 			break;
 		}
 		case "PermissionOverwriteSet": {
-			const overwriteType = (ent as any).metadata?.type ?? "unknown";
+			const overwriteType = ent.metadata?.type as string ?? "unknown";
 			const overwriteName = resolveName(
 				api2,
 				channels2,
 				room_id,
-				(ent as any).metadata?.overwrite_id,
-				(ent as any).metadata?.type === "Role" ? "role" : "user",
+				ent.metadata?.overwrite_id as string | undefined,
+				(ent.metadata?.type as string) === "Role" ? "role" : "user",
 			);
 			formatted.push(
 				<li>
 					{t(
 						"audit_log.changes.permission_overwrite_for",
-						overwriteType,
-						overwriteName,
+						{ type: overwriteType, target: overwriteName },
 					)}
 				</li>,
 			);
@@ -300,7 +307,7 @@ export function formatChanges(
 								api2,
 								channels2,
 								room_id,
-								ent.metadata.role_id,
+								ent.metadata?.role_id as string | undefined,
 								"role",
 							),
 						},
@@ -319,7 +326,7 @@ export function formatChanges(
 								api2,
 								channels2,
 								room_id,
-								ent.metadata.role_id,
+								ent.metadata?.role_id as string | undefined,
 								"role",
 							),
 						},
@@ -338,7 +345,7 @@ export function formatChanges(
 								api2,
 								channels2,
 								room_id,
-								ent.metadata.bot_id,
+								ent.metadata?.bot_id as string | undefined,
 								"user",
 							),
 						},
@@ -357,7 +364,7 @@ export function formatChanges(
 								api2,
 								channels2,
 								room_id,
-								ent.metadata.user_id,
+								ent.metadata?.user_id as string | undefined,
 								"user",
 							),
 						},
@@ -376,7 +383,7 @@ export function formatChanges(
 								api2,
 								channels2,
 								room_id,
-								ent.metadata.user_id,
+								ent.metadata?.user_id as string | undefined,
 								"user",
 							),
 						},
@@ -395,7 +402,7 @@ export function formatChanges(
 								api2,
 								channels2,
 								room_id,
-								ent.metadata.user_id,
+								ent.metadata?.user_id as string | undefined,
 								"user",
 							),
 						},
@@ -414,7 +421,7 @@ export function formatChanges(
 								api2,
 								channels2,
 								room_id,
-								ent.metadata.user_id,
+								ent.metadata?.user_id as string | undefined,
 								"user",
 							),
 						},
@@ -430,7 +437,7 @@ export function formatChanges(
 								api2,
 								channels2,
 								room_id,
-								ent.metadata.thread_id,
+								ent.metadata?.thread_id as string | undefined,
 								"channel",
 							),
 						},
@@ -449,7 +456,7 @@ export function formatChanges(
 								api2,
 								channels2,
 								room_id,
-								ent.metadata.user_id,
+								ent.metadata?.user_id as string | undefined,
 								"user",
 							),
 						},
@@ -465,7 +472,7 @@ export function formatChanges(
 								api2,
 								channels2,
 								room_id,
-								ent.metadata.thread_id,
+								ent.metadata?.thread_id as string | undefined,
 								"channel",
 							),
 						},
@@ -478,8 +485,8 @@ export function formatChanges(
 
 	const changes = "changes" in ent && ent.changes
 		? ent.changes
-		: "changes" in (ent as any).metadata
-		? ((ent as any).metadata.changes as AuditLogChange[])
+		: "metadata" in ent && ent.metadata && "changes" in ent.metadata
+		? (ent.metadata.changes as AuditLogChange[])
 		: undefined;
 
 	if (changes) {
@@ -575,7 +582,7 @@ export function formatChanges(
 						<li>
 							{t(
 								"audit_log.changes.role_added",
-								resolveName(api2, channels2, room_id, r, "role"),
+								{ role_name: resolveName(api2, channels2, room_id, r, "role") },
 							)}
 						</li>,
 					);
@@ -585,7 +592,7 @@ export function formatChanges(
 						<li>
 							{t(
 								"audit_log.changes.role_removed",
-								resolveName(api2, channels2, room_id, r, "role"),
+								{ role_name: resolveName(api2, channels2, room_id, r, "role") },
 							)}
 						</li>,
 					);
@@ -595,15 +602,14 @@ export function formatChanges(
 					<li>
 						{t(
 							"audit_log.changes.set_field",
-							c.key,
-							JSON.stringify(c.new) ?? "[null]",
+							{ field: c.key, value: JSON.stringify(c.new) ?? "[null]" },
 						)}
 					</li>,
 				);
 			} else {
 				formatted.push(
 					<li>
-						{t("audit_log.changes.removed_field", c.key)}
+						{t("audit_log.changes.removed_field", { field: c.key })}
 					</li>,
 				);
 			}
@@ -630,14 +636,14 @@ function renderPermissionDiff(
 	for (const p of added) {
 		formatted.push(
 			<li>
-				{t(`audit_log.changes.${addedLabel}`, p)}
+				{t(`audit_log.changes.${addedLabel}`, { permission: p })}
 			</li>,
 		);
 	}
 	for (const p of removed) {
 		formatted.push(
 			<li>
-				{t(`audit_log.changes.${removedLabel}`, p)}
+				{t(`audit_log.changes.${removedLabel}`, { permission: p })}
 			</li>,
 		);
 	}

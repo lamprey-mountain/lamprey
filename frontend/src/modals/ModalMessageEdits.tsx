@@ -3,6 +3,7 @@ import { createResource, For } from "solid-js";
 import { useApi2 } from "@/api";
 import { MessageView } from "../components/features/chat/Message";
 import { Modal } from "./mod";
+import type { Message, MessageVersion } from "sdk";
 
 export const ModalMessageEdits = (
 	props: { thread_id: string; message_id: string },
@@ -35,18 +36,33 @@ export const ModalMessageEdits = (
 					{(i, x) => {
 						const prev = edits()?.items[x() - 1];
 						if (prev) {
+							const prevVersion = prev.latest_version;
+							const currVersion = i.latest_version;
+							const prevContent = prevVersion.type === "DefaultMarkdown"
+								? prevVersion.content ?? ""
+								: "";
+							const currContent = currVersion.type === "DefaultMarkdown"
+								? currVersion.content ?? ""
+								: "";
 							const pages = diffChars(
-								(prev as any).content ?? "",
-								(i as any).content ?? "",
+								prevContent,
+								currContent,
 							);
 							const content = pages.map((i) => {
 								if (i.added) return `<ins>${i.value}</ins>`;
 								if (i.removed) return `<del>${i.value}</del>`;
 								return i.value;
 							}).join("");
+							const messageWithContent: Message = {
+								...i,
+								latest_version: {
+									...currVersion,
+									content,
+								} as MessageVersion,
+							};
 							return (
 								<li>
-									<MessageView message={{ ...i, content } as any} separate />
+									<MessageView message={messageWithContent} separate />
 								</li>
 							);
 						} else {

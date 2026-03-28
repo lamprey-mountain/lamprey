@@ -35,11 +35,25 @@ import {
 	createPlaceholderPlugin,
 } from "../editor/mod.tsx";
 
+type FilterNodeSpec = {
+	group: string;
+	inline: boolean;
+	atom: boolean;
+	attrs: Record<string, { default: string | boolean }>;
+	toDOM: (
+		node: import("prosemirror-model").Node,
+	) => import("prosemirror-model").DOMOutputSpec;
+	parseDOM: Array<{
+		tag: string;
+		getAttrs: (dom: HTMLElement) => Record<string, unknown>;
+	}>;
+};
+
 const createFilterNode = (
 	name: string,
 	valueKey: "id" | "value" | "date" = "value",
 	hasNameAttr: boolean = false,
-): any => ({
+): FilterNodeSpec => ({
 	group: "inline",
 	inline: true,
 	atom: true,
@@ -48,7 +62,7 @@ const createFilterNode = (
 		...(hasNameAttr ? { name: { default: "" } } : {}),
 		negated: { default: false },
 	},
-	toDOM: (node: Node) => {
+	toDOM: (node: import("prosemirror-model").Node) => {
 		const displayValue = hasNameAttr ? node.attrs.name : node.attrs[valueKey];
 		return [
 			"span",
@@ -62,7 +76,7 @@ const createFilterNode = (
 				node.attrs.negated ? `-${name}:` : `${name}:`,
 			],
 			["span", { class: "filter-value" }, displayValue],
-		] as any;
+		];
 	},
 	parseDOM: [
 		{

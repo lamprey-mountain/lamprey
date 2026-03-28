@@ -1,5 +1,17 @@
 import { marked, type Token, type Tokens } from "marked";
 
+type MentionToken = Token & {
+	mention_type: "user" | "role" | "channel" | "emoji";
+	id: string;
+	name?: string;
+	animated?: boolean;
+};
+
+type SpoilerToken = Token & {
+	text: string;
+	tokens: Token[];
+};
+
 const MENTION_CONFIGS = [
 	{ type: "user", prefix: "@", regex: /^<@([0-9a-fA-F-]{36})>/ },
 	{ type: "role", prefix: "@&", regex: /^<@&([0-9a-fA-F-]{36})>/ },
@@ -33,7 +45,7 @@ const mentionExtension = {
 			}
 		}
 	},
-	renderer(token: any) {
+	renderer(token: MentionToken) {
 		const attrs = Object.entries(token)
 			.filter(([k]) => ["id", "name", "animated"].includes(k))
 			.map(([k, v]) => `data-emoji-${k}="${v}"`).join(" ");
@@ -57,7 +69,7 @@ const spoilerExtension = {
 		(this as any).lexer.inline(token.text, token.tokens);
 		return token;
 	},
-	renderer(token: any) {
+	renderer(token: SpoilerToken) {
 		const content = (this as any).parser.parseInline(token.tokens);
 		return `<span class="spoiler" onclick="this.classList.toggle('shown')">${content}</span>`;
 	},
