@@ -1,14 +1,47 @@
-import { EditorState } from "prosemirror-state";
+import { EditorState, Plugin, PluginKey } from "prosemirror-state";
 import { DOMParser } from "prosemirror-model";
 type NodeViewConstructor = any;
 import {
+	Decoration,
+	DecorationSet,
 	type EditorProps as ProsemirrorEditorProps,
 	EditorView,
 } from "prosemirror-view";
-import { createEffect, onCleanup, onMount } from "solid-js";
-import { decorate } from "../../../markdown_utils.tsx";
+import { onCleanup, onMount } from "solid-js";
 import { schema as defaultSchema } from "./schema";
 import { pastePluginKey, submitPluginKey } from "./core-plugins.ts";
+
+const placeholderPluginKey = new PluginKey<string>("placeholder");
+
+export function createPlaceholderPlugin() {
+	return new Plugin<string>({
+		key: placeholderPluginKey,
+		state: {
+			init: () => "",
+			apply(tr, prev) {
+				const meta = tr.getMeta(placeholderPluginKey);
+				if (meta !== undefined) return meta;
+				return prev;
+			},
+		},
+		props: {
+			decorations(state) {
+				const text = placeholderPluginKey.getState(state);
+				if (!text) return DecorationSet.empty;
+				const isEmpty = !state.doc.firstChild?.content.size;
+				if (!isEmpty) return DecorationSet.empty;
+
+				const widget = Decoration.widget(1, () => {
+					const span = document.createElement("span");
+					span.className = "placeholder";
+					span.textContent = text;
+					return span;
+				});
+				return DecorationSet.create(state.doc, [widget]);
+			},
+		},
+	});
+}
 
 export type EditorOptions = {
 	schema?: typeof defaultSchema;
@@ -29,6 +62,48 @@ export type EditorViewProps = {
 	autofocus?: boolean;
 };
 
+type ViewInstance = {
+	view: EditorView;
+	placeholderPlugin: ReturnType<typeof createPlaceholderPlugin>;
+	props: EditorViewProps;
+	pendingUpdate?: boolean;
+};
+
+const viewInstances = new WeakMap<EditorView, ViewInstance>();
+
+function scheduleUpdate(instance: ViewInstance, newProps: EditorViewProps) {
+	if (instance.pendingUpdate) return;
+	instance.pendingUpdate = true;
+
+	queueMicrotask(() => {
+		instance.pendingUpdate = false;
+		const { view, placeholderPlugin, props: prevProps } = instance;
+		if (view.isDestroyed) return;
+
+		const needsUpdate = prevProps.onSubmit !== newProps.onSubmit ||
+			prevProps.submitOnEnter !== newProps.submitOnEnter ||
+			prevProps.onUpload !== newProps.onUpload ||
+			prevProps.placeholder !== newProps.placeholder;
+
+		if (needsUpdate) {
+			const tr = view.state.tr;
+			tr.setMeta(submitPluginKey, {
+				onSubmit: newProps.onSubmit,
+				submitOnEnter: newProps.submitOnEnter,
+			});
+			tr.setMeta(pastePluginKey, {
+				onUpload: newProps.onUpload,
+			});
+			if (newProps.placeholder !== undefined) {
+				tr.setMeta(placeholderPlugin, newProps.placeholder ?? "");
+			}
+			view.dispatch(tr);
+
+			instance.props = newProps;
+		}
+	});
+}
+
 export const createEditor = (opts: EditorOptions) => {
 	const schema = opts.schema ?? defaultSchema;
 	let editorRef!: HTMLDivElement;
@@ -47,12 +122,10 @@ export const createEditor = (opts: EditorOptions) => {
 		},
 		View(props: EditorViewProps) {
 			onMount(() => {
+				const placeholderPlugin = createPlaceholderPlugin();
 				view = new EditorView(editorRef!, {
 					domParser: DOMParser.fromSchema(schema),
 					state: opts.createState(schema),
-					decorations(state) {
-						return decorate(state, props.placeholder);
-					},
 					nodeViews: opts.nodeViews?.(view!),
 					handleDOMEvents: opts.handleDOMEvents,
 					editable: () => !(props.disabled ?? false),
@@ -71,31 +144,42 @@ export const createEditor = (opts: EditorOptions) => {
 				if (props.autofocus ?? opts.autofocus ?? true) {
 					view.focus();
 				}
-			});
 
-			onCleanup(() => {
-				view?.destroy();
-			});
-
-			createEffect(() => {
-				if (!view) return;
-
-				view.setProps({
-					editable: () => !(props.disabled ?? false),
-				});
-
-				// Reactively sync component callbacks/state into the plugins without re-creating them
+				// Initialize plugin state on mount
 				const tr = view.state.tr;
 				tr.setMeta(submitPluginKey, {
 					onSubmit: props.onSubmit,
-					submitOnEnter: props.submitOnEnter,
+					submitOnEnter: props.submitOnEnter ?? true,
 				});
 				tr.setMeta(pastePluginKey, {
 					onUpload: props.onUpload,
 				});
-
+				if (props.placeholder) {
+					tr.setMeta(placeholderPlugin, props.placeholder);
+				}
 				view.dispatch(tr);
+
+				viewInstances.set(view, { view, placeholderPlugin, props });
 			});
+
+			onCleanup(() => {
+				if (view) {
+					viewInstances.delete(view);
+				}
+				view?.destroy();
+			});
+
+			// Update props on every render - queued via microtask to avoid
+			// dispatching during render
+			if (view) {
+				const instance = viewInstances.get(view);
+				if (instance) {
+					view.setProps({
+						editable: () => !(props.disabled ?? false),
+					});
+					scheduleUpdate(instance, props);
+				}
+			}
 
 			return (
 				<div

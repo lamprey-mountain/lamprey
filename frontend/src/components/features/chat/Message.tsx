@@ -233,6 +233,7 @@ function MessageEditor(
 	return (
 		<div class="message-editor" ref={containerRef}>
 			<editor.View
+				placeholder="edit message..."
 				onSubmit={(text) => {
 					save(text);
 					return true;

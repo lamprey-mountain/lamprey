@@ -30,7 +30,10 @@ import { useFloating } from "solid-floating-ui";
 import icSearch from "../../../assets/search.png";
 import { useChannel } from "../../../channelctx";
 import { RoomSearch, useRoom } from "../../../contexts/room";
-import { createEditor as createBaseEditor } from "../editor/mod.tsx";
+import {
+	createEditor as createBaseEditor,
+	createPlaceholderPlugin,
+} from "../editor/mod.tsx";
 
 const createFilterNode = (
 	name: string,
@@ -1440,6 +1443,7 @@ export const SearchInput = (
 				schema: schema as any,
 				doc: docContent,
 				plugins: [
+					createPlaceholderPlugin(),
 					history(),
 					keymap({
 						"Ctrl-z": undo,

@@ -48,6 +48,8 @@ import {
 	selectNodeForward,
 } from "prosemirror-commands";
 import { createEmojiPlugin } from "./emoji-plugin.ts";
+import { createMarkdownHighlightPlugin } from "./markdown-highlight-plugin.ts";
+import { createPlaceholderPlugin } from "./mod.tsx";
 
 let isApplyingFormat = false;
 export const setIsApplyingFormat = (value: boolean) => {
@@ -170,7 +172,9 @@ export const createEditor = (
 					() => !(opts.diffMode?.() ?? false),
 				),
 				yUndoPlugin(),
+				createPlaceholderPlugin(),
 				createDiffPlugin(() => diffMarks()),
+				createMarkdownHighlightPlugin(),
 				createMarkdownInputRulesPlugin(),
 				createPastePlugin(),
 				createSubmitPlugin(),
@@ -211,7 +215,7 @@ export const createEditor = (
 	const editor = createBaseEditor({
 		schema,
 		createState: () => createState(),
-		nodeViews: createEditorNodeViews(api2, channels2, { currentChannelId }),
+		nodeViews: createEditorNodeViews(),
 	});
 
 	const subscribe = (channelId: string, branchId: string) => {

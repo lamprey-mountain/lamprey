@@ -138,6 +138,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 			<div class="dim">description</div>
 			<editor.View
 				onChange={(state) => setEditorState(state)}
+				placeholder="room description..."
 				submitOnEnter={false}
 				autofocus={false}
 			/>

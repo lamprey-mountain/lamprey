@@ -12,7 +12,8 @@ import {
 import { createToolbarPlugin } from "./toolbar-plugin.ts";
 import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
 import { createEmojiPlugin } from "./emoji-plugin.ts";
-import { useApi2, useChannels2 } from "@/api";
+import { createMarkdownHighlightPlugin } from "./markdown-highlight-plugin.ts";
+import { createPlaceholderPlugin } from "./mod.tsx";
 import { createEditorNodeViews } from "./node-views.tsx";
 import {
 	createMarkdownInputRulesPlugin,
@@ -48,8 +49,6 @@ type EditorProps = {
 export const createEditor = (
 	opts: EditorProps & { channelId: () => string; roomId?: () => string },
 ) => {
-	const api2 = useApi2();
-	const channels2 = useChannels2();
 	const toolbarPlugin = createToolbarPlugin();
 	const autocompletePlugin = createAutocompletePlugin(
 		opts.channelId,
@@ -80,6 +79,8 @@ export const createEditor = (
 			schema,
 			plugins: [
 				history(),
+				createPlaceholderPlugin(),
+				createMarkdownHighlightPlugin(),
 				createMarkdownInputRulesPlugin(),
 				createPastePlugin(),
 				createSubmitPlugin(),
@@ -115,9 +116,7 @@ export const createEditor = (
 	const editor = createBaseEditor({
 		schema,
 		createState: () => createState(),
-		nodeViews: createEditorNodeViews(api2, channels2, {
-			currentChannelId: opts.channelId,
-		}),
+		nodeViews: createEditorNodeViews(),
 	});
 
 	return {
