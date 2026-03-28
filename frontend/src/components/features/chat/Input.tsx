@@ -229,7 +229,7 @@ export function Input(props: InputProps) {
 			(props.channel.locked && !perms.has("ThreadManage"));
 	};
 
-	const bypassSlowmode = () =>
+	const bypassSlowmode = (): boolean =>
 		perms.has("ChannelManage") ||
 		perms.has("ThreadManage") ||
 		perms.has("MemberTimeout");
@@ -293,7 +293,6 @@ export function Input(props: InputProps) {
 		chUpdate("anchor", {
 			type: "backwards",
 			limit: SLICE_LEN,
-			nonce: Math.random(),
 		});
 	};
 

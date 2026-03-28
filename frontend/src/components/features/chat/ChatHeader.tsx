@@ -119,7 +119,7 @@ export const ChatHeader = (
 	const name = () => {
 		if (props.channel.type === "Dm") {
 			const user_id = currentUser()?.id;
-			return props.channel.recipients.find((i) => i.id !== user_id)?.name ??
+			return props.channel.recipients?.find((i) => i.id !== user_id)?.name ??
 				"dm";
 		}
 

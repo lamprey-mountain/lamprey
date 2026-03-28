@@ -17,7 +17,7 @@ export const Friends = () => {
 	const [friends] = createResource(async () => {
 		const { data } = await api2.client.http.GET(
 			"/api/v1/user/@self/friend",
-			{ params: { query: { pagination: {} } } },
+			{ params: { query: {} } },
 		);
 		return data;
 	});
@@ -25,7 +25,7 @@ export const Friends = () => {
 	const [pending] = createResource(async () => {
 		const { data } = await api2.client.http.GET(
 			"/api/v1/user/@self/friend/pending",
-			{ params: { query: { pagination: {} } } },
+			{ params: { query: {} } },
 		);
 		return data;
 	});

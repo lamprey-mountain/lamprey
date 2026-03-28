@@ -558,13 +558,13 @@ export const RouteInvite = (p: ParentProps<RouteSectionProps>) => {
 
 export const RouteUser = (p: ParentProps<RouteSectionProps>) => {
 	const api2 = useApi2();
-	const user = () => api2.users.cache.get(p.params.user_id);
+	const user = () => api2.users.cache.get(p.params.user_id!);
 
 	return (
 		<LayoutDefault
 			title={user()?.name ?? "loading..."}
 			showChannelNav={true}
-			channelNavRoomId={p.params.room_id}
+			channelNavRoomId={p.params.room_id ?? ""}
 			showVoiceTray={true}
 		>
 			<header class="chat-header">

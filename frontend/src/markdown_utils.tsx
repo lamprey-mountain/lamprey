@@ -96,7 +96,9 @@ export function countEmojiOnly(content: string): number {
 
 	// Count unicode emoji using grapheme segmentation
 	// This properly handles emoji with variation selectors, ZWJ sequences, etc.
-	const segmenter = new Intl.Segmenter("en", { granularity: "grapheme" });
+	const segmenter = new (Intl as any).Segmenter("en", {
+		granularity: "grapheme",
+	});
 	for (const { segment } of segmenter.segment(withoutCustomEmoji)) {
 		// Skip whitespace
 		if (/\s/.test(segment)) continue;

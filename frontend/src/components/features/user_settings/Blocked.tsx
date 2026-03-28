@@ -13,7 +13,7 @@ function BlockedUserEntry(
 	},
 ) {
 	const api2 = useApi2();
-	const user = api2.users.fetch(() => props.relationship.user_id);
+	const user = () => api2.users.cache.get(props.relationship.user_id);
 
 	return (
 		<Show when={user()}>

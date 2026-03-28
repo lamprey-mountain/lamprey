@@ -126,9 +126,9 @@ export const createEditor = (
 				msg.channel_id === currentChannelId() &&
 				msg.branch_id === currentBranchId()
 			) {
-				const update = msg.update instanceof Uint8Array
-					? msg.update
-					: base64UrlDecode(msg.update);
+				const update: Uint8Array = (msg.update as any) instanceof Uint8Array
+					? msg.update as Uint8Array
+					: base64UrlDecode(msg.update as string);
 				Y.applyUpdate(ydoc, update, { key: "server" });
 			}
 		} else if (msg.type === "DocumentSubscribed") {

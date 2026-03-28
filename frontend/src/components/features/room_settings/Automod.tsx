@@ -37,12 +37,12 @@ export function Automod(props: VoidProps<{ room: Room }>) {
 		);
 	});
 
-	const [rules, { refetch }] = createResource<UiAutomodRule[]>(async () => {
+	const [rules, { refetch }] = createResource(async () => {
 		const { data } = await api2.client.http.GET(
 			"/api/v1/room/{room_id}/automod/rule",
 			{ params: { path: { room_id: props.room.id } } },
 		);
-		return data;
+		return (data ?? []) as UiAutomodRule[];
 	});
 
 	const removeRule = (rule_id: string) => () => {

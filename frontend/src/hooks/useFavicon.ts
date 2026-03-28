@@ -36,7 +36,7 @@ export function useFavicon() {
 					const self = useCurrentUser();
 					const selfUser = self();
 					if (selfUser) {
-						const otherUser = channel.recipients.find(
+						const otherUser = channel.recipients?.find(
 							(i) => i.id !== selfUser.id,
 						);
 						if (otherUser) {

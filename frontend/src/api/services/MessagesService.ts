@@ -849,13 +849,16 @@ export class MessagesService extends BaseService<Message> {
 
 			batch(() => {
 				for (const item of data.items) {
-					this.upsert(item as Message);
+					this.upsert(item as unknown as Message);
 				}
 			});
 
 			return {
 				...data,
-				items: [...pagination?.items ?? [], ...data.items as Message[]],
+				items: [
+					...pagination?.items ?? [],
+					...data.items as unknown as Message[],
+				],
 			} as Pagination<Message>;
 		};
 

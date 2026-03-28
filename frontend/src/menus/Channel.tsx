@@ -50,7 +50,6 @@ export function ChannelMenu(props: { channel_id: string }) {
 
 	const self_channel_member = threadMembers2.use(
 		() => props.channel_id,
-		self_id,
 	);
 	const copyId = () => navigator.clipboard.writeText(props.channel_id);
 	const markRead = async () => {

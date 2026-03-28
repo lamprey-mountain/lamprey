@@ -859,7 +859,13 @@ export function MessageView(props: MessageProps) {
 								<Reactions message={props.message} />
 							</Show>
 							<Show when={props.message.thread}>
-								{(thread) => <MessageThread thread={thread()} />}
+								{(thread) => (
+									<MessageThread
+										thread={thread()}
+										parentChannel={channels2.get(props.message.channel_id)!}
+										preferences={ctx.preferences()}
+									/>
+								)}
 							</Show>
 						</div>
 					</Show>
@@ -901,7 +907,13 @@ export function MessageView(props: MessageProps) {
 								<Reactions message={props.message} />
 							</Show>
 							<Show when={props.message.thread}>
-								{(thread) => <MessageThread thread={thread()} />}
+								{(thread) => (
+									<MessageThread
+										thread={thread()}
+										parentChannel={channels2.get(props.message.channel_id)!}
+										preferences={ctx.preferences()}
+									/>
+								)}
 							</Show>
 						</div>
 						<Time date={date} animGroup="message-ts" />

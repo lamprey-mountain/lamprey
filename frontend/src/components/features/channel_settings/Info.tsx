@@ -338,12 +338,12 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 			<div>
 				<CheckboxOption
 					id={`channel-${props.channel.id}-nsfw`}
-					checked={editingNsfw()}
+					checked={editingNsfw() ?? false}
 					onChange={setEditingNsfw}
 					seed={`channel-${props.channel.id}-nsfw`}
 				>
 					<Checkbox
-						checked={editingNsfw()}
+						checked={editingNsfw() ?? false}
 						seed={`channel-${props.channel.id}-nsfw`}
 					/>
 					<div>

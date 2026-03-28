@@ -1,21 +1,6 @@
-declare module "*.png" {
-	const value: string;
-	export default value;
-}
-declare module "*.scss" {
-	const value: string;
-	export default value;
-}
-declare module "*.svg" {
-	const value: string;
-	export default value;
-}
-declare module "*.html?raw" {
-	const content: string;
-	export default content;
-}
-
 // Type declaration for Intl.Segmenter (ESNext.Intl)
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Segmenter
+
 interface IntlSegmenterOptions {
 	granularity?: "grapheme" | "word" | "sentence";
 	localeMatcher?: "lookup" | "best fit";

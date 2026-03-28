@@ -42,7 +42,7 @@ const ChevronDown = () => (
 function createSelect<T>() {
 	const [getItems, setItems] = createSignal<Array<T>>([]);
 	const [getFilter, setFilter] = createSignal("");
-	const [getHovered, setHovered] = createSignal<T>();
+	const [getHovered, setHovered] = createSignal<T | null>(null);
 
 	// Use Memo for filtering logic (derived state)
 	const filtered = createMemo(() => {
@@ -61,7 +61,7 @@ function createSelect<T>() {
 		const list = filtered();
 		const currentHovered = getHovered();
 		if (!list.some((i) => i.obj === currentHovered)) {
-			setHovered(list[0]?.obj);
+			setHovered((list[0]?.obj ?? null) as any);
 		}
 	});
 
@@ -75,15 +75,17 @@ function createSelect<T>() {
 			const list = filtered();
 			if (list.length === 0) return;
 			const idx = list.findIndex((i) => i.obj === getHovered()!);
-			setHovered(list[(idx + 1) % list.length].obj);
+			setHovered((list[(idx + 1) % list.length]?.obj ?? null) as any);
 		},
 		prev() {
 			const list = filtered();
 			if (list.length === 0) return;
 			const idx = list.findIndex((i) => i.obj === getHovered()!);
-			setHovered(list[(list.length + idx - 1) % list.length].obj);
+			setHovered(
+				(list[(list.length + idx - 1) % list.length]?.obj ?? null) as any,
+			);
 		},
-	};
+	} as const;
 }
 
 export function createChannelPicker(
@@ -97,6 +99,8 @@ export function createChannelPicker(
 		mount?: Element | DocumentFragment | null;
 		placeholder?: string;
 		filter?: (channel: Channel) => boolean;
+		style?: JSX.CSSProperties;
+		class?: string;
 	},
 ) {
 	const [shown, setShown] = createSignal(false);
@@ -274,7 +278,7 @@ export function createChannelPicker(
 						<Show when={selectedChannel()}>
 							<ChannelIcon
 								channel={selectedChannel()!}
-								style={{ width: "20px", height: "20px", flex: "none" }}
+								style="width: 20px; height: 20px; flex: none;"
 							/>
 						</Show>
 						<input
@@ -376,7 +380,7 @@ export function createChannelPicker(
 													>
 														<ChannelIcon
 															channel={entry.obj.channel}
-															style={{ width: "20px", height: "20px" }}
+															style="width: 20px; height: 20px;"
 														/>
 														<span>{entry.obj.label}</span>
 													</div>
@@ -422,7 +426,7 @@ export function MultiChannelPicker(props: {
 	channels: () => Channel[];
 	onSelect: (channel: Channel) => void;
 	onRemove: (channel: Channel) => void;
-	style?: string;
+	style?: JSX.CSSProperties;
 	placeholder?: string;
 	mount?: Element | DocumentFragment | null;
 	filter?: (channel: Channel) => boolean;
@@ -543,7 +547,7 @@ export function MultiChannelPicker(props: {
 						<span class="chip">
 							<ChannelIcon
 								channel={channel}
-								style={{ width: "16px", height: "16px", flex: "none" }}
+								style="width: 16px; height: 16px; flex: none;"
 							/>
 							{channel.name}
 							<button
@@ -642,7 +646,7 @@ export function MultiChannelPicker(props: {
 											>
 												<ChannelIcon
 													channel={entry.obj.channel}
-													style={{ width: "20px", height: "20px" }}
+													style="width: 20px; height: 20px;"
 												/>
 												<span>{entry.obj.label}</span>
 											</div>

@@ -315,9 +315,10 @@ export class RootStore {
 		} else if (msg.type === "MessageDelete") {
 			this.messages.handleMessageDelete(msg.channel_id, msg.message_id);
 		} else if (msg.type === "PreferencesGlobal") {
-			const sessionUserId = this.session()?.status === "Unauthorized"
-				? undefined
-				: this.session()?.user_id;
+			const session = this.session();
+			const sessionUserId = session && session.status !== "Unauthorized"
+				? session.user_id
+				: undefined;
 			if (msg.user_id === sessionUserId) {
 				this.preferences.cache.set("@self", msg.config);
 				this.preferences._loaded = true;
@@ -335,8 +336,10 @@ export class RootStore {
 
 	async tempCreateSession() {
 		const session = await this.auth.createTempSession();
-		localStorage.setItem("token", session.token);
-		this.setSession(session);
-		this.client.start(session.token);
+		if (session.status !== "Unauthorized") {
+			localStorage.setItem("token", (session as any).token);
+			this.setSession(session);
+			this.client.start((session as any).token);
+		}
 	}
 }

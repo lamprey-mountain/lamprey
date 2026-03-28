@@ -614,10 +614,6 @@ const DocumentMain = (
 	const autocomplete = useAutocomplete();
 
 	const ed = createEditor({
-		channelId: () => props.channel.id,
-		roomId: () => props.channel.room_id,
-		toolbar,
-		autocomplete,
 		diffMode: () => mode() !== "edit",
 	});
 

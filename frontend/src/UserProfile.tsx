@@ -14,7 +14,7 @@ export function UserProfile(props: { user: UserWithRelationship }) {
 				{
 					params: {
 						path: { user_id },
-						query: { pagination: {} },
+						query: {},
 					},
 				},
 			);

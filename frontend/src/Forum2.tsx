@@ -645,7 +645,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 			slowmodeShake();
 			return false;
 		}
-		submit(text, bypassSlowmode);
+		submit(text, bypassSlowmode());
 		localStorage.removeItem(storageKey());
 		return true;
 	};
@@ -753,7 +753,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		() => props.channel.id,
 	);
 
-	const bypassSlowmode = () =>
+	const bypassSlowmode = (): boolean =>
 		perms.has("ChannelManage") ||
 		perms.has("ThreadManage") ||
 		perms.has("MemberTimeout");

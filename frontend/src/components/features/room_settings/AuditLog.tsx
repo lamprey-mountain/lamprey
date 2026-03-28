@@ -20,15 +20,17 @@ import { Dropdown } from "../../../atoms/Dropdown.tsx";
 
 export function AuditLog(props: VoidProps<{ room: Room }>) {
 	const api2 = useApi2();
-	const log = api2.audit_logs.fetch(() => props.room.id);
+	const log = api2.audit_logs.use(() => props.room.id);
 	const [members, setMembers] = createSignal<any[]>([]);
 	const collapsed = new ReactiveSet();
 
 	createEffect(() => {
-		const roomMembers = api2.room_members.list(() => props.room.id);
-		const items = roomMembers()?.items;
-		if (items) {
-			const userList = items.map((member: any) => {
+		const roomMembers = api2.room_members.cache;
+		const membersInRoom = Array.from(roomMembers.values()).filter(
+			(m: any) => m.room_id === props.room.id,
+		);
+		if (membersInRoom) {
+			const userList = membersInRoom.map((member: any) => {
 				const user = api2.users.cache.get(member.user_id);
 				return {
 					item: member.user_id,
@@ -72,7 +74,7 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 			</div>
 			<Show when={log()}>
 				<ul class="room-settings-audit-log">
-					<For each={mergeAuditLogEntries(log()!.items)}>
+					<For each={mergeAuditLogEntries((log()! as any).items ?? [])}>
 						{(mergedEntry) => {
 							const firstEntry = mergedEntry.entries[0];
 							const ts = () => getTimestampFromUUID(firstEntry.id);

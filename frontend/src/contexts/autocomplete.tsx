@@ -100,7 +100,7 @@ export const AutocompleteProvider: ParentComponent = (props) => {
 	const select = () => {
 		const item = state.items[state.activeIndex];
 		if (item && state.kind) {
-			state.kind.onSelect(item);
+			state.kind.onSelect(item as any);
 			hide();
 		}
 	};

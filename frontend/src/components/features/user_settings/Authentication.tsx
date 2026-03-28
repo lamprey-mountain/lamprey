@@ -160,8 +160,8 @@ function Oauth() {
 
 	const [enabledOauthProviders, { refetch: refetchOauthProviders }] =
 		createResource(async () => {
-			const { data } = await api2.client.http.GET("/api/v1/auth");
-			return data?.oauth_providers;
+			const { data } = await api2.client.http.GET("/api/v1/auth" as any, {});
+			return (data as any)?.oauth_providers ?? [];
 		});
 
 	const connectOauth = async (id: string) => {

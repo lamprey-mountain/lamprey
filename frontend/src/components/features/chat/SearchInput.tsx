@@ -406,7 +406,7 @@ const AutocompleteDropdown = (props: {
 	};
 
 	const authorSuggestions = createMemo(() => {
-    if (props.filter.type !== "author") return [];
+		if (props.filter.type !== "author") return [];
 
 		const query = props.filter.query.toLowerCase();
 		const all_user_ids = [
@@ -1396,11 +1396,23 @@ export const SearchInput = (
 					}
 				}
 
-				const tr = view.state.tr.insertText(text, start, from);
-				view.dispatch(tr);
-				setTimeout(() => {
-					if (editor.view?.dom?.isConnected) editor.view.focus();
-				}, 10);
+				// Check if this is a full query string from history (may contain multiple filters)
+				if (
+					text.match(/\b(author|thread|before|after|has|pinned|mentions):\S+/)
+				) {
+					const { nodes } = parseQueryToNodes(text, users2, roomThreads);
+					if (nodes.length > 0) {
+						const tr = editor.view.state.tr.replaceWith(
+							start,
+							from,
+							...nodes as any,
+						);
+						editor.view.dispatch(tr);
+						editor.view.focus();
+						setActiveFilter(null);
+						return;
+					}
+				}
 			} catch (e) {
 				console.warn("insertFilter error:", e);
 			}

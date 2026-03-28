@@ -39,8 +39,8 @@ export const useAutocompleteData = () => {
 	};
 	const perms = usePermissions(
 		() => currentUser()?.id ?? "",
-		() => channelForPerms()?.room_id,
-		() => state.kind?.type === "mention" ? state.kind.channelId : "",
+		() => channelForPerms()?.room_id ?? undefined,
+		() => state.kind?.type === "mention" ? (state.kind as any).channelId : "",
 	);
 	const hasMassMention = () => perms.has("MessageMassMention");
 
@@ -65,8 +65,10 @@ export const useAutocompleteData = () => {
 				: undefined;
 
 			const userIds = new Set<string>();
-			threadMembers?.items.forEach((m: any) => userIds.add(m.user_id));
-			roomMembers?.items.forEach((m: any) => userIds.add(m.user_id));
+			(threadMembers as any)?.items?.forEach((m: any) =>
+				userIds.add(m.user_id)
+			);
+			(roomMembers as any)?.items?.forEach((m: any) => userIds.add(m.user_id));
 
 			// Build user list from cache or use member data as fallback
 			const users = [...userIds].map((id) => {
@@ -76,10 +78,10 @@ export const useAutocompleteData = () => {
 				}
 				// Fallback: create a minimal user object from the member data
 				// Find the member to get any available name info
-				const member = threadMembers?.items.find((m: any) =>
+				const member = (threadMembers as any)?.items?.find((m: any) =>
 					m.user_id === id
 				) ||
-					roomMembers?.items.find((m: any) => m.user_id === id);
+					(roomMembers as any)?.items?.find((m: any) => m.user_id === id);
 				return {
 					id: id,
 					name: member?.override_name || id,

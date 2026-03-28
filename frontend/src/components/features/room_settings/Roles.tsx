@@ -648,10 +648,8 @@ const RolePermissionSelector = (
 			}
 
 			if (!searchQuery) return true;
-			const name = (t(`permissions.${perm.id}.name`) as string | undefined) ??
-				perm.id;
-			const description =
-				(t(`permissions.${perm.id}.description`) as string | undefined) ?? "";
+			const name = t(`permissions.${perm.id}.name`) ?? perm.id;
+			const description = t(`permissions.${perm.id}.description`) ?? "";
 			return (
 				name.toLowerCase().includes(searchQuery) ||
 				description.toLowerCase().includes(searchQuery) ||

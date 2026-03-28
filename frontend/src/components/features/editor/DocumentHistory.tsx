@@ -21,8 +21,8 @@ type DocumentHistoryProps = {
 };
 
 const AvatarWithTooltip = (props: { user: any; name: string }) => {
-	let wrap: HTMLDivElement;
-	let tipEl: HTMLDivElement;
+	let wrap: HTMLDivElement | undefined;
+	let tipEl: HTMLDivElement | undefined;
 	const [visible, setVisible] = createSignal(false);
 	const [position, setPosition] = createSignal({ x: 0, y: 0 });
 

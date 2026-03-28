@@ -235,8 +235,11 @@ const EditRoles = (
 			}
 		};
 
-	const getRoles = () =>
-		(roles()?.items ?? []).filter((r: any) => r.id !== r.room_id);
+	const getRoles = () => {
+		const r = roles();
+		if (!r || !Array.isArray(r)) return [] as any[];
+		return r.filter((r: any) => r.id !== r.room_id);
+	};
 
 	const u = useCurrentUser();
 	const self_id = () => u()!.id;

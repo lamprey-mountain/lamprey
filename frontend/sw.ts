@@ -163,7 +163,7 @@ self.addEventListener("notificationclick", (event) => {
 				for (const client of clientList) {
 					if (client.url.includes(self.location.origin) && "focus" in client) {
 						return (client as WindowClient).navigate(url).then((c) =>
-							c.focus()
+							c ? c.focus() : undefined
 						);
 					}
 				}

@@ -412,8 +412,8 @@ const AppEditor = (
 	};
 
 	const removeAvatar = async () => {
-		props.edit.setAvatar(null);
-		props.edit.setApp("avatar", null);
+		props.edit.setAvatar(undefined as any);
+		props.edit.setApp("avatar", undefined);
 	};
 
 	let avatarInputEl!: HTMLInputElement;
@@ -760,7 +760,7 @@ const InviteToRoom = (
 	const inviteToRoom = (room_id: string) => {
 		api2.client.http.POST("/api/v1/app/{app_id}/invite", {
 			params: { path: { app_id: props.app.id } },
-			body: { room_id },
+			body: room_id as any,
 		});
 	};
 

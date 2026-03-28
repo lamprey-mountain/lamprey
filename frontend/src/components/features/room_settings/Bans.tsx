@@ -31,7 +31,7 @@ export function Bans(props: VoidProps<{ room: RoomT }>) {
 		for (const entry of entries) {
 			if (entry.isIntersecting && bans()?.state.has_more) {
 				// Trigger refetch for pagination (TODO: implement proper pagination)
-				bans()?.refetch();
+				// bans()?.refetch?.();
 			}
 		}
 	});

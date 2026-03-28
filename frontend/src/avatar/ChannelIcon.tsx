@@ -46,7 +46,7 @@ export const ChannelIcon = (
 	const otherUser = createMemo(() => {
 		if (props.channel.type === "Dm") {
 			const selfId = currentUser()?.id;
-			return props.channel.recipients.find((i) => i.id !== selfId);
+			return props.channel.recipients?.find((i) => i.id !== selfId);
 		}
 		return undefined;
 	});

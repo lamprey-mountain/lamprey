@@ -41,6 +41,7 @@ export function RoomMenu(props: { room_id: string }) {
 			if (!confirm) return;
 			ctx.client.http.DELETE("/api/v1/room/{room_id}/member/{user_id}", {
 				params: {
+					query: { soft: false },
 					path: {
 						room_id: props.room_id,
 						user_id: currentUser()?.id || "",
