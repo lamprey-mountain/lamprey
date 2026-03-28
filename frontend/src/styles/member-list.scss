@@ -63,5 +63,15 @@
 				color: $fg-100;
 			}
 		}
+
+		&.offline {
+			& > .text > .name {
+				color: oklch(var(--color-fg5));
+			}
+
+			& > .avatar {
+				filter: brightness(0.5);
+			}
+		}
 	}
 }

@@ -124,6 +124,8 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 													`${room_id() as string}:${row.item.user.id}`,
 												)
 												: null;
+											const isOffline = () =>
+												user().presence.status === "Offline";
 											// Thread member display - end
 											const ctx = useCtx();
 											const { userView, setUserView } = useUserPopout();
@@ -143,6 +145,7 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 												<div
 													class="menu-user"
 													data-user-id={row.item.user.id}
+													classList={{ offline: isOffline() }}
 													onClick={(e) => {
 														e.stopPropagation();
 														const currentTarget = e

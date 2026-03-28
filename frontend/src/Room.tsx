@@ -113,6 +113,8 @@ export const RoomMembers = (props: { room: RoomT }) => {
 													row.item.room_member;
 											const user = () =>
 												users2.cache.get(row.item.user.id) ?? row.item.user;
+											const isOffline = () =>
+												user()?.presence.status === "Offline";
 
 											const ctx = useCtx();
 											const { userView, setUserView } = useUserPopout();
@@ -130,6 +132,7 @@ export const RoomMembers = (props: { room: RoomT }) => {
 												<div
 													class="menu-user"
 													data-user-id={row.item.user.id}
+													classList={{ offline: isOffline() }}
 													onClick={(e) => {
 														e.stopPropagation();
 														const currentTarget = e
