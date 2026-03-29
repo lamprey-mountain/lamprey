@@ -1,6 +1,6 @@
 import { md } from "@/markdown_utils";
-import { Fragment, Node as ProsemirrorNode, Slice } from "prosemirror-model";
-import { EditorView } from "prosemirror-view";
+import { type Fragment, Node as ProsemirrorNode, Slice } from "prosemirror-model";
+import type { EditorView } from "prosemirror-view";
 import htmlTemplate from "./html-template.html?raw";
 
 /**

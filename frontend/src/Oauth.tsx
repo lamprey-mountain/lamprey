@@ -1,4 +1,4 @@
-import { Location, RouteSectionProps, useNavigate } from "@solidjs/router";
+import { type Location, type RouteSectionProps, useNavigate } from "@solidjs/router";
 import { useCtx } from "./context";
 import {
 	Component,
@@ -7,9 +7,9 @@ import {
 	For,
 	type JSX,
 	Show,
-	VoidProps,
+	type VoidProps,
 } from "solid-js";
-import { OauthInfo } from "sdk";
+import type { OauthInfo } from "sdk";
 import { Avatar } from "./User";
 
 export const RouteAuthorize = (p: RouteSectionProps): JSX.Element => {

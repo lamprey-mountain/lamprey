@@ -1,6 +1,6 @@
-import { Role, RolePatch } from "sdk";
+import type { Role, RolePatch } from "sdk";
 import { BaseService } from "../core/Service";
-import { Accessor, createEffect, createResource, Resource } from "solid-js";
+import { type Accessor, createEffect, createResource, type Resource } from "solid-js";
 import { ReactiveMap } from "@solid-primitives/map";
 import { ReactiveSet } from "@solid-primitives/set";
 

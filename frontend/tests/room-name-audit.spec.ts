@@ -42,7 +42,7 @@ test("room name change creates audit log entry", async ({ navigateTo, page }) =>
 
 	// Get the room ID from the current URL for later navigation
 	const currentUrl = page.url();
-	const roomIdMatch = currentUrl.match(/\/room\/([^\/\?#]+)/);
+	const roomIdMatch = currentUrl.match(/\/room\/([^/?#]+)/);
 	expect(roomIdMatch).toBeTruthy();
 	const roomId = roomIdMatch![1];
 

@@ -1,4 +1,4 @@
-import { Channel, Pagination } from "sdk";
+import type { Channel, Pagination } from "sdk";
 import { BaseService } from "../core/Service";
 import { createResource, type Resource } from "solid-js";
 import { PaginatedList } from "../core/PaginatedList";

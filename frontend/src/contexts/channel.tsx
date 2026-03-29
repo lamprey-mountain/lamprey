@@ -1,9 +1,9 @@
-import { Message, Pagination } from "sdk";
+import type { Message, Pagination } from "sdk";
 import { createContext, useContext } from "solid-js";
-import { MessageListAnchor } from "@/api/services/MessagesService.ts";
-import { Attachment } from "../context";
-import { EditorState } from "prosemirror-state";
-import { SetStoreFunction, Store } from "solid-js/store";
+import type { MessageListAnchor } from "@/api/services/MessagesService.ts";
+import type { Attachment } from "../context";
+import type { EditorState } from "prosemirror-state";
+import type { SetStoreFunction, Store } from "solid-js/store";
 
 export type ChannelSearch = {
 	query: string;

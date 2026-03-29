@@ -1,7 +1,7 @@
 import { createResource } from "solid-js";
 import twemoji from "twemoji";
 import { getEmojiUrl } from "./media/util";
-import { ReactionKey } from "sdk";
+import type { ReactionKey } from "sdk";
 
 export type EmojiData = {
 	char: string;

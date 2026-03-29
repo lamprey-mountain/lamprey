@@ -1,4 +1,4 @@
-import { Message } from "./types.ts";
+import type { Message } from "./types.ts";
 
 type Data = {
 	messages: Map<string, Message>;

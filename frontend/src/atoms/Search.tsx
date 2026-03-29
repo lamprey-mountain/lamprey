@@ -1,4 +1,4 @@
-import { Accessor, Setter } from "solid-js";
+import type { Accessor, Setter } from "solid-js";
 
 export const Search = (props: {
 	placeholder: string;

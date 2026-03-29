@@ -1,4 +1,4 @@
-import { type JSX, type ParentProps } from "solid-js";
+import type { JSX, ParentProps } from "solid-js";
 import { Checkbox } from "../icons";
 
 type CheckboxOptionProps = {

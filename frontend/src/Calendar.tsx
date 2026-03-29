@@ -1,4 +1,4 @@
-import { Channel } from "sdk";
+import type { Channel } from "sdk";
 import {
 	createContext,
 	createEffect,

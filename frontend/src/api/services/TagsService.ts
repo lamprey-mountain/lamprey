@@ -1,4 +1,4 @@
-import { PaginationResponse, Tag } from "sdk";
+import type { PaginationResponse, Tag } from "sdk";
 import { BaseService } from "../core/Service";
 
 export class TagsService extends BaseService<Tag> {

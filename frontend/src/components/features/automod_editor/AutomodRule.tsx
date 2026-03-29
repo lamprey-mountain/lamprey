@@ -87,7 +87,7 @@ export function AutomodRule(props: {
 		);
 
 		if (props.rule.state === "draft") {
-			// @ts-ignore - dynamic path update
+			// @ts-expect-error - dynamic path update
 			props.setDraftRules((r) => r.id === props.rule.id, path, value);
 		} else {
 			// If it's a "clean" or "edited" server rule, you might need a local

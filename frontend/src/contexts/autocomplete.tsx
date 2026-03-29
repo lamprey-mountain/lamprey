@@ -1,4 +1,4 @@
-import { ReferenceElement } from "@floating-ui/dom";
+import type { ReferenceElement } from "@floating-ui/dom";
 import {
 	type Accessor,
 	batch,

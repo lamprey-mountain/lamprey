@@ -1,4 +1,4 @@
-import { Channel, getTimestampFromUUID } from "sdk";
+import { type Channel, getTimestampFromUUID } from "sdk";
 import {
 	createEffect,
 	createMemo,

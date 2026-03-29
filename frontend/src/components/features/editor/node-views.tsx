@@ -1,4 +1,4 @@
-import { getOwner, runWithOwner, VoidComponent } from "solid-js";
+import { getOwner, runWithOwner, type VoidComponent } from "solid-js";
 import { render } from "solid-js/web";
 import { getEmojiUrl } from "../../../media/util.tsx";
 import { getTwemoji, getTwemojiUrl } from "../../../emoji.ts";
@@ -36,7 +36,6 @@ export const createNodeViews = () => {
 				destroy: () => dispose(),
 			};
 		};
-	};
 };
 
 export const createEditorNodeViews = () => {

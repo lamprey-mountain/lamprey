@@ -1,4 +1,4 @@
-import { type RootStore } from "@/api";
+import type { RootStore } from "@/api";
 import type {
 	Channel,
 	Permission,

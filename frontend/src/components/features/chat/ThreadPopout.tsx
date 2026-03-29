@@ -67,7 +67,6 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 				name,
 				parent_id: channel_id,
 				type: "ThreadPublic" as any,
-				// @ts-ignore
 			} as any);
 			nav(`/channel/${chan.id}`);
 		});

@@ -1,4 +1,4 @@
-import { type VoidProps } from "solid-js";
+import type { VoidProps } from "solid-js";
 import { tooltip } from "./Tooltip";
 import { tick } from "../hooks/tick";
 

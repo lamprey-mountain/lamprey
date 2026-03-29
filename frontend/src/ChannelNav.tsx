@@ -495,7 +495,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		// It's either the top-level list of categories, OR a specific category's channels.
 
 		let siblings: Channel[] = [];
-		let newParentId: string | null | undefined = undefined;
+		let newParentId: string | null | undefined ;
 
 		if (fromChannel.type === "Category") {
 			// Reordering categories

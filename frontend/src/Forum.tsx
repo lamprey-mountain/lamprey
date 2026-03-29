@@ -1,13 +1,13 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { useCtx } from "./context.ts";
 import { useModals } from "./contexts/modal";
-import { Channel, getTimestampFromUUID } from "sdk";
+import { type Channel, getTimestampFromUUID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useChannels2, useThreads2 } from "@/api";
 import { ChannelIcon } from "./User";
 import { createEditor } from "./components/features/editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";
-import { EditorState } from "prosemirror-state";
+import type { EditorState } from "prosemirror-state";
 import { RenderUploadItem } from "./components/features/chat/Input.tsx";
 import { Time } from "./atoms/Time.tsx";
 import { flags } from "./flags.ts";

@@ -16,7 +16,7 @@ import { RoomIcon } from "../../../User.tsx";
 import { Savebar } from "../../../atoms/Savebar";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 import { createEditor } from "../editor/Editor.tsx";
-import { EditorState } from "prosemirror-state";
+import type { EditorState } from "prosemirror-state";
 import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
 import { useAutocomplete } from "../../../contexts/autocomplete";
 

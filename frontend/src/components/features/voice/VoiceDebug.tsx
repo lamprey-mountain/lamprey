@@ -6,7 +6,7 @@ import {
 	onCleanup,
 	Show,
 	Switch,
-	VoidProps,
+	type VoidProps,
 } from "solid-js";
 import { getAttributeDescription, parseSessionDescription } from "./rtc-util";
 import { useVoice } from "./voice-provider";

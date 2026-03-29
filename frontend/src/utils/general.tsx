@@ -1,4 +1,4 @@
-import { type Message } from "sdk";
+import type { Message } from "sdk";
 import { useModals } from "../contexts/modal";
 
 export function createWeaklyMemoized<T extends object, U>(

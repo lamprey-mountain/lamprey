@@ -1,4 +1,4 @@
-import { createEffect, createSignal, JSX, onCleanup, Show } from "solid-js";
+import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
 import {
 	clearDelegatedEvents,
 	DelegatedEvents,

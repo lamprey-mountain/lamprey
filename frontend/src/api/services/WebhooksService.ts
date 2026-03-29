@@ -1,4 +1,4 @@
-import { Pagination, Webhook } from "sdk";
+import type { Pagination, Webhook } from "sdk";
 import { BaseService } from "../core/Service";
 import { createResource, type Resource } from "solid-js";
 import { PaginatedList } from "../core/PaginatedList";

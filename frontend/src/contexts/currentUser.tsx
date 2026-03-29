@@ -1,5 +1,5 @@
-import { createContext, createMemo, JSX, useContext } from "solid-js";
-import { UserWithRelationship } from "sdk";
+import { createContext, createMemo, type JSX, useContext } from "solid-js";
+import type { UserWithRelationship } from "sdk";
 import { useUsers2 } from "@/api";
 import { logger } from "../logger";
 

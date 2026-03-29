@@ -1,4 +1,4 @@
-import { Channel, Room, User } from "sdk";
+import type { Channel, Room, User } from "sdk";
 import { generatePfp } from "./pfp.ts";
 import { getThumbFromId } from "./media/util.tsx";
 import { getColor } from "./colors.ts";

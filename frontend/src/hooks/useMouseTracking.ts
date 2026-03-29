@@ -1,7 +1,7 @@
 import { createEffect, onCleanup } from "solid-js";
 import { batch as solidBatch } from "solid-js";
-import { SetStoreFunction } from "solid-js/store";
-import { Data } from "../context";
+import type { SetStoreFunction } from "solid-js/store";
+import type { Data } from "../context";
 
 export function useMouseTracking(update: SetStoreFunction<Data>) {
 	let lastUpdateTime = 0;

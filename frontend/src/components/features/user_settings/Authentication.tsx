@@ -6,7 +6,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { type User } from "sdk";
+import type { User } from "sdk";
 import { useCtx } from "../../../context";
 import { useApi2 } from "@/api";
 import { useModals } from "../../../contexts/modal";

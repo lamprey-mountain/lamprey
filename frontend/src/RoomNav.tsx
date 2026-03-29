@@ -141,7 +141,7 @@ export const RoomNav = () => {
 	};
 
 	const reorderedItems = createMemo(() => {
-		let config = getConfig();
+		const config = getConfig();
 		const roomsList = rooms();
 		const roomMap = new Map(roomsList.map((r) => [r.id, r]));
 
@@ -291,7 +291,7 @@ export const RoomNav = () => {
 		if (to.item.type === "folder" && position === "inside" && movedItem.id) {
 			to.item.items.push(movedItem);
 		} else if (to.parent) {
-			let insertIndex = to.index + (position === "after" ? 1 : 0);
+			const insertIndex = to.index + (position === "after" ? 1 : 0);
 			to.parent.items.splice(insertIndex, 0, movedItem);
 		} else {
 			let insertIndex = to.index + (position === "after" ? 1 : 0);

@@ -10,7 +10,7 @@ import {
 	useUsers2,
 } from "@/api";
 import { go } from "fuzzysort";
-import { type Channel, type EmojiCustom, type User } from "sdk";
+import type { Channel, EmojiCustom, User } from "sdk";
 import type { Role } from "sdk";
 import { type Command, useSlashCommands } from "../contexts/slash-commands";
 import { type EmojiData, emojiResource } from "../emoji";

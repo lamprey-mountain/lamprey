@@ -41,7 +41,7 @@ const parseEmoji = (): EmojiGroup[] => {
 	if (!emojis) return [];
 
 	const groups: EmojiData[][] = [[], [], [], [], [], [], [], [], [], []];
-	for (let emoji of emojis) {
+	for (const emoji of emojis) {
 		if (emoji.group === 2) continue;
 		groups[emoji.group ?? 8].push(emoji);
 	}

@@ -1,4 +1,4 @@
-import { ChannelType, Permission } from "sdk";
+import type { ChannelType, Permission } from "sdk";
 
 // TODO: rename to PermissionDescription
 export type Perm = {

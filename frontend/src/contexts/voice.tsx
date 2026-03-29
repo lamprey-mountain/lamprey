@@ -11,7 +11,7 @@ import { createStore } from "solid-js/store";
 import { useApi2, useUsers2 } from "@/api";
 import { createVoiceClient } from "../components/features/voice/rtc";
 import { ReactiveMap } from "@solid-primitives/map";
-// @ts-ignore
+// @ts-expect-error
 import vadProcessorUrl from "../components/features/voice/vad-processor?url";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { colors, logger } from "../logger.ts";

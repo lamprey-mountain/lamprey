@@ -18,7 +18,7 @@ export const cyrb53 = (str: string, seed = 0) => {
 /** linear congruential generator */
 export function LCG(seed: number) {
 	let state = seed;
-	return function () {
+	return () => {
 		state = (1103515245 * state + 12345) % 2147483648;
 		return state / 2147483648;
 	};

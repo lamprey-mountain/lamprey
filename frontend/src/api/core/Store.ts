@@ -1,13 +1,13 @@
 import {
-	Client,
-	Message,
-	MessageEnvelope,
-	MessageReady,
-	MessageSync,
+	type Client,
+	type Message,
+	type MessageEnvelope,
+	type MessageReady,
+	type MessageSync,
 	Preferences,
-	Session,
+	type Session,
 } from "sdk";
-import { Accessor, createSignal } from "solid-js";
+import { type Accessor, createSignal } from "solid-js";
 import { RoomsService } from "../services/RoomsService";
 import { ChannelsService } from "../services/ChannelsService";
 import { UsersService } from "../services/UsersService";
@@ -34,7 +34,7 @@ import { WebhooksService } from "../services/WebhooksService";
 import { AuditLogService } from "../services/AuditLogService";
 import { InboxService } from "../services/InboxService";
 import { DocumentsService } from "../services/DocumentsService";
-import { Emitter } from "@solid-primitives/event-bus";
+import type { Emitter } from "@solid-primitives/event-bus";
 import type { IDBPDatabase } from "idb";
 import { ReactiveMap } from "@solid-primitives/map";
 import type { UserWithRelationship, VoiceState } from "sdk";

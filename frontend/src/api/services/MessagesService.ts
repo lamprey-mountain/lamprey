@@ -1,4 +1,4 @@
-import {
+import type {
 	Media,
 	Message,
 	MessageCreate,
@@ -9,14 +9,14 @@ import {
 } from "sdk";
 import { BaseService } from "../core/Service";
 import {
-	Accessor,
+	type Accessor,
 	batch,
 	createComputed,
 	createEffect,
 	createMemo,
 	createResource,
 	onCleanup,
-	Resource,
+	type Resource,
 } from "solid-js";
 import { uuidv7 } from "uuidv7";
 import { ReactiveMap } from "@solid-primitives/map";
@@ -428,7 +428,7 @@ export class MessagesService extends BaseService<Message> {
 					});
 				}
 			} else {
-				let r = Array.from(ranges.ranges).find((r) => !r.has_backwards);
+				const r = Array.from(ranges.ranges).find((r) => !r.has_backwards);
 				if (!r) {
 					const data = await this.fetchList(channel_id, {
 						dir: "f",
@@ -886,7 +886,7 @@ export class MessagesService extends BaseService<Message> {
 		const [resource, { mutate, refetch }] = createResource(
 			thread_id_signal,
 			async (thread_id) => {
-				let l = this._pinnedListings.get(thread_id)!;
+				const l = this._pinnedListings.get(thread_id)!;
 				if (l?.prom) {
 					await l.prom;
 					return l.pagination!;

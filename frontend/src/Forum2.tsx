@@ -2,10 +2,11 @@ import { useCurrentUser } from "./contexts/currentUser.tsx";
 // TODO: refactor out duplicated code from here and Message.tsx
 
 import {
-	Channel,
+	type Attachment,
+	type Channel,
 	getTimestampFromUUID,
 	type Media,
-	Message,
+	type Message,
 	MessageVersion,
 	type RoomMember,
 } from "sdk";

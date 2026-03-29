@@ -1,4 +1,4 @@
-import { Invite, Pagination } from "sdk";
+import type { Invite, Pagination } from "sdk";
 import { BaseService } from "../core/Service";
 import { createMemo, createResource, onCleanup, type Resource } from "solid-js";
 import { PaginatedList } from "../core/PaginatedList";

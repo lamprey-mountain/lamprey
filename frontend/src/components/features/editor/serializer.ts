@@ -1,4 +1,4 @@
-import { Node } from "prosemirror-model";
+import type { Node } from "prosemirror-model";
 
 /**
  * Serializes a ProseMirror document to markdown format,

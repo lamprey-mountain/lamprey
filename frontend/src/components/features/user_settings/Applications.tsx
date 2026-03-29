@@ -15,7 +15,7 @@ import { Copyable } from "../../../utils/general";
 import { createStore, reconcile } from "solid-js/store";
 import { useCtx } from "../../../context.ts";
 import { useFloating } from "solid-floating-ui";
-import { ReferenceElement, shift } from "@floating-ui/dom";
+import { type ReferenceElement, shift } from "@floating-ui/dom";
 import { usePermissions } from "../../../hooks/usePermissions.ts";
 import { useModals } from "../../../contexts/modal";
 import { Checkbox } from "../../../icons";

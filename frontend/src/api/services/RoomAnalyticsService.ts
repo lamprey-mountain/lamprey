@@ -1,11 +1,11 @@
 import {
-	RoomAnalyticsChannel,
+	type RoomAnalyticsChannel,
 	RoomAnalyticsInvites,
-	RoomAnalyticsMembersCount,
-	RoomAnalyticsMembersJoin,
-	RoomAnalyticsMembersLeave,
-	RoomAnalyticsOverview,
-	Time,
+	type RoomAnalyticsMembersCount,
+	type RoomAnalyticsMembersJoin,
+	type RoomAnalyticsMembersLeave,
+	type RoomAnalyticsOverview,
+	type Time,
 } from "sdk";
 import { BaseService } from "../core/Service";
 

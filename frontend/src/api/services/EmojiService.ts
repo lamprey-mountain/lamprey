@@ -1,4 +1,4 @@
-import { EmojiCustom, Pagination } from "sdk";
+import type { EmojiCustom, Pagination } from "sdk";
 import { BaseService } from "../core/Service";
 import { createResource, type Resource } from "solid-js";
 import { PaginatedList } from "../core/PaginatedList";
