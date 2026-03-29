@@ -1,14 +1,14 @@
+import { ReactiveSet } from "@solid-primitives/set";
+import { getTimestampFromUUID, type User } from "sdk";
 import { createResource, For, Show, type VoidProps } from "solid-js";
 import { useApi2 } from "@/api";
-import { getTimestampFromUUID, type User } from "sdk";
+import { Time } from "../../../atoms/Time.tsx";
 import {
 	formatAuditLogEntry,
 	formatChanges,
-	mergeAuditLogEntries,
 	type MergedAuditLogEntry,
+	mergeAuditLogEntries,
 } from "../../../audit-log-util.tsx";
-import { ReactiveSet } from "@solid-primitives/set";
-import { Time } from "../../../atoms/Time.tsx";
 
 export function AuditLog(props: VoidProps<{ user: User }>) {
 	const api2 = useApi2();
@@ -35,10 +35,7 @@ export function AuditLog(props: VoidProps<{ user: User }>) {
 							const firstEntry = mergedEntry.entries[0];
 							const ts = () => getTimestampFromUUID(firstEntry.id);
 							const entryDescription = () =>
-								formatAuditLogEntry(
-									props.user.id,
-									mergedEntry,
-								);
+								formatAuditLogEntry(props.user.id, mergedEntry);
 
 							return (
 								<li data-id={firstEntry.id}>
@@ -47,7 +44,8 @@ export function AuditLog(props: VoidProps<{ user: User }>) {
 										onClick={() =>
 											collapsed.has(firstEntry.id)
 												? collapsed.delete(firstEntry.id)
-												: collapsed.add(firstEntry.id)}
+												: collapsed.add(firstEntry.id)
+										}
 									>
 										<div style="display:flex;gap:4px">
 											<h3>{entryDescription()}</h3>
@@ -55,9 +53,11 @@ export function AuditLog(props: VoidProps<{ user: User }>) {
 										<Time date={ts()} />
 									</div>
 									<Show
-										when={(formatChanges(props.user.id, mergedEntry).length !==
-												0 ||
-											mergedEntry.reason) && !collapsed.has(firstEntry.id)}
+										when={
+											(formatChanges(props.user.id, mergedEntry).length !== 0 ||
+												mergedEntry.reason) &&
+											!collapsed.has(firstEntry.id)
+										}
 									>
 										<ul class="metadata">
 											<Show when={mergedEntry.reason}>

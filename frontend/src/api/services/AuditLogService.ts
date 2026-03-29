@@ -8,10 +8,10 @@ import {
 	type UserWithRelationship,
 	type Webhook,
 } from "sdk";
-import { BaseService } from "../core/Service";
 import { createResource, type Resource } from "solid-js";
-import { PaginatedList } from "../core/PaginatedList";
 import { logger } from "../../logger";
+import { PaginatedList } from "../core/PaginatedList";
+import { BaseService } from "../core/Service";
 
 const log = logger.for("api/audit_log");
 
@@ -58,7 +58,7 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 							from: cursor,
 						},
 					},
-				})
+				}),
 			);
 			const data = result.data as AuditLogPaginationResponse;
 

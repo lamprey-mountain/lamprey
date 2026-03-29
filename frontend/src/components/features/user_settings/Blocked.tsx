@@ -1,17 +1,14 @@
-import { For, Show, type VoidProps } from "solid-js";
 import type { Pagination, RelationshipWithUserId, User } from "sdk";
+import { createResource, For, Show, type VoidProps } from "solid-js";
 import { useApi2 } from "@/api";
-import { createResource } from "solid-js";
-import { Avatar } from "../../../User.tsx";
 import { useCtx } from "../../../context.ts";
 import { useModals } from "../../../contexts/modal";
+import { Avatar } from "../../../User.tsx";
 
-function BlockedUserEntry(
-	props: {
-		relationship: RelationshipWithUserId;
-		onUnblock: (userId: string) => void;
-	},
-) {
+function BlockedUserEntry(props: {
+	relationship: RelationshipWithUserId;
+	onUnblock: (userId: string) => void;
+}) {
 	const api2 = useApi2();
 	const user = () => api2.users.cache.get(props.relationship.user_id);
 

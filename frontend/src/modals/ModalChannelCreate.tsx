@@ -1,10 +1,10 @@
 import { createSignal, For, type ParentProps } from "solid-js";
-import { Modal } from "./mod";
 import { useCtx } from "../context";
-import { RadioDot } from "../icons";
-import { flags } from "../flags";
-import { useModals } from "../contexts/modal";
 import type { ChannelTypeOption } from "../contexts/modal";
+import { useModals } from "../contexts/modal";
+import { flags } from "../flags";
+import { RadioDot } from "../icons";
+import { Modal } from "./mod";
 
 interface ModalChannelCreateProps {
 	room_id: string;
@@ -36,9 +36,7 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 		<Modal>
 			<h3>new channel</h3>
 			<form class="new-channel" onSubmit={handleSubmit}>
-				<h3 class="dim">
-					channel type
-				</h3>
+				<h3 class="dim">channel type</h3>
 				<div class="type">
 					<For
 						each={[
@@ -58,29 +56,36 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 								description: "group other channels",
 							},
 							...(flags.has("channel_forum")
-								? [{
-									label: "forum channel",
-									type: "Forum",
-									description: "thread only channel",
-								}]
+								? [
+										{
+											label: "forum channel",
+											type: "Forum",
+											description: "thread only channel",
+										},
+									]
 								: []),
 							...(flags.has("channel_calendar")
-								? [{
-									label: "calendar channel",
-									type: "Calendar",
-									description: "experiment, may be removed later",
-								}]
+								? [
+										{
+											label: "calendar channel",
+											type: "Calendar",
+											description: "experiment, may be removed later",
+										},
+									]
 								: []),
 							...(flags.has("channel_documents")
-								? [{
-									label: "document channel",
-									type: "Document",
-									description: "a single document",
-								}, {
-									label: "wiki channel",
-									type: "Wiki",
-									description: "collection of documents",
-								}]
+								? [
+										{
+											label: "document channel",
+											type: "Document",
+											description: "a single document",
+										},
+										{
+											label: "wiki channel",
+											type: "Wiki",
+											description: "collection of documents",
+										},
+									]
 								: []),
 						]}
 					>

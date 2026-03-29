@@ -21,36 +21,42 @@ const languageMap: Record<string, string> = {
 
 function extractLanguage(node: Element): string {
 	// HACK: try to read language from the parent node
-	return extractLanguageInner(node) ||
-		(node.parentElement ? extractLanguageInner(node.parentElement) : "");
+	return (
+		extractLanguageInner(node) ||
+		(node.parentElement ? extractLanguageInner(node.parentElement) : "")
+	);
 }
 
 function extractLanguageInner(node: Element): string {
 	const className = node.className || "";
-	const language = (className.match(highlightRegExp) || [null, ""])[1] ||
-		"";
+	const language = (className.match(highlightRegExp) || [null, ""])[1] || "";
 	return languageMap[language] || language;
 }
 
 function highlightedCodeBlock(turndownService: TurndownService) {
 	turndownService.addRule("highlightedCodeBlock", {
 		filter: (node: HTMLElement) => {
-			return node.matches("pre") ||
+			return (
+				node.matches("pre") ||
 				(highlightRegExp.test(node.className) &&
-					!!node.querySelector(":scope > pre"));
+					!!node.querySelector(":scope > pre"))
+			);
 		},
 		replacement: (content, node, options) => {
 			if (!(node instanceof HTMLElement)) return content;
-			const pre = node.nodeName === "PRE"
-				? node
-				: node.querySelector(":scope > pre");
-			const code = pre?.querySelector(":scope > code") ??
+			const pre =
+				node.nodeName === "PRE" ? node : node.querySelector(":scope > pre");
+			const code =
+				pre?.querySelector(":scope > code") ??
 				node.querySelector(":scope > code");
-			const lang = extractLanguage(node) ||
+			const lang =
+				extractLanguage(node) ||
 				(pre ? extractLanguage(pre) : "") ||
 				(code ? extractLanguage(code) : "");
-			const text = (pre?.textContent ?? node.textContent ?? "")
-				.replace(/\r\n?/g, "\n");
+			const text = (pre?.textContent ?? node.textContent ?? "").replace(
+				/\r\n?/g,
+				"\n",
+			);
 			return `\n\n${options.fence}${lang}\n${text}\n${options.fence}\n\n`;
 		},
 	});
@@ -66,9 +72,11 @@ function strikethrough(turndownService: TurndownService) {
 function taskListItems(turndownService: TurndownService) {
 	turndownService.addRule("taskListItems", {
 		filter: (node: Node) => {
-			return node instanceof HTMLInputElement &&
+			return (
+				node instanceof HTMLInputElement &&
 				node.type === "checkbox" &&
-				node.parentNode instanceof HTMLLIElement;
+				node.parentNode instanceof HTMLLIElement
+			);
 		},
 		replacement: (_content: string, node: Node) => {
 			if (!(node instanceof HTMLInputElement)) return "";
@@ -96,11 +104,9 @@ function isHeadingRow(tr?: HTMLTableRowElement) {
 	const parentNode = tr.parentNode as HTMLElement;
 	return (
 		parentNode.nodeName === "THEAD" ||
-		(
-			parentNode.firstChild === tr &&
+		(parentNode.firstChild === tr &&
 			(parentNode.nodeName === "TABLE" || isFirstTbody(parentNode)) &&
-			Array.from(tr.cells).every((cell) => cell.nodeName === "TH")
-		)
+			Array.from(tr.cells).every((cell) => cell.nodeName === "TH"))
 	);
 }
 
@@ -137,9 +143,11 @@ function tables(turndownService: TurndownService) {
 			if (!(node instanceof HTMLTableRowElement)) return content;
 
 			const cells = Array.from(node.cells);
-			const row = cells.map((cellNode) =>
-				tableCellNormalize(cellNode.textContent || "", cellNode)
-			).join("");
+			const row = cells
+				.map((cellNode) =>
+					tableCellNormalize(cellNode.textContent || "", cellNode),
+				)
+				.join("");
 			if (isHeadingRow(node)) {
 				const alignMap: Record<string, string> = {
 					left: ":--",

@@ -1,8 +1,11 @@
-import { useCurrentUser } from "./contexts/currentUser.tsx";
+import { A, useNavigate } from "@solidjs/router";
+import { type Permission, SERVER_ROOM_ID } from "sdk";
 import { type Component, createMemo, For, Match, Show, Switch } from "solid-js";
-import type { RoomT } from "./types.ts";
 import { Dynamic } from "solid-js/web";
+import { useApi2 } from "@/api";
+import * as Admin from "./components/features/admin_settings/mod.tsx";
 import {
+	Metrics as Analytics,
 	AuditLog,
 	Automod,
 	Bans,
@@ -11,18 +14,15 @@ import {
 	Info,
 	Invites,
 	Members,
-	Metrics as Analytics,
 	Roles,
 	Webhooks,
 } from "./components/features/room_settings/mod.tsx";
-import * as Admin from "./components/features/admin_settings/mod.tsx";
-import { type Permission, SERVER_ROOM_ID } from "sdk";
-import { A, useNavigate } from "@solidjs/router";
 import { useCtx } from "./context.ts";
-import { useApi2 } from "@/api";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { useModals } from "./contexts/modal.tsx";
-import { usePermissions } from "./hooks/usePermissions.ts";
 import { flags } from "./flags.ts";
+import { usePermissions } from "./hooks/usePermissions.ts";
+import type { RoomT } from "./types.ts";
 
 // Tab type definitions with proper discriminated unions
 type CategoryTab = { category: string };
@@ -209,7 +209,8 @@ function groupTabsByCategory(
 			currentGroup = { category: tab.category, items: [] };
 			groups.push(currentGroup);
 		} else if (currentGroup) {
-			const isVisible = (!tab.permissionCheck || tab.permissionCheck(perms)) &&
+			const isVisible =
+				(!tab.permissionCheck || tab.permissionCheck(perms)) &&
 				(!tab.ownerOnly || room.owner_id === user_id());
 			if (isVisible) {
 				currentGroup.items.push(tab);
@@ -231,14 +232,15 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 		() => props.room.id,
 		() => undefined,
 	);
-	const currentTabs = () => props.room.id === SERVER_ROOM_ID ? adminTabs : tabs;
+	const currentTabs = () =>
+		props.room.id === SERVER_ROOM_ID ? adminTabs : tabs;
 	const currentTab = () =>
-		currentTabs().find((i): i is PageTab =>
-			isPageTab(i) && i.path === (props.page ?? "")
+		currentTabs().find(
+			(i): i is PageTab => isPageTab(i) && i.path === (props.page ?? ""),
 		);
 
 	const groupedTabs = createMemo(() =>
-		groupTabsByCategory(currentTabs(), perms, user_id, props.room)
+		groupTabsByCategory(currentTabs(), perms, user_id, props.room),
 	);
 
 	const nav = useNavigate();
@@ -250,14 +252,17 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 					`Are you sure you want to delete "${props.room.name}"?`,
 					(confirmed) => {
 						if (confirmed) {
-							api2.client.http.DELETE("/api/v1/room/{room_id}", {
-								params: { path: { room_id: props.room.id } },
-							}).then(() => {
-								nav("/");
-							}).catch((error) => {
-								console.error("Failed to delete room:", error);
-								modalCtl.alert("Failed to delete room: " + error.message);
-							});
+							api2.client.http
+								.DELETE("/api/v1/room/{room_id}", {
+									params: { path: { room_id: props.room.id } },
+								})
+								.then(() => {
+									nav("/");
+								})
+								.catch((error) => {
+									console.error("Failed to delete room:", error);
+									modalCtl.alert("Failed to delete room: " + error.message);
+								});
 						}
 					},
 				);
@@ -270,8 +275,8 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 	return (
 		<div class="settings">
 			<header>
-				{props.room.id === SERVER_ROOM_ID ? "admin settings" : "room settings"}
-				: {currentTab()?.name} <A href={`/room/${props.room.id}`}>back</A>
+				{props.room.id === SERVER_ROOM_ID ? "admin settings" : "room settings"}:{" "}
+				{currentTab()?.name} <A href={`/room/${props.room.id}`}>back</A>
 			</header>
 			<nav>
 				<ul>
@@ -282,7 +287,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 									class="dim"
 									style={{
 										"margin-top": groupIdx() === 0 ? "" : "12px",
-										"margin": "2px 8px",
+										margin: "2px 8px",
 									}}
 								>
 									{group.category}
@@ -297,7 +302,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 															class="action"
 															onClick={() => handleAction(item().action)}
 															classList={{
-																"danger": item().style === "danger",
+																danger: item().style === "danger",
 															}}
 														>
 															{item().name}
@@ -326,10 +331,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 			</nav>
 			<main classList={{ padded: !currentTab()?.noPad }}>
 				<Show when={currentTab()} fallback="unknown page">
-					<Dynamic
-						component={currentTab()?.component}
-						room={props.room}
-					/>
+					<Dynamic component={currentTab()?.component} room={props.room} />
 				</Show>
 			</main>
 		</div>

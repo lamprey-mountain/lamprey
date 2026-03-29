@@ -1,8 +1,8 @@
 import { createSignal } from "solid-js";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 import { Dropdown } from "../atoms/Dropdown";
 import { Checkbox } from "../icons";
 import { Modal } from "./mod";
-import { CheckboxOption } from "../atoms/CheckboxOption";
 
 interface ModalNotificationsProps {
 	room_id: string;
@@ -44,7 +44,8 @@ export const ModalNotifications = (props: ModalNotificationsProps) => {
 							value &&
 							setMessages(
 								value as "Everything" | "Watching" | "Mentions" | "Nothing",
-							)}
+							)
+						}
 						options={[
 							// You will be notified for all messages.
 							{ item: "Everything", label: "everything" },
@@ -65,7 +66,8 @@ export const ModalNotifications = (props: ModalNotificationsProps) => {
 					<Dropdown
 						selected={threads()}
 						onSelect={(value) =>
-							value && setThreads(value as "Notify" | "Inbox" | "Nothing")}
+							value && setThreads(value as "Notify" | "Inbox" | "Nothing")
+						}
 						options={[
 							// You will be notified whenever a new thread is created.
 							{ item: "Notify", label: "notify" },

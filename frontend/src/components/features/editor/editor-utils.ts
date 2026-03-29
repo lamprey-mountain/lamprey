@@ -1,5 +1,5 @@
-import { type Command, TextSelection } from "prosemirror-state";
 import { Schema } from "prosemirror-model";
+import { type Command, TextSelection } from "prosemirror-state";
 
 /** create a command that wraps or unwraps selected text with some characters */
 export function createWrapCommand(wrap: string): Command {
@@ -9,15 +9,13 @@ export function createWrapCommand(wrap: string): Command {
 		const { from, to } = state.selection;
 		const tr = state.tr;
 
-		const isWrapped = (
-			tr.doc.textBetween(from - len, from) === wrap &&
-			tr.doc.textBetween(to, to + len) === wrap
-		) || (
-			false
-			// FIXME: fails?
-			// tr.doc.textBetween(from, from + len) === wrap &&
-			// tr.doc.textBetween(to - len, to) === wrap
-		);
+		const isWrapped =
+			(tr.doc.textBetween(from - len, from) === wrap &&
+				tr.doc.textBetween(to, to + len) === wrap) ||
+			false;
+		// FIXME: fails?
+		// tr.doc.textBetween(from, from + len) === wrap &&
+		// tr.doc.textBetween(to - len, to) === wrap
 
 		if (isWrapped) {
 			tr.delete(to, to + len);
@@ -68,9 +66,7 @@ export function base64UrlEncode(bytes: Uint8Array): string {
  * Detects if the current line is part of a list (ordered, unordered, blockquote, or todo)
  * and returns the list type and prefix if applicable
  */
-export function getListPrefix(
-	line: string,
-): {
+export function getListPrefix(line: string): {
 	type: "ordered" | "unordered" | "blockquote" | "todo";
 	prefix: string;
 	number?: number;
@@ -137,8 +133,8 @@ export function createListContinueCommand(): Command {
 		const nextNewline = text.indexOf("\n", offsetInParent);
 
 		const lineStart = parentStart + (lastNewline === -1 ? 0 : lastNewline + 1);
-		const lineEnd = parentStart +
-			(nextNewline === -1 ? text.length : nextNewline);
+		const lineEnd =
+			parentStart + (nextNewline === -1 ? text.length : nextNewline);
 
 		const currentLine = state.doc.textBetween(
 			lineStart,
@@ -167,8 +163,8 @@ export function createListContinueCommand(): Command {
 		);
 
 		// If both before and after cursor are empty (just the prefix), remove the list item
-		const isLineEmpty = contentAfterPrefix.trim() === "" &&
-			lineAfterCursor.trim() === "";
+		const isLineEmpty =
+			contentAfterPrefix.trim() === "" && lineAfterCursor.trim() === "";
 
 		if (isLineEmpty) {
 			// Remove the entire line (list prefix and all)

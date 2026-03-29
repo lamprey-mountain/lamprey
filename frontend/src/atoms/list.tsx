@@ -1,6 +1,13 @@
+import {
+	type Accessor,
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	on,
+	onCleanup,
+} from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
-import { createMemo, For, on, onCleanup } from "solid-js";
-import { type Accessor, createEffect, createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
 
 const OVERSCAN = 5;
@@ -104,11 +111,13 @@ export function createList2<T extends { id: string; class?: string }>(options: {
 		const bottom = scrollTop + viewportH + OVERSCAN * ESTIMATED_H;
 
 		// binary search start
-		let lo = 0, hi = items.length - 1;
+		let lo = 0,
+			hi = items.length - 1;
 		while (lo < hi) {
 			const mid = (lo + hi) >> 1;
 			if (
-				(offsets()[mid] ?? 0) + (heights[items[mid].id] ?? ESTIMATED_H) < top
+				(offsets()[mid] ?? 0) + (heights[items[mid].id] ?? ESTIMATED_H) <
+				top
 			) {
 				lo = mid + 1;
 			} else hi = mid;
@@ -264,9 +273,9 @@ export function createList2<T extends { id: string; class?: string }>(options: {
 		getViewportHeight() {
 			return wrapperEl?.clientHeight ?? 0;
 		},
-		List(
-			listProps: { children: (item: T, idx: Accessor<number>) => JSX.Element },
-		) {
+		List(listProps: {
+			children: (item: T, idx: Accessor<number>) => JSX.Element;
+		}) {
 			createEffect(on(options.items, onItemsChange));
 			onCleanup(() => ro.disconnect());
 
@@ -290,19 +299,18 @@ export function createList2<T extends { id: string; class?: string }>(options: {
 							style="position: absolute; left: 0; right: 0; top: 0;"
 						>
 							<For
-								each={options.items().slice(
-									visibleRange().start,
-									visibleRange().end + 1,
-								)}
+								each={options
+									.items()
+									.slice(visibleRange().start, visibleRange().end + 1)}
 							>
 								{(item) => {
 									let wrapEl!: HTMLDivElement;
 
 									createEffect(() => {
 										if (!wrapEl) return;
-										const globalIdx = options.items().findIndex((x) =>
-											x.id === item.id
-										);
+										const globalIdx = options
+											.items()
+											.findIndex((x) => x.id === item.id);
 										wrapEl.style.transform = `translateY(${
 											offsets()[globalIdx] ?? 0
 										}px)`;
@@ -323,10 +331,8 @@ export function createList2<T extends { id: string; class?: string }>(options: {
 												onCleanup(() => ro.unobserve(el));
 											}}
 										>
-											{listProps.children(
-												item,
-												() =>
-													options.items().findIndex((x) => x.id === item.id),
+											{listProps.children(item, () =>
+												options.items().findIndex((x) => x.id === item.id),
 											)}
 										</div>
 									);

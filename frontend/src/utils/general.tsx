@@ -14,8 +14,8 @@ export function createWeaklyMemoized<T extends object, U>(
 	};
 }
 
-export const getMsgTs = createWeaklyMemoized((m: Message) =>
-	new Date(m.created_at)
+export const getMsgTs = createWeaklyMemoized(
+	(m: Message) => new Date(m.created_at),
 );
 
 export function getMessageOverrideName(message: Message | undefined) {
@@ -41,5 +41,9 @@ export const Copyable = (props: { children: string }) => {
 		modalctl.alert("copied!");
 	};
 
-	return <code class="copyable" onClick={copy}>{props.children}</code>;
+	return (
+		<code class="copyable" onClick={copy}>
+			{props.children}
+		</code>
+	);
 };

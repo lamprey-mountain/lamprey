@@ -39,7 +39,7 @@ export class RoomAnalyticsService extends BaseService<never> {
 					path: { room_id } as any,
 					query: query as any,
 				},
-			})
+			}),
 		);
 		return result.data;
 	}
@@ -54,7 +54,7 @@ export class RoomAnalyticsService extends BaseService<never> {
 					path: { room_id } as any,
 					query: query as any,
 				},
-			})
+			}),
 		);
 		return result.data;
 	}
@@ -69,7 +69,7 @@ export class RoomAnalyticsService extends BaseService<never> {
 					path: { room_id } as any,
 					query: query as any,
 				},
-			})
+			}),
 		);
 		return result.data;
 	}
@@ -84,7 +84,7 @@ export class RoomAnalyticsService extends BaseService<never> {
 					path: { room_id } as any,
 					query: query as any,
 				},
-			})
+			}),
 		);
 		return result.data;
 	}
@@ -100,7 +100,7 @@ export class RoomAnalyticsService extends BaseService<never> {
 					path: { room_id } as any,
 					query: { ...query, channel_id } as any,
 				},
-			})
+			}),
 		);
 		return result.data;
 	}

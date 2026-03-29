@@ -18,7 +18,9 @@ export const colors = {
 };
 
 const toCSS = (a: Record<string, string>) =>
-	Object.entries(a).map(([k, v]) => `${k}: ${v}`).join(";");
+	Object.entries(a)
+		.map(([k, v]) => `${k}: ${v}`)
+		.join(";");
 
 const badgeStyle = (bg: string, fg = "black") =>
 	toCSS({
@@ -52,35 +54,32 @@ const namespaceConfig = new Map<string, LoggerNamespaceConfig>();
 
 export const logger = {
 	for(namespace: string) {
-		const create = (level: LogLevel, customColor?: string) =>
-		// log.info(message, data)
-		// log.info(tag, message, data)
-		(a: string, b?: unknown, c?: unknown) => {
-			const tag = c ? a : undefined;
-			const message = c ? b as string : a;
-			const data = c ?? b;
+		const create =
+			(level: LogLevel, customColor?: string) =>
+			// log.info(message, data)
+			// log.info(tag, message, data)
+			(a: string, b?: unknown, c?: unknown) => {
+				const tag = c ? a : undefined;
+				const message = c ? (b as string) : a;
+				const data = c ?? b;
 
-			// entries.push({ level, namespace, tag, message, data });
-			const cfg = namespaceConfig.get(namespace);
-			const resolvedColor = customColor ?? cfg?.color ?? "white";
+				// entries.push({ level, namespace, tag, message, data });
+				const cfg = namespaceConfig.get(namespace);
+				const resolvedColor = customColor ?? cfg?.color ?? "white";
 
-			const log: Array<unknown> = tag
-				? [
-					"%c%s%c %s%c %s",
-					badgeStyle(resolvedColor),
-					namespace,
-					color(resolvedColor),
-					tag,
-				]
-				: [
-					"%c%s%c %s",
-					badgeStyle(resolvedColor),
-					namespace,
-				];
-			log.push("color:initial", message);
-			if (data) log.push(data);
-			console[level](...log);
-		};
+				const log: Array<unknown> = tag
+					? [
+							"%c%s%c %s%c %s",
+							badgeStyle(resolvedColor),
+							namespace,
+							color(resolvedColor),
+							tag,
+						]
+					: ["%c%s%c %s", badgeStyle(resolvedColor), namespace];
+				log.push("color:initial", message);
+				if (data) log.push(data);
+				console[level](...log);
+			};
 
 		return {
 			error: create("error"),

@@ -1,5 +1,9 @@
-import { type Location, type RouteSectionProps, useNavigate } from "@solidjs/router";
-import { useCtx } from "./context";
+import {
+	type Location,
+	type RouteSectionProps,
+	useNavigate,
+} from "@solidjs/router";
+import type { OauthInfo } from "sdk";
 import {
 	Component,
 	createResource,
@@ -9,7 +13,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import type { OauthInfo } from "sdk";
+import { useCtx } from "./context";
 import { Avatar } from "./User";
 
 export const RouteAuthorize = (p: RouteSectionProps): JSX.Element => {
@@ -32,9 +36,7 @@ export const RouteAuthorize = (p: RouteSectionProps): JSX.Element => {
 					<div class="error">error: {(data.error as Error)?.message}</div>
 				)}
 			>
-				<Show when={data.loading}>
-					loading...
-				</Show>
+				<Show when={data.loading}>loading...</Show>
 				<Show when={data()}>
 					<OauthAuthorizePrompt
 						application={data().application}
@@ -107,8 +109,12 @@ export const OauthAuthorizePrompt = (
 				</div>
 			</div>
 			<menu>
-				<button class="big" onClick={cancel}>cancel</button>
-				<button class="big primary" onClick={authorize}>authorize</button>
+				<button class="big" onClick={cancel}>
+					cancel
+				</button>
+				<button class="big primary" onClick={authorize}>
+					authorize
+				</button>
 			</menu>
 		</div>
 	);

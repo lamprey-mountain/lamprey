@@ -1,4 +1,12 @@
 import {
+	autoUpdate,
+	flip,
+	offset,
+	type Placement,
+	shift,
+} from "@floating-ui/dom";
+import { useFloating } from "solid-floating-ui";
+import {
 	createSignal,
 	type JSX,
 	type JSXElement,
@@ -8,14 +16,6 @@ import {
 	type ValidComponent,
 } from "solid-js";
 import { Portal, render } from "solid-js/web";
-import {
-	autoUpdate,
-	flip,
-	offset,
-	type Placement,
-	shift,
-} from "@floating-ui/dom";
-import { useFloating } from "solid-floating-ui";
 
 // WARNING: this is potentially very laggy
 // TODO: defer tooltip
@@ -104,8 +104,10 @@ export function tooltip(
 		isHovered = false;
 		if (!props.interactive) return hideTip();
 		if (
-			props.doesntRetain && document.activeElement?.matches(props.doesntRetain)
-		) return hideTip();
+			props.doesntRetain &&
+			document.activeElement?.matches(props.doesntRetain)
+		)
+			return hideTip();
 		if (tipEl()?.contains(document.activeElement)) return;
 		popupRemoveTimeout = setTimeout(hideTip, 0);
 	}
@@ -123,9 +125,10 @@ export function tooltip(
 		strategy: "fixed",
 		placement: props.placement,
 		// HACK: make volume slider work properly
-		middleware: props.placement === "top-start"
-			? [shift({ padding: padding() }), offset({ mainAxis: -8 }), flip()]
-			: [shift({ padding: padding() }), offset({ mainAxis: 8 }), flip()],
+		middleware:
+			props.placement === "top-start"
+				? [shift({ padding: padding() }), offset({ mainAxis: -8 }), flip()]
+				: [shift({ padding: padding() }), offset({ mainAxis: 8 }), flip()],
 	});
 
 	wrap.addEventListener("mouseenter", showTip);
@@ -238,8 +241,10 @@ export function createTooltip(props: CreateTooltipProps) {
 		isHovered = false;
 		if (!props.interactive) return hideTip();
 		if (
-			props.doesntRetain && document.activeElement?.matches(props.doesntRetain)
-		) return hideTip();
+			props.doesntRetain &&
+			document.activeElement?.matches(props.doesntRetain)
+		)
+			return hideTip();
 		const tip = tipEl();
 		if (tip instanceof Node && tip.contains(document.activeElement)) return;
 		popupRemoveTimeout = setTimeout(hideTip, 0);

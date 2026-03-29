@@ -9,8 +9,10 @@ export function getChannelTypeCategory(
 	channelType: ChannelType,
 ): "text" | "document" | "forum" | null {
 	if (
-		channelType === "Text" || channelType === "Announcement" ||
-		channelType === "Dm" || channelType === "Gdm"
+		channelType === "Text" ||
+		channelType === "Announcement" ||
+		channelType === "Dm" ||
+		channelType === "Gdm"
 	) {
 		return "text";
 	}

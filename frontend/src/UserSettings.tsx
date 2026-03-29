@@ -1,5 +1,6 @@
-import { createMemo, For, Show, Switch } from "solid-js";
 import { A } from "@solidjs/router";
+import type { User } from "sdk";
+import { createMemo, For, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import {
 	Appearance,
@@ -17,7 +18,6 @@ import {
 	Sessions,
 	Voice,
 } from "./components/features/user_settings/mod.tsx";
-import type { User } from "sdk";
 
 // Tab type definitions with proper discriminated unions
 type CategoryTab = { category: string };
@@ -115,7 +115,7 @@ export const UserSettings = (props: { user: User; page: string }) => {
 									class="dim"
 									style={{
 										"margin-top": groupIdx() === 0 ? "" : "12px",
-										"margin": "2px 8px",
+										margin: "2px 8px",
 									}}
 								>
 									{group.category}
@@ -123,9 +123,7 @@ export const UserSettings = (props: { user: User; page: string }) => {
 								<For each={group.items}>
 									{(tab) => (
 										<li>
-											<A href={`/settings/${tab.path}`}>
-												{tab.name}
-											</A>
+											<A href={`/settings/${tab.path}`}>{tab.name}</A>
 										</li>
 									)}
 								</For>
@@ -136,10 +134,7 @@ export const UserSettings = (props: { user: User; page: string }) => {
 			</nav>
 			<main classList={{ padded: !currentTab()?.noPad }}>
 				<Show when={currentTab()} fallback="unknown page">
-					<Dynamic
-						component={currentTab()?.component}
-						user={props.user}
-					/>
+					<Dynamic component={currentTab()?.component} user={props.user} />
 				</Show>
 			</main>
 		</div>

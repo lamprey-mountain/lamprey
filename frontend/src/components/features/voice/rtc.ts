@@ -1,8 +1,8 @@
+import { createEmitter } from "@solid-primitives/event-bus";
+import { ReactiveMap } from "@solid-primitives/map";
+import type { SignallingMessage, TrackMetadata } from "sdk";
 import { createSignal, untrack } from "solid-js";
 import { useApi2 } from "@/api";
-import type { SignallingMessage, TrackMetadata } from "sdk";
-import { ReactiveMap } from "@solid-primitives/map";
-import { createEmitter } from "@solid-primitives/event-bus";
 
 type RemoteStream = {
 	id: string;
@@ -289,7 +289,8 @@ export const createVoiceClient = () => {
 					settingRemoteAnswer = false;
 				}
 			} else if (msg.type === "Offer") {
-				const readyForOffer = !makingOffer &&
+				const readyForOffer =
+					!makingOffer &&
 					(conn.signalingState === "stable" || settingRemoteAnswer);
 				if (!readyForOffer) {
 					console.log(
@@ -435,8 +436,8 @@ export const createVoiceClient = () => {
 		createStream(key: string) {
 			const currentUser = api2.users.cache.get("@self");
 			const user_id = currentUser!.id;
-			const existing = localStreams.find((i) =>
-				i.key === key && i.user_id === user_id
+			const existing = localStreams.find(
+				(i) => i.key === key && i.user_id === user_id,
 			);
 			if (existing) {
 				console.log("[rtc:local] reuse local stream", key, existing);
@@ -478,7 +479,8 @@ export const createVoiceClient = () => {
 		updateIndicators(indicators: Indicators) {
 			const existing = untrack(() => api2.voiceState);
 			if (!existing) return;
-			const unchanged = existing.self_deaf === indicators.self_deaf &&
+			const unchanged =
+				existing.self_deaf === indicators.self_deaf &&
 				existing.self_mute === indicators.self_mute &&
 				existing.self_video === indicators.self_video &&
 				existing.self_screen === indicators.self_screen;

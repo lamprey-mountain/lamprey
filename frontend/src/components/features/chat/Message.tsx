@@ -1,4 +1,4 @@
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import { useNavigate } from "@solidjs/router";
 import {
 	type Attachment,
 	type Channel,
@@ -8,7 +8,6 @@ import {
 	type ReactionKey,
 	User,
 } from "sdk";
-import { type MessageT, MessageType, type ThreadT } from "../../../types.ts";
 import {
 	createEffect,
 	createSignal,
@@ -20,6 +19,8 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
+import type { SetStoreFunction } from "solid-js/store";
+import { uuidv7 } from "uuidv7";
 import {
 	useApi2,
 	useChannels2,
@@ -27,11 +28,29 @@ import {
 	useRoomMembers2,
 	useUsers2,
 } from "@/api";
+import icEdit from "../../../assets/edit.png";
+import icMemberAdd from "../../../assets/member-add.png";
+import icMemberJoin from "../../../assets/member-join.png";
+import icMemberRemove from "../../../assets/member-remove.png";
+import icMore from "../../../assets/more.png";
+import icPin from "../../../assets/pin.png";
+import icReactionAdd from "../../../assets/reaction-add.png";
+import icReply from "../../../assets/reply.png";
+import icThread from "../../../assets/threads.png";
+import { Markdown } from "../../../atoms/Markdown.tsx";
+import { Time } from "../../../atoms/Time";
+import { useChannel } from "../../../channelctx.tsx";
+import { useConfig } from "../../../config.tsx";
 import { useCtx } from "../../../context.ts";
+import { useAutocomplete } from "../../../contexts/autocomplete";
+import type { ChannelState } from "../../../contexts/channel";
+import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
 import { useMenu, useUserPopout } from "../../../contexts/mod.tsx";
 import { useModals } from "../../../contexts/modal";
-import { useNavigate } from "@solidjs/router";
-import { useChannel } from "../../../channelctx.tsx";
+import { flags } from "../../../flags.ts";
+import { useAppConfig } from "../../../hooks/useAppConfig.ts";
+import { countEmojiOnly } from "../../../markdown_utils.tsx";
 import {
 	AudioView,
 	FileView,
@@ -39,33 +58,14 @@ import {
 	TextView,
 	VideoView,
 } from "../../../media/mod.tsx";
-import { flags } from "../../../flags.ts";
 import { getEmojiUrl, type MediaProps } from "../../../media/util.tsx";
-import { Time } from "../../../atoms/Time";
-import { Avatar, UserView } from "../../../User.tsx";
+import { type MessageT, MessageType, type ThreadT } from "../../../types.ts";
 import { EmbedView } from "../../../UrlEmbed.tsx";
+import { Avatar, UserView } from "../../../User.tsx";
+import { openThread } from "../../../utils/channel";
 import { createEditor } from "../editor/Editor.tsx";
 import { serializeToMarkdown } from "../editor/serializer.ts";
-import { uuidv7 } from "uuidv7";
 import { Reactions } from "./Reactions.tsx";
-import icReply from "../../../assets/reply.png";
-import icReactionAdd from "../../../assets/reaction-add.png";
-import icEdit from "../../../assets/edit.png";
-import icMore from "../../../assets/more.png";
-import icMemberAdd from "../../../assets/member-add.png";
-import icMemberRemove from "../../../assets/member-remove.png";
-import icMemberJoin from "../../../assets/member-join.png";
-import icPin from "../../../assets/pin.png";
-import icThread from "../../../assets/threads.png";
-import { Markdown } from "../../../atoms/Markdown.tsx";
-import { countEmojiOnly } from "../../../markdown_utils.tsx";
-import { openThread } from "../../../utils/channel";
-import type { SetStoreFunction } from "solid-js/store";
-import type { ChannelState } from "../../../contexts/channel";
-import { useConfig } from "../../../config.tsx";
-import { useAppConfig } from "../../../hooks/useAppConfig.ts";
-import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
-import { useAutocomplete } from "../../../contexts/autocomplete";
 
 type MessageProps = {
 	message: MessageT;
@@ -88,7 +88,7 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 
 	const content = () =>
 		props.message.latest_version.type === "DefaultMarkdown"
-			? props.message.latest_version.content ?? ""
+			? (props.message.latest_version.content ?? "")
 			: "";
 
 	const emojiCount = () => countEmojiOnly(content());
@@ -102,22 +102,22 @@ function MessageTextMarkdown(props: MessageTextMarkdownProps) {
 			classList={{ local: props.message.is_local, "emoji-only": isEmojiOnly() }}
 		>
 			<Show when={props.message.id !== props.message.latest_version.version_id}>
-				<span class="edited" onClick={viewHistory}>(edited)</span>
+				<span class="edited" onClick={viewHistory}>
+					(edited)
+				</span>
 			</Show>
 		</Markdown>
 	);
 }
 
-function MessageEditor(
-	props: { message: MessageT },
-) {
+function MessageEditor(props: { message: MessageT }) {
 	const messagesService = useMessages2();
 	const [ch, chUpdate] = useChannel() ?? [null, null];
 
 	// TODO: save edit draft per message?
 	const [draft, setDraft] = createSignal(
 		props.message.latest_version.type === "DefaultMarkdown"
-			? props.message.latest_version.content ?? ""
+			? (props.message.latest_version.content ?? "")
 			: "",
 	);
 
@@ -134,20 +134,17 @@ function MessageEditor(
 		toolbar,
 		autocomplete,
 		initialContent: draft(),
-		initialSelection: ch.editingMessage
-			?.selection,
+		initialSelection: ch.editingMessage?.selection,
 		keymap: {
 			ArrowUp: (state) => {
 				if (state.selection.from !== 1) return false;
 
-				const ranges = messagesService._ranges.get(
-					props.message.channel_id,
-				);
+				const ranges = messagesService._ranges.get(props.message.channel_id);
 				if (!ranges) return false;
 
 				const messages = ranges.live.items;
-				const currentIndex = messages.findIndex((m) =>
-					m.id === props.message.id
+				const currentIndex = messages.findIndex(
+					(m) => m.id === props.message.id,
 				);
 				if (currentIndex === -1) return false;
 
@@ -167,14 +164,12 @@ function MessageEditor(
 			ArrowDown: (state) => {
 				if (state.selection.to !== state.doc.content.size - 1) return false;
 
-				const ranges = messagesService._ranges.get(
-					props.message.channel_id,
-				);
+				const ranges = messagesService._ranges.get(props.message.channel_id);
 				if (!ranges) return false;
 
 				const messages = ranges.live.items;
-				const currentIndex = messages.findIndex((m) =>
-					m.id === props.message.id
+				const currentIndex = messages.findIndex(
+					(m) => m.id === props.message.id,
 				);
 				if (currentIndex === -1) return false;
 
@@ -198,9 +193,10 @@ function MessageEditor(
 	});
 
 	const save = async (content: string) => {
-		const oldContent = props.message.latest_version.type === "DefaultMarkdown"
-			? props.message.latest_version.content ?? ""
-			: "";
+		const oldContent =
+			props.message.latest_version.type === "DefaultMarkdown"
+				? (props.message.latest_version.content ?? "")
+				: "";
 		if (content.trim() === oldContent.trim()) {
 			chUpdate("editingMessage", undefined);
 			return;
@@ -263,13 +259,11 @@ function MessageEditor(
 }
 
 // TODO: make thread reactive (store thread in cache on message fetch, read thread from cache)
-export function MessageThread(
-	props: {
-		thread: ThreadT;
-		parentChannel: Channel;
-		preferences: Preferences;
-	},
-) {
+export function MessageThread(props: {
+	thread: ThreadT;
+	parentChannel: Channel;
+	preferences: Preferences;
+}) {
 	const nav = useNavigate();
 	const [_chan, setChan] = useChannel()!;
 	const channels = useChannels2();
@@ -326,7 +320,10 @@ export function MessageView(props: MessageProps) {
 	const isReactionPickerOpen = () => {
 		const popout = ctx.popout();
 		if (
-			!popout || !("id" in popout) || popout.id !== "emoji" || !popout.ref ||
+			!popout ||
+			!("id" in popout) ||
+			popout.id !== "emoji" ||
+			!popout.ref ||
 			!messageArticleRef
 		) {
 			return false;
@@ -350,8 +347,7 @@ export function MessageView(props: MessageProps) {
 
 		const thread_id = props.message.channel_id;
 		const message_id = props.message.id;
-		const messages = messagesService._ranges.get(thread_id)?.live.items ??
-			[];
+		const messages = messagesService._ranges.get(thread_id)?.live.items ?? [];
 		const currentIndex = messages.findIndex((m) => m.id === message_id);
 
 		if (currentIndex === -1) return;
@@ -377,8 +373,7 @@ export function MessageView(props: MessageProps) {
 
 		if (e.shiftKey && selected.length > 0) {
 			const lastSelected = selected[selected.length - 1];
-			const messages = messagesService._ranges.get(thread_id)?.live.items ??
-				[];
+			const messages = messagesService._ranges.get(thread_id)?.live.items ?? [];
 			const lastIndex = messages.findIndex((m) => m.id === lastSelected);
 			const currentIndex = messages.findIndex((m) => m.id === message_id);
 
@@ -435,16 +430,14 @@ export function MessageView(props: MessageProps) {
 
 	function getComponent() {
 		const date = new Date(
-			props.message.latest_version.created_at ?? props.message.created_at ??
+			props.message.latest_version.created_at ??
+				props.message.created_at ??
 				new Date().toString(),
 		);
 		// FIXME: spacing between MessageDefault and oneline is missing
 		if (props.message.latest_version.type === "MemberAdd") {
 			const author = (
-				<span
-					class="author"
-					data-user-id={props.message.author_id}
-				>
+				<span class="author" data-user-id={props.message.author_id}>
 					<Author message={props.message} thread={thread()} />
 				</span>
 			);
@@ -478,10 +471,7 @@ export function MessageView(props: MessageProps) {
 			);
 		} else if (props.message.latest_version.type === "MemberRemove") {
 			const author = (
-				<span
-					class="author"
-					data-user-id={props.message.author_id}
-				>
+				<span class="author" data-user-id={props.message.author_id}>
 					<Author message={props.message} thread={thread()} />
 				</span>
 			);
@@ -515,10 +505,7 @@ export function MessageView(props: MessageProps) {
 			);
 		} else if (props.message.latest_version.type === "MemberJoin") {
 			const author = (
-				<span
-					class="author"
-					data-user-id={props.message.author_id}
-				>
+				<span class="author" data-user-id={props.message.author_id}>
 					<Author message={props.message} thread={thread()} />
 				</span>
 			);
@@ -540,10 +527,7 @@ export function MessageView(props: MessageProps) {
 		} else if (props.message.latest_version.type === "MessagePinned") {
 			const navigate = useNavigate();
 			const author = (
-				<span
-					class="author"
-					data-user-id={props.message.author_id}
-				>
+				<span class="author" data-user-id={props.message.author_id}>
 					<Author message={props.message} thread={thread()} />
 				</span>
 			);
@@ -581,10 +565,7 @@ export function MessageView(props: MessageProps) {
 			);
 		} else if (props.message.latest_version.type === "ChannelRename") {
 			const author = (
-				<span
-					class="author"
-					data-user-id={props.message.author_id}
-				>
+				<span class="author" data-user-id={props.message.author_id}>
 					<Author message={props.message} thread={thread()} />
 				</span>
 			);
@@ -607,10 +588,7 @@ export function MessageView(props: MessageProps) {
 		} else if (props.message.latest_version.type === "Call") {
 			// TODO: say "you missed a call" in dm channels
 			const author = (
-				<span
-					class="author"
-					data-user-id={props.message.author_id}
-				>
+				<span class="author" data-user-id={props.message.author_id}>
 					<Author message={props.message} thread={thread()} />
 				</span>
 			);
@@ -634,10 +612,7 @@ export function MessageView(props: MessageProps) {
 			);
 		} else if (props.message.latest_version.type === "ChannelPingback") {
 			const author = (
-				<span
-					class="author"
-					data-user-id={props.message.author_id}
-				>
+				<span class="author" data-user-id={props.message.author_id}>
 					<Author message={props.message} thread={thread()} />
 				</span>
 			);
@@ -658,10 +633,7 @@ export function MessageView(props: MessageProps) {
 			);
 		} else if (props.message.latest_version.type === "ChannelIcon") {
 			const author = (
-				<span
-					class="author"
-					data-user-id={props.message.author_id}
-				>
+				<span class="author" data-user-id={props.message.author_id}>
 					<Author message={props.message} thread={thread()} />
 				</span>
 			);
@@ -690,19 +662,13 @@ export function MessageView(props: MessageProps) {
 					: undefined;
 
 			const author = (
-				<span
-					class="author"
-					data-user-id={props.message.author_id}
-				>
+				<span class="author" data-user-id={props.message.author_id}>
 					<Author message={props.message} thread={thread()} />
 				</span>
 			);
 
 			const link = (text: string) => (
-				<Show
-					when={threadId()}
-					fallback={<span>{text}</span>}
-				>
+				<Show when={threadId()} fallback={<span>{text}</span>}>
 					<button
 						class="link"
 						onClick={(e) => {
@@ -765,11 +731,10 @@ export function MessageView(props: MessageProps) {
 			const ctx = useCtx();
 			const [ch] = useChannel() ?? [null];
 			const isEditing = () => {
-				return ch?.editingMessage?.message_id ===
-					props.message.id;
+				return ch?.editingMessage?.message_id === props.message.id;
 			};
-			const messageStyle = ctx.preferences().frontend["message_style"] ||
-				"cozy";
+			const messageStyle =
+				ctx.preferences().frontend["message_style"] || "cozy";
 			const withAvatar = messageStyle === "cozy";
 
 			// TODO: this code is getting messy and needs a refactor soon...
@@ -853,8 +818,9 @@ export function MessageView(props: MessageProps) {
 								</ul>
 							</Show>
 							<Show
-								when={props.message.reactions &&
-									props.message.reactions.length > 0}
+								when={
+									props.message.reactions && props.message.reactions.length > 0
+								}
 							>
 								<Reactions message={props.message} />
 							</Show>
@@ -901,8 +867,9 @@ export function MessageView(props: MessageProps) {
 								</ul>
 							</Show>
 							<Show
-								when={props.message.reactions &&
-									props.message.reactions.length > 0}
+								when={
+									props.message.reactions && props.message.reactions.length > 0
+								}
 							>
 								<Reactions message={props.message} />
 							</Show>
@@ -958,29 +925,31 @@ function ReplyView(props: ReplyProps) {
 	const channels2 = useChannels2();
 	const messagesService = useMessages2();
 	const { setUserView } = useUserPopout();
-	const reply = messagesService.use(
-		() => props.reply_id,
-	);
+	const reply = messagesService.use(() => props.reply_id);
 	const thread = channels2.use(() => props.thread_id);
 	const [ch, chUpdate] = useChannel() ?? [null, null];
 
 	const content = () => {
 		const r = reply();
 		if (!r) return;
-		return (r.latest_version.type === "DefaultMarkdown" &&
-			r.latest_version.content) ??
-			((r.latest_version.type === "DefaultMarkdown" &&
-					r.latest_version.attachments)
+		return (
+			(r.latest_version.type === "DefaultMarkdown" &&
+				r.latest_version.content) ??
+			(r.latest_version.type === "DefaultMarkdown" &&
+			r.latest_version.attachments
 				? `${r.latest_version.attachments.length} attachment(s)`
-				: undefined);
+				: undefined)
+		);
 	};
 
 	const ReplyContent = () => {
 		const r = reply();
 		if (
-			!r || r.latest_version.type !== "DefaultMarkdown" ||
+			!r ||
+			r.latest_version.type !== "DefaultMarkdown" ||
 			!r.latest_version.content
-		) return <>{content()}</>;
+		)
+			return <>{content()}</>;
 
 		return (
 			<Markdown
@@ -1032,9 +1001,11 @@ function ReplyView(props: ReplyProps) {
 						{(() => {
 							const r = reply();
 							const version = r?.latest_version;
-							return version?.type === "DefaultMarkdown" && version.content
-								? <ReplyContent />
-								: <>{content()}</>;
+							return version?.type === "DefaultMarkdown" && version.content ? (
+								<ReplyContent />
+							) : (
+								<>{content()}</>
+							);
 						})()}
 					</Show>
 				</div>
@@ -1043,17 +1014,13 @@ function ReplyView(props: ReplyProps) {
 	);
 }
 
-export function AttachmentView(
-	props: { att: Attachment },
-) {
+export function AttachmentView(props: { att: Attachment }) {
 	if (props.att.type !== "Media" || !props.att.media) return null;
 	const b = () => props.att.media!.content_type.split("/")[0];
 	if (b() === "image") {
 		return (
 			<li class="raw">
-				<ImageView
-					media={props.att.media!}
-				/>
+				<ImageView media={props.att.media!} />
 			</li>
 		);
 	} else if (b() === "video") {
@@ -1093,8 +1060,8 @@ export function Author(props: { message: Message; thread?: Channel }) {
 	const room_member = () =>
 		props.thread?.room_id
 			? roomMembers2.cache.get(
-				`${props.thread!.room_id!}:${props.message.author_id}`,
-			)
+					`${props.thread!.room_id!}:${props.message.author_id}`,
+				)
 			: null;
 	const user = () => users2.cache.get(props.message.author_id);
 
@@ -1151,11 +1118,7 @@ function Actor(props: { user_id: string; thread: Channel }) {
 		return name;
 	}
 
-	return (
-		<span class="user">
-			{name()}
-		</span>
-	);
+	return <span class="user">{name()}</span>;
 }
 
 export const MessageToolbar = (props: { message: Message }) => {
@@ -1175,7 +1138,7 @@ export const MessageToolbar = (props: { message: Message }) => {
 
 	const addReaction = (emoji: string) => {
 		const existing = props.message.reactions?.find((r) =>
-			areReactionKeysEqual(r.key, { type: "Text", content: emoji })
+			areReactionKeysEqual(r.key, { type: "Text", content: emoji }),
 		);
 		if (!existing || !existing.self) {
 			api2.reactions.add(
@@ -1204,7 +1167,9 @@ export const MessageToolbar = (props: { message: Message }) => {
 		} else {
 			const popout = ctx.popout();
 			if (
-				popout && "id" in popout && popout.id === "emoji" &&
+				popout &&
+				"id" in popout &&
+				popout.id === "emoji" &&
 				popout.ref === reactionButtonRef
 			) {
 				ctx.setPopout(null);
@@ -1215,7 +1180,8 @@ export const MessageToolbar = (props: { message: Message }) => {
 	const closePicker = (e: MouseEvent) => {
 		const popoutEl = document.querySelector(".popout");
 		if (
-			reactionButtonRef && !reactionButtonRef.contains(e.target as Node) &&
+			reactionButtonRef &&
+			!reactionButtonRef.contains(e.target as Node) &&
 			(!popoutEl || !popoutEl.contains(e.target as Node))
 		) {
 			setShowReactionPicker(false);
@@ -1237,9 +1203,11 @@ export const MessageToolbar = (props: { message: Message }) => {
 	};
 
 	const canEditMessage = () => {
-		return props.message.latest_version.type === "DefaultMarkdown" &&
+		return (
+			props.message.latest_version.type === "DefaultMarkdown" &&
 			!props.message.is_local &&
-			isOwnMessage();
+			isOwnMessage()
+		);
 	};
 
 	const handleAddReaction = (e: MouseEvent) => {

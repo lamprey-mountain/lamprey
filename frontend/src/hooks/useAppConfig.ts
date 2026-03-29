@@ -45,10 +45,10 @@ export function useAppConfig() {
 			throw new Error("config.cdn_url is not a string");
 		}
 
-		c.api_url ??= localStorage.getItem("api_url") ??
-			"https://chat.celery.eu.org";
-		c.cdn_url ??= localStorage.getItem("cdn_url") ??
-			"https://chat-cdn.celery.eu.org";
+		c.api_url ??=
+			localStorage.getItem("api_url") ?? "https://chat.celery.eu.org";
+		c.cdn_url ??=
+			localStorage.getItem("cdn_url") ?? "https://chat-cdn.celery.eu.org";
 
 		log.info("resolved new config", c);
 		localStorage.setItem("config", JSON.stringify(c));

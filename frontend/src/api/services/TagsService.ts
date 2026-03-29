@@ -34,7 +34,7 @@ export class TagsService extends BaseService<Tag> {
 					path: { channel_id },
 					query: params,
 				},
-			})
+			}),
 		);
 
 		this.upsertBulk(data.items);
@@ -55,7 +55,7 @@ export class TagsService extends BaseService<Tag> {
 					path: { channel_id },
 					query: { query, ...(archived !== undefined ? { archived } : {}) },
 				},
-			})
+			}),
 		);
 
 		this.upsertBulk(data.items);
@@ -80,7 +80,7 @@ export class TagsService extends BaseService<Tag> {
 					path: { channel_id },
 				},
 				body: data,
-			})
+			}),
 		);
 		this.upsert(result);
 		return result;
@@ -106,7 +106,7 @@ export class TagsService extends BaseService<Tag> {
 					path: { channel_id, tag_id },
 				},
 				body: data,
-			})
+			}),
 		);
 		this.upsert(result);
 		return result;
@@ -130,7 +130,7 @@ export class TagsService extends BaseService<Tag> {
 					path: { channel_id, tag_id },
 					query: params,
 				},
-			})
+			}),
 		);
 		this.cache.delete(tag_id);
 	}

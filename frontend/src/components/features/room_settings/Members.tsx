@@ -1,4 +1,7 @@
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import { type ReferenceElement, shift } from "@floating-ui/dom";
+import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import type { Role, RoomMember, RoomMemberOrigin } from "sdk";
+import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
 	createMemo,
@@ -9,17 +12,14 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { useApi2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
-import { useCtx } from "../../../context.ts";
-import { useMenu } from "../../../contexts/mod.tsx";
-import type { RoomT } from "../../../types.ts";
-import type { Role, RoomMember, RoomMemberOrigin } from "sdk";
-import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
-import { Avatar } from "../../../User.tsx";
 import { Time } from "../../../atoms/Time.tsx";
-import { useFloating } from "solid-floating-ui";
-import { type ReferenceElement, shift } from "@floating-ui/dom";
-import { usePermissions } from "../../../hooks/usePermissions.ts";
+import { useCtx } from "../../../context.ts";
+import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import { useMenu } from "../../../contexts/mod.tsx";
 import { useModals } from "../../../contexts/modal";
+import { usePermissions } from "../../../hooks/usePermissions.ts";
+import type { RoomT } from "../../../types.ts";
+import { Avatar } from "../../../User.tsx";
 
 export function Members(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
@@ -57,18 +57,23 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 
 	const [bottom, setBottom] = createSignal<Element | undefined>();
 
-	createIntersectionObserver(() => bottom() ? [bottom()!] : [], (entries) => {
-		for (const entry of entries) {
-			if (entry.isIntersecting) {
-				// Trigger a re-fetch by accessing the cache
-				roomMembers2.cache.size;
+	createIntersectionObserver(
+		() => (bottom() ? [bottom()!] : []),
+		(entries) => {
+			for (const entry of entries) {
+				if (entry.isIntersecting) {
+					// Trigger a re-fetch by accessing the cache
+					roomMembers2.cache.size;
+				}
 			}
-		}
-	});
+		},
+	);
 
-	const [editRoles, setEditRoles] = createSignal<
-		{ member: RoomMember; x: number; y: number }
-	>();
+	const [editRoles, setEditRoles] = createSignal<{
+		member: RoomMember;
+		x: number;
+		y: number;
+	}>();
 
 	return (
 		<div class="room-settings-members">
@@ -84,7 +89,7 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 							const i = roomMembers2.cache.get(id);
 							if (!i) return null;
 							const user = users2.use(() => i.user_id);
-							const name = () => (i.override_name ?? user()?.name);
+							const name = () => i.override_name ?? user()?.name;
 							return (
 								<li>
 									<div class="profile">
@@ -123,13 +128,11 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 											</ul>
 										</div>
 									</div>
-									{
-										/* TODO
+									{/* TODO
 									<div class="notes">
 										{i.deaf && <div>deaf</div>}
 										{i.mute && <div>mute</div>}
-									</div> */
-									}
+									</div> */}
 									<div class="joined">
 										<Time date={new Date(i.joined_at)} />
 										<div class="dim">{formatOrigin(i.origin)}</div>
@@ -171,9 +174,12 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 }
 
 // TODO: make this an actual context menu?
-const EditRoles = (
-	props: { x: number; y: number; user_id: string; room: RoomT },
-) => {
+const EditRoles = (props: {
+	x: number;
+	y: number;
+	user_id: string;
+	room: RoomT;
+}) => {
 	const api2 = useApi2();
 	const roles2 = useRoles2();
 	const roomMembers2 = useRoomMembers2();
@@ -199,10 +205,14 @@ const EditRoles = (
 		props.y;
 	});
 
-	const menuFloating = useFloating(() => menuParentRef(), () => menuRef(), {
-		middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
-		placement: "right-start",
-	});
+	const menuFloating = useFloating(
+		() => menuParentRef(),
+		() => menuRef(),
+		{
+			middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+			placement: "right-start",
+		},
+	);
 
 	const handleChecked =
 		(r: Role) => (e: InputEvent & { target: HTMLInputElement }) => {
@@ -238,8 +248,8 @@ const EditRoles = (
 		};
 
 	const getRoles = () =>
-		[...roles2.cache.values()].filter((r) =>
-			r.room_id === props.room.id && r.id !== r.room_id
+		[...roles2.cache.values()].filter(
+			(r) => r.room_id === props.room.id && r.id !== r.room_id,
 		);
 
 	const currentUser = useCurrentUser();
@@ -264,9 +274,7 @@ const EditRoles = (
 				{(r) => {
 					const memberRoles = member?.roles ?? [];
 					return (
-						<label
-							classList={{ disabled: r.position >= permissions().rank }}
-						>
+						<label classList={{ disabled: r.position >= permissions().rank }}>
 							<input
 								type="checkbox"
 								checked={memberRoles.includes(r.id)}

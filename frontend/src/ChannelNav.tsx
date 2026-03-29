@@ -17,22 +17,22 @@ import {
 	useRooms2,
 	useUsers2,
 } from "@/api";
+import icHome from "./assets/home.png";
+import icInbox from "./assets/inbox.png";
+import icMemberAdd from "./assets/member-add.png";
+import icSettings from "./assets/settings.png";
+import { useVoice } from "./components/features/voice/voice-provider";
 import { useConfig } from "./config";
-import { flags } from "./flags";
 import { useCtx } from "./context";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { useMenu } from "./contexts/mod.tsx";
 import { useModals } from "./contexts/modal";
-import { Avatar, AvatarWithStatus, ChannelIcon, ChannelIconGdm } from "./User";
-import { useVoice } from "./components/features/voice/voice-provider";
-import { useCurrentUser } from "./contexts/currentUser.tsx";
+import { flags } from "./flags";
 import {
 	calculatePermissions,
 	type PermissionContext,
 } from "./permission-calculator";
-import icHome from "./assets/home.png";
-import icInbox from "./assets/inbox.png";
-import icSettings from "./assets/settings.png";
-import icMemberAdd from "./assets/member-add.png";
+import { Avatar, AvatarWithStatus, ChannelIcon, ChannelIconGdm } from "./User";
 
 // TODO: review llm code here because im lazy and dont like implementing drag and drop
 
@@ -80,12 +80,15 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	});
 
 	// track drag ids
-	const [dragging, setDragging] = createSignal<
-		{ type: "channel" | "voice"; id: string; channelId?: string } | null
-	>(null);
-	const [target, setTarget] = createSignal<
-		{ id: string; mode: "before" | "after" | "inside" } | null
-	>(null);
+	const [dragging, setDragging] = createSignal<{
+		type: "channel" | "voice";
+		id: string;
+		channelId?: string;
+	} | null>(null);
+	const [target, setTarget] = createSignal<{
+		id: string;
+		mode: "before" | "after" | "inside";
+	} | null>(null);
 
 	// track collapsed categories
 	const [collapsedCategories, setCollapsedCategories] = createSignal<
@@ -163,7 +166,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		} else {
 			// sort by activity in dms list
 			channels.sort((a, b) =>
-				(a.last_version_id ?? "") < (b.last_version_id ?? "") ? 1 : -1
+				(a.last_version_id ?? "") < (b.last_version_id ?? "") ? 1 : -1,
 			);
 		}
 
@@ -495,13 +498,13 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		// It's either the top-level list of categories, OR a specific category's channels.
 
 		let siblings: Channel[] = [];
-		let newParentId: string | null | undefined ;
+		let newParentId: string | null | undefined;
 
 		if (fromChannel.type === "Category") {
 			// Reordering categories
-			siblings = currentCategories.map((c) => c.category).filter((c) =>
-				c !== null
-			) as Channel[];
+			siblings = currentCategories
+				.map((c) => c.category)
+				.filter((c) => c !== null) as Channel[];
 			newParentId = null; // Categories are top level
 		} else {
 			// Reordering channels
@@ -565,20 +568,23 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		// It's polite to reorder the old category too.
 
 		if (
-			fromChannel.parent_id !== newParentId && fromChannel.type !== "Category"
+			fromChannel.parent_id !== newParentId &&
+			fromChannel.type !== "Category"
 		) {
 			const oldCat = currentCategories.find(
 				(c) => (c.category?.id ?? null) === fromChannel.parent_id,
 			);
 			if (oldCat) {
-				const oldSiblings = oldCat.channels.filter((c) =>
-					c.id !== fromChannel.id
+				const oldSiblings = oldCat.channels.filter(
+					(c) => c.id !== fromChannel.id,
 				);
-				body.push(...oldSiblings.map((c, i) => ({
-					id: c.id,
-					parent_id: fromChannel.parent_id,
-					position: i,
-				})));
+				body.push(
+					...oldSiblings.map((c, i) => ({
+						id: c.id,
+						parent_id: fromChannel.parent_id,
+						position: i,
+					})),
+				);
 			}
 		}
 
@@ -601,7 +607,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		dragging()?.type === "channel" && dragging()?.id === id;
 
 	const isVoiceTarget = (id: string) =>
-		dragging()?.type === "voice" && target()?.id === id &&
+		dragging()?.type === "voice" &&
+		target()?.id === id &&
 		target()?.mode === "inside";
 
 	return (
@@ -644,12 +651,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 				<Show when={!props.room_id}>
 					<Show when={flags.has("inbox")}>
 						<li class="channel-item">
-							<A
-								href="/inbox"
-								class="channel-link"
-								draggable={false}
-								end
-							>
+							<A href="/inbox" class="channel-link" draggable={false} end>
 								<img src={icInbox} class="icon" /> inbox
 							</A>
 						</li>
@@ -722,9 +724,9 @@ export const ChannelNav = (props: { room_id?: string }) => {
 												class="channel-item"
 												data-drag-mode={getDragMode(channel.id)}
 												data-is-dragging={isDraggingThis(channel.id)}
-												data-voice-target={isVoiceTarget(channel.id)
-													? "true"
-													: undefined}
+												data-voice-target={
+													isVoiceTarget(channel.id) ? "true" : undefined
+												}
 												data-channel-id={channel.id}
 												draggable="true"
 												onDragStart={handleDragStart}
@@ -755,7 +757,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 																		setTarget(null);
 																	}}
 																	classList={{
-																		unread: thread.type !== "Voice" &&
+																		unread:
+																			thread.type !== "Voice" &&
 																			!!thread.is_unread,
 																	}}
 																>
@@ -769,31 +772,35 @@ export const ChannelNav = (props: { room_id?: string }) => {
 													</ul>
 												</Show>
 												<For
-													each={[...api2.voiceStates.values()].filter((i) =>
-														i.channel_id === channel.id
-													).sort((a, b) =>
-														Date.parse(a.joined_at) - Date.parse(b.joined_at)
-													)}
+													each={[...api2.voiceStates.values()]
+														.filter((i) => i.channel_id === channel.id)
+														.sort(
+															(a, b) =>
+																Date.parse(a.joined_at) -
+																Date.parse(b.joined_at),
+														)}
 												>
 													{(s) => {
 														const user = () => users2.cache.get(s.user_id);
 														const room_member = () =>
 															props.room_id
 																? roomMembers2.cache.get(
-																	`${props.room_id!}:${s.user_id}`,
-																)
+																		`${props.room_id!}:${s.user_id}`,
+																	)
 																: null;
 														const name = () =>
-															room_member()?.override_name || user()?.name ||
+															room_member()?.override_name ||
+															user()?.name ||
 															"unknown user";
 														return (
 															<div
 																class="voice-participant menu-user"
 																classList={{
-																	speaking: ((voice.rtc?.speaking.get(s.user_id)
-																		?.flags ??
-																		0) &
-																		1) === 1,
+																	speaking:
+																		((voice.rtc?.speaking.get(s.user_id)
+																			?.flags ?? 0) &
+																			1) ===
+																		1,
 																}}
 																data-channel-id={s.channel_id}
 																data-user-id={s.user_id}
@@ -803,7 +810,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 																		e,
 																		s.user_id,
 																		s.channel_id,
-																	)}
+																	)
+																}
 																onDragEnd={() => {
 																	setDragging(null);
 																	setTarget(null);
@@ -896,9 +904,11 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 		<A
 			href={`/channel/${props.channel.id}`}
 			class="menu-channel channel-link"
-			data-unread={props.channel.type !== "Voice" && !!props.channel.is_unread
-				? "true"
-				: undefined}
+			data-unread={
+				props.channel.type !== "Voice" && !!props.channel.is_unread
+					? "true"
+					: undefined
+			}
 			data-muted={isMuted() ? "true" : undefined}
 			data-channel-id={props.channel.id}
 			onClick={handleClick}
@@ -910,9 +920,10 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 			<div class="channel-details">
 				<span class="channel-name">{name()}</span>
 				<Show
-					when={otherUser()?.presence.activities.find((a) =>
-						a.type === "Custom"
-					)?.text}
+					when={
+						otherUser()?.presence.activities.find((a) => a.type === "Custom")
+							?.text
+					}
 				>
 					{(t) => <span class="channel-status dim">{t()}</span>}
 				</Show>

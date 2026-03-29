@@ -1,11 +1,11 @@
-import { createSignal, Show, type VoidProps } from "solid-js";
 import { createUpload, type User } from "sdk";
+import { createSignal, Show, type VoidProps } from "solid-js";
 import { useApi2 } from "@/api";
+import { Savebar } from "../../../atoms/Savebar";
 import { useCtx } from "../../../context";
-import { Copyable } from "../../../utils/general";
 import { useModals } from "../../../contexts/modal";
 import { Avatar } from "../../../User.tsx";
-import { Savebar } from "../../../atoms/Savebar";
+import { Copyable } from "../../../utils/general";
 
 // TODO(#753): allow uploading banner
 
@@ -125,11 +125,7 @@ export function Profile(props: VoidProps<{ user: User }>) {
 			<div>
 				user id: <Copyable>{props.user.id}</Copyable>
 			</div>
-			<Savebar
-				show={isDirty()}
-				onCancel={reset}
-				onSave={save}
-			/>
+			<Savebar show={isDirty()} onCancel={reset} onSave={save} />
 		</div>
 	);
 }

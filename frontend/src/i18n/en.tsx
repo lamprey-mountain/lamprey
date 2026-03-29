@@ -550,31 +550,19 @@ export default {
 		member_remove: (
 			author: JSX.Element,
 			target: JSX.Element,
-		): JSX.Element[] => [
+		): JSX.Element[] => [author, " removed ", target, " from the thread"],
+		member_join: (author: JSX.Element): JSX.Element[] => [
 			author,
-			" removed ",
-			target,
-			" from the thread",
+			" joined the room",
 		],
-		member_join: (
-			author: JSX.Element,
-		): JSX.Element[] => [author, " joined the room"],
 		message_pinned: (
 			author: JSX.Element,
 			Link: (text: string) => JSX.Element,
-		): JSX.Element[] => [
-			author,
-			" pinned ",
-			Link("a message"),
-		],
+		): JSX.Element[] => [author, " pinned ", Link("a message")],
 		channel_rename: (
 			author: JSX.Element,
 			name_new: JSX.Element,
-		): JSX.Element[] => [
-			author,
-			" renamed the thread to ",
-			name_new,
-		],
+		): JSX.Element[] => [author, " renamed the thread to ", name_new],
 		messages_moved: (author: JSX.Element): JSX.Element[] => [
 			author,
 			" moved messages to a different channel",
@@ -591,12 +579,14 @@ export default {
 			author,
 			" mentioned this channel from another channel",
 		],
-		channel_moved: (
-			author: JSX.Element,
-		): JSX.Element[] => [author, " moved this thread"],
-		channel_icon: (
-			author: JSX.Element,
-		): JSX.Element[] => [author, " changed the channel icon"],
+		channel_moved: (author: JSX.Element): JSX.Element[] => [
+			author,
+			" moved this thread",
+		],
+		channel_icon: (author: JSX.Element): JSX.Element[] => [
+			author,
+			" changed the channel icon",
+		],
 		automod_execution: (author: JSX.Element): JSX.Element[] => [
 			author,
 			" automod action triggered",
@@ -639,20 +629,23 @@ export default {
 		RoleApply: "{{actor}} applied role {{role_name}}",
 		RoleUnapply: "{{actor}} removed role {{role_name}}",
 		changes: {
-			in_channel: (
-				props: { name: JSX.Element },
-			): JSX.Element[] => ["in ", props.name],
-			messages_deleted: (
-				count: number,
-			): JSX.Element[] => [count, " messages were deleted"],
+			in_channel: (props: { name: JSX.Element }): JSX.Element[] => [
+				"in ",
+				props.name,
+			],
+			messages_deleted: (count: number): JSX.Element[] => [
+				count,
+				" messages were deleted",
+			],
 			invite_deleted: (props: { invite_code: JSX.Element }): JSX.Element[] => [
 				"invite ",
 				<em class="light">{props.invite_code}</em>,
 				" was deleted",
 			],
-			permission_overwrite_for: (
-				props: { type: string; target: JSX.Element },
-			): JSX.Element[] => ["for ", props.type, " ", props.target],
+			permission_overwrite_for: (props: {
+				type: string;
+				target: JSX.Element;
+			}): JSX.Element[] => ["for ", props.type, " ", props.target],
 			role_added: (props: { role_name: JSX.Element }): JSX.Element[] => [
 				"added role ",
 				props.role_name,
@@ -678,37 +671,31 @@ export default {
 				"unbanned user ",
 				props.user_name,
 			],
-			user_added_to_thread: (
-				props: { user_name: JSX.Element },
-			): JSX.Element[] => [
-				"added user ",
-				props.user_name,
-			],
-			user_removed_from_thread: (
-				props: { user_name: JSX.Element },
-			): JSX.Element[] => [
-				"removed user ",
-				props.user_name,
-			],
+			user_added_to_thread: (props: {
+				user_name: JSX.Element;
+			}): JSX.Element[] => ["added user ", props.user_name],
+			user_removed_from_thread: (props: {
+				user_name: JSX.Element;
+			}): JSX.Element[] => ["removed user ", props.user_name],
 			to_thread: (props: { channel_name: JSX.Element }): JSX.Element[] => [
 				"to thread ",
 				props.channel_name,
 			],
-			permission_granted: (
-				props: { permission: JSX.Element },
-			): JSX.Element[] => [
+			permission_granted: (props: {
+				permission: JSX.Element;
+			}): JSX.Element[] => [
 				"granted permission ",
 				<em class="light">{props.permission}</em>,
 			],
-			permission_revoked: (
-				props: { permission: JSX.Element },
-			): JSX.Element[] => [
+			permission_revoked: (props: {
+				permission: JSX.Element;
+			}): JSX.Element[] => [
 				"revoked permission ",
 				<em class="light">{props.permission}</em>,
 			],
-			permission_denied: (
-				props: { permission: JSX.Element },
-			): JSX.Element[] => [
+			permission_denied: (props: {
+				permission: JSX.Element;
+			}): JSX.Element[] => [
 				"denied permission ",
 				<em class="light">{props.permission}</em>,
 			],
@@ -725,9 +712,10 @@ export default {
 			icon_changed: "changed the icon",
 			icon_removed: "removed the icon",
 			icon_added: "added an icon",
-			set_field: (
-				props: { field: JSX.Element; value: JSX.Element },
-			): JSX.Element[] => [
+			set_field: (props: {
+				field: JSX.Element;
+				value: JSX.Element;
+			}): JSX.Element[] => [
 				"set ",
 				<em class="light">{props.field}</em>,
 				" to ",

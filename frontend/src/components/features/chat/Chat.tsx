@@ -1,25 +1,25 @@
-import { createEffect, createMemo, createSignal, on, Show } from "solid-js";
-import { useCtx } from "../../../context.ts";
-import { createList2 } from "../../../atoms/list.tsx";
+import { throttle } from "@solid-primitives/scheduled";
 import type { Channel } from "sdk";
+import { createEffect, createMemo, createSignal, on, Show } from "solid-js";
+import { Portal } from "solid-js/web";
+import { uuidv7 } from "uuidv7";
+import { useApi2, useMessages2 } from "@/api";
+import type { MessageListAnchor } from "@/api/services/MessagesService.ts";
+import { createList2 } from "../../../atoms/list.tsx";
+import { useChannel } from "../../../channelctx.tsx";
+import { useCtx } from "../../../context.ts";
+import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import { useReadTracking } from "../../../contexts/read-tracking.tsx";
+import { useUploads } from "../../../contexts/uploads.tsx";
+import { logger } from "../../../logger.ts";
+import { deepEqual } from "../../../utils/deepEqual.ts";
+import { Input } from "./Input.tsx";
+import { MessageSkeleton } from "./MessageSkeleton.tsx";
 import {
 	renderTimeline,
 	TimelineItem,
 	type TimelineItemT,
 } from "./Messages.tsx";
-import { Input } from "./Input.tsx";
-import { useApi2, useMessages2 } from "@/api";
-import { throttle } from "@solid-primitives/scheduled";
-import type { MessageListAnchor } from "@/api/services/MessagesService.ts";
-import { uuidv7 } from "uuidv7";
-import { Portal } from "solid-js/web";
-import { useChannel } from "../../../channelctx.tsx";
-import { useReadTracking } from "../../../contexts/read-tracking.tsx";
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
-import { useUploads } from "../../../contexts/uploads.tsx";
-import { MessageSkeleton } from "./MessageSkeleton.tsx";
-import { logger } from "../../../logger.ts";
-import { deepEqual } from "../../../utils/deepEqual.ts";
 
 type ChatProps = {
 	channel: Channel;
@@ -201,13 +201,18 @@ export const ChatMain = (props: ChatProps) => {
 	// });
 
 	// effect to initialize new channels
-	createEffect(on(() => props.channel.id, (_channel_id) => {
-		const last_read_id = props.channel.last_read_id ??
-			props.channel.last_version_id;
-		if (channelState.read_marker_id) return;
-		if (!last_read_id) return; // no messages in the channel
-		setChannelState("read_marker_id", last_read_id);
-	}));
+	createEffect(
+		on(
+			() => props.channel.id,
+			(_channel_id) => {
+				const last_read_id =
+					props.channel.last_read_id ?? props.channel.last_version_id;
+				if (channelState.read_marker_id) return;
+				if (!last_read_id) return; // no messages in the channel
+				setChannelState("read_marker_id", last_read_id);
+			},
+		),
+	);
 
 	// effect to update saved scroll position
 	const setPos = throttle(() => {
@@ -242,17 +247,20 @@ export const ChatMain = (props: ChatProps) => {
 	// 	setChannelState("highlight", undefined);
 	// }
 
-	createEffect(
-		on(() => channelState.highlight, scrollAndHighlight),
-	);
+	createEffect(on(() => channelState.highlight, scrollAndHighlight));
 
-	createEffect(on(() => channelState.anchor, (a) => {
-		if (a && a.type === "backwards" && !a.message_id) {
-			setTimeout(() => {
-				list.scrollTo(99999999);
-			});
-		}
-	}));
+	createEffect(
+		on(
+			() => channelState.anchor,
+			(a) => {
+				if (a && a.type === "backwards" && !a.message_id) {
+					setTimeout(() => {
+						list.scrollTo(99999999);
+					});
+				}
+			},
+		),
+	);
 
 	createEffect(on(list.scrollPos, setPos));
 
@@ -261,8 +269,9 @@ export const ChatMain = (props: ChatProps) => {
 	const currentUser = useCurrentUser();
 	const getTyping = () => {
 		const user_id = currentUser()?.id;
-		const user_ids = [...api2.typing.get(props.channel.id)?.values() ?? []]
-			.filter((i) => i !== user_id);
+		const user_ids = [
+			...(api2.typing.get(props.channel.id)?.values() ?? []),
+		].filter((i) => i !== user_id);
 		return user_ids;
 	};
 
@@ -290,7 +299,7 @@ export const ChatMain = (props: ChatProps) => {
 
 					const version_id =
 						messagesService._ranges.get(channel_id)?.live.end ??
-							props.channel.last_version_id;
+						props.channel.last_version_id;
 
 					if (version_id) {
 						markChannelRead(channel_id, version_id, true, false);
@@ -324,9 +333,9 @@ export const ChatMain = (props: ChatProps) => {
 					// 						list.scrollTo(99999999);
 					// 					});
 				} else if (e.key === "PageDown") {
-					list.scrollBy(globalThis.innerHeight * .8, true);
+					list.scrollBy(globalThis.innerHeight * 0.8, true);
 				} else if (e.key === "PageUp") {
-					list.scrollBy(-globalThis.innerHeight * .8, true);
+					list.scrollBy(-globalThis.innerHeight * 0.8, true);
 				}
 			}}
 			onDragEnter={(e) => {
@@ -351,8 +360,10 @@ export const ChatMain = (props: ChatProps) => {
 			}}
 		>
 			<Show
-				when={messages()?.has_forward &&
-					(props.channel.last_version_id !== channelState.read_marker_id)}
+				when={
+					messages()?.has_forward &&
+					props.channel.last_version_id !== channelState.read_marker_id
+				}
 			>
 				<div class="new-messages">
 					<button class="jump-read" onClick={jumpToLastRead}>
@@ -385,9 +396,7 @@ export const ChatMain = (props: ChatProps) => {
 			<Portal>
 				<Show when={dragging()}>
 					<div class="dnd-upload-message">
-						<div class="inner">
-							drop to upload
-						</div>
+						<div class="inner">drop to upload</div>
 					</div>
 				</Show>
 			</Portal>
@@ -396,23 +405,26 @@ export const ChatMain = (props: ChatProps) => {
 };
 
 function highlight(el: Element) {
-	el.animate([
+	el.animate(
+		[
+			{
+				boxShadow: "4px 0 0 -1px inset #cc1856",
+				backgroundColor: "#cc185622",
+				offset: 0,
+			},
+			{
+				boxShadow: "4px 0 0 -1px inset #cc1856",
+				backgroundColor: "#cc185622",
+				offset: 0.8,
+			},
+			{
+				boxShadow: "none",
+				backgroundColor: "transparent",
+				offset: 1,
+			},
+		],
 		{
-			boxShadow: "4px 0 0 -1px inset #cc1856",
-			backgroundColor: "#cc185622",
-			offset: 0,
+			duration: 1000,
 		},
-		{
-			boxShadow: "4px 0 0 -1px inset #cc1856",
-			backgroundColor: "#cc185622",
-			offset: .8,
-		},
-		{
-			boxShadow: "none",
-			backgroundColor: "transparent",
-			offset: 1,
-		},
-	], {
-		duration: 1000,
-	});
+	);
 }

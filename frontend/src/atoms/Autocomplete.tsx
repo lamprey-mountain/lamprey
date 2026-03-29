@@ -1,23 +1,20 @@
-import { For, Match, Show, Switch } from "solid-js";
-import { useAutocomplete } from "../contexts/autocomplete";
 import type { Channel, EmojiCustom, User } from "sdk";
+import { For, Match, Show, Switch } from "solid-js";
+import { ChannelIcon } from "../avatar/ChannelIcon";
+import type { AutocompleteMentionItem } from "../contexts/autocomplete";
+import { useAutocomplete } from "../contexts/autocomplete";
+import type { Command } from "../contexts/slash-commands";
+import { type EmojiData, getTwemoji } from "../emoji";
+import { useAutocompleteData } from "../hooks/useAutocompleteData";
 import { getEmojiUrl } from "../media/util";
 import { Avatar } from "../User";
-import { type EmojiData, getTwemoji } from "../emoji";
-import type { Command } from "../contexts/slash-commands";
-import { useAutocompleteData } from "../hooks/useAutocompleteData";
-import type { AutocompleteMentionItem } from "../contexts/autocomplete";
-import { ChannelIcon } from "../avatar/ChannelIcon";
 
 export const Autocomplete = () => {
 	const { state, select, setIndex } = useAutocomplete();
 	const { filtered } = useAutocompleteData();
 
 	return (
-		<Show
-			when={state.visible && state.kind &&
-				filtered().length > 0}
-		>
+		<Show when={state.visible && state.kind && filtered().length > 0}>
 			<div class="autocomplete">
 				<header>
 					<Show when={state.query} fallback={`list ${state.kind?.type}s`}>
@@ -38,14 +35,13 @@ export const Autocomplete = () => {
 						>
 							<Switch>
 								<Match when={"char" in (result.obj as any)}>
-									<span
-										innerHTML={getTwemoji((result.obj as any).char)}
-									>
-									</span>
+									<span innerHTML={getTwemoji((result.obj as any).char)}></span>
 								</Match>
 								<Match
-									when={state.kind?.type === "emoji" &&
-										!("char" in (result.obj as any))}
+									when={
+										state.kind?.type === "emoji" &&
+										!("char" in (result.obj as any))
+									}
 								>
 									<img
 										src={getEmojiUrl((result.obj as any).id)}
@@ -61,33 +57,32 @@ export const Autocomplete = () => {
 									</div>
 								</Match>
 								<Match
-									when={state.kind?.type === "mention" &&
-										(result.obj as any).type === "user"}
+									when={
+										state.kind?.type === "mention" &&
+										(result.obj as any).type === "user"
+									}
 								>
 									<div class="mention-user">
-										<Avatar
-											user={(result.obj as any).user}
-											pad={0}
-										/>
-										<span>
-											{(result.obj as any).name}
-										</span>
+										<Avatar user={(result.obj as any).user} pad={0} />
+										<span>{(result.obj as any).name}</span>
 									</div>
 								</Match>
 								<Match
-									when={state.kind?.type === "mention" &&
-										(result.obj as any).type === "role"}
+									when={
+										state.kind?.type === "mention" &&
+										(result.obj as any).type === "role"
+									}
 								>
 									<div class="mention-role">
 										<span class="role-badge">#</span>
-										<span>
-											{(result.obj as any).name}
-										</span>
+										<span>{(result.obj as any).name}</span>
 									</div>
 								</Match>
 								<Match
-									when={state.kind?.type === "mention" &&
-										(result.obj as any).type === "everyone"}
+									when={
+										state.kind?.type === "mention" &&
+										(result.obj as any).type === "everyone"
+									}
 								>
 									<div class="everyone-mention">
 										<span>@everyone</span>
@@ -102,7 +97,7 @@ export const Autocomplete = () => {
 								</Match>
 								<Match when={true}>
 									{"label" in (result.obj as any)
-										? (result.obj as any).label ?? (result.obj as any).name
+										? ((result.obj as any).label ?? (result.obj as any).name)
 										: (result.obj as any).name}
 								</Match>
 							</Switch>

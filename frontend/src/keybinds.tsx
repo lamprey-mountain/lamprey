@@ -12,7 +12,10 @@ export function createKeybinds(
 	const realBinds: Array<[Chord, (e: KeyboardEvent) => void]> = [];
 	for (const bind in binds) {
 		for (const version of bind.split(",")) {
-			const keys = version.trim().split(" ").map((i) => i.split("-"));
+			const keys = version
+				.trim()
+				.split(" ")
+				.map((i) => i.split("-"));
 			const chord = [];
 			for (const key of keys) {
 				chord.push({
@@ -33,8 +36,10 @@ export function createKeybinds(
 		for (const [chord, call] of valid) {
 			const bind = chord[0];
 			if (
-				e.ctrlKey === bind.ctrl && e.shiftKey === bind.shift &&
-				e.altKey === bind.alt && e.key === bind.key
+				e.ctrlKey === bind.ctrl &&
+				e.shiftKey === bind.shift &&
+				e.altKey === bind.alt &&
+				e.key === bind.key
 			) {
 				if (chord.length === 1) {
 					e.stopPropagation();

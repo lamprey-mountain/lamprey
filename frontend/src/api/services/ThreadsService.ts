@@ -1,8 +1,8 @@
 import type { Channel, Pagination } from "sdk";
-import { BaseService } from "../core/Service";
 import { createResource, type Resource } from "solid-js";
-import { PaginatedList } from "../core/PaginatedList";
 import { logger } from "../../logger";
+import { PaginatedList } from "../core/PaginatedList";
+import { BaseService } from "../core/Service";
 
 const log = logger.for("api/threads");
 
@@ -64,7 +64,7 @@ export class ThreadsService extends BaseService<Channel> {
 							from: cursor,
 						},
 					},
-				})
+				}),
 			);
 
 			this.upsertBulk(data.items);

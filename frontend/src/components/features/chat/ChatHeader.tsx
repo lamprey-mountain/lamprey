@@ -1,27 +1,25 @@
-import { createSignal, Match, Show, Switch } from "solid-js";
 import type { Channel } from "sdk";
-import { useCtx } from "../../../context.ts";
+import { createSignal, Match, Show, Switch } from "solid-js";
 import { useChannels2, useMessages2 } from "@/api";
+import icCall from "../../../assets/call.png";
+import icMembers from "../../../assets/members.png";
+import icPin from "../../../assets/pin.png";
+import icThreads from "../../../assets/threads.png";
 import { useChannel } from "../../../channelctx.tsx";
+import { useCtx } from "../../../context.ts";
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
 import { useModals } from "../../../contexts/modal.tsx";
-import { SearchInput } from "./SearchInput.tsx";
+import { usePermissions } from "../../../hooks/usePermissions.ts";
 import { md } from "../../../markdown_utils.tsx";
 import { ChannelIcon } from "../../../User.tsx";
-import { usePermissions } from "../../../hooks/usePermissions.ts";
-import icPin from "../../../assets/pin.png";
-import icMembers from "../../../assets/members.png";
-import icCall from "../../../assets/call.png";
-import icThreads from "../../../assets/threads.png";
+import { SearchInput } from "./SearchInput.tsx";
 
 type ChatHeaderProps = {
 	channel: Channel;
 	showMembersButton?: boolean;
 };
 
-export const ChatHeader = (
-	props: ChatHeaderProps,
-) => {
+export const ChatHeader = (props: ChatHeaderProps) => {
 	const ctx = useCtx();
 	const channels2 = useChannels2();
 	const messagesService = useMessages2();
@@ -119,8 +117,9 @@ export const ChatHeader = (
 	const name = () => {
 		if (props.channel.type === "Dm") {
 			const user_id = currentUser()?.id;
-			return props.channel.recipients?.find((i) => i.id !== user_id)?.name ??
-				"dm";
+			return (
+				props.channel.recipients?.find((i) => i.id !== user_id)?.name ?? "dm"
+			);
 		}
 
 		return props.channel.name;
@@ -154,9 +153,9 @@ export const ChatHeader = (
 							<b
 								class="channel-name-display"
 								onClick={startEditingName}
-								title={canManageChannel()
-									? "Click to edit channel name"
-									: undefined}
+								title={
+									canManageChannel() ? "Click to edit channel name" : undefined
+								}
 								style={canManageChannel() ? "cursor:pointer" : undefined}
 							>
 								{name()}
@@ -189,8 +188,7 @@ export const ChatHeader = (
 								}
 							}}
 							title="click to view topic"
-						>
-						</span>
+						></span>
 					</Show>
 					<Switch>
 						<Match when={props.channel.deleted_at}>{" (removed)"}</Match>
@@ -211,9 +209,11 @@ export const ChatHeader = (
 						</button>
 					</Show>
 					<Show
-						when={props.channel.type === "Text" ||
+						when={
+							props.channel.type === "Text" ||
 							props.channel.type === "Announcement" ||
-							props.channel.type === "Gdm"}
+							props.channel.type === "Gdm"
+						}
 					>
 						<button
 							onClick={(e) => {
@@ -241,10 +241,7 @@ export const ChatHeader = (
 						<img class="icon" src={icPin} />
 					</button>
 					<Show when={props.showMembersButton ?? true}>
-						<button
-							onClick={toggleMembers}
-							title="Show members"
-						>
+						<button onClick={toggleMembers} title="Show members">
 							<img class="icon" src={icMembers} />
 						</button>
 					</Show>

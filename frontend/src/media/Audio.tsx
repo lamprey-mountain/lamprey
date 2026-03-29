@@ -7,13 +7,15 @@ import {
 	Show,
 	type ValidComponent,
 } from "solid-js";
-import iconPlay from "../assets/play.png";
 import iconPause from "../assets/pause.png";
-import iconVolumeLow from "../assets/volume-low.png";
-import iconVolumeMedium from "../assets/volume-medium.png";
+import iconPlay from "../assets/play.png";
 import iconVolumeHigh from "../assets/volume-high.png";
-import iconVolumeMute from "../assets/volume-mute.png";
+import iconVolumeLow from "../assets/volume-low.png";
 import iconVolumeMax from "../assets/volume-max.png";
+import iconVolumeMedium from "../assets/volume-medium.png";
+import iconVolumeMute from "../assets/volume-mute.png";
+import { tooltip } from "../atoms/Tooltip.tsx";
+import { useCtx } from "../context.ts";
 import {
 	formatBytes,
 	formatTime,
@@ -24,8 +26,6 @@ import {
 	type MediaProps,
 	parseRanges,
 } from "./util.tsx";
-import { tooltip } from "../atoms/Tooltip.tsx";
-import { useCtx } from "../context.ts";
 
 export const AudioView = (props: MediaProps) => {
 	const ctx = useCtx();
@@ -39,12 +39,11 @@ export const AudioView = (props: MediaProps) => {
 
 	audio.preload = "metadata";
 	audio.crossOrigin = "anonymous";
-	createEffect(() => audio.src = getUrl(props.media));
+	createEffect(() => (audio.src = getUrl(props.media)));
 	onCleanup(() => audio.pause());
 
-	const [loadingState, setLoadingState] = createSignal<MediaLoadingState>(
-		"empty",
-	);
+	const [loadingState, setLoadingState] =
+		createSignal<MediaLoadingState>("empty");
 	const [buffered, setBuffered] = createSignal(parseRanges(audio.buffered));
 	const [duration, setDuration] = createSignal(getDuration(props.media));
 	const [progress, setProgress] = createSignal(0);
@@ -91,8 +90,8 @@ export const AudioView = (props: MediaProps) => {
 		setBuffered(parseRanges(audio.buffered));
 	};
 
-	createEffect(() => audio.muted = muted());
-	createEffect(() => gain.gain.value = volume());
+	createEffect(() => (audio.muted = muted()));
+	createEffect(() => (gain.gain.value = volume()));
 
 	const volumeDatalistId = createUniqueId();
 
@@ -109,17 +108,18 @@ export const AudioView = (props: MediaProps) => {
 	const handleVolumeWheel = (e: WheelEvent) => {
 		e.preventDefault();
 		if (e.deltaY > 0) {
-			setVolume(Math.max(volume() - .05, 0));
+			setVolume(Math.max(volume() - 0.05, 0));
 		} else {
-			setVolume(Math.min(volume() + .05, 1));
+			setVolume(Math.min(volume() + 0.05, 1));
 		}
 	};
 
 	const handleScrubWheel = (e: WheelEvent) => {
 		e.preventDefault();
-		const newt = e.deltaY > 0
-			? Math.max(progress() - 5, 0)
-			: Math.min(progress() + 5, duration());
+		const newt =
+			e.deltaY > 0
+				? Math.max(progress() - 5, 0)
+				: Math.min(progress() + 5, duration());
 		audio.currentTime = newt;
 		setProgress(newt);
 	};
@@ -156,8 +156,8 @@ export const AudioView = (props: MediaProps) => {
 	const getVolumeIcon = () => {
 		if (muted()) return iconVolumeMute;
 		if (volume() === 0) return iconVolumeMute;
-		if (volume() < .333) return iconVolumeLow;
-		if (volume() < .667) return iconVolumeMedium;
+		if (volume() < 0.333) return iconVolumeLow;
+		if (volume() < 0.667) return iconVolumeMedium;
 		if (volume() <= 1) return iconVolumeHigh;
 		return iconVolumeMax;
 	};
@@ -172,11 +172,13 @@ export const AudioView = (props: MediaProps) => {
 			title: props.media.filename,
 			// artist: "artist",
 			// album: "album",
-			artwork: [{
-				sizes: "640x640",
-				src: getThumb(props.media, 640),
-				type: "image/avif",
-			}],
+			artwork: [
+				{
+					sizes: "640x640",
+					src: getThumb(props.media, 640),
+					type: "image/avif",
+				},
+			],
 		});
 	};
 
@@ -249,7 +251,7 @@ export const AudioView = (props: MediaProps) => {
 				</a>
 				<div class="dim">
 					{ty()} - {formatBytes(props.media.size)}
-					<Show when={loadingState() === "stalled"}>{" "}- loading</Show>
+					<Show when={loadingState() === "stalled"}> - loading</Show>
 				</div>
 			</div>
 			<div class="controls">
@@ -274,7 +276,7 @@ export const AudioView = (props: MediaProps) => {
 								max={1.5}
 								value={volume()}
 								disabled={muted()}
-								step={.001}
+								step={0.001}
 								list={volumeDatalistId}
 								onInput={(e) => setVolume(e.target.valueAsNumber)}
 							/>
@@ -291,11 +293,7 @@ export const AudioView = (props: MediaProps) => {
 							title={getVolumeText()}
 							onWheel={handleVolumeWheel}
 						>
-							<img
-								class="icon"
-								src={getVolumeIcon()}
-								alt={getVolumeText()}
-							/>
+							<img class="icon" src={getVolumeIcon()} alt={getVolumeText()} />
 						</button>
 					) as HTMLElement,
 				)}

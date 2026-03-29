@@ -1,7 +1,7 @@
-import { Modal } from "./mod";
-import { useModals } from "../contexts/modal";
-import type { Api } from "@/api";
 import { createSignal } from "solid-js";
+import type { Api } from "@/api";
+import { useModals } from "../contexts/modal";
+import { Modal } from "./mod";
 
 interface ModalKickProps {
 	api: Api;
@@ -61,9 +61,8 @@ export const ModalKick = (props: ModalKickProps) => {
 					kick <strong>{displayName()}</strong>
 				</h3>
 				<p>
-					Are you sure you want to kick{" "}
-					<strong>{displayName()}</strong>? They will not be able to rejoin the
-					room.
+					Are you sure you want to kick <strong>{displayName()}</strong>? They
+					will not be able to rejoin the room.
 				</p>
 
 				<div style="margin-top: 16px;">
@@ -82,9 +81,7 @@ export const ModalKick = (props: ModalKickProps) => {
 					<button class="danger" onClick={handleKick}>
 						kick
 					</button>
-					<button onClick={() => modalCtl.close()}>
-						cancel
-					</button>
+					<button onClick={() => modalCtl.close()}>cancel</button>
 				</div>
 			</div>
 		</Modal>

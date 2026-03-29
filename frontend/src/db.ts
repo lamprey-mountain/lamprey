@@ -6,6 +6,18 @@ import {
 	type StoreNames,
 } from "idb";
 import type {
+	AuditLogEntry,
+	EmojiCustom,
+	Invite,
+	Notification,
+	PushInfo,
+	RoomBan,
+	Tag,
+	ThreadMember,
+	Webhook,
+} from "sdk";
+import type { RevisionContent } from "@/api/services/DocumentsService.ts";
+import type {
 	ChannelT,
 	MediaT,
 	MemberT,
@@ -15,18 +27,6 @@ import type {
 	SessionT,
 	UserT,
 } from "./types.ts";
-import type { RevisionContent } from "@/api/services/DocumentsService.ts";
-import type {
-	AuditLogEntry,
-	EmojiCustom,
-	Invite,
-	Notification,
-	RoomBan,
-	Tag,
-	ThreadMember,
-	Webhook,
-} from "sdk";
-import type { PushInfo } from "sdk";
 
 export interface ApiDB extends DBSchema {
 	user: {

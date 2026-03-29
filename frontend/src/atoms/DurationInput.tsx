@@ -117,12 +117,10 @@ export const DurationInput = (props: DurationInputProps) => {
 		}
 
 		opts.push(
-			...presets().map(
-				(p) => ({
-					item: p.seconds as any,
-					label: p.label,
-				}),
-			),
+			...presets().map((p) => ({
+				item: p.seconds as any,
+				label: p.label,
+			})),
 		);
 
 		if (!isNaN(numeric) && numeric > 0 && !/[a-z]/i.test(currentText)) {
@@ -161,11 +159,12 @@ export const DurationInput = (props: DurationInputProps) => {
 			setText(t);
 			dropdown.setValue(t);
 		} else {
-			const t = props.value === "forever"
-				? "forever"
-				: props.value === null
-				? ""
-				: formatDuration(props.value as number);
+			const t =
+				props.value === "forever"
+					? "forever"
+					: props.value === null
+						? ""
+						: formatDuration(props.value as number);
 			setText(t);
 			dropdown.setValue(t);
 		}
@@ -187,11 +186,12 @@ export const DurationInput = (props: DurationInputProps) => {
 				});
 			} else {
 				setCustomMode(false);
-				const t = item === "forever"
-					? "forever"
-					: item === null
-					? ""
-					: formatDuration(item as number);
+				const t =
+					item === "forever"
+						? "forever"
+						: item === null
+							? ""
+							: formatDuration(item as number);
 				setText(t);
 				dropdown.setValue(t);
 				props.onInput(item as any);
@@ -204,9 +204,7 @@ export const DurationInput = (props: DurationInputProps) => {
 		onBlur: () => commit(text()),
 		options: options as any,
 		get mount() {
-			return (
-				props.mount ?? document.getElementById("overlay") ?? document.body
-			);
+			return props.mount ?? document.getElementById("overlay") ?? document.body;
 		},
 		get placeholder() {
 			return props.placeholder;

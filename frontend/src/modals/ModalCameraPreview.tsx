@@ -1,6 +1,6 @@
 import { onCleanup, onMount } from "solid-js";
-import { Modal } from "./mod";
 import { useModals } from "../contexts/modal";
+import { Modal } from "./mod";
 
 interface ModalCameraPreviewProps {
 	stream: MediaStream;
@@ -35,9 +35,7 @@ export const ModalCameraPreview = (props: ModalCameraPreviewProps) => {
 					style="width: 100%; max-width: 480px; border-radius: 8px; background: #000;"
 				/>
 				<div class="bottom">
-					<button onClick={() => modalCtl.close()}>
-						done
-					</button>
+					<button onClick={() => modalCtl.close()}>done</button>
 				</div>
 			</div>
 		</Modal>

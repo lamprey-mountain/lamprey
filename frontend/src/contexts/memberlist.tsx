@@ -1,8 +1,13 @@
-import { createContext, createEffect, type ParentProps, useContext } from "solid-js";
-import { useApi2, useMemberList2 } from "@/api";
-import type { MemberList } from "@/api";
 import type { ReactiveMap } from "@solid-primitives/map";
 import { useLocation } from "@solidjs/router";
+import {
+	createContext,
+	createEffect,
+	type ParentProps,
+	useContext,
+} from "solid-js";
+import type { MemberList } from "@/api";
+import { useApi2, useMemberList2 } from "@/api";
 import { logger } from "../logger";
 
 const memberListCtxLog = logger.for("member_list");

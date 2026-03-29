@@ -1,8 +1,13 @@
-import type { Role, RolePatch } from "sdk";
-import { BaseService } from "../core/Service";
-import { type Accessor, createEffect, createResource, type Resource } from "solid-js";
 import { ReactiveMap } from "@solid-primitives/map";
 import { ReactiveSet } from "@solid-primitives/set";
+import type { Role, RolePatch } from "sdk";
+import {
+	type Accessor,
+	createEffect,
+	createResource,
+	type Resource,
+} from "solid-js";
+import { BaseService } from "../core/Service";
 
 export class RolesService extends BaseService<Role> {
 	protected cacheName = "role";
@@ -24,7 +29,7 @@ export class RolesService extends BaseService<Role> {
 		const data = await this.retryWithBackoff<Role>(() =>
 			this.client.http.GET("/api/v1/room/{room_id}/role/{role_id}", {
 				params: { path: { room_id, role_id } },
-			})
+			}),
 		);
 		this.upsert(data);
 		return data;

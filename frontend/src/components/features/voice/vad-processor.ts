@@ -26,7 +26,8 @@ class VADProcessor extends AudioWorkletProcessor {
 				this.consecutiveOn++;
 				this.consecutiveOff = 0;
 				if (
-					!this.hasVoiceActivity && this.consecutiveOn >= this.minFramesEnable
+					!this.hasVoiceActivity &&
+					this.consecutiveOn >= this.minFramesEnable
 				) {
 					this.hasVoiceActivity = true;
 					(this as any).port?.postMessage({ hasVoiceActivity: true });
@@ -35,7 +36,8 @@ class VADProcessor extends AudioWorkletProcessor {
 				this.consecutiveOff++;
 				this.consecutiveOn = 0;
 				if (
-					this.hasVoiceActivity && this.consecutiveOff >= this.minFramesDisable
+					this.hasVoiceActivity &&
+					this.consecutiveOff >= this.minFramesDisable
 				) {
 					this.hasVoiceActivity = false;
 					(this as any).port?.postMessage({ hasVoiceActivity: false });

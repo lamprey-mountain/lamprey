@@ -1,3 +1,7 @@
+import { ReferenceElement, shift } from "@floating-ui/dom";
+import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import { Role, RoomMember, RoomMemberOrigin } from "sdk";
+import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
 	createSignal,
@@ -7,16 +11,12 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { useApi2, useRoomBans2, useUsers2 } from "@/api";
-import { useCtx } from "../../../context.ts";
-import type { RoomT } from "../../../types.ts";
-import { Role, RoomMember, RoomMemberOrigin } from "sdk";
-import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
-import { Avatar } from "../../../User.tsx";
 import { Time } from "../../../atoms/Time.tsx";
-import { useFloating } from "solid-floating-ui";
-import { ReferenceElement, shift } from "@floating-ui/dom";
-import { usePermissions } from "../../../hooks/usePermissions.ts";
 import { createTooltip } from "../../../atoms/Tooltip.tsx";
+import { useCtx } from "../../../context.ts";
+import { usePermissions } from "../../../hooks/usePermissions.ts";
+import type { RoomT } from "../../../types.ts";
+import { Avatar } from "../../../User.tsx";
 
 export function Bans(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
@@ -27,14 +27,17 @@ export function Bans(props: VoidProps<{ room: RoomT }>) {
 
 	const [bottom, setBottom] = createSignal<Element | undefined>();
 
-	createIntersectionObserver(() => bottom() ? [bottom()!] : [], (entries) => {
-		for (const entry of entries) {
-			if (entry.isIntersecting && bans()?.state.has_more) {
-				// Trigger refetch for pagination (TODO: implement proper pagination)
-				// bans()?.refetch?.();
+	createIntersectionObserver(
+		() => (bottom() ? [bottom()!] : []),
+		(entries) => {
+			for (const entry of entries) {
+				if (entry.isIntersecting && bans()?.state.has_more) {
+					// Trigger refetch for pagination (TODO: implement proper pagination)
+					// bans()?.refetch?.();
+				}
 			}
-		}
-	});
+		},
+	);
 
 	const unban = (user_id: string) => {
 		api2.client.http.DELETE("/api/v1/room/{room_id}/ban/{user_id}", {
@@ -78,14 +81,8 @@ export function Bans(props: VoidProps<{ room: RoomT }>) {
 											{(exp) => <Time date={new Date(exp())} />}
 										</Show>
 									</div>
-									<div class="reason">
-										{ban.reason}
-									</div>
-									<button
-										onClick={[unban, ban.user_id]}
-									>
-										unban
-									</button>
+									<div class="reason">{ban.reason}</div>
+									<button onClick={[unban, ban.user_id]}>unban</button>
 								</li>
 							);
 						}}

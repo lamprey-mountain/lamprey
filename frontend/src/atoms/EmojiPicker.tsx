@@ -1,6 +1,7 @@
-import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import fuzzysort from "fuzzysort";
-import { Search } from "./Search";
+import type { EmojiCustom, Room } from "sdk";
+import { createMemo, createResource, createSignal, For, Show } from "solid-js";
+import { useApi2, useEmoji2, useRooms2 } from "@/api";
 import icEmojiActivities from "../assets/emoji-activities.png";
 import icEmojiFaces from "../assets/emoji-faces.png";
 import icEmojiFlags from "../assets/emoji-flags.png";
@@ -10,11 +11,10 @@ import icEmojiObjects from "../assets/emoji-objects.png";
 import icEmojiPeople from "../assets/emoji-people.png";
 import icEmojiPlaces from "../assets/emoji-places.png";
 import icEmojiSymbols from "../assets/emoji-symbols.png";
-import { useApi2, useEmoji2, useRooms2 } from "@/api";
+import { type EmojiData, emojiResource, getTwemoji } from "../emoji";
 import { getThumbFromId } from "../media/util";
 import { RoomIcon } from "../User";
-import type { EmojiCustom, Room } from "sdk";
-import { type EmojiData, emojiResource, getTwemoji } from "../emoji";
+import { Search } from "./Search";
 
 type UnifiedEmoji = {
 	type: "standard" | "custom";
@@ -45,18 +45,20 @@ const parseEmoji = (): EmojiGroup[] => {
 		if (emoji.group === 2) continue;
 		groups[emoji.group ?? 8].push(emoji);
 	}
-	return groups.map((groupEmojis, i) => ({
-		id: i,
-		name: getGroupName(i) || "Unknown",
-		icon: getGroupIcon(i),
-		emojis: groupEmojis.map((e) => ({
-			type: "standard" as const,
-			label: e.label,
-			unicode: e.char,
-			hexcode: e.hexcode,
-			order: e.order,
-		})),
-	})).filter((g) => g.name !== "Unknown");
+	return groups
+		.map((groupEmojis, i) => ({
+			id: i,
+			name: getGroupName(i) || "Unknown",
+			icon: getGroupIcon(i),
+			emojis: groupEmojis.map((e) => ({
+				type: "standard" as const,
+				label: e.label,
+				unicode: e.char,
+				hexcode: e.hexcode,
+				order: e.order,
+			})),
+		}))
+		.filter((g) => g.name !== "Unknown");
 };
 
 const getGroupIcon = (id: number) => {
@@ -178,26 +180,28 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 		const s = search();
 		if (!s) return groups;
 
-		return groups.map((group) => {
-			const results = fuzzysort.go(s, group.emojis, {
-				key: "label",
-				threshold: -1000,
-			});
-			return {
-				...group,
-				emojis: results
-					.map((j) => j.obj)
-					.sort((a, b) => {
-						if (a.type === "standard" && b.type === "standard") {
-							return (
-								parseInt(a.hexcode!, 16) - parseInt(b.hexcode!, 16) ||
-								(a.order! > b.order! ? 1 : -1)
-							);
-						}
-						return a.label.localeCompare(b.label);
-					}),
-			};
-		}).filter((g) => g.emojis.length > 0);
+		return groups
+			.map((group) => {
+				const results = fuzzysort.go(s, group.emojis, {
+					key: "label",
+					threshold: -1000,
+				});
+				return {
+					...group,
+					emojis: results
+						.map((j) => j.obj)
+						.sort((a, b) => {
+							if (a.type === "standard" && b.type === "standard") {
+								return (
+									parseInt(a.hexcode!, 16) - parseInt(b.hexcode!, 16) ||
+									(a.order! > b.order! ? 1 : -1)
+								);
+							}
+							return a.label.localeCompare(b.label);
+						}),
+				};
+			})
+			.filter((g) => g.emojis.length > 0);
 	};
 
 	const handleSubmit = async (value: string, e: KeyboardEvent) => {
@@ -243,8 +247,7 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 					style="font-size: 24px; height: 28px; width: 28px; margin-left: 8px; cursor: pointer"
 					hidden
 					innerHTML={getTwemoji("")}
-				>
-				</div>
+				></div>
 			</header>
 			<div class="categories">
 				<For each={allGroups()}>
@@ -282,13 +285,15 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 													);
 												}
 											}}
-											innerHTML={emoji.type === "standard"
-												? getTwemoji(emoji.unicode!)
-												: `<img src="${
-													getThumbFromId(emoji.media_id!, 64)
-												}" class="custom-emoji" />`}
-										>
-										</div>
+											innerHTML={
+												emoji.type === "standard"
+													? getTwemoji(emoji.unicode!)
+													: `<img src="${getThumbFromId(
+															emoji.media_id!,
+															64,
+														)}" class="custom-emoji" />`
+											}
+										></div>
 									)}
 								</For>
 							</div>
@@ -296,8 +301,10 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 					)}
 				</For>
 				<Show
-					when={!emojiResource.loading &&
-						filtered().every((i) => i.emojis.length === 0)}
+					when={
+						!emojiResource.loading &&
+						filtered().every((i) => i.emojis.length === 0)
+					}
 				>
 					<div style="display: flex; align-items: center; justify-content: center; width 100%; height: 100%">
 						no emoji :(
@@ -309,13 +316,15 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 					{(h) => (
 						<>
 							<div
-								innerHTML={h().type === "standard"
-									? getTwemoji(h().unicode!)
-									: `<img src="${
-										getThumbFromId(h().media_id!, 64)
-									}" class="custom-emoji" />`}
-							>
-							</div>
+								innerHTML={
+									h().type === "standard"
+										? getTwemoji(h().unicode!)
+										: `<img src="${getThumbFromId(
+												h().media_id!,
+												64,
+											)}" class="custom-emoji" />`
+								}
+							></div>
 							<b>:{shortcode()}:</b>
 							{/* <span style="color: var(--fg-dim)">{h().tags?.join(", ")}</span> */}
 						</>

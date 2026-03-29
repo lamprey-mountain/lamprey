@@ -7,5 +7,5 @@ export const translation = {
 	"thread.untitled": "untitled thread",
 	"room.welcome": "Welcome to {{name}}!",
 	"room.topic": "This is the beginning of this room. {{topic}}",
-	"timeago": "{{}}",
+	timeago: "{{}}",
 };

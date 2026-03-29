@@ -4,8 +4,8 @@ import type { ChannelsService } from "@/api/services/ChannelsService";
 import type { ChatCtx } from "./context";
 import type { Command, SlashCommands } from "./contexts/slash-commands";
 import {
-	createPermissionChecker,
 	hasPermission as checkPermission,
+	createPermissionChecker,
 } from "./permission-calculator";
 
 export function registerDefaultSlashCommands(provider: SlashCommands) {
@@ -34,8 +34,10 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					},
 					self_id,
 				);
-				return checker.has("ThreadCreatePublic") ||
-					checker.has("ThreadCreatePrivate");
+				return (
+					checker.has("ThreadCreatePublic") ||
+					checker.has("ThreadCreatePrivate")
+				);
 			},
 			execute: async (
 				ctx,
@@ -183,8 +185,8 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const currentUser = api.users.cache.get("@self");
 				const self_id = currentUser?.id;
 				if (!self_id) return false;
-				const isThread = channel.type === "ThreadPublic" ||
-					channel.type === "ThreadPrivate";
+				const isThread =
+					channel.type === "ThreadPublic" || channel.type === "ThreadPrivate";
 				if (!isThread) return false;
 				return checkPermission(
 					{ api, room_id, channel_id: channel.id },
@@ -200,8 +202,8 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const self_id = currentUser?.id;
 				if (!self_id) return;
 
-				const isThread = channel.type === "ThreadPublic" ||
-					channel.type === "ThreadPrivate";
+				const isThread =
+					channel.type === "ThreadPublic" || channel.type === "ThreadPrivate";
 				if (!isThread) {
 					console.error("This command can only be used on threads.");
 					return;
@@ -232,8 +234,8 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const currentUser = api.users.cache.get("@self");
 				const self_id = currentUser?.id;
 				if (!self_id) return false;
-				const isThread = channel.type === "ThreadPublic" ||
-					channel.type === "ThreadPrivate";
+				const isThread =
+					channel.type === "ThreadPublic" || channel.type === "ThreadPrivate";
 				if (!isThread) return false;
 				return checkPermission(
 					{ api, room_id, channel_id: channel.id },
@@ -249,8 +251,8 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const self_id = currentUser?.id;
 				if (!self_id) return;
 
-				const isThread = channel.type === "ThreadPublic" ||
-					channel.type === "ThreadPrivate";
+				const isThread =
+					channel.type === "ThreadPublic" || channel.type === "ThreadPrivate";
 				if (!isThread) {
 					console.error("This command can only be used on threads.");
 					return;
@@ -287,8 +289,8 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const currentUser = api.users.cache.get("@self");
 				const self_id = currentUser?.id;
 				if (!self_id) return false;
-				const isThread = channel.type === "ThreadPublic" ||
-					channel.type === "ThreadPrivate";
+				const isThread =
+					channel.type === "ThreadPublic" || channel.type === "ThreadPrivate";
 				const permission = isThread ? "ThreadManage" : "ChannelManage";
 				if (isThread && channel.creator_id === self_id) return true;
 				return checkPermission(
@@ -305,16 +307,12 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const self_id = currentUser?.id;
 				if (!self_id) return;
 
-				const isThread = channel.type === "ThreadPublic" ||
-					channel.type === "ThreadPrivate";
+				const isThread =
+					channel.type === "ThreadPublic" || channel.type === "ThreadPrivate";
 				const permission = isThread ? "ThreadManage" : "ChannelManage";
 
 				if (
-					!checkPermission(
-						{ api, room_id, channel_id },
-						self_id,
-						permission,
-					)
+					!checkPermission({ api, room_id, channel_id }, self_id, permission)
 				) {
 					console.error("Insufficient permissions to set topic.");
 					return;
@@ -345,8 +343,8 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const currentUser = api.users.cache.get("@self");
 				const self_id = currentUser?.id;
 				if (!self_id) return false;
-				const isThread = channel.type === "ThreadPublic" ||
-					channel.type === "ThreadPrivate";
+				const isThread =
+					channel.type === "ThreadPublic" || channel.type === "ThreadPrivate";
 				if (isThread && channel.creator_id === self_id) return true;
 				const permission = isThread ? "ThreadManage" : "ChannelManage";
 				return checkPermission(
@@ -363,16 +361,12 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const self_id = currentUser?.id;
 				if (!self_id) return;
 
-				const isThread = channel.type === "ThreadPublic" ||
-					channel.type === "ThreadPrivate";
+				const isThread =
+					channel.type === "ThreadPublic" || channel.type === "ThreadPrivate";
 				const permission = isThread ? "ThreadManage" : "ChannelManage";
 
 				if (
-					!checkPermission(
-						{ api, room_id, channel_id },
-						self_id,
-						permission,
-					)
+					!checkPermission({ api, room_id, channel_id }, self_id, permission)
 				) {
 					console.error("Insufficient permissions to set thread name.");
 					return;
@@ -756,8 +750,9 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 					params: { path: { room_id, user_id: userId } },
 					headers: reason ? { "X-Reason": reason } : {},
 					body: {
-						timeout_until: new Date(Date.now() + (parseInt(duration) * 1000))
-							.toISOString(),
+						timeout_until: new Date(
+							Date.now() + parseInt(duration) * 1000,
+						).toISOString(),
 					},
 				});
 			},
@@ -856,8 +851,8 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const currentUser = api.users.cache.get("@self");
 				const self_id = currentUser?.id;
 				if (!self_id) return false;
-				const isThread = channel.type === "ThreadPublic" ||
-					channel.type === "ThreadPrivate";
+				const isThread =
+					channel.type === "ThreadPublic" || channel.type === "ThreadPrivate";
 				if (!isThread) return false;
 				return checkPermission(
 					{ api, room_id, channel_id: channel.id },
@@ -873,8 +868,8 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const self_id = currentUser?.id;
 				if (!self_id) return;
 
-				const isThread = channel.type === "ThreadPublic" ||
-					channel.type === "ThreadPrivate";
+				const isThread =
+					channel.type === "ThreadPublic" || channel.type === "ThreadPrivate";
 				if (!isThread) {
 					console.error("This command can only be used on threads.");
 					return;
@@ -914,8 +909,8 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const currentUser = api.users.cache.get("@self");
 				const self_id = currentUser?.id;
 				if (!self_id) return false;
-				const isThread = channel.type === "ThreadPublic" ||
-					channel.type === "ThreadPrivate";
+				const isThread =
+					channel.type === "ThreadPublic" || channel.type === "ThreadPrivate";
 				if (!isThread) return false;
 				return checkPermission(
 					{ api, room_id, channel_id: channel.id },
@@ -931,8 +926,8 @@ export function registerDefaultSlashCommands(provider: SlashCommands) {
 				const self_id = currentUser?.id;
 				if (!self_id) return;
 
-				const isThread = channel.type === "ThreadPublic" ||
-					channel.type === "ThreadPrivate";
+				const isThread =
+					channel.type === "ThreadPublic" || channel.type === "ThreadPrivate";
 				if (!isThread) {
 					console.error("This command can only be used on threads.");
 					return;

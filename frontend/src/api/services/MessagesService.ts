@@ -1,13 +1,13 @@
+import { ReactiveMap } from "@solid-primitives/map";
 import type {
 	Media,
 	Message,
 	MessageCreate,
-	type MessageSearch,
+	MessageSearch,
 	Pagination,
 	PaginationQuery,
-	type UserWithRelationship,
+	UserWithRelationship,
 } from "sdk";
-import { BaseService } from "../core/Service";
 import {
 	type Accessor,
 	batch,
@@ -19,9 +19,9 @@ import {
 	type Resource,
 } from "solid-js";
 import { uuidv7 } from "uuidv7";
-import { ReactiveMap } from "@solid-primitives/map";
 import { logger } from "../../logger";
 import { deepEqual } from "../../utils/deepEqual";
+import { BaseService } from "../core/Service";
 
 export type MessageListAnchor =
 	| { type: "backwards"; message_id?: string; limit: number }
@@ -34,7 +34,7 @@ type MessageSendReq = Omit<MessageCreate, "nonce"> & {
 
 /** sort messages and return a new message range */
 function sortMessagesById(msgs: Message[]): Message[] {
-	return [...msgs].sort((a, b) => a.id < b.id ? -1 : 1);
+	return [...msgs].sort((a, b) => (a.id < b.id ? -1 : 1));
 }
 
 const log = logger.for("api/messages");
@@ -185,10 +185,11 @@ export class MessageRanges {
 	tryMerge(): boolean {
 		const sorted = [...this.ranges]
 			.filter((r) => !r.isEmpty())
-			.sort((a, b) => a.start < b.start ? -1 : 1);
+			.sort((a, b) => (a.start < b.start ? -1 : 1));
 
 		for (let i = 0; i < sorted.length - 1; i++) {
-			const a = sorted[i]!, b = sorted[i + 1]!;
+			const a = sorted[i]!,
+				b = sorted[i + 1]!;
 			const adjacent = !a.has_forward && !b.has_backwards;
 			const overlapping = a.end >= b.start;
 
@@ -252,7 +253,7 @@ export class MessagesService extends BaseService<Message> {
 				{
 					params: { path: { channel_id: channel_id, message_id } },
 				},
-			)
+			),
 		);
 		const m = data as Message;
 		this.upsert(m);
@@ -272,7 +273,8 @@ export class MessagesService extends BaseService<Message> {
 			undefined,
 			{
 				equals: (a, b) =>
-					a._v === b._v && a.thread_id === b.thread_id &&
+					a._v === b._v &&
+					a.thread_id === b.thread_id &&
 					deepEqual(a.dir, b.dir),
 			},
 		);
@@ -514,8 +516,8 @@ export class MessagesService extends BaseService<Message> {
 					const half = Math.floor(dir.limit / 2);
 					const start = Math.max(idx - half, 0);
 
-					const hasEnoughForwards = start + dir.limit <= r.len ||
-						!r.has_forward;
+					const hasEnoughForwards =
+						start + dir.limit <= r.len || !r.has_forward;
 					const hasEnoughBackwards = idx - half >= 0 || !r.has_backwards;
 
 					if (!hasEnoughBackwards || !hasEnoughForwards) {
@@ -568,7 +570,7 @@ export class MessagesService extends BaseService<Message> {
 						const range = this.mergeAfter(
 							ranges,
 							new MessageRange(false, data.has_before ?? false, []),
-							{ items: (data.items as Message[]), has_more: data.has_after },
+							{ items: data.items as Message[], has_more: data.has_after },
 							data.has_after,
 						);
 						ranges.ranges.add(range);
@@ -584,7 +586,7 @@ export class MessagesService extends BaseService<Message> {
 					const range = this.mergeAfter(
 						ranges,
 						new MessageRange(false, data.has_before ?? false, []),
-						{ items: (data.items as Message[]), has_more: data.has_after },
+						{ items: data.items as Message[], has_more: data.has_after },
 						data.has_after,
 					);
 					ranges.ranges.add(range);
@@ -628,9 +630,8 @@ export class MessagesService extends BaseService<Message> {
 			for (const range of [...ranges.ranges]) {
 				const isLive = range === ranges.live;
 				const alreadyContains = range.contains(m.id);
-				const hasNonce = nonce && range.items.some(
-					(i) => i.nonce === nonce || i.id === nonce,
-				);
+				const hasNonce =
+					nonce && range.items.some((i) => i.nonce === nonce || i.id === nonce);
 
 				if (isLive || alreadyContains || hasNonce) {
 					ranges.replace(range, range.mergeMessageWithNonce(m, nonce));
@@ -718,16 +719,16 @@ export class MessagesService extends BaseService<Message> {
 				params: { path: { channel_id } },
 				body: {
 					...body,
-					attachments: body.attachments.map((
-						a: { media_id?: string; id?: string; spoiler?: boolean },
-					) => ({
-						type: "Media" as const,
-						media_id: a.media_id ?? a.id!,
-						spoiler: a.spoiler ?? false,
-					})),
+					attachments: body.attachments.map(
+						(a: { media_id?: string; id?: string; spoiler?: boolean }) => ({
+							type: "Media" as const,
+							media_id: a.media_id ?? a.id!,
+							spoiler: a.spoiler ?? false,
+						}),
+					),
 				},
 				headers: { "Idempotency-Key": id },
-			})
+			}),
 		);
 		const m = data as Message;
 		(m as any).nonce = id;
@@ -745,7 +746,7 @@ export class MessagesService extends BaseService<Message> {
 	): Promise<Message> {
 		const originalMessage = this.cache.get(message_id);
 		if (originalMessage) {
-			const updatedMessage = ({
+			const updatedMessage = {
 				...originalMessage,
 				latest_version: {
 					...originalMessage.latest_version,
@@ -754,7 +755,7 @@ export class MessagesService extends BaseService<Message> {
 					version_id: uuidv7(),
 				},
 				is_local: true,
-			} as unknown) as Message;
+			} as unknown as Message;
 			this.handleMessageUpdate(updatedMessage);
 		}
 
@@ -808,17 +809,14 @@ export class MessagesService extends BaseService<Message> {
 			async ({ channel_id, message_id, query }) => {
 				const { data, error } = await (message_id
 					? this.client.http.GET(
-						"/api/v1/channel/{channel_id}/reply/{message_id}",
-						{
-							params: { path: { channel_id, message_id }, query },
-						},
-					)
-					: this.client.http.GET(
-						"/api/v1/channel/{channel_id}/reply",
-						{
+							"/api/v1/channel/{channel_id}/reply/{message_id}",
+							{
+								params: { path: { channel_id, message_id }, query },
+							},
+						)
+					: this.client.http.GET("/api/v1/channel/{channel_id}/reply", {
 							params: { path: { channel_id }, query },
-						},
-					));
+						}));
 				if (error) throw error;
 
 				batch(() => {
@@ -862,8 +860,8 @@ export class MessagesService extends BaseService<Message> {
 			return {
 				...data,
 				items: [
-					...pagination?.items ?? [],
-					...data.items as unknown as Message[],
+					...(pagination?.items ?? []),
+					...(data.items as unknown as Message[]),
 				],
 			} as Pagination<Message>;
 		};
@@ -1013,9 +1011,10 @@ export class MessagesService extends BaseService<Message> {
 			pagination: Pagination<Message> | null;
 		}
 	>();
-	public _pinnedListingMutators = new Set<
-		{ thread_id: string; mutate: (value: Pagination<Message>) => void }
-	>();
+	public _pinnedListingMutators = new Set<{
+		thread_id: string;
+		mutate: (value: Pagination<Message>) => void;
+	}>();
 
 	// Helpers
 	private async fetchList(thread_id: string, query: PaginationQuery) {
@@ -1026,7 +1025,7 @@ export class MessagesService extends BaseService<Message> {
 			},
 		);
 		if (error) throw error;
-		return (data as unknown) as Pagination<Message>;
+		return data as unknown as Pagination<Message>;
 	}
 
 	private async fetchContext(
@@ -1075,7 +1074,7 @@ export class MessagesService extends BaseService<Message> {
 		has_more: boolean,
 		markFresh = false,
 	): MessageRange {
-		const newItems = (data.items as unknown) as Message[];
+		const newItems = data.items as unknown as Message[];
 		for (const item of newItems) this.upsert(item);
 
 		const merged = range.mergeMessages(newItems, markFresh);
@@ -1101,9 +1100,7 @@ export class MessagesService extends BaseService<Message> {
 		this._hydrated.add(channel_id);
 	}
 
-	private async rehydrateRanges(
-		channel_id: string,
-	): Promise<MessageRanges> {
+	private async rehydrateRanges(channel_id: string): Promise<MessageRanges> {
 		const cache = new MessageRanges();
 		if (!this.db) return cache;
 

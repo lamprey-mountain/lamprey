@@ -45,9 +45,11 @@ export const RadioDot = (props: { checked?: boolean }) => {
 	);
 };
 
-export const Checkmark = (
-	props: { seed: string; class?: string; style?: JSX.CSSProperties },
-) => {
+export const Checkmark = (props: {
+	seed: string;
+	class?: string;
+	style?: JSX.CSSProperties;
+}) => {
 	return (
 		<img
 			src={getCheckIcon(props.seed)}
@@ -57,9 +59,11 @@ export const Checkmark = (
 	);
 };
 
-export const XMark = (
-	props: { seed: string; class?: string; style?: JSX.CSSProperties },
-) => {
+export const XMark = (props: {
+	seed: string;
+	class?: string;
+	style?: JSX.CSSProperties;
+}) => {
 	return (
 		<img
 			src={getXIcon(props.seed)}

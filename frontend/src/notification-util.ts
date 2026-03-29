@@ -1,7 +1,5 @@
-import type { Message } from "sdk";
-import type { Client } from "sdk";
 import type { ReactiveMap } from "@solid-primitives/map";
-import type { Channel, Role, User } from "sdk";
+import type { Channel, Client, Message, Role, User } from "sdk";
 
 interface NotificationApi {
 	users: {

@@ -1,7 +1,7 @@
+import type { UserWithRelationship } from "sdk";
 import { createResource, For } from "solid-js";
 import { useApi2 } from "@/api";
 import { UserView } from "./User";
-import type { UserWithRelationship } from "sdk";
 
 export function UserProfile(props: { user: UserWithRelationship }) {
 	const api2 = useApi2();

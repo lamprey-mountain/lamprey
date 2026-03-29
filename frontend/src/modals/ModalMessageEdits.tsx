@@ -1,13 +1,14 @@
 import { diffChars } from "diff";
+import type { Message, MessageVersion } from "sdk";
 import { createResource, For } from "solid-js";
 import { useApi2 } from "@/api";
 import { MessageView } from "../components/features/chat/Message";
 import { Modal } from "./mod";
-import type { Message, MessageVersion } from "sdk";
 
-export const ModalMessageEdits = (
-	props: { thread_id: string; message_id: string },
-) => {
+export const ModalMessageEdits = (props: {
+	thread_id: string;
+	message_id: string;
+}) => {
 	// FIXME: pagination
 	const api2 = useApi2();
 	const [edits] = createResource(
@@ -38,21 +39,22 @@ export const ModalMessageEdits = (
 						if (prev) {
 							const prevVersion = prev.latest_version;
 							const currVersion = i.latest_version;
-							const prevContent = prevVersion.type === "DefaultMarkdown"
-								? prevVersion.content ?? ""
-								: "";
-							const currContent = currVersion.type === "DefaultMarkdown"
-								? currVersion.content ?? ""
-								: "";
-							const pages = diffChars(
-								prevContent,
-								currContent,
-							);
-							const content = pages.map((i) => {
-								if (i.added) return `<ins>${i.value}</ins>`;
-								if (i.removed) return `<del>${i.value}</del>`;
-								return i.value;
-							}).join("");
+							const prevContent =
+								prevVersion.type === "DefaultMarkdown"
+									? (prevVersion.content ?? "")
+									: "";
+							const currContent =
+								currVersion.type === "DefaultMarkdown"
+									? (currVersion.content ?? "")
+									: "";
+							const pages = diffChars(prevContent, currContent);
+							const content = pages
+								.map((i) => {
+									if (i.added) return `<ins>${i.value}</ins>`;
+									if (i.removed) return `<del>${i.value}</del>`;
+									return i.value;
+								})
+								.join("");
 							const messageWithContent: Message = {
 								...i,
 								latest_version: {

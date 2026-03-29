@@ -1,14 +1,14 @@
-import { createEffect, createSignal, Show } from "solid-js";
-import type { SetStoreFunction } from "solid-js/store";
 import type {
 	AutomodAction,
 	AutomodTarget,
 	AutomodTrigger,
 	Channel,
 } from "sdk";
+import { createEffect, createSignal, Show } from "solid-js";
+import type { SetStoreFunction } from "solid-js/store";
 import type { RuleState } from "../room_settings/Automod.tsx";
-import { TriggerEditor } from "./TriggerEditor.tsx";
 import { ActionsEditor } from "./ActionsEditor.tsx";
+import { TriggerEditor } from "./TriggerEditor.tsx";
 
 export interface UiAutomodRule {
 	id: string;
@@ -52,11 +52,7 @@ export function AutomodRule(props: {
 		setName(newName);
 		if (props.rule.state === "draft") {
 			props.setRuleState(props.rule.id, "draft");
-			props.setDraftRules(
-				(r) => r.id === props.rule.id,
-				"name",
-				newName,
-			);
+			props.setDraftRules((r) => r.id === props.rule.id, "name", newName);
 		} else {
 			props.setRuleState(props.rule.id, "edited");
 		}
@@ -149,9 +145,10 @@ export function AutomodRule(props: {
 
 	const addAction = () => {
 		// Default to 'Block' for Content or 'SendAlert' for Member
-		const newAction = props.rule.target === "Member"
-			? { type: "SendAlert", channel_id: "" }
-			: { type: "Block", message: "" };
+		const newAction =
+			props.rule.target === "Member"
+				? { type: "SendAlert", channel_id: "" }
+				: { type: "Block", message: "" };
 
 		props.setDraftRules(
 			(r) => r.id === props.rule.id,

@@ -1,11 +1,11 @@
-import { createEffect, Show, type VoidProps } from "solid-js";
 import type { Preferences, User } from "sdk";
-import { Checkbox } from "../../../icons";
-import { notificationPermission } from "../../../notification";
-import { useCtx } from "../../../context";
-import { Dropdown } from "../../../atoms/Dropdown";
+import { createEffect, Show, type VoidProps } from "solid-js";
 import { useApi2 } from "@/api";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
+import { Dropdown } from "../../../atoms/Dropdown";
+import { useCtx } from "../../../context";
+import { Checkbox } from "../../../icons";
+import { notificationPermission } from "../../../notification";
 
 type NotifAction = "Notify" | "Watching" | "Ignore";
 type NotifsMessages = "Everything" | "Watching" | "Mentions" | "Nothing";
@@ -62,12 +62,16 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 					}
 
 					const registration = await navigator.serviceWorker.ready;
-					const serverInfo = await api2.client.http.GET("/api/v1/server/@self")
+					const serverInfo = await api2.client.http
+						.GET("/api/v1/server/@self")
 						.then((res) => res.data);
 
-					const vapidKey = serverInfo && typeof serverInfo === "object" &&
+					const vapidKey =
+						serverInfo &&
+						typeof serverInfo === "object" &&
 						"features" in serverInfo &&
-						serverInfo.features && typeof serverInfo.features === "object" &&
+						serverInfo.features &&
+						typeof serverInfo.features === "object" &&
 						"web_push" in serverInfo.features &&
 						serverInfo.features.web_push &&
 						typeof serverInfo.features.web_push === "object" &&
@@ -154,7 +158,8 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				id={`user-${_props.user?.id ?? "@self"}-desktop-notifs`}
 				checked={isFrontendConfigEnabled("desktop_notifs")}
 				onChange={(checked) =>
-					setFrontendConfig("desktop_notifs", checked ? "yes" : "no")}
+					setFrontendConfig("desktop_notifs", checked ? "yes" : "no")
+				}
 				seed={`user-${_props.user?.id ?? "@self"}-desktop-notifs`}
 			>
 				<Checkbox
@@ -170,7 +175,8 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				id={`user-${_props.user?.id ?? "@self"}-push-notifs`}
 				checked={isFrontendConfigEnabled("push_notifs")}
 				onChange={(checked) =>
-					setFrontendConfig("push_notifs", checked ? "yes" : "no")}
+					setFrontendConfig("push_notifs", checked ? "yes" : "no")
+				}
 				seed={`user-${_props.user?.id ?? "@self"}-push-notifs`}
 			>
 				<Checkbox
@@ -186,7 +192,8 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				id={`user-${_props.user?.id ?? "@self"}-tts-notifs`}
 				checked={isFrontendConfigEnabled("tts_notifs")}
 				onChange={(checked) =>
-					setFrontendConfig("tts_notifs", checked ? "yes" : "no")}
+					setFrontendConfig("tts_notifs", checked ? "yes" : "no")
+				}
 				seed={`user-${_props.user?.id ?? "@self"}-tts-notifs`}
 			>
 				<Checkbox
@@ -205,14 +212,13 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				<div class="option">
 					<div>
 						<div>{t("user_settings.messages")}</div>
-						<div class="dim">
-							{t("user_settings.messages_description")}
-						</div>
+						<div class="dim">{t("user_settings.messages_description")}</div>
 					</div>
 					<Dropdown
 						selected={ctx.preferences().notifs.messages}
 						onSelect={(value) =>
-							value && setNotifConfig("messages", value as any)}
+							value && setNotifConfig("messages", value as any)
+						}
 						options={[
 							{ item: "Everything", label: t("user_settings.everything") },
 							{ item: "Watching", label: t("user_settings.watching") },
@@ -224,14 +230,13 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				<div class="option">
 					<div>
 						<div>{t("user_settings.threads")}</div>
-						<div class="dim">
-							{t("user_settings.threads_description")}
-						</div>
+						<div class="dim">{t("user_settings.threads_description")}</div>
 					</div>
 					<Dropdown
 						selected={ctx.preferences().notifs.threads}
 						onSelect={(value) =>
-							value && setNotifConfig("threads", value as any)}
+							value && setNotifConfig("threads", value as any)
+						}
 						options={[
 							{ item: "Notify", label: t("user_settings.notify") },
 							{ item: "Inbox", label: t("user_settings.inbox") },
@@ -242,14 +247,13 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				<div class="option">
 					<div>
 						<div>{t("user_settings.reactions")}</div>
-						<div class="dim">
-							{t("user_settings.reactions_description")}
-						</div>
+						<div class="dim">{t("user_settings.reactions_description")}</div>
 					</div>
 					<Dropdown
 						selected={ctx.preferences().notifs.reactions}
 						onSelect={(value) =>
-							value && setNotifConfig("reactions", value as any)}
+							value && setNotifConfig("reactions", value as any)
+						}
 						options={[
 							{ item: "Always", label: t("user_settings.always") },
 							{ item: "Restricted", label: t("user_settings.restricted") },
@@ -261,9 +265,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				<div class="option">
 					<div>
 						<div>{t("user_settings.tts")}</div>
-						<div class="dim">
-							{t("user_settings.tts_description")}
-						</div>
+						<div class="dim">{t("user_settings.tts_description")}</div>
 					</div>
 					<Dropdown
 						selected={ctx.preferences().notifs.tts}

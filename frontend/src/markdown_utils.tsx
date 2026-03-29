@@ -48,7 +48,8 @@ const mentionExtension = {
 	renderer(token: MentionToken) {
 		const attrs = Object.entries(token)
 			.filter(([k]) => ["id", "name", "animated"].includes(k))
-			.map(([k, v]) => `data-emoji-${k}="${v}"`).join(" ");
+			.map(([k, v]) => `data-emoji-${k}="${v}"`)
+			.join(" ");
 		return `<span class="mention" data-mention-type="${token.mention_type}" ${attrs}></span>`;
 	},
 };

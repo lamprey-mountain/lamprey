@@ -1,5 +1,6 @@
+import { go } from "fuzzysort";
+import type { Channel, EmojiCustom, Role, User } from "sdk";
 import { createEffect, createMemo, createSignal } from "solid-js";
-import { useAutocomplete } from "../contexts/autocomplete";
 import {
 	useApi2,
 	useChannels2,
@@ -9,17 +10,15 @@ import {
 	useThreadMembers2,
 	useUsers2,
 } from "@/api";
-import { go } from "fuzzysort";
-import type { Channel, EmojiCustom, User } from "sdk";
-import type { Role } from "sdk";
-import { type Command, useSlashCommands } from "../contexts/slash-commands";
-import { type EmojiData, emojiResource } from "../emoji";
-import { usePermissions } from "./usePermissions";
-import { useCurrentUser } from "../contexts/currentUser";
 import type {
 	AutocompleteItem,
 	AutocompleteMentionItem,
 } from "../contexts/autocomplete";
+import { useAutocomplete } from "../contexts/autocomplete";
+import { useCurrentUser } from "../contexts/currentUser";
+import { type Command, useSlashCommands } from "../contexts/slash-commands";
+import { type EmojiData, emojiResource } from "../emoji";
+import { usePermissions } from "./usePermissions";
 
 export const useAutocompleteData = () => {
 	const api2 = useApi2();
@@ -43,7 +42,7 @@ export const useAutocompleteData = () => {
 	const perms = usePermissions(
 		() => currentUser()?.id ?? "",
 		() => channelForPerms()?.room_id ?? undefined,
-		() => state.kind?.type === "mention" ? (state.kind as any).channelId : "",
+		() => (state.kind?.type === "mention" ? (state.kind as any).channelId : ""),
 	);
 	const hasMassMention = () => perms.has("MessageMassMention");
 
@@ -94,9 +93,10 @@ export const useAutocompleteData = () => {
 					.find((m) => m?.user_id === id);
 				const member = threadMember || roomMember;
 				// override_name only exists on RoomMember, not ThreadMember
-				const name = "override_name" in (member ?? {})
-					? (member as any)?.override_name
-					: undefined;
+				const name =
+					"override_name" in (member ?? {})
+						? (member as any)?.override_name
+						: undefined;
 				return {
 					id: id,
 					name: name || id,
@@ -214,9 +214,11 @@ export const useAutocompleteData = () => {
 			return limited.map((item) => ({
 				obj: item,
 				score: 0,
-				hits: [{
-					value: item.type === "everyone" ? "@everyone" : item.name,
-				}],
+				hits: [
+					{
+						value: item.type === "everyone" ? "@everyone" : item.name,
+					},
+				],
 			}));
 		} else if (type === "channel") {
 			const results = go(query, allChannels(), {

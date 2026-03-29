@@ -1,5 +1,5 @@
-import { createSignal, type JSX, Show } from "solid-js";
 import { type RouteSectionProps, useNavigate } from "@solidjs/router";
+import { createSignal, type JSX, Show } from "solid-js";
 import { useCtx } from "./context.ts";
 
 export const RouteVerifyEmail = (

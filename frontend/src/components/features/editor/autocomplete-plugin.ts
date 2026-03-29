@@ -1,8 +1,10 @@
+import type { ReferenceElement } from "@floating-ui/dom";
 import { Plugin, PluginKey, TextSelection } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
-import type { ReferenceElement } from "@floating-ui/dom";
-import type { AutocompleteKind } from "../../../contexts/autocomplete";
-import type { AutocompleteContext } from "../../../contexts/autocomplete";
+import type {
+	AutocompleteContext,
+	AutocompleteKind,
+} from "../../../contexts/autocomplete";
 
 export const autocompleteKey = new PluginKey("autocomplete");
 
@@ -90,10 +92,7 @@ export function createAutocompletePlugin(
 	channelId: () => string,
 	roomId: () => string,
 ): Plugin {
-	const handleTrigger = (
-		view: EditorView,
-		triggerChar: string,
-	): boolean => {
+	const handleTrigger = (view: EditorView, triggerChar: string): boolean => {
 		const state = view.state;
 		const type = getAutocompleteType(triggerChar);
 
@@ -112,9 +111,8 @@ export function createAutocompletePlugin(
 
 		// Find the trigger position to get the initial query
 		const triggerPos = findTriggerPosition(view, triggerChar);
-		const initialQuery = triggerPos !== null
-			? getCurrentQuery(view, triggerPos)
-			: "";
+		const initialQuery =
+			triggerPos !== null ? getCurrentQuery(view, triggerPos) : "";
 
 		const refElement = createRefElement(view);
 
@@ -329,13 +327,15 @@ export function createAutocompletePlugin(
 
 					// Otherwise, check if preceded by whitespace or start of document
 					// cursorPos - 2 could be negative if trigger is at position 1
-					const charBeforeTrigger = cursorPos >= 2
-						? view.state.doc.textBetween(cursorPos - 2, cursorPos - 1)
-						: "";
+					const charBeforeTrigger =
+						cursorPos >= 2
+							? view.state.doc.textBetween(cursorPos - 2, cursorPos - 1)
+							: "";
 
 					if (
 						charBeforeTrigger === "" || // Start of document or position 1
-						charBeforeTrigger === " " || charBeforeTrigger === "\n" ||
+						charBeforeTrigger === " " ||
+						charBeforeTrigger === "\n" ||
 						charBeforeTrigger === "\t"
 					) {
 						handleTrigger(view, charBefore);

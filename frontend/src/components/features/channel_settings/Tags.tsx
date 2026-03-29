@@ -1,4 +1,5 @@
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import type { Channel, Tag } from "sdk";
 import {
 	createEffect,
 	createResource,
@@ -8,12 +9,11 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { useApi2, useChannels2 } from "@/api";
-import type { Channel, Tag } from "sdk";
-import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
-import { usePermissions } from "../../../hooks/usePermissions.ts";
-import { useModals } from "../../../contexts/modal";
-import icEdit from "../../../assets/edit.png";
 import icDelete from "../../../assets/delete.png";
+import icEdit from "../../../assets/edit.png";
+import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import { useModals } from "../../../contexts/modal";
+import { usePermissions } from "../../../hooks/usePermissions.ts";
 
 export function Tags(props: VoidProps<{ channel: Channel }>) {
 	const api2 = useApi2();
@@ -35,15 +35,12 @@ export function Tags(props: VoidProps<{ channel: Channel }>) {
 	});
 
 	const deleteTag = (tag_id: string) => () => {
-		modalCtl.confirm(
-			"Are you sure you want to delete this tag?",
-			(conf) => {
-				if (!conf) return;
-				channels2.deleteTag(props.channel.id, tag_id).then(() => {
-					refetch();
-				});
-			},
-		);
+		modalCtl.confirm("Are you sure you want to delete this tag?", (conf) => {
+			if (!conf) return;
+			channels2.deleteTag(props.channel.id, tag_id).then(() => {
+				refetch();
+			});
+		});
 	};
 
 	const fetchMore = () => {
@@ -52,11 +49,14 @@ export function Tags(props: VoidProps<{ channel: Channel }>) {
 
 	const [bottom, setBottom] = createSignal<Element | undefined>();
 
-	createIntersectionObserver(() => bottom() ? [bottom()!] : [], (entries) => {
-		for (const entry of entries) {
-			if (entry.isIntersecting) fetchMore();
-		}
-	});
+	createIntersectionObserver(
+		() => (bottom() ? [bottom()!] : []),
+		(entries) => {
+			for (const entry of entries) {
+				if (entry.isIntersecting) fetchMore();
+			}
+		},
+	);
 
 	const [search, setSearch] = createSignal("");
 
@@ -101,7 +101,7 @@ export function Tags(props: VoidProps<{ channel: Channel }>) {
 				<ul class="tag-list">
 					<For
 						each={tags()!.items.filter((i) =>
-							i.name.toLowerCase().includes(search().toLowerCase())
+							i.name.toLowerCase().includes(search().toLowerCase()),
 						)}
 					>
 						{(tag) => {
@@ -119,8 +119,7 @@ export function Tags(props: VoidProps<{ channel: Channel }>) {
 											style={{
 												"background-color": tagColor() ?? "#808080",
 											}}
-										>
-										</div>
+										></div>
 										<div class="tag-info">
 											<h3 class="name">{tag.name}</h3>
 											<div class="description">

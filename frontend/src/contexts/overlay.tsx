@@ -1,4 +1,14 @@
 import {
+	autoUpdate,
+	type ClientRectObject,
+	computePosition,
+	flip,
+	offset,
+	type ReferenceElement,
+	type Strategy,
+	shift,
+} from "@floating-ui/dom";
+import {
 	createEffect,
 	createMemo,
 	createSignal,
@@ -8,27 +18,13 @@ import {
 	Show,
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import {
-	autoUpdate,
-	type ClientRectObject,
-	computePosition,
-	flip,
-	offset,
-	type ReferenceElement,
-	shift,
-	type Strategy,
-} from "@floating-ui/dom";
 import { Portal } from "solid-js/web";
-import { useCtx } from "../context.ts";
-import type { Menu } from "./menu.tsx";
-import {
-	useAutocomplete,
-	useFormattingToolbar,
-	useMenu,
-	useUserPopout,
-} from "./mod.tsx";
-import { FormattingToolbar } from "./FormattingToolbar.tsx";
 import { useApi2, useRoomMembers2, useThreadMembers2, useUsers2 } from "@/api";
+import { Autocomplete } from "../atoms/Autocomplete.tsx";
+import { EmojiPicker } from "../atoms/EmojiPicker.tsx";
+import { PopupEventEditor, useCalendarPopup } from "../Calendar.tsx";
+import { ThreadPopout } from "../components/features/chat/ThreadPopout.tsx";
+import { useCtx } from "../context.ts";
 import {
 	ChannelMenu,
 	FolderMenu,
@@ -36,13 +32,17 @@ import {
 	RoomMenu,
 	UserMenu,
 } from "../menus/mod.ts";
-import { EmojiPicker } from "../atoms/EmojiPicker.tsx";
-import { UserView } from "../User.tsx";
-import { ThreadPopout } from "../components/features/chat/ThreadPopout.tsx";
-import { Autocomplete } from "../atoms/Autocomplete.tsx";
-import { PopupEventEditor, useCalendarPopup } from "../Calendar.tsx";
 import { getModal } from "../modals/mod.tsx";
-import { Modal, useModals } from "./modal.tsx";
+import { UserView } from "../User.tsx";
+import { FormattingToolbar } from "./FormattingToolbar.tsx";
+import type { Menu } from "./menu.tsx";
+import {
+	useAutocomplete,
+	useFormattingToolbar,
+	useMenu,
+	useUserPopout,
+} from "./mod.tsx";
+import { type Modal, useModals } from "./modal.tsx";
 
 type FloatingPosition = { x: number; y: number; strategy: Strategy };
 
@@ -79,22 +79,14 @@ export function OverlayProvider(props: ParentProps) {
 		const floating = toolbarRef();
 		if (!reference || !floating) return;
 
-		const cleanup = autoUpdate(
-			reference,
-			floating,
-			() => {
-				computePosition(reference, floating, {
-					placement: "top",
-					middleware: [
-						offset({ mainAxis: 8 }),
-						flip(),
-						shift({ padding: 8 }),
-					],
-				}).then(({ x, y, strategy }) => {
-					setToolbarFloating({ x, y, strategy });
-				});
-			},
-		);
+		const cleanup = autoUpdate(reference, floating, () => {
+			computePosition(reference, floating, {
+				placement: "top",
+				middleware: [offset({ mainAxis: 8 }), flip(), shift({ padding: 8 })],
+			}).then(({ x, y, strategy }) => {
+				setToolbarFloating({ x, y, strategy });
+			});
+		});
 		onCleanup(cleanup);
 	});
 
@@ -130,46 +122,37 @@ export function OverlayProvider(props: ParentProps) {
 		const reference = menuParentRef();
 		const floating = menuRef();
 		if (!reference || !floating) return;
-		const cleanup = autoUpdate(
-			reference,
-			floating,
-			() => {
-				computePosition(reference, floating, {
-					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
-					placement: "right-start",
-				}).then(({ x, y, strategy }) => {
-					setMenuFloating({ x, y, strategy });
-				});
-			},
-		);
+		const cleanup = autoUpdate(reference, floating, () => {
+			computePosition(reference, floating, {
+				middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+				placement: "right-start",
+			}).then(({ x, y, strategy }) => {
+				setMenuFloating({ x, y, strategy });
+			});
+		});
 		onCleanup(cleanup);
 	});
 
 	const [autocompleteRef, setAutocompleteRef] = createSignal<HTMLElement>();
-	const [autocompleteFloating, setAutocompleteFloating] = createStore<
-		FloatingPosition
-	>({
-		x: 0,
-		y: 0,
-		strategy: "absolute",
-	});
+	const [autocompleteFloating, setAutocompleteFloating] =
+		createStore<FloatingPosition>({
+			x: 0,
+			y: 0,
+			strategy: "absolute",
+		});
 
 	createEffect(() => {
 		const reference = autocompleteState.reference;
 		const floating = autocompleteRef();
 		if (!reference || !floating) return;
-		const cleanup = autoUpdate(
-			reference,
-			floating,
-			() => {
-				computePosition(reference, floating, {
-					middleware: [offset({ mainAxis: 8 })],
-					placement: "top-start",
-				}).then(({ x, y, strategy }) => {
-					setAutocompleteFloating({ x, y, strategy });
-				});
-			},
-		);
+		const cleanup = autoUpdate(reference, floating, () => {
+			computePosition(reference, floating, {
+				middleware: [offset({ mainAxis: 8 })],
+				placement: "top-start",
+			}).then(({ x, y, strategy }) => {
+				setAutocompleteFloating({ x, y, strategy });
+			});
+		});
 		onCleanup(cleanup);
 	});
 
@@ -186,48 +169,38 @@ export function OverlayProvider(props: ParentProps) {
 		const reference = userView()?.ref;
 		const floating = userViewRef();
 		if (!reference || !floating) return;
-		const cleanup = autoUpdate(
-			reference,
-			floating,
-			() => {
-				computePosition(reference, floating, {
-					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
-					placement: userView()?.source === "message"
-						? "right-start"
-						: "left-start",
-				}).then(({ x, y, strategy }) => {
-					setUserViewFloating({ x, y, strategy });
-				});
-			},
-		);
+		const cleanup = autoUpdate(reference, floating, () => {
+			computePosition(reference, floating, {
+				middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+				placement:
+					userView()?.source === "message" ? "right-start" : "left-start",
+			}).then(({ x, y, strategy }) => {
+				setUserViewFloating({ x, y, strategy });
+			});
+		});
 		onCleanup(cleanup);
 	});
 
 	const [threadsViewRef, setThreadsViewRef] = createSignal<HTMLElement>();
-	const [threadsViewFloating, setThreadsViewFloating] = createStore<
-		FloatingPosition
-	>({
-		x: 0,
-		y: 0,
-		strategy: "absolute",
-	});
+	const [threadsViewFloating, setThreadsViewFloating] =
+		createStore<FloatingPosition>({
+			x: 0,
+			y: 0,
+			strategy: "absolute",
+		});
 
 	createEffect(() => {
 		const reference = ctx.threadsView()?.ref;
 		const floating = threadsViewRef();
 		if (!reference || !floating) return;
-		const cleanup = autoUpdate(
-			reference,
-			floating,
-			() => {
-				computePosition(reference, floating, {
-					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
-					placement: "bottom-end",
-				}).then(({ x, y, strategy }) => {
-					setThreadsViewFloating({ x, y, strategy });
-				});
-			},
-		);
+		const cleanup = autoUpdate(reference, floating, () => {
+			computePosition(reference, floating, {
+				middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+				placement: "bottom-end",
+			}).then(({ x, y, strategy }) => {
+				setThreadsViewFloating({ x, y, strategy });
+			});
+		});
 		onCleanup(cleanup);
 	});
 
@@ -242,18 +215,14 @@ export function OverlayProvider(props: ParentProps) {
 		const reference = ctx.popout()?.ref;
 		const floating = popoutRef();
 		if (!reference || !floating) return;
-		const cleanup = autoUpdate(
-			reference,
-			floating,
-			() => {
-				computePosition(reference, floating, {
-					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
-					placement: ctx.popout()?.placement ?? "top",
-				}).then(({ x, y, strategy }) => {
-					setPopoutFloating({ x, y, strategy });
-				});
-			},
-		);
+		const cleanup = autoUpdate(reference, floating, () => {
+			computePosition(reference, floating, {
+				middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+				placement: ctx.popout()?.placement ?? "top",
+			}).then(({ x, y, strategy }) => {
+				setPopoutFloating({ x, y, strategy });
+			});
+		});
 		onCleanup(cleanup);
 	});
 
@@ -388,8 +357,7 @@ export function OverlayProvider(props: ParentProps) {
 							position: threadsViewFloating.strategy,
 							top: "0px",
 							left: "0px",
-							translate:
-								`${threadsViewFloating.x}px ${threadsViewFloating.y}px`,
+							translate: `${threadsViewFloating.x}px ${threadsViewFloating.y}px`,
 							"z-index": 100,
 						}}
 					>
@@ -403,8 +371,7 @@ export function OverlayProvider(props: ParentProps) {
 							position: autocompleteFloating.strategy,
 							top: "0px",
 							left: "0px",
-							translate:
-								`${autocompleteFloating.x}px ${autocompleteFloating.y}px`,
+							translate: `${autocompleteFloating.x}px ${autocompleteFloating.y}px`,
 							"z-index": 100,
 						}}
 					>

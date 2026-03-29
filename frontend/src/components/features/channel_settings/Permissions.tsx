@@ -1,4 +1,3 @@
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
 import type {
 	Channel,
 	ChannelType,
@@ -18,13 +17,14 @@ import {
 } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import { useApi2, useRoles2, useRooms2 } from "@/api";
-import { PermissionSelector } from "../../../components/PermissionSelector";
-import { OverwriteDropdown } from "../../../components/OverwriteDropdown";
-import { permissions } from "../../../permissions.ts";
 import { Resizable } from "../../../atoms/Resizable";
-import { Copyable } from "../../../utils/general";
-import { useCtx } from "../../../context.ts";
 import { Savebar } from "../../../atoms/Savebar";
+import { OverwriteDropdown } from "../../../components/OverwriteDropdown";
+import { PermissionSelector } from "../../../components/PermissionSelector";
+import { useCtx } from "../../../context.ts";
+import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import { permissions } from "../../../permissions.ts";
+import { Copyable } from "../../../utils/general";
 
 function filterPermissionsByChannelType(
 	permList: typeof permissions,
@@ -53,8 +53,8 @@ function isAllInherit(
 	overwrite: PermissionOverwrite,
 	allPermissions: Permission[],
 ): boolean {
-	return allPermissions.every((perm) =>
-		getPermState(overwrite, perm) === "inherit"
+	return allPermissions.every(
+		(perm) => getPermState(overwrite, perm) === "inherit",
 	);
 }
 
@@ -94,8 +94,8 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 	const api2 = useApi2();
 	const rooms2 = useRooms2();
 	const roles2 = useRoles2();
-	const roles = [...roles2.cache.values()].filter((r) =>
-		r.room_id === props.channel.room_id
+	const roles = [...roles2.cache.values()].filter(
+		(r) => r.room_id === props.channel.room_id,
 	);
 	const room = rooms2.use(() => props.channel.room_id ?? "");
 
@@ -118,42 +118,51 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		setDeletedOverwrites({});
 	};
 
-	createEffect(on(() => props.channel.id, () => {
-		setOverwrites(structuredClone(props.channel.permission_overwrites));
-		resetChangeTracking();
-	}));
+	createEffect(
+		on(
+			() => props.channel.id,
+			() => {
+				setOverwrites(structuredClone(props.channel.permission_overwrites));
+				resetChangeTracking();
+			},
+		),
+	);
 
 	createEffect(
-		on(() => props.channel.permission_overwrites, (serverOverwrites) => {
-			if (!serverOverwrites) return;
-			batch(() => {
-				const dirtyIds = Object.keys(dirtyOverwrites).filter((id) =>
-					dirtyOverwrites[id]
-				);
-				for (const id of dirtyIds) {
-					const localOverwrite = overwrites.find((o) => o.id === id);
-					const serverOverwrite = serverOverwrites.find((o) => o.id === id);
-					if (areOverwritesEqual(localOverwrite, serverOverwrite)) {
-						setDirtyOverwrites(id, false);
+		on(
+			() => props.channel.permission_overwrites,
+			(serverOverwrites) => {
+				if (!serverOverwrites) return;
+				batch(() => {
+					const dirtyIds = Object.keys(dirtyOverwrites).filter(
+						(id) => dirtyOverwrites[id],
+					);
+					for (const id of dirtyIds) {
+						const localOverwrite = overwrites.find((o) => o.id === id);
+						const serverOverwrite = serverOverwrites.find((o) => o.id === id);
+						if (areOverwritesEqual(localOverwrite, serverOverwrite)) {
+							setDirtyOverwrites(id, false);
+						}
 					}
-				}
 
-				const deletedIds = Object.keys(deletedOverwrites).filter((id) =>
-					deletedOverwrites[id]
-				);
-				for (const id of deletedIds) {
-					if (!serverOverwrites.some((o) => o.id === id)) {
-						setDeletedOverwrites(id, false);
+					const deletedIds = Object.keys(deletedOverwrites).filter(
+						(id) => deletedOverwrites[id],
+					);
+					for (const id of deletedIds) {
+						if (!serverOverwrites.some((o) => o.id === id)) {
+							setDeletedOverwrites(id, false);
+						}
 					}
-				}
-			});
-		}, { defer: true }),
+				});
+			},
+			{ defer: true },
+		),
 	);
 
 	const updateChangeState = (id: string) => {
 		const localOverwrite = overwrites.find((o) => o.id === id);
-		const originalOverwrite = props.channel.permission_overwrites?.find((o) =>
-			o.id === id
+		const originalOverwrite = props.channel.permission_overwrites?.find(
+			(o) => o.id === id,
 		);
 
 		if (areOverwritesEqual(localOverwrite, originalOverwrite)) {
@@ -162,21 +171,26 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 			return;
 		}
 
-		if (localOverwrite && !originalOverwrite) { // Added
+		if (localOverwrite && !originalOverwrite) {
+			// Added
 			setDirtyOverwrites(id, true);
 			setDeletedOverwrites(id, false);
-		} else if (!localOverwrite && originalOverwrite) { // Deleted
+		} else if (!localOverwrite && originalOverwrite) {
+			// Deleted
 			setDirtyOverwrites(id, false);
 			setDeletedOverwrites(id, true);
-		} else { // Modified
+		} else {
+			// Modified
 			setDirtyOverwrites(id, true);
 			setDeletedOverwrites(id, false);
 		}
 	};
 
 	const isAnyDirty = createMemo(() => {
-		return Object.values(dirtyOverwrites).some(Boolean) ||
-			Object.values(deletedOverwrites).some(Boolean);
+		return (
+			Object.values(dirtyOverwrites).some(Boolean) ||
+			Object.values(deletedOverwrites).some(Boolean)
+		);
 	});
 
 	const overwritesWithEveryone = createMemo(() => {
@@ -221,8 +235,12 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 
 		const isEveryone = isEveryoneRole(id, props.channel.room_id ?? "");
 		const channelPerms = permissions.filter((p) => p.overwrite_group);
-		const shouldBeRemoved = isEveryone &&
-			isAllInherit(updatedOverwrite, channelPerms.map((p) => p.id));
+		const shouldBeRemoved =
+			isEveryone &&
+			isAllInherit(
+				updatedOverwrite,
+				channelPerms.map((p) => p.id),
+			);
 		const existsInStore = overwrites.some((o) => o.id === id);
 
 		if (shouldBeRemoved) {
@@ -251,35 +269,37 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 	};
 
 	const saveAll = async () => {
-		const dirtyIds = Object.keys(dirtyOverwrites).filter((id) =>
-			dirtyOverwrites[id]
+		const dirtyIds = Object.keys(dirtyOverwrites).filter(
+			(id) => dirtyOverwrites[id],
 		);
-		const deletedIds = Object.keys(deletedOverwrites).filter((id) =>
-			deletedOverwrites[id]
+		const deletedIds = Object.keys(deletedOverwrites).filter(
+			(id) => deletedOverwrites[id],
 		);
 
-		const putPromises = dirtyIds.map((id) => {
-			const overwrite = overwrites.find((o) => o.id === id);
-			if (overwrite) {
-				return api2.client.http.PUT(
-					"/api/v1/channel/{channel_id}/permission/{overwrite_id}",
-					{
-						params: {
-							path: {
-								channel_id: props.channel.id,
-								overwrite_id: overwrite.id,
+		const putPromises = dirtyIds
+			.map((id) => {
+				const overwrite = overwrites.find((o) => o.id === id);
+				if (overwrite) {
+					return api2.client.http.PUT(
+						"/api/v1/channel/{channel_id}/permission/{overwrite_id}",
+						{
+							params: {
+								path: {
+									channel_id: props.channel.id,
+									overwrite_id: overwrite.id,
+								},
+							},
+							body: {
+								type: overwrite.type,
+								allow: overwrite.allow,
+								deny: overwrite.deny,
 							},
 						},
-						body: {
-							type: overwrite.type,
-							allow: overwrite.allow,
-							deny: overwrite.deny,
-						},
-					},
-				);
-			}
-			return null;
-		}).filter((p) => p !== null) as Promise<unknown>[];
+					);
+				}
+				return null;
+			})
+			.filter((p) => p !== null) as Promise<unknown>[];
 
 		const deletePromises = deletedIds.map((id) =>
 			api2.client.http.DELETE(
@@ -292,7 +312,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 						},
 					},
 				},
-			)
+			),
 		);
 
 		await Promise.all([...putPromises, ...deletePromises]);
@@ -348,7 +368,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		return filterPermissionsByChannelType(
 			permissions,
 			props.channel.type,
-		).filter((p: typeof permissions[number]) => p.overwrite_group);
+		).filter((p: (typeof permissions)[number]) => p.overwrite_group);
 	});
 
 	return (
@@ -405,11 +425,12 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 							<div class="permissions-header">
 								<h3 class="editing-title">
 									Editing{" "}
-									{overwrite.type === "Role" ? roleName(overwrite.id) : "user"}
-									{" "}
+									{overwrite.type === "Role" ? roleName(overwrite.id) : "user"}{" "}
 									<Show
-										when={dirtyOverwrites[overwrite.id] ||
-											deletedOverwrites[overwrite.id]}
+										when={
+											dirtyOverwrites[overwrite.id] ||
+											deletedOverwrites[overwrite.id]
+										}
 									>
 										<span class="dirty-indicator">*</span>
 									</Show>
@@ -428,7 +449,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 								permStates={filteredPermissions().reduce(
 									(
 										acc: Record<Permission, PermState>,
-										p: typeof permissions[number],
+										p: (typeof permissions)[number],
 									) => {
 										acc[p.id as Permission] = getPermState(overwrite, p.id);
 										return acc;

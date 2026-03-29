@@ -1,10 +1,10 @@
+import { useNavigate } from "@solidjs/router";
+import type { InviteTarget } from "sdk";
 import { createEffect, Show } from "solid-js";
 import { useApi2, useInvites2 } from "@/api";
 import { useCtx } from "./context.ts";
 import { md } from "./markdown_utils.tsx";
-import { useNavigate } from "@solidjs/router";
 import { getThumbFromId } from "./media/util.tsx";
-import type { InviteTarget } from "sdk";
 
 const Title = (props: { title?: string }) => {
 	createEffect(() => (document.title = props.title ?? ""));
@@ -140,10 +140,7 @@ export const RouteInviteInner = (props: { code: string }) => {
 						<div class="box">
 							<div style="display:flex;">
 								<Show when={roomIcon()}>
-									<img
-										src={getThumbFromId(roomIcon()!, 64)}
-										class="avatar"
-									/>
+									<img src={getThumbFromId(roomIcon()!, 64)} class="avatar" />
 								</Show>
 								<div class="info">
 									<div style="font-size: 1.3rem;font-weight: bold">
@@ -153,15 +150,18 @@ export const RouteInviteInner = (props: { code: string }) => {
 										<div
 											class="markdown"
 											innerHTML={md(roomDescription()) as string}
-										>
-										</div>
+										></div>
 										<div class="dim">
 											{roomMemberCount()} members, {roomOnlineCount()} online
 										</div>
 									</Show>
 									<div style="display:flex;justify-content:end;gap:4px">
-										<button class="link" onClick={reject}>cancel</button>
-										<button class="primary" onClick={join}>{joinName()}</button>
+										<button class="link" onClick={reject}>
+											cancel
+										</button>
+										<button class="primary" onClick={join}>
+											{joinName()}
+										</button>
 									</div>
 								</div>
 							</div>

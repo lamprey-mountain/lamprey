@@ -1,16 +1,22 @@
 import { useCurrentUser } from "./contexts/currentUser.tsx";
+
 // TODO: refactor out duplicated code from here and Message.tsx
 
+import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
+import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import { leading, throttle } from "@solid-primitives/scheduled";
+import { ReactiveSet } from "@solid-primitives/set";
+import { A, useNavigate } from "@solidjs/router";
+import type { EditorState } from "prosemirror-state";
 import {
-	type Attachment,
 	type Channel,
 	getTimestampFromUUID,
 	type Media,
 	type Message,
-	MessageVersion,
+	type MessageVersion,
 	type RoomMember,
 } from "sdk";
-import type { Attachment } from "./context";
+import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
 	createMemo,
@@ -18,15 +24,15 @@ import {
 	createSignal,
 	createUniqueId,
 	For,
+	Match,
 	onCleanup,
 	onMount,
 	Show,
+	Switch,
 } from "solid-js";
-import { Portal } from "solid-js/web";
-import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
-import { useFloating } from "solid-floating-ui";
-import { useCtx } from "./context";
-import { useMenu, useUserPopout } from "./contexts/mod.tsx";
+import { createStore } from "solid-js/store";
+import { Portal, render } from "solid-js/web";
+import { uuidv7 } from "uuidv7";
 import {
 	useApi2,
 	useChannels2,
@@ -35,21 +41,34 @@ import {
 	useThreads2,
 	useUsers2,
 } from "@/api";
-import { ReactiveSet } from "@solid-primitives/set";
+import icDelete from "./assets/delete.png";
+import cancelIc from "./assets/x.png";
+import { Dropdown } from "./atoms/Dropdown";
+import { EmojiButton } from "./atoms/EmojiButton";
+import { Markdown } from "./atoms/Markdown";
+import { Resizable } from "./atoms/Resizable";
 import { Time } from "./atoms/Time";
-import { A, useNavigate } from "@solidjs/router";
+import { createTooltip } from "./atoms/Tooltip";
+import {
+	ChannelContext,
+	createInitialChannelState,
+	useChannel,
+} from "./channelctx";
+import { Author, MessageToolbar } from "./components/features/chat/Message";
+import { Reactions } from "./components/features/chat/Reactions";
+import { createEditor } from "./components/features/editor/Editor";
 import { serializeToMarkdown } from "./components/features/editor/serializer.ts";
+import type { Attachment as LocalAttachment } from "./context";
+import { useCtx } from "./context";
+import { useAutocomplete } from "./contexts/autocomplete";
+import { useFormattingToolbar } from "./contexts/formatting-toolbar";
+import { useMenu, useUserPopout } from "./contexts/mod.tsx";
 import { useModals } from "./contexts/modal";
-import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import { useUploads } from "./contexts/uploads";
+import { flags } from "./flags";
+import { useMessageSubmit } from "./hooks/useMessageSubmit";
 import { usePermissions } from "./hooks/usePermissions";
 import { md } from "./markdown_utils";
-import { flags } from "./flags";
-import { Dropdown } from "./atoms/Dropdown";
-import { Author, MessageToolbar } from "./components/features/chat/Message";
-import { Markdown } from "./atoms/Markdown";
-import { render } from "solid-js/web";
-import { getEmojiUrl, type MediaProps } from "./media/util";
-import { Reactions } from "./components/features/chat/Reactions";
 import {
 	AudioView,
 	FileView,
@@ -57,29 +76,9 @@ import {
 	TextView,
 	VideoView,
 } from "./media/mod";
-import {
-	ChannelContext,
-	createInitialChannelState,
-	useChannel,
-} from "./channelctx";
-import { createStore } from "solid-js/store";
-import { useMessageSubmit } from "./hooks/useMessageSubmit";
-import { createEditor } from "./components/features/editor/Editor";
-import { useFormattingToolbar } from "./contexts/formatting-toolbar";
-import { useAutocomplete } from "./contexts/autocomplete";
-import type { EditorState } from "prosemirror-state";
-
-import { Resizable } from "./atoms/Resizable";
-import { getMessageOverrideName } from "./utils/general";
-import cancelIc from "./assets/x.png";
-import { createTooltip } from "./atoms/Tooltip";
-import { leading, throttle } from "@solid-primitives/scheduled";
+import { getEmojiUrl, type MediaProps } from "./media/util";
 import { ChannelIcon } from "./User";
-import { EmojiButton } from "./atoms/EmojiButton";
-import { uuidv7 } from "uuidv7";
-import { useUploads } from "./contexts/uploads";
-import { Match, Switch } from "solid-js";
-import icDelete from "./assets/delete.png";
+import { getMessageOverrideName } from "./utils/general";
 
 // Type guard for RoomMember with override_name
 function hasOverrideName(
@@ -96,9 +95,7 @@ function hasLastVersionId(
 }
 
 // Type guard for Message with DefaultMarkdown type
-function isDefaultMarkdown(
-	msg: Message,
-): msg is Message & {
+function isDefaultMarkdown(msg: Message): msg is Message & {
 	latest_version: MessageVersion & {
 		type: "DefaultMarkdown";
 		content?: string | null;
@@ -108,9 +105,7 @@ function isDefaultMarkdown(
 }
 
 // Type guard for uploading attachment
-function isUploadingAttachment(
-	att: Attachment,
-): att is Attachment & {
+function isUploadingAttachment(att: LocalAttachment): att is LocalAttachment & {
 	status: "uploading";
 	file: File;
 	progress: number;
@@ -262,9 +257,12 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const getThreads = () => {
 		const list = getThreadsList()?.();
 		if (!list) return [];
-		const items = list.state.ids.map((id) => channels2.cache.get(id)).filter((
-			t,
-		): t is Channel => t !== undefined && t.parent_id === props.channel.id);
+		const items = list.state.ids
+			.map((id) => channels2.cache.get(id))
+			.filter(
+				(t): t is Channel =>
+					t !== undefined && t.parent_id === props.channel.id,
+			);
 		// sort descending by id
 		return [...items].sort((a, b) => {
 			if (sortBy() === "new") {
@@ -369,9 +367,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 										}}
 									>
 										<menu>
-											<div class="subtext header">
-												sort by
-											</div>
+											<div class="subtext header">sort by</div>
 											<button
 												onClick={() => {
 													setSortBy("new");
@@ -445,9 +441,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 												</Show>
 											</button>
 											<hr />
-											<div class="subtext header">
-												view as
-											</div>
+											<div class="subtext header">view as</div>
 											<button
 												onClick={() => {
 													setViewAs("list");
@@ -535,8 +529,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 													<div
 														class="description markdown"
 														innerHTML={md(thread.description ?? "") as string}
-													>
-													</div>
+													></div>
 												</Show>
 											</div>
 										</header>
@@ -627,9 +620,10 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		const rootComments: CommentNode[] = [];
 		for (const node of commentMap.values()) {
 			const msg = node.message;
-			const replyId = msg.latest_version.type === "DefaultMarkdown"
-				? msg.latest_version.reply_id
-				: undefined;
+			const replyId =
+				msg.latest_version.type === "DefaultMarkdown"
+					? msg.latest_version.reply_id
+					: undefined;
 
 			if (replyId && commentMap.has(replyId)) {
 				commentMap.get(replyId)!.children.push(node);
@@ -802,9 +796,12 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		perms.has("MemberTimeout");
 
 	const locked = () => {
-		return !perms.has("MessageCreate") ||
-			(("locked" in props.channel && !!props.channel.locked) &&
-				!perms.has("ThreadManage"));
+		return (
+			!perms.has("MessageCreate") ||
+			("locked" in props.channel &&
+				!!props.channel.locked &&
+				!perms.has("ThreadManage"))
+		);
 	};
 
 	const [remainingTime, setRemainingTime] = createSignal(0);
@@ -835,9 +832,10 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 			if (channelSlowmode) {
 				const mins = Math.floor(channelSlowmode / 60);
 				const secs = channelSlowmode % 60;
-				const time = mins === 0
-					? `slowmode set to ${secs}s`
-					: `slowmode set to ${mins}m${secs.toString().padStart(2, "0")}s`;
+				const time =
+					mins === 0
+						? `slowmode set to ${secs}s`
+						: `slowmode set to ${mins}m${secs.toString().padStart(2, "0")}s`;
 				return `slowmode set to ${time}${
 					bypassSlowmode() ? " (bypassed)" : ""
 				}`;
@@ -892,10 +890,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 					commentTree={commentTree()}
 					collapsed={collapsed}
 				/>
-				<div
-					class="comment-input"
-					classList={{ locked: locked() }}
-				>
+				<div class="comment-input" classList={{ locked: locked() }}>
 					<Show when={reply()}>
 						<InputReply thread={props.channel} reply={reply()!} />
 					</Show>
@@ -908,10 +903,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 							<ul>
 								<For each={atts()}>
 									{(att) => (
-										<RenderUploadItem
-											thread_id={props.channel.id}
-											att={att}
-										/>
+										<RenderUploadItem thread_id={props.channel.id} att={att} />
 									)}
 								</For>
 							</ul>
@@ -931,9 +923,9 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 						<editor.View
 							onSubmit={onSubmit}
 							onChange={onChange}
-							placeholder={locked()
-								? "This thread is locked"
-								: "add a comment..."}
+							placeholder={
+								locked() ? "This thread is locked" : "add a comment..."
+							}
 							channelId={props.channel.id}
 							submitOnEnter={false}
 							disabled={locked()}
@@ -976,8 +968,8 @@ const ThreadLog = (props: {
 			<ul>
 				<li>tags: [foo] [bar] [baz]</li>
 				<li>
-					comments: [{comments()?.items.length ?? 0}] comments ([{commentTree()
-						.length}] threads/top level comments)
+					comments: [{comments()?.items.length ?? 0}] comments ([
+					{commentTree().length}] threads/top level comments)
 				</li>
 				<li>
 					last comment: <a href="#">some time ago</a>
@@ -1002,13 +994,11 @@ export interface CommentNode {
 	children: CommentNode[];
 }
 
-export const Forum2Comments = (
-	props: {
-		channel: Channel;
-		commentTree: CommentNode[];
-		collapsed: ReactiveSet<string>;
-	},
-) => {
+export const Forum2Comments = (props: {
+	channel: Channel;
+	commentTree: CommentNode[];
+	collapsed: ReactiveSet<string>;
+}) => {
 	return (
 		<div class="comments">
 			<div>comments</div>
@@ -1033,30 +1023,31 @@ export const Forum2Comments = (
 const contentToHtml = new WeakMap();
 
 function highlight(el: Element) {
-	el.animate([
+	el.animate(
+		[
+			{
+				boxShadow: "4px 0 0 -1px inset #cc1856",
+				backgroundColor: "#cc185622",
+				offset: 0,
+			},
+			{
+				boxShadow: "4px 0 0 -1px inset #cc1856",
+				backgroundColor: "#cc185622",
+				offset: 0.8,
+			},
+			{
+				boxShadow: "none",
+				backgroundColor: "transparent",
+				offset: 1,
+			},
+		],
 		{
-			boxShadow: "4px 0 0 -1px inset #cc1856",
-			backgroundColor: "#cc185622",
-			offset: 0,
+			duration: 1000,
 		},
-		{
-			boxShadow: "4px 0 0 -1px inset #cc1856",
-			backgroundColor: "#cc185622",
-			offset: .8,
-		},
-		{
-			boxShadow: "none",
-			backgroundColor: "transparent",
-			offset: 1,
-		},
-	], {
-		duration: 1000,
-	});
+	);
 }
 
-function CommentEditor(
-	props: { message: Message; channel: Channel },
-) {
+function CommentEditor(props: { message: Message; channel: Channel }) {
 	const ctx = useCtx();
 	const messagesService = useMessages2();
 	const [ch, chUpdate] = useChannel()!;
@@ -1064,7 +1055,7 @@ function CommentEditor(
 	const autocomplete = useAutocomplete();
 	const [draft, setDraft] = createSignal(
 		props.message.latest_version.type === "DefaultMarkdown"
-			? props.message.latest_version.content ?? ""
+			? (props.message.latest_version.content ?? "")
 			: "",
 	);
 
@@ -1102,7 +1093,7 @@ function CommentEditor(
 	const save = (content: string) => {
 		const currentContent =
 			props.message.latest_version.type === "DefaultMarkdown"
-				? props.message.latest_version.content ?? ""
+				? (props.message.latest_version.content ?? "")
 				: "";
 
 		if (content.trim() === currentContent.trim()) {
@@ -1113,13 +1104,11 @@ function CommentEditor(
 			chUpdate("editingMessage", undefined);
 			return true;
 		}
-		messagesService.edit(
-			props.message.channel_id,
-			props.message.id,
-			content,
-		).catch((e) => {
-			console.error("failed to edit comment", e);
-		});
+		messagesService
+			.edit(props.message.channel_id, props.message.id, content)
+			.catch((e) => {
+				console.error("failed to edit comment", e);
+			});
 		chUpdate("editingMessage", undefined);
 		return true;
 	};
@@ -1165,14 +1154,12 @@ function CommentEditor(
 	);
 }
 
-const Comment = (
-	props: {
-		collapsed: ReactiveSet<string>;
-		channel: Channel;
-		node: CommentNode;
-		depth: number;
-	},
-) => {
+const Comment = (props: {
+	collapsed: ReactiveSet<string>;
+	channel: Channel;
+	node: CommentNode;
+	depth: number;
+}) => {
 	const message = () => props.node.message;
 	const children = () => props.node.children;
 	const api2 = useApi2();
@@ -1191,9 +1178,11 @@ const Comment = (
 
 	const canEditMessage = () => {
 		const msg = message();
-		return msg.latest_version.type === "DefaultMarkdown" &&
+		return (
+			msg.latest_version.type === "DefaultMarkdown" &&
 			!msg.is_local &&
-			isOwnMessage();
+			isOwnMessage()
+		);
 	};
 
 	const handleClick = (e: MouseEvent) => {
@@ -1249,8 +1238,10 @@ const Comment = (
 	);
 
 	const countAllChildren = (node: CommentNode): number => {
-		return node.children.length +
-			node.children.reduce((sum, child) => sum + countAllChildren(child), 0);
+		return (
+			node.children.length +
+			node.children.reduce((sum, child) => sum + countAllChildren(child), 0)
+		);
 	};
 
 	let contentEl!: HTMLElement;
@@ -1293,7 +1284,8 @@ const Comment = (
 						onClick={() =>
 							collapsed()
 								? props.collapsed.delete(message().id)
-								: props.collapsed.add(message().id)}
+								: props.collapsed.add(message().id)
+						}
 					>
 						{collapsed() ? "+" : "-"}
 					</button>
@@ -1305,9 +1297,7 @@ const Comment = (
 					</Show>
 					<Time date={getTimestampFromUUID(message().id)} />
 					<Show when={collapsed()}>
-						<div class="summary">
-							{summary() ?? "..."}
-						</div>
+						<div class="summary">{summary() ?? "..."}</div>
 					</Show>
 				</header>
 				<Show when={!collapsed()}>
@@ -1320,9 +1310,10 @@ const Comment = (
 						{(() => {
 							const msg = message();
 							const version = msg.latest_version;
-							const content = version.type === "DefaultMarkdown"
-								? version.content ?? ""
-								: "";
+							const content =
+								version.type === "DefaultMarkdown"
+									? (version.content ?? "")
+									: "";
 							return (
 								<Markdown
 									content={content}
@@ -1337,14 +1328,18 @@ const Comment = (
 								const version = message().latest_version;
 								return (
 									<Show
-										when={version.type === "DefaultMarkdown" &&
-											version.attachments?.length}
+										when={
+											version.type === "DefaultMarkdown" &&
+											version.attachments?.length
+										}
 									>
 										<ul class="attachments">
 											<For
-												each={version.type === "DefaultMarkdown"
-													? version.attachments
-													: []}
+												each={
+													version.type === "DefaultMarkdown"
+														? version.attachments
+														: []
+												}
 											>
 												{(att) => (
 													<Show when={att.type === "Media"}>
@@ -1385,9 +1380,10 @@ const Comment = (
 	);
 };
 
-export function RenderUploadItem(
-	props: { thread_id: string; att: Attachment },
-) {
+export function RenderUploadItem(props: {
+	thread_id: string;
+	att: LocalAttachment;
+}) {
 	const ctx = useCtx();
 	const uploads = useUploads();
 	const thumbUrl = isUploadingAttachment(props.att)
@@ -1399,7 +1395,7 @@ export function RenderUploadItem(
 		});
 	}
 
-	function renderInfo(att: Attachment) {
+	function renderInfo(att: LocalAttachment) {
 		if (isUploadingAttachment(att)) {
 			if (att.progress === 1) {
 				return `processing`;
@@ -1412,7 +1408,7 @@ export function RenderUploadItem(
 		}
 	}
 
-	function getProgress(att: Attachment) {
+	function getProgress(att: LocalAttachment) {
 		if (isUploadingAttachment(att)) {
 			return att.progress;
 		} else {
@@ -1439,8 +1435,10 @@ export function RenderUploadItem(
 	return (
 		<>
 			<div class="upload-item">
-				<div class="thumb" style={{ "background-image": `url(${thumbUrl})` }}>
-				</div>
+				<div
+					class="thumb"
+					style={{ "background-image": `url(${thumbUrl})` }}
+				></div>
 				<div class="info">
 					<svg class="progress" viewBox="0 0 1 1" preserveAspectRatio="none">
 						<rect class="bar" height="1" width={getProgress(props.att)}></rect>
@@ -1457,12 +1455,9 @@ export function RenderUploadItem(
 						<menu>
 							<Switch>
 								<Match
-									when={isUploadingAttachment(props.att) &&
-										props.att.paused}
+									when={isUploadingAttachment(props.att) && props.att.paused}
 								>
-									<button onClick={resume}>
-										⬆️
-									</button>
+									<button onClick={resume}>⬆️</button>
 								</Match>
 								<Match when={isUploadingAttachment(props.att)}>
 									<button onClick={pause}>⏸️</button>
@@ -1472,7 +1467,8 @@ export function RenderUploadItem(
 								onClick={() =>
 									removeAttachment(
 										isUploadingAttachment(props.att) ? props.att.local_id : "",
-									)}
+									)
+								}
 							>
 								<img class="icon" src={icDelete} />
 							</button>

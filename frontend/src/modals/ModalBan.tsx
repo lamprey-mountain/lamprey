@@ -1,8 +1,8 @@
 import { createSignal } from "solid-js";
-import { Modal } from "./mod";
-import { useModals } from "../contexts/modal";
 import type { Api } from "@/api";
 import { DurationInput } from "../atoms/DurationInput";
+import { useModals } from "../contexts/modal";
+import { Modal } from "./mod";
 
 interface ModalBanProps {
 	api: Api;
@@ -43,18 +43,15 @@ export const ModalBan = (props: ModalBanProps) => {
 				body.expires_at = new Date(Date.now() + durationMs).toISOString();
 			}
 
-			await props.api.client.http.PUT(
-				"/api/v1/room/{room_id}/ban/{user_id}",
-				{
-					params: {
-						path: {
-							room_id: props.room_id,
-							user_id: props.user_id,
-						},
+			await props.api.client.http.PUT("/api/v1/room/{room_id}/ban/{user_id}", {
+				params: {
+					path: {
+						room_id: props.room_id,
+						user_id: props.user_id,
 					},
-					body,
 				},
-			);
+				body,
+			});
 			modalCtl.close();
 		} catch (err) {
 			console.error("Failed to ban user:", err);
@@ -77,9 +74,8 @@ export const ModalBan = (props: ModalBanProps) => {
 					ban <strong>{displayName()}</strong>
 				</h3>
 				<p>
-					Are you sure you want to ban{" "}
-					<strong>{displayName()}</strong>? They will not be able to rejoin the
-					room.
+					Are you sure you want to ban <strong>{displayName()}</strong>? They
+					will not be able to rejoin the room.
 				</p>
 
 				<div style="margin-top: 16px;">
@@ -104,11 +100,7 @@ export const ModalBan = (props: ModalBanProps) => {
 				</div>
 
 				<div class="bottom">
-					<button
-						class="danger"
-						onClick={handleBan}
-						disabled={loading()}
-					>
+					<button class="danger" onClick={handleBan} disabled={loading()}>
 						{loading() ? "banning..." : "ban"}
 					</button>
 					<button onClick={() => modalCtl.close()} disabled={loading()}>

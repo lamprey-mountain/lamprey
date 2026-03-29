@@ -13,9 +13,9 @@ type DateRangePickerProps = {
 export const DateRangePicker = (props: DateRangePickerProps) => {
 	const [dateRange, setDateRange] = createSignal<DateRange>(
 		props.initialValue || {
-			start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split(
-				"T",
-			)[0],
+			start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+				.toISOString()
+				.split("T")[0],
 			end: new Date().toISOString().split("T")[0],
 		},
 	);

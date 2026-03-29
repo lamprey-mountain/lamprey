@@ -1,33 +1,31 @@
+import type { Message, UserWithRelationship } from "sdk";
 import { createMemo, Match, Show, Switch } from "solid-js";
 import { useApi, useMessages2, useRoomMembers2 } from "@/api";
-import type { MessageT, ThreadT } from "../../../types.ts";
+import { useChannel } from "../../../channelctx.tsx";
 import { useCtx } from "../../../context.ts";
 import { md } from "../../../markdown_utils.tsx";
-import { MessageView } from "./Message.tsx";
-import { useChannel } from "../../../channelctx.tsx";
-import type { Message, UserWithRelationship } from "sdk";
-import {
-	getMessageOverrideName,
-	getMsgTs as get_msg_ts,
-} from "../../../utils/general";
+import type { MessageT, ThreadT } from "../../../types.ts";
 import { ChannelIcon } from "../../../User.tsx";
+import {
+	getMsgTs as get_msg_ts,
+	getMessageOverrideName,
+} from "../../../utils/general";
+import { MessageView } from "./Message.tsx";
 
-export type TimelineItemT =
-	& { id: string; class?: string }
-	& (
-		| { type: "info"; header: boolean }
-		| { type: "editor" }
-		| { type: "spacer" }
-		| { type: "spacer-mini" }
-		| { type: "spacer-mini2" }
-		| { type: "divider"; unread: boolean; date?: Date }
-		| {
+export type TimelineItemT = { id: string; class?: string } & (
+	| { type: "info"; header: boolean }
+	| { type: "editor" }
+	| { type: "spacer" }
+	| { type: "spacer-mini" }
+	| { type: "spacer-mini2" }
+	| { type: "divider"; unread: boolean; date?: Date }
+	| {
 			type: "message";
 			message: MessageT;
 			separate: boolean;
 			class: string;
-		}
-	);
+	  }
+);
 
 export const TimelineItem = (props: {
 	thread: ThreadT;
@@ -47,11 +45,13 @@ export const TimelineItem = (props: {
 			const is_mentioned = createMemo(() => {
 				const me = props.currentUser();
 				if (!me || props.item.type !== "message") return false;
-				const mentions = (props.item.message as Message).mentions as {
-					users?: Array<{ id: string }>;
-					everyone?: boolean;
-					roles?: Array<{ id: string }>;
-				} | undefined;
+				const mentions = (props.item.message as Message).mentions as
+					| {
+							users?: Array<{ id: string }>;
+							everyone?: boolean;
+							roles?: Array<{ id: string }>;
+					  }
+					| undefined;
 				if (!mentions) return false;
 
 				if (mentions.users?.some((u) => u.id === me.id)) {
@@ -114,8 +114,7 @@ export const TimelineItem = (props: {
 							<span
 								class="markdown"
 								innerHTML={md(props.thread.description ?? "") as string}
-							>
-							</span>
+							></span>
 						</p>
 					</header>
 				</li>
@@ -143,9 +142,7 @@ export const TimelineItem = (props: {
 					<Show when={props.item.date}>
 						{(d) => (
 							<>
-								<time datetime={d().toISOString()}>
-									{d().toDateString()}
-								</time>
+								<time datetime={d().toISOString()}>{d().toDateString()}</time>
 								<hr />
 							</>
 						)}
@@ -177,11 +174,15 @@ type RenderTimelineParams = {
 	has_after: boolean;
 };
 
-export function renderTimeline(
-	{ items, read_marker_id, has_before, has_after, cache }:
-		& RenderTimelineParams
-		& { cache?: Map<string, TimelineItemT> },
-): Array<TimelineItemT> {
+export function renderTimeline({
+	items,
+	read_marker_id,
+	has_before,
+	has_after,
+	cache,
+}: RenderTimelineParams & {
+	cache?: Map<string, TimelineItemT>;
+}): Array<TimelineItemT> {
 	const newItems: Array<TimelineItemT> = [];
 	if (has_before) {
 		newItems.push({
@@ -198,8 +199,8 @@ export function renderTimeline(
 	for (let i = 0; i < items.length; i++) {
 		const msg = items[i];
 		const prev = items[i - 1] as Message | undefined;
-		const markerTime = prev &&
-			get_msg_ts(msg).getDay() !== get_msg_ts(prev).getDay();
+		const markerTime =
+			prev && get_msg_ts(msg).getDay() !== get_msg_ts(prev).getDay();
 		const markerUnread = prev?.id === read_marker_id;
 		if (markerTime || markerUnread) {
 			newItems.push({

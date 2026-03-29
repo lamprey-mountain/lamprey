@@ -1,8 +1,8 @@
 import { createSignal } from "solid-js";
-import { Modal } from "./mod";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons";
-import { CheckboxOption } from "../atoms/CheckboxOption";
+import { Modal } from "./mod";
 
 export const ModalExportData = () => {
 	const [, modalCtl] = useModals();

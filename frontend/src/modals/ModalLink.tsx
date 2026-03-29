@@ -1,8 +1,8 @@
-import { Modal } from "./mod";
-import { useModals } from "../contexts/modal.tsx";
 import { TextSelection } from "prosemirror-state";
-import { onMount } from "solid-js";
 import type { EditorView } from "prosemirror-view";
+import { onMount } from "solid-js";
+import { useModals } from "../contexts/modal.tsx";
+import { Modal } from "./mod";
 
 interface ModalLinkProps {
 	editor: EditorView;
@@ -39,9 +39,7 @@ export const ModalLink = (props: ModalLinkProps) => {
 
 		const tr = view.state.tr;
 		tr.insertText(`[${linkText}](${url})`, from, to);
-		tr.setSelection(
-			TextSelection.create(tr.doc, from + linkText.length + 3),
-		);
+		tr.setSelection(TextSelection.create(tr.doc, from + linkText.length + 3));
 
 		view.dispatch(tr);
 		view.focus();

@@ -22,7 +22,8 @@ async function setupTestEnvironment(page: any) {
 	await page.waitForSelector(`[data-room-id] .nav:has-text("${roomName}")`, {
 		timeout: 5000,
 	});
-	await page.locator(`[data-room-id] .nav:has-text("${roomName}")`)
+	await page
+		.locator(`[data-room-id] .nav:has-text("${roomName}")`)
 		.first()
 		.click();
 
@@ -42,9 +43,10 @@ async function setupTestEnvironment(page: any) {
 	// Wait for modal and fill in channel name
 	await page.waitForSelector("form.new-channel", { timeout: 5000 });
 	const channelName = "general-test";
-	await page.locator('form.new-channel input[type="text"]').first().fill(
-		channelName,
-	);
+	await page
+		.locator('form.new-channel input[type="text"]')
+		.first()
+		.fill(channelName);
 
 	// Submit channel creation
 	await page.locator('form.new-channel button[type="submit"]').click();
@@ -54,9 +56,8 @@ async function setupTestEnvironment(page: any) {
 		`[data-channel-id] .nav-channel:has-text("${channelName}")`,
 		{ timeout: 5000 },
 	);
-	await page.locator(
-		`[data-channel-id] .nav-channel:has-text("${channelName}")`,
-	)
+	await page
+		.locator(`[data-channel-id] .nav-channel:has-text("${channelName}")`)
 		.first()
 		.click();
 
@@ -74,7 +75,10 @@ function getMessageInput(page: any) {
 }
 
 test.describe("Message Sending", () => {
-	test("basic message sending with is_local echo", async ({ navigateTo, page }) => {
+	test("basic message sending with is_local echo", async ({
+		navigateTo,
+		page,
+	}) => {
 		// Set up test environment
 		await navigateTo("/");
 		await setupTestEnvironment(page);
@@ -104,7 +108,10 @@ test.describe("Message Sending", () => {
 		await expect(localMessageLocator).not.toBeVisible({ timeout: 5000 });
 	});
 
-	test("multiple messages maintain is_local lifecycle", async ({ navigateTo, page }) => {
+	test("multiple messages maintain is_local lifecycle", async ({
+		navigateTo,
+		page,
+	}) => {
 		// Set up test environment
 		await navigateTo("/");
 		await setupTestEnvironment(page);
@@ -190,7 +197,10 @@ test.describe("Markdown Rendering", () => {
 		await expect(italicElement).toBeVisible({ timeout: 5000 });
 	});
 
-	test("code block markdown renders correctly", async ({ navigateTo, page }) => {
+	test("code block markdown renders correctly", async ({
+		navigateTo,
+		page,
+	}) => {
 		await navigateTo("/");
 		await setupTestEnvironment(page);
 
@@ -238,7 +248,10 @@ test.describe("Markdown Rendering", () => {
 });
 
 test.describe("Message Editing", () => {
-	test("edit message via right-click context menu", async ({ navigateTo, page }) => {
+	test("edit message via right-click context menu", async ({
+		navigateTo,
+		page,
+	}) => {
 		await navigateTo("/");
 		await setupTestEnvironment(page);
 
@@ -256,9 +269,11 @@ test.describe("Message Editing", () => {
 		await expect(confirmedMessage).toBeVisible({ timeout: 10000 });
 
 		// Get the message element to right-click on
-		const messageArticle = page.locator(
-			`article.message[data-message-id]:has-text("${originalMessage}")`,
-		).first();
+		const messageArticle = page
+			.locator(
+				`article.message[data-message-id]:has-text("${originalMessage}")`,
+			)
+			.first();
 
 		// Ensure any open menu is closed first
 		await page.keyboard.press("Escape");
@@ -304,7 +319,10 @@ test.describe("Message Editing", () => {
 		await expect(editedIndicator).toBeVisible({ timeout: 5000 });
 	});
 
-	test("edit message preserves is_local lifecycle during edit", async ({ navigateTo, page }) => {
+	test("edit message preserves is_local lifecycle during edit", async ({
+		navigateTo,
+		page,
+	}) => {
 		await navigateTo("/");
 		await setupTestEnvironment(page);
 
@@ -322,9 +340,11 @@ test.describe("Message Editing", () => {
 		await expect(confirmedMessage).toBeVisible({ timeout: 10000 });
 
 		// Get the message article element to right-click on
-		const messageArticle = page.locator(
-			`article.message[data-message-id]:has-text("${originalMessage}")`,
-		).first();
+		const messageArticle = page
+			.locator(
+				`article.message[data-message-id]:has-text("${originalMessage}")`,
+			)
+			.first();
 
 		// Ensure any open menu is closed first
 		await page.keyboard.press("Escape");
@@ -384,9 +404,11 @@ test.describe("Message Editing", () => {
 		await expect(confirmedMessage).toBeVisible({ timeout: 10000 });
 
 		// Get the message article element to right-click on
-		const messageArticle = page.locator(
-			`article.message[data-message-id]:has-text("${originalMessage}")`,
-		).first();
+		const messageArticle = page
+			.locator(
+				`article.message[data-message-id]:has-text("${originalMessage}")`,
+			)
+			.first();
 
 		// Ensure any open menu is closed first
 		await page.keyboard.press("Escape");
@@ -448,9 +470,11 @@ test.describe("Message Replies", () => {
 		await expect(confirmedMessage).toBeVisible({ timeout: 10000 });
 
 		// Get the message article element to right-click on
-		const messageArticle = page.locator(
-			`article.message[data-message-id]:has-text("${originalMessage}")`,
-		).first();
+		const messageArticle = page
+			.locator(
+				`article.message[data-message-id]:has-text("${originalMessage}")`,
+			)
+			.first();
 
 		// Ensure any open menu is closed first
 		await page.keyboard.press("Escape");
@@ -516,9 +540,11 @@ test.describe("Message Replies", () => {
 		await expect(confirmedMessage).toBeVisible({ timeout: 10000 });
 
 		// Right-click to open context menu and reply
-		const messageArticle = page.locator(
-			`article.message[data-message-id]:has-text("${originalMessage}")`,
-		).first();
+		const messageArticle = page
+			.locator(
+				`article.message[data-message-id]:has-text("${originalMessage}")`,
+			)
+			.first();
 		await page.keyboard.press("Escape");
 		await page.waitForTimeout(200);
 		await messageArticle.click({ button: "right" });
@@ -554,9 +580,11 @@ test.describe("Message Replies", () => {
 		await expect(confirmedMessage).toBeVisible({ timeout: 10000 });
 
 		// Right-click to open context menu and reply
-		const messageArticle = page.locator(
-			`article.message[data-message-id]:has-text("${originalMessage}")`,
-		).first();
+		const messageArticle = page
+			.locator(
+				`article.message[data-message-id]:has-text("${originalMessage}")`,
+			)
+			.first();
 		await page.keyboard.press("Escape");
 		await page.waitForTimeout(200);
 		await messageArticle.click({ button: "right" });
@@ -596,9 +624,11 @@ test.describe("Message Replies", () => {
 		await expect(confirmedMessage).toBeVisible({ timeout: 10000 });
 
 		// Right-click to open context menu and reply
-		const messageArticle = page.locator(
-			`article.message[data-message-id]:has-text("${originalMessage}")`,
-		).first();
+		const messageArticle = page
+			.locator(
+				`article.message[data-message-id]:has-text("${originalMessage}")`,
+			)
+			.first();
 		await page.keyboard.press("Escape");
 		await page.waitForTimeout(200);
 		await messageArticle.click({ button: "right" });
@@ -654,9 +684,11 @@ test.describe("Message Replies", () => {
 		);
 		await expect(confirmedMessage).toBeVisible({ timeout: 10000 });
 
-		const messageArticle = page.locator(
-			`article.message[data-message-id]:has-text("${originalMessage}")`,
-		).first();
+		const messageArticle = page
+			.locator(
+				`article.message[data-message-id]:has-text("${originalMessage}")`,
+			)
+			.first();
 
 		// Send first reply
 		await page.keyboard.press("Escape");

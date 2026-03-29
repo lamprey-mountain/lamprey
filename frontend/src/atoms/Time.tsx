@@ -1,9 +1,9 @@
 import type { VoidProps } from "solid-js";
-import { tooltip } from "./Tooltip";
 import { tick } from "../hooks/tick";
+import { tooltip } from "./Tooltip";
 
 export function timeAgo(date: Date): string {
-	const diff = Date.now() - (+date);
+	const diff = Date.now() - +date;
 	const fmt = new Intl.RelativeTimeFormat("en", {
 		style: "long",
 		numeric: "auto",
@@ -45,7 +45,7 @@ type TimeProps = {
 } & ({ ts: number } | { date: Date });
 
 export function Time(props: VoidProps<TimeProps>) {
-	const date = () => "date" in props ? props.date : new Date(props.ts);
+	const date = () => ("date" in props ? props.date : new Date(props.ts));
 
 	return (
 		<>
@@ -55,8 +55,11 @@ export function Time(props: VoidProps<TimeProps>) {
 					placement: "left-start",
 				},
 				date().toDateString(),
-				<time datetime={date().toISOString()}>{(tick(), timeAgo(date()))}
-				</time> as HTMLElement,
+				(
+					<time datetime={date().toISOString()}>
+						{(tick(), timeAgo(date()))}
+					</time>
+				) as HTMLElement,
 			)}
 		</>
 	);

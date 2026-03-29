@@ -10,9 +10,9 @@ export function formatTime(time: number): string {
 	const minutes = Math.floor(t / 60) % 60;
 	const hours = Math.floor(t / 3600);
 	if (hours) {
-		return `${hours}:${minutes.toString().padStart(2, "0")}:${
-			seconds.toString().padStart(2, "0")
-		}`;
+		return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds
+			.toString()
+			.padStart(2, "0")}`;
 	} else {
 		return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 	}
@@ -108,10 +108,12 @@ export type MediaLoadingState =
 	| "ready"; // media is ready to play
 
 export const parseRanges = (b: TimeRanges) =>
-	Array(b.length).fill(0).map((_, idx) => ({
-		start: b.start(idx),
-		end: b.end(idx),
-	}));
+	Array(b.length)
+		.fill(0)
+		.map((_, idx) => ({
+			start: b.start(idx),
+			end: b.end(idx),
+		}));
 
 type ResizeProps = {
 	height: number;

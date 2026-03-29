@@ -1,8 +1,7 @@
+import type { Channel, Message } from "sdk";
 import { createMemo, createSignal, For, Show } from "solid-js";
-import type { Channel } from "sdk";
 import { useMessages2 } from "@/api";
 import { MessageView } from "./Message.tsx";
-import type { Message } from "sdk";
 
 type PinnedMessagesProps = {
 	channel: Channel;
@@ -13,11 +12,10 @@ export function PinnedMessages(props: PinnedMessagesProps) {
 	const pinnedMessages = messagesService.listPinned(() => props.channel.id);
 
 	const [dragging, setDragging] = createSignal<string | null>(null);
-	const [target, setTarget] = createSignal<
-		{ id: string; after: boolean } | null
-	>(
-		null,
-	);
+	const [target, setTarget] = createSignal<{
+		id: string;
+		after: boolean;
+	} | null>(null);
 
 	const getMessageId = (e: DragEvent) =>
 		(e.currentTarget as HTMLLIElement).dataset.messageId;
@@ -72,7 +70,7 @@ export function PinnedMessages(props: PinnedMessagesProps) {
 
 		if (
 			JSON.stringify(messages.map((m) => m.id)) ===
-				JSON.stringify(reordered.map((m) => m.id))
+			JSON.stringify(reordered.map((m) => m.id))
 		) {
 			return;
 		}

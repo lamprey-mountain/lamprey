@@ -1,5 +1,5 @@
-import type { AuditLogChange, AuditLogEntry } from "sdk";
 import { ChangeObject, diffArrays } from "diff";
+import type { AuditLogChange, AuditLogEntry } from "sdk";
 import { type JSX, untrack } from "solid-js";
 import { useApi2, useChannels2, useRoomMembers2, useRooms2 } from "@/api";
 import { useCtx } from "./context";
@@ -71,11 +71,11 @@ export function mergeAuditLogEntries(
 			user_id: entry.user_id,
 			type: entry.type,
 			reason: entry.reason,
-			metadata: (entry as { metadata?: Record<string, unknown> }).metadata ??
-				{},
-			changes:
-				(entry as { metadata?: { changes?: import("sdk").AuditLogChange[] } })
-					.metadata?.changes,
+			metadata:
+				(entry as { metadata?: Record<string, unknown> }).metadata ?? {},
+			changes: (
+				entry as { metadata?: { changes?: import("sdk").AuditLogChange[] } }
+			).metadata?.changes,
 		});
 	}
 
@@ -151,9 +151,10 @@ export function formatAuditLogEntry(
 	);
 
 	// Helper to safely access metadata (some entry types don't have it)
-	const metadata = "metadata" in ent
-		? ent.metadata as Record<string, unknown> | undefined
-		: undefined;
+	const metadata =
+		"metadata" in ent
+			? (ent.metadata as Record<string, unknown> | undefined)
+			: undefined;
 	const getMetadata = (key: string): unknown => metadata?.[key];
 
 	const params: Record<string, JSX.Element> = {
@@ -279,7 +280,7 @@ export function formatChanges(
 			break;
 		}
 		case "PermissionOverwriteSet": {
-			const overwriteType = ent.metadata?.type as string ?? "unknown";
+			const overwriteType = (ent.metadata?.type as string) ?? "unknown";
 			const overwriteName = resolveName(
 				api2,
 				channels2,
@@ -289,10 +290,10 @@ export function formatChanges(
 			);
 			formatted.push(
 				<li>
-					{t(
-						"audit_log.changes.permission_overwrite_for",
-						{ type: overwriteType, target: overwriteName },
-					)}
+					{t("audit_log.changes.permission_overwrite_for", {
+						type: overwriteType,
+						target: overwriteName,
+					})}
 				</li>,
 			);
 			break;
@@ -300,18 +301,15 @@ export function formatChanges(
 		case "RoleApply": {
 			formatted.push(
 				<li>
-					{t(
-						"audit_log.changes.role_added",
-						{
-							role_name: resolveName(
-								api2,
-								channels2,
-								room_id,
-								ent.metadata?.role_id as string | undefined,
-								"role",
-							),
-						},
-					)}
+					{t("audit_log.changes.role_added", {
+						role_name: resolveName(
+							api2,
+							channels2,
+							room_id,
+							ent.metadata?.role_id as string | undefined,
+							"role",
+						),
+					})}
 				</li>,
 			);
 			break;
@@ -319,18 +317,15 @@ export function formatChanges(
 		case "RoleUnapply": {
 			formatted.push(
 				<li>
-					{t(
-						"audit_log.changes.role_removed",
-						{
-							role_name: resolveName(
-								api2,
-								channels2,
-								room_id,
-								ent.metadata?.role_id as string | undefined,
-								"role",
-							),
-						},
-					)}
+					{t("audit_log.changes.role_removed", {
+						role_name: resolveName(
+							api2,
+							channels2,
+							room_id,
+							ent.metadata?.role_id as string | undefined,
+							"role",
+						),
+					})}
 				</li>,
 			);
 			break;
@@ -338,18 +333,15 @@ export function formatChanges(
 		case "BotAdd": {
 			formatted.push(
 				<li>
-					{t(
-						"audit_log.changes.bot_added",
-						{
-							bot_name: resolveName(
-								api2,
-								channels2,
-								room_id,
-								ent.metadata?.bot_id as string | undefined,
-								"user",
-							),
-						},
-					)}
+					{t("audit_log.changes.bot_added", {
+						bot_name: resolveName(
+							api2,
+							channels2,
+							room_id,
+							ent.metadata?.bot_id as string | undefined,
+							"user",
+						),
+					})}
 				</li>,
 			);
 			break;
@@ -357,18 +349,15 @@ export function formatChanges(
 		case "MemberKick": {
 			formatted.push(
 				<li>
-					{t(
-						"audit_log.changes.user_kicked",
-						{
-							user_name: resolveName(
-								api2,
-								channels2,
-								room_id,
-								ent.metadata?.user_id as string | undefined,
-								"user",
-							),
-						},
-					)}
+					{t("audit_log.changes.user_kicked", {
+						user_name: resolveName(
+							api2,
+							channels2,
+							room_id,
+							ent.metadata?.user_id as string | undefined,
+							"user",
+						),
+					})}
 				</li>,
 			);
 			break;
@@ -376,18 +365,15 @@ export function formatChanges(
 		case "MemberBan": {
 			formatted.push(
 				<li>
-					{t(
-						"audit_log.changes.user_banned",
-						{
-							user_name: resolveName(
-								api2,
-								channels2,
-								room_id,
-								ent.metadata?.user_id as string | undefined,
-								"user",
-							),
-						},
-					)}
+					{t("audit_log.changes.user_banned", {
+						user_name: resolveName(
+							api2,
+							channels2,
+							room_id,
+							ent.metadata?.user_id as string | undefined,
+							"user",
+						),
+					})}
 				</li>,
 			);
 			break;
@@ -395,18 +381,15 @@ export function formatChanges(
 		case "MemberUnban": {
 			formatted.push(
 				<li>
-					{t(
-						"audit_log.changes.user_unbanned",
-						{
-							user_name: resolveName(
-								api2,
-								channels2,
-								room_id,
-								ent.metadata?.user_id as string | undefined,
-								"user",
-							),
-						},
-					)}
+					{t("audit_log.changes.user_unbanned", {
+						user_name: resolveName(
+							api2,
+							channels2,
+							room_id,
+							ent.metadata?.user_id as string | undefined,
+							"user",
+						),
+					})}
 				</li>,
 			);
 			break;
@@ -414,34 +397,28 @@ export function formatChanges(
 		case "ThreadMemberAdd": {
 			formatted.push(
 				<li>
-					{t(
-						"audit_log.changes.user_added_to_thread",
-						{
-							user_name: resolveName(
-								api2,
-								channels2,
-								room_id,
-								ent.metadata?.user_id as string | undefined,
-								"user",
-							),
-						},
-					)}
+					{t("audit_log.changes.user_added_to_thread", {
+						user_name: resolveName(
+							api2,
+							channels2,
+							room_id,
+							ent.metadata?.user_id as string | undefined,
+							"user",
+						),
+					})}
 				</li>,
 			);
 			formatted.push(
 				<li>
-					{t(
-						"audit_log.changes.to_thread",
-						{
-							channel_name: resolveName(
-								api2,
-								channels2,
-								room_id,
-								ent.metadata?.thread_id as string | undefined,
-								"channel",
-							),
-						},
-					)}
+					{t("audit_log.changes.to_thread", {
+						channel_name: resolveName(
+							api2,
+							channels2,
+							room_id,
+							ent.metadata?.thread_id as string | undefined,
+							"channel",
+						),
+					})}
 				</li>,
 			);
 			break;
@@ -449,45 +426,40 @@ export function formatChanges(
 		case "ThreadMemberRemove": {
 			formatted.push(
 				<li>
-					{t(
-						"audit_log.changes.user_removed_from_thread",
-						{
-							user_name: resolveName(
-								api2,
-								channels2,
-								room_id,
-								ent.metadata?.user_id as string | undefined,
-								"user",
-							),
-						},
-					)}
+					{t("audit_log.changes.user_removed_from_thread", {
+						user_name: resolveName(
+							api2,
+							channels2,
+							room_id,
+							ent.metadata?.user_id as string | undefined,
+							"user",
+						),
+					})}
 				</li>,
 			);
 			formatted.push(
 				<li>
-					{t(
-						"audit_log.changes.to_thread",
-						{
-							channel_name: resolveName(
-								api2,
-								channels2,
-								room_id,
-								ent.metadata?.thread_id as string | undefined,
-								"channel",
-							),
-						},
-					)}
+					{t("audit_log.changes.to_thread", {
+						channel_name: resolveName(
+							api2,
+							channels2,
+							room_id,
+							ent.metadata?.thread_id as string | undefined,
+							"channel",
+						),
+					})}
 				</li>,
 			);
 			break;
 		}
 	}
 
-	const changes = "changes" in ent && ent.changes
-		? ent.changes
-		: "metadata" in ent && ent.metadata && "changes" in ent.metadata
-		? (ent.metadata.changes as AuditLogChange[])
-		: undefined;
+	const changes =
+		"changes" in ent && ent.changes
+			? ent.changes
+			: "metadata" in ent && ent.metadata && "changes" in ent.metadata
+				? (ent.metadata.changes as AuditLogChange[])
+				: undefined;
 
 	if (changes) {
 		for (const c of changes) {
@@ -580,37 +552,33 @@ export function formatChanges(
 				for (const r of added) {
 					formatted.push(
 						<li>
-							{t(
-								"audit_log.changes.role_added",
-								{ role_name: resolveName(api2, channels2, room_id, r, "role") },
-							)}
+							{t("audit_log.changes.role_added", {
+								role_name: resolveName(api2, channels2, room_id, r, "role"),
+							})}
 						</li>,
 					);
 				}
 				for (const r of removed) {
 					formatted.push(
 						<li>
-							{t(
-								"audit_log.changes.role_removed",
-								{ role_name: resolveName(api2, channels2, room_id, r, "role") },
-							)}
+							{t("audit_log.changes.role_removed", {
+								role_name: resolveName(api2, channels2, room_id, r, "role"),
+							})}
 						</li>,
 					);
 				}
 			} else if (c.new) {
 				formatted.push(
 					<li>
-						{t(
-							"audit_log.changes.set_field",
-							{ field: c.key, value: JSON.stringify(c.new) ?? "[null]" },
-						)}
+						{t("audit_log.changes.set_field", {
+							field: c.key,
+							value: JSON.stringify(c.new) ?? "[null]",
+						})}
 					</li>,
 				);
 			} else {
 				formatted.push(
-					<li>
-						{t("audit_log.changes.removed_field", { field: c.key })}
-					</li>,
+					<li>{t("audit_log.changes.removed_field", { field: c.key })}</li>,
 				);
 			}
 		}
@@ -630,21 +598,17 @@ function renderPermissionDiff(
 	const formatted: Array<JSX.Element> = [];
 	const { t } = useCtx();
 	const diff = diffArrays([...oldValues].sort(), [...newValues].sort());
-	const added = diff.flatMap((i) => i.added ? i.value : []);
-	const removed = diff.flatMap((i) => i.removed ? i.value : []);
+	const added = diff.flatMap((i) => (i.added ? i.value : []));
+	const removed = diff.flatMap((i) => (i.removed ? i.value : []));
 
 	for (const p of added) {
 		formatted.push(
-			<li>
-				{t(`audit_log.changes.${addedLabel}`, { permission: p })}
-			</li>,
+			<li>{t(`audit_log.changes.${addedLabel}`, { permission: p })}</li>,
 		);
 	}
 	for (const p of removed) {
 		formatted.push(
-			<li>
-				{t(`audit_log.changes.${removedLabel}`, { permission: p })}
-			</li>,
+			<li>{t(`audit_log.changes.${removedLabel}`, { permission: p })}</li>,
 		);
 	}
 	return formatted;

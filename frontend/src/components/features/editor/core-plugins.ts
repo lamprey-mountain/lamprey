@@ -1,5 +1,5 @@
-import { Plugin, PluginKey, TextSelection } from "prosemirror-state";
 import type { EditorState, Transaction } from "prosemirror-state";
+import { Plugin, PluginKey, TextSelection } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
 import { initTurndownService } from "../../../turndown.ts";
 import { convertEmojiInText } from "./emoji-plugin.ts";
@@ -42,12 +42,15 @@ export function createPastePlugin() {
 				const html = event.clipboardData?.getData("text/html");
 				const plainText = event.clipboardData?.getData("text/plain");
 
-				const str = html ? turndown.turndown(html) : (plainText ??
-					slice.content.textBetween(0, slice.content.size, "\n"));
+				const str = html
+					? turndown.turndown(html)
+					: (plainText ??
+						slice.content.textBetween(0, slice.content.size, "\n"));
 
 				const tr = view.state.tr;
 				if (
-					!tr.selection.empty && /^(https?:\/\/|mailto:)\S+$/i.test(str.trim())
+					!tr.selection.empty &&
+					/^(https?:\/\/|mailto:)\S+$/i.test(str.trim())
 				) {
 					const url = str.trim();
 					const { from, to } = tr.selection;
@@ -55,10 +58,10 @@ export function createPastePlugin() {
 					tr.insertText("[", from);
 					tr.setSelection(TextSelection.create(tr.doc, tr.mapping.map(to)));
 					view.dispatch(
-						tr.scrollIntoView().setMeta("paste", true).setMeta(
-							"uiEvent",
-							"paste",
-						),
+						tr
+							.scrollIntoView()
+							.setMeta("paste", true)
+							.setMeta("uiEvent", "paste"),
 					);
 					return true;
 				}
@@ -68,7 +71,8 @@ export function createPastePlugin() {
 				if (hasEmoji) {
 					const { from, to } = view.state.selection;
 					view.dispatch(
-						view.state.tr.replaceWith(from, to, content)
+						view.state.tr
+							.replaceWith(from, to, content)
 							.scrollIntoView()
 							.setMeta("paste", true),
 					);
@@ -76,7 +80,8 @@ export function createPastePlugin() {
 				}
 
 				view.dispatch(
-					view.state.tr.replaceSelectionWith(schema.text(str))
+					view.state.tr
+						.replaceSelectionWith(schema.text(str))
 						.scrollIntoView()
 						.setMeta("paste", true),
 				);

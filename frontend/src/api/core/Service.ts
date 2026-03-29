@@ -1,5 +1,6 @@
-import type { Client } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
+import type { IDBPDatabase } from "idb";
+import type { Client } from "sdk";
 import {
 	type Accessor,
 	batch,
@@ -7,9 +8,8 @@ import {
 	createResource,
 	type Resource,
 } from "solid-js";
-import type { RootStore } from "./Store";
-import type { IDBPDatabase } from "idb";
 import { logger } from "../../logger";
+import type { RootStore } from "./Store";
 
 export type Item<T> =
 	| { status: "loading" } // the item is currently being loaded
@@ -62,7 +62,8 @@ export abstract class BaseService<T> {
 				// Don't retry on client errors (4xx except 429)
 				const error = e as { response?: { status?: number } };
 				if (
-					error?.response?.status && error.response.status < 500 &&
+					error?.response?.status &&
+					error.response.status < 500 &&
 					error.response.status !== 429
 				) {
 					throw e;
@@ -112,12 +113,14 @@ export abstract class BaseService<T> {
 			return this.inflight.get(id)!;
 		}
 
-		const promise = this.fetch(id).then((data) => {
-			this.upsert(data);
-			return data;
-		}).finally(() => {
-			this.inflight.delete(id);
-		});
+		const promise = this.fetch(id)
+			.then((data) => {
+				this.upsert(data);
+				return data;
+			})
+			.finally(() => {
+				this.inflight.delete(id);
+			});
 
 		this.inflight.set(id, promise);
 		return promise;

@@ -1,3 +1,5 @@
+import type { EditorState } from "prosemirror-state";
+import { createUpload } from "sdk";
 import {
 	createEffect,
 	createSignal,
@@ -5,20 +7,18 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useCtx } from "../../../context.ts";
-import type { RoomT } from "../../../types.ts";
-import { getThumbFromId, getUrl } from "../../../media/util.tsx";
-import { createUpload } from "sdk";
 import { useApi2, useChannels2 } from "@/api";
-import { Checkbox } from "../../../icons";
-import { useModals } from "../../../contexts/modal";
-import { RoomIcon } from "../../../User.tsx";
-import { Savebar } from "../../../atoms/Savebar";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
-import { createEditor } from "../editor/Editor.tsx";
-import type { EditorState } from "prosemirror-state";
-import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
+import { Savebar } from "../../../atoms/Savebar";
+import { useCtx } from "../../../context.ts";
 import { useAutocomplete } from "../../../contexts/autocomplete";
+import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
+import { useModals } from "../../../contexts/modal";
+import { Checkbox } from "../../../icons";
+import { getThumbFromId, getUrl } from "../../../media/util.tsx";
+import type { RoomT } from "../../../types.ts";
+import { RoomIcon } from "../../../User.tsx";
+import { createEditor } from "../editor/Editor.tsx";
 
 export function Info(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
@@ -151,11 +151,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 			/>
 			<br />
 			<br />
-			<Savebar
-				show={isDirty()}
-				onCancel={reset}
-				onSave={save}
-			/>
+			<Savebar show={isDirty()} onCancel={reset} onSave={save} />
 			<div>
 				<div class="avatar-uploader" onClick={openAvatarPicker}>
 					<div class="avatar-inner">

@@ -1,8 +1,8 @@
 import type { Channel, Pagination } from "sdk";
-import { BaseService } from "../core/Service";
 import { createResource, type Resource } from "solid-js";
-import { PaginatedList } from "../core/PaginatedList";
 import { logger } from "../../logger";
+import { PaginatedList } from "../core/PaginatedList";
+import { BaseService } from "../core/Service";
 
 const log = logger.for("api/dms");
 
@@ -19,10 +19,7 @@ export class DmsService extends BaseService<Channel> {
 		throw new Error("Use channels.fetch() for DM channels");
 	}
 
-	private async fetchPage(
-		list: PaginatedList,
-		cursor?: string,
-	): Promise<void> {
+	private async fetchPage(list: PaginatedList, cursor?: string): Promise<void> {
 		if (list.state.isLoading || !list.state.has_more) return;
 
 		// return empty list if session is logged out
@@ -45,7 +42,7 @@ export class DmsService extends BaseService<Channel> {
 							from: cursor,
 						},
 					},
-				})
+				}),
 			);
 			const data = result as Pagination<Channel>;
 

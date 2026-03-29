@@ -2,15 +2,15 @@ import { useNavigate } from "@solidjs/router";
 import type { Channel, Room } from "sdk";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { useApi2, useChannels2, useDms2, useRooms2 } from "@/api";
+import icHome from "../assets/home.png";
+import icInbox from "../assets/inbox.png";
+import icMembers from "../assets/members.png";
+import icSettings from "../assets/settings.png";
 import { useCtx } from "../context";
+import { useModals } from "../contexts/modal";
 import { getThumbFromId } from "../media/util";
 import { ChannelIcon } from "../User";
 import { Modal } from "./mod";
-import { useModals } from "../contexts/modal";
-import icHome from "../assets/home.png";
-import icInbox from "../assets/inbox.png";
-import icSettings from "../assets/settings.png";
-import icMembers from "../assets/members.png";
 
 export const ModalPalette = () => {
 	const api2 = useApi2();
@@ -86,7 +86,10 @@ export const ModalPalette = () => {
 	});
 
 	const recentChannels = createMemo(() => {
-		return ctx.recentChannels().slice(1).map((i) => channels2.cache.get(i)!)
+		return ctx
+			.recentChannels()
+			.slice(1)
+			.map((i) => channels2.cache.get(i)!)
 			.filter((channel) => channel.type !== "Category")
 			.map((thread) => ({
 				type: "thread" as const,
@@ -232,8 +235,8 @@ export const ModalPalette = () => {
 			return items;
 		}
 
-		return allItems().filter((item) =>
-			item.name && item.name.toLowerCase().includes(q)
+		return allItems().filter(
+			(item) => item.name && item.name.toLowerCase().includes(q),
 		);
 	});
 
@@ -335,15 +338,17 @@ export const ModalPalette = () => {
 									<Show when={item.type === "link"} keyed>
 										<div class="item-icon">
 											<img
-												src={item.id === "home"
-													? icHome
-													: item.id === "inbox"
-													? icInbox
-													: item.id === "settings"
-													? icSettings
-													: item.id === "friends"
-													? icMembers
-													: ""}
+												src={
+													item.id === "home"
+														? icHome
+														: item.id === "inbox"
+															? icInbox
+															: item.id === "settings"
+																? icSettings
+																: item.id === "friends"
+																	? icMembers
+																	: ""
+												}
 												class="icon"
 											/>
 										</div>

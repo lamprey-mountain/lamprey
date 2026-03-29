@@ -1,3 +1,6 @@
+import { autoUpdate, flip, offset } from "@floating-ui/dom";
+import { go } from "fuzzysort";
+import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
 	createSignal,
@@ -9,11 +12,8 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import { go } from "fuzzysort";
-import { autoUpdate, flip, offset } from "@floating-ui/dom";
-import { useFloating } from "solid-floating-ui";
-import { createKeybinds } from "../keybinds";
 import { Checkmark, XMark } from "../icons";
+import { createKeybinds } from "../keybinds";
 
 export type DropdownItem<T> = {
 	item: T;
@@ -81,20 +81,18 @@ function createSelect<T>() {
 	};
 }
 
-export function createDropdown<T>(
-	props: {
-		selected?: T;
-		required?: boolean;
-		onSelect?: (item: T | null) => void;
-		onInput?: (value: string) => void;
-		onKeyDown?: (e: KeyboardEvent) => void;
-		onBlur?: (e: FocusEvent) => void;
-		ignoreMissingLabel?: boolean;
-		options: () => Array<DropdownItem<T>>;
-		mount?: Element | DocumentFragment | null;
-		placeholder?: string;
-	},
-) {
+export function createDropdown<T>(props: {
+	selected?: T;
+	required?: boolean;
+	onSelect?: (item: T | null) => void;
+	onInput?: (value: string) => void;
+	onKeyDown?: (e: KeyboardEvent) => void;
+	onBlur?: (e: FocusEvent) => void;
+	ignoreMissingLabel?: boolean;
+	options: () => Array<DropdownItem<T>>;
+	mount?: Element | DocumentFragment | null;
+	placeholder?: string;
+}) {
 	const [shown, setShown] = createSignal(false);
 	const [inputEl, setInputEl] = createSignal<HTMLInputElement>();
 	const [dropdownEl, setDropdownEl] = createSignal<HTMLDivElement>();
@@ -125,7 +123,7 @@ export function createDropdown<T>(
 	};
 
 	const binds = createKeybinds({
-		"ArrowUp": (e) => {
+		ArrowUp: (e) => {
 			if (!shown()) {
 				e.preventDefault();
 				const options = props.options();
@@ -134,7 +132,7 @@ export function createDropdown<T>(
 				select(options[next]?.item);
 			}
 		},
-		"ArrowDown": (e) => {
+		ArrowDown: (e) => {
 			if (!shown()) {
 				e.preventDefault();
 				const options = props.options();
@@ -155,13 +153,13 @@ export function createDropdown<T>(
 				selector.next();
 			}
 		},
-		"Escape": (e) => {
+		Escape: (e) => {
 			if (shown()) {
 				e.preventDefault();
 				setShown(false);
 			}
 		},
-		"Enter": (e) => {
+		Enter: (e) => {
 			const hovered = selector.getHovered();
 			if (shown() && hovered) {
 				e.preventDefault();
@@ -362,13 +360,13 @@ export function MultiDropdown<T>(
 				selector.next();
 			}
 		},
-		"Escape": (e) => {
+		Escape: (e) => {
 			if (shown()) {
 				e.preventDefault();
 				setShown(false);
 			}
 		},
-		"Enter": (e) => {
+		Enter: (e) => {
 			e.preventDefault();
 			if (shown()) {
 				const hovered = selector.getHovered();
@@ -381,7 +379,7 @@ export function MultiDropdown<T>(
 				setShown(true);
 			}
 		},
-		"Backspace": (e) => {
+		Backspace: (e) => {
 			if (selector.getFiltered().length === 0 && props.selected.length > 0) {
 				props.onRemove(props.selected[props.selected.length - 1]);
 			}

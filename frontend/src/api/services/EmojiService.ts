@@ -1,8 +1,8 @@
 import type { EmojiCustom, Pagination } from "sdk";
-import { BaseService } from "../core/Service";
 import { createResource, type Resource } from "solid-js";
-import { PaginatedList } from "../core/PaginatedList";
 import { logger } from "../../logger";
+import { PaginatedList } from "../core/PaginatedList";
+import { BaseService } from "../core/Service";
 
 const log = logger.for("api/emoji");
 
@@ -23,7 +23,7 @@ export class EmojiService extends BaseService<EmojiCustom> {
 		const data = await this.retryWithBackoff<EmojiCustom>(() =>
 			this.client.http.GET("/api/v1/room/{room_id}/emoji/{emoji_id}", {
 				params: { path: { room_id, emoji_id } },
-			})
+			}),
 		);
 		this.upsert(data);
 		return data;
@@ -48,7 +48,7 @@ export class EmojiService extends BaseService<EmojiCustom> {
 							from: cursor,
 						},
 					},
-				})
+				}),
 			);
 
 			this.upsertBulk(data.items);
@@ -90,7 +90,7 @@ export class EmojiService extends BaseService<EmojiCustom> {
 				params: {
 					query: { query, limit: 100 },
 				},
-			})
+			}),
 		);
 	}
 

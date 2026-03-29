@@ -1,4 +1,5 @@
-import { createSignal } from "solid-js";
+import { createEffect, createSignal } from "solid-js";
+import iconDownload from "../assets/download.png";
 import { useCtx } from "../context.ts";
 import { useModals } from "../contexts/modal";
 import {
@@ -9,8 +10,6 @@ import {
 	type MediaProps,
 	Resize,
 } from "./util.tsx";
-import iconDownload from "../assets/download.png";
-import { createEffect } from "solid-js";
 
 type ImageViewProps = MediaProps & {
 	thumb_width?: number;

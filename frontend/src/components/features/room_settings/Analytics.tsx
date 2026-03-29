@@ -6,22 +6,22 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import type { RoomT } from "../../../types.ts";
 import { useApi2 } from "@/api";
-import { useCtx } from "../../../context.ts";
-import { formatBytes } from "../../../media/util.tsx";
+import type { Aggregation } from "@/api/services/RoomAnalyticsService.ts";
 import { DateRangePicker } from "../../../atoms/Daterangepicker.tsx";
 import { Dropdown } from "../../../atoms/Dropdown.tsx";
-import type { Aggregation } from "@/api/services/RoomAnalyticsService.ts";
+import { useCtx } from "../../../context.ts";
+import { formatBytes } from "../../../media/util.tsx";
+import type { RoomT } from "../../../types.ts";
 
 export function Metrics(props: VoidProps<{ room: RoomT }>) {
 	const api2 = useApi2();
 
 	const [aggregation, setAggregation] = createSignal<Aggregation>("Daily");
 	const [dateRange, setDateRange] = createSignal({
-		start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split(
-			"T",
-		)[0],
+		start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+			.toISOString()
+			.split("T")[0],
 		end: new Date().toISOString().split("T")[0],
 	});
 
@@ -41,24 +41,20 @@ export function Metrics(props: VoidProps<{ room: RoomT }>) {
 		};
 	};
 
-	const [analyticsOverview] = createResource(
-		refreshData,
-		(args) => api2.room_analytics.getOverview(args.room_id, args),
+	const [analyticsOverview] = createResource(refreshData, (args) =>
+		api2.room_analytics.getOverview(args.room_id, args),
 	);
 
-	const [analyticsMembersCount] = createResource(
-		refreshData,
-		(args) => api2.room_analytics.getMembersCount(args.room_id, args),
+	const [analyticsMembersCount] = createResource(refreshData, (args) =>
+		api2.room_analytics.getMembersCount(args.room_id, args),
 	);
 
-	const [analyticsMembersJoin] = createResource(
-		refreshData,
-		(args) => api2.room_analytics.getMembersJoin(args.room_id, args),
+	const [analyticsMembersJoin] = createResource(refreshData, (args) =>
+		api2.room_analytics.getMembersJoin(args.room_id, args),
 	);
 
-	const [analyticsMembersLeave] = createResource(
-		refreshData,
-		(args) => api2.room_analytics.getMembersLeave(args.room_id, args),
+	const [analyticsMembersLeave] = createResource(refreshData, (args) =>
+		api2.room_analytics.getMembersLeave(args.room_id, args),
 	);
 
 	const onZoom = (startBucket: string, endBucket: string) => {
@@ -73,9 +69,9 @@ export function Metrics(props: VoidProps<{ room: RoomT }>) {
 
 	const resetZoom = () => {
 		setDateRange({
-			start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split(
-				"T",
-			)[0],
+			start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+				.toISOString()
+				.split("T")[0],
 			end: new Date().toISOString().split("T")[0],
 		});
 	};
@@ -103,7 +99,8 @@ export function Metrics(props: VoidProps<{ room: RoomT }>) {
 							{ item: "Monthly", label: "Monthly" },
 						]}
 						onSelect={(value) =>
-							value !== null && setAggregation(value as Aggregation)}
+							value !== null && setAggregation(value as Aggregation)
+						}
 					/>
 				</div>
 			</div>
@@ -191,12 +188,12 @@ function Chart<T extends { bucket: string }>(props: ChartProps<T>) {
 	const ctx = useCtx();
 	const data = createMemo(() => props.data ?? []);
 	const points = createMemo(() =>
-		data().map((d) => d[props.field] as unknown as number)
+		data().map((d) => d[props.field] as unknown as number),
 	);
 	const maxHeight = createMemo(() => Math.max(...points(), 1));
 
-	const scaleX = createMemo(() =>
-		600 / (points().length > 1 ? points().length - 1 : 1)
+	const scaleX = createMemo(
+		() => 600 / (points().length > 1 ? points().length - 1 : 1),
 	);
 	const scaleY = createMemo(() => 100 / maxHeight());
 
@@ -401,23 +398,28 @@ function Chart<T extends { bucket: string }>(props: ChartProps<T>) {
 								/>
 								<path
 									d={pathFill()}
-									fill={`url(#chart-gradient-${
-										props.name.replace(/\s+/g, "-")
-									})`}
+									fill={`url(#chart-gradient-${props.name.replace(
+										/\s+/g,
+										"-",
+									)})`}
 								/>
 
 								{/* Selection overlay */}
 								<Show
-									when={selectionStartIndex() !== null &&
-										hoveredIndex() !== null}
+									when={
+										selectionStartIndex() !== null && hoveredIndex() !== null
+									}
 								>
 									<rect
-										x={Math.min(selectionStartIndex()!, hoveredIndex()!) *
-											scaleX()}
+										x={
+											Math.min(selectionStartIndex()!, hoveredIndex()!) *
+											scaleX()
+										}
 										y="-100"
-										width={Math.abs(
-											selectionStartIndex()! - hoveredIndex()!,
-										) * scaleX()}
+										width={
+											Math.abs(selectionStartIndex()! - hoveredIndex()!) *
+											scaleX()
+										}
 										height="100"
 										fill="oklch(var(--color-link-500) / 0.3)"
 									/>

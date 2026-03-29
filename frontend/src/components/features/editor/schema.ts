@@ -21,17 +21,21 @@ export const schema = new Schema({
 			code: true,
 			defining: true,
 			attrs: { language: { default: null } },
-			toDOM: (
-				node,
-			) => ["pre", ["code", { "data-language": node.attrs.language }, 0]],
-			parseDOM: [{
-				tag: "pre",
-				preserveWhitespace: "full",
-				getAttrs: (el) => ({
-					language:
-						(el as HTMLElement).querySelector("code")?.dataset.language ?? null,
-				}),
-			}],
+			toDOM: (node) => [
+				"pre",
+				["code", { "data-language": node.attrs.language }, 0],
+			],
+			parseDOM: [
+				{
+					tag: "pre",
+					preserveWhitespace: "full",
+					getAttrs: (el) => ({
+						language:
+							(el as HTMLElement).querySelector("code")?.dataset.language ??
+							null,
+					}),
+				},
+			],
 		},
 		blockquote: {
 			content: "block+",
@@ -72,20 +76,24 @@ export const schema = new Schema({
 					? `@${node.attrs.name}`
 					: `<@${node.attrs.user}>`;
 			},
-			toDOM: (
-				n,
-			) => ["span", {
-				"data-user-id": n.attrs.user,
-				"data-name": n.attrs.name,
-				"class": "mention",
-			}, n.attrs.name ? `@${n.attrs.name}` : `<@${n.attrs.user}>`],
-			parseDOM: [{
-				tag: "span.mention[data-user-id]",
-				getAttrs: (el) => ({
-					user: (el as HTMLElement).dataset.userId,
-					name: (el as HTMLElement).dataset.name,
-				}),
-			}],
+			toDOM: (n) => [
+				"span",
+				{
+					"data-user-id": n.attrs.user,
+					"data-name": n.attrs.name,
+					class: "mention",
+				},
+				n.attrs.name ? `@${n.attrs.name}` : `<@${n.attrs.user}>`,
+			],
+			parseDOM: [
+				{
+					tag: "span.mention[data-user-id]",
+					getAttrs: (el) => ({
+						user: (el as HTMLElement).dataset.userId,
+						name: (el as HTMLElement).dataset.name,
+					}),
+				},
+			],
 		},
 		mentionChannel: {
 			group: "inline",
@@ -101,20 +109,24 @@ export const schema = new Schema({
 					? `#${node.attrs.name}`
 					: `<#${node.attrs.channel}>`;
 			},
-			toDOM: (
-				n,
-			) => ["span", {
-				"data-channel-id": n.attrs.channel,
-				"data-name": n.attrs.name,
-				"class": "mention",
-			}, n.attrs.name ? `#${n.attrs.name}` : `<#${n.attrs.channel}>`],
-			parseDOM: [{
-				tag: "span.mention[data-channel-id]",
-				getAttrs: (el) => ({
-					channel: (el as HTMLElement).dataset.channelId,
-					name: (el as HTMLElement).dataset.name,
-				}),
-			}],
+			toDOM: (n) => [
+				"span",
+				{
+					"data-channel-id": n.attrs.channel,
+					"data-name": n.attrs.name,
+					class: "mention",
+				},
+				n.attrs.name ? `#${n.attrs.name}` : `<#${n.attrs.channel}>`,
+			],
+			parseDOM: [
+				{
+					tag: "span.mention[data-channel-id]",
+					getAttrs: (el) => ({
+						channel: (el as HTMLElement).dataset.channelId,
+						name: (el as HTMLElement).dataset.name,
+					}),
+				},
+			],
 		},
 		mentionRole: {
 			group: "inline",
@@ -130,20 +142,24 @@ export const schema = new Schema({
 					? `@${node.attrs.name}`
 					: `<@&${node.attrs.role}>`;
 			},
-			toDOM: (
-				n,
-			) => ["span", {
-				"data-role-id": n.attrs.role,
-				"data-name": n.attrs.name,
-				"class": "mention",
-			}, n.attrs.name ? `@${n.attrs.name}` : `<@&${n.attrs.role}>`],
-			parseDOM: [{
-				tag: "span.mention[data-role-id]",
-				getAttrs: (el) => ({
-					role: (el as HTMLElement).dataset.roleId,
-					name: (el as HTMLElement).dataset.name,
-				}),
-			}],
+			toDOM: (n) => [
+				"span",
+				{
+					"data-role-id": n.attrs.role,
+					"data-name": n.attrs.name,
+					class: "mention",
+				},
+				n.attrs.name ? `@${n.attrs.name}` : `<@&${n.attrs.role}>`,
+			],
+			parseDOM: [
+				{
+					tag: "span.mention[data-role-id]",
+					getAttrs: (el) => ({
+						role: (el as HTMLElement).dataset.roleId,
+						name: (el as HTMLElement).dataset.name,
+					}),
+				},
+			],
 		},
 		mentionEveryone: {
 			group: "inline",
@@ -154,13 +170,19 @@ export const schema = new Schema({
 			leafText() {
 				return "@everyone";
 			},
-			toDOM: () => ["span", {
-				"data-mention": "everyone",
-				"class": "mention mention-everyone",
-			}, "@everyone"],
-			parseDOM: [{
-				tag: "span.mention-everyone",
-			}],
+			toDOM: () => [
+				"span",
+				{
+					"data-mention": "everyone",
+					class: "mention mention-everyone",
+				},
+				"@everyone",
+			],
+			parseDOM: [
+				{
+					tag: "span.mention-everyone",
+				},
+			],
 		},
 		emojiCustom: {
 			group: "inline",
@@ -175,22 +197,26 @@ export const schema = new Schema({
 			leafText(node) {
 				return `:${node.attrs.name}:`;
 			},
-			toDOM: (
-				n,
-			) => ["span", {
-				"data-emoji-id": n.attrs.id,
-				"data-emoji-name": n.attrs.name,
-				"data-emoji-animated": n.attrs.animated ? "true" : "false",
-				"class": "mention",
-			}, `:${n.attrs.name}:`],
-			parseDOM: [{
-				tag: "span[data-emoji-id][data-emoji-name]",
-				getAttrs: (el) => ({
-					id: (el as HTMLElement).dataset.emojiId,
-					name: (el as HTMLElement).dataset.emojiName,
-					animated: (el as HTMLElement).dataset.emojiAnimated === "true",
-				}),
-			}],
+			toDOM: (n) => [
+				"span",
+				{
+					"data-emoji-id": n.attrs.id,
+					"data-emoji-name": n.attrs.name,
+					"data-emoji-animated": n.attrs.animated ? "true" : "false",
+					class: "mention",
+				},
+				`:${n.attrs.name}:`,
+			],
+			parseDOM: [
+				{
+					tag: "span[data-emoji-id][data-emoji-name]",
+					getAttrs: (el) => ({
+						id: (el as HTMLElement).dataset.emojiId,
+						name: (el as HTMLElement).dataset.emojiName,
+						animated: (el as HTMLElement).dataset.emojiAnimated === "true",
+					}),
+				},
+			],
 		},
 		emojiUnicode: {
 			group: "inline",
@@ -207,16 +233,18 @@ export const schema = new Schema({
 				"span",
 				{
 					"data-emoji-unicode": n.attrs.char,
-					"class": "emoji-unicode",
+					class: "emoji-unicode",
 				},
 				n.attrs.char,
 			],
-			parseDOM: [{
-				tag: "span[data-emoji-unicode]",
-				getAttrs: (el) => ({
-					char: (el as HTMLElement).dataset.emojiUnicode,
-				}),
-			}],
+			parseDOM: [
+				{
+					tag: "span[data-emoji-unicode]",
+					getAttrs: (el) => ({
+						char: (el as HTMLElement).dataset.emojiUnicode,
+					}),
+				},
+			],
 		},
 		text: {
 			group: "inline",

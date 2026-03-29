@@ -44,7 +44,7 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 		const res = await fetch(upload_url!, {
 			method: "HEAD",
 			headers: {
-				"authorization": `Bearer ${opts.client.opts.token}`,
+				authorization: `Bearer ${opts.client.opts.token}`,
 			},
 		});
 		if (res.ok) {
@@ -53,7 +53,9 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 			attemptUpload();
 		} else {
 			opts.onFail(
-				new Error(`upload probe failed: ${await res.text() ?? res.statusText}`),
+				new Error(
+					`upload probe failed: ${(await res.text()) ?? res.statusText}`,
+				),
 			);
 		}
 	}

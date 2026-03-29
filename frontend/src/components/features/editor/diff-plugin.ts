@@ -1,6 +1,6 @@
+import type { Transaction } from "prosemirror-state";
 import { Plugin, PluginKey } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
-import type { Transaction } from "prosemirror-state";
 
 export type DiffMark =
 	| { from: number; to: number; type: "insertion" }
@@ -8,9 +8,7 @@ export type DiffMark =
 
 export const diffPluginKey = new PluginKey("diff");
 
-export function createDiffPlugin(
-	_getDiffMarks: () => DiffMark[],
-): Plugin {
+export function createDiffPlugin(_getDiffMarks: () => DiffMark[]): Plugin {
 	return new Plugin({
 		key: diffPluginKey,
 		state: {
@@ -36,19 +34,23 @@ export function createDiffPlugin(
 								if (!node) break;
 
 								const nodeEnd = Math.min(from + node.nodeSize, to);
-								decorations.push(Decoration.inline(from, nodeEnd, {
-									class: "diff-insertion",
-								}));
+								decorations.push(
+									Decoration.inline(from, nodeEnd, {
+										class: "diff-insertion",
+									}),
+								);
 								from = nodeEnd;
 							}
 						} else {
 							const pos = Math.max(0, Math.min(mark.pos, maxPos));
-							decorations.push(Decoration.widget(pos, () => {
-								const dom = document.createElement("span");
-								dom.className = "diff-deletion";
-								dom.textContent = mark.text;
-								return dom;
-							}));
+							decorations.push(
+								Decoration.widget(pos, () => {
+									const dom = document.createElement("span");
+									dom.className = "diff-deletion";
+									dom.textContent = mark.text;
+									return dom;
+								}),
+							);
 						}
 					}
 
@@ -70,9 +72,6 @@ export function createDiffPlugin(
 	});
 }
 
-export function setDiffMarks(
-	tr: Transaction,
-	marks: DiffMark[],
-): Transaction {
+export function setDiffMarks(tr: Transaction, marks: DiffMark[]): Transaction {
 	return tr.setMeta(diffPluginKey, { marks });
 }

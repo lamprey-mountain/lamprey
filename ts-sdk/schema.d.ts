@@ -2345,85 +2345,84 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/calendar/{channel_id}/event/{event_id}/overwrite/{seq}/rsvp/{user_id}":
-		{
+	"/api/v1/calendar/{channel_id}/event/{event_id}/overwrite/{seq}/rsvp/{user_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Calendar overwrite RSVP put
+		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarRsvpDelete</div>
+		 */
+		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path?: never;
+				path: {
+					channel_id: string;
+					event_id: string;
+					seq: number;
+					user_id: null | components["schemas"]["Id"];
+				};
 				cookie?: never;
 			};
-			get?: never;
-			/**
-			 * Calendar overwrite RSVP put
-			 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
-			 *     <div class="markdown-alert-scope-required">Full</div>
-			 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarRsvpDelete</div>
-			 */
-			put: {
-				parameters: {
-					query?: never;
-					header?: never;
-					path: {
-						channel_id: string;
-						event_id: string;
-						seq: number;
-						user_id: null | components["schemas"]["Id"];
-					};
-					cookie?: never;
-				};
-				requestBody: {
-					content: {
-						"application/json": {
-							status: components["schemas"]["CalendarRsvpStatus"];
-						};
-					};
-				};
-				responses: {
-					/** @description Success */
-					200: {
-						headers: {
-							[name: string]: unknown;
-						};
-						content?: never;
+			requestBody: {
+				content: {
+					"application/json": {
+						status: components["schemas"]["CalendarRsvpStatus"];
 					};
 				};
 			};
-			post?: never;
-			/**
-			 * Calendar overwrite RSVP delete
-			 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
-			 *     <div class="markdown-alert-scope-required">Full</div>
-			 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarRsvpDelete</div>
-			 */
-			delete: {
-				parameters: {
-					query?: never;
-					header?: never;
-					path: {
-						channel_id: string;
-						event_id: string;
-						seq: number;
-						user_id: null | components["schemas"]["Id"];
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
 					};
-					cookie?: never;
-				};
-				requestBody?: never;
-				responses: {
-					/** @description Success */
-					200: {
-						headers: {
-							[name: string]: unknown;
-						};
-						content?: never;
-					};
+					content?: never;
 				};
 			};
-			options?: never;
-			head?: never;
-			patch?: never;
-			trace?: never;
 		};
+		post?: never;
+		/**
+		 * Calendar overwrite RSVP delete
+		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarRsvpDelete</div>
+		 */
+		delete: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					event_id: string;
+					seq: number;
+					user_id: null | components["schemas"]["Id"];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/calendar/{channel_id}/event/{event_id}/rsvp": {
 		parameters: {
 			query?: never;
@@ -2629,8 +2628,7 @@ export interface paths {
 						/** @description not safe for work */
 						nsfw?: boolean;
 						parent_id?: null | components["schemas"]["Id"];
-						permission_overwrites?:
-							components["schemas"]["PermissionOverwrite"][];
+						permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
 						/** @description the recipient(s) for this dm/gdm */
 						recipients?: components["schemas"]["Id"][] | null;
 						/** Format: int64 */
@@ -2714,8 +2712,7 @@ export interface paths {
 							owner_id?: null | components["schemas"]["Id"];
 							parent_id?: null | components["schemas"]["Id"];
 							/** @description permission overwrites for this channel */
-							permission_overwrites:
-								components["schemas"]["PermissionOverwrite"][];
+							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 							/**
 							 * Format: int32
 							 * @description the position of this channel in the navbar
@@ -2867,8 +2864,7 @@ export interface paths {
 							owner_id?: null | components["schemas"]["Id"];
 							parent_id?: null | components["schemas"]["Id"];
 							/** @description permission overwrites for this channel */
-							permission_overwrites:
-								components["schemas"]["PermissionOverwrite"][];
+							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 							/**
 							 * Format: int32
 							 * @description the position of this channel in the navbar
@@ -3051,8 +3047,7 @@ export interface paths {
 							owner_id?: null | components["schemas"]["Id"];
 							parent_id?: null | components["schemas"]["Id"];
 							/** @description permission overwrites for this channel */
-							permission_overwrites:
-								components["schemas"]["PermissionOverwrite"][];
+							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 							/**
 							 * Format: int32
 							 * @description the position of this channel in the navbar
@@ -4076,82 +4071,81 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}/{user_id}":
-		{
+	"/api/v1/channel/{channel_id}/message/{message_id}/reaction/{reaction_key}/{user_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Reaction add
+		 * @description <div class="markdown-alert-permission-required">ReactionAdd</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Add a reaction to a message.
+		 */
+		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path?: never;
+				path: {
+					channel_id: string;
+					message_id: string;
+					reaction_key: string;
+					user_id: null | components["schemas"]["Id"];
+				};
 				cookie?: never;
 			};
-			get?: never;
-			/**
-			 * Reaction add
-			 * @description <div class="markdown-alert-permission-required">ReactionAdd</div>
-			 *     <div class="markdown-alert-scope-required">Full</div>
-			 *
-			 *     Add a reaction to a message.
-			 */
-			put: {
-				parameters: {
-					query?: never;
-					header?: never;
-					path: {
-						channel_id: string;
-						message_id: string;
-						reaction_key: string;
-						user_id: null | components["schemas"]["Id"];
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
 					};
-					cookie?: never;
-				};
-				requestBody?: never;
-				responses: {
-					/** @description Success */
-					200: {
-						headers: {
-							[name: string]: unknown;
-						};
-						content?: never;
-					};
+					content?: never;
 				};
 			};
-			post?: never;
-			/**
-			 * Reaction remove
-			 * @description <div class="markdown-alert-permission-optional">ReactionManage</div>
-			 *     <div class="markdown-alert-scope-required">Full</div>
-			 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ReactionDeleteUser</div>
-			 *
-			 *     Remove a user's reaction from a message.
-			 */
-			delete: {
-				parameters: {
-					query?: never;
-					header?: never;
-					path: {
-						channel_id: string;
-						message_id: string;
-						reaction_key: string;
-						user_id: null | components["schemas"]["Id"];
-					};
-					cookie?: never;
-				};
-				requestBody?: never;
-				responses: {
-					/** @description Success */
-					200: {
-						headers: {
-							[name: string]: unknown;
-						};
-						content?: never;
-					};
-				};
-			};
-			options?: never;
-			head?: never;
-			patch?: never;
-			trace?: never;
 		};
+		post?: never;
+		/**
+		 * Reaction remove
+		 * @description <div class="markdown-alert-permission-optional">ReactionManage</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ReactionDeleteUser</div>
+		 *
+		 *     Remove a user's reaction from a message.
+		 */
+		delete: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					message_id: string;
+					reaction_key: string;
+					user_id: null | components["schemas"]["Id"];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/channel/{channel_id}/message/{message_id}/thread": {
 		parameters: {
 			query?: never;
@@ -4194,8 +4188,7 @@ export interface paths {
 						/** @description not safe for work */
 						nsfw?: boolean;
 						parent_id?: null | components["schemas"]["Id"];
-						permission_overwrites?:
-							components["schemas"]["PermissionOverwrite"][];
+						permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
 						/** @description the recipient(s) for this dm/gdm */
 						recipients?: components["schemas"]["Id"][] | null;
 						/** Format: int64 */
@@ -4279,8 +4272,7 @@ export interface paths {
 							owner_id?: null | components["schemas"]["Id"];
 							parent_id?: null | components["schemas"]["Id"];
 							/** @description permission overwrites for this channel */
-							permission_overwrites:
-								components["schemas"]["PermissionOverwrite"][];
+							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 							/**
 							 * Format: int32
 							 * @description the position of this channel in the navbar
@@ -5473,8 +5465,7 @@ export interface paths {
 						/** @description not safe for work */
 						nsfw?: boolean;
 						parent_id?: null | components["schemas"]["Id"];
-						permission_overwrites?:
-							components["schemas"]["PermissionOverwrite"][];
+						permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
 						/** @description the recipient(s) for this dm/gdm */
 						recipients?: components["schemas"]["Id"][] | null;
 						/** Format: int64 */
@@ -5558,8 +5549,7 @@ export interface paths {
 							owner_id?: null | components["schemas"]["Id"];
 							parent_id?: null | components["schemas"]["Id"];
 							/** @description permission overwrites for this channel */
-							permission_overwrites:
-								components["schemas"]["PermissionOverwrite"][];
+							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 							/**
 							 * Format: int32
 							 * @description the position of this channel in the navbar
@@ -5867,8 +5857,7 @@ export interface paths {
 							owner_id?: null | components["schemas"]["Id"];
 							parent_id?: null | components["schemas"]["Id"];
 							/** @description permission overwrites for this channel */
-							permission_overwrites:
-								components["schemas"]["PermissionOverwrite"][];
+							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 							/**
 							 * Format: int32
 							 * @description the position of this channel in the navbar
@@ -6761,28 +6750,31 @@ export interface paths {
 				header?: never;
 				path: {
 					channel_id: string;
-					revision_id: {
-						/** @description the current head of this branch
-						 *
-						 *     serialized as `branch-id` */
-						Branch: {
-							branch_id: components["schemas"]["Id"];
-						};
-					} | {
-						/** @description this one specific revision
-						 *
-						 *     serialized as `branch-uuid@seq` */
-						Revision: {
-							version_id: components["schemas"]["DocumentVersionId"];
-						};
-					} | {
-						/** @description this one specific revision
-						 *
-						 *     serialized as `~tag` */
-						Tag: {
-							tag_id: components["schemas"]["Id"];
-						};
-					};
+					revision_id:
+						| {
+								/** @description the current head of this branch
+								 *
+								 *     serialized as `branch-id` */
+								Branch: {
+									branch_id: components["schemas"]["Id"];
+								};
+						  }
+						| {
+								/** @description this one specific revision
+								 *
+								 *     serialized as `branch-uuid@seq` */
+								Revision: {
+									version_id: components["schemas"]["DocumentVersionId"];
+								};
+						  }
+						| {
+								/** @description this one specific revision
+								 *
+								 *     serialized as `~tag` */
+								Tag: {
+									tag_id: components["schemas"]["Id"];
+								};
+						  };
 				};
 				cookie?: never;
 			};
@@ -10507,8 +10499,7 @@ export interface paths {
 						/** @description not safe for work */
 						nsfw?: boolean;
 						parent_id?: null | components["schemas"]["Id"];
-						permission_overwrites?:
-							components["schemas"]["PermissionOverwrite"][];
+						permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
 						/** @description the recipient(s) for this dm/gdm */
 						recipients?: components["schemas"]["Id"][] | null;
 						/** Format: int64 */
@@ -10592,8 +10583,7 @@ export interface paths {
 							owner_id?: null | components["schemas"]["Id"];
 							parent_id?: null | components["schemas"]["Id"];
 							/** @description permission overwrites for this channel */
-							permission_overwrites:
-								components["schemas"]["PermissionOverwrite"][];
+							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 							/**
 							 * Format: int32
 							 * @description the position of this channel in the navbar
@@ -14199,8 +14189,7 @@ export interface paths {
 							owner_id?: null | components["schemas"]["Id"];
 							parent_id?: null | components["schemas"]["Id"];
 							/** @description permission overwrites for this channel */
-							permission_overwrites:
-								components["schemas"]["PermissionOverwrite"][];
+							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 							/**
 							 * Format: int32
 							 * @description the position of this channel in the navbar
@@ -14342,8 +14331,7 @@ export interface paths {
 							owner_id?: null | components["schemas"]["Id"];
 							parent_id?: null | components["schemas"]["Id"];
 							/** @description permission overwrites for this channel */
-							permission_overwrites:
-								components["schemas"]["PermissionOverwrite"][];
+							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 							/**
 							 * Format: int32
 							 * @description the position of this channel in the navbar
@@ -16903,743 +16891,848 @@ export interface components {
 		 * @enum {string}
 		 */
 		AuditLogEntryStatus: "Success" | "Unauthorized" | "Failed";
-		AuditLogEntryType: {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-			};
-			/** @enum {string} */
-			type: "RoomCreate";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-			};
-			/** @enum {string} */
-			type: "RoomUpdate";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				channel_id: components["schemas"]["Id"];
-				channel_type: components["schemas"]["ChannelType"];
-			};
-			/** @enum {string} */
-			type: "ChannelCreate";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				channel_id: components["schemas"]["Id"];
-				channel_type: components["schemas"]["ChannelType"];
-			};
-			/** @enum {string} */
-			type: "ChannelUpdate";
-		} | {
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-				message_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "MessageDelete";
-		} | {
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-				message_id: components["schemas"]["Id"];
-				version_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "MessageVersionDelete";
-		} | {
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-				message_ids: components["schemas"]["Id"][];
-			};
-			/** @enum {string} */
-			type: "MessageDeleteBulk";
-		} | {
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-				message_ids: components["schemas"]["Id"][];
-			};
-			/** @enum {string} */
-			type: "MessageRemove";
-		} | {
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-				message_ids: components["schemas"]["Id"][];
-			};
-			/** @enum {string} */
-			type: "MessageRestore";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-			};
-			/** @enum {string} */
-			type: "RoleCreate";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-			};
-			/** @enum {string} */
-			type: "RoleUpdate";
-		} | {
-			metadata: {
-				changes?: components["schemas"]["AuditLogChange"][];
-				role_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "RoleDelete";
-		} | {
-			metadata: {
-				roles: components["schemas"]["RoleReorderItem"][];
-			};
-			/** @enum {string} */
-			type: "RoleReorder";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-			};
-			/** @enum {string} */
-			type: "InviteCreate";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-			};
-			/** @enum {string} */
-			type: "InviteUpdate";
-		} | {
-			metadata: {
-				changes?: components["schemas"]["AuditLogChange"][];
-				code: components["schemas"]["InviteCode"];
-			};
-			/** @enum {string} */
-			type: "InviteDelete";
-		} | {
-			/**
-			 * @deprecated
-			 * @description remove all reactions
-			 */
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-				message_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "ReactionPurge";
-		} | {
-			/** @description remove all reactions from a message */
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-				message_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "ReactionDeleteAll";
-		} | {
-			/** @description remove all reactions of an emoji from a message */
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-				key: components["schemas"]["ReactionKeyParam"];
-				message_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "ReactionDeleteKey";
-		} | {
-			/** @description remove a reactions from a specific user on a message */
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-				key: components["schemas"]["ReactionKeyParam"];
-				message_id: components["schemas"]["Id"];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "ReactionDeleteUser";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-			};
-			/** @enum {string} */
-			type: "EmojiCreate";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-			};
-			/** @enum {string} */
-			type: "EmojiUpdate";
-		} | {
-			metadata: {
-				changes?: components["schemas"]["AuditLogChange"][];
-				emoji_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "EmojiDelete";
-		} | {
-			/** @deprecated */
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				channel_id: components["schemas"]["Id"];
-				/** Format: uuid */
-				overwrite_id: string;
-				type: components["schemas"]["PermissionOverwriteType"];
-			};
-			/** @enum {string} */
-			type: "PermissionOverwriteSet";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				channel_id: components["schemas"]["Id"];
-				/** Format: uuid */
-				overwrite_id: string;
-				type: components["schemas"]["PermissionOverwriteType"];
-			};
-			/** @enum {string} */
-			type: "PermissionOverwriteCreate";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				channel_id: components["schemas"]["Id"];
-				/** Format: uuid */
-				overwrite_id: string;
-				type: components["schemas"]["PermissionOverwriteType"];
-			};
-			/** @enum {string} */
-			type: "PermissionOverwriteUpdate";
-		} | {
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-				/** Format: uuid */
-				overwrite_id: string;
-				type: components["schemas"]["PermissionOverwriteType"];
-			};
-			/** @enum {string} */
-			type: "PermissionOverwriteDelete";
-		} | {
-			metadata: {
-				room_id: components["schemas"]["Id"];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "MemberKick";
-		} | {
-			metadata: {
-				room_id: components["schemas"]["Id"];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "MemberBan";
-		} | {
-			metadata: {
-				room_id: components["schemas"]["Id"];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "MemberUnban";
-		} | {
-			metadata: {
-				/**
-				 * Format: int64
-				 * @description number of pruned users
-				 */
-				pruned: number;
-			};
-			/** @enum {string} */
-			type: "MemberPrune";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				room_id: components["schemas"]["Id"];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "MemberUpdate";
-		} | {
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "MemberDisconnect";
-		} | {
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "MemberDisconnectAll";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "MemberMove";
-		} | {
-			metadata: {
-				role_id: components["schemas"]["Id"];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "RoleApply";
-		} | {
-			metadata: {
-				role_id: components["schemas"]["Id"];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "RoleUnapply";
-		} | {
-			metadata: {
-				bot_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "BotAdd";
-		} | {
-			metadata: {
-				thread_id: components["schemas"]["Id"];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "ThreadMemberAdd";
-		} | {
-			metadata: {
-				thread_id: components["schemas"]["Id"];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "ThreadMemberRemove";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-			};
-			/** @enum {string} */
-			type: "UserUpdate";
-		} | {
-			metadata: {
-				expires_at?: null | components["schemas"]["Time"];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "UserSuspend";
-		} | {
-			metadata: {
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "UserUnsuspend";
-		} | {
-			/** @description friend request sent to another user */
-			metadata: {
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "FriendRequest";
-		} | {
-			/** @description friend request from another user accepted */
-			metadata: {
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "FriendAccept";
-		} | {
-			metadata: {
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "FriendDelete";
-		} | {
-			metadata: {
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "BlockCreate";
-		} | {
-			metadata: {
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "BlockDelete";
-		} | {
-			metadata: {
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "IgnoreAdd";
-		} | {
-			metadata: {
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "IgnoreRemove";
-		} | {
-			metadata: {
-				session_id: components["schemas"]["Id"];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "SessionLogin";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				session_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "SessionUpdate";
-		} | {
-			metadata: {
-				changes?: components["schemas"]["AuditLogChange"][];
-				session_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "SessionDelete";
-		} | {
-			/** @enum {string} */
-			type: "SessionDeleteAll";
-		} | {
-			/** @description auth state changed */
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-			};
-			/** @enum {string} */
-			type: "AuthUpdate";
-		} | {
-			/** @description user entered sudo mode */
-			metadata: {
-				session_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "AuthSudo";
-		} | {
-			metadata: {
-				application_id: components["schemas"]["Id"];
-				changes: components["schemas"]["AuditLogChange"][];
-			};
-			/** @enum {string} */
-			type: "ApplicationCreate";
-		} | {
-			metadata: {
-				application_id: components["schemas"]["Id"];
-				changes: components["schemas"]["AuditLogChange"][];
-			};
-			/** @enum {string} */
-			type: "ApplicationUpdate";
-		} | {
-			metadata: {
-				application_id: components["schemas"]["Id"];
-				changes?: components["schemas"]["AuditLogChange"][];
-			};
-			/** @enum {string} */
-			type: "ApplicationDelete";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				email: components["schemas"]["EmailAddr"];
-			};
-			/** @enum {string} */
-			type: "EmailCreate";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				email: components["schemas"]["EmailAddr"];
-			};
-			/** @enum {string} */
-			type: "EmailUpdate";
-		} | {
-			metadata: {
-				changes?: components["schemas"]["AuditLogChange"][];
-				email: components["schemas"]["EmailAddr"];
-			};
-			/** @enum {string} */
-			type: "EmailDelete";
-		} | {
-			metadata: {
-				application_id: components["schemas"]["Id"];
-				scopes: components["schemas"]["Scopes"];
-			};
-			/** @enum {string} */
-			type: "ConnectionCreate";
-		} | {
-			metadata: {
-				application_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "ConnectionDelete";
-		} | {
-			metadata: {
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "UserRegistered";
-		} | {
-			metadata: {
-				changes?: components["schemas"]["AuditLogChange"][];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "UserDelete";
-		} | {
-			metadata: {
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "UserUndelete";
-		} | {
-			metadata: {
-				harvest_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "HarvestCreate";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "AdminWhisper";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-			};
-			/** @enum {string} */
-			type: "AdminBroadcast";
-		} | {
-			metadata: {
-				changes?: components["schemas"]["AuditLogChange"][];
-				room_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "RoomDelete";
-		} | {
-			metadata: {
-				room_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "RoomUndelete";
-		} | {
-			metadata: {
-				room_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "RoomQuarantine";
-		} | {
-			metadata: {
-				room_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "RoomUnquarantine";
-		} | {
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-				message_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "MessagePin";
-		} | {
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-				message_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "MessageUnpin";
-		} | {
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "MessagePinReorder";
-		} | {
-			metadata: {
-				channels: components["schemas"]["ChannelReorderItem"][];
-			};
-			/** @enum {string} */
-			type: "ChannelReorder";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-			};
-			/** @enum {string} */
-			type: "CalendarEventCreate";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-			};
-			/** @enum {string} */
-			type: "CalendarEventUpdate";
-		} | {
-			metadata: {
-				changes?: components["schemas"]["AuditLogChange"][];
-				event_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "CalendarEventDelete";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				event_id: components["schemas"]["Id"];
-				/** Format: int64 */
-				seq: number;
-			};
-			/** @enum {string} */
-			type: "CalendarOverwriteCreate";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				event_id: components["schemas"]["Id"];
-				/** Format: int64 */
-				seq: number;
-			};
-			/** @enum {string} */
-			type: "CalendarOverwriteUpdate";
-		} | {
-			metadata: {
-				changes?: components["schemas"]["AuditLogChange"][];
-				event_id: components["schemas"]["Id"];
-				/** Format: int64 */
-				seq: number;
-			};
-			/** @enum {string} */
-			type: "CalendarOverwriteDelete";
-		} | {
-			/** @description someone else's rsvp was deleted
-			 *
-			 *     not emitted when someone deletes their own rsvp */
-			metadata: {
-				event_id: components["schemas"]["Id"];
-				/**
-				 * Format: int64
-				 * @description populated if this is for an overwrite
-				 */
-				seq?: number | null;
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "CalendarRsvpDelete";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				webhook_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "WebhookCreate";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				webhook_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "WebhookUpdate";
-		} | {
-			metadata: {
-				changes?: components["schemas"]["AuditLogChange"][];
-				webhook_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "WebhookDelete";
-		} | {
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-				slowmode_message_expire_at?: null | components["schemas"]["Time"];
-				slowmode_thread_expire_at?: null | components["schemas"]["Time"];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "RatelimitUpdate";
-		} | {
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-				user_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "RatelimitDelete";
-		} | {
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "RatelimitDeleteAll";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				rule_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "AutomodRuleCreate";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				rule_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "AutomodRuleUpdate";
-		} | {
-			metadata: {
-				changes?: components["schemas"]["AuditLogChange"][];
-				rule_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "AutomodRuleDelete";
-		} | {
-			metadata: {
-				channel_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "ChannelReindex";
-		} | {
-			metadata: {
-				room_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "RoomReindex";
-		} | {
-			/** @enum {string} */
-			type: "ReindexEverything";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				hostname: string;
-			};
-			/** @enum {string} */
-			type: "ServerUpdate";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				channel_id: components["schemas"]["Id"];
-				tag_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "TagCreate";
-		} | {
-			metadata: {
-				changes: components["schemas"]["AuditLogChange"][];
-				channel_id: components["schemas"]["Id"];
-				tag_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "TagUpdate";
-		} | {
-			metadata: {
-				changes?: components["schemas"]["AuditLogChange"][];
-				channel_id: components["schemas"]["Id"];
-				tag_id: components["schemas"]["Id"];
-			};
-			/** @enum {string} */
-			type: "TagDelete";
-		};
-		AutomodAction: {
-			/** @description a custom message to show to the user */
-			message?: string | null;
-			/** @enum {string} */
-			type: "Block";
-		} | {
-			/**
-			 * Format: int64
-			 * @description in milliseconds
-			 */
-			duration: number;
-			/** @enum {string} */
-			type: "Timeout";
-		} | {
-			/** @enum {string} */
-			type: "Remove";
-		} | {
-			/** @description where to send the alert to */
-			channel_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "SendAlert";
-		};
+		AuditLogEntryType:
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "RoomCreate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "RoomUpdate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						channel_id: components["schemas"]["Id"];
+						channel_type: components["schemas"]["ChannelType"];
+					};
+					/** @enum {string} */
+					type: "ChannelCreate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						channel_id: components["schemas"]["Id"];
+						channel_type: components["schemas"]["ChannelType"];
+					};
+					/** @enum {string} */
+					type: "ChannelUpdate";
+			  }
+			| {
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+						message_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "MessageDelete";
+			  }
+			| {
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+						message_id: components["schemas"]["Id"];
+						version_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "MessageVersionDelete";
+			  }
+			| {
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+						message_ids: components["schemas"]["Id"][];
+					};
+					/** @enum {string} */
+					type: "MessageDeleteBulk";
+			  }
+			| {
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+						message_ids: components["schemas"]["Id"][];
+					};
+					/** @enum {string} */
+					type: "MessageRemove";
+			  }
+			| {
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+						message_ids: components["schemas"]["Id"][];
+					};
+					/** @enum {string} */
+					type: "MessageRestore";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "RoleCreate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "RoleUpdate";
+			  }
+			| {
+					metadata: {
+						changes?: components["schemas"]["AuditLogChange"][];
+						role_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "RoleDelete";
+			  }
+			| {
+					metadata: {
+						roles: components["schemas"]["RoleReorderItem"][];
+					};
+					/** @enum {string} */
+					type: "RoleReorder";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "InviteCreate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "InviteUpdate";
+			  }
+			| {
+					metadata: {
+						changes?: components["schemas"]["AuditLogChange"][];
+						code: components["schemas"]["InviteCode"];
+					};
+					/** @enum {string} */
+					type: "InviteDelete";
+			  }
+			| {
+					/**
+					 * @deprecated
+					 * @description remove all reactions
+					 */
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+						message_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "ReactionPurge";
+			  }
+			| {
+					/** @description remove all reactions from a message */
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+						message_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "ReactionDeleteAll";
+			  }
+			| {
+					/** @description remove all reactions of an emoji from a message */
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+						key: components["schemas"]["ReactionKeyParam"];
+						message_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "ReactionDeleteKey";
+			  }
+			| {
+					/** @description remove a reactions from a specific user on a message */
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+						key: components["schemas"]["ReactionKeyParam"];
+						message_id: components["schemas"]["Id"];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "ReactionDeleteUser";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "EmojiCreate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "EmojiUpdate";
+			  }
+			| {
+					metadata: {
+						changes?: components["schemas"]["AuditLogChange"][];
+						emoji_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "EmojiDelete";
+			  }
+			| {
+					/** @deprecated */
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						channel_id: components["schemas"]["Id"];
+						/** Format: uuid */
+						overwrite_id: string;
+						type: components["schemas"]["PermissionOverwriteType"];
+					};
+					/** @enum {string} */
+					type: "PermissionOverwriteSet";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						channel_id: components["schemas"]["Id"];
+						/** Format: uuid */
+						overwrite_id: string;
+						type: components["schemas"]["PermissionOverwriteType"];
+					};
+					/** @enum {string} */
+					type: "PermissionOverwriteCreate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						channel_id: components["schemas"]["Id"];
+						/** Format: uuid */
+						overwrite_id: string;
+						type: components["schemas"]["PermissionOverwriteType"];
+					};
+					/** @enum {string} */
+					type: "PermissionOverwriteUpdate";
+			  }
+			| {
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+						/** Format: uuid */
+						overwrite_id: string;
+						type: components["schemas"]["PermissionOverwriteType"];
+					};
+					/** @enum {string} */
+					type: "PermissionOverwriteDelete";
+			  }
+			| {
+					metadata: {
+						room_id: components["schemas"]["Id"];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "MemberKick";
+			  }
+			| {
+					metadata: {
+						room_id: components["schemas"]["Id"];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "MemberBan";
+			  }
+			| {
+					metadata: {
+						room_id: components["schemas"]["Id"];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "MemberUnban";
+			  }
+			| {
+					metadata: {
+						/**
+						 * Format: int64
+						 * @description number of pruned users
+						 */
+						pruned: number;
+					};
+					/** @enum {string} */
+					type: "MemberPrune";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						room_id: components["schemas"]["Id"];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "MemberUpdate";
+			  }
+			| {
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "MemberDisconnect";
+			  }
+			| {
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "MemberDisconnectAll";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "MemberMove";
+			  }
+			| {
+					metadata: {
+						role_id: components["schemas"]["Id"];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "RoleApply";
+			  }
+			| {
+					metadata: {
+						role_id: components["schemas"]["Id"];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "RoleUnapply";
+			  }
+			| {
+					metadata: {
+						bot_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "BotAdd";
+			  }
+			| {
+					metadata: {
+						thread_id: components["schemas"]["Id"];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "ThreadMemberAdd";
+			  }
+			| {
+					metadata: {
+						thread_id: components["schemas"]["Id"];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "ThreadMemberRemove";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "UserUpdate";
+			  }
+			| {
+					metadata: {
+						expires_at?: null | components["schemas"]["Time"];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "UserSuspend";
+			  }
+			| {
+					metadata: {
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "UserUnsuspend";
+			  }
+			| {
+					/** @description friend request sent to another user */
+					metadata: {
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "FriendRequest";
+			  }
+			| {
+					/** @description friend request from another user accepted */
+					metadata: {
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "FriendAccept";
+			  }
+			| {
+					metadata: {
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "FriendDelete";
+			  }
+			| {
+					metadata: {
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "BlockCreate";
+			  }
+			| {
+					metadata: {
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "BlockDelete";
+			  }
+			| {
+					metadata: {
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "IgnoreAdd";
+			  }
+			| {
+					metadata: {
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "IgnoreRemove";
+			  }
+			| {
+					metadata: {
+						session_id: components["schemas"]["Id"];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "SessionLogin";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						session_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "SessionUpdate";
+			  }
+			| {
+					metadata: {
+						changes?: components["schemas"]["AuditLogChange"][];
+						session_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "SessionDelete";
+			  }
+			| {
+					/** @enum {string} */
+					type: "SessionDeleteAll";
+			  }
+			| {
+					/** @description auth state changed */
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "AuthUpdate";
+			  }
+			| {
+					/** @description user entered sudo mode */
+					metadata: {
+						session_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "AuthSudo";
+			  }
+			| {
+					metadata: {
+						application_id: components["schemas"]["Id"];
+						changes: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "ApplicationCreate";
+			  }
+			| {
+					metadata: {
+						application_id: components["schemas"]["Id"];
+						changes: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "ApplicationUpdate";
+			  }
+			| {
+					metadata: {
+						application_id: components["schemas"]["Id"];
+						changes?: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "ApplicationDelete";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						email: components["schemas"]["EmailAddr"];
+					};
+					/** @enum {string} */
+					type: "EmailCreate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						email: components["schemas"]["EmailAddr"];
+					};
+					/** @enum {string} */
+					type: "EmailUpdate";
+			  }
+			| {
+					metadata: {
+						changes?: components["schemas"]["AuditLogChange"][];
+						email: components["schemas"]["EmailAddr"];
+					};
+					/** @enum {string} */
+					type: "EmailDelete";
+			  }
+			| {
+					metadata: {
+						application_id: components["schemas"]["Id"];
+						scopes: components["schemas"]["Scopes"];
+					};
+					/** @enum {string} */
+					type: "ConnectionCreate";
+			  }
+			| {
+					metadata: {
+						application_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "ConnectionDelete";
+			  }
+			| {
+					metadata: {
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "UserRegistered";
+			  }
+			| {
+					metadata: {
+						changes?: components["schemas"]["AuditLogChange"][];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "UserDelete";
+			  }
+			| {
+					metadata: {
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "UserUndelete";
+			  }
+			| {
+					metadata: {
+						harvest_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "HarvestCreate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "AdminWhisper";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "AdminBroadcast";
+			  }
+			| {
+					metadata: {
+						changes?: components["schemas"]["AuditLogChange"][];
+						room_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "RoomDelete";
+			  }
+			| {
+					metadata: {
+						room_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "RoomUndelete";
+			  }
+			| {
+					metadata: {
+						room_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "RoomQuarantine";
+			  }
+			| {
+					metadata: {
+						room_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "RoomUnquarantine";
+			  }
+			| {
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+						message_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "MessagePin";
+			  }
+			| {
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+						message_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "MessageUnpin";
+			  }
+			| {
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "MessagePinReorder";
+			  }
+			| {
+					metadata: {
+						channels: components["schemas"]["ChannelReorderItem"][];
+					};
+					/** @enum {string} */
+					type: "ChannelReorder";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "CalendarEventCreate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "CalendarEventUpdate";
+			  }
+			| {
+					metadata: {
+						changes?: components["schemas"]["AuditLogChange"][];
+						event_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "CalendarEventDelete";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						event_id: components["schemas"]["Id"];
+						/** Format: int64 */
+						seq: number;
+					};
+					/** @enum {string} */
+					type: "CalendarOverwriteCreate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						event_id: components["schemas"]["Id"];
+						/** Format: int64 */
+						seq: number;
+					};
+					/** @enum {string} */
+					type: "CalendarOverwriteUpdate";
+			  }
+			| {
+					metadata: {
+						changes?: components["schemas"]["AuditLogChange"][];
+						event_id: components["schemas"]["Id"];
+						/** Format: int64 */
+						seq: number;
+					};
+					/** @enum {string} */
+					type: "CalendarOverwriteDelete";
+			  }
+			| {
+					/** @description someone else's rsvp was deleted
+					 *
+					 *     not emitted when someone deletes their own rsvp */
+					metadata: {
+						event_id: components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description populated if this is for an overwrite
+						 */
+						seq?: number | null;
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "CalendarRsvpDelete";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						webhook_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "WebhookCreate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						webhook_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "WebhookUpdate";
+			  }
+			| {
+					metadata: {
+						changes?: components["schemas"]["AuditLogChange"][];
+						webhook_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "WebhookDelete";
+			  }
+			| {
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "RatelimitUpdate";
+			  }
+			| {
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+						user_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "RatelimitDelete";
+			  }
+			| {
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "RatelimitDeleteAll";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						rule_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "AutomodRuleCreate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						rule_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "AutomodRuleUpdate";
+			  }
+			| {
+					metadata: {
+						changes?: components["schemas"]["AuditLogChange"][];
+						rule_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "AutomodRuleDelete";
+			  }
+			| {
+					metadata: {
+						channel_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "ChannelReindex";
+			  }
+			| {
+					metadata: {
+						room_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "RoomReindex";
+			  }
+			| {
+					/** @enum {string} */
+					type: "ReindexEverything";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						hostname: string;
+					};
+					/** @enum {string} */
+					type: "ServerUpdate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						channel_id: components["schemas"]["Id"];
+						tag_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "TagCreate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						channel_id: components["schemas"]["Id"];
+						tag_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "TagUpdate";
+			  }
+			| {
+					metadata: {
+						changes?: components["schemas"]["AuditLogChange"][];
+						channel_id: components["schemas"]["Id"];
+						tag_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "TagDelete";
+			  };
+		AutomodAction:
+			| {
+					/** @description a custom message to show to the user */
+					message?: string | null;
+					/** @enum {string} */
+					type: "Block";
+			  }
+			| {
+					/**
+					 * Format: int64
+					 * @description in milliseconds
+					 */
+					duration: number;
+					/** @enum {string} */
+					type: "Timeout";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Remove";
+			  }
+			| {
+					/** @description where to send the alert to */
+					channel_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "SendAlert";
+			  };
 		/** @description matches found in a piece of text */
 		AutomodMatches: {
 			/** @description the keywords in the automod rule that matched */
@@ -17711,78 +17804,96 @@ export interface components {
 		 */
 		AutomodTarget: "Content" | "Member";
 		/** @description where a piece of text was found */
-		AutomodTextLocation: {
-			/** @enum {string} */
-			type: "UserName";
-		} | {
-			/** @enum {string} */
-			type: "UserBio";
-		} | {
-			/** @enum {string} */
-			type: "MemberNickname";
-		} | {
-			/** @enum {string} */
-			type: "MemberDescription";
-		} | {
-			/** @enum {string} */
-			type: "MessageContent";
-		} | {
-			/** @enum {string} */
-			type: "ThreadTitle";
-		} | {
-			/** @enum {string} */
-			type: "ThreadTopic";
-		} | {
-			/** @enum {string} */
-			type: "EmbedTitle";
-		} | {
-			/** @enum {string} */
-			type: "EmbedDescription";
-		} | {
-			/** @enum {string} */
-			type: "EmbedAuthorName";
-		} | {
-			/** @enum {string} */
-			type: "EmbedAuthorUrl";
-		} | {
-			/** @enum {string} */
-			type: "EmbedUrl";
-		} | {
-			/** @enum {string} */
-			type: "Test";
-		};
-		AutomodTrigger: {
-			/** @description allow content that matches any of these regexes. overrides deny. */
-			allow: string[];
-			/** @description deny content that matches any of these regexes. */
-			deny: string[];
-			/** @enum {string} */
-			type: "TextRegex";
-		} | {
-			allow: string[];
-			keywords: string[];
-			/** @enum {string} */
-			type: "TextKeywords";
-		} | {
-			/** @description which hostnames to block or allow. works recursively (ie. foo.example.com is blocked if example.com is blocked) */
-			hostnames: string[];
-			/** @enum {string} */
-			type: "TextLinks";
-			/** @description whether this is a list of allowed link domains, otherwise this is a blacklist */
-			whitelist: boolean;
-		} | {
-			/** @description the name of the server defined list */
-			list: string;
-			/** @enum {string} */
-			type: "TextBuiltin";
-		} | {
-			/** @description the name of a server defined media scanner
-			 *
-			 *     for example, `Nsfw` or `Malware` */
-			scanner: string;
-			/** @enum {string} */
-			type: "MediaScan";
-		};
+		AutomodTextLocation:
+			| {
+					/** @enum {string} */
+					type: "UserName";
+			  }
+			| {
+					/** @enum {string} */
+					type: "UserBio";
+			  }
+			| {
+					/** @enum {string} */
+					type: "MemberNickname";
+			  }
+			| {
+					/** @enum {string} */
+					type: "MemberDescription";
+			  }
+			| {
+					/** @enum {string} */
+					type: "MessageContent";
+			  }
+			| {
+					/** @enum {string} */
+					type: "ThreadTitle";
+			  }
+			| {
+					/** @enum {string} */
+					type: "ThreadTopic";
+			  }
+			| {
+					/** @enum {string} */
+					type: "EmbedTitle";
+			  }
+			| {
+					/** @enum {string} */
+					type: "EmbedDescription";
+			  }
+			| {
+					/** @enum {string} */
+					type: "EmbedAuthorName";
+			  }
+			| {
+					/** @enum {string} */
+					type: "EmbedAuthorUrl";
+			  }
+			| {
+					/** @enum {string} */
+					type: "EmbedUrl";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Test";
+			  };
+		AutomodTrigger:
+			| {
+					/** @description allow content that matches any of these regexes. overrides deny. */
+					allow: string[];
+					/** @description deny content that matches any of these regexes. */
+					deny: string[];
+					/** @enum {string} */
+					type: "TextRegex";
+			  }
+			| {
+					allow: string[];
+					keywords: string[];
+					/** @enum {string} */
+					type: "TextKeywords";
+			  }
+			| {
+					/** @description which hostnames to block or allow. works recursively (ie. foo.example.com is blocked if example.com is blocked) */
+					hostnames: string[];
+					/** @enum {string} */
+					type: "TextLinks";
+					/** @description whether this is a list of allowed link domains, otherwise this is a blacklist */
+					whitelist: boolean;
+			  }
+			| {
+					/** @description the name of the server defined list */
+					list: string;
+					/** @enum {string} */
+					type: "TextBuiltin";
+			  }
+			| {
+					/** @description the name of a server defined media scanner
+					 *
+					 *     for example, `Nsfw` or `Malware` */
+					scanner: string;
+					/** @enum {string} */
+					type: "MediaScan";
+			  };
 		/** @description where this application bridge content to */
 		Bridge: {
 			/** @description a description of this platform */
@@ -18222,28 +18333,31 @@ export interface components {
 			unlisted?: boolean | null;
 		};
 		/** @description a revision of a document at a point in time */
-		DocumentRevisionId: {
-			/** @description the current head of this branch
-			 *
-			 *     serialized as `branch-id` */
-			Branch: {
-				branch_id: components["schemas"]["Id"];
-			};
-		} | {
-			/** @description this one specific revision
-			 *
-			 *     serialized as `branch-uuid@seq` */
-			Revision: {
-				version_id: components["schemas"]["DocumentVersionId"];
-			};
-		} | {
-			/** @description this one specific revision
-			 *
-			 *     serialized as `~tag` */
-			Tag: {
-				tag_id: components["schemas"]["Id"];
-			};
-		};
+		DocumentRevisionId:
+			| {
+					/** @description the current head of this branch
+					 *
+					 *     serialized as `branch-id` */
+					Branch: {
+						branch_id: components["schemas"]["Id"];
+					};
+			  }
+			| {
+					/** @description this one specific revision
+					 *
+					 *     serialized as `branch-uuid@seq` */
+					Revision: {
+						version_id: components["schemas"]["DocumentVersionId"];
+					};
+			  }
+			| {
+					/** @description this one specific revision
+					 *
+					 *     serialized as `~tag` */
+					Tag: {
+						tag_id: components["schemas"]["Id"];
+					};
+			  };
 		/** @description Base64 encoded state vector */
 		DocumentStateVector: string;
 		/** @description a named version */
@@ -18354,14 +18468,16 @@ export interface components {
 			name: string;
 			owner?: null | components["schemas"]["EmojiOwner"];
 		};
-		EmojiOwner: {
-			/** @enum {string} */
-			owner: "Room";
-			room_id: components["schemas"]["Id"];
-		} | {
-			/** @enum {string} */
-			owner: "User";
-		};
+		EmojiOwner:
+			| {
+					/** @enum {string} */
+					owner: "Room";
+					room_id: components["schemas"]["Id"];
+			  }
+			| {
+					/** @enum {string} */
+					owner: "User";
+			  };
 		/**
 		 * @description Error codes for non-fatal errors.
 		 * @enum {string}
@@ -18467,27 +18583,31 @@ export interface components {
 			/** @description include all reactions you have sent */
 			include_reactions: boolean;
 		};
-		HarvestStatus: {
-			/** @enum {string} */
-			status: "Queued";
-		} | {
-			failed_at: components["schemas"]["Time"];
-			message: string;
-			/** @enum {string} */
-			status: "Failed";
-		} | {
-			completed_at: components["schemas"]["Time"];
-			expires_at: components["schemas"]["Time"];
-			/** @enum {string} */
-			status: "Completed";
-			/** Format: uri */
-			url: string;
-		} | {
-			cancelled_at: components["schemas"]["Time"];
-			message: string;
-			/** @enum {string} */
-			status: "Cancelled";
-		};
+		HarvestStatus:
+			| {
+					/** @enum {string} */
+					status: "Queued";
+			  }
+			| {
+					failed_at: components["schemas"]["Time"];
+					message: string;
+					/** @enum {string} */
+					status: "Failed";
+			  }
+			| {
+					completed_at: components["schemas"]["Time"];
+					expires_at: components["schemas"]["Time"];
+					/** @enum {string} */
+					status: "Completed";
+					/** Format: uri */
+					url: string;
+			  }
+			| {
+					cancelled_at: components["schemas"]["Time"];
+					message: string;
+					/** @enum {string} */
+					status: "Cancelled";
+			  };
 		HistoryPagination: {
 			/** @description the resulting changesets, ordered oldest to newest */
 			changesets: components["schemas"]["Changeset"][];
@@ -18561,45 +18681,53 @@ export interface components {
 		/** @description a short, unique identifier. knowing the code grants access to the invite's target. */
 		InviteCode: string;
 		/** @description where this invite leads */
-		InviteTarget: {
-			channel?: null | components["schemas"]["Channel"];
-			/** @description which roles to apply when accepting the invite */
-			roles: components["schemas"]["Role"][];
-			/** @description the room itself */
-			room: components["schemas"]["Room"];
-			/** @enum {string} */
-			type: "Room";
-		} | {
-			channel: components["schemas"]["Channel"];
-			/** @enum {string} */
-			type: "Gdm";
-		} | {
-			/** @enum {string} */
-			type: "Server";
-		} | {
-			/** @enum {string} */
-			type: "User";
-			user: components["schemas"]["User"];
-		};
+		InviteTarget:
+			| {
+					channel?: null | components["schemas"]["Channel"];
+					/** @description which roles to apply when accepting the invite */
+					roles: components["schemas"]["Role"][];
+					/** @description the room itself */
+					room: components["schemas"]["Room"];
+					/** @enum {string} */
+					type: "Room";
+			  }
+			| {
+					channel: components["schemas"]["Channel"];
+					/** @enum {string} */
+					type: "Gdm";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Server";
+			  }
+			| {
+					/** @enum {string} */
+					type: "User";
+					user: components["schemas"]["User"];
+			  };
 		/** @description the type and id of this invite's target */
-		InviteTargetId: {
-			channel_id?: null | components["schemas"]["Id"];
-			role_ids?: components["schemas"]["Id"][];
-			room_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Room";
-		} | {
-			channel_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Gdm";
-		} | {
-			/** @enum {string} */
-			type: "Server";
-		} | {
-			/** @enum {string} */
-			type: "User";
-			user_id: components["schemas"]["Id"];
-		};
+		InviteTargetId:
+			| {
+					channel_id?: null | components["schemas"]["Id"];
+					role_ids?: components["schemas"]["Id"][];
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Room";
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Gdm";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Server";
+			  }
+			| {
+					/** @enum {string} */
+					type: "User";
+					user_id: components["schemas"]["Id"];
+			  };
 		InviteWithMetadata: components["schemas"]["Invite"] & {
 			/**
 			 * Format: int32
@@ -18621,19 +18749,23 @@ export interface components {
 			until?: null | components["schemas"]["Time"];
 		};
 		/** @description A log entry from the unfurler. */
-		LogEntry: {
-			/** @description HTTP fetch event (initial request or redirect) */
-			Fetch: components["schemas"]["FetchEntry"];
-		} | {
-			/** @description Plugin selection event */
-			SelectPlugin: components["schemas"]["SelectPluginEntry"];
-		} | {
-			/** @description Non-fatal error during embed generation (e.g., invalid HTML) */
-			Error: components["schemas"]["ErrorEntry"];
-		} | {
-			/** @description Fatal failure that prevented embed generation */
-			Failed: components["schemas"]["FailedEntry"];
-		};
+		LogEntry:
+			| {
+					/** @description HTTP fetch event (initial request or redirect) */
+					Fetch: components["schemas"]["FetchEntry"];
+			  }
+			| {
+					/** @description Plugin selection event */
+					SelectPlugin: components["schemas"]["SelectPluginEntry"];
+			  }
+			| {
+					/** @description Non-fatal error during embed generation (e.g., invalid HTML) */
+					Error: components["schemas"]["ErrorEntry"];
+			  }
+			| {
+					/** @description Fatal failure that prevented embed generation */
+					Failed: components["schemas"]["FailedEntry"];
+			  };
 		/** @description A piece of media. */
 		Media: {
 			/** @description Descriptive alt text. */
@@ -18695,28 +18827,30 @@ export interface components {
 			strip_exif?: boolean;
 		};
 		/** @description What to create this media from */
-		MediaCreateSource: {
-			/** @description The filename of the downloaded file; automatically detect if None */
-			filename?: string | null;
-			/**
-			 * Format: int64
-			 * @description The size (in bytes). HIGHLY recommended, as this lets lamprey reject oversized files earlier.
-			 */
-			size?: number | null;
-			/**
-			 * Format: uri
-			 * @description A url to download this media from
-			 */
-			source_url: string;
-		} | {
-			/** @description The filename of this file to use */
-			filename?: string;
-			/**
-			 * Format: int64
-			 * @description The size of this file (in bytes). HIGHLY recommended, as this lets lamprey reject oversized files earlier.
-			 */
-			size?: number | null;
-		};
+		MediaCreateSource:
+			| {
+					/** @description The filename of the downloaded file; automatically detect if None */
+					filename?: string | null;
+					/**
+					 * Format: int64
+					 * @description The size (in bytes). HIGHLY recommended, as this lets lamprey reject oversized files earlier.
+					 */
+					size?: number | null;
+					/**
+					 * Format: uri
+					 * @description A url to download this media from
+					 */
+					source_url: string;
+			  }
+			| {
+					/** @description The filename of this file to use */
+					filename?: string;
+					/**
+					 * Format: int64
+					 * @description The size of this file (in bytes). HIGHLY recommended, as this lets lamprey reject oversized files earlier.
+					 */
+					size?: number | null;
+			  };
 		/** @description response body for `media_create` */
 		MediaCreated: {
 			/** @description The id of the media that has been created */
@@ -18743,93 +18877,107 @@ export interface components {
 		 *
 		 *     objects can be linked to multiple objects; for example, media linked to
 		 *     `Message`s also have links to each `MessageVersion` they're referenced in. */
-		MediaLinkType: {
-			channel_id: components["schemas"]["Id"];
-			message_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Message";
-		} | {
-			channel_id: components["schemas"]["Id"];
-			message_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "MessageVersion";
-			version_id: components["schemas"]["Id"];
-		} | {
-			/** @enum {string} */
-			type: "UserAvatar";
-			user_id: components["schemas"]["Id"];
-		} | {
-			/** @enum {string} */
-			type: "UserBanner";
-			user_id: components["schemas"]["Id"];
-		} | {
-			channel_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "ChannelIcon";
-		} | {
-			room_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "RoomIcon";
-		} | {
-			id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Embed";
-		} | {
-			room_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "CustomEmoji";
-		} | {
-			room_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "RoomBanner";
-		};
+		MediaLinkType:
+			| {
+					channel_id: components["schemas"]["Id"];
+					message_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Message";
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					message_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "MessageVersion";
+					version_id: components["schemas"]["Id"];
+			  }
+			| {
+					/** @enum {string} */
+					type: "UserAvatar";
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					/** @enum {string} */
+					type: "UserBanner";
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ChannelIcon";
+			  }
+			| {
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "RoomIcon";
+			  }
+			| {
+					id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Embed";
+			  }
+			| {
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "CustomEmoji";
+			  }
+			| {
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "RoomBanner";
+			  };
 		/** @description Filetype-specific metadata */
-		MediaMetadata: {
-			/**
-			 * Format: int64
-			 * @description the height of the image in pixels
-			 */
-			height: number;
-			/** @enum {string} */
-			type: "Image";
-			/**
-			 * Format: int64
-			 * @description the width of the image in pixels
-			 */
-			width: number;
-		} | {
-			/**
-			 * Format: int64
-			 * @description the duration of the video in seconds
-			 */
-			duration: number;
-			/**
-			 * Format: int64
-			 * @description the height of the video in pixels
-			 */
-			height: number;
-			/** @enum {string} */
-			type: "Video";
-			/**
-			 * Format: int64
-			 * @description the width of the video in pixels
-			 */
-			width: number;
-		} | {
-			/**
-			 * Format: int64
-			 * @description the duration of the video in seconds
-			 */
-			duration: number;
-			/** @enum {string} */
-			type: "Audio";
-		} | {
-			/** @enum {string} */
-			type: "Text";
-		} | {
-			/** @enum {string} */
-			type: "File";
-		};
+		MediaMetadata:
+			| {
+					/**
+					 * Format: int64
+					 * @description the height of the image in pixels
+					 */
+					height: number;
+					/** @enum {string} */
+					type: "Image";
+					/**
+					 * Format: int64
+					 * @description the width of the image in pixels
+					 */
+					width: number;
+			  }
+			| {
+					/**
+					 * Format: int64
+					 * @description the duration of the video in seconds
+					 */
+					duration: number;
+					/**
+					 * Format: int64
+					 * @description the height of the video in pixels
+					 */
+					height: number;
+					/** @enum {string} */
+					type: "Video";
+					/**
+					 * Format: int64
+					 * @description the width of the video in pixels
+					 */
+					width: number;
+			  }
+			| {
+					/**
+					 * Format: int64
+					 * @description the duration of the video in seconds
+					 */
+					duration: number;
+					/** @enum {string} */
+					type: "Audio";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Text";
+			  }
+			| {
+					/** @enum {string} */
+					type: "File";
+			  };
 		/** @description An update to a piece of media */
 		MediaPatch: {
 			/** @description Descriptive alt text, not entirely unlike a caption */
@@ -18849,14 +18997,17 @@ export interface components {
 			time: components["schemas"]["Time"];
 		};
 		/** @description A reference to a piece of media to be used. */
-		MediaReference: {
-			media_id: components["schemas"]["Id"];
-		} | {
-			/** Format: uri */
-			source_url: string;
-		} | {
-			field_name: string;
-		};
+		MediaReference:
+			| {
+					media_id: components["schemas"]["Id"];
+			  }
+			| {
+					/** Format: uri */
+					source_url: string;
+			  }
+			| {
+					field_name: string;
+			  };
 		/** @description An automated scan result */
 		MediaScan: {
 			/** @description The name of the media scanner (eg. `nsfw`, `malware`) */
@@ -18896,43 +19047,49 @@ export interface components {
 			count: number;
 			id: components["schemas"]["MemberListGroupId"];
 		};
-		MemberListGroupId: "Online" | "Offline" | {
-			/** @description hoisted roles */
-			Role: components["schemas"]["Id"];
-		};
-		MemberListOp: {
-			/** @description the users in this range */
-			items: components["schemas"]["Id"][];
-			/**
-			 * Format: int64
-			 * @description the start of the range
-			 */
-			position: number;
-			/** @description only returned if channel is in a room and not already cached by client */
-			room_members?: components["schemas"]["RoomMember"][] | null;
-			/** @description only returned if listing members in a thread and not already cached by client */
-			thread_members?: components["schemas"]["ThreadMember"][] | null;
-			/** @enum {string} */
-			type: "Sync";
-			/** @description users in this range that are not already cached by client */
-			users?: components["schemas"]["User"][] | null;
-		} | {
-			/** Format: int64 */
-			position: number;
-			room_member?: null | components["schemas"]["RoomMember"];
-			thread_member?: null | components["schemas"]["ThreadMember"];
-			/** @enum {string} */
-			type: "Insert";
-			user?: null | components["schemas"]["User"];
-			user_id: components["schemas"]["Id"];
-		} | {
-			/** Format: int64 */
-			count: number;
-			/** Format: int64 */
-			position: number;
-			/** @enum {string} */
-			type: "Delete";
-		};
+		MemberListGroupId:
+			| "Online"
+			| "Offline"
+			| {
+					/** @description hoisted roles */
+					Role: components["schemas"]["Id"];
+			  };
+		MemberListOp:
+			| {
+					/** @description the users in this range */
+					items: components["schemas"]["Id"][];
+					/**
+					 * Format: int64
+					 * @description the start of the range
+					 */
+					position: number;
+					/** @description only returned if channel is in a room and not already cached by client */
+					room_members?: components["schemas"]["RoomMember"][] | null;
+					/** @description only returned if listing members in a thread and not already cached by client */
+					thread_members?: components["schemas"]["ThreadMember"][] | null;
+					/** @enum {string} */
+					type: "Sync";
+					/** @description users in this range that are not already cached by client */
+					users?: components["schemas"]["User"][] | null;
+			  }
+			| {
+					/** Format: int64 */
+					position: number;
+					room_member?: null | components["schemas"]["RoomMember"];
+					thread_member?: null | components["schemas"]["ThreadMember"];
+					/** @enum {string} */
+					type: "Insert";
+					user?: null | components["schemas"]["User"];
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					/** Format: int64 */
+					count: number;
+					/** Format: int64 */
+					position: number;
+					/** @enum {string} */
+					type: "Delete";
+			  };
 		/** @description who/what this message notified on send */
 		Mentions: {
 			/** @description the channels that were mentioned */
@@ -18998,12 +19155,10 @@ export interface components {
 			spoiler: boolean;
 		};
 		/** @description used in `message_create` and `message_update` */
-		MessageAttachmentCreate:
-			& components["schemas"]["MessageAttachmentCreateType"]
-			& {
-				/** @description if this is a spoiler and should be blurred */
-				spoiler?: boolean;
-			};
+		MessageAttachmentCreate: components["schemas"]["MessageAttachmentCreateType"] & {
+			/** @description if this is a spoiler and should be blurred */
+			spoiler?: boolean;
+		};
 		MessageAttachmentCreateType: components["schemas"]["MediaReference"] & {
 			/** @description Shortcut for setting alt text on the media item */
 			alt?: string | null;
@@ -19111,595 +19266,595 @@ export interface components {
 		MessageSearchOrderField: "Created" | "Relevancy";
 		MessageSync:
 			| {
-				/** @description all non-thread channels the user can see */
-				channels: components["schemas"]["Channel"][];
-				/** @description user's global preferences */
-				config: components["schemas"]["PreferencesGlobal"];
-				/** @description all roles in all rooms the user can see */
-				roles: components["schemas"]["Role"][];
-				/** @description the user's room member object for each room the user is in */
-				room_members: components["schemas"]["RoomMember"][];
-				/** @description all rooms the user can see */
-				rooms: components["schemas"]["Room"][];
-				/** @description all active (ie. not archived) threads the user can see */
-				threads: components["schemas"]["Channel"][];
-				/** @enum {string} */
-				type: "Ambient";
-				/** @description the user that this Ambient message is for */
-				user_id: components["schemas"]["Id"];
-			}
+					/** @description all non-thread channels the user can see */
+					channels: components["schemas"]["Channel"][];
+					/** @description user's global preferences */
+					config: components["schemas"]["PreferencesGlobal"];
+					/** @description all roles in all rooms the user can see */
+					roles: components["schemas"]["Role"][];
+					/** @description the user's room member object for each room the user is in */
+					room_members: components["schemas"]["RoomMember"][];
+					/** @description all rooms the user can see */
+					rooms: components["schemas"]["Room"][];
+					/** @description all active (ie. not archived) threads the user can see */
+					threads: components["schemas"]["Channel"][];
+					/** @enum {string} */
+					type: "Ambient";
+					/** @description the user that this Ambient message is for */
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				room: components["schemas"]["Room"];
-				/** @enum {string} */
-				type: "RoomCreate";
-			}
+					room: components["schemas"]["Room"];
+					/** @enum {string} */
+					type: "RoomCreate";
+			  }
 			| {
-				room: components["schemas"]["Room"];
-				/** @enum {string} */
-				type: "RoomUpdate";
-			}
+					room: components["schemas"]["Room"];
+					/** @enum {string} */
+					type: "RoomUpdate";
+			  }
 			| {
-				room_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "RoomDelete";
-			}
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "RoomDelete";
+			  }
 			| {
-				channel: components["schemas"]["Channel"];
-				/** @enum {string} */
-				type: "ChannelCreate";
-			}
+					channel: components["schemas"]["Channel"];
+					/** @enum {string} */
+					type: "ChannelCreate";
+			  }
 			| {
-				channel: components["schemas"]["Channel"];
-				/** @enum {string} */
-				type: "ChannelUpdate";
-			}
+					channel: components["schemas"]["Channel"];
+					/** @enum {string} */
+					type: "ChannelUpdate";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "ChannelTyping";
-				until: components["schemas"]["Time"];
-				user_id: components["schemas"]["Id"];
-			}
+					channel_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ChannelTyping";
+					until: components["schemas"]["Time"];
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				message_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "ChannelAck";
-				user_id: components["schemas"]["Id"];
-				version_id: components["schemas"]["Id"];
-			}
+					channel_id: components["schemas"]["Id"];
+					message_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ChannelAck";
+					user_id: components["schemas"]["Id"];
+					version_id: components["schemas"]["Id"];
+			  }
 			| {
-				message: components["schemas"]["Message"];
-				/** @enum {string} */
-				type: "MessageCreate";
-			}
+					message: components["schemas"]["Message"];
+					/** @enum {string} */
+					type: "MessageCreate";
+			  }
 			| {
-				message: components["schemas"]["Message"];
-				/** @enum {string} */
-				type: "MessageUpdate";
-			}
+					message: components["schemas"]["Message"];
+					/** @enum {string} */
+					type: "MessageUpdate";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				message_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "MessageDelete";
-			}
+					channel_id: components["schemas"]["Id"];
+					message_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "MessageDelete";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				message_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "MessageVersionDelete";
-				version_id: components["schemas"]["Id"];
-			}
+					channel_id: components["schemas"]["Id"];
+					message_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "MessageVersionDelete";
+					version_id: components["schemas"]["Id"];
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				message_ids: components["schemas"]["Id"][];
-				/** @enum {string} */
-				type: "MessageDeleteBulk";
-			}
+					channel_id: components["schemas"]["Id"];
+					message_ids: components["schemas"]["Id"][];
+					/** @enum {string} */
+					type: "MessageDeleteBulk";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				message_ids: components["schemas"]["Id"][];
-				/** @enum {string} */
-				type: "MessageRemove";
-			}
+					channel_id: components["schemas"]["Id"];
+					message_ids: components["schemas"]["Id"][];
+					/** @enum {string} */
+					type: "MessageRemove";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				message_ids: components["schemas"]["Id"][];
-				/** @enum {string} */
-				type: "MessageRestore";
-			}
+					channel_id: components["schemas"]["Id"];
+					message_ids: components["schemas"]["Id"][];
+					/** @enum {string} */
+					type: "MessageRestore";
+			  }
 			| {
-				harvest: components["schemas"]["Harvest"];
-				/** @enum {string} */
-				type: "HarvestUpdate";
-			}
+					harvest: components["schemas"]["Harvest"];
+					/** @enum {string} */
+					type: "HarvestUpdate";
+			  }
 			| {
-				member: components["schemas"]["RoomMember"];
-				/** @enum {string} */
-				type: "RoomMemberCreate";
-				user: components["schemas"]["User"];
-			}
+					member: components["schemas"]["RoomMember"];
+					/** @enum {string} */
+					type: "RoomMemberCreate";
+					user: components["schemas"]["User"];
+			  }
 			| {
-				member: components["schemas"]["RoomMember"];
-				/** @enum {string} */
-				type: "RoomMemberUpdate";
-				user: components["schemas"]["User"];
-			}
+					member: components["schemas"]["RoomMember"];
+					/** @enum {string} */
+					type: "RoomMemberUpdate";
+					user: components["schemas"]["User"];
+			  }
 			| {
-				room_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "RoomMemberDelete";
-				user_id: components["schemas"]["Id"];
-			}
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "RoomMemberDelete";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				/** @description members that were added to the thread */
-				added: components["schemas"]["ThreadMember"][];
-				/** @description members that were removed from the thread */
-				removed: components["schemas"]["Id"][];
-				room_id?: null | components["schemas"]["Id"];
-				thread_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "ThreadMemberUpsert";
-			}
+					/** @description members that were added to the thread */
+					added: components["schemas"]["ThreadMember"][];
+					/** @description members that were removed from the thread */
+					removed: components["schemas"]["Id"][];
+					room_id?: null | components["schemas"]["Id"];
+					thread_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ThreadMemberUpsert";
+			  }
 			| {
-				role: components["schemas"]["Role"];
-				/** @enum {string} */
-				type: "RoleCreate";
-			}
+					role: components["schemas"]["Role"];
+					/** @enum {string} */
+					type: "RoleCreate";
+			  }
 			| {
-				role: components["schemas"]["Role"];
-				/** @enum {string} */
-				type: "RoleUpdate";
-			}
+					role: components["schemas"]["Role"];
+					/** @enum {string} */
+					type: "RoleUpdate";
+			  }
 			| {
-				role_id: components["schemas"]["Id"];
-				room_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "RoleDelete";
-			}
+					role_id: components["schemas"]["Id"];
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "RoleDelete";
+			  }
 			| {
-				roles: components["schemas"]["RoleReorderItem"][];
-				room_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "RoleReorder";
-			}
+					roles: components["schemas"]["RoleReorderItem"][];
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "RoleReorder";
+			  }
 			| {
-				invite: components["schemas"]["InviteWithMetadata"];
-				/** @enum {string} */
-				type: "InviteCreate";
-			}
+					invite: components["schemas"]["InviteWithMetadata"];
+					/** @enum {string} */
+					type: "InviteCreate";
+			  }
 			| {
-				invite: components["schemas"]["InviteWithMetadata"];
-				/** @enum {string} */
-				type: "InviteUpdate";
-			}
+					invite: components["schemas"]["InviteWithMetadata"];
+					/** @enum {string} */
+					type: "InviteUpdate";
+			  }
 			| {
-				code: components["schemas"]["InviteCode"];
-				creator_id: components["schemas"]["Id"];
-				target: components["schemas"]["InviteTargetId"];
-				/** @enum {string} */
-				type: "InviteDelete";
-			}
+					code: components["schemas"]["InviteCode"];
+					creator_id: components["schemas"]["Id"];
+					target: components["schemas"]["InviteTargetId"];
+					/** @enum {string} */
+					type: "InviteDelete";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				key: components["schemas"]["ReactionKey"];
-				message_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "ReactionCreate";
-				user_id: components["schemas"]["Id"];
-			}
+					channel_id: components["schemas"]["Id"];
+					key: components["schemas"]["ReactionKey"];
+					message_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ReactionCreate";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				key: components["schemas"]["ReactionKey"];
-				message_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "ReactionDelete";
-				user_id: components["schemas"]["Id"];
-			}
+					channel_id: components["schemas"]["Id"];
+					key: components["schemas"]["ReactionKey"];
+					message_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ReactionDelete";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				key: components["schemas"]["ReactionKey"];
-				message_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "ReactionDeleteKey";
-			}
+					channel_id: components["schemas"]["Id"];
+					key: components["schemas"]["ReactionKey"];
+					message_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ReactionDeleteKey";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				message_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "ReactionDeleteAll";
-			}
+					channel_id: components["schemas"]["Id"];
+					message_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ReactionDeleteAll";
+			  }
 			| {
-				emoji: components["schemas"]["EmojiCustom"];
-				/** @enum {string} */
-				type: "EmojiCreate";
-			}
+					emoji: components["schemas"]["EmojiCustom"];
+					/** @enum {string} */
+					type: "EmojiCreate";
+			  }
 			| {
-				emoji: components["schemas"]["EmojiCustom"];
-				/** @enum {string} */
-				type: "EmojiUpdate";
-			}
+					emoji: components["schemas"]["EmojiCustom"];
+					/** @enum {string} */
+					type: "EmojiUpdate";
+			  }
 			| {
-				emoji_id: components["schemas"]["Id"];
-				room_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "EmojiDelete";
-			}
+					emoji_id: components["schemas"]["Id"];
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "EmojiDelete";
+			  }
 			| {
-				tag: components["schemas"]["Tag"];
-				/** @enum {string} */
-				type: "TagCreate";
-			}
+					tag: components["schemas"]["Tag"];
+					/** @enum {string} */
+					type: "TagCreate";
+			  }
 			| {
-				tag: components["schemas"]["Tag"];
-				/** @enum {string} */
-				type: "TagUpdate";
-			}
+					tag: components["schemas"]["Tag"];
+					/** @enum {string} */
+					type: "TagUpdate";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				tag_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "TagDelete";
-			}
+					channel_id: components["schemas"]["Id"];
+					tag_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "TagDelete";
+			  }
 			| {
-				payload: components["schemas"]["SignallingMessage"];
-				/** @enum {string} */
-				type: "VoiceDispatch";
-				/** @description who to send this dispatch to */
-				user_id: components["schemas"]["Id"];
-			}
+					payload: components["schemas"]["SignallingMessage"];
+					/** @enum {string} */
+					type: "VoiceDispatch";
+					/** @description who to send this dispatch to */
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				state?: null | components["schemas"]["VoiceState"];
-				/** @enum {string} */
-				type: "VoiceState";
-				user_id: components["schemas"]["Id"];
-			}
+					state?: null | components["schemas"]["VoiceState"];
+					/** @enum {string} */
+					type: "VoiceState";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				call: components["schemas"]["Call"];
-				/** @enum {string} */
-				type: "CallCreate";
-			}
+					call: components["schemas"]["Call"];
+					/** @enum {string} */
+					type: "CallCreate";
+			  }
 			| {
-				call: components["schemas"]["Call"];
-				/** @enum {string} */
-				type: "CallUpdate";
-			}
+					call: components["schemas"]["Call"];
+					/** @enum {string} */
+					type: "CallUpdate";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "CallDelete";
-			}
+					channel_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "CallDelete";
+			  }
 			| {
-				/** @enum {string} */
-				type: "UserCreate";
-				user: components["schemas"]["User"];
-			}
+					/** @enum {string} */
+					type: "UserCreate";
+					user: components["schemas"]["User"];
+			  }
 			| {
-				/** @enum {string} */
-				type: "UserUpdate";
-				user: components["schemas"]["User"];
-			}
+					/** @enum {string} */
+					type: "UserUpdate";
+					user: components["schemas"]["User"];
+			  }
 			| {
-				presence: components["schemas"]["Presence"];
-				/** @enum {string} */
-				type: "PresenceUpdate";
-				user_id: components["schemas"]["Id"];
-			}
+					presence: components["schemas"]["Presence"];
+					/** @enum {string} */
+					type: "PresenceUpdate";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				config: components["schemas"]["PreferencesGlobal"];
-				/** @enum {string} */
-				type: "PreferencesGlobal";
-				user_id: components["schemas"]["Id"];
-			}
+					config: components["schemas"]["PreferencesGlobal"];
+					/** @enum {string} */
+					type: "PreferencesGlobal";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				config: components["schemas"]["PreferencesRoom"];
-				room_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "PreferencesRoom";
-				user_id: components["schemas"]["Id"];
-			}
+					config: components["schemas"]["PreferencesRoom"];
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "PreferencesRoom";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				config: components["schemas"]["PreferencesChannel"];
-				/** @enum {string} */
-				type: "PreferencesChannel";
-				user_id: components["schemas"]["Id"];
-			}
+					channel_id: components["schemas"]["Id"];
+					config: components["schemas"]["PreferencesChannel"];
+					/** @enum {string} */
+					type: "PreferencesChannel";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				config: components["schemas"]["PreferencesUser"];
-				target_user_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "PreferencesUser";
-				user_id: components["schemas"]["Id"];
-			}
+					config: components["schemas"]["PreferencesUser"];
+					target_user_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "PreferencesUser";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "UserDelete";
-			}
+					id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "UserDelete";
+			  }
 			| {
-				session: components["schemas"]["Session"];
-				/** @enum {string} */
-				type: "SessionCreate";
-			}
+					session: components["schemas"]["Session"];
+					/** @enum {string} */
+					type: "SessionCreate";
+			  }
 			| {
-				session: components["schemas"]["Session"];
-				/** @enum {string} */
-				type: "SessionUpdate";
-			}
+					session: components["schemas"]["Session"];
+					/** @enum {string} */
+					type: "SessionUpdate";
+			  }
 			| {
-				id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "SessionDelete";
-				user_id?: null | components["schemas"]["Id"];
-			}
+					id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "SessionDelete";
+					user_id?: null | components["schemas"]["Id"];
+			  }
 			| {
-				/** @enum {string} */
-				type: "SessionDeleteAll";
-				user_id: components["schemas"]["Id"];
-			}
+					/** @enum {string} */
+					type: "SessionDeleteAll";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				relationship: components["schemas"]["Relationship"];
-				target_user_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "RelationshipUpsert";
-				user_id: components["schemas"]["Id"];
-			}
+					relationship: components["schemas"]["Relationship"];
+					target_user_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "RelationshipUpsert";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				target_user_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "RelationshipDelete";
-				user_id: components["schemas"]["Id"];
-			}
+					target_user_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "RelationshipDelete";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				connection: components["schemas"]["Connection"];
-				/** @enum {string} */
-				type: "ConnectionCreate";
-				user_id: components["schemas"]["Id"];
-			}
+					connection: components["schemas"]["Connection"];
+					/** @enum {string} */
+					type: "ConnectionCreate";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				app_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "ConnectionDelete";
-				user_id: components["schemas"]["Id"];
-			}
+					app_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ConnectionDelete";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				entry: components["schemas"]["AuditLogEntry"];
-				/** @enum {string} */
-				type: "AuditLogEntryCreate";
-			}
+					entry: components["schemas"]["AuditLogEntry"];
+					/** @enum {string} */
+					type: "AuditLogEntryCreate";
+			  }
 			| {
-				ban: components["schemas"]["RoomBan"];
-				room_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "BanCreate";
-			}
+					ban: components["schemas"]["RoomBan"];
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "BanCreate";
+			  }
 			| {
-				room_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "BanDelete";
-				user_id: components["schemas"]["Id"];
-			}
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "BanDelete";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				channel_id?: null | components["schemas"]["Id"];
-				groups: components["schemas"]["MemberListGroup"][];
-				ops: components["schemas"]["MemberListOp"][];
-				room_id?: null | components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "MemberListSync";
-				/** @description which user this list sync is for */
-				user_id: components["schemas"]["Id"];
-			}
+					channel_id?: null | components["schemas"]["Id"];
+					groups: components["schemas"]["MemberListGroup"][];
+					ops: components["schemas"]["MemberListOp"][];
+					room_id?: null | components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "MemberListSync";
+					/** @description which user this list sync is for */
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				notification: components["schemas"]["Notification"];
-				/** @enum {string} */
-				type: "InboxNotificationCreate";
-				user_id: components["schemas"]["Id"];
-			}
+					notification: components["schemas"]["Notification"];
+					/** @enum {string} */
+					type: "InboxNotificationCreate";
+					user_id: components["schemas"]["Id"];
+			  }
 			| (components["schemas"]["NotificationMarkRead"] & {
-				user_id: components["schemas"]["Id"];
-			} & {
-				/** @enum {string} */
-				type: "InboxMarkRead";
-			})
+					user_id: components["schemas"]["Id"];
+			  } & {
+					/** @enum {string} */
+					type: "InboxMarkRead";
+			  })
 			| (components["schemas"]["NotificationMarkRead"] & {
-				user_id: components["schemas"]["Id"];
-			} & {
-				/** @enum {string} */
-				type: "InboxMarkUnread";
-			})
+					user_id: components["schemas"]["Id"];
+			  } & {
+					/** @enum {string} */
+					type: "InboxMarkUnread";
+			  })
 			| (components["schemas"]["NotificationFlush"] & {
-				user_id: components["schemas"]["Id"];
-			} & {
-				/** @enum {string} */
-				type: "InboxFlush";
-			})
+					user_id: components["schemas"]["Id"];
+			  } & {
+					/** @enum {string} */
+					type: "InboxFlush";
+			  })
 			| {
-				event: components["schemas"]["CalendarEvent"];
-				/** @enum {string} */
-				type: "CalendarEventCreate";
-			}
+					event: components["schemas"]["CalendarEvent"];
+					/** @enum {string} */
+					type: "CalendarEventCreate";
+			  }
 			| {
-				event: components["schemas"]["CalendarEvent"];
-				/** @enum {string} */
-				type: "CalendarEventUpdate";
-			}
+					event: components["schemas"]["CalendarEvent"];
+					/** @enum {string} */
+					type: "CalendarEventUpdate";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				event_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "CalendarEventDelete";
-			}
+					channel_id: components["schemas"]["Id"];
+					event_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "CalendarEventDelete";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				overwrite: components["schemas"]["CalendarOverwrite"];
-				/** @enum {string} */
-				type: "CalendarOverwriteCreate";
-			}
+					channel_id: components["schemas"]["Id"];
+					overwrite: components["schemas"]["CalendarOverwrite"];
+					/** @enum {string} */
+					type: "CalendarOverwriteCreate";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				overwrite: components["schemas"]["CalendarOverwrite"];
-				/** @enum {string} */
-				type: "CalendarOverwriteUpdate";
-			}
+					channel_id: components["schemas"]["Id"];
+					overwrite: components["schemas"]["CalendarOverwrite"];
+					/** @enum {string} */
+					type: "CalendarOverwriteUpdate";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				event_id: components["schemas"]["Id"];
-				/** Format: int64 */
-				seq: number;
-				/** @enum {string} */
-				type: "CalendarOverwriteDelete";
-			}
+					channel_id: components["schemas"]["Id"];
+					event_id: components["schemas"]["Id"];
+					/** Format: int64 */
+					seq: number;
+					/** @enum {string} */
+					type: "CalendarOverwriteDelete";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				event_id: components["schemas"]["Id"];
-				participant: components["schemas"]["CalendarEventParticipant"];
-				/** @enum {string} */
-				type: "CalendarRsvpCreate";
-			}
+					channel_id: components["schemas"]["Id"];
+					event_id: components["schemas"]["Id"];
+					participant: components["schemas"]["CalendarEventParticipant"];
+					/** @enum {string} */
+					type: "CalendarRsvpCreate";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				event_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "CalendarRsvpDelete";
-				user_id: components["schemas"]["Id"];
-			}
+					channel_id: components["schemas"]["Id"];
+					event_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "CalendarRsvpDelete";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				event_id: components["schemas"]["Id"];
-				participant: components["schemas"]["CalendarEventParticipant"];
-				/** Format: int64 */
-				seq: number;
-				/** @enum {string} */
-				type: "CalendarOverwriteRsvpCreate";
-			}
+					channel_id: components["schemas"]["Id"];
+					event_id: components["schemas"]["Id"];
+					participant: components["schemas"]["CalendarEventParticipant"];
+					/** Format: int64 */
+					seq: number;
+					/** @enum {string} */
+					type: "CalendarOverwriteRsvpCreate";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				event_id: components["schemas"]["Id"];
-				/** Format: int64 */
-				seq: number;
-				/** @enum {string} */
-				type: "CalendarOverwriteRsvpDelete";
-				user_id: components["schemas"]["Id"];
-			}
+					channel_id: components["schemas"]["Id"];
+					event_id: components["schemas"]["Id"];
+					/** Format: int64 */
+					seq: number;
+					/** @enum {string} */
+					type: "CalendarOverwriteRsvpDelete";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				/** @enum {string} */
-				type: "WebhookCreate";
-				webhook: components["schemas"]["Webhook"];
-			}
+					/** @enum {string} */
+					type: "WebhookCreate";
+					webhook: components["schemas"]["Webhook"];
+			  }
 			| {
-				/** @enum {string} */
-				type: "WebhookUpdate";
-				webhook: components["schemas"]["Webhook"];
-			}
+					/** @enum {string} */
+					type: "WebhookUpdate";
+					webhook: components["schemas"]["Webhook"];
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				room_id?: null | components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "WebhookDelete";
-				webhook_id: components["schemas"]["Id"];
-			}
+					channel_id: components["schemas"]["Id"];
+					room_id?: null | components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "WebhookDelete";
+					webhook_id: components["schemas"]["Id"];
+			  }
 			| {
-				rule: components["schemas"]["AutomodRule"];
-				/** @enum {string} */
-				type: "AutomodRuleCreate";
-			}
+					rule: components["schemas"]["AutomodRule"];
+					/** @enum {string} */
+					type: "AutomodRuleCreate";
+			  }
 			| {
-				rule: components["schemas"]["AutomodRule"];
-				/** @enum {string} */
-				type: "AutomodRuleUpdate";
-			}
+					rule: components["schemas"]["AutomodRule"];
+					/** @enum {string} */
+					type: "AutomodRuleUpdate";
+			  }
 			| {
-				room_id: components["schemas"]["Id"];
-				rule_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "AutomodRuleDelete";
-			}
+					room_id: components["schemas"]["Id"];
+					rule_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "AutomodRuleDelete";
+			  }
 			| {
-				execution: components["schemas"]["AutomodRuleExecution"];
-				/** @enum {string} */
-				type: "AutomodRuleExecute";
-			}
+					execution: components["schemas"]["AutomodRuleExecution"];
+					/** @enum {string} */
+					type: "AutomodRuleExecute";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				slowmode_message_expire_at?: null | components["schemas"]["Time"];
-				slowmode_thread_expire_at?: null | components["schemas"]["Time"];
-				/** @enum {string} */
-				type: "RatelimitUpdate";
-				user_id: components["schemas"]["Id"];
-			}
+					channel_id: components["schemas"]["Id"];
+					slowmode_message_expire_at?: null | components["schemas"]["Time"];
+					slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+					/** @enum {string} */
+					type: "RatelimitUpdate";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				branch_id: components["schemas"]["Id"];
-				channel_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "DocumentEdit";
-				/** @description the encoded update to this document */
-				update: components["schemas"]["DocumentUpdate"];
-			}
+					branch_id: components["schemas"]["Id"];
+					channel_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "DocumentEdit";
+					/** @description the encoded update to this document */
+					update: components["schemas"]["DocumentUpdate"];
+			  }
 			| {
-				branch_id: components["schemas"]["Id"];
-				channel_id: components["schemas"]["Id"];
-				cursor_head: string;
-				cursor_tail?: string | null;
-				/** @enum {string} */
-				type: "DocumentPresence";
-				user_id: components["schemas"]["Id"];
-			}
+					branch_id: components["schemas"]["Id"];
+					channel_id: components["schemas"]["Id"];
+					cursor_head: string;
+					cursor_tail?: string | null;
+					/** @enum {string} */
+					type: "DocumentPresence";
+					user_id: components["schemas"]["Id"];
+			  }
 			| {
-				branch_id: components["schemas"]["Id"];
-				channel_id: components["schemas"]["Id"];
-				/** @description the connection ID this subscription confirmation is sent to */
-				connection_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "DocumentSubscribed";
-			}
+					branch_id: components["schemas"]["Id"];
+					channel_id: components["schemas"]["Id"];
+					/** @description the connection ID this subscription confirmation is sent to */
+					connection_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "DocumentSubscribed";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				tag: components["schemas"]["DocumentTag"];
-				/** @enum {string} */
-				type: "DocumentTagCreate";
-			}
+					channel_id: components["schemas"]["Id"];
+					tag: components["schemas"]["DocumentTag"];
+					/** @enum {string} */
+					type: "DocumentTagCreate";
+			  }
 			| {
-				channel_id: components["schemas"]["Id"];
-				tag: components["schemas"]["DocumentTag"];
-				/** @enum {string} */
-				type: "DocumentTagUpdate";
-			}
+					channel_id: components["schemas"]["Id"];
+					tag: components["schemas"]["DocumentTag"];
+					/** @enum {string} */
+					type: "DocumentTagUpdate";
+			  }
 			| {
-				branch_id: components["schemas"]["Id"];
-				channel_id: components["schemas"]["Id"];
-				tag_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "DocumentTagDelete";
-			}
+					branch_id: components["schemas"]["Id"];
+					channel_id: components["schemas"]["Id"];
+					tag_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "DocumentTagDelete";
+			  }
 			| {
-				branch: components["schemas"]["DocumentBranch"];
-				/** @enum {string} */
-				type: "DocumentBranchCreate";
-			}
+					branch: components["schemas"]["DocumentBranch"];
+					/** @enum {string} */
+					type: "DocumentBranchCreate";
+			  }
 			| {
-				branch: components["schemas"]["DocumentBranch"];
-				/** @enum {string} */
-				type: "DocumentBranchUpdate";
-			}
+					branch: components["schemas"]["DocumentBranch"];
+					/** @enum {string} */
+					type: "DocumentBranchUpdate";
+			  }
 			| {
-				branch_id: components["schemas"]["Id"];
-				channel_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "DocumentBranchDelete";
-			}
+					branch_id: components["schemas"]["Id"];
+					channel_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "DocumentBranchDelete";
+			  }
 			| {
-				media: components["schemas"]["Media"];
-				session_id: components["schemas"]["Id"];
-				/** @enum {string} */
-				type: "MediaProcessed";
-			}
+					media: components["schemas"]["Media"];
+					session_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "MediaProcessed";
+			  }
 			| {
-				media: components["schemas"]["Media"];
-				/** @enum {string} */
-				type: "MediaUpdate";
-			};
+					media: components["schemas"]["Media"];
+					/** @enum {string} */
+					type: "MediaUpdate";
+			  };
 		/** @description Information about a thread being created */
 		MessageThreadCreated: {
 			source_message_id?: null | components["schemas"]["Id"];
@@ -19707,53 +19862,53 @@ export interface components {
 		};
 		MessageType:
 			| (components["schemas"]["MessageDefaultMarkdown"] & {
-				/** @enum {string} */
-				type: "DefaultMarkdown";
-			})
+					/** @enum {string} */
+					type: "DefaultMarkdown";
+			  })
 			| (components["schemas"]["MessagePin"] & {
-				/** @enum {string} */
-				type: "MessagePinned";
-			})
+					/** @enum {string} */
+					type: "MessagePinned";
+			  })
 			| (components["schemas"]["MessageMember"] & {
-				/** @enum {string} */
-				type: "MemberAdd";
-			})
+					/** @enum {string} */
+					type: "MemberAdd";
+			  })
 			| (components["schemas"]["MessageMember"] & {
-				/** @enum {string} */
-				type: "MemberRemove";
-			})
+					/** @enum {string} */
+					type: "MemberRemove";
+			  })
 			| {
-				/** @enum {string} */
-				type: "MemberJoin";
-			}
+					/** @enum {string} */
+					type: "MemberJoin";
+			  }
 			| (components["schemas"]["MessageCall"] & {
-				/** @enum {string} */
-				type: "Call";
-			})
+					/** @enum {string} */
+					type: "Call";
+			  })
 			| (components["schemas"]["MessageChannelRename"] & {
-				/** @enum {string} */
-				type: "ChannelRename";
-			})
+					/** @enum {string} */
+					type: "ChannelRename";
+			  })
 			| (components["schemas"]["MessageChannelPingback"] & {
-				/** @enum {string} */
-				type: "ChannelPingback";
-			})
+					/** @enum {string} */
+					type: "ChannelPingback";
+			  })
 			| (components["schemas"]["MessageChannelMoved"] & {
-				/** @enum {string} */
-				type: "ChannelMoved";
-			})
+					/** @enum {string} */
+					type: "ChannelMoved";
+			  })
 			| (components["schemas"]["MessageChannelIcon"] & {
-				/** @enum {string} */
-				type: "ChannelIcon";
-			})
+					/** @enum {string} */
+					type: "ChannelIcon";
+			  })
 			| (components["schemas"]["MessageThreadCreated"] & {
-				/** @enum {string} */
-				type: "ThreadCreated";
-			})
+					/** @enum {string} */
+					type: "ThreadCreated";
+			  })
 			| (components["schemas"]["MessageAutomodExecution"] & {
-				/** @enum {string} */
-				type: "AutomodExecution";
-			});
+					/** @enum {string} */
+					type: "AutomodExecution";
+			  });
 		/** @description a message's content at a point in time */
 		MessageVersion: components["schemas"]["MessageType"] & {
 			author_id?: null | components["schemas"]["Id"];
@@ -19811,23 +19966,25 @@ export interface components {
 			/** @description mark everything in these rooms as read */
 			room_ids?: components["schemas"]["Id"][];
 		};
-		NotificationType: {
-			/** @description the channel this message was sent in */
-			channel_id: components["schemas"]["Id"];
-			/** @description the id of the message that was sent */
-			message_id: components["schemas"]["Id"];
-			room_id?: null | components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Message";
-		} | {
-			/** @description the channel this reaction was sent in */
-			channel_id: components["schemas"]["Id"];
-			/** @description the id of the message that was reacted to */
-			message_id: components["schemas"]["Id"];
-			room_id?: null | components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Reaction";
-		};
+		NotificationType:
+			| {
+					/** @description the channel this message was sent in */
+					channel_id: components["schemas"]["Id"];
+					/** @description the id of the message that was sent */
+					message_id: components["schemas"]["Id"];
+					room_id?: null | components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Message";
+			  }
+			| {
+					/** @description the channel this reaction was sent in */
+					channel_id: components["schemas"]["Id"];
+					/** @description the id of the message that was reacted to */
+					message_id: components["schemas"]["Id"];
+					room_id?: null | components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Reaction";
+			  };
 		/** @description notification config for a channel */
 		NotifsChannel: {
 			messages?: null | components["schemas"]["NotifsMessages"];
@@ -19958,15 +20115,17 @@ export interface components {
 			password: string;
 		};
 		/** @description who's logging in */
-		PasswordExecIdent: {
-			/** @enum {string} */
-			type: "UserId";
-			user_id: components["schemas"]["Id"];
-		} | {
-			email: components["schemas"]["EmailAddr"];
-			/** @enum {string} */
-			type: "Email";
-		};
+		PasswordExecIdent:
+			| {
+					/** @enum {string} */
+					type: "UserId";
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					email: components["schemas"]["EmailAddr"];
+					/** @enum {string} */
+					type: "Email";
+			  };
 		/**
 		 * @description a permission that lets a user do something
 		 * @enum {string}
@@ -20197,14 +20356,14 @@ export interface components {
 		/** @description reaction key returned in reaction counts for messages */
 		ReactionKey:
 			| {
-				content: string;
-				/** @enum {string} */
-				type: "Text";
-			}
+					content: string;
+					/** @enum {string} */
+					type: "Text";
+			  }
 			| (components["schemas"]["EmojiCustom"] & {
-				/** @enum {string} */
-				type: "Custom";
-			});
+					/** @enum {string} */
+					type: "Custom";
+			  });
 		/** @description Reaction key used in reaction route params.
 		 *
 		 *     Serialized as:
@@ -20232,19 +20391,22 @@ export interface components {
 		};
 		/** @enum {string} */
 		RecurrenceFrequency: "Daily" | "Weekly" | "Monthly" | "Yearly";
-		RecurrenceRange: {
-			/** @enum {string} */
-			type: "Infinite";
-		} | {
-			/** Format: int32 */
-			count: number;
-			/** @enum {string} */
-			type: "Count";
-		} | {
-			time: components["schemas"]["Time"];
-			/** @enum {string} */
-			type: "Until";
-		};
+		RecurrenceRange:
+			| {
+					/** @enum {string} */
+					type: "Infinite";
+			  }
+			| {
+					/** Format: int32 */
+					count: number;
+					/** @enum {string} */
+					type: "Count";
+			  }
+			| {
+					time: components["schemas"]["Time"];
+					/** @enum {string} */
+					type: "Until";
+			  };
 		Registration: Record<string, never>;
 		Relationship: (null | components["schemas"]["Ignore"]) & {
 			relation?: null | components["schemas"]["RelationshipType"];
@@ -20410,25 +20572,30 @@ export interface components {
 			 */
 			uses: number;
 		};
-		RoomAnalyticsInvitesOrigin: {
-			code: components["schemas"]["InviteCode"];
-			/** @enum {string} */
-			type: "Invite";
-		} | {
-			/** @enum {string} */
-			type: "BotInstall";
-		} | {
-			/** @description the bridge that owns this puppet */
-			bridge_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Bridged";
-		} | {
-			/** @enum {string} */
-			type: "PublicJoin";
-		} | {
-			/** @enum {string} */
-			type: "Other";
-		};
+		RoomAnalyticsInvitesOrigin:
+			| {
+					code: components["schemas"]["InviteCode"];
+					/** @enum {string} */
+					type: "Invite";
+			  }
+			| {
+					/** @enum {string} */
+					type: "BotInstall";
+			  }
+			| {
+					/** @description the bridge that owns this puppet */
+					bridge_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Bridged";
+			  }
+			| {
+					/** @enum {string} */
+					type: "PublicJoin";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Other";
+			  };
 		RoomAnalyticsMembersCount: {
 			/** @description The bucket for this data point. */
 			bucket: components["schemas"]["Time"];
@@ -20505,33 +20672,39 @@ export interface components {
 			timeout_until?: null | components["schemas"]["Time"];
 			user_id: components["schemas"]["Id"];
 		};
-		RoomMemberOrigin: {
-			/** @description the invite code they joined with */
-			code: components["schemas"]["InviteCode"];
-			/** @description the user who created the invite */
-			inviter: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Invite";
-		} | {
-			/** @enum {string} */
-			type: "BotInstall";
-			/** @description the user who installed this bot */
-			user_id: components["schemas"]["Id"];
-		} | {
-			/** @description the bridge that owns this puppet */
-			bridge_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Bridged";
-		} | {
-			/** @enum {string} */
-			type: "Creator";
-		} | {
-			/** @enum {string} */
-			type: "GdmUpgrade";
-		} | {
-			/** @enum {string} */
-			type: "PublicJoin";
-		};
+		RoomMemberOrigin:
+			| {
+					/** @description the invite code they joined with */
+					code: components["schemas"]["InviteCode"];
+					/** @description the user who created the invite */
+					inviter: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Invite";
+			  }
+			| {
+					/** @enum {string} */
+					type: "BotInstall";
+					/** @description the user who installed this bot */
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					/** @description the bridge that owns this puppet */
+					bridge_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Bridged";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Creator";
+			  }
+			| {
+					/** @enum {string} */
+					type: "GdmUpgrade";
+			  }
+			| {
+					/** @enum {string} */
+					type: "PublicJoin";
+			  };
 		RoomMemberSearchResponse: {
 			room_members: components["schemas"]["RoomMember"][];
 			users: components["schemas"]["User"][];
@@ -20729,70 +20902,83 @@ export interface components {
 		};
 		/** @description webrtc session description */
 		SessionDescription: string;
-		SessionStatus: {
-			/** @enum {string} */
-			status: "Unauthorized";
-		} | {
-			/** @enum {string} */
-			status: "Bound";
-			user_id: components["schemas"]["Id"];
-		} | {
-			/** @enum {string} */
-			status: "Authorized";
-			user_id: components["schemas"]["Id"];
-		} | {
-			/** @enum {string} */
-			status: "Sudo";
-			sudo_expires_at: components["schemas"]["Time"];
-			user_id: components["schemas"]["Id"];
-		};
+		SessionStatus:
+			| {
+					/** @enum {string} */
+					status: "Unauthorized";
+			  }
+			| {
+					/** @enum {string} */
+					status: "Bound";
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					/** @enum {string} */
+					status: "Authorized";
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					/** @enum {string} */
+					status: "Sudo";
+					sudo_expires_at: components["schemas"]["Time"];
+					user_id: components["schemas"]["Id"];
+			  };
 		SessionToken: string;
 		/** @enum {string} */
 		SessionType: "User" | "Access";
 		/** @description messages that either the sfu or client can send to each other */
-		SignallingMessage: {
-			/** @description the id of the selected sfu. internal; for debugging. */
-			sfu_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Ready";
-		} | {
-			sdp: components["schemas"]["SessionDescription"];
-			tracks: components["schemas"]["TrackMetadata"][];
-			/** @enum {string} */
-			type: "Offer";
-		} | {
-			sdp: components["schemas"]["SessionDescription"];
-			/** @enum {string} */
-			type: "Answer";
-		} | {
-			candidate: components["schemas"]["IceCandidate"];
-			/** @enum {string} */
-			type: "Candidate";
-		} | {
-			channel_id: components["schemas"]["Id"];
-			tracks: components["schemas"]["TrackMetadata"][];
-			/** @enum {string} */
-			type: "Have";
-			user_id: components["schemas"]["Id"];
-		} | {
-			subscriptions: components["schemas"]["Subscription"][];
-			/** @enum {string} */
-			type: "Want";
-		} | {
-			state?: null | components["schemas"]["VoiceStateUpdate"];
-			/** @enum {string} */
-			type: "VoiceState";
-		} | {
-			/** @enum {string} */
-			type: "Reconnect";
-		} | {
-			/** @description what exactly went wrong */
-			code: components["schemas"]["VoiceErrorCode"];
-			/** @description human readable error message */
-			message: string;
-			/** @enum {string} */
-			type: "Error";
-		};
+		SignallingMessage:
+			| {
+					/** @description the id of the selected sfu. internal; for debugging. */
+					sfu_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Ready";
+			  }
+			| {
+					sdp: components["schemas"]["SessionDescription"];
+					tracks: components["schemas"]["TrackMetadata"][];
+					/** @enum {string} */
+					type: "Offer";
+			  }
+			| {
+					sdp: components["schemas"]["SessionDescription"];
+					/** @enum {string} */
+					type: "Answer";
+			  }
+			| {
+					candidate: components["schemas"]["IceCandidate"];
+					/** @enum {string} */
+					type: "Candidate";
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					tracks: components["schemas"]["TrackMetadata"][];
+					/** @enum {string} */
+					type: "Have";
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					subscriptions: components["schemas"]["Subscription"][];
+					/** @enum {string} */
+					type: "Want";
+			  }
+			| {
+					state?: null | components["schemas"]["VoiceStateUpdate"];
+					/** @enum {string} */
+					type: "VoiceState";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Reconnect";
+			  }
+			| {
+					/** @description what exactly went wrong */
+					code: components["schemas"]["VoiceErrorCode"];
+					/** @description human readable error message */
+					message: string;
+					/** @enum {string} */
+					type: "Error";
+			  };
 		/** @enum {string} */
 		Status: "Offline" | "Online" | "Away" | "Busy" | "Available";
 		Subscription: {
@@ -21147,8 +21333,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json":
-						components["schemas"]["AdminCollectGarbageResponse"];
+					"application/json": components["schemas"]["AdminCollectGarbageResponse"];
 				};
 			};
 			/** @description garbage collecting task started */
@@ -21311,8 +21496,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Webhook"];
+					"application/json": components["schemas"]["PaginationResponse_Webhook"];
 				};
 			};
 		};
@@ -21773,8 +21957,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json":
-						components["schemas"]["PaginationResponse_Webhook"];
+					"application/json": components["schemas"]["PaginationResponse_Webhook"];
 				};
 			};
 		};

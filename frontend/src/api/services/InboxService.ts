@@ -1,6 +1,11 @@
-import type { Channel, InboxListParams, Notification, Pagination, Room } from "sdk";
-import type { Message } from "sdk";
-import { BaseService } from "../core/Service";
+import type {
+	Channel,
+	InboxListParams,
+	Message,
+	Notification,
+	Pagination,
+	Room,
+} from "sdk";
 import {
 	createEffect,
 	createResource,
@@ -8,6 +13,7 @@ import {
 	type Resource,
 } from "solid-js";
 import { logger } from "../../logger";
+import { BaseService } from "../core/Service";
 
 const log = logger.for("api/inbox");
 
@@ -35,9 +41,7 @@ export class InboxService extends BaseService<Notification> {
 		throw new Error("Use useList() to fetch inbox notifications");
 	}
 
-	useList(
-		params: () => InboxListParams,
-	): InboxListResult {
+	useList(params: () => InboxListParams): InboxListResult {
 		const [resource, { refetch }] = createResource(
 			() => [params(), this.store.session()] as const,
 			async ([p, session]) => {
@@ -54,7 +58,7 @@ export class InboxService extends BaseService<Notification> {
 								limit: 50,
 							},
 						},
-					})
+					}),
 				);
 
 				const data = result.data as {
@@ -106,7 +110,7 @@ export class InboxService extends BaseService<Notification> {
 		await this.retryWithBackoff(() =>
 			this.client.http.POST("/api/v1/inbox/mark-read", {
 				body: { message_ids },
-			})
+			}),
 		);
 	}
 
@@ -114,7 +118,7 @@ export class InboxService extends BaseService<Notification> {
 		await this.retryWithBackoff(() =>
 			this.client.http.POST("/api/v1/inbox/mark-unread", {
 				body: { message_ids },
-			})
+			}),
 		);
 	}
 }

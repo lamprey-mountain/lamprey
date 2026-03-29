@@ -1,10 +1,10 @@
-import { createContext, useContext } from "solid-js";
-import type { Api } from "@/api";
-import type { ChannelContextT } from "../channelctx";
 import type { ReactiveMap } from "@solid-primitives/map";
+import { createContext, useContext } from "solid-js";
 import type { SetStoreFunction } from "solid-js/store";
-import type { Data } from "../context.ts";
+import type { Api } from "@/api";
 import type { ChannelsService } from "@/api/services/ChannelsService.ts";
+import type { ChannelContextT } from "../channelctx";
+import type { Data } from "../context.ts";
 
 export type ReadTrackingContextT = {
 	markThreadRead: (
@@ -147,15 +147,13 @@ export function createReadTrackingProvider(
 	};
 }
 
-export const ReadTrackingProvider = (
-	props: {
-		api: Api;
-		channels2: ChannelsService;
-		channel_contexts: ReactiveMap<string, ChannelContextT>;
-		dataUpdate: SetStoreFunction<Data>;
-		children: import("solid-js").JSX.Element;
-	},
-) => {
+export const ReadTrackingProvider = (props: {
+	api: Api;
+	channels2: ChannelsService;
+	channel_contexts: ReactiveMap<string, ChannelContextT>;
+	dataUpdate: SetStoreFunction<Data>;
+	children: import("solid-js").JSX.Element;
+}) => {
 	const value = createReadTrackingProvider(
 		props.api,
 		props.channels2,

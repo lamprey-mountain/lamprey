@@ -1,7 +1,7 @@
 import { createSignal } from "solid-js";
-import { Modal } from "./mod";
-import { Checkbox } from "../icons";
 import { CheckboxOption } from "../atoms/CheckboxOption";
+import { Checkbox } from "../icons";
+import { Modal } from "./mod";
 
 interface ModalPrivacyProps {
 	room_id: string;
@@ -47,9 +47,7 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 					/>
 					<label for="opt-friends">
 						<div>Allow friend requests</div>
-						<div class="dim">
-							Let others send friend requests to you.
-						</div>
+						<div class="dim">Let others send friend requests to you.</div>
 					</label>
 				</CheckboxOption>
 				<CheckboxOption

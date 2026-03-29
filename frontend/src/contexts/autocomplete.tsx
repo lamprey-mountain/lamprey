@@ -1,4 +1,5 @@
 import type { ReferenceElement } from "@floating-ui/dom";
+import type { User } from "sdk";
 import {
 	type Accessor,
 	batch,
@@ -9,7 +10,6 @@ import {
 	useContext,
 } from "solid-js";
 import { createStore, SetStoreFunction } from "solid-js/store";
-import type { User } from "sdk";
 
 export type AutocompleteState = {
 	visible: boolean;
@@ -34,26 +34,26 @@ export type AutocompleteContext = {
 
 export type AutocompleteKind =
 	| {
-		type: "mention";
-		onSelect: (item: AutocompleteMentionItem) => void;
-		channelId: string;
-		roomId?: string;
-	}
+			type: "mention";
+			onSelect: (item: AutocompleteMentionItem) => void;
+			channelId: string;
+			roomId?: string;
+	  }
 	| {
-		type: "channel";
-		onSelect: (channelId: string, channelName: string) => void;
-		channelId: string;
-	}
+			type: "channel";
+			onSelect: (channelId: string, channelName: string) => void;
+			channelId: string;
+	  }
 	| {
-		type: "emoji";
-		onSelect: (id: string, name: string, char?: string) => void;
-		channelId: string;
-	}
+			type: "emoji";
+			onSelect: (id: string, name: string, char?: string) => void;
+			channelId: string;
+	  }
 	| {
-		type: "command";
-		onSelect: (command: string) => void;
-		channelId: string;
-	};
+			type: "command";
+			onSelect: (command: string) => void;
+			channelId: string;
+	  };
 
 export type AutocompleteMentionItem =
 	| { type: "user"; user_id: string; name: string; user: User }

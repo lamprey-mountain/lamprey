@@ -1,8 +1,8 @@
 import type { Invite, Pagination } from "sdk";
-import { BaseService } from "../core/Service";
 import { createMemo, createResource, onCleanup, type Resource } from "solid-js";
-import { PaginatedList } from "../core/PaginatedList";
 import { logger } from "../../logger";
+import { PaginatedList } from "../core/PaginatedList";
+import { BaseService } from "../core/Service";
 
 const log = logger.for("api/invites");
 
@@ -21,7 +21,7 @@ export class InvitesService extends BaseService<Invite> {
 		const data = await this.retryWithBackoff<Invite>(() =>
 			this.client.http.GET("/api/v1/invite/{invite_code}", {
 				params: { path: { invite_code: id } },
-			})
+			}),
 		);
 		this.upsert(data);
 		return data;
@@ -31,7 +31,7 @@ export class InvitesService extends BaseService<Invite> {
 		await this.retryWithBackoff(() =>
 			this.client.http.POST("/api/v1/invite/{invite_code}", {
 				params: { path: { invite_code } },
-			})
+			}),
 		);
 	}
 
@@ -54,7 +54,7 @@ export class InvitesService extends BaseService<Invite> {
 							from: cursor,
 						},
 					},
-				})
+				}),
 			);
 
 			this.upsertBulk(data.items);
@@ -87,7 +87,7 @@ export class InvitesService extends BaseService<Invite> {
 							from: cursor,
 						},
 					},
-				})
+				}),
 			);
 
 			this.upsertBulk(data.items);
@@ -118,7 +118,7 @@ export class InvitesService extends BaseService<Invite> {
 							from: cursor,
 						},
 					},
-				})
+				}),
 			);
 
 			this.upsertBulk(data.items);

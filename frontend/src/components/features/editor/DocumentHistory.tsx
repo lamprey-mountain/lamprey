@@ -1,10 +1,9 @@
+import type { Channel, HistoryPagination } from "sdk";
 import { createEffect, createSignal, For, on, Show } from "solid-js";
-import type { Channel } from "sdk";
 import { useApi2 } from "@/api";
-import type { HistoryPagination } from "sdk";
 import { Time } from "../../../atoms/Time.tsx";
-import { useChannel } from "../../../contexts/channel.tsx";
 import { Avatar } from "../../../avatar/UserAvatar.tsx";
+import { useChannel } from "../../../contexts/channel.tsx";
 
 type ChangesetSelection = {
 	start_seq: number;
@@ -20,9 +19,10 @@ type DocumentHistoryProps = {
 	selectedSeq: ChangesetSelection | null;
 };
 
-const AvatarWithTooltip = (
-	props: { user?: import("sdk").User; name: string },
-) => {
+const AvatarWithTooltip = (props: {
+	user?: import("sdk").User;
+	name: string;
+}) => {
 	let wrap: HTMLDivElement | undefined;
 	let tipEl: HTMLDivElement | undefined;
 	const [visible, setVisible] = createSignal(false);
@@ -146,7 +146,8 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 					>
 						<For each={history()!.changesets}>
 							{(changeset) => {
-								const isSelected = props.selectedSeq !== null &&
+								const isSelected =
+									props.selectedSeq !== null &&
 									props.selectedSeq.start_seq === changeset.start_seq &&
 									props.selectedSeq.end_seq === changeset.end_seq;
 								return (
@@ -167,7 +168,8 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 											props.onHoverChangeset({
 												start_seq: changeset.start_seq,
 												end_seq: changeset.end_seq,
-											})}
+											})
+										}
 									>
 										<div class="history-item-header">
 											<Time date={new Date(changeset.start_time)} />
@@ -187,8 +189,8 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 													<>
 														<For each={visibleAuthors}>
 															{(authorId) => {
-																const user = history()!.users.find((u) =>
-																	u.id === authorId
+																const user = history()!.users.find(
+																	(u) => u.id === authorId,
 																);
 																const userName = user?.name ?? authorId;
 																return (

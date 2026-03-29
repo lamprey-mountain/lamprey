@@ -1,8 +1,7 @@
+import type { EditorView } from "prosemirror-view";
+import type { Media, Tag } from "sdk";
 import { createContext, type ParentProps, useContext } from "solid-js";
 import { createStore } from "solid-js/store";
-import type { Media } from "sdk";
-import type { Tag } from "sdk";
-import type { EditorView } from "prosemirror-view";
 
 export type ChannelTypeOption =
 	| "Text"
@@ -16,103 +15,99 @@ export type ChannelTypeOption =
 export type Modal =
 	| { type: "alert"; text: string }
 	| {
-		type: "confirm";
-		text: string;
-		cont: (confirmed: boolean) => void;
-	}
+			type: "confirm";
+			text: string;
+			cont: (confirmed: boolean) => void;
+	  }
 	| {
-		type: "prompt";
-		text: string;
-		cont: (text: string | null) => void;
-	}
+			type: "prompt";
+			text: string;
+			cont: (text: string | null) => void;
+	  }
 	| {
-		type: "media";
-		media: Media;
-	}
+			type: "media";
+			media: Media;
+	  }
 	| {
-		type: "message_edits";
-		channel_id: string;
-		message_id: string;
-	}
+			type: "message_edits";
+			channel_id: string;
+			message_id: string;
+	  }
 	| {
-		type: "reset_password";
-	}
+			type: "reset_password";
+	  }
 	| {
-		type: "palette";
-	}
+			type: "palette";
+	  }
 	| {
-		type: "channel_create";
-		room_id: string;
-		cont: (
-			data: { name: string; type: ChannelTypeOption } | null,
-		) => void;
-	}
+			type: "channel_create";
+			room_id: string;
+			cont: (data: { name: string; type: ChannelTypeOption } | null) => void;
+	  }
 	| {
-		type: "tag_editor";
-		forumChannelId: string;
-		tag?: Tag;
-		onSave?: (tag: Tag) => void;
-		onClose?: () => void;
-	}
+			type: "tag_editor";
+			forumChannelId: string;
+			tag?: Tag;
+			onSave?: (tag: Tag) => void;
+			onClose?: () => void;
+	  }
 	| {
-		type: "export_data";
-	}
+			type: "export_data";
+	  }
 	| {
-		type: "view_reactions";
-		channel_id: string;
-		message_id: string;
-	}
+			type: "view_reactions";
+			channel_id: string;
+			message_id: string;
+	  }
 	| {
-		type: "privacy";
-		room_id: string;
-	}
+			type: "privacy";
+			room_id: string;
+	  }
 	| {
-		type: "notifications";
-		room_id: string;
-	}
+			type: "notifications";
+			room_id: string;
+	  }
 	| {
-		type: "invite_create";
-		room_id?: string;
-		channel_id?: string;
-	}
+			type: "invite_create";
+			room_id?: string;
+			channel_id?: string;
+	  }
 	| {
-		type: "attachment";
-		channel_id: string;
-		local_id: string;
-	}
+			type: "attachment";
+			channel_id: string;
+			local_id: string;
+	  }
 	| {
-		type: "channel_topic";
-		channel_id: string;
-	}
+			type: "channel_topic";
+			channel_id: string;
+	  }
 	| {
-		type: "link";
-		editor: EditorView;
-	}
+			type: "link";
+			editor: EditorView;
+	  }
 	| {
-		type: "kick";
-		room_id: string;
-		user_id: string;
-	}
+			type: "kick";
+			room_id: string;
+			user_id: string;
+	  }
 	| {
-		type: "ban";
-		room_id: string;
-		user_id?: string;
-	}
+			type: "ban";
+			room_id: string;
+			user_id?: string;
+	  }
 	| {
-		type: "timeout";
-		room_id: string;
-		user_id: string;
-	}
+			type: "timeout";
+			room_id: string;
+			user_id: string;
+	  }
 	| {
-		type: "camera_preview";
-		stream: MediaStream;
-	}
+			type: "camera_preview";
+			stream: MediaStream;
+	  }
 	| {
-		type: "room_create";
-		cont: (
-			data: { name: string; public: boolean } | null,
-		) => void;
-	};
+			type: "room_create";
+			cont: (data: { name: string; public: boolean } | null) => void;
+	  };
 
 export type ModalsController = {
 	close: () => void;

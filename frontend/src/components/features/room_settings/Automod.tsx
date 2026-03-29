@@ -1,4 +1,5 @@
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import fuzzysort from "fuzzysort";
+import type { Room, AutomodRule as SdkAutomodRule } from "sdk";
 import {
 	createEffect,
 	createMemo,
@@ -8,15 +9,14 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi2, useChannels2 } from "@/api";
-import type { AutomodRule as SdkAutomodRule, Room } from "sdk";
-import { useModals } from "../../../contexts/modal";
-import fuzzysort from "fuzzysort";
-import { uuidv7 } from "uuidv7";
-import { Savebar } from "@/atoms/Savebar.tsx";
 import { createStore } from "solid-js/store";
-import { AutomodRule } from "../automod_editor/AutomodRule.tsx";
+import { uuidv7 } from "uuidv7";
+import { useApi2, useChannels2 } from "@/api";
+import { Savebar } from "@/atoms/Savebar.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
+import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import { useModals } from "../../../contexts/modal";
+import { AutomodRule } from "../automod_editor/AutomodRule.tsx";
 
 // clean = not touched, data is straight from the server
 // draft = not yet created
@@ -46,18 +46,16 @@ export function Automod(props: VoidProps<{ room: Room }>) {
 	});
 
 	const removeRule = (rule_id: string) => () => {
-		modalCtl.confirm(
-			"Are you sure you want to delete this rule?",
-			(conf) => {
-				if (!conf) return;
-				api2.client.http.DELETE(
-					"/api/v1/room/{room_id}/automod/rule/{rule_id}",
-					{ params: { path: { room_id: props.room.id, rule_id } } },
-				).then(() => {
+		modalCtl.confirm("Are you sure you want to delete this rule?", (conf) => {
+			if (!conf) return;
+			api2.client.http
+				.DELETE("/api/v1/room/{room_id}/automod/rule/{rule_id}", {
+					params: { path: { room_id: props.room.id, rule_id } },
+				})
+				.then(() => {
 					refetch();
 				});
-			},
-		);
+		});
 	};
 
 	const [search, setSearch] = createSignal("");
@@ -118,7 +116,11 @@ export function Automod(props: VoidProps<{ room: Room }>) {
 	};
 
 	const user_id = () => currentUser()?.id;
-	const perms = usePermissions(user_id, () => props.room.id, () => undefined);
+	const perms = usePermissions(
+		user_id,
+		() => props.room.id,
+		() => undefined,
+	);
 
 	const handleSave = async () => {
 		const states = ruleStates();
@@ -133,27 +135,24 @@ export function Automod(props: VoidProps<{ room: Room }>) {
 						...rule,
 						trigger: {
 							...rule.trigger,
-							keywords: (rule.trigger as any).keywords?.filter((k: string) =>
-								k.trim() !== ""
+							keywords: (rule.trigger as any).keywords?.filter(
+								(k: string) => k.trim() !== "",
 							),
-							deny: (rule.trigger as any).deny?.filter((d: string) =>
-								d.trim() !== ""
+							deny: (rule.trigger as any).deny?.filter(
+								(d: string) => d.trim() !== "",
 							),
-							allow: (rule.trigger as any).allow?.filter((a: string) =>
-								a.trim() !== ""
+							allow: (rule.trigger as any).allow?.filter(
+								(a: string) => a.trim() !== "",
 							),
-							hostnames: (rule.trigger as any).hostnames?.filter((h: string) =>
-								h.trim() !== ""
+							hostnames: (rule.trigger as any).hostnames?.filter(
+								(h: string) => h.trim() !== "",
 							),
 						},
 					};
-					await api2.client.http.POST(
-						"/api/v1/room/{room_id}/automod/rule",
-						{
-							params: { path: { room_id: props.room.id } },
-							body: cleanedRule,
-						},
-					);
+					await api2.client.http.POST("/api/v1/room/{room_id}/automod/rule", {
+						params: { path: { room_id: props.room.id } },
+						body: cleanedRule,
+					});
 				}
 			} else if (state === "edited") {
 				const rule = filteredRules().find((r) => r.id === ruleId);

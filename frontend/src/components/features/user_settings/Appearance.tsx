@@ -1,11 +1,11 @@
-import { Show, type VoidProps } from "solid-js";
 import { createUpload, type User } from "sdk";
-import { useCtx } from "../../../context.ts";
+import { Show, type VoidProps } from "solid-js";
 import { useApi2 } from "@/api";
-import { getThumbFromId } from "../../../media/util.tsx";
-import { Checkbox } from "../../../icons";
-import { Dropdown } from "../../../atoms/Dropdown";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
+import { Dropdown } from "../../../atoms/Dropdown";
+import { useCtx } from "../../../context.ts";
+import { Checkbox } from "../../../icons";
+import { getThumbFromId } from "../../../media/util.tsx";
 
 export function Appearance(props: VoidProps<{ user: User }>) {
 	const api2 = useApi2();
@@ -67,19 +67,22 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 						},
 						{
 							item: "auto-highcontrast",
-							label: t("user_settings.theme_auto_highcontrast") ||
+							label:
+								t("user_settings.theme_auto_highcontrast") ||
 								"Auto (system) (high contrast)",
 						},
 						{ item: "light", label: t("user_settings.theme_light") || "Light" },
 						{ item: "dark", label: t("user_settings.theme_dark") || "Dark" },
 						{
 							item: "light-highcontrast",
-							label: t("user_settings.theme_light_highcontrast") ||
+							label:
+								t("user_settings.theme_light_highcontrast") ||
 								"Light (high contrast)",
 						},
 						{
 							item: "dark-highcontrast",
-							label: t("user_settings.theme_dark_highcontrast") ||
+							label:
+								t("user_settings.theme_dark_highcontrast") ||
 								"Dark (high contrast)",
 						},
 					]}
@@ -156,9 +159,11 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 						type="range"
 						min="0"
 						max="24"
-						value={(ctx.preferences().frontend["message_spacing"] as
-							| number
-							| undefined) || 8}
+						value={
+							(ctx.preferences().frontend["message_spacing"] as
+								| number
+								| undefined) || 8
+						}
 						onChange={(e) => {
 							const c = ctx.preferences();
 							ctx.setPreferences({
@@ -184,9 +189,11 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 						type="range"
 						min="80"
 						max="150"
-						value={(ctx.preferences().frontend["chat_font_scale"] as
-							| number
-							| undefined) || 100}
+						value={
+							(ctx.preferences().frontend["chat_font_scale"] as
+								| number
+								| undefined) || 100
+						}
 						onChange={(e) => {
 							const c = ctx.preferences();
 							ctx.setPreferences({
@@ -212,9 +219,10 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 						type="range"
 						min="80"
 						max="150"
-						value={(ctx.preferences().frontend["app_scale"] as
-							| number
-							| undefined) || 100}
+						value={
+							(ctx.preferences().frontend["app_scale"] as number | undefined) ||
+							100
+						}
 						onChange={(e) => {
 							const c = ctx.preferences();
 							ctx.setPreferences({
@@ -240,9 +248,11 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 						type="range"
 						min="0"
 						max="100"
-						value={(ctx.preferences().frontend["saturation"] as
-							| number
-							| undefined) || 100}
+						value={
+							(ctx.preferences().frontend["saturation"] as
+								| number
+								| undefined) || 100
+						}
 						onChange={(e) => {
 							const c = ctx.preferences();
 							ctx.setPreferences({
@@ -276,8 +286,9 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 					seed={`user-${props.user?.id ?? "@self"}-reduced-motion-sync`}
 				>
 					<Checkbox
-						checked={ctx.preferences().frontend["reduced_motion_sync"] ===
-							"yes"}
+						checked={
+							ctx.preferences().frontend["reduced_motion_sync"] === "yes"
+						}
 						seed={`user-${props.user?.id ?? "@self"}-reduced-motion-sync`}
 					/>
 					<span>{t("user_settings.reduced_motion_sync")}</span>

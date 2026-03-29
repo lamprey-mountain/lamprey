@@ -33,7 +33,7 @@ export class ReactionsService extends BaseService<never> {
 						query,
 					},
 				},
-			)
+			),
 		);
 	}
 
@@ -55,7 +55,7 @@ export class ReactionsService extends BaseService<never> {
 						},
 					},
 				},
-			)
+			),
 		);
 	}
 
@@ -77,7 +77,7 @@ export class ReactionsService extends BaseService<never> {
 						},
 					},
 				},
-			)
+			),
 		);
 	}
 
@@ -100,7 +100,7 @@ export class ReactionsService extends BaseService<never> {
 						},
 					},
 				},
-			)
+			),
 		);
 	}
 
@@ -121,7 +121,7 @@ export class ReactionsService extends BaseService<never> {
 						},
 					},
 				},
-			)
+			),
 		);
 	}
 
@@ -137,7 +137,7 @@ export class ReactionsService extends BaseService<never> {
 						},
 					},
 				},
-			)
+			),
 		);
 	}
 }

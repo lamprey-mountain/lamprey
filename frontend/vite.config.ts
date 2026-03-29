@@ -1,8 +1,8 @@
+import { execSync, spawnSync } from "node:child_process";
+import path from "node:path";
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 import pkg from "./package.json";
-import { execSync, spawnSync } from "node:child_process";
-import path from "node:path";
 
 function getGitCommit() {
 	if (process.env.VITE_GIT_SHA) {

@@ -38,7 +38,9 @@ export const EmojiButton = (props: EmojiButtonProps) => {
 		} else {
 			const popout = ctx.popout();
 			if (
-				popout && "id" in popout && popout.id === "emoji" &&
+				popout &&
+				"id" in popout &&
+				popout.id === "emoji" &&
 				popout.ref === wrapperEl
 			) {
 				ctx.setPopout(null);

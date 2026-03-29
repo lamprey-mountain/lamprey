@@ -1,25 +1,25 @@
-import { createMemo, createSignal, For, Show } from "solid-js";
-import { useCtx } from "./context.ts";
-import { useModals } from "./contexts/modal";
-import { type Channel, getTimestampFromUUID } from "sdk";
-import { A, useNavigate } from "@solidjs/router";
-import { useChannels2, useThreads2 } from "@/api";
-import { ChannelIcon } from "./User";
-import { createEditor } from "./components/features/editor/Editor.tsx";
-import { uuidv7 } from "uuidv7";
-import type { EditorState } from "prosemirror-state";
-import { RenderUploadItem } from "./components/features/chat/Input.tsx";
-import { Time } from "./atoms/Time.tsx";
-import { flags } from "./flags.ts";
-import { usePermissions } from "./hooks/usePermissions.ts";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
-import { md } from "./markdown_utils.tsx";
+import { A, useNavigate } from "@solidjs/router";
+import type { EditorState } from "prosemirror-state";
+import { type Channel, getTimestampFromUUID } from "sdk";
+import { createMemo, createSignal, For, Show } from "solid-js";
+import { uuidv7 } from "uuidv7";
+import { useChannels2, useThreads2 } from "@/api";
+import { Time } from "./atoms/Time.tsx";
 import { useChannel } from "./channelctx.tsx";
-import { useUploads } from "./contexts/uploads.tsx";
-import { useCurrentUser } from "./contexts/currentUser.tsx";
-import { useMessageSubmit } from "./hooks/useMessageSubmit.ts";
-import { useFormattingToolbar } from "./contexts/formatting-toolbar";
+import { RenderUploadItem } from "./components/features/chat/Input.tsx";
+import { createEditor } from "./components/features/editor/Editor.tsx";
+import { useCtx } from "./context.ts";
 import { useAutocomplete } from "./contexts/autocomplete";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
+import { useFormattingToolbar } from "./contexts/formatting-toolbar";
+import { useModals } from "./contexts/modal";
+import { useUploads } from "./contexts/uploads.tsx";
+import { flags } from "./flags.ts";
+import { useMessageSubmit } from "./hooks/useMessageSubmit.ts";
+import { usePermissions } from "./hooks/usePermissions.ts";
+import { md } from "./markdown_utils.tsx";
+import { ChannelIcon } from "./User";
 
 export const Forum = (props: { channel: Channel }) => {
 	const ctx = useCtx();
@@ -52,9 +52,12 @@ export const Forum = (props: { channel: Channel }) => {
 	const getThreads = () => {
 		const list = getThreadsList()?.();
 		if (!list) return [];
-		const items = list.state.ids.map((id) => channels2.cache.get(id)).filter((
-			t,
-		): t is Channel => t !== undefined && t.parent_id === props.channel.id);
+		const items = list.state.ids
+			.map((id) => channels2.cache.get(id))
+			.filter(
+				(t): t is Channel =>
+					t !== undefined && t.parent_id === props.channel.id,
+			);
 		// sort descending by id
 		return [...items].sort((a, b) => (a.id < b.id ? 1 : -1));
 	};
@@ -81,8 +84,7 @@ export const Forum = (props: { channel: Channel }) => {
 					<p
 						class="markdown"
 						innerHTML={md(props.channel.description ?? "") as string}
-					>
-					</p>
+					></p>
 				</div>
 				<div style="display:flex;flex-direction:column;gap:4px">
 					<A
@@ -164,8 +166,7 @@ export const Forum = (props: { channel: Channel }) => {
 											<div
 												class="description markdown"
 												innerHTML={md(thread.description ?? "") as string}
-											>
-											</div>
+											></div>
 										</Show>
 									</div>
 								</header>
@@ -180,9 +181,7 @@ export const Forum = (props: { channel: Channel }) => {
 };
 
 // NOTE the room id is reused as the channel id for draft messages and attachments
-const QuickCreate = (
-	props: { channel: Channel },
-) => {
+const QuickCreate = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const channels2 = useChannels2();
 	const n = useNavigate();
@@ -215,14 +214,16 @@ const QuickCreate = (
 
 	const onSubmit = (text: string) => {
 		if (!text) return false;
-		channels2.create(props.channel.room_id!, {
-			name: "thread",
-			parent_id: props.channel.id,
-		}).then((t) => {
-			if (!t) return;
-			submit(text, false, t.id);
-			n(`/channel/${t.id}`);
-		});
+		channels2
+			.create(props.channel.room_id!, {
+				name: "thread",
+				parent_id: props.channel.id,
+			})
+			.then((t) => {
+				if (!t) return;
+				submit(text, false, t.id);
+				n(`/channel/${t.id}`);
+			});
 		return true;
 	};
 
@@ -243,10 +244,7 @@ const QuickCreate = (
 					<ul>
 						<For each={atts()}>
 							{(att) => (
-								<RenderUploadItem
-									thread_id={props.channel.id}
-									att={att}
-								/>
+								<RenderUploadItem thread_id={props.channel.id} att={att} />
 							)}
 						</For>
 					</ul>

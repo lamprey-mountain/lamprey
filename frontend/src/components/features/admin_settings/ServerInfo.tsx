@@ -31,16 +31,12 @@ export function ServerInfo() {
 	return (
 		<>
 			<h2>Info</h2>
-			<h3 class="dim" style="margin-top:8px">Garbage collect</h3>
+			<h3 class="dim" style="margin-top:8px">
+				Garbage collect
+			</h3>
 			<ul class="admin-tasks">
 				<For
-					each={[
-						"Media",
-						"Messages",
-						"Session",
-						"AuditLog",
-						"RoomAnalytics",
-					]}
+					each={["Media", "Messages", "Session", "AuditLog", "RoomAnalytics"]}
 				>
 					{(i) => (
 						<li>
@@ -52,7 +48,9 @@ export function ServerInfo() {
 					)}
 				</For>
 			</ul>
-			<h3 class="dim" style="margin-top:8px">Purge caches</h3>
+			<h3 class="dim" style="margin-top:8px">
+				Purge caches
+			</h3>
 			<ul class="admin-tasks">
 				<For
 					each={[

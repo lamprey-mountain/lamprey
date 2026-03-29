@@ -1,8 +1,8 @@
 import { For, Show, type VoidProps } from "solid-js";
 import { useApi2, useInvites2, useUsers2 } from "@/api";
+import { Time } from "../../../atoms/Time.tsx";
 import type { RoomT } from "../../../types.ts";
 import { Avatar } from "../../../User.tsx";
-import { Time } from "../../../atoms/Time.tsx";
 import { Copyable } from "../../../utils/general";
 
 export function Invites(props: VoidProps<{ room: RoomT }>) {
@@ -29,7 +29,9 @@ export function Invites(props: VoidProps<{ room: RoomT }>) {
 	return (
 		<>
 			<h2>invites</h2>
-			<button class="big primary" onClick={createInvite}>create invite</button>
+			<button class="big primary" onClick={createInvite}>
+				create invite
+			</button>
 			<br />
 			<br />
 			<div class="invites">

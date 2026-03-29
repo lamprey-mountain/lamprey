@@ -1,9 +1,9 @@
-import type { MemberListGroup, RoomMember, ThreadMember, User } from "sdk";
-import type { RootStore } from "../core/Store";
 import { ReactiveMap } from "@solid-primitives/map";
+import type { MemberListGroup, RoomMember, ThreadMember, User } from "sdk";
 import { batch, createMemo } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { logger } from "../../logger";
+import type { RootStore } from "../core/Store";
 
 const memberListLog = logger.for("member_list");
 
@@ -188,7 +188,7 @@ export class MemberListService {
 				const newItems = list.items.map((item) =>
 					item.user.id === user_id
 						? { ...item, room_member: member ?? null }
-						: item
+						: item,
 				);
 				this.lists.set(room_id, { ...list, items: newItems });
 			}
@@ -200,7 +200,7 @@ export class MemberListService {
 				const newItems = list.items.map((item) =>
 					item.user.id === user_id
 						? { ...item, thread_member: member ?? null }
-						: item
+						: item,
 				);
 				this.lists.set(thread_id, { ...list, items: newItems });
 			}

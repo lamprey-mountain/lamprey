@@ -1,10 +1,10 @@
+import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import { getTimestampFromUUID } from "sdk";
 import { createSignal, For, Show } from "solid-js";
 import { useApi2, useRooms2 } from "@/api";
-import { Avatar } from "../../../User.tsx";
 import { Time } from "../../../atoms/Time.tsx";
-import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { getThumbFromId } from "../../../media/util.tsx";
-import { getTimestampFromUUID } from "sdk";
+import { Avatar } from "../../../User.tsx";
 
 export function Rooms() {
 	const api2 = useApi2();

@@ -1,20 +1,20 @@
-import { For, Show, type VoidProps } from "solid-js";
-import { useApi2, useAuditLog2 } from "@/api";
+import { ReactiveSet } from "@solid-primitives/set";
 import {
 	type AuditLogEntry,
 	getTimestampFromUUID,
 	type Room,
 	SERVER_ROOM_ID,
 } from "sdk";
+import { For, Show, type VoidProps } from "solid-js";
+import { useApi2, useAuditLog2 } from "@/api";
+import { Dropdown } from "../../../atoms/Dropdown.tsx";
+import { Time } from "../../../atoms/Time.tsx";
 import {
 	formatAuditLogEntry,
 	formatChanges,
-	mergeAuditLogEntries,
 	type MergedAuditLogEntry,
+	mergeAuditLogEntries,
 } from "../../../audit-log-util.tsx";
-import { Time } from "../../../atoms/Time.tsx";
-import { ReactiveSet } from "@solid-primitives/set";
-import { Dropdown } from "../../../atoms/Dropdown.tsx";
 
 export function AuditLog(props: VoidProps<{ room: Room }>) {
 	const api2 = useApi2();
@@ -52,19 +52,16 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 				<ul class="room-settings-audit-log">
 					<For
 						each={mergeAuditLogEntries(
-							log()!.state.ids.map((id) => auditLog2.cache.get(id)).filter((
-								e,
-							): e is AuditLogEntry => e !== undefined),
+							log()!
+								.state.ids.map((id) => auditLog2.cache.get(id))
+								.filter((e): e is AuditLogEntry => e !== undefined),
 						)}
 					>
 						{(mergedEntry) => {
 							const firstEntry = mergedEntry.entries[0];
 							const ts = () => getTimestampFromUUID(firstEntry.id);
 							const entryDescription = () =>
-								formatAuditLogEntry(
-									SERVER_ROOM_ID,
-									mergedEntry,
-								);
+								formatAuditLogEntry(SERVER_ROOM_ID, mergedEntry);
 
 							return (
 								<li data-id={firstEntry.id}>
@@ -73,7 +70,8 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 										onClick={() =>
 											collapsed.has(firstEntry.id)
 												? collapsed.delete(firstEntry.id)
-												: collapsed.add(firstEntry.id)}
+												: collapsed.add(firstEntry.id)
+										}
 									>
 										<div style="display:flex;gap:4px">
 											<h3>{entryDescription()}</h3>
@@ -81,9 +79,12 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 										<Time date={ts()} />
 									</div>
 									<Show
-										when={(formatChanges(SERVER_ROOM_ID, mergedEntry).length !==
+										when={
+											(formatChanges(SERVER_ROOM_ID, mergedEntry).length !==
 												0 ||
-											mergedEntry.reason) && !collapsed.has(firstEntry.id)}
+												mergedEntry.reason) &&
+											!collapsed.has(firstEntry.id)
+										}
 									>
 										<ul class="metadata">
 											<Show when={mergedEntry.reason}>

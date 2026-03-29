@@ -1,7 +1,7 @@
-import { For, Match, Show, Switch } from "solid-js";
 import type { AutomodAction, AutomodTarget, Channel } from "sdk";
-import { ChannelIcon } from "../../../avatar/ChannelIcon.tsx";
+import { For, Match, Show, Switch } from "solid-js";
 import { ChannelPicker } from "../../../atoms/ChannelPicker.tsx";
+import { ChannelIcon } from "../../../avatar/ChannelIcon.tsx";
 
 export interface ActionsEditorProps {
 	target: AutomodTarget;
@@ -46,7 +46,8 @@ function TimeoutFields(props: {
 				type="number"
 				value={mins()}
 				onInput={(e) =>
-					props.update("duration", parseInt(e.currentTarget.value) * 60000)}
+					props.update("duration", parseInt(e.currentTarget.value) * 60000)
+				}
 			/>
 		</label>
 	);
@@ -124,7 +125,7 @@ function ActionItem(props: {
 				Member: "Send Alert to Channel",
 			},
 		};
-		return labels[type][props.target as keyof typeof labels[string]] || type;
+		return labels[type][props.target as keyof (typeof labels)[string]] || type;
 	};
 
 	return (
@@ -145,7 +146,8 @@ function ActionItem(props: {
 				<select
 					value={props.action.type}
 					onChange={(e) =>
-						props.onUpdateType(e.currentTarget.value as AutomodAction["type"])}
+						props.onUpdateType(e.currentTarget.value as AutomodAction["type"])
+					}
 				>
 					<Show when={isActionAllowed("Block")}>
 						<option value="Block">{getActionLabel("Block")}</option>
@@ -235,7 +237,8 @@ export function ActionsEditor(props: ActionsEditorProps) {
 							target={props.target}
 							onUpdateType={(type) => props.updateActionType(i(), type)}
 							onUpdateValue={(key, val) =>
-								props.updateActionValue(i(), key, val)}
+								props.updateActionValue(i(), key, val)
+							}
 							onRemove={() => props.removeAction(i())}
 							room_id={props.room_id}
 							channels={props.channels}

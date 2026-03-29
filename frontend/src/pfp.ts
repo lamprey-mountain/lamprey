@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
-import { getColor } from "./colors";
 import pfpsUrl from "./assets/pfps.png";
+import { getColor } from "./colors";
 import { cyrb53, LCG } from "./rng";
 
 const SIZE = 80;
