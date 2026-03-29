@@ -1,9 +1,9 @@
 import { useCurrentUser } from "../contexts/currentUser.tsx";
-import { Navigate, RouteSectionProps } from "@solidjs/router";
+import { Navigate, type RouteSectionProps } from "@solidjs/router";
 import type { ParentProps, VoidProps } from "solid-js";
 import { useApi2, useChannels2, useRooms2 } from "@/api";
 import { useCtx } from "../context.ts";
-import { type ChannelSearch } from "../context.ts";
+import type { ChannelSearch } from "../context.ts";
 import { flags } from "../flags.ts";
 import { ChannelNav } from "../ChannelNav.tsx";
 import { RoomHome, RoomMembers } from "../Room.tsx";
@@ -45,7 +45,7 @@ import {
 	useRoom,
 } from "../contexts/room.tsx";
 import { createStore } from "solid-js/store";
-import { RoomT } from "../types.ts";
+import type { RoomT } from "../types.ts";
 import { Friends } from "../Friends.tsx";
 import { Calendar } from "../Calendar.tsx";
 import { Document } from "../components/features/editor/Document.tsx";

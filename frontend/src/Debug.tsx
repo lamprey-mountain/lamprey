@@ -8,13 +8,13 @@ import type { Embed, Message } from "sdk";
 import { EmbedView } from "./UrlEmbed.tsx";
 import { Dropdown } from "./atoms/Dropdown.tsx";
 
-// @ts-ignore
+// @ts-expect-error
 const packageJson = __VITE_PACKAGE_JSON__;
 
-// @ts-ignore
+// @ts-expect-error
 const gitCommit = __VITE_GIT_COMMIT__;
 
-// @ts-ignore
+// @ts-expect-error
 const gitDirty = __VITE_GIT_DIRTY__;
 
 export const Debug = () => {

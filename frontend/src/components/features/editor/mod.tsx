@@ -1,4 +1,4 @@
-import { EditorState, Plugin, PluginKey } from "prosemirror-state";
+import { type EditorState, Plugin, PluginKey } from "prosemirror-state";
 import { DOMParser } from "prosemirror-model";
 type NodeViewConstructor = any;
 import {

@@ -1,5 +1,5 @@
-import { type VoidProps } from "solid-js";
-import { type User } from "sdk";
+import type { VoidProps } from "solid-js";
+import type { User } from "sdk";
 import { Checkbox } from "../../../icons";
 import { useCtx } from "../../../context.ts";
 import { Dropdown } from "../../../atoms/Dropdown.tsx";

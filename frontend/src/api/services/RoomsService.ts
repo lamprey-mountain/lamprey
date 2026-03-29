@@ -1,8 +1,8 @@
-import { Room } from "sdk";
+import type { Room } from "sdk";
 import { BaseService } from "../core/Service";
 import { batch, createResource, createSignal, type Resource } from "solid-js";
 import type { Pagination } from "sdk";
-import { ListState, PaginatedList } from "../core/PaginatedList";
+import { type ListState, PaginatedList } from "../core/PaginatedList";
 import { logger } from "../../logger";
 
 const log = logger.for("api/rooms");
@@ -123,7 +123,7 @@ export class RoomsService extends BaseService<Room> {
 
 	async markRead(room_id: string) {
 		let has_more = true;
-		let from: string | undefined = undefined;
+		let from: string | undefined ;
 		while (has_more) {
 			let data;
 			try {

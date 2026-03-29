@@ -1,5 +1,5 @@
 import { For, Show, type VoidProps } from "solid-js";
-import { type Pagination, type RelationshipWithUserId, type User } from "sdk";
+import type { Pagination, RelationshipWithUserId, User } from "sdk";
 import { useApi2 } from "@/api";
 import { createResource } from "solid-js";
 import { Avatar } from "../../../User.tsx";

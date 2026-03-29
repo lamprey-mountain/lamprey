@@ -1,6 +1,6 @@
-import { ThreadMember } from "sdk";
+import type { ThreadMember } from "sdk";
 import { BaseService } from "../core/Service";
-import { Accessor, createResource, Resource } from "solid-js";
+import { type Accessor, createResource, type Resource } from "solid-js";
 import { PaginatedList } from "../core/PaginatedList";
 import { logger } from "../../logger";
 

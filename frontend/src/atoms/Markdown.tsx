@@ -6,7 +6,7 @@ import {
 	For,
 	Match,
 	onMount,
-	ParentProps,
+	type ParentProps,
 	Show,
 	Switch,
 	useContext,

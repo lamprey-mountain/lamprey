@@ -1,7 +1,7 @@
-import { createResource, Show, VoidProps } from "solid-js";
+import { createResource, Show, type VoidProps } from "solid-js";
 import { generatePfp, pfpsLoaded } from "../pfp";
 import { getThumbFromId } from "../media/util";
-import { Room } from "sdk";
+import type { Room } from "sdk";
 
 export const RoomIcon = (
 	props: VoidProps<{ room: Room; pad?: number; mentionCount?: number }>,

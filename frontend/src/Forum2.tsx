@@ -3,10 +3,10 @@ import { useCurrentUser } from "./contexts/currentUser.tsx";
 
 import {
 	type Attachment,
-	Channel,
+	type Channel,
 	getTimestampFromUUID,
 	type Media,
-	Message,
+	type Message,
 } from "sdk";
 import {
 	createEffect,

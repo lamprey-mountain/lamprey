@@ -1,5 +1,5 @@
-import { Message } from "sdk";
-import { RootStore } from "../core/Store";
+import type { Message } from "sdk";
+import type { RootStore } from "../core/Store";
 import { notificationPermission } from "../../notification";
 import { stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal } from "../../notification-util";
 import { generateNotificationIcon } from "../../drawing";

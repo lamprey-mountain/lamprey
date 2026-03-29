@@ -976,7 +976,7 @@ const DocumentMain = (
 		};
 
 		const originalDispatch = view.dispatch.bind(view);
-		view.dispatch = function (tr: any) {
+		view.dispatch = (tr: any) => {
 			originalDispatch(tr);
 			if (tr.docChanged) {
 				console.log("[TOC] doc changed, updating headings");

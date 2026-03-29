@@ -1,4 +1,4 @@
-import { Command, Plugin, PluginKey, TextSelection } from "prosemirror-state";
+import { type Command, Plugin, PluginKey, TextSelection } from "prosemirror-state";
 import { DOMSerializer } from "prosemirror-model";
 import { liftTarget } from "prosemirror-transform";
 import { schema } from "./schema.ts";
@@ -81,7 +81,7 @@ export function createMarkdownInputRulesPlugin() {
 						isAtLineStart && $from.depth >= 2 &&
 						$from.node($from.depth - 1).type === schema.nodes.blockquote
 					) {
-						let tr = state.tr;
+						const tr = state.tr;
 						const isolatedStart = isolateLine(tr, bounds);
 
 						// resolve positions
@@ -103,7 +103,7 @@ export function createMarkdownInputRulesPlugin() {
 				}
 
 				if (event.key === "Enter") {
-					let tr = state.tr;
+					const tr = state.tr;
 
 					// create code block
 					const codeMatch = bounds.text.match(/^```+(\w*)$/);
@@ -163,7 +163,7 @@ export function createMarkdownInputRulesPlugin() {
 				if (
 					bounds.text === ">" && $from.parent.type === schema.nodes.paragraph
 				) {
-					let tr = state.tr;
+					const tr = state.tr;
 					if (!bounds.isFirstLine) {
 						tr.delete(bounds.start - 1, bounds.start).split(bounds.start - 1);
 					}

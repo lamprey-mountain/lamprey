@@ -1,8 +1,8 @@
-import { Channel } from "sdk";
+import type { Channel } from "sdk";
 import type { RootStore } from "@/api/core/Store";
 import type { ChannelsService } from "@/api/services/ChannelsService";
 import type { ChatCtx } from "./context";
-import { type Command, SlashCommands } from "./contexts/slash-commands";
+import type { Command, SlashCommands } from "./contexts/slash-commands";
 import {
 	createPermissionChecker,
 	hasPermission as checkPermission,

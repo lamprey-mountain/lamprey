@@ -1,11 +1,11 @@
 import {
-	DBSchema,
+	type DBSchema,
 	type IDBPDatabase,
-	IDBPTransaction,
+	type IDBPTransaction,
 	openDB,
-	StoreNames,
+	type StoreNames,
 } from "idb";
-import {
+import type {
 	ChannelT,
 	MediaT,
 	MemberT,

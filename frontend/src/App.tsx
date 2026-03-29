@@ -6,7 +6,7 @@ import {
 	type ParentProps,
 	Show,
 } from "solid-js";
-import { type RouteSectionProps } from "@solidjs/router";
+import type { RouteSectionProps } from "@solidjs/router";
 import { Portal } from "solid-js/web";
 import { Route, Router } from "@solidjs/router";
 import { Debug } from "./Debug.tsx";

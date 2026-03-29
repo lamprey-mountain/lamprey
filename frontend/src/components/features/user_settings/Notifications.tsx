@@ -1,5 +1,5 @@
 import { createEffect, Show, type VoidProps } from "solid-js";
-import { type Preferences, type User } from "sdk";
+import type { Preferences, User } from "sdk";
 import { Checkbox } from "../../../icons";
 import { notificationPermission } from "../../../notification";
 import { useCtx } from "../../../context";

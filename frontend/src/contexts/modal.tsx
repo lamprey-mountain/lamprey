@@ -1,4 +1,4 @@
-import { createContext, ParentProps, useContext } from "solid-js";
+import { createContext, type ParentProps, useContext } from "solid-js";
 import { createStore } from "solid-js/store";
 import type { Media } from "sdk";
 import type { Tag } from "sdk";

@@ -1,6 +1,6 @@
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
 import {
-	Attachment,
+	type Attachment,
 	type Channel,
 	getTimestampFromUUID,
 	type Message,
@@ -8,7 +8,7 @@ import {
 	type ReactionKey,
 	User,
 } from "sdk";
-import { type MessageT, MessageType, ThreadT } from "../../../types.ts";
+import { type MessageT, MessageType, type ThreadT } from "../../../types.ts";
 import {
 	createEffect,
 	createSignal,

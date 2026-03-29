@@ -16,8 +16,8 @@ import type { ReactiveMap } from "@solid-primitives/map";
 import type { Emitter } from "@solid-primitives/event-bus";
 import type * as i18n from "@solid-primitives/i18n";
 import type en from "./i18n/en.tsx";
-import { Placement } from "@floating-ui/dom";
-import { SlashCommands } from "./contexts/slash-commands";
+import type { Placement } from "@floating-ui/dom";
+import type { SlashCommands } from "./contexts/slash-commands";
 
 export type Slice = {
 	start: number;
@@ -81,7 +81,7 @@ export type Popout = {
 
 import type { ChannelContextT } from "./channelctx";
 import type { RoomContextT } from "./contexts/room.tsx";
-import { DocumentContextT } from "./contexts/document.tsx";
+import type { DocumentContextT } from "./contexts/document.tsx";
 import type { SetStoreFunction } from "solid-js/store";
 
 // TODO: split apart this massive context into more granular contexts

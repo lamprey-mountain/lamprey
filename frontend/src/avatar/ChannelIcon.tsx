@@ -13,7 +13,7 @@ import icChanCalendar1 from "../assets/channel-calendar-1.png";
 import icChanDocument1 from "../assets/channel-document-1.png";
 import icChanWiki1 from "../assets/channel-wiki-1.png";
 import icChanNsfw from "../assets/channel-nsfw.png";
-import { Channel } from "sdk";
+import type { Channel } from "sdk";
 import { cyrb53, LCG } from "../rng";
 import { AvatarWithStatus } from "./UserAvatar";
 

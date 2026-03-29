@@ -1,5 +1,5 @@
 import { useCurrentUser } from "./contexts/currentUser.tsx";
-import { Component, createMemo, For, Match, Show, Switch } from "solid-js";
+import { type Component, createMemo, For, Match, Show, Switch } from "solid-js";
 import type { RoomT } from "./types.ts";
 import { Dynamic } from "solid-js/web";
 import {
@@ -16,7 +16,7 @@ import {
 	Webhooks,
 } from "./components/features/room_settings/mod.tsx";
 import * as Admin from "./components/features/admin_settings/mod.tsx";
-import { Permission, SERVER_ROOM_ID } from "sdk";
+import { type Permission, SERVER_ROOM_ID } from "sdk";
 import { A, useNavigate } from "@solidjs/router";
 import { useCtx } from "./context.ts";
 import { useApi2 } from "@/api";

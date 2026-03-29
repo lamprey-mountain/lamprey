@@ -17,11 +17,11 @@ import {
 } from "@/api";
 import type { RoomT, ThreadT } from "../../../types";
 import type { ChannelSearch } from "../../../context";
-import { User } from "sdk";
+import type { User } from "sdk";
 import { UUID } from "uuidv7";
 import { EditorState, Plugin } from "prosemirror-state";
-import { Decoration, DecorationSet, EditorView } from "prosemirror-view";
-import { Node, Schema } from "prosemirror-model";
+import { Decoration, DecorationSet, type EditorView } from "prosemirror-view";
+import { type Node, Schema } from "prosemirror-model";
 import { keymap } from "prosemirror-keymap";
 import { history, redo, undo } from "prosemirror-history";
 import { Portal } from "solid-js/web";
@@ -29,7 +29,7 @@ import { autoUpdate, flip, offset, size } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import icSearch from "../../../assets/search.png";
 import { useChannel } from "../../../channelctx";
-import { RoomSearch, useRoom } from "../../../contexts/room";
+import { type RoomSearch, useRoom } from "../../../contexts/room";
 import {
 	createEditor as createBaseEditor,
 	createPlaceholderPlugin,
@@ -561,7 +561,7 @@ const AutocompleteDropdown = (props: {
 
 	const formatRecentSearch = (query: string) => {
 		const parts: (string | { type: string; value: string })[] = [];
-		let lastIndex = 0;
+		const lastIndex = 0;
 		const tokens = parseSearchQuery(query);
 
 		const phraseRegex = /"([^"]*)"/g;
@@ -1435,7 +1435,7 @@ export const SearchInput = (
 	const editor = createBaseEditor({
 		schema: schema as any,
 		createState: (schema) => {
-			let docContent: Node | undefined = undefined;
+			let docContent: Node | undefined ;
 			const initialSearch = currentSearch();
 
 			if (initialSearch?.query) {

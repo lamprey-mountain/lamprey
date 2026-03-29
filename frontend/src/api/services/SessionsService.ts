@@ -1,4 +1,4 @@
-import { Session } from "sdk";
+import type { Session } from "sdk";
 import { BaseService } from "../core/Service";
 
 export class SessionsService extends BaseService<Session> {

@@ -1,6 +1,6 @@
 import { Plugin, PluginKey, TextSelection } from "prosemirror-state";
-import { EditorView } from "prosemirror-view";
-import { ReferenceElement } from "@floating-ui/dom";
+import type { EditorView } from "prosemirror-view";
+import type { ReferenceElement } from "@floating-ui/dom";
 import type { AutocompleteKind } from "../../../contexts/autocomplete";
 import type { AutocompleteContext } from "../../../contexts/autocomplete";
 

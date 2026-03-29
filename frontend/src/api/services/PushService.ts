@@ -1,4 +1,4 @@
-import { PushCreate, PushInfo } from "sdk";
+import type { PushCreate, PushInfo } from "sdk";
 import { BaseService } from "../core/Service";
 import { logger } from "../../logger";
 

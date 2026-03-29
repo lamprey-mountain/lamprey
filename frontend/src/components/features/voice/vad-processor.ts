@@ -1,4 +1,4 @@
-// @ts-ignore
+// @ts-expect-error
 class VADProcessor extends AudioWorkletProcessor {
 	private threshold = 0.02;
 	private minFramesEnable = 3;
@@ -46,6 +46,6 @@ class VADProcessor extends AudioWorkletProcessor {
 	}
 }
 
-// @ts-ignore
+// @ts-expect-error
 registerProcessor("vad-processor", VADProcessor);
 export {};

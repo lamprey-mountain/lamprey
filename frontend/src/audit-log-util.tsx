@@ -1,6 +1,6 @@
-import { type AuditLogChange, type AuditLogEntry } from "sdk";
+import type { AuditLogChange, AuditLogEntry } from "sdk";
 import { ChangeObject, diffArrays } from "diff";
-import { JSX, untrack } from "solid-js";
+import { type JSX, untrack } from "solid-js";
 import { useApi2, useChannels2, useRoomMembers2, useRooms2 } from "@/api";
 import { useCtx } from "./context";
 

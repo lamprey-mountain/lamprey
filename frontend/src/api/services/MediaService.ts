@@ -1,4 +1,4 @@
-import { Media } from "sdk";
+import type { Media } from "sdk";
 import { BaseService } from "../core/Service";
 
 export class MediaService extends BaseService<Media> {

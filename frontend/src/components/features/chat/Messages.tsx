@@ -5,7 +5,7 @@ import { useCtx } from "../../../context.ts";
 import { md } from "../../../markdown_utils.tsx";
 import { MessageView } from "./Message.tsx";
 import { useChannel } from "../../../channelctx.tsx";
-import { Message, UserWithRelationship } from "sdk";
+import type { Message, UserWithRelationship } from "sdk";
 import {
 	getMessageOverrideName,
 	getMsgTs as get_msg_ts,

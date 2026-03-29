@@ -263,7 +263,7 @@ export function createMarkdownHighlightPlugin() {
 			},
 			apply(tr, prev, _oldState, newState) {
 				// Map old decorations through the transaction
-				let mapped = prev.decorations.map(tr.mapping, tr.doc);
+				const mapped = prev.decorations.map(tr.mapping, tr.doc);
 
 				// Only recalculate if document content changed
 				if (tr.docChanged) {

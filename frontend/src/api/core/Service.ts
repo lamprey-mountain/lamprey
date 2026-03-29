@@ -1,11 +1,11 @@
-import { Client } from "sdk";
+import type { Client } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
 import {
-	Accessor,
+	type Accessor,
 	batch,
 	createEffect,
 	createResource,
-	Resource,
+	type Resource,
 } from "solid-js";
 import type { RootStore } from "./Store";
 import type { IDBPDatabase } from "idb";
@@ -68,7 +68,7 @@ export abstract class BaseService<T> {
 				}
 				if (i === retries - 1) throw e;
 				// Exponential backoff with jitter
-				const delay = baseDelay * Math.pow(2, i) + Math.random() * 100;
+				const delay = baseDelay * 2 ** i + Math.random() * 100;
 				await new Promise((r) => setTimeout(r, delay));
 				continue;
 			}
@@ -82,7 +82,7 @@ export abstract class BaseService<T> {
 
 			if (i === retries - 1) throw error;
 			// Exponential backoff with jitter
-			const delay = baseDelay * Math.pow(2, i) + Math.random() * 100;
+			const delay = baseDelay * 2 ** i + Math.random() * 100;
 			await new Promise((r) => setTimeout(r, delay));
 		}
 		throw new Error("too many errors");

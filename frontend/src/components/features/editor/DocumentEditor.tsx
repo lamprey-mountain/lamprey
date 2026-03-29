@@ -13,7 +13,7 @@ import { md } from "../../../markdown_utils.tsx";
 import { useApi2, useChannels2 } from "@/api";
 import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
 import { useAutocomplete } from "../../../contexts/autocomplete";
-import { MessageSync } from "sdk";
+import type { MessageSync } from "sdk";
 import { cursorPlugin } from "./editor-cursors.ts";
 import {
 	createEditor as createBaseEditor,
@@ -144,8 +144,8 @@ export const createEditor = (
 	api2.events.on("sync", onSync);
 
 	const createState = () => {
-		let type = ydoc.get("doc", Y.XmlFragment);
-		let mapping = initProseMirrorDoc(type, schema).mapping;
+		const type = ydoc.get("doc", Y.XmlFragment);
+		const mapping = initProseMirrorDoc(type, schema).mapping;
 
 		let doc;
 		if (opts.initialContent) {

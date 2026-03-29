@@ -8,7 +8,7 @@ import { logger } from "./logger.ts";
 
 const log = logger.for("sw");
 
-// @ts-ignore
+// @ts-expect-error
 const gitCommit = __VITE_GIT_COMMIT__;
 
 (async () => {

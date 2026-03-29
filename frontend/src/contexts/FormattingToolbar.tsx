@@ -4,7 +4,7 @@ import iconItalic from "../assets/format-italic.png";
 import iconCode from "../assets/format-code.png";
 import iconStrikethrough from "../assets/format-strikethrough.png";
 import { useFormattingToolbar } from "./formatting-toolbar.tsx";
-import { EditorView } from "prosemirror-view";
+import type { EditorView } from "prosemirror-view";
 import { TextSelection } from "prosemirror-state";
 import { setIsApplyingFormat } from "../components/features/editor/Editor";
 

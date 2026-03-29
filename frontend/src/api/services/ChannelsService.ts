@@ -1,4 +1,4 @@
-import { Channel, ChannelPatch } from "sdk";
+import type { Channel, ChannelPatch } from "sdk";
 import { BaseService } from "../core/Service";
 
 export class ChannelsService extends BaseService<Channel> {

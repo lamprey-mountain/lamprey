@@ -1,4 +1,4 @@
-import { Preferences } from "sdk";
+import type { Preferences } from "sdk";
 import { BaseService } from "../core/Service";
 import { createEffect } from "solid-js";
 import { logger } from "../../logger";

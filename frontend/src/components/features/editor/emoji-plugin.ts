@@ -1,6 +1,6 @@
-import { Schema } from "prosemirror-model";
+import type { Schema } from "prosemirror-model";
 import { Plugin, PluginKey } from "prosemirror-state";
-import { EditorView } from "prosemirror-view";
+import type { EditorView } from "prosemirror-view";
 
 export const emojiPluginKey = new PluginKey("emoji");
 
@@ -45,7 +45,7 @@ export function createEmojiPlugin(): Plugin {
 				if (!EMOJI_TEST.test(text)) return false;
 
 				const { content } = convertEmojiInText(view.state.schema, text);
-				let tr = view.state.tr.replaceWith(from, to, content);
+				const tr = view.state.tr.replaceWith(from, to, content);
 				view.dispatch(tr.scrollIntoView());
 				return true;
 			},

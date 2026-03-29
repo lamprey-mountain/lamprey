@@ -9,7 +9,7 @@ export async function fetchWithRetry<T>(
 			res = await fn();
 		} catch (e) {
 			if (i === retries - 1) throw e;
-			await new Promise((r) => setTimeout(r, delay * Math.pow(2, i)));
+			await new Promise((r) => setTimeout(r, delay * 2 ** i));
 			continue;
 		}
 
@@ -21,7 +21,7 @@ export async function fetchWithRetry<T>(
 		}
 
 		if (i === retries - 1) throw error;
-		await new Promise((r) => setTimeout(r, delay * Math.pow(2, i)));
+		await new Promise((r) => setTimeout(r, delay * 2 ** i));
 	}
 
 	throw new Error("too many errors?");

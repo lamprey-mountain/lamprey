@@ -1,4 +1,4 @@
-import { Channel, InboxListParams, Notification, Pagination, Room } from "sdk";
+import type { Channel, InboxListParams, Notification, Pagination, Room } from "sdk";
 import type { Message } from "sdk";
 import { BaseService } from "../core/Service";
 import {

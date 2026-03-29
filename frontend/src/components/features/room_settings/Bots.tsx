@@ -12,12 +12,12 @@ import { useApi2 } from "@/api";
 import { useCtx } from "../../../context.ts";
 import { useMenu } from "../../../contexts/mod.tsx";
 import type { RoomT } from "../../../types.ts";
-import { Role, RoomMember, RoomMemberOrigin } from "sdk";
+import type { Role, RoomMember, RoomMemberOrigin } from "sdk";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { Avatar } from "../../../User.tsx";
 import { Time } from "../../../atoms/Time.tsx";
 import { useFloating } from "solid-floating-ui";
-import { ReferenceElement, shift } from "@floating-ui/dom";
+import { type ReferenceElement, shift } from "@floating-ui/dom";
 import { usePermissions } from "../../../hooks/usePermissions.ts";
 import { useModals } from "../../../contexts/modal";
 

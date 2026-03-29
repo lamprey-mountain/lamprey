@@ -1,8 +1,8 @@
 import createFetch from "openapi-fetch";
-import * as oapi from "openapi-fetch";
+import type * as oapi from "openapi-fetch";
 import type { paths } from "./schema.d.ts";
-import { MessageEnvelope, MessageReady, MessageSync } from "./types.ts";
-import { createObservable, Observer } from "./observable.ts";
+import type { MessageEnvelope, MessageReady, MessageSync } from "./types.ts";
+import { createObservable, type Observer } from "./observable.ts";
 import { pack, unpack, Unpackr, UnpackrStream } from "msgpackr";
 export * from "./observable.ts";
 

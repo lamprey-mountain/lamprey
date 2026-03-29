@@ -1,4 +1,4 @@
-import { Client } from "./client.ts";
+import type { Client } from "./client.ts";
 import type { Media } from "./types.ts";
 
 export type UploadOptions = {

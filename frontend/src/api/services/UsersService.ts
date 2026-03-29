@@ -1,4 +1,4 @@
-import { User, UserWithRelationship } from "sdk";
+import type { User, UserWithRelationship } from "sdk";
 import { BaseService } from "../core/Service";
 
 export class UsersService extends BaseService<UserWithRelationship> {

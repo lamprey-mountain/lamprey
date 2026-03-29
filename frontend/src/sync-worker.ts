@@ -3,8 +3,6 @@
 
 declare const self: SharedWorkerGlobalScope;
 
-export {};
-
 import {
 	type Client,
 	type ClientState,
@@ -41,10 +39,10 @@ type PortData = {
 };
 
 const ports = new Set<PortData>();
-let client: Client | null = null;
+const client: Client | null = null;
 
 // cached ready payload for when a client connects
-let ready: MessageReady | null = null;
+const ready: MessageReady | null = null;
 
 // maximum number of events to cache
 const MAX_RESUME_EVENTS = 100;

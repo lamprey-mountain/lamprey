@@ -1,4 +1,4 @@
-import { Pagination } from "sdk";
+import type { Pagination } from "sdk";
 import { BaseService } from "../core/Service";
 
 export type ReactionUser = { user_id: string };

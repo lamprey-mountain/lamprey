@@ -1,12 +1,12 @@
 import {
-	AuditLogEntry,
-	Channel,
+	type AuditLogEntry,
+	type Channel,
 	Pagination,
-	RoomMember,
-	Tag,
-	User,
-	UserWithRelationship,
-	Webhook,
+	type RoomMember,
+	type Tag,
+	type User,
+	type UserWithRelationship,
+	type Webhook,
 } from "sdk";
 import { BaseService } from "../core/Service";
 import { createResource, type Resource } from "solid-js";

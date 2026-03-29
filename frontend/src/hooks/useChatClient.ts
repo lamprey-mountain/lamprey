@@ -17,7 +17,7 @@ import { flags } from "../flags.ts";
 import { RootStore } from "@/api/core/Store.ts";
 import { colors, logger } from "../logger.ts";
 import { DBSchema, type IDBPDatabase, openDB } from "idb";
-import { ApiDB, migrations } from "../db.ts";
+import { type ApiDB, migrations } from "../db.ts";
 
 export function useChatClient(config: Config) {
 	const events = createEmitter<{
