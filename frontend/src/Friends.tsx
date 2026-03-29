@@ -1,9 +1,9 @@
-import { useCurrentUser } from "./contexts/currentUser.tsx";
-import { createResource, createSignal, For, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
-import { useApi2, useDms2, useUsers2 } from "@/api";
-import { AvatarWithStatus } from "./User";
 import type { RelationshipType } from "sdk";
+import { createResource, createSignal, For, Show } from "solid-js";
+import { useApi2, useDms2, useUsers2 } from "@/api";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
+import { AvatarWithStatus } from "./User";
 
 type FilterType = "all" | "online" | "incoming" | "outgoing";
 
@@ -15,10 +15,9 @@ export const Friends = () => {
 	const [filter, setFilter] = createSignal<FilterType>("all");
 
 	const [friends] = createResource(async () => {
-		const { data } = await api2.client.http.GET(
-			"/api/v1/user/@self/friend",
-			{ params: { query: {} } },
-		);
+		const { data } = await api2.client.http.GET("/api/v1/user/@self/friend", {
+			params: { query: {} },
+		});
 		return data;
 	});
 
@@ -87,7 +86,9 @@ export const Friends = () => {
 						outgoing
 					</button>
 				</div>
-				<button class="primary" onClick={sendRequest}>add</button>
+				<button class="primary" onClick={sendRequest}>
+					add
+				</button>
 			</div>
 			<ul>
 				<For each={filteredFriends()}>
@@ -130,8 +131,9 @@ const Friend = (props: { user_id: string }) => {
 			<div>
 				<div>{user()?.name}</div>
 				<Show
-					when={user()?.presence.activities.find((a) => a.type === "Custom")
-						?.text}
+					when={
+						user()?.presence.activities.find((a) => a.type === "Custom")?.text
+					}
 				>
 					{(t) => <div class="dim">{t()}</div>}
 				</Show>

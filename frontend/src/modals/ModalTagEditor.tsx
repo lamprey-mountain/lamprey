@@ -1,12 +1,12 @@
-import { createSignal, onMount } from "solid-js";
-import { Modal } from "./mod";
-import { useCtx } from "../context";
 import { type Tag, type TagCreate, TagPatch } from "sdk";
+import { createSignal, onMount } from "solid-js";
 import { useApi2, useChannels2 } from "@/api";
+import { CheckboxOption } from "../atoms/CheckboxOption";
+import { Colorpicker } from "../atoms/Colorpicker";
+import { useCtx } from "../context";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons";
-import { Colorpicker } from "../atoms/Colorpicker";
-import { CheckboxOption } from "../atoms/CheckboxOption";
+import { Modal } from "./mod";
 
 interface ModalTagEditorProps {
 	tag?: Tag;
@@ -75,7 +75,9 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 			<h3>{props.tag ? "Edit Tag" : "Create Tag"}</h3>
 			<form class="tag-edit-form" onSubmit={handleSubmit}>
 				<div class="option-block">
-					<label for="tagName" class="small">Name</label>
+					<label for="tagName" class="small">
+						Name
+					</label>
 					<input
 						id="tagName"
 						type="text"
@@ -123,18 +125,14 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 					</div>
 				</CheckboxOption>
 
-				{error() && (
-					<div class="error">
-						{error()}
-					</div>
-				)}
+				{error() && <div class="error">{error()}</div>}
 
 				<div class="bottom">
 					<button type="button" onClick={modalCtl.close}>
 						Cancel
 					</button>
 					<button type="submit" class="primary" disabled={loading()}>
-						{loading() ? "Saving..." : (props.tag ? "Update" : "Create")}
+						{loading() ? "Saving..." : props.tag ? "Update" : "Create"}
 					</button>
 				</div>
 			</form>

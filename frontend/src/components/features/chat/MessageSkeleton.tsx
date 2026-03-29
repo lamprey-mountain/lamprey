@@ -9,10 +9,13 @@ export const MessageSkeleton = () => {
 	const skeletonItems = Array.from({ length: 20 }, (_, i) => ({
 		id: `skeleton-${i}`,
 		hasAvatar: isCozy,
-		hasAttachment: Math.random() > .7,
-		contentLines: Array.from({
-			length: Math.floor(Math.random() * (isCozy ? 8 : 5) + (isCozy ? 4 : 3)),
-		}, () => Math.random() * 40 + 10),
+		hasAttachment: Math.random() > 0.7,
+		contentLines: Array.from(
+			{
+				length: Math.floor(Math.random() * (isCozy ? 8 : 5) + (isCozy ? 4 : 3)),
+			},
+			() => Math.random() * 40 + 10,
+		),
 	}));
 
 	return (

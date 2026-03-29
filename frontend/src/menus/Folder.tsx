@@ -1,8 +1,8 @@
-import { Item, Menu, Separator } from "./Parts.tsx";
-import { useCtx } from "../context.ts";
 import { useApi2, useRooms2 } from "@/api";
-import type { RoomNavItem } from "../RoomNav.tsx";
+import { useCtx } from "../context.ts";
 import { useModals } from "../contexts/modal";
+import type { RoomNavItem } from "../RoomNav.tsx";
+import { Item, Menu, Separator } from "./Parts.tsx";
 
 type FolderMenuProps = {
 	folder_id: string;
@@ -17,8 +17,9 @@ export function FolderMenu(props: FolderMenuProps) {
 		const config = ctx.preferences().frontend.roomNav as RoomNavItem[];
 		if (!config) return null;
 
-		return config.find((item: RoomNavItem) =>
-			item.type === "folder" && item.id === props.folder_id
+		return config.find(
+			(item: RoomNavItem) =>
+				item.type === "folder" && item.id === props.folder_id,
 		) as (RoomNavItem & { type: "folder" }) | undefined;
 	};
 
@@ -38,8 +39,7 @@ export function FolderMenu(props: FolderMenuProps) {
 		modalctl.prompt("new folder name", (name) => {
 			if (!name) return;
 
-			const currentConfig = ctx.preferences().frontend
-				.roomNav as RoomNavItem[];
+			const currentConfig = ctx.preferences().frontend.roomNav as RoomNavItem[];
 			const newConfig = currentConfig.map((item: RoomNavItem) => {
 				if (item.type === "folder" && item.id === props.folder_id) {
 					return { ...item, name };

@@ -12,7 +12,7 @@ export class MediaService extends BaseService<Media> {
 		return await this.retryWithBackoff<Media>(() =>
 			this.client.http.GET("/api/v1/media/{media_id}", {
 				params: { path: { media_id: id } },
-			})
+			}),
 		);
 	}
 }

@@ -1,4 +1,10 @@
-import type { Channel } from "sdk";
+import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
+import { diffWords } from "diff";
+import type { Tokens } from "marked";
+import { DOMParser, type Node as PMNode } from "prosemirror-model";
+import { TextSelection } from "prosemirror-state";
+import type { Channel, HistoryPagination } from "sdk";
+import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
 	createMemo,
@@ -10,12 +16,8 @@ import {
 	Show,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import { useFloating } from "solid-floating-ui";
-import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
-import { createEditor } from "./DocumentEditor.tsx";
-import type { DiffMark } from "./diff-plugin.ts";
-import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
-import { useAutocomplete } from "../../../contexts/autocomplete";
+import * as Y from "yjs";
+import { useApi2 } from "@/api";
 import icBranchDefault from "../../../assets/edit.png";
 import icBranchPrivate from "../../../assets/edit.png";
 import icBranchNew from "../../../assets/edit.png";
@@ -24,30 +26,27 @@ import icBranch from "../../../assets/edit.png";
 import icMergeFull from "../../../assets/edit.png";
 import icMergeCherrypick from "../../../assets/edit.png";
 import icFormatBold from "../../../assets/format-bold.png";
-import icFormatItalic from "../../../assets/format-italic.png";
 import icFormatCode from "../../../assets/format-code.png";
+import icFormatItalic from "../../../assets/format-italic.png";
 import icFormatStrikethrough from "../../../assets/format-strikethrough.png";
 import icFormatUrl from "../../../assets/format-url.png";
-import { useDocument } from "../../../contexts/document.tsx";
-import { useModals } from "../../../contexts/modal.tsx";
-import { TextSelection } from "prosemirror-state";
-import { useChannel } from "../../../contexts/channel.tsx";
-import { useApi2 } from "@/api";
-import type { HistoryPagination } from "sdk";
-import * as Y from "yjs";
-import { base64UrlDecode } from "./editor-utils.ts";
 import { Time } from "../../../atoms/Time.tsx";
-import { schema } from "./schema.ts";
+import { useAutocomplete } from "../../../contexts/autocomplete";
+import { useChannel } from "../../../contexts/channel.tsx";
+import { useDocument } from "../../../contexts/document.tsx";
+import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
+import { useModals } from "../../../contexts/modal.tsx";
 import { md } from "../../../markdown_utils.tsx";
-import { DOMParser, type Node as PMNode } from "prosemirror-model";
-import { diffWords } from "diff";
-import type { Tokens } from "marked";
+import { createEditor } from "./DocumentEditor.tsx";
+import type { DiffMark } from "./diff-plugin.ts";
+import { base64UrlDecode } from "./editor-utils.ts";
 import {
 	downloadFile,
 	exportAsHtml,
 	exportAsMarkdown,
 	generateFilename,
 } from "./export-utils.ts";
+import { schema } from "./schema.ts";
 
 type ChangesetSelection = {
 	start_seq: number;
@@ -71,10 +70,7 @@ export const Document = (
 
 	return (
 		<div class="document">
-			<DocumentHeader
-				channel={props.channel}
-				editor={editor}
-			/>
+			<DocumentHeader channel={props.channel} editor={editor} />
 			<DocumentMain
 				channel={props.channel}
 				setEditor={setEditor}
@@ -349,9 +345,7 @@ const DocumentHeader = (
 									<img class="icon" src={icBranchPrivate} />
 									<div class="info">
 										<div>branch name here</div>
-										<div class="dim">
-											private branch; created n minutes ago
-										</div>
+										<div class="dim">private branch; created n minutes ago</div>
 									</div>
 								</button>
 							</li>
@@ -582,32 +576,37 @@ const DocumentMain = (
 		if (selection === null) return null;
 		const hist = history();
 		if (!hist) return null;
-		return hist.changesets.find(
-			(cs) =>
-				cs.start_seq === selection.start_seq &&
-				cs.end_seq === selection.end_seq,
-		) ?? null;
+		return (
+			hist.changesets.find(
+				(cs) =>
+					cs.start_seq === selection.start_seq &&
+					cs.end_seq === selection.end_seq,
+			) ?? null
+		);
 	};
 
 	// Load history when channel changes
 	createEffect(
-		on(() => props.channel.id, async (channelId) => {
-			setEditState(null);
-			api2.documents.clearChannelCache(channelId);
+		on(
+			() => props.channel.id,
+			async (channelId) => {
+				setEditState(null);
+				api2.documents.clearChannelCache(channelId);
 
-			try {
-				const data = await api2.documents.history(channelId, channelId, {
-					limit: 50,
-					by_author: false,
-					by_changes: 100,
-					by_tag: true,
-					by_time: 60 * 5,
-				});
-				setHistory(data);
-			} catch (e) {
-				console.error("Failed to load history:", e);
-			}
-		}),
+				try {
+					const data = await api2.documents.history(channelId, channelId, {
+						limit: 50,
+						by_author: false,
+						by_changes: 100,
+						by_tag: true,
+						by_time: 60 * 5,
+					});
+					setHistory(data);
+				} catch (e) {
+					console.error("Failed to load history:", e);
+				}
+			},
+		),
 	);
 
 	const toolbar = useFormattingToolbar();
@@ -645,9 +644,8 @@ const DocumentMain = (
 		const m = mode();
 		if (!ed || m === "edit") return;
 
-		const selection = m === "diff_readonly"
-			? props.selectedSeq
-			: props.hoverSeq;
+		const selection =
+			m === "diff_readonly" ? props.selectedSeq : props.hoverSeq;
 		if (selection === null) return;
 
 		// Save edit state before switching to readonly (only if not already saved)
@@ -712,7 +710,8 @@ const DocumentMain = (
 			if (
 				activeSelection?.start_seq !== selection.start_seq ||
 				activeSelection?.end_seq !== selection.end_seq
-			) return;
+			)
+				return;
 
 			// Fetch previous revision for diff
 			let oldSerdoc: any = null;
@@ -735,7 +734,8 @@ const DocumentMain = (
 			if (
 				activeSelectionPostFetch?.start_seq !== selection.start_seq ||
 				activeSelectionPostFetch?.end_seq !== selection.end_seq
-			) return;
+			)
+				return;
 
 			// Compute diff marks BEFORE setting state
 			const marks = computeDiffMarks(oldSerdoc ?? {}, newSerdoc);
@@ -761,7 +761,8 @@ const DocumentMain = (
 			const activeSelection = isPreview ? props.hoverSeq : props.selectedSeq;
 			if (
 				activeSelection?.start_seq === selection.start_seq &&
-				activeSelection?.end_seq === selection.end_seq && !hasCache
+				activeSelection?.end_seq === selection.end_seq &&
+				!hasCache
 			) {
 				setDiffLoading(false);
 			}
@@ -797,9 +798,9 @@ const DocumentMain = (
 
 		try {
 			if (mode === "new") {
-				const newBranchName = `restored-${
-					new Date().toISOString().slice(0, 10)
-				}`;
+				const newBranchName = `restored-${new Date()
+					.toISOString()
+					.slice(0, 10)}`;
 				await api2.client.http.POST(
 					"/api/v1/document/{channel_id}/branch/{parent_id}/fork",
 					{
@@ -844,10 +845,11 @@ const DocumentMain = (
 			console.log("[TOC] token type:", token.type);
 			if (token.type === "heading") {
 				const heading = token as Tokens.Heading;
-				const text = heading.tokens
-					?.map((t) => (t.type === "text" ? t.text : ""))
-					.join("")
-					.trim() ?? heading.text.trim();
+				const text =
+					heading.tokens
+						?.map((t) => (t.type === "text" ? t.text : ""))
+						.join("")
+						.trim() ?? heading.text.trim();
 				console.log("[TOC] found heading:", heading.depth, text);
 				if (text) {
 					result.push({ level: heading.depth, text });
@@ -1175,11 +1177,13 @@ const DocumentMain = (
 							onSubmit={() => false}
 							channelId={props.channel.id}
 							submitOnEnter={false}
-							placeholder={mode() === "edit"
-								? "write something cool..."
-								: mode() === "diff_readonly"
-								? "viewing historical revision (readonly)"
-								: ""}
+							placeholder={
+								mode() === "edit"
+									? "write something cool..."
+									: mode() === "diff_readonly"
+										? "viewing historical revision (readonly)"
+										: ""
+							}
 							disabled={mode() !== "edit" || diffLoading()}
 						/>
 					);

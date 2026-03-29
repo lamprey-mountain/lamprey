@@ -1,12 +1,12 @@
+import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { useUsers2 } from "@/api";
-import { Avatar } from "../../../User.tsx";
 import { Time } from "../../../atoms/Time.tsx";
-import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { useCtx } from "../../../context.ts";
 import { useMenu } from "../../../contexts/mod.tsx";
-import { UserAdminMenu } from "../../../menus/UserAdmin.tsx";
 import { UserMenu } from "../../../menus/User.tsx";
+import { UserAdminMenu } from "../../../menus/UserAdmin.tsx";
+import { Avatar } from "../../../User.tsx";
 
 export function Users() {
 	const ctx = useCtx();

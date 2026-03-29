@@ -1,9 +1,9 @@
 import { createSignal, type ParentProps } from "solid-js";
-import { Modal } from "./mod";
-import { useCtx } from "../context";
-import { RadioDot } from "../icons";
-import { useModals } from "../contexts/modal";
 import { CheckboxOptionWithLabel } from "../atoms/CheckboxOption";
+import { useCtx } from "../context";
+import { useModals } from "../contexts/modal";
+import { RadioDot } from "../icons";
+import { Modal } from "./mod";
 
 interface ModalRoomCreateProps {
 	cont: (data: { name: string; public: boolean }) => void;

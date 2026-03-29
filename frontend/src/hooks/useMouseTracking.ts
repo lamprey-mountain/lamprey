@@ -1,5 +1,4 @@
-import { createEffect, onCleanup } from "solid-js";
-import { batch as solidBatch } from "solid-js";
+import { createEffect, onCleanup, batch as solidBatch } from "solid-js";
 import type { SetStoreFunction } from "solid-js/store";
 import type { Data } from "../context";
 

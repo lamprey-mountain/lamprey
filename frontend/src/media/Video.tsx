@@ -7,6 +7,17 @@ import {
 	Show,
 	ValidComponent,
 } from "solid-js";
+import iconFullscreen from "../assets/fullscreen.png";
+import iconFullscreent from "../assets/fullscreent.png";
+import iconPause from "../assets/pause.png";
+import iconPlay from "../assets/play.png";
+import iconVolumeHigh from "../assets/volume-high.png";
+import iconVolumeLow from "../assets/volume-low.png";
+import iconVolumeMax from "../assets/volume-max.png";
+import iconVolumeMedium from "../assets/volume-medium.png";
+import iconVolumeMute from "../assets/volume-mute.png";
+import { createTooltip } from "../atoms/Tooltip.tsx";
+import { useCtx } from "../context.ts";
 import {
 	formatBytes,
 	formatTime,
@@ -21,26 +32,14 @@ import {
 	parseRanges,
 	Resize,
 } from "./util.tsx";
-import iconPlay from "../assets/play.png";
-import iconPause from "../assets/pause.png";
-import iconVolumeLow from "../assets/volume-low.png";
-import iconVolumeMedium from "../assets/volume-medium.png";
-import iconVolumeHigh from "../assets/volume-high.png";
-import iconVolumeMute from "../assets/volume-mute.png";
-import iconVolumeMax from "../assets/volume-max.png";
-import iconFullscreen from "../assets/fullscreen.png";
-import iconFullscreent from "../assets/fullscreent.png";
-import { createTooltip } from "../atoms/Tooltip.tsx";
-import { useCtx } from "../context.ts";
 
 export const VideoView = (props: MediaProps) => {
 	const ctx = useCtx();
 	const height = () => getHeight(props.media);
 	const width = () => getWidth(props.media);
 
-	const [loadingState, setLoadingState] = createSignal<MediaLoadingState>(
-		"empty",
-	);
+	const [loadingState, setLoadingState] =
+		createSignal<MediaLoadingState>("empty");
 	const [buffered, setBuffered] = createSignal(
 		[] as ReturnType<typeof parseRanges>,
 	);
@@ -65,7 +64,7 @@ export const VideoView = (props: MediaProps) => {
 		interactive: true,
 		doesntRetain: "input[type=range]",
 		altBoundary: true,
-		mount: () => fullscreen() ? wrapperEl : undefined,
+		mount: () => (fullscreen() ? wrapperEl : undefined),
 		tip: () => (
 			<div class="range" onWheel={handleVolumeWheel}>
 				<input
@@ -74,7 +73,7 @@ export const VideoView = (props: MediaProps) => {
 					max={1}
 					value={volume()}
 					disabled={muted()}
-					step={.001}
+					step={0.001}
 					onInput={(e) => setVolume(e.target.valueAsNumber)}
 				/>
 				<div class="dim">(click to mute)</div>
@@ -121,8 +120,8 @@ export const VideoView = (props: MediaProps) => {
 		};
 	});
 
-	createEffect(() => video.muted = muted());
-	createEffect(() => video.volume = volume());
+	createEffect(() => (video.muted = muted()));
+	createEffect(() => (video.volume = volume()));
 
 	const togglePlayPause = () => {
 		if (playing()) {
@@ -144,9 +143,10 @@ export const VideoView = (props: MediaProps) => {
 
 	const handleScrubWheel = (e: WheelEvent) => {
 		e.preventDefault();
-		const newt = e.deltaY > 0
-			? Math.max(progress() - 5, 0)
-			: Math.min(progress() + 5, duration());
+		const newt =
+			e.deltaY > 0
+				? Math.max(progress() - 5, 0)
+				: Math.min(progress() + 5, duration());
 		video.currentTime = newt;
 		setProgress(newt);
 	};
@@ -154,9 +154,9 @@ export const VideoView = (props: MediaProps) => {
 	const handleVolumeWheel = (e: WheelEvent) => {
 		e.preventDefault();
 		if (e.deltaY > 0) {
-			setVolume(Math.max(volume() - .05, 0));
+			setVolume(Math.max(volume() - 0.05, 0));
 		} else {
-			setVolume(Math.min(volume() + .05, 1));
+			setVolume(Math.min(volume() + 0.05, 1));
 		}
 	};
 
@@ -192,8 +192,8 @@ export const VideoView = (props: MediaProps) => {
 	const getVolumeIcon = () => {
 		if (muted()) return iconVolumeMute;
 		if (volume() === 0) return iconVolumeMute;
-		if (volume() < .333) return iconVolumeLow;
-		if (volume() < .667) return iconVolumeMedium;
+		if (volume() < 0.333) return iconVolumeLow;
+		if (volume() < 0.667) return iconVolumeMedium;
 		if (volume() <= 1) return iconVolumeHigh;
 		return iconVolumeMax;
 	};
@@ -231,11 +231,13 @@ export const VideoView = (props: MediaProps) => {
 			title: props.media.filename,
 			// artist: "artist",
 			// album: "album",
-			artwork: [{
-				sizes: "640x640",
-				src: getThumb(props.media, 640),
-				type: "image/avif",
-			}],
+			artwork: [
+				{
+					sizes: "640x640",
+					src: getThumb(props.media, 640),
+					type: "image/avif",
+				},
+			],
 		});
 	};
 
@@ -316,7 +318,7 @@ export const VideoView = (props: MediaProps) => {
 						</a>
 						<div class="dim">
 							{ty()} - {formatBytes(props.media.size)}
-							<Show when={loadingState() === "stalled"}>{" "}- loading</Show>
+							<Show when={loadingState() === "stalled"}> - loading</Show>
 						</div>
 					</div>
 					<div class="controls">
@@ -337,11 +339,7 @@ export const VideoView = (props: MediaProps) => {
 							// @ts-expect-error - use:vtc is a directive
 							use:vtc
 						>
-							<img
-								class="icon"
-								src={getVolumeIcon()}
-								alt={getVolumeText()}
-							/>
+							<img class="icon" src={getVolumeIcon()} alt={getVolumeText()} />
 						</button>
 						<button
 							onClick={toggleFullscreen}

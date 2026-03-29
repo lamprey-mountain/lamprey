@@ -20,10 +20,7 @@ export function createInitialRoomState(): RoomState {
 	return {};
 }
 
-export type RoomContextT = [
-	Store<RoomState>,
-	SetStoreFunction<RoomState>,
-];
+export type RoomContextT = [Store<RoomState>, SetStoreFunction<RoomState>];
 
 export const RoomContext = createContext<RoomContextT>();
 export const useRoom = () => useContext(RoomContext);

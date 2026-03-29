@@ -12,7 +12,7 @@ export class ChannelsService extends BaseService<Channel> {
 		return await this.retryWithBackoff<Channel>(() =>
 			this.client.http.GET("/api/v1/channel/{channel_id}", {
 				params: { path: { channel_id: id } },
-			})
+			}),
 		);
 	}
 
@@ -24,7 +24,7 @@ export class ChannelsService extends BaseService<Channel> {
 			this.client.http.POST("/api/v1/room/{room_id}/channel", {
 				params: { path: { room_id } },
 				body,
-			})
+			}),
 		);
 		this.upsert(data);
 		return data;
@@ -35,7 +35,7 @@ export class ChannelsService extends BaseService<Channel> {
 			this.client.http.PATCH("/api/v1/channel/{channel_id}", {
 				params: { path: { channel_id } },
 				body,
-			})
+			}),
 		);
 		this.upsert(data);
 		return data;
@@ -45,7 +45,7 @@ export class ChannelsService extends BaseService<Channel> {
 		await this.retryWithBackoff(() =>
 			this.client.http.POST("/api/v1/channel/{channel_id}/typing", {
 				params: { path: { channel_id } },
-			})
+			}),
 		);
 	}
 
@@ -58,7 +58,7 @@ export class ChannelsService extends BaseService<Channel> {
 			this.client.http.PUT("/api/v1/channel/{channel_id}/ack", {
 				params: { path: { channel_id } },
 				body: { message_id, version_id },
-			})
+			}),
 		);
 
 		// Update cache
@@ -85,7 +85,7 @@ export class ChannelsService extends BaseService<Channel> {
 		await this.retryWithBackoff(() =>
 			this.client.http.POST("/api/v1/ack", {
 				body: { acks },
-			})
+			}),
 		);
 
 		// Update cache in batch
@@ -132,7 +132,7 @@ export class ChannelsService extends BaseService<Channel> {
 					params: { path: { channel_id, message_id } },
 					body: body as any,
 				},
-			)
+			),
 		);
 		this.upsert(data);
 		return data;
@@ -143,13 +143,10 @@ export class ChannelsService extends BaseService<Channel> {
 		body: import("sdk").TagCreate,
 	): Promise<import("sdk").Tag> {
 		return await this.retryWithBackoff(() =>
-			this.client.http.POST(
-				"/api/v1/channel/{channel_id}/tag",
-				{
-					params: { path: { channel_id } },
-					body: body,
-				},
-			)
+			this.client.http.POST("/api/v1/channel/{channel_id}/tag", {
+				params: { path: { channel_id } },
+				body: body,
+			}),
 		);
 	}
 
@@ -159,13 +156,10 @@ export class ChannelsService extends BaseService<Channel> {
 		body: import("sdk").TagPatch,
 	): Promise<import("sdk").Tag> {
 		return await this.retryWithBackoff(() =>
-			this.client.http.PATCH(
-				"/api/v1/channel/{channel_id}/tag/{tag_id}",
-				{
-					params: { path: { channel_id, tag_id } },
-					body: body,
-				},
-			)
+			this.client.http.PATCH("/api/v1/channel/{channel_id}/tag/{tag_id}", {
+				params: { path: { channel_id, tag_id } },
+				body: body,
+			}),
 		);
 	}
 
@@ -175,13 +169,10 @@ export class ChannelsService extends BaseService<Channel> {
 		force: boolean = false,
 	): Promise<void> {
 		await this.retryWithBackoff(() =>
-			this.client.http.DELETE(
-				"/api/v1/channel/{channel_id}/tag/{tag_id}",
-				{
-					params: { path: { channel_id, tag_id } },
-					query: { force },
-				},
-			)
+			this.client.http.DELETE("/api/v1/channel/{channel_id}/tag/{tag_id}", {
+				params: { path: { channel_id, tag_id } },
+				query: { force },
+			}),
 		);
 	}
 
@@ -191,7 +182,8 @@ export class ChannelsService extends BaseService<Channel> {
 		if (!channel.recipients) channel.recipients = [];
 		if (
 			!channel.tags &&
-			(channel.type === "ThreadPublic" || channel.type === "ThreadPrivate" ||
+			(channel.type === "ThreadPublic" ||
+				channel.type === "ThreadPrivate" ||
 				channel.type === "ThreadForum2")
 		) {
 			channel.tags = [];

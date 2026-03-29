@@ -1,3 +1,4 @@
+import { ReactiveMap } from "@solid-primitives/map";
 import {
 	createContext,
 	createEffect,
@@ -10,7 +11,6 @@ import {
 import { createStore } from "solid-js/store";
 import { useApi2, useUsers2 } from "@/api";
 import { createVoiceClient } from "../components/features/voice/rtc";
-import { ReactiveMap } from "@solid-primitives/map";
 // @ts-expect-error
 import vadProcessorUrl from "../components/features/voice/vad-processor?url";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
@@ -82,9 +82,11 @@ export const VoiceProvider = (props: ParentProps) => {
 
 	let rtcCreated = false;
 
-	createEffect(on(vad.hasVoiceActivity, (activity) => {
-		state.rtc?.sendSpeaking(activity ? 1 : 0);
-	}));
+	createEffect(
+		on(vad.hasVoiceActivity, (activity) => {
+			state.rtc?.sendSpeaking(activity ? 1 : 0);
+		}),
+	);
 
 	createEffect(() => {
 		state.rtc?.updateIndicators({
@@ -182,9 +184,10 @@ export const VoiceProvider = (props: ParentProps) => {
 		toggleMic: async () => {
 			if (!streamMic) {
 				// if we don't have a microphone, try to get it
-				const stream = await navigator.mediaDevices.getUserMedia({
-					audio: true,
-				})
+				const stream = await navigator.mediaDevices
+					.getUserMedia({
+						audio: true,
+					})
 					.catch(handleGetMediaError);
 				if (stream) {
 					voiceLog.debug("got microphone stream", stream);
@@ -242,9 +245,10 @@ export const VoiceProvider = (props: ParentProps) => {
 		toggleCam: async () => {
 			if (!streamCam) {
 				// if we don't have a camera, try to get it
-				const stream = await navigator.mediaDevices.getUserMedia({
-					video: true,
-				})
+				const stream = await navigator.mediaDevices
+					.getUserMedia({
+						video: true,
+					})
 					.catch(handleGetMediaError);
 				if (stream) {
 					voiceLog.debug("got camera stream", stream);
@@ -309,10 +313,12 @@ export const VoiceProvider = (props: ParentProps) => {
 				if (t) t.enabled = !tr.enabled;
 				update("screenshareEnabled", tr.enabled);
 			} else {
-				const stream = await navigator.mediaDevices.getDisplayMedia({
-					video: true,
-					audio: true,
-				}).catch(handleGetMediaError);
+				const stream = await navigator.mediaDevices
+					.getDisplayMedia({
+						video: true,
+						audio: true,
+					})
+					.catch(handleGetMediaError);
 				if (!stream) return;
 				const videoTrack = stream.getVideoTracks()[0];
 				if (videoTrack) {
@@ -343,11 +349,12 @@ export const VoiceProvider = (props: ParentProps) => {
 					"https://dump.celery.eu.org/resoundingly-one-bullsnake.opus";
 				audio.crossOrigin = "anonymous";
 				await new Promise((res) =>
-					audio.addEventListener("loadedmetadata", res, { once: true })
+					audio.addEventListener("loadedmetadata", res, { once: true }),
 				);
-				const stream: MediaStream = "captureStream" in audio
-					? (audio as any).captureStream()
-					: (audio as any).mozCaptureStream();
+				const stream: MediaStream =
+					"captureStream" in audio
+						? (audio as any).captureStream()
+						: (audio as any).mozCaptureStream();
 				const track = stream.getAudioTracks()[0];
 				await musicTn.sender.replaceTrack(track);
 				musicTn.direction = "sendonly";

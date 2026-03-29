@@ -1,3 +1,4 @@
+import type { User } from "sdk";
 import {
 	createResource,
 	createSignal,
@@ -6,9 +7,8 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import type { User } from "sdk";
-import { useCtx } from "../../../context";
 import { useApi2 } from "@/api";
+import { useCtx } from "../../../context";
 import { useModals } from "../../../contexts/modal";
 import { Modal } from "../../../modals/mod";
 
@@ -77,18 +77,22 @@ function Email(_props: VoidProps<{ user: User }>) {
 	function addEmail() {
 		modalctl.prompt("email?", (email: string | null) => {
 			if (!email) return;
-			api2.client.http.PUT("/api/v1/user/{user_id}/email/{addr}", {
-				params: { path: { user_id: "@self", addr: email } },
-			}).then(refetch);
+			api2.client.http
+				.PUT("/api/v1/user/{user_id}/email/{addr}", {
+					params: { path: { user_id: "@self", addr: email } },
+				})
+				.then(refetch);
 		});
 	}
 
 	function deleteEmail(email: string) {
 		modalctl.confirm("delete email?", (conf: boolean) => {
 			if (!conf) return;
-			api2.client.http.DELETE("/api/v1/user/{user_id}/email/{addr}", {
-				params: { path: { user_id: "@self", addr: email } },
-			}).then(refetch);
+			api2.client.http
+				.DELETE("/api/v1/user/{user_id}/email/{addr}", {
+					params: { path: { user_id: "@self", addr: email } },
+				})
+				.then(refetch);
 		});
 	}
 
@@ -151,9 +155,12 @@ function Oauth() {
 	// add something to sync i guess
 	const [oauthProviders] = createResource(async () => {
 		const { data } = await api2.client.http.GET("/api/v1/debug/info");
-		return (data && "features" in data && data.features &&
-				"oauth" in data.features &&
-				data.features.oauth && "providers" in data.features.oauth)
+		return data &&
+			"features" in data &&
+			data.features &&
+			"oauth" in data.features &&
+			data.features.oauth &&
+			"providers" in data.features.oauth
 			? data.features.oauth.providers
 			: undefined;
 	});
@@ -220,7 +227,8 @@ function Oauth() {
 								onClick={() =>
 									connected()
 										? disconnectOauth(provider.id)
-										: connectOauth(provider.id)}
+										: connectOauth(provider.id)
+								}
 								classList={{ danger: connected() }}
 							>
 								{connected() ? "disconnect" : "connect"}

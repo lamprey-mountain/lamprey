@@ -1,4 +1,7 @@
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import { type ReferenceElement, shift } from "@floating-ui/dom";
+import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import type { Role, RoomMember, RoomMemberOrigin } from "sdk";
+import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
 	createResource,
@@ -9,17 +12,14 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { useApi2 } from "@/api";
-import { useCtx } from "../../../context.ts";
-import { useMenu } from "../../../contexts/mod.tsx";
-import type { RoomT } from "../../../types.ts";
-import type { Role, RoomMember, RoomMemberOrigin } from "sdk";
-import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
-import { Avatar } from "../../../User.tsx";
 import { Time } from "../../../atoms/Time.tsx";
-import { useFloating } from "solid-floating-ui";
-import { type ReferenceElement, shift } from "@floating-ui/dom";
-import { usePermissions } from "../../../hooks/usePermissions.ts";
+import { useCtx } from "../../../context.ts";
+import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import { useMenu } from "../../../contexts/mod.tsx";
 import { useModals } from "../../../contexts/modal";
+import { usePermissions } from "../../../hooks/usePermissions.ts";
+import type { RoomT } from "../../../types.ts";
+import { Avatar } from "../../../User.tsx";
 
 export function Bots(props: VoidProps<{ room: RoomT }>) {
 	const ctx = useCtx();
@@ -55,15 +55,20 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 
 	const [bottom, setBottom] = createSignal<Element | undefined>();
 
-	createIntersectionObserver(() => bottom() ? [bottom()!] : [], (entries) => {
-		for (const entry of entries) {
-			if (entry.isIntersecting) fetchMore();
-		}
-	});
+	createIntersectionObserver(
+		() => (bottom() ? [bottom()!] : []),
+		(entries) => {
+			for (const entry of entries) {
+				if (entry.isIntersecting) fetchMore();
+			}
+		},
+	);
 
-	const [editRoles, setEditRoles] = createSignal<
-		{ member: RoomMember; x: number; y: number }
-	>();
+	const [editRoles, setEditRoles] = createSignal<{
+		member: RoomMember;
+		x: number;
+		y: number;
+	}>();
 
 	return (
 		<div class="room-settings-members">
@@ -79,7 +84,7 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 							const user = api2.users.cache.get(i.user_id);
 							const name = () =>
 								((i as any).membership === "Join" ? i.override_name : null) ??
-									user?.name;
+								user?.name;
 							return (
 								<li>
 									<div class="profile">
@@ -120,13 +125,11 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 											</ul>
 										</div>
 									</div>
-									{
-										/* TODO
+									{/* TODO
 									<div class="notes">
 										{i.deaf && <div>deaf</div>}
 										{i.mute && <div>mute</div>}
-									</div> */
-									}
+									</div> */}
 									<div class="joined">
 										<Time date={new Date(i.joined_at)} />
 										<div class="dim">{formatOrigin(i.origin)}</div>
@@ -168,9 +171,12 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 }
 
 // TODO: make this an actual context menu?
-const EditRoles = (
-	props: { x: number; y: number; user_id: string; room: RoomT },
-) => {
+const EditRoles = (props: {
+	x: number;
+	y: number;
+	user_id: string;
+	room: RoomT;
+}) => {
 	const api2 = useApi2();
 	const roles = api2.roles.use(() => props.room.id);
 	const member = api2.room_members.use(
@@ -197,10 +203,14 @@ const EditRoles = (
 		props.y;
 	});
 
-	const menuFloating = useFloating(() => menuParentRef(), () => menuRef(), {
-		middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
-		placement: "right-start",
-	});
+	const menuFloating = useFloating(
+		() => menuParentRef(),
+		() => menuRef(),
+		{
+			middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+			placement: "right-start",
+		},
+	);
 
 	const handleChecked =
 		(r: Role) => (e: InputEvent & { target: HTMLInputElement }) => {
@@ -261,9 +271,7 @@ const EditRoles = (
 		>
 			<For each={getRoles()}>
 				{(r) => (
-					<label
-						classList={{ disabled: r.position >= permissions().rank }}
-					>
+					<label classList={{ disabled: r.position >= permissions().rank }}>
 						<input
 							type="checkbox"
 							checked={member()!.roles.includes(r.id)}

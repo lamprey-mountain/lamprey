@@ -1,14 +1,14 @@
 import { useNavigate } from "@solidjs/router";
 import { createResource, createSignal, Show } from "solid-js";
-import { timeAgo } from "../atoms/Time.tsx";
 import { useApi2, useRooms2 } from "@/api";
-import { useCtx } from "../context.ts";
-import { usePermissions } from "../hooks/usePermissions.ts";
-import { useModals } from "../contexts/modal";
-import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
-import { Checkbox } from "../icons.tsx";
 import { CheckboxOption } from "../atoms/CheckboxOption";
+import { timeAgo } from "../atoms/Time.tsx";
+import { useCtx } from "../context.ts";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
+import { useModals } from "../contexts/modal";
+import { usePermissions } from "../hooks/usePermissions.ts";
+import { Checkbox } from "../icons.tsx";
+import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 
 // the context menu for rooms
 export function RoomMenu(props: { room_id: string }) {
@@ -56,22 +56,19 @@ export function RoomMenu(props: { room_id: string }) {
 
 	return (
 		<Menu>
-			<Item onClick={() => rooms2.markRead(props.room_id)}>
-				mark as read
-			</Item>
+			<Item onClick={() => rooms2.markRead(props.room_id)}>mark as read</Item>
 			<Item onClick={copyLink}>copy link</Item>
 			<Item
 				onClick={() =>
 					modalctl.open({
 						type: "privacy",
 						room_id: props.room_id,
-					})}
+					})
+				}
 			>
 				privacy
 			</Item>
-			<Show when={room()}>
-				{(r) => <RoomNotificationMenu room={r()} />}
-			</Show>
+			<Show when={room()}>{(r) => <RoomNotificationMenu room={r()} />}</Show>
 			<Separator />
 			<Show when={hasPermission("ChannelManage")}>
 				<Item
@@ -107,7 +104,9 @@ export function RoomMenu(props: { room_id: string }) {
 				<Item onClick={settings("/logs")}>audit log</Item>
 				<Item onClick={settings("/metrics")}>metrics</Item>
 			</Submenu>
-			<Item onClick={leave} color="danger">leave</Item>
+			<Item onClick={leave} color="danger">
+				leave
+			</Item>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
 			<Item onClick={logToConsole}>log to console</Item>
@@ -140,9 +139,10 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 	};
 
 	const setMute = (duration_ms: number | null) => {
-		const expires_at = duration_ms === null
-			? null
-			: new Date(Date.now() + duration_ms).toISOString();
+		const expires_at =
+			duration_ms === null
+				? null
+				: new Date(Date.now() + duration_ms).toISOString();
 		setNotifs({ mute: { expires_at } });
 	};
 
@@ -175,16 +175,19 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 			<Submenu
 				content={"notifications"}
 				onClick={() =>
-					modalctl.open({ type: "notifications", room_id: props.room.id })}
+					modalctl.open({ type: "notifications", room_id: props.room.id })
+				}
 			>
 				<Item
 					onClick={() =>
 						setNotifs({
 							messages: undefined,
 							threads: undefined,
-						})}
+						})
+					}
 					classList={{
-						selected: roomConfig()?.notifs.messages === undefined &&
+						selected:
+							roomConfig()?.notifs.messages === undefined &&
 							roomConfig()?.notifs.threads === undefined,
 					}}
 				>
@@ -317,7 +320,8 @@ function RoomNotificationMenu(props: { room: import("sdk").Room }) {
 					<div>unmute</div>
 					<Show when={roomConfig()?.notifs.mute?.expires_at}>
 						<div class="subtext">
-							unmutes {timeAgo(
+							unmutes{" "}
+							{timeAgo(
 								new Date(Date.parse(roomConfig()!.notifs.mute!.expires_at!)),
 							)}
 						</div>

@@ -1,9 +1,9 @@
-import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
-import { useCtx } from "../../../context.ts";
-import { createTooltip } from "../../../atoms/Tooltip.tsx";
 import type { Message } from "sdk";
+import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { useReactions2 } from "@/api";
 import icReactionAdd from "../../../assets/reaction-add.png";
+import { createTooltip } from "../../../atoms/Tooltip.tsx";
+import { useCtx } from "../../../context.ts";
 import { renderReactionKey } from "../../../emoji";
 
 type ReactionsProps = {
@@ -41,47 +41,50 @@ export const Reactions = (props: ReactionsProps) => {
 		}
 	};
 
-	createEffect(on(showPicker, () => {
-		if (showPicker()) {
-			ctx.setPopout({
-				id: "emoji",
-				ref: addEl,
-				placement: "top-start",
-				props: {
-					selected: (emoji: string | null, keepOpen: boolean) => {
-						if (emoji) {
-							// Picker returns string (unicode), we need to compare with ReactionKey
-							const existing = props.message.reactions?.find((r) =>
-								r.key.type === "Text" && r.key.content === emoji
-							);
-							if (!existing || !existing.self) {
-								reactions2.add(
-									props.message.channel_id,
-									props.message.id,
-									`t:${emoji}`,
+	createEffect(
+		on(showPicker, () => {
+			if (showPicker()) {
+				ctx.setPopout({
+					id: "emoji",
+					ref: addEl,
+					placement: "top-start",
+					props: {
+						selected: (emoji: string | null, keepOpen: boolean) => {
+							if (emoji) {
+								// Picker returns string (unicode), we need to compare with ReactionKey
+								const existing = props.message.reactions?.find(
+									(r) => r.key.type === "Text" && r.key.content === emoji,
 								);
+								if (!existing || !existing.self) {
+									reactions2.add(
+										props.message.channel_id,
+										props.message.id,
+										`t:${emoji}`,
+									);
+								}
 							}
-						}
-						if (!keepOpen) setShowPicker(false);
+							if (!keepOpen) setShowPicker(false);
+						},
 					},
-				},
-			});
-		} else {
-			const popout = ctx.popout();
-			if (
-				popout &&
-				(popout as any).id === "emoji" &&
-				(popout as any).ref === addEl
-			) {
-				ctx.setPopout({});
+				});
+			} else {
+				const popout = ctx.popout();
+				if (
+					popout &&
+					(popout as any).id === "emoji" &&
+					(popout as any).ref === addEl
+				) {
+					ctx.setPopout({});
+				}
 			}
-		}
-	}));
+		}),
+	);
 
 	const closePicker = (e: MouseEvent) => {
 		const popoutEl = document.querySelector(".popout");
 		if (
-			addEl && !addEl.contains(e.target as Node) &&
+			addEl &&
+			!addEl.contains(e.target as Node) &&
 			(!popoutEl || !popoutEl.contains(e.target as Node))
 		) {
 			setShowPicker(false);

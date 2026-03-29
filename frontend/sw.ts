@@ -44,16 +44,18 @@ self.addEventListener("install", () => {
 
 self.addEventListener("activate", (e) => {
 	console.log("[sw] activated");
-	e.waitUntil(Promise.all([
-		deleteOldCaches(),
-		self.registration.navigationPreload.enable(),
-		self.clients.claim(),
-	]));
+	e.waitUntil(
+		Promise.all([
+			deleteOldCaches(),
+			self.registration.navigationPreload.enable(),
+			self.clients.claim(),
+		]),
+	);
 });
 
-async function getState(sessionId?: string): Promise<
-	{ api_url: string | null; token: string | null }
-> {
+async function getState(
+	sessionId?: string,
+): Promise<{ api_url: string | null; token: string | null }> {
 	return new Promise((resolve) => {
 		const request = indexedDB.open("sw-state", 1);
 		request.onsuccess = () => {
@@ -80,76 +82,83 @@ self.addEventListener("push", (e) => {
 	const data = e.data?.json();
 	if (!data) return;
 
-	e.waitUntil((async () => {
-		const { api_url, token } = await getState(data.session_id);
-		if (!api_url || !token) return;
+	e.waitUntil(
+		(async () => {
+			const { api_url, token } = await getState(data.session_id);
+			if (!api_url || !token) return;
 
-		const headers = {
-			"Authorization": `Bearer ${token}`,
-		};
+			const headers = {
+				Authorization: `Bearer ${token}`,
+			};
 
-		const [notif, channel] = await Promise.all([
-			fetch(
-				`${api_url}/api/v1/channel/${data.channel_id}/message/${data.message_id}`,
-				{ headers },
-			).then((res) => res.json()),
-			fetch(`${api_url}/api/v1/channel/${data.channel_id}`, { headers }).then(
-				(res) => res.json(),
-			),
-		]);
+			const [notif, channel] = await Promise.all([
+				fetch(
+					`${api_url}/api/v1/channel/${data.channel_id}/message/${data.message_id}`,
+					{ headers },
+				).then((res) => res.json()),
+				fetch(`${api_url}/api/v1/channel/${data.channel_id}`, { headers }).then(
+					(res) => res.json(),
+				),
+			]);
 
-		const message = "latest_version" in notif ? notif.latest_version : notif;
-		const author = await fetch(`${api_url}/api/v1/user/${message.author_id}`, {
-			headers,
-		}).then((res) => res.json());
+			const message = "latest_version" in notif ? notif.latest_version : notif;
+			const author = await fetch(
+				`${api_url}/api/v1/user/${message.author_id}`,
+				{
+					headers,
+				},
+			).then((res) => res.json());
 
-		const title = `${author.name} in #${channel.name}`;
+			const title = `${author.name} in #${channel.name}`;
 
-		const mockApi = {
-			users: { cache: new Map() },
-			channels: { cache: new Map([[data.channel_id, channel]]) },
-			roles: { cache: new Map() },
-			client: {
-				http: {
-					GET: async (url: string, options: any) => {
-						let finalUrl = url;
-						if (options.params?.path) {
-							for (const [key, value] of Object.entries(options.params.path)) {
-								finalUrl = finalUrl.replace(`{${key}}`, value as string);
+			const mockApi = {
+				users: { cache: new Map() },
+				channels: { cache: new Map([[data.channel_id, channel]]) },
+				roles: { cache: new Map() },
+				client: {
+					http: {
+						GET: async (url: string, options: any) => {
+							let finalUrl = url;
+							if (options.params?.path) {
+								for (const [key, value] of Object.entries(
+									options.params.path,
+								)) {
+									finalUrl = finalUrl.replace(`{${key}}`, value as string);
+								}
 							}
-						}
-						const res = await fetch(`${api_url}${finalUrl}`, { headers });
-						if (res.ok) {
-							return { data: await res.json() };
-						}
-						return { data: null };
+							const res = await fetch(`${api_url}${finalUrl}`, { headers });
+							if (res.ok) {
+								return { data: await res.json() };
+							}
+							return { data: null };
+						},
 					},
 				},
-			},
-		};
+			};
 
-		const processedContent = await stripMarkdownAndResolveMentions(
-			message.content || "",
-			data.channel_id,
-			mockApi,
-			message.mentions,
-		);
-		const body = processedContent.substring(0, 200);
+			const processedContent = await stripMarkdownAndResolveMentions(
+				message.content || "",
+				data.channel_id,
+				mockApi,
+				message.mentions,
+			);
+			const body = processedContent.substring(0, 200);
 
-		let icon: string | undefined;
-		if (author.avatar) {
-			icon = `${api_url}/api/v1/media/${author.avatar}/blob`;
-		}
+			let icon: string | undefined;
+			if (author.avatar) {
+				icon = `${api_url}/api/v1/media/${author.avatar}/blob`;
+			}
 
-		await self.registration.showNotification(title, {
-			body,
-			icon,
-			data: {
-				channel_id: data.channel_id,
-				message_id: data.message_id,
-			},
-		});
-	})());
+			await self.registration.showNotification(title, {
+				body,
+				icon,
+				data: {
+					channel_id: data.channel_id,
+					message_id: data.message_id,
+				},
+			});
+		})(),
+	);
 });
 
 self.addEventListener("notificationclick", (event) => {
@@ -158,20 +167,20 @@ self.addEventListener("notificationclick", (event) => {
 	const url = `/channel/${channel_id}/message/${message_id}`;
 
 	event.waitUntil(
-		self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(
-			(clientList) => {
+		self.clients
+			.matchAll({ type: "window", includeUncontrolled: true })
+			.then((clientList) => {
 				for (const client of clientList) {
 					if (client.url.includes(self.location.origin) && "focus" in client) {
-						return (client as WindowClient).navigate(url).then((c) =>
-							c ? c.focus() : undefined
-						);
+						return (client as WindowClient)
+							.navigate(url)
+							.then((c) => (c ? c.focus() : undefined));
 					}
 				}
 				if (self.clients.openWindow) {
 					return self.clients.openWindow(url);
 				}
-			},
-		),
+			}),
 	);
 });
 
@@ -190,8 +199,8 @@ async function stripMarkdownAndResolveMentions(
 	processedContent = processedContent.replace(
 		userMentionRegex,
 		(match, userId) => {
-			const mentioned = (mentions?.users as any[])?.find((u) =>
-				u.id === userId
+			const mentioned = (mentions?.users as any[])?.find(
+				(u) => u.id === userId,
 			);
 			if (mentioned) return `@${mentioned.resolved_name}`;
 			const user = users.cache.get(userId);
@@ -205,8 +214,8 @@ async function stripMarkdownAndResolveMentions(
 	processedContent = processedContent.replace(
 		channelMentionRegex,
 		(match, channelId) => {
-			const mentioned = (mentions?.channels as any[])?.find((c) =>
-				c.id === channelId
+			const mentioned = (mentions?.channels as any[])?.find(
+				(c) => c.id === channelId,
 			);
 			if (mentioned) return `#${mentioned.name}`;
 			const channel = channels.cache.get(channelId);

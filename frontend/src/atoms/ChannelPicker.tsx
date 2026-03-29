@@ -1,3 +1,7 @@
+import { autoUpdate, flip, offset, shift, size } from "@floating-ui/dom";
+import { go } from "fuzzysort";
+import type { Channel } from "sdk";
+import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
 	createMemo,
@@ -8,12 +12,8 @@ import {
 	Show,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import { go } from "fuzzysort";
-import { autoUpdate, flip, offset, shift, size } from "@floating-ui/dom";
-import { useFloating } from "solid-floating-ui";
-import { createKeybinds } from "../keybinds";
-import type { Channel } from "sdk";
 import { ChannelIcon } from "../avatar/ChannelIcon.tsx";
+import { createKeybinds } from "../keybinds";
 
 export type ChannelPickerOption = {
 	channel: Channel;
@@ -88,21 +88,19 @@ function createSelect<T>() {
 	} as const;
 }
 
-export function createChannelPicker(
-	props: {
-		selected?: Channel | null;
-		channels: () => Channel[];
-		onSelect?: (channel: Channel | null) => void;
-		onInput?: (value: string) => void;
-		onKeyDown?: (e: KeyboardEvent) => void;
-		onBlur?: (e: FocusEvent) => void;
-		mount?: Element | DocumentFragment | null;
-		placeholder?: string;
-		filter?: (channel: Channel) => boolean;
-		style?: JSX.CSSProperties;
-		class?: string;
-	},
-) {
+export function createChannelPicker(props: {
+	selected?: Channel | null;
+	channels: () => Channel[];
+	onSelect?: (channel: Channel | null) => void;
+	onInput?: (value: string) => void;
+	onKeyDown?: (e: KeyboardEvent) => void;
+	onBlur?: (e: FocusEvent) => void;
+	mount?: Element | DocumentFragment | null;
+	placeholder?: string;
+	filter?: (channel: Channel) => boolean;
+	style?: JSX.CSSProperties;
+	class?: string;
+}) {
 	const [shown, setShown] = createSignal(false);
 	const [inputEl, setInputEl] = createSignal<HTMLInputElement>();
 	const [dropdownEl, setDropdownEl] = createSignal<HTMLUListElement>();
@@ -164,7 +162,7 @@ export function createChannelPicker(
 	};
 
 	const binds = createKeybinds({
-		"ArrowUp": (e) => {
+		ArrowUp: (e) => {
 			if (!shown()) {
 				e.preventDefault();
 				const opts = options();
@@ -176,7 +174,7 @@ export function createChannelPicker(
 				selector.prev();
 			}
 		},
-		"ArrowDown": (e) => {
+		ArrowDown: (e) => {
 			if (!shown()) {
 				e.preventDefault();
 				const opts = options();
@@ -188,13 +186,13 @@ export function createChannelPicker(
 				selector.next();
 			}
 		},
-		"Escape": (e) => {
+		Escape: (e) => {
 			if (shown()) {
 				e.preventDefault();
 				setShown(false);
 			}
 		},
-		"Enter": (e) => {
+		Enter: (e) => {
 			const hovered = selector.getHovered();
 			if (shown() && hovered) {
 				e.preventDefault();
@@ -318,9 +316,11 @@ export function createChannelPicker(
 							aria-haspopup="listbox"
 							aria-controls={shown() ? listboxId : undefined}
 							aria-expanded={shown()}
-							aria-activedescendant={hoveredChannel()
-								? `channel-option-${hoveredChannel()!.id}`
-								: undefined}
+							aria-activedescendant={
+								hoveredChannel()
+									? `channel-option-${hoveredChannel()!.id}`
+									: undefined
+							}
 							style={{ width: "100%" }}
 						/>
 					</div>
@@ -486,13 +486,13 @@ export function MultiChannelPicker(props: {
 				selector.next();
 			}
 		},
-		"Escape": (e) => {
+		Escape: (e) => {
 			if (shown()) {
 				e.preventDefault();
 				setShown(false);
 			}
 		},
-		"Enter": (e) => {
+		Enter: (e) => {
 			e.preventDefault();
 			if (shown()) {
 				const hovered = selector.getHovered();
@@ -505,7 +505,7 @@ export function MultiChannelPicker(props: {
 				setShown(true);
 			}
 		},
-		"Backspace": (e) => {
+		Backspace: (e) => {
 			if (selector.filtered().length === 0 && props.selected.length > 0) {
 				props.onRemove(props.selected[props.selected.length - 1]);
 			}
@@ -578,9 +578,11 @@ export function MultiChannelPicker(props: {
 					aria-haspopup="listbox"
 					aria-controls={shown() ? listboxId : undefined}
 					aria-expanded={shown()}
-					aria-activedescendant={selector.getHovered()
-						? `channel-option-${selector.getHovered()!.channel.id}`
-						: undefined}
+					aria-activedescendant={
+						selector.getHovered()
+							? `channel-option-${selector.getHovered()!.channel.id}`
+							: undefined
+					}
 				/>
 			</div>
 			<div

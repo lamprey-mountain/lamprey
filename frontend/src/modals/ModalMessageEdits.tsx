@@ -4,9 +4,10 @@ import { useApi2 } from "@/api";
 import { MessageView } from "../components/features/chat/Message";
 import { Modal } from "./mod";
 
-export const ModalMessageEdits = (
-	props: { thread_id: string; message_id: string },
-) => {
+export const ModalMessageEdits = (props: {
+	thread_id: string;
+	message_id: string;
+}) => {
 	// FIXME: pagination
 	const api2 = useApi2();
 	const [edits] = createResource(
@@ -39,11 +40,13 @@ export const ModalMessageEdits = (
 								(prev as any).content ?? "",
 								(i as any).content ?? "",
 							);
-							const content = pages.map((i) => {
-								if (i.added) return `<ins>${i.value}</ins>`;
-								if (i.removed) return `<del>${i.value}</del>`;
-								return i.value;
-							}).join("");
+							const content = pages
+								.map((i) => {
+									if (i.added) return `<ins>${i.value}</ins>`;
+									if (i.removed) return `<del>${i.value}</del>`;
+									return i.value;
+								})
+								.join("");
 							return (
 								<li>
 									<MessageView message={{ ...i, content } as any} separate />

@@ -1,3 +1,5 @@
+import { A } from "@solidjs/router";
+import type { Pagination, Permission, Role, RoomMember, User } from "sdk";
 import {
 	createEffect,
 	createMemo,
@@ -8,23 +10,21 @@ import {
 	Switch,
 	type VoidProps,
 } from "solid-js";
-import { useApi2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
-import { useCtx } from "../../../context.ts";
-import type { RoomT } from "../../../types.ts";
-import type { Pagination, Permission, Role, RoomMember, User } from "sdk";
-import { Copyable } from "../../../utils/general";
 import { createStore, produce } from "solid-js/store";
-import { permissions } from "../../../permissions.ts";
-import { Resizable } from "../../../atoms/Resizable";
-import { md } from "../../../markdown_utils.tsx";
-import { PermissionSelector } from "../../../components/PermissionSelector";
-import { Checkbox } from "../../../icons";
+import { useApi2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
-import { useModals } from "../../../contexts/modal";
-import { A } from "@solidjs/router";
-import { Avatar } from "../../../User.tsx";
-import { Savebar } from "../../../atoms/Savebar";
 import { Markdown } from "../../../atoms/Markdown.tsx";
+import { Resizable } from "../../../atoms/Resizable";
+import { Savebar } from "../../../atoms/Savebar";
+import { PermissionSelector } from "../../../components/PermissionSelector";
+import { useCtx } from "../../../context.ts";
+import { useModals } from "../../../contexts/modal";
+import { Checkbox } from "../../../icons";
+import { md } from "../../../markdown_utils.tsx";
+import { permissions } from "../../../permissions.ts";
+import type { RoomT } from "../../../types.ts";
+import { Avatar } from "../../../User.tsx";
+import { Copyable } from "../../../utils/general";
 
 function setDifference<T>(a: Set<T>, b: Set<T>) {
 	return new Set([...a].filter((x) => !b.has(x)));
@@ -41,12 +41,14 @@ function isDirty(a: Role, b: Role): boolean {
 	const denyDiff1 = setDifference(denyA, denyB);
 	const denyDiff2 = setDifference(denyB, denyA);
 
-	return a.name !== b.name ||
+	return (
+		a.name !== b.name ||
 		a.description !== b.description ||
 		a.is_self_applicable !== b.is_self_applicable ||
 		a.is_mentionable !== b.is_mentionable ||
 		a.hoist !== b.hoist ||
-		allowDiff1.size + allowDiff2.size + denyDiff1.size + denyDiff2.size > 0;
+		allowDiff1.size + allowDiff2.size + denyDiff1.size + denyDiff2.size > 0
+	);
 }
 
 export function Roles(props: VoidProps<{ room: RoomT }>) {
@@ -119,8 +121,8 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 	};
 
 	const cancelOrder = () => {
-		const sortedRoles = [...roomRoles()].sort((a, b) =>
-			b.position - a.position
+		const sortedRoles = [...roomRoles()].sort(
+			(a, b) => b.position - a.position,
 		);
 		setLocalRoles(sortedRoles);
 	};
@@ -143,8 +145,12 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 						<Show when={isOrderDirty()}>
 							<div style="display: flex; gap: 8px; align-items: center; margin-left: auto">
 								<span>order changed</span>
-								<button class="big" onClick={cancelOrder}>cancel</button>
-								<button class="big primary" onClick={saveOrder}>save</button>
+								<button class="big" onClick={cancelOrder}>
+									cancel
+								</button>
+								<button class="big primary" onClick={saveOrder}>
+									save
+								</button>
 							</div>
 						</Show>
 						<button class="big primary" onClick={createRole}>
@@ -176,24 +182,21 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 	);
 }
 
-const RoleList = (
-	props: {
-		search: string;
-		roles: Role[];
-		setRoles: import("solid-js/store").SetStoreFunction<Role[]>;
-		edit: RoleEditState;
-	},
-) => {
+const RoleList = (props: {
+	search: string;
+	roles: Role[];
+	setRoles: import("solid-js/store").SetStoreFunction<Role[]>;
+	edit: RoleEditState;
+}) => {
 	const filteredRoles = createMemo(() => {
 		return props.roles.filter((i) => i.name.includes(props.search));
 	});
 
 	const [dragging, setDragging] = createSignal<string | null>(null);
-	const [target, setTarget] = createSignal<
-		{ id: string; after: boolean } | null
-	>(
-		null,
-	);
+	const [target, setTarget] = createSignal<{
+		id: string;
+		after: boolean;
+	} | null>(null);
 
 	const getRoleId = (e: DragEvent) =>
 		(e.currentTarget as HTMLElement).dataset.roleId;
@@ -257,7 +260,7 @@ const RoleList = (
 
 		if (
 			JSON.stringify(originalIds) ===
-				JSON.stringify(reorderedCheck.map((r) => r.id))
+			JSON.stringify(reorderedCheck.map((r) => r.id))
 		) {
 			return;
 		}
@@ -349,19 +352,21 @@ const RoleList = (
 								<Match when={true}>
 									<div>
 										<span class="perm-safe">
-											{i.allow.filter(
-												(perm: Permission) => {
+											{
+												i.allow.filter((perm: Permission) => {
 													const p = permissions.find((x) => x.id === perm);
 													return !p?.moderator;
-												},
-											).length}
+												}).length
+											}
 										</span>
 										+
 										<span class="perm-mod">
-											{i.allow.filter((perm) => {
-												const p = permissions.find((x) => x.id === perm);
-												return p?.moderator;
-											}).length}
+											{
+												i.allow.filter((perm) => {
+													const p = permissions.find((x) => x.id === perm);
+													return p?.moderator;
+												}).length
+											}
 										</span>{" "}
 										permissions
 									</div>
@@ -443,11 +448,9 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 
 	const saveRole = () => {
 		if (
-			!isDirty(
-				props.edit.role as Role,
-				roles2.cache.get(props.edit.role.id!)!,
-			)
-		) return;
+			!isDirty(props.edit.role as Role, roles2.cache.get(props.edit.role.id!)!)
+		)
+			return;
 		const r = props.edit.role as Role;
 		api2.client.http.PATCH("/api/v1/room/{room_id}/role/{role_id}", {
 			params: { path: { room_id: props.room.id, role_id: r.id } },
@@ -474,10 +477,12 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 					close
 				</button>
 				<button
-					disabled={!isDirty(
-						props.edit.role as Role,
-						roles2.cache.get(props.edit.role.id!)!,
-					)}
+					disabled={
+						!isDirty(
+							props.edit.role as Role,
+							roles2.cache.get(props.edit.role.id!)!,
+						)
+					}
 					onClick={saveRole}
 				>
 					save
@@ -529,24 +534,26 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 				<br />
 				<br />
 				<For
-					each={[
-						/* TODO: move these to i18n */
-						{
-							key: "is_mentionable",
-							name: "Mentionable",
-							description: "Anyone can mention this role",
-						},
-						{
-							key: "is_self_applicable",
-							name: "Self applicable",
-							description: "Anyone can apply this role to themselves",
-						},
-						{
-							key: "hoist",
-							name: "Hoisted",
-							description: "Display this role separately from other members",
-						},
-					] as const}
+					each={
+						[
+							/* TODO: move these to i18n */
+							{
+								key: "is_mentionable",
+								name: "Mentionable",
+								description: "Anyone can mention this role",
+							},
+							{
+								key: "is_self_applicable",
+								name: "Self applicable",
+								description: "Anyone can apply this role to themselves",
+							},
+							{
+								key: "hoist",
+								name: "Hoisted",
+								description: "Display this role separately from other members",
+							},
+						] as const
+					}
 				>
 					{(i) => (
 						<CheckboxOption
@@ -565,9 +572,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 								seed={`role-${props.edit.role.id}-${i.key}`}
 							/>
 							<div>
-								<div class="name">
-									{i.name}
-								</div>
+								<div class="name">{i.name}</div>
 								<Markdown class="description" content={i.description ?? ""} />
 							</div>
 						</CheckboxOption>
@@ -578,10 +583,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 					<h3>permissions</h3>
 				</div>
 
-				<RolePermissionSelector
-					room={props.room}
-					edit={props.edit}
-				/>
+				<RolePermissionSelector room={props.room} edit={props.edit} />
 			</Show>
 			<Show when={activeTab() === "members"}>
 				<div class="members-tab">
@@ -623,7 +625,7 @@ type RoleEditState = ReturnType<typeof useRoleEditor>;
 
 function useRoleEditor(initial: Role | null) {
 	const [role, setRole] = createStore(
-		initial ?? { id: null } as unknown as Role,
+		initial ?? ({ id: null } as unknown as Role),
 	);
 	const [name, setName] = createSignal(initial?.name ?? "");
 	const [desc, setDesc] = createSignal(initial?.description ?? undefined);
@@ -631,9 +633,10 @@ function useRoleEditor(initial: Role | null) {
 	return { role, setRole, name, setName, desc, setDesc };
 }
 
-const RolePermissionSelector = (
-	props: { room: RoomT; edit: RoleEditState },
-) => {
+const RolePermissionSelector = (props: {
+	room: RoomT;
+	edit: RoleEditState;
+}) => {
 	const { t } = useCtx();
 	const [permSearch, setPermSearch] = createSignal("");
 
@@ -659,13 +662,16 @@ const RolePermissionSelector = (
 	});
 
 	const permStates = createMemo(() => {
-		return allPermissions().reduce((acc, perm) => {
-			const role = props.edit.role;
-			if (role.allow?.includes(perm.id)) acc[perm.id] = "allow";
-			else if (role.deny?.includes(perm.id)) acc[perm.id] = "deny";
-			else acc[perm.id] = "inherit";
-			return acc;
-		}, {} as Record<Permission, "allow" | "deny" | "inherit">);
+		return allPermissions().reduce(
+			(acc, perm) => {
+				const role = props.edit.role;
+				if (role.allow?.includes(perm.id)) acc[perm.id] = "allow";
+				else if (role.deny?.includes(perm.id)) acc[perm.id] = "deny";
+				else acc[perm.id] = "inherit";
+				return acc;
+			},
+			{} as Record<Permission, "allow" | "deny" | "inherit">,
+		);
 	});
 
 	const handlePermChange = (

@@ -1,3 +1,7 @@
+import { autoUpdate, flip, offset } from "@floating-ui/dom";
+import { throttle } from "@solid-primitives/scheduled";
+import type { Role, RoomMemberSearchResponse, User } from "sdk";
+import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
 	createMemo,
@@ -7,12 +11,8 @@ import {
 	Show,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import { autoUpdate, flip, offset } from "@floating-ui/dom";
-import { useFloating } from "solid-floating-ui";
 import { useRoles2, useRoomMembers2 } from "@/api";
 import { createKeybinds } from "../keybinds.tsx";
-import type { Role, RoomMemberSearchResponse, User } from "sdk";
-import { throttle } from "@solid-primitives/scheduled";
 
 type OverwriteOption = {
 	id: string;
@@ -34,29 +34,25 @@ export function OverwriteDropdown(props: {
 	const [dropdownEl, setDropdownEl] = createSignal<HTMLDivElement>();
 	const [hoveredIndex, setHoveredIndex] = createSignal(0);
 
-	const roles = [...roles2.cache.values()].filter((r) =>
-		r.room_id === props.room_id
+	const roles = [...roles2.cache.values()].filter(
+		(r) => r.room_id === props.room_id,
 	);
-	const [memberResults, setMemberResults] = createSignal<
-		RoomMemberSearchResponse
-	>({ room_members: [], users: [] });
+	const [memberResults, setMemberResults] =
+		createSignal<RoomMemberSearchResponse>({ room_members: [], users: [] });
 
-	const throttledSearch = throttle(
-		async (q: string) => {
-			if (q.length > 0) {
-				try {
-					const results = await roomMembers2.search(props.room_id, q);
-					setMemberResults(results);
-				} catch (e) {
-					console.error("Member search failed:", e);
-					setMemberResults({ room_members: [], users: [] });
-				}
-			} else {
+	const throttledSearch = throttle(async (q: string) => {
+		if (q.length > 0) {
+			try {
+				const results = await roomMembers2.search(props.room_id, q);
+				setMemberResults(results);
+			} catch (e) {
+				console.error("Member search failed:", e);
 				setMemberResults({ room_members: [], users: [] });
 			}
-		},
-		300,
-	);
+		} else {
+			setMemberResults({ room_members: [], users: [] });
+		}
+	}, 300);
 
 	createEffect(() => {
 		throttledSearch(query());
@@ -67,15 +63,16 @@ export function OverwriteDropdown(props: {
 		const exclude = new Set(props.excludeIds || []);
 
 		const roleOptions: OverwriteOption[] = roles
-			.filter((r: Role) =>
-				r.id !== props.room_id && // exclude @everyone
-				!exclude.has(r.id) &&
-				r.name.toLowerCase().includes(q)
+			.filter(
+				(r: Role) =>
+					r.id !== props.room_id && // exclude @everyone
+					!exclude.has(r.id) &&
+					r.name.toLowerCase().includes(q),
 			)
 			.map((r: Role) => ({ id: r.id, name: r.name, type: "Role" as const }));
 
-		const userOptions: OverwriteOption[] = memberResults().users
-			.filter((u: User) => !exclude.has(u.id))
+		const userOptions: OverwriteOption[] = memberResults()
+			.users.filter((u: User) => !exclude.has(u.id))
 			.map((u: User) => ({ id: u.id, name: u.name, type: "User" as const }));
 
 		return [...roleOptions, ...userOptions];
@@ -100,20 +97,20 @@ export function OverwriteDropdown(props: {
 	};
 
 	const binds = createKeybinds({
-		"ArrowUp": (e) => {
+		ArrowUp: (e) => {
 			e.preventDefault();
 			setHoveredIndex((i) => (i > 0 ? i - 1 : options().length - 1));
 		},
-		"ArrowDown": (e) => {
+		ArrowDown: (e) => {
 			e.preventDefault();
 			setHoveredIndex((i) => (i < options().length - 1 ? i + 1 : 0));
 		},
-		"Enter": (e) => {
+		Enter: (e) => {
 			e.preventDefault();
 			const opt = options()[hoveredIndex()];
 			if (opt) select(opt);
 		},
-		"Escape": () => setShown(false),
+		Escape: () => setShown(false),
 	});
 
 	const listboxId = createUniqueId();

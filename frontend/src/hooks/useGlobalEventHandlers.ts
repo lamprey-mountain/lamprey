@@ -1,8 +1,8 @@
 import { onCleanup } from "solid-js";
-import { useModals } from "../contexts/modal";
 import { useCtx } from "../context.ts";
-import { useContextMenu } from "./useContextMenu.ts";
 import { useMenu, useUserPopout } from "../contexts/mod.tsx";
+import { useModals } from "../contexts/modal";
+import { useContextMenu } from "./useContextMenu.ts";
 
 export function useGlobalEventHandlers() {
 	const ctx = useCtx();

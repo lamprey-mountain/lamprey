@@ -1,6 +1,5 @@
-import { createSignal, Show } from "solid-js";
 import { A } from "@solidjs/router";
-import { useCtx } from "./context.ts";
+import { createSignal, Show } from "solid-js";
 import {
 	useApi2,
 	useAuth2,
@@ -10,8 +9,9 @@ import {
 	useSessions2,
 	useUsers2,
 } from "@/api";
-import { useModals } from "./contexts/modal";
+import { useCtx } from "./context.ts";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
+import { useModals } from "./contexts/modal";
 import { flags } from "./flags.ts";
 
 export const Home = () => {
@@ -147,16 +147,16 @@ export const Home = () => {
 			<br />
 			<br />
 			<Show when={user()}>
-				<button onClick={createRoom}>
-					create room
-				</button>
+				<button onClick={createRoom}>create room</button>
 				<br />
 				<button onClick={useInvite}>use invite</button>
 				<br />
 				<A href="/settings">settings</A>
 				<br />
 			</Show>
-			<A target="_self" href="/api/docs">api docs</A>
+			<A target="_self" href="/api/docs">
+				api docs
+			</A>
 			<br />
 			<Show when={flags.has("dev")}>
 				<A href="/debug">debug</A>

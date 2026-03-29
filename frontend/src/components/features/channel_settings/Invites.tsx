@@ -1,9 +1,8 @@
+import type { Channel, InviteWithMetadata } from "sdk";
 import { For, Show, type VoidProps } from "solid-js";
 import { useApi2, useInvites2, useUsers2 } from "@/api";
-import type { Channel } from "sdk";
-import type { InviteWithMetadata } from "sdk";
-import { Avatar } from "../../../User.tsx";
 import { Time } from "../../../atoms/Time.tsx";
+import { Avatar } from "../../../User.tsx";
 import { Copyable } from "../../../utils/general";
 
 export function Invites(props: VoidProps<{ channel: Channel }>) {
@@ -33,7 +32,9 @@ export function Invites(props: VoidProps<{ channel: Channel }>) {
 	return (
 		<>
 			<h2>invites</h2>
-			<button class="big primary" onClick={createInvite}>create invite</button>
+			<button class="big primary" onClick={createInvite}>
+				create invite
+			</button>
 			<br />
 			<br />
 			<div class="invites">

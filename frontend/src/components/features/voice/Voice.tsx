@@ -1,3 +1,4 @@
+import { useNavigate } from "@solidjs/router";
 import type { Channel } from "sdk";
 import {
 	createEffect,
@@ -10,27 +11,26 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
+import { useApi2, useChannels2, useRooms2 } from "@/api";
 import iconCamera from "../../../assets/camera.png";
+import iconExit from "../../../assets/exit.png";
 import iconHeadphones from "../../../assets/headphones.png";
 import iconMic from "../../../assets/mic.png";
+import iconMusic from "../../../assets/music.png";
 import iconScreenshare from "../../../assets/screenshare.png";
 import iconSettings from "../../../assets/settings.png";
-import iconMusic from "../../../assets/music.png";
-import iconExit from "../../../assets/exit.png";
-import { useApi2, useChannels2, useRooms2 } from "@/api";
 import { ToggleIcon } from "../../../atoms/ToggleIcon.tsx";
-import { useVoice } from "./voice-provider.tsx";
-import { useConfig } from "../../../config.tsx";
-import { flags } from "../../../flags.ts";
-import { useNavigate } from "@solidjs/router";
-import { VoiceDebug } from "./VoiceDebug.tsx";
-import { createPopup } from "../../../popup.tsx";
-import { useCtx } from "../../../context.ts";
-import { md } from "../../../markdown_utils.tsx";
-import { getColor } from "../../../colors.ts";
 import { useChannel } from "../../../channelctx.tsx";
+import { getColor } from "../../../colors.ts";
+import { useConfig } from "../../../config.tsx";
+import { useCtx } from "../../../context.ts";
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import { flags } from "../../../flags.ts";
+import { md } from "../../../markdown_utils.tsx";
+import { createPopup } from "../../../popup.tsx";
 import { AvatarWithStatus } from "../../../User.tsx";
+import { VoiceDebug } from "./VoiceDebug.tsx";
+import { useVoice } from "./voice-provider.tsx";
 
 export const Voice = (p: { channel: Channel }) => {
 	const config = useConfig();
@@ -40,18 +40,25 @@ export const Voice = (p: { channel: Channel }) => {
 	const [ch, chUpdate] = useChannel()!;
 	const currentUser = useCurrentUser();
 
-	createEffect(on(() => p.channel.id, (tid) => {
-		if (!voice.threadId || voice.threadId !== tid) actions.connect(tid);
-	}));
+	createEffect(
+		on(
+			() => p.channel.id,
+			(tid) => {
+				if (!voice.threadId || voice.threadId !== tid) actions.connect(tid);
+			},
+		),
+	);
 
 	const getName = (uid: string) => {
 		const user = api2.users.use(() => uid);
 		const room_member = p.channel.room_id
 			? api2.room_members.use(() => `${p.channel.room_id}!:${uid}`)
 			: null;
-		return ((room_member?.()?.membership === "Join" &&
-			room_member?.()?.override_name) ||
-			uid);
+		return (
+			(room_member?.()?.membership === "Join" &&
+				room_member?.()?.override_name) ||
+			uid
+		);
 	};
 
 	const getUsersWithoutStreams = () => {
@@ -123,21 +130,16 @@ export const Voice = (p: { channel: Channel }) => {
 											fullscreen: focused() === stream.id,
 											speaking:
 												((voice.rtc?.speaking.get(stream.user_id)?.flags ?? 0) &
-													1) === 1,
+													1) ===
+												1,
 										}}
 										onClick={() =>
-											setFocused((s) => (s === stream.id ? null : stream.id))}
+											setFocused((s) => (s === stream.id ? null : stream.id))
+										}
 									>
 										<div class="live">live</div>
-										<video
-											autoplay
-											playsinline
-											ref={videoRef!}
-											muted
-										/>
-										<div class="status">
-											{getName(stream.user_id)}
-										</div>
+										<video autoplay playsinline ref={videoRef!} muted />
+										<div class="status">{getName(stream.user_id)}</div>
 									</div>
 								);
 							})(voice.rtc?.streams.get(focused()!))}
@@ -157,24 +159,19 @@ export const Voice = (p: { channel: Channel }) => {
 												speaking:
 													((voice.rtc?.speaking.get(stream.user_id)?.flags ??
 														0) &
-														1) === 1,
+														1) ===
+													1,
 											}}
 											style={{
 												display: focused() === stream.id ? "none" : undefined,
 											}}
 											onClick={() =>
-												setFocused((s) => (s === stream.id ? null : stream.id))}
+												setFocused((s) => (s === stream.id ? null : stream.id))
+											}
 										>
 											<div class="live">live</div>
-											<video
-												autoplay
-												playsinline
-												ref={videoRef!}
-												muted
-											/>
-											<div class="status">
-												{getName(stream.user_id)}
-											</div>
+											<video autoplay playsinline ref={videoRef!} muted />
+											<div class="status">{getName(stream.user_id)}</div>
 										</div>
 									);
 								}}
@@ -191,9 +188,7 @@ export const Voice = (p: { channel: Channel }) => {
 										>
 											<Show when={user}>
 												<AvatarWithStatus user={user()} />
-												<div class="status">
-													{getName(uid)}
-												</div>
+												<div class="status">{getName(uid)}</div>
 											</Show>
 										</div>
 									);
@@ -212,8 +207,7 @@ export const Voice = (p: { channel: Channel }) => {
 					<span
 						class="markdown"
 						innerHTML={md(p.channel.description ?? "") as string}
-					>
-					</span>
+					></span>
 				</Show>
 				<Switch>
 					<Match when={p.channel.deleted_at}>{" (removed)"}</Match>
@@ -247,10 +241,7 @@ export const Voice = (p: { channel: Channel }) => {
 					</button>
 					<Show when={flags.has("voice_music")}>
 						<button onClick={actions.playMusic}>
-							<ToggleIcon
-								checked={voice.musicPlaying}
-								src={iconMusic}
-							/>
+							<ToggleIcon checked={voice.musicPlaying} src={iconMusic} />
 						</button>
 					</Show>
 					<button class="disconnect" onClick={actions.disconnect}>
@@ -281,9 +272,9 @@ export const VoiceTray = () => {
 	const calcConnectedDuration = () => {
 		const joinedAt = api2.voiceState?.joined_at;
 		if (joinedAt) {
-			return (Date.now() - Date.parse(joinedAt));
+			return Date.now() - Date.parse(joinedAt);
 		} else {
-			return (0);
+			return 0;
 		}
 	};
 

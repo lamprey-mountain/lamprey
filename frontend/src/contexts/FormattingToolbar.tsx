@@ -1,12 +1,12 @@
+import { TextSelection } from "prosemirror-state";
+import type { EditorView } from "prosemirror-view";
 import { Show } from "solid-js";
 import iconBold from "../assets/format-bold.png";
-import iconItalic from "../assets/format-italic.png";
 import iconCode from "../assets/format-code.png";
+import iconItalic from "../assets/format-italic.png";
 import iconStrikethrough from "../assets/format-strikethrough.png";
-import { useFormattingToolbar } from "./formatting-toolbar.tsx";
-import type { EditorView } from "prosemirror-view";
-import { TextSelection } from "prosemirror-state";
 import { setIsApplyingFormat } from "../components/features/editor/Editor";
+import { useFormattingToolbar } from "./formatting-toolbar.tsx";
 
 type FormattingToolbarProps = {
 	onClose: () => void;
@@ -48,9 +48,7 @@ const toggleFormat = (wrapper: string) => {
 			// Delete from end to start to preserve positions
 			tr.delete(to, to + wrapper.length);
 			tr.delete(from - wrapper.length, from);
-			tr.setSelection(
-				TextSelection.create(tr.doc, newFrom, newTo),
-			);
+			tr.setSelection(TextSelection.create(tr.doc, newFrom, newTo));
 		} else {
 			// Add formatting
 			tr.insertText(wrapper, from, to);

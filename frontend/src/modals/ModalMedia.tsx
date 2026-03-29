@@ -1,8 +1,8 @@
 import type { Media } from "sdk";
 import { createEffect, createSignal } from "solid-js";
 import { useCtx } from "../context";
-import { getHeight, getUrl, getWidth, Resize } from "../media/util";
 import { useModals } from "../contexts/modal";
+import { getHeight, getUrl, getWidth, Resize } from "../media/util";
 
 // currently only supports images!
 // though, it doesn't make much sense for video/audio/other media?

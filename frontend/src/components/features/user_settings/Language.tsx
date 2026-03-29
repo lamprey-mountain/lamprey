@@ -1,6 +1,6 @@
 import { createSignal, createUniqueId, For } from "solid-js";
-import { RadioDot } from "../../../icons";
 import { Dropdown } from "../../../atoms/Dropdown";
+import { RadioDot } from "../../../icons";
 
 const langs = [
 	{ labelNative: "english", labelLocalized: "english", id: "en-US" },

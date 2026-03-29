@@ -4,9 +4,10 @@ import type { EditorView } from "prosemirror-view";
 
 export const emojiPluginKey = new PluginKey("emoji");
 
-const segmenter = (typeof (Intl as any).Segmenter !== "undefined")
-	? new (Intl as any).Segmenter("en", { granularity: "grapheme" })
-	: null;
+const segmenter =
+	typeof (Intl as any).Segmenter !== "undefined"
+		? new (Intl as any).Segmenter("en", { granularity: "grapheme" })
+		: null;
 
 export const EMOJI_TEST = /\p{Emoji_Presentation}|\p{Extended_Pictographic}/u;
 

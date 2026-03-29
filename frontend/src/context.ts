@@ -1,9 +1,7 @@
-import {
-	type Accessor,
-	createContext,
-	type Setter,
-	useContext,
-} from "solid-js";
+import type { Placement } from "@floating-ui/dom";
+import type { Emitter } from "@solid-primitives/event-bus";
+import type * as i18n from "@solid-primitives/i18n";
+import type { ReactiveMap } from "@solid-primitives/map";
 import type {
 	Client,
 	Media,
@@ -12,22 +10,22 @@ import type {
 	Preferences,
 	Upload,
 } from "sdk";
-import type { ReactiveMap } from "@solid-primitives/map";
-import type { Emitter } from "@solid-primitives/event-bus";
-import type * as i18n from "@solid-primitives/i18n";
-import type en from "./i18n/en.tsx";
-import type { Placement } from "@floating-ui/dom";
+import {
+	type Accessor,
+	createContext,
+	type Setter,
+	useContext,
+} from "solid-js";
 import type { SlashCommands } from "./contexts/slash-commands";
+import type en from "./i18n/en.tsx";
 
 export type Slice = {
 	start: number;
 	end: number;
 };
 
-export type Attachment =
-	& { local_id: string }
-	& (
-		| {
+export type Attachment = { local_id: string } & (
+	| {
 			status: "uploading";
 			file: File;
 			progress: number;
@@ -35,13 +33,13 @@ export type Attachment =
 			filename?: string;
 			alt?: string;
 			spoiler?: boolean;
-		}
-		| {
+	  }
+	| {
 			status: "uploaded";
 			media: Media;
 			spoiler?: boolean;
-		}
-	);
+	  }
+);
 
 export type Data = {
 	cursor: Cursor;
@@ -79,10 +77,10 @@ export type Popout = {
 	placement?: Placement;
 };
 
-import type { ChannelContextT } from "./channelctx";
-import type { RoomContextT } from "./contexts/room.tsx";
-import type { DocumentContextT } from "./contexts/document.tsx";
 import type { SetStoreFunction } from "solid-js/store";
+import type { ChannelContextT } from "./channelctx";
+import type { DocumentContextT } from "./contexts/document.tsx";
+import type { RoomContextT } from "./contexts/room.tsx";
 
 // TODO: split apart this massive context into more granular contexts
 export type ChatCtx = {

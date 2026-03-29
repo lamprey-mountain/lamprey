@@ -1,7 +1,7 @@
 import type { Channel, Room, User } from "sdk";
-import { generatePfp } from "./pfp.ts";
-import { getThumbFromId } from "./media/util.tsx";
 import { getColor } from "./colors.ts";
+import { getThumbFromId } from "./media/util.tsx";
+import { generatePfp } from "./pfp.ts";
 
 export const generateNotificationIcon = async (author: User, room?: Room) => {
 	const c = new OffscreenCanvas(256, 256);

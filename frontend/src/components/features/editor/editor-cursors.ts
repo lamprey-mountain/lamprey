@@ -1,5 +1,3 @@
-import { Plugin, PluginKey } from "prosemirror-state";
-import { Decoration, DecorationSet } from "prosemirror-view";
 import {
 	autoUpdate,
 	computePosition,
@@ -7,15 +5,17 @@ import {
 	offset,
 	shift,
 } from "@floating-ui/dom";
-import type { Api } from "@/api";
-import { getColor } from "../../../colors.ts";
-import { base64UrlDecode, base64UrlEncode } from "./editor-utils.ts";
-import * as Y from "yjs";
+import { Plugin, PluginKey } from "prosemirror-state";
+import { Decoration, DecorationSet } from "prosemirror-view";
 import {
 	absolutePositionToRelativePosition,
 	relativePositionToAbsolutePosition,
 	ySyncPluginKey,
 } from "y-prosemirror";
+import * as Y from "yjs";
+import type { Api } from "@/api";
+import { getColor } from "../../../colors.ts";
+import { base64UrlDecode, base64UrlEncode } from "./editor-utils.ts";
 
 const cursorPluginKey = new PluginKey("cursorPlugin");
 
@@ -89,50 +89,53 @@ export const cursorPlugin = (
 					const to = Math.max(anchor, head);
 
 					if (from !== to) {
-						decos.push(Decoration.inline(from, to, {
-							style:
-								`background-color: color-mix(in srgb, ${data.color}, transparent 70%)`,
-						}));
+						decos.push(
+							Decoration.inline(from, to, {
+								style: `background-color: color-mix(in srgb, ${data.color}, transparent 70%)`,
+							}),
+						);
 					}
 
 					// render cursors
-					decos.push(Decoration.widget(head, (view) => {
-						const widget = document.createElement("span");
-						widget.classList.add("document-presence-cursor");
-						widget.style.borderLeft = `2px solid ${data.color}`;
+					decos.push(
+						Decoration.widget(
+							head,
+							(view) => {
+								const widget = document.createElement("span");
+								widget.classList.add("document-presence-cursor");
+								widget.style.borderLeft = `2px solid ${data.color}`;
 
-						const label = document.createElement("div");
-						label.classList.add("document-presence-name");
-						label.textContent = data.name;
-						label.style.backgroundColor = data.color;
+								const label = document.createElement("div");
+								label.classList.add("document-presence-name");
+								label.textContent = data.name;
+								label.style.backgroundColor = data.color;
 
-						widget.appendChild(label);
+								widget.appendChild(label);
 
-						const cleanup = autoUpdate(widget, label, () => {
-							computePosition(widget, label, {
-								placement: "top-start",
-								middleware: [
-									offset(4),
-									flip(),
-									shift({ padding: 4 }),
-								],
-							}).then(({ x, y }) => {
-								label.style.translate = `${x}px ${y}px`;
-							});
-						});
+								const cleanup = autoUpdate(widget, label, () => {
+									computePosition(widget, label, {
+										placement: "top-start",
+										middleware: [offset(4), flip(), shift({ padding: 4 })],
+									}).then(({ x, y }) => {
+										label.style.translate = `${x}px ${y}px`;
+									});
+								});
 
-						// FIXME: there may be multiple editors
-						(widget as any)._floating_cleanup = cleanup;
+								// FIXME: there may be multiple editors
+								(widget as any)._floating_cleanup = cleanup;
 
-						return widget;
-					}, {
-						key: userId,
-						destroy(dom) {
-							if ((dom as any)._floating_cleanup) {
-								(dom as any)._floating_cleanup();
-							}
-						},
-					}));
+								return widget;
+							},
+							{
+								key: userId,
+								destroy(dom) {
+									if ((dom as any)._floating_cleanup) {
+										(dom as any)._floating_cleanup();
+									}
+								},
+							},
+						),
+					);
 				}
 
 				return DecorationSet.create(state.doc, decos);
@@ -141,7 +144,8 @@ export const cursorPlugin = (
 		view(view) {
 			const onSync = ([msg]: any) => {
 				if (
-					msg.type === "DocumentPresence" && msg.channel_id === channelId &&
+					msg.type === "DocumentPresence" &&
+					msg.channel_id === channelId &&
 					msg.branch_id === branchId
 				) {
 					const currentUser = api.users.cache.get("@self");

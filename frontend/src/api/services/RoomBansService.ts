@@ -1,8 +1,8 @@
 import type { Pagination, RoomBan } from "sdk";
-import { BaseService } from "../core/Service";
 import { type Accessor, createResource, type Resource } from "solid-js";
-import { PaginatedList } from "../core/PaginatedList";
 import { logger } from "../../logger";
+import { PaginatedList } from "../core/PaginatedList";
+import { BaseService } from "../core/Service";
 
 const log = logger.for("api/room_bans");
 
@@ -32,7 +32,7 @@ export class RoomBansService extends BaseService<RoomBan> {
 			const data = await this.retryWithBackoff<RoomBan>(() =>
 				this.client.http.GET("/api/v1/room/{room_id}/ban/{user_id}", {
 					params: { path: { room_id, user_id } },
-				})
+				}),
 			);
 			return data;
 		} catch (error: any) {
@@ -85,7 +85,7 @@ export class RoomBansService extends BaseService<RoomBan> {
 							from: cursor,
 						},
 					},
-				})
+				}),
 			);
 
 			this.upsertBulk(data.items);

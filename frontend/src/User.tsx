@@ -1,3 +1,10 @@
+import {
+	autoUpdate,
+	computePosition,
+	type ReferenceElement,
+	shift,
+} from "@floating-ui/dom";
+import { useNavigate } from "@solidjs/router";
 import type {
 	PreferencesUser,
 	Role,
@@ -5,7 +12,6 @@ import type {
 	ThreadMember,
 	UserWithRelationship,
 } from "sdk";
-import { useApi2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
 import {
 	createEffect,
 	createSignal,
@@ -15,22 +21,16 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { Copyable } from "./utils/general";
-import { getThumbFromId } from "./media/util";
 import { createStore } from "solid-js/store";
-import { useCtx } from "./context.ts";
-import { useMenu } from "./contexts/mod.tsx";
-import { md } from "./markdown_utils.tsx";
-import {
-	autoUpdate,
-	computePosition,
-	type ReferenceElement,
-	shift,
-} from "@floating-ui/dom";
-import { usePermissions } from "./hooks/usePermissions.ts";
-import { useNavigate } from "@solidjs/router";
+import { useApi2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
 import { AvatarWithStatus } from "./avatar/UserAvatar.tsx";
+import { useCtx } from "./context.ts";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
+import { useMenu } from "./contexts/mod.tsx";
+import { usePermissions } from "./hooks/usePermissions.ts";
+import { md } from "./markdown_utils.tsx";
+import { getThumbFromId } from "./media/util";
+import { Copyable } from "./utils/general";
 
 type UserProps = {
 	room_member?: RoomMember;
@@ -38,9 +38,12 @@ type UserProps = {
 	user: UserWithRelationship;
 };
 
-const EditRoles = (
-	props: { x: number; y: number; user_id: string; room_id: string },
-) => {
+const EditRoles = (props: {
+	x: number;
+	y: number;
+	user_id: string;
+	room_id: string;
+}) => {
 	const api2 = useApi2();
 	const roomMembers2 = useRoomMembers2();
 	const member = roomMembers2.use(() => `${props.room_id}:${props.user_id}`);
@@ -71,18 +74,14 @@ const EditRoles = (
 		const reference = menuParentRef();
 		const floating = menuRef();
 		if (!reference || !floating) return;
-		const cleanup = autoUpdate(
-			reference,
-			floating,
-			() => {
-				computePosition(reference, floating, {
-					middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
-					placement: "right-start",
-				}).then(({ x, y, strategy }) => {
-					setMenuFloating({ x, y, strategy: strategy as any });
-				});
-			},
-		);
+		const cleanup = autoUpdate(reference, floating, () => {
+			computePosition(reference, floating, {
+				middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+				placement: "right-start",
+			}).then(({ x, y, strategy }) => {
+				setMenuFloating({ x, y, strategy: strategy as any });
+			});
+		});
 		onCleanup(cleanup);
 	});
 
@@ -120,8 +119,8 @@ const EditRoles = (
 		};
 
 	const getRoles = () =>
-		[...api2.roles.cache.values()].filter((r) =>
-			r.room_id === props.room_id && r.id !== props.room_id
+		[...api2.roles.cache.values()].filter(
+			(r) => r.room_id === props.room_id && r.id !== props.room_id,
 		);
 
 	const currentUser = useCurrentUser();
@@ -144,9 +143,7 @@ const EditRoles = (
 		>
 			<For each={getRoles()}>
 				{(r) => (
-					<label
-						classList={{ disabled: r.position >= permissions().rank }}
-					>
+					<label classList={{ disabled: r.position >= permissions().rank }}>
 						<input
 							type="checkbox"
 							checked={member()!.roles.includes(r.id)}
@@ -281,8 +278,10 @@ export function UserView(props: UserProps) {
 			<div
 				class="banner"
 				style={{
-					"background-image": props.user.banner &&
-							`url(${getThumbFromId(props.user.banner!, 640)})` || undefined,
+					"background-image":
+						(props.user.banner &&
+							`url(${getThumbFromId(props.user.banner!, 640)})`) ||
+						undefined,
 				}}
 			/>
 			<div class="header">
@@ -326,16 +325,13 @@ export function UserView(props: UserProps) {
 						<div
 							class="markdown"
 							innerHTML={md(props.user.description ?? "") as string}
-						>
-						</div>
+						></div>
 					</div>
 				</Show>
 
 				<Show when={(room_member() as any)?.membership === "Join"}>
 					<div class="roles">
-						<h3 class="dim">
-							Roles
-						</h3>
+						<h3 class="dim">Roles</h3>
 						<ul>
 							<For each={room_member()!.roles}>
 								{(role_id) => {
@@ -382,6 +378,6 @@ export function UserView(props: UserProps) {
 	);
 }
 
-export { RoomIcon } from "./avatar/RoomIcon.tsx";
 export { ChannelIcon, ChannelIconGdm } from "./avatar/ChannelIcon.tsx";
+export { RoomIcon } from "./avatar/RoomIcon.tsx";
 export { Avatar, AvatarWithStatus } from "./avatar/UserAvatar.tsx";

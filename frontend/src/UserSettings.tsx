@@ -1,5 +1,6 @@
-import { createMemo, For, Match, Show, Switch } from "solid-js";
 import { A } from "@solidjs/router";
+import type { User } from "sdk";
+import { createMemo, For, Match, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import {
 	Appearance,
@@ -17,7 +18,6 @@ import {
 	Sessions,
 	Voice,
 } from "./components/features/user_settings/mod.tsx";
-import type { User } from "sdk";
 
 const tabs = [
 	{ category: "account" },
@@ -44,7 +44,7 @@ const tabs = [
 	},
 ];
 
-type TabItem = typeof tabs[number];
+type TabItem = (typeof tabs)[number];
 type GroupedTab = {
 	category: string;
 	items: Exclude<TabItem, { category: string }>[];
@@ -56,7 +56,7 @@ function groupTabsByCategory(tabs: TabItem[]): GroupedTab[] {
 
 	for (const tab of tabs) {
 		if ("category" in tab) {
-			currentGroup = { category: (tab.category as any), items: [] };
+			currentGroup = { category: tab.category as any, items: [] };
 			groups.push(currentGroup);
 		} else {
 			(currentGroup as any)?.items?.push(tab);
@@ -84,7 +84,7 @@ export const UserSettings = (props: { user: User; page: string }) => {
 									class="dim"
 									style={{
 										"margin-top": groupIdx() === 0 ? "" : "12px",
-										"margin": "2px 8px",
+										margin: "2px 8px",
 									}}
 								>
 									{group.category}
@@ -92,9 +92,7 @@ export const UserSettings = (props: { user: User; page: string }) => {
 								<For each={group.items}>
 									{(tab) => (
 										<li>
-											<A href={`/settings/${tab.path}`}>
-												{tab.name}
-											</A>
+											<A href={`/settings/${tab.path}`}>{tab.name}</A>
 										</li>
 									)}
 								</For>
@@ -105,10 +103,7 @@ export const UserSettings = (props: { user: User; page: string }) => {
 			</nav>
 			<main classList={{ padded: !currentTab()?.noPad }}>
 				<Show when={currentTab()} fallback="unknown page">
-					<Dynamic
-						component={currentTab()?.component}
-						user={props.user}
-					/>
+					<Dynamic component={currentTab()?.component} user={props.user} />
 				</Show>
 			</main>
 		</div>

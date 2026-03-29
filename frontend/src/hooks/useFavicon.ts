@@ -1,7 +1,7 @@
-import { useCurrentUser } from "../contexts/currentUser.tsx";
-import { createEffect, createMemo, onCleanup } from "solid-js";
 import { useLocation } from "@solidjs/router";
+import { createEffect, createMemo, onCleanup } from "solid-js";
 import { useApi, useApi2, useChannels2 } from "@/api";
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { generateFavicon } from "../drawing.ts";
 
 export function useFavicon() {
@@ -60,9 +60,8 @@ export function useFavicon() {
 			if (!blob) return;
 
 			const url = URL.createObjectURL(blob);
-			let link: HTMLLinkElement | null = document.querySelector(
-				"link[rel~='icon']",
-			);
+			let link: HTMLLinkElement | null =
+				document.querySelector("link[rel~='icon']");
 			if (!link) {
 				link = document.createElement("link");
 				link.rel = "icon";

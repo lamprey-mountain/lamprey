@@ -1,10 +1,10 @@
+import type { ResourceFetcherInfo } from "solid-js";
 import { createResource, For, Show, type VoidProps } from "solid-js";
 import { useApi2 } from "@/api";
+import { Time } from "../../../atoms/Time.tsx";
 import { useCtx } from "../../../context.ts";
 import { useModals } from "../../../contexts/modal";
 import type { Pagination, SessionT, UserT } from "../../../types.ts";
-import type { ResourceFetcherInfo } from "solid-js";
-import { Time } from "../../../atoms/Time.tsx";
 import { Copyable } from "../../../utils/general";
 
 function parseUA(ua: string) {
@@ -29,14 +29,14 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 		() => props.user.id,
 		async (
 			user_id: string,
-			{ value }: ResourceFetcherInfo<
-				Pagination<SessionT> & { user_id: string }
-			>,
+			{
+				value,
+			}: ResourceFetcherInfo<Pagination<SessionT> & { user_id: string }>,
 		) => {
 			if (value?.user_id !== user_id) value = undefined;
 			if (value?.has_more === false) return value;
-			const lastId = value?.items.at(-1)?.id ??
-				"00000000-0000-0000-0000-000000000000";
+			const lastId =
+				value?.items.at(-1)?.id ?? "00000000-0000-0000-0000-000000000000";
 			const { data, error } = await ctx.client.http.GET("/api/v1/session", {
 				params: {
 					query: {
@@ -49,7 +49,7 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 			if (error) throw new Error(error);
 			return {
 				...data,
-				items: [...value?.items ?? [], ...data.items],
+				items: [...(value?.items ?? []), ...data.items],
 				user_id,
 			};
 		},
@@ -114,23 +114,25 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 								<div class="meta">
 									<Time date={new Date(s.last_seen_at)} />
 									<span class="bullet"></span>
-									{s.user_agent
-										? parseUA(s.user_agent).label
-										: <span class="unknown">unknown ua</span>}
+									{s.user_agent ? (
+										parseUA(s.user_agent).label
+									) : (
+										<span class="unknown">unknown ua</span>
+									)}
 									<span class="bullet"></span>
 									{s.ip_addr ?? <span class="unknown">unknown ip</span>}
 								</div>
 								<div class="dim">
 									<Copyable>{s.id}</Copyable>
-									<Show when={s.id === api2.session()?.id}>
-										{" (current)"}
-									</Show>
+									<Show when={s.id === api2.session()?.id}>{" (current)"}</Show>
 								</div>
 							</li>
 						)}
 					</For>
 				</ul>
-				<button type="button" onClick={fetchSessions}>more</button>
+				<button type="button" onClick={fetchSessions}>
+					more
+				</button>
 			</Show>
 		</div>
 	);

@@ -1,8 +1,8 @@
 import type { Pagination, Webhook } from "sdk";
-import { BaseService } from "../core/Service";
 import { createResource, type Resource } from "solid-js";
-import { PaginatedList } from "../core/PaginatedList";
 import { logger } from "../../logger";
+import { PaginatedList } from "../core/PaginatedList";
+import { BaseService } from "../core/Service";
 
 const log = logger.for("api/webhooks");
 
@@ -19,7 +19,7 @@ export class WebhooksService extends BaseService<Webhook> {
 		const data = await this.retryWithBackoff<Webhook>(() =>
 			this.client.http.GET("/api/v1/webhook/{webhook_id}", {
 				params: { path: { webhook_id: id } },
-			})
+			}),
 		);
 		this.upsert(data);
 		return data;
@@ -44,7 +44,7 @@ export class WebhooksService extends BaseService<Webhook> {
 							from: cursor,
 						},
 					},
-				})
+				}),
 			);
 
 			this.upsertBulk(data.items);

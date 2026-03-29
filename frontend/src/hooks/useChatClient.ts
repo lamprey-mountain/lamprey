@@ -1,23 +1,34 @@
-import { createEffect, createSignal, from, onCleanup } from "solid-js";
-import { createStore } from "solid-js/store";
-import { createClient, type Preferences, Room } from "sdk";
 import { createEmitter } from "@solid-primitives/event-bus";
-import { ReactiveMap } from "@solid-primitives/map";
-import { createResource } from "solid-js";
 import * as i18n from "@solid-primitives/i18n";
-import type en from "../i18n/en.tsx";
-import { useMouseTracking } from "./useMouseTracking.ts";
-import { SlashCommands } from "../contexts/slash-commands";
-import { registerDefaultSlashCommands } from "../default-slash-commands.ts";
+import { ReactiveMap } from "@solid-primitives/map";
 import { useLocation } from "@solidjs/router";
-import type { ChatCtx, Data, Events, MediaCtx, Popout } from "../context.ts";
-import type { ThreadsViewData } from "../context.ts";
-import type { Config } from "../config.tsx";
-import { flags } from "../flags.ts";
-import { RootStore } from "@/api/core/Store.ts";
-import { colors, logger } from "../logger.ts";
 import { DBSchema, type IDBPDatabase, openDB } from "idb";
+import { createClient, type Preferences, Room } from "sdk";
+import {
+	createEffect,
+	createResource,
+	createSignal,
+	from,
+	onCleanup,
+} from "solid-js";
+import { createStore } from "solid-js/store";
+import { RootStore } from "@/api/core/Store.ts";
+import type { Config } from "../config.tsx";
+import type {
+	ChatCtx,
+	Data,
+	Events,
+	MediaCtx,
+	Popout,
+	ThreadsViewData,
+} from "../context.ts";
+import { SlashCommands } from "../contexts/slash-commands";
 import { type ApiDB, migrations } from "../db.ts";
+import { registerDefaultSlashCommands } from "../default-slash-commands.ts";
+import { flags } from "../flags.ts";
+import type en from "../i18n/en.tsx";
+import { colors, logger } from "../logger.ts";
+import { useMouseTracking } from "./useMouseTracking.ts";
 
 export function useChatClient(config: Config) {
 	const events = createEmitter<{
@@ -149,7 +160,7 @@ export function useChatClient(config: Config) {
 		const path = loc.pathname.match(/^\/(channel)\/([^/]+)/);
 		if (!path) return;
 		ctx.setRecentChannels((s) =>
-			[path[2], ...s.filter((i) => i !== path[2])].slice(0, 11)
+			[path[2], ...s.filter((i) => i !== path[2])].slice(0, 11),
 		);
 	});
 

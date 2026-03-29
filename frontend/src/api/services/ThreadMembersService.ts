@@ -1,8 +1,8 @@
 import type { ThreadMember } from "sdk";
-import { BaseService } from "../core/Service";
 import { type Accessor, createResource, type Resource } from "solid-js";
-import { PaginatedList } from "../core/PaginatedList";
 import { logger } from "../../logger";
+import { PaginatedList } from "../core/PaginatedList";
+import { BaseService } from "../core/Service";
 
 export class ThreadMembersService extends BaseService<ThreadMember> {
 	protected cacheName = "thread_member";
@@ -44,7 +44,7 @@ export class ThreadMembersService extends BaseService<ThreadMember> {
 			const data = await this.retryWithBackoff<ThreadMember>(() =>
 				this.client.http.GET("/api/v1/thread/{thread_id}/member/{user_id}", {
 					params: { path: { thread_id, user_id } },
-				})
+				}),
 			);
 			return data;
 		} catch (error: any) {
@@ -91,9 +91,10 @@ export class ThreadMembersService extends BaseService<ThreadMember> {
 		list.setLoading(true);
 
 		try {
-			const data = await this.retryWithBackoff<
-				{ items: ThreadMember[]; has_more: boolean }
-			>(() =>
+			const data = await this.retryWithBackoff<{
+				items: ThreadMember[];
+				has_more: boolean;
+			}>(() =>
 				this.client.http.GET("/api/v1/thread/{thread_id}/member", {
 					params: {
 						path: { thread_id },
@@ -103,7 +104,7 @@ export class ThreadMembersService extends BaseService<ThreadMember> {
 							from: cursor,
 						},
 					},
-				})
+				}),
 			);
 
 			this.upsertBulk(data.items);

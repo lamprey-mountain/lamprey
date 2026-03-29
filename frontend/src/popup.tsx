@@ -1,4 +1,10 @@
-import { createEffect, createSignal, type JSX, onCleanup, Show } from "solid-js";
+import {
+	createEffect,
+	createSignal,
+	type JSX,
+	onCleanup,
+	Show,
+} from "solid-js";
 import {
 	clearDelegatedEvents,
 	DelegatedEvents,
@@ -80,11 +86,7 @@ export const createPopup = (props: {
 		View() {
 			return (
 				<Show when={popup()}>
-					{(p) => (
-						<Portal mount={p().document.body}>
-							{props.content()}
-						</Portal>
-					)}
+					{(p) => <Portal mount={p().document.body}>{props.content()}</Portal>}
 				</Show>
 			);
 		},

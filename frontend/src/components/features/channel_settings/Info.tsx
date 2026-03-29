@@ -1,21 +1,21 @@
+import type { EditorState } from "prosemirror-state";
 import type { Channel } from "sdk";
+import { createUpload } from "sdk";
 import { createSignal, For, onMount, Show, type VoidProps } from "solid-js";
-import { useCtx } from "../../../context.ts";
 import { useApi2, useChannels2 } from "@/api";
-import { useModals } from "../../../contexts/modal";
-import { Checkbox } from "../../../icons";
+import { CheckboxOption } from "../../../atoms/CheckboxOption";
 import {
 	DurationInput,
 	type DurationPreset,
 } from "../../../atoms/DurationInput.tsx";
-import { createUpload } from "sdk";
-import { ChannelIconGdm } from "../../../User.tsx";
 import { Savebar } from "../../../atoms/Savebar";
-import { CheckboxOption } from "../../../atoms/CheckboxOption";
-import { createEditor } from "../editor/Editor.tsx";
-import type { EditorState } from "prosemirror-state";
-import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
+import { useCtx } from "../../../context.ts";
 import { useAutocomplete } from "../../../contexts/autocomplete";
+import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
+import { useModals } from "../../../contexts/modal";
+import { Checkbox } from "../../../icons";
+import { ChannelIconGdm } from "../../../User.tsx";
+import { createEditor } from "../editor/Editor.tsx";
 
 const slowmodePresets: DurationPreset[] = [
 	{ label: "disabled", seconds: null as any },
@@ -54,9 +54,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		props.channel.slowmode_thread,
 	);
 	const [editingDefaultSlowmodeMessage, setEditingDefaultSlowmodeMessage] =
-		createSignal(
-			props.channel.default_slowmode_message,
-		);
+		createSignal(props.channel.default_slowmode_message);
 	const [editingUserLimit, setEditingUserLimit] = createSignal(
 		props.channel.user_limit ?? 0,
 	);
@@ -257,7 +255,8 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				<DurationInput
 					value={editingSlowmodeMessage()}
 					onInput={(d) =>
-						setEditingSlowmodeMessage(typeof d === "number" ? d : null)}
+						setEditingSlowmodeMessage(typeof d === "number" ? d : null)
+					}
 					presets={slowmodePresets}
 					placeholder="disabled"
 				/>
@@ -267,23 +266,25 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				<DurationInput
 					value={editingSlowmodeThread()}
 					onInput={(d) =>
-						setEditingSlowmodeThread(typeof d === "number" ? d : null)}
+						setEditingSlowmodeThread(typeof d === "number" ? d : null)
+					}
 					presets={slowmodePresets}
 					placeholder="disabled"
 				/>
 			</div>
 			<Show
-				when={channels2.cache.get(props.channel.id)?.type === "Forum" ||
-					channels2.cache.get(props.channel.id)?.type === "Text"}
+				when={
+					channels2.cache.get(props.channel.id)?.type === "Forum" ||
+					channels2.cache.get(props.channel.id)?.type === "Text"
+				}
 			>
 				<div>
 					<div class="dim">slowmode (messages default for threads)</div>
 					<DurationInput
 						value={editingDefaultSlowmodeMessage()}
 						onInput={(d) =>
-							setEditingDefaultSlowmodeMessage(
-								typeof d === "number" ? d : null,
-							)}
+							setEditingDefaultSlowmodeMessage(typeof d === "number" ? d : null)
+						}
 						presets={slowmodePresets}
 						placeholder="disabled"
 					/>
@@ -302,7 +303,8 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 							max="100"
 							value={editingUserLimit()}
 							onInput={(e) =>
-								setEditingUserLimit(Number(e.currentTarget.value))}
+								setEditingUserLimit(Number(e.currentTarget.value))
+							}
 							style="flex: 1;"
 						/>
 						<span style="min-width: 60px; text-align: right;">
@@ -393,11 +395,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 			</Show>
 			{/* TODO: add/remove tags from thread channels */}
 			{/* TODO: archive all threads in this channel (text, forum) */}
-			<Savebar
-				show={isDirty()}
-				onCancel={reset}
-				onSave={save}
-			/>
+			<Savebar show={isDirty()} onCancel={reset} onSave={save} />
 		</div>
 	);
 }

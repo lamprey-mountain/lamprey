@@ -12,10 +12,10 @@ import icX1 from "../assets/x-1.png";
 import icX2 from "../assets/x-2.png";
 import icX3 from "../assets/x-3.png";
 import icX4 from "../assets/x-4.png";
+import { Markdown } from "../atoms/Markdown.tsx";
+import { useCtx } from "../context.ts";
 import { permissions } from "../permissions.ts";
 import { cyrb53, LCG } from "../rng.ts";
-import { useCtx } from "../context.ts";
-import { Markdown } from "../atoms/Markdown.tsx";
 
 const icon = (type: "x" | "slash" | "check", seed: string) => {
 	const rand = LCG(cyrb53(seed));
@@ -83,29 +83,30 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 		const filtered = filteredPermissions();
 		const groups = new Map<string, PermissionItem[]>();
 
-		const groupOrder = props.roomType === "Default"
-			? [
-				"general", // channel overwrites
-				"room",
-				"members",
-				"messages",
-				"threads", // channel overwrites
-				"channels",
-				"voice",
-				"calendar",
-				"dangerous",
-			]
-			: [
-				"server",
-				"server members",
-				"room",
-				"members",
-				"messages",
-				"channels",
-				"voice",
-				"calendar",
-				"dangerous",
-			];
+		const groupOrder =
+			props.roomType === "Default"
+				? [
+						"general", // channel overwrites
+						"room",
+						"members",
+						"messages",
+						"threads", // channel overwrites
+						"channels",
+						"voice",
+						"calendar",
+						"dangerous",
+					]
+				: [
+						"server",
+						"server members",
+						"room",
+						"members",
+						"messages",
+						"channels",
+						"voice",
+						"calendar",
+						"dangerous",
+					];
 
 		groupOrder.forEach((group) => {
 			groups.set(group, []);
@@ -149,8 +150,8 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 								<ul>
 									<For each={perms}>
 										{(p) => {
-											const state = createMemo(() =>
-												props.permStates[p.id] || "inherit"
+											const state = createMemo(
+												() => props.permStates[p.id] || "inherit",
 											);
 											const [isExpanded, setIsExpanded] = createSignal(false);
 
@@ -160,8 +161,8 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 												: ((t as any)(`permissions.${p.id}.name`) ?? p.id);
 											const description = isOverwriteContext()
 												? ((t as any)(
-													`permission_overwrites.${p.id}.description`,
-												) ?? "")
+														`permission_overwrites.${p.id}.description`,
+													) ?? "")
 												: ((t as any)(`permissions.${p.id}.description`) ?? "");
 
 											return (
@@ -195,7 +196,8 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 																"state-inherit": state() === "inherit",
 															}}
 															onClick={() =>
-																props.onPermChange(p.id, "inherit")}
+																props.onPermChange(p.id, "inherit")
+															}
 															title="Default"
 														>
 															<img

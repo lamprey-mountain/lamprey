@@ -18,7 +18,7 @@ export class AuthService extends BaseService<never> {
 				params: {
 					path: { provider },
 				},
-			})
+			}),
 		);
 		return result.data.url;
 	}
@@ -27,7 +27,7 @@ export class AuthService extends BaseService<never> {
 		await this.retryWithBackoff(() =>
 			this.client.http.POST("/api/v1/auth/password", {
 				body,
-			})
+			}),
 		);
 	}
 
@@ -35,7 +35,7 @@ export class AuthService extends BaseService<never> {
 		return await this.retryWithBackoff(() =>
 			this.client.http.POST("/api/v1/session", {
 				body: {},
-			})
+			}),
 		);
 	}
 }

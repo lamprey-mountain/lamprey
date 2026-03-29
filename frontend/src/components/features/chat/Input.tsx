@@ -1,8 +1,14 @@
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import { leading, throttle } from "@solid-primitives/scheduled";
+import type { EditorState } from "prosemirror-state";
+import type { Channel } from "sdk";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	onCleanup,
+	onMount,
+} from "solid-js";
 import { For, Match, render, Show, Switch } from "solid-js/web";
-import { type Attachment, useCtx } from "../../../context.ts";
-import type { MessageT, ThreadT } from "../../../types.ts";
-import { createEditor } from "../editor/Editor.tsx";
 import { uuidv7 } from "uuidv7";
 import {
 	useApi2,
@@ -11,30 +17,24 @@ import {
 	useRoomMembers2,
 	useUsers2,
 } from "@/api";
-import { leading, throttle } from "@solid-primitives/scheduled";
-import {
-	createEffect,
-	createMemo,
-	createSignal,
-	onCleanup,
-	onMount,
-} from "solid-js";
-import { getMessageOverrideName } from "../../../utils/general";
-import type { EditorState } from "prosemirror-state";
-import { usePermissions } from "../../../hooks/usePermissions.ts";
-import cancelIc from "../../../assets/x.png";
-import { createTooltip } from "../../../atoms/Tooltip.tsx";
-import { EmojiButton } from "../../../atoms/EmojiButton.tsx";
-import type { Channel } from "sdk";
 import icDelete from "../../../assets/delete.png";
 import icEdit from "../../../assets/edit.png";
-import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
-import { useAutocomplete } from "../../../contexts/autocomplete";
+import cancelIc from "../../../assets/x.png";
+import { EmojiButton } from "../../../atoms/EmojiButton.tsx";
+import { createTooltip } from "../../../atoms/Tooltip.tsx";
 import { useChannel } from "../../../channelctx.tsx";
-import { useMessageSubmit } from "../../../hooks/useMessageSubmit.ts";
-import { useUploads } from "../../../contexts/uploads.tsx";
+import { type Attachment, useCtx } from "../../../context.ts";
+import { useAutocomplete } from "../../../contexts/autocomplete";
+import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
 import { useModals } from "../../../contexts/modal.tsx";
+import { useUploads } from "../../../contexts/uploads.tsx";
+import { useMessageSubmit } from "../../../hooks/useMessageSubmit.ts";
+import { usePermissions } from "../../../hooks/usePermissions.ts";
 import { getThumbFromId } from "../../../media/util.tsx";
+import type { MessageT, ThreadT } from "../../../types.ts";
+import { getMessageOverrideName } from "../../../utils/general";
+import { createEditor } from "../editor/Editor.tsx";
 
 type InputProps = {
 	channel: Channel;
@@ -69,9 +69,13 @@ export function Input(props: InputProps) {
 
 	const atts = () => ch.attachments;
 
-	const sendTyping = leading(throttle, () => {
-		channels2.typing(props.channel.id);
-	}, 8000);
+	const sendTyping = leading(
+		throttle,
+		() => {
+			channels2.typing(props.channel.id);
+		},
+		8000,
+	);
 
 	const getName = (user_id: string) => {
 		const user = users2.cache.get(user_id);
@@ -82,15 +86,18 @@ export function Input(props: InputProps) {
 
 		const member = roomMembers2.cache.get(`${room_id}:${user_id}`);
 		const m = member;
-		return (((m as any)?.membership as any) === "Join" && m?.override_name) ??
-			user?.name;
+		return (
+			(((m as any)?.membership as any) === "Join" && m?.override_name) ??
+			user?.name
+		);
 	};
 	const fmt = new (Intl as any).ListFormat();
 
 	const typingUsers = createMemo(() => {
 		const user_id = currentUser()?.id;
-		const user_ids = [...store.typing.get(props.channel.id)?.values() ?? []]
-			.filter((i) => i !== user_id);
+		const user_ids = [
+			...(store.typing.get(props.channel.id)?.values() ?? []),
+		].filter((i) => i !== user_id);
 		return user_ids;
 	});
 
@@ -98,18 +105,22 @@ export function Input(props: InputProps) {
 
 	const slowmodeShake = () => {
 		const SCALEX = 1.5;
-		const SCALEY = .4;
+		const SCALEY = 0.4;
 		const FRAMES = 10;
 		const rnd = (sx: number, sy: number) =>
 			`${Math.random() * sx - sx / 2}px ${Math.random() * sy - sy / 2}px`;
-		const translations = new Array(FRAMES).fill(0).map((_, i) =>
-			rnd(i * SCALEX, i * SCALEY)
-		).reverse();
+		const translations = new Array(FRAMES)
+			.fill(0)
+			.map((_, i) => rnd(i * SCALEX, i * SCALEY))
+			.reverse();
 		const reduceMotion = false; // TODO
-		slowmodeRef.animate({
-			translate: reduceMotion ? [] : translations,
-			color: ["red", ""],
-		}, { duration: 200, easing: "linear" });
+		slowmodeRef.animate(
+			{
+				translate: reduceMotion ? [] : translations,
+				color: ["red", ""],
+			},
+			{ duration: 200, easing: "linear" },
+		);
 	};
 
 	const onSubmit = (text: string) => {
@@ -211,7 +222,8 @@ export function Input(props: InputProps) {
 			const currentExpireAt = ch.slowmode_expire_at;
 			const newExpireAt = new Date(expireAt);
 			if (
-				!currentExpireAt || currentExpireAt.getTime() !== newExpireAt.getTime()
+				!currentExpireAt ||
+				currentExpireAt.getTime() !== newExpireAt.getTime()
 			) {
 				chUpdate("slowmode_expire_at", newExpireAt);
 			}
@@ -225,8 +237,10 @@ export function Input(props: InputProps) {
 	);
 
 	const locked = () => {
-		return !perms.has("MessageCreate") ||
-			(props.channel.locked && !perms.has("ThreadManage"));
+		return (
+			!perms.has("MessageCreate") ||
+			(props.channel.locked && !perms.has("ThreadManage"))
+		);
 	};
 
 	const bypassSlowmode = (): boolean =>
@@ -262,9 +276,10 @@ export function Input(props: InputProps) {
 			if (channelSlowmode) {
 				const mins = Math.floor(channelSlowmode / 60);
 				const secs = channelSlowmode % 60;
-				const time = mins === 0
-					? `slowmode set to ${secs}s`
-					: `slowmode set to ${mins}m${secs.toString().padStart(2, "0")}s`;
+				const time =
+					mins === 0
+						? `slowmode set to ${secs}s`
+						: `slowmode set to ${mins}m${secs.toString().padStart(2, "0")}s`;
 				return `slowmode set to ${time}${
 					bypassSlowmode() ? " (bypassed)" : ""
 				}`;
@@ -337,9 +352,7 @@ export function Input(props: InputProps) {
 						you are viewing older messages &bull; click to jump to present
 					</button>
 				</Match>
-				<Match
-					when={ch.reply_jump_source}
-				>
+				<Match when={ch.reply_jump_source}>
 					<button class="jump-to-latest" onClick={jumpToReplySource}>
 						you are viewing a reply &bull; click to jump to source
 					</button>
@@ -364,9 +377,11 @@ export function Input(props: InputProps) {
 					onChange={onChange}
 					onUpload={handleUpload}
 					channelId={props.channel.id}
-					placeholder={(locked() ?? false)
-						? "you cannot send messages here"
-						: `send a message...`}
+					placeholder={
+						(locked() ?? false)
+							? "you cannot send messages here"
+							: `send a message...`
+					}
 					disabled={locked() ?? false}
 				/>
 				<EmojiButton picked={onEmojiPick} />
@@ -392,15 +407,17 @@ export function Input(props: InputProps) {
 	);
 }
 
-export function RenderUploadItem(
-	props: { thread_id: string; att: Attachment },
-) {
+export function RenderUploadItem(props: {
+	thread_id: string;
+	att: Attachment;
+}) {
 	const ctx = useCtx();
 	const uploads = useUploads();
 	const [, modalCtl] = useModals();
-	const thumbUrl = props.att.status === "uploaded"
-		? getThumbFromId(props.att.media.id, 64)
-		: URL.createObjectURL(props.att.file);
+	const thumbUrl =
+		props.att.status === "uploaded"
+			? getThumbFromId(props.att.media.id, 64)
+			: URL.createObjectURL(props.att.file);
 
 	if (props.att.status !== "uploaded") {
 		onCleanup(() => {
@@ -442,15 +459,18 @@ export function RenderUploadItem(
 		uploads.resume(props.att.local_id);
 	}
 
-	const filename = props.att.status === "uploaded"
-		? props.att.media.filename
-		: props.att.filename ?? props.att.file.name;
+	const filename =
+		props.att.status === "uploaded"
+			? props.att.media.filename
+			: (props.att.filename ?? props.att.file.name);
 
 	return (
 		<>
 			<div class="upload-item">
-				<div class="thumb" style={{ "background-image": `url(${thumbUrl})` }}>
-				</div>
+				<div
+					class="thumb"
+					style={{ "background-image": `url(${thumbUrl})` }}
+				></div>
 				<div class="info">
 					<svg class="progress" viewBox="0 0 1 1" preserveAspectRatio="none">
 						<rect class="bar" height="1" width={getProgress(props.att)}></rect>
@@ -467,9 +487,7 @@ export function RenderUploadItem(
 								<Match
 									when={props.att.status === "uploading" && props.att.paused}
 								>
-									<button onClick={resume}>
-										⬆️
-									</button>
+									<button onClick={resume}>⬆️</button>
 								</Match>
 								<Match when={props.att.status === "uploading"}>
 									<button onClick={pause}>⏸️</button>
@@ -482,7 +500,8 @@ export function RenderUploadItem(
 											type: "attachment",
 											channel_id: props.thread_id,
 											local_id: props.att.local_id,
-										})}
+										})
+									}
 								>
 									<img class="icon" src={icEdit} />
 								</button>
@@ -512,8 +531,10 @@ const InputReply = (props: { thread: ThreadT; reply: MessageT }) => {
 		const member = roomMembers2.cache.get(`${room_id}:${user_id}`);
 
 		const m = member;
-		return (((m as any)?.membership as any) === "Join" && m?.override_name) ??
-			user?.name;
+		return (
+			(((m as any)?.membership as any) === "Join" && m?.override_name) ??
+			user?.name
+		);
 	};
 
 	const getNameNullable = (user_id?: string) => {

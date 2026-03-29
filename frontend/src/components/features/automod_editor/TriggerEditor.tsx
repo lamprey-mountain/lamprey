@@ -1,6 +1,5 @@
-import { createEffect, For, Match, Switch } from "solid-js";
-import { createSignal } from "solid-js";
 import type { AutomodTrigger } from "sdk";
+import { createEffect, createSignal, For, Match, Switch } from "solid-js";
 
 export interface TriggerEditorProps {
 	trigger: AutomodTrigger;
@@ -78,9 +77,7 @@ function TextRegexFields(props: {
 					onBlur={() => {
 						const clean = denyRaw()
 							.split("\n")
-							.map((d) =>
-								d.trim()
-							)
+							.map((d) => d.trim())
 							.filter((d) => d !== "");
 						setDenyRaw(clean.join("\n"));
 						props.update("deny", clean);
@@ -129,8 +126,7 @@ function TextLinksFields(props: {
 				<input
 					type="checkbox"
 					checked={props.trigger.whitelist || false}
-					onChange={(e) =>
-						props.update("whitelist", e.currentTarget.checked)}
+					onChange={(e) => props.update("whitelist", e.currentTarget.checked)}
 				/>
 				Is Whitelist (only allow these domains)
 			</label>
@@ -215,7 +211,8 @@ export function TriggerEditor(props: TriggerEditorProps) {
 					onChange={(e) =>
 						props.updateTriggerType(
 							e.currentTarget.value as AutomodTrigger["type"],
-						)}
+						)
+					}
 				>
 					<For each={types}>{(t) => <option value={t}>{t}</option>}</For>
 				</select>
@@ -225,9 +222,11 @@ export function TriggerEditor(props: TriggerEditorProps) {
 				<Switch>
 					<Match when={props.trigger.type === "TextKeywords"}>
 						<TextKeywordsFields
-							trigger={props.trigger as AutomodTrigger & {
-								type: "TextKeywords";
-							}}
+							trigger={
+								props.trigger as AutomodTrigger & {
+									type: "TextKeywords";
+								}
+							}
 							update={props.updateTriggerValue}
 						/>
 					</Match>
@@ -245,9 +244,11 @@ export function TriggerEditor(props: TriggerEditorProps) {
 					</Match>
 					<Match when={props.trigger.type === "TextBuiltin"}>
 						<TextBuiltinFields
-							trigger={props.trigger as AutomodTrigger & {
-								type: "TextBuiltin";
-							}}
+							trigger={
+								props.trigger as AutomodTrigger & {
+									type: "TextBuiltin";
+								}
+							}
 							update={props.updateTriggerValue}
 						/>
 					</Match>

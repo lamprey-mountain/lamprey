@@ -5,6 +5,8 @@ import {
 	openDB,
 	type StoreNames,
 } from "idb";
+import type { EmojiCustom, Invite, ThreadMember, Webhook } from "sdk";
+import type { RevisionContent } from "@/api/services/DocumentsService.ts";
 import type {
 	ChannelT,
 	MediaT,
@@ -15,8 +17,6 @@ import type {
 	SessionT,
 	UserT,
 } from "./types.ts";
-import type { RevisionContent } from "@/api/services/DocumentsService.ts";
-import type { EmojiCustom, Invite, ThreadMember, Webhook } from "sdk";
 
 export interface ApiDB extends DBSchema {
 	user: {

@@ -1,8 +1,8 @@
+import { useNavigate } from "@solidjs/router";
 import { createEffect, Show } from "solid-js";
 import { useApi2, useInvites2 } from "@/api";
 import { useCtx } from "./context.ts";
 import { md } from "./markdown_utils.tsx";
-import { useNavigate } from "@solidjs/router";
 import { getThumbFromId } from "./media/util.tsx";
 
 const Title = (props: { title?: string }) => {
@@ -20,7 +20,7 @@ export const RouteInviteInner = (props: { code: string }) => {
 	const name = () => {
 		const i = invite();
 		if (!i) return "unknown";
-		switch (((i as any).target.type as any)) {
+		switch ((i as any).target.type as any) {
 			case "Room":
 				return ((i as any).target.room as any)?.name;
 			case "Thread":
@@ -49,7 +49,7 @@ export const RouteInviteInner = (props: { code: string }) => {
 	const joinName = () => {
 		const i = invite();
 		if (!i) return "join";
-		switch ((i.target.type as any)) {
+		switch (i.target.type as any) {
 			case "Room":
 				return "join";
 			case "Thread":
@@ -115,12 +115,13 @@ export const RouteInviteInner = (props: { code: string }) => {
 									<Show when={(invite()?.target as any)?.type === "Room"}>
 										<div
 											class="markdown"
-											innerHTML={md(
-												((invite()?.target as any)?.room?.description ??
-													"") as string,
-											) as string}
-										>
-										</div>
+											innerHTML={
+												md(
+													((invite()?.target as any)?.room?.description ??
+														"") as string,
+												) as string
+											}
+										></div>
 										<div class="dim">
 											{(invite()?.target as any)?.room?.member_count ?? 0}{" "}
 											members,{" "}
@@ -129,8 +130,12 @@ export const RouteInviteInner = (props: { code: string }) => {
 										</div>
 									</Show>
 									<div style="display:flex;justify-content:end;gap:4px">
-										<button class="link" onClick={reject}>cancel</button>
-										<button class="primary" onClick={join}>{joinName()}</button>
+										<button class="link" onClick={reject}>
+											cancel
+										</button>
+										<button class="primary" onClick={join}>
+											{joinName()}
+										</button>
 									</div>
 								</div>
 							</div>

@@ -1,6 +1,6 @@
 import type { PushCreate, PushInfo } from "sdk";
-import { BaseService } from "../core/Service";
 import { logger } from "../../logger";
+import { BaseService } from "../core/Service";
 
 const log = logger.for("api/push");
 
@@ -14,7 +14,7 @@ export class PushService extends BaseService<PushInfo> {
 
 	async fetch(id: string): Promise<PushInfo> {
 		return await this.retryWithBackoff<PushInfo>(() =>
-			this.client.http.GET("/api/v1/push")
+			this.client.http.GET("/api/v1/push"),
 		);
 	}
 
@@ -22,7 +22,7 @@ export class PushService extends BaseService<PushInfo> {
 		const data = await this.retryWithBackoff<PushInfo>(() =>
 			this.client.http.POST("/api/v1/push", {
 				body,
-			})
+			}),
 		);
 		this.upsert(data);
 		return data;

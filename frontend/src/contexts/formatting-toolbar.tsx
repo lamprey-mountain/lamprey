@@ -1,3 +1,4 @@
+import type { ReferenceElement } from "@floating-ui/dom";
 import {
 	type Accessor,
 	createContext,
@@ -6,7 +7,6 @@ import {
 	type Setter,
 	useContext,
 } from "solid-js";
-import type { ReferenceElement } from "@floating-ui/dom";
 
 export type FormattingToolbarState = {
 	visible: boolean;

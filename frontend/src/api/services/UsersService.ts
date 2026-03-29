@@ -12,7 +12,7 @@ export class UsersService extends BaseService<UserWithRelationship> {
 		return await this.retryWithBackoff<UserWithRelationship>(() =>
 			this.client.http.GET("/api/v1/user/{user_id}", {
 				params: { path: { user_id: id } },
-			})
+			}),
 		);
 	}
 
@@ -38,13 +38,13 @@ export class UsersService extends BaseService<UserWithRelationship> {
 
 	async createGuest(name: string): Promise<void> {
 		await this.retryWithBackoff(() =>
-			this.client.http.POST("/api/v1/guest", { body: { name } })
+			this.client.http.POST("/api/v1/guest", { body: { name } }),
 		);
 	}
 
 	async setPreferences(body: any): Promise<void> {
 		await this.retryWithBackoff(() =>
-			this.client.http.PUT("/api/v1/preferences", { body })
+			this.client.http.PUT("/api/v1/preferences", { body }),
 		);
 	}
 }

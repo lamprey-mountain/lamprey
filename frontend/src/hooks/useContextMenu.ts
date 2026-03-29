@@ -16,22 +16,18 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 		) as HTMLElement | null;
 		const mediaEl = targetEl.closest(
 			"a:not(.nav), img:not(.avatar), video, audio",
-		) as
-			| HTMLElement
-			| null;
+		) as HTMLElement | null;
 		console.log("[menu] target elements", { menuEl, mediaEl, targetEl });
 		if (!menuEl) return;
 		if (mediaEl && mediaEl !== menuEl) return;
 
 		const getData = (key: string) => {
 			const target = menuEl.closest(`[${key}]`) as HTMLElement | null;
-			return target
-				?.dataset[
-					key.slice("data-".length).replace(
-						/-([a-z])/g,
-						(_, c) => c.toUpperCase(),
-					)
-				];
+			return target?.dataset[
+				key
+					.slice("data-".length)
+					.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
+			];
 		};
 
 		let menu: Partial<Menu> | null = null;
@@ -65,7 +61,8 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 			const message = store.messages.cache.get(message_id!);
 			if (!message) return;
 			const channel_id = (message as any).channel_id;
-			const version_id = (message as any).latest_version?.version_id ??
+			const version_id =
+				(message as any).latest_version?.version_id ??
 				(message as any).version_id;
 			menu = {
 				type: "message",

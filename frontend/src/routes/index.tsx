@@ -1,12 +1,6 @@
-import { useCurrentUser } from "../contexts/currentUser.tsx";
-import { Navigate, type RouteSectionProps } from "@solidjs/router";
+import { Navigate, type RouteSectionProps, useNavigate } from "@solidjs/router";
+import { type Channel, SERVER_ROOM_ID } from "sdk";
 import type { ParentProps, VoidProps } from "solid-js";
-import { useApi2, useChannels2, useRooms2 } from "@/api";
-import { useCtx } from "../context.ts";
-import type { ChannelSearch } from "../context.ts";
-import { flags } from "../flags.ts";
-import { ChannelNav } from "../ChannelNav.tsx";
-import { RoomHome, RoomMembers } from "../Room.tsx";
 import {
 	createEffect,
 	createMemo,
@@ -17,50 +11,59 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { RoomSettings } from "../RoomSettings.tsx";
+import { createStore } from "solid-js/store";
+import { useApi2, useChannels2, useRooms2 } from "@/api";
+import icX from "../assets/x-1.png";
+import { Resizable } from "../atoms/Resizable.tsx";
+import { Calendar } from "../Calendar.tsx";
+import { Category } from "../Category.tsx";
+import { ChannelNav } from "../ChannelNav.tsx";
 import { ChannelSettings } from "../ChannelSettings.tsx";
+import {
+	ChannelContext,
+	createInitialChannelState,
+	useChannel,
+} from "../channelctx.tsx";
 import { ChatMain } from "../components/features/chat/Chat.tsx";
 import { ChatHeader } from "../components/features/chat/ChatHeader.tsx";
-import { RoomHeader } from "../RoomHeader.tsx";
+import { PinnedMessages } from "../components/features/chat/PinnedMessages.tsx";
 import { SearchResults } from "../components/features/chat/SearchResults.tsx";
 import { ThreadMembers } from "../components/features/chat/Thread.tsx";
-import { Home } from "../Home.tsx";
-import { Voice, VoiceTray } from "../components/features/voice/Voice.tsx";
-import { Feed } from "../Feed.tsx";
-import { RouteInviteInner } from "../Invite.tsx";
-import { Forum } from "../Forum.tsx";
-import { Forum2, Forum2Thread, Forum2ThreadPage } from "../Forum2.tsx";
-import { Category } from "../Category.tsx";
-import { type Channel, SERVER_ROOM_ID } from "sdk";
-import { PinnedMessages } from "../components/features/chat/PinnedMessages.tsx";
-import { Resizable } from "../atoms/Resizable.tsx";
-import { UserProfile } from "../UserProfile.tsx";
-import { Inbox } from "../Inbox.tsx";
-import { RoomNav } from "../RoomNav.tsx";
-import { ChannelContext, useChannel } from "../channelctx.tsx";
-import { createInitialChannelState } from "../channelctx.tsx";
-import {
-	createInitialRoomState,
-	RoomContext,
-	useRoom,
-} from "../contexts/room.tsx";
-import { createStore } from "solid-js/store";
-import type { RoomT } from "../types.ts";
-import { Friends } from "../Friends.tsx";
-import { Calendar } from "../Calendar.tsx";
 import { Document } from "../components/features/editor/Document.tsx";
-import { Wiki } from "../Wiki.tsx";
 import { DocumentHistory } from "../components/features/editor/DocumentHistory.tsx";
+import { Voice, VoiceTray } from "../components/features/voice/Voice.tsx";
+import type { ChannelSearch } from "../context.ts";
+import { useCtx } from "../context.ts";
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 import {
 	createInitialDocumentState,
 	DocumentContext,
 	useDocument,
 } from "../contexts/document.tsx";
-import { shouldUseThreadSidebar } from "../utils/channel.ts";
-import { useNavigate } from "@solidjs/router";
 import { useModals } from "../contexts/modal.tsx";
+import {
+	createInitialRoomState,
+	RoomContext,
+	useRoom,
+} from "../contexts/room.tsx";
+import { Feed } from "../Feed.tsx";
+import { Forum } from "../Forum.tsx";
+import { Forum2, Forum2Thread, Forum2ThreadPage } from "../Forum2.tsx";
+import { Friends } from "../Friends.tsx";
+import { flags } from "../flags.ts";
+import { Home } from "../Home.tsx";
+import { Inbox } from "../Inbox.tsx";
+import { RouteInviteInner } from "../Invite.tsx";
+import { RoomHome, RoomMembers } from "../Room.tsx";
+import { RoomHeader } from "../RoomHeader.tsx";
+import { RoomNav } from "../RoomNav.tsx";
+import { RoomSettings } from "../RoomSettings.tsx";
+import type { RoomT } from "../types.ts";
 import { ChannelIcon } from "../User.tsx";
-import icX from "../assets/x-1.png";
+import { UserProfile } from "../UserProfile.tsx";
+import { shouldUseThreadSidebar } from "../utils/channel.ts";
+import { Wiki } from "../Wiki.tsx";
+
 export { RouteAuthorize } from "../Oauth.tsx";
 
 const Title = (props: { title?: string }) => {
@@ -297,11 +300,9 @@ const ChannelSidebar = (props: {
 		ctx.preferences().frontend.showMembers !== false;
 	const showPinned = () => ch.pinned_view ?? false;
 	const showVoiceChat = () =>
-		props.channel.type === "Voice" &&
-		ch.voice_chat_sidebar_open;
+		props.channel.type === "Voice" && ch.voice_chat_sidebar_open;
 	const showHistory = () =>
-		props.channel.type === "Document" &&
-		ch.history_view;
+		props.channel.type === "Document" && ch.history_view;
 	const showThreadChatSidebar = () => ch.thread_chat_sidebar_thread_id;
 
 	return (
@@ -442,8 +443,7 @@ export const RouteChannel = (p: ParentProps<RouteSectionProps>) => {
 		if (!ch) return t("loading");
 		if (ch.type === "Dm") {
 			const user_id = currentUser()?.id;
-			return ch.recipients?.find((i) => i.id !== user_id)?.name ??
-				"dm";
+			return ch.recipients?.find((i) => i.id !== user_id)?.name ?? "dm";
 		}
 
 		return room() && ch.room_id ? `${ch.name} - ${room()!.name}` : ch.name;
@@ -465,12 +465,14 @@ export const RouteChannel = (p: ParentProps<RouteSectionProps>) => {
 									<Voice channel={channel()!} />
 								</Match>
 								<Match
-									when={channel()!.type === "Text" ||
+									when={
+										channel()!.type === "Text" ||
 										channel()!.type === "Dm" ||
 										channel()!.type === "Gdm" ||
 										channel()!.type === "Announcement" ||
 										channel()!.type === "ThreadPublic" ||
-										channel()!.type === "ThreadPrivate"}
+										channel()!.type === "ThreadPrivate"
+									}
 								>
 									<ChatHeader channel={channel()!} />
 									<ChatMain channel={channel()!} />
@@ -532,11 +534,7 @@ export const RouteHome = (_props: ParentProps<RouteSectionProps>) => {
 
 export const RouteFeed = (_props: ParentProps<RouteSectionProps>) => {
 	return (
-		<LayoutDefault
-			title="feed"
-			showChannelNav={false}
-			showVoiceTray={true}
-		>
+		<LayoutDefault title="feed" showChannelNav={false} showVoiceTray={true}>
 			<Feed />
 		</LayoutDefault>
 	);
@@ -592,11 +590,7 @@ export function RouteInbox(p: RouteSectionProps) {
 
 export function RouteFriends() {
 	return (
-		<LayoutDefault
-			title="friends"
-			showChannelNav={true}
-			showVoiceTray={true}
-		>
+		<LayoutDefault title="friends" showChannelNav={true} showVoiceTray={true}>
 			<Friends />
 		</LayoutDefault>
 	);
@@ -606,14 +600,8 @@ export function RouteNotFound() {
 	const { t } = useCtx();
 
 	return (
-		<LayoutDefault
-			title="not found"
-			showChannelNav={true}
-			showVoiceTray={true}
-		>
-			<div style="padding:8px">
-				{t("not_found")}
-			</div>
+		<LayoutDefault title="not found" showChannelNav={true} showVoiceTray={true}>
+			<div style="padding:8px">{t("not_found")}</div>
 		</LayoutDefault>
 	);
 }

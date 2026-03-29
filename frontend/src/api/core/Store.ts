@@ -8,22 +8,33 @@ import {
 	type Session,
 } from "sdk";
 import { type Accessor, createSignal } from "solid-js";
-import { RoomsService } from "../services/RoomsService";
 import { ChannelsService } from "../services/ChannelsService";
-import { UsersService } from "../services/UsersService";
-import { RolesService } from "../services/RolesService";
-import { SessionsService } from "../services/SessionsService";
-import { RoomMembersService } from "../services/RoomMembersService";
-import { ThreadMembersService } from "../services/ThreadMembersService";
 import { MessagesService } from "../services/MessagesService";
 import { NotificationService } from "../services/NotificationService";
 import { PreferencesService } from "../services/PreferencesService";
+import { RolesService } from "../services/RolesService";
+import { RoomMembersService } from "../services/RoomMembersService";
+import { RoomsService } from "../services/RoomsService";
+import { SessionsService } from "../services/SessionsService";
+import { ThreadMembersService } from "../services/ThreadMembersService";
+import { UsersService } from "../services/UsersService";
+
 export { MemberListService } from "../services/MemberListService";
-import { MemberListService } from "../services/MemberListService";
-import { InvitesService } from "../services/InvitesService";
+
+import type { Emitter } from "@solid-primitives/event-bus";
+import { ReactiveMap } from "@solid-primitives/map";
+import type { IDBPDatabase } from "idb";
+import type { UserWithRelationship, VoiceState } from "sdk";
+import { logger } from "../../logger";
+import { stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal } from "../../notification-util.ts";
+import { AuditLogService } from "../services/AuditLogService";
 import { AuthService } from "../services/AuthService";
 import { DmsService } from "../services/DmsService";
+import { DocumentsService } from "../services/DocumentsService";
 import { EmojiService } from "../services/EmojiService";
+import { InboxService } from "../services/InboxService";
+import { InvitesService } from "../services/InvitesService";
+import { MemberListService } from "../services/MemberListService";
 import { PushService } from "../services/PushService";
 import { ReactionsService } from "../services/ReactionsService";
 import { RoomAnalyticsService } from "../services/RoomAnalyticsService";
@@ -31,17 +42,6 @@ import { RoomBansService } from "../services/RoomBansService";
 import { TagsService } from "../services/TagsService";
 import { ThreadsService } from "../services/ThreadsService";
 import { WebhooksService } from "../services/WebhooksService";
-import { AuditLogService } from "../services/AuditLogService";
-import { InboxService } from "../services/InboxService";
-import { DocumentsService } from "../services/DocumentsService";
-import type { Emitter } from "@solid-primitives/event-bus";
-import type { IDBPDatabase } from "idb";
-import { ReactiveMap } from "@solid-primitives/map";
-import type { UserWithRelationship, VoiceState } from "sdk";
-import { logger } from "../../logger";
-import {
-	stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal,
-} from "../../notification-util.ts";
 
 const storeLog = logger.for("api/rooms");
 
@@ -181,14 +181,14 @@ export class RootStore {
 		this.setSession(msg.session);
 		if (msg.user) {
 			// Set @self alias first using session user_id
-			const userId = msg.session.status === "Unauthorized"
-				? undefined
-				: msg.session.user_id;
+			const userId =
+				msg.session.status === "Unauthorized" ? undefined : msg.session.user_id;
 			storeLog.debug("Setting @self alias", {
 				userId,
-				session_user_id: msg.session.status === "Unauthorized"
-					? undefined
-					: msg.session.user_id,
+				session_user_id:
+					msg.session.status === "Unauthorized"
+						? undefined
+						: msg.session.user_id,
 			});
 			if (userId) {
 				const userWithRelationship: UserWithRelationship = {
@@ -232,9 +232,7 @@ export class RootStore {
 			}
 		} else if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
 			this.rooms.upsert(msg.room);
-		} else if (
-			msg.type === "ChannelCreate" || msg.type === "ChannelUpdate"
-		) {
+		} else if (msg.type === "ChannelCreate" || msg.type === "ChannelUpdate") {
 			if ("channel" in msg) {
 				this.channels.upsert(msg.channel);
 			}
@@ -256,7 +254,8 @@ export class RootStore {
 		} else if (msg.type === "SessionCreate") {
 			const s = this.session();
 			if (
-				msg.session?.id === s?.id && s?.status === "Unauthorized" &&
+				msg.session?.id === s?.id &&
+				s?.status === "Unauthorized" &&
 				msg.session.status === "Authorized"
 			) {
 				location.reload();
@@ -266,7 +265,8 @@ export class RootStore {
 				this.setSession(msg.session);
 			}
 		} else if (
-			msg.type === "RoomMemberCreate" || msg.type === "RoomMemberUpdate"
+			msg.type === "RoomMemberCreate" ||
+			msg.type === "RoomMemberUpdate"
 		) {
 			this.roomMembers.upsert(msg.member);
 			this.memberLists.updateMember(msg.member.user_id, msg.member.room_id);
@@ -293,9 +293,8 @@ export class RootStore {
 			this.notifications.handleMessageCreate(m);
 
 			const session = this.session();
-			const sessionUserId = session?.status === "Unauthorized"
-				? undefined
-				: session?.user_id;
+			const sessionUserId =
+				session?.status === "Unauthorized" ? undefined : session?.user_id;
 			const isOwnMessage = m.author_id === sessionUserId;
 			if (isOwnMessage) {
 				const channel = this.channels.cache.get(m.channel_id);
@@ -316,9 +315,10 @@ export class RootStore {
 			this.messages.handleMessageDelete(msg.channel_id, msg.message_id);
 		} else if (msg.type === "PreferencesGlobal") {
 			const session = this.session();
-			const sessionUserId = session && session.status !== "Unauthorized"
-				? session.user_id
-				: undefined;
+			const sessionUserId =
+				session && session.status !== "Unauthorized"
+					? session.user_id
+					: undefined;
 			if (msg.user_id === sessionUserId) {
 				this.preferences.cache.set("@self", msg.config);
 				this.preferences._loaded = true;

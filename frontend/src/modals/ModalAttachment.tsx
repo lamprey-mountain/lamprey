@@ -1,11 +1,11 @@
 import { createSignal, onMount, Show } from "solid-js";
-import { Checkbox } from "../icons";
-import { Modal } from "./mod";
 import { useApi2 } from "@/api";
-import { useModals } from "../contexts/modal";
-import { useCtx } from "../context";
-import { getThumbFromId } from "../media/util";
 import { CheckboxOption } from "../atoms/CheckboxOption";
+import { useCtx } from "../context";
+import { useModals } from "../contexts/modal";
+import { Checkbox } from "../icons";
+import { getThumbFromId } from "../media/util";
+import { Modal } from "./mod";
 
 type ModalAttachmentProps = {
 	channel_id: string;
@@ -100,11 +100,12 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 				<h2>attachment</h2>
 				<div
 					style="height:70px;width:100px;background-size:cover;background-position:center;border-radius:4px;margin:8px 0"
-					style:background-image={attachment()?.status === "uploaded"
-						? `url(${getThumbFromId((attachment() as any).media.id, 64)})`
-						: "none"}
-				>
-				</div>
+					style:background-image={
+						attachment()?.status === "uploaded"
+							? `url(${getThumbFromId((attachment() as any).media.id, 64)})`
+							: "none"
+					}
+				></div>
 				<label style="display:block;margin:4px 0">
 					<h3 class="dim">filename</h3>
 					<input
@@ -144,21 +145,25 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 						checked={exif()}
 						onChange={setExif}
 						seed="modal-attachment-exif"
-						disabled={false /* TODO: once strip_exif is set to true, it cannot be set to false */}
+						disabled={
+							false /* TODO: once strip_exif is set to true, it cannot be set to false */
+						}
 					>
 						{/* TODO: styles for disabled checkbox */}
 						<Checkbox checked={exif()} seed="modal-attachment-exif" />
 						<label for="opt-exif">
 							<div>Include metadata</div>
-							<div class="dim">
-								Preserve EXIF data from the original file
-							</div>
+							<div class="dim">Preserve EXIF data from the original file</div>
 						</label>
 					</CheckboxOption>
 				</Show>
 				<div class="bottom">
-					<button type="button" onClick={() => modalCtl.close()}>cancel</button>
-					<button type="submit" class="primary">save</button>
+					<button type="button" onClick={() => modalCtl.close()}>
+						cancel
+					</button>
+					<button type="submit" class="primary">
+						save
+					</button>
 				</div>
 			</form>
 		</Modal>

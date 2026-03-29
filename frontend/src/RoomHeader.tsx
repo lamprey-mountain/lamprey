@@ -1,15 +1,13 @@
 import type { Room } from "sdk";
-import { useCtx } from "./context.ts";
-import { SearchInput } from "./components/features/chat/SearchInput.tsx";
 import icMembers from "./assets/members.png";
+import { SearchInput } from "./components/features/chat/SearchInput.tsx";
+import { useCtx } from "./context.ts";
 
 type RoomHeaderProps = {
 	room: Room;
 };
 
-export const RoomHeader = (
-	props: RoomHeaderProps,
-) => {
+export const RoomHeader = (props: RoomHeaderProps) => {
 	const ctx = useCtx();
 
 	const toggleMembers = () => {
@@ -32,10 +30,7 @@ export const RoomHeader = (
 			<b>home</b>
 			<div style="flex:1"></div>
 			<SearchInput room={props.room} />
-			<button
-				onClick={toggleMembers}
-				title="Show members"
-			>
+			<button onClick={toggleMembers} title="Show members">
 				<img class="icon" src={icMembers} />
 			</button>
 		</header>

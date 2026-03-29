@@ -1,6 +1,6 @@
-import { BaseService } from "../core/Service";
-import type { HistoryPagination, User, UserWithRelationship } from "sdk";
 import { ReactiveMap } from "@solid-primitives/map";
+import type { HistoryPagination, User, UserWithRelationship } from "sdk";
+import { BaseService } from "../core/Service";
 
 export type RevisionContent = {
 	data?: {
@@ -61,7 +61,7 @@ export class DocumentsService extends BaseService<RevisionContent> {
 							},
 						},
 					},
-				)
+				),
 			);
 			this.revisionCache.set(cacheKey, data);
 			return data;
@@ -100,7 +100,7 @@ export class DocumentsService extends BaseService<RevisionContent> {
 						query: params,
 					},
 				},
-			)
+			),
 		);
 
 		for (const user of data.users) {
@@ -140,7 +140,7 @@ export class DocumentsService extends BaseService<RevisionContent> {
 					},
 					parseAs: "arrayBuffer",
 				},
-			)
+			),
 		);
 	}
 }

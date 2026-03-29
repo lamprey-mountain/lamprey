@@ -1,3 +1,6 @@
+import { useNavigate } from "@solidjs/router";
+import type { Token, Tokens } from "marked";
+import type { Channel } from "sdk";
 import {
 	createContext,
 	createEffect,
@@ -18,14 +21,11 @@ import {
 	useRoomMembers2,
 	useUsers2,
 } from "@/api";
-import { md } from "../markdown_utils";
-import { useNavigate } from "@solidjs/router";
 import { useUserPopout } from "../contexts/mod";
-import { getEmojiUrl } from "../media/util";
 import { getTwemoji } from "../emoji";
-import type { Token, Tokens } from "marked";
-import type { Channel } from "sdk";
 import { flags } from "../flags";
+import { md } from "../markdown_utils";
+import { getEmojiUrl } from "../media/util";
 
 // --- Context ---
 
@@ -54,8 +54,8 @@ function UserMention(props: { id: string }) {
 					setUserView(null);
 				} else {
 					setUserView({
-						user_id: (props.id as any),
-						room_id: (ctx?.channel?.room_id as any),
+						user_id: props.id as any,
+						room_id: ctx?.channel?.room_id as any,
 						channel_id: ctx?.channel?.id,
 						ref: currentTarget,
 						source: "message",
@@ -148,16 +148,17 @@ function CodeBlock(props: { text: string; lang?: string }) {
 	};
 
 	const isHtml = () =>
-		props.lang === "html" || props.lang === "htm" || props.lang === "xml" ||
+		props.lang === "html" ||
+		props.lang === "htm" ||
+		props.lang === "xml" ||
 		props.lang === "svg";
 
 	const isRust = () => props.lang === "rust" || props.lang === "rs";
 
 	const openPlayground = () => {
-		const url =
-			`https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&code=${
-				encodeURIComponent(props.text)
-			}`;
+		const url = `https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&code=${encodeURIComponent(
+			props.text,
+		)}`;
 		window.open(url, "_blank");
 	};
 
@@ -191,7 +192,10 @@ function CodeBlock(props: { text: string; lang?: string }) {
 					when={preview()}
 					fallback={
 						<pre>
-							<code ref={ref} class={props.lang ? `language-${props.lang}` : ""}>
+							<code
+								ref={ref}
+								class={props.lang ? `language-${props.lang}` : ""}
+							>
 								{props.text}
 							</code>
 						</pre>
@@ -208,10 +212,12 @@ function CodeBlock(props: { text: string; lang?: string }) {
 
 function TwemojiText(props: { text: string }) {
 	const escape = (html: string) => {
-		return html.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(
-			/>/g,
-			"&gt;",
-		).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+		return html
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;")
+			.replace(/'/g, "&#39;");
 	};
 
 	const html = createMemo(() => getTwemoji(escape(props.text)));
@@ -223,9 +229,7 @@ function TwemojiText(props: { text: string }) {
 
 function RenderTokens(props: { tokens?: Token[] }) {
 	return (
-		<For each={props.tokens}>
-			{(token) => <TokenView token={token} />}
-		</For>
+		<For each={props.tokens}>{(token) => <TokenView token={token} />}</For>
 	);
 }
 

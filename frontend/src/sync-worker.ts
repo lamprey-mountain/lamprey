@@ -13,25 +13,30 @@ import {
 } from "sdk";
 
 // from tab to worker
-type PortMessage = {
-	type: "connect";
-	apiUrl: string;
-} | {
-	type: "websocket";
-	data: unknown;
-};
+type PortMessage =
+	| {
+			type: "connect";
+			apiUrl: string;
+	  }
+	| {
+			type: "websocket";
+			data: unknown;
+	  };
 
 // from worker to tab
-type PortResponse = {
-	type: "state";
-	state: ClientState;
-} | {
-	type: "sync";
-	event: MessageEnvelope;
-} | {
-	type: "websocket";
-	data: unknown;
-};
+type PortResponse =
+	| {
+			type: "state";
+			state: ClientState;
+	  }
+	| {
+			type: "sync";
+			event: MessageEnvelope;
+	  }
+	| {
+			type: "websocket";
+			data: unknown;
+	  };
 
 // information about a tab
 type PortData = {

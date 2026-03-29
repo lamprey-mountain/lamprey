@@ -1,3 +1,4 @@
+import { debounce } from "@solid-primitives/scheduled";
 import {
 	createEffect,
 	createResource,
@@ -6,11 +7,10 @@ import {
 	on,
 	Show,
 } from "solid-js";
-import { formatBytes, getUrl, type MediaProps } from "./util.tsx";
 import { useCtx } from "../context.ts";
-import { debounce } from "@solid-primitives/scheduled";
 import { useModals } from "../contexts/modal";
 import { flags } from "../flags";
+import { formatBytes, getUrl, type MediaProps } from "./util.tsx";
 
 // 16KiB
 const MAX_PREVIEW_SIZE = 16384;
@@ -79,10 +79,9 @@ export const TextView = (props: MediaProps) => {
 	const openPlayground = async () => {
 		const t = await getFullText();
 		if (t) {
-			const url =
-				`https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&code=${
-					encodeURIComponent(t)
-				}`;
+			const url = `https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&code=${encodeURIComponent(
+				t,
+			)}`;
 			window.open(url, "_blank");
 		} else {
 			const [, modalCtl] = useModals();
@@ -103,8 +102,7 @@ export const TextView = (props: MediaProps) => {
 				const cell = el as HTMLElement;
 				delete cell.dataset.highlighted;
 				cell.classList.add(
-					"language-" +
-						props.media.filename.match(/\.([a-z0-9]+)$/)?.[1],
+					"language-" + props.media.filename.match(/\.([a-z0-9]+)$/)?.[1],
 				);
 				hljs.highlightElement(cell);
 			}
@@ -168,8 +166,8 @@ export const TextView = (props: MediaProps) => {
 				</Show>
 				<Show when={props.media.size > MAX_PREVIEW_SIZE}>
 					<div class="warn-truncated">
-						<span class="warn">warning:</span>{" "}
-						file preview truncated (too long!)
+						<span class="warn">warning:</span> file preview truncated (too
+						long!)
 					</div>
 				</Show>
 			</div>

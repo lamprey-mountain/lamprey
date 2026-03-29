@@ -1,8 +1,5 @@
 import { useNavigate } from "@solidjs/router";
-import { useApi2, useChannels2, useTags2, useThreadMembers2 } from "@/api";
-import { useCtx } from "../context.ts";
-import { usePermissions } from "../hooks/usePermissions.ts";
-import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
+import type { Channel, NotifsChannel, Tag } from "sdk";
 import {
 	createEffect,
 	createResource,
@@ -12,12 +9,15 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
+import { useApi2, useChannels2, useTags2, useThreadMembers2 } from "@/api";
 import { timeAgo } from "../atoms/Time.tsx";
-import type { Channel, NotifsChannel, Tag } from "sdk";
-import { useModals } from "../contexts/modal";
-import { Checkbox } from "../icons.tsx";
-import { useReadTracking } from "../contexts/read-tracking.tsx";
+import { useCtx } from "../context.ts";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
+import { useModals } from "../contexts/modal";
+import { useReadTracking } from "../contexts/read-tracking.tsx";
+import { usePermissions } from "../hooks/usePermissions.ts";
+import { Checkbox } from "../icons.tsx";
+import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 
 // the context menu for channels
 export function ChannelMenu(props: { channel_id: string }) {
@@ -33,8 +33,8 @@ export function ChannelMenu(props: { channel_id: string }) {
 	const currentUser = useCurrentUser();
 	const self_id = () => currentUser()?.id ?? "";
 	const channel = channels2.use(() => props.channel_id);
-	const parentChan = channels2.use(() =>
-		(channel() as any)?.parent_id as string
+	const parentChan = channels2.use(
+		() => (channel() as any)?.parent_id as string,
 	);
 
 	const { has: hasPermission } = usePermissions(
@@ -45,12 +45,11 @@ export function ChannelMenu(props: { channel_id: string }) {
 
 	// FIXME: documents are threads if they are in wikis
 	const isThread = () =>
-		channel()?.type === "ThreadPublic" || channel()?.type === "ThreadPrivate" ||
+		channel()?.type === "ThreadPublic" ||
+		channel()?.type === "ThreadPrivate" ||
 		channel()?.type === "ThreadForum2";
 
-	const self_channel_member = threadMembers2.use(
-		() => props.channel_id,
-	);
+	const self_channel_member = threadMembers2.use(() => props.channel_id);
 	const copyId = () => navigator.clipboard.writeText(props.channel_id);
 	const markRead = async () => {
 		const c = channels2.cache.get(props.channel_id);
@@ -133,22 +132,25 @@ export function ChannelMenu(props: { channel_id: string }) {
 		}
 	};
 
-	const [tagsResource] = createResource(() => {
-		const c = channel();
-		const p = parentChan();
-		if (!c || !p || !c.room_id) return null;
-		if (!p.type.includes("Forum")) return null;
-		return p.id;
-	}, async (forumId) => {
-		if (!forumId) return [];
-		try {
-			const result = await tags2.list(forumId, false);
-			return result.items;
-		} catch (e) {
-			console.error("Failed to fetch tags:", e);
-			return [];
-		}
-	});
+	const [tagsResource] = createResource(
+		() => {
+			const c = channel();
+			const p = parentChan();
+			if (!c || !p || !c.room_id) return null;
+			if (!p.type.includes("Forum")) return null;
+			return p.id;
+		},
+		async (forumId) => {
+			if (!forumId) return [];
+			try {
+				const result = await tags2.list(forumId, false);
+				return result.items;
+			} catch (e) {
+				console.error("Failed to fetch tags:", e);
+				return [];
+			}
+		},
+	);
 
 	const [tagSearchQuery, setTagSearchQuery] = createSignal("");
 	const [tagsSearchResource] = createResource(
@@ -206,8 +208,11 @@ export function ChannelMenu(props: { channel_id: string }) {
 				<Item onClick={settings("/webhooks")}>webhooks</Item>
 			</Submenu>
 			<Show
-				when={channel() && isThread() &&
-					(parentChan()?.type === "Forum" || parentChan()?.type === "Forum2")}
+				when={
+					channel() &&
+					isThread() &&
+					(parentChan()?.type === "Forum" || parentChan()?.type === "Forum2")
+				}
 			>
 				<Submenu content={"tags"} onOpen={() => tagSearchInputRef?.focus()}>
 					<div class="tags">
@@ -265,8 +270,9 @@ export function ChannelMenu(props: { channel_id: string }) {
 							}}
 						</For>
 						<Show
-							when={tagsResource.state === "ready" &&
-								displayedTags().length === 0}
+							when={
+								tagsResource.state === "ready" && displayedTags().length === 0
+							}
 						>
 							<Item disabled>no tags available</Item>
 						</Show>
@@ -289,11 +295,15 @@ export function ChannelMenu(props: { channel_id: string }) {
 				</Item>
 			</Show>
 			<Show
-				when={isThread()
-					? hasPermission("ThreadManage")
-					: hasPermission("ChannelManage")}
+				when={
+					isThread()
+						? hasPermission("ThreadManage")
+						: hasPermission("ChannelManage")
+				}
 			>
-				<Item onClick={removeChannel} color="danger">remove</Item>
+				<Item onClick={removeChannel} color="danger">
+					remove
+				</Item>
 			</Show>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>
@@ -331,9 +341,10 @@ function ChannelNotificationMenu(props: { channel: Channel }) {
 	};
 
 	const setMute = (duration_ms: number | null) => {
-		const expires_at = duration_ms === null
-			? null
-			: new Date(Date.now() + duration_ms).toISOString();
+		const expires_at =
+			duration_ms === null
+				? null
+				: new Date(Date.now() + duration_ms).toISOString();
 		setNotifs({ mute: { expires_at } });
 	};
 
@@ -358,7 +369,8 @@ function ChannelNotificationMenu(props: { channel: Channel }) {
 				<Item
 					onClick={() => setNotifs({ messages: undefined, threads: undefined })}
 					classList={{
-						selected: channelConfig()?.notifs.messages === undefined &&
+						selected:
+							channelConfig()?.notifs.messages === undefined &&
 							channelConfig()?.notifs.threads === undefined,
 					}}
 				>
@@ -471,7 +483,8 @@ function ChannelNotificationMenu(props: { channel: Channel }) {
 					<div>unmute</div>
 					<Show when={channelConfig()?.notifs.mute?.expires_at}>
 						<div class="subtext">
-							unmutes {timeAgo(
+							unmutes{" "}
+							{timeAgo(
 								new Date(Date.parse(channelConfig()!.notifs.mute!.expires_at!)),
 							)}
 						</div>

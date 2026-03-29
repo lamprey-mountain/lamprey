@@ -1,25 +1,3 @@
-import { type Command, EditorState, TextSelection } from "prosemirror-state";
-import { DOMParser } from "prosemirror-model";
-import { history, redo, undo } from "prosemirror-history";
-import { keymap } from "prosemirror-keymap";
-import { createEditor as createBaseEditor } from "./mod.tsx";
-import { schema } from "./schema.ts";
-import { md } from "../../../markdown_utils.tsx";
-import {
-	createListContinueCommand,
-	createWrapCommand,
-} from "./editor-utils.ts";
-import { createToolbarPlugin } from "./toolbar-plugin.ts";
-import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
-import { createEmojiPlugin } from "./emoji-plugin.ts";
-import { createMarkdownHighlightPlugin } from "./markdown-highlight-plugin.ts";
-import { createPlaceholderPlugin } from "./mod.tsx";
-import { createEditorNodeViews } from "./node-views.tsx";
-import {
-	createMarkdownInputRulesPlugin,
-	joinBlockquoteBackward,
-	joinBlockquoteForward,
-} from "./input-rules-plugin.ts";
 import {
 	chainCommands,
 	deleteSelection,
@@ -28,7 +6,31 @@ import {
 	selectNodeBackward,
 	selectNodeForward,
 } from "prosemirror-commands";
+import { history, redo, undo } from "prosemirror-history";
+import { keymap } from "prosemirror-keymap";
+import { DOMParser } from "prosemirror-model";
+import { type Command, EditorState, TextSelection } from "prosemirror-state";
+import { md } from "../../../markdown_utils.tsx";
+import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
 import { createPastePlugin, createSubmitPlugin } from "./core-plugins.ts";
+import {
+	createListContinueCommand,
+	createWrapCommand,
+} from "./editor-utils.ts";
+import { createEmojiPlugin } from "./emoji-plugin.ts";
+import {
+	createMarkdownInputRulesPlugin,
+	joinBlockquoteBackward,
+	joinBlockquoteForward,
+} from "./input-rules-plugin.ts";
+import { createMarkdownHighlightPlugin } from "./markdown-highlight-plugin.ts";
+import {
+	createEditor as createBaseEditor,
+	createPlaceholderPlugin,
+} from "./mod.tsx";
+import { createEditorNodeViews } from "./node-views.tsx";
+import { schema } from "./schema.ts";
+import { createToolbarPlugin } from "./toolbar-plugin.ts";
 
 let isApplyingFormat = false;
 export const setIsApplyingFormat = (value: boolean) => {
@@ -98,13 +100,13 @@ export const createEditor = (
 					"Ctrl-i": createWrapCommand("*"),
 					"Ctrl-`": createWrapCommand("`"),
 					"Shift-Enter": createListContinueCommand(),
-					"Backspace": chainCommands(
+					Backspace: chainCommands(
 						deleteSelection,
 						joinBlockquoteBackward,
 						joinBackward,
 						selectNodeBackward,
 					),
-					"Delete": chainCommands(
+					Delete: chainCommands(
 						deleteSelection,
 						joinBlockquoteForward,
 						joinForward,

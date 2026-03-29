@@ -1,10 +1,10 @@
+import { useNavigate } from "@solidjs/router";
+import type { Channel } from "sdk";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { useChannels2, useThreads2 } from "@/api";
 import { useCtx } from "../../../context.ts";
-import { ChannelIcon } from "../../../User.tsx";
-import { useNavigate } from "@solidjs/router";
-import type { Channel } from "sdk";
 import { useModals } from "../../../contexts/modal.tsx";
+import { ChannelIcon } from "../../../User.tsx";
 
 export const ThreadPopout = (props: { channel_id: string }) => {
 	const threads2 = useThreads2();
@@ -22,12 +22,12 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 		const activeList = activeThreads()?.state.ids ?? [];
 		const archivedList = archivedThreads()?.state.ids ?? [];
 
-		const active = activeList.map((id) => channels2.cache.get(id)).filter((
-			t,
-		): t is Channel => t !== undefined);
-		const archived = archivedList.map((id) => channels2.cache.get(id)).filter((
-			t,
-		): t is Channel => t !== undefined);
+		const active = activeList
+			.map((id) => channels2.cache.get(id))
+			.filter((t): t is Channel => t !== undefined);
+		const archived = archivedList
+			.map((id) => channels2.cache.get(id))
+			.filter((t): t is Channel => t !== undefined);
 
 		const query = search().toLowerCase();
 		const filter = (t: Channel) => t.name.toLowerCase().includes(query);
@@ -89,7 +89,9 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 					onInput={(e) => setSearch(e.currentTarget.value)}
 					class="search-pad"
 				/>
-				<button class="primary" onClick={onCreateThread}>create thread</button>
+				<button class="primary" onClick={onCreateThread}>
+					create thread
+				</button>
 			</div>
 			<div class="thread-list">
 				<Show when={sortedThreads().joined.length}>
@@ -97,10 +99,7 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 				</Show>
 				<For each={sortedThreads().joined}>
 					{(thread) => (
-						<div
-							class="thread-item"
-							onClick={() => onThreadClick(thread)}
-						>
+						<div class="thread-item" onClick={() => onThreadClick(thread)}>
 							<ChannelIcon channel={thread} />
 							<span>{thread.name}</span>
 							<span class="badge">Joined</span>
@@ -112,10 +111,7 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 				</Show>
 				<For each={sortedThreads().notJoined}>
 					{(thread) => (
-						<div
-							class="thread-item"
-							onClick={() => onThreadClick(thread)}
-						>
+						<div class="thread-item" onClick={() => onThreadClick(thread)}>
 							<ChannelIcon channel={thread} />
 							<span>{thread.name}</span>
 						</div>
@@ -127,19 +123,19 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 				<Show when={sortedThreads().archived.length > 0}>
 					<For each={sortedThreads().archived}>
 						{(thread) => (
-							<div
-								class="thread-item"
-								onClick={() => onThreadClick(thread)}
-							>
+							<div class="thread-item" onClick={() => onThreadClick(thread)}>
 								<ChannelIcon channel={thread} />
 								<span>{thread.name}</span>
 							</div>
 						)}
 					</For>
 					<Show
-						when={(sortedThreads().joined.length +
-							sortedThreads().notJoined.length +
-							sortedThreads().archived.length) === 0}
+						when={
+							sortedThreads().joined.length +
+								sortedThreads().notJoined.length +
+								sortedThreads().archived.length ===
+							0
+						}
 					>
 						<div style="text-align:center">no threads :(</div>
 					</Show>

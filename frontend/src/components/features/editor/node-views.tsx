@@ -1,15 +1,16 @@
 import { getOwner, runWithOwner, type VoidComponent } from "solid-js";
 import { render } from "solid-js/web";
-import { getEmojiUrl } from "../../../media/util.tsx";
 import { getTwemoji, getTwemojiUrl } from "../../../emoji.ts";
+import { getEmojiUrl } from "../../../media/util.tsx";
 
 export const createNodeViews = () => {
 	const owner = getOwner();
 
-	return <T extends Record<string, any>,>(
+	return <T extends Record<string, any>>(
 		propsFn: (node: any) => T,
 		Component: VoidComponent<T>,
-	) => (node: any) => {
+	) =>
+		(node: any) => {
 			const dom = document.createElement("span");
 			dom.classList.add("node-view-wrapper");
 

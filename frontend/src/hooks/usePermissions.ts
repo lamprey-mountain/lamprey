@@ -1,12 +1,12 @@
-import { createEffect, createMemo, untrack } from "solid-js";
 import type { Permission } from "sdk";
+import { createEffect, createMemo, untrack } from "solid-js";
 import { useApi2, useUsers2 } from "@/api";
+import { logger } from "../logger";
 import {
 	calculatePermissions,
 	type PermissionContext,
 	type ResolvedPermissions,
 } from "../permission-calculator";
-import { logger } from "../logger";
 
 const permHookLog = logger.for("permissions");
 

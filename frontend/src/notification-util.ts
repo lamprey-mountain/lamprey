@@ -15,8 +15,8 @@ export async function stripMarkdownAndResolveMentions(
 	processedContent = processedContent.replace(
 		userMentionRegex,
 		(match, userId) => {
-			const mentioned = (mentions?.users as any[])?.find((u) =>
-				u.id === userId
+			const mentioned = (mentions?.users as any[])?.find(
+				(u) => u.id === userId,
 			);
 			if (mentioned) return `@${mentioned.resolved_name}`;
 			const user = users.cache.get(userId);
@@ -30,8 +30,8 @@ export async function stripMarkdownAndResolveMentions(
 	processedContent = processedContent.replace(
 		channelMentionRegex,
 		(match, channelId) => {
-			const mentioned = (mentions?.channels as any[])?.find((c) =>
-				c.id === channelId
+			const mentioned = (mentions?.channels as any[])?.find(
+				(c) => c.id === channelId,
 			);
 			if (mentioned) return `#${mentioned.name}`;
 			const channel = channels.cache.get(channelId);

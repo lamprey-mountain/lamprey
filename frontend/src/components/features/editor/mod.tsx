@@ -1,15 +1,17 @@
-import { type EditorState, Plugin, PluginKey } from "prosemirror-state";
 import { DOMParser } from "prosemirror-model";
+import { type EditorState, Plugin, PluginKey } from "prosemirror-state";
+
 type NodeViewConstructor = any;
+
 import {
 	Decoration,
 	DecorationSet,
-	type EditorProps as ProsemirrorEditorProps,
 	EditorView,
+	type EditorProps as ProsemirrorEditorProps,
 } from "prosemirror-view";
 import { onCleanup, onMount } from "solid-js";
-import { schema as defaultSchema } from "./schema";
 import { pastePluginKey, submitPluginKey } from "./core-plugins.ts";
+import { schema as defaultSchema } from "./schema";
 
 const placeholderPluginKey = new PluginKey<string>("placeholder");
 
@@ -84,7 +86,8 @@ function scheduleUpdate(instance: ViewInstance, newProps: EditorViewProps) {
 		const { view, placeholderPlugin } = instance;
 		if (view.isDestroyed) return;
 
-		const needsUpdate = instance.lastOnSubmit !== newProps.onSubmit ||
+		const needsUpdate =
+			instance.lastOnSubmit !== newProps.onSubmit ||
 			instance.lastSubmitOnEnter !== newProps.submitOnEnter ||
 			instance.lastOnUpload !== newProps.onUpload ||
 			instance.lastPlaceholder !== newProps.placeholder;
@@ -213,8 +216,7 @@ export const createEditor = (opts: EditorOptions) => {
 					aria-label="chat input"
 					aria-placeholder={props.placeholder}
 					aria-multiline="true"
-				>
-				</div>
+				></div>
 			);
 		},
 	};

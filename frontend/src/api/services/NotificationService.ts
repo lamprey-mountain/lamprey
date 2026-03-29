@@ -1,8 +1,8 @@
 import type { Message } from "sdk";
-import type { RootStore } from "../core/Store";
+import { generateNotificationIcon } from "../../drawing";
 import { notificationPermission } from "../../notification";
 import { stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal } from "../../notification-util";
-import { generateNotificationIcon } from "../../drawing";
+import type { RootStore } from "../core/Store";
 
 export class NotificationService {
 	constructor(private store: RootStore) {}
@@ -14,8 +14,10 @@ export class NotificationService {
 
 		// Determine if mentioned
 		if (
-			me && m.author_id !== me.id &&
-			(m.latest_version as any).type === "DefaultMarkdown" && mentions
+			me &&
+			m.author_id !== me.id &&
+			(m.latest_version as any).type === "DefaultMarkdown" &&
+			mentions
 		) {
 			if (mentions.users?.some((u: any) => u.id === me.id)) {
 				is_mentioned = true;
@@ -59,9 +61,10 @@ export class NotificationService {
 			const title = `${author?.name ?? "Someone"} in #${
 				channel?.name ?? "channel"
 			}`;
-			const rawContent = (m.latest_version as any).type === "DefaultMarkdown"
-				? (m.latest_version as any).content ?? ""
-				: "";
+			const rawContent =
+				(m.latest_version as any).type === "DefaultMarkdown"
+					? ((m.latest_version as any).content ?? "")
+					: "";
 
 			// Helper wrapper for the util
 			const processedContent = await stripMarkdownAndResolveMentionsOriginal(
@@ -103,12 +106,15 @@ export class NotificationService {
 		// TTS notifications
 		const ttsEnabled = preferences.frontend["tts_notifs"] === "yes";
 		const ttsMode = preferences.notifs.tts;
-		const shouldSpeak = ttsEnabled && ttsMode !== "Nothing" &&
+		const shouldSpeak =
+			ttsEnabled &&
+			ttsMode !== "Nothing" &&
 			(ttsMode === "Always" || (ttsMode === "Mentions" && is_mentioned));
 		const isOwnMessage = m.author_id === me?.id;
 
 		if (
-			shouldSpeak && !isOwnMessage &&
+			shouldSpeak &&
+			!isOwnMessage &&
 			(m.latest_version as any).type === "DefaultMarkdown"
 		) {
 			const author = this.store.users.get(m.author_id);

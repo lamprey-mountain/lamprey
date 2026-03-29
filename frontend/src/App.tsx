@@ -1,3 +1,5 @@
+import type { RouteSectionProps } from "@solidjs/router";
+import { Route, Router } from "@solidjs/router";
 import {
 	type Component,
 	createEffect,
@@ -6,22 +8,37 @@ import {
 	type ParentProps,
 	Show,
 } from "solid-js";
-import type { RouteSectionProps } from "@solidjs/router";
 import { Portal } from "solid-js/web";
-import { Route, Router } from "@solidjs/router";
-import { Debug } from "./Debug.tsx";
-import { UserSettings } from "./UserSettings.tsx";
-import { chatctx, useCtx } from "./context.ts";
-import { Config, ConfigProvider, useConfig } from "./config.tsx";
-import { useAppConfig } from "./hooks/useAppConfig.ts";
-import { useChatClient } from "./hooks/useChatClient.ts";
-import { useFavicon } from "./hooks/useFavicon.ts";
-import { useGlobalEventHandlers } from "./hooks/useGlobalEventHandlers.ts";
-import { OverlayProvider } from "./contexts/overlay.tsx";
+import { RootStoreContext, useApi } from "@/api";
+import { CalendarPopupProvider } from "./Calendar.tsx";
 import {
 	useVoice,
 	VoiceProvider,
 } from "./components/features/voice/voice-provider.tsx";
+import { Config, ConfigProvider, useConfig } from "./config.tsx";
+import { chatctx, useCtx } from "./context.ts";
+import {
+	CurrentUserProvider,
+	useCurrentUser,
+} from "./contexts/currentUser.tsx";
+import { MemberListProvider } from "./contexts/memberlist.tsx";
+import {
+	AutocompleteProvider,
+	FormattingToolbarProvider,
+	MenuProvider,
+	UserPopoutProvider,
+} from "./contexts/mod.tsx";
+import { ModalsProvider, useModals } from "./contexts/modal";
+import { OverlayProvider } from "./contexts/overlay.tsx";
+import { ReadTrackingProvider } from "./contexts/read-tracking.tsx";
+import { SlashCommandsProvider } from "./contexts/slash-commands.tsx";
+import { UploadsProvider } from "./contexts/uploads.tsx";
+import { Debug } from "./Debug.tsx";
+import { flags } from "./flags.ts";
+import { useAppConfig } from "./hooks/useAppConfig.ts";
+import { useChatClient } from "./hooks/useChatClient.ts";
+import { useFavicon } from "./hooks/useFavicon.ts";
+import { useGlobalEventHandlers } from "./hooks/useGlobalEventHandlers.ts";
 import {
 	RouteAuthorize,
 	RouteChannel,
@@ -36,25 +53,8 @@ import {
 	RouteRoomSettings,
 	RouteUser,
 } from "./routes";
+import { UserSettings } from "./UserSettings.tsx";
 import { RouteVerifyEmail } from "./VerifyEmail.tsx";
-import { CalendarPopupProvider } from "./Calendar.tsx";
-import { ModalsProvider, useModals } from "./contexts/modal";
-import { MemberListProvider } from "./contexts/memberlist.tsx";
-import { UploadsProvider } from "./contexts/uploads.tsx";
-import { SlashCommandsProvider } from "./contexts/slash-commands.tsx";
-import { ReadTrackingProvider } from "./contexts/read-tracking.tsx";
-import {
-	AutocompleteProvider,
-	FormattingToolbarProvider,
-	MenuProvider,
-	UserPopoutProvider,
-} from "./contexts/mod.tsx";
-import { RootStoreContext, useApi } from "@/api";
-import {
-	CurrentUserProvider,
-	useCurrentUser,
-} from "./contexts/currentUser.tsx";
-import { flags } from "./flags.ts";
 
 const App: Component = () => {
 	return (
@@ -218,7 +218,7 @@ export const AppShell: Component<ParentProps<{}>> = (props) => {
 			{props.children}
 			<OverlayProvider />
 			<div style="visibility:hidden">
-				<For each={[...voice.rtc?.streams.values() ?? []]}>
+				<For each={[...(voice.rtc?.streams.values() ?? [])]}>
 					{(stream) => {
 						let audioRef!: HTMLAudioElement;
 						createEffect(() => {
@@ -226,16 +226,21 @@ export const AppShell: Component<ParentProps<{}>> = (props) => {
 							if (audioRef) audioRef.srcObject = stream.media;
 						});
 						createEffect(() => {
-							const c = voice.preferences.get(stream.user_id) ??
-								{ mute: false, mute_video: false, volume: 100 };
+							const c = voice.preferences.get(stream.user_id) ?? {
+								mute: false,
+								mute_video: false,
+								volume: 100,
+							};
 							audioRef.volume = c.volume / 100;
 						});
 						return (
 							<audio
 								autoplay
 								ref={audioRef!}
-								muted={voice.deafened ||
-									voice.preferences.get(stream.user_id)?.mute === true}
+								muted={
+									voice.deafened ||
+									voice.preferences.get(stream.user_id)?.mute === true
+								}
 							/>
 						);
 					}}
@@ -251,7 +256,7 @@ export const AppShell: Component<ParentProps<{}>> = (props) => {
 };
 
 const Title = (props: { title?: string }) => {
-	createEffect(() => document.title = props.title ?? "");
+	createEffect(() => (document.title = props.title ?? ""));
 	return undefined;
 };
 

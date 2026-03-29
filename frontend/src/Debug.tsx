@@ -1,12 +1,12 @@
-import { createResource, createSignal, For, Show } from "solid-js";
 import { leadingAndTrailing, throttle } from "@solid-primitives/scheduled";
-import { useApi2, useMessages2 } from "@/api";
-import { useCtx } from "./context.ts";
-import { MessageView } from "./components/features/chat/Message.tsx";
-import { flags } from "./flags.ts";
 import type { Embed, Message } from "sdk";
-import { EmbedView } from "./UrlEmbed.tsx";
+import { createResource, createSignal, For, Show } from "solid-js";
+import { useApi2, useMessages2 } from "@/api";
 import { Dropdown } from "./atoms/Dropdown.tsx";
+import { MessageView } from "./components/features/chat/Message.tsx";
+import { useCtx } from "./context.ts";
+import { flags } from "./flags.ts";
+import { EmbedView } from "./UrlEmbed.tsx";
 
 // @ts-expect-error
 const packageJson = __VITE_PACKAGE_JSON__;
@@ -24,7 +24,9 @@ export const Debug = () => {
 			<details>
 				<summary>build info</summary>
 				commit {gitCommit} {gitDirty && "(dirty)"}
-				<pre><code>{JSON.stringify(packageJson, null, 4)}</code></pre>
+				<pre>
+					<code>{JSON.stringify(packageJson, null, 4)}</code>
+				</pre>
 			</details>
 			<details>
 				<summary>invite json</summary>

@@ -1,6 +1,9 @@
 import { expect, test } from "./fixtures";
 
-test("room name change creates audit log entry", async ({ navigateTo, page }) => {
+test("room name change creates audit log entry", async ({
+	navigateTo,
+	page,
+}) => {
 	// Step 1: Navigate to home and create a guest
 	await navigateTo("/");
 	await page.getByRole("button", { name: "create guest" }).click();
@@ -29,8 +32,10 @@ test("room name change creates audit log entry", async ({ navigateTo, page }) =>
 		`[data-room-id] .nav:has-text("${initialRoomName}")`,
 		{ timeout: 5000 },
 	);
-	await page.locator(`[data-room-id] .nav:has-text("${initialRoomName}")`)
-		.first().click();
+	await page
+		.locator(`[data-room-id] .nav:has-text("${initialRoomName}")`)
+		.first()
+		.click();
 
 	// Wait for room to load
 	await page.waitForSelector(`h2:has-text("${initialRoomName}")`, {

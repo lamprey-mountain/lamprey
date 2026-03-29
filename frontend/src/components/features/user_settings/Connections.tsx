@@ -1,9 +1,9 @@
+import fuzzysort from "fuzzysort";
+import type { Scope } from "sdk";
 import { createResource, createSignal, For, onCleanup } from "solid-js";
 import { useApi2 } from "@/api";
 import { Time } from "../../../atoms/Time";
 import { Copyable } from "../../../utils/general";
-import type { Scope } from "sdk";
-import fuzzysort from "fuzzysort";
 
 export function Connections() {
 	const api2 = useApi2();
@@ -81,7 +81,8 @@ export function Connections() {
 							<div class="dim">
 								<button
 									onClick={() =>
-										navigator.clipboard.writeText(c.application.id)}
+										navigator.clipboard.writeText(c.application.id)
+									}
 								>
 									copy id
 								</button>
@@ -97,7 +98,11 @@ export function Connections() {
 							</div>
 							<div>
 								<div class="dim">Permissions</div>
-								<ul>{c.scopes.map((s) => <li>{formatScope(s)}</li>)}</ul>
+								<ul>
+									{c.scopes.map((s) => (
+										<li>{formatScope(s)}</li>
+									))}
+								</ul>
 							</div>
 							<menu>
 								<button

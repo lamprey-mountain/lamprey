@@ -1,9 +1,7 @@
 import { createResource, createSignal } from "solid-js";
 import { useApi2 } from "@/api";
 
-export function creaeRoomMembersSearch(
-	room_id: () => string,
-) {
+export function creaeRoomMembersSearch(room_id: () => string) {
 	const api2 = useApi2();
 
 	// TODO: debounce queries

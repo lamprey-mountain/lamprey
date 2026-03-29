@@ -1,3 +1,9 @@
+import { ReferenceElement, shift } from "@floating-ui/dom";
+import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import fuzzysort from "fuzzysort";
+import type { Channel } from "sdk";
+import { createUpload, getTimestampFromUUID, type Webhook } from "sdk";
+import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
 	createResource,
@@ -8,19 +14,13 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { useApi2, useChannels2, useUsers2 } from "@/api";
-import { useCtx } from "../../../context.ts";
-import type { Channel } from "sdk";
-import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
-import { Avatar } from "../../../User.tsx";
-import { Time } from "../../../atoms/Time.tsx";
-import { useFloating } from "solid-floating-ui";
-import { ReferenceElement, shift } from "@floating-ui/dom";
-import { usePermissions } from "../../../hooks/usePermissions.ts";
-import { createUpload, getTimestampFromUUID, type Webhook } from "sdk";
 import { Dropdown } from "../../../atoms/Dropdown.tsx";
+import { Time } from "../../../atoms/Time.tsx";
 import { useConfig } from "../../../config.tsx";
+import { useCtx } from "../../../context.ts";
 import { useModals } from "../../../contexts/modal";
-import fuzzysort from "fuzzysort";
+import { usePermissions } from "../../../hooks/usePermissions.ts";
+import { Avatar } from "../../../User.tsx";
 
 export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 	const api2 = useApi2();
@@ -42,12 +42,13 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 			"Are you sure you want to delete this webhook?",
 			(conf) => {
 				if (!conf) return;
-				api2.client.http.DELETE(
-					"/api/v1/webhook/{webhook_id}",
-					{ params: { path: { webhook_id } } },
-				).then(() => {
-					refetch();
-				});
+				api2.client.http
+					.DELETE("/api/v1/webhook/{webhook_id}", {
+						params: { path: { webhook_id } },
+					})
+					.then(() => {
+						refetch();
+					});
 			},
 		);
 	};
@@ -58,11 +59,14 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 
 	const [bottom, setBottom] = createSignal<Element | undefined>();
 
-	createIntersectionObserver(() => bottom() ? [bottom()!] : [], (entries) => {
-		for (const entry of entries) {
-			if (entry.isIntersecting) fetchMore();
-		}
-	});
+	createIntersectionObserver(
+		() => (bottom() ? [bottom()!] : []),
+		(entries) => {
+			for (const entry of entries) {
+				if (entry.isIntersecting) fetchMore();
+			}
+		},
+	);
 
 	const [search, setSearch] = createSignal("");
 
@@ -149,8 +153,7 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 							};
 
 							const copyWebhookUrl = () => {
-								const webhookUrl =
-									`${config.api_url}/api/v1/webhook/${i.id}/${i.token}`;
+								const webhookUrl = `${config.api_url}/api/v1/webhook/${i.id}/${i.token}`;
 								navigator.clipboard.writeText(webhookUrl);
 							};
 
@@ -253,19 +256,20 @@ export function Webhooks(props: VoidProps<{ channel: Channel }>) {
 																<Dropdown
 																	selected={i.channel_id}
 																	onSelect={(i) => console.log(i)}
-																	options={channels().map((ch) => ({
-																		label: ch.name ||
-																			`#${ch.id.substring(0, 8)}...`,
-																		value: ch.id,
-																	})) as any || []}
+																	options={
+																		(channels().map((ch) => ({
+																			label:
+																				ch.name ||
+																				`#${ch.id.substring(0, 8)}...`,
+																			value: ch.id,
+																		})) as any) || []
+																	}
 																/>
 															</div>
 														</Show>
 													</div>
 													<div style="margin-top: 8px; display: flex; gap: 8px">
-														<button onClick={copyWebhookUrl}>
-															copy url
-														</button>
+														<button onClick={copyWebhookUrl}>copy url</button>
 														<button
 															onClick={removeWebhook(i.id)}
 															class="destructive"

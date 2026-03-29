@@ -1,13 +1,13 @@
 // the context menu for messages
 
+import { Show } from "solid-js";
 import { useApi2, useChannels2, useMessages2 } from "@/api";
 import { useCtx } from "../context.ts";
-import { Item, Menu, Separator } from "./Parts.tsx";
-import { useModals } from "../contexts/modal";
-import { usePermissions } from "../hooks/usePermissions.ts";
-import { Show } from "solid-js";
-import { useReadTracking } from "../contexts/read-tracking.tsx";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
+import { useModals } from "../contexts/modal";
+import { useReadTracking } from "../contexts/read-tracking.tsx";
+import { usePermissions } from "../hooks/usePermissions.ts";
+import { Item, Menu, Separator } from "./Parts.tsx";
 
 // should i have a separate one for bulk messages?
 
@@ -150,24 +150,21 @@ export function MessageMenu(props: MessageMenuProps) {
 		const msg = message();
 		const parentChannel = channel();
 		// can create threads in text channels, forums, and similar
-		const parentThreadable = parentChannel && [
-			"Text",
-			"Announcement",
-			"Forum",
-			"Forum2",
-		].includes(parentChannel.type);
-		return hasPermission("ThreadCreatePublic") && parentThreadable &&
-			!msg?.thread;
+		const parentThreadable =
+			parentChannel &&
+			["Text", "Announcement", "Forum", "Forum2"].includes(parentChannel.type);
+		return (
+			hasPermission("ThreadCreatePublic") && parentThreadable && !msg?.thread
+		);
 	};
 
 	const createThread = () => {
 		modalCtl.prompt("thread name?", (name) => {
 			if (!name) return;
-			channels2.createThreadFromMessage(
-				props.channel_id,
-				props.message_id,
-				{ name, type: "ThreadPublic" },
-			);
+			channels2.createThreadFromMessage(props.channel_id, props.message_id, {
+				name,
+				type: "ThreadPublic",
+			});
 		});
 	};
 
@@ -198,7 +195,9 @@ export function MessageMenu(props: MessageMenuProps) {
 				<Item onClick={selectMessage}>select</Item>
 			</Show>
 			<Show when={canDelete()}>
-				<Item onClick={deleteMessage} color="danger">delete</Item>
+				<Item onClick={deleteMessage} color="danger">
+					delete
+				</Item>
 			</Show>
 			<Separator />
 			<Item onClick={copyId}>copy id</Item>

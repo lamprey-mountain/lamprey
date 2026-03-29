@@ -11,9 +11,9 @@ import {
 	useContext,
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import { Checkbox, XMark } from "./icons";
 import { CheckboxOption } from "./atoms/CheckboxOption";
 import { Dropdown, type DropdownItem } from "./atoms/Dropdown";
+import { Checkbox, XMark } from "./icons";
 
 export type CalendarPopup = {
 	ref: HTMLElement | null;
@@ -170,15 +170,15 @@ export const PopupEventEditor = (props: {
 			// Only reset other fields if it's a completely different event (different ID)
 			...(!isSameEvent
 				? {
-					name: event.name || "",
-					allDay: event.allDay || false,
-					timezone: event.timezone || "UTC",
-					recurrence: event.recurrence || "",
-					location: event.location || "",
-					url: event.url || "",
-					description: event.description || "",
-					reminders: event.reminders || [],
-				}
+						name: event.name || "",
+						allDay: event.allDay || false,
+						timezone: event.timezone || "UTC",
+						recurrence: event.recurrence || "",
+						location: event.location || "",
+						url: event.url || "",
+						description: event.description || "",
+						reminders: event.reminders || [],
+					}
 				: {}),
 		});
 	});
@@ -281,7 +281,8 @@ export const PopupEventEditor = (props: {
 									type="time"
 									value={formData.start.toTimeString().slice(0, 5)}
 									onInput={(e) => {
-										const [hours, minutes] = e.currentTarget.value.split(":")
+										const [hours, minutes] = e.currentTarget.value
+											.split(":")
 											.map(Number);
 										const newDate = new Date(formData.start);
 										newDate.setHours(hours, minutes);
@@ -295,7 +296,8 @@ export const PopupEventEditor = (props: {
 									type="time"
 									value={formData.end.toTimeString().slice(0, 5)}
 									onInput={(e) => {
-										const [hours, minutes] = e.currentTarget.value.split(":")
+										const [hours, minutes] = e.currentTarget.value
+											.split(":")
 											.map(Number);
 										const newDate = new Date(formData.end);
 										newDate.setHours(hours, minutes);
@@ -358,7 +360,8 @@ export const PopupEventEditor = (props: {
 								placeholder="Description"
 								value={formData.description}
 								onInput={(e) =>
-									handleChange("description", e.currentTarget.value)}
+									handleChange("description", e.currentTarget.value)
+								}
 							/>
 						</div>
 
@@ -385,22 +388,20 @@ export const PopupEventEditor = (props: {
 				<div
 					class={`tab-content ${activeTab() === "instances" ? "active" : ""}`}
 				>
-					{props.event?.instances
-						? (
-							<div class="popup-form">
-								<h3>Event Instances</h3>
-								<p>
-									This event has {props.event.instances.length}{" "}
-									instances. Click on individual instances to edit them.
-								</p>
-							</div>
-						)
-						: (
+					{props.event?.instances ? (
+						<div class="popup-form">
+							<h3>Event Instances</h3>
 							<p>
-								No instances configured. Set a recurrence pattern to create
-								recurring instances.
+								This event has {props.event.instances.length} instances. Click
+								on individual instances to edit them.
 							</p>
-						)}
+						</div>
+					) : (
+						<p>
+							No instances configured. Set a recurrence pattern to create
+							recurring instances.
+						</p>
+					)}
 				</div>
 
 				{/* Participants Tab */}
@@ -409,16 +410,16 @@ export const PopupEventEditor = (props: {
 						activeTab() === "participants" ? "active" : ""
 					}`}
 				>
-					{props.event?.participants
-						? (
-							<div class="popup-form">
-								<h3>Event Participants</h3>
-								<p>
-									This event has {props.event.participants.length} participants.
-								</p>
-							</div>
-						)
-						: <p>No participants added yet.</p>}
+					{props.event?.participants ? (
+						<div class="popup-form">
+							<h3>Event Participants</h3>
+							<p>
+								This event has {props.event.participants.length} participants.
+							</p>
+						</div>
+					) : (
+						<p>No participants added yet.</p>
+					)}
 				</div>
 			</div>
 
@@ -436,8 +437,12 @@ export const PopupEventEditor = (props: {
 
 export const Calendar = (props: { channel: Channel }) => {
 	const [currentDate, setCurrentDate] = createSignal(new Date(2025, 11, 1));
-	const { popup: calendarPopup, setPopup, closePopup, setChannelId } =
-		useCalendarPopup();
+	const {
+		popup: calendarPopup,
+		setPopup,
+		closePopup,
+		setChannelId,
+	} = useCalendarPopup();
 
 	// Set channel_id when component mounts or channel_id changes
 	createEffect(() => {
@@ -650,8 +655,11 @@ const CalendarMonth = (props: {
 
 	const today = new Date();
 	const isToday = (day: number) => {
-		return day === today.getDate() && month() === today.getMonth() &&
-			year() === today.getFullYear();
+		return (
+			day === today.getDate() &&
+			month() === today.getMonth() &&
+			year() === today.getFullYear()
+		);
 	};
 
 	const displayDaysOfWeek = createMemo(() => {
@@ -662,7 +670,9 @@ const CalendarMonth = (props: {
 
 	return (
 		<div class="month-view">
-			{displayDaysOfWeek().map((i) => <div class="dayofweek">{i}</div>)}
+			{displayDaysOfWeek().map((i) => (
+				<div class="dayofweek">{i}</div>
+			))}
 			{calendarDays().map((d) => {
 				return (
 					<div

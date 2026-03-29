@@ -1,8 +1,8 @@
 import { Show } from "solid-js";
 import { useApi2 } from "@/api";
 import { useCtx } from "../context.ts";
-import { Item, Menu, Separator } from "./Parts.tsx";
 import { useModals } from "../contexts/modal";
+import { Item, Menu, Separator } from "./Parts.tsx";
 
 type UserAdminMenuProps = {
 	user_id: string;
@@ -75,7 +75,9 @@ export function UserAdminMenu(props: UserAdminMenuProps) {
 			<Show when={!user()?.suspended}>
 				<Item onClick={suspendUser}>suspend user</Item>
 			</Show>
-			<Item onClick={deleteUser} color="danger">delete user</Item>
+			<Item onClick={deleteUser} color="danger">
+				delete user
+			</Item>
 			<Separator />
 			<Item onClick={copyUserId}>copy user id</Item>
 			<Item onClick={logToConsole}>log to console</Item>

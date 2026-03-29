@@ -1,26 +1,33 @@
 // Minimal API exports for new service pattern
 // Use useApi2() and service-specific hooks instead.
 
-import { createContext, useContext } from "solid-js";
-import type { Resource } from "solid-js";
 import type { Pagination } from "sdk";
+import type { Resource } from "solid-js";
+import { createContext, useContext } from "solid-js";
+
 export { RootStore } from "./api/core/Store.ts";
+
 import type { RootStore } from "./api/core/Store.ts";
 
+export type { ChannelsService } from "./api/services/ChannelsService";
+export type {
+	DocumentsService,
+	RevisionContent,
+} from "./api/services/DocumentsService";
 // Re-export service types
 export type { InboxService } from "./api/services/InboxService";
-export type { DocumentsService } from "./api/services/DocumentsService";
-export type { RoomAnalyticsService } from "./api/services/RoomAnalyticsService";
-export type { ChannelsService } from "./api/services/ChannelsService";
-export type { MessagesService } from "./api/services/MessagesService";
-export type { NotificationService } from "./api/services/NotificationService";
-export type { PreferencesService } from "./api/services/PreferencesService";
-
 // Re-export other types
 export type { MemberList } from "./api/services/MemberListService";
-export type { MessageListAnchor } from "./api/services/MessagesService";
-export type { RevisionContent } from "./api/services/DocumentsService";
-export type { Aggregation } from "./api/services/RoomAnalyticsService";
+export type {
+	MessageListAnchor,
+	MessagesService,
+} from "./api/services/MessagesService";
+export type { NotificationService } from "./api/services/NotificationService";
+export type { PreferencesService } from "./api/services/PreferencesService";
+export type {
+	Aggregation,
+	RoomAnalyticsService,
+} from "./api/services/RoomAnalyticsService";
 
 // Backwards compatibility type - maps old Api property names to RootStore
 export type Api = RootStore;

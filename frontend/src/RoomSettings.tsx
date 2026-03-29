@@ -1,8 +1,11 @@
-import { useCurrentUser } from "./contexts/currentUser.tsx";
+import { A, useNavigate } from "@solidjs/router";
+import { type Permission, SERVER_ROOM_ID } from "sdk";
 import { type Component, createMemo, For, Match, Show, Switch } from "solid-js";
-import type { RoomT } from "./types.ts";
 import { Dynamic } from "solid-js/web";
+import { useApi2 } from "@/api";
+import * as Admin from "./components/features/admin_settings/mod.tsx";
 import {
+	Metrics as Analytics,
 	AuditLog,
 	Automod,
 	Bans,
@@ -11,37 +14,36 @@ import {
 	Info,
 	Invites,
 	Members,
-	Metrics as Analytics,
 	Roles,
 	Webhooks,
 } from "./components/features/room_settings/mod.tsx";
-import * as Admin from "./components/features/admin_settings/mod.tsx";
-import { type Permission, SERVER_ROOM_ID } from "sdk";
-import { A, useNavigate } from "@solidjs/router";
 import { useCtx } from "./context.ts";
-import { useApi2 } from "@/api";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { useModals } from "./contexts/modal.tsx";
-import { usePermissions } from "./hooks/usePermissions.ts";
 import { flags } from "./flags.ts";
+import { usePermissions } from "./hooks/usePermissions.ts";
+import type { RoomT } from "./types.ts";
 
 // TODO: more permission checks
 const tabs: Array<
-	{ category: string } | {
-		name: string;
-		path: string;
-		noPad?: boolean;
-		// TODO: fix type errors
-		// component: Component,
-		component: any;
-		permissionCheck?: (p: Set<Permission>) => boolean;
-		ownerOnly?: boolean;
-	} | {
-		name: string;
-		action: "delete";
-		style?: "danger";
-		permissionCheck?: (p: Set<Permission>) => boolean;
-		ownerOnly?: boolean;
-	}
+	| { category: string }
+	| {
+			name: string;
+			path: string;
+			noPad?: boolean;
+			// TODO: fix type errors
+			// component: Component,
+			component: any;
+			permissionCheck?: (p: Set<Permission>) => boolean;
+			ownerOnly?: boolean;
+	  }
+	| {
+			name: string;
+			action: "delete";
+			style?: "danger";
+			permissionCheck?: (p: Set<Permission>) => boolean;
+			ownerOnly?: boolean;
+	  }
 > = [
 	{ category: "overview" },
 	{ name: "info", path: "", component: Info },
@@ -105,16 +107,17 @@ const tabs: Array<
 const todo = (what: string) => () => `todo: ${what}` as any as Component;
 
 const adminTabs: Array<
-	{ category: string } | {
-		name: string;
-		path: string;
-		noPad?: boolean;
-		// TODO: fix type errors
-		// component: Component,
-		component: any;
-		permissionCheck?: (p: Set<Permission>) => boolean;
-		ownerOnly?: boolean;
-	}
+	| { category: string }
+	| {
+			name: string;
+			path: string;
+			noPad?: boolean;
+			// TODO: fix type errors
+			// component: Component,
+			component: any;
+			permissionCheck?: (p: Set<Permission>) => boolean;
+			ownerOnly?: boolean;
+	  }
 > = [
 	{ category: "overview" },
 	{ name: "info", path: "", component: Admin.ServerInfo },
@@ -175,7 +178,7 @@ const adminTabs: Array<
 	},
 ];
 
-type TabItem = typeof tabs[number];
+type TabItem = (typeof tabs)[number];
 type GroupedTab = {
 	category: string;
 	items: Exclude<TabItem, { category: string }>[];
@@ -218,12 +221,13 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 		() => props.room.id,
 		() => undefined,
 	);
-	const currentTabs = () => props.room.id === SERVER_ROOM_ID ? adminTabs : tabs;
+	const currentTabs = () =>
+		props.room.id === SERVER_ROOM_ID ? adminTabs : tabs;
 	const currentTab = () =>
 		currentTabs().find((i: any) => i.path === (props.page ?? ""))!;
 
 	const groupedTabs = createMemo(() =>
-		groupTabsByCategory(currentTabs(), perms, user_id, props.room)
+		groupTabsByCategory(currentTabs(), perms, user_id, props.room),
 	);
 
 	const nav = useNavigate();
@@ -235,14 +239,17 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 					`Are you sure you want to delete "${props.room.name}"?`,
 					(confirmed) => {
 						if (confirmed) {
-							api2.client.http.DELETE("/api/v1/room/{room_id}", {
-								params: { path: { room_id: props.room.id } },
-							}).then(() => {
-								nav("/");
-							}).catch((error) => {
-								console.error("Failed to delete room:", error);
-								modalCtl.alert("Failed to delete room: " + error.message);
-							});
+							api2.client.http
+								.DELETE("/api/v1/room/{room_id}", {
+									params: { path: { room_id: props.room.id } },
+								})
+								.then(() => {
+									nav("/");
+								})
+								.catch((error) => {
+									console.error("Failed to delete room:", error);
+									modalCtl.alert("Failed to delete room: " + error.message);
+								});
 						}
 					},
 				);
@@ -255,8 +262,8 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 	return (
 		<div class="settings">
 			<header>
-				{props.room.id === SERVER_ROOM_ID ? "admin settings" : "room settings"}
-				: {(currentTab() as any)?.name}{" "}
+				{props.room.id === SERVER_ROOM_ID ? "admin settings" : "room settings"}:{" "}
+				{(currentTab() as any)?.name}{" "}
 				<A href={`/room/${props.room.id}`}>back</A>
 			</header>
 			<nav>
@@ -268,7 +275,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 									class="dim"
 									style={{
 										"margin-top": groupIdx() === 0 ? "" : "12px",
-										"margin": "2px 8px",
+										margin: "2px 8px",
 									}}
 								>
 									{group.category}
@@ -282,7 +289,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 														class="action"
 														onClick={() => handleAction((tab as any).action)}
 														classList={{
-															"danger": (tab as any).style === "danger",
+															danger: (tab as any).style === "danger",
 														}}
 													>
 														{tab.name}
@@ -292,8 +299,9 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 											<Match when={true}>
 												<li>
 													<A
-														href={`/room/${props.room.id}/settings/${((tab as any)
-															.path as any)}`}
+														href={`/room/${props.room.id}/settings/${
+															(tab as any).path as any
+														}`}
 													>
 														{(tab as any).name}
 													</A>

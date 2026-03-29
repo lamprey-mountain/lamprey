@@ -1,9 +1,8 @@
-import type { Room } from "sdk";
-import { BaseService } from "../core/Service";
+import type { Pagination, Room } from "sdk";
 import { batch, createResource, createSignal, type Resource } from "solid-js";
-import type { Pagination } from "sdk";
-import { type ListState, PaginatedList } from "../core/PaginatedList";
 import { logger } from "../../logger";
+import { type ListState, PaginatedList } from "../core/PaginatedList";
+import { BaseService } from "../core/Service";
 
 const log = logger.for("api/rooms");
 
@@ -21,7 +20,7 @@ export class RoomsService extends BaseService<Room> {
 		const data = await this.retryWithBackoff<Room>(() =>
 			this.client.http.GET("/api/v1/room/{room_id}", {
 				params: { path: { room_id: id } },
-			})
+			}),
 		);
 		this.upsert(data);
 		return data;
@@ -31,7 +30,7 @@ export class RoomsService extends BaseService<Room> {
 		const data = await this.retryWithBackoff<Room>(() =>
 			this.client.http.POST("/api/v1/room", {
 				body,
-			})
+			}),
 		);
 		this.upsert(data);
 		return data;
@@ -39,13 +38,10 @@ export class RoomsService extends BaseService<Room> {
 
 	async update(room_id: string, body: any): Promise<Room> {
 		const data = await this.retryWithBackoff<Room>(() =>
-			this.client.http.PATCH(
-				"/api/v1/room/{room_id}",
-				{
-					params: { path: { room_id } },
-					body,
-				},
-			)
+			this.client.http.PATCH("/api/v1/room/{room_id}", {
+				params: { path: { room_id } },
+				body,
+			}),
 		);
 		this.upsert(data);
 		return data;
@@ -62,7 +58,7 @@ export class RoomsService extends BaseService<Room> {
 						from: cursor,
 					},
 				},
-			})
+			}),
 		);
 	}
 
@@ -76,7 +72,7 @@ export class RoomsService extends BaseService<Room> {
 						from: cursor,
 					},
 				},
-			})
+			}),
 		);
 	}
 
@@ -104,7 +100,8 @@ export class RoomsService extends BaseService<Room> {
 
 	useList() {
 		if (
-			this.roomList.state.ids.length === 0 && !this.roomList.state.isLoading
+			this.roomList.state.ids.length === 0 &&
+			!this.roomList.state.isLoading
 		) {
 			this.fetchPage(this.roomList, this.fetchList);
 		}
@@ -123,7 +120,7 @@ export class RoomsService extends BaseService<Room> {
 
 	async markRead(room_id: string) {
 		let has_more = true;
-		let from: string | undefined ;
+		let from: string | undefined;
 		while (has_more) {
 			let data;
 			try {
@@ -137,7 +134,7 @@ export class RoomsService extends BaseService<Room> {
 								from,
 							},
 						},
-					})
+					}),
 				);
 			} catch (error) {
 				log.error("Failed to fetch threads for room", error);
@@ -146,13 +143,10 @@ export class RoomsService extends BaseService<Room> {
 
 			for (const thread of data.items) {
 				if (thread.last_version_id) {
-					await this.client.http.PUT(
-						"/api/v1/channel/{channel_id}/ack",
-						{
-							params: { path: { channel_id: thread.id } },
-							body: { version_id: thread.last_version_id },
-						},
-					);
+					await this.client.http.PUT("/api/v1/channel/{channel_id}/ack", {
+						params: { path: { channel_id: thread.id } },
+						body: { version_id: thread.last_version_id },
+					});
 				}
 			}
 			has_more = data.has_more;

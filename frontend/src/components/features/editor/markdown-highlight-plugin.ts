@@ -1,16 +1,16 @@
-import {
-	Decoration,
-	type DecorationAttrs,
-	DecorationSet,
-	EditorView,
-} from "prosemirror-view";
+import type { Token, Tokens } from "marked";
 import {
 	type EditorState,
 	Plugin,
 	PluginKey,
 	type Transaction,
 } from "prosemirror-state";
-import type { Token, Tokens } from "marked";
+import {
+	Decoration,
+	type DecorationAttrs,
+	DecorationSet,
+	EditorView,
+} from "prosemirror-view";
 import { md } from "../../../markdown_utils.tsx";
 
 let hljs: any = null;
@@ -87,9 +87,7 @@ function getHighlightDecorations(
  * Map of token types to decoration generators
  */
 const DECORATION_STRATEGIES: Record<string, (token: any) => DecorationDef[]> = {
-	heading: (
-		t: Tokens.Heading,
-	) => [{ attrs: SYN, start: 0, end: t.depth }],
+	heading: (t: Tokens.Heading) => [{ attrs: SYN, start: 0, end: t.depth }],
 
 	em: (t: Tokens.Em) => [
 		{ attrs: SYN, start: 0, end: 1 },
@@ -144,7 +142,8 @@ const DECORATION_STRATEGIES: Record<string, (token: any) => DecorationDef[]> = {
 
 			if (firstNewline !== -1) {
 				const lastNewline = t.raw.lastIndexOf("\n");
-				const hasClosing = lastNewline > firstNewline &&
+				const hasClosing =
+					lastNewline > firstNewline &&
 					t.raw.slice(lastNewline).trim().startsWith(t.raw[0].repeat(3));
 				const contentEnd = hasClosing ? lastNewline : t.raw.length;
 
@@ -188,9 +187,10 @@ const DECORATION_STRATEGIES: Record<string, (token: any) => DecorationDef[]> = {
 	},
 };
 
-function mapDecorations(
-	token: Token,
-): { len: number; decorations: DecorationDef[] } {
+function mapDecorations(token: Token): {
+	len: number;
+	decorations: DecorationDef[];
+} {
 	const decorations = DECORATION_STRATEGIES[token.type]?.(token) ?? [];
 
 	if ("tokens" in token && token.tokens && token.type !== "blockquote") {
@@ -206,18 +206,21 @@ function mapDecorations(
 }
 
 function reduceDecorations(tokens: Token[], startPos = 0) {
-	return tokens.reduce((acc, token) => {
-		const { decorations, len } = mapDecorations(token);
-		const mapped = decorations.map((d) => ({
-			...d,
-			start: d.start + acc.pos,
-			end: d.end + acc.pos,
-		}));
-		return {
-			pos: acc.pos + len,
-			decorations: [...acc.decorations, ...mapped],
-		};
-	}, { pos: startPos, decorations: [] as DecorationDef[] });
+	return tokens.reduce(
+		(acc, token) => {
+			const { decorations, len } = mapDecorations(token);
+			const mapped = decorations.map((d) => ({
+				...d,
+				start: d.start + acc.pos,
+				end: d.end + acc.pos,
+			}));
+			return {
+				pos: acc.pos + len,
+				decorations: [...acc.decorations, ...mapped],
+			};
+		},
+		{ pos: startPos, decorations: [] as DecorationDef[] },
+	);
 }
 
 function calculateDecorations(state: EditorState): DecorationSet {
@@ -286,9 +289,7 @@ export function createMarkdownHighlightPlugin() {
 /**
  * Get the current decoration set from the plugin state
  */
-export function getMarkdownDecorations(
-	state: EditorState,
-): DecorationSet {
+export function getMarkdownDecorations(state: EditorState): DecorationSet {
 	const pluginState = markdownHighlightKey.getState(state);
 	return pluginState?.decorations ?? DecorationSet.empty;
 }

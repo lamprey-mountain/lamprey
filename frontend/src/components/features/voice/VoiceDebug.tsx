@@ -1,3 +1,4 @@
+import { ReactiveMap } from "@solid-primitives/map";
 import {
 	createMemo,
 	createSignal,
@@ -8,11 +9,10 @@ import {
 	Switch,
 	type VoidProps,
 } from "solid-js";
+import { useApi2 } from "@/api";
+import { Copyable } from "../../../utils/general";
 import { getAttributeDescription, parseSessionDescription } from "./rtc-util";
 import { useVoice } from "./voice-provider";
-import { ReactiveMap } from "@solid-primitives/map";
-import { Copyable } from "../../../utils/general";
-import { useApi2 } from "@/api";
 
 export const VoiceDebug = (props: { onClose: () => void }) => {
 	const [voice] = useVoice();
@@ -41,12 +41,12 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 
 	currentConn?.addEventListener("connectionstatechange", updateSdps);
 	onCleanup(() =>
-		currentConn?.removeEventListener("connectionstatechange", updateSdps)
+		currentConn?.removeEventListener("connectionstatechange", updateSdps),
 	);
 
 	const voiceStates = createMemo(() => {
-		return [...api2.voiceStates.values()].filter((i) =>
-			(i as any).thread_id === voice.threadId
+		return [...api2.voiceStates.values()].filter(
+			(i) => (i as any).thread_id === voice.threadId,
 		);
 	});
 
@@ -72,9 +72,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 						</button>
 					)}
 				</For>
-				<button onClick={props.onClose}>
-					close
-				</button>
+				<button onClick={props.onClose}>close</button>
 			</nav>
 			<main>
 				<Switch>
@@ -100,7 +98,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 						<div style="margin: 8px;">
 							<h3>{voice.rtc?.streams.size} stream(s)</h3>
 							<br />
-							<For each={[...voice.rtc?.streams.values() ?? []]}>
+							<For each={[...(voice.rtc?.streams.values() ?? [])]}>
 								{(s) => {
 									return (
 										<div style="border: solid #444 1px;padding:4px">
@@ -118,7 +116,8 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 															const t = voice.rtc?.transceivers.get(m);
 															return (
 																<li>
-																	<b>{m}</b> {t?.sender.track?.kind ??
+																	<b>{m}</b>{" "}
+																	{t?.sender.track?.kind ??
 																		t?.receiver.track.kind}
 																</li>
 															);
@@ -131,15 +130,13 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 								}}
 							</For>
 							<br />
-							<h3>
-								{voice.rtc?.conn.getTransceivers().length} transceivers
-							</h3>
+							<h3>{voice.rtc?.conn.getTransceivers().length} transceivers</h3>
 							<ul style="list-style: inside">
 								<For each={voice.rtc?.conn.getTransceivers()}>
 									{(t) => (
 										<li>
-											{t.mid} {t.direction} {t?.sender.track?.kind ??
-												t?.receiver.track.kind}
+											{t.mid} {t.direction}{" "}
+											{t?.sender.track?.kind ?? t?.receiver.track.kind}
 										</li>
 									)}
 								</For>
@@ -185,9 +182,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 							)}
 						</Show>
 					</Match>
-					<Match when={tab() === "foobar"}>
-						foobar!
-					</Match>
+					<Match when={tab() === "foobar"}>foobar!</Match>
 				</Switch>
 			</main>
 		</div>
@@ -307,9 +302,11 @@ export const VoiceSdp = (props: { sdp: string }) => {
 											</div>
 											<Show when={value}>
 												<div class="value">
-													{key === "candidate"
-														? <HighlightIpAddr addr={value!} />
-														: value}
+													{key === "candidate" ? (
+														<HighlightIpAddr addr={value!} />
+													) : (
+														value
+													)}
 												</div>
 											</Show>
 										</li>
@@ -355,18 +352,19 @@ const VoiceStats = () => {
 	// - codec
 
 	const [voice] = useVoice();
-	const [codec, setCodec] = createSignal<
-		Record<
-			string,
-			{
-				type: string;
-				codec: string;
-				channels: number;
-				clockRate: number;
-				mime: string;
-			}
-		>
-	>();
+	const [codec, setCodec] =
+		createSignal<
+			Record<
+				string,
+				{
+					type: string;
+					codec: string;
+					channels: number;
+					clockRate: number;
+					mime: string;
+				}
+			>
+		>();
 
 	const bandwidthIn = new ReactiveMap<
 		string,
@@ -387,7 +385,8 @@ const VoiceStats = () => {
 		stats?.forEach((v) => {
 			v.timestamp;
 			if (
-				v.type === "candidate-pair" || v.type === "local-candidate" ||
+				v.type === "candidate-pair" ||
+				v.type === "local-candidate" ||
 				v.type === "remote-candidate"
 			) {
 				candidates.push(v);
@@ -439,9 +438,16 @@ const VoiceStats = () => {
 			<button
 				style="display:none"
 				onClick={() =>
-					setFormat((f) =>
-						({ bytes: "packet", packets: "bytes" } as Record<string, string>)[f]
-					)}
+					setFormat(
+						(f) =>
+							(
+								({ bytes: "packet", packets: "bytes" }) as Record<
+									string,
+									string
+								>
+							)[f],
+					)
+				}
 			>
 				format: {format()}
 			</button>
@@ -513,17 +519,17 @@ const Chart = (
 	const pathStroke = () =>
 		[
 			`M 0 ${-props.points[0] * scaleY()}`,
-			...props.points.slice(1).map((d, i) =>
-				`L ${(i + 1) * scaleX()} ${-d * scaleY()}`
-			),
+			...props.points
+				.slice(1)
+				.map((d, i) => `L ${(i + 1) * scaleX()} ${-d * scaleY()}`),
 		].join(" ");
 	const pathFill = () =>
 		[
 			`M 0 0`,
 			`L 0 ${-props.points[0] * scaleY()}`,
-			...props.points.slice(1).map((d, i) =>
-				`L ${(i + 1) * scaleX()} ${-d * scaleY()}`
-			),
+			...props.points
+				.slice(1)
+				.map((d, i) => `L ${(i + 1) * scaleX()} ${-d * scaleY()}`),
 			`L ${scaleX() * (props.points.length - 1)} 0`,
 		].join(" ");
 
@@ -564,7 +570,7 @@ const Chart = (
 							stoke-width="1"
 						/>
 						<text x={x + 4} y={8 + 4} fill="#aaa" font-size="10">
-							{((1 - (x / 300)) * 31).toFixed(0)}s
+							{((1 - x / 300) * 31).toFixed(0)}s
 						</text>
 					</>
 				)}

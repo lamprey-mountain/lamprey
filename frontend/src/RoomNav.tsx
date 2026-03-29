@@ -1,4 +1,5 @@
 import { A } from "@solidjs/router";
+import type { Room } from "sdk";
 import {
 	createMemo,
 	createSignal,
@@ -9,31 +10,30 @@ import {
 	Switch,
 } from "solid-js";
 import { useApi, useChannels2, useRooms2 } from "@/api";
-import { flags } from "./flags";
-import { getThumbFromId } from "./media/util";
+import icFolder1 from "./assets/folder-1.png";
+import icHome from "./assets/home.png";
 import { useCtx } from "./context";
 import { useMenu } from "./contexts/mod.tsx";
-import type { Room } from "sdk";
-import icHome from "./assets/home.png";
-import icFolder1 from "./assets/folder-1.png";
+import { flags } from "./flags";
+import { getThumbFromId } from "./media/util";
 import { RoomIcon } from "./User";
 
 export type RoomNavItem =
 	| {
-		type: "room";
-		room_id: string;
-	}
+			type: "room";
+			room_id: string;
+	  }
 	| {
-		type: "folder";
-		id: string;
-		name: string;
-		items: { type: "room"; room_id: string }[];
-	}
+			type: "folder";
+			id: string;
+			name: string;
+			items: { type: "room"; room_id: string }[];
+	  }
 	| {
-		type: "view";
-		name: string;
-		// Omitting view-specific properties for now
-	};
+			type: "view";
+			name: string;
+			// Omitting view-specific properties for now
+	  };
 
 /*
 TODO: room nav views
@@ -95,7 +95,8 @@ export const RoomNav = () => {
 	const getRoomUnread = (roomId: string) => {
 		for (const channel of channels2.cache.values()) {
 			if (
-				channel.room_id === roomId && channel.is_unread &&
+				channel.room_id === roomId &&
+				channel.is_unread &&
 				channel.type !== "Voice"
 			) {
 				return true;
@@ -115,17 +116,14 @@ export const RoomNav = () => {
 		);
 	};
 
-	const [dragging, setDragging] = createSignal<
-		{
-			id: string;
-			type: "room" | "folder";
-		} | null
-	>(null);
-	const [target, setTarget] = createSignal<
-		{ id: string; position: "before" | "after" | "inside" } | null
-	>(
-		null,
-	);
+	const [dragging, setDragging] = createSignal<{
+		id: string;
+		type: "room" | "folder";
+	} | null>(null);
+	const [target, setTarget] = createSignal<{
+		id: string;
+		position: "before" | "after" | "inside";
+	} | null>(null);
 	const [collapsedFolders, setCollapsedFolders] = createSignal(
 		new Set<string>(),
 	);
@@ -215,11 +213,12 @@ export const RoomNav = () => {
 		const findItem = (id: string, list: any[]) => {
 			for (let i = 0; i < list.length; i++) {
 				const item = list[i];
-				const itemId = item.type === "folder"
-					? item.id
-					: item.type === "view"
-					? `view-${item.name}`
-					: item.id;
+				const itemId =
+					item.type === "folder"
+						? item.id
+						: item.type === "view"
+							? `view-${item.name}`
+							: item.id;
 				if (itemId === id) {
 					return { item, index: i, parent: null, parentList: list };
 				}
@@ -240,7 +239,9 @@ export const RoomNav = () => {
 		};
 
 		if (
-			creatingFolder && toId === creatingFolder && fromId !== creatingFolder
+			creatingFolder &&
+			toId === creatingFolder &&
+			fromId !== creatingFolder
 		) {
 			const fromResult = findItem(fromId, newItems);
 			const toResult = findItem(toId, newItems);
@@ -249,8 +250,8 @@ export const RoomNav = () => {
 			}
 
 			const [fromItem] = fromResult.parentList.splice(fromResult.index, 1);
-			const toIndex = newItems.findIndex((i: any) =>
-				(i.type === "folder" ? i.id : i.id) === toId
+			const toIndex = newItems.findIndex(
+				(i: any) => (i.type === "folder" ? i.id : i.id) === toId,
 			);
 			if (toIndex === -1) return items;
 
@@ -281,7 +282,8 @@ export const RoomNav = () => {
 		if (!from || !to) return items;
 
 		if (
-			from.item.type === "folder" && (to.parent || to.item.type === "folder")
+			from.item.type === "folder" &&
+			(to.parent || to.item.type === "folder")
 		) {
 			return items;
 		}
@@ -476,7 +478,8 @@ export const RoomNav = () => {
 		if (!from || !to) return;
 
 		if (
-			from.item.type === "folder" && (to.parent || to.item.type === "folder")
+			from.item.type === "folder" &&
+			(to.parent || to.item.type === "folder")
 		) {
 			return;
 		}
@@ -486,7 +489,8 @@ export const RoomNav = () => {
 			: config.splice(from.index, 1);
 
 		if (
-			to.item.type === "folder" && position === "inside" &&
+			to.item.type === "folder" &&
+			position === "inside" &&
 			movedItem.type === "room"
 		) {
 			to.item.items.push(movedItem);
@@ -549,10 +553,10 @@ export const RoomNav = () => {
 				}}
 				classList={{
 					dragging: dragging()?.id === props.room.id,
-					"drag-over": target()?.id === props.room.id &&
-						target()?.position === "before",
-					"drag-over-after": target()?.id === props.room.id &&
-						target()?.position === "after",
+					"drag-over":
+						target()?.id === props.room.id && target()?.position === "before",
+					"drag-over-after":
+						target()?.id === props.room.id && target()?.position === "after",
 					"folder-preview": folderPreview() === props.room.id,
 					"no-icon": !props.room.icon,
 					unread: getRoomUnread(props.room.id),
@@ -594,20 +598,24 @@ export const RoomNav = () => {
 											onDrop={handleDrop}
 											onDragLeave={handleDragLeave}
 											classList={{
-												dragging: !!dragging()?.id &&
-													dragging()?.id === folder.id,
-												"drag-over": !!target()?.id &&
+												dragging:
+													!!dragging()?.id && dragging()?.id === folder.id,
+												"drag-over":
+													!!target()?.id &&
 													target()?.id === folder.id &&
 													target()?.position === "before",
-												"drag-over-after": !!target()?.id &&
+												"drag-over-after":
+													!!target()?.id &&
 													target()?.id === folder.id &&
 													target()?.position === "after",
-												"drag-over-inside": !!target()?.id &&
+												"drag-over-inside":
+													!!target()?.id &&
 													target()?.id === folder.id &&
 													target()?.position === "inside",
-												"preview": !!folderPreview() &&
-													folder.items.some((room) =>
-														room.id === folderPreview()
+												preview:
+													!!folderPreview() &&
+													folder.items.some(
+														(room) => room.id === folderPreview(),
 													),
 												collapsed: collapsedFolders().has(folder.id),
 												unread: !!getFolderUnread(folder),

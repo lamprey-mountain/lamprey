@@ -51,8 +51,7 @@ export type Relationship = components["schemas"]["Relationship"] & {
 };
 export type Ignore = components["schemas"]["Ignore"];
 export type UserWithRelationship =
-	& components["schemas"]["UserWithRelationship"]
-	& {
+	components["schemas"]["UserWithRelationship"] & {
 		/** @description relationship with current user (with client-side extensions) */
 		relationship: Relationship;
 	};
@@ -181,47 +180,47 @@ export type TrackMetadata = {
 
 export type SignallingMessage =
 	| {
-		type: "Ready";
-	}
+			type: "Ready";
+	  }
 	| {
-		type: "Offer";
-		sdp: string;
-		tracks: TrackMetadata[];
-	}
+			type: "Offer";
+			sdp: string;
+			tracks: TrackMetadata[];
+	  }
 	| {
-		type: "Answer";
-		sdp: string;
-	}
+			type: "Answer";
+			sdp: string;
+	  }
 	| {
-		type: "Candidate";
-		candidate: string;
-	}
+			type: "Candidate";
+			candidate: string;
+	  }
 	| {
-		// only sent by the server
-		type: "Have";
-		thread_id: string;
-		user_id: string;
-		tracks: TrackMetadata[];
-	}
-	| {
-		type: "Want";
-		tracks: string[];
-	}
-	| {
-		// only sent from client
-		// TODO: move this to a top level event
-		type: "VoiceState";
-		state: {
+			// only sent by the server
+			type: "Have";
 			thread_id: string;
-			self_mute: boolean;
-			self_deaf: boolean;
-			self_video: boolean;
-			self_screen: boolean;
-		} | null;
-	}
+			user_id: string;
+			tracks: TrackMetadata[];
+	  }
 	| {
-		type: "Reconnect";
-	};
+			type: "Want";
+			tracks: string[];
+	  }
+	| {
+			// only sent from client
+			// TODO: move this to a top level event
+			type: "VoiceState";
+			state: {
+				thread_id: string;
+				self_mute: boolean;
+				self_deaf: boolean;
+				self_video: boolean;
+				self_screen: boolean;
+			} | null;
+	  }
+	| {
+			type: "Reconnect";
+	  };
 
 export type VoiceState = {
 	user_id: string;

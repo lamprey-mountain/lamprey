@@ -1,6 +1,6 @@
-import type * as Y from "yjs";
 import { createContext, useContext } from "solid-js";
 import type { SetStoreFunction, Store } from "solid-js/store";
+import type * as Y from "yjs";
 
 export type DocumentState = {
 	/** currently focused branch */

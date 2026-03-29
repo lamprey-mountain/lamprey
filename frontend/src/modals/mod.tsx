@@ -1,38 +1,33 @@
 import { onMount, type ParentProps } from "solid-js";
-import { type Modal as ContextModal, useCtx } from "../context.ts";
-import { ModalResetPassword } from "../components/features/user_settings/mod.tsx";
-import { ModalPalette } from "./ModalPalette.tsx";
-import { ModalMessageEdits } from "./ModalMessageEdits.tsx";
-import { ModalMedia } from "./ModalMedia.tsx";
-import { ModalChannelCreate } from "./ModalChannelCreate";
-import { ModalTagEditor } from "./ModalTagEditor.tsx";
-import { ModalExportData } from "./ModalExportData.tsx";
-import { useModals } from "../contexts/modal.tsx";
-import { ModalReactions } from "./ModalReactions.tsx";
-import { ModalNotifications } from "./ModalNotifications.tsx";
-import { ModalPrivacy } from "./ModalPrivacy.tsx";
-import { ModalAttachment } from "./ModalAttachment.tsx";
-import { ModalInviteCreate } from "./ModalInviteCreate.tsx";
-import { ModalChannelTopic } from "./ModalChannelTopic.tsx";
-import { ModalLink } from "./ModalLink.tsx";
-import { ModalKick } from "./ModalKick.tsx";
-import { ModalBan } from "./ModalBan.tsx";
-import { ModalTimeout } from "./ModalTimeout.tsx";
-import { ModalCameraPreview } from "./ModalCameraPreview.tsx";
-import { ModalRoomCreate } from "./ModalRoomCreate";
 import { useApi2 } from "@/api";
+import { ModalResetPassword } from "../components/features/user_settings/mod.tsx";
+import { type Modal as ContextModal, useCtx } from "../context.ts";
+import { useModals } from "../contexts/modal.tsx";
+import { ModalAttachment } from "./ModalAttachment.tsx";
+import { ModalBan } from "./ModalBan.tsx";
+import { ModalCameraPreview } from "./ModalCameraPreview.tsx";
+import { ModalChannelCreate } from "./ModalChannelCreate";
+import { ModalChannelTopic } from "./ModalChannelTopic.tsx";
+import { ModalExportData } from "./ModalExportData.tsx";
+import { ModalInviteCreate } from "./ModalInviteCreate.tsx";
+import { ModalKick } from "./ModalKick.tsx";
+import { ModalLink } from "./ModalLink.tsx";
+import { ModalMedia } from "./ModalMedia.tsx";
+import { ModalMessageEdits } from "./ModalMessageEdits.tsx";
+import { ModalNotifications } from "./ModalNotifications.tsx";
+import { ModalPalette } from "./ModalPalette.tsx";
+import { ModalPrivacy } from "./ModalPrivacy.tsx";
+import { ModalReactions } from "./ModalReactions.tsx";
+import { ModalRoomCreate } from "./ModalRoomCreate";
+import { ModalTagEditor } from "./ModalTagEditor.tsx";
+import { ModalTimeout } from "./ModalTimeout.tsx";
 
 export const Modal = (
 	props: ParentProps & { onKeyDown?: (e: KeyboardEvent) => void },
 ) => {
 	const [, modalCtl] = useModals();
 	return (
-		<div
-			class="modal"
-			onKeyDown={props.onKeyDown}
-			tabindex="-1"
-			autofocus
-		>
+		<div class="modal" onKeyDown={props.onKeyDown} tabindex="-1" autofocus>
 			<div class="bg" onClick={() => modalCtl.close()}></div>
 			<div class="content">
 				<div class="base"></div>
@@ -129,18 +124,10 @@ export function getModal(modal: ContextModal) {
 			);
 		}
 		case "channel_topic": {
-			return (
-				<ModalChannelTopic
-					channel_id={(modal as any).channel_id}
-				/>
-			);
+			return <ModalChannelTopic channel_id={(modal as any).channel_id} />;
 		}
 		case "link": {
-			return (
-				<ModalLink
-					editor={(modal as any).editor}
-				/>
-			);
+			return <ModalLink editor={(modal as any).editor} />;
 		}
 		case "kick": {
 			return (
@@ -170,18 +157,10 @@ export function getModal(modal: ContextModal) {
 			);
 		}
 		case "camera_preview": {
-			return (
-				<ModalCameraPreview
-					stream={(modal as any).stream}
-				/>
-			);
+			return <ModalCameraPreview stream={(modal as any).stream} />;
 		}
 		case "room_create": {
-			return (
-				<ModalRoomCreate
-					cont={(modal as any).cont}
-				/>
-			);
+			return <ModalRoomCreate cont={(modal as any).cont} />;
 		}
 	}
 }
@@ -208,9 +187,10 @@ const ModalAlert = (props: { text: string }) => {
 	);
 };
 
-const ModalConfirm = (
-	props: { text: string; cont: (bool: boolean) => void },
-) => {
+const ModalConfirm = (props: {
+	text: string;
+	cont: (bool: boolean) => void;
+}) => {
 	const [, modalCtl] = useModals();
 	let cancelBtn: HTMLButtonElement | undefined;
 	onMount(() => cancelBtn?.focus());
@@ -250,9 +230,10 @@ const ModalConfirm = (
 	);
 };
 
-const ModalPrompt = (
-	props: { text: string; cont: (s: string | null) => void },
-) => {
+const ModalPrompt = (props: {
+	text: string;
+	cont: (s: string | null) => void;
+}) => {
 	const [, modalCtl] = useModals();
 	let input: HTMLInputElement | undefined;
 	onMount(() => input?.focus());
@@ -264,9 +245,7 @@ const ModalPrompt = (
 				onSubmit={(e) => {
 					e.preventDefault();
 					const form = e.target as HTMLFormElement;
-					const input = form.elements.namedItem(
-						"text",
-					) as HTMLInputElement;
+					const input = form.elements.namedItem("text") as HTMLInputElement;
 					props.cont(input.value);
 					modalCtl.close();
 				}}

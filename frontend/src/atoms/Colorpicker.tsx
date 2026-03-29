@@ -1,6 +1,7 @@
-export const Colorpicker = (
-	props: { onInput: (color: string) => void; value: string },
-) => {
+export const Colorpicker = (props: {
+	onInput: (color: string) => void;
+	value: string;
+}) => {
 	return (
 		<input
 			type="color"

@@ -1,7 +1,8 @@
-import { Component, For, Match, Show, Switch } from "solid-js";
-import type { Channel, Permission } from "sdk";
 import { A } from "@solidjs/router";
+import type { Channel, Permission } from "sdk";
+import { Component, For, Match, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import { useApi2 } from "@/api";
 import {
 	Info,
 	Invites,
@@ -10,10 +11,9 @@ import {
 	Webhooks,
 } from "./components/features/channel_settings/mod.tsx";
 import { useCtx } from "./context.ts";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { useModals } from "./contexts/modal.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
-import { useApi2 } from "@/api";
-import { useCurrentUser } from "./contexts/currentUser.tsx";
 
 const tabs: Array<{
 	name: string;
@@ -87,16 +87,19 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 					`Are you sure you want to remove "${props.channel.name}"?`,
 					(confirmed) => {
 						if (confirmed) {
-							api2.client.http.DELETE("/api/v1/channel/{channel_id}/remove", {
-								params: { path: { channel_id: props.channel.id } },
-							}).then(() => {
-								// assuming channel has room_id
-								const parentRoomId = props.channel.room_id;
-								window.location.href = `/room/${parentRoomId}`;
-							}).catch((error) => {
-								console.error("Failed to remove channel:", error);
-								modalCtl.alert("Failed to remove channel: " + error.message);
-							});
+							api2.client.http
+								.DELETE("/api/v1/channel/{channel_id}/remove", {
+									params: { path: { channel_id: props.channel.id } },
+								})
+								.then(() => {
+									// assuming channel has room_id
+									const parentRoomId = props.channel.room_id;
+									window.location.href = `/room/${parentRoomId}`;
+								})
+								.catch((error) => {
+									console.error("Failed to remove channel:", error);
+									modalCtl.alert("Failed to remove channel: " + error.message);
+								});
 						}
 					},
 				);
@@ -117,9 +120,11 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 					<For each={tabs}>
 						{(tab) => (
 							<Show
-								when={(!tab.channelTypes ||
-									tab.channelTypes.includes(props.channel.type)) &&
-									(!tab.permissionCheck || tab.permissionCheck(perms as any))}
+								when={
+									(!tab.channelTypes ||
+										tab.channelTypes.includes(props.channel.type)) &&
+									(!tab.permissionCheck || tab.permissionCheck(perms as any))
+								}
 							>
 								<Switch>
 									<Match when={tab.action}>
@@ -128,7 +133,7 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 												class="action"
 												onClick={() => handleAction(tab.action as any)}
 												classList={{
-													"danger": tab.style === "danger",
+													danger: tab.style === "danger",
 												}}
 											>
 												{tab.name as any}

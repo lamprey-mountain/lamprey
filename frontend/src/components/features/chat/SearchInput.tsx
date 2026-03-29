@@ -1,3 +1,11 @@
+import { autoUpdate, flip, offset, size } from "@floating-ui/dom";
+import { history, redo, undo } from "prosemirror-history";
+import { keymap } from "prosemirror-keymap";
+import { type Node, Schema } from "prosemirror-model";
+import { EditorState, Plugin } from "prosemirror-state";
+import { Decoration, DecorationSet, type EditorView } from "prosemirror-view";
+import type { User } from "sdk";
+import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
 	createMemo,
@@ -6,6 +14,8 @@ import {
 	onCleanup,
 	Show,
 } from "solid-js";
+import { Portal } from "solid-js/web";
+import { UUID } from "uuidv7";
 import {
 	useApi2,
 	useChannels2,
@@ -15,21 +25,11 @@ import {
 	useThreadMembers2,
 	useUsers2,
 } from "@/api";
-import type { RoomT, ThreadT } from "../../../types";
-import type { ChannelSearch } from "../../../context";
-import type { User } from "sdk";
-import { UUID } from "uuidv7";
-import { EditorState, Plugin } from "prosemirror-state";
-import { Decoration, DecorationSet, type EditorView } from "prosemirror-view";
-import { type Node, Schema } from "prosemirror-model";
-import { keymap } from "prosemirror-keymap";
-import { history, redo, undo } from "prosemirror-history";
-import { Portal } from "solid-js/web";
-import { autoUpdate, flip, offset, size } from "@floating-ui/dom";
-import { useFloating } from "solid-floating-ui";
 import icSearch from "../../../assets/search.png";
 import { useChannel } from "../../../channelctx";
+import type { ChannelSearch } from "../../../context";
 import { type RoomSearch, useRoom } from "../../../contexts/room";
+import type { RoomT, ThreadT } from "../../../types";
 import {
 	createEditor as createBaseEditor,
 	createPlaceholderPlugin,
@@ -68,9 +68,10 @@ const createFilterNode = (
 		{
 			tag: `span.filter-${name}`,
 			getAttrs: (dom: HTMLElement) => ({
-				[valueKey]: valueKey === "id"
-					? dom.dataset.id
-					: dom.querySelector(".filter-value")?.textContent ?? "",
+				[valueKey]:
+					valueKey === "id"
+						? dom.dataset.id
+						: (dom.querySelector(".filter-value")?.textContent ?? ""),
 				...(hasNameAttr
 					? { name: dom.querySelector(".filter-value")?.textContent ?? "" }
 					: {}),
@@ -115,8 +116,10 @@ function addRecentSearch(query: string) {
 	if (!query.trim()) return;
 	const normalizedQuery = query.trim().replace(/\s+/g, " ");
 	let searches = getRecentSearches();
-	searches = [normalizedQuery, ...searches.filter((s) => s !== normalizedQuery)]
-		.slice(0, 10);
+	searches = [
+		normalizedQuery,
+		...searches.filter((s) => s !== normalizedQuery),
+	].slice(0, 10);
 	localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
 }
 
@@ -309,8 +312,7 @@ function syntaxHighlightingPlugin() {
 							const negatedClass = token.negated ? " filter-negated" : "";
 							decorations.push(
 								Decoration.inline(from, to, {
-									class:
-										`filter-token filter-${token.filterType}${negatedClass}`,
+									class: `filter-token filter-${token.filterType}${negatedClass}`,
 								}),
 							);
 						}
@@ -380,13 +382,14 @@ const AutocompleteDropdown = (props: {
 	const roles = useRoles2();
 
 	const roomThreads = () =>
-		[...channels2.cache.values()].filter((c) =>
-			c.room_id === ((props.channel?.room_id as any) ?? props.room?.id ?? "")
+		[...channels2.cache.values()].filter(
+			(c) =>
+				c.room_id === ((props.channel?.room_id as any) ?? props.room?.id ?? ""),
 		);
 
 	const roomId = () => props.channel?.room_id ?? props.room?.id ?? null;
 	const roomRoles = createMemo(() =>
-		[...roles.cache.values()].filter((r) => r.room_id === roomId())
+		[...roles.cache.values()].filter((r) => r.room_id === roomId()),
 	);
 
 	const threadMemberIds = () => {
@@ -414,21 +417,30 @@ const AutocompleteDropdown = (props: {
 		];
 		if (!query) return all_user_ids.slice(0, 10);
 
-		const users = all_user_ids.map((id) => users2.cache.get(id)).filter(
-			Boolean,
-		) as User[];
-		return users.filter((u) =>
-			u.name.toLowerCase().includes(query) || u.id.toLowerCase().includes(query)
-		).map((u) => u.id).slice(0, 10);
+		const users = all_user_ids
+			.map((id) => users2.cache.get(id))
+			.filter(Boolean) as User[];
+		return users
+			.filter(
+				(u) =>
+					u.name.toLowerCase().includes(query) ||
+					u.id.toLowerCase().includes(query),
+			)
+			.map((u) => u.id)
+			.slice(0, 10);
 	});
 
 	const channelSuggestions = createMemo(() => {
 		const query = props.filter.query.toLowerCase();
 		const threads = roomThreads() ?? [];
 		if (!query) return threads.slice(0, 10);
-		return threads.filter((t) =>
-			t.name.toLowerCase().includes(query) || t.id.toLowerCase().includes(query)
-		).slice(0, 10);
+		return threads
+			.filter(
+				(t) =>
+					t.name.toLowerCase().includes(query) ||
+					t.id.toLowerCase().includes(query),
+			)
+			.slice(0, 10);
 	});
 
 	const hasFilterSuggestions = createMemo(() => {
@@ -456,25 +468,28 @@ const AutocompleteDropdown = (props: {
 			...new Set([...threadMemberIds(), ...roomMemberIds()]),
 		];
 
-		const users = (all_user_ids.map((id) =>
-			users2.cache.get(id)
-		).filter(Boolean) as User[])
-			.filter((u) =>
-				u.name.toLowerCase().includes(query) ||
-				u.id.toLowerCase().includes(query)
+		const users = (
+			all_user_ids.map((id) => users2.cache.get(id)).filter(Boolean) as User[]
+		)
+			.filter(
+				(u) =>
+					u.name.toLowerCase().includes(query) ||
+					u.id.toLowerCase().includes(query),
 			)
-			.map((u) =>
-				({ id: `user-${u.id}`, name: u.name, type: "user" }) as Mentionable
+			.map(
+				(u) =>
+					({ id: `user-${u.id}`, name: u.name, type: "user" }) as Mentionable,
 			);
 
 		const _roles = (roomRoles() ?? [])
 			.filter((r) => r.name.toLowerCase().includes(query))
-			.map((r) =>
-				({
-					id: `role-${r.id}`,
-					name: r.name,
-					type: "role" as const,
-				}) as Mentionable
+			.map(
+				(r) =>
+					({
+						id: `role-${r.id}`,
+						name: r.name,
+						type: "role" as const,
+					}) as Mentionable,
 			);
 
 		const special: Mentionable[] = [
@@ -549,7 +564,7 @@ const AutocompleteDropdown = (props: {
 
 		return allFilterSuggestions
 			.filter((f) => f.toLowerCase().includes(query))
-			.map((f) => negated ? "-" + f : f);
+			.map((f) => (negated ? "-" + f : f));
 	});
 
 	const recentSearches = createMemo(() => {
@@ -686,13 +701,14 @@ const AutocompleteDropdown = (props: {
 
 		const merged: Segment[] = [];
 		for (const seg of segments) {
-			const overlaps = merged.find((m) =>
-				!(seg.to <= m.from || seg.from >= m.to)
+			const overlaps = merged.find(
+				(m) => !(seg.to <= m.from || seg.from >= m.to),
 			);
 			if (!overlaps) {
 				merged.push(seg);
 			} else if (
-				seg.type.startsWith("filter-") && !overlaps.type.startsWith("filter-")
+				seg.type.startsWith("filter-") &&
+				!overlaps.type.startsWith("filter-")
 			) {
 				const idx = merged.indexOf(overlaps);
 				merged.splice(idx, 1, seg);
@@ -728,8 +744,8 @@ const AutocompleteDropdown = (props: {
 						const user = users2.cache.get(value.replace("user-", ""));
 						displayName = user?.name ?? value.replace("user-", "");
 					} else if (value.startsWith("role-")) {
-						const role = roomRoles().find((r) =>
-							r.id === value.replace("role-", "")
+						const role = roomRoles().find(
+							(r) => r.id === value.replace("role-", ""),
 						);
 						displayName = role?.name ?? value.replace("role-", "");
 					} else if (value === "everyone-room") displayName = "@room";
@@ -873,9 +889,12 @@ const AutocompleteDropdown = (props: {
 							const renderLabel = () => {
 								const label = item.label;
 								if (Array.isArray(label)) {
-									return label.map((part) => (typeof part === "string"
-										? <span>{part}</span>
-										: <span class={part.type}>{part.value}</span>)
+									return label.map((part) =>
+										typeof part === "string" ? (
+											<span>{part}</span>
+										) : (
+											<span class={part.type}>{part.value}</span>
+										),
 									);
 								}
 								return label;
@@ -981,15 +1000,19 @@ function autocompletePlugin(
 	});
 }
 
-export const SearchInput = (
-	props: { channel?: ThreadT; room?: RoomT; autofocus?: boolean },
-) => {
+export const SearchInput = (props: {
+	channel?: ThreadT;
+	room?: RoomT;
+	autofocus?: boolean;
+}) => {
 	const users2 = useUsers2();
 	const messagesService = useMessages2();
 	const [dropdownRef, setDropdownRef] = createSignal<HTMLDivElement>();
-	const [activeFilter, setActiveFilter] = createSignal<
-		{ type: string; query: string; negated?: boolean } | null
-	>(null);
+	const [activeFilter, setActiveFilter] = createSignal<{
+		type: string;
+		query: string;
+		negated?: boolean;
+	} | null>(null);
 	const [hoveredIndex, setHoveredIndex] = createSignal<number>(0);
 	const [editorRef, setEditorRef] = createSignal<HTMLElement>();
 	const [userNavigated, setUserNavigated] = createSignal(false);
@@ -1021,8 +1044,8 @@ export const SearchInput = (
 	const channels2 = useChannels2();
 
 	const roomThreads = () =>
-		[...channels2.cache.values()].filter((c) =>
-			c.room_id === (props.channel?.room_id ?? props.room?.id ?? "")
+		[...channels2.cache.values()].filter(
+			(c) => c.room_id === (props.channel?.room_id ?? props.room?.id ?? ""),
 		);
 
 	const currentSearch = () => {
@@ -1250,8 +1273,10 @@ export const SearchInput = (
 						`metadata_fast.mentions_role:${mentionId.replace("role-", "")}`,
 					);
 				} else if (
-					mentionId === "everyone-room" || mentionId === "everyone-thread"
-				) mentionSubquery.push(`metadata_fast.mentions_everyone:true`);
+					mentionId === "everyone-room" ||
+					mentionId === "everyone-thread"
+				)
+					mentionSubquery.push(`metadata_fast.mentions_everyone:true`);
 			}
 			return mentionSubquery;
 		};
@@ -1329,7 +1354,8 @@ export const SearchInput = (
 
 				const recent = getRecentSearches();
 				if (
-					recent.includes(text) && cleanText.length > 0 &&
+					recent.includes(text) &&
+					cleanText.length > 0 &&
 					!isNegatedSuggestion &&
 					!cleanText.match(/^(author|channel|mentions):/)
 				) {
@@ -1435,7 +1461,7 @@ export const SearchInput = (
 	const editor = createBaseEditor({
 		schema: schema as any,
 		createState: (schema) => {
-			let docContent: Node | undefined ;
+			let docContent: Node | undefined;
 			const initialSearch = currentSearch();
 
 			if (initialSearch?.query) {
@@ -1472,8 +1498,8 @@ export const SearchInput = (
 								const filterActive = activeFilter();
 
 								const items = currentItemsRef?.items || [];
-								const hasSelectableItems = items.length > 0 &&
-									items.some((i) => !i.isSeparator);
+								const hasSelectableItems =
+									items.length > 0 && items.some((i) => !i.isSeparator);
 
 								if (filterActive && hasSelectableItems) {
 									if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -1481,14 +1507,24 @@ export const SearchInput = (
 										event.preventDefault();
 										setHoveredIndex((prev) => {
 											const max = items.length - 1;
-											let next = event.key === "ArrowDown"
-												? (prev >= max ? 0 : prev + 1)
-												: (prev <= 0 ? max : prev - 1);
+											let next =
+												event.key === "ArrowDown"
+													? prev >= max
+														? 0
+														: prev + 1
+													: prev <= 0
+														? max
+														: prev - 1;
 
 											if (items[next]?.isSeparator) {
-												next = event.key === "ArrowDown"
-													? (next >= max ? 0 : next + 1)
-													: (next <= 0 ? max : next - 1);
+												next =
+													event.key === "ArrowDown"
+														? next >= max
+															? 0
+															: next + 1
+														: next <= 0
+															? max
+															: next - 1;
 											}
 											return next;
 										});
@@ -1581,7 +1617,7 @@ export const SearchInput = (
 							position: position.strategy,
 							top: `${position.y ?? 0}px`,
 							left: `${position.x ?? 0}px`,
-							width: `${(editorRef()?.offsetWidth || 0)}px`,
+							width: `${editorRef()?.offsetWidth || 0}px`,
 						}}
 					>
 						<AutocompleteDropdown

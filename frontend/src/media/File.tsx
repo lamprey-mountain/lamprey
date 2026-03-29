@@ -8,7 +8,9 @@ export const FileView = (props: MediaProps) => {
 			<a download={props.media.filename} href={getUrl(props.media)}>
 				download {props.media.filename}
 			</a>
-			<div class="dim">{ty()} - {formatBytes(props.media.size)}</div>
+			<div class="dim">
+				{ty()} - {formatBytes(props.media.size)}
+			</div>
 		</div>
 	);
 };

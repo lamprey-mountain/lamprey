@@ -1,5 +1,5 @@
-import { createSignal, Show } from "solid-js";
 import { type RouteSectionProps, useNavigate } from "@solidjs/router";
+import { createSignal, Show } from "solid-js";
 import { useCtx } from "./context.ts";
 
 export const RouteVerifyEmail = (props: RouteSectionProps<unknown>) => {
@@ -25,8 +25,8 @@ export const RouteVerifyEmail = (props: RouteSectionProps<unknown>) => {
 			.POST("/api/v1/user/{user_id}/email/{addr}/verify/{code}", {
 				params: {
 					path: {
-						addr: (emailAddr as any),
-						code: (code as any),
+						addr: emailAddr as any,
+						code: code as any,
 						user_id: "@self",
 					},
 				},

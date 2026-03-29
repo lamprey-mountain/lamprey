@@ -1,4 +1,3 @@
-import type { RootStore } from "@/api";
 import type {
 	Channel,
 	Permission,
@@ -7,6 +6,7 @@ import type {
 	Room,
 	RoomMember,
 } from "sdk";
+import type { RootStore } from "@/api";
 import { logger } from "./logger";
 
 const permLog = logger.for("permissions");
@@ -36,8 +36,11 @@ function isAllowedForTimedOut(perm: Permission): boolean {
  * Check if a permission is allowed for quarantined users
  */
 function isAllowedForQuarantined(perm: Permission): boolean {
-	return perm === "ChannelView" || perm === "AuditLogView" ||
-		perm === "MemberNickname";
+	return (
+		perm === "ChannelView" ||
+		perm === "AuditLogView" ||
+		perm === "MemberNickname"
+	);
 }
 
 /**
@@ -435,7 +438,7 @@ function applyChannelOverwrites(
 		if (!isExpired) {
 			// Channel is locked, check if user can bypass
 			const canBypass = locked.allow_roles?.some((roleId) =>
-				member.roles.includes(roleId)
+				member.roles.includes(roleId),
 			);
 
 			if (canBypass) {
@@ -448,7 +451,8 @@ function applyChannelOverwrites(
 	}
 
 	if (
-		!channel.permission_overwrites || channel.permission_overwrites.length === 0
+		!channel.permission_overwrites ||
+		channel.permission_overwrites.length === 0
 	) {
 		return;
 	}
@@ -646,8 +650,9 @@ export function canUseCommand(
 	const checker = createPermissionChecker(ctx, user_id);
 	switch (commandName) {
 		case "thread":
-			return checker.has("ThreadCreatePublic") ||
-				checker.has("ThreadCreatePrivate");
+			return (
+				checker.has("ThreadCreatePublic") || checker.has("ThreadCreatePrivate")
+			);
 		case "archive":
 		case "unarchive":
 			return checker.has("ThreadManage");
@@ -680,6 +685,5 @@ export function canUseLockedChannel(
 	user_id: string,
 ): boolean {
 	const checker = createPermissionChecker(ctx, user_id);
-	return checker.has("ThreadManage") ||
-		checker.has("ChannelManage");
+	return checker.has("ThreadManage") || checker.has("ChannelManage");
 }

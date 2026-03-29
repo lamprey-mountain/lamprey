@@ -1,46 +1,3 @@
-import * as Y from "yjs";
-import { type Command, EditorState, TextSelection } from "prosemirror-state";
-import { DOMParser } from "prosemirror-model";
-import {
-	initProseMirrorDoc,
-	redo,
-	undo,
-	ySyncPlugin,
-	yUndoPlugin,
-} from "y-prosemirror";
-import { keymap } from "prosemirror-keymap";
-import { md } from "../../../markdown_utils.tsx";
-import { useApi2, useChannels2 } from "@/api";
-import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
-import { useAutocomplete } from "../../../contexts/autocomplete";
-import type { MessageSync } from "sdk";
-import { cursorPlugin } from "./editor-cursors.ts";
-import {
-	createEditor as createBaseEditor,
-	type EditorViewProps,
-} from "./mod.tsx";
-import { schema } from "./schema.ts";
-import {
-	base64UrlDecode,
-	base64UrlEncode,
-	createListContinueCommand,
-	createWrapCommand,
-} from "./editor-utils.ts";
-import { createSignal } from "solid-js";
-import {
-	createDiffPlugin,
-	type DiffMark,
-	diffPluginKey,
-} from "./diff-plugin.ts";
-import { createToolbarPlugin } from "./toolbar-plugin.ts";
-import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
-import { createEditorNodeViews } from "./node-views.tsx";
-import { createPastePlugin, createSubmitPlugin } from "./core-plugins.ts";
-import {
-	createMarkdownInputRulesPlugin,
-	joinBlockquoteBackward,
-	joinBlockquoteForward,
-} from "./input-rules-plugin.ts";
 import {
 	chainCommands,
 	deleteSelection,
@@ -49,9 +6,52 @@ import {
 	selectNodeBackward,
 	selectNodeForward,
 } from "prosemirror-commands";
+import { keymap } from "prosemirror-keymap";
+import { DOMParser } from "prosemirror-model";
+import { type Command, EditorState, TextSelection } from "prosemirror-state";
+import type { MessageSync } from "sdk";
+import { createSignal } from "solid-js";
+import {
+	initProseMirrorDoc,
+	redo,
+	undo,
+	ySyncPlugin,
+	yUndoPlugin,
+} from "y-prosemirror";
+import * as Y from "yjs";
+import { useApi2, useChannels2 } from "@/api";
+import { useAutocomplete } from "../../../contexts/autocomplete";
+import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
+import { md } from "../../../markdown_utils.tsx";
+import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
+import { createPastePlugin, createSubmitPlugin } from "./core-plugins.ts";
+import {
+	createDiffPlugin,
+	type DiffMark,
+	diffPluginKey,
+} from "./diff-plugin.ts";
+import { cursorPlugin } from "./editor-cursors.ts";
+import {
+	base64UrlDecode,
+	base64UrlEncode,
+	createListContinueCommand,
+	createWrapCommand,
+} from "./editor-utils.ts";
 import { createEmojiPlugin } from "./emoji-plugin.ts";
+import {
+	createMarkdownInputRulesPlugin,
+	joinBlockquoteBackward,
+	joinBlockquoteForward,
+} from "./input-rules-plugin.ts";
 import { createMarkdownHighlightPlugin } from "./markdown-highlight-plugin.ts";
-import { createPlaceholderPlugin } from "./mod.tsx";
+import {
+	createEditor as createBaseEditor,
+	createPlaceholderPlugin,
+	type EditorViewProps,
+} from "./mod.tsx";
+import { createEditorNodeViews } from "./node-views.tsx";
+import { schema } from "./schema.ts";
+import { createToolbarPlugin } from "./toolbar-plugin.ts";
 
 let isApplyingFormat = false;
 export const setIsApplyingFormat = (value: boolean) => {
@@ -88,9 +88,8 @@ export const createEditor = (
 	const autocomplete = useAutocomplete();
 	const toolbarPlugin = createToolbarPlugin(toolbar);
 	const [isSubscribed, setIsSubscribed] = createSignal(false);
-	const [currentChannelId, setCurrentChannelId] = createSignal(
-		"no channel id!",
-	);
+	const [currentChannelId, setCurrentChannelId] =
+		createSignal("no channel id!");
 	const [currentRoomId, setCurrentRoomId] = createSignal<string>("");
 	const [currentBranchId, setCurrentBranchId] = createSignal("no branch id!");
 	const [diffMarks, setDiffMarksSignal] = createSignal<DiffMark[]>(
@@ -126,9 +125,11 @@ export const createEditor = (
 				msg.channel_id === currentChannelId() &&
 				msg.branch_id === currentBranchId()
 			) {
-				const update = ((msg.update as unknown) instanceof Uint8Array
-					? msg.update
-					: base64UrlDecode(msg.update as unknown as string)) as Uint8Array;
+				const update = (
+					(msg.update as unknown) instanceof Uint8Array
+						? msg.update
+						: base64UrlDecode(msg.update as unknown as string)
+				) as Uint8Array;
 				Y.applyUpdate(ydoc, update, { key: "server" });
 			}
 		} else if (msg.type === "DocumentSubscribed") {
@@ -193,16 +194,16 @@ export const createEditor = (
 					"Ctrl-m": (_state) => {
 						return false;
 					},
-					"Enter": (state, dispatch) => {
+					Enter: (state, dispatch) => {
 						return createListContinueCommand()(state, dispatch);
 					},
-					"Backspace": chainCommands(
+					Backspace: chainCommands(
 						deleteSelection,
 						joinBlockquoteBackward,
 						joinBackward,
 						selectNodeBackward,
 					),
-					"Delete": chainCommands(
+					Delete: chainCommands(
 						deleteSelection,
 						joinBlockquoteForward,
 						joinForward,
@@ -225,10 +226,7 @@ export const createEditor = (
 
 	const subscribe = (channelId: string, branchId: string) => {
 		// don't resubscribe if nothing changed
-		if (
-			currentChannelId() === channelId &&
-			currentBranchId() === branchId
-		) {
+		if (currentChannelId() === channelId && currentBranchId() === branchId) {
 			return;
 		}
 
@@ -275,9 +273,7 @@ export const createEditor = (
 		return EditorState.create({
 			doc,
 			schema,
-			plugins: [
-				createDiffPlugin(() => diffMarks()),
-			],
+			plugins: [createDiffPlugin(() => diffMarks())],
 		});
 	};
 
@@ -293,9 +289,7 @@ export const createEditor = (
 		return EditorState.create({
 			doc,
 			schema,
-			plugins: [
-				createDiffPlugin(() => diffMarks()),
-			],
+			plugins: [createDiffPlugin(() => diffMarks())],
 		});
 	};
 
@@ -313,7 +307,7 @@ export const createEditor = (
 			return (
 				<editor.View
 					{...props}
-					disabled={props.disabled ?? (opts.diffMode?.() ?? false)}
+					disabled={props.disabled ?? opts.diffMode?.() ?? false}
 				/>
 			);
 		},

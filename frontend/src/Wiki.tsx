@@ -1,4 +1,7 @@
+import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
+import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { type Channel, getTimestampFromUUID } from "sdk";
+import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
 	createMemo,
@@ -7,23 +10,20 @@ import {
 	onCleanup,
 	Show,
 } from "solid-js";
+import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
-import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
-import { useFloating } from "solid-floating-ui";
-import { useCtx } from "./context";
 import { useApi2, useChannels2 } from "@/api";
+import { Resizable } from "./atoms/Resizable";
 import { Time } from "./atoms/Time";
+import { ChannelContext, createInitialChannelState } from "./channelctx";
+import { Document } from "./components/features/editor/Document";
+import { useCtx } from "./context";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { useModals } from "./contexts/modal";
-import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import { flags } from "./flags";
 import { usePermissions } from "./hooks/usePermissions";
 import { md } from "./markdown_utils";
-import { flags } from "./flags";
-import { ChannelContext, createInitialChannelState } from "./channelctx";
-import { createStore } from "solid-js/store";
-import { Document } from "./components/features/editor/Document";
-import { Resizable } from "./atoms/Resizable";
 import { ChannelIcon } from "./User";
-import { useCurrentUser } from "./contexts/currentUser.tsx";
 
 export const Wiki = (props: { channel: Channel }) => {
 	const ctx = useCtx();
@@ -94,24 +94,23 @@ export const Wiki = (props: { channel: Channel }) => {
 	const getDocuments = () => {
 		const list = documentsResource()?.();
 		if (!list) return [];
-		const items = list.state.ids.map((id) => channels2.cache.get(id)).filter((
-			t,
-		): t is Channel => t !== undefined);
+		const items = list.state.ids
+			.map((id) => channels2.cache.get(id))
+			.filter((t): t is Channel => t !== undefined);
 		// sort descending by id
-		return [...items].filter((t) => t.parent_id === props.channel.id).sort((
-			a,
-			b,
-		) => {
-			if (sortBy() === "new") {
-				return a.id < b.id ? 1 : -1;
-			} else if (sortBy() === "activity") {
-				// activity
-				const tA = a.last_version_id ?? a.id;
-				const tB = b.last_version_id ?? b.id;
-				return tA < tB ? 1 : -1;
-			}
-			return 0;
-		});
+		return [...items]
+			.filter((t) => t.parent_id === props.channel.id)
+			.sort((a, b) => {
+				if (sortBy() === "new") {
+					return a.id < b.id ? 1 : -1;
+				} else if (sortBy() === "activity") {
+					// activity
+					const tA = a.last_version_id ?? a.id;
+					const tB = b.last_version_id ?? b.id;
+					return tA < tB ? 1 : -1;
+				}
+				return 0;
+			});
 	};
 
 	function createDocument(room_id: string) {
@@ -214,9 +213,7 @@ export const Wiki = (props: { channel: Channel }) => {
 										}}
 									>
 										<menu>
-											<div class="subtext header">
-												sort by
-											</div>
+											<div class="subtext header">sort by</div>
 											<button
 												onClick={() => {
 													setSortBy("new");
@@ -290,9 +287,7 @@ export const Wiki = (props: { channel: Channel }) => {
 												</Show>
 											</button>
 											<hr />
-											<div class="subtext header">
-												view as
-											</div>
+											<div class="subtext header">view as</div>
 											<button
 												onClick={() => {
 													setViewAs("list");
@@ -361,10 +356,7 @@ export const Wiki = (props: { channel: Channel }) => {
 													Created <Time date={getTimestampFromUUID(doc.id)} />
 												</div>
 											</div>
-											<div
-												class="bottom"
-												onClick={() => setDocumentId(doc.id)}
-											>
+											<div class="bottom" onClick={() => setDocumentId(doc.id)}>
 												<div class="dim">
 													{doc.message_count} message(s) &bull; last update{" "}
 													<Time
@@ -377,8 +369,7 @@ export const Wiki = (props: { channel: Channel }) => {
 													<div
 														class="description markdown"
 														innerHTML={md(doc.description ?? "") as string}
-													>
-													</div>
+													></div>
 												</Show>
 											</div>
 										</header>

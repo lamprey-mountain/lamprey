@@ -1,3 +1,4 @@
+import type { User } from "sdk";
 import {
 	createEffect,
 	createResource,
@@ -7,11 +8,10 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import type { User } from "sdk";
-import { Modal } from "./mod";
 import { useApi2, useMessages2, useUsers2 } from "@/api";
-import { Avatar } from "../User";
 import { renderReactionKey } from "../emoji";
+import { Avatar } from "../User";
+import { Modal } from "./mod";
 
 interface ModalReactionsProps {
 	channel_id: string;

@@ -1,8 +1,13 @@
-import { type Command, Plugin, PluginKey, TextSelection } from "prosemirror-state";
 import { DOMSerializer } from "prosemirror-model";
+import {
+	type Command,
+	Plugin,
+	PluginKey,
+	TextSelection,
+} from "prosemirror-state";
 import { liftTarget } from "prosemirror-transform";
-import { schema } from "./schema.ts";
 import { serializeToMarkdown } from "./export-utils.ts";
+import { schema } from "./schema.ts";
 
 function getLineBoundaries($pos: any) {
 	const parent = $pos.parent;
@@ -78,7 +83,8 @@ export function createMarkdownInputRulesPlugin() {
 
 					// deleting/exiting part of a blockquote
 					if (
-						isAtLineStart && $from.depth >= 2 &&
+						isAtLineStart &&
+						$from.depth >= 2 &&
 						$from.node($from.depth - 1).type === schema.nodes.blockquote
 					) {
 						const tr = state.tr;
@@ -130,7 +136,9 @@ export function createMarkdownInputRulesPlugin() {
 					if (
 						$from.parent.type === schema.nodes.code_block &&
 						// FIXME: code blocks must close with the same fence as it opened with
-						bounds.text.trim().startsWith("```")
+						bounds.text
+							.trim()
+							.startsWith("```")
 					) {
 						const insertPos = tr.mapping.map($from.after($from.depth));
 						tr.insert(insertPos, schema.nodes.paragraph.create());
@@ -142,7 +150,8 @@ export function createMarkdownInputRulesPlugin() {
 
 				// handling tab inside of codeblocks
 				if (
-					event.key === "Tab" && $from.parent.type === schema.nodes.code_block
+					event.key === "Tab" &&
+					$from.parent.type === schema.nodes.code_block
 				) {
 					event.preventDefault();
 					dispatch(state.tr.insertText("\t"));
@@ -161,7 +170,8 @@ export function createMarkdownInputRulesPlugin() {
 
 				// convert > into blockquote elements
 				if (
-					bounds.text === ">" && $from.parent.type === schema.nodes.paragraph
+					bounds.text === ">" &&
+					$from.parent.type === schema.nodes.paragraph
 				) {
 					const tr = state.tr;
 					if (!bounds.isFirstLine) {
@@ -172,7 +182,8 @@ export function createMarkdownInputRulesPlugin() {
 					const range = tr.doc.resolve(start).blockRange();
 					if (range) {
 						dispatch(
-							tr.wrap(range, [{ type: schema.nodes.blockquote }])
+							tr
+								.wrap(range, [{ type: schema.nodes.blockquote }])
 								.scrollIntoView(),
 						);
 						return true;
@@ -192,7 +203,9 @@ export const joinBlockquoteBackward: Command = (state, dispatch) => {
 
 	// Only trigger if selection is empty and at the start of a paragraph
 	if (
-		!empty || $from.parentOffset > 0 || $from.parent.type.name !== "paragraph"
+		!empty ||
+		$from.parentOffset > 0 ||
+		$from.parent.type.name !== "paragraph"
 	) {
 		return false;
 	}

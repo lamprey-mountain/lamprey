@@ -1,19 +1,19 @@
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import { ReactiveMap } from "@solid-primitives/map";
+import { A, useNavigate } from "@solidjs/router";
 import { createVirtualizer } from "@tanstack/solid-virtual";
-import type { RoomT } from "./types.ts";
+import { type Channel, getTimestampFromUUID } from "sdk";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import { useChannels2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
+import { Time } from "./atoms/Time.tsx";
 import { useCtx } from "./context.ts";
+import { useCurrentUser } from "./contexts/currentUser.tsx";
+import { useMemberList } from "./contexts/memberlist.tsx";
 import { useUserPopout } from "./contexts/mod.tsx";
 import { useModals } from "./contexts/modal";
-import { type Channel, getTimestampFromUUID } from "sdk";
-import { A, useNavigate } from "@solidjs/router";
-import { useChannels2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
-import { AvatarWithStatus, ChannelIcon } from "./User.tsx";
-import { Time } from "./atoms/Time.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
 import { md } from "./markdown_utils.tsx";
-import { ReactiveMap } from "@solid-primitives/map";
-import { useMemberList } from "./contexts/memberlist.tsx";
-import { useCurrentUser } from "./contexts/currentUser.tsx";
+import type { RoomT } from "./types.ts";
+import { AvatarWithStatus, ChannelIcon } from "./User.tsx";
 
 export const RoomMembers = (props: { room: RoomT }) => {
 	const roles2 = useRoles2();
@@ -90,76 +90,72 @@ export const RoomMembers = (props: { room: RoomT }) => {
 									transform: `translateY(${virtualRow.start}px)`,
 								}}
 							>
-								{row.type === "group"
-									? (
-										<div
-											class="member-group"
-											onClick={() => {
-												const groupId = JSON.stringify(row.group.id);
-												const newMap = new ReactiveMap(collapsedGroups());
-												newMap.set(groupId, !newMap.get(groupId));
-												setCollapsedGroups(newMap);
-											}}
-										>
-											{getGroupName(row.group)} — {row.group.count}
-										</div>
-									)
-									: (
-										(() => {
-											const member = () =>
-												roomMembers2.cache.get(
-													`${room_id()}:${row.item.user.id}`,
-												) ??
-													row.item.room_member;
-											const user = () =>
-												users2.cache.get(row.item.user.id) ?? row.item.user;
-											const isOffline = () =>
-												user()?.presence.status === "Offline";
+								{row.type === "group" ? (
+									<div
+										class="member-group"
+										onClick={() => {
+											const groupId = JSON.stringify(row.group.id);
+											const newMap = new ReactiveMap(collapsedGroups());
+											newMap.set(groupId, !newMap.get(groupId));
+											setCollapsedGroups(newMap);
+										}}
+									>
+										{getGroupName(row.group)} — {row.group.count}
+									</div>
+								) : (
+									(() => {
+										const member = () =>
+											roomMembers2.cache.get(
+												`${room_id()}:${row.item.user.id}`,
+											) ?? row.item.room_member;
+										const user = () =>
+											users2.cache.get(row.item.user.id) ?? row.item.user;
+										const isOffline = () =>
+											user()?.presence.status === "Offline";
 
-											const ctx = useCtx();
-											const { userView, setUserView } = useUserPopout();
-											const [hovered, setHovered] = createSignal(false);
-											function name() {
-												let name: string | undefined | null = null;
-												if (member()?.membership === "Join") {
-													name ??= member()!.override_name;
-												}
-												name ??= user()?.name;
-												return name;
+										const ctx = useCtx();
+										const { userView, setUserView } = useUserPopout();
+										const [hovered, setHovered] = createSignal(false);
+										function name() {
+											let name: string | undefined | null = null;
+											if (member()?.membership === "Join") {
+												name ??= member()!.override_name;
 											}
+											name ??= user()?.name;
+											return name;
+										}
 
-											return (
-												<div
-													class="menu-user"
-													data-user-id={row.item.user.id}
-													classList={{ offline: isOffline() }}
-													onClick={(e) => {
-														e.stopPropagation();
-														const currentTarget = e
-															.currentTarget as HTMLElement;
-														if (userView()?.ref === currentTarget) {
-															setUserView(null);
-														} else {
-															setUserView({
-																user_id: user()!.id,
-																room_id: props.room.id,
-																ref: currentTarget,
-																source: "member-list",
-															});
-														}
-													}}
-													// FIXME: handle keyboard naviatation
-													onMouseEnter={() => setHovered(true)}
-													onMouseLeave={() => setHovered(false)}
-												>
-													<AvatarWithStatus user={user()} animate={hovered()} />
-													<span class="text">
-														<span class="name">{name()}</span>
-													</span>
-												</div>
-											);
-										})()
-									)}
+										return (
+											<div
+												class="menu-user"
+												data-user-id={row.item.user.id}
+												classList={{ offline: isOffline() }}
+												onClick={(e) => {
+													e.stopPropagation();
+													const currentTarget = e.currentTarget as HTMLElement;
+													if (userView()?.ref === currentTarget) {
+														setUserView(null);
+													} else {
+														setUserView({
+															user_id: user()!.id,
+															room_id: props.room.id,
+															ref: currentTarget,
+															source: "member-list",
+														});
+													}
+												}}
+												// FIXME: handle keyboard naviatation
+												onMouseEnter={() => setHovered(true)}
+												onMouseLeave={() => setHovered(false)}
+											>
+												<AvatarWithStatus user={user()} animate={hovered()} />
+												<span class="text">
+													<span class="name">{name()}</span>
+												</span>
+											</div>
+										);
+									})()
+								)}
 							</div>
 						);
 					}}
@@ -183,7 +179,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 
 	const channels2 = useChannels2();
 	const threadsResource = createMemo(() =>
-		[...channels2.cache.values()].filter((c) => c.room_id === room_id())
+		[...channels2.cache.values()].filter((c) => c.room_id === room_id()),
 	);
 
 	const categorizedChannels = createMemo(() => {
@@ -316,8 +312,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 					<p
 						class="markdown"
 						innerHTML={md(props.room.description ?? "") as string}
-					>
-					</p>
+					></p>
 				</div>
 				<div style="display:flex;flex-direction:column;gap:4px">
 					<button onClick={() => leaveRoom(room_id())}>leave room</button>
@@ -330,8 +325,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 				<h3 style="font-size:1rem; margin-top:8px;flex:1">
 					{threadsResource().length} channels
 				</h3>
-				{
-					/*
+				{/*
 				<div class="thread-filter">
 					<button
 						classList={{ selected: threadFilter() === "active" }}
@@ -354,8 +348,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 						</button>
 					</Show>
 				</div>
-				*/
-				}
+				*/}
 				<button
 					class="primary"
 					style="margin-left: 8px;border-radius:4px"
@@ -392,8 +385,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 													onClick={() => nav(`/thread/${thread.id}`)}
 												>
 													<div class="dim">
-														{thread.message_count} message(s) &bull; last msg
-														{" "}
+														{thread.message_count} message(s) &bull; last msg{" "}
 														<Time
 															date={getTimestampFromUUID(
 																thread.last_version_id ?? thread.id,
@@ -404,8 +396,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 														<div
 															class="description markdown"
 															innerHTML={md(thread.description ?? "") as string}
-														>
-														</div>
+														></div>
 													</Show>
 												</div>
 											</header>

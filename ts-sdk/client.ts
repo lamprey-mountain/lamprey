@@ -1,9 +1,10 @@
-import createFetch from "openapi-fetch";
+import { pack, Unpackr, UnpackrStream, unpack } from "msgpackr";
 import type * as oapi from "openapi-fetch";
+import createFetch from "openapi-fetch";
+import { createObservable, type Observer } from "./observable.ts";
 import type { paths } from "./schema.d.ts";
 import type { MessageEnvelope, MessageReady, MessageSync } from "./types.ts";
-import { createObservable, type Observer } from "./observable.ts";
-import { pack, unpack, Unpackr, UnpackrStream } from "msgpackr";
+
 export * from "./observable.ts";
 
 export type ClientState = "stopped" | "connecting" | "connected" | "ready";
@@ -224,9 +225,8 @@ function createDecompressor(
 	onError?: (err: Error) => void,
 ) {
 	const stream = new DecompressionStream("deflate");
-	const deserializer = format === "json"
-		? new JsonStream()
-		: new MsgpackStream();
+	const deserializer =
+		format === "json" ? new JsonStream() : new MsgpackStream();
 	const reader = stream.readable.pipeThrough(deserializer).getReader();
 
 	(async () => {

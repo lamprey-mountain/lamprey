@@ -1,9 +1,14 @@
-import type { RoomMember } from "sdk";
-import { BaseService } from "../core/Service";
-import { type Accessor, createEffect, createResource, type Resource } from "solid-js";
 import { ReactiveMap } from "@solid-primitives/map";
-import { PaginatedList } from "../core/PaginatedList";
+import type { RoomMember } from "sdk";
+import {
+	type Accessor,
+	createEffect,
+	createResource,
+	type Resource,
+} from "solid-js";
 import { logger } from "../../logger";
+import { PaginatedList } from "../core/PaginatedList";
+import { BaseService } from "../core/Service";
 
 export class RoomMembersService extends BaseService<RoomMember> {
 	protected cacheName = "room_member";
@@ -32,7 +37,7 @@ export class RoomMembersService extends BaseService<RoomMember> {
 			const data = await this.retryWithBackoff<RoomMember>(() =>
 				this.client.http.GET("/api/v1/room/{room_id}/member/{user_id}", {
 					params: { path: { room_id, user_id } },
-				})
+				}),
 			);
 			return data;
 		} catch (error: any) {
@@ -97,7 +102,7 @@ export class RoomMembersService extends BaseService<RoomMember> {
 					path: { room_id },
 					query: { query },
 				},
-			})
+			}),
 		);
 		return result;
 	}
@@ -111,9 +116,10 @@ export class RoomMembersService extends BaseService<RoomMember> {
 		list.setLoading(true);
 
 		try {
-			const data = await this.retryWithBackoff<
-				{ items: RoomMember[]; has_more: boolean }
-			>(() =>
+			const data = await this.retryWithBackoff<{
+				items: RoomMember[];
+				has_more: boolean;
+			}>(() =>
 				this.client.http.GET("/api/v1/room/{room_id}/member", {
 					params: {
 						path: { room_id },
@@ -123,7 +129,7 @@ export class RoomMembersService extends BaseService<RoomMember> {
 							from: cursor,
 						},
 					},
-				})
+				}),
 			);
 
 			this.upsertBulk(data.items);

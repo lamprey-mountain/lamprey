@@ -1,3 +1,5 @@
+import { autoUpdate, flip } from "@floating-ui/dom";
+import { useFloating } from "solid-floating-ui";
 import {
 	children,
 	createEffect,
@@ -7,11 +9,9 @@ import {
 	type ParentProps,
 	useContext,
 } from "solid-js";
-import { useFloating } from "solid-floating-ui";
-import { autoUpdate, flip } from "@floating-ui/dom";
 import { chatctx, useCtx } from "../context.ts";
-import { useModals } from "../contexts/modal";
 import { useMenu } from "../contexts/menu.tsx";
+import { useModals } from "../contexts/modal";
 
 function isSeparator(child: any): boolean {
 	return (child as HTMLElement)?.classList.contains("menu-separator");
@@ -56,14 +56,12 @@ export function Menu(props: ParentProps<{ submenu?: boolean }>) {
 }
 
 export function Submenu(
-	props: ParentProps<
-		{
-			content: JSX.Element;
-			onClick?: (e: MouseEvent) => void;
-			onOpen?: () => void;
-			color?: ItemColor;
-		}
-	>,
+	props: ParentProps<{
+		content: JSX.Element;
+		onClick?: (e: MouseEvent) => void;
+		onOpen?: () => void;
+		color?: ItemColor;
+	}>,
 ) {
 	const ctx = useCtx();
 	const { preview, setPreview } = useMenu();
@@ -90,7 +88,7 @@ export function Submenu(
 			if (a <= 0.3) {
 				setPreview(menuId);
 			} else {
-				s += .01;
+				s += 0.01;
 				timeout = setTimeout(attempt, a);
 			}
 		};
@@ -144,9 +142,7 @@ export function Submenu(
 				onMouseLeave={() => setHovered(false)}
 				id={menuId}
 			>
-				<Menu submenu>
-					{props.children}
-				</Menu>
+				<Menu submenu>{props.children}</Menu>
 			</div>
 		</li>
 	);
@@ -155,14 +151,12 @@ export function Submenu(
 type ItemColor = "danger";
 
 export function Item(
-	props: ParentProps<
-		{
-			onClick?: (e: MouseEvent) => void;
-			disabled?: boolean;
-			color?: ItemColor;
-			classList?: Record<string, boolean>;
-		}
-	>,
+	props: ParentProps<{
+		onClick?: (e: MouseEvent) => void;
+		disabled?: boolean;
+		color?: ItemColor;
+		classList?: Record<string, boolean>;
+	}>,
 ) {
 	const ctx = useContext(chatctx)!;
 	const { preview, setPreview } = useMenu();

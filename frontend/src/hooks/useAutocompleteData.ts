@@ -1,5 +1,6 @@
+import { go } from "fuzzysort";
+import type { Channel, EmojiCustom, Role, User } from "sdk";
 import { createEffect, createMemo, createSignal } from "solid-js";
-import { useAutocomplete } from "../contexts/autocomplete";
 import {
 	useApi2,
 	useChannels2,
@@ -9,14 +10,12 @@ import {
 	useThreadMembers2,
 	useUsers2,
 } from "@/api";
-import { go } from "fuzzysort";
-import type { Channel, EmojiCustom, User } from "sdk";
-import type { Role } from "sdk";
+import type { AutocompleteMentionItem } from "../contexts/autocomplete";
+import { useAutocomplete } from "../contexts/autocomplete";
+import { useCurrentUser } from "../contexts/currentUser";
 import { type Command, useSlashCommands } from "../contexts/slash-commands";
 import { type EmojiData, emojiResource } from "../emoji";
 import { usePermissions } from "./usePermissions";
-import { useCurrentUser } from "../contexts/currentUser";
-import type { AutocompleteMentionItem } from "../contexts/autocomplete";
 
 export const useAutocompleteData = () => {
 	const api2 = useApi2();
@@ -40,7 +39,7 @@ export const useAutocompleteData = () => {
 	const perms = usePermissions(
 		() => currentUser()?.id ?? "",
 		() => channelForPerms()?.room_id ?? undefined,
-		() => state.kind?.type === "mention" ? (state.kind as any).channelId : "",
+		() => (state.kind?.type === "mention" ? (state.kind as any).channelId : ""),
 	);
 	const hasMassMention = () => perms.has("MessageMassMention");
 
@@ -66,7 +65,7 @@ export const useAutocompleteData = () => {
 
 			const userIds = new Set<string>();
 			(threadMembers as any)?.items?.forEach((m: any) =>
-				userIds.add(m.user_id)
+				userIds.add(m.user_id),
 			);
 			(roomMembers as any)?.items?.forEach((m: any) => userIds.add(m.user_id));
 
@@ -78,9 +77,8 @@ export const useAutocompleteData = () => {
 				}
 				// Fallback: create a minimal user object from the member data
 				// Find the member to get any available name info
-				const member = (threadMembers as any)?.items?.find((m: any) =>
-					m.user_id === id
-				) ||
+				const member =
+					(threadMembers as any)?.items?.find((m: any) => m.user_id === id) ||
 					(roomMembers as any)?.items?.find((m: any) => m.user_id === id);
 				return {
 					id: id,
@@ -199,9 +197,11 @@ export const useAutocompleteData = () => {
 			return limited.map((item) => ({
 				obj: item,
 				score: 0,
-				hits: [{
-					value: item.type === "everyone" ? "@everyone" : item.name,
-				}],
+				hits: [
+					{
+						value: item.type === "everyone" ? "@everyone" : item.name,
+					},
+				],
 			}));
 		} else if (type === "channel") {
 			const results = go(query, allChannels(), {

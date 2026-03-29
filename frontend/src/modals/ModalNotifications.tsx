@@ -1,8 +1,8 @@
 import { createSignal } from "solid-js";
+import { CheckboxOption } from "../atoms/CheckboxOption";
 import { Dropdown } from "../atoms/Dropdown";
 import { Checkbox } from "../icons";
 import { Modal } from "./mod";
-import { CheckboxOption } from "../atoms/CheckboxOption";
 
 interface ModalNotificationsProps {
 	room_id: string;

@@ -7,29 +7,27 @@ import {
 	useContext,
 } from "solid-js";
 
-export type Menu =
-	& {
-		x: number;
-		y: number;
-	}
-	& (
-		| { type: "room"; room_id: string }
-		| { type: "channel"; channel_id: string }
-		| {
+export type Menu = {
+	x: number;
+	y: number;
+} & (
+	| { type: "room"; room_id: string }
+	| { type: "channel"; channel_id: string }
+	| {
 			type: "message";
 			channel_id: string;
 			message_id: string;
 			version_id: string;
-		}
-		| {
+	  }
+	| {
 			type: "user";
 			user_id: string;
 			channel_id?: string;
 			room_id?: string;
 			admin: boolean;
-		}
-		| { type: "folder"; folder_id: string }
-	);
+	  }
+	| { type: "folder"; folder_id: string }
+);
 
 export type MenuContextT = {
 	menu: Accessor<Menu | null>;

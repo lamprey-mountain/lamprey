@@ -1,5 +1,7 @@
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
-import type { RoomT } from "../../../types";
+import { type ReferenceElement, shift } from "@floating-ui/dom";
+import fuzzysort from "fuzzysort";
+import { type Application, createUpload, type Room, type User } from "sdk";
+import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
 	createResource,
@@ -9,22 +11,20 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { type Application, createUpload, type Room, type User } from "sdk";
-import { useApi2, useRooms2 } from "@/api";
-import { Copyable } from "../../../utils/general";
 import { createStore, reconcile } from "solid-js/store";
-import { useCtx } from "../../../context.ts";
-import { useFloating } from "solid-floating-ui";
-import { type ReferenceElement, shift } from "@floating-ui/dom";
-import { usePermissions } from "../../../hooks/usePermissions.ts";
-import { useModals } from "../../../contexts/modal";
-import { Checkbox } from "../../../icons";
-import { Resizable } from "../../../atoms/Resizable";
+import { useApi2, useRooms2 } from "@/api";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
-import { getThumbFromId } from "../../../media/util";
-import { Avatar } from "../../../User.tsx";
+import { Resizable } from "../../../atoms/Resizable";
 import { Savebar } from "../../../atoms/Savebar";
-import fuzzysort from "fuzzysort";
+import { useCtx } from "../../../context.ts";
+import { useCurrentUser } from "../../../contexts/currentUser.tsx";
+import { useModals } from "../../../contexts/modal";
+import { usePermissions } from "../../../hooks/usePermissions.ts";
+import { Checkbox } from "../../../icons";
+import { getThumbFromId } from "../../../media/util";
+import type { RoomT } from "../../../types";
+import { Avatar } from "../../../User.tsx";
+import { Copyable } from "../../../utils/general";
 
 // TODO: in create session and rotate oauth token, make the secret Copyable
 
@@ -101,7 +101,7 @@ type AppEditState = ReturnType<typeof useAppEditor>;
 
 function useAppEditor(initial: Application | null) {
 	const [app, setApp] = createStore(
-		initial ?? { id: null } as unknown as Application,
+		initial ?? ({ id: null } as unknown as Application),
 	);
 	const [name, setName] = createSignal(initial?.name ?? "");
 	const [desc, setDesc] = createSignal(initial?.description ?? undefined);
@@ -163,7 +163,8 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 			.map((app) => {
 				const originalApp = originalApps().find((o) => o.id === app.id);
 				if (
-					originalApp && JSON.stringify(app) !== JSON.stringify(originalApp)
+					originalApp &&
+					JSON.stringify(app) !== JSON.stringify(originalApp)
 				) {
 					return api2.client.http.PATCH("/api/v1/app/{app_id}", {
 						params: { path: { app_id: app.id } },
@@ -201,9 +202,11 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 		);
 	};
 
-	const [inviteApp, setInviteApp] = createSignal<
-		{ app: Application; x: number; y: number }
-	>();
+	const [inviteApp, setInviteApp] = createSignal<{
+		app: Application;
+		x: number;
+		y: number;
+	}>();
 	const InviteAppClear = () => setInviteApp();
 	document.addEventListener("click", InviteAppClear);
 	onCleanup(() => document.removeEventListener("click", InviteAppClear));
@@ -326,31 +329,23 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 				</Show>
 			</div>
 			<Show when={inviteApp()}>
-				{(app) => (
-					<InviteToRoom
-						x={app().x}
-						y={app().y}
-						app={app().app}
-					/>
-				)}
+				{(app) => <InviteToRoom x={app().x} y={app().y} app={app().app} />}
 			</Show>
 		</div>
 	);
 }
 
-const AppEditor = (
-	props: {
-		edit: AppEditState;
-		updateApp: (index: number, field: keyof Application, value: any) => void;
-		apps: Application[];
-		rotateSecret: (app_id: string) => Promise<void>;
-		createSession: (app_id: string) => Promise<void>;
-		setInviteApp: (
-			app: { app: Application; x: number; y: number } | undefined,
-		) => void;
-		refetch: () => void;
-	},
-) => {
+const AppEditor = (props: {
+	edit: AppEditState;
+	updateApp: (index: number, field: keyof Application, value: any) => void;
+	apps: Application[];
+	rotateSecret: (app_id: string) => Promise<void>;
+	createSession: (app_id: string) => Promise<void>;
+	setInviteApp: (
+		app: { app: Application; x: number; y: number } | undefined,
+	) => void;
+	refetch: () => void;
+}) => {
 	const api2 = useApi2();
 	const [, modalCtl] = useModals();
 	const [activeTab, setActiveTab] = createSignal<
@@ -379,20 +374,22 @@ const AppEditor = (
 		const originalApp = props.apps[index];
 
 		if (JSON.stringify(app) !== JSON.stringify(originalApp)) {
-			api2.client.http.PATCH("/api/v1/app/{app_id}", {
-				params: { path: { app_id: app.id } },
-				body: {
-					name: props.edit.name(),
-					description: props.edit.desc() ?? null,
-					bridge: app.bridge,
-					public: app.public,
-					oauth_confidential: app.oauth_confidential,
-					oauth_redirect_uris: app.oauth_redirect_uris,
-					avatar: props.edit.avatar(),
-				},
-			}).then(() => {
-				props.refetch();
-			});
+			api2.client.http
+				.PATCH("/api/v1/app/{app_id}", {
+					params: { path: { app_id: app.id } },
+					body: {
+						name: props.edit.name(),
+						description: props.edit.desc() ?? null,
+						bridge: app.bridge,
+						public: app.public,
+						oauth_confidential: app.oauth_confidential,
+						oauth_redirect_uris: app.oauth_redirect_uris,
+						avatar: props.edit.avatar(),
+					},
+				})
+				.then(() => {
+					props.refetch();
+				});
 		}
 	};
 
@@ -458,10 +455,7 @@ const AppEditor = (
 				>
 					close
 				</button>
-				<button
-					disabled={!isDirty()}
-					onClick={saveApp}
-				>
+				<button disabled={!isDirty()} onClick={saveApp}>
 					save
 				</button>
 				<button class="danger" onClick={deleteApp(props.edit.app.id!)}>
@@ -634,10 +628,8 @@ const AppEditor = (
 							type="checkbox"
 							checked={props.edit.app.oauth_confidential}
 							onInput={(e) =>
-								props.edit.setApp(
-									"oauth_confidential",
-									e.currentTarget.checked,
-								)}
+								props.edit.setApp("oauth_confidential", e.currentTarget.checked)
+							}
 							style="display: none;"
 						/>
 						<Checkbox
@@ -659,25 +651,19 @@ const AppEditor = (
 										value={uri}
 										onInput={(e) => {
 											const newUris = [
-												...props.edit.app.oauth_redirect_uris ?? [],
+												...(props.edit.app.oauth_redirect_uris ?? []),
 											];
 											newUris[uriIndex()] = e.currentTarget.value;
-											props.edit.setApp(
-												"oauth_redirect_uris",
-												newUris,
-											);
+											props.edit.setApp("oauth_redirect_uris", newUris);
 										}}
 									/>
 									<button
 										onClick={() => {
 											const newUris = [
-												...props.edit.app.oauth_redirect_uris ?? [],
+												...(props.edit.app.oauth_redirect_uris ?? []),
 											];
 											newUris.splice(uriIndex(), 1);
-											props.edit.setApp(
-												"oauth_redirect_uris",
-												newUris,
-											);
+											props.edit.setApp("oauth_redirect_uris", newUris);
 										}}
 									>
 										remove
@@ -689,13 +675,10 @@ const AppEditor = (
 							<button
 								onClick={() => {
 									const newUris = [
-										...props.edit.app.oauth_redirect_uris ?? [],
+										...(props.edit.app.oauth_redirect_uris ?? []),
 										"",
 									];
-									props.edit.setApp(
-										"oauth_redirect_uris",
-										newUris,
-									);
+									props.edit.setApp("oauth_redirect_uris", newUris);
 								}}
 							>
 								add uri
@@ -721,16 +704,14 @@ const AppEditor = (
 };
 
 // TODO: make this an actual context menu?
-const InviteToRoom = (
-	props: { x: number; y: number; app: Application },
-) => {
+const InviteToRoom = (props: { x: number; y: number; app: Application }) => {
 	const api2 = useApi2();
 	const rooms2 = useRooms2();
 	const rooms = rooms2.useList();
 	const roomItems = () =>
-		rooms.ids.map((id) => rooms2.cache.get(id) ?? null).filter((r): r is Room =>
-			r !== null
-		);
+		rooms.ids
+			.map((id) => rooms2.cache.get(id) ?? null)
+			.filter((r): r is Room => r !== null);
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
 	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
 
@@ -752,10 +733,14 @@ const InviteToRoom = (
 		props.y;
 	});
 
-	const menuFloating = useFloating(() => menuParentRef(), () => menuRef(), {
-		middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
-		placement: "right-start",
-	});
+	const menuFloating = useFloating(
+		() => menuParentRef(),
+		() => menuRef(),
+		{
+			middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+			placement: "right-start",
+		},
+	);
 
 	const inviteToRoom = (room_id: string) => {
 		api2.client.http.POST("/api/v1/app/{app_id}/invite", {
@@ -788,13 +773,11 @@ const InviteToRoom = (
 	);
 };
 
-const RoomInviteButton = (
-	props: {
-		room: RoomT;
-		self_id: () => string | undefined;
-		onInvite: (id: string) => void;
-	},
-) => {
+const RoomInviteButton = (props: {
+	room: RoomT;
+	self_id: () => string | undefined;
+	onInvite: (id: string) => void;
+}) => {
 	const perms = usePermissions(
 		props.self_id,
 		() => props.room.id,

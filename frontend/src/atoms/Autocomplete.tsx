@@ -1,23 +1,20 @@
-import { For, Match, Show, Switch } from "solid-js";
-import { useAutocomplete } from "../contexts/autocomplete";
 import type { Channel, EmojiCustom, User } from "sdk";
+import { For, Match, Show, Switch } from "solid-js";
+import { ChannelIcon } from "../avatar/ChannelIcon";
+import type { AutocompleteMentionItem } from "../contexts/autocomplete";
+import { useAutocomplete } from "../contexts/autocomplete";
+import type { Command } from "../contexts/slash-commands";
+import { type EmojiData, getTwemoji } from "../emoji";
+import { useAutocompleteData } from "../hooks/useAutocompleteData";
 import { getEmojiUrl } from "../media/util";
 import { Avatar } from "../User";
-import { type EmojiData, getTwemoji } from "../emoji";
-import type { Command } from "../contexts/slash-commands";
-import { useAutocompleteData } from "../hooks/useAutocompleteData";
-import type { AutocompleteMentionItem } from "../contexts/autocomplete";
-import { ChannelIcon } from "../avatar/ChannelIcon";
 
 export const Autocomplete = () => {
 	const { state, select, setIndex } = useAutocomplete();
 	const { filtered } = useAutocompleteData();
 
 	return (
-		<Show
-			when={state.visible && state.kind &&
-				filtered().length > 0}
-		>
+		<Show when={state.visible && state.kind && filtered().length > 0}>
 			<div class="autocomplete">
 				<header>
 					<Show when={state.query} fallback={`list ${state.kind?.type}s`}>
@@ -40,8 +37,7 @@ export const Autocomplete = () => {
 								<Match when={"char" in result.obj}>
 									<span
 										innerHTML={getTwemoji((result.obj as EmojiData).char)}
-									>
-									</span>
+									></span>
 								</Match>
 								<Match
 									when={state.kind?.type === "emoji" && !("char" in result.obj)}
@@ -60,39 +56,57 @@ export const Autocomplete = () => {
 									</div>
 								</Match>
 								<Match
-									when={state.kind?.type === "mention" &&
-										(result.obj as AutocompleteMentionItem).type === "user"}
+									when={
+										state.kind?.type === "mention" &&
+										(result.obj as AutocompleteMentionItem).type === "user"
+									}
 								>
 									<div class="mention-user">
 										<Avatar
-											user={(result.obj as AutocompleteMentionItem & {
-												user: User;
-											}).user}
+											user={
+												(
+													result.obj as AutocompleteMentionItem & {
+														user: User;
+													}
+												).user
+											}
 											pad={0}
 										/>
 										<span>
-											{(result.obj as AutocompleteMentionItem & {
-												name: string;
-											}).name}
+											{
+												(
+													result.obj as AutocompleteMentionItem & {
+														name: string;
+													}
+												).name
+											}
 										</span>
 									</div>
 								</Match>
 								<Match
-									when={state.kind?.type === "mention" &&
-										(result.obj as AutocompleteMentionItem).type === "role"}
+									when={
+										state.kind?.type === "mention" &&
+										(result.obj as AutocompleteMentionItem).type === "role"
+									}
 								>
 									<div class="mention-role">
 										<span class="role-badge">#</span>
 										<span>
-											{(result.obj as AutocompleteMentionItem & {
-												name: string;
-											}).name}
+											{
+												(
+													result.obj as AutocompleteMentionItem & {
+														name: string;
+													}
+												).name
+											}
 										</span>
 									</div>
 								</Match>
 								<Match
-									when={state.kind?.type === "mention" &&
-										(result.obj as AutocompleteMentionItem).type === "everyone"}
+									when={
+										state.kind?.type === "mention" &&
+										(result.obj as AutocompleteMentionItem).type === "everyone"
+									}
 								>
 									<div class="everyone-mention">
 										<span>@everyone</span>
@@ -107,7 +121,7 @@ export const Autocomplete = () => {
 								</Match>
 								<Match when={true}>
 									{"label" in result.obj
-										? result.obj.label ?? result.obj.name
+										? (result.obj.label ?? result.obj.name)
 										: result.obj.name}
 								</Match>
 							</Switch>

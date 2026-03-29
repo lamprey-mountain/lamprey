@@ -1,7 +1,7 @@
 import type { Preferences } from "sdk";
-import { BaseService } from "../core/Service";
 import { createEffect } from "solid-js";
 import { logger } from "../../logger";
+import { BaseService } from "../core/Service";
 
 const log = logger.for("api/preferences");
 
@@ -58,7 +58,7 @@ export class PreferencesService extends BaseService<Preferences> {
 	/** fetch preferences via http */
 	async fetch(_id: string): Promise<Preferences> {
 		const data = await this.retryWithBackoff<Preferences>(() =>
-			this.client.http.GET("/api/v1/preferences")
+			this.client.http.GET("/api/v1/preferences"),
 		);
 		return data;
 	}
@@ -66,7 +66,7 @@ export class PreferencesService extends BaseService<Preferences> {
 	/** set preferences via http */
 	async setPreferences(preferences: Preferences): Promise<void> {
 		await this.retryWithBackoff(() =>
-			this.client.http.PUT("/api/v1/preferences", { body: preferences })
+			this.client.http.PUT("/api/v1/preferences", { body: preferences }),
 		);
 	}
 

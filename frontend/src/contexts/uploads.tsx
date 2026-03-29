@@ -1,3 +1,5 @@
+import type { ReactiveMap } from "@solid-primitives/map";
+import { createUpload, type Media } from "sdk";
 import {
 	createContext,
 	onCleanup,
@@ -5,9 +7,7 @@ import {
 	type ParentProps,
 	useContext,
 } from "solid-js";
-import { createUpload, type Media } from "sdk";
 import type { Attachment, ChatCtx } from "../context";
-import type { ReactiveMap } from "@solid-primitives/map";
 import { useModals } from "./modal";
 
 export type UploadController = {
@@ -61,8 +61,8 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 			for (const [thread_id, ctx] of props.ctx.channel_contexts.entries()) {
 				const [ch, chUpdate] = ctx;
 				const atts = ch.attachments;
-				const idx = atts.findIndex((a) =>
-					a.status === "uploaded" && a.media.id === media.id
+				const idx = atts.findIndex(
+					(a) => a.status === "uploaded" && a.media.id === media.id,
 				);
 				if (idx !== -1) {
 					const att = atts[idx];
@@ -92,14 +92,17 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 		const [ch, chUpdate] = props.ctx.channel_contexts.get(thread_id)!;
 
 		// Add initial attachment
-		chUpdate("attachments", [...ch.attachments, {
-			status: "uploading",
-			file,
-			local_id,
-			progress: 0,
-			paused: false,
-			filename: file.name,
-		}]);
+		chUpdate("attachments", [
+			...ch.attachments,
+			{
+				status: "uploading",
+				file,
+				local_id,
+				progress: 0,
+				paused: false,
+				filename: file.name,
+			},
+		]);
 
 		// Create upload
 		createUpload({

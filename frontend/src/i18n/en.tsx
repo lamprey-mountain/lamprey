@@ -675,9 +675,10 @@ export default {
 				" to ",
 				value,
 			],
-			removed_field: (
-				field: any,
-			) => ["removed ", <em class="light">{field}</em>],
+			removed_field: (field: any) => [
+				"removed ",
+				<em class="light">{field}</em>,
+			],
 		},
 	},
 };

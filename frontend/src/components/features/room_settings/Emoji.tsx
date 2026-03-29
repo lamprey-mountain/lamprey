@@ -1,10 +1,10 @@
-import { For, type VoidProps } from "solid-js";
-import type { RoomT } from "../../../types.ts";
-import { useApi2, useEmoji2 } from "@/api";
-import { useCtx } from "../../../context.ts";
 import { createUpload } from "sdk";
+import { For, type VoidProps } from "solid-js";
+import { useApi2, useEmoji2 } from "@/api";
 import { useConfig } from "../../../config.tsx";
+import { useCtx } from "../../../context.ts";
 import { useModals } from "../../../contexts/modal";
+import type { RoomT } from "../../../types.ts";
 
 export function Emoji(props: VoidProps<{ room: RoomT }>) {
 	const config = useConfig();
@@ -13,8 +13,7 @@ export function Emoji(props: VoidProps<{ room: RoomT }>) {
 	const [, modalCtl] = useModals();
 	const emoji = emoji2.useRoomList(() => props.room.id);
 
-	function create() {
-	}
+	function create() {}
 
 	function remove(emoji_id: string) {
 		modalCtl.confirm("really remove?", (confirmed) => {

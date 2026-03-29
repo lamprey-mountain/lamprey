@@ -1,14 +1,14 @@
-import { useCurrentUser } from "../contexts/currentUser.tsx";
+import { useNavigate } from "@solidjs/router";
 import { For, Match, Show, Switch } from "solid-js";
 import { useApi2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
-import { useCtx } from "../context.ts";
-import { useMenu } from "../contexts/mod.tsx";
-import { usePermissions } from "../hooks/usePermissions.ts";
-import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 import { useVoice } from "../components/features/voice/voice-provider.tsx";
-import { useNavigate } from "@solidjs/router";
-import { Checkbox } from "../icons";
+import { useCtx } from "../context.ts";
+import { useCurrentUser } from "../contexts/currentUser.tsx";
+import { useMenu } from "../contexts/mod.tsx";
 import { useModals } from "../contexts/modal";
+import { usePermissions } from "../hooks/usePermissions.ts";
+import { Checkbox } from "../icons";
+import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 
 type UserMenuProps = {
 	user_id: string;
@@ -92,17 +92,14 @@ export function UserMenu(props: UserMenuProps) {
 	};
 
 	const kickThread = () => {
-		api2.client.http.DELETE(
-			"/api/v1/thread/{thread_id}/member/{user_id}",
-			{
-				params: {
-					path: {
-						thread_id: props.thread_id!,
-						user_id: props.user_id,
-					},
+		api2.client.http.DELETE("/api/v1/thread/{thread_id}/member/{user_id}", {
+			params: {
+				path: {
+					thread_id: props.thread_id!,
+					user_id: props.user_id,
 				},
 			},
-		);
+		});
 	};
 
 	const banRoom = () => {
@@ -312,9 +309,12 @@ export function UserMenu(props: UserMenuProps) {
 					)}
 				</For>
 				<Show
-					when={!(roles()?.items?.filter((r: any) => r.id !== r.room_id)
-						?.length ??
-						0)}
+					when={
+						!(
+							roles()?.items?.filter((r: any) => r.id !== r.room_id)?.length ??
+							0
+						)
+					}
 				>
 					<div>no roles</div>
 				</Show>
@@ -347,7 +347,8 @@ export function UserMenu(props: UserMenuProps) {
 						onClick={() =>
 							user()?.relationship?.relation === "Block"
 								? unblockUser()
-								: blockUser()}
+								: blockUser()
+						}
 					>
 						{user()?.relationship?.relation === "Block" ? "unblock" : "block"}
 					</Item>
@@ -370,20 +371,27 @@ export function UserMenu(props: UserMenuProps) {
 					</Switch>
 					<Separator />
 					<Show
-						when={hasPermission("MemberNicknameManage") ||
-							(hasPermission("MemberNickname") &&
-								props.user_id === self_id())}
+						when={
+							hasPermission("MemberNicknameManage") ||
+							(hasPermission("MemberNickname") && props.user_id === self_id())
+						}
 					>
 						<Item onClick={changeNickname}>change nickname</Item>
 					</Show>
 					<Show when={hasPermission("MemberKick") && canModerate()}>
-						<Item onClick={kickRoom} color="danger">kick</Item>
+						<Item onClick={kickRoom} color="danger">
+							kick
+						</Item>
 					</Show>
 					<Show when={hasPermission("MemberBan") && canModerate()}>
-						<Item onClick={banRoom} color="danger">ban</Item>
+						<Item onClick={banRoom} color="danger">
+							ban
+						</Item>
 					</Show>
 					<Show when={hasPermission("MemberTimeout") && canModerate()}>
-						<Item onClick={timeoutRoom} color="danger">timeout</Item>
+						<Item onClick={timeoutRoom} color="danger">
+							timeout
+						</Item>
 					</Show>
 					<Show
 						when={hasPermission("RoleApply") && props.room_id && hasRoles()}
@@ -406,17 +414,24 @@ export function UserMenu(props: UserMenuProps) {
 									value={voice.preferences.get(props.user_id)?.volume ?? 100}
 									onInput={(e) =>
 										voice.preferences.set(props.user_id, {
-											...voice.preferences.get(props.user_id) ??
-												{ mute: false, mute_video: false, volume: 100 },
+											...(voice.preferences.get(props.user_id) ?? {
+												mute: false,
+												mute_video: false,
+												volume: 100,
+											}),
 											volume: parseFloat(e.target.value),
-										})}
+										})
+									}
 								/>
 							</label>
 						</li>
 						<Item
 							onClick={() => {
-								const c = voice.preferences.get(props.user_id) ??
-									{ mute: false, mute_video: false, volume: 100 };
+								const c = voice.preferences.get(props.user_id) ?? {
+									mute: false,
+									mute_video: false,
+									volume: 100,
+								};
 								c.mute = !c.mute;
 								voice.preferences.set(props.user_id, { ...c });
 							}}
@@ -460,7 +475,8 @@ export function UserMenu(props: UserMenuProps) {
 							onClick={() =>
 								user()?.relationship?.relation === "Block"
 									? unblockUser()
-									: blockUser()}
+									: blockUser()
+							}
 						>
 							{user()?.relationship?.relation === "Block" ? "unblock" : "block"}
 						</Item>
@@ -478,7 +494,9 @@ export function UserMenu(props: UserMenuProps) {
 						<Show when={!user()?.suspended}>
 							<Item onClick={suspendUser}>suspend user</Item>
 						</Show>
-						<Item onClick={deleteUser} color="danger">delete user</Item>
+						<Item onClick={deleteUser} color="danger">
+							delete user
+						</Item>
 					</Show>
 				</Match>
 			</Switch>

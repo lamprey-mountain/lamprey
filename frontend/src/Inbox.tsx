@@ -1,10 +1,10 @@
+import { A } from "@solidjs/router";
+import type { Channel, Message, Notification, Room } from "sdk";
 import { createSignal, For, Show } from "solid-js";
 import { useInbox2 } from "@/api";
-import type { Channel, Message, Notification, Room } from "sdk";
-import { A } from "@solidjs/router";
+import type { NotificationPagination } from "@/api/services/InboxService.ts";
 import { Time } from "./atoms/Time.tsx";
 import { MessageView } from "./components/features/chat/Message.tsx";
-import type { NotificationPagination } from "@/api/services/InboxService.ts";
 
 export const Inbox = () => {
 	const inbox2 = useInbox2();
@@ -43,7 +43,7 @@ export const Inbox = () => {
 
 	const toggleSelection = (notifId: string, isSelected: boolean) => {
 		setSelected((s) =>
-			isSelected ? [...s, notifId] : s.filter((id) => id !== notifId)
+			isSelected ? [...s, notifId] : s.filter((id) => id !== notifId),
 		);
 	};
 
@@ -70,7 +70,8 @@ export const Inbox = () => {
 								setParams({
 									...params(),
 									include_read: e.currentTarget.checked,
-								})}
+								})
+							}
 						/>
 						include read
 					</label>
@@ -113,16 +114,14 @@ export const Inbox = () => {
 	);
 };
 
-const NotificationItem = (
-	props: {
-		notification: Notification;
-		allData: NotificationPagination | undefined;
-		selected: boolean;
-		onSelect: (id: string, selected: boolean) => void;
-		refetch: () => void;
-		include_read: boolean;
-	},
-) => {
+const NotificationItem = (props: {
+	notification: Notification;
+	allData: NotificationPagination | undefined;
+	selected: boolean;
+	onSelect: (id: string, selected: boolean) => void;
+	refetch: () => void;
+	include_read: boolean;
+}) => {
 	const inbox2 = useInbox2();
 	const thread = () => {
 		const threadId = (props.notification as any).thread_id as
@@ -133,8 +132,8 @@ const NotificationItem = (
 		return props.allData?.channels.find((c) => c.id === threadId);
 	};
 	const message = () =>
-		props.allData?.messages.find((m: Message) =>
-			m.id === props.notification.message_id
+		props.allData?.messages.find(
+			(m: Message) => m.id === props.notification.message_id,
 		);
 	const room = () => {
 		const t = thread();
@@ -153,7 +152,7 @@ const NotificationItem = (
 	};
 
 	const reasonText = () => {
-		switch (((props.notification as any).reason as any)) {
+		switch ((props.notification as any).reason as any) {
 			case "Mention":
 				return "Mention";
 			case "MentionBulk":
@@ -176,7 +175,8 @@ const NotificationItem = (
 					class="notification-checkbox"
 					checked={props.selected}
 					onChange={(e) =>
-						props.onSelect(props.notification.id, e.currentTarget.checked)}
+						props.onSelect(props.notification.id, e.currentTarget.checked)
+					}
 				/>
 				<Show when={room()}>
 					<A href={`/room/${room()!.id}`}>{room()!.name}</A>

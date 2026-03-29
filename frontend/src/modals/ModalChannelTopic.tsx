@@ -1,6 +1,6 @@
-import { Modal } from "./mod";
-import { md } from "../markdown_utils.tsx";
 import { useApi, useChannels2 } from "@/api";
+import { md } from "../markdown_utils.tsx";
+import { Modal } from "./mod";
 
 interface ModalChannelTopicProps {
 	channel_id: string;

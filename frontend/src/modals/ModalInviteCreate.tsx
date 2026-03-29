@@ -1,4 +1,4 @@
-import { useCurrentUser } from "../contexts/currentUser.tsx";
+import { Time } from "sdk";
 import {
 	createEffect,
 	createMemo,
@@ -6,14 +6,14 @@ import {
 	createSignal,
 	Show,
 } from "solid-js";
-import { Dropdown, MultiDropdown } from "../atoms/Dropdown";
-import { Modal } from "./mod";
 import { useApi2, useRoles2, useRooms2 } from "@/api";
-import { Time } from "sdk";
+import { Dropdown, MultiDropdown } from "../atoms/Dropdown";
+import { useCurrentUser } from "../contexts/currentUser.tsx";
 import {
 	calculatePermissions,
 	type PermissionContext,
 } from "../permission-calculator";
+import { Modal } from "./mod";
 
 interface ModalInviteCreateProps {
 	room_id?: string;
@@ -48,8 +48,8 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 			permissionContext,
 			userId,
 		);
-		const hasRoleApply = permissions.has("RoleApply") ||
-			permissions.has("Admin");
+		const hasRoleApply =
+			permissions.has("RoleApply") || permissions.has("Admin");
 		const room = rooms2.use(() => roomId)();
 		const isOwner = room?.owner_id === userId;
 		return { canApply: hasRoleApply, rank, isOwner };
@@ -172,7 +172,8 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 							selected={selectedRoleIds()}
 							onSelect={(id) => setSelectedRoleIds([...selectedRoleIds(), id])}
 							onRemove={(id) =>
-								setSelectedRoleIds(selectedRoleIds().filter((i) => i !== id))}
+								setSelectedRoleIds(selectedRoleIds().filter((i) => i !== id))
+							}
 							options={availableRoles()}
 							placeholder="select roles..."
 							style="width:min-content"
