@@ -1,6 +1,5 @@
-import { createEffect, createSignal } from "solid-js";
+import { createSignal } from "solid-js";
 import iconDownload from "../assets/download.png";
-import { useCtx } from "../context.ts";
 import { useModals } from "../contexts/modal";
 import {
 	formatBytes,

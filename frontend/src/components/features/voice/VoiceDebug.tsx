@@ -27,8 +27,8 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 	);
 
 	const updateSdps = () => {
-		setLocalSdp(voice.rtc!.conn.localDescription);
-		setRemoteSdp(voice.rtc!.conn.remoteDescription);
+		setLocalSdp(voice.rtc?.conn.localDescription ?? null);
+		setRemoteSdp(voice.rtc?.conn.remoteDescription ?? null);
 	};
 	updateSdps();
 

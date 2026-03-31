@@ -87,7 +87,7 @@ export const ChatMain = (props: ChatProps) => {
 		log.debug("tl", { tl: [...tl()], msgs: messages() });
 	});
 
-	let last_thread_id: string | undefined;
+	let _last_thread_id: string | undefined;
 	let chatRef: HTMLDivElement | undefined;
 	const list = createList2({
 		items: tl,

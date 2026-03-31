@@ -5,7 +5,6 @@ import {
 } from "@solidjs/router";
 import type { OauthInfo } from "sdk";
 import {
-	Component,
 	createResource,
 	ErrorBoundary,
 	For,
@@ -14,7 +13,6 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { useCtx } from "./context";
-import { Avatar } from "./User";
 
 export const RouteAuthorize = (p: RouteSectionProps): JSX.Element => {
 	const ctx = useCtx();
@@ -22,29 +20,29 @@ export const RouteAuthorize = (p: RouteSectionProps): JSX.Element => {
 	const [data] = createResource(async () => {
 		// HACK: openapi fetch typescript doesn't like manually built urls here
 		const { data, error } = await ctx.client.http.GET(
-			("/api/v1/oauth/authorize" + p.location.search) as any,
-			{},
+			`/api/v1/oauth/authorize${p.location.search}` as "/api/v1/oauth/authorize",
+			{} as any,
 		);
-		if (error) throw error.error;
+		if (error) throw (error as any).error;
 		return data;
 	});
 
 	return (
 		<div class="oauth-authorize">
 			<ErrorBoundary
-				fallback={() => (
-					<div class="error">error: {(data.error as Error)?.message}</div>
-				)}
+				fallback={(err) => <div class="error">error: {err.message}</div>}
 			>
 				<Show when={data.loading}>loading...</Show>
 				<Show when={data()}>
-					<OauthAuthorizePrompt
-						application={data().application}
-						auth_user={data().auth_user}
-						bot_user={data().bot_user}
-						authorized={data().authorized}
-						location={p.location}
-					/>
+					{(d) => (
+						<OauthAuthorizePrompt
+							application={d().application}
+							auth_user={d().auth_user}
+							bot_user={d().bot_user}
+							authorized={d().authorized}
+							location={p.location}
+						/>
+					)}
 				</Show>
 			</ErrorBoundary>
 		</div>
@@ -60,13 +58,13 @@ export const OauthAuthorizePrompt = (
 	const authorize = async () => {
 		try {
 			const { data, error } = await ctx.client.http.POST(
-				("/api/v1/oauth/authorize" + p.location.search) as any,
-				{},
+				`/api/v1/oauth/authorize${p.location.search}` as "/api/v1/oauth/authorize",
+				{} as any,
 			);
 			if (error) {
 				console.error(error);
-			} else {
-				location.href = data.redirect_uri;
+			} else if (data && "redirect_uri" in data) {
+				location.href = (data as { redirect_uri: string }).redirect_uri;
 			}
 		} catch (err) {
 			console.error(err);
@@ -109,10 +107,10 @@ export const OauthAuthorizePrompt = (
 				</div>
 			</div>
 			<menu>
-				<button class="big" onClick={cancel}>
+				<button type="button" class="big" onClick={cancel}>
 					cancel
 				</button>
-				<button class="big primary" onClick={authorize}>
+				<button type="button" class="big primary" onClick={authorize}>
 					authorize
 				</button>
 			</menu>

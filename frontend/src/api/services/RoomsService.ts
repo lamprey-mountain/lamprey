@@ -1,5 +1,4 @@
 import type { Pagination, Room } from "sdk";
-import { batch, createResource, createSignal, type Resource } from "solid-js";
 import { logger } from "../../logger";
 import { type ListState, PaginatedList } from "../core/PaginatedList";
 import { BaseService } from "../core/Service";

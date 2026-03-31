@@ -49,7 +49,7 @@ test("room name change creates audit log entry", async ({
 	const currentUrl = page.url();
 	const roomIdMatch = currentUrl.match(/\/room\/([^/?#]+)/);
 	expect(roomIdMatch).toBeTruthy();
-	const roomId = roomIdMatch![1];
+	const roomId = roomIdMatch?.[1];
 
 	// Step 4: Navigate to room settings (info page) and edit the room name
 	await page.getByRole("link", { name: "settings" }).click();

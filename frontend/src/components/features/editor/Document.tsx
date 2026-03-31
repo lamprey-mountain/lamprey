@@ -16,7 +16,6 @@ import {
 	Show,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import * as Y from "yjs";
 import { useApi2 } from "@/api";
 import icBranchDefault from "../../../assets/edit.png";
 import icBranchPrivate from "../../../assets/edit.png";
@@ -39,9 +38,7 @@ import { useModals } from "../../../contexts/modal.tsx";
 import { md } from "../../../markdown_utils.tsx";
 import { createEditor } from "./DocumentEditor.tsx";
 import type { DiffMark } from "./diff-plugin.ts";
-import { base64UrlDecode } from "./editor-utils.ts";
 import {
-	downloadFile,
 	exportAsHtml,
 	exportAsMarkdown,
 	generateFilename,
@@ -65,7 +62,7 @@ export const Document = (
 		onHoverChangeset: (changeset: ChangesetSelection | null) => void;
 	},
 ) => {
-	const [branchId, setBranchId] = createSignal(props.channel.id);
+	const [_branchId, _setBranchId] = createSignal(props.channel.id);
 	const [editor, setEditor] = createSignal<any>(null);
 
 	return (
@@ -541,7 +538,7 @@ const DocumentMain = (
 	},
 ) => {
 	const api2 = useApi2();
-	const [ch, setCh] = useChannel()!;
+	const [ch, _setCh] = useChannel()!;
 	const [diffLoading, setDiffLoading] = createSignal(false);
 	const [history, setHistory] = createSignal<HistoryPagination | null>(null);
 	const [currentRevision, setCurrentRevision] = createSignal<number | null>(
@@ -609,8 +606,8 @@ const DocumentMain = (
 		),
 	);
 
-	const toolbar = useFormattingToolbar();
-	const autocomplete = useAutocomplete();
+	const _toolbar = useFormattingToolbar();
+	const _autocomplete = useAutocomplete();
 
 	const ed = createEditor({
 		diffMode: () => mode() !== "edit",
@@ -1265,7 +1262,7 @@ function computeDiffMarks(oldSerdoc: Serdoc, newSerdoc: Serdoc): DiffMark[] {
 	const changes = diffWords(oldData.text, newData.text);
 
 	const marks: DiffMark[] = [];
-	let oldTextPos = 0;
+	let _oldTextPos = 0;
 	let newTextPos = 0;
 
 	for (const change of changes) {
@@ -1283,9 +1280,9 @@ function computeDiffMarks(oldSerdoc: Serdoc, newSerdoc: Serdoc): DiffMark[] {
 			// Replace actual newlines so deletion widgets don't aggressively line-break visually
 			const cleanText = change.value.replace(/\n/g, " ↵ ");
 			marks.push({ type: "deletion", pos, text: cleanText });
-			oldTextPos += len;
+			_oldTextPos += len;
 		} else {
-			oldTextPos += len;
+			_oldTextPos += len;
 			newTextPos += len;
 		}
 	}

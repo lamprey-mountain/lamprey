@@ -6,18 +6,10 @@ import { EditorState, Plugin } from "prosemirror-state";
 import { Decoration, DecorationSet, type EditorView } from "prosemirror-view";
 import type { User } from "sdk";
 import { useFloating } from "solid-floating-ui";
-import {
-	createEffect,
-	createMemo,
-	createSignal,
-	For,
-	onCleanup,
-	Show,
-} from "solid-js";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import { UUID } from "uuidv7";
 import {
-	useApi2,
 	useChannels2,
 	useMessages2,
 	useRoles2,
@@ -121,7 +113,7 @@ function getRecentSearches(): string[] {
 	if (!stored) return [];
 	try {
 		return JSON.parse(stored);
-	} catch (e) {
+	} catch (_e) {
 		return [];
 	}
 }
@@ -281,7 +273,7 @@ function dateToBoundaryUUID(
 ): string | undefined {
 	try {
 		const date = new Date(dateString);
-		if (isNaN(date.getTime())) return undefined;
+		if (Number.isNaN(date.getTime())) return undefined;
 
 		if (boundary === "start") {
 			date.setUTCHours(0, 0, 0, 0);
@@ -572,13 +564,13 @@ const AutocompleteDropdown = (props: {
 		const negated = props.filter.negated;
 		if (!query) {
 			return negated
-				? allFilterSuggestions.map((f) => "-" + f)
+				? allFilterSuggestions.map((f) => `-${f}`)
 				: allFilterSuggestions;
 		}
 
 		return allFilterSuggestions
 			.filter((f) => f.toLowerCase().includes(query))
-			.map((f) => (negated ? "-" + f : f));
+			.map((f) => (negated ? `-${f}` : f));
 	});
 
 	const recentSearches = createMemo(() => {
@@ -590,7 +582,7 @@ const AutocompleteDropdown = (props: {
 
 	const formatRecentSearch = (query: string) => {
 		const parts: (string | { type: string; value: string })[] = [];
-		const lastIndex = 0;
+		const _lastIndex = 0;
 		const tokens = parseSearchQuery(query);
 
 		const phraseRegex = /"([^"]*)"/g;
@@ -1467,7 +1459,7 @@ export const SearchInput = (props: {
 	createEffect(() => {
 		if (!activeFilter()) return;
 		const items = dropdownRef()?.querySelectorAll(".autocomplete-item");
-		if (items && items[hoveredIndex()]) {
+		if (items?.[hoveredIndex()]) {
 			items[hoveredIndex()].scrollIntoView({ block: "nearest" });
 		}
 	});

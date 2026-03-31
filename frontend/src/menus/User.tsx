@@ -21,7 +21,6 @@ type UserMenuProps = {
 // the context menu for users
 // TODO: hide separators when a category has no items
 export function UserMenu(props: UserMenuProps) {
-	const ctx = useCtx();
 	const { setMenu } = useMenu();
 	const api2 = useApi2();
 	const users2 = useUsers2();
@@ -314,7 +313,7 @@ export function UserMenu(props: UserMenuProps) {
 	);
 
 	const hasRoles = () => roles().filter((r) => r.id !== r.room_id).length > 0;
-	const hasAnyPermission = (checks: Array<() => boolean>) =>
+	const _hasAnyPermission = (checks: Array<() => boolean>) =>
 		checks.some((c) => c());
 
 	return (

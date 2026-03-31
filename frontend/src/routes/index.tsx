@@ -1,12 +1,10 @@
-import { Navigate, type RouteSectionProps, useNavigate } from "@solidjs/router";
-import { type Channel, SERVER_ROOM_ID } from "sdk";
-import type { Component, JSX, ParentProps, VoidProps } from "solid-js";
+import type { RouteSectionProps } from "@solidjs/router";
+import type { Channel } from "sdk";
+import type { JSX, ParentProps } from "solid-js";
 import {
 	createEffect,
 	createMemo,
-	createResource,
 	createSignal,
-	For,
 	Match,
 	Show,
 	Switch,
@@ -40,7 +38,6 @@ import {
 	DocumentContext,
 	useDocument,
 } from "../contexts/document.tsx";
-import { useModals } from "../contexts/modal.tsx";
 import {
 	createInitialRoomState,
 	RoomContext,
@@ -48,7 +45,7 @@ import {
 } from "../contexts/room.tsx";
 import { Feed } from "../Feed.tsx";
 import { Forum } from "../Forum.tsx";
-import { Forum2, Forum2Thread, Forum2ThreadPage } from "../Forum2.tsx";
+import { Forum2, Forum2ThreadPage } from "../Forum2.tsx";
 import { Friends } from "../Friends.tsx";
 import { flags } from "../flags.ts";
 import { Home } from "../Home.tsx";
@@ -59,9 +56,7 @@ import { RoomHeader } from "../RoomHeader.tsx";
 import { RoomNav } from "../RoomNav.tsx";
 import { RoomSettings } from "../RoomSettings.tsx";
 import type { RoomT } from "../types.ts";
-import { ChannelIcon } from "../User.tsx";
 import { UserProfile } from "../UserProfile.tsx";
-import { shouldUseThreadSidebar } from "../utils/channel.ts";
 import { Wiki } from "../Wiki.tsx";
 
 export { RouteAuthorize } from "../Oauth.tsx";
@@ -154,7 +149,6 @@ const RoomSidebar = (props: { room: RoomT }) => {
 export const RouteRoom = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 	const { t } = useCtx();
 	const ctx = useCtx();
-	const api2 = useApi2();
 	const rooms = useRooms2();
 	const room = rooms.use(() => p.params.room_id);
 
@@ -176,7 +170,7 @@ export const RouteRoom = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 		<Show when={roomCtx} fallback={<div>Loading room...</div>}>
 			<RoomContext.Provider value={roomCtx!}>
 				<LayoutDefault
-					title={room() ? room()!.name : t("loading")}
+					title={room() ? room()?.name : t("loading")}
 					showChannelNav={true}
 					channelNavRoomId={p.params.room_id}
 					showVoiceTray={true}
@@ -196,16 +190,21 @@ export const RouteRoomSettings = (
 	p: ParentProps<RouteSectionProps>,
 ): JSX.Element => {
 	const { t } = useCtx();
-	const api2 = useApi2();
 	const rooms = useRooms2();
 	const room = rooms.use(() => p.params.room_id);
-	const title = () =>
-		room() ? t("page.settings_room", room()!.name) : t("loading");
+	const title = () => {
+		const r = room();
+		return r?.name ? t("page.settings_room", r.name) : t("loading");
+	};
 	return (
 		<>
 			<Title title={title()} />
 			<Show when={room()}>
-				<RoomSettings room={room()!} page={p.params.page!} />
+				{(r) => (
+					<Show when={p.params.page}>
+						{(page) => <RoomSettings room={r()} page={page()} />}
+					</Show>
+				)}
 			</Show>
 		</>
 	);
@@ -217,13 +216,19 @@ export const RouteChannelSettings = (
 	const { t } = useCtx();
 	const channels2 = useChannels2();
 	const channel = channels2.use(() => p.params.channel_id);
-	const title = () =>
-		channel() ? t("page.settings_channel", channel()!.name) : t("loading");
+	const title = () => {
+		const c = channel();
+		return c?.name ? t("page.settings_channel", c.name) : t("loading");
+	};
 	return (
 		<>
 			<Title title={title()} />
 			<Show when={channel()}>
-				<ChannelSettings channel={channel()!} page={p.params.page!} />
+				{(c) => (
+					<Show when={p.params.page}>
+						{(page) => <ChannelSettings channel={c()} page={page()} />}
+					</Show>
+				)}
 			</Show>
 		</>
 	);
@@ -238,7 +243,7 @@ const ThreadChatSidebar = (props: { thread_id: string }) => {
 	const channels2 = useChannels2();
 	const thread = channels2.use(() => props.thread_id);
 	const ctx = useCtx();
-	const [ch, setChannelState] = useChannel()!;
+	const [_ch, setChannelState] = useChannel()!;
 
 	const getOrCreateChannelContext = () => {
 		const channelId = props.thread_id;
@@ -274,14 +279,24 @@ const ThreadChatSidebar = (props: { thread_id: string }) => {
 	return (
 		<div class="thread-chat-sidebar">
 			<Show when={thread()}>
-				<ChannelContext.Provider value={channelCtx()!}>
-					<DocumentContext.Provider value={documentCtx()!}>
-						<button class="close" onClick={onClose}>
-							<img class="icon" src={icX} />
-						</button>
-						<ChatMain channel={thread()!} />
-					</DocumentContext.Provider>
-				</ChannelContext.Provider>
+				{(t) => (
+					<Show when={channelCtx()}>
+						{(cc) => (
+							<Show when={documentCtx()}>
+								{(dc) => (
+									<ChannelContext.Provider value={cc()}>
+										<DocumentContext.Provider value={dc()}>
+											<button class="close" onClick={onClose}>
+												<img class="icon" src={icX} />
+											</button>
+											<ChatMain channel={t()} />
+										</DocumentContext.Provider>
+									</ChannelContext.Provider>
+								)}
+							</Show>
+						)}
+					</Show>
+				)}
 			</Show>
 		</div>
 	);
@@ -372,7 +387,6 @@ export const RouteChannel = (
 ): JSX.Element => {
 	const { t } = useCtx();
 	const ctx = useCtx();
-	const api2 = useApi2();
 	const rooms = useRooms2();
 	const channels2 = useChannels2();
 	const channel = channels2.use(() => p.params.channel_id);
@@ -452,75 +466,85 @@ export const RouteChannel = (
 			return ch.recipients?.find((i) => i.id !== user_id)?.name ?? "dm";
 		}
 
-		return room() && ch.room_id ? `${ch.name} - ${room()!.name}` : ch.name;
+		return room() && ch.room_id ? `${ch.name} - ${room()?.name}` : ch.name;
 	};
 
 	return (
 		<Show when={channelCtx()} fallback={<div>Loading channel...</div>}>
-			<ChannelContext.Provider value={channelCtx()!}>
-				<DocumentContext.Provider value={documentCtx()!}>
-					<LayoutDefault
-						title={title()}
-						showChannelNav={true}
-						channelNavRoomId={channel()?.room_id ?? undefined}
-						showVoiceTray={true}
-					>
-						<Show when={channel()}>
-							<Switch>
-								<Match when={channel()!.type === "Voice"}>
-									<Voice channel={channel()!} />
-								</Match>
-								<Match
-									when={
-										channel()!.type === "Text" ||
-										channel()!.type === "Dm" ||
-										channel()!.type === "Gdm" ||
-										channel()!.type === "Announcement" ||
-										channel()!.type === "ThreadPublic" ||
-										channel()!.type === "ThreadPrivate"
-									}
+			{(cc) => (
+				<Show when={documentCtx()}>
+					{(dc) => (
+						<ChannelContext.Provider value={cc()}>
+							<DocumentContext.Provider value={dc()}>
+								<LayoutDefault
+									title={title()}
+									showChannelNav={true}
+									channelNavRoomId={channel()?.room_id ?? undefined}
+									showVoiceTray={true}
 								>
-									<ChatHeader channel={channel()!} />
-									<ChatMain channel={channel()!} />
-								</Match>
-								<Match when={channel()!.type === "Document"}>
-									<Document
-										channel={channel()!}
-										selectedSeq={selectedSeq()}
-										onSelectChangeset={setSelectedSeq}
-										hoverSeq={hoverSeq()}
-										onHoverChangeset={setHoverSeq}
-									/>
-								</Match>
-								<Match when={channel()!.type === "Wiki"}>
-									<Wiki channel={channel()!} />
-								</Match>
-								<Match when={channel()!.type === "Forum"}>
-									<Forum channel={channel()!} />
-								</Match>
-								<Match when={channel()!.type === "Forum2"}>
-									<Forum2 channel={channel()!} />
-								</Match>
-								<Match when={channel()!.type === "ThreadForum2"}>
-									<Forum2ThreadPage channel={channel()!} />
-								</Match>
-								<Match when={channel()!.type === "Calendar"}>
-									<Calendar channel={channel()!} />
-								</Match>
-								<Match when={channel()!.type === "Category"}>
-									<Category channel={channel()!} />
-								</Match>
-							</Switch>
-							<ChannelSidebar
-								channel={channel()!}
-								selectedSeq={selectedSeq()}
-								onSelectChangeset={setSelectedSeq}
-								onHoverChangeset={setHoverSeq}
-							/>
-						</Show>
-					</LayoutDefault>
-				</DocumentContext.Provider>
-			</ChannelContext.Provider>
+									<Show when={channel()}>
+										{(ch) => (
+											<>
+												<Switch>
+													<Match when={ch().type === "Voice"}>
+														<Voice channel={ch()} />
+													</Match>
+													<Match
+														when={
+															ch().type === "Text" ||
+															ch().type === "Dm" ||
+															ch().type === "Gdm" ||
+															ch().type === "Announcement" ||
+															ch().type === "ThreadPublic" ||
+															ch().type === "ThreadPrivate"
+														}
+													>
+														<ChatHeader channel={ch()} />
+														<ChatMain channel={ch()} />
+													</Match>
+													<Match when={ch().type === "Document"}>
+														<Document
+															channel={ch()}
+															selectedSeq={selectedSeq()}
+															onSelectChangeset={setSelectedSeq}
+															hoverSeq={hoverSeq()}
+															onHoverChangeset={setHoverSeq}
+														/>
+													</Match>
+													<Match when={ch().type === "Wiki"}>
+														<Wiki channel={ch()} />
+													</Match>
+													<Match when={ch().type === "Forum"}>
+														<Forum channel={ch()} />
+													</Match>
+													<Match when={ch().type === "Forum2"}>
+														<Forum2 channel={ch()} />
+													</Match>
+													<Match when={ch().type === "ThreadForum2"}>
+														<Forum2ThreadPage channel={ch()} />
+													</Match>
+													<Match when={ch().type === "Calendar"}>
+														<Calendar channel={ch()} />
+													</Match>
+													<Match when={ch().type === "Category"}>
+														<Category channel={ch()} />
+													</Match>
+												</Switch>
+												<ChannelSidebar
+													channel={ch()}
+													selectedSeq={selectedSeq()}
+													onSelectChangeset={setSelectedSeq}
+													onHoverChangeset={setHoverSeq}
+												/>
+											</>
+										)}
+									</Show>
+								</LayoutDefault>
+							</DocumentContext.Provider>
+						</ChannelContext.Provider>
+					)}
+				</Show>
+			)}
 		</Show>
 	);
 };

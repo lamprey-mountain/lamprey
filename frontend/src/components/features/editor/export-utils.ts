@@ -46,7 +46,7 @@ export function serializeToMarkdown(
 				if (node.isInline) {
 					markdown += node.textContent;
 				} else {
-					markdown += node.textContent + "\n\n";
+					markdown += `${node.textContent}\n\n`;
 				}
 			}
 		}

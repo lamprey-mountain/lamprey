@@ -44,7 +44,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 	const [, modalctl] = useModals();
 	const [editingNsfw, setEditingNsfw] = createSignal(props.channel.nsfw);
 	const [editingName, setEditingName] = createSignal(props.channel.name);
-	const [editingDescription, setEditingDescription] = createSignal(
+	const [_editingDescription, _setEditingDescription] = createSignal(
 		props.channel.description,
 	);
 	const [editingSlowmodeMessage, setEditingSlowmodeMessage] = createSignal(
@@ -135,7 +135,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 
 	const getDescriptionFromState = () => {
 		if (!editorState()) return "";
-		const text = editorState()!.doc.textContent;
+		const text = editorState()?.doc.textContent;
 		return text;
 	};
 
@@ -159,7 +159,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		});
 	};
 
-	const toggleArchived = () => {
+	const _toggleArchived = () => {
 		if (props.channel.archived_at) {
 			channels2.unarchive(props.channel.id);
 		} else {
@@ -167,7 +167,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		}
 	};
 
-	const toggleLocked = () => {
+	const _toggleLocked = () => {
 		if (props.channel.locked) {
 			channels2.unlock(props.channel.id);
 		} else {

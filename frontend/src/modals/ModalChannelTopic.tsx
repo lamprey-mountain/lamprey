@@ -1,4 +1,4 @@
-import { useApi, useChannels2 } from "@/api";
+import { useChannels2 } from "@/api";
 import { md } from "../markdown_utils.tsx";
 import { Modal } from "./mod";
 

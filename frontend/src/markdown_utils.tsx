@@ -1,4 +1,4 @@
-import { marked, type Token, type Tokens } from "marked";
+import { marked, type Token } from "marked";
 
 type MentionToken = Token & {
 	mention_type: "user" | "role" | "channel" | "emoji";

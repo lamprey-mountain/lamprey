@@ -167,7 +167,7 @@ export const parseSessionDescription = (
 
 export const getAttributeDescription = (
 	key: string,
-	value: string | undefined,
+	_value: string | undefined,
 ) => {
 	const descriptions: Record<string, string> = {
 		"ice-ufrag": "ICE username fragment for authentication",

@@ -1,9 +1,9 @@
 import type { Setter } from "solid-js";
-import { useApi, useApi2, useChannels2 } from "@/api";
+import { useApi2, useChannels2 } from "@/api";
 import type { Menu } from "../context.ts";
 
 export function useContextMenu(setMenu: Setter<Menu | null>) {
-	const api2 = useApi2();
+	const _api2 = useApi2();
 	const channels2 = useChannels2();
 	const store = useApi2();
 

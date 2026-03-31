@@ -1,7 +1,7 @@
-import { ChangeObject, diffArrays } from "diff";
+import { diffArrays } from "diff";
 import type { AuditLogChange, AuditLogEntry } from "sdk";
-import { type JSX, untrack } from "solid-js";
-import { useApi2, useChannels2, useRoomMembers2, useRooms2 } from "@/api";
+import type { JSX } from "solid-js";
+import { useApi2, useChannels2, useRoomMembers2 } from "@/api";
 import { useCtx } from "./context";
 
 const MERGE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
@@ -588,8 +588,8 @@ export function formatChanges(
 }
 
 function renderPermissionDiff(
-	api2: ReturnType<typeof useApi2>,
-	room_id: string,
+	_api2: ReturnType<typeof useApi2>,
+	_room_id: string,
 	oldValues: Array<string>,
 	newValues: Array<string>,
 	addedLabel: keyof typeof import("./i18n/en.tsx").default.audit_log.changes,

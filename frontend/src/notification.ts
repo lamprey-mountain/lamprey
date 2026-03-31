@@ -1,4 +1,3 @@
-import type { Message } from "sdk";
 import { createSignal } from "solid-js";
 
 type NotificationPermission = "granted" | "denied" | "prompt" | "unknown";

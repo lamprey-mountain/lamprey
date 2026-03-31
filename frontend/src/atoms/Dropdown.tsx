@@ -278,10 +278,10 @@ export function createDropdown<T>(props: {
 					<Portal mount={props.mount ?? document.body}>
 						<Show when={shown()}>
 							<menu
-								role="listbox"
 								ref={setDropdownEl}
 								id={listboxId}
 								class="dropdown-items floating"
+								role="listbox"
 								style={{
 									"z-index": 999999,
 									position: position.strategy,
@@ -293,6 +293,7 @@ export function createDropdown<T>(props: {
 									<For each={selector.getFiltered()} fallback={"no options"}>
 										{(entry) => (
 											<li
+												role="option"
 												onMouseOver={() => selector.setHovered(entry.obj)}
 												onMouseDown={(e) => {
 													e.preventDefault();
@@ -379,7 +380,7 @@ export function MultiDropdown<T>(
 				setShown(true);
 			}
 		},
-		Backspace: (e) => {
+		Backspace: (_e) => {
 			if (selector.getFiltered().length === 0 && props.selected.length > 0) {
 				props.onRemove(props.selected[props.selected.length - 1]);
 			}
@@ -452,7 +453,6 @@ export function MultiDropdown<T>(
 			<Portal mount={props.mount ?? document.body}>
 				<Show when={shown()}>
 					<menu
-						role="listbox"
 						ref={setDropdownEl}
 						id={listboxId}
 						class="dropdown-items floating"

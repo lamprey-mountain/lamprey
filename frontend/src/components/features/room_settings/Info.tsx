@@ -1,12 +1,6 @@
 import type { EditorState } from "prosemirror-state";
 import { createUpload } from "sdk";
-import {
-	createEffect,
-	createSignal,
-	onMount,
-	Show,
-	type VoidProps,
-} from "solid-js";
+import { createSignal, onMount, Show, type VoidProps } from "solid-js";
 import { useApi2, useChannels2 } from "@/api";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 import { Savebar } from "../../../atoms/Savebar";
@@ -15,13 +9,12 @@ import { useAutocomplete } from "../../../contexts/autocomplete";
 import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
 import { useModals } from "../../../contexts/modal";
 import { Checkbox } from "../../../icons";
-import { getThumbFromId, getUrl } from "../../../media/util.tsx";
 import type { RoomT } from "../../../types.ts";
 import { RoomIcon } from "../../../User.tsx";
 import { createEditor } from "../editor/Editor.tsx";
 
 export function Info(props: VoidProps<{ room: RoomT }>) {
-	const ctx = useCtx();
+	const _ctx = useCtx();
 	const [, modalCtl] = useModals();
 
 	let avatarInputEl!: HTMLInputElement;
@@ -60,7 +53,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 	};
 
 	const [editingName, setEditingName] = createSignal(props.room.name);
-	const [editingDescription, setEditingDescription] = createSignal(
+	const [_editingDescription, setEditingDescription] = createSignal(
 		props.room.description,
 	);
 	const [editingPublic, setEditingPublic] = createSignal(props.room.public);
@@ -115,7 +108,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 	const channels2 = useChannels2();
 	const threads = () =>
 		[...channels2.cache.values()].filter((c) => c.room_id === props.room.id);
-	const archiveAllThreads = () => {
+	const _archiveAllThreads = () => {
 		modalCtl.confirm("really archive everything?", (confirmed) => {
 			if (!confirmed) return;
 			console.log(threads());

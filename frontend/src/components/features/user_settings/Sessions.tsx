@@ -87,7 +87,7 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 			<h2>sessions</h2>
 			<Show when={sessions()}>
 				<ul>
-					<For each={sessions()!.items}>
+					<For each={sessions()?.items}>
 						{(s) => (
 							<li
 								class="session"

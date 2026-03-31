@@ -7,8 +7,6 @@ import { getHeight, getUrl, getWidth, Resize } from "../media/util";
 // currently only supports images!
 // though, it doesn't make much sense for video/audio/other media?
 export const ModalMedia = (props: { media: Media }) => {
-	const ctx = useCtx();
-
 	const [loaded, setLoaded] = createSignal(false);
 	const height = () => getHeight(props.media);
 	const width = () => getWidth(props.media);

@@ -6,7 +6,6 @@ import { Time } from "../../../atoms/Time.tsx";
 import {
 	formatAuditLogEntry,
 	formatChanges,
-	type MergedAuditLogEntry,
 	mergeAuditLogEntries,
 } from "../../../audit-log-util.tsx";
 

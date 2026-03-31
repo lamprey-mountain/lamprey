@@ -256,7 +256,7 @@ test.describe("Message Editing", () => {
 		await setupTestEnvironment(page);
 
 		// Send initial message
-		const originalMessage = "Original message " + Date.now();
+		const originalMessage = `Original message ${Date.now()}`;
 		const messageInput = getMessageInput(page);
 		await messageInput.click();
 		await messageInput.fill(originalMessage);
@@ -327,7 +327,7 @@ test.describe("Message Editing", () => {
 		await setupTestEnvironment(page);
 
 		// Send initial message
-		const originalMessage = "Message to edit " + Date.now();
+		const originalMessage = `Message to edit ${Date.now()}`;
 		const messageInput = getMessageInput(page);
 		await messageInput.click();
 		await messageInput.fill(originalMessage);
@@ -391,7 +391,7 @@ test.describe("Message Editing", () => {
 		await setupTestEnvironment(page);
 
 		// Send initial message
-		const originalMessage = "Original message " + Date.now();
+		const originalMessage = `Original message ${Date.now()}`;
 		const messageInput = getMessageInput(page);
 		await messageInput.click();
 		await messageInput.fill(originalMessage);
@@ -457,7 +457,7 @@ test.describe("Message Replies", () => {
 		await setupTestEnvironment(page);
 
 		// Send initial message to reply to
-		const originalMessage = "Original message to reply to " + Date.now();
+		const originalMessage = `Original message to reply to ${Date.now()}`;
 		const messageInput = getMessageInput(page);
 		await messageInput.click();
 		await messageInput.fill(originalMessage);
@@ -496,7 +496,7 @@ test.describe("Message Replies", () => {
 		await expect(replyContainer).toContainText("replying to");
 
 		// Send the reply
-		const replyText = "This is my reply " + Date.now();
+		const replyText = `This is my reply ${Date.now()}`;
 		await messageInput.click();
 		await messageInput.fill(replyText);
 		await page.keyboard.press("Enter");
@@ -527,7 +527,7 @@ test.describe("Message Replies", () => {
 		await setupTestEnvironment(page);
 
 		// Send initial message to reply to
-		const originalMessage = "Message preview test " + Date.now();
+		const originalMessage = `Message preview test ${Date.now()}`;
 		const messageInput = getMessageInput(page);
 		await messageInput.click();
 		await messageInput.fill(originalMessage);
@@ -567,7 +567,7 @@ test.describe("Message Replies", () => {
 		await setupTestEnvironment(page);
 
 		// Send initial message to reply to
-		const originalMessage = "Message to cancel reply " + Date.now();
+		const originalMessage = `Message to cancel reply ${Date.now()}`;
 		const messageInput = getMessageInput(page);
 		await messageInput.click();
 		await messageInput.fill(originalMessage);
@@ -611,7 +611,7 @@ test.describe("Message Replies", () => {
 		await setupTestEnvironment(page);
 
 		// Send initial message to reply to
-		const originalMessage = "Message for reply lifecycle " + Date.now();
+		const originalMessage = `Message for reply lifecycle ${Date.now()}`;
 		const messageInput = getMessageInput(page);
 		await messageInput.click();
 		await messageInput.fill(originalMessage);
@@ -642,7 +642,7 @@ test.describe("Message Replies", () => {
 		await expect(replyContainer).toBeVisible({ timeout: 5000 });
 
 		// Send the reply
-		const replyText = "Reply with lifecycle test " + Date.now();
+		const replyText = `Reply with lifecycle test ${Date.now()}`;
 		await messageInput.click();
 		await messageInput.fill(replyText);
 		await page.keyboard.press("Enter");
@@ -672,7 +672,7 @@ test.describe("Message Replies", () => {
 		await setupTestEnvironment(page);
 
 		// Send initial message to reply to
-		const originalMessage = "Message with multiple replies " + Date.now();
+		const originalMessage = `Message with multiple replies ${Date.now()}`;
 		const messageInput = getMessageInput(page);
 		await messageInput.click();
 		await messageInput.fill(originalMessage);
@@ -702,7 +702,7 @@ test.describe("Message Replies", () => {
 		const activeReply = page.locator(".reply:has-text('replying to')").first();
 		await expect(activeReply).toBeVisible({ timeout: 5000 });
 
-		const firstReply = "First reply " + Date.now();
+		const firstReply = `First reply ${Date.now()}`;
 		await messageInput.click();
 		await messageInput.fill(firstReply);
 		await page.keyboard.press("Enter");
@@ -727,7 +727,7 @@ test.describe("Message Replies", () => {
 		const activeReply2 = page.locator(".reply:has-text('replying to')").first();
 		await expect(activeReply2).toBeVisible({ timeout: 5000 });
 
-		const secondReply = "Second reply " + Date.now();
+		const secondReply = `Second reply ${Date.now()}`;
 		await messageInput.click();
 		await messageInput.fill(secondReply);
 		await page.keyboard.press("Enter");

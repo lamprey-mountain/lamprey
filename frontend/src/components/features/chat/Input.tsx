@@ -8,7 +8,7 @@ import {
 	onCleanup,
 	onMount,
 } from "solid-js";
-import { For, Match, render, Show, Switch } from "solid-js/web";
+import { For, Match, Show, Switch } from "solid-js/web";
 import { uuidv7 } from "uuidv7";
 import {
 	useApi2,
@@ -253,7 +253,7 @@ export function Input(props: InputProps) {
 		const expireAt = ch.slowmode_expire_at;
 		if (expireAt) {
 			const updateTimer = () => {
-				const now = new Date().getTime();
+				const now = Date.now();
 				const remaining = expireAt.getTime() - now;
 				setRemainingTime(Math.max(0, remaining));
 			};
@@ -408,7 +408,7 @@ export function RenderUploadItem(props: {
 	thread_id: string;
 	att: Attachment;
 }) {
-	const ctx = useCtx();
+	const _ctx = useCtx();
 	const uploads = useUploads();
 	const [, modalCtl] = useModals();
 	const thumbUrl =
@@ -462,55 +462,53 @@ export function RenderUploadItem(props: {
 			: (props.att.filename ?? props.att.file.name);
 
 	return (
-		<>
-			<div class="upload-item">
-				<div
-					class="thumb"
-					style={{ "background-image": `url(${thumbUrl})` }}
-				></div>
-				<div class="info">
-					<svg class="progress" viewBox="0 0 1 1" preserveAspectRatio="none">
-						<rect class="bar" height="1" width={getProgress(props.att)}></rect>
-					</svg>
-					<div style="display: flex">
-						<div style="flex: 1;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">
-							{filename}
-							<span style="color:#888;margin-left:.5ex">
-								{renderInfo(props.att)}
-							</span>
-						</div>
-						<menu style="display:flex">
-							<Switch>
-								<Match
-									when={props.att.status === "uploading" && props.att.paused}
-								>
-									<button onClick={resume}>⬆️</button>
-								</Match>
-								<Match when={props.att.status === "uploading"}>
-									<button onClick={pause}>⏸️</button>
-								</Match>
-							</Switch>
-							<Show when={props.att.status === "uploaded"}>
-								<button
-									onClick={() =>
-										modalCtl.open({
-											type: "attachment",
-											channel_id: props.thread_id,
-											local_id: props.att.local_id,
-										})
-									}
-								>
-									<img class="icon" src={icEdit} />
-								</button>
-							</Show>
-							<button onClick={() => removeAttachment(props.att.local_id)}>
-								<img class="icon" src={icDelete} />
-							</button>
-						</menu>
+		<div class="upload-item">
+			<div
+				class="thumb"
+				style={{ "background-image": `url(${thumbUrl})` }}
+			></div>
+			<div class="info">
+				<svg class="progress" viewBox="0 0 1 1" preserveAspectRatio="none">
+					<rect class="bar" height="1" width={getProgress(props.att)}></rect>
+				</svg>
+				<div style="display: flex">
+					<div style="flex: 1;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">
+						{filename}
+						<span style="color:#888;margin-left:.5ex">
+							{renderInfo(props.att)}
+						</span>
 					</div>
+					<menu style="display:flex">
+						<Switch>
+							<Match
+								when={props.att.status === "uploading" && props.att.paused}
+							>
+								<button onClick={resume}>⬆️</button>
+							</Match>
+							<Match when={props.att.status === "uploading"}>
+								<button onClick={pause}>⏸️</button>
+							</Match>
+						</Switch>
+						<Show when={props.att.status === "uploaded"}>
+							<button
+								onClick={() =>
+									modalCtl.open({
+										type: "attachment",
+										channel_id: props.thread_id,
+										local_id: props.att.local_id,
+									})
+								}
+							>
+								<img class="icon" src={icEdit} />
+							</button>
+						</Show>
+						<button onClick={() => removeAttachment(props.att.local_id)}>
+							<img class="icon" src={icDelete} />
+						</button>
+					</menu>
 				</div>
 			</div>
-		</>
+		</div>
 	);
 }
 

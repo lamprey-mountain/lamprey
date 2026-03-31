@@ -6,21 +6,16 @@ import {
 	type Message,
 	type Preferences,
 	type ReactionKey,
-	User,
 } from "sdk";
 import {
 	createEffect,
 	createSignal,
 	For,
 	type JSX,
-	Match,
 	onCleanup,
 	onMount,
 	Show,
-	Switch,
 } from "solid-js";
-import type { SetStoreFunction } from "solid-js/store";
-import { uuidv7 } from "uuidv7";
 import {
 	useApi2,
 	useChannels2,
@@ -40,16 +35,12 @@ import icThread from "../../../assets/threads.png";
 import { Markdown } from "../../../atoms/Markdown.tsx";
 import { Time } from "../../../atoms/Time";
 import { useChannel } from "../../../channelctx.tsx";
-import { useConfig } from "../../../config.tsx";
 import { useCtx } from "../../../context.ts";
 import { useAutocomplete } from "../../../contexts/autocomplete";
-import type { ChannelState } from "../../../contexts/channel";
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
 import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
 import { useMenu, useUserPopout } from "../../../contexts/mod.tsx";
 import { useModals } from "../../../contexts/modal";
-import { flags } from "../../../flags.ts";
-import { useAppConfig } from "../../../hooks/useAppConfig.ts";
 import { countEmojiOnly } from "../../../markdown_utils.tsx";
 import {
 	AudioView,
@@ -58,10 +49,9 @@ import {
 	TextView,
 	VideoView,
 } from "../../../media/mod.tsx";
-import { getEmojiUrl, type MediaProps } from "../../../media/util.tsx";
-import { type MessageT, MessageType, type ThreadT } from "../../../types.ts";
+import type { MessageT, ThreadT } from "../../../types.ts";
 import { EmbedView } from "../../../UrlEmbed.tsx";
-import { Avatar, UserView } from "../../../User.tsx";
+import { Avatar } from "../../../User.tsx";
 import { openThread } from "../../../utils/channel";
 import { createEditor } from "../editor/Editor.tsx";
 import { serializeToMarkdown } from "../editor/serializer.ts";
@@ -299,7 +289,7 @@ export function MessageThread(props: {
 }
 
 export function MessageView(props: MessageProps) {
-	const api2 = useApi2();
+	const _api2 = useApi2();
 	const channels2 = useChannels2();
 	const messagesService = useMessages2();
 	const ctx = useCtx();
@@ -723,9 +713,8 @@ export function MessageView(props: MessageProps) {
 			const user = users2.use(() => props.message.author_id);
 			const set_w = (e: HTMLElement) => {
 				onMount(() => {
-					set_arrow_width(
-						e.querySelector(".user")!.getBoundingClientRect().width,
-					);
+					const width = e.querySelector(".user")?.getBoundingClientRect().width;
+					if (width) set_arrow_width(width);
 				});
 			};
 			const ctx = useCtx();
@@ -733,8 +722,7 @@ export function MessageView(props: MessageProps) {
 			const isEditing = () => {
 				return ch?.editingMessage?.message_id === props.message.id;
 			};
-			const messageStyle =
-				ctx.preferences().frontend["message_style"] || "cozy";
+			const messageStyle = ctx.preferences().frontend.message_style || "cozy";
 			const withAvatar = messageStyle === "cozy";
 
 			// TODO: this code is getting messy and needs a refactor soon...
@@ -921,13 +909,13 @@ type ReplyProps = {
 };
 
 function ReplyView(props: ReplyProps) {
-	const ctx = useCtx();
+	const _ctx = useCtx();
 	const channels2 = useChannels2();
 	const messagesService = useMessages2();
 	const { setUserView } = useUserPopout();
 	const reply = messagesService.use(() => props.reply_id);
 	const thread = channels2.use(() => props.thread_id);
-	const [ch, chUpdate] = useChannel() ?? [null, null];
+	const [_ch, chUpdate] = useChannel() ?? [null, null];
 
 	const content = () => {
 		const r = reply();
@@ -973,50 +961,48 @@ function ReplyView(props: ReplyProps) {
 	};
 
 	return (
-		<>
-			<div class="reply">
-				<div class="arrow">
-					<svg
-						viewBox="0 0 100 100"
-						preserveAspectRatio="none"
-						style={{ width: props.arrow_width ? `${props.arrow_width}px` : "" }}
-					>
-						<path
-							vector-effect="non-scaling-stroke"
-							shape-rendering="crispEdges"
-							// M = move to x y
-							// L = line to x y
-							d="M 50 100 L 50 50 L 100 50"
-						/>
-					</svg>
-				</div>
-				<div class="content" style="display:flex" onClick={scrollToReply}>
-					<Show when={!reply.loading} fallback="loading...">
-						<Show
-							when={reply() && thread()}
-							fallback={<span class="author"></span>}
-						>
-							<Author message={reply()!} thread={thread()!} />
-						</Show>
-						{(() => {
-							const r = reply();
-							const version = r?.latest_version;
-							return version?.type === "DefaultMarkdown" && version.content ? (
-								<ReplyContent />
-							) : (
-								<>{content()}</>
-							);
-						})()}
-					</Show>
-				</div>
+		<div class="reply">
+			<div class="arrow">
+				<svg
+					viewBox="0 0 100 100"
+					preserveAspectRatio="none"
+					style={{ width: props.arrow_width ? `${props.arrow_width}px` : "" }}
+				>
+					<path
+						vector-effect="non-scaling-stroke"
+						shape-rendering="crispEdges"
+						// M = move to x y
+						// L = line to x y
+						d="M 50 100 L 50 50 L 100 50"
+					/>
+				</svg>
 			</div>
-		</>
+			<div class="content" style="display:flex" onClick={scrollToReply}>
+				<Show when={!reply.loading} fallback="loading...">
+					<Show
+						when={reply() && thread()}
+						fallback={<span class="author"></span>}
+					>
+						<Author message={reply()!} thread={thread()!} />
+					</Show>
+					{(() => {
+						const r = reply();
+						const version = r?.latest_version;
+						return version?.type === "DefaultMarkdown" && version.content ? (
+							<ReplyContent />
+						) : (
+							content()
+						);
+					})()}
+				</Show>
+			</div>
+		</div>
 	);
 }
 
 export function AttachmentView(props: { att: Attachment }) {
 	if (props.att.type !== "Media" || !props.att.media) return null;
-	const b = () => props.att.media!.content_type.split("/")[0];
+	const b = () => props.att.media?.content_type.split("/")[0];
 	if (b() === "image") {
 		return (
 			<li class="raw">
@@ -1037,7 +1023,7 @@ export function AttachmentView(props: { att: Attachment }) {
 		);
 	} else if (
 		b() === "text" ||
-		/^application\/json\b/.test(props.att.media!.content_type)
+		/^application\/json\b/.test(props.att.media?.content_type)
 	) {
 		return (
 			<li class="raw">
@@ -1060,16 +1046,16 @@ export function Author(props: { message: Message; thread?: Channel }) {
 	const room_member = () =>
 		props.thread?.room_id
 			? roomMembers2.cache.get(
-					`${props.thread!.room_id!}:${props.message.author_id}`,
+					`${props.thread?.room_id!}:${props.message.author_id}`,
 				)
 			: null;
 	const user = () => users2.cache.get(props.message.author_id);
 
 	function name() {
 		let name;
-		if (room_member()) name ??= room_member()!.override_name;
+		if (room_member()) name ??= room_member()?.override_name;
 
-		if (user()) name ??= user()!.name;
+		if (user()) name ??= user()?.name;
 
 		return name;
 	}
@@ -1111,9 +1097,9 @@ function Actor(props: { user_id: string; thread: Channel }) {
 	function name() {
 		let name;
 
-		if (room_member()) name ??= room_member()!.override_name;
+		if (room_member()) name ??= room_member()?.override_name;
 
-		if (user()) name ??= user()!.name;
+		if (user()) name ??= user()?.name;
 
 		return name;
 	}
@@ -1125,7 +1111,7 @@ export const MessageToolbar = (props: { message: Message }) => {
 	const api2 = useApi2();
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
-	const messagesService = useMessages2();
+	const _messagesService = useMessages2();
 	const [showReactionPicker, setShowReactionPicker] = createSignal(false);
 	let reactionButtonRef: HTMLButtonElement | undefined;
 

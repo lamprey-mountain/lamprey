@@ -1,7 +1,7 @@
 import { onMount, type ParentProps } from "solid-js";
 import { useApi2 } from "@/api";
 import { ModalResetPassword } from "../components/features/user_settings/mod.tsx";
-import { type Modal as ModalType, useCtx } from "../context.ts";
+import type { Modal as ModalType } from "../context.ts";
 import { useModals } from "../contexts/modal.tsx";
 import { ModalAttachment } from "./ModalAttachment.tsx";
 import { ModalBan } from "./ModalBan.tsx";

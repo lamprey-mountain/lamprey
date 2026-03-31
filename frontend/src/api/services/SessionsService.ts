@@ -8,7 +8,7 @@ export class SessionsService extends BaseService<Session> {
 		return item.id;
 	}
 
-	async fetch(id: string): Promise<Session> {
+	async fetch(_id: string): Promise<Session> {
 		// No endpoint to fetch a single session by ID currently
 		throw new Error("Method not implemented.");
 	}

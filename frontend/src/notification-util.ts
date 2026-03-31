@@ -85,7 +85,7 @@ export async function stripMarkdownAndResolveMentions(
 		/<:(\w+):[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}>/g;
 	processedContent = processedContent.replace(
 		emojiMentionRegex,
-		(match, emojiName) => {
+		(_match, emojiName) => {
 			return `:${emojiName}:`;
 		},
 	);

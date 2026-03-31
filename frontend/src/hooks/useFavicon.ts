@@ -1,11 +1,11 @@
 import { useLocation } from "@solidjs/router";
 import { createEffect, createMemo, onCleanup } from "solid-js";
-import { useApi, useApi2, useChannels2 } from "@/api";
+import { useApi2, useChannels2 } from "@/api";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { generateFavicon } from "../drawing.ts";
 
 export function useFavicon() {
-	const api2 = useApi2();
+	const _api2 = useApi2();
 	const channels2 = useChannels2();
 	const store = useApi2();
 	const location = useLocation();
@@ -69,13 +69,13 @@ export function useFavicon() {
 			}
 			oldUrl = link.href;
 			link.href = url;
-			if (oldUrl && oldUrl.startsWith("blob:")) {
+			if (oldUrl?.startsWith("blob:")) {
 				URL.revokeObjectURL(oldUrl);
 			}
 		})();
 
 		onCleanup(() => {
-			if (oldUrl && oldUrl.startsWith("blob:")) {
+			if (oldUrl?.startsWith("blob:")) {
 				URL.revokeObjectURL(oldUrl);
 			}
 		});

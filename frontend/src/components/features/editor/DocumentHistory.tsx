@@ -144,7 +144,7 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 						class="history-list"
 						onMouseLeave={() => props.onHoverChangeset(null)}
 					>
-						<For each={history()!.changesets}>
+						<For each={history()?.changesets}>
 							{(changeset) => {
 								const isSelected =
 									props.selectedSeq !== null &&
@@ -189,7 +189,7 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 													<>
 														<For each={visibleAuthors}>
 															{(authorId) => {
-																const user = history()!.users.find(
+																const user = history()?.users.find(
 																	(u) => u.id === authorId,
 																);
 																const userName = user?.name ?? authorId;

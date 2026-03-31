@@ -9,13 +9,12 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { useApi, useChannels2, useRooms2 } from "@/api";
+import { useChannels2, useRooms2 } from "@/api";
 import icFolder1 from "./assets/folder-1.png";
 import icHome from "./assets/home.png";
 import { useCtx } from "./context";
 import { useMenu } from "./contexts/mod.tsx";
 import { flags } from "./flags";
-import { getThumbFromId } from "./media/util";
 import { RoomIcon } from "./User";
 
 export type RoomNavItem =
@@ -109,7 +108,7 @@ export const RoomNav = () => {
 		return folder.items.some((room) => getRoomUnread(room.id));
 	};
 
-	const getFolderMentionCount = (folder: { items: Room[] }) => {
+	const _getFolderMentionCount = (folder: { items: Room[] }) => {
 		return folder.items.reduce(
 			(acc, room) => acc + getRoomMentionCount(room.id),
 			0,

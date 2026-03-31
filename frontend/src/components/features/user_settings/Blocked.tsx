@@ -1,7 +1,6 @@
 import type { Pagination, RelationshipWithUserId, User } from "sdk";
 import { createResource, For, Show, type VoidProps } from "solid-js";
 import { useApi2 } from "@/api";
-import { useCtx } from "../../../context.ts";
 import { useModals } from "../../../contexts/modal";
 import { Avatar } from "../../../User.tsx";
 
@@ -70,7 +69,7 @@ export function Blocked(_props: VoidProps<{ user: User }>) {
 			<Show when={blockedUsers.error}>
 				<div>Error loading blocked users: {blockedUsers.error.message}</div>
 			</Show>
-			<Show when={blockedUsers() && blockedUsers()!.items.length === 0}>
+			<Show when={blockedUsers() && blockedUsers()?.items.length === 0}>
 				<div>You haven't blocked anyone.</div>
 			</Show>
 			<ul class="blocked-users-list">

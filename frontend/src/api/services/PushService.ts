@@ -2,7 +2,7 @@ import type { PushCreate, PushInfo } from "sdk";
 import { logger } from "../../logger";
 import { BaseService } from "../core/Service";
 
-const log = logger.for("api/push");
+const _log = logger.for("api/push");
 
 export class PushService extends BaseService<PushInfo> {
 	protected cacheName = "push";
@@ -12,7 +12,7 @@ export class PushService extends BaseService<PushInfo> {
 		return item.endpoint;
 	}
 
-	async fetch(id: string): Promise<PushInfo> {
+	async fetch(_id: string): Promise<PushInfo> {
 		return await this.retryWithBackoff<PushInfo>(() =>
 			this.client.http.GET("/api/v1/push"),
 		);

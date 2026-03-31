@@ -53,9 +53,9 @@ import { createEditorNodeViews } from "./node-views.tsx";
 import { schema } from "./schema.ts";
 import { createToolbarPlugin } from "./toolbar-plugin.ts";
 
-let isApplyingFormat = false;
+let _isApplyingFormat = false;
 export const setIsApplyingFormat = (value: boolean) => {
-	isApplyingFormat = value;
+	_isApplyingFormat = value;
 };
 
 type EditorProps = {

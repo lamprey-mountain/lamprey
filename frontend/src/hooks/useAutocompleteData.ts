@@ -80,7 +80,7 @@ export const useAutocompleteData = () => {
 			// Build user list from cache or use member data as fallback
 			const users = [...userIds].map((id) => {
 				const cachedUser = users2.cache.get(id);
-				if (cachedUser && cachedUser.id) {
+				if (cachedUser?.id) {
 					return cachedUser;
 				}
 				// Fallback: create a minimal user object from the member data

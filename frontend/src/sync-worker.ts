@@ -3,14 +3,7 @@
 
 declare const self: SharedWorkerGlobalScope;
 
-import {
-	type Client,
-	type ClientState,
-	createClient,
-	type MessageEnvelope,
-	type MessageReady,
-	type MessageSync,
-} from "sdk";
+import type { Client, ClientState, MessageEnvelope, MessageReady } from "sdk";
 
 // from tab to worker
 type PortMessage =
@@ -44,15 +37,15 @@ type PortData = {
 };
 
 const ports = new Set<PortData>();
-const client: Client | null = null;
+const _client: Client | null = null;
 
 // cached ready payload for when a client connects
-const ready: MessageReady | null = null;
+const _ready: MessageReady | null = null;
 
 // maximum number of events to cache
-const MAX_RESUME_EVENTS = 100;
+const _MAX_RESUME_EVENTS = 100;
 
-function getOrCreateClient(): Client {
+function _getOrCreateClient(): Client {
 	throw "todo!";
 }
 

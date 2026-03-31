@@ -1,11 +1,4 @@
-import { Time } from "sdk";
-import {
-	createEffect,
-	createMemo,
-	createResource,
-	createSignal,
-	Show,
-} from "solid-js";
+import { createMemo, createSignal, Show } from "solid-js";
 import { useApi2, useRoles2, useRooms2 } from "@/api";
 import { Dropdown, MultiDropdown } from "../atoms/Dropdown";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
@@ -118,7 +111,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 	const inviteLink = () =>
 		inviteCode() && `${window.location.origin}/invite/${inviteCode()}`;
 
-	const copyToClipboard = () => {
+	const _copyToClipboard = () => {
 		navigator.clipboard.writeText(inviteLink());
 	};
 

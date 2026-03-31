@@ -7,7 +7,9 @@ import { md } from "./markdown_utils.tsx";
 import { getThumbFromId } from "./media/util.tsx";
 
 const Title = (props: { title?: string }) => {
-	createEffect(() => (document.title = props.title ?? ""));
+	createEffect(() => {
+		document.title = props.title ?? "";
+	});
 	return undefined;
 };
 
@@ -24,7 +26,7 @@ function isGdmTarget(
 	return target.type === "Gdm";
 }
 
-function isServerTarget(
+function _isServerTarget(
 	target: InviteTarget,
 ): target is Extract<InviteTarget, { type: "Server" }> {
 	return target.type === "Server";
@@ -42,7 +44,6 @@ function getRoomFromTarget(target: InviteTarget | undefined) {
 }
 
 export const RouteInviteInner = (props: { code: string }) => {
-	const api2 = useApi2();
 	const invites2 = useInvites2();
 	const ctx = useCtx();
 	const nav = useNavigate();
@@ -95,7 +96,8 @@ export const RouteInviteInner = (props: { code: string }) => {
 				path: { invite_code: props.code },
 			},
 		});
-		const target = invite()!.target;
+		const target = invite()?.target;
+		if (!target) return;
 		switch (target.type) {
 			case "User":
 				if (isUserTarget(target)) return nav(`/user/${target.user.id}`);
@@ -140,7 +142,13 @@ export const RouteInviteInner = (props: { code: string }) => {
 						<div class="box">
 							<div style="display:flex;">
 								<Show when={roomIcon()}>
-									<img src={getThumbFromId(roomIcon()!, 64)} class="avatar" />
+									{(icon) => (
+										<img
+											src={getThumbFromId(icon(), 64)}
+											class="avatar"
+											alt={`${name()} room icon`}
+										/>
+									)}
 								</Show>
 								<div class="info">
 									<div style="font-size: 1.3rem;font-weight: bold">
@@ -156,10 +164,10 @@ export const RouteInviteInner = (props: { code: string }) => {
 										</div>
 									</Show>
 									<div style="display:flex;justify-content:end;gap:4px">
-										<button class="link" onClick={reject}>
+										<button type="button" class="link" onClick={reject}>
 											cancel
 										</button>
-										<button class="primary" onClick={join}>
+										<button type="button" class="primary" onClick={join}>
 											{joinName()}
 										</button>
 									</div>
@@ -169,9 +177,9 @@ export const RouteInviteInner = (props: { code: string }) => {
 						<Show when={invite()?.target.type === "Server" && false}>
 							<div class="warning">
 								<div>you need to add an authentication method first!</div>
-								<button>add email</button>
-								<button>add password</button>
-								<button>login with oauth</button>
+								<button type="button">add email</button>
+								<button type="button">add password</button>
+								<button type="button">login with oauth</button>
 							</div>
 						</Show>
 					</div>

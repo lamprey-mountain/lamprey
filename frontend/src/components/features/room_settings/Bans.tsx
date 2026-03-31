@@ -1,25 +1,14 @@
-import { ReferenceElement, shift } from "@floating-ui/dom";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
-import { Role, RoomMember, RoomMemberOrigin } from "sdk";
-import { useFloating } from "solid-floating-ui";
-import {
-	createEffect,
-	createSignal,
-	For,
-	onCleanup,
-	Show,
-	type VoidProps,
-} from "solid-js";
+import { createSignal, For, Show, type VoidProps } from "solid-js";
 import { useApi2, useRoomBans2, useUsers2 } from "@/api";
 import { Time } from "../../../atoms/Time.tsx";
 import { createTooltip } from "../../../atoms/Tooltip.tsx";
 import { useCtx } from "../../../context.ts";
-import { usePermissions } from "../../../hooks/usePermissions.ts";
 import type { RoomT } from "../../../types.ts";
 import { Avatar } from "../../../User.tsx";
 
 export function Bans(props: VoidProps<{ room: RoomT }>) {
-	const ctx = useCtx();
+	const _ctx = useCtx();
 	const api2 = useApi2();
 	const roomBans2 = useRoomBans2();
 	const users2 = useUsers2();
@@ -56,7 +45,7 @@ export function Bans(props: VoidProps<{ room: RoomT }>) {
 			</header>
 			<Show when={bans()}>
 				<ul>
-					<For each={bans()!.state.ids}>
+					<For each={bans()?.state.ids}>
 						{(id) => {
 							const ban = roomBans2.cache.get(id);
 							if (!ban) return null;

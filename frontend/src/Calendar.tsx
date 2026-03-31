@@ -12,7 +12,7 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { CheckboxOption } from "./atoms/CheckboxOption";
-import { Dropdown, type DropdownItem } from "./atoms/Dropdown";
+import { Dropdown } from "./atoms/Dropdown";
 import { Checkbox, XMark } from "./icons";
 
 export type CalendarPopup = {
@@ -234,8 +234,9 @@ export const PopupEventEditor = (props: {
 				<div class={`tab-content ${activeTab() === "event" ? "active" : ""}`}>
 					<div class="popup-form">
 						<div class="popup-form-group">
-							<label>Event Name</label>
+							<label for="event-name-input">Event Name</label>
 							<input
+								id="event-name-input"
 								type="text"
 								placeholder="Event name"
 								value={formData.name}
@@ -245,8 +246,9 @@ export const PopupEventEditor = (props: {
 
 						<div class="popup-form-row">
 							<div class="popup-form-group">
-								<label>Date</label>
+								<label for="event-date-input">Date</label>
 								<input
+									id="event-date-input"
 									type="date"
 									value={formData.start.toISOString().split("T")[0]}
 									onInput={(e) => {
@@ -256,28 +258,31 @@ export const PopupEventEditor = (props: {
 								/>
 							</div>
 							<div class="popup-form-group">
-								<label>Timezone</label>
-								<Dropdown
-									selected={formData.timezone}
-									onSelect={(v) => handleChange("timezone", v)}
-									options={[
-										{ item: "UTC", label: "UTC" },
-										{ item: "America/New_York", label: "Eastern" },
-										{ item: "America/Chicago", label: "Central" },
-										{ item: "America/Denver", label: "Mountain" },
-										{ item: "America/Los_Angeles", label: "Pacific" },
-										{ item: "Europe/London", label: "London" },
-										{ item: "Europe/Paris", label: "Paris" },
-										{ item: "Asia/Tokyo", label: "Tokyo" },
-									]}
-								/>
+								<label>
+									Timezone
+									<Dropdown
+										selected={formData.timezone}
+										onSelect={(v) => handleChange("timezone", v)}
+										options={[
+											{ item: "UTC", label: "UTC" },
+											{ item: "America/New_York", label: "Eastern" },
+											{ item: "America/Chicago", label: "Central" },
+											{ item: "America/Denver", label: "Mountain" },
+											{ item: "America/Los_Angeles", label: "Pacific" },
+											{ item: "Europe/London", label: "London" },
+											{ item: "Europe/Paris", label: "Paris" },
+											{ item: "Asia/Tokyo", label: "Tokyo" },
+										]}
+									/>
+								</label>
 							</div>
 						</div>
 
 						<div class="popup-form-row">
 							<div class="popup-form-group">
-								<label>Start</label>
+								<label for="calendar-start-input">Start</label>
 								<input
+									id="calendar-start-input"
 									type="time"
 									value={formData.start.toTimeString().slice(0, 5)}
 									onInput={(e) => {
@@ -291,8 +296,9 @@ export const PopupEventEditor = (props: {
 								/>
 							</div>
 							<div class="popup-form-group">
-								<label>End</label>
+								<label for="calendar-end-input">End</label>
 								<input
+									id="calendar-end-input"
 									type="time"
 									value={formData.end.toTimeString().slice(0, 5)}
 									onInput={(e) => {
@@ -713,7 +719,7 @@ const CalendarMonth = (props: {
 	);
 };
 
-const CalendarWeek = (props: { channel: Channel; events: EventMap }) => {
+const CalendarWeek = (_props: { channel: Channel; events: EventMap }) => {
 	return (
 		<div class="week-view">
 			<p>Week view coming soon...</p>
@@ -721,7 +727,7 @@ const CalendarWeek = (props: { channel: Channel; events: EventMap }) => {
 	);
 };
 
-const CalendarTimeline = (props: { channel: Channel; events: EventMap }) => {
+const CalendarTimeline = (_props: { channel: Channel; events: EventMap }) => {
 	return (
 		<div class="timeline-view">
 			<p>Timeline view coming soon...</p>

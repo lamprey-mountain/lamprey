@@ -1,15 +1,12 @@
-import { ReferenceElement, shift } from "@floating-ui/dom";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import fuzzysort from "fuzzysort";
-import type { Channel, Room } from "sdk";
-import { createUpload, getTimestampFromUUID, type Webhook } from "sdk";
-import { useFloating } from "solid-floating-ui";
+import type { Room } from "sdk";
+import { createUpload, getTimestampFromUUID } from "sdk";
 import {
 	createEffect,
 	createResource,
 	createSignal,
 	For,
-	onCleanup,
 	Show,
 	type VoidProps,
 } from "solid-js";
@@ -17,9 +14,7 @@ import { useApi2, useChannels2, useUsers2 } from "@/api";
 import { Dropdown } from "../../../atoms/Dropdown.tsx";
 import { Time } from "../../../atoms/Time.tsx";
 import { useConfig } from "../../../config.tsx";
-import { useCtx } from "../../../context.ts";
 import { useModals } from "../../../contexts/modal";
-import { usePermissions } from "../../../hooks/usePermissions.ts";
 import { Avatar } from "../../../User.tsx";
 
 // TODO(#750): group webhooks by channel
@@ -74,8 +69,9 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 
 	const filteredWebhooks = () => {
 		const query = search();
-		if (!query) return webhooks()!.items;
-		const results = fuzzysort.go(query, webhooks()!.items, {
+		if (!query) return webhooks()?.items ?? [];
+		const items = webhooks()?.items ?? [];
+		const results = fuzzysort.go(query, items, {
 			key: "name",
 			threshold: -10000,
 		});

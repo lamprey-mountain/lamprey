@@ -8,19 +8,12 @@ import {
 	createSignal,
 	For,
 	Match,
-	onMount,
 	type ParentProps,
 	Show,
 	Switch,
 	useContext,
 } from "solid-js";
-import {
-	useApi2,
-	useChannels2,
-	useRoles2,
-	useRoomMembers2,
-	useUsers2,
-} from "@/api";
+import { useChannels2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
 import { useUserPopout } from "../contexts/mod";
 import { getTwemoji } from "../emoji";
 import { flags } from "../flags";
@@ -41,7 +34,7 @@ function UserMention(props: { id: string }) {
 	const user = users2.use(() => props.id);
 	const room_member = createMemo(() => {
 		if (!ctx?.channel?.room_id) return null;
-		return roomMembers2.cache.get(`${ctx.channel!.room_id!}:${props.id}`);
+		return roomMembers2.cache.get(`${ctx.channel?.room_id!}:${props.id}`);
 	});
 
 	return (

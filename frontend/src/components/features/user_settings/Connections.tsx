@@ -3,11 +3,10 @@ import type { Scope } from "sdk";
 import { createResource, createSignal, For, onCleanup } from "solid-js";
 import { useApi2 } from "@/api";
 import { Time } from "../../../atoms/Time";
-import { Copyable } from "../../../utils/general";
 
 export function Connections() {
 	const api2 = useApi2();
-	const [connecting, setConnecting] = createSignal(false);
+	const [_connecting, setConnecting] = createSignal(false);
 
 	const [connections, { refetch }] = createResource(async () => {
 		const { data } = await api2.client.http.GET(

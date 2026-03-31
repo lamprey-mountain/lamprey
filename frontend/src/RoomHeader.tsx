@@ -30,8 +30,8 @@ export const RoomHeader = (props: RoomHeaderProps) => {
 			<b>home</b>
 			<div style="flex:1"></div>
 			<SearchInput room={props.room} />
-			<button onClick={toggleMembers} title="Show members">
-				<img class="icon" src={icMembers} />
+			<button type="button" onClick={toggleMembers} title="Show members">
+				<img class="icon" src={icMembers} alt="Members" />
 			</button>
 		</header>
 	);

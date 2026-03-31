@@ -1,10 +1,8 @@
-import type { Channel, EmojiCustom, User } from "sdk";
+import type { Channel } from "sdk";
 import { For, Match, Show, Switch } from "solid-js";
 import { ChannelIcon } from "../avatar/ChannelIcon";
-import type { AutocompleteMentionItem } from "../contexts/autocomplete";
 import { useAutocomplete } from "../contexts/autocomplete";
-import type { Command } from "../contexts/slash-commands";
-import { type EmojiData, getTwemoji } from "../emoji";
+import { getTwemoji } from "../emoji";
 import { useAutocompleteData } from "../hooks/useAutocompleteData";
 import { getEmojiUrl } from "../media/util";
 import { Avatar } from "../User";

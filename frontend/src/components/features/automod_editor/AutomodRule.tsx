@@ -37,7 +37,7 @@ export function AutomodRule(props: {
 	channels: () => Channel[];
 }) {
 	const [name, setName] = createSignal(props.rule.name);
-	const [enabled, setEnabled] = createSignal(props.rule.enabled);
+	const [_enabled, setEnabled] = createSignal(props.rule.enabled);
 	const [isEditing, setIsEditing] = createSignal(false);
 	let inputEl: HTMLInputElement | undefined;
 
@@ -76,7 +76,7 @@ export function AutomodRule(props: {
 		}
 	};
 
-	const updateNested = (path: string, value: unknown) => {
+	const _updateNested = (path: string, value: unknown) => {
 		props.setRuleState(
 			props.rule.id,
 			props.rule.state === "draft" ? "draft" : "edited",

@@ -92,15 +92,17 @@ export const Checkbox = (props: { checked?: boolean; seed?: string }) => {
 				stroke-width="1"
 			/>
 			<Show when={props.checked && props.seed}>
-				<image
-					class="icon"
-					href={getCheckIcon(props.seed!)}
-					style="height:12px;width:12px"
-					height="12"
-					width="12"
-					x="2"
-					y="2"
-				/>
+				{(seed) => (
+					<image
+						class="icon"
+						href={getCheckIcon(seed())}
+						style="height:12px;width:12px"
+						height="12"
+						width="12"
+						x="2"
+						y="2"
+					/>
+				)}
 			</Show>
 		</svg>
 	);

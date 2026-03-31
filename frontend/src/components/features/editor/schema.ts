@@ -59,7 +59,7 @@ export const schema = new Schema({
 				{ tag: "h6", attrs: { level: 6 } },
 			],
 			toDOM(node) {
-				return ["h" + node.attrs.level, 0];
+				return [`h${node.attrs.level}`, 0];
 			},
 		},
 		mention: {

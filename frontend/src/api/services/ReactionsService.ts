@@ -6,11 +6,11 @@ export type ReactionUser = { user_id: string };
 export class ReactionsService extends BaseService<never> {
 	protected cacheName = "reactions";
 
-	getKey(item: never): string {
+	getKey(_item: never): string {
 		throw new Error("ReactionsService does not cache items");
 	}
 
-	async fetch(id: string): Promise<never> {
+	async fetch(_id: string): Promise<never> {
 		throw new Error("ReactionsService does not fetch single items");
 	}
 

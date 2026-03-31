@@ -25,7 +25,7 @@ export type ReadTrackingContextT = {
 const ReadTrackingContext = createContext<ReadTrackingContextT>();
 
 export function createReadTrackingProvider(
-	api: Api,
+	_api: Api,
 	channels2: ChannelsService,
 	channel_contexts: ReactiveMap<string, ChannelContextT>,
 	dataUpdate: SetStoreFunction<Data>,
@@ -36,12 +36,12 @@ export function createReadTrackingProvider(
 		also_local: boolean,
 		delay = false,
 	) => {
-		let ackGraceTimeout: ReturnType<typeof setTimeout> | undefined;
-		let ackDebounceTimeout: ReturnType<typeof setTimeout> | undefined;
+		let _ackGraceTimeout: ReturnType<typeof setTimeout> | undefined;
+		let _ackDebounceTimeout: ReturnType<typeof setTimeout> | undefined;
 
 		if (delay) {
-			ackGraceTimeout = setTimeout(() => {
-				ackDebounceTimeout = setTimeout(() => {
+			_ackGraceTimeout = setTimeout(() => {
+				_ackDebounceTimeout = setTimeout(() => {
 					markThreadRead(thread_id, version_id, also_local, false);
 				}, 800);
 			}, 200);

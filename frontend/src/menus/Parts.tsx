@@ -18,7 +18,6 @@ function isSeparator(child: JSX.Element): boolean {
 }
 
 export function Menu(props: ParentProps<{ submenu?: boolean }>) {
-	const ctx = useCtx();
 	const { setPreview } = useMenu();
 	const resolved = children(() => props.children);
 
@@ -48,7 +47,6 @@ export function Menu(props: ParentProps<{ submenu?: boolean }>) {
 		<menu
 			onMouseDown={(e) => !props.submenu && e.stopPropagation()}
 			onMouseLeave={() => setPreview(null)}
-			role="menu"
 		>
 			<ul>{filtered()}</ul>
 		</menu>
@@ -121,10 +119,10 @@ export function Submenu(
 					e.stopPropagation();
 					props.onClick?.(e);
 					// HACK: close menu
-					document.getElementById("root")!.click();
+					document.getElementById("root")?.click();
 				}}
 				classList={{
-					["color-" + props.color]: !!props.color,
+					[`color-${props.color}`]: !!props.color,
 				}}
 			>
 				{props.content}
@@ -197,7 +195,7 @@ export function Item(
 				disabled={props.disabled ?? false}
 				classList={{
 					...props.classList,
-					["color-" + props.color]: !!props.color,
+					[`color-${props.color}`]: !!props.color,
 				}}
 			>
 				{props.children}

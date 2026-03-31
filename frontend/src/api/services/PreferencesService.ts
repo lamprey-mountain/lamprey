@@ -1,5 +1,4 @@
 import type { Preferences } from "sdk";
-import { createEffect } from "solid-js";
 import { logger } from "../../logger";
 import { BaseService } from "../core/Service";
 
@@ -32,7 +31,7 @@ const DEFAULT_PREFERENCES: Preferences = {
 };
 
 // TODO: store preferences in db instead of localstorage
-function loadSavedPreferences(): Preferences | null {
+function _loadSavedPreferences(): Preferences | null {
 	const c = localStorage.getItem("preferences");
 	if (!c) return null;
 	try {

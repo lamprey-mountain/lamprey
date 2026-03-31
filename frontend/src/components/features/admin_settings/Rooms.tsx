@@ -4,10 +4,9 @@ import { createSignal, For, Show } from "solid-js";
 import { useApi2, useRooms2 } from "@/api";
 import { Time } from "../../../atoms/Time.tsx";
 import { getThumbFromId } from "../../../media/util.tsx";
-import { Avatar } from "../../../User.tsx";
 
 export function Rooms() {
-	const api2 = useApi2();
+	const _api2 = useApi2();
 	const rooms2 = useRooms2();
 	const rooms = rooms2.useListAll();
 

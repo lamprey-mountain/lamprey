@@ -88,7 +88,7 @@ export const RoomIcon = (
 						height={size}
 						x={pad()}
 						y={pad()}
-						href={getThumbFromId(props.room!.icon!)!}
+						href={getThumbFromId(props.room?.icon!)!}
 					/>
 				</Show>
 			</g>

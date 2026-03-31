@@ -150,7 +150,7 @@ export abstract class BaseService<T> {
 						this.fetchOrQueue(itemId).catch(() => {});
 						return cached;
 					}
-				} catch (e) {
+				} catch (_e) {
 					// IndexedDB error, continue with API fetch
 				}
 			}

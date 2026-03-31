@@ -1,4 +1,4 @@
-import type { Channel, ChannelType } from "sdk";
+import type { Channel } from "sdk";
 import type { Api } from "@/api";
 import { canUseCommand as checkCommandPermission } from "../permission-calculator";
 

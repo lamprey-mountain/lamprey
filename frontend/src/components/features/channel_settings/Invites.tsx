@@ -1,4 +1,4 @@
-import type { Channel, InviteWithMetadata } from "sdk";
+import type { Channel } from "sdk";
 import { For, Show, type VoidProps } from "solid-js";
 import { useApi2, useInvites2, useUsers2 } from "@/api";
 import { Time } from "../../../atoms/Time.tsx";
@@ -46,7 +46,7 @@ export function Invites(props: VoidProps<{ channel: Channel }>) {
 						<div class="expires">expires</div>
 					</header>
 					<ul>
-						<For each={invites()!.state.ids}>
+						<For each={invites()?.state.ids}>
 							{(code) => {
 								const i = invites2.cache.get(code);
 								if (!i) return null;

@@ -8,11 +8,11 @@ export class TagsService extends BaseService<Tag> {
 		return item.id;
 	}
 
-	async fetch(id: string): Promise<Tag> {
+	async fetch(_id: string): Promise<Tag> {
 		throw new Error("Use fetchByChannel(channel_id, tag_id) instead");
 	}
 
-	async fetchByChannel(channel_id: string, tag_id: string): Promise<Tag> {
+	async fetchByChannel(_channel_id: string, _tag_id: string): Promise<Tag> {
 		throw new Error("Fetch via list() and cache lookup");
 	}
 

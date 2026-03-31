@@ -13,10 +13,8 @@ import { Time } from "../../../atoms/Time.tsx";
 import {
 	formatAuditLogEntry,
 	formatChanges,
-	type MergedAuditLogEntry,
 	mergeAuditLogEntries,
 } from "../../../audit-log-util.tsx";
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
 
 export function AuditLog(props: VoidProps<{ room: Room }>) {
 	const api2 = useApi2();

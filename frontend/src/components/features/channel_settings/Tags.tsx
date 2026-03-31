@@ -100,7 +100,7 @@ export function Tags(props: VoidProps<{ channel: Channel }>) {
 			<Show when={tags()}>
 				<ul class="tag-list">
 					<For
-						each={tags()!.items.filter((i) =>
+						each={tags()?.items.filter((i) =>
 							i.name.toLowerCase().includes(search().toLowerCase()),
 						)}
 					>

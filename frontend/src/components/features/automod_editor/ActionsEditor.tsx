@@ -1,7 +1,6 @@
 import type { AutomodAction, AutomodTarget, Channel } from "sdk";
 import { For, Match, Show, Switch } from "solid-js";
 import { ChannelPicker } from "../../../atoms/ChannelPicker.tsx";
-import { ChannelIcon } from "../../../avatar/ChannelIcon.tsx";
 
 export interface ActionsEditorProps {
 	target: AutomodTarget;
@@ -46,7 +45,7 @@ function TimeoutFields(props: {
 				type="number"
 				value={mins()}
 				onInput={(e) =>
-					props.update("duration", parseInt(e.currentTarget.value) * 60000)
+					props.update("duration", parseInt(e.currentTarget.value, 10) * 60000)
 				}
 			/>
 		</label>

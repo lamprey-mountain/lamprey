@@ -1,4 +1,4 @@
-import { Item, Menu, Separator } from "./Parts.tsx";
+import { Item, Menu } from "./Parts.tsx";
 
 type ChannelNavMenuProps = {};
 

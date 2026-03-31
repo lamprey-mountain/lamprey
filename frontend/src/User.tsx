@@ -23,7 +23,7 @@ import {
 	Switch,
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import { useApi2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
+import { useApi2, useRoomMembers2 } from "@/api";
 import { AvatarWithStatus } from "./avatar/UserAvatar.tsx";
 import { useCtx } from "./context.ts";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
@@ -89,8 +89,9 @@ const EditRoles = (props: {
 	const handleChecked =
 		(r: Role) => (e: InputEvent & { target: HTMLInputElement }) => {
 			const role_id = r.id;
-			const user_id = member()!.user_id;
-			if (e.target!.checked) {
+			const user_id = member()?.user_id;
+			if (!user_id) return;
+			if (e.target?.checked) {
 				api2.client.http.PUT(
 					"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 					{
@@ -147,12 +148,12 @@ const EditRoles = (props: {
 					<label classList={{ disabled: r.position >= permissions().rank }}>
 						<input
 							type="checkbox"
-							checked={member()!.roles.includes(r.id)}
+							checked={member()?.roles.includes(r.id)}
 							onInput={handleChecked(r)}
 							disabled={r.position >= permissions().rank}
 						/>
 						<div>
-							<div classList={{ has: member()!.roles.includes(r.id) }}>
+							<div classList={{ has: member()?.roles.includes(r.id) }}>
 								{r.name}
 							</div>
 							<div class="dim">{r.description}</div>
@@ -166,7 +167,6 @@ const EditRoles = (props: {
 
 export function UserView(props: UserProps) {
 	const api2 = useApi2();
-	const ctx = useCtx();
 	const { setMenu } = useMenu();
 	const nav = useNavigate();
 
@@ -336,7 +336,7 @@ export function UserView(props: UserProps) {
 					<div class="roles">
 						<h3 class="dim">Roles</h3>
 						<ul>
-							<For each={room_member()!.roles}>
+							<For each={room_member()?.roles}>
 								{(role_id) => {
 									const role = api2.roles.cache.get(role_id);
 									return <li>{role?.name ?? "role"}</li>;
@@ -345,12 +345,26 @@ export function UserView(props: UserProps) {
 							<Show when={hasPermission("RoleApply")}>
 								<li
 									role="button"
+									tabIndex={0}
 									onClick={(e) => {
 										e.stopImmediatePropagation();
 										setEditRoles({
 											x: e.clientX,
 											y: e.clientY,
 										});
+									}}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" || e.key === " ") {
+											e.preventDefault();
+											e.stopImmediatePropagation();
+											const rect = (
+												e.currentTarget as HTMLElement
+											).getBoundingClientRect();
+											setEditRoles({
+												x: rect.x,
+												y: rect.y,
+											});
+										}
 									}}
 								>
 									edit...
@@ -369,13 +383,19 @@ export function UserView(props: UserProps) {
 					/>
 				</div>
 			</div>
-			<Show when={editRoles() && room_member()}>
-				<EditRoles
-					x={editRoles()!.x}
-					y={editRoles()!.y}
-					user_id={props.user.id}
-					room_id={room_member()!.room_id}
-				/>
+			<Show when={editRoles()}>
+				{(ed) => (
+					<Show when={room_member()}>
+						{(member) => (
+							<EditRoles
+								x={ed().x}
+								y={ed().y}
+								user_id={props.user.id}
+								room_id={member().room_id}
+							/>
+						)}
+					</Show>
+				)}
 			</Show>
 		</div>
 	);

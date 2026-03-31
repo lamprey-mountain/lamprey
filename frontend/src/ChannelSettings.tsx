@@ -1,5 +1,5 @@
 import { A } from "@solidjs/router";
-import type { Channel, Permission } from "sdk";
+import type { Channel } from "sdk";
 import { type Component, For, Match, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useApi2 } from "@/api";
@@ -10,7 +10,6 @@ import {
 	Tags,
 	Webhooks,
 } from "./components/features/channel_settings/mod.tsx";
-import { useCtx } from "./context.ts";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { useModals } from "./contexts/modal.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
@@ -21,7 +20,7 @@ const tabs: Array<{
 	name: string;
 	path: string;
 	noPad?: boolean;
-	component: Component<any> | null;
+	component: Component<{ channel: Channel }> | null;
 	action?: "remove";
 	style?: string;
 	permissionCheck?: PermissionCheck;
@@ -58,7 +57,7 @@ const tabs: Array<{
 	{
 		name: "remove channel",
 		path: "remove",
-		component: null as any,
+		component: null,
 		action: "remove",
 		style: "danger",
 		// TODO: check ThreadManage in threads, ChannelManage in channels
@@ -67,7 +66,6 @@ const tabs: Array<{
 ];
 
 export const ChannelSettings = (props: { channel: Channel; page: string }) => {
-	const ctx = useCtx();
 	const api2 = useApi2();
 	const [, modalCtl] = useModals();
 	const currentUser = useCurrentUser();
@@ -78,7 +76,7 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 		() => props.channel.id,
 	);
 
-	const currentTab = () => tabs.find((i) => i.path === (props.page ?? ""))!;
+	const currentTab = () => tabs.find((i) => i.path === (props.page ?? ""));
 
 	const handleAction = (action: string) => {
 		switch (action) {
@@ -98,7 +96,7 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 								})
 								.catch((error) => {
 									console.error("Failed to remove channel:", error);
-									modalCtl.alert("Failed to remove channel: " + error.message);
+									modalCtl.alert(`Failed to remove channel: ${error.message}`);
 								});
 						}
 					},
@@ -128,17 +126,20 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 							>
 								<Switch>
 									<Match when={tab.action}>
-										<li>
-											<button
-												class="action"
-												onClick={() => handleAction(tab.action!)}
-												classList={{
-													danger: tab.style === "danger",
-												}}
-											>
-												{tab.name}
-											</button>
-										</li>
+										{(action) => (
+											<li>
+												<button
+													type="button"
+													class="action"
+													onClick={() => handleAction(action())}
+													classList={{
+														danger: tab.style === "danger",
+													}}
+												>
+													{tab.name}
+												</button>
+											</li>
+										)}
 									</Match>
 									<Match when={true}>
 										<li>
@@ -157,10 +158,9 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 			</nav>
 			<main classList={{ padded: !currentTab()?.noPad }}>
 				<Show when={currentTab()?.component} fallback="unknown page">
-					<Dynamic
-						component={currentTab()!.component!}
-						channel={props.channel}
-					/>
+					{(component) => (
+						<Dynamic component={component()} channel={props.channel} />
+					)}
 				</Show>
 			</main>
 		</div>

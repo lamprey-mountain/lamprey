@@ -1,4 +1,4 @@
-import type { ReactionCount, ReactionKey, User } from "sdk";
+import type { ReactionKey } from "sdk";
 import {
 	createEffect,
 	createResource,

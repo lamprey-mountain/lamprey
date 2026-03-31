@@ -1,4 +1,4 @@
-import { createEffect, createSignal, type JSX, onMount } from "solid-js";
+import { createEffect, createSignal } from "solid-js";
 import { createDropdown, type DropdownItem } from "./Dropdown";
 
 const UNITS: Record<string, number> = {
@@ -47,7 +47,7 @@ export function parseDuration(input: string): number | null {
 
 	if (!hasMatch) {
 		const plainNumber = parseFloat(input);
-		return isNaN(plainNumber) ? null : plainNumber;
+		return Number.isNaN(plainNumber) ? null : plainNumber;
 	}
 
 	return totalSeconds;
@@ -123,7 +123,7 @@ export const DurationInput = (props: DurationInputProps) => {
 			})),
 		);
 
-		if (!isNaN(numeric) && numeric > 0 && !/[a-z]/i.test(currentText)) {
+		if (!Number.isNaN(numeric) && numeric > 0 && !/[a-z]/i.test(currentText)) {
 			opts.push(
 				{ item: numeric, label: `${numeric} seconds` },
 				{ item: numeric * 60, label: `${numeric} minutes` },

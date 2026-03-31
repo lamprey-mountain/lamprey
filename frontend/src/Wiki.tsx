@@ -20,7 +20,6 @@ import { Document } from "./components/features/editor/Document";
 import { useCtx } from "./context";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { useModals } from "./contexts/modal";
-import { flags } from "./flags";
 import { usePermissions } from "./hooks/usePermissions";
 import { md } from "./markdown_utils";
 import { ChannelIcon } from "./User";
@@ -51,9 +50,9 @@ export const Wiki = (props: { channel: Channel }) => {
 		if (
 			menuOpen() &&
 			referenceEl() &&
-			!referenceEl()!.contains(e.target as Node) &&
+			!referenceEl()?.contains(e.target as Node) &&
 			floatingEl() &&
-			!floatingEl()!.contains(e.target as Node)
+			!floatingEl()?.contains(e.target as Node)
 		) {
 			setMenuOpen(false);
 		}

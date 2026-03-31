@@ -15,7 +15,7 @@ export class DmsService extends BaseService<Channel> {
 		return item.id;
 	}
 
-	async fetch(id: string): Promise<Channel> {
+	async fetch(_id: string): Promise<Channel> {
 		throw new Error("Use channels.fetch() for DM channels");
 	}
 

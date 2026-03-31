@@ -57,7 +57,7 @@ export const SearchResults = (props: {
 						{(message, index) => {
 							const prev = () => {
 								const i = index();
-								if (i > 0) return props.search.results!.messages[i - 1];
+								if (i > 0) return props.search.results?.messages[i - 1];
 								return undefined;
 							};
 							return (
@@ -90,7 +90,7 @@ export const SearchResultItem = (props: {
 		<>
 			<Show when={showHeader() && channel()}>
 				<div style="padding: 4px 12px 0; font-weight: bold; color: var(--text-dim);">
-					#{channel()!.name}
+					#{channel()?.name}
 				</div>
 			</Show>
 			<li onClick={() => props.onResultClick(props.message)}>

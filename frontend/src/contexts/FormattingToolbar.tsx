@@ -1,6 +1,5 @@
 import { TextSelection } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
-import { Show } from "solid-js";
 import iconBold from "../assets/format-bold.png";
 import iconCode from "../assets/format-code.png";
 import iconItalic from "../assets/format-italic.png";
@@ -73,7 +72,7 @@ const toggleFormat = (wrapper: string) => {
 	}
 };
 
-export const FormattingToolbar = (props: FormattingToolbarProps) => {
+export const FormattingToolbar = (_props: FormattingToolbarProps) => {
 	const { hideToolbar } = useFormattingToolbar();
 
 	const applyFormat = (wrapper: string) => {

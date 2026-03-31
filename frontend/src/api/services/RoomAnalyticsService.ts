@@ -1,11 +1,10 @@
-import {
-	type RoomAnalyticsChannel,
-	RoomAnalyticsInvites,
-	type RoomAnalyticsMembersCount,
-	type RoomAnalyticsMembersJoin,
-	type RoomAnalyticsMembersLeave,
-	type RoomAnalyticsOverview,
-	type Time,
+import type {
+	RoomAnalyticsChannel,
+	RoomAnalyticsMembersCount,
+	RoomAnalyticsMembersJoin,
+	RoomAnalyticsMembersLeave,
+	RoomAnalyticsOverview,
+	Time,
 } from "sdk";
 import { BaseService } from "../core/Service";
 
@@ -21,11 +20,11 @@ export type RoomAnalyticsParams = {
 export class RoomAnalyticsService extends BaseService<never> {
 	protected cacheName = "room_analytics";
 
-	getKey(item: never): string {
+	getKey(_item: never): string {
 		throw new Error("RoomAnalyticsService does not cache items");
 	}
 
-	async fetch(id: string): Promise<never> {
+	async fetch(_id: string): Promise<never> {
 		throw new Error("RoomAnalyticsService does not fetch single items");
 	}
 

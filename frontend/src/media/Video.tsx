@@ -5,7 +5,6 @@ import {
 	onCleanup,
 	onMount,
 	Show,
-	ValidComponent,
 } from "solid-js";
 import iconFullscreen from "../assets/fullscreen.png";
 import iconFullscreent from "../assets/fullscreent.png";
@@ -56,7 +55,7 @@ export const VideoView = (props: MediaProps) => {
 
 	let video!: HTMLVideoElement;
 	let wrapperEl!: HTMLDivElement;
-	let topEl!: HTMLDivElement;
+	let _topEl!: HTMLDivElement;
 	// const [wrapperEl]!: HTMLDivElement;
 
 	const volumeTooltip = createTooltip({
@@ -81,7 +80,7 @@ export const VideoView = (props: MediaProps) => {
 			</div>
 		),
 	});
-	const vtc = volumeTooltip.content;
+	const _vtc = volumeTooltip.content;
 
 	onMount(() => {
 		video.ondurationchange = () => setDuration(video.duration);

@@ -1,7 +1,5 @@
 import { ReactiveMap } from "@solid-primitives/map";
 import type { MemberListGroup, RoomMember, ThreadMember, User } from "sdk";
-import { batch, createMemo } from "solid-js";
-import { createStore, reconcile } from "solid-js/store";
 import { logger } from "../../logger";
 import type { RootStore } from "../core/Store";
 

@@ -154,7 +154,6 @@ export function OverwriteDropdown(props: {
 							<For each={options()}>
 								{(opt, i) => (
 									<li
-										role="option"
 										aria-selected={i() === hoveredIndex()}
 										onMouseEnter={() => setHoveredIndex(i())}
 										onMouseDown={(e) => {

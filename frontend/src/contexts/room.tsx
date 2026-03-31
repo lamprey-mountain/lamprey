@@ -1,6 +1,6 @@
 import type { Message, Pagination } from "sdk";
 import { createContext, useContext } from "solid-js";
-import { createStore, type SetStoreFunction, type Store } from "solid-js/store";
+import type { SetStoreFunction, Store } from "solid-js/store";
 
 export type RoomSearch = {
 	query: string;

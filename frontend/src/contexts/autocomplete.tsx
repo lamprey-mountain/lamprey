@@ -1,15 +1,12 @@
 import type { ReferenceElement } from "@floating-ui/dom";
 import type { User } from "sdk";
 import {
-	type Accessor,
 	batch,
 	createContext,
-	createSignal,
 	type ParentComponent,
-	type Setter,
 	useContext,
 } from "solid-js";
-import { createStore, SetStoreFunction } from "solid-js/store";
+import { createStore } from "solid-js/store";
 
 export type AutocompleteState = {
 	visible: boolean;

@@ -10,7 +10,7 @@ declare const self: ServiceWorkerGlobalScope;
 
 const CACHE_VALID: Array<string> = [];
 
-const makeError = (error: string, status = 400) => {
+const _makeError = (error: string, status = 400) => {
 	return new Response(JSON.stringify({ error }), {
 		status,
 		headers: { "content-type": "application/json" },
@@ -30,7 +30,7 @@ const deleteOldCaches = async () => {
 	);
 };
 
-const shouldCache = (req: Request) => {
+const _shouldCache = (req: Request) => {
 	if (req.method !== "GET" && req.method !== "HEAD") return false;
 	// const url = new URL(req.url, self.location.href);
 	// console.log("should cache?", url.href);
@@ -259,7 +259,7 @@ async function stripMarkdownAndResolveMentions(
 		/<:(\w+):[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}>/g;
 	processedContent = processedContent.replace(
 		emojiMentionRegex,
-		(match, emojiName) => {
+		(_match, emojiName) => {
 			return `:${emojiName}:`;
 		},
 	);

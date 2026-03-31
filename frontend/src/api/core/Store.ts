@@ -1,11 +1,10 @@
-import {
-	type Client,
-	type Message,
-	type MessageEnvelope,
-	type MessageReady,
-	type MessageSync,
-	Preferences,
-	type Session,
+import type {
+	Client,
+	Message,
+	MessageEnvelope,
+	MessageReady,
+	MessageSync,
+	Session,
 } from "sdk";
 import { type Accessor, createSignal } from "solid-js";
 import { ChannelsService } from "../services/ChannelsService";

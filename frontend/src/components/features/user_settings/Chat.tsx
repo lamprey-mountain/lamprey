@@ -30,14 +30,12 @@ export function Chat(props: VoidProps<{ user: User }>) {
 				</h3>
 				<CheckboxOption
 					id={`user-${props.user.id}-preview-attachments`}
-					checked={ctx.preferences().frontend["preview_attachments"] === "yes"}
+					checked={ctx.preferences().frontend.preview_attachments === "yes"}
 					onChange={() => toggle("preview_attachments")()}
 					seed={`user-${props.user.id}-preview-attachments`}
 				>
 					<Checkbox
-						checked={
-							ctx.preferences().frontend["preview_attachments"] === "yes"
-						}
+						checked={ctx.preferences().frontend.preview_attachments === "yes"}
 						seed={`user-${props.user.id}-preview-attachments`}
 					/>
 					<span>{t("user_settings.preview_attachments")}</span>
@@ -45,7 +43,7 @@ export function Chat(props: VoidProps<{ user: User }>) {
 				<CheckboxOption
 					id={`user-${props.user.id}-preview-attachments-descriptions`}
 					checked={
-						ctx.preferences().frontend["preview_attachments_descriptions"] ===
+						ctx.preferences().frontend.preview_attachments_descriptions ===
 						"yes"
 					}
 					onChange={() => toggle("preview_attachments_descriptions")()}
@@ -53,7 +51,7 @@ export function Chat(props: VoidProps<{ user: User }>) {
 				>
 					<Checkbox
 						checked={
-							ctx.preferences().frontend["preview_attachments_descriptions"] ===
+							ctx.preferences().frontend.preview_attachments_descriptions ===
 							"yes"
 						}
 						seed={`user-${props.user.id}-preview-attachments-descriptions`}
@@ -62,12 +60,12 @@ export function Chat(props: VoidProps<{ user: User }>) {
 				</CheckboxOption>
 				<CheckboxOption
 					id={`user-${props.user.id}-link-previews`}
-					checked={ctx.preferences().frontend["link_previews"] === "yes"}
+					checked={ctx.preferences().frontend.link_previews === "yes"}
 					onChange={() => toggle("link_previews")()}
 					seed={`user-${props.user.id}-link-previews`}
 				>
 					<Checkbox
-						checked={ctx.preferences().frontend["link_previews"] === "yes"}
+						checked={ctx.preferences().frontend.link_previews === "yes"}
 						seed={`user-${props.user.id}-link-previews`}
 					/>
 					<span>{t("user_settings.link_previews")}</span>
@@ -75,24 +73,24 @@ export function Chat(props: VoidProps<{ user: User }>) {
 				<h3 class="dim">{t("user_settings.input")}</h3>
 				<CheckboxOption
 					id={`user-${props.user.id}-show-send-button`}
-					checked={ctx.preferences().frontend["show_send_button"] === "yes"}
+					checked={ctx.preferences().frontend.show_send_button === "yes"}
 					onChange={() => toggle("show_send_button")()}
 					seed={`user-${props.user.id}-show-send-button`}
 				>
 					<Checkbox
-						checked={ctx.preferences().frontend["show_send_button"] === "yes"}
+						checked={ctx.preferences().frontend.show_send_button === "yes"}
 						seed={`user-${props.user.id}-show-send-button`}
 					/>
 					<span>{t("user_settings.show_send_button")}</span>
 				</CheckboxOption>
 				<CheckboxOption
 					id={`user-${props.user.id}-typing-indicators`}
-					checked={ctx.preferences().frontend["typing_indicators"] === "yes"}
+					checked={ctx.preferences().frontend.typing_indicators === "yes"}
 					onChange={() => toggle("typing_indicators")()}
 					seed={`user-${props.user.id}-typing-indicators`}
 				>
 					<Checkbox
-						checked={ctx.preferences().frontend["typing_indicators"] === "yes"}
+						checked={ctx.preferences().frontend.typing_indicators === "yes"}
 						seed={`user-${props.user.id}-typing-indicators`}
 					/>
 					<span>{t("user_settings.typing_indicators")}</span>
@@ -106,7 +104,7 @@ export function Chat(props: VoidProps<{ user: User }>) {
 						</div>
 					</div>
 					<Dropdown
-						selected={ctx.preferences().frontend["spoilers"] || "click"}
+						selected={ctx.preferences().frontend.spoilers || "click"}
 						onSelect={(value) => {
 							if (value) {
 								const c = ctx.preferences();
@@ -129,14 +127,12 @@ export function Chat(props: VoidProps<{ user: User }>) {
 				<h3 class="dim">{t("user_settings.threads_sidebar")}</h3>
 				<CheckboxOption
 					id={`user-${props.user.id}-threads-sidebar-text`}
-					checked={ctx.preferences().frontend["threads_sidebar_text"] === "yes"}
+					checked={ctx.preferences().frontend.threads_sidebar_text === "yes"}
 					onChange={toggle("threads_sidebar_text")}
 					seed={`user-${props.user.id}-threads-sidebar-text`}
 				>
 					<Checkbox
-						checked={
-							ctx.preferences().frontend["threads_sidebar_text"] === "yes"
-						}
+						checked={ctx.preferences().frontend.threads_sidebar_text === "yes"}
 						seed={`user-${props.user.id}-threads-sidebar-text`}
 					/>
 					<span>{t("user_settings.threads_sidebar_text")}</span>
@@ -144,14 +140,14 @@ export function Chat(props: VoidProps<{ user: User }>) {
 				<CheckboxOption
 					id={`user-${props.user.id}-threads-sidebar-document`}
 					checked={
-						ctx.preferences().frontend["threads_sidebar_document"] === "yes"
+						ctx.preferences().frontend.threads_sidebar_document === "yes"
 					}
 					onChange={toggle("threads_sidebar_document")}
 					seed={`user-${props.user.id}-threads-sidebar-document`}
 				>
 					<Checkbox
 						checked={
-							ctx.preferences().frontend["threads_sidebar_document"] === "yes"
+							ctx.preferences().frontend.threads_sidebar_document === "yes"
 						}
 						seed={`user-${props.user.id}-threads-sidebar-document`}
 					/>
@@ -159,16 +155,12 @@ export function Chat(props: VoidProps<{ user: User }>) {
 				</CheckboxOption>
 				<CheckboxOption
 					id={`user-${props.user.id}-threads-sidebar-forum`}
-					checked={
-						ctx.preferences().frontend["threads_sidebar_forum"] === "yes"
-					}
+					checked={ctx.preferences().frontend.threads_sidebar_forum === "yes"}
 					onChange={toggle("threads_sidebar_forum")}
 					seed={`user-${props.user.id}-threads-sidebar-forum`}
 				>
 					<Checkbox
-						checked={
-							ctx.preferences().frontend["threads_sidebar_forum"] === "yes"
-						}
+						checked={ctx.preferences().frontend.threads_sidebar_forum === "yes"}
 						seed={`user-${props.user.id}-threads-sidebar-forum`}
 					/>
 					<span>{t("user_settings.threads_sidebar_forum")}</span>

@@ -1,7 +1,7 @@
 import { ReactiveMap } from "@solid-primitives/map";
 import { createVirtualizer } from "@tanstack/solid-virtual";
-import type { Channel, Role, RoomMember, User } from "sdk";
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import type { Channel, RoomMember, User } from "sdk";
+import { createMemo, createSignal, For } from "solid-js";
 import {
 	useApi2,
 	useRoles2,
@@ -15,7 +15,7 @@ import { useUserPopout } from "../../../contexts/mod.tsx";
 import { AvatarWithStatus } from "../../../User.tsx";
 
 export const ThreadMembers = (props: { thread: Channel }) => {
-	const api2 = useApi2();
+	const _api2 = useApi2();
 	const roles2 = useRoles2();
 	const threadMembers2 = useThreadMembers2();
 	const users2 = useUsers2();
@@ -113,7 +113,7 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 									</div>
 								) : (
 									(() => {
-										const member = () =>
+										const _member = () =>
 											threadMembers2.cache.get(
 												`${thread_id()}:${row.item.user.id}`,
 											) ?? row.item.thread_member;
@@ -128,7 +128,7 @@ export const ThreadMembers = (props: { thread: Channel }) => {
 										const isOffline = () =>
 											user().presence.status === "Offline";
 										// Thread member display - end
-										const ctx = useCtx();
+										const _ctx = useCtx();
 										const { userView, setUserView } = useUserPopout();
 										const [hovered, setHovered] = createSignal(false);
 

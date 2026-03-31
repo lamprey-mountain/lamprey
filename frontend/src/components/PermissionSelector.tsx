@@ -117,7 +117,7 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 		for (const perm of filtered) {
 			const group = isOverwriteContext() ? perm.overwrite_group : perm.group;
 			if (group && groups.has(group)) {
-				groups.get(group)!.push(perm);
+				groups.get(group)?.push(perm);
 			}
 		}
 
@@ -157,7 +157,6 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 											const state = createMemo(
 												() => props.permStates[p.id] || "inherit",
 											);
-											const [isExpanded, setIsExpanded] = createSignal(false);
 
 											const name = isOverwriteContext()
 												? String(

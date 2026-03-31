@@ -47,7 +47,7 @@ export function Invites(props: VoidProps<{ room: RoomT }>) {
 						<div class="expires">expires</div>
 					</header>
 					<ul>
-						<For each={invites()!.state.ids}>
+						<For each={invites()?.state.ids}>
 							{(code) => {
 								const invite = invites2.cache.get(code);
 								if (!invite) return null;

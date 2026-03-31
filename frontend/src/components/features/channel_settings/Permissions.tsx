@@ -22,7 +22,6 @@ import { Savebar } from "../../../atoms/Savebar";
 import { OverwriteDropdown } from "../../../components/OverwriteDropdown";
 import { PermissionSelector } from "../../../components/PermissionSelector";
 import { useCtx } from "../../../context.ts";
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
 import { permissions } from "../../../permissions.ts";
 import { Copyable } from "../../../utils/general";
 

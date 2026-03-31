@@ -1,4 +1,3 @@
-import type { UserWithRelationship } from "sdk";
 import { Show } from "solid-js";
 import { useApi2 } from "@/api";
 import { useCtx } from "../context.ts";
@@ -10,7 +9,6 @@ type UserAdminMenuProps = {
 };
 
 export function UserAdminMenu(props: UserAdminMenuProps) {
-	const ctx = useCtx();
 	const api2 = useApi2();
 	const user = api2.users.use(() => props.user_id);
 	const [, modalCtl] = useModals();

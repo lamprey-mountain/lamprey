@@ -100,7 +100,7 @@ export const cursorPlugin = (
 					decos.push(
 						Decoration.widget(
 							head,
-							(view) => {
+							(_view) => {
 								const widget = document.createElement("span");
 								widget.classList.add("document-presence-cursor");
 								widget.style.borderLeft = `2px solid ${data.color}`;

@@ -3,13 +3,11 @@ import { createSignal, Show } from "solid-js";
 import {
 	useApi2,
 	useAuth2,
-	useDms2,
 	useInvites2,
 	useRooms2,
 	useSessions2,
 	useUsers2,
 } from "@/api";
-import { useCtx } from "./context.ts";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { useModals } from "./contexts/modal";
 import { flags } from "./flags.ts";
@@ -24,7 +22,6 @@ export const Home = () => {
 	const user = useCurrentUser();
 	const [email, setEmail] = createSignal("");
 	const [password, setPassword] = createSignal("");
-	const [confirmPassword, setConfirmPassword] = createSignal("");
 	const [, modalctl] = useModals();
 
 	function createRoom() {
@@ -126,12 +123,20 @@ export const Home = () => {
 					<section class="social-wrapper">
 						<ul class="social-list">
 							<li class="social-item">
-								<button class="social-button" onClick={loginDiscord}>
+								<button
+									type="button"
+									class="social-button"
+									onClick={loginDiscord}
+								>
 									login with discord
 								</button>
 							</li>
 							<li class="social-item">
-								<button class="social-button" onClick={loginGithub}>
+								<button
+									type="button"
+									class="social-button"
+									onClick={loginGithub}
+								>
 									login with github
 								</button>
 							</li>
@@ -139,17 +144,25 @@ export const Home = () => {
 					</section>
 				</div>
 				<br />
-				<button onClick={createGuest}>create guest</button>
+				<button type="button" onClick={createGuest}>
+					create guest
+				</button>
 			</Show>
 			<Show when={api2.session() && api2.session()?.status !== "Unauthorized"}>
-				<button onClick={logout}>logout</button>
+				<button type="button" onClick={logout}>
+					logout
+				</button>
 			</Show>
 			<br />
 			<br />
 			<Show when={user()}>
-				<button onClick={createRoom}>create room</button>
+				<button type="button" onClick={createRoom}>
+					create room
+				</button>
 				<br />
-				<button onClick={useInvite}>use invite</button>
+				<button type="button" onClick={useInvite}>
+					use invite
+				</button>
 				<br />
 				<A href="/settings">settings</A>
 				<br />

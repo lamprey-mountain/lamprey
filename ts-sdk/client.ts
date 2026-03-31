@@ -1,4 +1,4 @@
-import { pack, Unpackr, UnpackrStream, unpack } from "msgpackr";
+import { pack, Unpackr, unpack } from "msgpackr";
 import type * as oapi from "openapi-fetch";
 import createFetch from "openapi-fetch";
 import { createObservable, type Observer } from "./observable.ts";
@@ -270,7 +270,7 @@ export class MsgpackStream extends TransformStream<Uint8Array, any> {
 					});
 
 					buffer = buffer.slice(consumedUntil);
-				} catch (e) {
+				} catch (_e) {
 					// if it throws, we have a partial message
 					if (consumedUntil > 0) {
 						buffer = buffer.slice(consumedUntil);

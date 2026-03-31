@@ -125,7 +125,7 @@ export function PinnedMessages(props: PinnedMessagesProps) {
 				when={pinnedMessages.loading}
 				fallback={
 					<Show
-						when={pinnedMessages()?.items && pinnedMessages()!.items.length > 0}
+						when={pinnedMessages()?.items?.length}
 						fallback={
 							<div class="dim" style="text-align: center; margin-top: 8px">
 								no pinned messages

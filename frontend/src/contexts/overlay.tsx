@@ -52,7 +52,6 @@ export function OverlayProvider(props: ParentProps) {
 	const { state: autocompleteState } = useAutocomplete();
 	const { userView } = useUserPopout();
 	const { toolbar, hideToolbar } = useFormattingToolbar();
-	const api2 = useApi2();
 	const users2 = useUsers2();
 	const roomMembers2 = useRoomMembers2();
 	const threadMembers2 = useThreadMembers2();
@@ -344,9 +343,9 @@ export function OverlayProvider(props: ParentProps) {
 						}}
 					>
 						<UserView
-							user={userViewData()!.user()!}
-							room_member={userViewData()!.room_member() ?? undefined}
-							thread_member={userViewData()!.thread_member() ?? undefined}
+							user={userViewData()?.user()!}
+							room_member={userViewData()?.room_member() ?? undefined}
+							thread_member={userViewData()?.thread_member() ?? undefined}
 						/>
 					</div>
 				</Show>
@@ -361,7 +360,9 @@ export function OverlayProvider(props: ParentProps) {
 							"z-index": 100,
 						}}
 					>
-						<ThreadPopout channel_id={ctx.threadsView()!.channel_id} />
+						<Show when={ctx.threadsView()?.channel_id}>
+							{(cid) => <ThreadPopout channel_id={cid()} />}
+						</Show>
 					</div>
 				</Show>
 				<Show when={autocompleteState.visible}>
@@ -403,11 +404,15 @@ export function OverlayProvider(props: ParentProps) {
 							"z-index": 100,
 						}}
 					>
-						<PopupEventEditor
-							channel_id={calendarPopup()!.props.channel_id}
-							event={calendarPopup()!.props.event}
-							onClose={closeCalendarPopup}
-						/>
+						<Show when={calendarPopup()?.props.channel_id}>
+							{(cid) => (
+								<PopupEventEditor
+									channel_id={cid()}
+									event={calendarPopup()?.props.event}
+									onClose={closeCalendarPopup}
+								/>
+							)}
+						</Show>
 					</div>
 				</Show>
 			</Portal>

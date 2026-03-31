@@ -22,7 +22,7 @@ import type { RoomT } from "../../../types.ts";
 import { Avatar } from "../../../User.tsx";
 
 export function Bots(props: VoidProps<{ room: RoomT }>) {
-	const ctx = useCtx();
+	const _ctx = useCtx();
 	const { setMenu } = useMenu();
 	const api2 = useApi2();
 	const [, modalCtl] = useModals();
@@ -79,7 +79,7 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 			</header>
 			<Show when={integrations()}>
 				<ul>
-					<For each={integrations()!.items}>
+					<For each={integrations()?.items}>
 						{({ member: i }) => {
 							const user = api2.users.cache.get(i.user_id);
 							const name = () => i.override_name ?? user?.name;
@@ -155,12 +155,14 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 				<div ref={setBottom}></div>
 			</Show>
 			<Show when={editRoles()}>
-				<EditRoles
-					x={editRoles()!.x}
-					y={editRoles()!.y}
-					user_id={editRoles()!.member.user_id}
-					room={props.room}
-				/>
+				{(ed) => (
+					<EditRoles
+						x={ed().x}
+						y={ed().y}
+						user_id={ed().member.user_id}
+						room={props.room}
+					/>
+				)}
 			</Show>
 		</div>
 	);
@@ -211,8 +213,9 @@ const EditRoles = (props: {
 	const handleChecked =
 		(r: Role) => (e: InputEvent & { target: HTMLInputElement }) => {
 			const role_id = r.id;
-			const user_id = member()!.user_id;
-			if (e.target!.checked) {
+			const user_id = member()?.user_id;
+			if (!user_id) return;
+			if (e.target?.checked) {
 				api2.client.http.PUT(
 					"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 					{
@@ -248,7 +251,7 @@ const EditRoles = (props: {
 	};
 
 	const u = useCurrentUser();
-	const self_id = () => u()!.id;
+	const self_id = () => u()?.id;
 
 	const { permissions } = usePermissions(
 		self_id,
@@ -270,12 +273,12 @@ const EditRoles = (props: {
 					<label classList={{ disabled: r.position >= permissions().rank }}>
 						<input
 							type="checkbox"
-							checked={member()!.roles.includes(r.id)}
+							checked={member()?.roles.includes(r.id)}
 							onInput={handleChecked(r)}
 							disabled={r.position >= permissions().rank}
 						/>
 						<div>
-							<div classList={{ has: member()!.roles.includes(r.id) }}>
+							<div classList={{ has: member()?.roles.includes(r.id) }}>
 								{r.name}
 							</div>
 							<div class="dim">{r.description}</div>

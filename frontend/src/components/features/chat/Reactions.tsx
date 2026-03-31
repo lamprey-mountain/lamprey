@@ -1,5 +1,5 @@
 import type { Message, ReactionKey } from "sdk";
-import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
+import { createEffect, createSignal, For, on, onCleanup } from "solid-js";
 import { useReactions2 } from "@/api";
 import icReactionAdd from "../../../assets/reaction-add.png";
 import { createTooltip } from "../../../atoms/Tooltip.tsx";
@@ -25,7 +25,7 @@ export const Reactions = (props: ReactionsProps) => {
 		return "";
 	};
 
-	const areKeysEqual = (a: ReactionKey, b: ReactionKey): boolean => {
+	const _areKeysEqual = (a: ReactionKey, b: ReactionKey): boolean => {
 		if (a.type !== b.type) return false;
 		if (a.type === "Text") {
 			return a.content === (b as ReactionKey & { type: "Text" }).content;

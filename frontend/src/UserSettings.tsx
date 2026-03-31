@@ -1,6 +1,6 @@
 import { A } from "@solidjs/router";
 import type { User } from "sdk";
-import { createMemo, For, Show, Switch } from "solid-js";
+import { createMemo, For, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import {
 	Appearance,
@@ -32,7 +32,7 @@ type PageTab = {
 type TabItem = CategoryTab | PageTab;
 
 // Helper for type-safe matching with SolidJS Switch/Match
-function matches<S extends TabItem>(
+function _matches<S extends TabItem>(
 	e: TabItem,
 	predicate: (e: TabItem) => e is S,
 ): S | false {

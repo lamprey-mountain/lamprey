@@ -318,7 +318,7 @@ export function createChannelPicker(props: {
 							aria-expanded={shown()}
 							aria-activedescendant={
 								hoveredChannel()
-									? `channel-option-${hoveredChannel()!.id}`
+									? `channel-option-${hoveredChannel()?.id}`
 									: undefined
 							}
 							style={{ width: "100%" }}
@@ -333,10 +333,10 @@ export function createChannelPicker(props: {
 					<Portal mount={props.mount ?? document.getElementById("overlay")!}>
 						<Show when={shown()}>
 							<menu
-								role="listbox"
 								ref={setDropdownEl}
 								id={listboxId}
 								class="dropdown-items floating"
+								role="listbox"
 								style={{
 									"z-index": 999999,
 									position: position.strategy,
@@ -505,7 +505,7 @@ export function MultiChannelPicker(props: {
 				setShown(true);
 			}
 		},
-		Backspace: (e) => {
+		Backspace: (_e) => {
 			if (selector.filtered().length === 0 && props.selected.length > 0) {
 				props.onRemove(props.selected[props.selected.length - 1]);
 			}
@@ -580,7 +580,7 @@ export function MultiChannelPicker(props: {
 					aria-expanded={shown()}
 					aria-activedescendant={
 						selector.getHovered()
-							? `channel-option-${selector.getHovered()!.channel.id}`
+							? `channel-option-${selector.getHovered()?.channel.id}`
 							: undefined
 					}
 				/>
@@ -597,7 +597,6 @@ export function MultiChannelPicker(props: {
 			<Portal mount={props.mount ?? document.body}>
 				<Show when={shown()}>
 					<menu
-						role="listbox"
 						ref={setDropdownEl}
 						id={listboxId}
 						class="dropdown-items floating"
@@ -623,7 +622,6 @@ export function MultiChannelPicker(props: {
 									return (
 										<li
 											id={itemId}
-											role="option"
 											onMouseOver={() => selector.setHovered(entry.obj)}
 											onMouseDown={(e) => {
 												e.preventDefault();

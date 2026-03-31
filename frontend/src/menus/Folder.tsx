@@ -10,7 +10,6 @@ type FolderMenuProps = {
 
 export function FolderMenu(props: FolderMenuProps) {
 	const ctx = useCtx();
-	const api2 = useApi2();
 	const [, modalctl] = useModals();
 
 	const getFolder = () => {

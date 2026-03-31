@@ -38,7 +38,6 @@ export const ChannelIcon = (props: {
 				return rnd([icChanDocument1]);
 			case "Wiki":
 				return rnd([icChanWiki1]);
-			case "Text":
 			default:
 				return rnd([icChanText1, icChanText2, icChanText3, icChanText4]);
 		}

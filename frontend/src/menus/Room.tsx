@@ -1,6 +1,6 @@
 import { useNavigate } from "@solidjs/router";
 import type { NotifsRoom, Room } from "sdk";
-import { createResource, createSignal, Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import { useApi2, useRooms2 } from "@/api";
 import { CheckboxOption } from "../atoms/CheckboxOption";
 import { timeAgo } from "../atoms/Time.tsx";
@@ -14,7 +14,6 @@ import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 // the context menu for rooms
 export function RoomMenu(props: { room_id: string }) {
 	const ctx = useCtx();
-	const api2 = useApi2();
 	const rooms2 = useRooms2();
 	const nav = useNavigate();
 	const room = rooms2.use(() => props.room_id);
@@ -323,7 +322,7 @@ function RoomNotificationMenu(props: { room: Room }) {
 						<div class="subtext">
 							unmutes{" "}
 							{timeAgo(
-								new Date(Date.parse(roomConfig()!.notifs.mute!.expires_at!)),
+								new Date(Date.parse(roomConfig()?.notifs.mute?.expires_at!)),
 							)}
 						</div>
 					</Show>

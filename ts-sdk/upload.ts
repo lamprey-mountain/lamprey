@@ -32,24 +32,43 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 	}
 
 	const { upload_url, media_id } = data;
+	if (!upload_url) {
+		const err = new Error("missing upload_url in media response");
+		opts.onFail(err);
+		throw err;
+	}
+
 	let offset = 0;
 	let currentOffset = 0;
 	let xhr: XMLHttpRequest;
-	let uploadComplete = false;
+	let _uploadComplete = false;
 
 	async function resumeUpload() {
 		// make sure to cancel the currently in flight upload, in case resume is called multiple times
 		xhr?.abort();
 
-		const res = await fetch(upload_url!, {
+		const token = opts.client.opts.token;
+		if (!token) {
+			opts.onFail(new Error("missing token"));
+			return;
+		}
+		if (!upload_url) {
+			opts.onFail(new Error("missing upload_url"));
+			return;
+		}
+
+		const res = await fetch(upload_url, {
 			method: "HEAD",
 			headers: {
-				authorization: `Bearer ${opts.client.opts.token}`,
+				authorization: `Bearer ${token}`,
 			},
 		});
 		if (res.ok) {
-			offset = parseInt(res.headers.get("upload-offset")!, 10);
-			currentOffset = offset;
+			const rawOffset = res.headers.get("upload-offset");
+			if (rawOffset) {
+				offset = parseInt(rawOffset, 10);
+				currentOffset = offset;
+			}
 			attemptUpload();
 		} else {
 			opts.onFail(
@@ -70,7 +89,7 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 
 		xhr.onload = async () => {
 			if (xhr.status === 204) {
-				uploadComplete = true;
+				_uploadComplete = true;
 				// try {
 				// 	const { error } = await opts.client.http.PUT(
 				// 		"/api/v1/media/{media_id}/done",
@@ -104,9 +123,18 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 			setTimeout(resumeUpload, 1000);
 		};
 
-		xhr.open("PATCH", upload_url!);
-		// TODO: handle missing token
-		xhr.setRequestHeader("authorization", `Bearer ${opts.client.opts.token}`);
+		const token = opts.client.opts.token;
+		if (!token) {
+			opts.onFail(new Error("missing token"));
+			return;
+		}
+		if (!upload_url) {
+			opts.onFail(new Error("missing upload_url"));
+			return;
+		}
+
+		xhr.open("PATCH", upload_url);
+		xhr.setRequestHeader("authorization", `Bearer ${token}`);
 		xhr.setRequestHeader("upload-offset", offset.toString());
 		xhr.send(opts.file.slice(offset));
 	}

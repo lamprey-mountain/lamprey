@@ -1,6 +1,5 @@
 import type { EditorState, Transaction } from "prosemirror-state";
 import { Plugin, PluginKey, TextSelection } from "prosemirror-state";
-import type { EditorView } from "prosemirror-view";
 import { initTurndownService } from "../../../turndown.ts";
 import { convertEmojiInText } from "./emoji-plugin.ts";
 import { schema } from "./schema.ts";

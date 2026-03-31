@@ -92,8 +92,8 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 					await api2.push.register({
 						endpoint: subJson.endpoint!,
 						keys: {
-							p256dh: subJson.keys!.p256dh!,
-							auth: subJson.keys!.auth!,
+							p256dh: subJson.keys?.p256dh!,
+							auth: subJson.keys?.auth!,
 						},
 					});
 				} catch (e) {
@@ -132,7 +132,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 			const registration = await navigator.serviceWorker.ready;
 			const subscription = await registration.pushManager.getSubscription();
 			const isEnabled = !!subscription;
-			const currentConfig = ctx.preferences().frontend["push_notifs"] === "yes";
+			const currentConfig = ctx.preferences().frontend.push_notifs === "yes";
 
 			if (isEnabled !== currentConfig) {
 				// TODO: sync config

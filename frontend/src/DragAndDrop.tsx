@@ -1,4 +1,4 @@
-import { createSignal, For, Show } from "solid-js";
+import { createSignal, For } from "solid-js";
 
 export const DragAndDrop = () => {
 	const [dragging, setDragging] = createSignal<number | null>(null);
@@ -28,18 +28,22 @@ export const DragAndDrop = () => {
 	};
 
 	const handleDragStart = (e: DragEvent) => {
-		setDragging(parseInt((e.target as HTMLLIElement).dataset.index!));
+		const index = (e.target as HTMLLIElement).dataset.index;
+		if (index) setDragging(parseInt(index, 10));
 	};
 
-	const handleDragEnd = (e: DragEvent) => {
+	const handleDragEnd = (_e: DragEvent) => {
 		setDragging(null);
 		setTarget(null);
 	};
 
 	const handleDrop = (e: DragEvent) => {
 		e.preventDefault();
-		const from = dragging()!;
-		const to = parseInt((e.target as HTMLLIElement).dataset.index!);
+		const from = dragging();
+		const targetIndex = (e.target as HTMLLIElement).dataset.index;
+		if (from === null || !targetIndex) return;
+
+		const to = parseInt(targetIndex, 10);
 		const updated = [...items()];
 		const [item] = updated.splice(from, 1);
 		updated.splice(from < to ? to - 1 : to, 0, item);
@@ -55,17 +59,21 @@ export const DragAndDrop = () => {
 			onDragEnter={(e) => {
 				e.preventDefault();
 				const index = (e.target as HTMLLIElement).dataset.index;
-				setTarget(parseInt(index!));
+				if (index) setTarget(parseInt(index, 10));
 			}}
 			onDragOver={(e) => e.preventDefault()}
 			onDragLeave={(e) => {
 				e.preventDefault();
 				const index = (e.target as HTMLLIElement).dataset.index;
-				if (target() === parseInt(index!)) setTarget(null);
+				if (index && target() === parseInt(index, 10)) setTarget(null);
 			}}
 			onDrop={handleDrop}
+			role="listbox"
+			tabIndex={0}
 		>
-			<button onClick={reset}>reset</button>
+			<button type="button" onClick={reset}>
+				reset
+			</button>
 			<ul>
 				<For each={items()}>
 					{(item, idx) => (

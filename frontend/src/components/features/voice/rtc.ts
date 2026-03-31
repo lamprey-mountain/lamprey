@@ -214,7 +214,7 @@ export const createVoiceClient = () => {
 			console.info("[rtc:sdp] create offer", tracks);
 			send({
 				type: "Offer",
-				sdp: conn.localDescription!.sdp,
+				sdp: conn.localDescription?.sdp ?? "",
 				tracks,
 			});
 		} finally {
@@ -307,7 +307,7 @@ export const createVoiceClient = () => {
 						sdp: msg.sdp,
 					});
 					await conn.setLocalDescription(await conn.createAnswer());
-					send({ type: "Answer", sdp: conn.localDescription!.sdp });
+					send({ type: "Answer", sdp: conn.localDescription?.sdp ?? "" });
 				} catch (err) {
 					console.error("[rtc:sdp] error while accepting offer", err);
 					console.log("COPY PASTE THIS", {
@@ -320,7 +320,7 @@ export const createVoiceClient = () => {
 				await conn.addIceCandidate({ candidate: msg.candidate });
 			} else if (msg.type === "Have") {
 				const currentUser = api2.users.cache.get("@self");
-				const user_id = currentUser!.id;
+				const user_id = currentUser?.id;
 				const ruid = msg.user_id;
 				if (ruid === user_id) {
 					console.log("[rtc:signal] ignoring Have from self");
@@ -435,7 +435,8 @@ export const createVoiceClient = () => {
 		},
 		createStream(key: string) {
 			const currentUser = api2.users.cache.get("@self");
-			const user_id = currentUser!.id;
+			const user_id = currentUser?.id;
+			if (!user_id) return;
 			const existing = localStreams.find(
 				(i) => i.key === key && i.user_id === user_id,
 			);

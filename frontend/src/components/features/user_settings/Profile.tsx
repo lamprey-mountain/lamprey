@@ -12,7 +12,7 @@ import { Copyable } from "../../../utils/general";
 export function Profile(props: VoidProps<{ user: User }>) {
 	const api2 = useApi2();
 	const ctx = useCtx();
-	const [, modalCtl] = useModals();
+	const [, _modalCtl] = useModals();
 
 	const [editingName, setEditingName] = createSignal(props.user.name);
 	const [editingDescription, setEditingDescription] = createSignal(

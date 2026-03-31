@@ -1,12 +1,11 @@
-import {
-	type AuditLogEntry,
-	type Channel,
-	Pagination,
-	type RoomMember,
-	type Tag,
-	type User,
-	type UserWithRelationship,
-	type Webhook,
+import type {
+	AuditLogEntry,
+	Channel,
+	RoomMember,
+	Tag,
+	User,
+	UserWithRelationship,
+	Webhook,
 } from "sdk";
 import { createResource, type Resource } from "solid-js";
 import { logger } from "../../logger";
@@ -35,7 +34,7 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 		return item.id;
 	}
 
-	async fetch(id: string): Promise<AuditLogEntry> {
+	async fetch(_id: string): Promise<AuditLogEntry> {
 		throw new Error("Use fetchByRoom(room_id) and cache lookup");
 	}
 

@@ -1,16 +1,17 @@
 import type { Node } from "prosemirror-model";
 import { getOwner, runWithOwner, type VoidComponent } from "solid-js";
 import { render } from "solid-js/web";
-import { getTwemoji, getTwemojiUrl } from "../../../emoji.ts";
+import { getTwemojiUrl } from "../../../emoji.ts";
 import { getEmojiUrl } from "../../../media/util.tsx";
 
 export const createNodeViews = () => {
 	const owner = getOwner();
 
-	return <T extends Record<string, unknown>,>(
+	return <T extends Record<string, unknown>>(
 		propsFn: (node: Node) => T,
 		Component: VoidComponent<T>,
-	) => (node: Node) => {
+	) =>
+		(node: Node) => {
 			const dom = document.createElement("span");
 			dom.classList.add("node-view-wrapper");
 

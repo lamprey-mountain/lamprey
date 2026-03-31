@@ -13,8 +13,7 @@ import { useApi2, useUsers2 } from "@/api";
 import { createVoiceClient } from "../components/features/voice/rtc";
 // @ts-expect-error
 import vadProcessorUrl from "../components/features/voice/vad-processor?url";
-import { useCurrentUser } from "../contexts/currentUser.tsx";
-import { colors, logger } from "../logger.ts";
+import { logger } from "../logger.ts";
 
 type VoiceClient = ReturnType<typeof createVoiceClient>;
 
@@ -129,7 +128,7 @@ export const VoiceProvider = (props: ParentProps) => {
 					}
 					const track = streamMic.getAudioTracks()[0];
 					if (track) {
-						await micTn!.sender.replaceTrack(track);
+						await micTn?.sender.replaceTrack(track);
 						micTn!.direction = "sendonly";
 					}
 				}
@@ -142,7 +141,7 @@ export const VoiceProvider = (props: ParentProps) => {
 					}
 					const track = streamCam.getVideoTracks()[0];
 					if (track) {
-						await camTn!.sender.replaceTrack(track);
+						await camTn?.sender.replaceTrack(track);
 						camTn!.direction = "sendonly";
 					}
 				}

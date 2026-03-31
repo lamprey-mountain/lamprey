@@ -1,10 +1,4 @@
-import {
-	type DBSchema,
-	type IDBPDatabase,
-	type IDBPTransaction,
-	openDB,
-	type StoreNames,
-} from "idb";
+import type { DBSchema, IDBPDatabase, IDBPTransaction, StoreNames } from "idb";
 import type {
 	AuditLogEntry,
 	EmojiCustom,

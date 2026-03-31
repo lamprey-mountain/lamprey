@@ -1,11 +1,4 @@
-import type {
-	Channel,
-	Permission,
-	PermissionOverwriteType,
-	Role,
-	Room,
-	RoomMember,
-} from "sdk";
+import type { Channel, Permission, Role, RoomMember } from "sdk";
 import type { RootStore } from "@/api";
 import { logger } from "./logger";
 
@@ -198,9 +191,21 @@ export function calculatePermissions(
 		};
 	}
 
-	const room = ctx.api.rooms.cache.get(ctx.room_id!);
+	const rid = ctx.room_id;
+	if (!rid) {
+		permLog.debug("no room_id provided, returning empty permissions");
+		return {
+			permissions: new Set<Permission>(),
+			rank: 0,
+			timedOut: false,
+			quarantined: false,
+			lurker: false,
+		};
+	}
+
+	const room = ctx.api.rooms.cache.get(rid);
 	permLog.debug("room lookup", {
-		room_id: ctx.room_id,
+		room_id: rid,
 		found: !!room,
 		owner_id: room?.owner_id,
 	});
@@ -218,8 +223,8 @@ export function calculatePermissions(
 		};
 	}
 
-	const member = ctx.api.roomMembers.cache.get(`${ctx.room_id!}:${user_id}`);
-	const roles = ctx.api.roles.listByRoom(ctx.room_id);
+	const member = ctx.api.roomMembers.cache.get(`${rid}:${user_id}`);
+	const roles = ctx.api.roles.listByRoom(rid);
 
 	permLog.debug("member and roles lookup", {
 		member_found: !!member,
@@ -405,17 +410,27 @@ function applyChannelPermissions(
 	ctx: PermissionContext,
 	member: RoomMember,
 ) {
-	const channel = ctx.api.channels.cache.get(ctx.channel_id!);
+	const cid = ctx.channel_id;
+	if (!cid) {
+		permLog.debug("no channel_id provided, returning early");
+		return;
+	}
+
+	const channel = ctx.api.channels.cache.get(cid);
 	if (!channel) return;
 
+	const rid = ctx.room_id;
+
 	if (channel.parent_id) {
-		const parentChannel = ctx.api.channels.cache.get(channel.parent_id!);
-		if (parentChannel) {
-			applyChannelOverwrites(perms, parentChannel, member, ctx.room_id!);
+		const parentChannel = ctx.api.channels.cache.get(channel.parent_id);
+		if (parentChannel && rid) {
+			applyChannelOverwrites(perms, parentChannel, member, rid);
 		}
 	}
 
-	applyChannelOverwrites(perms, channel, member, ctx.room_id!);
+	if (rid) {
+		applyChannelOverwrites(perms, channel, member, rid);
+	}
 }
 
 /**

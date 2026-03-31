@@ -9,14 +9,13 @@ import {
 	type ParentProps,
 	Show,
 } from "solid-js";
-import { Portal } from "solid-js/web";
-import { RootStoreContext, useApi } from "@/api";
+import { RootStoreContext } from "@/api";
 import { CalendarPopupProvider } from "./Calendar.tsx";
 import {
 	useVoice,
 	VoiceProvider,
 } from "./components/features/voice/voice-provider.tsx";
-import { Config, ConfigProvider, useConfig } from "./config.tsx";
+import { ConfigProvider, useConfig } from "./config.tsx";
 import { chatctx, useCtx } from "./context.ts";
 import {
 	CurrentUserProvider,
@@ -29,7 +28,7 @@ import {
 	MenuProvider,
 	UserPopoutProvider,
 } from "./contexts/mod.tsx";
-import { ModalsProvider, useModals } from "./contexts/modal";
+import { ModalsProvider } from "./contexts/modal";
 import { OverlayProvider } from "./contexts/overlay.tsx";
 import { ReadTrackingProvider } from "./contexts/read-tracking.tsx";
 import { SlashCommandsProvider } from "./contexts/slash-commands.tsx";
@@ -108,9 +107,11 @@ export const AppBootstrap: Component<RouteSectionProps> = (props) => {
 
 	return (
 		<Show when={config()}>
-			<ConfigProvider value={config()!}>
-				<AppProviders resolved={resolved()}>{props.children}</AppProviders>
-			</ConfigProvider>
+			{(c) => (
+				<ConfigProvider value={c()}>
+					<AppProviders resolved={resolved()}>{props.children}</AppProviders>
+				</ConfigProvider>
+			)}
 		</Show>
 	);
 };
@@ -126,10 +127,11 @@ export const AppProviders: Component<ParentProps<{ resolved: boolean }>> = (
 	const { client, ctx, store } = useChatClient(config);
 
 	// TEMP: debugging
-	(globalThis as any).ctx = ctx;
-	(globalThis as any).client = client;
-	(globalThis as any).store = store;
-	(globalThis as any).flags = flags;
+	const g = globalThis as any;
+	g.ctx = ctx;
+	g.client = client;
+	g.store = store;
+	g.flags = flags;
 
 	return (
 		<RootStoreContext.Provider value={store}>
@@ -173,7 +175,7 @@ export const AppProviders: Component<ParentProps<{ resolved: boolean }>> = (
  * AppShell - Layer 3
  * Renders UI chrome, global event handlers, and overlay.
  */
-export const AppShell: Component<ParentProps<{}>> = (props) => {
+export const AppShell: Component<ParentProps> = (props) => {
 	const ctx = useCtx();
 	const [voice] = useVoice();
 	const state = from(ctx.client.state);
@@ -188,8 +190,7 @@ export const AppShell: Component<ParentProps<{}>> = (props) => {
 			id="root"
 			class="precedence-hack"
 			classList={{
-				"underline-links":
-					ctx.preferences().frontend["underline_links"] === "yes",
+				"underline-links": ctx.preferences().frontend.underline_links === "yes",
 			}}
 		>
 			<Show when={cursorStats()}>
@@ -221,7 +222,7 @@ export const AppShell: Component<ParentProps<{}>> = (props) => {
 			<div style="visibility:hidden">
 				<For each={[...(voice.rtc?.streams.values() ?? [])]}>
 					{(stream) => {
-						let audioRef!: HTMLAudioElement;
+						let audioRef: HTMLAudioElement | undefined;
 						createEffect(() => {
 							console.log("listening to stream", stream);
 							if (audioRef) audioRef.srcObject = stream.media;
@@ -232,12 +233,12 @@ export const AppShell: Component<ParentProps<{}>> = (props) => {
 								mute_video: false,
 								volume: 100,
 							};
-							audioRef.volume = c.volume / 100;
+							if (audioRef) audioRef.volume = c.volume / 100;
 						});
 						return (
 							<audio
 								autoplay
-								ref={audioRef!}
+								ref={audioRef}
 								muted={
 									voice.deafened ||
 									voice.preferences.get(stream.user_id)?.mute === true
@@ -257,7 +258,9 @@ export const AppShell: Component<ParentProps<{}>> = (props) => {
 };
 
 const Title = (props: { title?: string }) => {
-	createEffect(() => (document.title = props.title ?? ""));
+	createEffect(() => {
+		document.title = props.title ?? "";
+	});
 	return undefined;
 };
 
@@ -271,7 +274,11 @@ function RouteSettings(p: RouteSectionProps): JSX.Element {
 		<>
 			<Title title={user() ? t("page.settings_user") : t("loading")} />
 			<Show when={user()}>
-				<UserSettings user={user()!} page={p.params.page!} />
+				{(u) => (
+					<Show when={p.params.page}>
+						{(page) => <UserSettings user={u()} page={page()} />}
+					</Show>
+				)}
 			</Show>
 		</>
 	);

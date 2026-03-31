@@ -11,11 +11,9 @@ import type {
 import {
 	type Accessor,
 	batch,
-	createComputed,
 	createEffect,
 	createMemo,
 	createResource,
-	onCleanup,
 	type Resource,
 } from "solid-js";
 import { uuidv7 } from "uuidv7";
@@ -224,7 +222,6 @@ export class MessagesService extends BaseService<Message> {
 	public _ranges = new Map<string, MessageRanges>();
 
 	private _versions = new ReactiveMap<string, number>();
-	private _mutators = new Set<MessageMutator>();
 
 	private getOrCreateCache(channel_id: string): MessageRanges {
 		let c = this._ranges.get(channel_id);
@@ -239,7 +236,7 @@ export class MessagesService extends BaseService<Message> {
 		this._versions.set(channel_id, (this._versions.get(channel_id) ?? 0) + 1);
 	}
 
-	async fetch(id: string): Promise<Message> {
+	async fetch(_id: string): Promise<Message> {
 		throw new Error("Use fetchInThread(thread_id, message_id)");
 	}
 
@@ -1047,7 +1044,7 @@ export class MessagesService extends BaseService<Message> {
 	}
 
 	private mergeAfter(
-		ranges: MessageRanges,
+		_ranges: MessageRanges,
 		range: MessageRange,
 		data: { items: Message[]; has_more?: boolean },
 		has_more: boolean,
@@ -1068,7 +1065,7 @@ export class MessagesService extends BaseService<Message> {
 	}
 
 	private mergeBefore(
-		ranges: MessageRanges,
+		_ranges: MessageRanges,
 		range: MessageRange,
 		data: { items: Message[]; has_more?: boolean },
 		has_more: boolean,
@@ -1130,31 +1127,5 @@ export class MessagesService extends BaseService<Message> {
 		if (live) cache.live = live;
 
 		return cache;
-	}
-
-	private async persistRanges(channel_id: string) {
-		if (!this.db) return;
-
-		const ranges = this._ranges.get(channel_id);
-		if (!ranges) return;
-
-		const tx = this.db.transaction("message_ranges", "readwrite");
-		const store = tx.objectStore("message_ranges");
-
-		// for now, just delete all ranges and recreate
-		const existing = await store.index("channel_id").getAllKeys(channel_id);
-		for (const key of existing) await store.delete(key);
-
-		for (const r of ranges.ranges) {
-			if (r.isEmpty()) continue;
-			await store.put({
-				id: uuidv7(),
-				channel_id,
-				start_id: r.start,
-				end_id: r.end,
-				has_forward: r.has_forward,
-				has_backwards: r.has_backwards,
-			});
-		}
 	}
 }

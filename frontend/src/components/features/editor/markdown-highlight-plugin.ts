@@ -1,15 +1,9 @@
 import type { Token, Tokens } from "marked";
-import {
-	type EditorState,
-	Plugin,
-	PluginKey,
-	type Transaction,
-} from "prosemirror-state";
+import { type EditorState, Plugin, PluginKey } from "prosemirror-state";
 import {
 	Decoration,
 	type DecorationAttrs,
 	DecorationSet,
-	EditorView,
 } from "prosemirror-view";
 import { md } from "../../../markdown_utils.tsx";
 
@@ -85,7 +79,7 @@ function getHighlightDecorations(
 		if (root?.children) {
 			root.children.forEach(walk);
 		}
-	} catch (e) {
+	} catch (_e) {
 		// ignore highlight errors
 	}
 	return decos;

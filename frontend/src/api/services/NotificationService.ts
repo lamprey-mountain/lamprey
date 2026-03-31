@@ -60,7 +60,7 @@ export class NotificationService {
 		if (
 			is_mentioned &&
 			notificationPermission() === "granted" &&
-			preferences.frontend["desktop_notifs"] === "yes"
+			preferences.frontend.desktop_notifs === "yes"
 		) {
 			const author = this.store.users.get(m.author_id);
 			const channel = this.store.channels.get(m.channel_id);
@@ -110,7 +110,7 @@ export class NotificationService {
 		}
 
 		// TTS notifications
-		const ttsEnabled = preferences.frontend["tts_notifs"] === "yes";
+		const ttsEnabled = preferences.frontend.tts_notifs === "yes";
 		const ttsMode = preferences.notifs.tts;
 		const shouldSpeak =
 			ttsEnabled &&

@@ -1,5 +1,5 @@
 import { A } from "@solidjs/router";
-import type { Pagination, Permission, Role, RoomMember, User } from "sdk";
+import type { Permission, Role, RoomMember } from "sdk";
 import {
 	createEffect,
 	createMemo,
@@ -15,12 +15,10 @@ import { useApi2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 import { Markdown } from "../../../atoms/Markdown.tsx";
 import { Resizable } from "../../../atoms/Resizable";
-import { Savebar } from "../../../atoms/Savebar";
 import { PermissionSelector } from "../../../components/PermissionSelector";
 import { useCtx } from "../../../context.ts";
 import { useModals } from "../../../contexts/modal";
 import { Checkbox } from "../../../icons";
-import { md } from "../../../markdown_utils.tsx";
 import { permissions } from "../../../permissions.ts";
 import type { RoomT } from "../../../types.ts";
 import { Avatar } from "../../../User.tsx";
@@ -131,54 +129,52 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 	const edit = useRoleEditor(null);
 
 	return (
-		<>
-			<div class="room-settings-roles">
-				<div class="role-main">
-					<h2>roles</h2>
-					<header class="applications-header">
-						<input
-							type="search"
-							placeholder="search"
-							aria-label="search"
-							onInput={(e) => setSearch(e.target.value)}
-						/>
-						<Show when={isOrderDirty()}>
-							<div style="display: flex; gap: 8px; align-items: center; margin-left: auto">
-								<span>order changed</span>
-								<button class="big" onClick={cancelOrder}>
-									cancel
-								</button>
-								<button class="big primary" onClick={saveOrder}>
-									save
-								</button>
-							</div>
-						</Show>
-						<button class="big primary" onClick={createRole}>
-							create role
-						</button>
-					</header>
-					<Show when={roomRoles().length > 0} fallback="loading...">
-						<RoleList
-							search={search()}
-							roles={localRoles}
-							setRoles={setLocalRoles}
-							edit={edit}
-						/>
+		<div class="room-settings-roles">
+			<div class="role-main">
+				<h2>roles</h2>
+				<header class="applications-header">
+					<input
+						type="search"
+						placeholder="search"
+						aria-label="search"
+						onInput={(e) => setSearch(e.target.value)}
+					/>
+					<Show when={isOrderDirty()}>
+						<div style="display: flex; gap: 8px; align-items: center; margin-left: auto">
+							<span>order changed</span>
+							<button class="big" onClick={cancelOrder}>
+								cancel
+							</button>
+							<button class="big primary" onClick={saveOrder}>
+								save
+							</button>
+						</div>
 					</Show>
-				</div>
-				<Show when={roles2.cache.has(edit.role.id!)}>
-					<Resizable
-						storageKey="role-editor-width"
-						initialWidth={400}
-						minWidth={300}
-						maxWidth={800}
-						classList={{ "role-edit-resizable": true }}
-					>
-						<RoleEditor room={props.room} edit={edit} />
-					</Resizable>
+					<button class="big primary" onClick={createRole}>
+						create role
+					</button>
+				</header>
+				<Show when={roomRoles().length > 0} fallback="loading...">
+					<RoleList
+						search={search()}
+						roles={localRoles}
+						setRoles={setLocalRoles}
+						edit={edit}
+					/>
 				</Show>
 			</div>
-		</>
+			<Show when={roles2.cache.has(edit.role.id!)}>
+				<Resizable
+					storageKey="role-editor-width"
+					initialWidth={400}
+					minWidth={300}
+					maxWidth={800}
+					classList={{ "role-edit-resizable": true }}
+				>
+					<RoleEditor room={props.room} edit={edit} />
+				</Resizable>
+			</Show>
+		</div>
 	);
 }
 
@@ -397,7 +393,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 	const roles2 = useRoles2();
 	const users2 = useUsers2();
 	const roomMembers2 = useRoomMembers2();
-	const ctx = useCtx();
+	const _ctx = useCtx();
 	const [, modalCtl] = useModals();
 	const [activeTab, setActiveTab] = createSignal<"role" | "members">("role");
 	const [memberSearch, setMemberSearch] = createSignal("");

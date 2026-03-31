@@ -16,12 +16,10 @@ import { useApi2, useRooms2 } from "@/api";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 import { Resizable } from "../../../atoms/Resizable";
 import { Savebar } from "../../../atoms/Savebar";
-import { useCtx } from "../../../context.ts";
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
 import { useModals } from "../../../contexts/modal";
 import { usePermissions } from "../../../hooks/usePermissions.ts";
 import { Checkbox } from "../../../icons";
-import { getThumbFromId } from "../../../media/util";
 import type { RoomT } from "../../../types";
 import { Avatar } from "../../../User.tsx";
 import { Copyable } from "../../../utils/general";
@@ -68,7 +66,7 @@ const SessionList = (props: { appId: string }) => {
 		<div class="sessions-list">
 			<h4>Sessions</h4>
 			<Show when={sessions.loading}>Loading sessions...</Show>
-			<Show when={sessions() && sessions()!.length > 0}>
+			<Show when={sessions()?.length}>
 				<ul>
 					<For each={sessions()}>
 						{(session) => (
@@ -90,7 +88,7 @@ const SessionList = (props: { appId: string }) => {
 					</For>
 				</ul>
 			</Show>
-			<Show when={sessions() && sessions()!.length === 0}>
+			<Show when={sessions() && sessions()?.length === 0}>
 				<p>No active sessions.</p>
 			</Show>
 		</div>
@@ -142,8 +140,9 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 
 	createEffect(() => {
 		if (list()) {
-			setOriginalApps(JSON.parse(JSON.stringify(list()!.items)));
-			setApps(reconcile(list()!.items));
+			const items = list()?.items ?? [];
+			setOriginalApps(JSON.parse(JSON.stringify(items)));
+			setApps(reconcile(items));
 		}
 	});
 
@@ -264,7 +263,7 @@ export function Applications(_props: VoidProps<{ user: User }>) {
 					</header>
 					<ul class="applications-list">
 						<For each={filteredApps()}>
-							{(app, index) => {
+							{(app, _index) => {
 								const appWithAvatar = () => ({
 									id: app.id,
 									name: app.name,

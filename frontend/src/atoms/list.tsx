@@ -238,7 +238,7 @@ export function createList2<T extends { id: string; class?: string }>(options: {
 			if (options.onRestore) {
 				// We must queue this onto the next tick so the DOM has time to render new scrollHeight limits
 				setTimeout(() => {
-					if (options.onRestore!()) {
+					if (options.onRestore?.()) {
 						updateRender();
 					}
 				}, 0);

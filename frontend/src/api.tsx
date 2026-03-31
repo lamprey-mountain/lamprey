@@ -32,7 +32,7 @@ export type {
 // Backwards compatibility type - maps old Api property names to RootStore
 export type Api = RootStore;
 
-const ApiContext = createContext<never>();
+const _ApiContext = createContext<never>();
 export const RootStoreContext = createContext<RootStore>();
 
 export function useApi2() {

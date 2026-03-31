@@ -4,12 +4,10 @@ import { useUsers2 } from "@/api";
 import { Time } from "../../../atoms/Time.tsx";
 import { useCtx } from "../../../context.ts";
 import { useMenu } from "../../../contexts/mod.tsx";
-import { UserMenu } from "../../../menus/User.tsx";
-import { UserAdminMenu } from "../../../menus/UserAdmin.tsx";
 import { Avatar } from "../../../User.tsx";
 
 export function Users() {
-	const ctx = useCtx();
+	const _ctx = useCtx();
 	const { setMenu } = useMenu();
 	const users2 = useUsers2();
 	const users = createMemo(() => [...users2.cache.values()]);

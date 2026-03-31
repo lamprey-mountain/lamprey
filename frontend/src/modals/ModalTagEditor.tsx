@@ -1,5 +1,5 @@
-import { type Tag, type TagCreate, TagPatch } from "sdk";
-import { createSignal, onMount } from "solid-js";
+import type { Tag, TagCreate } from "sdk";
+import { createSignal } from "solid-js";
 import { useApi2, useChannels2 } from "@/api";
 import { CheckboxOption } from "../atoms/CheckboxOption";
 import { Colorpicker } from "../atoms/Colorpicker";
@@ -16,8 +16,6 @@ interface ModalTagEditorProps {
 }
 
 export const ModalTagEditor = (props: ModalTagEditorProps) => {
-	const ctx = useCtx();
-	const api2 = useApi2();
 	const channels2 = useChannels2();
 	const [, modalCtl] = useModals();
 

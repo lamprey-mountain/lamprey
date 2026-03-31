@@ -1,5 +1,5 @@
 import fuzzysort from "fuzzysort";
-import type { EmojiCustom, Room } from "sdk";
+import type { Room } from "sdk";
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { useApi2, useEmoji2, useRooms2 } from "@/api";
 import icEmojiActivities from "../assets/emoji-activities.png";
@@ -115,7 +115,6 @@ type EmojiPickerProps = {
 };
 
 export const EmojiPicker = (props: EmojiPickerProps) => {
-	const api2 = useApi2();
 	const rooms2 = useRooms2();
 	const emoji2 = useEmoji2();
 	const [search, setSearch] = createSignal("");

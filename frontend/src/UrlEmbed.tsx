@@ -34,14 +34,15 @@ export const EmbedView = (props: VoidProps<EmbedProps>) => {
 				<div class="info">
 					<header>
 						<Show when={props.embed.url} fallback={<b>{props.embed.title}</b>}>
-							<a class="title" href={props.embed.url!}>
+							<a class="title" href={props.embed.url ?? ""}>
 								{props.embed.title || props.embed.url}
 							</a>
 						</Show>
 						<Show when={props.embed.site_name || props.embed.url}>
 							<span class="site">
 								{" - "}
-								{props.embed.site_name || URL.parse(props.embed.url!)?.host}
+								{props.embed.site_name ||
+									URL.parse(props.embed.url ?? "")?.host}
 							</span>
 						</Show>
 					</header>
@@ -51,22 +52,18 @@ export const EmbedView = (props: VoidProps<EmbedProps>) => {
 				</div>
 			</Show>
 			<Show when={props.embed.thumbnail}>
-				<div class="thumb">
-					<ImageView
-						media={props.embed.thumbnail!}
-						thumb_width={64}
-						thumb_height={64}
-					/>
-				</div>
+				{(thumbnail) => (
+					<div class="thumb">
+						<ImageView media={thumbnail()} thumb_width={64} thumb_height={64} />
+					</div>
+				)}
 			</Show>
 			<Show when={props.embed.media}>
-				<div class="media">
-					<ImageView
-						media={props.embed.media!}
-						thumb_width={320}
-						thumb_height={320}
-					/>
-				</div>
+				{(media) => (
+					<div class="media">
+						<ImageView media={media()} thumb_width={320} thumb_height={320} />
+					</div>
+				)}
 			</Show>
 		</article>
 	);

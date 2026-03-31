@@ -2,7 +2,6 @@ import { useNavigate } from "@solidjs/router";
 import type { Channel } from "sdk";
 import {
 	createEffect,
-	createResource,
 	createSignal,
 	For,
 	Match,
@@ -33,12 +32,12 @@ import { VoiceDebug } from "./VoiceDebug.tsx";
 import { useVoice } from "./voice-provider.tsx";
 
 export const Voice = (p: { channel: Channel }) => {
-	const config = useConfig();
+	const _config = useConfig();
 	const api2 = useApi2();
 	const [voice, actions] = useVoice();
-	const ctx = useCtx();
+	const _ctx = useCtx();
 	const [ch, chUpdate] = useChannel()!;
-	const currentUser = useCurrentUser();
+	const _currentUser = useCurrentUser();
 
 	createEffect(
 		on(
@@ -50,7 +49,7 @@ export const Voice = (p: { channel: Channel }) => {
 	);
 
 	const getName = (uid: string) => {
-		const user = api2.users.use(() => uid);
+		const _user = api2.users.use(() => uid);
 		const room_member = p.channel.room_id
 			? api2.room_members.use(() => `${p.channel.room_id}!:${uid}`)
 			: null;
@@ -141,7 +140,7 @@ export const Voice = (p: { channel: Channel }) => {
 							})(voice.rtc?.streams.get(focused()!))}
 						</Show>
 						<div class="list">
-							<For each={[...voice.rtc!.streams.values()]}>
+							<For each={[...(voice.rtc?.streams.values() ?? [])]}>
 								{(stream) => {
 									let videoRef!: HTMLVideoElement;
 									createEffect(() => {

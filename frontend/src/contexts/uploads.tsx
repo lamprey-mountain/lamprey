@@ -1,12 +1,5 @@
-import type { ReactiveMap } from "@solid-primitives/map";
 import { createUpload, type Media, type MessageSync } from "sdk";
-import {
-	createContext,
-	onCleanup,
-	onMount,
-	type ParentProps,
-	useContext,
-} from "solid-js";
+import { createContext, onMount, type ParentProps, useContext } from "solid-js";
 import type { Attachment, ChatCtx } from "../context";
 import { useModals } from "./modal";
 
@@ -59,7 +52,7 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 
 		const handleMediaUpdate = (media: Media) => {
 			// Update all attachments that reference this media
-			for (const [thread_id, ctx] of props.ctx.channel_contexts.entries()) {
+			for (const [_thread_id, ctx] of props.ctx.channel_contexts.entries()) {
 				const [ch, chUpdate] = ctx;
 				const atts = ch.attachments;
 				const idx = atts.findIndex(

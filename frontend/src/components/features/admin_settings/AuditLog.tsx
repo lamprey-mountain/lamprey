@@ -12,12 +12,11 @@ import { Time } from "../../../atoms/Time.tsx";
 import {
 	formatAuditLogEntry,
 	formatChanges,
-	type MergedAuditLogEntry,
 	mergeAuditLogEntries,
 } from "../../../audit-log-util.tsx";
 
-export function AuditLog(props: VoidProps<{ room: Room }>) {
-	const api2 = useApi2();
+export function AuditLog(_props: VoidProps<{ room: Room }>) {
+	const _api2 = useApi2();
 	const auditLog2 = useAuditLog2();
 	const log = auditLog2.useList(() => SERVER_ROOM_ID);
 	const collapsed = new ReactiveSet();

@@ -30,7 +30,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 				<div style="display:flex;flex-direction:column;flex:1">
 					<h3 class="dim title2">input device</h3>
 					<Dropdown
-						selected={ctx.preferences().frontend["input_device"] || "default"}
+						selected={ctx.preferences().frontend.input_device || "default"}
 						onSelect={(value) => {
 							if (value) {
 								const c = ctx.preferences();
@@ -56,9 +56,8 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 						min="0"
 						max="100"
 						value={
-							(ctx.preferences().frontend["mic_volume"] as
-								| number
-								| undefined) || 50
+							(ctx.preferences().frontend.mic_volume as number | undefined) ||
+							50
 						}
 						onChange={(e) => {
 							const c = ctx.preferences();
@@ -66,7 +65,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 								...c,
 								frontend: {
 									...c.frontend,
-									["mic_volume"]: Number(e.target.value),
+									mic_volume: Number(e.target.value),
 								},
 							});
 						}}
@@ -76,7 +75,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 				<div style="display:flex;flex-direction:column;flex:1">
 					<h3 class="dim title2">output device</h3>
 					<Dropdown
-						selected={ctx.preferences().frontend["output_device"] || "default"}
+						selected={ctx.preferences().frontend.output_device || "default"}
 						onSelect={(value) => {
 							if (value) {
 								const c = ctx.preferences();
@@ -103,7 +102,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 						min="0"
 						max="100"
 						value={
-							(ctx.preferences().frontend["speaker_volume"] as
+							(ctx.preferences().frontend.speaker_volume as
 								| number
 								| undefined) || 75
 						}
@@ -113,7 +112,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 								...c,
 								frontend: {
 									...c.frontend,
-									["speaker_volume"]: Number(e.target.value),
+									speaker_volume: Number(e.target.value),
 								},
 							});
 						}}
@@ -132,32 +131,24 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 			<h3 class="dim title">audio processing</h3>
 			<CheckboxOption
 				id={`user-${_props.user?.id ?? "@self"}-voice-echo-cancellation`}
-				checked={
-					ctx.preferences().frontend["voice_echo_cancellation"] === "yes"
-				}
+				checked={ctx.preferences().frontend.voice_echo_cancellation === "yes"}
 				onChange={() => toggle("voice_echo_cancellation")()}
 				seed={`user-${_props.user?.id ?? "@self"}-voice-echo-cancellation`}
 			>
 				<Checkbox
-					checked={
-						ctx.preferences().frontend["voice_echo_cancellation"] === "yes"
-					}
+					checked={ctx.preferences().frontend.voice_echo_cancellation === "yes"}
 					seed={`user-${_props.user?.id ?? "@self"}-voice-echo-cancellation`}
 				/>
 				<span>Enable echo cancellation</span>
 			</CheckboxOption>
 			<CheckboxOption
 				id={`user-${_props.user?.id ?? "@self"}-voice-noise-suppression`}
-				checked={
-					ctx.preferences().frontend["voice_noise_suppression"] === "yes"
-				}
+				checked={ctx.preferences().frontend.voice_noise_suppression === "yes"}
 				onChange={() => toggle("voice_noise_suppression")()}
 				seed={`user-${_props.user?.id ?? "@self"}-voice-noise-suppression`}
 			>
 				<Checkbox
-					checked={
-						ctx.preferences().frontend["voice_noise_suppression"] === "yes"
-					}
+					checked={ctx.preferences().frontend.voice_noise_suppression === "yes"}
 					seed={`user-${_props.user?.id ?? "@self"}-voice-noise-suppression`}
 				/>
 				<span>Enable noise suppression</span>
@@ -170,7 +161,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 						<div class="dim">Sensitivity for voice activation mode</div>
 					</div>
 					<Dropdown
-						selected={ctx.preferences().frontend["voice_input_mode"] || "vad"}
+						selected={ctx.preferences().frontend.voice_input_mode || "vad"}
 						onSelect={(value) => {
 							if (value) {
 								const c = ctx.preferences();
@@ -192,7 +183,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 				</div>
 				<Show
 					when={
-						(ctx.preferences().frontend["voice_input_mode"] || "vad") === "vad"
+						(ctx.preferences().frontend.voice_input_mode || "vad") === "vad"
 					}
 				>
 					<div class="option apart">
@@ -205,7 +196,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 							min="0"
 							max="100"
 							value={
-								(ctx.preferences().frontend["voice_activity_threshold"] as
+								(ctx.preferences().frontend.voice_activity_threshold as
 									| number
 									| undefined) || 30
 							}
@@ -215,7 +206,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 									...c,
 									frontend: {
 										...c.frontend,
-										["voice_activity_threshold"]: Number(e.target.value),
+										voice_activity_threshold: Number(e.target.value),
 									},
 								});
 							}}
@@ -233,7 +224,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 							max="5000"
 							step="100"
 							value={
-								(ctx.preferences().frontend["voice_activity_timeout"] as
+								(ctx.preferences().frontend.voice_activity_timeout as
 									| number
 									| undefined) || 1000
 							}
@@ -243,7 +234,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 									...c,
 									frontend: {
 										...c.frontend,
-										["voice_activity_timeout"]: Number(e.target.value),
+										voice_activity_timeout: Number(e.target.value),
 									},
 								});
 							}}

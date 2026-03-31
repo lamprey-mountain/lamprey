@@ -1,5 +1,4 @@
-import { createSignal, For, type ParentProps } from "solid-js";
-import { useCtx } from "../context";
+import { createSignal, For } from "solid-js";
 import type { ChannelTypeOption } from "../contexts/modal";
 import { useModals } from "../contexts/modal";
 import { flags } from "../flags";

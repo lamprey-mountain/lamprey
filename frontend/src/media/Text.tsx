@@ -4,7 +4,6 @@ import {
 	createResource,
 	createSignal,
 	For,
-	on,
 	Show,
 } from "solid-js";
 import { useCtx } from "../context.ts";
@@ -16,9 +15,7 @@ import { formatBytes, getUrl, type MediaProps } from "./util.tsx";
 const MAX_PREVIEW_SIZE = 16384;
 
 export const TextView = (props: MediaProps) => {
-	const ctx = useCtx();
-
-	const ty = () => props.media.content_type.split(";")[0];
+	const _ty = () => props.media.content_type.split(";")[0];
 	const isHtml = () =>
 		props.media.filename.endsWith(".html") ||
 		props.media.filename.endsWith(".htm") ||
@@ -40,7 +37,7 @@ export const TextView = (props: MediaProps) => {
 		async ({ media, full }) => {
 			const headers: Record<string, string> = {};
 			if (!full && media.size > MAX_PREVIEW_SIZE) {
-				headers["Range"] = `bytes=0-${MAX_PREVIEW_SIZE}`;
+				headers.Range = `bytes=0-${MAX_PREVIEW_SIZE}`;
 			}
 			const req = await fetch(getUrl(media), { headers });
 			if (!req.ok) throw req.statusText;
@@ -102,7 +99,7 @@ export const TextView = (props: MediaProps) => {
 				const cell = el as HTMLElement;
 				delete cell.dataset.highlighted;
 				cell.classList.add(
-					"language-" + props.media.filename.match(/\.([a-z0-9]+)$/)?.[1],
+					`language-${props.media.filename.match(/\.([a-z0-9]+)$/)?.[1]}`,
 				);
 				hljs.highlightElement(cell);
 			}
@@ -150,7 +147,7 @@ export const TextView = (props: MediaProps) => {
 					fallback={
 						<pre class="numbered" ref={highlightEl}>
 							<For each={text()?.split("\n")}>
-								{(l, i) => <code data-line-number={i() + 1}>{l + "\n"}</code>}
+								{(l, i) => <code data-line-number={i() + 1}>{`${l}\n`}</code>}
 							</For>
 						</pre>
 					}

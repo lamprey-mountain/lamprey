@@ -1,15 +1,13 @@
-import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { A, useNavigate } from "@solidjs/router";
 import type { EditorState } from "prosemirror-state";
 import { type Channel, getTimestampFromUUID } from "sdk";
-import { createMemo, createSignal, For, Show } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 import { uuidv7 } from "uuidv7";
 import { useChannels2, useThreads2 } from "@/api";
 import { Time } from "./atoms/Time.tsx";
 import { useChannel } from "./channelctx.tsx";
 import { RenderUploadItem } from "./components/features/chat/Input.tsx";
 import { createEditor } from "./components/features/editor/Editor.tsx";
-import { useCtx } from "./context.ts";
 import { useAutocomplete } from "./contexts/autocomplete";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { useFormattingToolbar } from "./contexts/formatting-toolbar";
@@ -22,12 +20,11 @@ import { md } from "./markdown_utils.tsx";
 import { ChannelIcon } from "./User";
 
 export const Forum = (props: { channel: Channel }) => {
-	const ctx = useCtx();
 	const channels2 = useChannels2();
 	const threads2 = useThreads2();
 	const nav = useNavigate();
 	const [, modalctl] = useModals();
-	const room_id = () => props.channel.room_id!;
+	const room_id = () => props.channel.room_id ?? "";
 	const forum_id = () => props.channel.id;
 
 	const [threadFilter, setThreadFilter] = createSignal("active");
@@ -45,7 +42,7 @@ export const Forum = (props: { channel: Channel }) => {
 		return activeThreads;
 	};
 
-	const [bottom, setBottom] = createSignal<Element | undefined>();
+	const [_bottom, setBottom] = createSignal<Element | undefined>();
 
 	// TODO: Implement proper pagination for threads
 
@@ -106,12 +103,14 @@ export const Forum = (props: { channel: Channel }) => {
 				</h3>
 				<div class="thread-filter">
 					<button
+						type="button"
 						classList={{ selected: threadFilter() === "active" }}
 						onClick={[setThreadFilter, "active"]}
 					>
 						active
 					</button>
 					<button
+						type="button"
 						classList={{ selected: threadFilter() === "archived" }}
 						onClick={[setThreadFilter, "archived"]}
 					>
@@ -119,6 +118,7 @@ export const Forum = (props: { channel: Channel }) => {
 					</button>
 					<Show when={perms.has("ThreadManage")}>
 						<button
+							type="button"
 							classList={{ selected: threadFilter() === "removed" }}
 							onClick={[setThreadFilter, "removed"]}
 						>
@@ -127,9 +127,13 @@ export const Forum = (props: { channel: Channel }) => {
 					</Show>
 				</div>
 				<button
+					type="button"
 					class="primary"
 					style="margin-left: 8px;border-radius:4px"
-					onClick={() => createThread(room_id())}
+					onClick={() => {
+						const rid = room_id();
+						if (rid) createThread(rid);
+					}}
 				>
 					create thread
 				</button>
@@ -142,7 +146,14 @@ export const Forum = (props: { channel: Channel }) => {
 								class="thread menu-thread thread-card"
 								data-thread-id={thread.id}
 							>
-								<header onClick={() => nav(`/thread/${thread.id}`)}>
+								<header
+									onClick={() => nav(`/thread/${thread.id}`)}
+									onKeyDown={(e) =>
+										e.key === "Enter" && nav(`/thread/${thread.id}`)
+									}
+									role="button"
+									tabIndex={0}
+								>
 									<div class="top">
 										<ChannelIcon channel={thread} />
 										<div class="spacer">{thread.name}</div>
@@ -153,6 +164,11 @@ export const Forum = (props: { channel: Channel }) => {
 									<div
 										class="bottom"
 										onClick={() => nav(`/thread/${thread.id}`)}
+										onKeyDown={(e) =>
+											e.key === "Enter" && nav(`/thread/${thread.id}`)
+										}
+										role="button"
+										tabIndex={0}
 									>
 										<div class="dim">
 											{thread.message_count} message(s) &bull; last msg{" "}
@@ -182,91 +198,103 @@ export const Forum = (props: { channel: Channel }) => {
 
 // NOTE the room id is reused as the channel id for draft messages and attachments
 const QuickCreate = (props: { channel: Channel }) => {
-	const ctx = useCtx();
 	const channels2 = useChannels2();
 	const n = useNavigate();
-	const [ch, chUpdate] = useChannel()!;
+	const channelCtx = useChannel();
 	const uploads = useUploads();
 	const submit = useMessageSubmit(props.channel.id);
 	const toolbar = useFormattingToolbar();
 	const autocomplete = useAutocomplete();
 
-	const editor = createEditor({
-		channelId: () => props.channel.id,
-		roomId: () => props.channel.room_id!,
-		toolbar,
-		autocomplete,
-	});
-
-	function uploadFile(e: InputEvent) {
-		const target = e.target! as HTMLInputElement;
-		const files = Array.from(target.files!);
-		for (const file of files) {
-			handleUpload(file);
-		}
-	}
-
-	function handleUpload(file: File) {
-		console.log(file);
-		const local_id = uuidv7();
-		uploads.init(local_id, props.channel.id, file);
-	}
-
-	const onSubmit = (text: string) => {
-		if (!text) return false;
-		channels2
-			.create(props.channel.room_id!, {
-				name: "thread",
-				parent_id: props.channel.id,
-			})
-			.then((t) => {
-				if (!t) return;
-				submit(text, false, t.id);
-				n(`/channel/${t.id}`);
-			});
-		return true;
-	};
-
-	const onChange = (state: EditorState) => {
-		chUpdate("editor_state", state);
-	};
-
-	const atts = () => ch.attachments;
 	return (
-		<div class="message-input quick-create">
-			<div style="margin-bottom: 2px">quick create thread</div>
-			<Show when={atts()?.length}>
-				<div class="attachments">
-					<header>
-						{atts()?.length}{" "}
-						{atts()?.length === 1 ? "attachment" : "attachments"}
-					</header>
-					<ul>
-						<For each={atts()}>
-							{(att) => (
-								<RenderUploadItem thread_id={props.channel.id} att={att} />
-							)}
-						</For>
-					</ul>
-				</div>
-			</Show>
-			<div class="text">
-				<label class="upload">
-					+
-					<input
-						multiple
-						type="file"
-						onInput={uploadFile}
-						value="upload file"
-					/>
-				</label>
-				<editor.View
-					onSubmit={onSubmit}
-					onChange={onChange}
-					onUpload={handleUpload}
-					placeholder={"send a message..."}
-				/>
-			</div>
-		</div>
+		<Show when={channelCtx} fallback={<div>Loading editor...</div>}>
+			{(ctx) => {
+				const [ch, chUpdate] = ctx();
+				const editor = createEditor({
+					channelId: () => props.channel.id,
+					roomId: () => props.channel.room_id ?? "",
+					toolbar,
+					autocomplete,
+				});
+
+				function uploadFile(e: InputEvent) {
+					const target = e.target as HTMLInputElement;
+					if (!target.files) return;
+					const files = Array.from(target.files);
+					for (const file of files) {
+						handleUpload(file);
+					}
+				}
+
+				function handleUpload(file: File) {
+					console.log(file);
+					const local_id = uuidv7();
+					uploads.init(local_id, props.channel.id, file);
+				}
+
+				const onSubmit = (text: string) => {
+					if (!text) return false;
+					const rid = props.channel.room_id;
+					if (!rid) return false;
+					channels2
+						.create(rid, {
+							name: "thread",
+							parent_id: props.channel.id,
+						})
+						.then((t) => {
+							if (!t) return;
+							submit(text, false, t.id);
+							n(`/channel/${t.id}`);
+						});
+					return true;
+				};
+
+				const onChange = (state: EditorState) => {
+					chUpdate("editor_state", state);
+				};
+
+				const atts = () => ch.attachments;
+				return (
+					<div class="message-input quick-create">
+						<div style="margin-bottom: 2px">quick create thread</div>
+						<Show when={atts()?.length}>
+							<div class="attachments">
+								<header>
+									{atts()?.length}{" "}
+									{atts()?.length === 1 ? "attachment" : "attachments"}
+								</header>
+								<ul>
+									<For each={atts()}>
+										{(att) => (
+											<RenderUploadItem
+												thread_id={props.channel.id}
+												att={att}
+											/>
+										)}
+									</For>
+								</ul>
+							</div>
+						</Show>
+						<div class="text">
+							<label class="upload">
+								+
+								<input
+									multiple
+									type="file"
+									onInput={uploadFile}
+									value="upload file"
+								/>
+							</label>
+							<editor.View
+								onSubmit={onSubmit}
+								onChange={onChange}
+								onUpload={handleUpload}
+								placeholder={"send a message..."}
+							/>
+						</div>
+					</div>
+				);
+			}}
+		</Show>
 	);
 };

@@ -1,11 +1,5 @@
-import { ReactiveMap } from "@solid-primitives/map";
 import type { RoomMember, User } from "sdk";
-import {
-	type Accessor,
-	createEffect,
-	createResource,
-	type Resource,
-} from "solid-js";
+import { type Accessor, createResource, type Resource } from "solid-js";
 import { logger } from "../../logger";
 import { PaginatedList } from "../core/PaginatedList";
 import { BaseService } from "../core/Service";

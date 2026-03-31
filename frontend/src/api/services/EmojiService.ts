@@ -15,7 +15,7 @@ export class EmojiService extends BaseService<EmojiCustom> {
 		return item.id;
 	}
 
-	async fetch(id: string): Promise<EmojiCustom> {
+	async fetch(_id: string): Promise<EmojiCustom> {
 		throw new Error("Use fetchByRoom(room_id, emoji_id) instead");
 	}
 

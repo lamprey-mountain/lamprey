@@ -242,7 +242,7 @@ export function createAutocompletePlugin(
 		autocomplete.setReference(refElement);
 	};
 
-	const handleKeyDown = (view: EditorView, event: KeyboardEvent): boolean => {
+	const handleKeyDown = (_view: EditorView, event: KeyboardEvent): boolean => {
 		const currentKind = autocomplete.state.kind;
 
 		if (!currentKind) {

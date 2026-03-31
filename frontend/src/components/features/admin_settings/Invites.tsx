@@ -5,7 +5,7 @@ import type { RoomT } from "../../../types.ts";
 import { Avatar } from "../../../User.tsx";
 import { Copyable } from "../../../utils/general";
 
-export function Invites(props: VoidProps<{ room: RoomT }>) {
+export function Invites(_props: VoidProps<{ room: RoomT }>) {
 	const api2 = useApi2();
 	const invites2 = useInvites2();
 	const users2 = useUsers2();
@@ -43,7 +43,7 @@ export function Invites(props: VoidProps<{ room: RoomT }>) {
 						<div class="expires">expires</div>
 					</header>
 					<ul>
-						<For each={invites()!.state.ids}>
+						<For each={invites()?.state.ids}>
 							{(code) => {
 								const i = invites2.cache.get(code);
 								if (!i) return null;

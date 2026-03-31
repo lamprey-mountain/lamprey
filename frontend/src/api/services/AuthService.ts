@@ -4,11 +4,11 @@ import { BaseService } from "../core/Service";
 export class AuthService extends BaseService<never> {
 	protected cacheName = "auth";
 
-	getKey(item: never): string {
+	getKey(_item: never): string {
 		throw new Error("AuthService does not cache items");
 	}
 
-	async fetch(id: string): Promise<never> {
+	async fetch(_id: string): Promise<never> {
 		throw new Error("AuthService does not fetch items");
 	}
 

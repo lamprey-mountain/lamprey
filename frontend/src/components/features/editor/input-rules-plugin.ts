@@ -1,7 +1,6 @@
 import { DOMSerializer, type ResolvedPos } from "prosemirror-model";
 import {
 	type Command,
-	EditorState,
 	Plugin,
 	PluginKey,
 	TextSelection,

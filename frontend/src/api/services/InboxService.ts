@@ -15,7 +15,7 @@ import {
 import { logger } from "../../logger";
 import { BaseService } from "../core/Service";
 
-const log = logger.for("api/inbox");
+const _log = logger.for("api/inbox");
 
 export interface NotificationPagination extends Pagination<Notification> {
 	channels: Channel[];
@@ -37,7 +37,7 @@ export class InboxService extends BaseService<Notification> {
 		return item.id;
 	}
 
-	async fetch(id: string): Promise<Notification> {
+	async fetch(_id: string): Promise<Notification> {
 		throw new Error("Use useList() to fetch inbox notifications");
 	}
 

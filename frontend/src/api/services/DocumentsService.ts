@@ -1,5 +1,4 @@
-import { ReactiveMap } from "@solid-primitives/map";
-import type { HistoryPagination, User, UserWithRelationship } from "sdk";
+import type { HistoryPagination, UserWithRelationship } from "sdk";
 import { BaseService } from "../core/Service";
 
 export type RevisionContent = {
@@ -26,7 +25,7 @@ export class DocumentsService extends BaseService<RevisionContent> {
 
 	revisionCache = new Map<string, RevisionContent>();
 
-	getKey(item: RevisionContent): string {
+	getKey(_item: RevisionContent): string {
 		return "";
 	}
 

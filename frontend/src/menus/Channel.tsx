@@ -1,7 +1,6 @@
 import { useNavigate } from "@solidjs/router";
-import type { Channel, NotifsChannel, Tag } from "sdk";
+import type { Channel, NotifsChannel } from "sdk";
 import {
-	createEffect,
 	createResource,
 	createSignal,
 	For,
@@ -22,7 +21,6 @@ import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 // the context menu for channels
 export function ChannelMenu(props: { channel_id: string }) {
 	const ctx = useCtx();
-	const api2 = useApi2();
 	const channels2 = useChannels2();
 	const threadMembers2 = useThreadMembers2();
 	const tags2 = useTags2();
@@ -483,7 +481,7 @@ function ChannelNotificationMenu(props: { channel: Channel }) {
 						<div class="subtext">
 							unmutes{" "}
 							{timeAgo(
-								new Date(Date.parse(channelConfig()!.notifs.mute!.expires_at!)),
+								new Date(Date.parse(channelConfig()?.notifs.mute?.expires_at!)),
 							)}
 						</div>
 					</Show>

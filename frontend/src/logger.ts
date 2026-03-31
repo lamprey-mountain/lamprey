@@ -44,7 +44,7 @@ type LogEntry = {
 	data: unknown;
 };
 
-const entries: Array<LogEntry> = [];
+const _entries: Array<LogEntry> = [];
 
 type LoggerNamespaceConfig = {
 	color: string;

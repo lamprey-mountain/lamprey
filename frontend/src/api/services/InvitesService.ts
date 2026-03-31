@@ -1,5 +1,5 @@
 import type { Invite, Pagination } from "sdk";
-import { createMemo, createResource, onCleanup, type Resource } from "solid-js";
+import { createResource, type Resource } from "solid-js";
 import { logger } from "../../logger";
 import { PaginatedList } from "../core/PaginatedList";
 import { BaseService } from "../core/Service";

@@ -1,4 +1,4 @@
-import { useApi, useApi2, useChannels2 } from "@/api";
+import { useApi2, useChannels2 } from "@/api";
 import { useChannel } from "../channelctx";
 import { useCtx } from "../context";
 
@@ -31,7 +31,7 @@ export function useMessageSubmit(channel_id: string) {
 
 		const attachments = atts.map((i) => ({
 			type: "Media" as const,
-			media_id: i.media!.id,
+			media_id: i.media?.id,
 			media: i.media, // ADDED for optimistic update
 			spoiler: i.spoiler,
 		})) as any;

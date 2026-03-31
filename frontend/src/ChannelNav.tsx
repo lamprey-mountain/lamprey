@@ -1,14 +1,6 @@
 import { A, useNavigate, useParams } from "@solidjs/router";
 import type { Channel } from "sdk";
-import {
-	createEffect,
-	createMemo,
-	createSignal,
-	For,
-	Match,
-	Show,
-	Switch,
-} from "solid-js";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import {
 	useApi2,
 	useChannels2,
@@ -32,7 +24,7 @@ import {
 	calculatePermissions,
 	type PermissionContext,
 } from "./permission-calculator";
-import { Avatar, AvatarWithStatus, ChannelIcon, ChannelIconGdm } from "./User";
+import { Avatar, ChannelIcon } from "./User";
 
 // TODO: review llm code here because im lazy and dont like implementing drag and drop
 
@@ -47,14 +39,13 @@ function setLastViewedChannel(roomId: string, channelId: string): void {
 }
 
 export const ChannelNav = (props: { room_id?: string }) => {
-	const config = useConfig();
+	const _config = useConfig();
 	const api2 = useApi2();
 	const dms2 = useDms2();
 	const rooms2 = useRooms2();
 	const channels2 = useChannels2();
 	const users2 = useUsers2();
 	const [voice] = useVoice();
-	const ctx = useCtx();
 	const { setMenu } = useMenu();
 	const params = useParams();
 	const nav = useNavigate();
@@ -96,7 +87,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	>(new Set());
 
 	// Load DMs when not in a room
-	const dms = !props.room_id ? dms2.useList() : null;
+	const _dms = !props.room_id ? dms2.useList() : null;
 
 	const room = props.room_id ? rooms2.use(() => props.room_id!) : () => null;
 	const roomMembers2 = useRoomMembers2();
@@ -241,7 +232,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		e.stopPropagation();
 		e.dataTransfer!.effectAllowed = "move";
 		const id = getChannelId(e);
-		e.dataTransfer!.setData("text/plain", id || "");
+		e.dataTransfer?.setData("text/plain", id || "");
 
 		if (id) {
 			setDragging({ type: "channel", id });
@@ -256,7 +247,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		e.stopPropagation();
 		e.stopImmediatePropagation();
 		e.dataTransfer!.effectAllowed = "move";
-		e.dataTransfer!.setData("text/plain", userId);
+		e.dataTransfer?.setData("text/plain", userId);
 		setDragging({ type: "voice", id: userId, channelId });
 	};
 
@@ -473,12 +464,12 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		// Handle Reordering
 		// We need to calculate the new order for the affected list.
 
-		let targetParentId = toChannel.parent_id;
+		let _targetParentId = toChannel.parent_id;
 		if (toChannel.type === "Category") {
 			// If we are reordering categories (target is category, from is category)
 			// parent is null
 			if (fromChannel.type === "Category") {
-				targetParentId = null;
+				_targetParentId = null;
 			} else {
 				// Should have been handled by "inside" logic above?
 				// If we dropped "before/after" a category?
@@ -662,54 +653,54 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					{({ category, channels }) => (
 						<>
 							<Show when={category}>
-								<div
-									class="category-header"
-									classList={{
-										collapsed: collapsedCategories().has(category!.id),
-									}}
-									data-drag-mode={getDragMode(category!.id)}
-									data-is-dragging={isDraggingThis(category!.id)}
-									data-channel-id={category!.id}
-									draggable="true"
-									onDragStart={handleDragStart}
-									onDragOver={handleDragOver}
-									onDrop={handleDrop}
-									onDragEnd={() => {
-										setDragging(null);
-										setTarget(null);
-									}}
-									onClick={() => {
-										setCollapsedCategories((prev) => {
-											const newSet = new Set(prev);
-											if (newSet.has(category!.id)) {
-												newSet.delete(category!.id);
-											} else {
-												newSet.add(category!.id);
-											}
-											return newSet;
-										});
-									}}
-									onContextMenu={(e) => {
-										e.preventDefault();
-										queueMicrotask(() => {
-											setMenu({
-												x: e.clientX,
-												y: e.clientY,
-												type: "channel",
-												channel_id: category!.id,
+								{(cat) => (
+									<div
+										class="category-header"
+										classList={{
+											collapsed: collapsedCategories().has(cat().id),
+										}}
+										data-drag-mode={getDragMode(cat().id)}
+										data-is-dragging={isDraggingThis(cat().id)}
+										data-channel-id={cat().id}
+										draggable="true"
+										onDragStart={handleDragStart}
+										onDragOver={handleDragOver}
+										onDrop={handleDrop}
+										onDragEnd={() => {
+											setDragging(null);
+											setTarget(null);
+										}}
+										onClick={() => {
+											setCollapsedCategories((prev) => {
+												const newSet = new Set(prev);
+												if (newSet.has(cat().id)) {
+													newSet.delete(cat().id);
+												} else {
+													newSet.add(cat().id);
+												}
+												return newSet;
 											});
-										});
-									}}
-								>
-									<span class="category-toggle">
-										{collapsedCategories().has(category!.id) ? "▶" : "▼"}
-									</span>
-									<span class="category-name">{category!.name}</span>
-								</div>
+										}}
+										onContextMenu={(e) => {
+											e.preventDefault();
+											queueMicrotask(() => {
+												setMenu({
+													x: e.clientX,
+													y: e.clientY,
+													type: "channel",
+													channel_id: cat().id,
+												});
+											});
+										}}
+									>
+										<span class="category-toggle">
+											{collapsedCategories().has(cat().id) ? "▶" : "▼"}
+										</span>
+										<span class="category-name">{cat().name}</span>
+									</div>
+								)}
 							</Show>
-							<Show
-								when={!category || !collapsedCategories().has(category!.id)}
-							>
+							<Show when={!category || !collapsedCategories().has(category.id)}>
 								<ul class="category-channels">
 									<For
 										each={channels}
@@ -839,15 +830,15 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 	const api2 = useApi2();
-	const channels2 = useChannels2();
-	const rooms2 = useRooms2();
+	const _channels2 = useChannels2();
+	const _rooms2 = useRooms2();
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
 	const user = useCurrentUser();
 	const currentUserId = () => user()?.id;
 	const [hovered, setHovered] = createSignal(false);
 
-	const handleClick = (e: MouseEvent) => {
+	const handleClick = (_e: MouseEvent) => {
 		if (props.room_id) {
 			setLastViewedChannel(props.room_id, props.channel.id);
 		}

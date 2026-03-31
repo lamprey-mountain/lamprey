@@ -147,8 +147,9 @@ export const createEditor = (opts: EditorOptions) => {
 					handleDOMEvents: opts.handleDOMEvents,
 					editable: () => !(props.disabled ?? false),
 					dispatchTransaction(tr) {
-						const newState = view!.state.apply(tr);
-						view!.updateState(newState);
+						const newState = view?.state.apply(tr);
+						if (!newState || !view) return;
+						view.updateState(newState);
 						props.onChange?.(newState);
 					},
 				});

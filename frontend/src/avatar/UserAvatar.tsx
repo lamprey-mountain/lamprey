@@ -82,7 +82,7 @@ export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 						height={size}
 						x={pad()}
 						y={pad()}
-						href={getThumbFromId(props.user!.avatar!, 64, props.animate)!}
+						href={getThumbFromId(props.user?.avatar!, 64, props.animate)!}
 					/>
 				</Show>
 			</g>
@@ -153,7 +153,7 @@ export const Avatar = (props: VoidProps<AvatarProps>) => {
 						height={size}
 						x={pad()}
 						y={pad()}
-						href={getThumbFromId(props.user!.avatar!, 64, props.animate)!}
+						href={getThumbFromId(props.user?.avatar!, 64, props.animate)!}
 					/>
 				</Show>
 			</g>

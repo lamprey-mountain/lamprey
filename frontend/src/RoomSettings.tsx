@@ -1,5 +1,5 @@
 import { A, useNavigate } from "@solidjs/router";
-import { type Permission, SERVER_ROOM_ID } from "sdk";
+import { SERVER_ROOM_ID } from "sdk";
 import { type Component, createMemo, For, Match, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useApi2 } from "@/api";
@@ -222,7 +222,6 @@ function groupTabsByCategory(
 }
 
 export const RoomSettings = (props: { room: RoomT; page: string }) => {
-	const ctx = useCtx();
 	const api2 = useApi2();
 	const [, modalCtl] = useModals();
 	const currentUser = useCurrentUser();
@@ -261,7 +260,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 								})
 								.catch((error) => {
 									console.error("Failed to delete room:", error);
-									modalCtl.alert("Failed to delete room: " + error.message);
+									modalCtl.alert(`Failed to delete room: ${error.message}`);
 								});
 						}
 					},

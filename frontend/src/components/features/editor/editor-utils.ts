@@ -1,4 +1,3 @@
-import { Schema } from "prosemirror-model";
 import { type Command, TextSelection } from "prosemirror-state";
 
 /** create a command that wraps or unwraps selected text with some characters */

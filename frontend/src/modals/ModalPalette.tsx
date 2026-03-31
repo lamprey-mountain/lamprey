@@ -13,7 +13,6 @@ import { ChannelIcon } from "../User";
 import { Modal } from "./mod";
 
 export const ModalPalette = () => {
-	const api2 = useApi2();
 	const channels2 = useChannels2();
 	const rooms2 = useRooms2();
 	const dms2 = useDms2();
@@ -25,7 +24,7 @@ export const ModalPalette = () => {
 	const [selectedIndex, setSelectedIndex] = createSignal(0);
 
 	// try to load all threads
-	const rooms = rooms2.useList();
+	const _rooms = rooms2.useList();
 	dms2.useList();
 
 	type PaletteItem = {
@@ -130,7 +129,7 @@ export const ModalPalette = () => {
 			// Check localStorage drafts (Forum2)
 			const draftKey = `editor_draft_${channel.id}`;
 			const draft = localStorage.getItem(draftKey);
-			if (draft && draft.trim()) {
+			if (draft?.trim()) {
 				try {
 					const parsed = JSON.parse(draft);
 					const timestamp = parsed.timestamp ?? 0;
@@ -151,7 +150,7 @@ export const ModalPalette = () => {
 			if (chCtx) {
 				const [chState] = chCtx;
 				const editorState = chState.editor_state;
-				if (editorState && editorState.doc.textContent.trim()) {
+				if (editorState?.doc.textContent.trim()) {
 					draftChannels.push({
 						channel,
 						draftTimestamp: 0,
@@ -235,9 +234,7 @@ export const ModalPalette = () => {
 			return items;
 		}
 
-		return allItems().filter(
-			(item) => item.name && item.name.toLowerCase().includes(q),
-		);
+		return allItems().filter((item) => item.name?.toLowerCase().includes(q));
 	});
 
 	createEffect(() => {
@@ -321,15 +318,15 @@ export const ModalPalette = () => {
 									<Show when={item.type === "room" && item.room} keyed>
 										<div class="item-icon">
 											<Show
-												when={item.room!.icon}
+												when={item.room?.icon}
 												fallback={
 													<div class="avatar fake">
-														{item.room!.name.substring(0, 2)}
+														{item.room?.name.substring(0, 2)}
 													</div>
 												}
 											>
 												<img
-													src={getThumbFromId(item.room!.icon!, 64)}
+													src={getThumbFromId(item.room?.icon!, 64)}
 													class="avatar"
 												/>
 											</Show>

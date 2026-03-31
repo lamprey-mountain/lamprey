@@ -2,7 +2,7 @@ import { ReactiveMap } from "@solid-primitives/map";
 import { A, useNavigate } from "@solidjs/router";
 import { createVirtualizer } from "@tanstack/solid-virtual";
 import { type Channel, getTimestampFromUUID, type MemberListGroup } from "sdk";
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import { createMemo, createSignal, For, Show } from "solid-js";
 import { useChannels2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
 import type { MemberListItem } from "@/api/services/MemberListService";
 import { Time } from "./atoms/Time.tsx";
@@ -120,13 +120,12 @@ export const RoomMembers = (props: { room: RoomT }) => {
 										const isOffline = () =>
 											user()?.presence.status === "Offline";
 
-										const ctx = useCtx();
 										const { userView, setUserView } = useUserPopout();
 										const [hovered, setHovered] = createSignal(false);
 										function name() {
 											let name: string | undefined | null = null;
 											if (member()) {
-												name ??= member()!.override_name;
+												name ??= member()?.override_name;
 											}
 											name ??= user()?.name;
 											return name;
@@ -144,7 +143,7 @@ export const RoomMembers = (props: { room: RoomT }) => {
 														setUserView(null);
 													} else {
 														setUserView({
-															user_id: user()!.id,
+															user_id: user()?.id,
 															room_id: props.room.id,
 															ref: currentTarget,
 															source: "member-list",
@@ -181,8 +180,6 @@ export const RoomHome = (props: { room: RoomT }) => {
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
 	const room_id = () => props.room.id;
-
-	const [threadFilter, setThreadFilter] = createSignal("active");
 
 	const channels2 = useChannels2();
 	const threadsResource = createMemo(() =>
@@ -295,11 +292,13 @@ export const RoomHome = (props: { room: RoomT }) => {
 	function leaveRoom(_room_id: string) {
 		modalCtl.confirm("are you sure you want to leave?", (confirmed) => {
 			if (!confirmed) return;
+			const uid = user()?.id;
+			if (!uid) return;
 			ctx.client.http.DELETE("/api/v1/room/{room_id}/member/{user_id}", {
 				params: {
 					path: {
 						room_id: props.room.id,
-						user_id: user()!.id,
+						user_id: uid,
 					},
 					query: { soft: false },
 				},
@@ -309,7 +308,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 
 	const user = useCurrentUser();
 	const user_id = () => user()?.id;
-	const perms = usePermissions(user_id, room_id, () => undefined);
+	const _perms = usePermissions(user_id, room_id, () => undefined);
 
 	return (
 		<div class="room-home">

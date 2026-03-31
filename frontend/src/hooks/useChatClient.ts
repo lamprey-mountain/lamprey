@@ -2,14 +2,13 @@ import { createEmitter } from "@solid-primitives/event-bus";
 import * as i18n from "@solid-primitives/i18n";
 import { ReactiveMap } from "@solid-primitives/map";
 import { useLocation } from "@solidjs/router";
-import { DBSchema, type IDBPDatabase, openDB } from "idb";
+import { type IDBPDatabase, openDB } from "idb";
 import {
 	createClient,
 	type MessageEnvelope,
 	type MessageReady,
 	type MessageSync,
 	type Preferences,
-	Room,
 } from "sdk";
 import {
 	createEffect,
@@ -24,7 +23,6 @@ import type { Config } from "../config.tsx";
 import type {
 	ChatCtx,
 	Data,
-	Events,
 	MediaCtx,
 	Popout,
 	ThreadsViewData,

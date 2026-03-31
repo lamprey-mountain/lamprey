@@ -21,7 +21,7 @@ export class RolesService extends BaseService<Role> {
 	// Roles generally don't have a global fetch endpoint in this API version
 	// They are usually fetched via listing the room's roles.
 	// However, if we need to fetch a specific role, we need the room_id.
-	async fetch(id: string): Promise<Role> {
+	async fetch(_id: string): Promise<Role> {
 		throw new Error("Cannot fetch role by ID alone. Use fetchByRoom.");
 	}
 

@@ -3,10 +3,9 @@ import { useCurrentUser } from "./contexts/currentUser.tsx";
 // TODO: refactor out duplicated code from here and Message.tsx
 
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
-import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { leading, throttle } from "@solid-primitives/scheduled";
 import { ReactiveSet } from "@solid-primitives/set";
-import { A, useNavigate } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 import type { EditorState } from "prosemirror-state";
 import {
 	type Channel,
@@ -22,7 +21,6 @@ import {
 	createMemo,
 	createResource,
 	createSignal,
-	createUniqueId,
 	For,
 	Match,
 	onCleanup,
@@ -62,7 +60,6 @@ import type { Attachment as LocalAttachment } from "./context";
 import { useCtx } from "./context";
 import { useAutocomplete } from "./contexts/autocomplete";
 import { useFormattingToolbar } from "./contexts/formatting-toolbar";
-import { useMenu, useUserPopout } from "./contexts/mod.tsx";
 import { useModals } from "./contexts/modal";
 import { useUploads } from "./contexts/uploads";
 import { flags } from "./flags";
@@ -76,7 +73,7 @@ import {
 	TextView,
 	VideoView,
 } from "./media/mod";
-import { getEmojiUrl, type MediaProps } from "./media/util";
+import type { MediaProps } from "./media/util";
 import { ChannelIcon } from "./User";
 import { getMessageOverrideName } from "./utils/general";
 
@@ -95,7 +92,7 @@ function hasLastVersionId(
 }
 
 // Type guard for Message with DefaultMarkdown type
-function isDefaultMarkdown(msg: Message): msg is Message & {
+function _isDefaultMarkdown(msg: Message): msg is Message & {
 	latest_version: MessageVersion & {
 		type: "DefaultMarkdown";
 		content?: string | null;
@@ -117,7 +114,7 @@ function isUploadingAttachment(att: LocalAttachment): att is LocalAttachment & {
 
 function AttachmentView(props: MediaProps) {
 	const b = () => props.media.content_type.split("/")[0];
-	const ty = () => props.media.content_type.split(";")[0];
+	const _ty = () => props.media.content_type.split(";")[0];
 	if (b() === "image") {
 		return (
 			<li class="raw">
@@ -181,6 +178,7 @@ const InputReply = (props: { thread: Channel; reply: Message }) => {
 				class="cancel"
 				onClick={() => chUpdate("reply_id", undefined)}
 				ref={tip.content}
+				type="button"
 			>
 				<img class="icon" src={cancelIc} />
 			</button>
@@ -199,9 +197,9 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const channels2 = useChannels2();
 	const threads2 = useThreads2();
-	const nav = useNavigate();
+	const _nav = useNavigate();
 	const [, modalctl] = useModals();
-	const room_id = () => props.channel.room_id!;
+	const room_id = () => props.channel.room_id ?? "";
 	const forum_id = () => props.channel.id;
 
 	const [threadFilter, setThreadFilter] = createSignal("active");
@@ -222,9 +220,9 @@ export const Forum2 = (props: { channel: Channel }) => {
 		if (
 			menuOpen() &&
 			referenceEl() &&
-			!referenceEl()!.contains(e.target as Node) &&
+			!referenceEl()?.contains(e.target as Node) &&
 			floatingEl() &&
-			!floatingEl()!.contains(e.target as Node)
+			!floatingEl()?.contains(e.target as Node)
 		) {
 			setMenuOpen(false);
 		}
@@ -250,7 +248,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 		return activeThreads;
 	};
 
-	const [bottom, setBottom] = createSignal<Element | undefined>();
+	const [_bottom, setBottom] = createSignal<Element | undefined>();
 
 	// TODO: Implement proper pagination for threads
 
@@ -298,7 +296,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 			const store = createStore(createInitialChannelState());
 			ctx.channel_contexts.set(channelId, store);
 		}
-		return ctx.channel_contexts.get(channelId)!;
+		return ctx.channel_contexts.get(channelId);
 	};
 
 	return (
@@ -321,7 +319,10 @@ export const Forum2 = (props: { channel: Channel }) => {
 						<button
 							class="primary"
 							style="margin-left: 8px;border-radius:4px"
-							onClick={() => createThread(room_id())}
+							onClick={() => {
+								const rid = room_id();
+								if (rid) createThread(rid);
+							}}
 						>
 							create thread
 						</button>
@@ -570,7 +571,6 @@ function EditorChannelMention(props: { id: string }) {
 }
 
 export const Forum2Thread = (props: { channel: Channel }) => {
-	const ctx = useCtx();
 	const channels2 = useChannels2();
 	const messagesService = useMessages2();
 	const [ch, chUpdate] = useChannel()!;
@@ -578,7 +578,10 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	const uploads = useUploads();
 	const currentUser = useCurrentUser();
 	const reply_id = () => ch.reply_id;
-	const reply = () => messagesService.cache.get(reply_id()!);
+	const reply = () => {
+		const rid = reply_id();
+		return rid ? messagesService.cache.get(rid) : undefined;
+	};
 	const storageKey = () => `editor_draft_${props.channel.id}`;
 
 	function handleUpload(file: File) {
@@ -626,7 +629,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 					: undefined;
 
 			if (replyId && commentMap.has(replyId)) {
-				commentMap.get(replyId)!.children.push(node);
+				commentMap.get(replyId)?.children.push(node);
 			} else {
 				rootComments.push(node);
 			}
@@ -689,10 +692,9 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 
 	const toolbar = useFormattingToolbar();
 	const autocomplete = useAutocomplete();
-
 	const editor = createEditor({
 		channelId: () => props.channel.id,
-		roomId: () => props.channel.room_id!,
+		roomId: () => props.channel.room_id ?? "",
 		toolbar,
 		autocomplete,
 		initialContent: (() => {
@@ -812,7 +814,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		const expireAt = ch.slowmode_expire_at;
 		if (expireAt) {
 			const updateTimer = () => {
-				const now = new Date().getTime();
+				const now = Date.now();
 				const remaining = expireAt.getTime() - now;
 				setRemainingTime(Math.max(0, remaining));
 			};
@@ -892,7 +894,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 				/>
 				<div class="comment-input" classList={{ locked: locked() }}>
 					<Show when={reply()}>
-						<InputReply thread={props.channel} reply={reply()!} />
+						{(r) => <InputReply thread={props.channel} reply={r()} />}
 					</Show>
 					<Show when={atts()?.length}>
 						<div class="attachments">
@@ -955,7 +957,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	);
 };
 
-const ThreadLog = (props: {
+const _ThreadLog = (props: {
 	comments: { items: Array<{ id: string }> } | undefined;
 	commentTree: Array<unknown>;
 }) => {
@@ -1020,7 +1022,7 @@ export const Forum2Comments = (props: {
 	);
 };
 
-const contentToHtml = new WeakMap();
+const _contentToHtml = new WeakMap();
 
 function highlight(el: Element) {
 	el.animate(
@@ -1048,7 +1050,6 @@ function highlight(el: Element) {
 }
 
 function CommentEditor(props: { message: Message; channel: Channel }) {
-	const ctx = useCtx();
 	const messagesService = useMessages2();
 	const [ch, chUpdate] = useChannel()!;
 	const toolbar = useFormattingToolbar();
@@ -1176,7 +1177,7 @@ const Comment = (props: {
 		return currentUser()?.id === message().author_id;
 	};
 
-	const canEditMessage = () => {
+	const _canEditMessage = () => {
 		const msg = message();
 		return (
 			msg.latest_version.type === "DefaultMarkdown" &&
@@ -1384,7 +1385,6 @@ export function RenderUploadItem(props: {
 	thread_id: string;
 	att: LocalAttachment;
 }) {
-	const ctx = useCtx();
 	const uploads = useUploads();
 	const thumbUrl = isUploadingAttachment(props.att)
 		? URL.createObjectURL(props.att.file)
@@ -1433,50 +1433,48 @@ export function RenderUploadItem(props: {
 	}
 
 	return (
-		<>
-			<div class="upload-item">
-				<div
-					class="thumb"
-					style={{ "background-image": `url(${thumbUrl})` }}
-				></div>
-				<div class="info">
-					<svg class="progress" viewBox="0 0 1 1" preserveAspectRatio="none">
-						<rect class="bar" height="1" width={getProgress(props.att)}></rect>
-					</svg>
-					<div style="display: flex">
-						<div style="flex: 1;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">
-							{isUploadingAttachment(props.att)
-								? props.att.file.name
-								: "uploaded"}
-							<span style="color:#888;margin-left:.5ex">
-								{renderInfo(props.att)}
-							</span>
-						</div>
-						<menu>
-							<Switch>
-								<Match
-									when={isUploadingAttachment(props.att) && props.att.paused}
-								>
-									<button onClick={resume}>⬆️</button>
-								</Match>
-								<Match when={isUploadingAttachment(props.att)}>
-									<button onClick={pause}>⏸️</button>
-								</Match>
-							</Switch>
-							<button
-								onClick={() =>
-									removeAttachment(
-										isUploadingAttachment(props.att) ? props.att.local_id : "",
-									)
-								}
-							>
-								<img class="icon" src={icDelete} />
-							</button>
-						</menu>
+		<div class="upload-item">
+			<div
+				class="thumb"
+				style={{ "background-image": `url(${thumbUrl})` }}
+			></div>
+			<div class="info">
+				<svg class="progress" viewBox="0 0 1 1" preserveAspectRatio="none">
+					<rect class="bar" height="1" width={getProgress(props.att)}></rect>
+				</svg>
+				<div style="display: flex">
+					<div style="flex: 1;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">
+						{isUploadingAttachment(props.att)
+							? props.att.file.name
+							: "uploaded"}
+						<span style="color:#888;margin-left:.5ex">
+							{renderInfo(props.att)}
+						</span>
 					</div>
+					<menu>
+						<Switch>
+							<Match
+								when={isUploadingAttachment(props.att) && props.att.paused}
+							>
+								<button onClick={resume}>⬆️</button>
+							</Match>
+							<Match when={isUploadingAttachment(props.att)}>
+								<button onClick={pause}>⏸️</button>
+							</Match>
+						</Switch>
+						<button
+							onClick={() =>
+								removeAttachment(
+									isUploadingAttachment(props.att) ? props.att.local_id : "",
+								)
+							}
+						>
+							<img class="icon" src={icDelete} />
+						</button>
+					</menu>
 				</div>
 			</div>
-		</>
+		</div>
 	);
 }
 

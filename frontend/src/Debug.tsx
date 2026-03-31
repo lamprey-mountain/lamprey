@@ -4,7 +4,6 @@ import { createResource, createSignal, For, type JSX, Show } from "solid-js";
 import { useApi2, useMessages2 } from "@/api";
 import { Dropdown } from "./atoms/Dropdown.tsx";
 import { MessageView } from "./components/features/chat/Message.tsx";
-import { useCtx } from "./context.ts";
 import { flags } from "./flags.ts";
 import { EmbedView } from "./UrlEmbed.tsx";
 
@@ -87,19 +86,17 @@ export const Debug = (): JSX.Element => {
 };
 
 const Search = () => {
-	const ctx = useCtx();
-	const api2 = useApi2();
 	const messagesService = useMessages2();
 	const [searchQuery, setSearchQueryRaw] = createSignal<string>("");
 	const setSearchQuery = leadingAndTrailing(throttle, setSearchQueryRaw, 300);
-	const [searchResults] = createResource(
-		searchQuery as any,
-		(async (query: string) => {
-			if (!query) return;
-			const data = await messagesService.search({ query });
-			return (data as any).items;
-		}) as any,
-	);
+	const [searchResults] = createResource(searchQuery, async (query: string) => {
+		if (!query) return;
+		const data = await messagesService.search({ query });
+		if (data && "items" in data) {
+			return (data as { items: Message[] }).items;
+		}
+		return [];
+	});
 
 	return (
 		<>
@@ -109,7 +106,7 @@ const Search = () => {
 			</label>
 			<br />
 			<Show when={searchResults.loading}>loading...</Show>
-			<For each={searchResults.latest as any}>
+			<For each={searchResults.latest}>
 				{(m: Message) => (
 					<li class="message menu-message" data-message-id={m.id}>
 						<MessageView message={m} />
@@ -150,17 +147,18 @@ const InviteView = () => {
 
 const UrlEmbedDbg = () => {
 	const api2 = useApi2();
-	let url: string;
+	const [url, setUrl] = createSignal("");
 	const [data, setData] = createSignal<Embed | null>(null);
 	const [error, setError] = createSignal<{ error: string } | null>(null);
 
 	async function generate(e: SubmitEvent) {
 		e.preventDefault();
-		if (!url) return;
+		const u = url();
+		if (!u) return;
 		const { data, error } = await api2.client.http.POST(
 			"/api/v1/unfurler/debug",
 			{
-				body: { url },
+				body: { url: u },
 			},
 		);
 		setData(data?.embeds[0] ?? null);
@@ -172,7 +170,7 @@ const UrlEmbedDbg = () => {
 			<form onSubmit={generate}>
 				<label>
 					url:{" "}
-					<input type="url" onInput={(e) => (url = e.currentTarget.value)} />
+					<input type="url" onInput={(e) => setUrl(e.currentTarget.value)} />
 				</label>
 			</form>
 			<Show when={error()}>
@@ -181,9 +179,11 @@ const UrlEmbedDbg = () => {
 				</div>
 			</Show>
 			<Show when={data()}>
-				<div>
-					<EmbedView embed={data()!} />
-				</div>
+				{(d) => (
+					<div>
+						<EmbedView embed={d()} />
+					</div>
+				)}
 			</Show>
 			<pre>{JSON.stringify(data(), null, 4)}</pre>
 		</>

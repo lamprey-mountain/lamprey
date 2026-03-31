@@ -1,5 +1,5 @@
 import { A } from "@solidjs/router";
-import type { Channel, Message, Notification, Room } from "sdk";
+import type { Message, Notification, Room } from "sdk";
 import { createSignal, For, Show } from "solid-js";
 import { useInbox2 } from "@/api";
 import type { NotificationPagination } from "@/api/services/InboxService.ts";
@@ -89,8 +89,12 @@ export const Inbox = () => {
 				<Show when={selected().length > 0}>
 					<div style="margin-left: 8px">
 						<span>{selected().length} selected</span>
-						<button onClick={handleMarkSelectedRead}>Mark as read</button>
-						<button onClick={handleMarkSelectedUnread}>Mark as unread</button>
+						<button type="button" onClick={handleMarkSelectedRead}>
+							Mark as read
+						</button>
+						<button type="button" onClick={handleMarkSelectedUnread}>
+							Mark as unread
+						</button>
 					</div>
 				</Show>
 			</div>
@@ -179,7 +183,7 @@ const NotificationItem = (props: {
 					}
 				/>
 				<Show when={room()}>
-					<A href={`/room/${room()!.id}`}>{room()!.name}</A>
+					<A href={`/room/${room()?.id}`}>{room()?.name}</A>
 					&nbsp;&gt;&nbsp;
 				</Show>
 				<A href={`/thread/${thread()?.id}`}>{thread()?.name ?? "..."}</A>
@@ -190,12 +194,12 @@ const NotificationItem = (props: {
 				<Show
 					when={!props.notification.read_at}
 					fallback={
-						<button class="mark-read" onClick={handleMarkUnread}>
+						<button type="button" class="mark-read" onClick={handleMarkUnread}>
 							Mark as unread
 						</button>
 					}
 				>
-					<button class="mark-read" onClick={handleMarkRead}>
+					<button type="button" class="mark-read" onClick={handleMarkRead}>
 						Mark as read
 					</button>
 				</Show>
