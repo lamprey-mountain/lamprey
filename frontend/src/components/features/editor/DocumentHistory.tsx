@@ -130,7 +130,9 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 		<div class="document-history">
 			<header class="document-history-header">
 				<h3>History</h3>
-				<button onClick={() => setCh("history_view", false)}>Close</button>
+				<button type="button" onClick={() => setCh("history_view", false)}>
+					Close
+				</button>
 			</header>
 			<div class="document-history-content">
 				<Show when={loading()}>

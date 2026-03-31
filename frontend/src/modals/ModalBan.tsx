@@ -100,10 +100,19 @@ export const ModalBan = (props: ModalBanProps) => {
 				</div>
 
 				<div class="bottom">
-					<button class="danger" onClick={handleBan} disabled={loading()}>
+					<button
+						type="button"
+						class="danger"
+						onClick={handleBan}
+						disabled={loading()}
+					>
 						{loading() ? "banning..." : "ban"}
 					</button>
-					<button onClick={() => modalCtl.close()} disabled={loading()}>
+					<button
+						type="button"
+						onClick={() => modalCtl.close()}
+						disabled={loading()}
+					>
 						cancel
 					</button>
 				</div>

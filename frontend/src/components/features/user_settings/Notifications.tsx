@@ -147,6 +147,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				<div class="permission">
 					{t("user_settings.notifications_permission_text")}
 					<button
+						type="button"
 						class="primary"
 						onClick={() => Notification.requestPermission()}
 					>

@@ -32,60 +32,60 @@ export class RoomAnalyticsService extends BaseService<never> {
 		room_id: string,
 		query: RoomAnalyticsParams,
 	): Promise<RoomAnalyticsOverview[]> {
-		const result = await this.retryWithBackoff<any>(() =>
+		const result = await this.retryWithBackoff(() =>
 			this.client.http.GET("/api/v1/room/{room_id}/analytics/overview", {
 				params: {
-					path: { room_id } as any,
-					query: query as any,
+					path: { room_id },
+					query,
 				},
 			}),
 		);
-		return result.data;
+		return result as RoomAnalyticsOverview[];
 	}
 
 	async getMembersCount(
 		room_id: string,
 		query: RoomAnalyticsParams,
 	): Promise<RoomAnalyticsMembersCount[]> {
-		const result = await this.retryWithBackoff<any>(() =>
+		const result = await this.retryWithBackoff(() =>
 			this.client.http.GET("/api/v1/room/{room_id}/analytics/members-count", {
 				params: {
-					path: { room_id } as any,
-					query: query as any,
+					path: { room_id },
+					query,
 				},
 			}),
 		);
-		return result.data;
+		return result as RoomAnalyticsMembersCount[];
 	}
 
 	async getMembersJoin(
 		room_id: string,
 		query: RoomAnalyticsParams,
 	): Promise<RoomAnalyticsMembersJoin[]> {
-		const result = await this.retryWithBackoff<any>(() =>
+		const result = await this.retryWithBackoff(() =>
 			this.client.http.GET("/api/v1/room/{room_id}/analytics/members-join", {
 				params: {
-					path: { room_id } as any,
-					query: query as any,
+					path: { room_id },
+					query,
 				},
 			}),
 		);
-		return result.data;
+		return result as RoomAnalyticsMembersJoin[];
 	}
 
 	async getMembersLeave(
 		room_id: string,
 		query: RoomAnalyticsParams,
 	): Promise<RoomAnalyticsMembersLeave[]> {
-		const result = await this.retryWithBackoff<any>(() =>
+		const result = await this.retryWithBackoff(() =>
 			this.client.http.GET("/api/v1/room/{room_id}/analytics/members-leave", {
 				params: {
-					path: { room_id } as any,
-					query: query as any,
+					path: { room_id },
+					query,
 				},
 			}),
 		);
-		return result.data;
+		return result as RoomAnalyticsMembersLeave[];
 	}
 
 	async getChannels(
@@ -93,14 +93,14 @@ export class RoomAnalyticsService extends BaseService<never> {
 		query: RoomAnalyticsParams,
 		channel_id?: string,
 	): Promise<RoomAnalyticsChannel[]> {
-		const result = await this.retryWithBackoff<any>(() =>
+		const result = await this.retryWithBackoff(() =>
 			this.client.http.GET("/api/v1/room/{room_id}/analytics/channels", {
 				params: {
-					path: { room_id } as any,
-					query: { ...query, channel_id } as any,
+					path: { room_id },
+					query: { ...query, channel_id },
 				},
 			}),
 		);
-		return result.data;
+		return result as RoomAnalyticsChannel[];
 	}
 }

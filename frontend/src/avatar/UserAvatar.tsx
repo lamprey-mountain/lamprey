@@ -29,6 +29,7 @@ export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 
 	return (
 		<svg
+			aria-hidden="true"
 			class="avatar status-indicator"
 			data-status={props.user?.presence.status ?? "Offline"}
 			viewBox={`0 0 ${totalSize()} ${totalSize()}`}
@@ -106,6 +107,7 @@ export const Avatar = (props: VoidProps<AvatarProps>) => {
 
 	return (
 		<svg
+			aria-hidden="true"
 			class="avatar"
 			data-status={props.user?.presence?.status ?? "Offline"}
 			viewBox={`0 0 ${totalSize()} ${totalSize()}`}

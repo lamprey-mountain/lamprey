@@ -115,6 +115,7 @@ export function Submenu(
 			aria-controls={menuId}
 		>
 			<button
+				type="button"
 				onClick={(e) => {
 					e.stopPropagation();
 					props.onClick?.(e);
@@ -183,6 +184,7 @@ export function Item(
 	return (
 		<li>
 			<button
+				type="button"
 				onClick={(e) => {
 					props.onClick?.(e);
 					if (!props.onClick) {

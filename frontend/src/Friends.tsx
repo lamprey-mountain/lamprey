@@ -123,14 +123,12 @@ const Friend = (props: { user_id: string }) => {
 	};
 
 	return (
-		<div
+		<button
+			type="button"
 			class="friend menu-user"
 			data-user-id={props.user_id}
 			onClick={openDm}
 			onKeyDown={(e) => e.key === "Enter" && openDm()}
-			style="cursor: pointer"
-			role="button"
-			tabIndex={0}
 		>
 			<AvatarWithStatus user={user()} />
 			<div>
@@ -143,6 +141,6 @@ const Friend = (props: { user_id: string }) => {
 					{(t) => <div class="dim">{t()}</div>}
 				</Show>
 			</div>
-		</div>
+		</button>
 	);
 };

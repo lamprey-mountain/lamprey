@@ -171,14 +171,18 @@ function CodeBlock(props: { text: string; lang?: string }) {
 					<span class="lang">{props.lang ?? "text"}</span>
 					<div class="actions">
 						<Show when={isHtml() && flags.has("markdown_html_preview")}>
-							<button onClick={() => setPreview(!preview())}>
+							<button type="button" onClick={() => setPreview(!preview())}>
 								{preview() ? "code" : "preview"}
 							</button>
 						</Show>
 						<Show when={isRust() && flags.has("markdown_rust_playground")}>
-							<button onClick={openPlayground}>play</button>
+							<button type="button" onClick={openPlayground}>
+								play
+							</button>
 						</Show>
-						<button onClick={copy}>{copied() ? "copied" : "copy"}</button>
+						<button type="button" onClick={copy}>
+							{copied() ? "copied" : "copy"}
+						</button>
 					</div>
 				</div>
 				<Show

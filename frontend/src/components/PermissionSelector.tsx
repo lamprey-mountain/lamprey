@@ -187,6 +187,7 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 													</div>
 													<div class="permission-controls">
 														<button
+															type="button"
 															class="perm-state-button"
 															classList={{
 																"state-allow": state() === "allow",
@@ -200,6 +201,7 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 															/>
 														</button>
 														<button
+															type="button"
 															class="perm-state-button"
 															classList={{
 																"state-inherit": state() === "inherit",
@@ -215,6 +217,7 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 															/>
 														</button>
 														<button
+															type="button"
 															class="perm-state-button"
 															classList={{
 																"state-deny": state() === "deny",

@@ -73,10 +73,14 @@ const SessionList = (props: { appId: string }) => {
 							<li>
 								<div style="display:flex">
 									<div style="flex:1">{session.name || session.id}</div>
-									<button onClick={() => renameSession(session.id)}>
+									<button
+										type="button"
+										onClick={() => renameSession(session.id)}
+									>
 										Rename
 									</button>
 									<button
+										type="button"
 										class="danger"
 										onClick={() => revokeSession(session.id)}
 									>
@@ -452,6 +456,7 @@ const AppEditor = (props: {
 		<div class="role-edit appplication-edit">
 			<div class="toolbar">
 				<button
+					type="button"
 					onClick={() => {
 						props.edit.setApp({ id: null } as unknown as Application);
 					}}
@@ -461,24 +466,31 @@ const AppEditor = (props: {
 				<button disabled={!isDirty()} onClick={saveApp}>
 					save
 				</button>
-				<button class="danger" onClick={deleteApp(props.edit.app.id!)}>
+				<button
+					type="button"
+					class="danger"
+					onClick={deleteApp(props.edit.app.id!)}
+				>
 					delete app
 				</button>
 			</div>
 			<div class="tabs">
 				<button
+					type="button"
 					classList={{ active: activeTab() === "overview" }}
 					onClick={() => setActiveTab("overview")}
 				>
 					overview
 				</button>
 				<button
+					type="button"
 					classList={{ active: activeTab() === "oauth" }}
 					onClick={() => setActiveTab("oauth")}
 				>
 					oauth
 				</button>
 				<button
+					type="button"
 					classList={{ active: activeTab() === "sessions" }}
 					onClick={() => setActiveTab("sessions")}
 				>
@@ -493,6 +505,7 @@ const AppEditor = (props: {
 					</div>
 					<Show when={props.edit.avatar()}>
 						<button
+							type="button"
 							class="remove"
 							onClick={(e) => {
 								e.stopPropagation();
@@ -611,6 +624,7 @@ const AppEditor = (props: {
 					</label>
 				</CheckboxOption>
 				<button
+					type="button"
 					style="margin-left:4px"
 					onClick={(e) => {
 						e.stopImmediatePropagation();
@@ -661,6 +675,7 @@ const AppEditor = (props: {
 										}}
 									/>
 									<button
+										type="button"
 										onClick={() => {
 											const newUris = [
 												...(props.edit.app.oauth_redirect_uris ?? []),
@@ -676,6 +691,7 @@ const AppEditor = (props: {
 						</For>
 						<li>
 							<button
+								type="button"
 								onClick={() => {
 									const newUris = [
 										...(props.edit.app.oauth_redirect_uris ?? []),
@@ -689,14 +705,20 @@ const AppEditor = (props: {
 						</li>
 					</ul>
 					<br />
-					<button onClick={() => props.rotateSecret(props.edit.app.id!)}>
+					<button
+						type="button"
+						onClick={() => props.rotateSecret(props.edit.app.id!)}
+					>
 						rotate secret
 					</button>
 				</div>
 			</Show>
 			<Show when={activeTab() === "sessions"}>
 				<div class="sessions">
-					<button onClick={() => props.createSession(props.edit.app.id!)}>
+					<button
+						type="button"
+						onClick={() => props.createSession(props.edit.app.id!)}
+					>
 						create session
 					</button>
 					<SessionList appId={props.edit.app.id!} />
@@ -789,6 +811,7 @@ const RoomInviteButton = (props: {
 
 	return (
 		<button
+			type="button"
 			onClick={() => props.onInvite(props.room.id)}
 			disabled={!perms.has("IntegrationsManage")}
 		>

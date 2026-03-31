@@ -29,7 +29,7 @@ export function Invites(_props: VoidProps<{ room: RoomT }>) {
 	return (
 		<>
 			<h2>invites</h2>
-			<button class="big primary" onClick={createInvite}>
+			<button type="button" class="big primary" onClick={createInvite}>
 				create invite
 			</button>
 			<br />
@@ -77,7 +77,10 @@ export function Invites(_props: VoidProps<{ room: RoomT }>) {
 											</Show>
 										</div>
 										<div>
-											<button onClick={() => deleteInvite(i.code)}>
+											<button
+												type="button"
+												onClick={() => deleteInvite(i.code)}
+											>
 												delete
 											</button>
 										</div>

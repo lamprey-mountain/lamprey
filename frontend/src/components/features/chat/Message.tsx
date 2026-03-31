@@ -241,8 +241,14 @@ function MessageEditor(props: { message: MessageT }) {
 				}}
 			/>
 			<div class="edit-info dim">
-				escape to <button onClick={cancel}>cancel</button> • enter to{" "}
-				<button onClick={() => save(draft())}>save</button>
+				escape to{" "}
+				<button type="button" onClick={cancel}>
+					cancel
+				</button>{" "}
+				• enter to{" "}
+				<button type="button" onClick={() => save(draft())}>
+					save
+				</button>
 			</div>
 		</div>
 	);
@@ -255,18 +261,15 @@ export function MessageThread(props: {
 	preferences: Preferences;
 }) {
 	const nav = useNavigate();
-	const [_chan, setChan] = useChannel()!;
+	const [chan, setChan] = useChannel()!;
 	const channels = useChannels2();
 	const ctx = useCtx();
 
 	const openThreadClick = () => {
-		openThread(
-			props.thread,
-			channels.get(props.thread.parent_id!)!,
-			ctx.preferences(),
-			setChan,
-			nav,
-		);
+		if (!props.thread.parent_id) return;
+		const parentChannel = channels.get(props.thread.parent_id);
+		if (!chan || !parentChannel) return;
+		openThread(props.thread, parentChannel, ctx.preferences(), setChan, nav);
 	};
 
 	const lastActivityAt = () =>
@@ -394,7 +397,7 @@ export function MessageView(props: MessageProps) {
 	}) {
 		return (
 			<article
-				ref={messageArticleRef!}
+				ref={messageArticleRef}
 				class={`message menu-message oneline ${props2.class ?? ""}`}
 				data-message-id={props.message.id}
 				classList={{
@@ -426,21 +429,16 @@ export function MessageView(props: MessageProps) {
 		);
 		// FIXME: spacing between MessageDefault and oneline is missing
 		if (props.message.latest_version.type === "MemberAdd") {
+			const targetUserId = props.message.latest_version.target_user_id;
 			const author = (
 				<span class="author" data-user-id={props.message.author_id}>
 					<Author message={props.message} thread={thread()} />
 				</span>
 			);
 			const target = (
-				<span
-					class="author"
-					data-user-id={props.message.latest_version.target_user_id}
-				>
+				<span class="author" data-user-id={targetUserId}>
 					<Show when={thread()}>
-						<Actor
-							user_id={props.message.latest_version.target_user_id}
-							thread={thread()!}
-						/>
+						{(t) => <Actor user_id={targetUserId} thread={t()} />}
 					</Show>
 				</span>
 			);
@@ -460,21 +458,16 @@ export function MessageView(props: MessageProps) {
 				/>
 			);
 		} else if (props.message.latest_version.type === "MemberRemove") {
+			const targetUserId = props.message.latest_version.target_user_id;
 			const author = (
 				<span class="author" data-user-id={props.message.author_id}>
 					<Author message={props.message} thread={thread()} />
 				</span>
 			);
 			const target = (
-				<span
-					class="author"
-					data-user-id={props.message.latest_version.target_user_id}
-				>
+				<span class="author" data-user-id={targetUserId}>
 					<Show when={thread()}>
-						<Actor
-							user_id={props.message.latest_version.target_user_id}
-							thread={thread()!}
-						/>
+						{(t) => <Actor user_id={targetUserId} thread={t()} />}
 					</Show>
 				</span>
 			);
@@ -525,6 +518,7 @@ export function MessageView(props: MessageProps) {
 			const version = props.message.latest_version;
 			const link = (text: string) => (
 				<button
+					type="button"
 					style="color: oklch(var(--color-fg1))"
 					class="link"
 					onClick={(e) => {
@@ -660,6 +654,7 @@ export function MessageView(props: MessageProps) {
 			const link = (text: string) => (
 				<Show when={threadId()} fallback={<span>{text}</span>}>
 					<button
+						type="button"
 						class="link"
 						onClick={(e) => {
 							e.stopPropagation();
@@ -675,6 +670,7 @@ export function MessageView(props: MessageProps) {
 
 			const viewAll = (text: string) => (
 				<button
+					type="button"
 					class="link"
 					onClick={(e) => {
 						e.stopPropagation();
@@ -728,7 +724,7 @@ export function MessageView(props: MessageProps) {
 			// TODO: this code is getting messy and needs a refactor soon...
 			return (
 				<article
-					ref={messageArticleRef!}
+					ref={messageArticleRef}
 					class="message menu-message"
 					data-message-id={props.message.id}
 					classList={{
@@ -746,12 +742,14 @@ export function MessageView(props: MessageProps) {
 					onMouseLeave={() => setHovered(false)}
 				>
 					<Show when={props.message.latest_version.reply_id}>
-						<ReplyView
-							thread_id={props.message.channel_id}
-							reply_id={props.message.latest_version.reply_id!}
-							arrow_width={arrow_width()}
-							source_id={props.message.id}
-						/>
+						{(reply) => (
+							<ReplyView
+								thread_id={props.message.channel_id}
+								reply_id={reply()}
+								arrow_width={arrow_width()}
+								source_id={props.message.id}
+							/>
+						)}
 					</Show>
 					<Show when={withAvatar}>
 						<Show when={props.separate}>
@@ -814,11 +812,15 @@ export function MessageView(props: MessageProps) {
 							</Show>
 							<Show when={props.message.thread}>
 								{(thread) => (
-									<MessageThread
-										thread={thread()}
-										parentChannel={channels2.get(props.message.channel_id)!}
-										preferences={ctx.preferences()}
-									/>
+									<Show when={channels2.get(props.message.channel_id)}>
+										{(parentChannel) => (
+											<MessageThread
+												thread={thread()}
+												parentChannel={parentChannel()}
+												preferences={ctx.preferences()}
+											/>
+										)}
+									</Show>
 								)}
 							</Show>
 						</div>
@@ -863,11 +865,15 @@ export function MessageView(props: MessageProps) {
 							</Show>
 							<Show when={props.message.thread}>
 								{(thread) => (
-									<MessageThread
-										thread={thread()}
-										parentChannel={channels2.get(props.message.channel_id)!}
-										preferences={ctx.preferences()}
-									/>
+									<Show when={channels2.get(props.message.channel_id)}>
+										{(parentChannel) => (
+											<MessageThread
+												thread={thread()}
+												parentChannel={parentChannel()}
+												preferences={ctx.preferences()}
+											/>
+										)}
+									</Show>
 								)}
 							</Show>
 						</div>
@@ -879,7 +885,7 @@ export function MessageView(props: MessageProps) {
 		} else {
 			return (
 				<article
-					ref={messageArticleRef!}
+					ref={messageArticleRef}
 					class="message menu-message"
 					data-message-id={props.message.id}
 					classList={{ "toolbar-visible": toolbarVisible() }}
@@ -964,6 +970,7 @@ function ReplyView(props: ReplyProps) {
 		<div class="reply">
 			<div class="arrow">
 				<svg
+					aria-hidden="true"
 					viewBox="0 0 100 100"
 					preserveAspectRatio="none"
 					style={{ width: props.arrow_width ? `${props.arrow_width}px` : "" }}
@@ -979,11 +986,12 @@ function ReplyView(props: ReplyProps) {
 			</div>
 			<div class="content" style="display:flex" onClick={scrollToReply}>
 				<Show when={!reply.loading} fallback="loading...">
-					<Show
-						when={reply() && thread()}
-						fallback={<span class="author"></span>}
-					>
-						<Author message={reply()!} thread={thread()!} />
+					<Show when={reply()}>
+						{(r) => (
+							<Show when={thread()}>
+								{(t) => <Author message={r()} thread={t()} />}
+							</Show>
+						)}
 					</Show>
 					{(() => {
 						const r = reply();
@@ -1006,19 +1014,19 @@ export function AttachmentView(props: { att: Attachment }) {
 	if (b() === "image") {
 		return (
 			<li class="raw">
-				<ImageView media={props.att.media!} />
+				<ImageView media={props.att.media} />
 			</li>
 		);
 	} else if (b() === "video") {
 		return (
 			<li class="raw">
-				<VideoView media={props.att.media!} />
+				<VideoView media={props.att.media} />
 			</li>
 		);
 	} else if (b() === "audio") {
 		return (
 			<li class="raw">
-				<AudioView media={props.att.media!} />
+				<AudioView media={props.att.media} />
 			</li>
 		);
 	} else if (
@@ -1027,13 +1035,13 @@ export function AttachmentView(props: { att: Attachment }) {
 	) {
 		return (
 			<li class="raw">
-				<TextView media={props.att.media!} />
+				<TextView media={props.att.media} />
 			</li>
 		);
 	} else {
 		return (
 			<li>
-				<FileView media={props.att.media!} />
+				<FileView media={props.att.media} />
 			</li>
 		);
 	}
@@ -1046,7 +1054,7 @@ export function Author(props: { message: Message; thread?: Channel }) {
 	const room_member = () =>
 		props.thread?.room_id
 			? roomMembers2.cache.get(
-					`${props.thread?.room_id!}:${props.message.author_id}`,
+					`${props.thread.room_id}:${props.message.author_id}`,
 				)
 			: null;
 	const user = () => users2.cache.get(props.message.author_id);
@@ -1090,7 +1098,7 @@ function Actor(props: { user_id: string; thread: Channel }) {
 	const users2 = useUsers2();
 	const room_member = () =>
 		props.thread.room_id
-			? roomMembers2.cache.get(`${props.thread.room_id!}:${props.user_id}`)
+			? roomMembers2.cache.get(`${props.thread.room_id}:${props.user_id}`)
 			: null;
 	const user = () => users2.cache.get(props.user_id);
 
@@ -1237,6 +1245,7 @@ export const MessageToolbar = (props: { message: Message }) => {
 	return (
 		<div class="message-toolbar">
 			<button
+				type="button"
 				ref={reactionButtonRef}
 				onClick={handleAddReaction}
 				title="Add reaction"
@@ -1244,15 +1253,26 @@ export const MessageToolbar = (props: { message: Message }) => {
 			>
 				<img class="icon" src={icReactionAdd} />
 			</button>
-			<button onClick={handleReply} title="Reply" aria-label="Reply">
+			<button
+				type="button"
+				onClick={handleReply}
+				title="Reply"
+				aria-label="Reply"
+			>
 				<img class="icon" src={icReply} />
 			</button>
 			<Show when={canEditMessage()}>
-				<button onClick={handleEdit} title="Edit" aria-label="Edit">
+				<button
+					type="button"
+					onClick={handleEdit}
+					title="Edit"
+					aria-label="Edit"
+				>
 					<img class="icon" src={icEdit} />
 				</button>
 			</Show>
 			<button
+				type="button"
 				onClick={handleContextMenu}
 				title="More options"
 				aria-label="More options"

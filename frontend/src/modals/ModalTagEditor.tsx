@@ -1,9 +1,8 @@
 import type { Tag, TagCreate } from "sdk";
 import { createSignal } from "solid-js";
-import { useApi2, useChannels2 } from "@/api";
+import { useChannels2 } from "@/api";
 import { CheckboxOption } from "../atoms/CheckboxOption";
 import { Colorpicker } from "../atoms/Colorpicker";
-import { useCtx } from "../context";
 import { useModals } from "../contexts/modal";
 import { Checkbox } from "../icons";
 import { Modal } from "./mod";

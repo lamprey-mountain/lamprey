@@ -286,7 +286,7 @@ const ThreadChatSidebar = (props: { thread_id: string }) => {
 								{(dc) => (
 									<ChannelContext.Provider value={cc()}>
 										<DocumentContext.Provider value={dc()}>
-											<button class="close" onClick={onClose}>
+											<button type="button" class="close" onClick={onClose}>
 												<img class="icon" src={icX} />
 											</button>
 											<ChatMain channel={t()} />

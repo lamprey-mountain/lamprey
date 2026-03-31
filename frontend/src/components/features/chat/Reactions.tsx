@@ -130,7 +130,7 @@ export const Reactions = (props: ReactionsProps) => {
 					);
 				}}
 			</For>
-			<button class="add-reaction" ref={addEl as any}>
+			<button type="button" class="add-reaction" ref={addEl as any}>
 				<img
 					class="icon"
 					classList={{ show: showPicker() }}

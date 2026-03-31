@@ -17,10 +17,10 @@ export function Savebar(props: ParentProps<SavebarProps>) {
 					<div class="warning">
 						{props.warningText ?? "you have unsaved changes"}
 					</div>
-					<button class="reset" onClick={props.onCancel}>
+					<button type="button" class="reset" onClick={props.onCancel}>
 						{props.cancelText ?? "cancel"}
 					</button>
-					<button class="save" onClick={props.onSave}>
+					<button type="button" class="save" onClick={props.onSave}>
 						{props.saveText ?? "save"}
 					</button>
 				</div>

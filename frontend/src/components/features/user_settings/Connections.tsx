@@ -79,6 +79,7 @@ export function Connections() {
 							<div class="name">{c.application.name}</div>
 							<div class="dim">
 								<button
+									type="button"
 									onClick={() =>
 										navigator.clipboard.writeText(c.application.id)
 									}
@@ -105,6 +106,7 @@ export function Connections() {
 							</div>
 							<menu>
 								<button
+									type="button"
 									class="danger"
 									onClick={() => deauthorize(c.application.id)}
 								>
@@ -117,6 +119,7 @@ export function Connections() {
 			</For>
 			<div class="add-connection">
 				<button
+					type="button"
 					onClick={() => {
 						setConnecting(true);
 						// TODO: show list of available applications to connect

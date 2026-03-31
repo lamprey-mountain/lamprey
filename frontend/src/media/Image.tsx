@@ -64,7 +64,7 @@ export const ImageView = (props: ImageViewProps) => {
 					onClick={(e) => e.stopPropagation()}
 				>
 					<button>
-						<img src={iconDownload} class="icon" />
+						<img src={iconDownload} class="icon" alt="icon" />
 					</button>
 				</a>
 				<footer class="info dim">

@@ -15,7 +15,7 @@ export type ClientOptions = {
 	onReady: (event: MessageReady) => void;
 	onSync: (event: MessageSync, raw: MessageEnvelope) => void;
 	onError?: (error: Error) => void;
-	onSend?: (data: any) => void;
+	onSend?: (data: unknown) => void;
 	onMessage?: (raw: MessageEnvelope) => void;
 	format?: "json" | "msgpack";
 	compress?: "deflate";
@@ -40,7 +40,7 @@ export type Client = {
 	getWebsocket: () => WebSocket;
 
 	/** Send a message to the sync server, queueing if not connected */
-	send: (data: any) => void;
+	send: (data: unknown) => void;
 };
 
 type Resume = {
@@ -52,7 +52,7 @@ export function createClient(opts: ClientOptions): Client {
 	let ws: WebSocket;
 	let resume: null | Resume = null;
 	const state = createObservable<ClientState>("stopped");
-	const queue: Array<any> = [];
+	const queue: Array<unknown> = [];
 	const format = opts.format ?? "json";
 
 	function handleMessage(msg: MessageEnvelope) {
@@ -91,7 +91,7 @@ export function createClient(opts: ClientOptions): Client {
 		}
 	}
 
-	function packData(data: any): ArrayBuffer {
+	function packData(data: unknown): ArrayBuffer {
 		const packed = pack(data);
 		return packed.buffer.slice(
 			packed.byteOffset,
@@ -116,7 +116,7 @@ export function createClient(opts: ClientOptions): Client {
 		state.set(newState);
 	}
 
-	function send(data: any, force = false) {
+	function send(data: unknown, force = false) {
 		if (state.get() === "ready" || force) {
 			let msg: string | ArrayBuffer;
 			if (typeof data === "string") {
@@ -234,7 +234,7 @@ function createDecompressor(
 			while (true) {
 				const { value, done } = await reader.read();
 				if (done) break;
-				if (value) onMessage(value);
+				if (value) onMessage(value as MessageEnvelope);
 			}
 		} catch (err) {
 			onError?.(err as Error);
@@ -244,7 +244,7 @@ function createDecompressor(
 	return stream.writable.getWriter();
 }
 
-export class MsgpackStream extends TransformStream<Uint8Array, any> {
+export class MsgpackStream extends TransformStream<Uint8Array, unknown> {
 	constructor() {
 		const unpacker = new Unpackr({
 			mapsAsObjects: true,
@@ -284,7 +284,7 @@ export class MsgpackStream extends TransformStream<Uint8Array, any> {
 	}
 }
 
-export class JsonStream extends TransformStream<Uint8Array, any> {
+export class JsonStream extends TransformStream<Uint8Array, unknown> {
 	constructor() {
 		const decoder = new TextDecoder();
 		let buffer = "";

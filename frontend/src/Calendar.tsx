@@ -193,7 +193,7 @@ export const PopupEventEditor = (props: {
 				<h2>
 					{formData.name || (props.event?.id ? "Edit Event" : "New Event")}
 				</h2>
-				<button class="popup-close" onClick={props.onClose}>
+				<button type="button" class="popup-close" onClick={props.onClose}>
 					<XMark seed={props.event?.id || "new"} />
 				</button>
 			</div>
@@ -201,6 +201,7 @@ export const PopupEventEditor = (props: {
 			<Show when={props.event?.id}>
 				<div class="popup-tabs">
 					<button
+						type="button"
 						class={`popup-tab ${activeTab() === "event" ? "active" : ""}`}
 						onClick={() => setActiveTab("event")}
 					>
@@ -208,6 +209,7 @@ export const PopupEventEditor = (props: {
 					</button>
 					<Show when={props.event?.recurrence}>
 						<button
+							type="button"
 							class={`popup-tab ${activeTab() === "instances" ? "active" : ""}`}
 							onClick={() => setActiveTab("instances")}
 						>
@@ -217,6 +219,7 @@ export const PopupEventEditor = (props: {
 						</button>
 					</Show>
 					<button
+						type="button"
 						class={`popup-tab ${
 							activeTab() === "participants" ? "active" : ""
 						}`}
@@ -258,23 +261,21 @@ export const PopupEventEditor = (props: {
 								/>
 							</div>
 							<div class="popup-form-group">
-								<label>
-									Timezone
-									<Dropdown
-										selected={formData.timezone}
-										onSelect={(v) => handleChange("timezone", v)}
-										options={[
-											{ item: "UTC", label: "UTC" },
-											{ item: "America/New_York", label: "Eastern" },
-											{ item: "America/Chicago", label: "Central" },
-											{ item: "America/Denver", label: "Mountain" },
-											{ item: "America/Los_Angeles", label: "Pacific" },
-											{ item: "Europe/London", label: "London" },
-											{ item: "Europe/Paris", label: "Paris" },
-											{ item: "Asia/Tokyo", label: "Tokyo" },
-										]}
-									/>
-								</label>
+								<label for="timezone-select">Timezone</label>
+								<Dropdown
+									selected={formData.timezone}
+									onSelect={(v) => handleChange("timezone", v)}
+									options={[
+										{ item: "UTC", label: "UTC" },
+										{ item: "America/New_York", label: "Eastern" },
+										{ item: "America/Chicago", label: "Central" },
+										{ item: "America/Denver", label: "Mountain" },
+										{ item: "America/Los_Angeles", label: "Pacific" },
+										{ item: "Europe/London", label: "London" },
+										{ item: "Europe/Paris", label: "Paris" },
+										{ item: "Asia/Tokyo", label: "Tokyo" },
+									]}
+								/>
 							</div>
 						</div>
 
@@ -324,7 +325,7 @@ export const PopupEventEditor = (props: {
 						</CheckboxOption>
 
 						<div class="popup-form-group">
-							<label>Recurrence</label>
+							<label for="calendar-recurrence-input">Recurrence</label>
 							<Dropdown
 								selected={formData.recurrence}
 								onSelect={(v) => handleChange("recurrence", v)}
@@ -341,8 +342,9 @@ export const PopupEventEditor = (props: {
 						</div>
 
 						<div class="popup-form-group">
-							<label>Location</label>
+							<label for="calendar-location-input">Location</label>
 							<input
+								id="calendar-location-input"
 								type="text"
 								placeholder="Location"
 								value={formData.location}
@@ -351,8 +353,9 @@ export const PopupEventEditor = (props: {
 						</div>
 
 						<div class="popup-form-group">
-							<label>URL</label>
+							<label for="calendar-url-input">URL</label>
 							<input
+								id="calendar-url-input"
 								type="url"
 								placeholder="https://..."
 								value={formData.url}
@@ -361,8 +364,9 @@ export const PopupEventEditor = (props: {
 						</div>
 
 						<div class="popup-form-group">
-							<label>Description</label>
+							<label for="calendar-description-input">Description</label>
 							<textarea
+								id="calendar-description-input"
 								placeholder="Description"
 								value={formData.description}
 								onInput={(e) =>
@@ -372,7 +376,7 @@ export const PopupEventEditor = (props: {
 						</div>
 
 						<div class="popup-form-group">
-							<label>Reminder</label>
+							<label for="calendar-reminder-input">Reminder</label>
 							<Dropdown
 								selected={formData.reminders[0] || ""}
 								onSelect={(v) => handleChange("reminders", v ? [v] : [])}
@@ -430,10 +434,10 @@ export const PopupEventEditor = (props: {
 			</div>
 
 			<div class="popup-footer">
-				<button class="popup-cancel-btn" onClick={props.onClose}>
+				<button type="button" class="popup-cancel-btn" onClick={props.onClose}>
 					Cancel
 				</button>
-				<button class="popup-save-btn" onClick={props.onClose}>
+				<button type="button" class="popup-save-btn" onClick={props.onClose}>
 					Save
 				</button>
 			</div>
@@ -564,18 +568,21 @@ export const Calendar = (props: { channel: Channel }) => {
 				<menu>
 					<div class="filters">
 						<button
+							type="button"
 							onClick={() => setView("week")}
 							classList={{ active: view() === "week" }}
 						>
 							week
 						</button>
 						<button
+							type="button"
 							onClick={() => setView("month")}
 							classList={{ active: view() === "month" }}
 						>
 							month
 						</button>
 						<button
+							type="button"
 							onClick={() => setView("timeline")}
 							classList={{ active: view() === "timeline" }}
 						>
@@ -583,9 +590,13 @@ export const Calendar = (props: { channel: Channel }) => {
 						</button>
 					</div>
 					<div class="filters" style="margin-left:4px">
-						<button onClick={prevMonth}>prev</button>
-						<button onClick={nextMonth}>next</button>
-						<button class="primary" onClick={goToToday}>
+						<button type="button" onClick={prevMonth}>
+							prev
+						</button>
+						<button type="button" onClick={nextMonth}>
+							next
+						</button>
+						<button type="button" class="primary" onClick={goToToday}>
 							today
 						</button>
 					</div>

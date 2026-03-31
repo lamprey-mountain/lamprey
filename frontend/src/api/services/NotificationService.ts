@@ -10,21 +10,13 @@ export class NotificationService {
 	async handleMessageCreate(m: Message) {
 		const me = this.store.users.get("@self");
 		let is_mentioned = false;
-		const mentions = (m.latest_version as any).mentions as
-			| {
-					users?: Array<{ id: string }>;
-					everyone?: boolean;
-					roles?: Array<{ id: string }>;
-			  }
-			| undefined;
+		const latestVersion = m.latest_version;
+		const mentions = latestVersion?.mentions;
+		const isDefaultMarkdown = latestVersion?.type === "DefaultMarkdown";
+		const content = isDefaultMarkdown ? (latestVersion as any).content : "";
 
 		// Determine if mentioned
-		if (
-			me &&
-			m.author_id !== me.id &&
-			(m.latest_version as any).type === "DefaultMarkdown" &&
-			mentions
-		) {
+		if (me && m.author_id !== me.id && isDefaultMarkdown && mentions) {
 			if (mentions.users?.some((u) => u.id === me.id)) {
 				is_mentioned = true;
 			}
@@ -67,17 +59,14 @@ export class NotificationService {
 			const title = `${author?.name ?? "Someone"} in #${
 				channel?.name ?? "channel"
 			}`;
-			const rawContent =
-				(m.latest_version as any).type === "DefaultMarkdown"
-					? ((m.latest_version as any).content ?? "")
-					: "";
+			const rawContent = content;
 
 			// Helper wrapper for the util
 			const processedContent = await stripMarkdownAndResolveMentionsOriginal(
 				rawContent,
 				m.channel_id,
-				this.store as any, // HACK: The util expects 'Api' but RootStore is close enough or we fix util
-				(m.latest_version as any).mentions,
+				this.store,
+				mentions,
 			);
 			const body = processedContent.substring(0, 200);
 
@@ -118,19 +107,15 @@ export class NotificationService {
 			(ttsMode === "Always" || (ttsMode === "Mentions" && is_mentioned));
 		const isOwnMessage = m.author_id === me?.id;
 
-		if (
-			shouldSpeak &&
-			!isOwnMessage &&
-			(m.latest_version as any).type === "DefaultMarkdown"
-		) {
+		if (shouldSpeak && !isOwnMessage && isDefaultMarkdown) {
 			const author = this.store.users.get(m.author_id);
 			const channel = this.store.channels.get(m.channel_id);
-			const rawContent = (m.latest_version as any).content ?? "";
+			const rawContent = content;
 			const processedContent = await stripMarkdownAndResolveMentionsOriginal(
 				rawContent,
 				m.channel_id,
-				this.store as any,
-				(m.latest_version as any).mentions,
+				this.store,
+				mentions,
 			);
 			const text = processedContent.substring(0, 200);
 

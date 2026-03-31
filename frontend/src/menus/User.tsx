@@ -2,7 +2,6 @@ import { useNavigate } from "@solidjs/router";
 import { For, Match, Show, Switch } from "solid-js";
 import { useApi2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
 import { useVoice } from "../components/features/voice/voice-provider.tsx";
-import { useCtx } from "../context.ts";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { useMenu } from "../contexts/mod.tsx";
 import { useModals } from "../contexts/modal";

@@ -65,6 +65,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 				>
 					{(a) => (
 						<button
+							type="button"
 							classList={{ active: tab() === a.tab }}
 							onClick={() => setTab(a.tab)}
 						>
@@ -72,7 +73,9 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 						</button>
 					)}
 				</For>
-				<button onClick={props.onClose}>close</button>
+				<button type="button" onClick={props.onClose}>
+					close
+				</button>
 			</nav>
 			<main>
 				<Switch>
@@ -153,6 +156,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 									<div style="margin: 8px;">
 										<h3>local sdp ({s().type})</h3>
 										<button
+											type="button"
 											style="margin-left: 8px"
 											onClick={() => navigator.clipboard.writeText(s().sdp)}
 										>
@@ -171,6 +175,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 									<div style="margin: 8px;">
 										<h3>remote sdp ({s().type})</h3>
 										<button
+											type="button"
 											style="margin-left: 8px"
 											onClick={() => navigator.clipboard.writeText(s().sdp)}
 										>
@@ -436,6 +441,7 @@ const VoiceStats = () => {
 	return (
 		<div style="padding: 8px">
 			<button
+				type="button"
 				style="display:none"
 				onClick={() =>
 					setFormat(
@@ -534,7 +540,7 @@ const Chart = (
 		].join(" ");
 
 	return (
-		<svg class="chart" viewBox="0 -100 300 116">
+		<svg aria-hidden="true" class="chart" viewBox="0 -100 300 116">
 			<defs>
 				<linearGradient id="chart-gradient" x1="0" x2="0" y1="0" y2="1">
 					<stop offset="0%" stop-color="#08f6" />

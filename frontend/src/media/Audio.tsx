@@ -204,6 +204,7 @@ export const AudioView = (props: MediaProps) => {
 	return (
 		<article class="audio">
 			<svg
+				aria-hidden="true"
 				class="progress"
 				viewBox="0 0 1 1"
 				preserveAspectRatio="none"
@@ -255,7 +256,11 @@ export const AudioView = (props: MediaProps) => {
 				</div>
 			</div>
 			<div class="controls">
-				<button onClick={togglePlayPause} title={playing() ? "pause" : "play"}>
+				<button
+					type="button"
+					onClick={togglePlayPause}
+					title={playing() ? "pause" : "play"}
+				>
 					<img
 						class="icon"
 						src={playing() ? iconPause : iconPlay}
@@ -289,6 +294,7 @@ export const AudioView = (props: MediaProps) => {
 					) as ValidComponent,
 					(
 						<button
+							type="button"
 							onClick={toggleMute}
 							title={getVolumeText()}
 							onWheel={handleVolumeWheel}

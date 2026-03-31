@@ -437,7 +437,9 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 								<Show
 									when={!isEveryoneRole(overwrite.id, props.channel.room_id!)}
 								>
-									<button onClick={() => remove(overwrite.id)}>delete</button>
+									<button type="button" onClick={() => remove(overwrite.id)}>
+										delete
+									</button>
 								</Show>
 							</div>
 							<PermissionSelector

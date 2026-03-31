@@ -19,7 +19,7 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
-import { useApi2, useRoomMembers2, useThreadMembers2, useUsers2 } from "@/api";
+import { useRoomMembers2, useThreadMembers2, useUsers2 } from "@/api";
 import { Autocomplete } from "../atoms/Autocomplete.tsx";
 import { EmojiPicker } from "../atoms/EmojiPicker.tsx";
 import { PopupEventEditor, useCalendarPopup } from "../Calendar.tsx";

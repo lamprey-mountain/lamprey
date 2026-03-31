@@ -579,7 +579,7 @@ export const RoomNav = () => {
 				<ul class="room-list">
 					<li class="home-item">
 						<A href="/" end>
-							<img src={icHome} class="icon" />
+							<img src={icHome} class="icon" alt="icon" />
 						</A>
 					</li>
 					<For each={previewedItems()}>
@@ -635,7 +635,7 @@ export const RoomNav = () => {
 													});
 												}}
 											>
-												<img src={icFolder1} class="icon" />
+												<img src={icFolder1} class="icon" alt="icon" />
 											</div>
 											<Show when={!collapsedFolders().has(folder.id)}>
 												<ul>

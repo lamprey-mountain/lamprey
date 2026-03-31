@@ -190,6 +190,7 @@ const DocumentHeader = (
 		<header>
 			<div class="menu-group">
 				<button
+					type="button"
 					ref={setBranchBtn}
 					onClick={(e) => {
 						e.stopPropagation();
@@ -201,6 +202,7 @@ const DocumentHeader = (
 				</button>
 				<Show when={true}>
 					<button
+						type="button"
 						ref={setMergeBtn}
 						onClick={(e) => {
 							e.stopPropagation();
@@ -212,6 +214,7 @@ const DocumentHeader = (
 					</button>
 				</Show>
 				<button
+					type="button"
 					onClick={(e) => {
 						e.stopPropagation();
 						toggleHistory();
@@ -222,6 +225,7 @@ const DocumentHeader = (
 			</div>
 			<div class="menu-group">
 				<button
+					type="button"
 					class="icon-button"
 					onClick={(e) => {
 						e.stopPropagation();
@@ -231,6 +235,7 @@ const DocumentHeader = (
 					<img class="icon" src={icFormatBold} />
 				</button>
 				<button
+					type="button"
 					class="icon-button"
 					onClick={(e) => {
 						e.stopPropagation();
@@ -240,6 +245,7 @@ const DocumentHeader = (
 					<img class="icon" src={icFormatItalic} />
 				</button>
 				<button
+					type="button"
 					class="icon-button"
 					onClick={(e) => {
 						e.stopPropagation();
@@ -249,6 +255,7 @@ const DocumentHeader = (
 					<img class="icon" src={icFormatStrikethrough} />
 				</button>
 				<button
+					type="button"
 					class="icon-button"
 					onClick={(e) => {
 						e.stopPropagation();
@@ -258,6 +265,7 @@ const DocumentHeader = (
 					<img class="icon" src={icFormatCode} />
 				</button>
 				<button
+					type="button"
 					class="icon-button"
 					onClick={(e) => {
 						e.stopPropagation();
@@ -267,6 +275,7 @@ const DocumentHeader = (
 					<img class="icon" src={icFormatUrl} />
 				</button>
 				<button
+					type="button"
 					ref={setInsertBtn}
 					onClick={(e) => {
 						e.stopPropagation();
@@ -279,6 +288,7 @@ const DocumentHeader = (
 			</div>
 			<div class="menu-group">
 				<button
+					type="button"
 					ref={setExportBtn}
 					onClick={(e) => {
 						e.stopPropagation();
@@ -435,7 +445,7 @@ const DocumentHeader = (
 					>
 						<ul>
 							<li>
-								<button onClick={() => setActive(null)}>
+								<button type="button" onClick={() => setActive(null)}>
 									<div class="info">
 										<div>{false ? "open in new tab" : "publish document"}</div>
 									</div>
@@ -443,7 +453,7 @@ const DocumentHeader = (
 							</li>
 							<li class="separator"></li>
 							<li>
-								<button onClick={handleExportHtml}>
+								<button type="button" onClick={handleExportHtml}>
 									<div class="info">
 										<div>download as html</div>
 										<div class="dim">single file .html file</div>
@@ -451,7 +461,7 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li>
-								<button onClick={handleExportMarkdown}>
+								<button type="button" onClick={handleExportMarkdown}>
 									<div class="info">
 										<div>download as markdown</div>
 									</div>
@@ -476,7 +486,7 @@ const DocumentHeader = (
 					>
 						<ul>
 							<li>
-								<button onClick={() => setActive(null)}>
+								<button type="button" onClick={() => setActive(null)}>
 									<div class="info">
 										<div>media</div>
 										<div class="dim">insert images, videos, and audio</div>
@@ -484,7 +494,7 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li>
-								<button onClick={() => setActive(null)}>
+								<button type="button" onClick={() => setActive(null)}>
 									<div class="info">
 										<div>table</div>
 										<div class="dim">insert tables with rows and columns</div>
@@ -492,7 +502,7 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li>
-								<button onClick={() => setActive(null)}>
+								<button type="button" onClick={() => setActive(null)}>
 									<div class="info">
 										<div>code</div>
 										<div class="dim">
@@ -502,7 +512,7 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li>
-								<button onClick={() => setActive(null)}>
+								<button type="button" onClick={() => setActive(null)}>
 									<div class="info">
 										<div>symbols</div>
 										<div class="dim">insert special characters and symbols</div>
@@ -510,7 +520,7 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li>
-								<button onClick={() => setActive(null)}>
+								<button type="button" onClick={() => setActive(null)}>
 									<div class="info">
 										<div>time</div>
 										<div class="dim">insert current date and time</div>
@@ -1075,6 +1085,7 @@ const DocumentMain = (
 							</div>
 							<div class="diff-view-actions">
 								<button
+									type="button"
 									class="secondary linkstyled"
 									onClick={() => {
 										props.onSelectChangeset(null);
@@ -1084,6 +1095,7 @@ const DocumentMain = (
 									Cancel
 								</button>
 								<button
+									type="button"
 									ref={setRestoreBtn}
 									class="secondary"
 									onClick={(e) => {
@@ -1137,7 +1149,10 @@ const DocumentMain = (
 						>
 							<ul>
 								<li>
-									<button onClick={() => handleRestoreVersion("current")}>
+									<button
+										type="button"
+										onClick={() => handleRestoreVersion("current")}
+									>
 										<div class="info">
 											<div>Restore to current branch</div>
 											<div class="dim">overwrite current content</div>
@@ -1145,7 +1160,10 @@ const DocumentMain = (
 									</button>
 								</li>
 								<li>
-									<button onClick={() => handleRestoreVersion("new")}>
+									<button
+										type="button"
+										onClick={() => handleRestoreVersion("new")}
+									>
 										<div class="info">
 											<div>Create new branch</div>
 											<div class="dim">fork from this revision</div>

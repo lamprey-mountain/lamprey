@@ -1,6 +1,7 @@
 export const ToggleIcon = (props: { checked: boolean; src: string }) => {
 	return (
 		<svg
+			aria-hidden="true"
 			viewBox={`0 0 64 64`}
 			role="img"
 			class="icon strike"

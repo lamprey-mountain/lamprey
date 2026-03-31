@@ -224,6 +224,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 						</div>
 						<Show when={editingIcon()}>
 							<button
+								type="button"
 								class="remove"
 								onClick={(e) => {
 									e.stopPropagation();
@@ -381,6 +382,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 						</For>
 					</div>
 					<button
+						type="button"
 						class="secondary small"
 						onClick={() => {
 							modalctl.open({

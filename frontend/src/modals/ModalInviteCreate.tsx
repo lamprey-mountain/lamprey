@@ -188,6 +188,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 						}}
 					/>
 					<button
+						type="button"
 						class="primary"
 						onClick={() => {
 							if (inviteCode()) {

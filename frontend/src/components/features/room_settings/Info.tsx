@@ -153,6 +153,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 					</div>
 					<Show when={roomIcon()}>
 						<button
+							type="button"
 							class="remove"
 							onClick={(e) => {
 								e.stopPropagation();

@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import type { InviteTarget } from "sdk";
 import { createEffect, Show } from "solid-js";
-import { useApi2, useInvites2 } from "@/api";
+import { useInvites2 } from "@/api";
 import { useCtx } from "./context.ts";
 import { md } from "./markdown_utils.tsx";
 import { getThumbFromId } from "./media/util.tsx";

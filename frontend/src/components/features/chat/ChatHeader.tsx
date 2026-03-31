@@ -200,6 +200,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 						when={props.channel.type === "Dm" || props.channel.type === "Gdm"}
 					>
 						<button
+							type="button"
 							onClick={() => {
 								// TODO: calling
 							}}
@@ -216,6 +217,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 						}
 					>
 						<button
+							type="button"
 							onClick={(e) => {
 								if (!ctx.threadsView()) {
 									const ref = e.currentTarget;
@@ -233,6 +235,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 						</button>
 					</Show>
 					<button
+						type="button"
 						onClick={togglePinned}
 						classList={{ active: isShowingPinned() }}
 						title="Show pinned messages"
@@ -241,7 +244,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 						<img class="icon" src={icPin} />
 					</button>
 					<Show when={props.showMembersButton ?? true}>
-						<button onClick={toggleMembers} title="Show members">
+						<button type="button" onClick={toggleMembers} title="Show members">
 							<img class="icon" src={icMembers} />
 						</button>
 					</Show>
@@ -253,12 +256,18 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 				<span>{selected().length} selected</span>
 				<div style="flex:1"></div>
 				<Show when={canDelete()}>
-					<button onClick={deleteSelected}>Delete</button>
+					<button type="button" onClick={deleteSelected}>
+						Delete
+					</button>
 				</Show>
 				<Show when={canRemove()}>
-					<button onClick={removeSelected}>Remove</button>
+					<button type="button" onClick={removeSelected}>
+						Remove
+					</button>
 				</Show>
-				<button onClick={exitSelectMode}>Cancel</button>
+				<button type="button" onClick={exitSelectMode}>
+					Cancel
+				</button>
 			</header>
 		</Show>
 	);

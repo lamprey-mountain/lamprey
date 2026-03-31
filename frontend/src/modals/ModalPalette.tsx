@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import type { Channel, Room } from "sdk";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
-import { useApi2, useChannels2, useDms2, useRooms2 } from "@/api";
+import { useChannels2, useDms2, useRooms2 } from "@/api";
 import icHome from "../assets/home.png";
 import icInbox from "../assets/inbox.png";
 import icMembers from "../assets/members.png";

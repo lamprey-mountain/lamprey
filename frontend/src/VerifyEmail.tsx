@@ -58,7 +58,7 @@ export const RouteVerifyEmail = (
 		<div>
 			<p>Verify email address: {email() ?? "(email not found in link)"}</p>
 			<br />
-			<button onClick={verify} disabled={verifying() || !email()}>
+			<button type="button" onClick={verify} disabled={verifying() || !email()}>
 				<Show when={verifying()} fallback={"Verify"}>
 					Verifying...
 				</Show>
