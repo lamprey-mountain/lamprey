@@ -102,6 +102,7 @@ export function Profile(props: VoidProps<{ user: User }>) {
 					</div>
 					<Show when={editingAvatar()}>
 						<button
+							type="button"
 							class="remove"
 							onClick={(e) => {
 								e.stopPropagation();

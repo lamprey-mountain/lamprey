@@ -41,6 +41,7 @@ export const SearchResults = (props: {
 					{props.search.results?.approximate_total ?? 0} results
 				</Show>
 				<button
+					type="button"
 					onClick={() => {
 						const id = searchId();
 						if (id) {

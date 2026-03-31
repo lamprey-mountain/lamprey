@@ -142,15 +142,15 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 					<Show when={isOrderDirty()}>
 						<div style="display: flex; gap: 8px; align-items: center; margin-left: auto">
 							<span>order changed</span>
-							<button class="big" onClick={cancelOrder}>
+							<button type="button" class="big" onClick={cancelOrder}>
 								cancel
 							</button>
-							<button class="big primary" onClick={saveOrder}>
+							<button type="button" class="big primary" onClick={saveOrder}>
 								save
 							</button>
 						</div>
 					</Show>
-					<button class="big primary" onClick={createRole}>
+					<button type="button" class="big primary" onClick={createRole}>
 						create role
 					</button>
 				</header>
@@ -466,6 +466,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 		<div class="role-edit">
 			<div class="toolbar">
 				<button
+					type="button"
 					onClick={() => {
 						props.edit.setRole({ id: null } as unknown as Role);
 					}}
@@ -473,6 +474,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 					close
 				</button>
 				<button
+					type="button"
 					disabled={
 						!isDirty(
 							props.edit.role as Role,
@@ -483,18 +485,24 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 				>
 					save
 				</button>
-				<button class="danger" onClick={deleteRole(props.edit.role.id!)}>
+				<button
+					type="button"
+					class="danger"
+					onClick={deleteRole(props.edit.role.id!)}
+				>
 					delete role
 				</button>
 			</div>
 			<div class="tabs">
 				<button
+					type="button"
 					classList={{ active: activeTab() === "role" }}
 					onClick={() => setActiveTab("role")}
 				>
 					role
 				</button>
 				<button
+					type="button"
 					classList={{ active: activeTab() === "members" }}
 					onClick={() => setActiveTab("members")}
 				>
@@ -590,7 +598,9 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 							value={memberSearch()}
 							onInput={(e) => setMemberSearch(e.currentTarget.value)}
 						/>
-						<button onClick={addMember}>add member</button>
+						<button type="button" onClick={addMember}>
+							add member
+						</button>
 					</div>
 					<ul class="members-list">
 						<For each={filteredMembers()}>
@@ -603,7 +613,10 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 											{user()?.name ?? member.user_id}
 										</A>
 										<div style="flex:1"></div>
-										<button onClick={() => removeMember(member.user_id)}>
+										<button
+											type="button"
+											onClick={() => removeMember(member.user_id)}
+										>
 											remove
 										</button>
 									</li>

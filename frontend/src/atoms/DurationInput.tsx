@@ -113,12 +113,12 @@ export const DurationInput = (props: DurationInputProps) => {
 		const opts: Array<DropdownItem<number | "forever" | "custom" | null>> = [];
 
 		if (parsed !== null && !presets().some((p) => p.seconds === parsed)) {
-			opts.push({ item: parsed as any, label: currentText });
+			opts.push({ item: parsed, label: currentText });
 		}
 
 		opts.push(
 			...presets().map((p) => ({
-				item: p.seconds as any,
+				item: p.seconds,
 				label: p.label,
 			})),
 		);
@@ -162,9 +162,9 @@ export const DurationInput = (props: DurationInputProps) => {
 			const t =
 				props.value === "forever"
 					? "forever"
-					: props.value === null
+					: props.value === null || props.value === undefined
 						? ""
-						: formatDuration(props.value as number);
+						: formatDuration(props.value);
 			setText(t);
 			dropdown.setValue(t);
 		}
@@ -172,7 +172,7 @@ export const DurationInput = (props: DurationInputProps) => {
 
 	const dropdown = createDropdown<number | "forever" | "custom" | null>({
 		get selected() {
-			return (props.value ?? undefined) as any;
+			return props.value ?? undefined;
 		},
 		ignoreMissingLabel: true,
 		onSelect: (item) => {
@@ -191,10 +191,10 @@ export const DurationInput = (props: DurationInputProps) => {
 						? "forever"
 						: item === null
 							? ""
-							: formatDuration(item as number);
+							: formatDuration(item);
 				setText(t);
 				dropdown.setValue(t);
-				props.onInput(item as any);
+				props.onInput(item);
 			}
 		},
 		onInput: setText,
@@ -202,7 +202,7 @@ export const DurationInput = (props: DurationInputProps) => {
 			if (e.key === "Enter") commit(text());
 		},
 		onBlur: () => commit(text()),
-		options: options as any,
+		options,
 		get mount() {
 			return props.mount ?? document.getElementById("overlay") ?? document.body;
 		},
@@ -220,7 +220,7 @@ export const DurationInput = (props: DurationInputProps) => {
 				setText("");
 				dropdown.setValue("");
 			}
-			dropdown.setSelected(null as any);
+			dropdown.setSelected(null);
 			return v;
 		}
 
@@ -238,7 +238,7 @@ export const DurationInput = (props: DurationInputProps) => {
 			dropdown.setValue(t);
 		}
 
-		dropdown.setSelected(v as any);
+		dropdown.setSelected(v);
 		return v;
 	});
 

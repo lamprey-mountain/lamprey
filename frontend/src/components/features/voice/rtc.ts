@@ -162,7 +162,7 @@ export const createVoiceClient = () => {
 		});
 	}
 
-	function close() {
+	function _close() {
 		conn.close();
 		send({ type: "VoiceState", state: null });
 	}

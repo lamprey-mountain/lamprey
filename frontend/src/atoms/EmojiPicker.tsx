@@ -1,7 +1,7 @@
 import fuzzysort from "fuzzysort";
 import type { Room } from "sdk";
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
-import { useApi2, useEmoji2, useRooms2 } from "@/api";
+import { useEmoji2, useRooms2 } from "@/api";
 import icEmojiActivities from "../assets/emoji-activities.png";
 import icEmojiFaces from "../assets/emoji-faces.png";
 import icEmojiFlags from "../assets/emoji-flags.png";
@@ -251,7 +251,7 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 			<div class="categories">
 				<For each={allGroups()}>
 					{(cat) => (
-						<button onClick={() => scrollToCategory(cat.id)}>
+						<button type="button" onClick={() => scrollToCategory(cat.id)}>
 							<Show
 								when={cat.room}
 								fallback={<img class="icon" src={cat.icon} />}

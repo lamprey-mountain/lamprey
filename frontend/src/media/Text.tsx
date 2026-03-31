@@ -6,7 +6,6 @@ import {
 	For,
 	Show,
 } from "solid-js";
-import { useCtx } from "../context.ts";
 import { useModals } from "../contexts/modal";
 import { flags } from "../flags";
 import { formatBytes, getUrl, type MediaProps } from "./util.tsx";
@@ -129,14 +128,16 @@ export const TextView = (props: MediaProps) => {
 				</div>
 				<div class="actions">
 					<Show when={isHtml() && flags.has("markdown_html_preview")}>
-						<button onClick={() => setPreview(!preview())}>
+						<button type="button" onClick={() => setPreview(!preview())}>
 							{preview() ? "code" : "preview"}
 						</button>
 					</Show>
 					<Show when={isRust() && flags.has("markdown_rust_playground")}>
-						<button onClick={openPlayground}>play</button>
+						<button type="button" onClick={openPlayground}>
+							play
+						</button>
 					</Show>
-					<button class="copy" onClick={copy}>
+					<button type="button" class="copy" onClick={copy}>
 						{copied() ? "copied!" : "copy"}
 					</button>
 				</div>
@@ -157,7 +158,11 @@ export const TextView = (props: MediaProps) => {
 					</div>
 				</Show>
 				<Show when={!preview()}>
-					<button class="expand-btn" onClick={() => setCollapsed((c) => !c)}>
+					<button
+						type="button"
+						class="expand-btn"
+						onClick={() => setCollapsed((c) => !c)}
+					>
 						{collapsed() ? "expand" : "collapse"}
 					</button>
 				</Show>

@@ -216,6 +216,7 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 													</div>
 													<Show when={webhookUser().avatar}>
 														<button
+															type="button"
 															class="remove"
 															onClick={(e) => {
 																e.stopPropagation();
@@ -267,8 +268,11 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 														</Show>
 													</div>
 													<div style="margin-top: 8px; display: flex; gap: 8px">
-														<button onClick={copyWebhookUrl}>copy url</button>
+														<button type="button" onClick={copyWebhookUrl}>
+															copy url
+														</button>
 														<button
+															type="button"
 															onClick={removeWebhook(i.id)}
 															class="destructive"
 														>

@@ -366,10 +366,10 @@ export const ChatMain = (props: ChatProps) => {
 				}
 			>
 				<div class="new-messages">
-					<button class="jump-read" onClick={jumpToLastRead}>
+					<button type="button" class="jump-read" onClick={jumpToLastRead}>
 						jump to unread
 					</button>
-					<button class="mark-read" onClick={markReadImmediately}>
+					<button type="button" class="mark-read" onClick={markReadImmediately}>
 						mark as read
 					</button>
 				</div>

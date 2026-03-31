@@ -323,6 +323,7 @@ const ModalConfirm = (props: {
 			<p>{props.text}</p>
 			<div class="bottom">
 				<button
+					type="button"
 					onClick={() => {
 						props.cont(true);
 						modalCtl.close();
@@ -331,6 +332,7 @@ const ModalConfirm = (props: {
 					okay!
 				</button>
 				<button
+					type="button"
 					ref={cancelBtn}
 					onClick={() => {
 						props.cont(false);
@@ -368,6 +370,7 @@ const ModalPrompt = (props: {
 				<div class="bottom">
 					<input type="submit" value="done!"></input>{" "}
 					<button
+						type="button"
 						onClick={() => {
 							props.cont(null);
 							modalCtl.close();

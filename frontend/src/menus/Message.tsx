@@ -24,7 +24,8 @@ export function MessageMenu(props: MessageMenuProps) {
 	const messagesService = useMessages2();
 	const { markThreadRead } = useReadTracking();
 	const message = messagesService.use(() => props.message_id);
-	const [_ch, chUpdate] = ctx.channel_contexts.get(props.channel_id)!;
+	const channelContext = () => ctx.channel_contexts.get(props.channel_id);
+	const [, chUpdate] = channelContext() ?? [null, undefined];
 	const [, modalCtl] = useModals();
 
 	const currentUser = useCurrentUser();
@@ -45,7 +46,7 @@ export function MessageMenu(props: MessageMenuProps) {
 	};
 
 	const setReply = () => {
-		chUpdate("reply_id", props.message_id);
+		chUpdate?.("reply_id", props.message_id);
 	};
 
 	function markUnread() {
@@ -64,7 +65,7 @@ export function MessageMenu(props: MessageMenuProps) {
 			// If no previous message, we mark everything as unread
 			// In our current system, setting it to undefined or a very old ID might work.
 			// Clearing the local marker makes it look unread until next sync.
-			chUpdate("read_marker_id", undefined);
+			chUpdate?.("read_marker_id", undefined);
 			// We might need an API call to truly clear it on server, but 'ack' usually takes an ID.
 		}
 	}
@@ -95,15 +96,15 @@ export function MessageMenu(props: MessageMenuProps) {
 	}
 
 	const edit = () => {
-		chUpdate("editingMessage", {
+		chUpdate?.("editingMessage", {
 			message_id: props.message_id,
 			selection: "end",
 		});
 	};
 
 	const selectMessage = () => {
-		chUpdate("selectMode", true);
-		chUpdate("selectedMessages", [props.message_id]);
+		chUpdate?.("selectMode", true);
+		chUpdate?.("selectedMessages", [props.message_id]);
 	};
 
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(message())));

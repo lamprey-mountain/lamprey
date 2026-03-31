@@ -280,6 +280,7 @@ export const VideoView = (props: MediaProps) => {
 				/>
 				<div class="footer">
 					<svg
+						aria-hidden="true"
 						class="progress"
 						viewBox="0 0 1 1"
 						preserveAspectRatio="none"
@@ -322,6 +323,7 @@ export const VideoView = (props: MediaProps) => {
 					</div>
 					<div class="controls">
 						<button
+							type="button"
 							onClick={togglePlayPause}
 							title={playing() ? "pause" : "play"}
 						>
@@ -332,6 +334,7 @@ export const VideoView = (props: MediaProps) => {
 							/>
 						</button>
 						<button
+							type="button"
 							onClick={toggleMute}
 							title={getVolumeText()}
 							onWheel={handleVolumeWheel}
@@ -341,6 +344,7 @@ export const VideoView = (props: MediaProps) => {
 							<img class="icon" src={getVolumeIcon()} alt={getVolumeText()} />
 						</button>
 						<button
+							type="button"
 							onClick={toggleFullscreen}
 							title={fullscreen() ? "exit fullscreen" : "enter fullscreen"}
 						>

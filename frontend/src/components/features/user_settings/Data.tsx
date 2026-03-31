@@ -14,7 +14,9 @@ export function Data() {
 			<br />
 			<h3>export</h3>
 			<p>export all of your data in one big data dump</p>
-			<button onClick={handleExportClick}>export</button>
+			<button type="button" onClick={handleExportClick}>
+				export
+			</button>
 		</div>
 	);
 }

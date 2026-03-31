@@ -25,7 +25,6 @@ import {
 import { createStore } from "solid-js/store";
 import { useApi2, useRoomMembers2 } from "@/api";
 import { AvatarWithStatus } from "./avatar/UserAvatar.tsx";
-import { useCtx } from "./context.ts";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { useMenu } from "./contexts/mod.tsx";
 import { usePermissions } from "./hooks/usePermissions.ts";
@@ -277,13 +276,16 @@ export function UserView(props: UserProps) {
 				e.stopPropagation();
 				setMenu(null);
 			}}
+			onKeyDown={(e) => e.key === "Escape" && setMenu(null)}
+			tabIndex={0}
+			role="button"
 		>
 			<div
 				class="banner"
 				style={{
 					"background-image":
 						(props.user.banner &&
-							`url(${getThumbFromId(props.user.banner!, 640)})`) ||
+							`url(${getThumbFromId(props.user.banner, 640)})`) ||
 						undefined,
 				}}
 			/>
@@ -306,20 +308,32 @@ export function UserView(props: UserProps) {
 				<div class="actions">
 					<Switch>
 						<Match when={props.user.relationship?.relation === "Friend"}>
-							<button onClick={removeFriend}>Remove Friend</button>
+							<button type="button" onClick={removeFriend}>
+								Remove Friend
+							</button>
 						</Match>
 						<Match when={props.user.relationship?.relation === "Outgoing"}>
-							<button onClick={removeFriend}>Cancel Request</button>
+							<button type="button" onClick={removeFriend}>
+								Cancel Request
+							</button>
 						</Match>
 						<Match when={props.user.relationship?.relation === "Incoming"}>
-							<button onClick={sendFriendRequest}>Accept Friend</button>
+							<button type="button" onClick={sendFriendRequest}>
+								Accept Friend
+							</button>
 						</Match>
 						<Match when={!props.user.relationship?.relation}>
-							<button onClick={sendFriendRequest}>Add Friend</button>
+							<button type="button" onClick={sendFriendRequest}>
+								Add Friend
+							</button>
 						</Match>
 					</Switch>
-					<button onClick={openDm}>Message</button>
-					<button onClick={openUserMenu}>menu</button>
+					<button type="button" onClick={openDm}>
+						Message
+					</button>
+					<button type="button" onClick={openUserMenu}>
+						menu
+					</button>
 				</div>
 
 				<Show when={props.user.description}>
@@ -343,19 +357,11 @@ export function UserView(props: UserProps) {
 								}}
 							</For>
 							<Show when={hasPermission("RoleApply")}>
-								<li
-									role="button"
-									tabIndex={0}
-									onClick={(e) => {
-										e.stopImmediatePropagation();
-										setEditRoles({
-											x: e.clientX,
-											y: e.clientY,
-										});
-									}}
-									onKeyDown={(e) => {
-										if (e.key === "Enter" || e.key === " ") {
-											e.preventDefault();
+								<li>
+									<button
+										type="button"
+										class="edit-roles-btn"
+										onClick={(e) => {
 											e.stopImmediatePropagation();
 											const rect = (
 												e.currentTarget as HTMLElement
@@ -364,10 +370,10 @@ export function UserView(props: UserProps) {
 												x: rect.x,
 												y: rect.y,
 											});
-										}
-									}}
-								>
-									edit...
+										}}
+									>
+										edit...
+									</button>
 								</li>
 							</Show>
 						</ul>

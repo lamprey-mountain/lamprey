@@ -15,7 +15,6 @@ import icMemberAdd from "./assets/member-add.png";
 import icSettings from "./assets/settings.png";
 import { useVoice } from "./components/features/voice/voice-provider";
 import { useConfig } from "./config";
-import { useCtx } from "./context";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { useMenu } from "./contexts/mod.tsx";
 import { useModals } from "./contexts/modal";
@@ -89,7 +88,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	// Load DMs when not in a room
 	const _dms = !props.room_id ? dms2.useList() : null;
 
-	const room = props.room_id ? rooms2.use(() => props.room_id!) : () => null;
+	const room = props.room_id ? rooms2.use(() => props.room_id) : () => null;
 	const roomMembers2 = useRoomMembers2();
 
 	const canViewChannel = (channel: Channel): boolean => {
@@ -103,10 +102,10 @@ export const ChannelNav = (props: { room_id?: string }) => {
 			channel_id: channel.id,
 		};
 
-		const { permissions } = calculatePermissions(
-			permissionContext,
-			currentUserId()!,
-		);
+		const uid = currentUserId();
+		if (!uid) return false;
+
+		const { permissions } = calculatePermissions(permissionContext, uid);
 
 		return permissions.has("ChannelView");
 	};
@@ -147,12 +146,12 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		if (props.room_id) {
 			// sort by id
 			channels.sort((a, b) => {
-				if (a.position === null && b.position === null) {
+				if (a.position == null && b.position == null) {
 					return a.id < b.id ? 1 : -1;
 				}
-				if (a.position === null) return 1;
-				if (b.position === null) return -1;
-				return a.position! - b.position!;
+				if (a.position == null) return 1;
+				if (b.position == null) return -1;
+				return a.position - b.position;
 			});
 		} else {
 			// sort by activity in dms list
@@ -192,14 +191,15 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					categoryMap.set(c.id, cat);
 				}
 			} else {
-				const children = categoryMap.get(c.parent_id!) ?? [];
+				const parentId = c.parent_id ?? null;
+				const children = categoryMap.get(parentId) ?? [];
 				children.push(c);
-				categoryMap.set(c.parent_id!, children);
+				categoryMap.set(parentId, children);
 			}
 		}
 		return [...categoryMap.entries()]
 			.map(([cid, cs]) => ({
-				category: cid ? channels2.cache.get(cid)! : null,
+				category: cid ? (channels2.cache.get(cid) ?? null) : null,
 				channels: cs,
 			}))
 			.filter(({ channels }) => {
@@ -209,19 +209,19 @@ export const ChannelNav = (props: { room_id?: string }) => {
 				if (!a.category) return -1;
 				if (!b.category) return 1;
 
-				if (a.category.position === null && b.category.position === null) {
+				if (a.category.position == null && b.category.position == null) {
 					return a.category.id < b.category.id ? 1 : -1;
 				}
-				if (a.category.position === null) return 1;
-				if (b.category.position === null) return -1;
+				if (a.category.position == null) return 1;
+				if (b.category.position == null) return -1;
 
-				const p = a.category.position! - b.category.position!;
+				const p = a.category.position - b.category.position;
 				if (p === 0) {
 					return a.category.id < b.category.id ? 1 : -1;
 				}
 
 				return p;
-			}) as any;
+			});
 	});
 
 	// helper to get channel id from the element's data attribute
@@ -230,7 +230,9 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 	const handleDragStart = (e: DragEvent) => {
 		e.stopPropagation();
-		e.dataTransfer!.effectAllowed = "move";
+		if (e.dataTransfer) {
+			e.dataTransfer.effectAllowed = "move";
+		}
 		const id = getChannelId(e);
 		e.dataTransfer?.setData("text/plain", id || "");
 
@@ -246,7 +248,9 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	) => {
 		e.stopPropagation();
 		e.stopImmediatePropagation();
-		e.dataTransfer!.effectAllowed = "move";
+		if (e.dataTransfer) {
+			e.dataTransfer.effectAllowed = "move";
+		}
 		e.dataTransfer?.setData("text/plain", userId);
 		setDragging({ type: "voice", id: userId, channelId });
 	};
@@ -389,11 +393,13 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		setTarget(null);
 
 		if (!dragInfo || !toId || dragInfo.id === toId) return;
+		if (!props.room_id) return;
 
 		// Handle voice participant move
 		if (dragInfo.type === "voice") {
 			const toChannel = channels2.cache.get(toId);
 			if (!toChannel || toChannel.type !== "Voice") return;
+			if (!dragInfo.channelId) return;
 
 			// Move the user to the target voice channel
 			api2.client.http.POST(
@@ -401,7 +407,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 				{
 					params: {
 						path: {
-							channel_id: dragInfo.channelId!,
+							channel_id: dragInfo.channelId,
 							user_id: dragInfo.id,
 						},
 					},
@@ -580,7 +586,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		}
 
 		api2.client.http.PATCH("/api/v1/room/{room_id}/channel", {
-			params: { path: { room_id: props.room_id! } },
+			params: { path: { room_id: props.room_id } },
 			body: {
 				channels: body,
 			},
@@ -605,7 +611,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	return (
 		<nav id="channel-nav">
 			<Show when={flags.has("nav_header")}>
-				<header
+				<button
+					type="button"
 					classList={{
 						"menu-room": !!props.room_id,
 					}}
@@ -622,9 +629,24 @@ export const ChannelNav = (props: { room_id?: string }) => {
 							});
 						}
 					}}
+					onKeyDown={(e) => {
+						if (e.key === "Enter" || e.key === " ") {
+							e.preventDefault();
+							if (props.room_id) {
+								queueMicrotask(() => {
+									setMenu({
+										x: 0,
+										y: 0,
+										type: "room",
+										room_id: props.room_id!,
+									});
+								});
+							}
+						}
+					}}
 				>
 					{props.room_id ? (room()?.name ?? "loading...") : "home"}
-				</header>
+				</button>
 			</Show>
 
 			<ul class="channel-list">
@@ -635,7 +657,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 						draggable={false}
 						end
 					>
-						<img src={icHome} class="icon" /> home
+						<img src={icHome} class="icon" alt="Home" /> home
 					</A>
 				</li>
 
@@ -643,7 +665,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					<Show when={flags.has("inbox")}>
 						<li class="channel-item">
 							<A href="/inbox" class="channel-link" draggable={false} end>
-								<img src={icInbox} class="icon" /> inbox
+								<img src={icInbox} class="icon" alt="Inbox" /> inbox
 							</A>
 						</li>
 					</Show>
@@ -927,6 +949,7 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 				<div class="channel-actions">
 					<Show when={canInvite()}>
 						<button
+							type="button"
 							class="action-button"
 							title="Create Invite"
 							onClick={(e) => {
@@ -944,6 +967,7 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 					</Show>
 
 					<button
+						type="button"
 						class="action-button"
 						title="Channel Settings"
 						onClick={(e) => {

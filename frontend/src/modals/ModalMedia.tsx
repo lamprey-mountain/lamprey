@@ -1,6 +1,5 @@
 import type { Media } from "sdk";
 import { createEffect, createSignal } from "solid-js";
-import { useCtx } from "../context";
 import { useModals } from "../contexts/modal";
 import { getHeight, getUrl, getWidth, Resize } from "../media/util";
 

@@ -1,4 +1,4 @@
-import { useApi2, useRooms2 } from "@/api";
+import { useRooms2 } from "@/api";
 import { useCtx } from "../context.ts";
 import { useModals } from "../contexts/modal";
 import type { RoomNavItem } from "../RoomNav.tsx";

@@ -159,6 +159,7 @@ const TagToolbar = (props: TagToolbarProps) => {
 	return (
 		<div class="message-toolbar">
 			<button
+				type="button"
 				title="Edit tag"
 				aria-label="Edit tag"
 				onClick={(e) => {
@@ -169,6 +170,7 @@ const TagToolbar = (props: TagToolbarProps) => {
 				<img class="icon" src={icEdit} />
 			</button>
 			<button
+				type="button"
 				title="Delete tag"
 				aria-label="Delete tag"
 				onClick={(e) => {

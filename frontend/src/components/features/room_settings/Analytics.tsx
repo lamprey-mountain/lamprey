@@ -86,7 +86,9 @@ export function Metrics(props: VoidProps<{ room: RoomT }>) {
 					onChange={(range) => setDateRange(range)}
 				/>
 
-				<button onClick={resetZoom}>Reset View</button>
+				<button type="button" onClick={resetZoom}>
+					Reset View
+				</button>
 
 				<div class="aggregation-selector">
 					<label>Aggregation Interval:</label>
@@ -337,6 +339,7 @@ function Chart<T extends { bucket: string }>(props: ChartProps<T>) {
 					{(d) => (
 						<Show when={d().length > 0} fallback="No data available">
 							<svg
+								aria-hidden="true"
 								ref={svgRef}
 								viewBox="0 -105 600 120"
 								style="width: 100%; overflow: visible;"

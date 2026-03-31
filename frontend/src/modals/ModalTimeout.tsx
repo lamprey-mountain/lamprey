@@ -93,13 +93,18 @@ export const ModalTimeout = (props: ModalTimeoutProps) => {
 
 				<div class="bottom">
 					<button
+						type="button"
 						class="danger"
 						onClick={handleTimeout}
 						disabled={loading() || !duration()}
 					>
 						{loading() ? "timing out..." : "timeout"}
 					</button>
-					<button onClick={() => modalCtl.close()} disabled={loading()}>
+					<button
+						type="button"
+						onClick={() => modalCtl.close()}
+						disabled={loading()}
+					>
 						cancel
 					</button>
 				</div>

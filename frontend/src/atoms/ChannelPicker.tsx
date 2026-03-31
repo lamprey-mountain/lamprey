@@ -22,6 +22,7 @@ export type ChannelPickerOption = {
 
 const ChevronDown = () => (
 	<svg
+		aria-hidden="true"
 		width="16"
 		height="16"
 		viewBox="0 0 16 16"
@@ -551,6 +552,7 @@ export function MultiChannelPicker(props: {
 							/>
 							{channel.name}
 							<button
+								type="button"
 								onClick={(e) => {
 									e.stopPropagation();
 									props.onRemove(channel);
@@ -600,6 +602,7 @@ export function MultiChannelPicker(props: {
 						ref={setDropdownEl}
 						id={listboxId}
 						class="dropdown-items floating"
+						role="listbox"
 						style={{
 							"z-index": 999999,
 							position: position.strategy,
@@ -622,6 +625,7 @@ export function MultiChannelPicker(props: {
 									return (
 										<li
 											id={itemId}
+											role="option"
 											onMouseOver={() => selector.setHovered(entry.obj)}
 											onMouseDown={(e) => {
 												e.preventDefault();

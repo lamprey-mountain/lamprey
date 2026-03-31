@@ -89,7 +89,7 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 					onInput={(e) => setSearch(e.currentTarget.value)}
 					class="search-pad"
 				/>
-				<button class="primary" onClick={onCreateThread}>
+				<button type="button" class="primary" onClick={onCreateThread}>
 					create thread
 				</button>
 			</div>

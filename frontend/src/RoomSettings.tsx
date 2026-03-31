@@ -17,7 +17,6 @@ import {
 	Roles,
 	Webhooks,
 } from "./components/features/room_settings/mod.tsx";
-import { useCtx } from "./context.ts";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { useModals } from "./contexts/modal.tsx";
 import { flags } from "./flags.ts";
@@ -298,6 +297,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 												{(item) => (
 													<li>
 														<button
+															type="button"
 															class="action"
 															onClick={() => handleAction(item().action)}
 															classList={{

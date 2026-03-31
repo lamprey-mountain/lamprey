@@ -71,7 +71,9 @@ export function Bans(props: VoidProps<{ room: RoomT }>) {
 										</Show>
 									</div>
 									<div class="reason">{ban.reason}</div>
-									<button onClick={[unban, ban.user_id]}>unban</button>
+									<button type="button" onClick={[unban, ban.user_id]}>
+										unban
+									</button>
 								</li>
 							);
 						}}

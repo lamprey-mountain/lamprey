@@ -41,9 +41,15 @@ export function ServerInfo() {
 					{(i) => (
 						<li>
 							<div class="name">{i}</div>
-							<button onClick={[gcDry, i]}>dry</button>
-							<button onClick={[gcMark, i]}>mark</button>
-							<button onClick={[gcSweep, i]}>sweep</button>
+							<button type="button" onClick={[gcDry, i]}>
+								dry
+							</button>
+							<button type="button" onClick={[gcMark, i]}>
+								mark
+							</button>
+							<button type="button" onClick={[gcSweep, i]}>
+								sweep
+							</button>
 						</li>
 					)}
 				</For>
@@ -65,7 +71,9 @@ export function ServerInfo() {
 					{(i) => (
 						<li>
 							<div class="name">{i}</div>
-							<button onClick={[purgeCache, i]}>purge</button>
+							<button type="button" onClick={[purgeCache, i]}>
+								purge
+							</button>
 						</li>
 					)}
 				</For>

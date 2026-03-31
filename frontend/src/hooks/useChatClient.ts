@@ -55,7 +55,9 @@ export function useChatClient(config: Config) {
 			recvLog("recv 🢃", `got op ${op}`, raw);
 		},
 		onSend(data) {
-			sendLog("send 🢁", `sent op ${data.type}`, data);
+			if (data && typeof data === "object" && "type" in data) {
+				sendLog("send 🢁", `sent op ${(data as { type: string }).type}`, data);
+			}
 		},
 		onError(error) {
 			syncLog.error("error", error.message, error);

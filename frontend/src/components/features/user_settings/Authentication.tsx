@@ -36,6 +36,7 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 				<div style="height: 4px"></div>
 				<label>
 					<button
+						type="button"
 						onClick={() => {
 							modalctl.open({ type: "reset_password" });
 						}}
@@ -46,12 +47,16 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 				</label>
 				<div style="height: 4px"></div>
 				<label>
-					<button onClick={() => alert("todo")}>disable</button>
+					<button type="button" onClick={() => alert("todo")}>
+						disable
+					</button>
 					<span style="margin-left:8px">this will disable your account</span>
 				</label>
 				<div style="height: 4px"></div>
 				<label>
-					<button onClick={() => alert("todo")}>self destruct</button>
+					<button type="button" onClick={() => alert("todo")}>
+						self destruct
+					</button>
 					<span style="margin-left:8px">this will delete your account</span>
 				</label>
 			</div>
@@ -128,8 +133,8 @@ function Email(_props: VoidProps<{ user: User }>) {
 									</button>
 								</Show>
 								<button
-									class="danger"
 									type="button"
+									class="danger"
 									onClick={() => deleteEmail(email.email)}
 								>
 									delete
@@ -140,7 +145,7 @@ function Email(_props: VoidProps<{ user: User }>) {
 				</For>
 			</div>
 			<div class="email-add">
-				<button class="primary" type="button" onClick={addEmail}>
+				<button type="button" class="primary" onClick={addEmail}>
 					add email
 				</button>
 			</div>
@@ -224,6 +229,7 @@ function Oauth() {
 						<div class="provider">
 							<div style="flex:1">{provider.name}</div>
 							<button
+								type="button"
 								onClick={() =>
 									connected()
 										? disconnectOauth(provider.id)

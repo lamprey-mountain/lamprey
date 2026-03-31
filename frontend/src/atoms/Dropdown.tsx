@@ -23,6 +23,7 @@ export type DropdownItem<T> = {
 
 const ChevronDown = () => (
 	<svg
+		aria-hidden="true"
 		width="16"
 		height="16"
 		viewBox="0 0 16 16"
@@ -412,6 +413,7 @@ export function MultiDropdown<T>(
 						<span class="chip">
 							{props.options.find((o) => o.item === item)?.label ?? "???"}
 							<button
+								type="button"
 								onClick={(e) => {
 									e.stopPropagation();
 									props.onRemove(item);
@@ -456,6 +458,7 @@ export function MultiDropdown<T>(
 						ref={setDropdownEl}
 						id={listboxId}
 						class="dropdown-items floating"
+						role="listbox"
 						style={{
 							"z-index": 999999,
 							position: position.strategy,
@@ -467,6 +470,7 @@ export function MultiDropdown<T>(
 							<For each={selector.getFiltered()} fallback={"no options"}>
 								{(entry) => (
 									<li
+										role="option"
 										onMouseOver={() => selector.setHovered(entry.obj)}
 										onMouseDown={(e) => {
 											e.preventDefault();

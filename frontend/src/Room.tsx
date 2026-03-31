@@ -98,7 +98,8 @@ export const RoomMembers = (props: { room: RoomT }) => {
 								}}
 							>
 								{row.type === "group" ? (
-									<div
+									<button
+										type="button"
 										class="member-group"
 										onClick={() => {
 											const groupId = JSON.stringify(row.group.id);
@@ -106,9 +107,18 @@ export const RoomMembers = (props: { room: RoomT }) => {
 											newMap.set(groupId, !newMap.get(groupId));
 											setCollapsedGroups(newMap);
 										}}
+										onKeyDown={(e) => {
+											if (e.key === "Enter" || e.key === " ") {
+												e.preventDefault();
+												const groupId = JSON.stringify(row.group.id);
+												const newMap = new ReactiveMap(collapsedGroups());
+												newMap.set(groupId, !newMap.get(groupId));
+												setCollapsedGroups(newMap);
+											}
+										}}
 									>
 										{getGroupName(row.group)} — {row.group.count}
-									</div>
+									</button>
 								) : (
 									(() => {
 										const member = () =>
@@ -132,7 +142,8 @@ export const RoomMembers = (props: { room: RoomT }) => {
 										}
 
 										return (
-											<div
+											<button
+												type="button"
 												class="menu-user"
 												data-user-id={row.item.user.id}
 												classList={{ offline: isOffline() }}
@@ -150,7 +161,24 @@ export const RoomMembers = (props: { room: RoomT }) => {
 														});
 													}
 												}}
-												// FIXME: handle keyboard naviatation
+												onKeyDown={(e) => {
+													if (e.key === "Enter" || e.key === " ") {
+														e.preventDefault();
+														e.stopPropagation();
+														const currentTarget =
+															e.currentTarget as HTMLElement;
+														if (userView()?.ref === currentTarget) {
+															setUserView(null);
+														} else {
+															setUserView({
+																user_id: user()?.id,
+																room_id: props.room.id,
+																ref: currentTarget,
+																source: "member-list",
+															});
+														}
+													}
+												}}
 												onMouseEnter={() => setHovered(true)}
 												onMouseLeave={() => setHovered(false)}
 											>
@@ -158,7 +186,7 @@ export const RoomMembers = (props: { room: RoomT }) => {
 												<span class="text">
 													<span class="name">{name()}</span>
 												</span>
-											</div>
+											</button>
 										);
 									})()
 								)}
@@ -200,12 +228,12 @@ export const RoomHome = (props: { room: RoomT }) => {
 		);
 
 		channels.sort((a, b) => {
-			if (a.position === null && b.position === null) {
+			if (a.position == null && b.position == null) {
 				return a.id < b.id ? 1 : -1;
 			}
-			if (a.position === null) return 1;
-			if (b.position === null) return -1;
-			return a.position! - b.position!;
+			if (a.position == null) return 1;
+			if (b.position == null) return -1;
+			return a.position - b.position;
 		});
 
 		const channelMap = new Map<string, Channel & { threads: Channel[] }>();
@@ -214,9 +242,11 @@ export const RoomHome = (props: { room: RoomT }) => {
 		}
 
 		for (const thread of threads) {
-			const parent = channelMap.get(thread.parent_id!);
-			if (parent) {
-				parent.threads.push(thread);
+			if (thread.parent_id) {
+				const parent = channelMap.get(thread.parent_id);
+				if (parent) {
+					parent.threads.push(thread);
+				}
 			}
 		}
 
@@ -235,14 +265,15 @@ export const RoomHome = (props: { room: RoomT }) => {
 				const cat = categories.get(c.id) ?? [];
 				categories.set(c.id, cat);
 			} else {
-				const children = categories.get(c.parent_id!) ?? [];
+				const parentId = c.parent_id ?? null;
+				const children = categories.get(parentId) ?? [];
 				children.push(c);
-				categories.set(c.parent_id!, children);
+				categories.set(parentId, children);
 			}
 		}
 		const list = [...categories.entries()]
 			.map(([cid, cs]) => ({
-				category: cid ? channels2.cache.get(cid)! : null,
+				category: cid ? (channels2.cache.get(cid) ?? null) : null,
 				channels: cs,
 			}))
 			.sort((a, b) => {
@@ -251,15 +282,15 @@ export const RoomHome = (props: { room: RoomT }) => {
 				if (!b.category) return 1;
 
 				// categories with positions come first
-				if (a.category.position === null && b.category.position === null) {
+				if (a.category.position == null && b.category.position == null) {
 					// newer categories first
 					return a.category.id < b.category.id ? 1 : -1;
 				}
-				if (a.category.position === null) return 1;
-				if (b.category.position === null) return -1;
+				if (a.category.position == null) return 1;
+				if (b.category.position == null) return -1;
 
 				// order by position
-				const p = a.category.position! - b.category.position!;
+				const p = a.category.position - b.category.position;
 				if (p === 0) {
 					// newer categories first
 					return a.category.id < b.category.id ? 1 : -1;
@@ -321,7 +352,9 @@ export const RoomHome = (props: { room: RoomT }) => {
 					></p>
 				</div>
 				<div style="display:flex;flex-direction:column;gap:4px">
-					<button onClick={() => leaveRoom(room_id())}>leave room</button>
+					<button type="button" onClick={() => leaveRoom(room_id())}>
+						leave room
+					</button>
 					<A style="padding: 0 4px" href={`/room/${props.room.id}/settings`}>
 						settings
 					</A>
@@ -333,20 +366,20 @@ export const RoomHome = (props: { room: RoomT }) => {
 				</h3>
 				{/*
 				<div class="thread-filter">
-					<button
+					<button type="button"
 						classList={{ selected: threadFilter() === "active" }}
 						onClick={[setThreadFilter, "active"]}
 					>
 						active
 					</button>
-					<button
+					<button type="button"
 						classList={{ selected: threadFilter() === "archived" }}
 						onClick={[setThreadFilter, "archived"]}
 					>
 						archived
 					</button>
 					<Show when={perms.has("ThreadManage")}>
-						<button
+						<button type="button"
 							classList={{ selected: threadFilter() === "removed" }}
 							onClick={[setThreadFilter, "removed"]}
 						>
@@ -356,6 +389,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 				</div>
 				*/}
 				<button
+					type="button"
 					class="primary"
 					style="margin-left: 8px;border-radius:4px"
 					onClick={() => createThread(room_id())}
@@ -377,35 +411,44 @@ export const RoomHome = (props: { room: RoomT }) => {
 											class="thread menu-thread thread-card"
 											data-thread-id={thread.id}
 										>
-											<header onClick={() => nav(`/thread/${thread.id}`)}>
-												<div class="top">
-													<ChannelIcon channel={thread} />
-													<div class="spacer">{thread.name}</div>
-													<div class="time">
-														Created{" "}
-														<Time date={getTimestampFromUUID(thread.id)} />
-													</div>
+											<button
+												type="button"
+												class="top"
+												onClick={() => nav(`/thread/${thread.id}`)}
+												onKeyDown={(e) =>
+													e.key === "Enter" && nav(`/thread/${thread.id}`)
+												}
+											>
+												<ChannelIcon channel={thread} />
+												<div class="spacer">{thread.name}</div>
+												<div class="time">
+													Created{" "}
+													<Time date={getTimestampFromUUID(thread.id)} />
 												</div>
-												<div
-													class="bottom"
-													onClick={() => nav(`/thread/${thread.id}`)}
-												>
-													<div class="dim">
-														{thread.message_count} message(s) &bull; last msg{" "}
-														<Time
-															date={getTimestampFromUUID(
-																thread.last_version_id ?? thread.id,
-															)}
-														/>
-													</div>
-													<Show when={thread.description}>
-														<div
-															class="description markdown"
-															innerHTML={md(thread.description ?? "") as string}
-														></div>
-													</Show>
+											</button>
+											<button
+												type="button"
+												class="bottom"
+												onClick={() => nav(`/thread/${thread.id}`)}
+												onKeyDown={(e) =>
+													e.key === "Enter" && nav(`/thread/${thread.id}`)
+												}
+											>
+												<div class="dim">
+													{thread.message_count} message(s) &bull; last msg{" "}
+													<Time
+														date={getTimestampFromUUID(
+															thread.last_version_id ?? thread.id,
+														)}
+													/>
 												</div>
-											</header>
+												<Show when={thread.description}>
+													<div
+														class="description markdown"
+														innerHTML={md(thread.description ?? "") as string}
+													></div>
+												</Show>
+											</button>
 										</article>
 									</li>
 								)}

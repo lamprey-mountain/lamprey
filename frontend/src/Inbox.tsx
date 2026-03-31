@@ -128,9 +128,9 @@ const NotificationItem = (props: {
 }) => {
 	const inbox2 = useInbox2();
 	const thread = () => {
-		const threadId = (props.notification as any).thread_id as
-			| string
-			| undefined;
+		const threadId = (
+			props.notification as Notification & { thread_id?: string }
+		).thread_id;
 		if (!threadId) return undefined;
 		// Try to find the thread channel from channels array
 		return props.allData?.channels.find((c) => c.id === threadId);
@@ -156,7 +156,9 @@ const NotificationItem = (props: {
 	};
 
 	const reasonText = () => {
-		switch ((props.notification as any).reason as any) {
+		const reason = (props.notification as Notification & { reason?: string })
+			.reason;
+		switch (reason) {
 			case "Mention":
 				return "Mention";
 			case "MentionBulk":
@@ -165,13 +167,17 @@ const NotificationItem = (props: {
 				return "Reminder";
 			case "Reply":
 				return "Reply";
+			default:
+				return reason ?? "Unknown";
 		}
 	};
 
 	return (
 		<article
 			class="notification"
-			data-type={(props.notification as any).reason as any}
+			data-type={
+				(props.notification as Notification & { reason?: string }).reason
+			}
 		>
 			<header>
 				<input

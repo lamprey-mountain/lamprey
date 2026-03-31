@@ -74,7 +74,12 @@ export const ChannelIcon = (props: {
 					"Wiki",
 				].includes(props.channel.type)}
 			>
-				<svg class="icon" viewBox="0 0 64 64" style={props.style}>
+				<svg
+					aria-hidden="true"
+					class="icon"
+					viewBox="0 0 64 64"
+					style={props.style}
+				>
 					<defs>
 						<mask id="nsfw">
 							<rect width="64" height="64" x="0" y="0" fill="white" />
@@ -105,6 +110,7 @@ export const ChannelIconGdm = (props: {
 	const totalSize = () => size + pad() * 2;
 	return (
 		<svg
+			aria-hidden="true"
 			class="avatar"
 			viewBox={`0 0 ${totalSize()} ${totalSize()}`}
 			role="img"

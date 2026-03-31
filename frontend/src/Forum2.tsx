@@ -175,10 +175,10 @@ const InputReply = (props: { thread: Channel; reply: Message }) => {
 	return (
 		<div class="reply">
 			<button
+				type="button"
 				class="cancel"
 				onClick={() => chUpdate("reply_id", undefined)}
 				ref={tip.content}
-				type="button"
 			>
 				<img class="icon" src={cancelIc} />
 			</button>
@@ -317,6 +317,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 					<div style="display:flex; align-items:center">
 						<input placeholder="search" type="search" class="search-pad" />
 						<button
+							type="button"
 							class="primary"
 							style="margin-left: 8px;border-radius:4px"
 							onClick={() => {
@@ -333,6 +334,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 						</h3>
 						<div class="sort-view-container">
 							<button
+								type="button"
 								ref={setReferenceEl}
 								onClick={() => setMenuOpen(!menuOpen())}
 								class="secondary sort-view-button"
@@ -340,6 +342,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 							>
 								<span>sort and view</span>
 								<svg
+									aria-hidden="true"
 									width="10"
 									height="6"
 									viewBox="0 0 10 6"
@@ -370,6 +373,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 										<menu>
 											<div class="subtext header">sort by</div>
 											<button
+												type="button"
 												onClick={() => {
 													setSortBy("new");
 													setMenuOpen(false);
@@ -382,6 +386,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 												</Show>
 											</button>
 											<button
+												type="button"
 												onClick={() => {
 													setSortBy("activity");
 													setMenuOpen(false);
@@ -394,6 +399,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 												</Show>
 											</button>
 											<button
+												type="button"
 												onClick={() => {
 													setSortBy("reactions:+1");
 													setMenuOpen(false);
@@ -406,6 +412,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 												</Show>
 											</button>
 											<button
+												type="button"
 												onClick={() => {
 													setSortBy("random");
 													setMenuOpen(false);
@@ -418,6 +425,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 												</Show>
 											</button>
 											<button
+												type="button"
 												onClick={() => {
 													setSortBy("hot");
 													setMenuOpen(false);
@@ -430,6 +438,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 												</Show>
 											</button>
 											<button
+												type="button"
 												onClick={() => {
 													setSortBy("hot2");
 													setMenuOpen(false);
@@ -444,6 +453,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 											<hr />
 											<div class="subtext header">view as</div>
 											<button
+												type="button"
 												onClick={() => {
 													setViewAs("list");
 													setMenuOpen(false);
@@ -456,6 +466,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 												</Show>
 											</button>
 											<button
+												type="button"
 												onClick={() => {
 													setViewAs("gallery");
 													setMenuOpen(false);
@@ -474,12 +485,14 @@ export const Forum2 = (props: { channel: Channel }) => {
 						</div>
 						<div class="filters">
 							<button
+								type="button"
 								classList={{ selected: threadFilter() === "active" }}
 								onClick={[setThreadFilter, "active"]}
 							>
 								active
 							</button>
 							<button
+								type="button"
 								classList={{ selected: threadFilter() === "archived" }}
 								onClick={[setThreadFilter, "archived"]}
 							>
@@ -487,6 +500,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 							</button>
 							<Show when={perms.has("ThreadManage")}>
 								<button
+									type="button"
 									classList={{ selected: threadFilter() === "removed" }}
 									onClick={[setThreadFilter, "removed"]}
 								>
@@ -860,8 +874,12 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 				<div style="display:flex">
 					<div style="flex:1">
 						{comments()?.items.length ?? 0} comments
-						<button onClick={collapseAll}>collapse replies</button>
-						<button onClick={expandAll}>expand all</button>
+						<button type="button" onClick={collapseAll}>
+							collapse replies
+						</button>
+						<button type="button" onClick={expandAll}>
+							expand all
+						</button>
 					</div>
 					<div>
 						<div>
@@ -943,6 +961,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 						<div style="flex:1"></div>
 						<menu>
 							<button
+								type="button"
 								class="big primary"
 								onClick={send}
 								disabled={locked() || isEmpty()}
@@ -1148,8 +1167,14 @@ function CommentEditor(props: { message: Message; channel: Channel }) {
 				<EmojiButton picked={onEmojiPick} />
 			</div>
 			<div class="edit-info dim">
-				escape to <button onClick={cancel}>cancel</button> • enter to{" "}
-				<button onClick={() => save(draft())}>save</button>
+				escape to{" "}
+				<button type="button" onClick={cancel}>
+					cancel
+				</button>{" "}
+				• enter to{" "}
+				<button type="button" onClick={() => save(draft())}>
+					save
+				</button>
 			</div>
 		</div>
 	);
@@ -1281,6 +1306,7 @@ const Comment = (props: {
 			<div class="inner">
 				<header>
 					<button
+						type="button"
 						class="collapse"
 						onClick={() =>
 							collapsed()
@@ -1439,7 +1465,12 @@ export function RenderUploadItem(props: {
 				style={{ "background-image": `url(${thumbUrl})` }}
 			></div>
 			<div class="info">
-				<svg class="progress" viewBox="0 0 1 1" preserveAspectRatio="none">
+				<svg
+					aria-hidden="true"
+					class="progress"
+					viewBox="0 0 1 1"
+					preserveAspectRatio="none"
+				>
 					<rect class="bar" height="1" width={getProgress(props.att)}></rect>
 				</svg>
 				<div style="display: flex">
@@ -1456,13 +1487,18 @@ export function RenderUploadItem(props: {
 							<Match
 								when={isUploadingAttachment(props.att) && props.att.paused}
 							>
-								<button onClick={resume}>⬆️</button>
+								<button type="button" onClick={resume}>
+									⬆️
+								</button>
 							</Match>
 							<Match when={isUploadingAttachment(props.att)}>
-								<button onClick={pause}>⏸️</button>
+								<button type="button" onClick={pause}>
+									⏸️
+								</button>
 							</Match>
 						</Switch>
 						<button
+							type="button"
 							onClick={() =>
 								removeAttachment(
 									isUploadingAttachment(props.att) ? props.att.local_id : "",

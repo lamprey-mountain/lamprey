@@ -345,12 +345,16 @@ export function Input(props: InputProps) {
 			</Show>
 			<Switch>
 				<Match when={messages()?.has_forward}>
-					<button class="jump-to-latest" onClick={jumpToLatest}>
+					<button type="button" class="jump-to-latest" onClick={jumpToLatest}>
 						you are viewing older messages &bull; click to jump to present
 					</button>
 				</Match>
 				<Match when={ch.reply_jump_source}>
-					<button class="jump-to-latest" onClick={jumpToReplySource}>
+					<button
+						type="button"
+						class="jump-to-latest"
+						onClick={jumpToReplySource}
+					>
 						you are viewing a reply &bull; click to jump to source
 					</button>
 				</Match>
@@ -468,7 +472,12 @@ export function RenderUploadItem(props: {
 				style={{ "background-image": `url(${thumbUrl})` }}
 			></div>
 			<div class="info">
-				<svg class="progress" viewBox="0 0 1 1" preserveAspectRatio="none">
+				<svg
+					aria-hidden="true"
+					class="progress"
+					viewBox="0 0 1 1"
+					preserveAspectRatio="none"
+				>
 					<rect class="bar" height="1" width={getProgress(props.att)}></rect>
 				</svg>
 				<div style="display: flex">
@@ -483,14 +492,19 @@ export function RenderUploadItem(props: {
 							<Match
 								when={props.att.status === "uploading" && props.att.paused}
 							>
-								<button onClick={resume}>⬆️</button>
+								<button type="button" onClick={resume}>
+									⬆️
+								</button>
 							</Match>
 							<Match when={props.att.status === "uploading"}>
-								<button onClick={pause}>⏸️</button>
+								<button type="button" onClick={pause}>
+									⏸️
+								</button>
 							</Match>
 						</Switch>
 						<Show when={props.att.status === "uploaded"}>
 							<button
+								type="button"
 								onClick={() =>
 									modalCtl.open({
 										type: "attachment",
@@ -502,7 +516,10 @@ export function RenderUploadItem(props: {
 								<img class="icon" src={icEdit} />
 							</button>
 						</Show>
-						<button onClick={() => removeAttachment(props.att.local_id)}>
+						<button
+							type="button"
+							onClick={() => removeAttachment(props.att.local_id)}
+						>
 							<img class="icon" src={icDelete} />
 						</button>
 					</menu>
@@ -536,6 +553,7 @@ const InputReply = (props: { thread: ThreadT; reply: MessageT }) => {
 	return (
 		<div class="reply">
 			<button
+				type="button"
 				class="cancel"
 				onClick={() => chUpdate("reply_id", undefined)}
 				ref={tip.content}

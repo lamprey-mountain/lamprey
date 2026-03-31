@@ -146,46 +146,43 @@ export const Forum = (props: { channel: Channel }) => {
 								class="thread menu-thread thread-card"
 								data-thread-id={thread.id}
 							>
-								<header
+								<button
+									type="button"
+									class="top"
 									onClick={() => nav(`/thread/${thread.id}`)}
 									onKeyDown={(e) =>
 										e.key === "Enter" && nav(`/thread/${thread.id}`)
 									}
-									role="button"
-									tabIndex={0}
 								>
-									<div class="top">
-										<ChannelIcon channel={thread} />
-										<div class="spacer">{thread.name}</div>
-										<div class="time">
-											Created <Time date={getTimestampFromUUID(thread.id)} />
-										</div>
+									<ChannelIcon channel={thread} />
+									<div class="spacer">{thread.name}</div>
+									<div class="time">
+										Created <Time date={getTimestampFromUUID(thread.id)} />
 									</div>
-									<div
-										class="bottom"
-										onClick={() => nav(`/thread/${thread.id}`)}
-										onKeyDown={(e) =>
-											e.key === "Enter" && nav(`/thread/${thread.id}`)
-										}
-										role="button"
-										tabIndex={0}
-									>
-										<div class="dim">
-											{thread.message_count} message(s) &bull; last msg{" "}
-											<Time
-												date={getTimestampFromUUID(
-													thread.last_version_id ?? thread.id,
-												)}
-											/>
-										</div>
-										<Show when={thread.description}>
-											<div
-												class="description markdown"
-												innerHTML={md(thread.description ?? "") as string}
-											></div>
-										</Show>
+								</button>
+								<button
+									type="button"
+									class="bottom"
+									onClick={() => nav(`/thread/${thread.id}`)}
+									onKeyDown={(e) =>
+										e.key === "Enter" && nav(`/thread/${thread.id}`)
+									}
+								>
+									<div class="dim">
+										{thread.message_count} message(s) &bull; last msg{" "}
+										<Time
+											date={getTimestampFromUUID(
+												thread.last_version_id ?? thread.id,
+											)}
+										/>
 									</div>
-								</header>
+									<Show when={thread.description}>
+										<div
+											class="description markdown"
+											innerHTML={md(thread.description ?? "") as string}
+										></div>
+									</Show>
+								</button>
 							</article>
 						</li>
 					)}

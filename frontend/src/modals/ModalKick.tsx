@@ -78,10 +78,12 @@ export const ModalKick = (props: ModalKickProps) => {
 				</div>
 
 				<div class="bottom">
-					<button class="danger" onClick={handleKick}>
+					<button type="button" class="danger" onClick={handleKick}>
 						kick
 					</button>
-					<button onClick={() => modalCtl.close()}>cancel</button>
+					<button type="button" onClick={() => modalCtl.close()}>
+						cancel
+					</button>
 				</div>
 			</div>
 		</Modal>
