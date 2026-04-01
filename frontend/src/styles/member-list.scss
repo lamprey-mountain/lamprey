@@ -18,6 +18,11 @@
 		height: 24px;
 		display: flex;
 		align-items: center;
+		background: none;
+		border: none;
+		width: 100%;
+		text-align: left;
+		padding: 0;
 	}
 
 	& .menu-user {
@@ -27,6 +32,12 @@
 		cursor: pointer;
 		height: 44px;
 		box-sizing: border-box;
+		background: none;
+		border: none;
+		font: inherit;
+		width: 100%;
+		text-align: left;
+		color: inherit;
 
 		& > .text {
 			grid-area: name;

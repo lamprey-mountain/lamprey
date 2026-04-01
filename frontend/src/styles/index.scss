@@ -111,25 +111,38 @@ input[type="submit"] {
 	border-radius: 4px;
 	max-width: 800px;
 
-	& > header {
+	& > .top, & > .bottom {
 		display: flex;
-		flex-direction: column;
+		width: 100%;
+		background: none;
+		border: none;
+		text-align: left;
+		font: inherit;
+		color: inherit;
 		padding: 4px 8px;
 		cursor: pointer;
+	}
 
-		& > .top {
-			display: flex;
-			align-items: center;
-			gap: 8px;
+	& > .top {
+		align-items: center;
+		gap: 8px;
 
-			& > .spacer {
-				@include truncate;
-				flex: 1;
-			}
+		& > .spacer {
+			@include truncate;
+			flex: 1;
+		}
 
-			& > .time {
-				color: $fg-500;
-			}
+		& > .time {
+			color: $fg-500;
+		}
+	}
+
+	& > .bottom {
+		flex-direction: column;
+		
+		.dim {
+			font-size: 0.8rem;
+			color: $fg-500;
 		}
 
 		.description {
@@ -1081,6 +1094,12 @@ article.message {
 	border-radius: 4px;
 	overflow: hidden;
 	width: 320px;
+	display: block;
+	text-align: left;
+	font: inherit;
+	color: inherit;
+	padding: 0;
+	cursor: default;
 
 	.banner {
 		height: 96px;
@@ -1146,6 +1165,19 @@ article.message {
 			background-color: $bg-300;
 			padding: 4px 8px;
 			border-radius: 4px;
+
+			.edit-roles-btn {
+				background: none;
+				border: none;
+				padding: 0;
+				font: inherit;
+				color: inherit;
+				cursor: pointer;
+				
+				&:hover {
+					text-decoration: underline;
+				}
+			}
 		}
 
 		.note textarea {
@@ -3790,6 +3822,13 @@ kbd {
 		display: flex;
 		gap: 8px;
 		align-items: center;
+		background: none;
+		border: none;
+		width: 100%;
+		text-align: left;
+		font: inherit;
+		color: inherit;
+		padding: 0;
 
 		.avatar {
 			padding: 8px;
