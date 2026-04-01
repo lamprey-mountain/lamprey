@@ -42,14 +42,27 @@
 	overflow-y: auto;
 	scrollbar-width: none;
 
-	& > header {
+	& > button#room-name-btn {
 		position: sticky;
 		top: 0;
 		z-index: 1;
 		min-height: 48px;
 		background: $bg-100;
 		padding: 8px 16px;
+		border: none;
 		border-bottom: solid $sep-300 1px;
+		
+		/* Button reset */
+		border-radius: 0;
+		text-align: left;
+		font: inherit;
+		width: 100%;
+		color: $fg-200;
+		cursor: pointer;
+		
+		&:hover {
+			background-color: $bg-200;
+		}
 	}
 
 	.channel-list {
