@@ -12,7 +12,7 @@ import {
 } from "../../../utils/general";
 import { MessageView } from "./Message.tsx";
 
-export type TimelineItemT = { id: string; class?: string } & (
+export type TimelineItemT = { id: string; class?: string; nonce?: string } & (
 	| { type: "info"; header: boolean }
 	| { type: "editor" }
 	| { type: "spacer" }
@@ -218,6 +218,7 @@ export function renderTimeline({
 			item = {
 				type: "message",
 				id: msg.id,
+				nonce: msg.nonce,
 				message: msg as any,
 				separate,
 				class: separate ? "separate" : "",
