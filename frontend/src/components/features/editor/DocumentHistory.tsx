@@ -130,7 +130,11 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 		<div class="document-history">
 			<header class="document-history-header">
 				<h3>History</h3>
-				<button type="button" onClick={() => setCh("history_view", false)}>
+				<button
+					type="button"
+					class="button"
+					onClick={() => setCh("history_view", false)}
+				>
 					Close
 				</button>
 			</header>

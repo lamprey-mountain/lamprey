@@ -569,6 +569,7 @@ export const Calendar = (props: { channel: Channel }) => {
 					<div class="filters">
 						<button
 							type="button"
+							class="button"
 							onClick={() => setView("week")}
 							classList={{ active: view() === "week" }}
 						>
@@ -576,6 +577,7 @@ export const Calendar = (props: { channel: Channel }) => {
 						</button>
 						<button
 							type="button"
+							class="button"
 							onClick={() => setView("month")}
 							classList={{ active: view() === "month" }}
 						>
@@ -583,6 +585,7 @@ export const Calendar = (props: { channel: Channel }) => {
 						</button>
 						<button
 							type="button"
+							class="button"
 							onClick={() => setView("timeline")}
 							classList={{ active: view() === "timeline" }}
 						>
@@ -590,10 +593,10 @@ export const Calendar = (props: { channel: Channel }) => {
 						</button>
 					</div>
 					<div class="filters" style="margin-left:4px">
-						<button type="button" onClick={prevMonth}>
+						<button type="button" class="button" onClick={prevMonth}>
 							prev
 						</button>
-						<button type="button" onClick={nextMonth}>
+						<button type="button" class="button" onClick={nextMonth}>
 							next
 						</button>
 						<button type="button" class="primary" onClick={goToToday}>

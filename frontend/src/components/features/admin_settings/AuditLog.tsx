@@ -26,8 +26,12 @@ export function AuditLog(_props: VoidProps<{ room: Room }>) {
 			<h2>audit log</h2>
 			<Show when={false}>
 				{/* TODO: expand/collapse audit log entries */}
-				<button>expand all</button>
-				<button>collapse all</button>
+				<button type="button" class="button">
+					expand all
+				</button>
+				<button type="button" class="button">
+					collapse all
+				</button>
 			</Show>
 			<Show when={false}>
 				{/* TODO: filter audit log by event type, actor, time range */}

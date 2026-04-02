@@ -308,30 +308,30 @@ export function UserView(props: UserProps) {
 				<div class="actions">
 					<Switch>
 						<Match when={props.user.relationship?.relation === "Friend"}>
-							<button type="button" onClick={removeFriend}>
+							<button type="button" class="button" onClick={removeFriend}>
 								Remove Friend
 							</button>
 						</Match>
 						<Match when={props.user.relationship?.relation === "Outgoing"}>
-							<button type="button" onClick={removeFriend}>
+							<button type="button" class="button" onClick={removeFriend}>
 								Cancel Request
 							</button>
 						</Match>
 						<Match when={props.user.relationship?.relation === "Incoming"}>
-							<button type="button" onClick={sendFriendRequest}>
+							<button type="button" class="button" onClick={sendFriendRequest}>
 								Accept Friend
 							</button>
 						</Match>
 						<Match when={!props.user.relationship?.relation}>
-							<button type="button" onClick={sendFriendRequest}>
+							<button type="button" class="button" onClick={sendFriendRequest}>
 								Add Friend
 							</button>
 						</Match>
 					</Switch>
-					<button type="button" onClick={openDm}>
+					<button type="button" class="button" onClick={openDm}>
 						Message
 					</button>
-					<button type="button" onClick={openUserMenu}>
+					<button type="button" class="button" onClick={openUserMenu}>
 						menu
 					</button>
 				</div>

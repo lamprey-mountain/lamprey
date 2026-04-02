@@ -211,6 +211,7 @@ export const Voice = (p: { channel: Channel }) => {
 				<div style="flex:1"></div>
 				<button
 					type="button"
+					class="button"
 					onClick={toggleChat}
 					classList={{ active: isChatOpen() }}
 					title="Show chat"
@@ -220,23 +221,23 @@ export const Voice = (p: { channel: Channel }) => {
 			</header>
 			<div class="bottom">
 				<div class="controls">
-					<button type="button" onClick={actions.toggleDeafened}>
+					<button type="button" class="button" onClick={actions.toggleDeafened}>
 						<ToggleIcon checked={!voice.deafened} src={iconHeadphones} />
 					</button>
-					<button type="button" onClick={actions.toggleCam}>
+					<button type="button" class="button" onClick={actions.toggleCam}>
 						<ToggleIcon checked={!voice.cameraHidden} src={iconCamera} />
 					</button>
-					<button type="button" onClick={actions.toggleMic}>
+					<button type="button" class="button" onClick={actions.toggleMic}>
 						<ToggleIcon checked={!voice.muted} src={iconMic} />
 					</button>
-					<button type="button" onClick={actions.toggleScreen}>
+					<button type="button" class="button" onClick={actions.toggleScreen}>
 						<ToggleIcon
 							checked={voice.screenshareEnabled}
 							src={iconScreenshare}
 						/>
 					</button>
 					<Show when={flags.has("voice_music")}>
-						<button type="button" onClick={actions.playMusic}>
+						<button type="button" class="button" onClick={actions.playMusic}>
 							<ToggleIcon checked={voice.musicPlaying} src={iconMusic} />
 						</button>
 					</Show>
@@ -325,7 +326,12 @@ export const VoiceTray = () => {
 						<div style="width:8px"></div>
 						<Duration ms={connectedDuration()} />
 					</div>
-					<button style="width: auto" onClick={actions.disconnect}>
+					<button
+						type="button"
+						class="button"
+						style="width: auto"
+						onClick={actions.disconnect}
+					>
 						disconnect
 					</button>
 				</div>
@@ -339,11 +345,17 @@ export const VoiceTray = () => {
 						</a>
 					</div>
 					<div style="flex:1"></div>
-					<button data-tooltip="toggle camera" onClick={actions.toggleCam}>
+					<button
+						type="button"
+						class="button"
+						data-tooltip="toggle camera"
+						onClick={actions.toggleCam}
+					>
 						<ToggleIcon checked={!voice.cameraHidden} src={iconCamera} />
 					</button>
 					<button
 						type="button"
+						class="button"
 						data-tooltip="toggle screenshare"
 						onClick={actions.toggleScreen}
 					>
@@ -365,13 +377,13 @@ export const VoiceTray = () => {
 						</Show>
 					</Show>
 				</div>
-				<button type="button" onClick={actions.toggleMic}>
+				<button type="button" class="button" onClick={actions.toggleMic}>
 					<ToggleIcon checked={!voice.muted} src={iconMic} />
 				</button>
-				<button type="button" onClick={actions.toggleDeafened}>
+				<button type="button" class="button" onClick={actions.toggleDeafened}>
 					<ToggleIcon checked={!voice.deafened} src={iconHeadphones} />
 				</button>
-				<button type="button" onClick={() => nav("/settings")}>
+				<button type="button" class="button" onClick={() => nav("/settings")}>
 					<img class="icon" src={iconSettings} />
 				</button>
 			</div>

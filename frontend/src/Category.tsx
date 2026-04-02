@@ -83,6 +83,7 @@ export const Category = (props: { channel: Channel }) => {
 				<div class="thread-filter">
 					<button
 						type="button"
+						class="button"
 						classList={{ selected: threadFilter() === "active" }}
 						onClick={[setThreadFilter, "active"]}
 					>
@@ -90,6 +91,7 @@ export const Category = (props: { channel: Channel }) => {
 					</button>
 					<button
 						type="button"
+						class="button"
 						classList={{ selected: threadFilter() === "archived" }}
 						onClick={[setThreadFilter, "archived"]}
 					>
@@ -98,6 +100,7 @@ export const Category = (props: { channel: Channel }) => {
 					<Show when={perms.has("ThreadManage")}>
 						<button
 							type="button"
+							class="button"
 							classList={{ selected: threadFilter() === "removed" }}
 							onClick={[setThreadFilter, "removed"]}
 						>

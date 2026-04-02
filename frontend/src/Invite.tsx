@@ -177,9 +177,15 @@ export const RouteInviteInner = (props: { code: string }) => {
 						<Show when={invite()?.target.type === "Server" && false}>
 							<div class="warning">
 								<div>you need to add an authentication method first!</div>
-								<button type="button">add email</button>
-								<button type="button">add password</button>
-								<button type="button">login with oauth</button>
+								<button type="button" class="button">
+									add email
+								</button>
+								<button type="button" class="button">
+									add password
+								</button>
+								<button type="button" class="button">
+									login with oauth
+								</button>
 							</div>
 						</Show>
 					</div>

@@ -414,6 +414,7 @@ export function MultiDropdown<T>(
 							{props.options.find((o) => o.item === item)?.label ?? "???"}
 							<button
 								type="button"
+								class="button"
 								onClick={(e) => {
 									e.stopPropagation();
 									props.onRemove(item);

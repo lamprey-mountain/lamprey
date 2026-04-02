@@ -80,6 +80,7 @@ export function Connections() {
 							<div class="dim">
 								<button
 									type="button"
+									class="button"
 									onClick={() =>
 										navigator.clipboard.writeText(c.application.id)
 									}
@@ -120,6 +121,7 @@ export function Connections() {
 			<div class="add-connection">
 				<button
 					type="button"
+					class="button"
 					onClick={() => {
 						setConnecting(true);
 						// TODO: show list of available applications to connect

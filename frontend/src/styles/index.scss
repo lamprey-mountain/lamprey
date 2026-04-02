@@ -48,7 +48,7 @@
 	color: $fg-200;
 }
 
-button,
+button.button,
 input[type="submit"] {
 	background-color: $bg-300;
 	cursor: pointer;
@@ -139,7 +139,7 @@ input[type="submit"] {
 
 	& > .bottom {
 		flex-direction: column;
-		
+
 		.dim {
 			font-size: 0.8rem;
 			color: $fg-500;
@@ -1173,7 +1173,7 @@ article.message {
 				font: inherit;
 				color: inherit;
 				cursor: pointer;
-				
+
 				&:hover {
 					text-decoration: underline;
 				}

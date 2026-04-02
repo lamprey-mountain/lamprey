@@ -66,6 +66,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 					{(a) => (
 						<button
 							type="button"
+							class="button"
 							classList={{ active: tab() === a.tab }}
 							onClick={() => setTab(a.tab)}
 						>
@@ -73,7 +74,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 						</button>
 					)}
 				</For>
-				<button type="button" onClick={props.onClose}>
+				<button type="button" class="button" onClick={props.onClose}>
 					close
 				</button>
 			</nav>
@@ -157,6 +158,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 										<h3>local sdp ({s().type})</h3>
 										<button
 											type="button"
+											class="button"
 											style="margin-left: 8px"
 											onClick={() => navigator.clipboard.writeText(s().sdp)}
 										>
@@ -176,6 +178,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 										<h3>remote sdp ({s().type})</h3>
 										<button
 											type="button"
+											class="button"
 											style="margin-left: 8px"
 											onClick={() => navigator.clipboard.writeText(s().sdp)}
 										>
@@ -442,6 +445,7 @@ const VoiceStats = () => {
 		<div style="padding: 8px">
 			<button
 				type="button"
+				class="button"
 				style="display:none"
 				onClick={() =>
 					setFormat(

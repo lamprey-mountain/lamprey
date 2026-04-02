@@ -35,7 +35,7 @@ export const ModalCameraPreview = (props: ModalCameraPreviewProps) => {
 					style="width: 100%; max-width: 480px; border-radius: 8px; background: #000;"
 				/>
 				<div class="bottom">
-					<button type="button" onClick={() => modalCtl.close()}>
+					<button type="button" class="button" onClick={() => modalCtl.close()}>
 						done
 					</button>
 				</div>

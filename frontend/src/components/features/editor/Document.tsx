@@ -191,6 +191,7 @@ const DocumentHeader = (
 			<div class="menu-group">
 				<button
 					type="button"
+					class="button"
 					ref={setBranchBtn}
 					onClick={(e) => {
 						e.stopPropagation();
@@ -203,6 +204,7 @@ const DocumentHeader = (
 				<Show when={true}>
 					<button
 						type="button"
+						class="button"
 						ref={setMergeBtn}
 						onClick={(e) => {
 							e.stopPropagation();
@@ -215,6 +217,7 @@ const DocumentHeader = (
 				</Show>
 				<button
 					type="button"
+					class="button"
 					onClick={(e) => {
 						e.stopPropagation();
 						toggleHistory();
@@ -276,6 +279,7 @@ const DocumentHeader = (
 				</button>
 				<button
 					type="button"
+					class="button"
 					ref={setInsertBtn}
 					onClick={(e) => {
 						e.stopPropagation();
@@ -289,6 +293,7 @@ const DocumentHeader = (
 			<div class="menu-group">
 				<button
 					type="button"
+					class="button"
 					ref={setExportBtn}
 					onClick={(e) => {
 						e.stopPropagation();
@@ -328,7 +333,7 @@ const DocumentHeader = (
 									setActive(null);
 								}}
 							>
-								<button>
+								<button type="button" class="button">
 									<img class="icon" src={icBranchDefault} />
 									<div class="info">
 										<div>default</div>
@@ -337,7 +342,7 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li>
-								<button>
+								<button type="button" class="button">
 									<img class="icon" src={icBranch} />
 									<div class="info">
 										<div>branch name here</div>
@@ -348,7 +353,7 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li class="private">
-								<button>
+								<button type="button" class="button">
 									<img class="icon" src={icBranchPrivate} />
 									<div class="info">
 										<div>branch name here</div>
@@ -358,7 +363,7 @@ const DocumentHeader = (
 							</li>
 							<li class="separator"></li>
 							<li class="new">
-								<button>
+								<button type="button" class="button">
 									<img class="icon" src={icBranchNew} />
 									<div class="info">
 										<div>new</div>
@@ -367,7 +372,7 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li class="new">
-								<button>
+								<button type="button" class="button">
 									<img class="icon" src={icBranchFork} />
 									<div class="info">
 										<div>new from changes</div>
@@ -378,7 +383,7 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li class="new">
-								<button>
+								<button type="button" class="button">
 									<img class="icon" src={icBranchFork} />
 									<div class="info">
 										<div>new private</div>
@@ -407,7 +412,7 @@ const DocumentHeader = (
 					>
 						<ul>
 							<li>
-								<button>
+								<button type="button" class="button">
 									<img class="icon" src={icMergeFull} />
 									<div class="info">
 										<div>full</div>
@@ -418,7 +423,7 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li>
-								<button>
+								<button type="button" class="button">
 									<img class="icon" src={icMergeCherrypick} />
 									<div class="info">
 										<div>cherry pick</div>
@@ -445,7 +450,11 @@ const DocumentHeader = (
 					>
 						<ul>
 							<li>
-								<button type="button" onClick={() => setActive(null)}>
+								<button
+									type="button"
+									class="button"
+									onClick={() => setActive(null)}
+								>
 									<div class="info">
 										<div>{false ? "open in new tab" : "publish document"}</div>
 									</div>
@@ -453,7 +462,7 @@ const DocumentHeader = (
 							</li>
 							<li class="separator"></li>
 							<li>
-								<button type="button" onClick={handleExportHtml}>
+								<button type="button" class="button" onClick={handleExportHtml}>
 									<div class="info">
 										<div>download as html</div>
 										<div class="dim">single file .html file</div>
@@ -461,7 +470,11 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li>
-								<button type="button" onClick={handleExportMarkdown}>
+								<button
+									type="button"
+									class="button"
+									onClick={handleExportMarkdown}
+								>
 									<div class="info">
 										<div>download as markdown</div>
 									</div>
@@ -486,7 +499,11 @@ const DocumentHeader = (
 					>
 						<ul>
 							<li>
-								<button type="button" onClick={() => setActive(null)}>
+								<button
+									type="button"
+									class="button"
+									onClick={() => setActive(null)}
+								>
 									<div class="info">
 										<div>media</div>
 										<div class="dim">insert images, videos, and audio</div>
@@ -494,7 +511,11 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li>
-								<button type="button" onClick={() => setActive(null)}>
+								<button
+									type="button"
+									class="button"
+									onClick={() => setActive(null)}
+								>
 									<div class="info">
 										<div>table</div>
 										<div class="dim">insert tables with rows and columns</div>
@@ -502,7 +523,11 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li>
-								<button type="button" onClick={() => setActive(null)}>
+								<button
+									type="button"
+									class="button"
+									onClick={() => setActive(null)}
+								>
 									<div class="info">
 										<div>code</div>
 										<div class="dim">
@@ -512,7 +537,11 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li>
-								<button type="button" onClick={() => setActive(null)}>
+								<button
+									type="button"
+									class="button"
+									onClick={() => setActive(null)}
+								>
 									<div class="info">
 										<div>symbols</div>
 										<div class="dim">insert special characters and symbols</div>
@@ -520,7 +549,11 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li>
-								<button type="button" onClick={() => setActive(null)}>
+								<button
+									type="button"
+									class="button"
+									onClick={() => setActive(null)}
+								>
 									<div class="info">
 										<div>time</div>
 										<div class="dim">insert current date and time</div>
@@ -1151,6 +1184,7 @@ const DocumentMain = (
 								<li>
 									<button
 										type="button"
+										class="button"
 										onClick={() => handleRestoreVersion("current")}
 									>
 										<div class="info">
@@ -1162,6 +1196,7 @@ const DocumentMain = (
 								<li>
 									<button
 										type="button"
+										class="button"
 										onClick={() => handleRestoreVersion("new")}
 									>
 										<div class="info">

@@ -125,8 +125,12 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 				<div style="flex:1;background:#111;border-radius:4px;overflow:hidden;">
 					<div style="width:12%;background:oklch(var(--color-link-500));height:100%"></div>
 				</div>
-				<button>record</button>
-				<button>play</button>
+				<button type="button" class="button">
+					record
+				</button>
+				<button type="button" class="button">
+					play
+				</button>
 			</div>
 			<h3 class="dim title">audio processing</h3>
 			<CheckboxOption

@@ -90,6 +90,7 @@ export const FormattingToolbar = (_props: FormattingToolbarProps) => {
 		<div class="formatting-toolbar">
 			<button
 				type="button"
+				class="button"
 				onMouseDown={(e) => e.preventDefault()}
 				onClick={() => applyFormat("**")}
 				title="Bold"
@@ -98,6 +99,7 @@ export const FormattingToolbar = (_props: FormattingToolbarProps) => {
 			</button>
 			<button
 				type="button"
+				class="button"
 				onMouseDown={(e) => e.preventDefault()}
 				onClick={() => applyFormat("*")}
 				title="Italic"
@@ -106,6 +108,7 @@ export const FormattingToolbar = (_props: FormattingToolbarProps) => {
 			</button>
 			<button
 				type="button"
+				class="button"
 				onMouseDown={(e) => e.preventDefault()}
 				onClick={() => applyFormat("`")}
 				title="Code"
@@ -114,6 +117,7 @@ export const FormattingToolbar = (_props: FormattingToolbarProps) => {
 			</button>
 			<button
 				type="button"
+				class="button"
 				onMouseDown={(e) => e.preventDefault()}
 				onClick={() => applyFormat("~~")}
 				title="Strikethrough"

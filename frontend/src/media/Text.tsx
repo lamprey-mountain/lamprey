@@ -128,12 +128,16 @@ export const TextView = (props: MediaProps) => {
 				</div>
 				<div class="actions">
 					<Show when={isHtml() && flags.has("markdown_html_preview")}>
-						<button type="button" onClick={() => setPreview(!preview())}>
+						<button
+							type="button"
+							class="button"
+							onClick={() => setPreview(!preview())}
+						>
 							{preview() ? "code" : "preview"}
 						</button>
 					</Show>
 					<Show when={isRust() && flags.has("markdown_rust_playground")}>
-						<button type="button" onClick={openPlayground}>
+						<button type="button" class="button" onClick={openPlayground}>
 							play
 						</button>
 					</Show>

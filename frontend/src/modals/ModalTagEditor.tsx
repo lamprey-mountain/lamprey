@@ -125,7 +125,7 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 				{error() && <div class="error">{error()}</div>}
 
 				<div class="bottom">
-					<button type="button" onClick={modalCtl.close}>
+					<button type="button" class="button" onClick={modalCtl.close}>
 						Cancel
 					</button>
 					<button type="submit" class="primary" disabled={loading()}>

@@ -71,7 +71,7 @@ export const DragAndDrop = () => {
 			role="listbox"
 			tabIndex={0}
 		>
-			<button type="button" onClick={reset}>
+			<button type="button" class="button" onClick={reset}>
 				reset
 			</button>
 			<ul>

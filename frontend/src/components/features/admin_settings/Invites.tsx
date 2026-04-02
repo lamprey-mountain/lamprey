@@ -79,6 +79,7 @@ export function Invites(_props: VoidProps<{ room: RoomT }>) {
 										<div>
 											<button
 												type="button"
+												class="button"
 												onClick={() => deleteInvite(i.code)}
 											>
 												delete
