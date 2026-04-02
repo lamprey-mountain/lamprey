@@ -17,7 +17,11 @@ function BlockedUserEntry(props: {
 				<li class="blocked-user-item">
 					<Avatar user={u()} />
 					<span class="name">{u().name}</span>
-					<button type="button" onClick={() => props.onUnblock(u().id)}>
+					<button
+						type="button"
+						class="button"
+						onClick={() => props.onUnblock(u().id)}
+					>
 						Unblock
 					</button>
 				</li>

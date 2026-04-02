@@ -251,7 +251,11 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 			<div class="categories">
 				<For each={allGroups()}>
 					{(cat) => (
-						<button type="button" onClick={() => scrollToCategory(cat.id)}>
+						<button
+							type="button"
+							class="button"
+							onClick={() => scrollToCategory(cat.id)}
+						>
 							<Show
 								when={cat.room}
 								fallback={<img class="icon" src={cat.icon} />}

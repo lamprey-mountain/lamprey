@@ -492,12 +492,12 @@ export function RenderUploadItem(props: {
 							<Match
 								when={props.att.status === "uploading" && props.att.paused}
 							>
-								<button type="button" onClick={resume}>
+								<button type="button" class="button" onClick={resume}>
 									⬆️
 								</button>
 							</Match>
 							<Match when={props.att.status === "uploading"}>
-								<button type="button" onClick={pause}>
+								<button type="button" class="button" onClick={pause}>
 									⏸️
 								</button>
 							</Match>
@@ -505,6 +505,7 @@ export function RenderUploadItem(props: {
 						<Show when={props.att.status === "uploaded"}>
 							<button
 								type="button"
+								class="button"
 								onClick={() =>
 									modalCtl.open({
 										type: "attachment",
@@ -518,6 +519,7 @@ export function RenderUploadItem(props: {
 						</Show>
 						<button
 							type="button"
+							class="button"
 							onClick={() => removeAttachment(props.att.local_id)}
 						>
 							<img class="icon" src={icDelete} />

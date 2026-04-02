@@ -467,6 +467,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 			<div class="toolbar">
 				<button
 					type="button"
+					class="button"
 					onClick={() => {
 						props.edit.setRole({ id: null } as unknown as Role);
 					}}
@@ -475,6 +476,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 				</button>
 				<button
 					type="button"
+					class="button"
 					disabled={
 						!isDirty(
 							props.edit.role as Role,
@@ -496,6 +498,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 			<div class="tabs">
 				<button
 					type="button"
+					class="button"
 					classList={{ active: activeTab() === "role" }}
 					onClick={() => setActiveTab("role")}
 				>
@@ -503,6 +506,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 				</button>
 				<button
 					type="button"
+					class="button"
 					classList={{ active: activeTab() === "members" }}
 					onClick={() => setActiveTab("members")}
 				>
@@ -598,7 +602,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 							value={memberSearch()}
 							onInput={(e) => setMemberSearch(e.currentTarget.value)}
 						/>
-						<button type="button" onClick={addMember}>
+						<button type="button" class="button" onClick={addMember}>
 							add member
 						</button>
 					</div>
@@ -615,6 +619,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 										<div style="flex:1"></div>
 										<button
 											type="button"
+											class="button"
 											onClick={() => removeMember(member.user_id)}
 										>
 											remove

@@ -612,6 +612,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		<nav id="channel-nav">
 			<Show when={flags.has("nav_header")}>
 				<button
+					id="room-name-btn"
 					type="button"
 					classList={{
 						"menu-room": !!props.room_id,
@@ -950,7 +951,7 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 					<Show when={canInvite()}>
 						<button
 							type="button"
-							class="action-button"
+							class="action-button button"
 							title="Create Invite"
 							onClick={(e) => {
 								e.preventDefault();
@@ -968,7 +969,7 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 
 					<button
 						type="button"
-						class="action-button"
+						class="action-button button"
 						title="Channel Settings"
 						onClick={(e) => {
 							e.preventDefault();

@@ -116,6 +116,7 @@ export function Submenu(
 		>
 			<button
 				type="button"
+				class="button"
 				onClick={(e) => {
 					e.stopPropagation();
 					props.onClick?.(e);
@@ -185,6 +186,7 @@ export function Item(
 		<li>
 			<button
 				type="button"
+				class="button"
 				onClick={(e) => {
 					props.onClick?.(e);
 					if (!props.onClick) {

@@ -103,10 +103,18 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 										</Show>
 									</div>
 									<menu>
-										<button type="button" onClick={() => renameSession(s.id)}>
+										<button
+											type="button"
+											class="button"
+											onClick={() => renameSession(s.id)}
+										>
 											rename
 										</button>
-										<button type="button" onClick={() => revokeSession(s.id)}>
+										<button
+											type="button"
+											class="button"
+											onClick={() => revokeSession(s.id)}
+										>
 											revoke
 										</button>
 									</menu>
@@ -130,7 +138,7 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 						)}
 					</For>
 				</ul>
-				<button type="button" onClick={fetchSessions}>
+				<button type="button" class="button" onClick={fetchSessions}>
 					more
 				</button>
 			</Show>

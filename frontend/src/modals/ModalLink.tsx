@@ -90,6 +90,7 @@ export const ModalLink = (props: ModalLinkProps) => {
 					<input class="primary" type="submit" value="Insert" />{" "}
 					<button
 						type="button"
+						class="button"
 						onClick={() => {
 							modalCtl.close();
 						}}

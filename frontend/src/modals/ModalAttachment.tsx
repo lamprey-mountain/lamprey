@@ -162,7 +162,7 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 					</CheckboxOption>
 				</Show>
 				<div class="bottom">
-					<button type="button" onClick={() => modalCtl.close()}>
+					<button type="button" class="button" onClick={() => modalCtl.close()}>
 						cancel
 					</button>
 					<button type="submit" class="primary">

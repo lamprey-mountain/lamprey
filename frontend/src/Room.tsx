@@ -352,7 +352,11 @@ export const RoomHome = (props: { room: RoomT }) => {
 					></p>
 				</div>
 				<div style="display:flex;flex-direction:column;gap:4px">
-					<button type="button" onClick={() => leaveRoom(room_id())}>
+					<button
+						type="button"
+						class="button"
+						onClick={() => leaveRoom(room_id())}
+					>
 						leave room
 					</button>
 					<A style="padding: 0 4px" href={`/room/${props.room.id}/settings`}>
@@ -366,20 +370,20 @@ export const RoomHome = (props: { room: RoomT }) => {
 				</h3>
 				{/*
 				<div class="thread-filter">
-					<button type="button"
+					<button type="button" class="button"
 						classList={{ selected: threadFilter() === "active" }}
 						onClick={[setThreadFilter, "active"]}
 					>
 						active
 					</button>
-					<button type="button"
+					<button type="button" class="button"
 						classList={{ selected: threadFilter() === "archived" }}
 						onClick={[setThreadFilter, "archived"]}
 					>
 						archived
 					</button>
 					<Show when={perms.has("ThreadManage")}>
-						<button type="button"
+						<button type="button" class="button"
 							classList={{ selected: threadFilter() === "removed" }}
 							onClick={[setThreadFilter, "removed"]}
 						>

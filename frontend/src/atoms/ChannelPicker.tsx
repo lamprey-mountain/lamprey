@@ -553,6 +553,7 @@ export function MultiChannelPicker(props: {
 							{channel.name}
 							<button
 								type="button"
+								class="button"
 								onClick={(e) => {
 									e.stopPropagation();
 									props.onRemove(channel);

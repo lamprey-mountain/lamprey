@@ -145,7 +145,11 @@ export const ModalNotifications = (props: ModalNotificationsProps) => {
 								]}
 							/>
 							{/* TODO: show menu to mute this channel */}
-							<button style="background:#111;border:solid #222 1px; padding:4px;margin-left:4px">
+							<button
+								type="button"
+								class="button"
+								style="background:#111;border:solid #222 1px; padding:4px;margin-left:4px"
+							>
 								mute
 							</button>
 							{/* TODO: show option to deleet this setting */}

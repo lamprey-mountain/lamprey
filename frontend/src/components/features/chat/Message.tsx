@@ -242,11 +242,11 @@ function MessageEditor(props: { message: MessageT }) {
 			/>
 			<div class="edit-info dim">
 				escape to{" "}
-				<button type="button" onClick={cancel}>
+				<button type="button" class="button" onClick={cancel}>
 					cancel
 				</button>{" "}
 				• enter to{" "}
-				<button type="button" onClick={() => save(draft())}>
+				<button type="button" class="button" onClick={() => save(draft())}>
 					save
 				</button>
 			</div>
@@ -1246,6 +1246,7 @@ export const MessageToolbar = (props: { message: Message }) => {
 		<div class="message-toolbar">
 			<button
 				type="button"
+				class="button"
 				ref={reactionButtonRef}
 				onClick={handleAddReaction}
 				title="Add reaction"
@@ -1255,6 +1256,7 @@ export const MessageToolbar = (props: { message: Message }) => {
 			</button>
 			<button
 				type="button"
+				class="button"
 				onClick={handleReply}
 				title="Reply"
 				aria-label="Reply"
@@ -1264,6 +1266,7 @@ export const MessageToolbar = (props: { message: Message }) => {
 			<Show when={canEditMessage()}>
 				<button
 					type="button"
+					class="button"
 					onClick={handleEdit}
 					title="Edit"
 					aria-label="Edit"
@@ -1273,6 +1276,7 @@ export const MessageToolbar = (props: { message: Message }) => {
 			</Show>
 			<button
 				type="button"
+				class="button"
 				onClick={handleContextMenu}
 				title="More options"
 				aria-label="More options"

@@ -268,7 +268,11 @@ export function Webhooks(props: VoidProps<{ room: Room }>) {
 														</Show>
 													</div>
 													<div style="margin-top: 8px; display: flex; gap: 8px">
-														<button type="button" onClick={copyWebhookUrl}>
+														<button
+															type="button"
+															class="button"
+															onClick={copyWebhookUrl}
+														>
 															copy url
 														</button>
 														<button

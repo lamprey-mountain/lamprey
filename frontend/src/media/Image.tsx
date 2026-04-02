@@ -63,7 +63,7 @@ export const ImageView = (props: ImageViewProps) => {
 					href={getUrl(props.media)}
 					onClick={(e) => e.stopPropagation()}
 				>
-					<button>
+					<button type="button" class="button">
 						<img src={iconDownload} class="icon" alt="icon" />
 					</button>
 				</a>

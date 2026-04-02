@@ -97,6 +97,7 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 															<li>
 																<button
 																	type="button"
+																	class="button"
 																	onClick={removeRole(i.user_id, role_id)}
 																>
 																	{role?.name ?? "unknown role"}
@@ -108,6 +109,7 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 												<li class="add">
 													<button
 														type="button"
+														class="button"
 														onClick={(e) => {
 															e.stopImmediatePropagation();
 															setEditRoles({
@@ -135,6 +137,7 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 									<div style="flex:1"></div>
 									<button
 										type="button"
+										class="button"
 										onClick={(e) => {
 											queueMicrotask(() => {
 												setMenu({

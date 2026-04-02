@@ -111,6 +111,7 @@ export const ModalReactions = (props: ModalReactionsProps) => {
 							return (
 								<button
 									type="button"
+									class="button"
 									onClick={() => setSelectedReaction(key)}
 									data-selected={selectedReaction() === key}
 								>

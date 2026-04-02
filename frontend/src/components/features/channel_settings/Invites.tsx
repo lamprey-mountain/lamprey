@@ -82,6 +82,7 @@ export function Invites(props: VoidProps<{ channel: Channel }>) {
 										<div>
 											<button
 												type="button"
+												class="button"
 												onClick={() => deleteInvite(i.code)}
 											>
 												delete

@@ -75,6 +75,7 @@ const SessionList = (props: { appId: string }) => {
 									<div style="flex:1">{session.name || session.id}</div>
 									<button
 										type="button"
+										class="button"
 										onClick={() => renameSession(session.id)}
 									>
 										Rename
@@ -457,13 +458,19 @@ const AppEditor = (props: {
 			<div class="toolbar">
 				<button
 					type="button"
+					class="button"
 					onClick={() => {
 						props.edit.setApp({ id: null } as unknown as Application);
 					}}
 				>
 					close
 				</button>
-				<button disabled={!isDirty()} onClick={saveApp}>
+				<button
+					type="button"
+					class="button"
+					disabled={!isDirty()}
+					onClick={saveApp}
+				>
 					save
 				</button>
 				<button
@@ -477,6 +484,7 @@ const AppEditor = (props: {
 			<div class="tabs">
 				<button
 					type="button"
+					class="button"
 					classList={{ active: activeTab() === "overview" }}
 					onClick={() => setActiveTab("overview")}
 				>
@@ -484,6 +492,7 @@ const AppEditor = (props: {
 				</button>
 				<button
 					type="button"
+					class="button"
 					classList={{ active: activeTab() === "oauth" }}
 					onClick={() => setActiveTab("oauth")}
 				>
@@ -491,6 +500,7 @@ const AppEditor = (props: {
 				</button>
 				<button
 					type="button"
+					class="button"
 					classList={{ active: activeTab() === "sessions" }}
 					onClick={() => setActiveTab("sessions")}
 				>
@@ -625,6 +635,7 @@ const AppEditor = (props: {
 				</CheckboxOption>
 				<button
 					type="button"
+					class="button"
 					style="margin-left:4px"
 					onClick={(e) => {
 						e.stopImmediatePropagation();
@@ -676,6 +687,7 @@ const AppEditor = (props: {
 									/>
 									<button
 										type="button"
+										class="button"
 										onClick={() => {
 											const newUris = [
 												...(props.edit.app.oauth_redirect_uris ?? []),
@@ -692,6 +704,7 @@ const AppEditor = (props: {
 						<li>
 							<button
 								type="button"
+								class="button"
 								onClick={() => {
 									const newUris = [
 										...(props.edit.app.oauth_redirect_uris ?? []),
@@ -707,6 +720,7 @@ const AppEditor = (props: {
 					<br />
 					<button
 						type="button"
+						class="button"
 						onClick={() => props.rotateSecret(props.edit.app.id!)}
 					>
 						rotate secret
@@ -717,6 +731,7 @@ const AppEditor = (props: {
 				<div class="sessions">
 					<button
 						type="button"
+						class="button"
 						onClick={() => props.createSession(props.edit.app.id!)}
 					>
 						create session
@@ -812,6 +827,7 @@ const RoomInviteButton = (props: {
 	return (
 		<button
 			type="button"
+			class="button"
 			onClick={() => props.onInvite(props.room.id)}
 			disabled={!perms.has("IntegrationsManage")}
 		>

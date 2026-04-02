@@ -83,7 +83,11 @@ export function Emoji(props: VoidProps<{ room: RoomT }>) {
 									style="height:1em;width:1em"
 								/>
 								{i.name}{" "}
-								<button type="button" onClick={() => remove(i.id)}>
+								<button
+									type="button"
+									class="button"
+									onClick={() => remove(i.id)}
+								>
 									remove
 								</button>
 							</li>

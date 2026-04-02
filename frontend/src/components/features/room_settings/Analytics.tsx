@@ -86,7 +86,7 @@ export function Metrics(props: VoidProps<{ room: RoomT }>) {
 					onChange={(range) => setDateRange(range)}
 				/>
 
-				<button type="button" onClick={resetZoom}>
+				<button type="button" class="button" onClick={resetZoom}>
 					Reset View
 				</button>
 

@@ -61,7 +61,9 @@ export function Rooms() {
 										<Time date={getTimestampFromUUID(room.id)} />
 									</div>
 									<div style="flex:1"></div>
-									<button>options</button>
+									<button type="button" class="button">
+										options
+									</button>
 								</li>
 							);
 						}}

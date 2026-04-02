@@ -256,16 +256,16 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 				<span>{selected().length} selected</span>
 				<div style="flex:1"></div>
 				<Show when={canDelete()}>
-					<button type="button" onClick={deleteSelected}>
+					<button type="button" class="button" onClick={deleteSelected}>
 						Delete
 					</button>
 				</Show>
 				<Show when={canRemove()}>
-					<button type="button" onClick={removeSelected}>
+					<button type="button" class="button" onClick={removeSelected}>
 						Remove
 					</button>
 				</Show>
-				<button type="button" onClick={exitSelectMode}>
+				<button type="button" class="button" onClick={exitSelectMode}>
 					Cancel
 				</button>
 			</header>

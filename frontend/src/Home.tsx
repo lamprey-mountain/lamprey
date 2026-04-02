@@ -144,23 +144,23 @@ export const Home = () => {
 					</section>
 				</div>
 				<br />
-				<button type="button" onClick={createGuest}>
+				<button type="button" class="button" onClick={createGuest}>
 					create guest
 				</button>
 			</Show>
 			<Show when={api2.session() && api2.session()?.status !== "Unauthorized"}>
-				<button type="button" onClick={logout}>
+				<button type="button" class="button" onClick={logout}>
 					logout
 				</button>
 			</Show>
 			<br />
 			<br />
 			<Show when={user()}>
-				<button type="button" onClick={createRoom}>
+				<button type="button" class="button" onClick={createRoom}>
 					create room
 				</button>
 				<br />
-				<button type="button" onClick={useInvite}>
+				<button type="button" class="button" onClick={useInvite}>
 					use invite
 				</button>
 				<br />

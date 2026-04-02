@@ -37,6 +37,7 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 				<label>
 					<button
 						type="button"
+						class="button"
 						onClick={() => {
 							modalctl.open({ type: "reset_password" });
 						}}
@@ -47,14 +48,14 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 				</label>
 				<div style="height: 4px"></div>
 				<label>
-					<button type="button" onClick={() => alert("todo")}>
+					<button type="button" class="button" onClick={() => alert("todo")}>
 						disable
 					</button>
 					<span style="margin-left:8px">this will disable your account</span>
 				</label>
 				<div style="height: 4px"></div>
 				<label>
-					<button type="button" onClick={() => alert("todo")}>
+					<button type="button" class="button" onClick={() => alert("todo")}>
 						self destruct
 					</button>
 					<span style="margin-left:8px">this will delete your account</span>
@@ -127,6 +128,7 @@ function Email(_props: VoidProps<{ user: User }>) {
 								<Show when={!email.is_verified}>
 									<button
 										type="button"
+										class="button"
 										onClick={() => resendVerification(email.email)}
 									>
 										resend verification
@@ -230,6 +232,7 @@ function Oauth() {
 							<div style="flex:1">{provider.name}</div>
 							<button
 								type="button"
+								class="button"
 								onClick={() =>
 									connected()
 										? disconnectOauth(provider.id)

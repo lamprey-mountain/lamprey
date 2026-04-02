@@ -335,9 +335,9 @@ export const Forum2 = (props: { channel: Channel }) => {
 						<div class="sort-view-container">
 							<button
 								type="button"
+								class="button secondary sort-view-button"
 								ref={setReferenceEl}
 								onClick={() => setMenuOpen(!menuOpen())}
-								class="secondary sort-view-button"
 								classList={{ selected: menuOpen() }}
 							>
 								<span>sort and view</span>
@@ -374,11 +374,11 @@ export const Forum2 = (props: { channel: Channel }) => {
 											<div class="subtext header">sort by</div>
 											<button
 												type="button"
+												class="button menu-item"
 												onClick={() => {
 													setSortBy("new");
 													setMenuOpen(false);
 												}}
-												class="menu-item"
 											>
 												Newest threads first
 												<Show when={sortBy() === "new"}>
@@ -387,11 +387,11 @@ export const Forum2 = (props: { channel: Channel }) => {
 											</button>
 											<button
 												type="button"
+												class="button menu-item"
 												onClick={() => {
 													setSortBy("activity");
 													setMenuOpen(false);
 												}}
-												class="menu-item"
 											>
 												Recently active threads
 												<Show when={sortBy() === "activity"}>
@@ -400,11 +400,11 @@ export const Forum2 = (props: { channel: Channel }) => {
 											</button>
 											<button
 												type="button"
+												class="button menu-item"
 												onClick={() => {
 													setSortBy("reactions:+1");
 													setMenuOpen(false);
 												}}
-												class="menu-item"
 											>
 												Expected to be helpful
 												<Show when={sortBy() === "reactions:+1"}>
@@ -413,11 +413,11 @@ export const Forum2 = (props: { channel: Channel }) => {
 											</button>
 											<button
 												type="button"
+												class="button menu-item"
 												onClick={() => {
 													setSortBy("random");
 													setMenuOpen(false);
 												}}
-												class="menu-item"
 											>
 												Random ordering
 												<Show when={sortBy() === "random"}>
@@ -426,11 +426,11 @@ export const Forum2 = (props: { channel: Channel }) => {
 											</button>
 											<button
 												type="button"
+												class="button menu-item"
 												onClick={() => {
 													setSortBy("hot");
 													setMenuOpen(false);
 												}}
-												class="menu-item"
 											>
 												Hot
 												<Show when={sortBy() === "hot"}>
@@ -439,11 +439,11 @@ export const Forum2 = (props: { channel: Channel }) => {
 											</button>
 											<button
 												type="button"
+												class="button menu-item"
 												onClick={() => {
 													setSortBy("hot2");
 													setMenuOpen(false);
 												}}
-												class="menu-item"
 											>
 												Hot 2
 												<Show when={sortBy() === "hot2"}>
@@ -454,11 +454,11 @@ export const Forum2 = (props: { channel: Channel }) => {
 											<div class="subtext header">view as</div>
 											<button
 												type="button"
+												class="button menu-item"
 												onClick={() => {
 													setViewAs("list");
 													setMenuOpen(false);
 												}}
-												class="menu-item"
 											>
 												List
 												<Show when={viewAs() === "list"}>
@@ -467,11 +467,11 @@ export const Forum2 = (props: { channel: Channel }) => {
 											</button>
 											<button
 												type="button"
+												class="button menu-item"
 												onClick={() => {
 													setViewAs("gallery");
 													setMenuOpen(false);
 												}}
-												class="menu-item"
 											>
 												Gallery
 												<Show when={viewAs() === "gallery"}>
@@ -486,6 +486,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 						<div class="filters">
 							<button
 								type="button"
+								class="button"
 								classList={{ selected: threadFilter() === "active" }}
 								onClick={[setThreadFilter, "active"]}
 							>
@@ -493,6 +494,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 							</button>
 							<button
 								type="button"
+								class="button"
 								classList={{ selected: threadFilter() === "archived" }}
 								onClick={[setThreadFilter, "archived"]}
 							>
@@ -501,6 +503,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 							<Show when={perms.has("ThreadManage")}>
 								<button
 									type="button"
+									class="button"
 									classList={{ selected: threadFilter() === "removed" }}
 									onClick={[setThreadFilter, "removed"]}
 								>
@@ -874,10 +877,10 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 				<div style="display:flex">
 					<div style="flex:1">
 						{comments()?.items.length ?? 0} comments
-						<button type="button" onClick={collapseAll}>
+						<button type="button" class="button" onClick={collapseAll}>
 							collapse replies
 						</button>
-						<button type="button" onClick={expandAll}>
+						<button type="button" class="button" onClick={expandAll}>
 							expand all
 						</button>
 					</div>
@@ -1168,11 +1171,11 @@ function CommentEditor(props: { message: Message; channel: Channel }) {
 			</div>
 			<div class="edit-info dim">
 				escape to{" "}
-				<button type="button" onClick={cancel}>
+				<button type="button" class="button" onClick={cancel}>
 					cancel
 				</button>{" "}
 				• enter to{" "}
-				<button type="button" onClick={() => save(draft())}>
+				<button type="button" class="button" onClick={() => save(draft())}>
 					save
 				</button>
 			</div>
@@ -1487,18 +1490,19 @@ export function RenderUploadItem(props: {
 							<Match
 								when={isUploadingAttachment(props.att) && props.att.paused}
 							>
-								<button type="button" onClick={resume}>
+								<button type="button" class="button" onClick={resume}>
 									⬆️
 								</button>
 							</Match>
 							<Match when={isUploadingAttachment(props.att)}>
-								<button type="button" onClick={pause}>
+								<button type="button" class="button" onClick={pause}>
 									⏸️
 								</button>
 							</Match>
 						</Switch>
 						<button
 							type="button"
+							class="button"
 							onClick={() =>
 								removeAttachment(
 									isUploadingAttachment(props.att) ? props.att.local_id : "",

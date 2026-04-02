@@ -160,6 +160,7 @@ const TagToolbar = (props: TagToolbarProps) => {
 		<div class="message-toolbar">
 			<button
 				type="button"
+				class="button"
 				title="Edit tag"
 				aria-label="Edit tag"
 				onClick={(e) => {
@@ -171,6 +172,7 @@ const TagToolbar = (props: TagToolbarProps) => {
 			</button>
 			<button
 				type="button"
+				class="button"
 				title="Delete tag"
 				aria-label="Delete tag"
 				onClick={(e) => {

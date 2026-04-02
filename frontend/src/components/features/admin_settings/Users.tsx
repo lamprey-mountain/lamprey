@@ -54,6 +54,7 @@ export function Users() {
 								<div style="flex:1"></div>
 								<button
 									type="button"
+									class="button"
 									onClick={(e) => {
 										queueMicrotask(() => {
 											setMenu({

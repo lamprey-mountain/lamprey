@@ -178,9 +178,9 @@ export const Wiki = (props: { channel: Channel }) => {
 						<div class="sort-view-container">
 							<button
 								type="button"
+								class="button secondary sort-view-button"
 								ref={setReferenceEl}
 								onClick={() => setMenuOpen(!menuOpen())}
-								class="secondary sort-view-button"
 								classList={{ selected: menuOpen() }}
 							>
 								<span>sort and view</span>
@@ -217,11 +217,11 @@ export const Wiki = (props: { channel: Channel }) => {
 											<div class="subtext header">sort by</div>
 											<button
 												type="button"
+												class="button menu-item"
 												onClick={() => {
 													setSortBy("new");
 													setMenuOpen(false);
 												}}
-												class="menu-item"
 											>
 												Newest documents first
 												<Show when={sortBy() === "new"}>
@@ -230,11 +230,11 @@ export const Wiki = (props: { channel: Channel }) => {
 											</button>
 											<button
 												type="button"
+												class="button menu-item"
 												onClick={() => {
 													setSortBy("activity");
 													setMenuOpen(false);
 												}}
-												class="menu-item"
 											>
 												Recently active documents
 												<Show when={sortBy() === "activity"}>
@@ -243,11 +243,11 @@ export const Wiki = (props: { channel: Channel }) => {
 											</button>
 											<button
 												type="button"
+												class="button menu-item"
 												onClick={() => {
 													setSortBy("reactions:+1");
 													setMenuOpen(false);
 												}}
-												class="menu-item"
 											>
 												Expected to be helpful
 												<Show when={sortBy() === "reactions:+1"}>
@@ -256,11 +256,11 @@ export const Wiki = (props: { channel: Channel }) => {
 											</button>
 											<button
 												type="button"
+												class="button menu-item"
 												onClick={() => {
 													setSortBy("random");
 													setMenuOpen(false);
 												}}
-												class="menu-item"
 											>
 												Random ordering
 												<Show when={sortBy() === "random"}>
@@ -269,11 +269,11 @@ export const Wiki = (props: { channel: Channel }) => {
 											</button>
 											<button
 												type="button"
+												class="button menu-item"
 												onClick={() => {
 													setSortBy("hot");
 													setMenuOpen(false);
 												}}
-												class="menu-item"
 											>
 												Hot
 												<Show when={sortBy() === "hot"}>
@@ -282,11 +282,11 @@ export const Wiki = (props: { channel: Channel }) => {
 											</button>
 											<button
 												type="button"
+												class="button menu-item"
 												onClick={() => {
 													setSortBy("hot2");
 													setMenuOpen(false);
 												}}
-												class="menu-item"
 											>
 												Hot 2
 												<Show when={sortBy() === "hot2"}>
@@ -297,11 +297,11 @@ export const Wiki = (props: { channel: Channel }) => {
 											<div class="subtext header">view as</div>
 											<button
 												type="button"
+												class="button menu-item"
 												onClick={() => {
 													setViewAs("list");
 													setMenuOpen(false);
 												}}
-												class="menu-item"
 											>
 												List
 												<Show when={viewAs() === "list"}>
@@ -310,11 +310,11 @@ export const Wiki = (props: { channel: Channel }) => {
 											</button>
 											<button
 												type="button"
+												class="button menu-item"
 												onClick={() => {
 													setViewAs("gallery");
 													setMenuOpen(false);
 												}}
-												class="menu-item"
 											>
 												Gallery
 												<Show when={viewAs() === "gallery"}>
@@ -329,6 +329,7 @@ export const Wiki = (props: { channel: Channel }) => {
 						<div class="filters">
 							<button
 								type="button"
+								class="button"
 								classList={{ selected: documentFilter() === "active" }}
 								onClick={[setDocumentFilter, "active"]}
 							>
@@ -336,6 +337,7 @@ export const Wiki = (props: { channel: Channel }) => {
 							</button>
 							<button
 								type="button"
+								class="button"
 								classList={{ selected: documentFilter() === "archived" }}
 								onClick={[setDocumentFilter, "archived"]}
 							>
@@ -344,6 +346,7 @@ export const Wiki = (props: { channel: Channel }) => {
 							<Show when={perms.has("ThreadManage")}>
 								<button
 									type="button"
+									class="button"
 									classList={{ selected: documentFilter() === "removed" }}
 									onClick={[setDocumentFilter, "removed"]}
 								>

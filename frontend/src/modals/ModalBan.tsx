@@ -110,6 +110,7 @@ export const ModalBan = (props: ModalBanProps) => {
 					</button>
 					<button
 						type="button"
+						class="button"
 						onClick={() => modalCtl.close()}
 						disabled={loading()}
 					>

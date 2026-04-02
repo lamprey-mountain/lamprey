@@ -42,6 +42,7 @@ export const SearchResults = (props: {
 				</Show>
 				<button
 					type="button"
+					class="button"
 					onClick={() => {
 						const id = searchId();
 						if (id) {

@@ -89,10 +89,18 @@ export const Inbox = () => {
 				<Show when={selected().length > 0}>
 					<div style="margin-left: 8px">
 						<span>{selected().length} selected</span>
-						<button type="button" onClick={handleMarkSelectedRead}>
+						<button
+							type="button"
+							class="button"
+							onClick={handleMarkSelectedRead}
+						>
 							Mark as read
 						</button>
-						<button type="button" onClick={handleMarkSelectedUnread}>
+						<button
+							type="button"
+							class="button"
+							onClick={handleMarkSelectedUnread}
+						>
 							Mark as unread
 						</button>
 					</div>

@@ -61,6 +61,7 @@ export const Friends = () => {
 				<div class="filter">
 					<button
 						type="button"
+						class="button"
 						classList={{ active: filter() === "online" }}
 						onClick={() => setFilter("online")}
 					>
@@ -68,6 +69,7 @@ export const Friends = () => {
 					</button>
 					<button
 						type="button"
+						class="button"
 						classList={{ active: filter() === "all" }}
 						onClick={() => setFilter("all")}
 					>
@@ -75,6 +77,7 @@ export const Friends = () => {
 					</button>
 					<button
 						type="button"
+						class="button"
 						classList={{ active: filter() === "incoming" }}
 						onClick={() => setFilter("incoming")}
 					>
@@ -82,6 +85,7 @@ export const Friends = () => {
 					</button>
 					<button
 						type="button"
+						class="button"
 						classList={{ active: filter() === "outgoing" }}
 						onClick={() => setFilter("outgoing")}
 					>
