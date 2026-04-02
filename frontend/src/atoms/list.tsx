@@ -13,7 +13,9 @@ import { createStore } from "solid-js/store";
 const OVERSCAN = 5;
 const ESTIMATED_H = 80;
 
-export function createList2<T extends { id: string; class?: string }>(options: {
+export function createList2<
+	T extends { id: string; class?: string; nonce?: string },
+>(options: {
 	items: Accessor<Array<T>>;
 	autoscroll?: Accessor<boolean>;
 	onPaginate?: (dir: "forwards" | "backwards") => void;
@@ -33,12 +35,16 @@ export function createList2<T extends { id: string; class?: string }>(options: {
 	// --- height + offset tracking ---
 	const [heights, setHeights] = createStore<Record<string, number>>({});
 
+	// Use nonce as the cache key if available, otherwise fall back to id
+	const getItemKey = (item: T): string => item.nonce ?? item.id;
+
 	const offsets = createMemo(() => {
 		const h = heights;
 		const items = options.items();
 		const result = [0];
 		for (let i = 1; i < items.length; i++) {
-			const prevH = h[items[i - 1].id] ?? ESTIMATED_H;
+			const prevKey = getItemKey(items[i - 1]);
+			const prevH = h[prevKey] ?? ESTIMATED_H;
 			result[i] = result[i - 1] + prevH;
 		}
 		return result;
@@ -48,7 +54,8 @@ export function createList2<T extends { id: string; class?: string }>(options: {
 		const items = options.items();
 		const lastIdx = items.length - 1;
 		if (lastIdx < 0) return 0;
-		return offsets()[lastIdx] + (heights[items[lastIdx].id] ?? ESTIMATED_H);
+		const lastKey = getItemKey(items[lastIdx]);
+		return offsets()[lastIdx] + (heights[lastKey] ?? ESTIMATED_H);
 	});
 
 	// --- ResizeObserver for height correction ---
@@ -70,19 +77,25 @@ export function createList2<T extends { id: string; class?: string }>(options: {
 			}
 
 			const id = target.dataset.id;
+			const nonce = target.dataset.nonce;
 			if (!id) continue;
+
+			// Use nonce as the cache key if available (for local-echo -> server transition)
+			const cacheKey = nonce || id;
 
 			const newH = Math.round(
 				entry.borderBoxSize?.[0]?.blockSize ??
 					target.getBoundingClientRect().height,
 			);
-			const oldH = heights[id] ?? ESTIMATED_H;
+			const oldH = heights[cacheKey] ?? ESTIMATED_H;
 
 			if (newH > 0 && oldH !== newH) {
-				setHeights(id, newH);
+				setHeights(cacheKey, newH);
 				changed = true;
 
-				const idx = options.items().findIndex((x) => x.id === id);
+				const idx = options
+					.items()
+					.findIndex((x) => (x.nonce ?? x.id) === cacheKey);
 				if (idx !== -1 && idx < firstVisibleIdx) {
 					heightDiff += newH - oldH;
 				}
@@ -193,13 +206,18 @@ export function createList2<T extends { id: string; class?: string }>(options: {
 		let pivotNewIdx = -1;
 		let isSameList = false;
 
-		for (let i = 0; i < prevLen; i++) {
+		// 1. Prioritize finding a pivot in the CURRENTLY VISIBLE range so content doesn't jump
+		const visStart = visibleRange().start;
+		const startIdx = Math.max(0, Math.min(visStart, prevLen - 1));
+
+		for (let i = startIdx; i < prevLen; i++) {
 			if (
 				!ignoreIds.has(prevItems[i].id) &&
 				!prevItems[i].id.startsWith("divider-")
 			) {
 				pivotPrevIdx = i;
-				pivotNewIdx = newItems.findIndex((x) => x.id === prevItems[i].id);
+				const prevKey = getItemKey(prevItems[i]);
+				pivotNewIdx = newItems.findIndex((x) => getItemKey(x) === prevKey);
 				if (pivotNewIdx !== -1) {
 					isSameList = true;
 					break;
@@ -207,36 +225,55 @@ export function createList2<T extends { id: string; class?: string }>(options: {
 			}
 		}
 
+		// 2. If nothing visible matched, fallback to searching from the beginning
+		if (!isSameList) {
+			for (let i = 0; i < prevLen; i++) {
+				if (
+					!ignoreIds.has(prevItems[i].id) &&
+					!prevItems[i].id.startsWith("divider-")
+				) {
+					pivotPrevIdx = i;
+					const prevKey = getItemKey(prevItems[i]);
+					pivotNewIdx = newItems.findIndex((x) => getItemKey(x) === prevKey);
+					if (pivotNewIdx !== -1) {
+						isSameList = true;
+						break;
+					}
+				}
+			}
+		}
+
 		if (isSameList) {
 			let oldPivotOffset = 0;
 			for (let i = 0; i < pivotPrevIdx; i++) {
-				oldPivotOffset += heights[prevItems[i].id] ?? ESTIMATED_H;
+				oldPivotOffset += heights[getItemKey(prevItems[i])] ?? ESTIMATED_H;
 			}
 
 			let newPivotOffset = 0;
 			for (let i = 0; i < pivotNewIdx; i++) {
-				newPivotOffset += heights[newItems[i].id] ?? ESTIMATED_H;
+				newPivotOffset += heights[getItemKey(newItems[i])] ?? ESTIMATED_H;
 			}
 
 			const shiftDiff = newPivotOffset - oldPivotOffset;
 
-			if (shiftDiff !== 0) {
+			// VERY IMPORTANT: Check this BEFORE applying programmatic scroll
+			const wasAtBottom = isAtBottom();
+
+			if (wasAtBottom && options.autoscroll?.()) {
+				// Always maintain bottom lock if we were at the bottom and autoscroll is enabled.
+				// This fixes the "scroll up on send" and the "jump on Escape" bugs.
+				queueMicrotask(() => {
+					isProgrammaticScroll = true;
+					wrapperEl?.scrollTo({ top: wrapperEl.scrollHeight });
+				});
+			} else if (shiftDiff !== 0) {
 				isProgrammaticScroll = true;
 				wrapperEl.scrollTop += shiftDiff;
-			} else if (newLen > prevLen) {
-				const wasAtBottom = isAtBottom();
-				if (wasAtBottom && options.autoscroll?.()) {
-					queueMicrotask(() => {
-						isProgrammaticScroll = true;
-						wrapperEl?.scrollTo({ top: wrapperEl.scrollHeight });
-					});
-				}
 			}
 		} else {
 			// Complete channel clear/reload (usually occurs on channel swap/restore)
 			setHeights({});
 			if (options.onRestore) {
-				// We must queue this onto the next tick so the DOM has time to render new scrollHeight limits
 				setTimeout(() => {
 					if (options.onRestore?.()) {
 						updateRender();
@@ -324,6 +361,7 @@ export function createList2<T extends { id: string; class?: string }>(options: {
 											ref={(el) => {
 												wrapEl = el;
 												el.dataset.id = item.id;
+												if (item.nonce) el.dataset.nonce = item.nonce;
 												el.style.position = "absolute";
 												el.style.left = "0";
 												el.style.right = "0";
