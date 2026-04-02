@@ -242,7 +242,8 @@ export const useAutocompleteData = () => {
 				obj: {
 					type: "emoji" as const,
 					id: r.obj.id,
-					name: "name" in r.obj ? r.obj.name : "",
+					name:
+						"name" in r.obj ? r.obj.name : "label" in r.obj ? r.obj.label : "",
 					char: "char" in r.obj ? r.obj.char : undefined,
 				},
 				score: r.score,

@@ -3561,6 +3561,21 @@ button.link {
 		width: 1em;
 	}
 
+	.emoji-item {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		min-width: 0;
+
+		.emoji-name {
+			font-size: 0.85em;
+			color: $fg-500;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+	}
+
 	.mention-user {
 		display: flex;
 		align-items: center;

@@ -1,4 +1,5 @@
 import type { ReferenceElement } from "@floating-ui/dom";
+import type { Node } from "prosemirror-model";
 import { Plugin, PluginKey, TextSelection } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
 import type {
@@ -39,6 +40,19 @@ function findTriggerPosition(
 		// Stop at whitespace - trigger must be on current "word"
 		if (char === " " || char === "\n" || char === "\t") {
 			return null;
+		}
+		// For emoji trigger, allow it to work right after an emoji atom node
+		// Check if current position is an emoji node (emojiUnicode or emojiCustom)
+		if (triggerChar === ":") {
+			const node = state.doc.nodeAt(i);
+			if (
+				node &&
+				(node.type.name === "emojiUnicode" || node.type.name === "emojiCustom")
+			) {
+				// Skip past this emoji atom node
+				// Subtract (nodeSize - 1) because the loop will also do i--
+				i -= node.nodeSize - 1;
+			}
 		}
 	}
 	return null;
@@ -325,18 +339,27 @@ export function createAutocompletePlugin(
 						return;
 					}
 
-					// Otherwise, check if preceded by whitespace or start of document
-					// cursorPos - 2 could be negative if trigger is at position 1
+					// Otherwise, check if preceded by whitespace, emoji atom, or start of document
+					const $cursor = view.state.selection.$from;
+					const nodeBeforeTrigger = $cursor.nodeBefore;
 					const charBeforeTrigger =
 						cursorPos >= 2
 							? view.state.doc.textBetween(cursorPos - 2, cursorPos - 1)
 							: "";
 
+					// For emoji trigger, allow it after emoji atoms
+					const isEmojiTrigger = charBefore === ":";
+					const isAfterEmoji =
+						nodeBeforeTrigger &&
+						(nodeBeforeTrigger.type.name === "emojiUnicode" ||
+							nodeBeforeTrigger.type.name === "emojiCustom");
+
 					if (
 						charBeforeTrigger === "" || // Start of document or position 1
 						charBeforeTrigger === " " ||
 						charBeforeTrigger === "\n" ||
-						charBeforeTrigger === "\t"
+						charBeforeTrigger === "\t" ||
+						(isEmojiTrigger && isAfterEmoji)
 					) {
 						handleTrigger(view, charBefore);
 					}

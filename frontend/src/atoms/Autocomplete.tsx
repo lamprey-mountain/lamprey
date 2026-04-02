@@ -74,14 +74,24 @@ export const Autocomplete = () => {
 										state.kind?.type === "emoji" && isEmojiWithChar(result.obj)
 									}
 								>
-									<span innerHTML={getTwemoji(result.obj.char)}></span>
+									<div class="emoji-item">
+										<span innerHTML={getTwemoji(result.obj.char)}></span>
+										<span class="emoji-name">{result.obj.name}</span>
+									</div>
 								</Match>
 								<Match
 									when={
 										state.kind?.type === "emoji" && !isEmojiWithChar(result.obj)
 									}
 								>
-									<img src={getEmojiUrl(result.obj.id)} class="emoji-img" />
+									<div class="emoji-item">
+										<img
+											src={getEmojiUrl(result.obj.id)}
+											class="emoji-img"
+											alt={result.obj.name}
+										/>
+										<span class="emoji-name">{result.obj.name}</span>
+									</div>
 								</Match>
 								<Match when={isCommand(result.obj)}>
 									<div class="command">
