@@ -394,7 +394,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 				*/}
 				<button
 					type="button"
-					class="primary"
+					class="button primary"
 					style="margin-left: 8px;border-radius:4px"
 					onClick={() => createThread(room_id())}
 				>

@@ -125,7 +125,7 @@ export const Home = () => {
 							<li class="social-item">
 								<button
 									type="button"
-									class="social-button"
+									class="button social-button"
 									onClick={loginDiscord}
 								>
 									login with discord
@@ -134,7 +134,7 @@ export const Home = () => {
 							<li class="social-item">
 								<button
 									type="button"
-									class="social-button"
+									class="button social-button"
 									onClick={loginGithub}
 								>
 									login with github

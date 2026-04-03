@@ -9,6 +9,7 @@
 	min-height: 0;
 	background-color: $bg-150;
 	overflow-y: auto;
+	overflow-x: hidden;
 
 	& .member-group {
 		@extend .dim !optional;
