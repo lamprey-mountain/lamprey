@@ -52,7 +52,10 @@ import {
 	createInitialChannelState,
 	useChannel,
 } from "./channelctx";
-import { Author, MessageToolbar } from "./components/features/chat/Message";
+import {
+	MessageToolbar,
+	UserDisplayName,
+} from "./components/features/chat/Message";
 import { Reactions } from "./components/features/chat/Reactions";
 import { createEditor } from "./components/features/editor/Editor";
 import { serializeToMarkdown } from "./components/features/editor/serializer.ts";
@@ -1323,7 +1326,12 @@ const Comment = (props: {
 						<span class="childCount dim">[{countAllChildren(props.node)}]</span>
 					</Show>
 					<Show when={props.channel}>
-						<Author message={props.node.message} thread={props.channel} />
+						<UserDisplayName
+							user_id={props.node.message.author_id}
+							room_id={props.channel.room_id}
+							thread_id={props.node.message.channel_id}
+							onClick
+						/>
 					</Show>
 					<Time date={getTimestampFromUUID(message().id)} />
 					<Show when={collapsed()}>

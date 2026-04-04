@@ -80,7 +80,7 @@ export const VideoView = (props: MediaProps) => {
 			</div>
 		),
 	});
-	const _vtc = volumeTooltip.content;
+	const vtc = volumeTooltip.content;
 
 	onMount(() => {
 		video.ondurationchange = () => setDuration(video.duration);

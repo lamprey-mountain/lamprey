@@ -1,5 +1,7 @@
+import { ReactiveMap } from "@solid-primitives/map";
+import { ReactiveSet } from "@solid-primitives/set";
 import type { RoomMember, User } from "sdk";
-import { type Accessor, createResource, type Resource } from "solid-js";
+import { type Accessor, batch, createResource, type Resource } from "solid-js";
 import { logger } from "../../logger";
 import { PaginatedList } from "../core/PaginatedList";
 import { BaseService } from "../core/Service";
@@ -8,9 +10,58 @@ export class RoomMembersService extends BaseService<RoomMember> {
 	protected cacheName = "room_member";
 
 	private _roomLists = new Map<string, PaginatedList>();
+	private membersByRoom = new ReactiveMap<string, ReactiveSet<string>>();
 
 	getKey(item: RoomMember): string {
 		return `${item.room_id}:${item.user_id}`;
+	}
+
+	protected override afterUpsert(member: RoomMember) {
+		const r = this.membersByRoom.get(member.room_id) ?? new ReactiveSet();
+		r.add(member.user_id);
+		this.membersByRoom.set(member.room_id, r);
+	}
+
+	protected override afterUpsertBulk(members: RoomMember[]) {
+		const byRoom = new Map<string, Set<string>>();
+		for (const m of members) {
+			let s = byRoom.get(m.room_id);
+			if (!s) {
+				s = new Set();
+				byRoom.set(m.room_id, s);
+			}
+			s.add(m.user_id);
+		}
+
+		batch(() => {
+			for (const [room_id, user_ids] of byRoom) {
+				const r = this.membersByRoom.get(room_id) ?? new ReactiveSet();
+				for (const uid of user_ids) {
+					r.add(uid);
+				}
+				this.membersByRoom.set(room_id, r);
+			}
+		});
+	}
+
+	protected override afterDelete(id: string, member?: RoomMember) {
+		if (member) {
+			this.membersByRoom.get(member.room_id)?.delete(member.user_id);
+		} else {
+			// fallback if member is not passed
+			const [room_id, user_id] = id.split(":");
+			if (room_id && user_id) {
+				this.membersByRoom.get(room_id)?.delete(user_id);
+			}
+		}
+	}
+
+	listByRoom(room_id: string): RoomMember[] {
+		const userIds = this.membersByRoom.get(room_id);
+		if (!userIds) return [];
+		return [...userIds]
+			.map((uid) => this.cache.get(`${room_id}:${uid}`))
+			.filter((m): m is RoomMember => m != null);
 	}
 
 	private compositeId(room_id: string, user_id: string): string {
@@ -33,19 +84,6 @@ export class RoomMembersService extends BaseService<RoomMember> {
 			}),
 		);
 		return data;
-	}
-
-	override upsert(item: RoomMember) {
-		this.cache.set(this.getKey(item), item);
-
-		if (this.db && this.cacheName) {
-			this.db.put(this.cacheName, item).catch((e) => {
-				console.warn(`Failed to write to ${this.cacheName}`, {
-					key: [item.room_id, item.user_id],
-					error: e,
-				});
-			});
-		}
 	}
 
 	override delete(id: string) {

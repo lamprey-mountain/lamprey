@@ -47,20 +47,16 @@ type TimeProps = {
 export function Time(props: VoidProps<TimeProps>) {
 	const date = () => ("date" in props ? props.date : new Date(props.ts));
 
-	return (
-		<>
-			{tooltip(
-				{
-					animGroup: props.animGroup,
-					placement: "left-start",
-				},
-				date().toDateString(),
-				(
-					<time datetime={date().toISOString()}>
-						{(tick(), timeAgo(date()))}
-					</time>
-				) as HTMLElement,
-			)}
-		</>
+	const wrap = (
+		<time datetime={date().toISOString()}>{(tick(), timeAgo(date()))}</time>
+	) as HTMLElement;
+
+	return tooltip(
+		{
+			animGroup: props.animGroup,
+			placement: "left-start",
+		},
+		() => date().toDateString(),
+		wrap,
 	);
 }

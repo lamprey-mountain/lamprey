@@ -82,7 +82,7 @@ function applyLurkerRestrictions(perms: Set<Permission>): Set<Permission> {
 	return restricted;
 }
 
-const adminPerms: Permission[] = [
+export const ADMIN_PERMS: Permission[] = [
 	"Admin",
 	"ApplicationCreate",
 	"ApplicationManage",
@@ -151,6 +151,8 @@ const adminPerms: Permission[] = [
 	"VoiceVideo",
 ];
 
+export const ADMIN_PERMS_SET = new Set<Permission>(ADMIN_PERMS);
+
 /**
  * Calculate the final permissions for a user in a given context
  */
@@ -158,7 +160,7 @@ export function calculatePermissions(
 	ctx: PermissionContext,
 	user_id: string,
 ): ResolvedPermissions {
-	permLog.debug("calculating permissions", { ctx, user_id });
+	// permLog.debug("calculating permissions", { ctx, user_id });
 
 	if (!ctx.room_id) {
 		// For non-room channels (DMs, GDMS), we'll allow some basic permissions
@@ -179,9 +181,11 @@ export function calculatePermissions(
 			"VoiceSpeak",
 			"VoiceVideo",
 		];
+		/*
 		permLog.debug("no room_id, returning default permissions", {
 			defaultPermissions,
 		});
+		*/
 		return {
 			permissions: new Set(defaultPermissions),
 			rank: 0,
@@ -193,7 +197,7 @@ export function calculatePermissions(
 
 	const rid = ctx.room_id;
 	if (!rid) {
-		permLog.debug("no room_id provided, returning empty permissions");
+		// permLog.debug("no room_id provided, returning empty permissions");
 		return {
 			permissions: new Set<Permission>(),
 			rank: 0,
@@ -204,18 +208,19 @@ export function calculatePermissions(
 	}
 
 	const room = ctx.api.rooms.cache.get(rid);
+	/*
 	permLog.debug("room lookup", {
 		room_id: rid,
 		found: !!room,
 		owner_id: room?.owner_id,
 	});
+	*/
 
 	if (room?.owner_id === user_id) {
 		// owners have full permissions (ViewChannel and Admin)
-		const ownerPerms = new Set<Permission>(adminPerms);
-		permLog.debug("user is room owner, returning full permissions");
+		// permLog.debug("user is room owner, returning full permissions");
 		return {
-			permissions: ownerPerms,
+			permissions: ADMIN_PERMS_SET,
 			rank: Infinity,
 			timedOut: false,
 			quarantined: false,
@@ -226,18 +231,22 @@ export function calculatePermissions(
 	const member = ctx.api.roomMembers.cache.get(`${rid}:${user_id}`);
 	const roles = ctx.api.roles.listByRoom(rid);
 
+	/*
 	permLog.debug("member and roles lookup", {
 		member_found: !!member,
 		member_roles: member?.roles,
 		roles_count: roles.length,
 	});
+	*/
 
 	// handle non-members
 	if (!room || !member) {
+		/*
 		permLog.debug("user is not a member or room not found", {
 			has_room: !!room,
 			has_member: !!member,
 		});
+		*/
 		if (room?.public) {
 			const everyoneRole = roles.find((r) => r.id === ctx.room_id);
 			if (everyoneRole) {
@@ -250,11 +259,13 @@ export function calculatePermissions(
 				}
 				// Apply lurker restrictions for non-members
 				const restricted = applyLurkerRestrictions(perms);
+				/*
 				permLog.debug("public room, returning lurker permissions", {
 					everyone_allow: everyoneRole.allow,
 					everyone_deny: everyoneRole.deny,
 					resulting_perms: [...restricted],
 				});
+				*/
 				return {
 					permissions: restricted,
 					rank: 0,
@@ -264,9 +275,11 @@ export function calculatePermissions(
 				};
 			}
 		}
+		/*
 		permLog.warn(
 			"user has no permissions (not a member, room not public or no everyone role)",
 		);
+		*/
 		return {
 			permissions: new Set(),
 			rank: 0,
@@ -288,13 +301,13 @@ export function calculatePermissions(
 		}
 	}
 
-	permLog.debug("role permissions collected", { allowed, denied });
+	// permLog.debug("role permissions collected", { allowed, denied });
 
 	const perms = new Set<Permission>();
 
 	const addPerm = (p: Permission) => {
 		if (p === "Admin") {
-			for (const ap of adminPerms) {
+			for (const ap of ADMIN_PERMS_SET) {
 				perms.add(ap);
 			}
 		} else if (p === "CalendarEventManage") {
@@ -307,14 +320,16 @@ export function calculatePermissions(
 		addPerm(p);
 	}
 
+	/*
 	permLog.debug("permissions after allowed", {
 		count: perms.size,
 		has_message_create: perms.has("MessageCreate"),
 	});
+	*/
 
 	if (perms.has("Admin")) {
 		const rank = calculateRank(roles, member.roles);
-		permLog.debug("user has admin, returning full permissions");
+		// permLog.debug("user has admin, returning full permissions");
 		return {
 			permissions: perms,
 			rank,
@@ -328,10 +343,12 @@ export function calculatePermissions(
 		perms.delete(p);
 	}
 
+	/*
 	permLog.debug("permissions after denied", {
 		count: perms.size,
 		has_message_create: perms.has("MessageCreate"),
 	});
+	*/
 
 	// Check if user is timed out
 	const isTimedOut = member.timeout_until
@@ -341,7 +358,7 @@ export function calculatePermissions(
 	// Apply timeout restrictions
 	if (isTimedOut) {
 		const restricted = applyTimedOutRestrictions(perms);
-		permLog.debug("user is timed out, applying restrictions");
+		// permLog.debug("user is timed out, applying restrictions");
 		return {
 			permissions: restricted,
 			rank: calculateRank(roles, member.roles),
@@ -354,7 +371,7 @@ export function calculatePermissions(
 	// Apply quarantine restrictions
 	if (member.quarantined) {
 		const restricted = applyQuarantinedRestrictions(perms);
-		permLog.debug("user is quarantined, applying restrictions");
+		// permLog.debug("user is quarantined, applying restrictions");
 		return {
 			permissions: restricted,
 			rank: calculateRank(roles, member.roles),
@@ -365,19 +382,23 @@ export function calculatePermissions(
 	}
 
 	if (ctx.channel_id) {
+		/*
 		permLog.debug("applying channel permissions", {
 			channel_id: ctx.channel_id,
 		});
+		*/
 		applyChannelPermissions(perms, ctx, member);
 	}
 
 	const rank = calculateRank(roles, member.roles);
 
+	/*
 	permLog.debug("final permissions", {
 		count: perms.size,
 		has_message_create: perms.has("MessageCreate"),
 		rank,
 	});
+	*/
 
 	return {
 		permissions: perms,
@@ -412,7 +433,7 @@ function applyChannelPermissions(
 ) {
 	const cid = ctx.channel_id;
 	if (!cid) {
-		permLog.debug("no channel_id provided, returning early");
+		// permLog.debug("no channel_id provided, returning early");
 		return;
 	}
 
@@ -476,75 +497,7 @@ function applyChannelOverwrites(
 
 	const addPerm = (p: Permission) => {
 		if (p === "Admin") {
-			const adminPerms: Permission[] = [
-				"Admin",
-				"ApplicationCreate",
-				"ApplicationManage",
-				"ChannelSlowmodeBypass",
-				"CalendarEventCreate",
-				"CalendarEventManage",
-				"CalendarEventRsvp",
-				"ChannelEdit",
-				"ChannelManage",
-				"DmCreate",
-				"DocumentComment",
-				"DocumentCreate",
-				"DocumentEdit",
-				"EmojiManage",
-				"EmojiUseExternal",
-				"FriendCreate",
-				"IntegrationsManage",
-				"IntegrationsBridge",
-				"InviteCreate",
-				"InviteManage",
-				"MemberBan",
-				"MemberKick",
-				"MemberNickname",
-				"MemberNicknameManage",
-				"MemberTimeout",
-				"MessageAttachments",
-				"MessageCreate",
-				"MessageCreateThread",
-				"MessageDelete",
-				"MessageEmbeds",
-				"MessageMassMention",
-				"MessageMove",
-				"MessagePin",
-				"MessageRemove",
-				"ReactionAdd",
-				"ReactionManage",
-				"RoleApply",
-				"RoleManage",
-				"RoomCreate",
-				"RoomEdit",
-				"RoomManage",
-				"ServerMaintenance",
-				"ServerMetrics",
-				"ServerOversee",
-				"ThreadCreatePrivate",
-				"ThreadCreatePublic",
-				"ThreadEdit",
-				"ThreadManage",
-				"CallUpdate",
-				"RoomJoin",
-				"RoomJoinForce",
-				"UserManage",
-				"UserManageSelf",
-				"UserProfileSelf",
-				"AnalyticsView",
-				"AuditLogView",
-				"ChannelView",
-				"VoiceBroadcast",
-				"VoiceDeafen",
-				"VoiceMove",
-				"VoiceMute",
-				"VoicePriority",
-				"VoiceRequest",
-				"VoiceSpeak",
-				"VoiceVad",
-				"VoiceVideo",
-			];
-			for (const ap of adminPerms) {
+			for (const ap of ADMIN_PERMS) {
 				perms.add(ap);
 			}
 		} else if (p === "CalendarEventManage") {

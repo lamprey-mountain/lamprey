@@ -9,12 +9,15 @@ import {
 } from "sdk";
 import {
 	createEffect,
+	createMemo,
 	createSignal,
 	For,
 	type JSX,
+	Match,
 	onCleanup,
 	onMount,
 	Show,
+	Switch,
 } from "solid-js";
 import {
 	useApi2,
@@ -57,16 +60,59 @@ import { createEditor } from "../editor/Editor.tsx";
 import { serializeToMarkdown } from "../editor/serializer.ts";
 import { Reactions } from "./Reactions.tsx";
 
-type MessageProps = {
+export type MessageProps = {
 	message: MessageT;
 	separate?: boolean;
 };
 
-type MessageTextMarkdownProps = {
-	message: MessageT;
-};
+export function UserDisplayName(props: {
+	user_id: string;
+	room_id?: string;
+	thread_id?: string;
+	onClick?: boolean;
+}) {
+	const roomMembers2 = useRoomMembers2();
+	const users2 = useUsers2();
+	const { userView, setUserView } = useUserPopout();
 
-function MessageTextMarkdown(props: MessageTextMarkdownProps) {
+	const room_member = () =>
+		props.room_id
+			? roomMembers2.cache.get(`${props.room_id}:${props.user_id}`)
+			: null;
+	const user = () => users2.cache.get(props.user_id);
+
+	const name = () => room_member()?.override_name ?? user()?.name;
+
+	const handleClick = (e: MouseEvent) => {
+		if (!props.onClick) return;
+		e.stopPropagation();
+		const currentTarget = e.currentTarget as HTMLElement;
+		if (userView()?.ref === currentTarget) {
+			setUserView(null);
+		} else {
+			setUserView({
+				user_id: props.user_id,
+				room_id: props.room_id,
+				thread_id: props.thread_id,
+				ref: currentTarget,
+				source: "message",
+			});
+		}
+	};
+
+	return (
+		<span
+			class="user"
+			classList={{ "menu-user": props.onClick }}
+			data-user-id={props.user_id}
+			onClick={handleClick}
+		>
+			{name()}
+		</span>
+	);
+}
+
+function MessageTextMarkdown(props: { message: MessageT }) {
 	const [, modalctl] = useModals();
 	const viewHistory = () => {
 		modalctl.open({
@@ -104,7 +150,6 @@ function MessageEditor(props: { message: MessageT }) {
 	const messagesService = useMessages2();
 	const [ch, chUpdate] = useChannel() ?? [null, null];
 
-	// TODO: save edit draft per message?
 	const [draft, setDraft] = createSignal(
 		props.message.latest_version.type === "DefaultMarkdown"
 			? (props.message.latest_version.content ?? "")
@@ -174,7 +219,6 @@ function MessageEditor(props: { message: MessageT }) {
 					}
 				}
 
-				// No next message, focus main input
 				chUpdate("editingMessage", undefined);
 				ch.input_focus?.();
 				return true;
@@ -254,7 +298,6 @@ function MessageEditor(props: { message: MessageT }) {
 	);
 }
 
-// TODO: make thread reactive (store thread in cache on message fetch, read thread from cache)
 export function MessageThread(props: {
 	thread: ThreadT;
 	parentChannel: Channel;
@@ -291,636 +334,55 @@ export function MessageThread(props: {
 	);
 }
 
-export function MessageView(props: MessageProps) {
-	const _api2 = useApi2();
-	const channels2 = useChannels2();
-	const messagesService = useMessages2();
-	const ctx = useCtx();
-	const { menu } = useMenu();
-	const { userView, setUserView } = useUserPopout();
-	const { t } = ctx;
-	const thread = channels2.use(() => props.message.channel_id);
-	const [ch, chUpdate] = useChannel() ?? [null, null];
-	let messageArticleRef: HTMLElement | undefined;
-	const [hovered, setHovered] = createSignal(false);
-
-	const isMenuOpen = () => {
-		const m = menu();
-		if (!m) return false;
-		return m.type === "message" && m.message_id === props.message.id;
-	};
-
-	const isReactionPickerOpen = () => {
-		const popout = ctx.popout();
-		if (
-			!popout ||
-			!("id" in popout) ||
-			popout.id !== "emoji" ||
-			!popout.ref ||
-			!messageArticleRef
-		) {
-			return false;
-		}
-		return messageArticleRef.contains(popout.ref);
-	};
-	const toolbarVisible = () => isMenuOpen() || isReactionPickerOpen();
-
-	const inSelectMode = () => ch?.selectMode ?? false;
-
-	const onMouseDown = (e: MouseEvent) => {
-		if (inSelectMode() && e.shiftKey) {
-			e.preventDefault();
-		}
-	};
-
-	const handleAltClick = (e: MouseEvent) => {
-		if (!e.altKey || !ch || !chUpdate) return;
-		e.preventDefault();
-		e.stopPropagation();
-
-		const thread_id = props.message.channel_id;
-		const message_id = props.message.id;
-		const messages = messagesService._ranges.get(thread_id)?.live.items ?? [];
-		const currentIndex = messages.findIndex((m) => m.id === message_id);
-
-		if (currentIndex === -1) return;
-
-		// set read marker to the *previous* message (making current message unread)
-		const prevMessage = messages[currentIndex - 1];
-		if (prevMessage) {
-			chUpdate("read_marker_id", prevMessage.id);
-		} else {
-			// TODO: theres probably a better way to handle this than clearing the read marker
-			chUpdate("read_marker_id", undefined);
-		}
-	};
-
-	const handleClick = (e: MouseEvent) => {
-		if (!inSelectMode() || !ch || !chUpdate) return;
-		e.preventDefault();
-		e.stopPropagation();
-
-		const thread_id = props.message.channel_id;
-		const message_id = props.message.id;
-		const selected = ch.selectedMessages;
-
-		if (e.shiftKey && selected.length > 0) {
-			const lastSelected = selected[selected.length - 1];
-			const messages = messagesService._ranges.get(thread_id)?.live.items ?? [];
-			const lastIndex = messages.findIndex((m) => m.id === lastSelected);
-			const currentIndex = messages.findIndex((m) => m.id === message_id);
-
-			if (lastIndex !== -1 && currentIndex !== -1) {
-				const start = Math.min(lastIndex, currentIndex);
-				const end = Math.max(lastIndex, currentIndex);
-				const rangeIds = messages.slice(start, end + 1).map((m) => m.id);
-				const newSelected = [...new Set([...selected, ...rangeIds])];
-				chUpdate("selectedMessages", newSelected);
-			}
-		} else {
-			if (selected.includes(message_id)) {
-				chUpdate(
-					"selectedMessages",
-					selected.filter((id) => id !== message_id),
-				);
-			} else {
-				chUpdate("selectedMessages", [...selected, message_id]);
-			}
-		}
-	};
-
-	function SystemMessage(props2: {
-		icon: string;
-		content: JSX.Element;
-		date: Date;
-		class?: string;
-	}) {
-		return (
-			<article
-				ref={messageArticleRef}
-				class={`message menu-message oneline ${props2.class ?? ""}`}
-				data-message-id={props.message.id}
-				classList={{
-					separate: props.separate,
-					notseparate: !props.separate,
-					"toolbar-visible": toolbarVisible(),
-				}}
-				onClick={handleClick}
-				onMouseDown={(e) => {
-					onMouseDown(e);
-					handleAltClick(e);
-				}}
-				onMouseEnter={() => setHovered(true)}
-				onMouseLeave={() => setHovered(false)}
-			>
-				<img class="icon main" src={props2.icon} />
-				<div class="content">{props2.content}</div>
-				<Time date={props2.date} animGroup="message-ts" />
-				<MessageToolbar message={props.message} />
-			</article>
-		);
-	}
-
-	function getComponent() {
-		const date = new Date(
-			props.message.latest_version.created_at ??
-				props.message.created_at ??
-				new Date().toString(),
-		);
-		// FIXME: spacing between MessageDefault and oneline is missing
-		if (props.message.latest_version.type === "MemberAdd") {
-			const targetUserId = props.message.latest_version.target_user_id;
-			const author = (
-				<span class="author" data-user-id={props.message.author_id}>
-					<Author message={props.message} thread={thread()} />
-				</span>
-			);
-			const target = (
-				<span class="author" data-user-id={targetUserId}>
-					<Show when={thread()}>
-						{(t) => <Actor user_id={targetUserId} thread={t()} />}
-					</Show>
-				</span>
-			);
-			return (
-				<SystemMessage
-					icon={icMemberAdd}
-					date={date}
-					content={
-						<div
-							class="body markdown"
-							classList={{ local: props.message.is_local }}
-						>
-							{/* @ts-ignore */}
-							{t("message_content.member_add", author, target)}
-						</div>
-					}
-				/>
-			);
-		} else if (props.message.latest_version.type === "MemberRemove") {
-			const targetUserId = props.message.latest_version.target_user_id;
-			const author = (
-				<span class="author" data-user-id={props.message.author_id}>
-					<Author message={props.message} thread={thread()} />
-				</span>
-			);
-			const target = (
-				<span class="author" data-user-id={targetUserId}>
-					<Show when={thread()}>
-						{(t) => <Actor user_id={targetUserId} thread={t()} />}
-					</Show>
-				</span>
-			);
-			return (
-				<SystemMessage
-					icon={icMemberRemove}
-					date={date}
-					content={
-						<div
-							class="body markdown"
-							classList={{ local: props.message.is_local }}
-						>
-							{/* @ts-ignore */}
-							{t("message_content.member_remove", author, target)}
-						</div>
-					}
-				/>
-			);
-		} else if (props.message.latest_version.type === "MemberJoin") {
-			const author = (
-				<span class="author" data-user-id={props.message.author_id}>
-					<Author message={props.message} thread={thread()} />
-				</span>
-			);
-			return (
-				<SystemMessage
-					icon={icMemberJoin}
-					date={date}
-					content={
-						<div
-							class="body markdown"
-							classList={{ local: props.message.is_local }}
-						>
-							{/* @ts-ignore */}
-							{t("message_content.member_join", author)}
-						</div>
-					}
-				/>
-			);
-		} else if (props.message.latest_version.type === "MessagePinned") {
-			const navigate = useNavigate();
-			const author = (
-				<span class="author" data-user-id={props.message.author_id}>
-					<Author message={props.message} thread={thread()} />
-				</span>
-			);
-
-			const version = props.message.latest_version;
-			const link = (text: string) => (
-				<button
-					type="button"
-					style="color: oklch(var(--color-fg1))"
-					class="link"
-					onClick={(e) => {
-						e.stopPropagation();
-						navigate(
-							`/channel/${props.message.channel_id}/message/${version.pinned_message_id}`,
-						);
-					}}
-				>
-					{text}
-				</button>
-			);
-
-			return (
-				<SystemMessage
-					icon={icPin}
-					date={date}
-					content={
-						<div
-							class="body markdown"
-							classList={{ local: props.message.is_local }}
-						>
-							{/* @ts-ignore */}
-							{t("message_content.message_pinned", author, link)}
-						</div>
-					}
-				/>
-			);
-		} else if (props.message.latest_version.type === "ChannelRename") {
-			const author = (
-				<span class="author" data-user-id={props.message.author_id}>
-					<Author message={props.message} thread={thread()} />
-				</span>
-			);
-			const name_new = <b>{props.message.latest_version.name_new}</b>;
-			return (
-				<SystemMessage
-					icon={icEdit}
-					date={date}
-					content={
-						<div
-							class="body markdown"
-							classList={{ local: props.message.is_local }}
-						>
-							{/* @ts-ignore */}
-							{t("message_content.channel_rename", author, name_new)}
-						</div>
-					}
-				/>
-			);
-		} else if (props.message.latest_version.type === "Call") {
-			// TODO: say "you missed a call" in dm channels
-			const author = (
-				<span class="author" data-user-id={props.message.author_id}>
-					<Author message={props.message} thread={thread()} />
-				</span>
-			);
-			const count = props.message.latest_version.participants.length;
-			return (
-				<SystemMessage
-					icon={icMemberJoin}
-					date={date}
-					content={
-						<div
-							class="body markdown"
-							classList={{ local: props.message.is_local }}
-						>
-							{/* @ts-ignore */}
-							{props.message.latest_version.ended_at
-								? t("message_content.call_ended", author, count)
-								: t("message_content.call_started", author, count)}
-						</div>
-					}
-				/>
-			);
-		} else if (props.message.latest_version.type === "ChannelPingback") {
-			const author = (
-				<span class="author" data-user-id={props.message.author_id}>
-					<Author message={props.message} thread={thread()} />
-				</span>
-			);
-			return (
-				<SystemMessage
-					icon={icReply}
-					date={date}
-					content={
-						<div
-							class="body markdown"
-							classList={{ local: props.message.is_local }}
-						>
-							{/* @ts-ignore */}
-							{t("message_content.channel_pingback", author)}
-						</div>
-					}
-				/>
-			);
-		} else if (props.message.latest_version.type === "ChannelIcon") {
-			const author = (
-				<span class="author" data-user-id={props.message.author_id}>
-					<Author message={props.message} thread={thread()} />
-				</span>
-			);
-			return (
-				<SystemMessage
-					icon={icEdit}
-					date={date}
-					content={
-						<div
-							class="body markdown"
-							classList={{ local: props.message.is_local }}
-						>
-							{/* @ts-ignore */}
-							{t("message_content.channel_icon", author)}
-						</div>
-					}
-				/>
-			);
-		} else if (props.message.latest_version.type === "ThreadCreated") {
-			const navigate = useNavigate();
-			const ctx = useCtx();
-			const { t } = ctx;
-			const threadId = () =>
-				props.message.latest_version.type === "ThreadCreated"
-					? props.message.latest_version.thread_id
-					: undefined;
-
-			const author = (
-				<span class="author" data-user-id={props.message.author_id}>
-					<Author message={props.message} thread={thread()} />
-				</span>
-			);
-
-			const link = (text: string) => (
-				<Show when={threadId()} fallback={<span>{text}</span>}>
-					<button
-						type="button"
-						class="link"
-						onClick={(e) => {
-							e.stopPropagation();
-							if (threadId()) {
-								navigate(`/thread/${threadId()}`);
-							}
-						}}
-					>
-						{text}
-					</button>
-				</Show>
-			);
-
-			const viewAll = (text: string) => (
-				<button
-					type="button"
-					class="link"
-					onClick={(e) => {
-						e.stopPropagation();
-						const ref = e.currentTarget;
-						queueMicrotask(() => {
-							ctx.setThreadsView({
-								channel_id: props.message.channel_id,
-								ref,
-							});
-						});
-					}}
-				>
-					{text}
-				</button>
-			);
-
-			return (
-				<SystemMessage
-					icon={icThread}
-					date={date}
-					class="message-dim-content"
-					content={
-						<div
-							class="body markdown"
-							classList={{ local: props.message.is_local }}
-						>
-							{/* @ts-ignore */}
-							{t("message_content.thread_created", author, link, viewAll)}
-						</div>
-					}
-				/>
-			);
-		} else if (props.message.latest_version.type === "DefaultMarkdown") {
-			const [arrow_width, set_arrow_width] = createSignal(0);
-			const users2 = useUsers2();
-			const user = users2.use(() => props.message.author_id);
-			const set_w = (e: HTMLElement) => {
-				onMount(() => {
-					const width = e.querySelector(".user")?.getBoundingClientRect().width;
-					if (width) set_arrow_width(width);
-				});
-			};
-			const ctx = useCtx();
-			const [ch] = useChannel() ?? [null];
-			const isEditing = () => {
-				return ch?.editingMessage?.message_id === props.message.id;
-			};
-			const messageStyle = ctx.preferences().frontend.message_style || "cozy";
-			const withAvatar = messageStyle === "cozy";
-
-			// TODO: this code is getting messy and needs a refactor soon...
-			return (
-				<article
-					ref={messageArticleRef}
-					class="message menu-message"
-					data-message-id={props.message.id}
-					classList={{
-						withavatar: withAvatar,
-						separate: props.separate,
-						notseparate: !props.separate,
-						"toolbar-visible": toolbarVisible(),
-					}}
-					onClick={handleClick}
-					onMouseDown={(e) => {
-						onMouseDown(e);
-						handleAltClick(e);
-					}}
-					onMouseEnter={() => setHovered(true)}
-					onMouseLeave={() => setHovered(false)}
-				>
-					<Show when={props.message.latest_version.reply_id}>
-						{(reply) => (
-							<ReplyView
-								thread_id={props.message.channel_id}
-								reply_id={reply()}
-								arrow_width={arrow_width()}
-								source_id={props.message.id}
-							/>
-						)}
-					</Show>
-					<Show when={withAvatar}>
-						<Show when={props.separate}>
-							<div
-								class="avatar-wrap menu-user"
-								data-user-id={props.message.author_id}
-								onClick={(e) => {
-									e.stopPropagation();
-									const currentTarget = e.currentTarget as HTMLElement;
-									if (userView()?.ref === currentTarget) {
-										setUserView(null);
-									} else {
-										setUserView({
-											user_id: props.message.author_id,
-											room_id: (thread() as any)?.room_id,
-											thread_id: props.message.channel_id,
-											ref: currentTarget,
-											source: "message",
-										});
-									}
-								}}
-							>
-								<Avatar user={user()} animate={hovered()} />
-							</div>
-							<div class="author">
-								<Author message={props.message} thread={thread()} />
-								<Time date={date} animGroup="message-ts" />
-							</div>
-						</Show>
-						<Show when={!props.separate}>
-							<div class="avatar"></div>
-						</Show>
-						<div class="content">
-							<Show
-								when={!isEditing()}
-								fallback={<MessageEditor message={props.message} />}
-							>
-								<MessageTextMarkdown message={props.message} />
-							</Show>
-							<Show when={props.message.latest_version.attachments?.length}>
-								<ul class="attachments">
-									<For each={props.message.latest_version.attachments}>
-										{(att) => <AttachmentView att={att} />}
-									</For>
-								</ul>
-							</Show>
-							<Show when={props.message.latest_version.embeds?.length}>
-								<ul class="embeds">
-									<For each={props.message.latest_version.embeds}>
-										{(embed) => <EmbedView embed={embed} />}
-									</For>
-								</ul>
-							</Show>
-							<Show
-								when={
-									props.message.reactions && props.message.reactions.length > 0
-								}
-							>
-								<Reactions message={props.message} />
-							</Show>
-							<Show when={props.message.thread}>
-								{(thread) => (
-									<Show when={channels2.get(props.message.channel_id)}>
-										{(parentChannel) => (
-											<MessageThread
-												thread={thread()}
-												parentChannel={parentChannel()}
-												preferences={ctx.preferences()}
-											/>
-										)}
-									</Show>
-								)}
-							</Show>
-						</div>
-					</Show>
-					<Show when={!withAvatar}>
-						<div class="author-wrap">
-							<div
-								class="author sticky"
-								ref={set_w}
-								data-user-id={props.message.author_id}
-							>
-								<Author message={props.message} thread={thread()} />
-							</div>
-						</div>
-						<div class="content">
-							<Show
-								when={!isEditing()}
-								fallback={<MessageEditor message={props.message} />}
-							>
-								<MessageTextMarkdown message={props.message} />
-							</Show>
-							<Show when={props.message.latest_version.attachments?.length}>
-								<ul class="attachments">
-									<For each={props.message.latest_version.attachments}>
-										{(att) => <AttachmentView att={att} />}
-									</For>
-								</ul>
-							</Show>
-							<Show when={props.message.latest_version.embeds?.length}>
-								<ul class="embeds">
-									<For each={props.message.latest_version.embeds}>
-										{(embed) => <EmbedView embed={embed} />}
-									</For>
-								</ul>
-							</Show>
-							<Show
-								when={
-									props.message.reactions && props.message.reactions.length > 0
-								}
-							>
-								<Reactions message={props.message} />
-							</Show>
-							<Show when={props.message.thread}>
-								{(thread) => (
-									<Show when={channels2.get(props.message.channel_id)}>
-										{(parentChannel) => (
-											<MessageThread
-												thread={thread()}
-												parentChannel={parentChannel()}
-												preferences={ctx.preferences()}
-											/>
-										)}
-									</Show>
-								)}
-							</Show>
-						</div>
-						<Time date={date} animGroup="message-ts" />
-					</Show>
-					<MessageToolbar message={props.message} />
-				</article>
-			);
-		} else {
-			return (
-				<article
-					ref={messageArticleRef}
-					class="message menu-message"
-					data-message-id={props.message.id}
-					classList={{ "toolbar-visible": toolbarVisible() }}
-					onClick={handleClick}
-					onMouseDown={(e) => {
-						onMouseDown(e);
-						handleAltClick(e);
-					}}
-					onMouseEnter={() => setHovered(true)}
-					onMouseLeave={() => setHovered(false)}
-				>
-					unknown message: {props.message.latest_version.type}
-					<MessageToolbar message={props.message} />
-				</article>
-			);
-		}
-	}
-
-	return <>{getComponent()}</>;
+function SystemMessage(props: {
+	message: Message;
+	icon: string;
+	content: JSX.Element;
+	date: Date;
+	class?: string;
+	separate: boolean;
+	toolbarVisible: boolean;
+	handleClick: (e: MouseEvent) => void;
+	onMouseDown: (e: MouseEvent) => void;
+	handleAltClick: (e: MouseEvent) => void;
+	setHovered: (v: boolean) => void;
+	messageArticleRef: (el: HTMLElement | undefined) => void;
+}) {
+	return (
+		<article
+			ref={props.messageArticleRef}
+			class={`message menu-message oneline ${props.class ?? ""}`}
+			data-message-id={props.message.id}
+			classList={{
+				separate: props.separate,
+				notseparate: !props.separate,
+				"toolbar-visible": props.toolbarVisible,
+			}}
+			onClick={props.handleClick}
+			onMouseDown={(e) => {
+				props.onMouseDown(e);
+				props.handleAltClick(e);
+			}}
+			onMouseEnter={() => props.setHovered(true)}
+			onMouseLeave={() => props.setHovered(false)}
+		>
+			<img class="icon main" src={props.icon} />
+			<div class="content">{props.content}</div>
+			<Time date={props.date} animGroup="message-ts" />
+			<MessageToolbar message={props.message} />
+		</article>
+	);
 }
 
-type ReplyProps = {
+export function ReplyView(props: {
 	thread_id: string;
 	reply_id: string;
-	arrow_width?: number;
 	source_id: string;
-};
-
-function ReplyView(props: ReplyProps) {
-	const _ctx = useCtx();
+	room_id?: string;
+}) {
 	const channels2 = useChannels2();
 	const messagesService = useMessages2();
-	const { setUserView } = useUserPopout();
 	const reply = messagesService.use(() => props.reply_id);
-	const thread = channels2.use(() => props.thread_id);
 	const [_ch, chUpdate] = useChannel() ?? [null, null];
 
 	const content = () => {
@@ -928,7 +390,7 @@ function ReplyView(props: ReplyProps) {
 		if (!r) return;
 		return (
 			(r.latest_version.type === "DefaultMarkdown" &&
-				r.latest_version.content) ??
+				r.latest_version.content) ||
 			(r.latest_version.type === "DefaultMarkdown" &&
 			r.latest_version.attachments
 				? `${r.latest_version.attachments.length} attachment(s)`
@@ -955,12 +417,11 @@ function ReplyView(props: ReplyProps) {
 	};
 
 	const scrollToReply = () => {
-		// if (!props.reply) return;
 		if (!chUpdate) return;
 		chUpdate("reply_jump_source", props.source_id);
 		chUpdate("anchor", {
 			type: "context",
-			limit: 50, // TODO: calc dynamically
+			limit: 50,
 			message_id: props.reply_id,
 		});
 		chUpdate("highlight", props.reply_id);
@@ -973,13 +434,10 @@ function ReplyView(props: ReplyProps) {
 					aria-hidden="true"
 					viewBox="0 0 100 100"
 					preserveAspectRatio="none"
-					style={{ width: props.arrow_width ? `${props.arrow_width}px` : "" }}
 				>
 					<path
 						vector-effect="non-scaling-stroke"
 						shape-rendering="crispEdges"
-						// M = move to x y
-						// L = line to x y
 						d="M 50 100 L 50 50 L 100 50"
 					/>
 				</svg>
@@ -988,9 +446,12 @@ function ReplyView(props: ReplyProps) {
 				<Show when={!reply.loading} fallback="loading...">
 					<Show when={reply()}>
 						{(r) => (
-							<Show when={thread()}>
-								{(t) => <Author message={r()} thread={t()} />}
-							</Show>
+							<UserDisplayName
+								user_id={r().author_id}
+								room_id={props.room_id}
+								thread_id={r().channel_id}
+								onClick
+							/>
 						)}
 					</Show>
 					{(() => {
@@ -1047,79 +508,10 @@ export function AttachmentView(props: { att: Attachment }) {
 	}
 }
 
-export function Author(props: { message: Message; thread?: Channel }) {
-	const roomMembers2 = useRoomMembers2();
-	const users2 = useUsers2();
-	const { userView, setUserView } = useUserPopout();
-	const room_member = () =>
-		props.thread?.room_id
-			? roomMembers2.cache.get(
-					`${props.thread.room_id}:${props.message.author_id}`,
-				)
-			: null;
-	const user = () => users2.cache.get(props.message.author_id);
-
-	function name() {
-		let name;
-		if (room_member()) name ??= room_member()?.override_name;
-
-		if (user()) name ??= user()?.name;
-
-		return name;
-	}
-
-	return (
-		<span
-			class="user menu-user"
-			data-user-id={props.message.author_id}
-			onClick={(e) => {
-				e.stopPropagation();
-				const currentTarget = e.currentTarget as HTMLElement;
-				if (userView()?.ref === currentTarget) {
-					setUserView(null);
-				} else {
-					setUserView({
-						user_id: props.message.author_id,
-						room_id: (props.thread as any)?.room_id,
-						thread_id: props.message.channel_id,
-						ref: currentTarget,
-						source: "message",
-					});
-				}
-			}}
-		>
-			{name()}
-		</span>
-	);
-}
-
-function Actor(props: { user_id: string; thread: Channel }) {
-	const roomMembers2 = useRoomMembers2();
-	const users2 = useUsers2();
-	const room_member = () =>
-		props.thread.room_id
-			? roomMembers2.cache.get(`${props.thread.room_id}:${props.user_id}`)
-			: null;
-	const user = () => users2.cache.get(props.user_id);
-
-	function name() {
-		let name;
-
-		if (room_member()) name ??= room_member()?.override_name;
-
-		if (user()) name ??= user()?.name;
-
-		return name;
-	}
-
-	return <span class="user">{name()}</span>;
-}
-
 export const MessageToolbar = (props: { message: Message }) => {
 	const api2 = useApi2();
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
-	const _messagesService = useMessages2();
 	const [showReactionPicker, setShowReactionPicker] = createSignal(false);
 	let reactionButtonRef: HTMLButtonElement | undefined;
 
@@ -1286,3 +678,698 @@ export const MessageToolbar = (props: { message: Message }) => {
 		</div>
 	);
 };
+
+export function MessageView(props: MessageProps) {
+	const channels2 = useChannels2();
+	const messagesService = useMessages2();
+	const ctx = useCtx();
+	const { menu } = useMenu();
+	const { userView, setUserView } = useUserPopout();
+	const thread = channels2.use(() => props.message.channel_id);
+	const [ch, chUpdate] = useChannel() ?? [null, null];
+	let messageArticleRef: HTMLElement | undefined;
+	const [hovered, setHovered] = createSignal(false);
+
+	const users2 = useUsers2();
+	const user = users2.use(() => props.message.author_id);
+
+	const isMenuOpen = () => {
+		const m = menu();
+		if (!m) return false;
+		return m.type === "message" && m.message_id === props.message.id;
+	};
+
+	const isReactionPickerOpen = () => {
+		const popout = ctx.popout();
+		if (
+			!popout ||
+			!("id" in popout) ||
+			popout.id !== "emoji" ||
+			!popout.ref ||
+			!messageArticleRef
+		) {
+			return false;
+		}
+		return messageArticleRef.contains(popout.ref);
+	};
+	const toolbarVisible = () => isMenuOpen() || isReactionPickerOpen();
+
+	const inSelectMode = () => ch?.selectMode ?? false;
+
+	const onMouseDown = (e: MouseEvent) => {
+		if (inSelectMode() && e.shiftKey) {
+			e.preventDefault();
+		}
+	};
+
+	const handleAltClick = (e: MouseEvent) => {
+		if (!e.altKey || !ch || !chUpdate) return;
+		e.preventDefault();
+		e.stopPropagation();
+
+		const thread_id = props.message.channel_id;
+		const message_id = props.message.id;
+		const messages = messagesService._ranges.get(thread_id)?.live.items ?? [];
+		const currentIndex = messages.findIndex((m) => m.id === message_id);
+
+		if (currentIndex === -1) return;
+
+		const prevMessage = messages[currentIndex - 1];
+		if (prevMessage) {
+			chUpdate("read_marker_id", prevMessage.id);
+		} else {
+			chUpdate("read_marker_id", undefined);
+		}
+	};
+
+	const handleClick = (e: MouseEvent) => {
+		if (!inSelectMode() || !ch || !chUpdate) return;
+		e.preventDefault();
+		e.stopPropagation();
+
+		const thread_id = props.message.channel_id;
+		const message_id = props.message.id;
+		const selected = ch.selectedMessages;
+
+		if (e.shiftKey && selected.length > 0) {
+			const lastSelected = selected[selected.length - 1];
+			const messages = messagesService._ranges.get(thread_id)?.live.items ?? [];
+			const lastIndex = messages.findIndex((m) => m.id === lastSelected);
+			const currentIndex = messages.findIndex((m) => m.id === message_id);
+
+			if (lastIndex !== -1 && currentIndex !== -1) {
+				const start = Math.min(lastIndex, currentIndex);
+				const end = Math.max(lastIndex, currentIndex);
+				const rangeIds = messages.slice(start, end + 1).map((m) => m.id);
+				const newSelected = [...new Set([...selected, ...rangeIds])];
+				chUpdate("selectedMessages", newSelected);
+			}
+		} else {
+			if (selected.includes(message_id)) {
+				chUpdate(
+					"selectedMessages",
+					selected.filter((id) => id !== message_id),
+				);
+			} else {
+				chUpdate("selectedMessages", [...selected, message_id]);
+			}
+		}
+	};
+
+	const date = createMemo(() => {
+		return new Date(
+			props.message.latest_version.created_at ??
+				props.message.created_at ??
+				new Date().toString(),
+		);
+	});
+
+	const isEditing = () => {
+		return ch?.editingMessage?.message_id === props.message.id;
+	};
+
+	const messageStyle = () => ctx.preferences().frontend.message_style || "cozy";
+	const withAvatar = () => messageStyle() === "cozy";
+
+	const systemProps = {
+		message: props.message,
+		date: date(),
+		separate: props.separate ?? false,
+		toolbarVisible: toolbarVisible(),
+		handleClick,
+		onMouseDown,
+		handleAltClick,
+		setHovered,
+		messageArticleRef: (el: HTMLElement | undefined) =>
+			(messageArticleRef = el),
+		room_id: (thread() as any)?.room_id,
+	};
+
+	return (
+		<Switch
+			fallback={
+				<article
+					ref={messageArticleRef}
+					class="message menu-message"
+					data-message-id={props.message.id}
+					classList={{ "toolbar-visible": toolbarVisible() }}
+					onClick={handleClick}
+					onMouseDown={(e) => {
+						onMouseDown(e);
+						handleAltClick(e);
+					}}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
+				>
+					unknown message: {props.message.latest_version.type}
+					<MessageToolbar message={props.message} />
+				</article>
+			}
+		>
+			<Match when={props.message.latest_version.type === "MemberAdd"}>
+				<SystemMessageMemberAdd {...systemProps} />
+			</Match>
+			<Match when={props.message.latest_version.type === "MemberRemove"}>
+				<SystemMessageMemberRemove {...systemProps} />
+			</Match>
+			<Match when={props.message.latest_version.type === "MemberJoin"}>
+				<SystemMessageMemberJoin {...systemProps} />
+			</Match>
+			<Match when={props.message.latest_version.type === "MessagePinned"}>
+				<SystemMessagePinned {...systemProps} />
+			</Match>
+			<Match when={props.message.latest_version.type === "ChannelRename"}>
+				<SystemMessageChannelRename {...systemProps} />
+			</Match>
+			<Match when={props.message.latest_version.type === "Call"}>
+				<SystemMessageCall {...systemProps} />
+			</Match>
+			<Match when={props.message.latest_version.type === "ChannelPingback"}>
+				<SystemMessageChannelPingback {...systemProps} />
+			</Match>
+			<Match when={props.message.latest_version.type === "ChannelIcon"}>
+				<SystemMessageChannelIcon {...systemProps} />
+			</Match>
+			<Match when={props.message.latest_version.type === "ThreadCreated"}>
+				<SystemMessageThreadCreated {...systemProps} />
+			</Match>
+			<Match when={props.message.latest_version.type === "DefaultMarkdown"}>
+				<DefaultMessage
+					{...systemProps}
+					withAvatar={withAvatar()}
+					user={user()}
+					hovered={hovered()}
+					isEditing={isEditing()}
+					channels2={channels2}
+					ctx={ctx}
+				/>
+			</Match>
+		</Switch>
+	);
+}
+
+function DefaultMessage(props: any) {
+	return (
+		<article
+			ref={props.messageArticleRef}
+			class="message menu-message"
+			data-message-id={props.message.id}
+			classList={{
+				withavatar: props.withAvatar,
+				separate: props.separate,
+				notseparate: !props.separate,
+				"toolbar-visible": props.toolbarVisible,
+			}}
+			onClick={props.handleClick}
+			onMouseDown={(e) => {
+				props.onMouseDown(e);
+				props.handleAltClick(e);
+			}}
+			onMouseEnter={() => props.setHovered(true)}
+			onMouseLeave={() => props.setHovered(false)}
+		>
+			<Show when={props.message.latest_version.reply_id}>
+				{(reply) => (
+					<ReplyView
+						thread_id={props.message.channel_id}
+						reply_id={reply()}
+						source_id={props.message.id}
+						room_id={props.room_id}
+					/>
+				)}
+			</Show>
+			<Show when={props.withAvatar}>
+				<Show when={props.separate}>
+					<div
+						class="avatar-wrap menu-user"
+						data-user-id={props.message.author_id}
+						onClick={(e) => {
+							e.stopPropagation();
+							const currentTarget = e.currentTarget as HTMLElement;
+							const popout = props.ctx.popout();
+							if (popout && popout.ref === currentTarget) {
+								props.ctx.setPopout(null);
+							} else {
+								props.ctx.setUserPopout({
+									user_id: props.message.author_id,
+									room_id: props.room_id,
+									thread_id: props.message.channel_id,
+									ref: currentTarget,
+									source: "message",
+								});
+							}
+						}}
+					>
+						<Avatar user={props.user} animate={props.hovered} />
+					</div>
+					<div class="author">
+						<UserDisplayName
+							user_id={props.message.author_id}
+							room_id={props.room_id}
+							thread_id={props.message.channel_id}
+							onClick
+						/>
+						<Time date={props.date} animGroup="message-ts" />
+					</div>
+				</Show>
+				<Show when={!props.separate}>
+					<div class="avatar"></div>
+				</Show>
+				<div class="content">
+					<Show
+						when={!props.isEditing}
+						fallback={<MessageEditor message={props.message} />}
+					>
+						<MessageTextMarkdown message={props.message} />
+					</Show>
+					<Show when={props.message.latest_version.attachments?.length}>
+						<ul class="attachments">
+							<For each={props.message.latest_version.attachments}>
+								{(att) => <AttachmentView att={att} />}
+							</For>
+						</ul>
+					</Show>
+					<Show when={props.message.latest_version.embeds?.length}>
+						<ul class="embeds">
+							<For each={props.message.latest_version.embeds}>
+								{(embed) => <EmbedView embed={embed} />}
+							</For>
+						</ul>
+					</Show>
+					<Show
+						when={props.message.reactions && props.message.reactions.length > 0}
+					>
+						<Reactions message={props.message} />
+					</Show>
+					<Show when={props.message.thread}>
+						{(thread) => (
+							<Show when={props.channels2.get(props.message.channel_id)}>
+								{(parentChannel) => (
+									<MessageThread
+										thread={thread()}
+										parentChannel={parentChannel()}
+										preferences={props.ctx.preferences()}
+									/>
+								)}
+							</Show>
+						)}
+					</Show>
+				</div>
+			</Show>
+			<Show when={!props.withAvatar}>
+				<div class="author-wrap">
+					<div class="author sticky" data-user-id={props.message.author_id}>
+						<UserDisplayName
+							user_id={props.message.author_id}
+							room_id={props.room_id}
+							thread_id={props.message.channel_id}
+							onClick
+						/>
+					</div>
+				</div>
+				<div class="content">
+					<Show
+						when={!props.isEditing}
+						fallback={<MessageEditor message={props.message} />}
+					>
+						<MessageTextMarkdown message={props.message} />
+					</Show>
+					<Show when={props.message.latest_version.attachments?.length}>
+						<ul class="attachments">
+							<For each={props.message.latest_version.attachments}>
+								{(att) => <AttachmentView att={att} />}
+							</For>
+						</ul>
+					</Show>
+					<Show when={props.message.latest_version.embeds?.length}>
+						<ul class="embeds">
+							<For each={props.message.latest_version.embeds}>
+								{(embed) => <EmbedView embed={embed} />}
+							</For>
+						</ul>
+					</Show>
+					<Show
+						when={props.message.reactions && props.message.reactions.length > 0}
+					>
+						<Reactions message={props.message} />
+					</Show>
+					<Show when={props.message.thread}>
+						{(thread) => (
+							<Show when={props.channels2.get(props.message.channel_id)}>
+								{(parentChannel) => (
+									<MessageThread
+										thread={thread()}
+										parentChannel={parentChannel()}
+										preferences={props.ctx.preferences()}
+									/>
+								)}
+							</Show>
+						)}
+					</Show>
+				</div>
+				<Time date={props.date} animGroup="message-ts" />
+			</Show>
+			<MessageToolbar message={props.message} />
+		</article>
+	);
+}
+
+function SystemMessageMemberAdd(props: any) {
+	const { t } = useCtx();
+	return (
+		<SystemMessage
+			{...props}
+			icon={icMemberAdd}
+			content={
+				<div
+					class="body markdown"
+					classList={{ local: props.message.is_local }}
+				>
+					{/* @ts-ignore */}
+					{t(
+						"message_content.member_add",
+						<span class="author">
+							<UserDisplayName
+								user_id={props.message.author_id}
+								room_id={props.room_id}
+								onClick
+							/>
+						</span>,
+						<span class="author">
+							<UserDisplayName
+								user_id={props.message.latest_version.target_user_id}
+								room_id={props.room_id}
+								onClick
+							/>
+						</span>,
+					)}
+				</div>
+			}
+		/>
+	);
+}
+
+function SystemMessageMemberRemove(props: any) {
+	const { t } = useCtx();
+	return (
+		<SystemMessage
+			{...props}
+			icon={icMemberRemove}
+			content={
+				<div
+					class="body markdown"
+					classList={{ local: props.message.is_local }}
+				>
+					{/* @ts-ignore */}
+					{t(
+						"message_content.member_remove",
+						<span class="author">
+							<UserDisplayName
+								user_id={props.message.author_id}
+								room_id={props.room_id}
+								onClick
+							/>
+						</span>,
+						<span class="author">
+							<UserDisplayName
+								user_id={props.message.latest_version.target_user_id}
+								room_id={props.room_id}
+								onClick
+							/>
+						</span>,
+					)}
+				</div>
+			}
+		/>
+	);
+}
+
+function SystemMessageMemberJoin(props: any) {
+	const { t } = useCtx();
+	return (
+		<SystemMessage
+			{...props}
+			icon={icMemberJoin}
+			content={
+				<div
+					class="body markdown"
+					classList={{ local: props.message.is_local }}
+				>
+					{/* @ts-ignore */}
+					{t(
+						"message_content.member_join",
+						<span class="author">
+							<UserDisplayName
+								user_id={props.message.author_id}
+								room_id={props.room_id}
+								onClick
+							/>
+						</span>,
+					)}
+				</div>
+			}
+		/>
+	);
+}
+
+function SystemMessagePinned(props: any) {
+	const { t } = useCtx();
+	const navigate = useNavigate();
+	return (
+		<SystemMessage
+			{...props}
+			icon={icPin}
+			content={
+				<div
+					class="body markdown"
+					classList={{ local: props.message.is_local }}
+				>
+					{/* @ts-ignore */}
+					{t(
+						"message_content.message_pinned",
+						<span class="author">
+							<UserDisplayName
+								user_id={props.message.author_id}
+								room_id={props.room_id}
+								onClick
+							/>
+						</span>,
+						(text: string) => (
+							<button
+								type="button"
+								style="color: oklch(var(--color-fg1))"
+								class="link"
+								onClick={(e) => {
+									e.stopPropagation();
+									navigate(
+										`/channel/${props.message.channel_id}/message/${props.message.latest_version.pinned_message_id}`,
+									);
+								}}
+							>
+								{text}
+							</button>
+						),
+					)}
+				</div>
+			}
+		/>
+	);
+}
+
+function SystemMessageChannelRename(props: any) {
+	const { t } = useCtx();
+	return (
+		<SystemMessage
+			{...props}
+			icon={icEdit}
+			content={
+				<div
+					class="body markdown"
+					classList={{ local: props.message.is_local }}
+				>
+					{/* @ts-ignore */}
+					{t(
+						"message_content.channel_rename",
+						<span class="author">
+							<UserDisplayName
+								user_id={props.message.author_id}
+								room_id={props.room_id}
+								onClick
+							/>
+						</span>,
+						<b>{props.message.latest_version.name_new}</b>,
+					)}
+				</div>
+			}
+		/>
+	);
+}
+
+function SystemMessageCall(props: any) {
+	const { t } = useCtx();
+	return (
+		<SystemMessage
+			{...props}
+			icon={icMemberJoin}
+			content={
+				<div
+					class="body markdown"
+					classList={{ local: props.message.is_local }}
+				>
+					{/* @ts-ignore */}
+					{props.message.latest_version.ended_at
+						? t(
+								"message_content.call_ended",
+								<span class="author">
+									<UserDisplayName
+										user_id={props.message.author_id}
+										room_id={props.room_id}
+										onClick
+									/>
+								</span>,
+								props.message.latest_version.participants.length,
+							)
+						: t(
+								"message_content.call_started",
+								<span class="author">
+									<UserDisplayName
+										user_id={props.message.author_id}
+										room_id={props.room_id}
+										onClick
+									/>
+								</span>,
+								props.message.latest_version.participants.length,
+							)}
+				</div>
+			}
+		/>
+	);
+}
+
+function SystemMessageChannelPingback(props: any) {
+	const { t } = useCtx();
+	return (
+		<SystemMessage
+			{...props}
+			icon={icReply}
+			content={
+				<div
+					class="body markdown"
+					classList={{ local: props.message.is_local }}
+				>
+					{/* @ts-ignore */}
+					{t(
+						"message_content.channel_pingback",
+						<span class="author">
+							<UserDisplayName
+								user_id={props.message.author_id}
+								room_id={props.room_id}
+								onClick
+							/>
+						</span>,
+					)}
+				</div>
+			}
+		/>
+	);
+}
+
+function SystemMessageChannelIcon(props: any) {
+	const { t } = useCtx();
+	return (
+		<SystemMessage
+			{...props}
+			icon={icEdit}
+			content={
+				<div
+					class="body markdown"
+					classList={{ local: props.message.is_local }}
+				>
+					{/* @ts-ignore */}
+					{t(
+						"message_content.channel_icon",
+						<span class="author">
+							<UserDisplayName
+								user_id={props.message.author_id}
+								room_id={props.room_id}
+								onClick
+							/>
+						</span>,
+					)}
+				</div>
+			}
+		/>
+	);
+}
+
+function SystemMessageThreadCreated(props: any) {
+	const { t } = useCtx();
+	const navigate = useNavigate();
+	const ctx = useCtx();
+
+	const threadId = () => props.message.latest_version.thread_id;
+
+	const link = (text: string) => (
+		<Show when={threadId()} fallback={<span>{text}</span>}>
+			<button
+				type="button"
+				class="link"
+				onClick={(e) => {
+					e.stopPropagation();
+					if (threadId()) {
+						navigate(`/thread/${threadId()}`);
+					}
+				}}
+			>
+				{text}
+			</button>
+		</Show>
+	);
+
+	const viewAll = (text: string) => (
+		<button
+			type="button"
+			class="link"
+			onClick={(e) => {
+				e.stopPropagation();
+				const ref = e.currentTarget;
+				queueMicrotask(() => {
+					ctx.setThreadsView({
+						channel_id: props.message.channel_id,
+						ref,
+					});
+				});
+			}}
+		>
+			{text}
+		</button>
+	);
+
+	return (
+		<SystemMessage
+			{...props}
+			icon={icThread}
+			class="message-dim-content"
+			content={
+				<div
+					class="body markdown"
+					classList={{ local: props.message.is_local }}
+				>
+					{/* @ts-ignore */}
+					{t(
+						"message_content.thread_created",
+						<span class="author">
+							<UserDisplayName
+								user_id={props.message.author_id}
+								room_id={props.room_id}
+								onClick
+							/>
+						</span>,
+						link,
+						viewAll,
+					)}
+				</div>
+			}
+		/>
+	);
+}

@@ -21,6 +21,8 @@ import { logger } from "../../logger";
 import { deepEqual } from "../../utils/deepEqual";
 import { BaseService } from "../core/Service";
 
+const MAX_MESSAGES_PER_RANGE = 500;
+
 export type MessageListAnchor =
 	| { type: "backwards"; message_id?: string; limit: number }
 	| { type: "forwards"; message_id?: string; limit: number }
@@ -81,6 +83,7 @@ export class MessageRange {
 		const byId = new Map<string, Message>();
 		for (const m of this.items) byId.set(m.id, m);
 		for (const m of newItems) byId.set(m.id, m);
+
 		return new MessageRange(
 			this.has_forward,
 			this.has_backwards,
@@ -181,33 +184,39 @@ export class MessageRanges {
 	}
 
 	tryMerge(): boolean {
-		const sorted = [...this.ranges]
+		let mergedAny = false;
+		const rangesArr = [...this.ranges]
 			.filter((r) => !r.isEmpty())
 			.sort((a, b) => (a.start < b.start ? -1 : 1));
 
-		for (let i = 0; i < sorted.length - 1; i++) {
-			const a = sorted[i]!,
-				b = sorted[i + 1]!;
+		let i = 0;
+		while (i < rangesArr.length - 1) {
+			const a = rangesArr[i]!;
+			const b = rangesArr[i + 1]!;
 			const adjacent = !a.has_forward && !b.has_backwards;
 			const overlapping = a.end >= b.start;
 
 			if (adjacent || overlapping) {
-				this.ranges.delete(a);
-				this.ranges.delete(b);
 				const fused = a.mergeRange(b);
-				this.ranges.add(fused);
+				rangesArr.splice(i, 2, fused); // Replace the two with the fused
 				if (this.live === a || this.live === b) this.live = fused;
-				return true;
+				mergedAny = true;
+			} else {
+				i++;
 			}
 		}
-		return false;
+
+		if (mergedAny) {
+			this.ranges = new Set(rangesArr);
+		}
+		return mergedAny;
 	}
 }
 
 export type MessageMutator = {
 	mutate: (r: MessageRange) => void;
 	query: MessageListAnchor;
-	thread_id: string;
+	channel_id: string;
 };
 
 export class MessagesService extends BaseService<Message> {
@@ -221,7 +230,22 @@ export class MessagesService extends BaseService<Message> {
 	// TODO: make this private
 	public _ranges = new Map<string, MessageRanges>();
 
-	private _versions = new ReactiveMap<string, number>();
+	public _versions = new ReactiveMap<string, number>();
+	private _pendingFetches = new Map<string, Promise<any>>();
+
+	private deduplicatedFetch<T>(
+		key: string,
+		fetcher: () => Promise<T>,
+	): Promise<T> {
+		if (this._pendingFetches.has(key)) {
+			return this._pendingFetches.get(key) as Promise<T>;
+		}
+		const promise = fetcher().finally(() => {
+			this._pendingFetches.delete(key);
+		});
+		this._pendingFetches.set(key, promise);
+		return promise;
+	}
 
 	private getOrCreateCache(channel_id: string): MessageRanges {
 		let c = this._ranges.get(channel_id);
@@ -237,7 +261,7 @@ export class MessagesService extends BaseService<Message> {
 	}
 
 	async fetch(_id: string): Promise<Message> {
-		throw new Error("Use fetchInThread(thread_id, message_id)");
+		throw new Error("Use fetchInThread(channel_id, message_id)");
 	}
 
 	async fetchInChannel(
@@ -248,7 +272,7 @@ export class MessagesService extends BaseService<Message> {
 			this.client.http.GET(
 				"/api/v1/channel/{channel_id}/message/{message_id}",
 				{
-					params: { path: { channel_id: channel_id, message_id } },
+					params: { path: { channel_id, message_id } },
 				},
 			),
 		);
@@ -258,29 +282,32 @@ export class MessagesService extends BaseService<Message> {
 	}
 
 	useList(
-		thread_id: Accessor<string>,
+		channel_id: Accessor<string>,
 		dir: Accessor<MessageListAnchor>,
 	): Resource<MessageRange> {
 		const source = createMemo(
 			() => ({
-				thread_id: thread_id(),
-				dir: dir(),
-				_v: this._versions.get(thread_id()) ?? 0,
+				channel_id: channel_id(),
+				dir: { ...dir() },
+				_v: this._versions.get(channel_id()) ?? 0,
 			}),
 			undefined,
 			{
-				equals: (a, b) =>
-					a._v === b._v &&
-					a.thread_id === b.thread_id &&
-					deepEqual(a.dir, b.dir),
+				equals: (a, b) => {
+					return (
+						a._v === b._v &&
+						a.channel_id === b.channel_id &&
+						deepEqual(a.dir, b.dir)
+					);
+				},
 			},
 		);
 
 		const [resource, { mutate }] = createResource(
 			source,
-			async ({ thread_id, dir }) => {
-				await this.ensureHydrated(thread_id);
-				const cache = this.getOrCreateCache(thread_id);
+			async ({ channel_id, dir }) => {
+				await this.ensureHydrated(channel_id);
+				const cache = this.getOrCreateCache(channel_id);
 				const slice = this.getSlice(cache, dir);
 
 				if (slice && !slice.stale) return slice;
@@ -290,7 +317,7 @@ export class MessagesService extends BaseService<Message> {
 					mutate(slice);
 				}
 
-				return await this.fetchRange(thread_id, dir, cache);
+				return await this.fetchRange(channel_id, dir, cache);
 			},
 		);
 
@@ -737,7 +764,7 @@ export class MessagesService extends BaseService<Message> {
 	}
 
 	async edit(
-		thread_id: string,
+		channel_id: string,
 		message_id: string,
 		content: string,
 	): Promise<Message> {
@@ -760,7 +787,7 @@ export class MessagesService extends BaseService<Message> {
 			const { data, error } = await this.client.http.PATCH(
 				"/api/v1/channel/{channel_id}/message/{message_id}",
 				{
-					params: { path: { channel_id: thread_id, message_id } },
+					params: { path: { channel_id, message_id } },
 					body: { content },
 				},
 			);
@@ -776,16 +803,16 @@ export class MessagesService extends BaseService<Message> {
 		}
 	}
 
-	async deleteBulk(thread_id: string, message_ids: string[]) {
+	async deleteBulk(channel_id: string, message_ids: string[]) {
 		await this.client.http.PATCH("/api/v1/channel/{channel_id}/message", {
-			params: { path: { channel_id: thread_id } },
+			params: { path: { channel_id } },
 			body: { delete: message_ids },
 		});
 	}
 
-	async removeBulk(thread_id: string, message_ids: string[]) {
+	async removeBulk(channel_id: string, message_ids: string[]) {
 		await this.client.http.PATCH("/api/v1/channel/{channel_id}/message", {
-			params: { path: { channel_id: thread_id } },
+			params: { path: { channel_id } },
 			body: { remove: message_ids },
 		});
 	}
@@ -829,7 +856,7 @@ export class MessagesService extends BaseService<Message> {
 	}
 
 	// TODO: pinned message cache?
-	listPinned(thread_id_signal: () => string): Resource<Pagination<Message>> {
+	listPinned(channel_id_signal: () => string): Resource<Pagination<Message>> {
 		const paginate = async (pagination?: Pagination<Message>) => {
 			if (pagination && !pagination.has_more) return pagination;
 
@@ -837,7 +864,7 @@ export class MessagesService extends BaseService<Message> {
 				"/api/v1/channel/{channel_id}/pin",
 				{
 					params: {
-						path: { channel_id: thread_id_signal() },
+						path: { channel_id: channel_id_signal() },
 						query: {
 							dir: "f",
 							limit: 1024,
@@ -863,8 +890,8 @@ export class MessagesService extends BaseService<Message> {
 			} as Pagination<Message>;
 		};
 
-		const thread_id = thread_id_signal();
-		const l = this._pinnedListings.get(thread_id);
+		const channel_id = channel_id_signal();
+		const l = this._pinnedListings.get(channel_id);
 		if (l) {
 			return l.resource;
 		}
@@ -876,12 +903,12 @@ export class MessagesService extends BaseService<Message> {
 			prom: null,
 			pagination: null,
 		};
-		this._pinnedListings.set(thread_id, l2);
+		this._pinnedListings.set(channel_id, l2);
 
 		const [resource, { mutate, refetch }] = createResource(
-			thread_id_signal,
-			async (thread_id) => {
-				const l = this._pinnedListings.get(thread_id)!;
+			channel_id_signal,
+			async (channel_id) => {
+				const l = this._pinnedListings.get(channel_id)!;
 				if (l?.prom) {
 					await l.prom;
 					return l.pagination!;
@@ -894,7 +921,7 @@ export class MessagesService extends BaseService<Message> {
 				l!.prom = null;
 
 				for (const mut of this._pinnedListingMutators) {
-					if (mut.thread_id === thread_id) mut.mutate(res);
+					if (mut.channel_id === channel_id) mut.mutate(res);
 				}
 
 				return res!;
@@ -905,40 +932,40 @@ export class MessagesService extends BaseService<Message> {
 		l2.refetch = refetch;
 		l2.mutate = mutate;
 
-		const mut = { thread_id: thread_id_signal(), mutate };
+		const mut = { channel_id: channel_id_signal(), mutate };
 		this._pinnedListingMutators.add(mut);
 
 		createEffect(() => {
-			mut.thread_id = thread_id_signal();
+			mut.channel_id = channel_id_signal();
 		});
 
 		return resource;
 	}
 
 	async reorderPins(
-		thread_id: string,
+		channel_id: string,
 		messages: { id: string; position: number }[],
 	) {
 		await this.client.http.PATCH("/api/v1/channel/{channel_id}/pin", {
-			params: { path: { channel_id: thread_id } },
+			params: { path: { channel_id } },
 			body: { messages },
 		});
 	}
 
-	async pin(thread_id: string, message_id: string) {
+	async pin(channel_id: string, message_id: string) {
 		await this.client.http.PUT(
 			"/api/v1/channel/{channel_id}/pin/{message_id}",
 			{
-				params: { path: { channel_id: thread_id, message_id } },
+				params: { path: { channel_id, message_id } },
 			},
 		);
 	}
 
-	async unpin(thread_id: string, message_id: string) {
+	async unpin(channel_id: string, message_id: string) {
 		await this.client.http.DELETE(
 			"/api/v1/channel/{channel_id}/pin/{message_id}",
 			{
-				params: { path: { channel_id: thread_id, message_id } },
+				params: { path: { channel_id, message_id } },
 			},
 		);
 	}
@@ -1009,38 +1036,44 @@ export class MessagesService extends BaseService<Message> {
 		}
 	>();
 	public _pinnedListingMutators = new Set<{
-		thread_id: string;
+		channel_id: string;
 		mutate: (value: Pagination<Message>) => void;
 	}>();
 
 	// Helpers
-	private async fetchList(thread_id: string, query: PaginationQuery) {
-		const { data, error } = await this.client.http.GET(
-			"/api/v1/channel/{channel_id}/message",
-			{
-				params: { path: { channel_id: thread_id }, query },
-			},
-		);
-		if (error) throw error;
-		return data as unknown as Pagination<Message>;
+	private async fetchList(channel_id: string, query: PaginationQuery) {
+		const key = `list:${channel_id}:${JSON.stringify(query)}`;
+		return this.deduplicatedFetch(key, async () => {
+			const { data, error } = await this.client.http.GET(
+				"/api/v1/channel/{channel_id}/message",
+				{
+					params: { path: { channel_id }, query },
+				},
+			);
+			if (error) throw error;
+			return data as unknown as Pagination<Message>;
+		});
 	}
 
 	private async fetchContext(
-		thread_id: string,
+		channel_id: string,
 		message_id: string,
 		limit: number,
 	) {
-		const { data, error } = await this.client.http.GET(
-			"/api/v1/channel/{channel_id}/context/{message_id}",
-			{
-				params: {
-					path: { channel_id: thread_id, message_id },
-					query: { limit },
+		const key = `context:${channel_id}:${message_id}:${limit}`;
+		return this.deduplicatedFetch(key, async () => {
+			const { data, error } = await this.client.http.GET(
+				"/api/v1/channel/{channel_id}/context/{message_id}",
+				{
+					params: {
+						path: { channel_id, message_id },
+						query: { limit },
+					},
 				},
-			},
-		);
-		if (error) throw error;
-		return data;
+			);
+			if (error) throw error;
+			return data;
+		});
 	}
 
 	private mergeAfter(

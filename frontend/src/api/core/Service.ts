@@ -177,13 +177,41 @@ export abstract class BaseService<T> {
 		return this.cache.get(id);
 	}
 
+	/**
+	 * Prepare an item for upsert (e.g. normalization).
+	 */
+	protected prepareUpsert(item: T): T {
+		return item;
+	}
+
+	/**
+	 * Hook called after an item is upserted.
+	 */
+	protected afterUpsert(_item: T): void {}
+
+	/**
+	 * Hook called after a bulk upsert of items.
+	 */
+	protected afterUpsertBulk(items: T[]): void {
+		for (const item of items) {
+			this.afterUpsert(item);
+		}
+	}
+
+	/**
+	 * Hook called after an item is deleted.
+	 */
+	protected afterDelete(_id: string, _item?: T): void {}
+
 	upsert(item: T) {
-		this.cache.set(this.getKey(item), item);
+		const prepared = this.prepareUpsert(item);
+		this.cache.set(this.getKey(prepared), prepared);
+		this.afterUpsert(prepared);
 
 		if (this.db && this.cacheName) {
-			this.db.put(this.cacheName, item).catch((e) => {
+			this.db.put(this.cacheName, prepared).catch((e) => {
 				logger.for("idb").warn(`Failed to write to ${this.cacheName}`, {
-					key: this.getKey(item),
+					key: this.getKey(prepared),
 					error: e,
 				});
 			});
@@ -193,11 +221,14 @@ export abstract class BaseService<T> {
 	upsertBulk(items: T[]) {
 		if (items.length === 0) return;
 
+		const preparedItems = items.map((item) => this.prepareUpsert(item));
+
 		// update in memory cache
 		batch(() => {
-			for (const item of items) {
+			for (const item of preparedItems) {
 				this.cache.set(this.getKey(item), item);
 			}
+			this.afterUpsertBulk(preparedItems);
 		});
 
 		// update indexeddb
@@ -211,14 +242,14 @@ export abstract class BaseService<T> {
 					const tx = db.transaction(storeName, "readwrite");
 					const store = tx.objectStore(storeName);
 
-					for (const item of items) {
+					for (const item of preparedItems) {
 						store.put(item);
 					}
 
 					await tx.done;
 				} catch (e) {
 					logger.for("idb").error(`Failed to bulk write to ${storeName}`, {
-						count: items.length,
+						count: preparedItems.length,
 						error: e,
 					});
 				}
@@ -227,6 +258,8 @@ export abstract class BaseService<T> {
 	}
 
 	delete(id: string) {
+		const item = this.cache.get(id);
 		this.cache.delete(id);
+		this.afterDelete(id, item);
 	}
 }

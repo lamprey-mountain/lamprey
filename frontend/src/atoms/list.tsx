@@ -1,16 +1,19 @@
 import {
 	type Accessor,
+	batch,
+	createComputed,
 	createEffect,
 	createMemo,
 	createSignal,
 	For,
 	on,
 	onCleanup,
+	untrack,
 } from "solid-js";
 import type { JSX } from "solid-js/jsx-runtime";
 import { createStore } from "solid-js/store";
 
-const OVERSCAN = 5;
+const OVERSCAN = 30;
 const ESTIMATED_H = 80;
 
 export function createList2<
@@ -61,12 +64,17 @@ export function createList2<
 	// --- ResizeObserver for height correction ---
 	const ro = new ResizeObserver((entries) => {
 		if (!wrapperEl) return;
+		// console.log("a");
 		let heightDiff = 0;
-		const firstVisibleIdx = visibleRange().start;
 		let changed = false;
 
 		// Note if we were locked to the bottom *before* adjusting layouts
 		const wasAtBottom = isAtBottom();
+		const currentScrollTop = wrapperEl.scrollTop;
+		const currentOffsets = untrack(() => offsets());
+
+		// 1. Accumulate updates
+		const updates: Record<string, number> = {};
 
 		for (const entry of entries) {
 			const target = entry.target as HTMLElement;
@@ -78,10 +86,12 @@ export function createList2<
 
 			const id = target.dataset.id;
 			const nonce = target.dataset.nonce;
-			if (!id) continue;
+			const idxStr = target.dataset.idx;
+			if (!id || !idxStr) continue;
 
 			// Use nonce as the cache key if available (for local-echo -> server transition)
 			const cacheKey = nonce || id;
+			const idx = parseInt(idxStr, 10);
 
 			const newH = Math.round(
 				entry.borderBoxSize?.[0]?.blockSize ??
@@ -90,33 +100,50 @@ export function createList2<
 			const oldH = heights[cacheKey] ?? ESTIMATED_H;
 
 			if (newH > 0 && oldH !== newH) {
-				setHeights(cacheKey, newH);
+				const oldOffset = currentOffsets[idx] ?? 0;
+				updates[cacheKey] = newH; // Accumulate instead of setHeights
 				changed = true;
 
-				const idx = options
-					.items()
-					.findIndex((x) => (x.nonce ?? x.id) === cacheKey);
-				if (idx !== -1 && idx < firstVisibleIdx) {
+				// If item's original top offset is above the current viewport,
+				// its expansion will push the viewport's current items down.
+				// We adjust the scroll position to perfectly track the visual location.
+				if (oldOffset < currentScrollTop + 1) {
 					heightDiff += newH - oldH;
 				}
 			}
 		}
 
-		if (heightDiff !== 0) {
-			isProgrammaticScroll = true;
-			wrapperEl.scrollTop += heightDiff;
-		} else if (wasAtBottom && options.autoscroll?.() && changed) {
-			// Maintain bottom lock if items inside/below the viewport resize (e.g., images loading)
-			isProgrammaticScroll = true;
-			wrapperEl.scrollTop = wrapperEl.scrollHeight;
+		// 2. Apply reactively in a single batch
+		if (Object.keys(updates).length > 0) {
+			batch(() => {
+				for (const k in updates) setHeights(k, updates[k]);
+			});
 		}
 
-		if (changed) updateRender();
+		if (changed) {
+			queueMicrotask(() => {
+				if (!wrapperEl) return;
+				const oldPos = wrapperEl.scrollTop;
+
+				if (wasAtBottom && options.autoscroll?.()) {
+					// Maintain bottom lock if items inside/below the viewport resize (e.g., images loading)
+					wrapperEl.scrollTop = wrapperEl.scrollHeight - wrapperEl.clientHeight;
+				} else if (heightDiff !== 0) {
+					wrapperEl.scrollTop += heightDiff;
+				}
+
+				if (wrapperEl.scrollTop !== oldPos) {
+					isProgrammaticScroll = true;
+				}
+			});
+			updateRender();
+		}
 	});
 
 	// --- visible range ---
 	function getVisibleRange(): { start: number; end: number } {
 		if (!wrapperEl) return { start: 0, end: 0 };
+		// console.log("b");
 		const items = options.items();
 		const scrollTop = wrapperEl.scrollTop;
 		const viewportH = wrapperEl.clientHeight;
@@ -128,10 +155,8 @@ export function createList2<
 			hi = items.length - 1;
 		while (lo < hi) {
 			const mid = (lo + hi) >> 1;
-			if (
-				(offsets()[mid] ?? 0) + (heights[items[mid].id] ?? ESTIMATED_H) <
-				top
-			) {
+			const key = getItemKey(items[mid]);
+			if ((offsets()[mid] ?? 0) + (heights[key] ?? ESTIMATED_H) < top) {
 				lo = mid + 1;
 			} else hi = mid;
 		}
@@ -150,18 +175,23 @@ export function createList2<
 	// --- render loop ---
 	function updateRender() {
 		if (!wrapperEl || !containerEl) return;
-		const { start, end } = getVisibleRange();
-		setVisibleRange({ start, end });
+		// console.log("c");
+		const range = getVisibleRange();
+		const current = visibleRange();
+		if (range.start !== current.start || range.end !== current.end) {
+			setVisibleRange(range);
+		}
 	}
 
 	// --- scroll handler ---
 	let ticking = false;
 	function onScroll() {
 		if (!wrapperEl) return;
+		// console.log("d");
 		const pos = wrapperEl.scrollTop;
 		const bottom = wrapperEl.scrollHeight - wrapperEl.clientHeight;
 		setScrollPos(pos);
-		setIsAtBottom(pos >= bottom - 32);
+		setIsAtBottom(pos >= bottom - 64);
 
 		// If this scroll event was triggered by our own code, abort pagination checks
 		if (isProgrammaticScroll) {
@@ -192,6 +222,7 @@ export function createList2<
 			return;
 		}
 
+		// console.log("e");
 		const prevLen = prevItems.length;
 		const newLen = newItems.length;
 
@@ -207,8 +238,9 @@ export function createList2<
 		let isSameList = false;
 
 		// 1. Prioritize finding a pivot in the CURRENTLY VISIBLE range so content doesn't jump
-		const visStart = visibleRange().start;
+		const visStart = untrack(() => visibleRange().start);
 		const startIdx = Math.max(0, Math.min(visStart, prevLen - 1));
+		const oldScrollTop = wrapperEl ? wrapperEl.scrollTop : 0;
 
 		for (let i = startIdx; i < prevLen; i++) {
 			if (
@@ -254,22 +286,29 @@ export function createList2<
 				newPivotOffset += heights[getItemKey(newItems[i])] ?? ESTIMATED_H;
 			}
 
-			const shiftDiff = newPivotOffset - oldPivotOffset;
+			// Calculate absolute target position directly via the logical offsets
+			// to bypass mid-update browser scroll clamping limits.
+			const relativePivotOffset = oldPivotOffset - oldScrollTop;
+			const desiredScrollTop = newPivotOffset - relativePivotOffset;
 
 			// VERY IMPORTANT: Check this BEFORE applying programmatic scroll
-			const wasAtBottom = isAtBottom();
+			const wasAtBottom = untrack(() => isAtBottom());
 
-			if (wasAtBottom && options.autoscroll?.()) {
-				// Always maintain bottom lock if we were at the bottom and autoscroll is enabled.
-				// This fixes the "scroll up on send" and the "jump on Escape" bugs.
-				queueMicrotask(() => {
+			queueMicrotask(() => {
+				if (!wrapperEl) return;
+				const oldPos = wrapperEl.scrollTop;
+
+				if (wasAtBottom && options.autoscroll?.()) {
+					// Always maintain bottom lock if we were at the bottom and autoscroll is enabled.
+					wrapperEl.scrollTop = wrapperEl.scrollHeight - wrapperEl.clientHeight;
+				} else if (desiredScrollTop !== oldScrollTop) {
+					wrapperEl.scrollTop = desiredScrollTop;
+				}
+
+				if (wrapperEl.scrollTop !== oldPos) {
 					isProgrammaticScroll = true;
-					wrapperEl?.scrollTo({ top: wrapperEl.scrollHeight });
-				});
-			} else if (shiftDiff !== 0) {
-				isProgrammaticScroll = true;
-				wrapperEl.scrollTop += shiftDiff;
-			}
+				}
+			});
 		} else {
 			// Complete channel clear/reload (usually occurs on channel swap/restore)
 			setHeights({});
@@ -286,22 +325,44 @@ export function createList2<
 		updateRender();
 	}
 
+	const itemIndices = createMemo(() => {
+		const map = new Map<string, number>();
+		const items = options.items();
+		for (let i = 0; i < items.length; i++) {
+			map.set(getItemKey(items[i]), i);
+		}
+		return map;
+	});
+
 	return {
 		scrollPos,
 		isAtBottom,
 		scrollBy(pos: number, smooth = false) {
-			isProgrammaticScroll = true;
-			wrapperEl?.scrollBy({
+			if (!wrapperEl) return;
+			const oldPos = wrapperEl.scrollTop;
+			wrapperEl.scrollBy({
 				top: pos,
 				behavior: smooth ? "smooth" : "instant",
 			});
+			if (wrapperEl.scrollTop !== oldPos) isProgrammaticScroll = true;
 		},
 		scrollTo(pos: number, smooth = false) {
-			isProgrammaticScroll = true;
-			wrapperEl?.scrollTo({
+			if (!wrapperEl) return;
+			const oldPos = wrapperEl.scrollTop;
+			wrapperEl.scrollTo({
 				top: pos,
 				behavior: smooth ? "smooth" : "instant",
 			});
+			if (wrapperEl.scrollTop !== oldPos) isProgrammaticScroll = true;
+		},
+		scrollToBottom(smooth = false) {
+			if (!wrapperEl) return;
+			const oldPos = wrapperEl.scrollTop;
+			wrapperEl.scrollTo({
+				top: wrapperEl.scrollHeight,
+				behavior: smooth ? "smooth" : "instant",
+			});
+			if (wrapperEl.scrollTop !== oldPos) isProgrammaticScroll = true;
 		},
 		getOffset(id: string) {
 			const idx = options.items().findIndex((x) => x.id === id);
@@ -313,7 +374,7 @@ export function createList2<
 		List(listProps: {
 			children: (item: T, idx: Accessor<number>) => JSX.Element;
 		}) {
-			createEffect(on(options.items, onItemsChange));
+			createComputed(on(options.items, onItemsChange));
 			onCleanup(() => ro.disconnect());
 
 			return (
@@ -324,7 +385,7 @@ export function createList2<
 						ro.observe(el);
 					}}
 					onScroll={onScroll}
-					style="position: relative; overflow-y: scroll; height: 100%; width: 100%;"
+					style="position: relative; overflow-y: scroll; overflow-anchor: none; height: 100%; width: 100%;"
 				>
 					<div
 						style={`width: 100%; position: relative; height: ${totalHeight()}px;`}
@@ -341,17 +402,9 @@ export function createList2<
 									.slice(visibleRange().start, visibleRange().end + 1)}
 							>
 								{(item) => {
-									let wrapEl!: HTMLDivElement;
-
-									createEffect(() => {
-										if (!wrapEl) return;
-										const globalIdx = options
-											.items()
-											.findIndex((x) => x.id === item.id);
-										wrapEl.style.transform = `translateY(${
-											offsets()[globalIdx] ?? 0
-										}px)`;
-										wrapEl.dataset.idx = String(globalIdx);
+									const globalIdx = createMemo(() => {
+										const key = item.nonce ?? item.id;
+										return itemIndices().get(key) ?? -1;
 									});
 
 									return (
@@ -359,19 +412,20 @@ export function createList2<
 											class="list-inner"
 											classList={{ [item?.class ?? ""]: !!item?.class }}
 											ref={(el) => {
-												wrapEl = el;
 												el.dataset.id = item.id;
 												if (item.nonce) el.dataset.nonce = item.nonce;
-												el.style.position = "absolute";
-												el.style.left = "0";
-												el.style.right = "0";
+												el.dataset.idx = String(globalIdx());
 												ro.observe(el);
 												onCleanup(() => ro.unobserve(el));
 											}}
+											style={{
+												position: "absolute",
+												left: "0",
+												right: "0",
+												transform: `translateY(${offsets()[globalIdx()] ?? 0}px)`,
+											}}
 										>
-											{listProps.children(item, () =>
-												options.items().findIndex((x) => x.id === item.id),
-											)}
+											{listProps.children(item, globalIdx)}
 										</div>
 									);
 								}}

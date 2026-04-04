@@ -9,6 +9,7 @@ import {
 	useRooms2,
 	useUsers2,
 } from "@/api";
+import { usePermissions } from "@/hooks/usePermissions";
 import icHome from "./assets/home.png";
 import icInbox from "./assets/inbox.png";
 import icMemberAdd from "./assets/member-add.png";
@@ -96,13 +97,18 @@ export const ChannelNav = (props: { room_id?: string }) => {
 			return true;
 		}
 
+		const rid = props.room_id;
+		const uid = currentUserId();
+
+		// Optimization: Owners can always view all channels.
+		if (uid && room()?.owner_id === uid) return true;
+
 		const permissionContext: PermissionContext = {
 			api: api2,
-			room_id: props.room_id,
+			room_id: rid,
 			channel_id: channel.id,
 		};
 
-		const uid = currentUserId();
 		if (!uid) return false;
 
 		const { permissions } = calculatePermissions(permissionContext, uid);
@@ -113,11 +119,9 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	const categories = createMemo<
 		Array<{ category: Channel | null; channels: Array<Channel> }>
 	>(() => {
-		const allChannels = [...channels2.cache.values()].filter(
-			(c) =>
-				(props.room_id ? c.room_id === props.room_id : c.room_id === null) &&
-				!c.deleted_at,
-		);
+		const allChannels = channels2
+			.listByRoom(props.room_id ?? null)
+			.filter((c) => !c.deleted_at);
 
 		const threads = allChannels.filter(
 			(c) =>
@@ -892,24 +896,13 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 		return Date.parse(c.notifs.mute.expires_at!) > Date.now();
 	};
 
-	const canInvite = createMemo(() => {
-		if (!props.room_id || !currentUserId()) {
-			return false;
-		}
+	const perms = usePermissions(
+		currentUserId,
+		() => props.room_id,
+		() => props.channel.id,
+	);
 
-		const permissionContext: PermissionContext = {
-			api: api2,
-			room_id: props.room_id,
-			channel_id: props.channel.id,
-		};
-
-		const { permissions } = calculatePermissions(
-			permissionContext,
-			currentUserId()!,
-		);
-
-		return permissions.has("InviteCreate");
-	});
+	const canInvite = () => perms.has("InviteCreate");
 
 	const isDm = () =>
 		props.channel.type === "Dm" || props.channel.type === "Gdm";

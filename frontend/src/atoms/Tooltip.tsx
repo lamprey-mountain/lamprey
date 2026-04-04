@@ -7,6 +7,7 @@ import {
 } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import {
+	createEffect,
 	createSignal,
 	type JSX,
 	type JSXElement,
@@ -131,13 +132,17 @@ export function tooltip(
 				: [shift({ padding: padding() }), offset({ mainAxis: 8 }), flip()],
 	});
 
-	wrap.addEventListener("mouseenter", showTip);
-	wrap.addEventListener("mouseleave", considerHidingTip);
-	setContentEl(wrap);
-
-	onCleanup(() => {
+	createEffect(() => {
 		wrap.addEventListener("mouseenter", showTip);
 		wrap.addEventListener("mouseleave", considerHidingTip);
+		onCleanup(() => {
+			wrap.removeEventListener("mouseenter", showTip);
+			wrap.removeEventListener("mouseleave", considerHidingTip);
+		});
+	});
+
+	onMount(() => {
+		setContentEl(wrap);
 	});
 
 	// TODO: use onPointerEnter/Leave instead of mouse events?

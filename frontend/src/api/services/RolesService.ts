@@ -3,6 +3,7 @@ import { ReactiveSet } from "@solid-primitives/set";
 import type { Role, RolePatch } from "sdk";
 import {
 	type Accessor,
+	batch,
 	createEffect,
 	createResource,
 	type Resource,
@@ -35,20 +36,38 @@ export class RolesService extends BaseService<Role> {
 		return data;
 	}
 
-	upsert(role: Role) {
-		super.upsert(role);
-
+	protected override afterUpsert(role: Role) {
 		const r = this.rolesByRoom.get(role.room_id) ?? new ReactiveSet();
 		r.add(role.id);
 		this.rolesByRoom.set(role.room_id, r);
 	}
 
-	delete(role_id: string) {
-		const role = this.cache.get(role_id);
+	protected override afterUpsertBulk(roles: Role[]) {
+		const byRoom = new Map<string, Set<string>>();
+		for (const role of roles) {
+			let s = byRoom.get(role.room_id);
+			if (!s) {
+				s = new Set();
+				byRoom.set(role.room_id, s);
+			}
+			s.add(role.id);
+		}
+
+		batch(() => {
+			for (const [room_id, role_ids] of byRoom) {
+				const r = this.rolesByRoom.get(room_id) ?? new ReactiveSet();
+				for (const id of role_ids) {
+					r.add(id);
+				}
+				this.rolesByRoom.set(room_id, r);
+			}
+		});
+	}
+
+	protected override afterDelete(role_id: string, role?: Role) {
 		if (role) {
 			this.rolesByRoom.get(role.room_id)?.delete(role_id);
 		}
-		super.delete(role_id);
 	}
 
 	useRole(

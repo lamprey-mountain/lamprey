@@ -39,7 +39,12 @@ export const ChatMain = (props: ChatProps) => {
 		if (a) return a;
 
 		const r = read_marker_id();
-		if (r) return { type: "context", limit: 50, message_id: r };
+		const last_id = props.channel.last_version_id;
+
+		// If channel has unread messages (and isn't just the very last message)
+		if (r && last_id && r !== last_id) {
+			return { type: "context", limit: 50, message_id: r };
+		}
 
 		return { type: "backwards", limit: 50 };
 	};
@@ -109,7 +114,7 @@ export const ChatMain = (props: ChatProps) => {
 			const PAGINATE_LEN = Math.floor(SLICE_LEN / 3);
 
 			const msgs = messages()!;
-			const old = { ...channelState.anchor };
+			const old = { ...channelState.anchor } as MessageListAnchor;
 
 			if (dir === "forwards") {
 				if (msgs.has_forward) {
@@ -120,15 +125,17 @@ export const ChatMain = (props: ChatProps) => {
 						message_id: msgs.items[idx]?.id,
 					});
 				} else {
-					// live timeline
-					setChannelState("anchor", {
-						type: "backwards",
-						limit: SLICE_LEN,
-					});
+					// live timeline - only switch if we aren't already on backwards
+					if (old.type !== "backwards") {
+						setChannelState("anchor", {
+							type: "backwards",
+							limit: SLICE_LEN,
+						});
+					}
 
 					if (list.isAtBottom()) markRead();
 				}
-			} else {
+			} else if (msgs.has_backwards) {
 				const idx = Math.min(PAGINATE_LEN, msgs.items.length - 1);
 				setChannelState("anchor", {
 					type: "backwards",
@@ -149,56 +156,23 @@ export const ChatMain = (props: ChatProps) => {
 			if (a.type === "context") {
 				const offset = list.getOffset(a.message_id);
 				if (offset !== null) {
-					list.scrollTo(offset - list.getViewportHeight() / 2);
+					const targetOffset = offset - list.getViewportHeight() / 2;
+					const distance = Math.abs(list.scrollPos() - targetOffset);
+					const shouldSmooth = distance < list.getViewportHeight() * 3;
+					list.scrollTo(targetOffset, shouldSmooth);
 					return true;
 				}
 				return false;
 			}
 			const pos = channelState.scroll_pos;
-			list.scrollTo(pos === undefined || pos === -1 ? 99999999 : pos);
+			if (pos === undefined || pos === -1) {
+				list.scrollToBottom();
+			} else {
+				list.scrollTo(pos);
+			}
 			return true;
 		},
 	});
-
-	// TODO: re-add jumping to context
-	// const list = createList2({
-	// 	onRestore() {
-	// 		const a = anchor();
-	// 		if (a.type === "context") {
-	// 			// TODO: is this safe and performant?
-	// 			const target = chatRef?.querySelector(
-	// 				`article[data-message-id="${a.message_id}"]`,
-	// 			);
-	// 			console.log("scroll restore: to anchor", a.message_id, target);
-	// 			if (target) {
-	// 				last_thread_id = props.channel.id;
-	// 				target.scrollIntoView({
-	// 					behavior: "instant",
-	// 					block: "center",
-	// 				});
-	// 				const hl = channelState.highlight;
-	// 				if (hl) scrollAndHighlight(hl);
-	// 				return true;
-	// 			} else {
-	// 				console.warn("couldn't find target to scroll to");
-	// 				return false;
-	// 			}
-	// 		} else if (last_thread_id !== props.channel.id) {
-	// 			const pos = channelState.scroll_pos;
-	// 			console.log("scroll restore: load pos", pos);
-	// 			if (pos === undefined || pos === -1) {
-	// 				list.scrollTo(999999);
-	// 			} else {
-	// 				list.scrollTo(pos);
-	// 			}
-	// 			last_thread_id = props.channel.id;
-	// 			return true;
-	// 		} else {
-	// 			console.log("nothing special");
-	// 			return false;
-	// 		}
-	// 	},
-	// });
 
 	// effect to initialize new channels
 	createEffect(
@@ -220,34 +194,45 @@ export const ChatMain = (props: ChatProps) => {
 		setChannelState("scroll_pos", pos);
 	}, 300);
 
-	// called both during reanchor and when thread_highlight changes
-	function scrollAndHighlight(hl?: string) {
-		if (!hl) return;
-		const target = chatRef?.querySelector(
-			`li:has(article.message[data-message-id="${hl}"])`,
-		);
-		if (!target) return;
-		target.scrollIntoView({
-			behavior: "instant",
-			block: "center",
+	// Wait for loading to finish, then jump to the highlight (used for replies)
+	createEffect(() => {
+		const hl = channelState.highlight;
+		if (!hl || messages.loading) return;
+
+		queueMicrotask(() => {
+			const offset = list.getOffset(hl);
+			if (offset !== null) {
+				const targetOffset = offset - list.getViewportHeight() / 2;
+				const distance = Math.abs(list.scrollPos() - targetOffset);
+				const shouldSmooth = distance < list.getViewportHeight() * 3;
+				list.scrollTo(targetOffset, shouldSmooth);
+
+				const target = chatRef?.querySelector(
+					`article.message[data-message-id="${hl}"]`,
+				);
+				if (target) highlight(target.closest("li") ?? target);
+				setChannelState("highlight", undefined);
+			}
 		});
-		highlight(target);
-		setChannelState("highlight", undefined);
-	}
+	});
 
-	// // TODO: replace with this
-	// function scrollAndHighlight(hl?: string) {
-	// 	if (!hl) return;
-	// 	const offset = list.getOffset(hl);
-	// 	if (offset === null) return;
-	// 	list.scrollTo(offset - list.getViewportHeight() / 2);
-	// 	// highlight the rendered el if it exists
-	// 	const el = document.querySelector(`article.message[data-message-id="${hl}"]`);
-	// 	if (el) highlight(el.closest('li') ?? el);
-	// 	setChannelState("highlight", undefined);
-	// }
+	// Auto-scroll to bottom immediately when the current user sends a message
+	let lastLiveEnd = "";
+	createEffect(() => {
+		messagesService._versions.get(props.channel.id); // track version reactively
+		const liveRange = messagesService._ranges.get(props.channel.id)?.live;
+		if (!liveRange || liveRange.isEmpty()) return;
 
-	createEffect(on(() => channelState.highlight, scrollAndHighlight));
+		const currentEnd = liveRange.end;
+		if (lastLiveEnd && currentEnd !== lastLiveEnd) {
+			const newMsg = liveRange.items[liveRange.items.length - 1];
+			if (newMsg && newMsg.is_local && newMsg.author_id === currentUser()?.id) {
+				setChannelState("anchor", { type: "backwards", limit: 50 });
+				setTimeout(() => list.scrollToBottom(), 0);
+			}
+		}
+		lastLiveEnd = currentEnd;
+	});
 
 	createEffect(
 		on(
@@ -255,7 +240,7 @@ export const ChatMain = (props: ChatProps) => {
 			(a) => {
 				if (a && a.type === "backwards" && !a.message_id) {
 					setTimeout(() => {
-						list.scrollTo(99999999);
+						list.scrollToBottom();
 					});
 				}
 			},
@@ -265,6 +250,7 @@ export const ChatMain = (props: ChatProps) => {
 	createEffect(on(list.scrollPos, setPos));
 
 	const [dragging, setDragging] = createSignal(false);
+	let dragCounter = 0;
 
 	const currentUser = useCurrentUser();
 	const getTyping = () => {
@@ -306,32 +292,8 @@ export const ChatMain = (props: ChatProps) => {
 					}
 
 					setTimeout(() => {
-						list.scrollTo(99999999);
+						list.scrollToBottom();
 					});
-					// }
-
-					// 					const channel_id = props.channel.id;
-					// 					const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
-
-					// 					// clear stored scroll to guarantee jump on restore
-					// 					setChannelState("scroll_pos", -1);
-
-					// 					setChannelState("anchor", {
-					// 						type: "backwards",
-					// 						limit: SLICE_LEN,
-					// 					});
-
-					// 					const version_id =
-					// 						messagesService.cacheRanges.get(channel_id)?.live.end ??
-					// 							props.channel.last_version_id;
-
-					// 					if (version_id) {
-					// 						markChannelRead(channel_id, version_id, true, false);
-					// 					}
-
-					// 					setTimeout(() => {
-					// 						list.scrollTo(99999999);
-					// 					});
 				} else if (e.key === "PageDown") {
 					list.scrollBy(globalThis.innerHeight * 0.8, true);
 				} else if (e.key === "PageUp") {
@@ -340,6 +302,7 @@ export const ChatMain = (props: ChatProps) => {
 			}}
 			onDragEnter={(e) => {
 				e.preventDefault();
+				dragCounter++;
 				setDragging(true);
 			}}
 			onDragOver={(e) => {
@@ -348,10 +311,12 @@ export const ChatMain = (props: ChatProps) => {
 			}}
 			onDragLeave={(e) => {
 				e.preventDefault();
-				setDragging(false);
+				dragCounter--;
+				if (dragCounter === 0) setDragging(false);
 			}}
 			onDrop={(e) => {
 				e.preventDefault();
+				dragCounter = 0;
 				setDragging(false);
 				for (const file of Array.from(e.dataTransfer?.files ?? [])) {
 					const local_id = uuidv7();
@@ -408,13 +373,13 @@ function highlight(el: Element) {
 	el.animate(
 		[
 			{
-				boxShadow: "4px 0 0 -1px inset #cc1856",
-				backgroundColor: "#cc185622",
+				boxShadow: "4px 0 0 -1px inset oklch(var(--color-highlight))",
+				backgroundColor: "oklch(var(--color-highlight) / 0.15)",
 				offset: 0,
 			},
 			{
-				boxShadow: "4px 0 0 -1px inset #cc1856",
-				backgroundColor: "#cc185622",
+				boxShadow: "4px 0 0 -1px inset oklch(var(--color-highlight))",
+				backgroundColor: "oklch(var(--color-highlight) / 0.15)",
 				offset: 0.8,
 			},
 			{

@@ -1,3 +1,5 @@
+import { ReactiveMap } from "@solid-primitives/map";
+import { ReactiveSet } from "@solid-primitives/set";
 import type {
 	Channel,
 	ChannelPatch,
@@ -6,13 +8,64 @@ import type {
 	TagCreate,
 	TagPatch,
 } from "sdk";
+import { batch } from "solid-js";
 import { BaseService } from "../core/Service";
 
 export class ChannelsService extends BaseService<Channel> {
 	protected cacheName = "channel";
 
+	private channelsByRoom = new ReactiveMap<
+		string | null,
+		ReactiveSet<string>
+	>();
+
 	getKey(item: Channel): string {
 		return item.id;
+	}
+
+	protected override afterUpsert(channel: Channel) {
+		const roomId = channel.room_id ?? null;
+		const r = this.channelsByRoom.get(roomId) ?? new ReactiveSet();
+		r.add(channel.id);
+		this.channelsByRoom.set(roomId, r);
+	}
+
+	protected override afterUpsertBulk(channels: Channel[]) {
+		const byRoom = new Map<string | null, Set<string>>();
+		for (const c of channels) {
+			const roomId = c.room_id ?? null;
+			let s = byRoom.get(roomId);
+			if (!s) {
+				s = new Set();
+				byRoom.set(roomId, s);
+			}
+			s.add(c.id);
+		}
+
+		batch(() => {
+			for (const [room_id, channel_ids] of byRoom) {
+				const r = this.channelsByRoom.get(room_id) ?? new ReactiveSet();
+				for (const id of channel_ids) {
+					r.add(id);
+				}
+				this.channelsByRoom.set(room_id, r);
+			}
+		});
+	}
+
+	protected override afterDelete(channel_id: string, channel?: Channel) {
+		if (channel) {
+			const roomId = channel.room_id ?? null;
+			this.channelsByRoom.get(roomId)?.delete(channel_id);
+		}
+	}
+
+	listByRoom(room_id: string | null): Channel[] {
+		const ids = this.channelsByRoom.get(room_id);
+		if (!ids) return [];
+		return [...ids]
+			.map((id) => this.cache.get(id))
+			.filter((c): c is Channel => c != null);
 	}
 
 	async fetch(id: string): Promise<Channel> {
@@ -181,7 +234,7 @@ export class ChannelsService extends BaseService<Channel> {
 	}
 
 	// Helper normalization method
-	normalize(channel: Channel): Channel {
+	protected override prepareUpsert(channel: Channel): Channel {
 		if (!channel.permission_overwrites) channel.permission_overwrites = [];
 		if (!channel.recipients) channel.recipients = [];
 		if (
@@ -193,9 +246,5 @@ export class ChannelsService extends BaseService<Channel> {
 			channel.tags = [];
 		}
 		return channel;
-	}
-
-	override upsert(item: Channel) {
-		super.upsert(this.normalize(item));
 	}
 }

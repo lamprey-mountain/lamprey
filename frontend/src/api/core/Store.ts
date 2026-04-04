@@ -6,7 +6,7 @@ import type {
 	MessageSync,
 	Session,
 } from "sdk";
-import { type Accessor, createSignal } from "solid-js";
+import { type Accessor, batch, createSignal } from "solid-js";
 import { ChannelsService } from "../services/ChannelsService";
 import { MessagesService } from "../services/MessagesService";
 import { NotificationService } from "../services/NotificationService";
@@ -210,25 +210,50 @@ export class RootStore {
 
 	handleSync(msg: MessageSync, raw: MessageEnvelope) {
 		if (msg.type === "Ambient") {
-			for (const room of msg.rooms) {
-				this.rooms.upsert(room);
-			}
-			for (const channel of msg.channels) {
-				this.channels.upsert(channel);
-			}
-			for (const thread of msg.threads) {
-				this.channels.upsert(thread);
-			}
-			for (const role of msg.roles) {
-				this.roles.upsert(role);
-			}
-			for (const member of msg.room_members) {
-				this.roomMembers.upsert(member);
-			}
-			if (msg.config) {
-				this.preferences.cache.set("@self", msg.config);
-				this.preferences._loaded = true;
-			}
+			// Process resources in chunks to avoid blocking the main thread
+			const process = async () => {
+				const CHUNK_SIZE = 500;
+
+				const chunkedUpsert = async <T>(
+					items: T[],
+					upsert: (items: T[]) => void,
+				) => {
+					for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+						upsert(items.slice(i, i + CHUNK_SIZE));
+						if (i + CHUNK_SIZE < items.length) {
+							await new Promise((r) => setTimeout(r, 0));
+						}
+					}
+				};
+
+				await chunkedUpsert(msg.rooms, (items) => this.rooms.upsertBulk(items));
+				await new Promise((r) => setTimeout(r, 0));
+
+				await chunkedUpsert(msg.channels, (items) =>
+					this.channels.upsertBulk(items),
+				);
+				await new Promise((r) => setTimeout(r, 0));
+
+				await chunkedUpsert(msg.threads, (items) =>
+					this.channels.upsertBulk(items),
+				);
+				await new Promise((r) => setTimeout(r, 0));
+
+				await chunkedUpsert(msg.roles, (items) => this.roles.upsertBulk(items));
+				await new Promise((r) => setTimeout(r, 0));
+
+				await chunkedUpsert(msg.room_members, (items) =>
+					this.roomMembers.upsertBulk(items),
+				);
+
+				if (msg.config) {
+					batch(() => {
+						this.preferences.cache.set("@self", msg.config);
+						this.preferences._loaded = true;
+					});
+				}
+			};
+			process();
 		} else if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
 			this.rooms.upsert(msg.room);
 		} else if (msg.type === "ChannelCreate" || msg.type === "ChannelUpdate") {

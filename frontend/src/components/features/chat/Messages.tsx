@@ -203,18 +203,28 @@ export function renderTimeline({
 			prev && get_msg_ts(msg).getDay() !== get_msg_ts(prev).getDay();
 		const markerUnread = prev?.id === read_marker_id;
 		if (markerTime || markerUnread) {
-			newItems.push({
-				type: "divider",
-				id: `divider-${msg.id}-${markerUnread}`,
-				date: markerTime ? get_msg_ts(msg) : undefined,
-				unread: markerUnread,
-			});
+			const id = `divider-${msg.id}-${markerUnread}`;
+			let item = cache?.get(id);
+			if (!item || item.type !== "divider") {
+				item = {
+					type: "divider",
+					id,
+					date: markerTime ? get_msg_ts(msg) : undefined,
+					unread: markerUnread,
+				};
+				cache?.set(id, item);
+			} else {
+				item.date = markerTime ? get_msg_ts(msg) : undefined;
+				item.unread = markerUnread;
+			}
+			newItems.push(item);
 		}
 
 		const separate = prev ? shouldSplit(msg, prev) : true;
-		const cacheKey = `${msg.id}:${separate}`;
+		const cacheKey = msg.id;
 		let item = cache?.get(cacheKey);
-		if (!item) {
+
+		if (!item || item.type !== "message" || item.message !== msg) {
 			item = {
 				type: "message",
 				id: msg.id,
@@ -224,6 +234,10 @@ export function renderTimeline({
 				class: separate ? "separate" : "",
 			};
 			cache?.set(cacheKey, item);
+		} else {
+			// Update separate without changing object reference
+			item.separate = separate;
+			item.class = separate ? "separate" : "";
 		}
 		newItems.push(item);
 	}
@@ -241,13 +255,8 @@ export function renderTimeline({
 	return newItems;
 }
 
-const shouldSplitMemo = new WeakMap();
 function shouldSplit(a: Message, b: Message) {
-	const s1 = shouldSplitMemo.get(a);
-	if (s1) return s1;
-	const s2 = shouldSplitInner(a, b);
-	shouldSplitMemo.set(a, s2);
-	return s2;
+	return shouldSplitInner(a, b);
 }
 
 function shouldSplitInner(a: Message, b: Message) {

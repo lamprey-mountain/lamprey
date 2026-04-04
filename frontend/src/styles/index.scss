@@ -242,8 +242,8 @@ input[type="submit"] {
 			}
 
 			&.context > article.message {
-				box-shadow: 4px 0 0 -1px inset #cc1856;
-				background-color: #cc185622;
+				box-shadow: 4px 0 0 -1px inset oklch(var(--color-highlight));
+				background-color: oklch(var(--color-highlight) / 0.15);
 			}
 
 			&.mentioned > article.message {
@@ -963,7 +963,7 @@ article.message {
 		cursor: pointer;
 		grid-column: 1 / span 3;
 		display: grid;
-		grid-template-columns: 128px 1fr;
+		grid-template-columns: subgrid;
 
 		&:hover {
 			color: $fg-400;
@@ -973,16 +973,19 @@ article.message {
 			display: grid;
 			place-items: center;
 			justify-content: end;
+			grid-column: 1;
 
 			& > svg {
 				height: 1em;
 				margin-right: 8px;
 				stroke: $sep-800;
 				fill: none;
+				width: 32px; /* Default width */
 			}
 		}
 
 		& > .content {
+			grid-column: 2;
 			overflow: hidden;
 			text-overflow: ellipsis;
 			white-space: nowrap;
@@ -2182,10 +2185,11 @@ table {
 
 	& > .reply {
 		grid-area: reply;
-		grid-template-columns: 64px 1fr;
+		grid-template-columns: subgrid;
 
 		& > .arrow > svg {
-			width: 32px;
+			width: auto;
+			max-width: 100%;
 		}
 	}
 
