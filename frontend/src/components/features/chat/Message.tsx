@@ -333,13 +333,9 @@ export function MessageThread(props: {
 		</div>
 	);
 }
-
-function SystemMessage(props: {
+type SystemMessageProps = {
 	message: Message;
-	icon: string;
-	content: JSX.Element;
 	date: Date;
-	class?: string;
 	separate: boolean;
 	toolbarVisible: boolean;
 	handleClick: (e: MouseEvent) => void;
@@ -347,7 +343,16 @@ function SystemMessage(props: {
 	handleAltClick: (e: MouseEvent) => void;
 	setHovered: (v: boolean) => void;
 	messageArticleRef: (el: HTMLElement | undefined) => void;
-}) {
+	room_id?: string;
+};
+
+function SystemMessage(
+	props: SystemMessageProps & {
+		icon: string;
+		content: JSX.Element;
+		class?: string;
+	},
+) {
 	return (
 		<article
 			ref={props.messageArticleRef}
@@ -577,8 +582,6 @@ export const MessageToolbar = (props: { message: Message }) => {
 	createEffect(() => {
 		if (showReactionPicker()) {
 			document.addEventListener("click", closePicker);
-		} else {
-			document.removeEventListener("click", closePicker);
 		}
 		onCleanup(() => document.removeEventListener("click", closePicker));
 	});
@@ -792,17 +795,27 @@ export function MessageView(props: MessageProps) {
 	const withAvatar = () => messageStyle() === "cozy";
 
 	const systemProps = {
-		message: props.message,
-		date: date(),
-		separate: props.separate ?? false,
-		toolbarVisible: toolbarVisible(),
+		get message() {
+			return props.message;
+		},
+		get date() {
+			return date();
+		},
+		get separate() {
+			return props.separate ?? false;
+		},
+		get toolbarVisible() {
+			return toolbarVisible();
+		},
 		handleClick,
 		onMouseDown,
 		handleAltClick,
 		setHovered,
 		messageArticleRef: (el: HTMLElement | undefined) =>
 			(messageArticleRef = el),
-		room_id: (thread() as any)?.room_id,
+		get room_id() {
+			return (thread() as any)?.room_id;
+		},
 	};
 
 	return (
@@ -868,7 +881,16 @@ export function MessageView(props: MessageProps) {
 	);
 }
 
-function DefaultMessage(props: any) {
+function DefaultMessage(
+	props: SystemMessageProps & {
+		withAvatar: boolean;
+		user: UserWithRelationship | undefined;
+		hovered: boolean;
+		isEditing: boolean;
+		channels2: ReturnType<typeof useChannels2>;
+		ctx: ReturnType<typeof useCtx>;
+	},
+) {
 	return (
 		<article
 			ref={props.messageArticleRef}
@@ -1034,7 +1056,7 @@ function DefaultMessage(props: any) {
 	);
 }
 
-function SystemMessageMemberAdd(props: any) {
+function SystemMessageMemberAdd(props: SystemMessageProps) {
 	const { t } = useCtx();
 	return (
 		<SystemMessage
@@ -1069,7 +1091,7 @@ function SystemMessageMemberAdd(props: any) {
 	);
 }
 
-function SystemMessageMemberRemove(props: any) {
+function SystemMessageMemberRemove(props: SystemMessageProps) {
 	const { t } = useCtx();
 	return (
 		<SystemMessage
@@ -1104,7 +1126,7 @@ function SystemMessageMemberRemove(props: any) {
 	);
 }
 
-function SystemMessageMemberJoin(props: any) {
+function SystemMessageMemberJoin(props: SystemMessageProps) {
 	const { t } = useCtx();
 	return (
 		<SystemMessage
@@ -1132,7 +1154,7 @@ function SystemMessageMemberJoin(props: any) {
 	);
 }
 
-function SystemMessagePinned(props: any) {
+function SystemMessagePinned(props: SystemMessageProps) {
 	const { t } = useCtx();
 	const navigate = useNavigate();
 	return (
@@ -1176,7 +1198,7 @@ function SystemMessagePinned(props: any) {
 	);
 }
 
-function SystemMessageChannelRename(props: any) {
+function SystemMessageChannelRename(props: SystemMessageProps) {
 	const { t } = useCtx();
 	return (
 		<SystemMessage
@@ -1205,7 +1227,7 @@ function SystemMessageChannelRename(props: any) {
 	);
 }
 
-function SystemMessageCall(props: any) {
+function SystemMessageCall(props: SystemMessageProps) {
 	const { t } = useCtx();
 	return (
 		<SystemMessage
@@ -1246,7 +1268,7 @@ function SystemMessageCall(props: any) {
 	);
 }
 
-function SystemMessageChannelPingback(props: any) {
+function SystemMessageChannelPingback(props: SystemMessageProps) {
 	const { t } = useCtx();
 	return (
 		<SystemMessage
@@ -1274,7 +1296,7 @@ function SystemMessageChannelPingback(props: any) {
 	);
 }
 
-function SystemMessageChannelIcon(props: any) {
+function SystemMessageChannelIcon(props: SystemMessageProps) {
 	const { t } = useCtx();
 	return (
 		<SystemMessage
@@ -1302,7 +1324,7 @@ function SystemMessageChannelIcon(props: any) {
 	);
 }
 
-function SystemMessageThreadCreated(props: any) {
+function SystemMessageThreadCreated(props: SystemMessageProps) {
 	const { t } = useCtx();
 	const navigate = useNavigate();
 	const ctx = useCtx();

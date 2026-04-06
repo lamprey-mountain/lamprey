@@ -1,5 +1,6 @@
 import type { Message, UserWithRelationship } from "sdk";
 import { createMemo, Show } from "solid-js";
+import { createMutable } from "solid-js/store";
 import { useRoomMembers2 } from "@/api";
 import { useChannel } from "../../../channelctx.tsx";
 import { useCtx } from "../../../context.ts";
@@ -206,12 +207,12 @@ export function renderTimeline({
 			const id = `divider-${msg.id}-${markerUnread}`;
 			let item = cache?.get(id);
 			if (!item || item.type !== "divider") {
-				item = {
+				item = createMutable({
 					type: "divider",
 					id,
 					date: markerTime ? get_msg_ts(msg) : undefined,
 					unread: markerUnread,
-				};
+				});
 				cache?.set(id, item);
 			} else {
 				item.date = markerTime ? get_msg_ts(msg) : undefined;
@@ -225,19 +226,23 @@ export function renderTimeline({
 		let item = cache?.get(cacheKey);
 
 		if (!item || item.type !== "message" || item.message !== msg) {
-			item = {
+			item = createMutable({
 				type: "message",
 				id: msg.id,
 				nonce: msg.nonce,
 				message: msg as any,
 				separate,
-				class: separate ? "separate" : "",
-			};
+				get class() {
+					return this.separate ? "separate" : "";
+				},
+			}) as TimelineItemT;
 			cache?.set(cacheKey, item);
 		} else {
 			// Update separate without changing object reference
+			// @ts-expect-error
 			item.separate = separate;
-			item.class = separate ? "separate" : "";
+			// @ts-expect-error
+			item.message = msg as any;
 		}
 		newItems.push(item);
 	}

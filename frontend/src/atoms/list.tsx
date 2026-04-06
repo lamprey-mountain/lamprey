@@ -86,12 +86,14 @@ export function createList2<
 
 			const id = target.dataset.id;
 			const nonce = target.dataset.nonce;
-			const idxStr = target.dataset.idx;
-			if (!id || !idxStr) continue;
+			if (!id) continue;
 
 			// Use nonce as the cache key if available (for local-echo -> server transition)
 			const cacheKey = nonce || id;
-			const idx = parseInt(idxStr, 10);
+			// Look up the true, current index
+			const idx = untrack(() => itemIndices().get(cacheKey) ?? -1);
+
+			if (idx === -1) continue;
 
 			const newH = Math.round(
 				entry.borderBoxSize?.[0]?.blockSize ??
@@ -414,7 +416,6 @@ export function createList2<
 											ref={(el) => {
 												el.dataset.id = item.id;
 												if (item.nonce) el.dataset.nonce = item.nonce;
-												el.dataset.idx = String(globalIdx());
 												ro.observe(el);
 												onCleanup(() => ro.unobserve(el));
 											}}

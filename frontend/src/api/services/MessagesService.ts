@@ -623,9 +623,7 @@ export class MessagesService extends BaseService<Message> {
 
 		// insert everything into the cache
 		const allItems = [...ranges.ranges].flatMap((r) => r.items as Message[]);
-		batch(() => {
-			for (const m of allItems) this.upsert(m);
-		});
+		this.upsertBulk(allItems);
 
 		const slice = this.getSlice(ranges, dir);
 		if (!slice) {
@@ -843,11 +841,7 @@ export class MessagesService extends BaseService<Message> {
 						}));
 				if (error) throw error;
 
-				batch(() => {
-					for (const item of data.items) {
-						this.upsert(item as Message);
-					}
-				});
+				this.upsertBulk(data.items as Message[]);
 
 				return data as Pagination<Message>;
 			},
@@ -875,11 +869,7 @@ export class MessagesService extends BaseService<Message> {
 			);
 			if (error) throw error;
 
-			batch(() => {
-				for (const item of data.items) {
-					this.upsert(item as unknown as Message);
-				}
-			});
+			this.upsertBulk(data.items as unknown as Message[]);
 
 			return {
 				...data,
@@ -981,9 +971,7 @@ export class MessagesService extends BaseService<Message> {
 
 		const { users, threads, room_members, thread_members, messages } = data;
 
-		for (const message of messages) {
-			this.upsert(message as Message);
-		}
+		this.upsertBulk(messages as Message[]);
 
 		if (users) {
 			for (const user of users) {
@@ -1084,7 +1072,7 @@ export class MessagesService extends BaseService<Message> {
 		markFresh = false,
 	): MessageRange {
 		const newItems = data.items;
-		for (const item of newItems) this.upsert(item);
+		this.upsertBulk(newItems);
 
 		const merged = range.mergeMessages(newItems, markFresh);
 		// If no items were fetched, treat as no more to prevent infinite loops
@@ -1105,7 +1093,7 @@ export class MessagesService extends BaseService<Message> {
 		markFresh = false,
 	): MessageRange {
 		const newItems = data.items as unknown as Message[];
-		for (const item of newItems) this.upsert(item);
+		this.upsertBulk(newItems);
 
 		const merged = range.mergeMessages(newItems, markFresh);
 		// If no items were fetched, treat as no more to prevent infinite loops

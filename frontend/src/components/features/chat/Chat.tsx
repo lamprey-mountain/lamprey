@@ -72,6 +72,15 @@ export const ChatMain = (props: ChatProps) => {
 
 	const timelineCache = new Map<string, TimelineItemT>();
 
+	createEffect(
+		on(
+			() => props.channel.id,
+			() => {
+				timelineCache.clear();
+			},
+		),
+	);
+
 	const tl = createMemo(() => {
 		const m = messages();
 		const rid = read_marker_id();
