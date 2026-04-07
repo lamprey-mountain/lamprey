@@ -856,9 +856,6 @@ export const ChannelNav = (props: { room_id?: string }) => {
 };
 
 export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
-	const api2 = useApi2();
-	const _channels2 = useChannels2();
-	const _rooms2 = useRooms2();
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
 	const user = useCurrentUser();

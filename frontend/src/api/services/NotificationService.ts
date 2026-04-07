@@ -1,8 +1,15 @@
-import type { Message } from "sdk";
+import type { Message, MessageVersion } from "sdk";
 import { generateNotificationIcon } from "../../drawing";
 import { notificationPermission } from "../../notification";
 import { stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal } from "../../notification-util";
 import type { RootStore } from "../core/Store";
+
+function getContentFromVersion(latestVersion: MessageVersion): string {
+	if (latestVersion.type === "DefaultMarkdown") {
+		return latestVersion.content ?? "";
+	}
+	return "";
+}
 
 export class NotificationService {
 	constructor(private store: RootStore) {}
@@ -13,7 +20,7 @@ export class NotificationService {
 		const latestVersion = m.latest_version;
 		const mentions = latestVersion?.mentions;
 		const isDefaultMarkdown = latestVersion?.type === "DefaultMarkdown";
-		const content = isDefaultMarkdown ? (latestVersion as any).content : "";
+		const content = latestVersion ? getContentFromVersion(latestVersion) : "";
 
 		// Determine if mentioned
 		if (me && m.author_id !== me.id && isDefaultMarkdown && mentions) {
@@ -92,7 +99,7 @@ export class NotificationService {
 				};
 				if (icon) {
 					notification.onclose = () => {
-						URL.revokeObjectURL(icon!);
+						URL.revokeObjectURL(icon);
 					};
 				}
 			})();

@@ -1,4 +1,3 @@
-import type { Channel } from "sdk";
 import { For, Match, Show, Switch } from "solid-js";
 import { ChannelIcon } from "../avatar/ChannelIcon";
 import type { AutocompleteItem } from "../contexts/autocomplete";

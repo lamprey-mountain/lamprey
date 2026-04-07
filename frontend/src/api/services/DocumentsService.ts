@@ -44,9 +44,8 @@ export class DocumentsService extends BaseService<RevisionContent> {
 	): Promise<RevisionContent | null> {
 		const cacheKey = `${channel_id}@${revision_id}`;
 
-		if (this.revisionCache.has(cacheKey)) {
-			return this.revisionCache.get(cacheKey)!;
-		}
+		const existing = this.revisionCache.get(cacheKey);
+		if (existing) return existing;
 
 		try {
 			const data = await this.retryWithBackoff<RevisionContent>(() =>
@@ -56,6 +55,7 @@ export class DocumentsService extends BaseService<RevisionContent> {
 						params: {
 							path: {
 								channel_id,
+								// biome-ignore lint/suspicious/noExplicitAny: utoipa incorrectly schemas revision_id as a complex union
 								revision_id: revision_id as any,
 							},
 						},

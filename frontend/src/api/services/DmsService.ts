@@ -32,7 +32,7 @@ export class DmsService extends BaseService<Channel> {
 		list.setLoading(true);
 
 		try {
-			const result = await this.retryWithBackoff<any>(() =>
+			const data = await this.retryWithBackoff<Pagination<Channel>>(() =>
 				this.client.http.GET("/api/v1/user/{user_id}/dm", {
 					params: {
 						path: { user_id: "@self" },
@@ -44,7 +44,6 @@ export class DmsService extends BaseService<Channel> {
 					},
 				}),
 			);
-			const data = result as Pagination<Channel>;
 
 			this.upsertBulk(data.items);
 

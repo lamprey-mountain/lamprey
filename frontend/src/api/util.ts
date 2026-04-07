@@ -4,7 +4,7 @@ export async function fetchWithRetry<T>(
 	delay = 1000,
 ): Promise<T> {
 	for (let i = 0; i < retries; i++) {
-		let res;
+		let res: { data?: T; error?: unknown; response: Response } | undefined;
 		try {
 			res = await fn();
 		} catch (e: unknown) {
@@ -14,7 +14,7 @@ export async function fetchWithRetry<T>(
 		}
 
 		const { data, error, response } = res;
-		if (!error) return data!;
+		if (!error) return data as T;
 
 		if (response.status < 500 && response.status !== 429) {
 			throw error;

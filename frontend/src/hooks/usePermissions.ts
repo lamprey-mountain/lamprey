@@ -8,8 +8,6 @@ import {
 	type ResolvedPermissions,
 } from "../permission-calculator";
 
-const permHookLog = logger.for("permissions");
-
 export function usePermissions(
 	user_id: () => string | undefined,
 	room_id: () => string | undefined,

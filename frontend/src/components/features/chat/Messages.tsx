@@ -205,14 +205,15 @@ export function renderTimeline({
 		const markerUnread = prev?.id === read_marker_id;
 		if (markerTime || markerUnread) {
 			const id = `divider-${msg.id}-${markerUnread}`;
-			let item = cache?.get(id);
+			let item: TimelineItemT | undefined = cache?.get(id);
 			if (!item || item.type !== "divider") {
-				item = createMutable({
+				const divider: TimelineItemT = createMutable({
 					type: "divider",
 					id,
 					date: markerTime ? get_msg_ts(msg) : undefined,
 					unread: markerUnread,
 				});
+				item = divider;
 				cache?.set(id, item);
 			} else {
 				item.date = markerTime ? get_msg_ts(msg) : undefined;
@@ -223,11 +224,11 @@ export function renderTimeline({
 
 		const separate = prev ? shouldSplit(msg, prev) : true;
 		const cacheKey = msg.id;
-		let item = cache?.get(cacheKey);
+		let item: TimelineItemT | undefined = cache?.get(cacheKey);
 
 		if (!item || item.type !== "message" || item.message !== msg) {
 			item = createMutable({
-				type: "message",
+				type: "message" as const,
 				id: msg.id,
 				nonce: msg.nonce,
 				message: msg as any,
@@ -239,9 +240,7 @@ export function renderTimeline({
 			cache?.set(cacheKey, item);
 		} else {
 			// Update separate without changing object reference
-			// @ts-expect-error
 			item.separate = separate;
-			// @ts-expect-error
 			item.message = msg as any;
 		}
 		newItems.push(item);

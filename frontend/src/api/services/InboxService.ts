@@ -49,7 +49,14 @@ export class InboxService extends BaseService<Notification> {
 					return undefined;
 				}
 
-				const result = await this.retryWithBackoff<any>(() =>
+				const data = await this.retryWithBackoff<{
+					notifications: Notification[];
+					channels: Channel[];
+					messages: Message[];
+					rooms: Room[];
+					has_more: boolean;
+					total: number;
+				}>(() =>
 					this.client.http.GET("/api/v1/inbox", {
 						params: {
 							query: {
@@ -61,36 +68,27 @@ export class InboxService extends BaseService<Notification> {
 					}),
 				);
 
-				const data = result.data as {
-					notifications: Notification[];
-					channels: Channel[];
-					messages: Message[];
-					rooms: Room[];
-					has_more: boolean;
-					total: number;
-				};
-
 				// Cache notifications
 				this.upsertBulk(data.notifications);
 
 				// Cache related entities
 				for (const channel of data.channels) {
-					this.store.channels.upsert(channel as any);
+					this.store.channels.upsert(channel);
 				}
 				for (const message of data.messages) {
-					this.store.messages.upsert(message as any);
+					this.store.messages.upsert(message);
 				}
 				for (const room of data.rooms) {
-					this.store.rooms.upsert(room as any);
+					this.store.rooms.upsert(room);
 				}
 
 				return {
 					items: data.notifications,
 					total: data.total,
 					has_more: data.has_more,
-					channels: data.channels as any,
-					messages: data.messages as any,
-					rooms: data.rooms as any,
+					channels: data.channels,
+					messages: data.messages,
+					rooms: data.rooms,
 				} as NotificationPagination;
 			},
 		);

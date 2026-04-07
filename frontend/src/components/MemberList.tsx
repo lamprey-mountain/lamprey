@@ -1,7 +1,7 @@
 import { ReactiveMap } from "@solid-primitives/map";
 import { createVirtualizer } from "@tanstack/solid-virtual";
-import type { MemberListGroup, RoomMember, ThreadMember, User } from "sdk";
-import { createMemo, createSignal, For, Show } from "solid-js";
+import type { MemberListGroup, RoomMember, User } from "sdk";
+import { createMemo, createSignal, For } from "solid-js";
 import {
 	useRoles2,
 	useRoomMembers2,
@@ -30,7 +30,7 @@ type MemberListProps =
 export const MemberList = (props: MemberListProps) => {
 	const roles2 = useRoles2();
 	const roomMembers2 = useRoomMembers2();
-	const threadMembers2 = useThreadMembers2();
+	const _threadMembers2 = useThreadMembers2();
 	const users2 = useUsers2();
 	const memberLists = useMemberList();
 	const list = () => memberLists.get(props.id);
@@ -89,11 +89,7 @@ export const MemberList = (props: MemberListProps) => {
 
 	const { userView, setUserView } = useUserPopout();
 
-	const handleUserClick = (
-		e: MouseEvent,
-		user: User,
-		room_member: RoomMember | null,
-	) => {
+	const handleUserClick = (e: MouseEvent, user: User) => {
 		e.stopPropagation();
 		const currentTarget = e.currentTarget as HTMLElement;
 		if (userView()?.ref === currentTarget) {
@@ -101,7 +97,7 @@ export const MemberList = (props: MemberListProps) => {
 		} else {
 			setUserView({
 				user_id: user.id,
-				room_id: props.roomId,
+				room_id: props.roomId ?? undefined,
 				thread_id: props.threadId,
 				ref: currentTarget,
 				source: "member-list",
@@ -112,7 +108,7 @@ export const MemberList = (props: MemberListProps) => {
 	const handleUserKeyDown = (
 		e: KeyboardEvent,
 		user: User,
-		room_member: RoomMember | null,
+		_room_member: RoomMember | null,
 	) => {
 		if (e.key === "Enter" || e.key === " ") {
 			e.preventDefault();
@@ -123,7 +119,7 @@ export const MemberList = (props: MemberListProps) => {
 			} else {
 				setUserView({
 					user_id: user.id,
-					room_id: props.roomId,
+					room_id: props.roomId ?? undefined,
 					thread_id: props.threadId,
 					ref: currentTarget,
 					source: "member-list",
@@ -209,12 +205,8 @@ export const MemberList = (props: MemberListProps) => {
 												class="menu-user"
 												data-user-id={item.user.id}
 												classList={{ offline: isOffline() }}
-												onClick={(e) =>
-													handleUserClick(e, user(), room_member())
-												}
-												onKeyDown={(e) =>
-													handleUserKeyDown(e, user(), room_member())
-												}
+												onClick={(e) => handleUserClick(e, user())}
+												onKeyDown={(e) => handleUserKeyDown(e, user())}
 												onMouseEnter={() => setHovered(true)}
 												onMouseLeave={() => setHovered(false)}
 											>

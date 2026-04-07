@@ -55,7 +55,7 @@ export abstract class BaseService<T> {
 		baseDelay = 1000,
 	): Promise<T> {
 		for (let i = 0; i < retries; i++) {
-			let res;
+			let res: { data?: T; error?: unknown; response: Response } | undefined;
 			try {
 				res = await fn();
 			} catch (e: unknown) {
@@ -76,7 +76,7 @@ export abstract class BaseService<T> {
 			}
 
 			const { data, error } = res;
-			if (!error) return data!;
+			if (!error) return data as T;
 
 			if (res.response.status < 500 && res.response.status !== 429) {
 				throw error;
@@ -105,12 +105,14 @@ export abstract class BaseService<T> {
 	 * Updates the cache with the result.
 	 */
 	async fetchOrQueue(id: string): Promise<T> {
-		if (this.cache.has(id)) {
-			return this.cache.get(id)!;
+		const cached = this.cache.get(id);
+		if (cached !== undefined) {
+			return cached;
 		}
 
-		if (this.inflight.has(id)) {
-			return this.inflight.get(id)!;
+		const inflightPromise = this.inflight.get(id);
+		if (inflightPromise !== undefined) {
+			return inflightPromise;
 		}
 
 		const promise = this.fetch(id)
@@ -162,11 +164,9 @@ export abstract class BaseService<T> {
 			const itemId = id();
 			if (!itemId) return;
 
-			if (this.cache.has(itemId)) {
-				const item = this.cache.get(itemId);
-				if (resource() !== item) {
-					mutate(item as any);
-				}
+			const item = this.cache.get(itemId);
+			if (item !== undefined && resource() !== item) {
+				mutate(item);
 			}
 		});
 

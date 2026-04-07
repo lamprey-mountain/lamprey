@@ -2,8 +2,8 @@ import { ReactiveMap } from "@solid-primitives/map";
 import { ReactiveSet } from "@solid-primitives/set";
 import type {
 	Channel,
+	ChannelCreate,
 	ChannelPatch,
-	ChannelType,
 	Tag,
 	TagCreate,
 	TagPatch,
@@ -183,14 +183,14 @@ export class ChannelsService extends BaseService<Channel> {
 	async createThreadFromMessage(
 		channel_id: string,
 		message_id: string,
-		body: { name: string; type?: ChannelType },
+		body: ChannelCreate,
 	): Promise<Channel> {
 		const data = await this.retryWithBackoff<Channel>(() =>
 			this.client.http.POST(
 				"/api/v1/channel/{channel_id}/message/{message_id}/thread",
 				{
 					params: { path: { channel_id, message_id } },
-					body: body as any,
+					body,
 				},
 			),
 		);

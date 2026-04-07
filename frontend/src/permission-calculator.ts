@@ -2,8 +2,6 @@ import type { Channel, Permission, Role, RoomMember } from "sdk";
 import type { RootStore } from "@/api";
 import { logger } from "./logger";
 
-const permLog = logger.for("permissions");
-
 export interface PermissionContext {
 	api: RootStore;
 	room_id?: string;

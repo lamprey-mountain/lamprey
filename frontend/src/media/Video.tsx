@@ -80,6 +80,7 @@ export const VideoView = (props: MediaProps) => {
 			</div>
 		),
 	});
+	// biome-ignore
 	const vtc = volumeTooltip.content;
 
 	onMount(() => {

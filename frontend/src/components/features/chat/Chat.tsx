@@ -235,7 +235,7 @@ export const ChatMain = (props: ChatProps) => {
 		const currentEnd = liveRange.end;
 		if (lastLiveEnd && currentEnd !== lastLiveEnd) {
 			const newMsg = liveRange.items[liveRange.items.length - 1];
-			if (newMsg && newMsg.is_local && newMsg.author_id === currentUser()?.id) {
+			if (newMsg?.is_local && newMsg.author_id === currentUser()?.id) {
 				setChannelState("anchor", { type: "backwards", limit: 50 });
 				setTimeout(() => list.scrollToBottom(), 0);
 			}

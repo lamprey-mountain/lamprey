@@ -2,7 +2,6 @@ import type {
 	AuditLogEntry,
 	Channel,
 	RoomMember,
-	Tag,
 	User,
 	UserWithRelationship,
 	Webhook,
@@ -47,19 +46,20 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 		list.setLoading(true);
 
 		try {
-			const result = await this.retryWithBackoff<any>(() =>
-				this.client.http.GET("/api/v1/room/{room_id}/audit-logs", {
-					params: {
-						path: { room_id },
-						query: {
-							dir: "b",
-							limit: 100,
-							from: cursor,
+			const result = await this.retryWithBackoff<AuditLogPaginationResponse>(
+				() =>
+					this.client.http.GET("/api/v1/room/{room_id}/audit-logs", {
+						params: {
+							path: { room_id },
+							query: {
+								dir: "b",
+								limit: 100,
+								from: cursor,
+							},
 						},
-					},
-				}),
+					}),
 			);
-			const data = result.data as AuditLogPaginationResponse;
+			const data = result;
 
 			// Cache related entities
 			for (const thread of data.threads) {
@@ -84,7 +84,7 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 				this.store.webhooks.upsert(webhook);
 			}
 			for (const tag of data.tags) {
-				this.store.channels.upsert(tag as any); // Tags are stored in channels cache
+				this.store.tags.upsert(tag);
 			}
 
 			// Cache audit log entries

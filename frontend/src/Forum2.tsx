@@ -1328,7 +1328,7 @@ const Comment = (props: {
 					<Show when={props.channel}>
 						<UserDisplayName
 							user_id={props.node.message.author_id}
-							room_id={props.channel.room_id}
+							room_id={props.channel.room_id ?? undefined}
 							thread_id={props.node.message.channel_id}
 							onClick
 						/>

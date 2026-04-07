@@ -21,7 +21,7 @@ import { logger } from "../../logger";
 import { deepEqual } from "../../utils/deepEqual";
 import { BaseService } from "../core/Service";
 
-const MAX_MESSAGES_PER_RANGE = 500;
+const _MAX_MESSAGES_PER_RANGE = 500;
 
 export type MessageListAnchor =
 	| { type: "backwards"; message_id?: string; limit: number }
@@ -94,9 +94,14 @@ export class MessageRange {
 
 	mergeMessageWithNonce(message: Message, nonce?: string): MessageRange {
 		const items = [...this.items];
-		let idx = nonce
-			? items.findIndex((m) => (m as any).nonce === nonce || m.id === nonce)
-			: -1;
+		let idx =
+			nonce !== undefined
+				? items.findIndex(
+						(m) =>
+							("nonce" in m && (m as { nonce?: string }).nonce === nonce) ||
+							m.id === nonce,
+					)
+				: -1;
 		if (idx === -1) idx = items.findIndex((m) => m.id === message.id);
 
 		if (idx !== -1) {
@@ -191,8 +196,9 @@ export class MessageRanges {
 
 		let i = 0;
 		while (i < rangesArr.length - 1) {
-			const a = rangesArr[i]!;
-			const b = rangesArr[i + 1]!;
+			const a = rangesArr[i];
+			const b = rangesArr[i + 1];
+			if (a === undefined || b === undefined) break;
 			const adjacent = !a.has_forward && !b.has_backwards;
 			const overlapping = a.end >= b.start;
 
@@ -231,7 +237,7 @@ export class MessagesService extends BaseService<Message> {
 	public _ranges = new Map<string, MessageRanges>();
 
 	public _versions = new ReactiveMap<string, number>();
-	private _pendingFetches = new Map<string, Promise<any>>();
+	private _pendingFetches = new Map<string, Promise<unknown>>();
 
 	private deduplicatedFetch<T>(
 		key: string,
@@ -744,7 +750,7 @@ export class MessagesService extends BaseService<Message> {
 					attachments: body.attachments.map(
 						(a: { media_id?: string; id?: string; spoiler?: boolean }) => ({
 							type: "Media" as const,
-							media_id: a.media_id ?? a.id!,
+							media_id: a.media_id ?? a.id ?? "",
 							spoiler: a.spoiler ?? false,
 						}),
 					),
@@ -753,7 +759,7 @@ export class MessagesService extends BaseService<Message> {
 			}),
 		);
 		const m = data as Message;
-		(m as any).nonce = id;
+		m.nonce = id;
 
 		// replace local echo
 		this.handleMessageCreate(m);
@@ -898,23 +904,29 @@ export class MessagesService extends BaseService<Message> {
 		const [resource, { mutate, refetch }] = createResource(
 			channel_id_signal,
 			async (channel_id) => {
-				const l = this._pinnedListings.get(channel_id)!;
-				if (l?.prom) {
+				const l = this._pinnedListings.get(channel_id);
+				if (l === undefined) {
+					return { items: [], has_more: false } as Pagination<Message>;
+				}
+				if (l.prom) {
 					await l.prom;
-					return l.pagination!;
+					if (l.pagination === null) {
+						return { items: [], has_more: false } as Pagination<Message>;
+					}
+					return l.pagination;
 				}
 
 				const prom = l.pagination ? paginate(l.pagination) : paginate();
 				l.prom = prom;
 				const res = await prom;
-				l!.pagination = res;
-				l!.prom = null;
+				l.pagination = res;
+				l.prom = null;
 
 				for (const mut of this._pinnedListingMutators) {
 					if (mut.channel_id === channel_id) mut.mutate(res);
 				}
 
-				return res!;
+				return res;
 			},
 		);
 
@@ -1110,7 +1122,7 @@ export class MessagesService extends BaseService<Message> {
 
 	private async ensureHydrated(channel_id: string) {
 		// TODO: hydration logic is extremely sketchy
-		return;
+		// return;
 
 		if (this._hydrated.has(channel_id)) return;
 		const rehydrated = await this.rehydrateRanges(channel_id);
@@ -1122,9 +1134,9 @@ export class MessagesService extends BaseService<Message> {
 		const cache = new MessageRanges();
 		if (!this.db) return cache;
 
-		const tx = this.db.transaction(["message_ranges", "messages"], "readonly");
+		const tx = this.db.transaction(["message_ranges", "message"], "readonly");
 		const rangeStore = tx.objectStore("message_ranges");
-		const messageStore = tx.objectStore("messages");
+		const messageStore = tx.objectStore("message");
 
 		const allRanges = await rangeStore.index("channel_id").getAll(channel_id);
 

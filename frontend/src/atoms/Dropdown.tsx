@@ -282,7 +282,6 @@ export function createDropdown<T>(props: {
 								ref={setDropdownEl}
 								id={listboxId}
 								class="dropdown-items floating"
-								role="listbox"
 								style={{
 									"z-index": 999999,
 									position: position.strategy,
@@ -459,7 +458,6 @@ export function MultiDropdown<T>(
 						ref={setDropdownEl}
 						id={listboxId}
 						class="dropdown-items floating"
-						role="listbox"
 						style={{
 							"z-index": 999999,
 							position: position.strategy,

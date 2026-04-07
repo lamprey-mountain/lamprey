@@ -95,27 +95,32 @@ export class MemberListService {
 					}
 
 					if (op.items) {
-						const items = op.items.map((user_id) => {
-							const user = this.store.users.get(user_id);
-							const room_member = room_id
-								? this.store.roomMembers.get(`${room_id}:${user_id}`)
-								: null;
-							const thread_member = thread_id
-								? this.store.threadMembers.get(`${thread_id}:${user_id}`)
-								: null;
+						const items = op.items
+							.map((user_id) => {
+								const user = this.store.users.get(user_id);
+								const room_member = room_id
+									? this.store.roomMembers.get(`${room_id}:${user_id}`)
+									: null;
+								const thread_member = thread_id
+									? this.store.threadMembers.get(`${thread_id}:${user_id}`)
+									: null;
 
-							if (!user) {
-								memberListLog.warn("MemberListSync: user not found", {
-									user_id,
-								});
-							}
+								if (!user) {
+									memberListLog.warn("MemberListSync: user not found", {
+										user_id,
+									});
+									return null;
+								}
 
-							return {
-								user: user!,
-								room_member: room_member ?? null,
-								thread_member: thread_member ?? null,
-							};
-						});
+								return {
+									user,
+									room_member,
+									thread_member,
+								};
+							})
+							.filter(
+								(item): item is NonNullable<typeof item> => item !== null,
+							);
 						newItems.splice(Number(op.position), items.length, ...items);
 					}
 				} else if (op.type === "Insert") {
@@ -147,12 +152,13 @@ export class MemberListService {
 						memberListLog.warn("MemberListSync Insert: user not found", {
 							user_id,
 						});
+						continue;
 					}
 
 					const item = {
-						user: user!,
-						room_member: room_member ?? null,
-						thread_member: thread_member ?? null,
+						user,
+						room_member,
+						thread_member,
 					};
 					newItems.splice(Number(op.position), 0, item);
 				} else if (op.type === "Delete") {

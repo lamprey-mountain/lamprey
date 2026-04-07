@@ -55,8 +55,8 @@ export function AuditLog(_props: VoidProps<{ room: Room }>) {
 				<ul class="room-settings-audit-log">
 					<For
 						each={mergeAuditLogEntries(
-							log()!
-								.state.ids.map((id) => auditLog2.cache.get(id))
+							log()
+								?.state.ids.map((id) => auditLog2.cache.get(id))
 								.filter((e): e is AuditLogEntry => e !== undefined),
 						)}
 					>

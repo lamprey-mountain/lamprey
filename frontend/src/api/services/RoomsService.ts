@@ -121,7 +121,9 @@ export class RoomsService extends BaseService<Room> {
 		let has_more = true;
 		let from: string | undefined;
 		while (has_more) {
-			let data;
+			let data:
+				| { items?: Array<{ id: string }>; has_more?: boolean }
+				| undefined;
 			try {
 				data = await this.retryWithBackoff(() =>
 					this.client.http.GET("/api/v1/room/{room_id}/channel", {

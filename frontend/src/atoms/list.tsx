@@ -2,7 +2,6 @@ import {
 	type Accessor,
 	batch,
 	createComputed,
-	createEffect,
 	createMemo,
 	createSignal,
 	For,
@@ -226,7 +225,6 @@ export function createList2<
 
 		// console.log("e");
 		const prevLen = prevItems.length;
-		const newLen = newItems.length;
 
 		const ignoreIds = new Set([
 			"spacer-top",

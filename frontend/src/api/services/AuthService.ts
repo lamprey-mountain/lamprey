@@ -13,14 +13,14 @@ export class AuthService extends BaseService<never> {
 	}
 
 	async oauthUrl(provider: string): Promise<string> {
-		const result = await this.retryWithBackoff<any>(() =>
+		const result = await this.retryWithBackoff<{ url: string }>(() =>
 			this.client.http.POST("/api/v1/auth/oauth/{provider}", {
 				params: {
 					path: { provider },
 				},
 			}),
 		);
-		return result.data.url;
+		return result.url;
 	}
 
 	async passwordLogin(body: {
@@ -30,7 +30,7 @@ export class AuthService extends BaseService<never> {
 	}): Promise<void> {
 		await this.retryWithBackoff(() =>
 			this.client.http.POST("/api/v1/auth/password", {
-				body: body as any,
+				body,
 			}),
 		);
 	}
