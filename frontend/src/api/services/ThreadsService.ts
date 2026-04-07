@@ -40,7 +40,11 @@ export class ThreadsService extends BaseService<Channel> {
 	}
 
 	private getListMap(type: ThreadListType): Map<string, PaginatedList> {
-		return this._roomLists.get(type)!;
+		const map = this._roomLists.get(type);
+		if (!map) {
+			throw new Error(`Unknown thread list type: ${type}`);
+		}
+		return map;
 	}
 
 	private async fetchPage(

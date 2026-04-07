@@ -69,22 +69,26 @@ export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 						/>
 					}
 				>
-					<rect
-						width={size}
-						height={size}
-						x={pad()}
-						y={pad()}
-						fill="oklch(var(--color-bg3))"
-					/>
-					<image
-						// temp? i need to crop avatars properly on upload
-						preserveAspectRatio="xMidYMid slice"
-						width={size}
-						height={size}
-						x={pad()}
-						y={pad()}
-						href={getThumbFromId(props.user?.avatar!, 64, props.animate)!}
-					/>
+					{(avatar) => (
+						<>
+							<rect
+								width={size}
+								height={size}
+								x={pad()}
+								y={pad()}
+								fill="oklch(var(--color-bg3))"
+							/>
+							<image
+								// temp? i need to crop avatars properly on upload
+								preserveAspectRatio="xMidYMid slice"
+								width={size}
+								height={size}
+								x={pad()}
+								y={pad()}
+								href={getThumbFromId(avatar(), 64, props.animate)}
+							/>
+						</>
+					)}
 				</Show>
 			</g>
 			<circle class="indicator" cx={circPos} cy={circPos} r={circRad} />
@@ -141,22 +145,26 @@ export const Avatar = (props: VoidProps<AvatarProps>) => {
 						/>
 					}
 				>
-					<rect
-						width={size}
-						height={size}
-						x={pad()}
-						y={pad()}
-						fill="oklch(var(--color-bg3))"
-					/>
-					<image
-						// temp? i need to crop avatars properly on upload
-						preserveAspectRatio="xMidYMid slice"
-						width={size}
-						height={size}
-						x={pad()}
-						y={pad()}
-						href={getThumbFromId(props.user?.avatar!, 64, props.animate)!}
-					/>
+					{(avatar) => (
+						<>
+							<rect
+								width={size}
+								height={size}
+								x={pad()}
+								y={pad()}
+								fill="oklch(var(--color-bg3))"
+							/>
+							<image
+								// temp? i need to crop avatars properly on upload
+								preserveAspectRatio="xMidYMid slice"
+								width={size}
+								height={size}
+								x={pad()}
+								y={pad()}
+								href={getThumbFromId(avatar(), 64, props.animate)}
+							/>
+						</>
+					)}
 				</Show>
 			</g>
 		</svg>

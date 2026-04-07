@@ -137,14 +137,16 @@ export const ChannelIconGdm = (props: {
 					fill={props.icon ? "oklch(var(--color-bg3))" : getColor(props.id)}
 				/>
 				<Show when={props.icon}>
-					<image
-						preserveAspectRatio="xMidYMid slice"
-						width={size}
-						height={size}
-						x={pad()}
-						y={pad()}
-						href={getThumbFromId(props.icon!, 64, props.animate)!}
-					/>
+					{(icon) => (
+						<image
+							preserveAspectRatio="xMidYMid slice"
+							width={size}
+							height={size}
+							x={pad()}
+							y={pad()}
+							href={getThumbFromId(icon(), 64, props.animate)}
+						/>
+					)}
 				</Show>
 			</g>
 		</svg>

@@ -75,22 +75,26 @@ export const RoomIcon = (
 						/>
 					}
 				>
-					<rect
-						width={size}
-						height={size}
-						x={pad()}
-						y={pad()}
-						fill="oklch(var(--color-bg3))"
-					/>
-					<image
-						// temp? i need to crop avatars properly on upload
-						preserveAspectRatio="xMidYMid slice"
-						width={size}
-						height={size}
-						x={pad()}
-						y={pad()}
-						href={getThumbFromId(props.room?.icon!)!}
-					/>
+					{(icon) => (
+						<>
+							<rect
+								width={size}
+								height={size}
+								x={pad()}
+								y={pad()}
+								fill="oklch(var(--color-bg3))"
+							/>
+							<image
+								// temp? i need to crop avatars properly on upload
+								preserveAspectRatio="xMidYMid slice"
+								width={size}
+								height={size}
+								x={pad()}
+								y={pad()}
+								href={getThumbFromId(icon(), 64)}
+							/>
+						</>
+					)}
 				</Show>
 			</g>
 			<Show when={mentionCount() > 0}>

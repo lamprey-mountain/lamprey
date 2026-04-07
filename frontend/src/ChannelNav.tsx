@@ -1,6 +1,9 @@
 import { A, useNavigate, useParams } from "@solidjs/router";
-import type { Channel } from "sdk";
+import type { Channel, ChannelType } from "sdk";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+
+type ChannelWithThreads = Channel & { threads?: Channel[] };
+
 import {
 	useApi2,
 	useChannels2,
@@ -372,7 +375,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					setTarget({ id, mode: "inside" });
 				}
 				return;
-			} else if ((targetChannel.type as any) !== "Category") {
+			} else if ((targetChannel.type as ChannelType) !== "Category") {
 				// Reorder relative to other channel
 				const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
 				const after = e.clientY > rect.top + rect.height / 2;
@@ -624,12 +627,13 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					data-room-id={props.room_id}
 					onClick={(e) => {
 						if (props.room_id) {
+							const roomId = props.room_id;
 							queueMicrotask(() => {
 								setMenu({
 									x: e.clientX,
 									y: e.clientY,
 									type: "room",
-									room_id: props.room_id!,
+									room_id: roomId,
 								});
 							});
 						}
@@ -638,12 +642,13 @@ export const ChannelNav = (props: { room_id?: string }) => {
 						if (e.key === "Enter" || e.key === " ") {
 							e.preventDefault();
 							if (props.room_id) {
+								const roomId = props.room_id;
 								queueMicrotask(() => {
 									setMenu({
 										x: 0,
 										y: 0,
 										type: "room",
-										room_id: props.room_id!,
+										room_id: roomId,
 									});
 								});
 							}
@@ -759,9 +764,11 @@ export const ChannelNav = (props: { room_id?: string }) => {
 													channel={channel}
 													room_id={props.room_id}
 												/>
-												<Show when={(channel as any).threads?.length > 0}>
+												<Show
+													when={(channel as ChannelWithThreads).threads?.length}
+												>
 													<ul class="thread-list">
-														<For each={(channel as any).threads}>
+														<For each={(channel as ChannelWithThreads).threads}>
 															{(thread: Channel) => (
 																<li
 																	class="channel-item"
@@ -800,12 +807,14 @@ export const ChannelNav = (props: { room_id?: string }) => {
 												>
 													{(s) => {
 														const user = () => users2.cache.get(s.user_id);
-														const room_member = () =>
-															props.room_id
+														const room_member = () => {
+															const roomId = props.room_id;
+															return roomId
 																? roomMembers2.cache.get(
-																		`${props.room_id!}:${s.user_id}`,
+																		`${roomId}:${s.user_id}`,
 																	)
 																: null;
+														};
 														const name = () =>
 															room_member()?.override_name ||
 															user()?.name ||
@@ -889,8 +898,9 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 	const isMuted = () => {
 		const c = channelConfig();
 		if (!c?.notifs.mute) return false;
-		if (c.notifs.mute.expires_at === null) return true;
-		return Date.parse(c.notifs.mute.expires_at!) > Date.now();
+		const expiresAt = c.notifs.mute.expires_at;
+		if (!expiresAt) return true;
+		return Date.parse(expiresAt) > Date.now();
 	};
 
 	const perms = usePermissions(

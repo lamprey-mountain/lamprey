@@ -2,7 +2,7 @@
 export const cyrb53 = (str: string, seed = 0) => {
 	let h1 = 0xdeadbeef ^ seed,
 		h2 = 0x41c6ce57 ^ seed;
-	for (let i = 0, ch; i < str.length; i++) {
+	for (let i = 0, ch: number; i < str.length; i++) {
 		ch = str.charCodeAt(i);
 		h1 = Math.imul(h1 ^ ch, 2654435761);
 		h2 = Math.imul(h2 ^ ch, 1597334677);

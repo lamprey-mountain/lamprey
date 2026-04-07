@@ -36,7 +36,11 @@ const _ApiContext = createContext<never>();
 export const RootStoreContext = createContext<RootStore>();
 
 export function useApi2() {
-	return useContext(RootStoreContext)!;
+	const ctx = useContext(RootStoreContext);
+	if (!ctx) {
+		throw new Error("useApi2 must be used within a RootStoreContext.Provider");
+	}
+	return ctx;
 }
 
 // Aliases for backwards compatibility

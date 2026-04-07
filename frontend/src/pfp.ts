@@ -18,8 +18,9 @@ const pfpCache = new Map<string, string>();
 
 export async function generatePfp(userId: string): Promise<string> {
 	if (!pfpsLoaded()) return "";
-	if (pfpCache.has(userId)) {
-		return pfpCache.get(userId)!;
+	const cached = pfpCache.get(userId);
+	if (cached) {
+		return cached;
 	}
 
 	const canvas = new OffscreenCanvas(SIZE, SIZE);

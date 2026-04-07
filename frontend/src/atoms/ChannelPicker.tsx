@@ -75,13 +75,15 @@ function createSelect<T>() {
 		next() {
 			const list = filtered();
 			if (list.length === 0) return;
-			const idx = list.findIndex((i) => i.obj === getHovered()!);
+			const hovered = getHovered();
+			const idx = hovered ? list.findIndex((i) => i.obj === hovered) : 0;
 			setHovered(() => list[(idx + 1) % list.length]?.obj ?? null);
 		},
 		prev() {
 			const list = filtered();
 			if (list.length === 0) return;
-			const idx = list.findIndex((i) => i.obj === getHovered()!);
+			const hovered = getHovered();
+			const idx = hovered ? list.findIndex((i) => i.obj === hovered) : 0;
 			setHovered(
 				() => list[(list.length + idx - 1) % list.length]?.obj ?? null,
 			);

@@ -1,5 +1,7 @@
 import type {
 	Client,
+	MemberListGroup,
+	MemberListOp,
 	Message,
 	MessageEnvelope,
 	MessageReady,
@@ -43,6 +45,15 @@ import { ThreadsService } from "../services/ThreadsService";
 import { WebhooksService } from "../services/WebhooksService";
 
 const storeLog = logger.for("api/rooms");
+
+type MemberListSyncMessage = {
+	type: "MemberListSync";
+	user_id: string;
+	room_id?: string | null;
+	channel_id?: string | null;
+	ops: MemberListOp[];
+	groups: MemberListGroup[];
+};
 
 export class RootStore {
 	client: Client;
@@ -313,7 +324,7 @@ export class RootStore {
 		} else if (msg.type === "MessageCreate") {
 			const m = msg.message;
 			if (raw.op === "Sync" && raw.nonce) {
-				(m as any).nonce = raw.nonce;
+				(m as typeof m & { nonce?: string }).nonce = raw.nonce;
 			}
 			this.messages.handleMessageCreate(m);
 			this.notifications.handleMessageCreate(m);
@@ -350,7 +361,7 @@ export class RootStore {
 				this.preferences._loaded = true;
 			}
 		} else if (msg.type === "MemberListSync") {
-			this.memberLists.handleSync(msg as any);
+			this.memberLists.handleSync(msg as MemberListSyncMessage);
 		} else if (msg.type === "VoiceState") {
 			if (msg.state) {
 				this.voiceStates.set(msg.user_id, msg.state);

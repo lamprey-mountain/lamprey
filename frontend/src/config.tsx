@@ -7,10 +7,14 @@ export type Config = {
 	cdn_url: string;
 };
 
-const configCtx = createContext<Config>();
+const configCtx = createContext<Config | undefined>();
 
-export const useConfig = () => {
-	return useContext(configCtx)!;
+export const useConfig = (): Config => {
+	const config = useContext(configCtx);
+	if (!config) {
+		throw new Error("useConfig must be used within a ConfigProvider");
+	}
+	return config;
 };
 
 export const ConfigProvider = configCtx.Provider;

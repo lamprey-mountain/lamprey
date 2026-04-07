@@ -183,8 +183,11 @@ export const PopupEventEditor = (props: {
 		});
 	});
 
-	const handleChange = (field: string, value: unknown) => {
-		setFormData(field as keyof typeof formData, value as any);
+	const handleChange = <K extends keyof typeof formData>(
+		field: K,
+		value: (typeof formData)[K],
+	) => {
+		setFormData(field, value);
 	};
 
 	return (

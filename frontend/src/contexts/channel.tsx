@@ -60,4 +60,10 @@ export type ChannelContextT = [
 ];
 
 export const ChannelContext = createContext<ChannelContextT>();
-export const useChannel = () => useContext(ChannelContext);
+export const useChannel = (): ChannelContextT => {
+	const ctx = useContext(ChannelContext);
+	if (!ctx) {
+		throw new Error("useChannel must be used within a ChannelContext.Provider");
+	}
+	return ctx;
+};

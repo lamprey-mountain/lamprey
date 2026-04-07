@@ -113,9 +113,9 @@ export const Autocomplete = () => {
 									<span>{result.obj.name}</span>
 								</Match>
 								<Match when={true}>
-									{"label" in result.obj
-										? ((result.obj as any).label ?? (result.obj as any).name)
-										: (result.obj as any).name}
+									{("label" in result.obj
+										? (result.obj as { label?: string; name?: string }).label
+										: undefined) ?? (result.obj as { name?: string }).name}
 								</Match>
 							</Switch>
 						</div>

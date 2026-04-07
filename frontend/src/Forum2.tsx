@@ -6,7 +6,7 @@ import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { leading, throttle } from "@solid-primitives/scheduled";
 import { ReactiveSet } from "@solid-primitives/set";
 import { useNavigate } from "@solidjs/router";
-import type { EditorState } from "prosemirror-state";
+import type { EditorState, Transaction } from "prosemirror-state";
 import {
 	type Channel,
 	getTimestampFromUUID,
@@ -158,7 +158,7 @@ const InputReply = (props: { thread: Channel; reply: Message }) => {
 	const users2 = useUsers2();
 	const roomMembers2 = useRoomMembers2();
 	const tip = createTooltip({ tip: () => "remove reply" });
-	const [_ch, chUpdate] = useChannel()!;
+	const [_ch, chUpdate] = useChannel();
 	const getName = (user_id: string) => {
 		const user = users2.use(() => user_id);
 		const room_id = props.thread.room_id;
@@ -593,7 +593,7 @@ function EditorChannelMention(props: { id: string }) {
 export const Forum2Thread = (props: { channel: Channel }) => {
 	const channels2 = useChannels2();
 	const messagesService = useMessages2();
-	const [ch, chUpdate] = useChannel()!;
+	const [ch, chUpdate] = useChannel();
 	const submit = useMessageSubmit(props.channel.id);
 	const uploads = useUploads();
 	const currentUser = useCurrentUser();
@@ -610,8 +610,9 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	}
 
 	function uploadFile(e: InputEvent) {
-		const target = e.target! as HTMLInputElement;
-		const files = Array.from(target.files!);
+		const target = e.target as HTMLInputElement | null;
+		if (!target?.files) return;
+		const files = Array.from(target.files);
 		for (const file of files) {
 			handleUpload(file);
 		}
@@ -757,7 +758,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		if (editorState) {
 			const { from, to } = editorState.selection;
 			const customMatch = emoji.match(/^<:([^:]+):([^>]+)>$/);
-			let tr;
+			let tr: Transaction;
 			if (customMatch) {
 				const name = customMatch[1];
 				const id = customMatch[2];
@@ -1076,7 +1077,7 @@ function highlight(el: Element) {
 
 function CommentEditor(props: { message: Message; channel: Channel }) {
 	const messagesService = useMessages2();
-	const [ch, chUpdate] = useChannel()!;
+	const [ch, chUpdate] = useChannel();
 	const toolbar = useFormattingToolbar();
 	const autocomplete = useAutocomplete();
 	const [draft, setDraft] = createSignal(
@@ -1090,7 +1091,7 @@ function CommentEditor(props: { message: Message; channel: Channel }) {
 		if (editorState) {
 			const { from, to } = editorState.selection;
 			const customMatch = emoji.match(/^<:([^:]+):([^>]+)>$/);
-			let tr;
+			let tr: Transaction;
 			if (customMatch) {
 				const name = customMatch[1];
 				const id = customMatch[2];
@@ -1195,7 +1196,7 @@ const Comment = (props: {
 	const message = () => props.node.message;
 	const children = () => props.node.children;
 	const api2 = useApi2();
-	const [ch, chUpdate] = useChannel()!;
+	const [ch, chUpdate] = useChannel();
 
 	const collapsed = () => props.collapsed.has(message().id);
 	const isEditing = () => ch.editingMessage?.message_id === message().id;

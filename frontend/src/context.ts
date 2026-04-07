@@ -132,4 +132,10 @@ export type { Menu } from "./contexts/menu.tsx";
 export type { Modal } from "./contexts/modal.tsx";
 
 export const chatctx = createContext<ChatCtx>();
-export const useCtx = () => useContext(chatctx)!;
+export const useCtx = (): ChatCtx => {
+	const ctx = useContext(chatctx);
+	if (!ctx) {
+		throw new Error("useCtx must be used within a ChatCtx provider");
+	}
+	return ctx;
+};

@@ -18,11 +18,13 @@ export function createKeybinds(
 				.map((i) => i.split("-"));
 			const chord = [];
 			for (const key of keys) {
+				const lastKey = key[key.length - 1];
+				if (!lastKey) continue;
 				chord.push({
 					ctrl: key.includes("Ctrl"),
 					shift: key.includes("Shift"),
 					alt: key.includes("Alt"),
-					key: key[key.length - 1]!,
+					key: lastKey,
 				});
 			}
 			realBinds.push([chord, binds[bind]]);

@@ -84,6 +84,7 @@ export type Attachment = components["schemas"]["MessageAttachment"];
 export type ReactionKey = components["schemas"]["ReactionKey"];
 export type RelationshipType = components["schemas"]["RelationshipType"];
 export type MemberListGroup = components["schemas"]["MemberListGroup"];
+export type MemberListOp = components["schemas"]["MemberListOp"];
 export type ChannelPatch = components["schemas"]["ChannelPatch"];
 export type HistoryPagination = components["schemas"]["HistoryPagination"];
 export type PaginationResponse<T = any> = {

@@ -127,7 +127,12 @@ export const AppProviders: Component<ParentProps<{ resolved: boolean }>> = (
 	const { client, ctx, store } = useChatClient(config);
 
 	// TEMP: debugging
-	const g = globalThis as any;
+	const g = globalThis as typeof globalThis & {
+		ctx: typeof ctx;
+		client: typeof client;
+		store: typeof store;
+		flags: typeof flags;
+	};
 	g.ctx = ctx;
 	g.client = client;
 	g.store = store;

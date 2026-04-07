@@ -1,4 +1,9 @@
-import { marked, type Token } from "marked";
+import {
+	marked,
+	type RendererThis,
+	type Token,
+	type TokenizerThis,
+} from "marked";
 
 type MentionToken = Token & {
 	mention_type: "user" | "role" | "channel" | "emoji";
@@ -58,7 +63,7 @@ const spoilerExtension = {
 	name: "spoiler",
 	level: "inline" as const,
 	start: (src: string) => src.indexOf("||"),
-	tokenizer(src: string) {
+	tokenizer(this: TokenizerThis, src: string) {
 		const match = /^\|\|([\s\S]+?)\|\|/.exec(src);
 		if (!match) return;
 		const token = {
@@ -67,11 +72,11 @@ const spoilerExtension = {
 			text: match[1],
 			tokens: [],
 		};
-		(this as any).lexer.inline(token.text, token.tokens);
+		this.lexer.inline(token.text, token.tokens);
 		return token;
 	},
-	renderer(token: SpoilerToken) {
-		const content = (this as any).parser.parseInline(token.tokens);
+	renderer(this: RendererThis, token: SpoilerToken) {
+		const content = this.parser.parseInline(token.tokens);
 		return `<span class="spoiler" onclick="this.classList.toggle('shown')">${content}</span>`;
 	},
 };
@@ -109,7 +114,7 @@ export function countEmojiOnly(content: string): number {
 
 	// Count unicode emoji using grapheme segmentation
 	// This properly handles emoji with variation selectors, ZWJ sequences, etc.
-	const segmenter = new (Intl as any).Segmenter("en", {
+	const segmenter = new Intl.Segmenter("en", {
 		granularity: "grapheme",
 	});
 	for (const { segment } of segmenter.segment(withoutCustomEmoji)) {
