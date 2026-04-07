@@ -15,35 +15,35 @@ declare module "*.html?raw" {
 	export default content;
 }
 
-// Type declaration for Intl.Segmenter (ESNext.Intl)
-interface IntlSegmenterOptions {
-	granularity?: "grapheme" | "word" | "sentence";
-	localeMatcher?: "lookup" | "best fit";
-	usage?: "sort" | "standalone";
-}
+declare namespace Intl {
+	interface SegmenterOptions {
+		granularity?: "grapheme" | "word" | "sentence";
+		localeMatcher?: "lookup" | "best fit";
+	}
 
-interface SegmentResult {
-	segment: string;
-	index: number;
-	input: string;
-	isWordLike?: boolean;
-}
+	interface SegmentResult {
+		segment: string;
+		index: number;
+		input: string;
+		isWordLike?: boolean;
+	}
 
-interface IntlSegmenter {
-	segment(input: string): IterableIterator<SegmentResult>;
-	resolvedOptions(): {
-		locale: string;
-		granularity: string;
-	};
-}
+	interface Segments {
+		[Symbol.iterator](): IterableIterator<SegmentResult>;
+		containing(index: number): SegmentResult;
+	}
 
-interface Intl {
-	Segmenter: {
-		prototype: IntlSegmenter;
-		new (
-			locale?: string | string[],
-			options?: IntlSegmenterOptions,
-		): IntlSegmenter;
+	interface Segmenter {
+		segment(input: string): Segments;
+		resolvedOptions(): {
+			locale: string;
+			granularity: "grapheme" | "word" | "sentence";
+		};
+	}
+
+	const Segmenter: {
+		prototype: Segmenter;
+		new (locale?: string | string[], options?: SegmenterOptions): Segmenter;
 		supportedLocalesOf(locales: string | string[]): string[];
 	};
 }

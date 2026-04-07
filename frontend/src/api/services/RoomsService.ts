@@ -1,4 +1,4 @@
-import type { Pagination, Room } from "sdk";
+import type { Channel, Pagination, Room } from "sdk";
 import { logger } from "../../logger";
 import { type ListState, PaginatedList } from "../core/PaginatedList";
 import { BaseService } from "../core/Service";
@@ -83,7 +83,7 @@ export class RoomsService extends BaseService<Room> {
 		list.setLoading(true);
 
 		try {
-			const data = await fetch();
+			const data = await fetch(list.state.cursor ?? undefined);
 			this.upsertBulk(data.items);
 
 			const newIds = data.items.map((room) => this.getKey(room));
@@ -121,9 +121,7 @@ export class RoomsService extends BaseService<Room> {
 		let has_more = true;
 		let from: string | undefined;
 		while (has_more) {
-			let data:
-				| { items?: Array<{ id: string }>; has_more?: boolean }
-				| undefined;
+			let data: Pagination<Channel> | undefined;
 			try {
 				data = await this.retryWithBackoff(() =>
 					this.client.http.GET("/api/v1/room/{room_id}/channel", {
@@ -141,6 +139,8 @@ export class RoomsService extends BaseService<Room> {
 				log.error("Failed to fetch threads for room", error);
 				break;
 			}
+
+			if (!data?.items) break;
 
 			for (const thread of data.items) {
 				if (thread.last_version_id) {

@@ -1,13 +1,19 @@
 import { ReactiveMap } from "@solid-primitives/map";
-import type { MemberListGroup, RoomMember, ThreadMember, User } from "sdk";
+import type {
+	MemberListGroup,
+	MemberListOp,
+	RoomMember,
+	ThreadMember,
+	User,
+} from "sdk";
 import { logger } from "../../logger";
 import type { RootStore } from "../core/Store";
 
 const memberListLog = logger.for("member_list");
 
 export type MemberListItem = {
-	room_member: RoomMember | null;
-	thread_member: ThreadMember | null;
+	room_member: RoomMember | null | undefined;
+	thread_member: ThreadMember | null | undefined;
 	user: User;
 };
 
@@ -26,19 +32,7 @@ export class MemberListService {
 		type: "MemberListSync";
 		room_id?: string | null;
 		channel_id?: string | null;
-		ops: Array<{
-			type: string;
-			position?: number;
-			items?: Array<string>;
-			users?: Array<User>;
-			room_members?: Array<RoomMember>;
-			thread_members?: Array<ThreadMember>;
-			user_id?: string;
-			user?: User;
-			room_member?: RoomMember;
-			thread_member?: ThreadMember;
-			count?: number;
-		}>;
+		ops: MemberListOp[];
 		groups: MemberListGroup[];
 	}) {
 		if (msg.type === "MemberListSync") {

@@ -4,8 +4,10 @@ import {
 	type Channel,
 	getTimestampFromUUID,
 	type Message,
+	type MessageVersion,
 	type Preferences,
 	type ReactionKey,
+	type UserWithRelationship,
 } from "sdk";
 import {
 	createEffect,
@@ -891,6 +893,11 @@ function DefaultMessage(
 		ctx: ReturnType<typeof useCtx>;
 	},
 ) {
+	const version = () =>
+		props.message.latest_version.type === "DefaultMarkdown"
+			? props.message.latest_version
+			: null;
+
 	return (
 		<article
 			ref={props.messageArticleRef}
@@ -910,7 +917,7 @@ function DefaultMessage(
 			onMouseEnter={() => props.setHovered(true)}
 			onMouseLeave={() => props.setHovered(false)}
 		>
-			<Show when={props.message.latest_version.reply_id}>
+			<Show when={version()?.reply_id}>
 				{(reply) => (
 					<ReplyView
 						thread_id={props.message.channel_id}
@@ -928,14 +935,14 @@ function DefaultMessage(
 						onClick={(e) => {
 							e.stopPropagation();
 							const currentTarget = e.currentTarget as HTMLElement;
-							const popout = props.ctx.popout();
-							if (popout && popout.ref === currentTarget) {
-								props.ctx.setPopout(null);
+							const { userView, setUserView } = useUserPopout();
+							if (userView()?.ref === currentTarget) {
+								setUserView(null);
 							} else {
-								props.ctx.setUserPopout({
+								setUserView({
 									user_id: props.message.author_id,
 									room_id: props.room_id,
-									thread_id: props.message.channel_id,
+									channel_id: props.message.channel_id,
 									ref: currentTarget,
 									source: "message",
 								});
@@ -964,16 +971,16 @@ function DefaultMessage(
 					>
 						<MessageTextMarkdown message={props.message} />
 					</Show>
-					<Show when={props.message.latest_version.attachments?.length}>
+					<Show when={version()?.attachments?.length}>
 						<ul class="attachments">
-							<For each={props.message.latest_version.attachments}>
+							<For each={version()?.attachments}>
 								{(att) => <AttachmentView att={att} />}
 							</For>
 						</ul>
 					</Show>
-					<Show when={props.message.latest_version.embeds?.length}>
+					<Show when={version()?.embeds?.length}>
 						<ul class="embeds">
-							<For each={props.message.latest_version.embeds}>
+							<For each={version()?.embeds}>
 								{(embed) => <EmbedView embed={embed} />}
 							</For>
 						</ul>
@@ -1016,16 +1023,16 @@ function DefaultMessage(
 					>
 						<MessageTextMarkdown message={props.message} />
 					</Show>
-					<Show when={props.message.latest_version.attachments?.length}>
+					<Show when={version()?.attachments?.length}>
 						<ul class="attachments">
-							<For each={props.message.latest_version.attachments}>
+							<For each={version()?.attachments}>
 								{(att) => <AttachmentView att={att} />}
 							</For>
 						</ul>
 					</Show>
-					<Show when={props.message.latest_version.embeds?.length}>
+					<Show when={version()?.embeds?.length}>
 						<ul class="embeds">
-							<For each={props.message.latest_version.embeds}>
+							<For each={version()?.embeds}>
 								{(embed) => <EmbedView embed={embed} />}
 							</For>
 						</ul>
@@ -1058,6 +1065,9 @@ function DefaultMessage(
 
 function SystemMessageMemberAdd(props: SystemMessageProps) {
 	const { t } = useCtx();
+	const version = () =>
+		props.message.latest_version as MessageVersion & { target_user_id: string };
+
 	return (
 		<SystemMessage
 			{...props}
@@ -1079,7 +1089,7 @@ function SystemMessageMemberAdd(props: SystemMessageProps) {
 						</span>,
 						<span class="author">
 							<UserDisplayName
-								user_id={props.message.latest_version.target_user_id}
+								user_id={version().target_user_id}
 								room_id={props.room_id}
 								onClick
 							/>
@@ -1093,6 +1103,9 @@ function SystemMessageMemberAdd(props: SystemMessageProps) {
 
 function SystemMessageMemberRemove(props: SystemMessageProps) {
 	const { t } = useCtx();
+	const version = () =>
+		props.message.latest_version as MessageVersion & { target_user_id: string };
+
 	return (
 		<SystemMessage
 			{...props}
@@ -1114,7 +1127,7 @@ function SystemMessageMemberRemove(props: SystemMessageProps) {
 						</span>,
 						<span class="author">
 							<UserDisplayName
-								user_id={props.message.latest_version.target_user_id}
+								user_id={version().target_user_id}
 								room_id={props.room_id}
 								onClick
 							/>
@@ -1157,6 +1170,11 @@ function SystemMessageMemberJoin(props: SystemMessageProps) {
 function SystemMessagePinned(props: SystemMessageProps) {
 	const { t } = useCtx();
 	const navigate = useNavigate();
+	const version = () =>
+		props.message.latest_version as MessageVersion & {
+			pinned_message_id: string;
+		};
+
 	return (
 		<SystemMessage
 			{...props}
@@ -1184,7 +1202,9 @@ function SystemMessagePinned(props: SystemMessageProps) {
 								onClick={(e) => {
 									e.stopPropagation();
 									navigate(
-										`/channel/${props.message.channel_id}/message/${props.message.latest_version.pinned_message_id}`,
+										`/channel/${props.message.channel_id}/message/${
+											version().pinned_message_id
+										}`,
 									);
 								}}
 							>
@@ -1200,6 +1220,9 @@ function SystemMessagePinned(props: SystemMessageProps) {
 
 function SystemMessageChannelRename(props: SystemMessageProps) {
 	const { t } = useCtx();
+	const version = () =>
+		props.message.latest_version as MessageVersion & { name_new: string };
+
 	return (
 		<SystemMessage
 			{...props}
@@ -1219,7 +1242,7 @@ function SystemMessageChannelRename(props: SystemMessageProps) {
 								onClick
 							/>
 						</span>,
-						<b>{props.message.latest_version.name_new}</b>,
+						<b>{version().name_new}</b>,
 					)}
 				</div>
 			}
@@ -1229,6 +1252,12 @@ function SystemMessageChannelRename(props: SystemMessageProps) {
 
 function SystemMessageCall(props: SystemMessageProps) {
 	const { t } = useCtx();
+	const version = () =>
+		props.message.latest_version as MessageVersion & {
+			ended_at?: string | null;
+			participants: string[];
+		};
+
 	return (
 		<SystemMessage
 			{...props}
@@ -1239,7 +1268,7 @@ function SystemMessageCall(props: SystemMessageProps) {
 					classList={{ local: props.message.is_local }}
 				>
 					{/* @ts-ignore */}
-					{props.message.latest_version.ended_at
+					{version().ended_at
 						? t(
 								"message_content.call_ended",
 								<span class="author">
@@ -1249,7 +1278,7 @@ function SystemMessageCall(props: SystemMessageProps) {
 										onClick
 									/>
 								</span>,
-								props.message.latest_version.participants.length,
+								version().participants.length,
 							)
 						: t(
 								"message_content.call_started",
@@ -1260,7 +1289,7 @@ function SystemMessageCall(props: SystemMessageProps) {
 										onClick
 									/>
 								</span>,
-								props.message.latest_version.participants.length,
+								version().participants.length,
 							)}
 				</div>
 			}
@@ -1329,7 +1358,9 @@ function SystemMessageThreadCreated(props: SystemMessageProps) {
 	const navigate = useNavigate();
 	const ctx = useCtx();
 
-	const threadId = () => props.message.latest_version.thread_id;
+	const threadId = () =>
+		(props.message.latest_version as MessageVersion & { thread_id?: string })
+			.thread_id;
 
 	const link = (text: string) => (
 		<Show when={threadId()} fallback={<span>{text}</span>}>

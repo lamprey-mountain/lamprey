@@ -3,7 +3,7 @@ import { createStore } from "solid-js/store";
 export type ListState = {
 	ids: string[];
 	has_more: boolean;
-	cursor?: string;
+	cursor?: string | null;
 	isLoading: boolean;
 	error?: unknown;
 };
@@ -27,7 +27,7 @@ export class PaginatedList {
 	}
 
 	// Used when fetching the next page from the API
-	appendPage(newIds: string[], has_more: boolean, cursor?: string) {
+	appendPage(newIds: string[], has_more: boolean, cursor?: string | null) {
 		this.setState((prev: ListState) => ({
 			ids: [...prev.ids, ...newIds],
 			has_more,

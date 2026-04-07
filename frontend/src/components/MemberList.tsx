@@ -108,7 +108,7 @@ export const MemberList = (props: MemberListProps) => {
 	const handleUserKeyDown = (
 		e: KeyboardEvent,
 		user: User,
-		_room_member: RoomMember | null,
+		_room_member: RoomMember | null | undefined,
 	) => {
 		if (e.key === "Enter" || e.key === " ") {
 			e.preventDefault();
@@ -206,7 +206,9 @@ export const MemberList = (props: MemberListProps) => {
 												data-user-id={item.user.id}
 												classList={{ offline: isOffline() }}
 												onClick={(e) => handleUserClick(e, user())}
-												onKeyDown={(e) => handleUserKeyDown(e, user())}
+												onKeyDown={(e) =>
+													handleUserKeyDown(e, user(), room_member())
+												}
 												onMouseEnter={() => setHovered(true)}
 												onMouseLeave={() => setHovered(false)}
 											>

@@ -12,7 +12,7 @@ export function Rooms() {
 
 	const fetchMore = () => {
 		if (rooms.has_more) {
-			rooms2.fetchListAll(rooms.cursor);
+			rooms2.fetchListAll(rooms.cursor ?? undefined);
 		}
 	};
 

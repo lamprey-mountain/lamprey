@@ -267,7 +267,7 @@ export const PopupEventEditor = (props: {
 								<label for="timezone-select">Timezone</label>
 								<Dropdown
 									selected={formData.timezone}
-									onSelect={(v) => handleChange("timezone", v)}
+									onSelect={(v) => v && handleChange("timezone", v)}
 									options={[
 										{ item: "UTC", label: "UTC" },
 										{ item: "America/New_York", label: "Eastern" },
@@ -331,7 +331,7 @@ export const PopupEventEditor = (props: {
 							<label for="calendar-recurrence-input">Recurrence</label>
 							<Dropdown
 								selected={formData.recurrence}
-								onSelect={(v) => handleChange("recurrence", v)}
+								onSelect={(v) => v !== null && handleChange("recurrence", v)}
 								options={[
 									{ item: "", label: "None" },
 									{ item: "daily", label: "Every day" },

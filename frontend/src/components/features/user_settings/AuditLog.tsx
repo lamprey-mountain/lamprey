@@ -29,7 +29,13 @@ export function AuditLog(props: VoidProps<{ user: User }>) {
 			<h2>audit log</h2>
 			<Show when={log()}>
 				<ul class="room-settings-audit-log">
-					<For each={mergeAuditLogEntries(log()?.audit_log_entries)}>
+					<For
+						each={(() => {
+							const l = log();
+							if (!l) return [];
+							return mergeAuditLogEntries(l.audit_log_entries);
+						})()}
+					>
 						{(mergedEntry) => {
 							const firstEntry = mergedEntry.entries[0];
 							const ts = () => getTimestampFromUUID(firstEntry.id);

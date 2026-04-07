@@ -76,6 +76,7 @@ export type Scope = components["schemas"]["Scope"];
 export type Tag = components["schemas"]["Tag"];
 export type TagCreate = components["schemas"]["TagCreate"];
 export type TagPatch = components["schemas"]["TagPatch"];
+export type ChannelCreate = components["schemas"]["ChannelCreate"];
 export type PushCreate = components["schemas"]["PushCreate"];
 export type PushInfo = components["schemas"]["PushInfo"];
 export type AutomodRule = components["schemas"]["AutomodRule"];

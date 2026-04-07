@@ -166,7 +166,7 @@ export abstract class BaseService<T> {
 
 			const item = this.cache.get(itemId);
 			if (item !== undefined && resource() !== item) {
-				mutate(item);
+				mutate(() => item);
 			}
 		});
 

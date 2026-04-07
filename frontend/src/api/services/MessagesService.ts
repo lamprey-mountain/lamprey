@@ -906,12 +906,20 @@ export class MessagesService extends BaseService<Message> {
 			async (channel_id) => {
 				const l = this._pinnedListings.get(channel_id);
 				if (l === undefined) {
-					return { items: [], has_more: false } as Pagination<Message>;
+					return {
+						items: [],
+						has_more: false,
+						total: 0,
+					} as Pagination<Message>;
 				}
 				if (l.prom) {
 					await l.prom;
 					if (l.pagination === null) {
-						return { items: [], has_more: false } as Pagination<Message>;
+						return {
+							items: [],
+							has_more: false,
+							total: 0,
+						} as Pagination<Message>;
 					}
 					return l.pagination;
 				}

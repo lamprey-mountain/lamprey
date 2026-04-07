@@ -54,11 +54,15 @@ export function AuditLog(_props: VoidProps<{ room: Room }>) {
 			<Show when={log()}>
 				<ul class="room-settings-audit-log">
 					<For
-						each={mergeAuditLogEntries(
-							log()
-								?.state.ids.map((id) => auditLog2.cache.get(id))
-								.filter((e): e is AuditLogEntry => e !== undefined),
-						)}
+						each={(() => {
+							const l = log();
+							if (!l) return [];
+							return mergeAuditLogEntries(
+								l.state.ids
+									.map((id) => auditLog2.cache.get(id))
+									.filter((e): e is AuditLogEntry => e !== undefined),
+							);
+						})()}
 					>
 						{(mergedEntry) => {
 							const firstEntry = mergedEntry.entries[0];

@@ -2,6 +2,7 @@ import type {
 	AuditLogEntry,
 	Channel,
 	RoomMember,
+	Tag,
 	User,
 	UserWithRelationship,
 	Webhook,
@@ -21,7 +22,7 @@ interface AuditLogPaginationResponse {
 	webhooks: Webhook[];
 	tags: Tag[];
 	has_more: boolean;
-	cursor?: string;
+	cursor?: string | null;
 }
 
 export class AuditLogService extends BaseService<AuditLogEntry> {
