@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO search_reindex_queue (channel_id) SELECT id FROM channel WHERE deleted_at IS NULL AND archived_at IS NULL ON CONFLICT (channel_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "312bf41c4db52ae3e8d17d6c69741c1d5f7583e1b504368727010b86ce185cc9"
+}
