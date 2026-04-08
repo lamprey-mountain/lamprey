@@ -306,7 +306,7 @@ export function MessageThread(props: {
 	preferences: Preferences;
 }) {
 	const nav = useNavigate();
-	const [chan, setChan] = useChannel();
+	const [chan, setChan] = useOptionalChannel();
 	const channels = useChannels();
 	const ctx = useCtx();
 
@@ -387,7 +387,6 @@ export function ReplyView(props: {
 	source_id: string;
 	room_id?: string;
 }) {
-	const channels2 = useChannels();
 	const messagesService = useMessages();
 	const reply = messagesService.use(() => props.reply_id);
 	const [_ch, chUpdate] = useOptionalChannel();

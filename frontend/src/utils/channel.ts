@@ -46,11 +46,11 @@ export function openThread(
 	thread: Channel,
 	parentChannel: Channel,
 	preferences: Preferences,
-	setChannelState: SetStoreFunction<ChannelState>,
+	setChannelState: SetStoreFunction<ChannelState> | null,
 	navigate: (path: string) => void,
 ) {
 	const shouldUseSidebar = shouldUseThreadSidebar(parentChannel, preferences);
-	if (shouldUseSidebar) {
+	if (shouldUseSidebar && setChannelState) {
 		setChannelState("thread_chat_sidebar_thread_id", thread.id);
 	} else {
 		navigate(`/thread/${thread.id}`);

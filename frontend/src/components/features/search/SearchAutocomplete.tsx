@@ -8,6 +8,8 @@ import {
 	useThreadMembers,
 	useUsers,
 } from "@/api";
+import { ChannelIcon } from "@/avatar/ChannelIcon";
+import { Avatar } from "@/avatar/UserAvatar";
 import type { RoomT, ThreadT } from "@/types";
 import { schema } from "./schema";
 import { getRecentSearches, parseSearchQuery } from "./utils";
@@ -111,6 +113,7 @@ export const SearchAutocomplete = (props: {
 		id: string;
 		name: string;
 		type: "user" | "role" | "special";
+		user?: User;
 	};
 	const mentionsSuggestions = createMemo(() => {
 		const query = props.filter.query.toLowerCase();
@@ -128,7 +131,12 @@ export const SearchAutocomplete = (props: {
 			)
 			.map(
 				(u) =>
-					({ id: `user-${u.id}`, name: u.name, type: "user" }) as Mentionable,
+					({
+						id: `user-${u.id}`,
+						name: u.name,
+						type: "user",
+						user: u,
+					}) as Mentionable,
 			);
 
 		const _roles = (roomRoles() ?? [])
@@ -445,6 +453,8 @@ export const SearchAutocomplete = (props: {
 			id: string;
 			label: string | LabelPart[];
 			rawValue?: string;
+			userData?: User;
+			channelData?: ThreadT;
 			onSelect: () => void;
 			isSeparator?: boolean;
 		}[] = [];
@@ -455,6 +465,7 @@ export const SearchAutocomplete = (props: {
 				result.push({
 					id: `author-${user_id}`,
 					label: user?.name ?? user_id,
+					userData: user,
 					onSelect: () => onAuthorSelect(user_id),
 				});
 			});
@@ -463,6 +474,7 @@ export const SearchAutocomplete = (props: {
 				result.push({
 					id: `channel-${thread.id}`,
 					label: thread.name,
+					channelData: thread,
 					onSelect: () => onChannelSelect(thread),
 				});
 			});
@@ -487,6 +499,7 @@ export const SearchAutocomplete = (props: {
 				result.push({
 					id: `mentions-${mentionable.id}`,
 					label: mentionable.name,
+					userData: mentionable.type === "user" ? mentionable.user : undefined,
 					onSelect: () => onMentionsSelect(mentionable),
 				});
 			});
@@ -560,13 +573,31 @@ export const SearchAutocomplete = (props: {
 									<li
 										id={item.id}
 										class="autocomplete-item"
-										classList={{ hovered: isHovered() }}
+										classList={{
+											hovered: isHovered(),
+											"not-recent": !item.id.startsWith("recent"),
+										}}
 										onMouseDown={(e) => {
 											e.preventDefault();
 											item.onSelect();
 										}}
 										onMouseEnter={() => props.setHoveredIndex?.(idx())}
 									>
+										<Show
+											when={item.userData}
+											fallback={
+												<Show when={item.channelData}>
+													{(ch) => (
+														<ChannelIcon
+															channel={ch()}
+															style="width: 16px; height: 16px; flex: none;"
+														/>
+													)}
+												</Show>
+											}
+										>
+											{(user) => <Avatar user={user()} />}
+										</Show>
 										{renderLabel()}
 									</li>
 								</Show>

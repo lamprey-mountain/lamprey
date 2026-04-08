@@ -28,6 +28,22 @@
 		padding: 2px 4px;
 		border-radius: 2px;
 
+		&.not-recent {
+			display: flex;
+			align-items: center;
+			gap: 6px;
+		}
+
+		& .avatar {
+			height: 18px;
+			width: 18px;
+			margin-right: 0;
+		}
+
+		& .icon {
+			filter: invert(.6);
+		}
+
 		&:hover,
 		&.hovered {
 			background-color: #fff1;
