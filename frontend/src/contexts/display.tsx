@@ -1,4 +1,4 @@
-import { createContext, useContext } from "solid-js";
+import { createContext, type ParentProps, useContext } from "solid-js";
 
 const MOBILE_BREAKPOINT = 768;
 
@@ -8,7 +8,7 @@ type DisplayContextType = {
 
 export const DisplayContext = createContext<DisplayContextType>();
 
-export const DisplayProvider = (props: { children: Node }) => {
+export const DisplayProvider = (props: ParentProps) => {
 	return (
 		<DisplayContext.Provider
 			value={{ isMobile: () => window.innerWidth < MOBILE_BREAKPOINT }}

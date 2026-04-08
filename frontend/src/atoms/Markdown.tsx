@@ -334,6 +334,9 @@ function TokenView(props: { token: Token }) {
 			<Match when={props.token.type === "hr"}>
 				<hr />
 			</Match>
+			<Match when={props.token.type === "table"}>
+				<TableView token={props.token as Tokens.Table} />
+			</Match>
 			<Match when={props.token.type === "html"}>
 				<TwemojiText text={(props.token as Tokens.HTML).text} />
 			</Match>
@@ -346,6 +349,56 @@ function TokenView(props: { token: Token }) {
 				<MentionToken token={props.token as any} />
 			</Match>
 		</Switch>
+	);
+}
+
+function TableView(props: { token: Tokens.Table }) {
+	const { header, rows, align } = props.token;
+
+	// NOTE: `align` array may be shorter than column count;
+	// `align[index]` safely returns undefined for missing entries.
+	const getAlign = (index: number): "left" | "center" | "right" | undefined => {
+		const a = align[index];
+		return a === "center" || a === "right" || a === "left" ? a : undefined;
+	};
+
+	return (
+		<div style={{ "overflow-x": "auto" }}>
+			<table>
+				<thead>
+					<tr>
+						<For each={header}>
+							{(cell, index) => {
+								const a = getAlign(index());
+								return (
+									<th style={a ? { "text-align": a } : undefined}>
+										<RenderTokens tokens={cell.tokens} />
+									</th>
+								);
+							}}
+						</For>
+					</tr>
+				</thead>
+				<tbody>
+					<For each={rows}>
+						{(row) => (
+							<tr>
+								<For each={row}>
+									{(cell, index) => {
+										const a = getAlign(index());
+										return (
+											<td style={a ? { "text-align": a } : undefined}>
+												<RenderTokens tokens={cell.tokens} />
+											</td>
+										);
+									}}
+								</For>
+							</tr>
+						)}
+					</For>
+				</tbody>
+			</table>
+		</div>
 	);
 }
 
