@@ -2155,22 +2155,35 @@ table {
 	width: 100%;
 	border-collapse: collapse;
 
+	// alternating stripes for rows
 	& tr {
 		background: $bg-200;
 
 		&:nth-child(even) {
-			background: $bg-300;
+			background: $bg-250;
 		}
 	}
 
-	& thead tr {
-		background: $bg-100;
+	& > thead {
+		// TODO: i would like to have `position: sticky` for table headers, but it doesnt work with virtual scrolling :(
+		border-bottom: solid $sep-300 1px;
+		// looks like the bottom thead border is covering the left/right table borders, unsure how to fix
+
+		& > tr {
+			background: $bg-100;
+		}
 	}
 
-	& td,
-	th {
-		padding: 4px;
+	& td, th {
+		padding: 6px 8px;
+
+		// default text align; is overridden by markdown column alignment syntax
 		text-align: left;
+	}
+
+	& th {
+		color: $fg-500;
+		font-weight: bold;
 	}
 }
 
