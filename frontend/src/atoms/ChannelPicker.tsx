@@ -45,7 +45,6 @@ function createSelect<T>() {
 	const [getFilter, setFilter] = createSignal("");
 	const [getHovered, setHovered] = createSignal<T | null>(null);
 
-	// Use Memo for filtering logic (derived state)
 	const filtered = createMemo(() => {
 		const filter = getFilter();
 		const items = getItems();
@@ -57,7 +56,6 @@ function createSelect<T>() {
 		}) as unknown as Array<Fuzzysort.KeyResult<T>>;
 	});
 
-	// Synchronize hovered state when list changes
 	createEffect(() => {
 		const list = filtered();
 		const currentHovered = getHovered();
@@ -76,7 +74,7 @@ function createSelect<T>() {
 			const list = filtered();
 			if (list.length === 0) return;
 			const hovered = getHovered();
-			const idx = hovered ? list.findIndex((i) => i.obj === hovered) : 0;
+			const idx = hovered ? list.findIndex((i) => i.obj === hovered) : -1;
 			setHovered(() => list[(idx + 1) % list.length]?.obj ?? null);
 		},
 		prev() {
@@ -150,8 +148,11 @@ export function createChannelPicker(props: {
 	});
 
 	createEffect(() => {
-		if (props.selected !== undefined) setSelected(() => props.selected!);
+		const pSelected = props.selected;
+		if (pSelected !== undefined) setSelected(() => pSelected);
 	});
+
+	const [value, setValue] = createSignal<string>("");
 
 	const select = (channel: Channel | null) => {
 		setSelected(() => channel);
@@ -204,23 +205,22 @@ export function createChannelPicker(props: {
 		},
 	});
 
-	// Only prevent default on wheel when dropdown is closed
 	function handleWheel(e: WheelEvent) {
-		if (shown()) return; // Let native scrolling work when open
+		if (shown()) return;
 		e.preventDefault();
 		const opts = options();
+		const currentSelected = selected();
 		if (e.deltaY < 0) {
-			const idx = opts.findIndex((o) => o.channel === selected());
+			const idx = opts.findIndex((o) => o.channel === currentSelected);
 			const next = (opts.length + idx - 1) % opts.length;
 			select(opts[next]?.channel ?? null);
 		} else if (e.deltaY > 0) {
-			const idx = opts.findIndex((o) => o.channel === selected());
+			const idx = opts.findIndex((o) => o.channel === currentSelected);
 			const next = (idx + 1) % opts.length;
 			select(opts[next]?.channel ?? null);
 		}
 	}
 
-	const [value, setValue] = createSignal<string>("");
 	createEffect(() => {
 		const s = selected();
 		if (document.activeElement === inputEl()) return;
@@ -232,7 +232,6 @@ export function createChannelPicker(props: {
 		}
 	});
 
-	// Scroll hovered item into view
 	createEffect(() => {
 		if (!shown()) return;
 		const hovered = selector.getHovered();
@@ -277,10 +276,12 @@ export function createChannelPicker(props: {
 						}}
 					>
 						<Show when={selectedChannel()}>
-							<ChannelIcon
-								channel={selectedChannel()!}
-								style="width: 20px; height: 20px; flex: none;"
-							/>
+							{(sc) => (
+								<ChannelIcon
+									channel={sc()}
+									style="width: 20px; height: 20px; flex: none;"
+								/>
+							)}
 						</Show>
 						<input
 							type="text"
@@ -295,19 +296,15 @@ export function createChannelPicker(props: {
 							onBlur={(e) => {
 								queueMicrotask(() => setShown(false));
 								const opt = options().find((o) => o.channel === selected());
-								if (opt) {
-									setValue(opt.label);
-								} else {
-									setValue("");
-								}
+								setValue(opt?.label ?? "");
 								props.onBlur?.(e);
 							}}
 							onInput={(e) => {
-								const { value } = e.target;
-								setValue(value);
-								selector.setFilter(value);
-								if (value) setShown(true);
-								props.onInput?.(value);
+								const val = e.currentTarget.value;
+								setValue(val);
+								selector.setFilter(val);
+								if (val) setShown(true);
+								props.onInput?.(val);
 							}}
 							onKeyDown={(e) => {
 								binds(e);
@@ -327,13 +324,20 @@ export function createChannelPicker(props: {
 							style={{ width: "100%" }}
 						/>
 					</div>
-					<div
+					{/* Fix: Changed div to button for a11y */}
+					<button
+						type="button"
 						class="dropdown-chevron-wrapper"
 						onClick={() => setShown(!shown())}
+						aria-label="Toggle dropdown"
 					>
 						<ChevronDown />
-					</div>
-					<Portal mount={props.mount ?? document.getElementById("overlay")!}>
+					</button>
+					<Portal
+						mount={
+							props.mount ?? document.getElementById("overlay") ?? document.body
+						}
+					>
 						<Show when={shown()}>
 							<menu
 								ref={setDropdownEl}
@@ -346,7 +350,7 @@ export function createChannelPicker(props: {
 									width: `${containerEl()?.offsetWidth || 0}px`,
 								}}
 							>
-								<ul>
+								<ul role="listbox">
 									<For
 										each={selector.filtered()}
 										fallback={<li class="no-results">no channels</li>}
@@ -362,6 +366,7 @@ export function createChannelPicker(props: {
 												<li
 													id={itemId}
 													role="option"
+													tabindex="-1"
 													onMouseOver={() => selector.setHovered(entry.obj)}
 													onMouseDown={(e) => {
 														e.preventDefault();
@@ -501,13 +506,14 @@ export function MultiChannelPicker(props: {
 				if (hovered) {
 					props.onSelect(hovered.channel);
 					selector.setFilter("");
-					if (inputEl()) inputEl()!.value = "";
+					const input = inputEl();
+					if (input) input.value = "";
 				}
 			} else {
 				setShown(true);
 			}
 		},
-		Backspace: (_e) => {
+		Backspace: () => {
 			if (selector.filtered().length === 0 && props.selected.length > 0) {
 				props.onRemove(props.selected[props.selected.length - 1]);
 			}
@@ -521,10 +527,10 @@ export function MultiChannelPicker(props: {
 			props.onSelect(channel);
 		}
 		selector.setFilter("");
-		if (inputEl()) inputEl()!.value = "";
+		const input = inputEl();
+		if (input) input.value = "";
 	}
 
-	// Scroll hovered item into view
 	createEffect(() => {
 		if (!shown()) return;
 		const hovered = selector.getHovered();
@@ -541,7 +547,11 @@ export function MultiChannelPicker(props: {
 			ref={setContainerEl}
 			class="dropdown multi-dropdown"
 			onClick={() => inputEl()?.focus()}
+			onKeyDown={(e) => {
+				if (e.key === "Enter") inputEl()?.focus();
+			}}
 			style={props.style}
+			role="presentation"
 		>
 			<div class="multi-dropdown-selected">
 				<For each={props.selected}>
@@ -573,7 +583,7 @@ export function MultiChannelPicker(props: {
 						queueMicrotask(() => setShown(false));
 					}}
 					onInput={(e) => {
-						selector.setFilter(e.target.value);
+						selector.setFilter(e.currentTarget.value);
 						setShown(true);
 					}}
 					onKeyDown={binds}
@@ -589,15 +599,18 @@ export function MultiChannelPicker(props: {
 					}
 				/>
 			</div>
-			<div
+			{/* Fix: Static interaction div -> button */}
+			<button
+				type="button"
 				class="dropdown-chevron-wrapper"
 				onClick={(e) => {
 					e.stopPropagation();
 					setShown(!shown());
 				}}
+				aria-label="Toggle listbox"
 			>
 				<ChevronDown />
-			</div>
+			</button>
 			<Portal mount={props.mount ?? document.body}>
 				<Show when={shown()}>
 					<menu
@@ -611,7 +624,7 @@ export function MultiChannelPicker(props: {
 							width: `${containerEl()?.offsetWidth || 0}px`,
 						}}
 					>
-						<ul>
+						<ul role="listbox">
 							<For
 								each={selector.filtered()}
 								fallback={<li class="no-results">no channels</li>}
@@ -627,6 +640,7 @@ export function MultiChannelPicker(props: {
 										<li
 											id={itemId}
 											role="option"
+											tabindex="-1"
 											onMouseOver={() => selector.setHovered(entry.obj)}
 											onMouseDown={(e) => {
 												e.preventDefault();
@@ -638,9 +652,7 @@ export function MultiChannelPicker(props: {
 												selected2: isSelected(),
 											}}
 											aria-selected={isSelected()}
-											style={{
-												display: "flex",
-											}}
+											style={{ display: "flex" }}
 										>
 											<div
 												style={{

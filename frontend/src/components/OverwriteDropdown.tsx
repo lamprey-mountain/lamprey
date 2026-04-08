@@ -132,8 +132,14 @@ export function OverwriteDropdown(props: {
 				onKeyDown={binds}
 				role="combobox"
 				aria-autocomplete="list"
+				aria-haspopup="listbox"
 				aria-expanded={shown()}
 				aria-controls={listboxId}
+				aria-activedescendant={
+					options().length > 0
+						? `${listboxId}-opt-${hoveredIndex()}`
+						: undefined
+				}
 			/>
 			<Portal>
 				<Show when={shown() && options().length > 0}>
@@ -154,6 +160,9 @@ export function OverwriteDropdown(props: {
 							<For each={options()}>
 								{(opt, i) => (
 									<li
+										id={`${listboxId}-opt-${i()}`}
+										role="option"
+										tabindex="-1"
 										aria-selected={i() === hoveredIndex()}
 										onMouseEnter={() => setHoveredIndex(i())}
 										onMouseDown={(e) => {

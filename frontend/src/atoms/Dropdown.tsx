@@ -207,6 +207,7 @@ export function createDropdown<T>(props: {
 	});
 
 	const listboxId = createUniqueId();
+	const optionId = (item: DropdownItem<T>) => `${listboxId}-opt-${item.label}`;
 
 	return {
 		setSelected(t: T) {
@@ -268,6 +269,11 @@ export function createDropdown<T>(props: {
 						aria-haspopup="listbox"
 						aria-controls={shown() ? listboxId : undefined}
 						aria-expanded={shown()}
+						aria-activedescendant={
+							selector.getHovered()
+								? optionId(selector.getHovered()!)
+								: undefined
+						}
 						style={{ width: "100%" }}
 					/>
 					<div
@@ -293,7 +299,9 @@ export function createDropdown<T>(props: {
 									<For each={selector.getFiltered()} fallback={"no options"}>
 										{(entry) => (
 											<li
+												id={optionId(entry.obj)}
 												role="option"
+												tabindex="-1"
 												onMouseOver={() => selector.setHovered(entry.obj)}
 												onMouseDown={(e) => {
 													e.preventDefault();
@@ -398,6 +406,7 @@ export function MultiDropdown<T>(
 	}
 
 	const listboxId = createUniqueId();
+	const optionId = (item: DropdownItem<T>) => `${listboxId}-opt-${item.label}`;
 
 	return (
 		<div
@@ -441,6 +450,9 @@ export function MultiDropdown<T>(
 					aria-haspopup="listbox"
 					aria-controls={shown() ? listboxId : undefined}
 					aria-expanded={shown()}
+					aria-activedescendant={
+						selector.getHovered() ? optionId(selector.getHovered()!) : undefined
+					}
 				/>
 			</div>
 			<div
@@ -469,7 +481,9 @@ export function MultiDropdown<T>(
 							<For each={selector.getFiltered()} fallback={"no options"}>
 								{(entry) => (
 									<li
+										id={optionId(entry.obj)}
 										role="option"
+										tabindex="-1"
 										onMouseOver={() => selector.setHovered(entry.obj)}
 										onMouseDown={(e) => {
 											e.preventDefault();

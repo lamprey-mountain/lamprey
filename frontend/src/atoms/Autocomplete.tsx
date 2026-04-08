@@ -1,4 +1,4 @@
-import { For, Match, Show, Switch } from "solid-js";
+import { createUniqueId, For, Match, Show, Switch } from "solid-js";
 import { ChannelIcon } from "../avatar/ChannelIcon";
 import type { AutocompleteItem } from "../contexts/autocomplete";
 import { useAutocomplete } from "../contexts/autocomplete";
@@ -46,10 +46,17 @@ function isChannel(
 export const Autocomplete = () => {
 	const { state, select, setIndex } = useAutocomplete();
 	const { filtered } = useAutocompleteData();
+	const listboxId = createUniqueId();
+	const optionId = (i: number) => `${listboxId}-opt-${i}`;
 
 	return (
 		<Show when={state.visible && state.kind && filtered().length > 0}>
-			<div class="autocomplete">
+			<div
+				class="autocomplete"
+				role="listbox"
+				id={listboxId}
+				aria-label={`${state.kind?.type ?? "autocomplete"} suggestions`}
+			>
 				<header>
 					<Show when={state.query} fallback={`list ${state.kind?.type}s`}>
 						filter {state.kind?.type} matching "{state.query}"
@@ -58,8 +65,12 @@ export const Autocomplete = () => {
 				<For each={filtered()}>
 					{(result, i) => (
 						<div
+							id={optionId(i())}
 							class="item"
+							role="option"
+							tabindex="-1"
 							classList={{ hovered: i() === state.activeIndex }}
+							aria-selected={i() === state.activeIndex}
 							onMouseEnter={() => setIndex(i())}
 							onMouseDown={(e) => {
 								e.preventDefault();
