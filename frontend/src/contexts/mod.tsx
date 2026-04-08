@@ -2,6 +2,7 @@
 
 export * from "./autocomplete.tsx";
 export * from "./channel.tsx";
+export * from "./display.tsx";
 export * from "./document.tsx";
 export * from "./formatting-toolbar.tsx";
 export * from "./memberlist.tsx";

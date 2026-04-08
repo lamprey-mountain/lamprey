@@ -20,7 +20,7 @@ import icSettings from "./assets/settings.png";
 import { useVoice } from "./components/features/voice/voice-provider";
 import { useConfig } from "./config";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
-import { useMenu } from "./contexts/mod.tsx";
+import { useDisplay, useMenu } from "./contexts/mod.tsx";
 import { useModals } from "./contexts/modal";
 import { flags } from "./flags";
 import {
@@ -870,10 +870,22 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 	const user = useCurrentUser();
 	const currentUserId = () => user()?.id;
 	const [hovered, setHovered] = createSignal(false);
+	const { isMobile } = useDisplay();
 
 	const handleClick = (_e: MouseEvent) => {
 		if (props.room_id) {
 			setLastViewedChannel(props.room_id, props.channel.id);
+		}
+
+		if (isMobile()) {
+			setTimeout(() => {
+				const chat = document.querySelector(".chat");
+				if (chat) {
+					chat.scrollIntoView();
+				} else {
+					console.warn("could not find chat!");
+				}
+			});
 		}
 	};
 

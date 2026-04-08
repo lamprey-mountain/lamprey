@@ -21,6 +21,7 @@ import {
 	CurrentUserProvider,
 	useCurrentUser,
 } from "./contexts/currentUser.tsx";
+import { DisplayProvider } from "./contexts/display.tsx";
 import { MemberListProvider } from "./contexts/memberlist.tsx";
 import {
 	AutocompleteProvider,
@@ -141,36 +142,38 @@ export const AppProviders: Component<ParentProps<{ resolved: boolean }>> = (
 	return (
 		<RootStoreContext.Provider value={store}>
 			<CurrentUserProvider>
-				<chatctx.Provider value={ctx}>
-					<ReadTrackingProvider
-						api={store}
-						channels2={store.channels}
-						channel_contexts={ctx.channel_contexts}
-						dataUpdate={ctx.dataUpdate}
-					>
-						<MemberListProvider>
-							<ModalsProvider>
-								<UploadsProvider ctx={ctx}>
-									<VoiceProvider>
-										<SlashCommandsProvider value={ctx.slashCommands}>
-											<MenuProvider>
-												<AutocompleteProvider>
-													<FormattingToolbarProvider>
-														<UserPopoutProvider>
-															<CalendarPopupProvider>
-																<AppShell>{props.children}</AppShell>
-															</CalendarPopupProvider>
-														</UserPopoutProvider>
-													</FormattingToolbarProvider>
-												</AutocompleteProvider>
-											</MenuProvider>
-										</SlashCommandsProvider>
-									</VoiceProvider>
-								</UploadsProvider>
-							</ModalsProvider>
-						</MemberListProvider>
-					</ReadTrackingProvider>
-				</chatctx.Provider>
+				<DisplayProvider>
+					<chatctx.Provider value={ctx}>
+						<ReadTrackingProvider
+							api={store}
+							channels2={store.channels}
+							channel_contexts={ctx.channel_contexts}
+							dataUpdate={ctx.dataUpdate}
+						>
+							<MemberListProvider>
+								<ModalsProvider>
+									<UploadsProvider ctx={ctx}>
+										<VoiceProvider>
+											<SlashCommandsProvider value={ctx.slashCommands}>
+												<MenuProvider>
+													<AutocompleteProvider>
+														<FormattingToolbarProvider>
+															<UserPopoutProvider>
+																<CalendarPopupProvider>
+																	<AppShell>{props.children}</AppShell>
+																</CalendarPopupProvider>
+															</UserPopoutProvider>
+														</FormattingToolbarProvider>
+													</AutocompleteProvider>
+												</MenuProvider>
+											</SlashCommandsProvider>
+										</VoiceProvider>
+									</UploadsProvider>
+								</ModalsProvider>
+							</MemberListProvider>
+						</ReadTrackingProvider>
+					</chatctx.Provider>
+				</DisplayProvider>
 			</CurrentUserProvider>
 		</RootStoreContext.Provider>
 	);
