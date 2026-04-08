@@ -8,6 +8,7 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::automod::{AutomodAction, AutomodMatches, AutomodRuleStripped};
+use crate::v1::types::metadata::MessageMetadata;
 use crate::v1::types::moderation::Report;
 use crate::v1::types::reaction::ReactionCounts;
 #[cfg(feature = "feat_interaction_reaction")]
@@ -20,14 +21,12 @@ use crate::v1::types::{ChannelType, EmojiId, MediaId, RoomId};
 use crate::v1::types::util::some_option;
 
 use crate::v2::types::media::{Media, MediaReference};
-use crate::v2::types::message::{Message as MessageV2, MessageMetadata};
 
 use super::channel::Channel;
 use super::EmbedCreate;
 use super::{ChannelId, MessageId, MessageVerId};
 use std::fmt;
 
-pub mod components;
 pub mod metadata;
 
 /// a message
@@ -835,7 +834,7 @@ pub struct RatelimitPut {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ContextResponse {
-    pub items: Vec<MessageV2>,
+    pub items: Vec<Message>,
     pub total: u64,
     pub has_after: bool,
     pub has_before: bool,

@@ -9,6 +9,7 @@ use validator::Validate;
 
 use crate::v1::types::error::SyncError;
 
+use crate::v1::types::Message;
 use crate::v1::types::{
     application::{Application, Connection},
     automod::{AutomodRule, AutomodRuleExecution},
@@ -21,8 +22,6 @@ use crate::v1::types::{
     DocumentTagId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember,
     WebhookId,
 };
-
-use crate::v2::types::message::Message as MessageV2;
 
 use super::{
     calendar::{CalendarEvent, CalendarEventParticipant, CalendarOverwrite},
@@ -373,7 +372,7 @@ pub enum MessageSync {
     // },
     MessageCreate {
         // i know, it's cursed to return v2 messages in a v1 api. but this is still in pre alpha so i don't really care.
-        message: MessageV2,
+        message: Message,
         // /// the room member of the author, if this was sent in a room
         // room_member: Option<RoomMember>,
 
@@ -385,7 +384,7 @@ pub enum MessageSync {
     },
 
     MessageUpdate {
-        message: MessageV2,
+        message: Message,
         // /// the room member of the author, if this was sent in a room
         // room_member: Option<RoomMember>,
 

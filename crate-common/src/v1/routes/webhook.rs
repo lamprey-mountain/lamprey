@@ -296,8 +296,7 @@ pub mod webhook_message_get {
     response(OK, body = Message, description = "Edit webhook message success"),
 )]
 pub mod webhook_message_edit {
-    use crate::v1::types::{Message, MessageId, WebhookId};
-    use crate::v2::types::message::MessagePatch;
+    use crate::v1::types::{Message, MessageId, MessagePatch, WebhookId};
 
     pub struct Request {
         #[path]

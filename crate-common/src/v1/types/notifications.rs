@@ -8,8 +8,9 @@ use uuid::Uuid;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{util::Time, Channel, ChannelId, MessageId, NotificationId, Room, RoomId};
-use crate::v2::types::message::Message;
+use crate::v1::types::{
+    util::Time, Channel, ChannelId, Message, MessageId, NotificationId, Room, RoomId,
+};
 
 pub mod preferences;
 

@@ -129,8 +129,7 @@ pub mod message_get {
     response(NOT_MODIFIED, description = "no change"),
 )]
 pub mod message_edit {
-    use crate::v1::types::{ChannelId, Message, MessageId};
-    use crate::v2::types::message::MessagePatch;
+    use crate::v1::types::{ChannelId, Message, MessageId, MessagePatch};
 
     pub struct Request {
         #[path]

@@ -149,9 +149,11 @@ pub enum ErrorFieldType {
     Required,
 
     /// the specified number is out of range
+    // NOTE: should these be usize?
     Range { min: Option<u64>, max: Option<u64> },
 
     /// the specified string or array length is out of range
+    // NOTE: should these be usize?
     Length { min: Option<u64>, max: Option<u64> },
 
     /// the incorrect type was passed
@@ -159,6 +161,16 @@ pub enum ErrorFieldType {
 
     /// some other validation error
     Other,
+}
+
+impl ErrorFieldType {
+    /// construct a `ErrorFieldType::Length`
+    pub fn length(min: u64, max: u64) -> Self {
+        Self::Length {
+            min: Some(min),
+            max: Some(max),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
