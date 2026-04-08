@@ -5,7 +5,7 @@ import {
 	type DecorationAttrs,
 	DecorationSet,
 } from "prosemirror-view";
-import { md } from "../../../markdown_utils.tsx";
+import { md } from "@/lib/markdown";
 
 let hljs: typeof import("highlight.js").default | null = null;
 import("highlight.js").then((m) => {

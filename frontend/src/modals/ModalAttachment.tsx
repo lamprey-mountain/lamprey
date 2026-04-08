@@ -1,10 +1,10 @@
 import { createSignal, onMount, Show } from "solid-js";
 import { useApi } from "@/api";
-import { CheckboxOption } from "../atoms/CheckboxOption";
-import { useCtx } from "../context";
-import { useModals } from "../contexts/modal";
-import { Checkbox } from "../icons";
-import { getThumbFromId } from "../media/util";
+import { useCtx } from "@/app/context";
+import { CheckboxOption } from "@/atoms/CheckboxOption";
+import { Checkbox } from "@/atoms/icons";
+import { useModals } from "@/contexts/modal";
+import { getThumbFromId } from "@/media/util";
 import { Modal } from "./mod";
 
 type ModalAttachmentProps = {

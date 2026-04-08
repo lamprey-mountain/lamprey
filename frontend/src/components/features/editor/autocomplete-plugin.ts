@@ -4,7 +4,7 @@ import type { EditorView } from "prosemirror-view";
 import type {
 	AutocompleteContext,
 	AutocompleteKind,
-} from "../../../contexts/autocomplete";
+} from "@/contexts/autocomplete";
 
 export const autocompleteKey = new PluginKey("autocomplete");
 

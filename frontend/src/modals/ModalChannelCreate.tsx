@@ -1,8 +1,8 @@
 import { createSignal, For } from "solid-js";
-import type { ChannelTypeOption } from "../contexts/modal";
-import { useModals } from "../contexts/modal";
-import { flags } from "../flags";
-import { RadioDot } from "../icons";
+import { RadioDot } from "@/atoms/icons";
+import type { ChannelTypeOption } from "@/contexts/modal";
+import { useModals } from "@/contexts/modal";
+import { flags } from "@/lib/flags";
 import { Modal } from "./mod";
 
 interface ModalChannelCreateProps {

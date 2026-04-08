@@ -1,11 +1,11 @@
 import { createUpload, type User } from "sdk";
 import { createSignal, Show, type VoidProps } from "solid-js";
 import { useApi } from "@/api";
-import { Savebar } from "../../../atoms/Savebar";
-import { useCtx } from "../../../context";
-import { useModals } from "../../../contexts/modal";
-import { Avatar } from "../../../User.tsx";
-import { Copyable } from "../../../utils/general";
+import { useCtx } from "@/app/context";
+import { Savebar } from "@/atoms/Savebar";
+import { Avatar } from "@/components/shared/User";
+import { useModals } from "@/contexts/modal";
+import { Copyable } from "@/utils/general";
 
 // TODO(#753): allow uploading banner
 

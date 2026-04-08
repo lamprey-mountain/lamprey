@@ -16,15 +16,15 @@ import {
 	useThreadMembers,
 	useUsers,
 } from "@/api";
-import icSearch from "../../../assets/search.png";
-import type { ChannelSearch } from "../../../context";
-import { useOptionalChannel } from "../../../contexts/channel";
-import { type RoomSearch, useRoom } from "../../../contexts/room";
-import type { RoomT, ThreadT } from "../../../types";
+import type { ChannelSearch } from "@/app/context";
+import icSearch from "@/assets/search.png";
 import {
 	createEditor as createBaseEditor,
 	createPlaceholderPlugin,
-} from "../editor/mod.tsx";
+} from "@/components/features/editor/mod.tsx";
+import { useOptionalChannel } from "@/contexts/channel";
+import { type RoomSearch, useRoom } from "@/contexts/room";
+import type { RoomT, ThreadT } from "@/types";
 import {
 	autocompletePlugin,
 	getFilterFromSelection,

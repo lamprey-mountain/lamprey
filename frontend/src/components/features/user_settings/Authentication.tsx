@@ -8,9 +8,9 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { useApi } from "@/api";
-import { useCtx } from "../../../context";
-import { useModals } from "../../../contexts/modal";
-import { Modal } from "../../../modals/mod";
+import { useCtx } from "@/app/context";
+import { useModals } from "@/contexts/modal";
+import { Modal } from "@/modals/mod";
 
 export function Authentication(props: VoidProps<{ user: User }>) {
 	const [, modalctl] = useModals();

@@ -8,13 +8,13 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { useApi } from "@/api";
-import { Dropdown } from "../../../atoms/Dropdown.tsx";
-import { Time } from "../../../atoms/Time.tsx";
+import { Dropdown } from "@/atoms/Dropdown.tsx";
+import { Time } from "@/atoms/Time.tsx";
 import {
 	formatAuditLogEntry,
 	formatChanges,
 	mergeAuditLogEntries,
-} from "../../../audit-log-util.tsx";
+} from "@/lib/audit-log-util";
 
 export function AuditLog(props: VoidProps<{ room: Room }>) {
 	const api2 = useApi();

@@ -17,8 +17,8 @@ import {
 	type Resource,
 } from "solid-js";
 import { uuidv7 } from "uuidv7";
-import { logger } from "../../logger";
-import { deepEqual } from "../../utils/deepEqual";
+import { deepEqual } from "@/utils/deepEqual";
+import { logger } from "@/utils/logger";
 import { BaseService } from "../core/Service";
 
 const _MAX_MESSAGES_PER_RANGE = 500;

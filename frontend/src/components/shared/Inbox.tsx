@@ -1,0 +1,233 @@
+import { A } from "@solidjs/router";
+import type { Message, Notification, Room } from "sdk";
+import { createSignal, For, Show } from "solid-js";
+import { useInbox } from "@/api";
+import type { NotificationPagination } from "@/api/services/InboxService.ts";
+import { Time } from "@/atoms/Time";
+import { MessageView } from "@/components/features/chat/Message.tsx";
+
+export const Inbox = () => {
+	const inbox2 = useInbox();
+	const [params, setParams] = createSignal({
+		include_read: false,
+		room_id: [],
+		thread_id: [],
+	});
+	const inboxResult = inbox2.useList(params);
+	const inboxItems = inboxResult.resource;
+	const [selected, setSelected] = createSignal<string[]>([]);
+
+	const getMessageIdsFromNotifIds = (notifIds: string[]) => {
+		const items = inboxItems()?.items ?? [];
+		return notifIds
+			.map((id) => {
+				const notif = items.find((it) => it.id === id);
+				return notif ? notif.message_id : null;
+			})
+			.filter((id): id is string => !!id);
+	};
+
+	const handleMarkSelectedRead = async () => {
+		if (selected().length === 0) return;
+		await inbox2.markRead(getMessageIdsFromNotifIds(selected()));
+		setSelected([]);
+		inboxResult.refetch();
+	};
+
+	const handleMarkSelectedUnread = async () => {
+		if (selected().length === 0) return;
+		await inbox2.markUnread(getMessageIdsFromNotifIds(selected()));
+		setSelected([]);
+		inboxResult.refetch();
+	};
+
+	const toggleSelection = (notifId: string, isSelected: boolean) => {
+		setSelected((s) =>
+			isSelected ? [...s, notifId] : s.filter((id) => id !== notifId),
+		);
+	};
+
+	const toggleSelectAll = (e: Event) => {
+		const checked = (e.currentTarget as HTMLInputElement).checked;
+		if (checked) {
+			setSelected(inboxItems()?.items.map((i) => i.id) ?? []);
+		} else {
+			setSelected([]);
+		}
+	};
+
+	return (
+		<div class="inbox">
+			<header>
+				<h2>inbox</h2>
+				<div class="spacer" />
+				<div class="filters">
+					<label>
+						<input
+							type="checkbox"
+							checked={params().include_read}
+							onChange={(e) =>
+								setParams({
+									...params(),
+									include_read: e.currentTarget.checked,
+								})
+							}
+						/>
+						include read
+					</label>
+				</div>
+			</header>
+			<div style="margin:8px;margin-bottom:0;margin-left: 16px;height:1rem;display:flex;align-items:center">
+				<label>
+					<input
+						type="checkbox"
+						onChange={toggleSelectAll}
+						style="margin-right:8px"
+					/>
+					select all
+				</label>
+				<Show when={selected().length > 0}>
+					<div style="margin-left: 8px">
+						<span>{selected().length} selected</span>
+						<button
+							type="button"
+							class="button"
+							onClick={handleMarkSelectedRead}
+						>
+							Mark as read
+						</button>
+						<button
+							type="button"
+							class="button"
+							onClick={handleMarkSelectedUnread}
+						>
+							Mark as unread
+						</button>
+					</div>
+				</Show>
+			</div>
+			<div class="inner">
+				<Show when={!inboxItems.loading} fallback={<div>loading...</div>}>
+					<For each={inboxItems()?.items} fallback={<div>no entries</div>}>
+						{(it) => (
+							<NotificationItem
+								notification={it}
+								allData={inboxItems()}
+								selected={selected().includes(it.id)}
+								onSelect={toggleSelection}
+								refetch={inboxResult.refetch}
+								include_read={params().include_read}
+							/>
+						)}
+					</For>
+				</Show>
+			</div>
+		</div>
+	);
+};
+
+const NotificationItem = (props: {
+	notification: Notification;
+	allData: NotificationPagination | undefined;
+	selected: boolean;
+	onSelect: (id: string, selected: boolean) => void;
+	refetch: () => void;
+	include_read: boolean;
+}) => {
+	const inbox2 = useInbox();
+	const thread = () => {
+		const threadId = (
+			props.notification as Notification & { thread_id?: string }
+		).thread_id;
+		if (!threadId) return undefined;
+		// Try to find the thread channel from channels array
+		return props.allData?.channels.find((c) => c.id === threadId);
+	};
+	const message = () =>
+		props.allData?.messages.find(
+			(m: Message) => m.id === props.notification.message_id,
+		);
+	const room = () => {
+		const t = thread();
+		if (!t?.room_id) return;
+		return props.allData?.rooms.find((r: Room) => r.id === t.room_id);
+	};
+
+	const handleMarkRead = async () => {
+		await inbox2.markRead([props.notification.message_id]);
+		props.refetch();
+	};
+
+	const handleMarkUnread = async () => {
+		await inbox2.markUnread([props.notification.message_id]);
+		props.refetch();
+	};
+
+	const reasonText = () => {
+		const reason = (props.notification as Notification & { reason?: string })
+			.reason;
+		switch (reason) {
+			case "Mention":
+				return "Mention";
+			case "MentionBulk":
+				return "Room Mention";
+			case "Reminder":
+				return "Reminder";
+			case "Reply":
+				return "Reply";
+			default:
+				return reason ?? "Unknown";
+		}
+	};
+
+	return (
+		<article
+			class="notification"
+			data-type={
+				(props.notification as Notification & { reason?: string }).reason
+			}
+		>
+			<header>
+				<input
+					type="checkbox"
+					class="notification-checkbox"
+					checked={props.selected}
+					onChange={(e) =>
+						props.onSelect(props.notification.id, e.currentTarget.checked)
+					}
+				/>
+				<Show when={room()}>
+					<A href={`/room/${room()?.id}`}>{room()?.name}</A>
+					&nbsp;&gt;&nbsp;
+				</Show>
+				<A href={`/thread/${thread()?.id}`}>{thread()?.name ?? "..."}</A>
+				&nbsp;&bull;&nbsp;
+				<Time date={new Date(props.notification.added_at)} />
+				<div class="spacer"></div>
+				<div class="label">{reasonText()}</div>
+				<Show
+					when={!props.notification.read_at}
+					fallback={
+						<button type="button" class="mark-read" onClick={handleMarkUnread}>
+							Mark as unread
+						</button>
+					}
+				>
+					<button type="button" class="mark-read" onClick={handleMarkRead}>
+						Mark as read
+					</button>
+				</Show>
+			</header>
+			<div class="notification-content">
+				<A
+					class="body-link"
+					href={`/thread/${thread()?.id}/message/${message()?.id}`}
+				>
+					<Show when={message()}>
+						<MessageView message={message() as Message} separate={true} />
+					</Show>
+				</A>
+			</div>
+		</article>
+	);
+};

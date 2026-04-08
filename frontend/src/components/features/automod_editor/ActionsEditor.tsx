@@ -1,6 +1,6 @@
 import type { AutomodAction, AutomodTarget, Channel } from "sdk";
 import { For, Match, Show, Switch } from "solid-js";
-import { ChannelPicker } from "../../../atoms/ChannelPicker.tsx";
+import { ChannelPicker } from "@/atoms/ChannelPicker.tsx";
 
 export interface ActionsEditorProps {
 	target: AutomodTarget;

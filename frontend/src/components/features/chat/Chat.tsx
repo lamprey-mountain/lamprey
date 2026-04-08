@@ -5,14 +5,14 @@ import { Portal } from "solid-js/web";
 import { uuidv7 } from "uuidv7";
 import { useApi, useMessages } from "@/api";
 import type { MessageListAnchor } from "@/api/services/MessagesService.ts";
-import { createList2 } from "../../../atoms/list.tsx";
-import { useChannel } from "../../../channelctx.tsx";
-import { useCtx } from "../../../context.ts";
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
-import { useReadTracking } from "../../../contexts/read-tracking.tsx";
-import { useUploads } from "../../../contexts/uploads.tsx";
-import { logger } from "../../../logger.ts";
-import { deepEqual } from "../../../utils/deepEqual.ts";
+import { useCtx } from "@/app/context";
+import { createList2 } from "@/atoms/list.tsx";
+import { useChannel } from "@/contexts/channel";
+import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useReadTracking } from "@/contexts/read-tracking.tsx";
+import { useUploads } from "@/contexts/uploads.tsx";
+import { deepEqual } from "@/utils/deepEqual.ts";
+import { logger } from "@/utils/logger";
 import { Input } from "./Input.tsx";
 import { MessageSkeleton } from "./MessageSkeleton.tsx";
 import {
@@ -63,7 +63,11 @@ export const ChatMain = (props: ChatProps) => {
 	const jumpToLastRead = () => {
 		const r = read_marker_id();
 		if (r) {
-			setChannelState("anchor", { type: "context", limit: 50, message_id: r });
+			setChannelState("anchor", {
+				type: "context",
+				limit: 50,
+				message_id: r,
+			});
 		}
 	};
 

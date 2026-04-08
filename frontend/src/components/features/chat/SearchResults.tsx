@@ -2,9 +2,9 @@ import { useNavigate } from "@solidjs/router";
 import type { Channel, Message, Room } from "sdk";
 import { For, Show } from "solid-js";
 import { useChannels } from "@/api";
-import type { ChannelSearch } from "../../../context";
-import { useOptionalChannel } from "../../../contexts/channel";
-import { useRoom } from "../../../contexts/room";
+import type { ChannelSearch } from "@/app/context";
+import { useOptionalChannel } from "@/contexts/channel";
+import { useRoom } from "@/contexts/room";
 import { MessageView } from "./Message";
 
 export const SearchResults = (props: {

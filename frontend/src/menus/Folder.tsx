@@ -1,7 +1,7 @@
 import { useRooms } from "@/api";
-import { useCtx } from "../context.ts";
-import { useModals } from "../contexts/modal";
-import type { RoomNavItem } from "../RoomNav.tsx";
+import { useCtx } from "@/app/context";
+import type { RoomNavItem } from "@/components/shared/RoomNav";
+import { useModals } from "@/contexts/modal";
 import { Item, Menu, Separator } from "./Parts.tsx";
 
 type FolderMenuProps = {

@@ -9,11 +9,11 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { useApi, useChannels } from "@/api";
-import icDelete from "../../../assets/delete.png";
-import icEdit from "../../../assets/edit.png";
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
-import { useModals } from "../../../contexts/modal";
-import { usePermissions } from "../../../hooks/usePermissions.ts";
+import icDelete from "@/assets/delete.png";
+import icEdit from "@/assets/edit.png";
+import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useModals } from "@/contexts/modal";
+import { usePermissions } from "@/hooks/usePermissions.ts";
 
 export function Tags(props: VoidProps<{ channel: Channel }>) {
 	const api2 = useApi();

@@ -14,7 +14,7 @@ import {
 } from "y-prosemirror";
 import * as Y from "yjs";
 import type { Api } from "@/api";
-import { getColor } from "../../../colors.ts";
+import { getColor } from "@/lib/colors";
 import { base64UrlDecode, base64UrlEncode } from "./editor-utils.ts";
 
 const cursorPluginKey = new PluginKey("cursorPlugin");

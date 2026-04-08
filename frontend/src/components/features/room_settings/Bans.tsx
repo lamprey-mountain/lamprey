@@ -1,11 +1,11 @@
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { createSignal, For, Show, type VoidProps } from "solid-js";
 import { useApi, useRoomBans, useUsers } from "@/api";
-import { Time } from "../../../atoms/Time.tsx";
-import { createTooltip } from "../../../atoms/Tooltip.tsx";
-import { useCtx } from "../../../context.ts";
-import type { RoomT } from "../../../types.ts";
-import { Avatar } from "../../../User.tsx";
+import { useCtx } from "@/app/context";
+import { Time } from "@/atoms/Time.tsx";
+import { createTooltip } from "@/atoms/Tooltip.tsx";
+import { Avatar } from "@/components/shared/User";
+import type { RoomT } from "@/types";
 
 export function Bans(props: VoidProps<{ room: RoomT }>) {
 	const _ctx = useCtx();

@@ -3,7 +3,7 @@ import type { EditorState } from "prosemirror-state";
 import type { User } from "sdk";
 import { UUID } from "uuidv7";
 import type { useUsers } from "@/api";
-import type { ThreadT } from "../../../types";
+import type { ThreadT } from "@/types";
 import { schema } from "./schema";
 
 const RECENT_SEARCHES_KEY = "recent_searches";

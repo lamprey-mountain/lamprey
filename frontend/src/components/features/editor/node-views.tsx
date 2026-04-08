@@ -1,8 +1,8 @@
 import type { Node } from "prosemirror-model";
 import { getOwner, runWithOwner, type VoidComponent } from "solid-js";
 import { render } from "solid-js/web";
-import { getTwemojiUrl } from "../../../emoji.ts";
-import { getEmojiUrl } from "../../../media/util.tsx";
+import { getTwemojiUrl } from "@/lib/emoji";
+import { getEmojiUrl } from "@/media/util.tsx";
 
 export const createNodeViews = () => {
 	const owner = getOwner();

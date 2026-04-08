@@ -20,20 +20,23 @@ import {
 import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
 import { useRoomMembers, useThreadMembers, useUsers } from "@/api";
-import { Autocomplete } from "../atoms/Autocomplete.tsx";
-import { EmojiPicker } from "../atoms/EmojiPicker.tsx";
-import { PopupEventEditor, useCalendarPopup } from "../Calendar.tsx";
-import { ThreadPopout } from "../components/features/chat/ThreadPopout.tsx";
-import { useCtx } from "../context.ts";
+import { useCtx } from "@/app/context";
+import { Autocomplete } from "@/atoms/Autocomplete.tsx";
+import { EmojiPicker } from "@/atoms/EmojiPicker.tsx";
+import { ThreadPopout } from "@/components/features/chat/ThreadPopout.tsx";
+import {
+	PopupEventEditor,
+	useCalendarPopup,
+} from "@/components/shared/Calendar";
+import { UserView } from "@/components/shared/User";
 import {
 	ChannelMenu,
 	FolderMenu,
 	MessageMenu,
 	RoomMenu,
 	UserMenu,
-} from "../menus/mod.ts";
-import { getModal } from "../modals/mod.tsx";
-import { UserView } from "../User.tsx";
+} from "@/menus/mod.ts";
+import { getModal } from "@/modals/mod.tsx";
 import { FormattingToolbar } from "./FormattingToolbar.tsx";
 import type { Menu } from "./menu.tsx";
 import {

@@ -1,9 +1,9 @@
 import type { Channel, HistoryPagination } from "sdk";
 import { createEffect, createSignal, For, on, Show } from "solid-js";
 import { useApi } from "@/api";
-import { Time } from "../../../atoms/Time.tsx";
-import { Avatar } from "../../../avatar/UserAvatar.tsx";
-import { useChannel } from "../../../contexts/channel.tsx";
+import { Time } from "@/atoms/Time.tsx";
+import { Avatar } from "@/avatar/UserAvatar.tsx";
+import { useChannel } from "@/contexts/channel.tsx";
 
 type ChangesetSelection = {
 	start_seq: number;

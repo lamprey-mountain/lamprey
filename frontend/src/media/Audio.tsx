@@ -7,15 +7,15 @@ import {
 	Show,
 	type ValidComponent,
 } from "solid-js";
-import iconPause from "../assets/pause.png";
-import iconPlay from "../assets/play.png";
-import iconVolumeHigh from "../assets/volume-high.png";
-import iconVolumeLow from "../assets/volume-low.png";
-import iconVolumeMax from "../assets/volume-max.png";
-import iconVolumeMedium from "../assets/volume-medium.png";
-import iconVolumeMute from "../assets/volume-mute.png";
-import { tooltip } from "../atoms/Tooltip.tsx";
-import { useCtx } from "../context.ts";
+import { useCtx } from "@/app/context";
+import iconPause from "@/assets/pause.png";
+import iconPlay from "@/assets/play.png";
+import iconVolumeHigh from "@/assets/volume-high.png";
+import iconVolumeLow from "@/assets/volume-low.png";
+import iconVolumeMax from "@/assets/volume-max.png";
+import iconVolumeMedium from "@/assets/volume-medium.png";
+import iconVolumeMute from "@/assets/volume-mute.png";
+import { tooltip } from "@/atoms/Tooltip.tsx";
 import {
 	formatBytes,
 	formatTime,

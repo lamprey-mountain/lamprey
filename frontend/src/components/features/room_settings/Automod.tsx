@@ -13,10 +13,10 @@ import { createStore } from "solid-js/store";
 import { uuidv7 } from "uuidv7";
 import { useApi, useChannels } from "@/api";
 import { Savebar } from "@/atoms/Savebar.tsx";
-import { usePermissions } from "@/hooks/usePermissions.ts";
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
-import { useModals } from "../../../contexts/modal";
-import { AutomodRule } from "../automod_editor/AutomodRule.tsx";
+import { AutomodRule } from "@/components/features/automod_editor/AutomodRule.tsx";
+import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useModals } from "@/contexts/modal";
+import { usePermissions } from "@/hooks/usePermissions";
 
 // clean = not touched, data is straight from the server
 // draft = not yet created

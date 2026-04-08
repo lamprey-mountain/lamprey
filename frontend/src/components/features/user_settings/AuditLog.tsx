@@ -2,12 +2,12 @@ import { ReactiveSet } from "@solid-primitives/set";
 import { getTimestampFromUUID, type User } from "sdk";
 import { createResource, For, Show, type VoidProps } from "solid-js";
 import { useApi } from "@/api";
-import { Time } from "../../../atoms/Time.tsx";
+import { Time } from "@/atoms/Time.tsx";
 import {
 	formatAuditLogEntry,
 	formatChanges,
 	mergeAuditLogEntries,
-} from "../../../audit-log-util.tsx";
+} from "@/lib/audit-log-util";
 
 export function AuditLog(props: VoidProps<{ user: User }>) {
 	const api2 = useApi();

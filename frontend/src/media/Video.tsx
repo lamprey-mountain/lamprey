@@ -6,17 +6,17 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import iconFullscreen from "../assets/fullscreen.png";
-import iconFullscreent from "../assets/fullscreent.png";
-import iconPause from "../assets/pause.png";
-import iconPlay from "../assets/play.png";
-import iconVolumeHigh from "../assets/volume-high.png";
-import iconVolumeLow from "../assets/volume-low.png";
-import iconVolumeMax from "../assets/volume-max.png";
-import iconVolumeMedium from "../assets/volume-medium.png";
-import iconVolumeMute from "../assets/volume-mute.png";
-import { createTooltip } from "../atoms/Tooltip.tsx";
-import { useCtx } from "../context.ts";
+import { useCtx } from "@/app/context";
+import iconFullscreen from "@/assets/fullscreen.png";
+import iconFullscreent from "@/assets/fullscreent.png";
+import iconPause from "@/assets/pause.png";
+import iconPlay from "@/assets/play.png";
+import iconVolumeHigh from "@/assets/volume-high.png";
+import iconVolumeLow from "@/assets/volume-low.png";
+import iconVolumeMax from "@/assets/volume-max.png";
+import iconVolumeMedium from "@/assets/volume-medium.png";
+import iconVolumeMute from "@/assets/volume-mute.png";
+import { createTooltip } from "@/atoms/Tooltip.tsx";
 import {
 	formatBytes,
 	formatTime,

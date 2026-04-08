@@ -28,38 +28,38 @@ import {
 	useRoomMembers,
 	useUsers,
 } from "@/api";
-import icEdit from "../../../assets/edit.png";
-import icMemberAdd from "../../../assets/member-add.png";
-import icMemberJoin from "../../../assets/member-join.png";
-import icMemberRemove from "../../../assets/member-remove.png";
-import icMore from "../../../assets/more.png";
-import icPin from "../../../assets/pin.png";
-import icReactionAdd from "../../../assets/reaction-add.png";
-import icReply from "../../../assets/reply.png";
-import icThread from "../../../assets/threads.png";
-import { Markdown } from "../../../atoms/Markdown.tsx";
-import { Time } from "../../../atoms/Time";
-import { useCtx } from "../../../context.ts";
-import { useAutocomplete } from "../../../contexts/autocomplete";
-import { useChannel, useOptionalChannel } from "../../../contexts/channel";
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
-import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
-import { useMenu, useUserPopout } from "../../../contexts/mod.tsx";
-import { useModals } from "../../../contexts/modal";
-import { countEmojiOnly } from "../../../markdown_utils.tsx";
+import { useCtx } from "@/app/context";
+import icEdit from "@/assets/edit.png";
+import icMemberAdd from "@/assets/member-add.png";
+import icMemberJoin from "@/assets/member-join.png";
+import icMemberRemove from "@/assets/member-remove.png";
+import icMore from "@/assets/more.png";
+import icPin from "@/assets/pin.png";
+import icReactionAdd from "@/assets/reaction-add.png";
+import icReply from "@/assets/reply.png";
+import icThread from "@/assets/threads.png";
+import { Markdown } from "@/atoms/Markdown.tsx";
+import { Time } from "@/atoms/Time";
+import { createEditor } from "@/components/features/editor/Editor.tsx";
+import { serializeToMarkdown } from "@/components/features/editor/serializer.ts";
+import { EmbedView } from "@/components/shared/UrlEmbed";
+import { Avatar } from "@/components/shared/User";
+import { useAutocomplete } from "@/contexts/autocomplete";
+import { useChannel, useOptionalChannel } from "@/contexts/channel";
+import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
+import { useMenu, useUserPopout } from "@/contexts/mod.tsx";
+import { useModals } from "@/contexts/modal";
+import { countEmojiOnly } from "@/lib/markdown";
 import {
 	AudioView,
 	FileView,
 	ImageView,
 	TextView,
 	VideoView,
-} from "../../../media/mod.tsx";
-import type { MessageT, ThreadT } from "../../../types.ts";
-import { EmbedView } from "../../../UrlEmbed.tsx";
-import { Avatar } from "../../../User.tsx";
-import { openThread } from "../../../utils/channel";
-import { createEditor } from "../editor/Editor.tsx";
-import { serializeToMarkdown } from "../editor/serializer.ts";
+} from "@/media/mod.tsx";
+import type { MessageT, ThreadT } from "@/types";
+import { openThread } from "@/utils/channel";
 import { Reactions } from "./Reactions.tsx";
 
 export type MessageProps = {

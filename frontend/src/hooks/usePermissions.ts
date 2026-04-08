@@ -1,12 +1,12 @@
 import type { Permission } from "sdk";
 import { createMemo } from "solid-js";
 import { useApi, useUsers } from "@/api";
-import { logger } from "../logger";
 import {
 	calculatePermissions,
 	type PermissionContext,
 	type ResolvedPermissions,
-} from "../permission-calculator";
+} from "@/lib/permissions/calculator";
+import { logger } from "@/utils/logger";
 
 export function usePermissions(
 	user_id: () => string | undefined,

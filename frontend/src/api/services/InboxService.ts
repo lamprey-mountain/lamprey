@@ -12,7 +12,7 @@ import {
 	onCleanup,
 	type Resource,
 } from "solid-js";
-import { logger } from "../../logger";
+import { logger } from "@/utils/logger";
 import { BaseService } from "../core/Service";
 
 const _log = logger.for("api/inbox");

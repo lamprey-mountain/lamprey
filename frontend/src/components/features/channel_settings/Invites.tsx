@@ -1,9 +1,9 @@
 import type { Channel } from "sdk";
 import { For, Show, type VoidProps } from "solid-js";
 import { useApi, useInvites, useUsers } from "@/api";
-import { Time } from "../../../atoms/Time.tsx";
-import { Avatar } from "../../../User.tsx";
-import { Copyable } from "../../../utils/general";
+import { Time } from "@/atoms/Time.tsx";
+import { Avatar } from "@/components/shared/User";
+import { Copyable } from "@/utils/general";
 
 export function Invites(props: VoidProps<{ channel: Channel }>) {
 	const api2 = useApi();

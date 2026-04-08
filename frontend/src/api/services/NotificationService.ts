@@ -1,7 +1,7 @@
 import type { Message, MessageVersion } from "sdk";
-import { generateNotificationIcon } from "../../drawing";
-import { notificationPermission } from "../../notification";
-import { stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal } from "../../notification-util";
+import { generateNotificationIcon } from "@/lib/drawing";
+import { notificationPermission } from "@/lib/notifications";
+import { stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal } from "@/lib/notifications/util";
 import type { RootStore } from "../core/Store";
 
 function getContentFromVersion(latestVersion: MessageVersion): string {

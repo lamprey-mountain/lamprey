@@ -1,18 +1,18 @@
 import type { Channel } from "sdk";
 import { createSignal, Match, Show, Switch } from "solid-js";
 import { useChannels, useMessages } from "@/api";
-import icCall from "../../../assets/call.png";
-import icMembers from "../../../assets/members.png";
-import icPin from "../../../assets/pin.png";
-import icThreads from "../../../assets/threads.png";
-import { useChannel } from "../../../channelctx.tsx";
-import { useCtx } from "../../../context.ts";
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
-import { useModals } from "../../../contexts/modal.tsx";
-import { usePermissions } from "../../../hooks/usePermissions.ts";
-import { md } from "../../../markdown_utils.tsx";
-import { ChannelIcon } from "../../../User.tsx";
-import { SearchInput } from "../search/SearchInput";
+import { useCtx } from "@/app/context";
+import icCall from "@/assets/call.png";
+import icMembers from "@/assets/members.png";
+import icPin from "@/assets/pin.png";
+import icThreads from "@/assets/threads.png";
+import { SearchInput } from "@/components/features/search/SearchInput";
+import { ChannelIcon } from "@/components/shared/User";
+import { useChannel } from "@/contexts/channel";
+import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useModals } from "@/contexts/modal.tsx";
+import { usePermissions } from "@/hooks/usePermissions.ts";
+import { md } from "@/lib/markdown";
 
 type ChatHeaderProps = {
 	channel: Channel;

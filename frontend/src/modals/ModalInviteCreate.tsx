@@ -1,11 +1,11 @@
 import { createMemo, createSignal, Show } from "solid-js";
 import { useApi, useRoles, useRooms } from "@/api";
-import { Dropdown, MultiDropdown } from "../atoms/Dropdown";
-import { useCurrentUser } from "../contexts/currentUser.tsx";
+import { Dropdown, MultiDropdown } from "@/atoms/Dropdown";
+import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import {
 	calculatePermissions,
 	type PermissionContext,
-} from "../permission-calculator";
+} from "@/lib/permissions/calculator";
 import { Modal } from "./mod";
 
 interface ModalInviteCreateProps {

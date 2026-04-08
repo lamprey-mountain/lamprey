@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
-import iconDownload from "../assets/download.png";
-import { useModals } from "../contexts/modal";
+import iconDownload from "@/assets/download.png";
+import { useModals } from "@/contexts/modal";
 import {
 	formatBytes,
 	getThumb,

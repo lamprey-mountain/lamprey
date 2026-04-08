@@ -4,7 +4,7 @@ import {
 	Slice,
 } from "prosemirror-model";
 import type { EditorView } from "prosemirror-view";
-import { md } from "@/markdown_utils";
+import { md } from "@/lib/markdown";
 import htmlTemplate from "./html-template.html?raw";
 
 /**

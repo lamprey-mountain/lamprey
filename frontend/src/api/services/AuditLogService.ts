@@ -8,7 +8,7 @@ import type {
 	Webhook,
 } from "sdk";
 import { createResource, type Resource } from "solid-js";
-import { logger } from "../../logger";
+import { logger } from "@/utils/logger";
 import { PaginatedList } from "../core/PaginatedList";
 import { BaseService } from "../core/Service";
 

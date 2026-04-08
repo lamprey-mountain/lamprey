@@ -13,16 +13,16 @@ import {
 } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { useApi, useRooms } from "@/api";
-import { CheckboxOption } from "../../../atoms/CheckboxOption";
-import { Resizable } from "../../../atoms/Resizable";
-import { Savebar } from "../../../atoms/Savebar";
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
-import { useModals } from "../../../contexts/modal";
-import { usePermissions } from "../../../hooks/usePermissions.ts";
-import { Checkbox } from "../../../icons";
-import type { RoomT } from "../../../types";
-import { Avatar } from "../../../User.tsx";
-import { Copyable } from "../../../utils/general";
+import { CheckboxOption } from "@/atoms/CheckboxOption";
+import { Checkbox } from "@/atoms/icons";
+import { Resizable } from "@/atoms/Resizable";
+import { Savebar } from "@/atoms/Savebar";
+import { Avatar } from "@/components/shared/User";
+import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useModals } from "@/contexts/modal";
+import { usePermissions } from "@/hooks/usePermissions.ts";
+import type { RoomT } from "@/types";
+import { Copyable } from "@/utils/general";
 
 // TODO: in create session and rotate oauth token, make the secret Copyable
 

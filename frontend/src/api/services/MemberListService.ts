@@ -6,7 +6,7 @@ import type {
 	ThreadMember,
 	User,
 } from "sdk";
-import { logger } from "../../logger";
+import { logger } from "@/utils/logger";
 import type { RootStore } from "../core/Store";
 
 const memberListLog = logger.for("member_list");

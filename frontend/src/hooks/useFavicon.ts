@@ -1,8 +1,8 @@
 import { useLocation } from "@solidjs/router";
 import { createEffect, createMemo, onCleanup } from "solid-js";
 import { useApi, useChannels } from "@/api";
-import { useCurrentUser } from "../contexts/currentUser.tsx";
-import { generateFavicon } from "../drawing.ts";
+import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { generateFavicon } from "@/lib/drawing";
 
 export function useFavicon() {
 	const _api2 = useApi();

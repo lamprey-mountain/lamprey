@@ -8,11 +8,11 @@ import {
 } from "solid-js";
 import { useApi } from "@/api";
 import type { Aggregation } from "@/api/services/RoomAnalyticsService.ts";
-import { DateRangePicker } from "../../../atoms/Daterangepicker.tsx";
-import { Dropdown } from "../../../atoms/Dropdown.tsx";
-import { useCtx } from "../../../context.ts";
-import { formatBytes } from "../../../media/util.tsx";
-import type { RoomT } from "../../../types.ts";
+import { useCtx } from "@/app/context";
+import { DateRangePicker } from "@/atoms/Daterangepicker.tsx";
+import { Dropdown } from "@/atoms/Dropdown.tsx";
+import { formatBytes } from "@/media/util.tsx";
+import type { RoomT } from "@/types";
 
 export function Metrics(props: VoidProps<{ room: RoomT }>) {
 	const api2 = useApi();

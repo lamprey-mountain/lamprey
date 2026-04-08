@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import { useCtx } from "../../../context";
+import { useCtx } from "@/app/context";
 
 export const MessageSkeleton = () => {
 	const ctx = useCtx();

@@ -1,8 +1,8 @@
 import { onMount, type ParentProps } from "solid-js";
 import { useApi } from "@/api";
-import { ModalResetPassword } from "../components/features/user_settings/mod.tsx";
-import type { Modal as ModalType } from "../context.ts";
-import { useModals } from "../contexts/modal.tsx";
+import type { Modal as ModalType } from "@/app/context";
+import { ModalResetPassword } from "@/components/features/user_settings/mod.tsx";
+import { useModals } from "@/contexts/modal.tsx";
 import { ModalAttachment } from "./ModalAttachment.tsx";
 import { ModalBan } from "./ModalBan.tsx";
 import { ModalCameraPreview } from "./ModalCameraPreview.tsx";

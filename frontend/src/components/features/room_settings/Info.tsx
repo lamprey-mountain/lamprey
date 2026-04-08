@@ -2,16 +2,16 @@ import type { EditorState } from "prosemirror-state";
 import { createUpload } from "sdk";
 import { createSignal, onMount, Show, type VoidProps } from "solid-js";
 import { useApi, useChannels } from "@/api";
-import { CheckboxOption } from "../../../atoms/CheckboxOption";
-import { Savebar } from "../../../atoms/Savebar";
-import { useCtx } from "../../../context.ts";
-import { useAutocomplete } from "../../../contexts/autocomplete";
-import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
-import { useModals } from "../../../contexts/modal";
-import { Checkbox } from "../../../icons";
-import type { RoomT } from "../../../types.ts";
-import { RoomIcon } from "../../../User.tsx";
-import { createEditor } from "../editor/Editor.tsx";
+import { useCtx } from "@/app/context";
+import { CheckboxOption } from "@/atoms/CheckboxOption";
+import { Checkbox } from "@/atoms/icons";
+import { Savebar } from "@/atoms/Savebar";
+import { createEditor } from "@/components/features/editor/Editor.tsx";
+import { RoomIcon } from "@/components/shared/User";
+import { useAutocomplete } from "@/contexts/autocomplete";
+import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
+import { useModals } from "@/contexts/modal";
+import type { RoomT } from "@/types";
 
 export function Info(props: VoidProps<{ room: RoomT }>) {
 	const _ctx = useCtx();

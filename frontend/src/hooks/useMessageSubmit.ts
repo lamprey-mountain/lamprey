@@ -1,6 +1,6 @@
 import { useApi, useChannels } from "@/api";
-import { useChannel } from "../channelctx";
-import { useCtx } from "../context";
+import { useCtx } from "@/app/context";
+import { useChannel } from "@/contexts/channel";
 
 export function useMessageSubmit(channel_id: string) {
 	const ctx = useCtx();

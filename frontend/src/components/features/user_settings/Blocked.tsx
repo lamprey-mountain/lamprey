@@ -1,8 +1,8 @@
 import type { Pagination, RelationshipWithUserId, User } from "sdk";
 import { createResource, For, Show, type VoidProps } from "solid-js";
 import { useApi } from "@/api";
-import { useModals } from "../../../contexts/modal";
-import { Avatar } from "../../../User.tsx";
+import { Avatar } from "@/components/shared/User";
+import { useModals } from "@/contexts/modal";
 
 function BlockedUserEntry(props: {
 	relationship: RelationshipWithUserId;

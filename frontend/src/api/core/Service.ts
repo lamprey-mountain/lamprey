@@ -8,7 +8,7 @@ import {
 	createResource,
 	type Resource,
 } from "solid-js";
-import { logger } from "../../logger";
+import { logger } from "@/utils/logger";
 import type { RootStore } from "./Store";
 
 export type Item<T> =

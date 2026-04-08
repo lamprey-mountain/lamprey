@@ -19,20 +19,20 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { RootStore } from "@/api/core/Store.ts";
-import type { Config } from "../config.tsx";
 import type {
 	ChatCtx,
 	Data,
 	MediaCtx,
 	Popout,
 	ThreadsViewData,
-} from "../context.ts";
-import { SlashCommands } from "../contexts/slash-commands";
-import { type ApiDB, migrations } from "../db.ts";
-import { registerDefaultSlashCommands } from "../default-slash-commands.ts";
-import { flags } from "../flags.ts";
-import type en from "../i18n/en.tsx";
-import { colors, logger } from "../logger.ts";
+} from "@/app/context";
+import { SlashCommands } from "@/contexts/slash-commands";
+import type en from "@/i18n/en.tsx";
+import { registerDefaultSlashCommands } from "@/lib/commands/default";
+import type { Config } from "@/lib/config";
+import { flags } from "@/lib/flags";
+import { type ApiDB, migrations } from "@/lib/sync/db";
+import { colors, logger } from "@/utils/logger";
 import { useMouseTracking } from "./useMouseTracking.ts";
 
 export function useChatClient(config: Config) {
@@ -129,7 +129,7 @@ export function useChatClient(config: Config) {
 	const [recentChannels, setRecentChannels] = createSignal([] as string[]);
 
 	const [cursorStats, setCursorStats] = createSignal<
-		import("../context.ts").CursorStats | null
+		import("@/app/context").CursorStats | null
 	>(null);
 
 	const ctx: ChatCtx = {

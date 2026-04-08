@@ -1,4 +1,4 @@
-import { useModals } from "../../../contexts/modal";
+import { useModals } from "@/contexts/modal";
 
 export function Data() {
 	const [, modalCtl] = useModals();

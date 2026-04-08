@@ -6,7 +6,7 @@ import type {
 } from "sdk";
 import { createEffect, createSignal, Show } from "solid-js";
 import type { SetStoreFunction } from "solid-js/store";
-import type { RuleState } from "../room_settings/Automod.tsx";
+import type { RuleState } from "@/components/features/room_settings/Automod.tsx";
 import { ActionsEditor } from "./ActionsEditor.tsx";
 import { TriggerEditor } from "./TriggerEditor.tsx";
 

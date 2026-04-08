@@ -12,8 +12,8 @@ import {
 	Show,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import { ChannelIcon } from "../avatar/ChannelIcon.tsx";
-import { createKeybinds } from "../keybinds";
+import { ChannelIcon } from "@/avatar/ChannelIcon.tsx";
+import { createKeybinds } from "@/lib/keybinds";
 
 export type ChannelPickerOption = {
 	channel: Channel;

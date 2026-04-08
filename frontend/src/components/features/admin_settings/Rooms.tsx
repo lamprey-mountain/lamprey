@@ -2,8 +2,8 @@ import { createIntersectionObserver } from "@solid-primitives/intersection-obser
 import { getTimestampFromUUID } from "sdk";
 import { createSignal, For, Show } from "solid-js";
 import { useApi, useRooms } from "@/api";
-import { Time } from "../../../atoms/Time.tsx";
-import { getThumbFromId } from "../../../media/util.tsx";
+import { Time } from "@/atoms/Time.tsx";
+import { getThumbFromId } from "@/media/util.tsx";
 
 export function Rooms() {
 	const _api2 = useApi();

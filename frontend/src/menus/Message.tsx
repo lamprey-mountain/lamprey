@@ -2,11 +2,11 @@
 
 import { Show } from "solid-js";
 import { useApi, useChannels, useMessages } from "@/api";
-import { useCtx } from "../context.ts";
-import { useCurrentUser } from "../contexts/currentUser.tsx";
-import { useModals } from "../contexts/modal";
-import { useReadTracking } from "../contexts/read-tracking.tsx";
-import { usePermissions } from "../hooks/usePermissions.ts";
+import { useCtx } from "@/app/context";
+import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useModals } from "@/contexts/modal";
+import { useReadTracking } from "@/contexts/read-tracking.tsx";
+import { usePermissions } from "@/hooks/usePermissions.ts";
 import { Item, Menu, Separator } from "./Parts.tsx";
 
 // should i have a separate one for bulk messages?

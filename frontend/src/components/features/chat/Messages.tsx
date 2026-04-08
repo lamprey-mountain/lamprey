@@ -2,15 +2,15 @@ import type { Message, UserWithRelationship } from "sdk";
 import { createMemo, Show } from "solid-js";
 import { createMutable } from "solid-js/store";
 import { useRoomMembers } from "@/api";
-import { useChannel } from "../../../channelctx.tsx";
-import { useCtx } from "../../../context.ts";
-import { md } from "../../../markdown_utils.tsx";
-import type { MessageT, ThreadT } from "../../../types.ts";
-import { ChannelIcon } from "../../../User.tsx";
+import { useCtx } from "@/app/context";
+import { ChannelIcon } from "@/components/shared/User";
+import { useChannel } from "@/contexts/channel";
+import { md } from "@/lib/markdown";
+import type { MessageT, ThreadT } from "@/types";
 import {
 	getMsgTs as get_msg_ts,
 	getMessageOverrideName,
-} from "../../../utils/general";
+} from "@/utils/general";
 import { MessageView } from "./Message.tsx";
 
 export type TimelineItemT = { id: string; class?: string; nonce?: string } & (

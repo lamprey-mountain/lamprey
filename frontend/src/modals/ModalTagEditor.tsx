@@ -1,10 +1,10 @@
 import type { Tag, TagCreate } from "sdk";
 import { createSignal } from "solid-js";
 import { useChannels } from "@/api";
-import { CheckboxOption } from "../atoms/CheckboxOption";
-import { Colorpicker } from "../atoms/Colorpicker";
-import { useModals } from "../contexts/modal";
-import { Checkbox } from "../icons";
+import { CheckboxOption } from "@/atoms/CheckboxOption";
+import { Colorpicker } from "@/atoms/Colorpicker";
+import { Checkbox } from "@/atoms/icons";
+import { useModals } from "@/contexts/modal";
 import { Modal } from "./mod";
 
 interface ModalTagEditorProps {

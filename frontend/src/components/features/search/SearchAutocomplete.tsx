@@ -8,7 +8,7 @@ import {
 	useThreadMembers,
 	useUsers,
 } from "@/api";
-import type { RoomT, ThreadT } from "../../../types";
+import type { RoomT, ThreadT } from "@/types";
 import { schema } from "./schema";
 import { getRecentSearches, parseSearchQuery } from "./utils";
 

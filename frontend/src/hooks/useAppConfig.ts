@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
-import type { Config } from "../config.tsx";
-import { logger } from "../logger.ts";
+import type { Config } from "@/lib/config";
+import { logger } from "@/utils/logger";
 
 const log = logger.for("config");
 

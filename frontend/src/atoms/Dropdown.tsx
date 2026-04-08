@@ -12,8 +12,8 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import { Checkmark, XMark } from "../icons";
-import { createKeybinds } from "../keybinds";
+import { createKeybinds } from "@/lib/keybinds";
+import { Checkmark, XMark } from "./icons";
 
 export type DropdownItem<T> = {
 	item: T;

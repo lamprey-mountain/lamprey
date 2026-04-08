@@ -1,7 +1,7 @@
 import type { UserWithRelationship } from "sdk";
 import { createContext, createMemo, type JSX, useContext } from "solid-js";
 import { useUsers } from "@/api";
-import { logger } from "../logger";
+import { logger } from "@/utils/logger";
 
 const currentUserLog = logger.for("current_user");
 

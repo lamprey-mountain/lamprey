@@ -11,55 +11,55 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { useApi, useChannels, useRooms } from "@/api";
-import icX from "../assets/x-1.png";
-import { Resizable } from "../atoms/Resizable.tsx";
-import { Calendar } from "../Calendar.tsx";
-import { Category } from "../Category.tsx";
-import { ChannelNav } from "../ChannelNav.tsx";
-import { ChannelSettings } from "../ChannelSettings.tsx";
+import type { ChannelSearch } from "@/app/context";
+import { useCtx } from "@/app/context";
+import icX from "@/assets/x-1.png";
+import { Resizable } from "@/atoms/Resizable.tsx";
+import { ChannelSettings } from "@/components/features/channel_settings/index";
+import { ChatMain } from "@/components/features/chat/Chat.tsx";
+import { ChatHeader } from "@/components/features/chat/ChatHeader.tsx";
+import { PinnedMessages } from "@/components/features/chat/PinnedMessages.tsx";
+import { SearchResults } from "@/components/features/chat/SearchResults.tsx";
+import { ThreadMembers } from "@/components/features/chat/Thread.tsx";
+import { Document } from "@/components/features/editor/Document.tsx";
+import { DocumentHistory } from "@/components/features/editor/DocumentHistory.tsx";
+import { RoomSettings } from "@/components/features/room_settings/RoomSettings";
+import { Voice, VoiceTray } from "@/components/features/voice/Voice.tsx";
+import { Calendar } from "@/components/shared/Calendar";
+import { Category } from "@/components/shared/Category";
+import { ChannelNav } from "@/components/shared/ChannelNav";
+import { Feed } from "@/components/shared/Feed";
+import { Forum } from "@/components/shared/Forum";
+import { Forum2, Forum2ThreadPage } from "@/components/shared/Forum2";
+import { Friends } from "@/components/shared/Friends";
+import { Home } from "@/components/shared/Home";
+import { Inbox } from "@/components/shared/Inbox";
+import { RouteInviteInner } from "@/components/shared/Invite";
+import { RoomHome, RoomMembers } from "@/components/shared/Room";
+import { RoomHeader } from "@/components/shared/RoomHeader";
+import { RoomNav } from "@/components/shared/RoomNav";
+import { UserProfile } from "@/components/shared/UserProfile";
+import { Wiki } from "@/components/shared/Wiki";
 import {
 	ChannelContext,
 	createInitialChannelState,
 	useChannel,
-} from "../channelctx.tsx";
-import { ChatMain } from "../components/features/chat/Chat.tsx";
-import { ChatHeader } from "../components/features/chat/ChatHeader.tsx";
-import { PinnedMessages } from "../components/features/chat/PinnedMessages.tsx";
-import { SearchResults } from "../components/features/chat/SearchResults.tsx";
-import { ThreadMembers } from "../components/features/chat/Thread.tsx";
-import { Document } from "../components/features/editor/Document.tsx";
-import { DocumentHistory } from "../components/features/editor/DocumentHistory.tsx";
-import { Voice, VoiceTray } from "../components/features/voice/Voice.tsx";
-import type { ChannelSearch } from "../context.ts";
-import { useCtx } from "../context.ts";
-import { useCurrentUser } from "../contexts/currentUser.tsx";
+} from "@/contexts/channel";
+import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import {
 	createInitialDocumentState,
 	DocumentContext,
 	useDocument,
-} from "../contexts/document.tsx";
+} from "@/contexts/document.tsx";
 import {
 	createInitialRoomState,
 	RoomContext,
 	useRoom,
-} from "../contexts/room.tsx";
-import { Feed } from "../Feed.tsx";
-import { Forum } from "../Forum.tsx";
-import { Forum2, Forum2ThreadPage } from "../Forum2.tsx";
-import { Friends } from "../Friends.tsx";
-import { flags } from "../flags.ts";
-import { Home } from "../Home.tsx";
-import { Inbox } from "../Inbox.tsx";
-import { RouteInviteInner } from "../Invite.tsx";
-import { RoomHome, RoomMembers } from "../Room.tsx";
-import { RoomHeader } from "../RoomHeader.tsx";
-import { RoomNav } from "../RoomNav.tsx";
-import { RoomSettings } from "../RoomSettings.tsx";
-import type { RoomT } from "../types.ts";
-import { UserProfile } from "../UserProfile.tsx";
-import { Wiki } from "../Wiki.tsx";
+} from "@/contexts/room.tsx";
+import { flags } from "@/lib/flags";
+import type { RoomT } from "@/types";
 
-export { RouteAuthorize } from "../Oauth.tsx";
+export { RouteAuthorize } from "@/components/shared/Oauth";
 
 const Title = (props: { title?: string }) => {
 	createEffect(() => (document.title = props.title ?? ""));

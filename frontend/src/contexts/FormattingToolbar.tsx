@@ -1,10 +1,10 @@
 import { TextSelection } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
-import iconBold from "../assets/format-bold.png";
-import iconCode from "../assets/format-code.png";
-import iconItalic from "../assets/format-italic.png";
-import iconStrikethrough from "../assets/format-strikethrough.png";
-import { setIsApplyingFormat } from "../components/features/editor/Editor";
+import iconBold from "@/assets/format-bold.png";
+import iconCode from "@/assets/format-code.png";
+import iconItalic from "@/assets/format-italic.png";
+import iconStrikethrough from "@/assets/format-strikethrough.png";
+import { setIsApplyingFormat } from "@/components/features/editor/Editor";
 import { useFormattingToolbar } from "./formatting-toolbar.tsx";
 
 type FormattingToolbarProps = {

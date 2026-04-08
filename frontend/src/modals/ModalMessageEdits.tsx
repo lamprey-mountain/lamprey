@@ -2,7 +2,7 @@ import { diffChars } from "diff";
 import type { Message, MessageVersion } from "sdk";
 import { createResource, For } from "solid-js";
 import { useApi } from "@/api";
-import { MessageView } from "../components/features/chat/Message";
+import { MessageView } from "@/components/features/chat/Message";
 import { Modal } from "./mod";
 
 export const ModalMessageEdits = (props: {

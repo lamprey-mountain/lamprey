@@ -1,6 +1,6 @@
 import type { Channel } from "sdk";
 import type { Api } from "@/api";
-import { canUseCommand as checkCommandPermission } from "../permission-calculator";
+import { canUseCommand as checkCommandPermission } from "@/lib/permissions/calculator";
 
 /**
  * Check if a command should be available based on channel type and permissions

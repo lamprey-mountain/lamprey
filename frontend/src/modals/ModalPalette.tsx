@@ -2,14 +2,14 @@ import { useNavigate } from "@solidjs/router";
 import type { Channel, Room } from "sdk";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { useChannels, useDms, useRooms } from "@/api";
-import icHome from "../assets/home.png";
-import icInbox from "../assets/inbox.png";
-import icMembers from "../assets/members.png";
-import icSettings from "../assets/settings.png";
-import { useCtx } from "../context";
-import { useModals } from "../contexts/modal";
-import { getThumbFromId } from "../media/util";
-import { ChannelIcon } from "../User";
+import { useCtx } from "@/app/context";
+import icHome from "@/assets/home.png";
+import icInbox from "@/assets/inbox.png";
+import icMembers from "@/assets/members.png";
+import icSettings from "@/assets/settings.png";
+import { ChannelIcon } from "@/components/shared/User";
+import { useModals } from "@/contexts/modal";
+import { getThumbFromId } from "@/media/util";
 import { Modal } from "./mod";
 
 export const ModalPalette = () => {

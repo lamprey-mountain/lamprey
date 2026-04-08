@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 import { useApi } from "@/api";
-import { useModals } from "../contexts/modal";
+import { useModals } from "@/contexts/modal";
 import { Item, Menu, Separator } from "./Parts.tsx";
 
 type UserAdminMenuProps = {

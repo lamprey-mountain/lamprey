@@ -1,5 +1,5 @@
 import type { VoidProps } from "solid-js";
-import { tick } from "../hooks/tick";
+import { tick } from "@/hooks/tick";
 import { tooltip } from "./Tooltip";
 
 export function timeAgo(date: Date): string {

@@ -1,20 +1,20 @@
 import type { Channel } from "sdk";
 import { createMemo, Match, Show, Switch } from "solid-js";
-import icChanCalendar1 from "../assets/channel-calendar-1.png";
-import icChanDocument1 from "../assets/channel-document-1.png";
-import icChanForum1 from "../assets/channel-forum-1.png";
-import icChanNsfw from "../assets/channel-nsfw.png";
-import icChanText1 from "../assets/channel-text-1.png";
-import icChanText2 from "../assets/channel-text-2.png";
-import icChanText3 from "../assets/channel-text-3.png";
-import icChanText4 from "../assets/channel-text-4.png";
-import icChanVoice1 from "../assets/channel-voice-1.png";
-import icChanVoice2 from "../assets/channel-voice-2.png";
-import icChanWiki1 from "../assets/channel-wiki-1.png";
-import { getColor } from "../colors";
-import { useCurrentUser } from "../contexts/currentUser.tsx";
-import { getThumbFromId } from "../media/util";
-import { cyrb53, LCG } from "../rng";
+import icChanCalendar1 from "@/assets/channel-calendar-1.png";
+import icChanDocument1 from "@/assets/channel-document-1.png";
+import icChanForum1 from "@/assets/channel-forum-1.png";
+import icChanNsfw from "@/assets/channel-nsfw.png";
+import icChanText1 from "@/assets/channel-text-1.png";
+import icChanText2 from "@/assets/channel-text-2.png";
+import icChanText3 from "@/assets/channel-text-3.png";
+import icChanText4 from "@/assets/channel-text-4.png";
+import icChanVoice1 from "@/assets/channel-voice-1.png";
+import icChanVoice2 from "@/assets/channel-voice-2.png";
+import icChanWiki1 from "@/assets/channel-wiki-1.png";
+import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { getColor } from "@/lib/colors";
+import { cyrb53, LCG } from "@/lib/rng";
+import { getThumbFromId } from "@/media/util";
 import { AvatarWithStatus } from "./UserAvatar";
 
 export const ChannelIcon = (props: {

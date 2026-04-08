@@ -1,7 +1,7 @@
 import type { User } from "sdk";
 import { createResource, Show, type VoidProps } from "solid-js";
-import { getThumbFromId } from "../media/util";
-import { generatePfp, pfpsLoaded } from "../pfp";
+import { generatePfp, pfpsLoaded } from "@/lib/pfp";
+import { getThumbFromId } from "@/media/util";
 
 type AvatarProps = {
 	user?: User;

@@ -11,25 +11,25 @@ import {
 	Switch,
 } from "solid-js";
 import { useApi, useChannels, useRooms } from "@/api";
-import iconCamera from "../../../assets/camera.png";
-import iconExit from "../../../assets/exit.png";
-import iconHeadphones from "../../../assets/headphones.png";
-import iconMic from "../../../assets/mic.png";
-import iconMusic from "../../../assets/music.png";
-import iconScreenshare from "../../../assets/screenshare.png";
-import iconSettings from "../../../assets/settings.png";
-import { ToggleIcon } from "../../../atoms/ToggleIcon.tsx";
-import { useChannel } from "../../../channelctx.tsx";
-import { getColor } from "../../../colors.ts";
-import { useConfig } from "../../../config.tsx";
-import { useCtx } from "../../../context.ts";
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
-import { flags } from "../../../flags.ts";
-import { md } from "../../../markdown_utils.tsx";
-import { createPopup } from "../../../popup.tsx";
-import { AvatarWithStatus } from "../../../User.tsx";
+import { useCtx } from "@/app/context";
+import { createPopup } from "@/app/popup";
+import iconCamera from "@/assets/camera.png";
+import iconExit from "@/assets/exit.png";
+import iconHeadphones from "@/assets/headphones.png";
+import iconMic from "@/assets/mic.png";
+import iconMusic from "@/assets/music.png";
+import iconScreenshare from "@/assets/screenshare.png";
+import iconSettings from "@/assets/settings.png";
+import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
+import { AvatarWithStatus } from "@/components/shared/User";
+import { useChannel } from "@/contexts/channel";
+import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useVoice } from "@/contexts/voice";
+import { getColor } from "@/lib/colors";
+import { useConfig } from "@/lib/config";
+import { flags } from "@/lib/flags";
+import { md } from "@/lib/markdown";
 import { VoiceDebug } from "./VoiceDebug.tsx";
-import { useVoice } from "./voice-provider.tsx";
 
 export const Voice = (p: { channel: Channel }) => {
 	const _config = useConfig();

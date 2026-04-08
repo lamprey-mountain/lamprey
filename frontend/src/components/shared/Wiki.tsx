@@ -1,0 +1,419 @@
+import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
+import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import { type Channel, getTimestampFromUUID } from "sdk";
+import { useFloating } from "solid-floating-ui";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	onCleanup,
+	Show,
+} from "solid-js";
+import { createStore } from "solid-js/store";
+import { Portal } from "solid-js/web";
+import { useApi, useChannels } from "@/api";
+import { useCtx } from "@/app/context";
+import { Resizable } from "@/atoms/Resizable";
+import { Time } from "@/atoms/Time";
+import { Document } from "@/components/features/editor/Document";
+import { ChannelContext, createInitialChannelState } from "@/contexts/channel";
+import { useCurrentUser } from "@/contexts/currentUser";
+import { useModals } from "@/contexts/modal";
+import { usePermissions } from "@/hooks/usePermissions";
+import { md } from "@/lib/markdown";
+import { ChannelIcon } from "./User";
+
+export const Wiki = (props: { channel: Channel }) => {
+	const ctx = useCtx();
+	const api2 = useApi();
+	const channels2 = useChannels();
+	const [, modalctl] = useModals();
+	const room_id = () => props.channel.room_id!;
+	const wiki_id = () => props.channel.id;
+
+	const [documentFilter, setDocumentFilter] = createSignal("active");
+	const [sortBy, setSortBy] = createSignal<
+		"new" | "activity" | "reactions:+1" | "random" | "hot" | "hot2"
+	>("new");
+	const [viewAs, setViewAs] = createSignal<"list" | "gallery">("list");
+	const [menuOpen, setMenuOpen] = createSignal(false);
+	const [referenceEl, setReferenceEl] = createSignal<HTMLElement>();
+	const [floatingEl, setFloatingEl] = createSignal<HTMLElement>();
+	const position = useFloating(referenceEl, floatingEl, {
+		whileElementsMounted: autoUpdate,
+		middleware: [offset(5), flip(), shift()],
+		placement: "bottom-end",
+	});
+
+	const clickOutside = (e: MouseEvent) => {
+		if (
+			menuOpen() &&
+			referenceEl() &&
+			!referenceEl()?.contains(e.target as Node) &&
+			floatingEl() &&
+			!floatingEl()?.contains(e.target as Node)
+		) {
+			setMenuOpen(false);
+		}
+	};
+
+	createEffect(() => {
+		if (menuOpen()) {
+			document.addEventListener("mousedown", clickOutside);
+			onCleanup(() => document.removeEventListener("mousedown", clickOutside));
+		}
+	});
+
+	const fetchMore = () => {
+		const filter = documentFilter();
+		// Assuming threads API handles generic child channels or we use it for documents too
+		if (filter === "active") {
+			return api2.threads.useListForChannel(wiki_id);
+		} else if (filter === "archived") {
+			return api2.threads.useListArchivedForChannel(wiki_id);
+		} else if (filter === "removed") {
+			return api2.threads.useListRemovedForChannel(wiki_id);
+		}
+	};
+
+	const documentsResource = createMemo(fetchMore);
+
+	const [bottom, setBottom] = createSignal<Element | undefined>();
+
+	createIntersectionObserver(
+		() => (bottom() ? [bottom()!] : []),
+		(entries) => {
+			for (const entry of entries) {
+				if (entry.isIntersecting) fetchMore();
+			}
+		},
+	);
+
+	const getDocuments = () => {
+		const list = documentsResource()?.();
+		if (!list) return [];
+		const items = list.state.ids
+			.map((id) => channels2.cache.get(id))
+			.filter((t): t is Channel => t !== undefined);
+		// sort descending by id
+		return [...items]
+			.filter((t) => t.parent_id === props.channel.id)
+			.sort((a, b) => {
+				if (sortBy() === "new") {
+					return a.id < b.id ? 1 : -1;
+				} else if (sortBy() === "activity") {
+					// activity
+					const tA = a.last_version_id ?? a.id;
+					const tB = b.last_version_id ?? b.id;
+					return tA < tB ? 1 : -1;
+				}
+				return 0;
+			});
+	};
+
+	function createDocument(room_id: string) {
+		modalctl.prompt("name?", (name) => {
+			if (!name) return;
+			channels2.create(room_id, {
+				name,
+				parent_id: props.channel.id,
+			} as { name: string; parent_id: string } & Record<string, unknown>);
+		});
+	}
+
+	const currentUser = useCurrentUser();
+	const user_id = () => currentUser()?.id;
+	const perms = usePermissions(user_id, room_id, () => undefined);
+
+	const [documentId, setDocumentId] = createSignal<null | string>(null);
+
+	type ChangesetSelection = {
+		start_seq: number;
+		end_seq: number;
+	};
+
+	const [selectedSeq, setSelectedSeq] = createSignal<ChangesetSelection | null>(
+		null,
+	);
+	const [hoverSeq, setHoverSeq] = createSignal<ChangesetSelection | null>(null);
+
+	const getOrCreateChannelContext = (channelId: string) => {
+		if (!ctx.channel_contexts.has(channelId)) {
+			const store = createStore(createInitialChannelState());
+			ctx.channel_contexts.set(channelId, store);
+		}
+		return ctx.channel_contexts.get(channelId)!;
+	};
+
+	return (
+		<div class="forum2">
+			<Resizable
+				storageKey="wiki-sidebar-width"
+				side="left"
+				initialWidth={350}
+				minWidth={250}
+				maxWidth={600}
+			>
+				<div class="list">
+					<div style="display:flex; align-items:center">
+						<input
+							placeholder="search documents"
+							type="search"
+							class="search-pad"
+						/>
+						<button
+							type="button"
+							class="primary"
+							style="margin-left: 8px;border-radius:4px"
+							onClick={() => createDocument(room_id())}
+						>
+							create document
+						</button>
+					</div>
+					<div style="display:flex; align-items:center">
+						<h3 style="font-size:1rem; margin-top:8px;flex:1">
+							{getDocuments().length} {documentFilter()} documents
+						</h3>
+						<div class="sort-view-container">
+							<button
+								type="button"
+								class="button secondary sort-view-button"
+								ref={setReferenceEl}
+								onClick={() => setMenuOpen(!menuOpen())}
+								classList={{ selected: menuOpen() }}
+							>
+								<span>sort and view</span>
+								<svg
+									aria-hidden="true"
+									width="10"
+									height="6"
+									viewBox="0 0 10 6"
+									fill="none"
+									xmlns="http://www.w3.org/2000/svg"
+								>
+									<path
+										d="M1 1L5 5L9 1"
+										stroke="currentColor"
+										stroke-width="1.5"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+									/>
+								</svg>
+							</button>
+							<Portal>
+								<Show when={menuOpen()}>
+									<div
+										ref={setFloatingEl}
+										class="sort-view-menu"
+										style={{
+											position: position.strategy,
+											top: `${position.y ?? 0}px`,
+											left: `${position.x ?? 0}px`,
+											"z-index": 1000,
+										}}
+									>
+										<menu>
+											<div class="subtext header">sort by</div>
+											<button
+												type="button"
+												class="button menu-item"
+												onClick={() => {
+													setSortBy("new");
+													setMenuOpen(false);
+												}}
+											>
+												Newest documents first
+												<Show when={sortBy() === "new"}>
+													<span>✓</span>
+												</Show>
+											</button>
+											<button
+												type="button"
+												class="button menu-item"
+												onClick={() => {
+													setSortBy("activity");
+													setMenuOpen(false);
+												}}
+											>
+												Recently active documents
+												<Show when={sortBy() === "activity"}>
+													<span>✓</span>
+												</Show>
+											</button>
+											<button
+												type="button"
+												class="button menu-item"
+												onClick={() => {
+													setSortBy("reactions:+1");
+													setMenuOpen(false);
+												}}
+											>
+												Expected to be helpful
+												<Show when={sortBy() === "reactions:+1"}>
+													<span>✓</span>
+												</Show>
+											</button>
+											<button
+												type="button"
+												class="button menu-item"
+												onClick={() => {
+													setSortBy("random");
+													setMenuOpen(false);
+												}}
+											>
+												Random ordering
+												<Show when={sortBy() === "random"}>
+													<span>✓</span>
+												</Show>
+											</button>
+											<button
+												type="button"
+												class="button menu-item"
+												onClick={() => {
+													setSortBy("hot");
+													setMenuOpen(false);
+												}}
+											>
+												Hot
+												<Show when={sortBy() === "hot"}>
+													<span>✓</span>
+												</Show>
+											</button>
+											<button
+												type="button"
+												class="button menu-item"
+												onClick={() => {
+													setSortBy("hot2");
+													setMenuOpen(false);
+												}}
+											>
+												Hot 2
+												<Show when={sortBy() === "hot2"}>
+													<span>✓</span>
+												</Show>
+											</button>
+											<hr />
+											<div class="subtext header">view as</div>
+											<button
+												type="button"
+												class="button menu-item"
+												onClick={() => {
+													setViewAs("list");
+													setMenuOpen(false);
+												}}
+											>
+												List
+												<Show when={viewAs() === "list"}>
+													<span>✓</span>
+												</Show>
+											</button>
+											<button
+												type="button"
+												class="button menu-item"
+												onClick={() => {
+													setViewAs("gallery");
+													setMenuOpen(false);
+												}}
+											>
+												Gallery
+												<Show when={viewAs() === "gallery"}>
+													<span>✓</span>
+												</Show>
+											</button>
+										</menu>
+									</div>
+								</Show>
+							</Portal>
+						</div>
+						<div class="filters">
+							<button
+								type="button"
+								class="button"
+								classList={{ selected: documentFilter() === "active" }}
+								onClick={[setDocumentFilter, "active"]}
+							>
+								active
+							</button>
+							<button
+								type="button"
+								class="button"
+								classList={{ selected: documentFilter() === "archived" }}
+								onClick={[setDocumentFilter, "archived"]}
+							>
+								archived
+							</button>
+							<Show when={perms.has("ThreadManage")}>
+								<button
+									type="button"
+									class="button"
+									classList={{ selected: documentFilter() === "removed" }}
+									onClick={[setDocumentFilter, "removed"]}
+								>
+									removed
+								</button>
+							</Show>
+						</div>
+					</div>
+					<ul>
+						<For each={getDocuments()}>
+							{(doc) => (
+								<li>
+									<article
+										class="thread menu-thread thread-card"
+										data-thread-id={doc.id}
+									>
+										<header onClick={() => setDocumentId(doc.id)}>
+											<div class="top">
+												<ChannelIcon channel={doc} />
+												<div class="spacer">{doc.name}</div>
+												<div class="time">
+													Created <Time date={getTimestampFromUUID(doc.id)} />
+												</div>
+											</div>
+											<div class="bottom" onClick={() => setDocumentId(doc.id)}>
+												<div class="dim">
+													{doc.message_count} message(s) &bull; last update{" "}
+													<Time
+														date={getTimestampFromUUID(
+															doc.last_version_id ?? doc.id,
+														)}
+													/>
+												</div>
+												<Show when={doc.description}>
+													<div
+														class="description markdown"
+														innerHTML={md(doc.description ?? "") as string}
+													></div>
+												</Show>
+											</div>
+										</header>
+									</article>
+								</li>
+							)}
+						</For>
+					</ul>
+					<div ref={setBottom}></div>
+				</div>
+			</Resizable>
+			<Show when={documentId()}>
+				{(did) => {
+					const documentChannel = channels2.cache.get(did());
+					if (!documentChannel) return;
+					const docCtx = getOrCreateChannelContext(did());
+					return (
+						<ChannelContext.Provider value={docCtx}>
+							<Document
+								channel={documentChannel}
+								selectedSeq={selectedSeq()}
+								onSelectChangeset={setSelectedSeq}
+								hoverSeq={hoverSeq()}
+								onHoverChangeset={setHoverSeq}
+							/>
+						</ChannelContext.Provider>
+					);
+				}}
+			</Show>
+		</div>
+	);
+};

@@ -1,5 +1,5 @@
 import type { Preferences } from "sdk";
-import { logger } from "../../logger";
+import { logger } from "@/utils/logger";
 import { BaseService } from "../core/Service";
 
 const log = logger.for("api/preferences");

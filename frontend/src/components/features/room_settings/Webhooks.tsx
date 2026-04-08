@@ -11,11 +11,11 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { useApi, useChannels, useUsers } from "@/api";
-import { Dropdown } from "../../../atoms/Dropdown.tsx";
-import { Time } from "../../../atoms/Time.tsx";
-import { useConfig } from "../../../config.tsx";
-import { useModals } from "../../../contexts/modal";
-import { Avatar } from "../../../User.tsx";
+import { Dropdown } from "@/atoms/Dropdown.tsx";
+import { Time } from "@/atoms/Time.tsx";
+import { Avatar } from "@/components/shared/User";
+import { useModals } from "@/contexts/modal";
+import { useConfig } from "@/lib/config";
 
 // TODO(#750): group webhooks by channel
 

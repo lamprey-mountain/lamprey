@@ -9,13 +9,13 @@ import {
 	Switch,
 } from "solid-js";
 import { useApi, useChannels, useTags, useThreadMembers } from "@/api";
-import { timeAgo } from "../atoms/Time.tsx";
-import { useCtx } from "../context.ts";
-import { useCurrentUser } from "../contexts/currentUser.tsx";
-import { useModals } from "../contexts/modal";
-import { useReadTracking } from "../contexts/read-tracking.tsx";
-import { usePermissions } from "../hooks/usePermissions.ts";
-import { Checkbox } from "../icons.tsx";
+import { useCtx } from "@/app/context";
+import { Checkbox } from "@/atoms/icons";
+import { timeAgo } from "@/atoms/Time.tsx";
+import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useModals } from "@/contexts/modal";
+import { useReadTracking } from "@/contexts/read-tracking.tsx";
+import { usePermissions } from "@/hooks/usePermissions.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 
 // the context menu for channels

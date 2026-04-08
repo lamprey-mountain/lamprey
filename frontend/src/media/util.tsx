@@ -1,6 +1,6 @@
 import type { Media } from "sdk";
 import type { ParentProps, VoidProps } from "solid-js";
-import { useConfig } from "../config";
+import { useConfig } from "@/lib/config";
 
 export type MediaProps = VoidProps<{ media: Media }>;
 

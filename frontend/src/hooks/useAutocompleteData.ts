@@ -13,11 +13,11 @@ import {
 import type {
 	AutocompleteItem,
 	AutocompleteMentionItem,
-} from "../contexts/autocomplete";
-import { useAutocomplete } from "../contexts/autocomplete";
-import { useCurrentUser } from "../contexts/currentUser";
-import { type Command, useSlashCommands } from "../contexts/slash-commands";
-import { type EmojiData, emojiResource } from "../emoji";
+} from "@/contexts/autocomplete";
+import { useAutocomplete } from "@/contexts/autocomplete";
+import { useCurrentUser } from "@/contexts/currentUser";
+import { type Command, useSlashCommands } from "@/contexts/slash-commands";
+import { type EmojiData, emojiResource } from "@/lib/emoji";
 import { usePermissions } from "./usePermissions";
 
 export const useAutocompleteData = () => {

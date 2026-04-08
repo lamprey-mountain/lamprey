@@ -20,9 +20,9 @@ import {
 } from "y-prosemirror";
 import * as Y from "yjs";
 import { useApi, useChannels } from "@/api";
-import { useAutocomplete } from "../../../contexts/autocomplete";
-import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
-import { md } from "../../../markdown_utils.tsx";
+import { useAutocomplete } from "@/contexts/autocomplete";
+import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
+import { md } from "@/lib/markdown";
 import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
 import { createPastePlugin, createSubmitPlugin } from "./core-plugins.ts";
 import {

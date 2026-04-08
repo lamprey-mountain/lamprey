@@ -14,11 +14,11 @@ import {
 	useContext,
 } from "solid-js";
 import { useChannels, useRoles, useRoomMembers, useUsers } from "@/api";
-import { useUserPopout } from "../contexts/mod";
-import { getTwemoji } from "../emoji";
-import { flags } from "../flags";
-import { md } from "../markdown_utils";
-import { getEmojiUrl } from "../media/util";
+import { useUserPopout } from "@/contexts/mod";
+import { getTwemoji } from "@/lib/emoji";
+import { flags } from "@/lib/flags";
+import { md } from "@/lib/markdown";
+import { getEmojiUrl } from "@/media/util";
 
 // --- Context ---
 

@@ -9,9 +9,9 @@ import {
 	type ParentProps,
 	useContext,
 } from "solid-js";
-import { chatctx, useCtx } from "../context.ts";
-import { useMenu } from "../contexts/menu.tsx";
-import { useModals } from "../contexts/modal";
+import { chatctx, useCtx } from "@/app/context";
+import { useMenu } from "@/contexts/menu.tsx";
+import { useModals } from "@/contexts/modal";
 
 function isSeparator(child: JSX.Element): boolean {
 	return (child as HTMLElement)?.classList?.contains("menu-separator") ?? false;

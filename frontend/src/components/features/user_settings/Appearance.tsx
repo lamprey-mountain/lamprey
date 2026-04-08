@@ -1,10 +1,10 @@
 import type { User } from "sdk";
 import type { VoidProps } from "solid-js";
 import { useApi } from "@/api";
-import { CheckboxOption } from "../../../atoms/CheckboxOption";
-import { Dropdown } from "../../../atoms/Dropdown";
-import { useCtx } from "../../../context.ts";
-import { Checkbox } from "../../../icons";
+import { useCtx } from "@/app/context";
+import { CheckboxOption } from "@/atoms/CheckboxOption";
+import { Dropdown } from "@/atoms/Dropdown";
+import { Checkbox } from "@/atoms/icons";
 
 export function Appearance(props: VoidProps<{ user: User }>) {
 	const _api2 = useApi();

@@ -3,19 +3,16 @@ import type { Channel } from "sdk";
 import { createUpload } from "sdk";
 import { createSignal, For, onMount, Show, type VoidProps } from "solid-js";
 import { useApi, useChannels } from "@/api";
-import { CheckboxOption } from "../../../atoms/CheckboxOption";
-import {
-	DurationInput,
-	type DurationPreset,
-} from "../../../atoms/DurationInput.tsx";
-import { Savebar } from "../../../atoms/Savebar";
-import { useCtx } from "../../../context.ts";
-import { useAutocomplete } from "../../../contexts/autocomplete";
-import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
-import { useModals } from "../../../contexts/modal";
-import { Checkbox } from "../../../icons";
-import { ChannelIconGdm } from "../../../User.tsx";
-import { createEditor } from "../editor/Editor.tsx";
+import { useCtx } from "@/app/context";
+import { CheckboxOption } from "@/atoms/CheckboxOption";
+import { DurationInput, type DurationPreset } from "@/atoms/DurationInput.tsx";
+import { Checkbox } from "@/atoms/icons";
+import { Savebar } from "@/atoms/Savebar";
+import { createEditor } from "@/components/features/editor/Editor.tsx";
+import { ChannelIconGdm } from "@/components/shared/User";
+import { useAutocomplete } from "@/contexts/autocomplete";
+import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
+import { useModals } from "@/contexts/modal";
 
 const slowmodePresets: DurationPreset[] = [
 	{ label: "disabled", seconds: null as any },

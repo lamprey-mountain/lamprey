@@ -9,8 +9,8 @@ import {
 	Show,
 } from "solid-js";
 import { useApi, useMessages, useUsers } from "@/api";
-import { renderReactionKey } from "../emoji";
-import { Avatar } from "../User";
+import { Avatar } from "@/components/shared/User";
+import { renderReactionKey } from "@/lib/emoji";
 import { Modal } from "./mod";
 
 interface ModalReactionsProps {

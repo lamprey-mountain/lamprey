@@ -1,7 +1,7 @@
 import { createSignal } from "solid-js";
 import type { Api } from "@/api";
-import { DurationInput } from "../atoms/DurationInput";
-import { useModals } from "../contexts/modal";
+import { DurationInput } from "@/atoms/DurationInput";
+import { useModals } from "@/contexts/modal";
 import { Modal } from "./mod";
 
 interface ModalTimeoutProps {

@@ -10,9 +10,9 @@ import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import { DOMParser } from "prosemirror-model";
 import { type Command, EditorState, TextSelection } from "prosemirror-state";
-import type { AutocompleteContext } from "../../../contexts/autocomplete.tsx";
-import type { FormattingToolbarContextT } from "../../../contexts/formatting-toolbar.tsx";
-import { md } from "../../../markdown_utils.tsx";
+import type { AutocompleteContext } from "@/contexts/autocomplete.tsx";
+import type { FormattingToolbarContextT } from "@/contexts/formatting-toolbar.tsx";
+import { md } from "@/lib/markdown";
 import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
 import { createPastePlugin, createSubmitPlugin } from "./core-plugins.ts";
 import {

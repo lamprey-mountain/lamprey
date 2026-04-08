@@ -12,17 +12,17 @@ import {
 } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import { useApi, useRoles, useRoomMembers, useUsers } from "@/api";
-import { CheckboxOption } from "../../../atoms/CheckboxOption";
-import { Markdown } from "../../../atoms/Markdown.tsx";
-import { Resizable } from "../../../atoms/Resizable";
-import { PermissionSelector } from "../../../components/PermissionSelector";
-import { useCtx } from "../../../context.ts";
-import { useModals } from "../../../contexts/modal";
-import { Checkbox } from "../../../icons";
-import { permissions } from "../../../permissions.ts";
-import type { RoomT } from "../../../types.ts";
-import { Avatar } from "../../../User.tsx";
-import { Copyable } from "../../../utils/general";
+import { useCtx } from "@/app/context";
+import { CheckboxOption } from "@/atoms/CheckboxOption";
+import { Checkbox } from "@/atoms/icons";
+import { Markdown } from "@/atoms/Markdown.tsx";
+import { Resizable } from "@/atoms/Resizable";
+import { PermissionSelector } from "@/components/shared/PermissionSelector";
+import { Avatar } from "@/components/shared/User";
+import { useModals } from "@/contexts/modal";
+import { permissions } from "@/lib/permissions";
+import type { RoomT } from "@/types";
+import { Copyable } from "@/utils/general";
 
 function setDifference<T>(a: Set<T>, b: Set<T>) {
 	return new Set([...a].filter((x) => !b.has(x)));

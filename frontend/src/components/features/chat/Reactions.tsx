@@ -1,10 +1,10 @@
 import type { Message, ReactionKey } from "sdk";
 import { createEffect, createSignal, For, on, onCleanup } from "solid-js";
 import { useReactions } from "@/api";
-import icReactionAdd from "../../../assets/reaction-add.png";
-import { createTooltip } from "../../../atoms/Tooltip.tsx";
-import { useCtx } from "../../../context.ts";
-import { renderReactionKey } from "../../../emoji";
+import { useCtx } from "@/app/context";
+import icReactionAdd from "@/assets/reaction-add.png";
+import { createTooltip } from "@/atoms/Tooltip.tsx";
+import { renderReactionKey } from "@/lib/emoji";
 
 type ReactionsProps = {
 	message: Message;

@@ -8,7 +8,7 @@ import {
 } from "solid-js";
 import type { MemberList } from "@/api";
 import { useApi, useMemberList } from "@/api";
-import { logger } from "../logger";
+import { logger } from "@/utils/logger";
 
 const memberListCtxLog = logger.for("member_list");
 

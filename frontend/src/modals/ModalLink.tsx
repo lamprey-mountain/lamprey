@@ -1,7 +1,7 @@
 import { TextSelection } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
 import { onMount } from "solid-js";
-import { useModals } from "../contexts/modal.tsx";
+import { useModals } from "@/contexts/modal.tsx";
 import { Modal } from "./mod";
 
 interface ModalLinkProps {

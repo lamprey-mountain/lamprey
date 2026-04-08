@@ -10,10 +10,10 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { useApi, useUsers } from "@/api";
-import { createVoiceClient } from "../components/features/voice/rtc";
+import { createVoiceClient } from "@/components/features/voice/rtc";
 // @ts-expect-error
-import vadProcessorUrl from "../components/features/voice/vad-processor?url";
-import { logger } from "../logger.ts";
+import vadProcessorUrl from "@/components/features/voice/vad-processor?url";
+import { logger } from "@/utils/logger";
 
 type VoiceClient = ReturnType<typeof createVoiceClient>;
 

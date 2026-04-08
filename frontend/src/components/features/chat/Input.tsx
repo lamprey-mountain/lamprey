@@ -17,24 +17,24 @@ import {
 	useRoomMembers,
 	useUsers,
 } from "@/api";
-import icDelete from "../../../assets/delete.png";
-import icEdit from "../../../assets/edit.png";
-import cancelIc from "../../../assets/x.png";
-import { EmojiButton } from "../../../atoms/EmojiButton.tsx";
-import { createTooltip } from "../../../atoms/Tooltip.tsx";
-import { useChannel } from "../../../channelctx.tsx";
-import { type Attachment, useCtx } from "../../../context.ts";
-import { useAutocomplete } from "../../../contexts/autocomplete";
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
-import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
-import { useModals } from "../../../contexts/modal.tsx";
-import { useUploads } from "../../../contexts/uploads.tsx";
-import { useMessageSubmit } from "../../../hooks/useMessageSubmit.ts";
-import { usePermissions } from "../../../hooks/usePermissions.ts";
-import { getThumbFromId } from "../../../media/util.tsx";
-import type { MessageT, ThreadT } from "../../../types.ts";
-import { getMessageOverrideName } from "../../../utils/general";
-import { createEditor } from "../editor/Editor.tsx";
+import { type Attachment, useCtx } from "@/app/context";
+import icDelete from "@/assets/delete.png";
+import icEdit from "@/assets/edit.png";
+import cancelIc from "@/assets/x.png";
+import { EmojiButton } from "@/atoms/EmojiButton.tsx";
+import { createTooltip } from "@/atoms/Tooltip.tsx";
+import { createEditor } from "@/components/features/editor/Editor.tsx";
+import { useAutocomplete } from "@/contexts/autocomplete";
+import { useChannel } from "@/contexts/channel";
+import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
+import { useModals } from "@/contexts/modal.tsx";
+import { useUploads } from "@/contexts/uploads.tsx";
+import { useMessageSubmit } from "@/hooks/useMessageSubmit.ts";
+import { usePermissions } from "@/hooks/usePermissions.ts";
+import { getThumbFromId } from "@/media/util.tsx";
+import type { MessageT, ThreadT } from "@/types";
+import { getMessageOverrideName } from "@/utils/general";
 
 type InputProps = {
 	channel: Channel;

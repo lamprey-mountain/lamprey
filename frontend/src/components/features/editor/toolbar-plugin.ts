@@ -1,5 +1,5 @@
 import { Plugin, PluginKey } from "prosemirror-state";
-import type { FormattingToolbarContextT } from "../../../contexts/formatting-toolbar";
+import type { FormattingToolbarContextT } from "@/contexts/formatting-toolbar";
 
 export const toolbarKey = new PluginKey("toolbar");
 

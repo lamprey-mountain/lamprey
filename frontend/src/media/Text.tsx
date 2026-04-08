@@ -6,8 +6,8 @@ import {
 	For,
 	Show,
 } from "solid-js";
-import { useModals } from "../contexts/modal";
-import { flags } from "../flags";
+import { useModals } from "@/contexts/modal";
+import { flags } from "@/lib/flags";
 import { formatBytes, getUrl, type MediaProps } from "./util.tsx";
 
 // 16KiB

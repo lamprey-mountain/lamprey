@@ -2,7 +2,7 @@ import fuzzysort from "fuzzysort";
 import type { Scope } from "sdk";
 import { createResource, createSignal, For, onCleanup } from "solid-js";
 import { useApi } from "@/api";
-import { Time } from "../../../atoms/Time";
+import { Time } from "@/atoms/Time";
 
 export function Connections() {
 	const api2 = useApi();

@@ -17,13 +17,13 @@ import {
 } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import { useApi, useRoles, useRooms } from "@/api";
-import { Resizable } from "../../../atoms/Resizable";
-import { Savebar } from "../../../atoms/Savebar";
-import { OverwriteDropdown } from "../../../components/OverwriteDropdown";
-import { PermissionSelector } from "../../../components/PermissionSelector";
-import { useCtx } from "../../../context.ts";
-import { permissions } from "../../../permissions.ts";
-import { Copyable } from "../../../utils/general";
+import { useCtx } from "@/app/context";
+import { Resizable } from "@/atoms/Resizable";
+import { Savebar } from "@/atoms/Savebar";
+import { OverwriteDropdown } from "@/components/shared/OverwriteDropdown";
+import { PermissionSelector } from "@/components/shared/PermissionSelector";
+import { permissions } from "@/lib/permissions";
+import { Copyable } from "@/utils/general";
 
 function filterPermissionsByChannelType(
 	permList: typeof permissions,

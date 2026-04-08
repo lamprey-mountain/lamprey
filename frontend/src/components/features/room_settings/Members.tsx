@@ -12,14 +12,14 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { useApi, useRoles, useRoomMembers, useUsers } from "@/api";
-import { Time } from "../../../atoms/Time.tsx";
-import { useCtx } from "../../../context.ts";
-import { useCurrentUser } from "../../../contexts/currentUser.tsx";
-import { useMenu } from "../../../contexts/mod.tsx";
-import { useModals } from "../../../contexts/modal";
-import { usePermissions } from "../../../hooks/usePermissions.ts";
-import type { RoomT } from "../../../types.ts";
-import { Avatar } from "../../../User.tsx";
+import { useCtx } from "@/app/context";
+import { Time } from "@/atoms/Time.tsx";
+import { Avatar } from "@/components/shared/User";
+import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useMenu } from "@/contexts/mod.tsx";
+import { useModals } from "@/contexts/modal";
+import { usePermissions } from "@/hooks/usePermissions.ts";
+import type { RoomT } from "@/types";
 
 export function Members(props: VoidProps<{ room: RoomT }>) {
 	const _ctx = useCtx();

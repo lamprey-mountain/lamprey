@@ -1,5 +1,5 @@
 import type { Channel, Pagination, Room } from "sdk";
-import { logger } from "../../logger";
+import { logger } from "@/utils/logger";
 import { type ListState, PaginatedList } from "../core/PaginatedList";
 import { BaseService } from "../core/Service";
 

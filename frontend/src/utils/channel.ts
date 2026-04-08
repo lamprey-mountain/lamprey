@@ -1,6 +1,6 @@
 import type { Channel, ChannelType, Preferences } from "sdk";
 import type { SetStoreFunction } from "solid-js/store";
-import type { ChannelState } from "../contexts/channel";
+import type { ChannelState } from "@/contexts/channel";
 
 /**
  * Get the channel type category for thread sidebar preferences

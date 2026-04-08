@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
-import { CheckboxOptionWithLabel } from "../atoms/CheckboxOption";
-import { useModals } from "../contexts/modal";
+import { CheckboxOptionWithLabel } from "@/atoms/CheckboxOption";
+import { useModals } from "@/contexts/modal";
 import { Modal } from "./mod";
 
 interface ModalRoomCreateProps {

@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
-import { CheckboxOption } from "../atoms/CheckboxOption";
-import { Checkbox } from "../icons";
+import { CheckboxOption } from "@/atoms/CheckboxOption";
+import { Checkbox } from "@/atoms/icons";
 import { Modal } from "./mod";
 
 interface ModalPrivacyProps {

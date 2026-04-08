@@ -1,5 +1,5 @@
 import { onCleanup, onMount } from "solid-js";
-import { useModals } from "../contexts/modal";
+import { useModals } from "@/contexts/modal";
 import { Modal } from "./mod";
 
 interface ModalCameraPreviewProps {

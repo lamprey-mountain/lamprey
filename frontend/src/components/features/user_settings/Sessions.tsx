@@ -1,11 +1,11 @@
 import type { ResourceFetcherInfo } from "solid-js";
 import { createResource, For, Show, type VoidProps } from "solid-js";
 import { useApi } from "@/api";
-import { Time } from "../../../atoms/Time.tsx";
-import { useCtx } from "../../../context.ts";
-import { useModals } from "../../../contexts/modal";
-import type { Pagination, SessionT, UserT } from "../../../types.ts";
-import { Copyable } from "../../../utils/general";
+import { useCtx } from "@/app/context";
+import { Time } from "@/atoms/Time.tsx";
+import { useModals } from "@/contexts/modal";
+import type { Pagination, SessionT, UserT } from "@/types";
+import { Copyable } from "@/utils/general";
 
 function parseUA(ua: string) {
 	if (/iPhone|iPad/.test(ua)) return { icon: "mobile", label: "iOS" };

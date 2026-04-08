@@ -1,11 +1,11 @@
 import type { Preferences, User } from "sdk";
 import { createEffect, Show, type VoidProps } from "solid-js";
 import { useApi } from "@/api";
-import { CheckboxOption } from "../../../atoms/CheckboxOption";
-import { Dropdown } from "../../../atoms/Dropdown";
-import { useCtx } from "../../../context";
-import { Checkbox } from "../../../icons";
-import { notificationPermission } from "../../../notification";
+import { useCtx } from "@/app/context";
+import { CheckboxOption } from "@/atoms/CheckboxOption";
+import { Dropdown } from "@/atoms/Dropdown";
+import { Checkbox } from "@/atoms/icons";
+import { notificationPermission } from "@/lib/notifications";
 
 type NotifAction = "Notify" | "Watching" | "Ignore";
 type NotifsMessages = "Everything" | "Watching" | "Mentions" | "Nothing";

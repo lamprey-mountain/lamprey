@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 import type { Api } from "@/api";
-import { useModals } from "../contexts/modal";
+import { useModals } from "@/contexts/modal";
 import { Modal } from "./mod";
 
 interface ModalKickProps {
