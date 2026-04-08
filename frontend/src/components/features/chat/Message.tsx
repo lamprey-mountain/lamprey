@@ -41,7 +41,7 @@ import { Markdown } from "../../../atoms/Markdown.tsx";
 import { Time } from "../../../atoms/Time";
 import { useCtx } from "../../../context.ts";
 import { useAutocomplete } from "../../../contexts/autocomplete";
-import { useOptionalChannel } from "../../../contexts/channel";
+import { useChannel, useOptionalChannel } from "../../../contexts/channel";
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
 import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
 import { useMenu, useUserPopout } from "../../../contexts/mod.tsx";

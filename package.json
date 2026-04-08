@@ -1,8 +1,12 @@
 {
 	"scripts": {
+		"tsc": "tsc --noEmit",
+		"check": "tsc --noEmit  && biome check",
+		"fix": "biome check --fix",
 		"test": "pnpm -F frontend test"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "^1.9.4",
 		"typescript": "^5.9.2"
 	}
 }
