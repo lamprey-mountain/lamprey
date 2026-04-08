@@ -238,9 +238,11 @@ impl TryFrom<String> for DocumentVersionId {
 
 /// a revision of a document at a point in time
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(try_from = "String", into = "String"))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(try_from = "String", into = "String")
+)]
 pub enum DocumentRevisionId {
     /// the current head of this branch
     ///
@@ -295,6 +297,31 @@ impl TryFrom<String> for DocumentRevisionId {
     type Error = String;
     fn try_from(s: String) -> Result<Self, Self::Error> {
         s.parse()
+    }
+}
+
+#[cfg(feature = "utoipa")]
+mod document_revision_id_schema {
+    use utoipa::{openapi::ObjectBuilder, PartialSchema, ToSchema};
+
+    use super::DocumentRevisionId;
+
+    impl ToSchema for DocumentRevisionId {}
+
+    impl PartialSchema for DocumentRevisionId {
+        fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+            ObjectBuilder::new()
+                .schema_type(utoipa::openapi::schema::Type::String)
+                .description(Some(
+                    "A revision of a document at a point in time.\n\n\
+                    Serialized as:\n\
+                    - `branch-id` for the current head of a branch\n\
+                    - `branch-uuid@seq` for a specific revision\n\
+                    - `~tag` for a specific tag",
+                ))
+                .build()
+                .into()
+        }
     }
 }
 
