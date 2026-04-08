@@ -1,7 +1,7 @@
 import type { EditorState } from "prosemirror-state";
 import { createUpload } from "sdk";
 import { createSignal, onMount, Show, type VoidProps } from "solid-js";
-import { useApi2, useChannels2 } from "@/api";
+import { useApi, useChannels } from "@/api";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 import { Savebar } from "../../../atoms/Savebar";
 import { useCtx } from "../../../context.ts";
@@ -19,7 +19,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 
 	let avatarInputEl!: HTMLInputElement;
 
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [roomIcon, setRoomIcon] = createSignal(props.room.icon);
 
 	const setAvatarFile = async (f: File) => {
@@ -105,7 +105,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		});
 	};
 
-	const channels2 = useChannels2();
+	const channels2 = useChannels();
 	const threads = () =>
 		[...channels2.cache.values()].filter((c) => c.room_id === props.room.id);
 	const _archiveAllThreads = () => {

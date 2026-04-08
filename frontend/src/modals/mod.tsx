@@ -1,5 +1,5 @@
 import { onMount, type ParentProps } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import { ModalResetPassword } from "../components/features/user_settings/mod.tsx";
 import type { Modal as ModalType } from "../context.ts";
 import { useModals } from "../contexts/modal.tsx";
@@ -173,7 +173,7 @@ function isRoomCreate(
 }
 
 export function getModal(modal: ModalType) {
-	const api2 = useApi2();
+	const api2 = useApi();
 	if (isAlert(modal)) {
 		return <ModalAlert text={modal.text} />;
 	}

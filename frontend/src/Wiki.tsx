@@ -12,7 +12,7 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
-import { useApi2, useChannels2 } from "@/api";
+import { useApi, useChannels } from "@/api";
 import { Resizable } from "./atoms/Resizable";
 import { Time } from "./atoms/Time";
 import { ChannelContext, createInitialChannelState } from "./channelctx";
@@ -26,8 +26,8 @@ import { ChannelIcon } from "./User";
 
 export const Wiki = (props: { channel: Channel }) => {
 	const ctx = useCtx();
-	const api2 = useApi2();
-	const channels2 = useChannels2();
+	const api2 = useApi();
+	const channels2 = useChannels();
 	const [, modalctl] = useModals();
 	const room_id = () => props.channel.room_id!;
 	const wiki_id = () => props.channel.id;

@@ -5,12 +5,12 @@ import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 type ChannelWithThreads = Channel & { threads?: Channel[] };
 
 import {
-	useApi2,
-	useChannels2,
-	useDms2,
-	useRoomMembers2,
-	useRooms2,
-	useUsers2,
+	useApi,
+	useChannels,
+	useDms,
+	useRoomMembers,
+	useRooms,
+	useUsers,
 } from "@/api";
 import { usePermissions } from "@/hooks/usePermissions";
 import icHome from "./assets/home.png";
@@ -43,11 +43,11 @@ function setLastViewedChannel(roomId: string, channelId: string): void {
 
 export const ChannelNav = (props: { room_id?: string }) => {
 	const _config = useConfig();
-	const api2 = useApi2();
-	const dms2 = useDms2();
-	const rooms2 = useRooms2();
-	const channels2 = useChannels2();
-	const users2 = useUsers2();
+	const api2 = useApi();
+	const dms2 = useDms();
+	const rooms2 = useRooms();
+	const channels2 = useChannels();
+	const users2 = useUsers();
 	const [voice] = useVoice();
 	const { setMenu } = useMenu();
 	const params = useParams();
@@ -93,7 +93,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	const _dms = !props.room_id ? dms2.useList() : null;
 
 	const room = props.room_id ? rooms2.use(() => props.room_id) : () => null;
-	const roomMembers2 = useRoomMembers2();
+	const roomMembers2 = useRoomMembers();
 
 	const canViewChannel = (channel: Channel): boolean => {
 		if (!props.room_id || !currentUserId()) {

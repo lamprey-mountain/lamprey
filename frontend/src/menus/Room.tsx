@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import type { NotifsRoom, Room } from "sdk";
 import { createSignal, Show } from "solid-js";
-import { useApi2, useRooms2 } from "@/api";
+import { useApi, useRooms } from "@/api";
 import { CheckboxOption } from "../atoms/CheckboxOption";
 import { timeAgo } from "../atoms/Time.tsx";
 import { useCtx } from "../context.ts";
@@ -14,7 +14,7 @@ import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 // the context menu for rooms
 export function RoomMenu(props: { room_id: string }) {
 	const ctx = useCtx();
-	const rooms2 = useRooms2();
+	const rooms2 = useRooms();
 	const nav = useNavigate();
 	const room = rooms2.use(() => props.room_id);
 	const [, modalctl] = useModals();
@@ -115,8 +115,8 @@ export function RoomMenu(props: { room_id: string }) {
 }
 
 function RoomNotificationMenu(props: { room: Room }) {
-	const api2 = useApi2();
-	const rooms2 = useRooms2();
+	const api2 = useApi();
+	const rooms2 = useRooms();
 	const roomConfig = () => props.room.preferences;
 
 	const setNotifs = (notifs: Partial<NotifsRoom>) => {

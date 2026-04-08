@@ -1,6 +1,6 @@
 import type { Preferences, User } from "sdk";
 import { createEffect, Show, type VoidProps } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 import { Dropdown } from "../../../atoms/Dropdown";
 import { useCtx } from "../../../context";
@@ -26,7 +26,7 @@ function urlBase64ToUint8Array(base64String: string) {
 
 export function Notifications(_props: VoidProps<{ user: User }>) {
 	const ctx = useCtx();
-	const api2 = useApi2();
+	const api2 = useApi();
 	const { t } = useCtx();
 
 	// TODO: option to disable mention sound

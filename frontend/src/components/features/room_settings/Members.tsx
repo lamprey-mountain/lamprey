@@ -11,7 +11,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
+import { useApi, useRoles, useRoomMembers, useUsers } from "@/api";
 import { Time } from "../../../atoms/Time.tsx";
 import { useCtx } from "../../../context.ts";
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
@@ -24,10 +24,10 @@ import { Avatar } from "../../../User.tsx";
 export function Members(props: VoidProps<{ room: RoomT }>) {
 	const _ctx = useCtx();
 	const { setMenu } = useMenu();
-	const api2 = useApi2();
-	const roomMembers2 = useRoomMembers2();
-	const users2 = useUsers2();
-	const roles2 = useRoles2();
+	const api2 = useApi();
+	const roomMembers2 = useRoomMembers();
+	const users2 = useUsers();
+	const roles2 = useRoles();
 
 	// Get member IDs for this room from cache
 	const memberIds = createMemo(() => {
@@ -188,9 +188,9 @@ const EditRoles = (props: {
 	user_id: string;
 	room: RoomT;
 }) => {
-	const api2 = useApi2();
-	const roles2 = useRoles2();
-	const roomMembers2 = useRoomMembers2();
+	const api2 = useApi();
+	const roles2 = useRoles();
+	const roomMembers2 = useRoomMembers();
 	const member = roomMembers2.cache.get(`${props.room.id}:${props.user_id}`);
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
 	const [menuRef, setMenuRef] = createSignal<HTMLElement>();

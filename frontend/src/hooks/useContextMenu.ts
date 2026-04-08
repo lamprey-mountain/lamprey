@@ -1,11 +1,11 @@
 import type { Setter } from "solid-js";
-import { useApi2, useChannels2 } from "@/api";
+import { useApi, useChannels } from "@/api";
 import type { Menu } from "../context.ts";
 
 export function useContextMenu(setMenu: Setter<Menu | null>) {
-	const _api2 = useApi2();
-	const channels2 = useChannels2();
-	const store = useApi2();
+	const _api2 = useApi();
+	const channels2 = useChannels();
+	const store = useApi();
 
 	const handleContextMenu = (e: MouseEvent) => {
 		console.log("[menu] open context menu");

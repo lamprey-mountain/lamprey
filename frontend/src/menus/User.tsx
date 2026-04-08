@@ -1,6 +1,6 @@
 import { useNavigate } from "@solidjs/router";
 import { For, Match, Show, Switch } from "solid-js";
-import { useApi2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
+import { useApi, useRoles, useRoomMembers, useUsers } from "@/api";
 import { useVoice } from "../components/features/voice/voice-provider.tsx";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { useMenu } from "../contexts/mod.tsx";
@@ -21,10 +21,10 @@ type UserMenuProps = {
 // TODO: hide separators when a category has no items
 export function UserMenu(props: UserMenuProps) {
 	const { setMenu } = useMenu();
-	const api2 = useApi2();
-	const users2 = useUsers2();
-	const roomMembers2 = useRoomMembers2();
-	const roles2 = useRoles2();
+	const api2 = useApi();
+	const users2 = useUsers();
+	const roomMembers2 = useRoomMembers();
+	const roles2 = useRoles();
 	const navigate = useNavigate();
 	const currentUser = useCurrentUser();
 	const user = users2.use(() => props.user_id);

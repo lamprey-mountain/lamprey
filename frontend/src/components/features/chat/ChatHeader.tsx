@@ -1,6 +1,6 @@
 import type { Channel } from "sdk";
 import { createSignal, Match, Show, Switch } from "solid-js";
-import { useChannels2, useMessages2 } from "@/api";
+import { useChannels, useMessages } from "@/api";
 import icCall from "../../../assets/call.png";
 import icMembers from "../../../assets/members.png";
 import icPin from "../../../assets/pin.png";
@@ -21,8 +21,8 @@ type ChatHeaderProps = {
 
 export const ChatHeader = (props: ChatHeaderProps) => {
 	const ctx = useCtx();
-	const channels2 = useChannels2();
-	const messagesService = useMessages2();
+	const channels2 = useChannels();
+	const messagesService = useMessages();
 	const [channelState, setChannelState] = useChannel()!;
 	const [, modalctl] = useModals();
 	const [hovered, setHovered] = createSignal(false);

@@ -1,6 +1,6 @@
 import type { Permission } from "sdk";
 import { createMemo } from "solid-js";
-import { useApi2, useUsers2 } from "@/api";
+import { useApi, useUsers } from "@/api";
 import { logger } from "../logger";
 import {
 	calculatePermissions,
@@ -13,8 +13,8 @@ export function usePermissions(
 	room_id: () => string | undefined,
 	thread_id: () => string | undefined,
 ) {
-	const api2 = useApi2();
-	const users2 = useUsers2();
+	const api2 = useApi();
+	const users2 = useUsers();
 
 	const permissions = createMemo<ResolvedPermissions>(
 		() => {

@@ -1,14 +1,14 @@
 import { useNavigate } from "@solidjs/router";
 import { createResource, createSignal, For, Show } from "solid-js";
-import { useApi2, useDms2, useUsers2 } from "@/api";
+import { useApi, useDms, useUsers } from "@/api";
 import { AvatarWithStatus } from "./User";
 
 type FilterType = "all" | "online" | "incoming" | "outgoing";
 
 export const Friends = () => {
-	const api2 = useApi2();
-	const users2 = useUsers2();
-	const _dms2 = useDms2();
+	const api2 = useApi();
+	const users2 = useUsers();
+	const _dms2 = useDms();
 	const _navigate = useNavigate();
 	const [filter, setFilter] = createSignal<FilterType>("all");
 
@@ -110,9 +110,9 @@ export const Friends = () => {
 };
 
 const Friend = (props: { user_id: string }) => {
-	const api2 = useApi2();
-	const users2 = useUsers2();
-	const _dms2 = useDms2();
+	const api2 = useApi();
+	const users2 = useUsers();
+	const _dms2 = useDms();
 	const navigate = useNavigate();
 	const user = users2.use(() => props.user_id);
 

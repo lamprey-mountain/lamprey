@@ -16,7 +16,7 @@ import {
 	Show,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import icBranchDefault from "../../../assets/edit.png";
 import icBranchPrivate from "../../../assets/edit.png";
 import icBranchNew from "../../../assets/edit.png";
@@ -580,7 +580,7 @@ const DocumentMain = (
 		editor: () => Editor | null;
 	},
 ) => {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [ch, _setCh] = useChannel()!;
 	const [diffLoading, setDiffLoading] = createSignal(false);
 	const [history, setHistory] = createSignal<HistoryPagination | null>(null);

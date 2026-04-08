@@ -1,6 +1,6 @@
 import { createUpload, type User } from "sdk";
 import { createSignal, Show, type VoidProps } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import { Savebar } from "../../../atoms/Savebar";
 import { useCtx } from "../../../context";
 import { useModals } from "../../../contexts/modal";
@@ -10,7 +10,7 @@ import { Copyable } from "../../../utils/general";
 // TODO(#753): allow uploading banner
 
 export function Profile(props: VoidProps<{ user: User }>) {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const ctx = useCtx();
 	const [, _modalCtl] = useModals();
 

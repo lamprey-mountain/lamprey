@@ -9,7 +9,7 @@ import {
 	useContext,
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import { useApi2, useUsers2 } from "@/api";
+import { useApi, useUsers } from "@/api";
 import { createVoiceClient } from "../components/features/voice/rtc";
 // @ts-expect-error
 import vadProcessorUrl from "../components/features/voice/vad-processor?url";
@@ -53,8 +53,8 @@ const voiceLog = logger.for("voice");
 const rtcLog = logger.for("rtc");
 
 export const VoiceProvider = (props: ParentProps) => {
-	const api2 = useApi2();
-	const users2 = useUsers2();
+	const api2 = useApi();
+	const users2 = useUsers();
 	const vad = createVoiceActivityDetection();
 	const [state, update] = createStore<VoiceProviderState>({
 		muted: true,

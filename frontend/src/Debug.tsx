@@ -1,7 +1,7 @@
 import { leadingAndTrailing, throttle } from "@solid-primitives/scheduled";
 import type { Embed, Message } from "sdk";
 import { createResource, createSignal, For, type JSX, Show } from "solid-js";
-import { useApi2, useMessages2 } from "@/api";
+import { useApi, useMessages } from "@/api";
 import { Dropdown } from "./atoms/Dropdown.tsx";
 import { MessageView } from "./components/features/chat/Message.tsx";
 import { flags } from "./flags.ts";
@@ -86,7 +86,7 @@ export const Debug = (): JSX.Element => {
 };
 
 const Search = () => {
-	const messagesService = useMessages2();
+	const messagesService = useMessages();
 	const [searchQuery, setSearchQueryRaw] = createSignal<string>("");
 	const setSearchQuery = leadingAndTrailing(throttle, setSearchQueryRaw, 300);
 	const [searchResults] = createResource(searchQuery, async (query: string) => {
@@ -118,7 +118,7 @@ const Search = () => {
 };
 
 const InviteView = () => {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [inviteCode, setInviteCodeRaw] = createSignal<string>("");
 	const setInviteCode = leadingAndTrailing(throttle, setInviteCodeRaw, 300);
 	const [invite] = createResource(inviteCode, async (code) => {
@@ -146,7 +146,7 @@ const InviteView = () => {
 };
 
 const UrlEmbedDbg = () => {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [url, setUrl] = createSignal("");
 	const [data, setData] = createSignal<Embed | null>(null);
 	const [error, setError] = createSignal<{ error: string } | null>(null);

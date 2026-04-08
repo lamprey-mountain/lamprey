@@ -1,6 +1,6 @@
 import type { UserWithRelationship } from "sdk";
 import { createContext, createMemo, type JSX, useContext } from "solid-js";
-import { useUsers2 } from "@/api";
+import { useUsers } from "@/api";
 import { logger } from "../logger";
 
 const currentUserLog = logger.for("current_user");
@@ -9,7 +9,7 @@ const CurrentUserContext =
 	createContext<() => UserWithRelationship | undefined>();
 
 export const CurrentUserProvider = (props: { children: JSX.Element }) => {
-	const users2 = useUsers2();
+	const users2 = useUsers();
 	const currentUser = createMemo(() => {
 		const user = users2.cache.get("@self");
 		currentUserLog.debug("currentUser memo", {

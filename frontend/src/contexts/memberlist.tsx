@@ -7,7 +7,7 @@ import {
 	useContext,
 } from "solid-js";
 import type { MemberList } from "@/api";
-import { useApi2, useMemberList2 } from "@/api";
+import { useApi, useMemberList } from "@/api";
 import { logger } from "../logger";
 
 const memberListCtxLog = logger.for("member_list");
@@ -15,8 +15,8 @@ const memberListCtxLog = logger.for("member_list");
 const MemberListContext = createContext<ReactiveMap<string, MemberList>>();
 
 export const MemberListProvider = (props: ParentProps) => {
-	const store = useApi2();
-	const service = useMemberList2();
+	const store = useApi();
+	const service = useMemberList();
 	const location = useLocation();
 
 	memberListCtxLog.info("MemberListProvider initialized", {
@@ -85,7 +85,7 @@ export const MemberListProvider = (props: ParentProps) => {
 	);
 };
 
-export const useMemberList = () => {
+export const useMemberListContext = () => {
 	const ctx = useContext(MemberListContext);
 	memberListCtxLog.debug("useMemberList called", {
 		has_context: !!ctx,

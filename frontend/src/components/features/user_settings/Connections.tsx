@@ -1,11 +1,11 @@
 import fuzzysort from "fuzzysort";
 import type { Scope } from "sdk";
 import { createResource, createSignal, For, onCleanup } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import { Time } from "../../../atoms/Time";
 
 export function Connections() {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [_connecting, setConnecting] = createSignal(false);
 
 	const [connections, { refetch }] = createResource(async () => {

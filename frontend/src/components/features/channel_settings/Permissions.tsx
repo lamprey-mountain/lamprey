@@ -16,7 +16,7 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { createStore, produce } from "solid-js/store";
-import { useApi2, useRoles2, useRooms2 } from "@/api";
+import { useApi, useRoles, useRooms } from "@/api";
 import { Resizable } from "../../../atoms/Resizable";
 import { Savebar } from "../../../atoms/Savebar";
 import { OverwriteDropdown } from "../../../components/OverwriteDropdown";
@@ -90,9 +90,9 @@ const createDefaultOverwrite = (id: string): PermissionOverwrite => ({
 });
 
 export function Permissions(props: VoidProps<{ channel: Channel }>) {
-	const api2 = useApi2();
-	const rooms2 = useRooms2();
-	const roles2 = useRoles2();
+	const api2 = useApi();
+	const rooms2 = useRooms();
+	const roles2 = useRoles();
 	const roles = [...roles2.cache.values()].filter(
 		(r) => r.room_id === props.channel.room_id,
 	);

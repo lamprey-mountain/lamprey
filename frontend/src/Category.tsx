@@ -3,7 +3,7 @@ import type { EditorState } from "prosemirror-state";
 import { type Channel, getTimestampFromUUID } from "sdk";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { uuidv7 } from "uuidv7";
-import { useChannels2 } from "@/api";
+import { useChannels } from "@/api";
 import { Time } from "./atoms/Time.tsx";
 import { useChannel } from "./channelctx.tsx";
 import { RenderUploadItem } from "./components/features/chat/Input.tsx";
@@ -19,7 +19,7 @@ import { usePermissions } from "./hooks/usePermissions.ts";
 import { md } from "./markdown_utils.tsx";
 
 export const Category = (props: { channel: Channel }) => {
-	const channels2 = useChannels2();
+	const channels2 = useChannels();
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
 	const room_id = () => props.channel.room_id ?? "";
@@ -173,7 +173,7 @@ export const Category = (props: { channel: Channel }) => {
 
 // NOTE the room id is reused as the channel id for draft messages and attachments
 const QuickCreate = (props: { channel: Channel }) => {
-	const channels2 = useChannels2();
+	const channels2 = useChannels();
 	const n = useNavigate();
 	const channelCtx = useChannel();
 	const submit = useMessageSubmit(props.channel.id);

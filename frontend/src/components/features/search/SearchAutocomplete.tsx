@@ -2,11 +2,11 @@ import type { Node } from "prosemirror-model";
 import type { User } from "sdk";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import {
-	useChannels2,
-	useRoles2,
-	useRoomMembers2,
-	useThreadMembers2,
-	useUsers2,
+	useChannels,
+	useRoles,
+	useRoomMembers,
+	useThreadMembers,
+	useUsers,
 } from "@/api";
 import type { RoomT, ThreadT } from "../../../types";
 import { schema } from "./schema";
@@ -25,11 +25,11 @@ export const SearchAutocomplete = (props: {
 		selectItem: (idx: number) => void,
 	) => void;
 }) => {
-	const channels2 = useChannels2();
-	const threadMembers2 = useThreadMembers2();
-	const roomMembers2 = useRoomMembers2();
-	const users2 = useUsers2();
-	const roles = useRoles2();
+	const channels2 = useChannels();
+	const threadMembers2 = useThreadMembers();
+	const roomMembers2 = useRoomMembers();
+	const users2 = useUsers();
+	const roles = useRoles();
 
 	const roomThreads = () =>
 		[...channels2.cache.values()].filter(

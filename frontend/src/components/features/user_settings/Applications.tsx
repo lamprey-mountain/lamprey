@@ -12,7 +12,7 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
-import { useApi2, useRooms2 } from "@/api";
+import { useApi, useRooms } from "@/api";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 import { Resizable } from "../../../atoms/Resizable";
 import { Savebar } from "../../../atoms/Savebar";
@@ -27,7 +27,7 @@ import { Copyable } from "../../../utils/general";
 // TODO: in create session and rotate oauth token, make the secret Copyable
 
 const SessionList = (props: { appId: string }) => {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [, modalctl] = useModals();
 
 	const [sessions, { refetch }] = createResource(async () => {
@@ -116,7 +116,7 @@ function useAppEditor(initial: Application | null) {
 }
 
 export function Applications(_props: VoidProps<{ user: User }>) {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [, modalctl] = useModals();
 
 	async function create() {
@@ -354,7 +354,7 @@ const AppEditor = (props: {
 	) => void;
 	refetch: () => void;
 }) => {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [, modalCtl] = useModals();
 	const [activeTab, setActiveTab] = createSignal<
 		"overview" | "oauth" | "sessions"
@@ -745,8 +745,8 @@ const AppEditor = (props: {
 
 // TODO: make this an actual context menu?
 const InviteToRoom = (props: { x: number; y: number; app: Application }) => {
-	const api2 = useApi2();
-	const rooms2 = useRooms2();
+	const api2 = useApi();
+	const rooms2 = useRooms();
 	const rooms = rooms2.useList();
 	const roomItems = () =>
 		rooms.ids

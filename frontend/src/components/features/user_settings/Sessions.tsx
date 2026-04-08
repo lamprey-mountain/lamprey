@@ -1,6 +1,6 @@
 import type { ResourceFetcherInfo } from "solid-js";
 import { createResource, For, Show, type VoidProps } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import { Time } from "../../../atoms/Time.tsx";
 import { useCtx } from "../../../context.ts";
 import { useModals } from "../../../contexts/modal";
@@ -18,7 +18,7 @@ function parseUA(ua: string) {
 
 export function Sessions(props: VoidProps<{ user: UserT }>) {
 	const ctx = useCtx();
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [, modalctl] = useModals();
 
 	// FIXME: live update sessions

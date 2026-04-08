@@ -1,24 +1,24 @@
 import { A } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
 import {
-	useApi2,
-	useAuth2,
-	useInvites2,
-	useRooms2,
-	useSessions2,
-	useUsers2,
+	useApi,
+	useAuth,
+	useInvites,
+	useRooms,
+	useSessions,
+	useUsers,
 } from "@/api";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { useModals } from "./contexts/modal";
 import { flags } from "./flags.ts";
 
 export const Home = () => {
-	const api2 = useApi2();
-	const auth2 = useAuth2();
-	const rooms2 = useRooms2();
-	const invites2 = useInvites2();
-	const sessions2 = useSessions2();
-	const users2 = useUsers2();
+	const api2 = useApi();
+	const auth2 = useAuth();
+	const rooms2 = useRooms();
+	const invites2 = useInvites();
+	const sessions2 = useSessions();
+	const users2 = useUsers();
 	const user = useCurrentUser();
 	const [email, setEmail] = createSignal("");
 	const [password, setPassword] = createSignal("");

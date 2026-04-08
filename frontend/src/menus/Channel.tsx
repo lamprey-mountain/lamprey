@@ -8,7 +8,7 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { useApi2, useChannels2, useTags2, useThreadMembers2 } from "@/api";
+import { useApi, useChannels, useTags, useThreadMembers } from "@/api";
 import { timeAgo } from "../atoms/Time.tsx";
 import { useCtx } from "../context.ts";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
@@ -21,9 +21,9 @@ import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 // the context menu for channels
 export function ChannelMenu(props: { channel_id: string }) {
 	const ctx = useCtx();
-	const channels2 = useChannels2();
-	const threadMembers2 = useThreadMembers2();
-	const tags2 = useTags2();
+	const channels2 = useChannels();
+	const threadMembers2 = useThreadMembers();
+	const tags2 = useTags();
 	const { markThreadRead, markCategoryRead } = useReadTracking();
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
@@ -309,8 +309,8 @@ export function ChannelMenu(props: { channel_id: string }) {
 }
 
 function ChannelNotificationMenu(props: { channel: Channel }) {
-	const api2 = useApi2();
-	const channels2 = useChannels2();
+	const api2 = useApi();
+	const channels2 = useChannels();
 	const channelConfig = () => props.channel.preferences;
 
 	const setNotifs = (notifs: Partial<NotifsChannel>) => {

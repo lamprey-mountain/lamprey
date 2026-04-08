@@ -6,7 +6,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import type { Aggregation } from "@/api/services/RoomAnalyticsService.ts";
 import { DateRangePicker } from "../../../atoms/Daterangepicker.tsx";
 import { Dropdown } from "../../../atoms/Dropdown.tsx";
@@ -15,7 +15,7 @@ import { formatBytes } from "../../../media/util.tsx";
 import type { RoomT } from "../../../types.ts";
 
 export function Metrics(props: VoidProps<{ room: RoomT }>) {
-	const api2 = useApi2();
+	const api2 = useApi();
 
 	const [aggregation, setAggregation] = createSignal<Aggregation>("Daily");
 	const [dateRange, setDateRange] = createSignal({

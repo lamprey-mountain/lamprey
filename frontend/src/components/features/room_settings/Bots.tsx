@@ -11,7 +11,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import { Time } from "../../../atoms/Time.tsx";
 import { useCtx } from "../../../context.ts";
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
@@ -24,7 +24,7 @@ import { Avatar } from "../../../User.tsx";
 export function Bots(props: VoidProps<{ room: RoomT }>) {
 	const _ctx = useCtx();
 	const { setMenu } = useMenu();
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [, modalCtl] = useModals();
 
 	const editRolesClear = () => setEditRoles();
@@ -181,7 +181,7 @@ const EditRoles = (props: {
 	user_id: string;
 	room: RoomT;
 }) => {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const roles = api2.roles.use(() => props.room.id);
 	const member = api2.room_members.use(
 		() => `${props.room.id}!:${props.user_id}`,

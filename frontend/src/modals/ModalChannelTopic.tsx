@@ -1,4 +1,4 @@
-import { useChannels2 } from "@/api";
+import { useChannels } from "@/api";
 import { md } from "../markdown_utils.tsx";
 import { Modal } from "./mod";
 
@@ -7,7 +7,7 @@ interface ModalChannelTopicProps {
 }
 
 export const ModalChannelTopic = (props: ModalChannelTopicProps) => {
-	const channels2 = useChannels2();
+	const channels2 = useChannels();
 	const channel = channels2.use(() => props.channel_id);
 
 	return (

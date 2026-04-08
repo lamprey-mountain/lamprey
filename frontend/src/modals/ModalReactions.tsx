@@ -8,7 +8,7 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import { useApi2, useMessages2, useUsers2 } from "@/api";
+import { useApi, useMessages, useUsers } from "@/api";
 import { renderReactionKey } from "../emoji";
 import { Avatar } from "../User";
 import { Modal } from "./mod";
@@ -28,9 +28,9 @@ const reactionKeyToParam = (key: ReactionKey): string => {
 };
 
 export const ModalReactions = (props: ModalReactionsProps) => {
-	const api2 = useApi2();
-	const users2 = useUsers2();
-	const messagesService = useMessages2();
+	const api2 = useApi();
+	const users2 = useUsers();
+	const messagesService = useMessages();
 	const message = messagesService.use(() => props.message_id);
 
 	const reactions = () => message()?.reactions ?? [];

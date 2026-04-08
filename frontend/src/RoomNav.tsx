@@ -9,7 +9,7 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { useChannels2, useRooms2 } from "@/api";
+import { useChannels, useRooms } from "@/api";
 import icFolder1 from "./assets/folder-1.png";
 import icHome from "./assets/home.png";
 import { useCtx } from "./context";
@@ -75,8 +75,8 @@ type ViewChannel = {
 type RoomNavConfig = Array<RoomNavItem>;
 
 export const RoomNav = () => {
-	const rooms2 = useRooms2();
-	const channels2 = useChannels2();
+	const rooms2 = useRooms();
+	const channels2 = useChannels();
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
 	const rooms = createMemo(() => [...rooms2.cache.values()]);

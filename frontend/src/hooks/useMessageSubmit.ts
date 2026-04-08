@@ -1,12 +1,12 @@
-import { useApi2, useChannels2 } from "@/api";
+import { useApi, useChannels } from "@/api";
 import { useChannel } from "../channelctx";
 import { useCtx } from "../context";
 
 export function useMessageSubmit(channel_id: string) {
 	const ctx = useCtx();
-	const api2 = useApi2();
-	const channels2 = useChannels2();
-	const store = useApi2();
+	const api2 = useApi();
+	const channels2 = useChannels();
+	const store = useApi();
 	const channelContext = useChannel();
 
 	return async (

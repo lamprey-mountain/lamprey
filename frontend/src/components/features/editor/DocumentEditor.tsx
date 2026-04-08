@@ -19,7 +19,7 @@ import {
 	yUndoPlugin,
 } from "y-prosemirror";
 import * as Y from "yjs";
-import { useApi2, useChannels2 } from "@/api";
+import { useApi, useChannels } from "@/api";
 import { useAutocomplete } from "../../../contexts/autocomplete";
 import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
 import { md } from "../../../markdown_utils.tsx";
@@ -86,8 +86,8 @@ export const createEditor = (
 		html: string,
 	) => import("prosemirror-state").EditorState;
 } => {
-	const api2 = useApi2();
-	const channels2 = useChannels2();
+	const api2 = useApi();
+	const channels2 = useChannels();
 	const toolbar = useFormattingToolbar();
 	const autocomplete = useAutocomplete();
 	const toolbarPlugin = createToolbarPlugin(toolbar);

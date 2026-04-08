@@ -1,5 +1,5 @@
 import { createMemo, createSignal, Show } from "solid-js";
-import { useApi2, useRoles2, useRooms2 } from "@/api";
+import { useApi, useRoles, useRooms } from "@/api";
 import { Dropdown, MultiDropdown } from "../atoms/Dropdown";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 import {
@@ -14,8 +14,8 @@ interface ModalInviteCreateProps {
 }
 
 export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
-	const api2 = useApi2();
-	const roles2 = useRoles2();
+	const api2 = useApi();
+	const roles2 = useRoles();
 	const [expiry, setExpiry] = createSignal<number | null>(null);
 	const [maxUses, setMaxUses] = createSignal<number | null>(null);
 	const [selectedRoleIds, setSelectedRoleIds] = createSignal<string[]>([]);
@@ -23,7 +23,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 	const [creating, setCreating] = createSignal(false);
 	const currentUser = useCurrentUser();
 
-	const rooms2 = useRooms2();
+	const rooms2 = useRooms();
 	const roles = () => roles2.listByRoom(props.room_id as string);
 
 	const currentUserId = () => currentUser()?.id;

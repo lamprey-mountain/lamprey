@@ -11,7 +11,7 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { createStore, produce } from "solid-js/store";
-import { useApi2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
+import { useApi, useRoles, useRoomMembers, useUsers } from "@/api";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 import { Markdown } from "../../../atoms/Markdown.tsx";
 import { Resizable } from "../../../atoms/Resizable";
@@ -50,8 +50,8 @@ function isDirty(a: Role, b: Role): boolean {
 }
 
 export function Roles(props: VoidProps<{ room: RoomT }>) {
-	const api2 = useApi2();
-	const roles2 = useRoles2();
+	const api2 = useApi();
+	const roles2 = useRoles();
 	const [, modalCtl] = useModals();
 
 	const [localRoles, setLocalRoles] = createStore<Role[]>([]);
@@ -389,10 +389,10 @@ const RoleList = (props: {
 };
 
 const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
-	const api2 = useApi2();
-	const roles2 = useRoles2();
-	const users2 = useUsers2();
-	const roomMembers2 = useRoomMembers2();
+	const api2 = useApi();
+	const roles2 = useRoles();
+	const users2 = useUsers();
+	const roomMembers2 = useRoomMembers();
 	const _ctx = useCtx();
 	const [, modalCtl] = useModals();
 	const [activeTab, setActiveTab] = createSignal<"role" | "members">("role");

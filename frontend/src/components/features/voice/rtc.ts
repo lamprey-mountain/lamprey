@@ -2,7 +2,7 @@ import { createEmitter } from "@solid-primitives/event-bus";
 import { ReactiveMap } from "@solid-primitives/map";
 import type { SignallingMessage, TrackMetadata } from "sdk";
 import { createSignal, untrack } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 
 type RemoteStream = {
 	id: string;
@@ -41,7 +41,7 @@ const RTC_CONFIG: RTCConfiguration = {
 
 export const createVoiceClient = () => {
 	let conn = new RTCPeerConnection(RTC_CONFIG);
-	const api2 = useApi2();
+	const api2 = useApi();
 	const transceivers = new Map<string, RTCRtpTransceiver>();
 	const remoteStreams: Array<RemoteStream> = [];
 	const localStreams: Array<LocalStream> = [];

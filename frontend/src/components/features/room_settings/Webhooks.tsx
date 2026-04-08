@@ -10,7 +10,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi2, useChannels2, useUsers2 } from "@/api";
+import { useApi, useChannels, useUsers } from "@/api";
 import { Dropdown } from "../../../atoms/Dropdown.tsx";
 import { Time } from "../../../atoms/Time.tsx";
 import { useConfig } from "../../../config.tsx";
@@ -20,10 +20,10 @@ import { Avatar } from "../../../User.tsx";
 // TODO(#750): group webhooks by channel
 
 export function Webhooks(props: VoidProps<{ room: Room }>) {
-	const api2 = useApi2();
-	const users2 = useUsers2();
+	const api2 = useApi();
+	const users2 = useUsers();
 	const config = useConfig();
-	const channels2 = useChannels2();
+	const channels2 = useChannels();
 	const [, modalCtl] = useModals();
 
 	const [webhooks, { refetch }] = createResource(async () => {

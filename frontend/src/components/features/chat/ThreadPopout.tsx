@@ -1,14 +1,14 @@
 import { useNavigate } from "@solidjs/router";
 import type { Channel } from "sdk";
 import { createMemo, createSignal, For, Show } from "solid-js";
-import { useChannels2, useThreads2 } from "@/api";
+import { useChannels, useThreads } from "@/api";
 import { useCtx } from "../../../context.ts";
 import { useModals } from "../../../contexts/modal.tsx";
 import { ChannelIcon } from "../../../User.tsx";
 
 export const ThreadPopout = (props: { channel_id: string }) => {
-	const threads2 = useThreads2();
-	const channels2 = useChannels2();
+	const threads2 = useThreads();
+	const channels2 = useChannels();
 	const ctx = useCtx();
 	const navigate = useNavigate();
 	const [search, setSearch] = createSignal("");

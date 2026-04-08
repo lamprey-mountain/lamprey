@@ -9,14 +9,14 @@ import {
 	Switch,
 	type VoidProps,
 } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import { Copyable } from "../../../utils/general";
 import { getAttributeDescription, parseSessionDescription } from "./rtc-util";
 import { useVoice } from "./voice-provider";
 
 export const VoiceDebug = (props: { onClose: () => void }) => {
 	const [voice] = useVoice();
-	const api2 = useApi2();
+	const api2 = useApi();
 
 	const [tab, setTab] = createSignal("streams");
 	const [localSdp, setLocalSdp] = createSignal<RTCSessionDescription | null>(

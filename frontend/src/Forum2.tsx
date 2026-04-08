@@ -32,12 +32,12 @@ import { createStore } from "solid-js/store";
 import { Portal, render } from "solid-js/web";
 import { uuidv7 } from "uuidv7";
 import {
-	useApi2,
-	useChannels2,
-	useMessages2,
-	useRoomMembers2,
-	useThreads2,
-	useUsers2,
+	useApi,
+	useChannels,
+	useMessages,
+	useRoomMembers,
+	useThreads,
+	useUsers,
 } from "@/api";
 import icDelete from "./assets/delete.png";
 import cancelIc from "./assets/x.png";
@@ -155,8 +155,8 @@ function AttachmentView(props: MediaProps) {
 }
 
 const InputReply = (props: { thread: Channel; reply: Message }) => {
-	const users2 = useUsers2();
-	const roomMembers2 = useRoomMembers2();
+	const users2 = useUsers();
+	const roomMembers2 = useRoomMembers();
 	const tip = createTooltip({ tip: () => "remove reply" });
 	const [_ch, chUpdate] = useChannel();
 	const getName = (user_id: string) => {
@@ -198,8 +198,8 @@ const InputReply = (props: { thread: Channel; reply: Message }) => {
 
 export const Forum2 = (props: { channel: Channel }) => {
 	const ctx = useCtx();
-	const channels2 = useChannels2();
-	const threads2 = useThreads2();
+	const channels2 = useChannels();
+	const threads2 = useThreads();
 	const _nav = useNavigate();
 	const [, modalctl] = useModals();
 	const room_id = () => props.channel.room_id ?? "";
@@ -579,20 +579,20 @@ export const Forum2 = (props: { channel: Channel }) => {
 };
 
 function EditorUserMention(props: { id: string }) {
-	const users2 = useUsers2();
+	const users2 = useUsers();
 	const user = users2.use(() => props.id);
 	return <span class="mention-user">@{user()?.name ?? props.id}</span>;
 }
 
 function EditorChannelMention(props: { id: string }) {
-	const channels2 = useChannels2();
+	const channels2 = useChannels();
 	const channel = createMemo(() => channels2.cache.get(props.id));
 	return <span class="mention-channel">#{channel()?.name ?? props.id}</span>;
 }
 
 export const Forum2Thread = (props: { channel: Channel }) => {
-	const channels2 = useChannels2();
-	const messagesService = useMessages2();
+	const channels2 = useChannels();
+	const messagesService = useMessages();
 	const [ch, chUpdate] = useChannel();
 	const submit = useMessageSubmit(props.channel.id);
 	const uploads = useUploads();
@@ -1076,7 +1076,7 @@ function highlight(el: Element) {
 }
 
 function CommentEditor(props: { message: Message; channel: Channel }) {
-	const messagesService = useMessages2();
+	const messagesService = useMessages();
 	const [ch, chUpdate] = useChannel();
 	const toolbar = useFormattingToolbar();
 	const autocomplete = useAutocomplete();
@@ -1195,7 +1195,7 @@ const Comment = (props: {
 }) => {
 	const message = () => props.node.message;
 	const children = () => props.node.children;
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [ch, chUpdate] = useChannel();
 
 	const collapsed = () => props.collapsed.has(message().id);

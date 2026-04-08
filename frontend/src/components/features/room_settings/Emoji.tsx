@@ -1,14 +1,14 @@
 import { createUpload } from "sdk";
 import { For, type VoidProps } from "solid-js";
-import { useApi2, useEmoji2 } from "@/api";
+import { useApi, useEmoji } from "@/api";
 import { useConfig } from "../../../config.tsx";
 import { useModals } from "../../../contexts/modal";
 import type { RoomT } from "../../../types.ts";
 
 export function Emoji(props: VoidProps<{ room: RoomT }>) {
 	const config = useConfig();
-	const api2 = useApi2();
-	const emoji2 = useEmoji2();
+	const api2 = useApi();
+	const emoji2 = useEmoji();
 	const [, modalCtl] = useModals();
 	const emoji = emoji2.useRoomList(() => props.room.id);
 

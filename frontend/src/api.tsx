@@ -1,6 +1,3 @@
-// Minimal API exports for new service pattern
-// Use useApi2() and service-specific hooks instead.
-
 import type { Pagination } from "sdk";
 import type { Resource } from "solid-js";
 import { createContext, useContext } from "solid-js";
@@ -32,110 +29,106 @@ export type {
 // Backwards compatibility type - maps old Api property names to RootStore
 export type Api = RootStore;
 
-const _ApiContext = createContext<never>();
 export const RootStoreContext = createContext<RootStore>();
 
-export function useApi2() {
+export function useApi() {
 	const ctx = useContext(RootStoreContext);
 	if (!ctx) {
-		throw new Error("useApi2 must be used within a RootStoreContext.Provider");
+		throw new Error("useApi must be used within a RootStoreContext.Provider");
 	}
 	return ctx;
 }
 
-// Aliases for backwards compatibility
-export const useApi = useApi2;
-
-export function useRooms2() {
-	return useApi2().rooms;
+export function useRooms() {
+	return useApi().rooms;
 }
 
-export function useChannels2() {
-	return useApi2().channels;
+export function useChannels() {
+	return useApi().channels;
 }
 
-export function useUsers2() {
-	return useApi2().users;
+export function useUsers() {
+	return useApi().users;
 }
 
-export function useRoles2() {
-	return useApi2().roles;
+export function useRoles() {
+	return useApi().roles;
 }
 
-export function useSessions2() {
-	return useApi2().sessions;
+export function useSessions() {
+	return useApi().sessions;
 }
 
-export function useMessages2() {
-	return useApi2().messages;
+export function useMessages() {
+	return useApi().messages;
 }
 
-export function useRoomMembers2() {
-	return useApi2().roomMembers;
+export function useRoomMembers() {
+	return useApi().roomMembers;
 }
 
-export function useMemberList2() {
-	return useApi2().memberLists;
+export function useMemberList() {
+	return useApi().memberLists;
 }
 
-export function useThreadMembers2() {
-	return useApi2().threadMembers;
+export function useThreadMembers() {
+	return useApi().threadMembers;
 }
 
-export function useInvites2() {
-	return useApi2().invites;
+export function useInvites() {
+	return useApi().invites;
 }
 
-export function useAuth2() {
-	return useApi2().auth;
+export function useAuth() {
+	return useApi().auth;
 }
 
-export function useDms2() {
-	return useApi2().dms;
+export function useDms() {
+	return useApi().dms;
 }
 
-export function useEmoji2() {
-	return useApi2().emoji;
+export function useEmoji() {
+	return useApi().emoji;
 }
 
-export function usePush2() {
-	return useApi2().push;
+export function usePush() {
+	return useApi().push;
 }
 
-export function useReactions2() {
-	return useApi2().reactions;
+export function useReactions() {
+	return useApi().reactions;
 }
 
-export function useRoomAnalytics2() {
-	return useApi2().roomAnalytics;
+export function useRoomAnalytics() {
+	return useApi().roomAnalytics;
 }
 
-export function useRoomBans2() {
-	return useApi2().roomBans;
+export function useRoomBans() {
+	return useApi().roomBans;
 }
 
-export function useTags2() {
-	return useApi2().tags;
+export function useTags() {
+	return useApi().tags;
 }
 
-export function useThreads2() {
-	return useApi2().threads;
+export function useThreads() {
+	return useApi().threads;
 }
 
-export function useWebhooks2() {
-	return useApi2().webhooks;
+export function useWebhooks() {
+	return useApi().webhooks;
 }
 
-export function useAuditLog2() {
-	return useApi2().auditLog;
+export function useAuditLog() {
+	return useApi().auditLog;
 }
 
-export function useInbox2() {
-	return useApi2().inbox;
+export function useInbox() {
+	return useApi().inbox;
 }
 
-export function usePreferences2() {
-	return useApi2().preferences;
+export function usePreferences() {
+	return useApi().preferences;
 }
 
 export type Listing<T> = {

@@ -23,7 +23,7 @@ import {
 	Switch,
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import { useApi2, useRoomMembers2 } from "@/api";
+import { useApi, useRoomMembers } from "@/api";
 import { AvatarWithStatus } from "./avatar/UserAvatar.tsx";
 import { useCurrentUser } from "./contexts/currentUser.tsx";
 import { useMenu } from "./contexts/mod.tsx";
@@ -44,8 +44,8 @@ const EditRoles = (props: {
 	user_id: string;
 	room_id: string;
 }) => {
-	const api2 = useApi2();
-	const roomMembers2 = useRoomMembers2();
+	const api2 = useApi();
+	const roomMembers2 = useRoomMembers();
 	const member = roomMembers2.use(() => `${props.room_id}:${props.user_id}`);
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
 	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
@@ -165,7 +165,7 @@ const EditRoles = (props: {
 };
 
 export function UserView(props: UserProps) {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const { setMenu } = useMenu();
 	const nav = useNavigate();
 

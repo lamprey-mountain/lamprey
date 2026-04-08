@@ -1,7 +1,7 @@
 import { A, useNavigate } from "@solidjs/router";
 import { type Channel, getTimestampFromUUID } from "sdk";
 import { createMemo, For, Show } from "solid-js";
-import { useChannels2 } from "@/api";
+import { useChannels } from "@/api";
 import { Time } from "./atoms/Time.tsx";
 import { MemberList } from "./components/MemberList.tsx";
 import { useCtx } from "./context.ts";
@@ -26,7 +26,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 	const [, modalCtl] = useModals();
 	const room_id = () => props.room.id;
 
-	const channels2 = useChannels2();
+	const channels2 = useChannels();
 	const threadsResource = createMemo(() =>
 		[...channels2.cache.values()].filter((c) => c.room_id === room_id()),
 	);

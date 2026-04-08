@@ -11,11 +11,11 @@ import {
 import { For, Match, Show, Switch } from "solid-js/web";
 import { uuidv7 } from "uuidv7";
 import {
-	useApi2,
-	useChannels2,
-	useMessages2,
-	useRoomMembers2,
-	useUsers2,
+	useApi,
+	useChannels,
+	useMessages,
+	useRoomMembers,
+	useUsers,
 } from "@/api";
 import icDelete from "../../../assets/delete.png";
 import icEdit from "../../../assets/edit.png";
@@ -41,11 +41,11 @@ type InputProps = {
 };
 
 export function Input(props: InputProps) {
-	const channels2 = useChannels2();
-	const messagesService = useMessages2();
-	const users2 = useUsers2();
-	const roomMembers2 = useRoomMembers2();
-	const store = useApi2();
+	const channels2 = useChannels();
+	const messagesService = useMessages();
+	const users2 = useUsers();
+	const roomMembers2 = useRoomMembers();
+	const store = useApi();
 	const [ch, chUpdate] = useChannel()!;
 	const submit = useMessageSubmit(props.channel.id);
 	const reply_id = () => ch.reply_id;
@@ -532,8 +532,8 @@ export function RenderUploadItem(props: {
 }
 
 const InputReply = (props: { thread: ThreadT; reply: MessageT }) => {
-	const users2 = useUsers2();
-	const roomMembers2 = useRoomMembers2();
+	const users2 = useUsers();
+	const roomMembers2 = useRoomMembers();
 	const tip = createTooltip({ tip: () => "remove reply" });
 	const [_ch, chUpdate] = useChannel()!;
 	const getName = (user_id: string) => {

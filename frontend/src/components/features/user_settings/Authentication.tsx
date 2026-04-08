@@ -7,7 +7,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import { useCtx } from "../../../context";
 import { useModals } from "../../../contexts/modal";
 import { Modal } from "../../../modals/mod";
@@ -66,7 +66,7 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 }
 
 function Email(_props: VoidProps<{ user: User }>) {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [, modalctl] = useModals();
 
 	// TODO: use props.user.emails when sync events are implemented
@@ -156,7 +156,7 @@ function Email(_props: VoidProps<{ user: User }>) {
 }
 
 function Oauth() {
-	const api2 = useApi2();
+	const api2 = useApi();
 
 	// TODO: dont use debug route for this
 	// add something to sync i guess

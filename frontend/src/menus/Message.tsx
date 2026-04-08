@@ -1,7 +1,7 @@
 // the context menu for messages
 
 import { Show } from "solid-js";
-import { useApi2, useChannels2, useMessages2 } from "@/api";
+import { useApi, useChannels, useMessages } from "@/api";
 import { useCtx } from "../context.ts";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { useModals } from "../contexts/modal";
@@ -19,9 +19,9 @@ type MessageMenuProps = {
 
 export function MessageMenu(props: MessageMenuProps) {
 	const ctx = useCtx();
-	const api2 = useApi2();
-	const channels2 = useChannels2();
-	const messagesService = useMessages2();
+	const api2 = useApi();
+	const channels2 = useChannels();
+	const messagesService = useMessages();
 	const { markThreadRead } = useReadTracking();
 	const message = messagesService.use(() => props.message_id);
 	const channelContext = () => ctx.channel_contexts.get(props.channel_id);

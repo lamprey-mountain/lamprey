@@ -7,7 +7,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import { Dropdown } from "../../../atoms/Dropdown.tsx";
 import { Time } from "../../../atoms/Time.tsx";
 import {
@@ -17,7 +17,7 @@ import {
 } from "../../../audit-log-util.tsx";
 
 export function AuditLog(props: VoidProps<{ room: Room }>) {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const log = api2.audit_logs.use(() => props.room.id);
 	const [members, setMembers] = createSignal<
 		Array<{ item: string; label: string }>

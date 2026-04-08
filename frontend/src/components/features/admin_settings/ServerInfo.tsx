@@ -1,8 +1,8 @@
 import { For } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 
 export function ServerInfo() {
-	const api2 = useApi2();
+	const api2 = useApi();
 
 	const purgeCache = (target: string) => {
 		api2.client.http.POST("/api/v1/admin/purge-cache", {

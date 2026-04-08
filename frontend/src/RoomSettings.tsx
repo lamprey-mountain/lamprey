@@ -2,7 +2,7 @@ import { A, useNavigate } from "@solidjs/router";
 import { SERVER_ROOM_ID } from "sdk";
 import { type Component, createMemo, For, Match, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import * as Admin from "./components/features/admin_settings/mod.tsx";
 import {
 	Metrics as Analytics,
@@ -221,7 +221,7 @@ function groupTabsByCategory(
 }
 
 export const RoomSettings = (props: { room: RoomT; page: string }) => {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [, modalCtl] = useModals();
 	const currentUser = useCurrentUser();
 	const user_id = () => currentUser()?.id;

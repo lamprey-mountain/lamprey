@@ -1,6 +1,6 @@
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { createSignal, For, Show, type VoidProps } from "solid-js";
-import { useApi2, useRoomBans2, useUsers2 } from "@/api";
+import { useApi, useRoomBans, useUsers } from "@/api";
 import { Time } from "../../../atoms/Time.tsx";
 import { createTooltip } from "../../../atoms/Tooltip.tsx";
 import { useCtx } from "../../../context.ts";
@@ -9,9 +9,9 @@ import { Avatar } from "../../../User.tsx";
 
 export function Bans(props: VoidProps<{ room: RoomT }>) {
 	const _ctx = useCtx();
-	const api2 = useApi2();
-	const roomBans2 = useRoomBans2();
-	const users2 = useUsers2();
+	const api2 = useApi();
+	const roomBans2 = useRoomBans();
+	const users2 = useUsers();
 	const bans = roomBans2.useList(() => props.room.id);
 
 	const [bottom, setBottom] = createSignal<Element | undefined>();

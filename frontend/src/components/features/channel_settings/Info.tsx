@@ -2,7 +2,7 @@ import type { EditorState } from "prosemirror-state";
 import type { Channel } from "sdk";
 import { createUpload } from "sdk";
 import { createSignal, For, onMount, Show, type VoidProps } from "solid-js";
-import { useApi2, useChannels2 } from "@/api";
+import { useApi, useChannels } from "@/api";
 import { CheckboxOption } from "../../../atoms/CheckboxOption";
 import {
 	DurationInput,
@@ -39,8 +39,8 @@ const slowmodePresets: DurationPreset[] = [
 
 export function Info(props: VoidProps<{ channel: Channel }>) {
 	const ctx = useCtx();
-	const api2 = useApi2();
-	const channels2 = useChannels2();
+	const api2 = useApi();
+	const channels2 = useChannels();
 	const [, modalctl] = useModals();
 	const [editingNsfw, setEditingNsfw] = createSignal(props.channel.nsfw);
 	const [editingName, setEditingName] = createSignal(props.channel.name);

@@ -19,7 +19,7 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
-import { useRoomMembers2, useThreadMembers2, useUsers2 } from "@/api";
+import { useRoomMembers, useThreadMembers, useUsers } from "@/api";
 import { Autocomplete } from "../atoms/Autocomplete.tsx";
 import { EmojiPicker } from "../atoms/EmojiPicker.tsx";
 import { PopupEventEditor, useCalendarPopup } from "../Calendar.tsx";
@@ -52,9 +52,9 @@ export function OverlayProvider(props: ParentProps) {
 	const { state: autocompleteState } = useAutocomplete();
 	const { userView } = useUserPopout();
 	const { toolbar, hideToolbar } = useFormattingToolbar();
-	const users2 = useUsers2();
-	const roomMembers2 = useRoomMembers2();
-	const threadMembers2 = useThreadMembers2();
+	const users2 = useUsers();
+	const roomMembers2 = useRoomMembers();
+	const threadMembers2 = useThreadMembers();
 	const [modals] = useModals();
 	const { popup: calendarPopup, closePopup: closeCalendarPopup } =
 		useCalendarPopup();

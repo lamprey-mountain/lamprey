@@ -1,13 +1,13 @@
 import { useLocation } from "@solidjs/router";
 import { createEffect, createMemo, onCleanup } from "solid-js";
-import { useApi2, useChannels2 } from "@/api";
+import { useApi, useChannels } from "@/api";
 import { useCurrentUser } from "../contexts/currentUser.tsx";
 import { generateFavicon } from "../drawing.ts";
 
 export function useFavicon() {
-	const _api2 = useApi2();
-	const channels2 = useChannels2();
-	const store = useApi2();
+	const _api2 = useApi();
+	const channels2 = useChannels();
+	const store = useApi();
 	const location = useLocation();
 
 	const totalMentions = createMemo(() => {

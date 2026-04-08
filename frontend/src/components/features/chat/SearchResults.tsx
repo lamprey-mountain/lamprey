@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import type { Channel, Message, Room } from "sdk";
 import { For, Show } from "solid-js";
-import { useChannels2 } from "@/api";
+import { useChannels } from "@/api";
 import type { ChannelSearch } from "../../../context";
 import { useOptionalChannel } from "../../../contexts/channel";
 import { useRoom } from "../../../contexts/room";
@@ -82,7 +82,7 @@ export const SearchResultItem = (props: {
 	prevMessage?: Message;
 	onResultClick: (message: Message) => void;
 }) => {
-	const channels2 = useChannels2();
+	const channels2 = useChannels();
 	const channel = channels2.use(() => props.message.channel_id);
 	const showHeader = () =>
 		!props.prevMessage ||

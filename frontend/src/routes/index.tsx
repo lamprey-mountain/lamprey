@@ -10,7 +10,7 @@ import {
 	Switch,
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import { useApi2, useChannels2, useRooms2 } from "@/api";
+import { useApi, useChannels, useRooms } from "@/api";
 import icX from "../assets/x-1.png";
 import { Resizable } from "../atoms/Resizable.tsx";
 import { Calendar } from "../Calendar.tsx";
@@ -149,7 +149,7 @@ const RoomSidebar = (props: { room: RoomT }) => {
 export const RouteRoom = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 	const { t } = useCtx();
 	const ctx = useCtx();
-	const rooms = useRooms2();
+	const rooms = useRooms();
 	const room = rooms.use(() => p.params.room_id);
 
 	const getOrCreateRoomContext = () => {
@@ -190,7 +190,7 @@ export const RouteRoomSettings = (
 	p: ParentProps<RouteSectionProps>,
 ): JSX.Element => {
 	const { t } = useCtx();
-	const rooms = useRooms2();
+	const rooms = useRooms();
 	const room = rooms.use(() => p.params.room_id);
 	const title = () => {
 		const r = room();
@@ -214,7 +214,7 @@ export const RouteChannelSettings = (
 	p: ParentProps<RouteSectionProps>,
 ): JSX.Element => {
 	const { t } = useCtx();
-	const channels2 = useChannels2();
+	const channels2 = useChannels();
 	const channel = channels2.use(() => p.params.channel_id);
 	const title = () => {
 		const c = channel();
@@ -240,7 +240,7 @@ type ChangesetSelection = {
 };
 
 const ThreadChatSidebar = (props: { thread_id: string }) => {
-	const channels2 = useChannels2();
+	const channels2 = useChannels();
 	const thread = channels2.use(() => props.thread_id);
 	const ctx = useCtx();
 	const [_ch, setChannelState] = useChannel()!;
@@ -387,8 +387,8 @@ export const RouteChannel = (
 ): JSX.Element => {
 	const { t } = useCtx();
 	const ctx = useCtx();
-	const rooms = useRooms2();
-	const channels2 = useChannels2();
+	const rooms = useRooms();
+	const channels2 = useChannels();
 	const channel = channels2.use(() => p.params.channel_id);
 	const room = rooms.use(() => channel()?.room_id!);
 
@@ -589,7 +589,7 @@ export const RouteInvite = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 };
 
 export const RouteUser = (p: ParentProps<RouteSectionProps>): JSX.Element => {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const user = () => api2.users.cache.get(p.params.user_id!);
 
 	return (

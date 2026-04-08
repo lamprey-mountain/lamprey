@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import type { InviteTarget } from "sdk";
 import { createEffect, Show } from "solid-js";
-import { useInvites2 } from "@/api";
+import { useInvites } from "@/api";
 import { useCtx } from "./context.ts";
 import { md } from "./markdown_utils.tsx";
 import { getThumbFromId } from "./media/util.tsx";
@@ -44,7 +44,7 @@ function getRoomFromTarget(target: InviteTarget | undefined) {
 }
 
 export const RouteInviteInner = (props: { code: string }) => {
-	const invites2 = useInvites2();
+	const invites2 = useInvites();
 	const ctx = useCtx();
 	const nav = useNavigate();
 	const invite = invites2.use(() => props.code);

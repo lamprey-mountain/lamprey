@@ -10,7 +10,7 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { useApi2, useChannels2, useRooms2 } from "@/api";
+import { useApi, useChannels, useRooms } from "@/api";
 import iconCamera from "../../../assets/camera.png";
 import iconExit from "../../../assets/exit.png";
 import iconHeadphones from "../../../assets/headphones.png";
@@ -33,7 +33,7 @@ import { useVoice } from "./voice-provider.tsx";
 
 export const Voice = (p: { channel: Channel }) => {
 	const _config = useConfig();
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [voice, actions] = useVoice();
 	const _ctx = useCtx();
 	const [ch, chUpdate] = useChannel()!;
@@ -251,9 +251,9 @@ export const Voice = (p: { channel: Channel }) => {
 };
 
 export const VoiceTray = () => {
-	const api2 = useApi2();
-	const channels2 = useChannels2();
-	const rooms2 = useRooms2();
+	const api2 = useApi();
+	const channels2 = useChannels();
+	const rooms2 = useRooms();
 	const currentUser = useCurrentUser();
 	const [voice, actions] = useVoice();
 	const threadData = voice.threadId

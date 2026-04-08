@@ -1,5 +1,5 @@
 import { createSignal, onMount, Show } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import { CheckboxOption } from "../atoms/CheckboxOption";
 import { useCtx } from "../context";
 import { useModals } from "../contexts/modal";
@@ -13,7 +13,7 @@ type ModalAttachmentProps = {
 };
 
 export const ModalAttachment = (props: ModalAttachmentProps) => {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [, modalCtl] = useModals();
 	const ctx = useCtx();
 	const [filename, setFilename] = createSignal("");

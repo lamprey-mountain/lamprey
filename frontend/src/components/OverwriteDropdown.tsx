@@ -11,7 +11,7 @@ import {
 	Show,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import { useRoles2, useRoomMembers2 } from "@/api";
+import { useRoles, useRoomMembers } from "@/api";
 import { createKeybinds } from "../keybinds.tsx";
 
 type OverwriteOption = {
@@ -26,8 +26,8 @@ export function OverwriteDropdown(props: {
 	onSelect: (id: string, type: "Role" | "User") => void;
 	excludeIds?: string[];
 }) {
-	const roles2 = useRoles2();
-	const roomMembers2 = useRoomMembers2();
+	const roles2 = useRoles();
+	const roomMembers2 = useRoomMembers();
 	const [shown, setShown] = createSignal(false);
 	const [query, setQuery] = createSignal("");
 	const [inputEl, setInputEl] = createSignal<HTMLInputElement>();

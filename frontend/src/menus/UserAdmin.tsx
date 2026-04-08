@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import { useModals } from "../contexts/modal";
 import { Item, Menu, Separator } from "./Parts.tsx";
 
@@ -8,7 +8,7 @@ type UserAdminMenuProps = {
 };
 
 export function UserAdminMenu(props: UserAdminMenuProps) {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const user = api2.users.use(() => props.user_id);
 	const [, modalCtl] = useModals();
 

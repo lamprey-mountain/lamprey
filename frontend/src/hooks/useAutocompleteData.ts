@@ -2,13 +2,13 @@ import { go } from "fuzzysort";
 import type { Channel, EmojiCustom, Role, User } from "sdk";
 import { createEffect, createMemo, createSignal } from "solid-js";
 import {
-	useApi2,
-	useChannels2,
-	useEmoji2,
-	useRoles2,
-	useRoomMembers2,
-	useThreadMembers2,
-	useUsers2,
+	useApi,
+	useChannels,
+	useEmoji,
+	useRoles,
+	useRoomMembers,
+	useThreadMembers,
+	useUsers,
 } from "@/api";
 import type {
 	AutocompleteItem,
@@ -21,14 +21,14 @@ import { type EmojiData, emojiResource } from "../emoji";
 import { usePermissions } from "./usePermissions";
 
 export const useAutocompleteData = () => {
-	const api2 = useApi2();
-	const channels2 = useChannels2();
-	const store = useApi2();
-	const rolesApi = useRoles2();
-	const threadMembers2 = useThreadMembers2();
-	const roomMembers2 = useRoomMembers2();
-	const users2 = useUsers2();
-	const emoji2 = useEmoji2();
+	const api2 = useApi();
+	const channels2 = useChannels();
+	const store = useApi();
+	const rolesApi = useRoles();
+	const threadMembers2 = useThreadMembers();
+	const roomMembers2 = useRoomMembers();
+	const users2 = useUsers();
+	const emoji2 = useEmoji();
 	const currentUser = useCurrentUser();
 	const { state, setResults } = useAutocomplete();
 

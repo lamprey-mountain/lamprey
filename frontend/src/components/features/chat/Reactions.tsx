@@ -1,6 +1,6 @@
 import type { Message, ReactionKey } from "sdk";
 import { createEffect, createSignal, For, on, onCleanup } from "solid-js";
-import { useReactions2 } from "@/api";
+import { useReactions } from "@/api";
 import icReactionAdd from "../../../assets/reaction-add.png";
 import { createTooltip } from "../../../atoms/Tooltip.tsx";
 import { useCtx } from "../../../context.ts";
@@ -12,7 +12,7 @@ type ReactionsProps = {
 
 export const Reactions = (props: ReactionsProps) => {
 	const ctx = useCtx();
-	const reactions2 = useReactions2();
+	const reactions2 = useReactions();
 	const [showPicker, setShowPicker] = createSignal(false);
 	let addEl: HTMLDivElement | undefined;
 

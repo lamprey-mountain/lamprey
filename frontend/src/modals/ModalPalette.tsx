@@ -1,7 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import type { Channel, Room } from "sdk";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
-import { useChannels2, useDms2, useRooms2 } from "@/api";
+import { useChannels, useDms, useRooms } from "@/api";
 import icHome from "../assets/home.png";
 import icInbox from "../assets/inbox.png";
 import icMembers from "../assets/members.png";
@@ -13,9 +13,9 @@ import { ChannelIcon } from "../User";
 import { Modal } from "./mod";
 
 export const ModalPalette = () => {
-	const channels2 = useChannels2();
-	const rooms2 = useRooms2();
-	const dms2 = useDms2();
+	const channels2 = useChannels();
+	const rooms2 = useRooms();
+	const dms2 = useDms();
 	const ctx = useCtx();
 	const navigate = useNavigate();
 	const [, modalCtl] = useModals();

@@ -1,4 +1,4 @@
-import { useRooms2 } from "@/api";
+import { useRooms } from "@/api";
 import { useCtx } from "../context.ts";
 import { useModals } from "../contexts/modal";
 import type { RoomNavItem } from "../RoomNav.tsx";
@@ -25,7 +25,7 @@ export function FolderMenu(props: FolderMenuProps) {
 	const markAsRead = () => {
 		const folder = getFolder();
 		if (folder) {
-			const api2 = useRooms2();
+			const api2 = useRooms();
 			for (const item of folder.items) {
 				if (item.type === "room") {
 					api2.markRead(item.room_id);

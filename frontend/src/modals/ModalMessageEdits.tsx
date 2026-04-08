@@ -1,7 +1,7 @@
 import { diffChars } from "diff";
 import type { Message, MessageVersion } from "sdk";
 import { createResource, For } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import { MessageView } from "../components/features/chat/Message";
 import { Modal } from "./mod";
 
@@ -10,7 +10,7 @@ export const ModalMessageEdits = (props: {
 	message_id: string;
 }) => {
 	// FIXME: pagination
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [edits] = createResource(
 		{ channel_id: props.thread_id, message_id: props.message_id },
 		async (path) => {

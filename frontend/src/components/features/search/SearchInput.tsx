@@ -9,12 +9,12 @@ import { useFloating } from "solid-floating-ui";
 import { createEffect, createMemo, createSignal, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import {
-	useChannels2,
-	useMessages2,
-	useRoles2,
-	useRoomMembers2,
-	useThreadMembers2,
-	useUsers2,
+	useChannels,
+	useMessages,
+	useRoles,
+	useRoomMembers,
+	useThreadMembers,
+	useUsers,
 } from "@/api";
 import icSearch from "../../../assets/search.png";
 import type { ChannelSearch } from "../../../context";
@@ -45,8 +45,8 @@ export const SearchInput = (props: {
 	room?: RoomT;
 	autofocus?: boolean;
 }) => {
-	const users2 = useUsers2();
-	const messagesService = useMessages2();
+	const users2 = useUsers();
+	const messagesService = useMessages();
 	const [dropdownRef, setDropdownRef] = createSignal<HTMLDivElement>();
 	const [activeFilter, setActiveFilter] = createSignal<{
 		type: string;
@@ -81,7 +81,7 @@ export const SearchInput = (props: {
 
 	const channelCtx = useOptionalChannel();
 	const roomCtx = useRoom();
-	const channels2 = useChannels2();
+	const channels2 = useChannels();
 
 	const roomThreads = () =>
 		[...channels2.cache.values()].filter(

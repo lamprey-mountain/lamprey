@@ -8,7 +8,7 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi2, useChannels2 } from "@/api";
+import { useApi, useChannels } from "@/api";
 import icDelete from "../../../assets/delete.png";
 import icEdit from "../../../assets/edit.png";
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
@@ -16,8 +16,8 @@ import { useModals } from "../../../contexts/modal";
 import { usePermissions } from "../../../hooks/usePermissions.ts";
 
 export function Tags(props: VoidProps<{ channel: Channel }>) {
-	const api2 = useApi2();
-	const channels2 = useChannels2();
+	const api2 = useApi();
+	const channels2 = useChannels();
 	const [, modalCtl] = useModals();
 	const currentUser = useCurrentUser();
 	const perms = usePermissions(

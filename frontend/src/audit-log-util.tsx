@@ -1,7 +1,7 @@
 import { diffArrays } from "diff";
 import type { AuditLogChange, AuditLogEntry } from "sdk";
 import type { JSX } from "solid-js";
-import { useApi2, useChannels2, useRoomMembers2 } from "@/api";
+import { useApi, useChannels, useRoomMembers } from "@/api";
 import { useCtx } from "./context";
 
 const MERGE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
@@ -87,8 +87,8 @@ function getTimestampFromUUID(uuid: string): Date {
 }
 
 const resolveName = (
-	api2: ReturnType<typeof useApi2>,
-	channels2: ReturnType<typeof useChannels2>,
+	api2: ReturnType<typeof useApi>,
+	channels2: ReturnType<typeof useChannels>,
 	room_id: string,
 	id: string | undefined,
 	type: "user" | "channel" | "role" | "webhook" | "room",
@@ -98,7 +98,7 @@ const resolveName = (
 
 	switch (type) {
 		case "user": {
-			const roomMembers2 = useRoomMembers2();
+			const roomMembers2 = useRoomMembers();
 			const member = roomMembers2.cache.get(`${room_id}:${id}`);
 			if (member?.override_name) return member.override_name;
 			const user = api2.users.cache.get(id);
@@ -137,8 +137,8 @@ export function formatAuditLogEntry(
 	ent: AuditLogEntry | MergedAuditLogEntry,
 ): string {
 	const { t } = useCtx();
-	const api2 = useApi2();
-	const channels2 = useChannels2();
+	const api2 = useApi();
+	const channels2 = useChannels();
 
 	const firstEntry = "entries" in ent ? ent.entries[0] : ent;
 
@@ -232,8 +232,8 @@ export function formatChanges(
 	ent: AuditLogEntry | MergedAuditLogEntry,
 ): Array<JSX.Element> {
 	const formatted: Array<JSX.Element> = [];
-	const api2 = useApi2();
-	const channels2 = useChannels2();
+	const api2 = useApi();
+	const channels2 = useChannels();
 	const { t } = useCtx();
 
 	const entWithMetadata = ent as { metadata?: Record<string, unknown> };
@@ -588,7 +588,7 @@ export function formatChanges(
 }
 
 function renderPermissionDiff(
-	_api2: ReturnType<typeof useApi2>,
+	_api2: ReturnType<typeof useApi>,
 	_room_id: string,
 	oldValues: Array<string>,
 	newValues: Array<string>,

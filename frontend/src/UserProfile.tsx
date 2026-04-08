@@ -1,10 +1,10 @@
 import type { UserWithRelationship } from "sdk";
 import { createResource, For } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import { UserView } from "./User";
 
 export function UserProfile(props: { user: UserWithRelationship }) {
-	const api2 = useApi2();
+	const api2 = useApi();
 
 	const [mutualRooms] = createResource(
 		() => props.user.id,

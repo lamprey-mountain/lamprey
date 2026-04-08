@@ -1,8 +1,8 @@
 import { createResource, createSignal } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 
 export function creaeRoomMembersSearch(room_id: () => string) {
-	const api2 = useApi2();
+	const api2 = useApi();
 
 	// TODO: debounce queries
 	// TODO: react to sync events

@@ -1,7 +1,7 @@
 import { ReactiveSet } from "@solid-primitives/set";
 import { getTimestampFromUUID, type User } from "sdk";
 import { createResource, For, Show, type VoidProps } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import { Time } from "../../../atoms/Time.tsx";
 import {
 	formatAuditLogEntry,
@@ -10,7 +10,7 @@ import {
 } from "../../../audit-log-util.tsx";
 
 export function AuditLog(props: VoidProps<{ user: User }>) {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const collapsed = new ReactiveSet();
 
 	// FIXME: return newest records first

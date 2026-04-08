@@ -13,7 +13,7 @@ import {
 	Switch,
 	useContext,
 } from "solid-js";
-import { useChannels2, useRoles2, useRoomMembers2, useUsers2 } from "@/api";
+import { useChannels, useRoles, useRoomMembers, useUsers } from "@/api";
 import { useUserPopout } from "../contexts/mod";
 import { getTwemoji } from "../emoji";
 import { flags } from "../flags";
@@ -28,8 +28,8 @@ const MarkdownContext = createContext<{ channel?: Channel }>();
 
 function UserMention(props: { id: string }) {
 	const ctx = useContext(MarkdownContext);
-	const users2 = useUsers2();
-	const roomMembers2 = useRoomMembers2();
+	const users2 = useUsers();
+	const roomMembers2 = useRoomMembers();
 	const { userView, setUserView } = useUserPopout();
 	const user = users2.use(() => props.id);
 	const room_member = createMemo(() => {
@@ -63,7 +63,7 @@ function UserMention(props: { id: string }) {
 
 function RoleMention(props: { id: string }) {
 	const ctx = useContext(MarkdownContext);
-	const roles2 = useRoles2();
+	const roles2 = useRoles();
 	const role = createMemo(() => {
 		if (!ctx?.channel?.room_id) return null;
 		return roles2.cache.get(props.id);
@@ -73,7 +73,7 @@ function RoleMention(props: { id: string }) {
 }
 
 function ChannelMention(props: { id: string }) {
-	const channels2 = useChannels2();
+	const channels2 = useChannels();
 	const navigate = useNavigate();
 	const channel = channels2.use(() => props.id);
 
@@ -483,7 +483,7 @@ export const Markdown = (
 		ref?: HTMLElement | ((el: HTMLElement) => void);
 	}>,
 ) => {
-	const channels2 = useChannels2();
+	const channels2 = useChannels();
 	const channel = channels2.use(() => props.channel_id);
 
 	const tokens = createMemo(() => {

@@ -1,14 +1,14 @@
 import { For, Show, type VoidProps } from "solid-js";
-import { useApi2, useInvites2, useUsers2 } from "@/api";
+import { useApi, useInvites, useUsers } from "@/api";
 import { Time } from "../../../atoms/Time.tsx";
 import type { RoomT } from "../../../types.ts";
 import { Avatar } from "../../../User.tsx";
 import { Copyable } from "../../../utils/general";
 
 export function Invites(_props: VoidProps<{ room: RoomT }>) {
-	const api2 = useApi2();
-	const invites2 = useInvites2();
-	const users2 = useUsers2();
+	const api2 = useApi();
+	const invites2 = useInvites();
+	const users2 = useUsers();
 
 	const invites = invites2.useServerList();
 

@@ -2,7 +2,7 @@ import { A } from "@solidjs/router";
 import type { Channel } from "sdk";
 import { type Component, For, Match, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import {
 	Info,
 	Invites,
@@ -66,7 +66,7 @@ const tabs: Array<{
 ];
 
 export const ChannelSettings = (props: { channel: Channel; page: string }) => {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [, modalCtl] = useModals();
 	const currentUser = useCurrentUser();
 	const user_id = () => currentUser()?.id;

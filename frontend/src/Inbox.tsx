@@ -1,13 +1,13 @@
 import { A } from "@solidjs/router";
 import type { Message, Notification, Room } from "sdk";
 import { createSignal, For, Show } from "solid-js";
-import { useInbox2 } from "@/api";
+import { useInbox } from "@/api";
 import type { NotificationPagination } from "@/api/services/InboxService.ts";
 import { Time } from "./atoms/Time.tsx";
 import { MessageView } from "./components/features/chat/Message.tsx";
 
 export const Inbox = () => {
-	const inbox2 = useInbox2();
+	const inbox2 = useInbox();
 	const [params, setParams] = createSignal({
 		include_read: false,
 		room_id: [],
@@ -134,7 +134,7 @@ const NotificationItem = (props: {
 	refetch: () => void;
 	include_read: boolean;
 }) => {
-	const inbox2 = useInbox2();
+	const inbox2 = useInbox();
 	const thread = () => {
 		const threadId = (
 			props.notification as Notification & { thread_id?: string }

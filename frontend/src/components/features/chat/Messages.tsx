@@ -1,7 +1,7 @@
 import type { Message, UserWithRelationship } from "sdk";
 import { createMemo, Show } from "solid-js";
 import { createMutable } from "solid-js/store";
-import { useRoomMembers2 } from "@/api";
+import { useRoomMembers } from "@/api";
 import { useChannel } from "../../../channelctx.tsx";
 import { useCtx } from "../../../context.ts";
 import { md } from "../../../markdown_utils.tsx";
@@ -36,7 +36,7 @@ export const TimelineItem = (props: {
 	switch (props.item.type) {
 		case "message": {
 			const _ctx = useCtx();
-			const roomMembersService = useRoomMembers2();
+			const roomMembersService = useRoomMembers();
 			const [ch] = useChannel()!;
 			const room_member = roomMembersService.useMember(
 				() => props.thread.room_id ?? "",

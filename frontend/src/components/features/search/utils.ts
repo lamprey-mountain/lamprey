@@ -2,7 +2,7 @@ import type { Node } from "prosemirror-model";
 import type { EditorState } from "prosemirror-state";
 import type { User } from "sdk";
 import { UUID } from "uuidv7";
-import type { useUsers2 } from "@/api";
+import type { useUsers } from "@/api";
 import type { ThreadT } from "../../../types";
 import { schema } from "./schema";
 
@@ -82,7 +82,7 @@ export function parseSearchQuery(query: string) {
 
 export function parseQueryToNodes(
 	query: string,
-	users2: ReturnType<typeof useUsers2>,
+	users2: ReturnType<typeof useUsers>,
 	roomThreads: () => ThreadT[],
 ): Node[] {
 	const nodes: Node[] = [];

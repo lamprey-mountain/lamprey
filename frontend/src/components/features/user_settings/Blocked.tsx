@@ -1,6 +1,6 @@
 import type { Pagination, RelationshipWithUserId, User } from "sdk";
 import { createResource, For, Show, type VoidProps } from "solid-js";
-import { useApi2 } from "@/api";
+import { useApi } from "@/api";
 import { useModals } from "../../../contexts/modal";
 import { Avatar } from "../../../User.tsx";
 
@@ -8,7 +8,7 @@ function BlockedUserEntry(props: {
 	relationship: RelationshipWithUserId;
 	onUnblock: (userId: string) => void;
 }) {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const user = () => api2.users.cache.get(props.relationship.user_id);
 
 	return (
@@ -31,7 +31,7 @@ function BlockedUserEntry(props: {
 }
 
 export function Blocked(_props: VoidProps<{ user: User }>) {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const [, modalCtl] = useModals();
 
 	const [blockedUsers, { refetch }] = createResource(async () => {

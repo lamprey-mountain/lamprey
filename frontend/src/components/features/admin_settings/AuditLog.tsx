@@ -6,7 +6,7 @@ import {
 	SERVER_ROOM_ID,
 } from "sdk";
 import { For, Show, type VoidProps } from "solid-js";
-import { useApi2, useAuditLog2 } from "@/api";
+import { useApi, useAuditLog } from "@/api";
 import { Dropdown } from "../../../atoms/Dropdown.tsx";
 import { Time } from "../../../atoms/Time.tsx";
 import {
@@ -16,8 +16,8 @@ import {
 } from "../../../audit-log-util.tsx";
 
 export function AuditLog(_props: VoidProps<{ room: Room }>) {
-	const _api2 = useApi2();
-	const auditLog2 = useAuditLog2();
+	const _api2 = useApi();
+	const auditLog2 = useAuditLog();
 	const log = auditLog2.useList(() => SERVER_ROOM_ID);
 	const collapsed = new ReactiveSet();
 

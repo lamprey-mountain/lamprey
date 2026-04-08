@@ -22,11 +22,11 @@ import {
 	Switch,
 } from "solid-js";
 import {
-	useApi2,
-	useChannels2,
-	useMessages2,
-	useRoomMembers2,
-	useUsers2,
+	useApi,
+	useChannels,
+	useMessages,
+	useRoomMembers,
+	useUsers,
 } from "@/api";
 import icEdit from "../../../assets/edit.png";
 import icMemberAdd from "../../../assets/member-add.png";
@@ -73,8 +73,8 @@ export function UserDisplayName(props: {
 	thread_id?: string;
 	onClick?: boolean;
 }) {
-	const roomMembers2 = useRoomMembers2();
-	const users2 = useUsers2();
+	const roomMembers2 = useRoomMembers();
+	const users2 = useUsers();
 	const { userView, setUserView } = useUserPopout();
 
 	const room_member = () =>
@@ -149,7 +149,7 @@ function MessageTextMarkdown(props: { message: MessageT }) {
 }
 
 function MessageEditor(props: { message: MessageT }) {
-	const messagesService = useMessages2();
+	const messagesService = useMessages();
 	const [ch, chUpdate] = useOptionalChannel();
 
 	const [draft, setDraft] = createSignal(
@@ -307,7 +307,7 @@ export function MessageThread(props: {
 }) {
 	const nav = useNavigate();
 	const [chan, setChan] = useChannel();
-	const channels = useChannels2();
+	const channels = useChannels();
 	const ctx = useCtx();
 
 	const openThreadClick = () => {
@@ -387,8 +387,8 @@ export function ReplyView(props: {
 	source_id: string;
 	room_id?: string;
 }) {
-	const channels2 = useChannels2();
-	const messagesService = useMessages2();
+	const channels2 = useChannels();
+	const messagesService = useMessages();
 	const reply = messagesService.use(() => props.reply_id);
 	const [_ch, chUpdate] = useOptionalChannel();
 
@@ -516,7 +516,7 @@ export function AttachmentView(props: { att: Attachment }) {
 }
 
 export const MessageToolbar = (props: { message: Message }) => {
-	const api2 = useApi2();
+	const api2 = useApi();
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
 	const [ch, chUpdate] = useOptionalChannel();
@@ -684,8 +684,8 @@ export const MessageToolbar = (props: { message: Message }) => {
 };
 
 export function MessageView(props: MessageProps) {
-	const channels2 = useChannels2();
-	const messagesService = useMessages2();
+	const channels2 = useChannels();
+	const messagesService = useMessages();
 	const ctx = useCtx();
 	const { menu } = useMenu();
 	const thread = channels2.use(() => props.message.channel_id);
@@ -693,7 +693,7 @@ export function MessageView(props: MessageProps) {
 	let messageArticleRef: HTMLElement | undefined;
 	const [hovered, setHovered] = createSignal(false);
 
-	const users2 = useUsers2();
+	const users2 = useUsers();
 	const user = users2.use(() => props.message.author_id);
 
 	const isMenuOpen = () => {
@@ -887,7 +887,7 @@ function DefaultMessage(
 		user: UserWithRelationship | undefined;
 		hovered: boolean;
 		isEditing: boolean;
-		channels2: ReturnType<typeof useChannels2>;
+		channels2: ReturnType<typeof useChannels>;
 		ctx: ReturnType<typeof useCtx>;
 	},
 ) {

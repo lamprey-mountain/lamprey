@@ -11,7 +11,7 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { uuidv7 } from "uuidv7";
-import { useApi2, useChannels2 } from "@/api";
+import { useApi, useChannels } from "@/api";
 import { Savebar } from "@/atoms/Savebar.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
@@ -26,8 +26,8 @@ export type RuleState = "clean" | "draft" | "edited";
 export type UiAutomodRule = SdkAutomodRule & { state: RuleState };
 
 export function Automod(props: VoidProps<{ room: Room }>) {
-	const api2 = useApi2();
-	const channels2 = useChannels2();
+	const api2 = useApi();
+	const channels2 = useChannels();
 	const [, modalCtl] = useModals();
 	const currentUser = useCurrentUser();
 
