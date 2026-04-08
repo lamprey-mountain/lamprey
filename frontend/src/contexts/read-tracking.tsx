@@ -3,8 +3,8 @@ import { createContext, useContext } from "solid-js";
 import type { SetStoreFunction } from "solid-js/store";
 import type { Api } from "@/api";
 import type { ChannelsService } from "@/api/services/ChannelsService.ts";
-import type { Data } from "@/app/context";
 import type { ChannelContextT } from "@/contexts/channel";
+import type { Data } from "@/types/chat";
 
 export type ReadTrackingContextT = {
 	markThreadRead: (

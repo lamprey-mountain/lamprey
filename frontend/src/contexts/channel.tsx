@@ -3,7 +3,7 @@ import type { Message, Pagination } from "sdk";
 import { createContext, useContext } from "solid-js";
 import type { SetStoreFunction, Store } from "solid-js/store";
 import type { MessageListAnchor } from "@/api/services/MessagesService.ts";
-import type { Attachment } from "@/app/context";
+import type { Attachment } from "@/types/chat";
 
 export type ChannelSearch = {
 	query: string;

@@ -1,15 +1,15 @@
 import type { Node, Schema } from "prosemirror-model";
 import { Plugin, PluginKey } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
+import { EMOJI_TEST } from "@/lib/markdown/emoji-constants";
 
+export { EMOJI_TEST };
 export const emojiPluginKey = new PluginKey("emoji");
 
 const segmenter =
 	typeof (Intl as any).Segmenter !== "undefined"
 		? new (Intl as any).Segmenter("en", { granularity: "grapheme" })
 		: null;
-
-export const EMOJI_TEST = /\p{Emoji_Presentation}|\p{Extended_Pictographic}/u;
 
 export function convertEmojiInText(schema: Schema, text: string) {
 	const content: Node[] = [];

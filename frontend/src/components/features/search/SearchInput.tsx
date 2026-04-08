@@ -16,7 +16,6 @@ import {
 	useThreadMembers,
 	useUsers,
 } from "@/api";
-import type { ChannelSearch } from "@/app/context";
 import icSearch from "@/assets/search.png";
 import {
 	createEditor as createBaseEditor,
@@ -25,6 +24,7 @@ import {
 import { useOptionalChannel } from "@/contexts/channel";
 import { type RoomSearch, useRoom } from "@/contexts/room";
 import type { RoomT, ThreadT } from "@/types";
+import type { ChannelSearch } from "@/types/chat";
 import {
 	autocompletePlugin,
 	getFilterFromSelection,

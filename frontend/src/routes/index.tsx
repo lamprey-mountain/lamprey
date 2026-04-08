@@ -11,7 +11,6 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { useApi, useChannels, useRooms } from "@/api";
-import type { ChannelSearch } from "@/app/context";
 import { useCtx } from "@/app/context";
 import icX from "@/assets/x-1.png";
 import { Resizable } from "@/atoms/Resizable.tsx";
@@ -58,6 +57,7 @@ import {
 } from "@/contexts/room.tsx";
 import { flags } from "@/lib/flags";
 import type { RoomT } from "@/types";
+import type { ChannelSearch } from "@/types/chat";
 
 export { RouteAuthorize } from "@/components/shared/Oauth";
 

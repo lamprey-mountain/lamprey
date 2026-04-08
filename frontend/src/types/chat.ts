@@ -1,0 +1,122 @@
+import type { Placement } from "@floating-ui/dom";
+import type { Emitter } from "@solid-primitives/event-bus";
+import type * as i18n from "@solid-primitives/i18n";
+import type { ReactiveMap } from "@solid-primitives/map";
+import type {
+	Client,
+	Media,
+	MessageReady,
+	MessageSearch,
+	MessageSync,
+	Preferences,
+	Upload,
+} from "sdk";
+import type { Accessor, Setter } from "solid-js";
+import type { SetStoreFunction } from "solid-js/store";
+import type { ChannelContextT } from "@/contexts/channel";
+import type { DocumentContextT } from "@/contexts/document.tsx";
+import type { RoomContextT } from "@/contexts/room.tsx";
+import type { SlashCommands } from "@/contexts/slash-commands";
+import type en from "@/i18n/en.tsx";
+
+export type Slice = {
+	start: number;
+	end: number;
+};
+
+export type Attachment = { local_id: string } & (
+	| {
+			status: "uploading";
+			file: File;
+			progress: number;
+			paused: boolean;
+			filename?: string;
+			alt?: string;
+			spoiler?: boolean;
+	  }
+	| {
+			status: "uploaded";
+			media: Media;
+			spoiler?: boolean;
+	  }
+);
+
+export type Data = {
+	cursor: Cursor;
+	channels: { [channel_id: string]: { read_marker_id?: string } };
+};
+
+export type Cursor = {
+	vel: number;
+	pos: Array<[number, number]>;
+};
+
+export type AttachmentCreateT = {
+	id: string;
+};
+
+export type ChannelSearch = {
+	query: string;
+	results: MessageSearch | null;
+	loading: boolean;
+	author?: string[];
+	before?: string;
+	after?: string;
+	channel?: string[];
+};
+
+export type ThreadsViewData = {
+	channel_id: string;
+	ref: HTMLElement;
+};
+
+export type Popout = {
+	id?: string;
+	ref?: HTMLElement;
+	props?: Record<string, unknown>;
+	placement?: Placement;
+};
+
+export type ChatCtx = {
+	client: Client;
+	data: Data;
+	dataUpdate: SetStoreFunction<Data>;
+
+	t: i18n.Translator<i18n.Flatten<typeof en>>;
+	events: Emitter<Events>;
+	popout: Accessor<Popout | null>;
+	setPopout: Setter<Popout | null>;
+
+	threadsView: Accessor<ThreadsViewData | null>;
+	setThreadsView: Setter<ThreadsViewData | null>;
+	uploads: ReactiveMap<string, Upload>;
+	recentChannels: Accessor<Array<string>>;
+	setRecentChannels: Setter<Array<string>>;
+	currentMedia: Accessor<MediaCtx | null>;
+	setCurrentMedia: Setter<MediaCtx | null>;
+	preferences: Accessor<Preferences>;
+	setPreferences: Setter<Preferences>;
+	scrollToChatList: (pos: number) => void;
+	cursorStats: Accessor<CursorStats | null>;
+	setCursorStats: Setter<CursorStats | null>;
+	slashCommands: SlashCommands;
+	channel_contexts: ReactiveMap<string, ChannelContextT>;
+	room_contexts: ReactiveMap<string, RoomContextT>;
+	document_contexts: ReactiveMap<string, DocumentContextT>;
+};
+
+export type CursorStats = {
+	x: number;
+	y: number;
+	label: string | null;
+};
+
+export type MediaCtx = {
+	media: Media;
+	element: HTMLMediaElement;
+};
+
+export type Events = {
+	sync: MessageSync;
+	ready: MessageReady;
+};

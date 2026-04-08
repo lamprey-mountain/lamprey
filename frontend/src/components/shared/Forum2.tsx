@@ -39,7 +39,6 @@ import {
 	useThreads,
 	useUsers,
 } from "@/api";
-import type { Attachment as LocalAttachment } from "@/app/context";
 import { useCtx } from "@/app/context";
 import icDelete from "@/assets/delete.png";
 import cancelIc from "@/assets/x.png";
@@ -77,6 +76,7 @@ import {
 	VideoView,
 } from "@/media/mod";
 import type { MediaProps } from "@/media/util";
+import type { Attachment } from "@/types/chat";
 import { getMessageOverrideName } from "@/utils/general";
 import { ChannelIcon } from "./User";
 
@@ -105,7 +105,7 @@ function _isDefaultMarkdown(msg: Message): msg is Message & {
 }
 
 // Type guard for uploading attachment
-function isUploadingAttachment(att: LocalAttachment): att is LocalAttachment & {
+function isUploadingAttachment(att: Attachment): att is Attachment & {
 	status: "uploading";
 	file: File;
 	progress: number;
@@ -1421,7 +1421,7 @@ const Comment = (props: {
 
 export function RenderUploadItem(props: {
 	thread_id: string;
-	att: LocalAttachment;
+	att: Attachment;
 }) {
 	const uploads = useUploads();
 	const thumbUrl = isUploadingAttachment(props.att)
@@ -1433,7 +1433,7 @@ export function RenderUploadItem(props: {
 		});
 	}
 
-	function renderInfo(att: LocalAttachment) {
+	function renderInfo(att: Attachment) {
 		if (isUploadingAttachment(att)) {
 			if (att.progress === 1) {
 				return `processing`;
@@ -1446,7 +1446,7 @@ export function RenderUploadItem(props: {
 		}
 	}
 
-	function getProgress(att: LocalAttachment) {
+	function getProgress(att: Attachment) {
 		if (isUploadingAttachment(att)) {
 			return att.progress;
 		} else {

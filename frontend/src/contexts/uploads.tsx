@@ -1,6 +1,6 @@
 import { createUpload, type Media, type MessageSync } from "sdk";
 import { createContext, onMount, type ParentProps, useContext } from "solid-js";
-import type { Attachment, ChatCtx } from "@/app/context";
+import type { Attachment, ChatCtx } from "@/types/chat";
 import { useModals } from "./modal";
 
 export type UploadController = {
