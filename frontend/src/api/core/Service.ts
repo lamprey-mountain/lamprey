@@ -48,6 +48,7 @@ export abstract class BaseService<T> {
 	/**
 	 * Retry a failed HTTP request with exponential backoff and jitter.
 	 * Automatically extracts data from the response and throws on error.
+	 * Respects the Retry-After header for 429 responses.
 	 */
 	protected async retryWithBackoff<T>(
 		fn: () => Promise<{ data?: T; error?: unknown; response: Response }>,
@@ -60,7 +61,9 @@ export abstract class BaseService<T> {
 				res = await fn();
 			} catch (e: unknown) {
 				// Don't retry on client errors (4xx except 429)
-				const error = e as { response?: { status?: number } };
+				const error = e as {
+					response?: { status?: number; headers?: Headers };
+				};
 				if (
 					error?.response?.status &&
 					error.response.status < 500 &&
@@ -69,8 +72,8 @@ export abstract class BaseService<T> {
 					throw e;
 				}
 				if (i === retries - 1) throw e;
-				// Exponential backoff with jitter
-				const delay = baseDelay * 2 ** i + Math.random() * 100;
+				// Use Retry-After header if available, otherwise exponential backoff with jitter
+				const delay = this.getRetryDelay(error.response, i, baseDelay);
 				await new Promise((r) => setTimeout(r, delay));
 				continue;
 			}
@@ -83,11 +86,41 @@ export abstract class BaseService<T> {
 			}
 
 			if (i === retries - 1) throw error;
-			// Exponential backoff with jitter
-			const delay = baseDelay * 2 ** i + Math.random() * 100;
+			// Use Retry-After header if available, otherwise exponential backoff with jitter
+			const delay = this.getRetryDelay(res.response, i, baseDelay);
 			await new Promise((r) => setTimeout(r, delay));
 		}
 		throw new Error("too many errors");
+	}
+
+	/**
+	 * Calculate retry delay based on Retry-After header or exponential backoff with jitter.
+	 */
+	private getRetryDelay(
+		response: { headers?: Headers } | undefined,
+		retryAttempt: number,
+		baseDelay: number,
+	): number {
+		const retryAfter = response?.headers?.get("Retry-After");
+		if (retryAfter) {
+			// Retry-After can be either:
+			// 1. A delay in seconds (e.g., "5")
+			// 2. An HTTP date timestamp (e.g., "Wed, 21 Oct 2015 07:28:00 GMT")
+			const delayInSeconds = Number.parseInt(retryAfter, 10);
+			if (!Number.isNaN(delayInSeconds)) {
+				return delayInSeconds * 1000;
+			}
+
+			// Try parsing as a date
+			const retryDate = new Date(retryAfter);
+			if (!Number.isNaN(retryDate.getTime())) {
+				const delay = retryDate.getTime() - Date.now();
+				return Math.max(0, delay);
+			}
+		}
+
+		// Fallback to exponential backoff with jitter
+		return baseDelay * 2 ** retryAttempt + Math.random() * 100;
 	}
 
 	/**
