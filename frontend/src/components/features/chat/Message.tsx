@@ -39,9 +39,9 @@ import icReply from "../../../assets/reply.png";
 import icThread from "../../../assets/threads.png";
 import { Markdown } from "../../../atoms/Markdown.tsx";
 import { Time } from "../../../atoms/Time";
-import { useChannel } from "../../../channelctx.tsx";
 import { useCtx } from "../../../context.ts";
 import { useAutocomplete } from "../../../contexts/autocomplete";
+import { useOptionalChannel } from "../../../contexts/channel";
 import { useCurrentUser } from "../../../contexts/currentUser.tsx";
 import { useFormattingToolbar } from "../../../contexts/formatting-toolbar";
 import { useMenu, useUserPopout } from "../../../contexts/mod.tsx";
@@ -150,7 +150,7 @@ function MessageTextMarkdown(props: { message: MessageT }) {
 
 function MessageEditor(props: { message: MessageT }) {
 	const messagesService = useMessages2();
-	const [ch, chUpdate] = useChannel() ?? [null, null];
+	const [ch, chUpdate] = useOptionalChannel();
 
 	const [draft, setDraft] = createSignal(
 		props.message.latest_version.type === "DefaultMarkdown"
@@ -306,7 +306,7 @@ export function MessageThread(props: {
 	preferences: Preferences;
 }) {
 	const nav = useNavigate();
-	const [chan, setChan] = useChannel()!;
+	const [chan, setChan] = useChannel();
 	const channels = useChannels2();
 	const ctx = useCtx();
 
@@ -390,7 +390,7 @@ export function ReplyView(props: {
 	const channels2 = useChannels2();
 	const messagesService = useMessages2();
 	const reply = messagesService.use(() => props.reply_id);
-	const [_ch, chUpdate] = useChannel() ?? [null, null];
+	const [_ch, chUpdate] = useOptionalChannel();
 
 	const content = () => {
 		const r = reply();
@@ -519,6 +519,7 @@ export const MessageToolbar = (props: { message: Message }) => {
 	const api2 = useApi2();
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
+	const [ch, chUpdate] = useOptionalChannel();
 	const [showReactionPicker, setShowReactionPicker] = createSignal(false);
 	let reactionButtonRef: HTMLButtonElement | undefined;
 
@@ -606,8 +607,6 @@ export const MessageToolbar = (props: { message: Message }) => {
 		setShowReactionPicker(!showReactionPicker());
 	};
 
-	const [ch, chUpdate] = useChannel() ?? [null, null];
-
 	const handleReply = () => {
 		if (!ch || !chUpdate) return;
 		chUpdate("reply_id", props.message.id);
@@ -689,9 +688,8 @@ export function MessageView(props: MessageProps) {
 	const messagesService = useMessages2();
 	const ctx = useCtx();
 	const { menu } = useMenu();
-	const { userView, setUserView } = useUserPopout();
 	const thread = channels2.use(() => props.message.channel_id);
-	const [ch, chUpdate] = useChannel() ?? [null, null];
+	const [ch, chUpdate] = useOptionalChannel();
 	let messageArticleRef: HTMLElement | undefined;
 	const [hovered, setHovered] = createSignal(false);
 

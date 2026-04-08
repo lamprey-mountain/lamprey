@@ -12,7 +12,7 @@ import { useModals } from "../../../contexts/modal.tsx";
 import { usePermissions } from "../../../hooks/usePermissions.ts";
 import { md } from "../../../markdown_utils.tsx";
 import { ChannelIcon } from "../../../User.tsx";
-import { SearchInput } from "./SearchInput.tsx";
+import { SearchInput } from "../search/SearchInput";
 
 type ChatHeaderProps = {
 	channel: Channel;

@@ -1,6 +1,6 @@
 import type { Room } from "sdk";
 import icMembers from "./assets/members.png";
-import { SearchInput } from "./components/features/chat/SearchInput.tsx";
+import { SearchInput } from "./components/features/search/SearchInput";
 import { useCtx } from "./context.ts";
 
 type RoomHeaderProps = {

@@ -2,8 +2,8 @@ import { useNavigate } from "@solidjs/router";
 import type { Channel, Message, Room } from "sdk";
 import { For, Show } from "solid-js";
 import { useChannels2 } from "@/api";
-import { useChannel } from "../../../channelctx";
 import type { ChannelSearch } from "../../../context";
+import { useOptionalChannel } from "../../../contexts/channel";
 import { useRoom } from "../../../contexts/room";
 import { MessageView } from "./Message";
 
@@ -12,14 +12,14 @@ export const SearchResults = (props: {
 	room?: Room;
 	search: ChannelSearch;
 }) => {
-	const channelCtx = useChannel();
+	const channelCtx = useOptionalChannel();
 	const roomCtx = useRoom();
 	const navigate = useNavigate();
 
 	const searchId = () => props.channel?.id ?? props.room?.id;
 
 	const clearSearch = () => {
-		if (props.channel && channelCtx) {
+		if (props.channel && channelCtx[1]) {
 			channelCtx[1]("search", undefined);
 		} else if (props.room && roomCtx) {
 			roomCtx[1]("search", undefined);

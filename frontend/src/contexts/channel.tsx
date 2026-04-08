@@ -67,3 +67,7 @@ export const useChannel = (): ChannelContextT => {
 	}
 	return ctx;
 };
+
+export const useOptionalChannel = (): ChannelContextT | [null, null] => {
+	return useContext(ChannelContext) ?? [null, null];
+};
