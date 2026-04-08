@@ -40,7 +40,10 @@
 #root {
 	display: grid;
 	grid-template-areas:
-		"room-nav channel-nav header header" "room-nav channel-nav main sidebar" "tray tray main sidebar" "footer footer footer footer";
+		"room-nav channel-nav header header"
+		"room-nav channel-nav main   sidebar"
+		"tray     tray        main   sidebar"
+		"footer   footer      footer footer";
 	grid-template-rows: auto 1fr auto auto;
 	grid-template-columns: auto auto 1fr auto;
 	height: 100vh;
@@ -3326,23 +3329,36 @@ button.link {
 
 .chat-header {
 	display: flex;
-	align-items: center;
+	justify-content: space-between;
 
-	& > .icon,
-	& > .avatar {
-		margin-right: 4px;
+	& > .left,
+	& > .right {
+		display: flex;
+		align-items: center;
 	}
 
-	& > .icon {
-		filter: invert(0.7);
+	& > .right {
+		justify-content: end;
 	}
 
-	& > .avatar {
-		height: 32px;
-		width: 32px;
+	& > .left,
+	& > .right {
+		& > .icon,
+		& > .avatar {
+			margin-right: 4px;
+		}
+
+		& > .icon {
+			filter: invert(0.7);
+		}
+
+		& > .avatar {
+			height: 32px;
+			width: 32px;
+		}
 	}
 
-	& > button {
+	& > .right > button {
 		border: none;
 		background: none;
 		width: 32px;
@@ -3388,6 +3404,21 @@ button.link {
 		&:focus {
 			border: solid 1px $link-500;
 			outline: none;
+		}
+	}
+
+	& .channel-topic-clickable {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		flex: 1;
+		margin-right: 24px;
+		max-height: 1.5em;
+		line-height: 1;
+
+		& > * {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
 		}
 	}
 }
