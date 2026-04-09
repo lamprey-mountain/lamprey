@@ -27,7 +27,7 @@
 
 use crate::ast::{
     AngleBracketLink, Ast, AstNode, Autolink, BlockQuote, CodeBlock, Emoji, Emphasis, Header,
-    InlineCode, Link, List, ListItem, Mention, Paragraph, Strikethrough, Strong,
+    InlineCode, Link, List, ListItem, Mention, Paragraph, Spoiler, Strikethrough, Strong,
 };
 use crate::parser::{SyntaxKind, SyntaxNode};
 use rowan::{NodeOrToken, TextRange};
@@ -48,6 +48,7 @@ pub enum Tag<'a> {
     Strong,
     Emphasis,
     Strikethrough,
+    Spoiler,
     InlineCode,
     Link {
         dest: Cow<'a, str>,
@@ -166,6 +167,10 @@ enum IterState<'a> {
     },
     Strikethrough {
         node: Strikethrough,
+        child_idx: usize,
+    },
+    Spoiler {
+        node: Spoiler,
         child_idx: usize,
     },
     InlineCode {
@@ -483,6 +488,28 @@ impl<'a> EventIterator<'a> {
                     }
                 }
 
+                Some(IterState::Spoiler {
+                    node,
+                    mut child_idx,
+                }) => {
+                    self.stack.pop();
+                    if child_idx == 0 {
+                        self.stack.push(IterState::Spoiler { node, child_idx: 1 });
+                        return Some(Event::Start(Tag::Spoiler));
+                    }
+
+                    let children: Vec<_> = node.syntax_node().children_with_tokens().collect();
+
+                    if child_idx < children.len() {
+                        let child = children[child_idx].clone();
+                        child_idx += 1;
+                        self.stack.push(IterState::Spoiler { node, child_idx });
+                        self.push_state_for_node_or_text(child);
+                    } else {
+                        return Some(Event::End(Tag::Spoiler));
+                    }
+                }
+
                 Some(IterState::InlineCode { node, emitted }) => {
                     self.stack.pop();
                     if !emitted {
@@ -728,6 +755,14 @@ impl<'a> EventIterator<'a> {
                 if let Some(strike) = Strikethrough::cast(node) {
                     self.stack.push(IterState::Strikethrough {
                         node: strike,
+                        child_idx: 0,
+                    });
+                }
+            }
+            SyntaxKind::Spoiler => {
+                if let Some(spoiler) = Spoiler::cast(node) {
+                    self.stack.push(IterState::Spoiler {
+                        node: spoiler,
                         child_idx: 0,
                     });
                 }

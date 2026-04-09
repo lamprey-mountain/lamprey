@@ -449,3 +449,46 @@ fn test_channel_mention_inside_italic() {
     assert!(has_channel, "Should have channel mention inside italic");
     assert!(has_emphasis, "Should have emphasis/italic");
 }
+
+// ============ Spoiler Tests ============
+
+#[test]
+fn test_spoiler_basic() {
+    let root = parse("||spoiler text||");
+    let has_spoiler = root.descendants().any(|n| n.kind() == SyntaxKind::Spoiler);
+
+    assert!(has_spoiler, "Should have spoiler node");
+}
+
+#[test]
+fn test_spoiler_with_formatting() {
+    let root = parse("||**bold** inside||");
+    let has_spoiler = root.descendants().any(|n| n.kind() == SyntaxKind::Spoiler);
+    let has_strong = root.descendants().any(|n| n.kind() == SyntaxKind::Strong);
+
+    assert!(has_spoiler, "Should have spoiler node");
+    assert!(has_strong, "Should have strong inside spoiler");
+}
+
+#[test]
+fn test_spoiler_unmatched_becomes_text() {
+    let root = parse("||only open");
+    let has_spoiler = root.descendants().any(|n| n.kind() == SyntaxKind::Spoiler);
+
+    assert!(
+        !has_spoiler,
+        "Unmatched spoiler should not create spoiler node"
+    );
+}
+
+#[test]
+fn test_spoiler_next_to_strikethrough() {
+    let root = parse("~~strike~~ ||spoiler||");
+    let has_spoiler = root.descendants().any(|n| n.kind() == SyntaxKind::Spoiler);
+    let has_strikethrough = root
+        .descendants()
+        .any(|n| n.kind() == SyntaxKind::Strikethrough);
+
+    assert!(has_spoiler, "Should have spoiler");
+    assert!(has_strikethrough, "Should have strikethrough");
+}

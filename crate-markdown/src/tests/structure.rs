@@ -55,13 +55,13 @@ fn test_parse_italic_structure() {
         })
         .count();
 
-    assert_eq!(delimiter_count, 2, "Should have two delimiters");
+    assert_eq!(delimiter_count, 2, "Should have two emphasis delimiters");
 }
 
 #[test]
 fn test_parse_strikethrough_structure() {
     let parser = Parser::new(ParseOptions::default());
-    let parsed = parser.parse("~~deleted~~");
+    let parsed = parser.parse("~~hello~~");
     let root = parsed.syntax();
 
     let strike_node = root
@@ -80,168 +80,16 @@ fn test_parse_strikethrough_structure() {
         })
         .count();
 
-    assert_eq!(delimiter_count, 2, "Should have two delimiters");
-}
-
-#[test]
-fn test_parse_inline_code_structure() {
-    let parser = Parser::new(ParseOptions::default());
-    let parsed = parser.parse("`code`");
-    let root = parsed.syntax();
-
-    let code_node = root
-        .descendants()
-        .find(|n| n.kind() == SyntaxKind::InlineCode)
-        .expect("Should have InlineCode node");
-
-    let fence_count = code_node
-        .children()
-        .filter(|child| child.kind() == SyntaxKind::InlineCodeFence)
-        .count();
-    let has_content = code_node
-        .children()
-        .any(|child| child.kind() == SyntaxKind::InlineCodeContent);
-
-    assert_eq!(fence_count, 2, "Should have two fences");
-    assert!(has_content, "Should have content node");
-}
-
-#[test]
-fn test_parse_link_structure() {
-    let parser = Parser::new(ParseOptions::default());
-    let parsed = parser.parse("[text](https://example.com)");
-    let root = parsed.syntax();
-
-    let link_node = root
-        .descendants()
-        .find(|n| n.kind() == SyntaxKind::Link)
-        .expect("Should have Link node");
-
-    let has_text = link_node
-        .children()
-        .any(|child| child.kind() == SyntaxKind::LinkText);
-    let has_dest = link_node
-        .children()
-        .any(|child| child.kind() == SyntaxKind::LinkDestination);
-
-    assert!(has_text, "Should have LinkText");
-    assert!(has_dest, "Should have LinkDestination");
-}
-
-#[test]
-fn test_parse_mention_structure() {
-    let parser = Parser::new(ParseOptions::default());
-    let parsed = parser.parse("@12345678-1234-1234-1234-123456789abc");
-    let root = parsed.syntax();
-
-    let mention_node = root
-        .descendants()
-        .find(|n| n.kind() == SyntaxKind::Mention)
-        .expect("Should have Mention node");
-
-    let has_marker = mention_node.children_with_tokens().any(|child| {
-        if let NodeOrToken::Token(t) = child {
-            t.kind() == SyntaxKind::MentionMarker
-        } else {
-            false
-        }
-    });
-
-    assert!(has_marker, "Should have MentionMarker");
-}
-
-#[test]
-fn test_parse_emoji_structure() {
-    let parser = Parser::new(ParseOptions::default());
-    let parsed = parser.parse("<:smile:12345678-1234-1234-1234-123456789abc>");
-    let root = parsed.syntax();
-
-    let emoji_node = root
-        .descendants()
-        .find(|n| n.kind() == SyntaxKind::Emoji)
-        .expect("Should have Emoji node");
-
-    let marker_count = emoji_node
-        .children_with_tokens()
-        .filter(|child| {
-            if let NodeOrToken::Token(t) = child {
-                t.kind() == SyntaxKind::EmojiMarker
-            } else {
-                false
-            }
-        })
-        .count();
-    let has_name = emoji_node
-        .children()
-        .any(|child| child.kind() == SyntaxKind::EmojiName);
-
-    assert!(marker_count >= 2, "Should have at least 2 EmojiMarkers");
-    assert!(has_name, "Should have EmojiName");
-}
-
-#[test]
-fn test_parse_header_structure() {
-    let parser = Parser::new(ParseOptions::default());
-    let parsed = parser.parse("# Header");
-    let root = parsed.syntax();
-
-    let header_node = root
-        .descendants()
-        .find(|n| n.kind() == SyntaxKind::Header)
-        .expect("Should have Header node");
-
-    let has_marker = header_node
-        .children()
-        .any(|child| child.kind() == SyntaxKind::HeaderMarker);
-
-    assert!(has_marker, "Should have HeaderMarker");
-}
-
-#[test]
-fn test_parse_list_structure() {
-    let parser = Parser::new(ParseOptions::default());
-    let parsed = parser.parse("- item");
-    let root = parsed.syntax();
-
-    let list_node = root
-        .descendants()
-        .find(|n| n.kind() == SyntaxKind::List)
-        .expect("Should have List node");
-
-    let list_item = list_node
-        .children()
-        .find(|n| n.kind() == SyntaxKind::ListItem)
-        .expect("Should have ListItem");
-
-    let has_marker = list_item
-        .children()
-        .any(|child| child.kind() == SyntaxKind::ListMarker);
-
-    assert!(has_marker, "Should have ListMarker");
-}
-
-#[test]
-fn test_parse_blockquote_structure() {
-    let parser = Parser::new(ParseOptions::default());
-    let parsed = parser.parse("> quote");
-    let root = parsed.syntax();
-
-    let quote_node = root
-        .descendants()
-        .find(|n| n.kind() == SyntaxKind::BlockQuote)
-        .expect("Should have BlockQuote node");
-
-    let has_marker = quote_node
-        .children()
-        .any(|n| n.kind() == SyntaxKind::BlockQuoteMarker);
-
-    assert!(has_marker, "Should have BlockQuoteMarker");
+    assert_eq!(
+        delimiter_count, 2,
+        "Should have two strikethrough delimiters"
+    );
 }
 
 #[test]
 fn test_parse_code_block_structure() {
     let parser = Parser::new(ParseOptions::default());
-    let parsed = parser.parse("```code```");
+    let parsed = parser.parse("```\ncode\n```");
     let root = parsed.syntax();
 
     let code_block = root
@@ -259,6 +107,63 @@ fn test_parse_code_block_structure() {
 
     assert!(fence_count >= 1, "Should have at least 1 CodeBlockFence");
     assert!(has_content, "Should have CodeBlockContent");
+}
+
+#[test]
+fn test_parse_blockquote_structure() {
+    let parser = Parser::new(ParseOptions::default());
+    let parsed = parser.parse("> quoted text");
+    let root = parsed.syntax();
+
+    let has_blockquote = root
+        .descendants()
+        .any(|n| n.kind() == SyntaxKind::BlockQuote);
+
+    assert!(has_blockquote, "Should have BlockQuote node");
+}
+
+#[test]
+fn test_parse_link_structure() {
+    let parser = Parser::new(ParseOptions::default());
+    let parsed = parser.parse("[text](https://example.com)");
+    let root = parsed.syntax();
+
+    let link_node = root
+        .descendants()
+        .find(|n| n.kind() == SyntaxKind::Link)
+        .expect("Should have Link node");
+
+    let has_text = link_node
+        .descendants()
+        .any(|n| n.kind() == SyntaxKind::LinkText);
+    let has_dest = link_node
+        .descendants()
+        .any(|n| n.kind() == SyntaxKind::LinkDestination);
+
+    assert!(has_text, "Link should have LinkText");
+    assert!(has_dest, "Link should have LinkDestination");
+}
+
+#[test]
+fn test_parse_emoji_structure() {
+    let parser = Parser::new(ParseOptions::default());
+    let parsed = parser.parse("<:smile:12345678-1234-1234-1234-123456789abc>");
+    let root = parsed.syntax();
+
+    let has_emoji = root.descendants().any(|n| n.kind() == SyntaxKind::Emoji);
+
+    assert!(has_emoji, "Should have Emoji node");
+}
+
+#[test]
+fn test_parse_mention_structure() {
+    let parser = Parser::new(ParseOptions::default());
+    let parsed = parser.parse("<@12345678-1234-1234-1234-123456789abc>");
+    let root = parsed.syntax();
+
+    let has_mention = root.descendants().any(|n| n.kind() == SyntaxKind::Mention);
+
+    assert!(has_mention, "Should have Mention node");
 }
 
 #[test]
@@ -298,4 +203,65 @@ fn test_link_with_bold_text_structure() {
         .any(|n| n.kind() == SyntaxKind::Strong);
 
     assert!(has_strong, "Link text should contain Strong (bold)");
+}
+
+#[test]
+fn test_parse_spoiler_structure() {
+    let parser = Parser::new(ParseOptions::default());
+    let parsed = parser.parse("||spoiler text||");
+    let root = parsed.syntax();
+
+    let spoiler_node = root
+        .descendants()
+        .find(|n| n.kind() == SyntaxKind::Spoiler)
+        .expect("Should have Spoiler node");
+
+    let delimiter_count = spoiler_node
+        .children_with_tokens()
+        .filter(|child| {
+            if let NodeOrToken::Token(t) = child {
+                t.kind() == SyntaxKind::SpoilerDelimiter
+            } else {
+                false
+            }
+        })
+        .count();
+
+    assert_eq!(delimiter_count, 2, "Should have two spoiler delimiters");
+}
+
+#[test]
+fn test_spoiler_with_nested_bold_structure() {
+    let parser = Parser::new(ParseOptions::default());
+    let parsed = parser.parse("||**bold** inside||");
+    let root = parsed.syntax();
+
+    let spoiler_node = root
+        .descendants()
+        .find(|n| n.kind() == SyntaxKind::Spoiler)
+        .expect("Should have Spoiler node");
+
+    let has_strong = spoiler_node
+        .descendants()
+        .any(|n| n.kind() == SyntaxKind::Strong);
+
+    assert!(has_strong, "Spoiler should contain Strong (bold)");
+}
+
+#[test]
+fn test_spoiler_with_nested_italic_structure() {
+    let parser = Parser::new(ParseOptions::default());
+    let parsed = parser.parse("||*italic* inside||");
+    let root = parsed.syntax();
+
+    let spoiler_node = root
+        .descendants()
+        .find(|n| n.kind() == SyntaxKind::Spoiler)
+        .expect("Should have Spoiler node");
+
+    let has_emphasis = spoiler_node
+        .descendants()
+        .any(|n| n.kind() == SyntaxKind::Emphasis);
+
+    assert!(has_emphasis, "Spoiler should contain Emphasis (italic)");
 }

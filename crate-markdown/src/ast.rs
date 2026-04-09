@@ -457,6 +457,45 @@ impl Strikethrough {
     }
 }
 
+/// Spoiler text: ||text||
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Spoiler(SyntaxNode);
+
+impl AstNode for Spoiler {
+    type Language = crate::parser::MyLang;
+
+    fn can_cast(kind: SyntaxKind) -> bool {
+        kind == SyntaxKind::Spoiler
+    }
+
+    fn cast(node: SyntaxNode) -> Option<Self> {
+        if Self::can_cast(node.kind()) {
+            Some(Self(node))
+        } else {
+            None
+        }
+    }
+
+    fn syntax(&self) -> &SyntaxNode {
+        &self.0
+    }
+}
+
+impl Spoiler {
+    /// Get the text content inside the spoiler delimiters.
+    pub fn text(&self) -> String {
+        let text = self.0.text().to_string();
+        text.trim_start_matches("||")
+            .trim_end_matches("||")
+            .to_string()
+    }
+
+    /// Get the underlying syntax node.
+    pub fn syntax_node(&self) -> &SyntaxNode {
+        &self.0
+    }
+}
+
 /// Inline code: `code`
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct InlineCode(SyntaxNode);

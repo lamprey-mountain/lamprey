@@ -75,6 +75,7 @@ pub use ast::{
     MentionId,
     MentionIds,
     Paragraph,
+    Spoiler,
     Strikethrough,
     Strong,
 };

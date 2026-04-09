@@ -253,6 +253,7 @@ fn tag_to_string(tag: &Tag<'_>) -> String {
         Tag::Strong => "strong".into(),
         Tag::Emphasis => "emphasis".into(),
         Tag::Strikethrough => "strikethrough".into(),
+        Tag::Spoiler => "spoiler".into(),
         Tag::InlineCode => "inline_code".into(),
         Tag::Link { .. } => "link".into(),
         Tag::Autolink => "autolink".into(),

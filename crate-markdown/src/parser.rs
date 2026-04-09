@@ -190,6 +190,26 @@ impl<'a> ParseContext<'a> {
                     }
                     self.builder.token(SyntaxKind::Text.into(), "~~");
                 }
+                TokenKind::Spoiler => {
+                    if let Some(close_idx) = self.find_closing_delimiter(TokenKind::Spoiler) {
+                        if close_idx <= end {
+                            self.builder.start_node(SyntaxKind::Spoiler.into());
+                            self.builder
+                                .token(SyntaxKind::SpoilerDelimiter.into(), "||");
+                            self.bump();
+                            self.parse_inline(close_idx);
+                            self.builder
+                                .token(SyntaxKind::SpoilerDelimiter.into(), "||");
+                            self.builder.finish_node();
+                            self.bump();
+                            continue;
+                        }
+                    }
+                    self.builder.token(SyntaxKind::Text.into(), "||");
+                }
+                TokenKind::SinglePipe => {
+                    self.builder.token(SyntaxKind::Text.into(), "|");
+                }
                 TokenKind::Backtick => {
                     // Count backticks for inline code
                     let mut fence_len = 1;
@@ -489,6 +509,24 @@ impl<'a> ParseContext<'a> {
                             self.parse_link_text(close_idx);
                             self.builder
                                 .token(SyntaxKind::EmphasisDelimiter.into(), "*");
+                            self.builder.finish_node();
+                            self.bump();
+                            continue;
+                        }
+                    }
+                    self.builder
+                        .token(SyntaxKind::Text.into(), self.text_for_range(range));
+                }
+                TokenKind::Spoiler => {
+                    if let Some(close_idx) = self.find_closing_delimiter(TokenKind::Spoiler) {
+                        if close_idx <= end {
+                            self.builder.start_node(SyntaxKind::Spoiler.into());
+                            self.builder
+                                .token(SyntaxKind::SpoilerDelimiter.into(), "||");
+                            self.bump();
+                            self.parse_link_text(close_idx);
+                            self.builder
+                                .token(SyntaxKind::SpoilerDelimiter.into(), "||");
                             self.builder.finish_node();
                             self.bump();
                             continue;
@@ -1023,6 +1061,12 @@ pub enum TokenKind {
     #[token("~~")]
     Strikethrough,
 
+    #[token("||")]
+    Spoiler,
+
+    #[token("|")]
+    SinglePipe,
+
     #[token("`")]
     Backtick,
 
@@ -1071,7 +1115,7 @@ pub enum TokenKind {
     Url,
 
     /// any other text (words, punctuation, etc.) - excluding special chars
-    #[regex(r"[^ \t\n*\\`<>\[\]\(\)#@:~.\-&]+")]
+    #[regex(r"[^ \t\n*\\`<>\[\]\(\)#@:~.\-&|]+")]
     Text,
 }
 
@@ -1102,6 +1146,8 @@ pub enum SyntaxKind {
     EmphasisDelimiter,
     Strikethrough,
     StrikethroughDelimiter,
+    Spoiler,
+    SpoilerDelimiter,
     InlineCode,
     InlineCodeFence,
     InlineCodeContent,

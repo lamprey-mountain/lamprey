@@ -246,3 +246,44 @@ fn test_events_empty_document() {
     let events: Vec<_> = ast.events().collect();
     assert!(events.len() >= 0);
 }
+
+#[test]
+fn test_events_spoiler() {
+    let parser = Parser::new(ParseOptions::default());
+    let ast = Ast::new(parser.parse("||spoiler text||"));
+
+    let events: Vec<_> = ast.events().collect();
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, Event::Start(Tag::Spoiler))));
+    assert!(events.iter().any(|e| matches!(e, Event::End(Tag::Spoiler))));
+}
+
+#[test]
+fn test_events_spoiler_nested() {
+    let parser = Parser::new(ParseOptions::default());
+    let ast = Ast::new(parser.parse("**bold ||spoiler|| more**"));
+
+    let events: Vec<_> = ast.events().collect();
+    let strong_start = events
+        .iter()
+        .position(|e| matches!(e, Event::Start(Tag::Strong)));
+    let spoiler_start = events
+        .iter()
+        .position(|e| matches!(e, Event::Start(Tag::Spoiler)));
+    let strong_end = events
+        .iter()
+        .rposition(|e| matches!(e, Event::End(Tag::Strong)));
+    let spoiler_end = events
+        .iter()
+        .rposition(|e| matches!(e, Event::End(Tag::Spoiler)));
+
+    assert!(strong_start.is_some());
+    assert!(spoiler_start.is_some());
+    assert!(strong_end.is_some());
+    assert!(spoiler_end.is_some());
+    // Strong should start before Spoiler
+    assert!(strong_start.unwrap() < spoiler_start.unwrap());
+    // Spoiler should end before Strong
+    assert!(spoiler_end.unwrap() < strong_end.unwrap());
+}
