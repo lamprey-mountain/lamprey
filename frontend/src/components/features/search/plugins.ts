@@ -30,11 +30,15 @@ export function getFilterFromSelection(state: EditorState): {
 	const $pos = state.doc.resolve(selection.from);
 	const nodeBefore = $pos.nodeBefore;
 
+	// at the start of doc or paragraph
 	if (!nodeBefore) return { type: "filter", query: "" };
-	if (!nodeBefore.isText) return null;
+
+	// after an atom node
+	if (!nodeBefore.isText) return { type: "filter", query: "" };
 
 	const textBeforeCursor = nodeBefore.text!;
 
+	// inside a filter value
 	const active = getActiveFilterAtCursor(
 		textBeforeCursor,
 		textBeforeCursor.length,
@@ -47,18 +51,19 @@ export function getFilterFromSelection(state: EditorState): {
 		};
 	}
 
-	// If text ends with whitespace or is empty → generic filter context
-	if (textBeforeCursor.match(/\s$/) || textBeforeCursor === "") {
+	// trailing space
+	if (textBeforeCursor.match(/\s$/)) {
 		return { type: "filter", query: "" };
 	}
 
-	// If cursor is in the middle of a word that isn't a filter → generic
+	// typing a word that isnt a filter yet
 	const wordMatch = textBeforeCursor.match(/(\S+)$/);
 	if (wordMatch) {
 		const word = wordMatch[1];
-		const cleanWord = word.startsWith("-") ? word.slice(1) : word;
+		const negated = word.startsWith("-");
+		const cleanWord = negated ? word.slice(1) : word;
 		if (cleanWord.includes(":")) return null;
-		return { type: "filter", query: cleanWord, negated: word.startsWith("-") };
+		return { type: "filter", query: cleanWord, negated };
 	}
 
 	return { type: "filter", query: "" };
@@ -176,6 +181,32 @@ export function autocompletePlugin(
 					negated: next.negated ?? false,
 				};
 			},
+		},
+		view() {
+			return {
+				update(view, prevState) {
+					const prev = autocompleteKey.getState(prevState);
+					const curr = autocompleteKey.getState(view.state);
+
+					// Only update the SolidJS signal if the autocomplete state actually changed
+					if (
+						prev?.active !== curr?.active ||
+						prev?.query !== curr?.query ||
+						prev?.filterType !== curr?.filterType ||
+						prev?.negated !== curr?.negated
+					) {
+						if (curr?.active) {
+							setFilter({
+								type: curr.filterType,
+								query: curr.query,
+								negated: curr.negated,
+							});
+						} else {
+							setFilter(null);
+						}
+					}
+				},
+			};
 		},
 		props: {
 			handleKeyDown(_view, event) {
