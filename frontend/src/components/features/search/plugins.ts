@@ -1,7 +1,24 @@
-import { type EditorState, Plugin } from "prosemirror-state";
+import { type EditorState, Plugin, PluginKey } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
-import { parseSearchQuery } from "./utils";
+import { getActiveFilterAtCursor, tokenizeSearch } from "./tokenizer";
 
+// ---------------------------------------------------------------------------
+// Autocomplete plugin state
+// ---------------------------------------------------------------------------
+
+export interface AutocompleteState {
+	active: boolean;
+	filterType: string;
+	query: string;
+	negated: boolean;
+}
+
+export const autocompleteKey = new PluginKey<AutocompleteState>("autocomplete");
+
+/**
+ * Get the active filter context from a plain text string (e.g. the text
+ * before the cursor in the current paragraph node).
+ */
 export function getFilterFromSelection(state: EditorState): {
 	type: string;
 	query: string;
@@ -18,40 +35,38 @@ export function getFilterFromSelection(state: EditorState): {
 
 	const textBeforeCursor = nodeBefore.text!;
 
-	const tokens = parseSearchQuery(textBeforeCursor);
-	const lastToken = tokens[tokens.length - 1];
-	if (lastToken && lastToken.to === textBeforeCursor.length) {
-		return {
-			type: lastToken.filterType,
-			query: lastToken.value,
-			negated: lastToken.negated,
-		};
-	}
-
-	const partialFilterMatch = textBeforeCursor.match(
-		/(-?)(author|channel|before|after|has|pinned|mentions):$/,
+	const active = getActiveFilterAtCursor(
+		textBeforeCursor,
+		textBeforeCursor.length,
 	);
-	if (partialFilterMatch) {
+	if (active) {
 		return {
-			type: partialFilterMatch[2],
-			query: "",
-			negated: !!partialFilterMatch[1],
+			type: active.filterType,
+			query: active.value,
+			negated: active.negated,
 		};
 	}
 
-	if (textBeforeCursor.match(/\s$/)) return { type: "filter", query: "" };
+	// If text ends with whitespace or is empty → generic filter context
+	if (textBeforeCursor.match(/\s$/) || textBeforeCursor === "") {
+		return { type: "filter", query: "" };
+	}
 
+	// If cursor is in the middle of a word that isn't a filter → generic
 	const wordMatch = textBeforeCursor.match(/(\S+)$/);
 	if (wordMatch) {
 		const word = wordMatch[1];
 		const cleanWord = word.startsWith("-") ? word.slice(1) : word;
 		if (cleanWord.includes(":")) return null;
-
 		return { type: "filter", query: cleanWord, negated: word.startsWith("-") };
 	}
 
 	return { type: "filter", query: "" };
 }
+
+// ---------------------------------------------------------------------------
+// Syntax highlighting plugin – uses the tokenizer
+// ---------------------------------------------------------------------------
 
 export function syntaxHighlightingPlugin() {
 	return new Plugin({
@@ -59,6 +74,7 @@ export function syntaxHighlightingPlugin() {
 			decorations(state) {
 				const decorations: Decoration[] = [];
 				state.doc.descendants((node, pos) => {
+					// Filter atoms
 					if (node.type.name !== "text" && node.isAtom) {
 						decorations.push(
 							Decoration.inline(pos, pos + node.nodeSize, {
@@ -68,11 +84,13 @@ export function syntaxHighlightingPlugin() {
 						return false;
 					}
 
-					if (node.isText) {
-						const text = node.text!;
+					if (!node.isText) return;
 
-						const tokens = parseSearchQuery(text);
-						for (const token of tokens) {
+					const text = node.text!;
+					const tokens = tokenizeSearch(text);
+
+					for (const token of tokens) {
+						if (token.type === "filter") {
 							const from = pos + token.from;
 							const to = pos + token.to;
 							const negatedClass = token.negated ? " filter-negated" : "";
@@ -81,42 +99,18 @@ export function syntaxHighlightingPlugin() {
 									class: `filter-token filter-${token.filterType}${negatedClass}`,
 								}),
 							);
-						}
-
-						const phraseRegex = /"([^"]*)"/g;
-						let match;
-						while ((match = phraseRegex.exec(text))) {
-							const from = pos + match.index;
-							const to = from + match[0].length;
+						} else if (token.type === "phrase") {
+							const from = pos + token.from;
+							const to = pos + token.to;
 							decorations.push(
 								Decoration.inline(from, to, { class: "filter-phrase" }),
 							);
 							decorations.push(
 								Decoration.inline(from, from + 1, { class: "syn" }),
 							);
-							if (match[0].length > 1) {
+							if (token.value.length > 0) {
 								decorations.push(
 									Decoration.inline(to - 1, to, { class: "syn" }),
-								);
-							}
-						}
-
-						const negationRegex = /(^|\s)-\S+/g;
-						while ((match = negationRegex.exec(text))) {
-							const from = pos + match.index + (match[1]?.length ?? 0);
-							const to = from + match[0].length - (match[1]?.length ?? 0);
-							const negatedText = match[0].trimStart();
-
-							if (
-								!negatedText.match(
-									/^-(author|channel|before|after|has|pinned|mentions):/,
-								)
-							) {
-								decorations.push(
-									Decoration.inline(from, to, { class: "filter-negation" }),
-								);
-								decorations.push(
-									Decoration.inline(from, from + 1, { class: "syn" }),
 								);
 							}
 						}
@@ -128,23 +122,70 @@ export function syntaxHighlightingPlugin() {
 	});
 }
 
+// ---------------------------------------------------------------------------
+// Autocomplete plugin
+// ---------------------------------------------------------------------------
+
 export function autocompletePlugin(
 	setFilter: (
 		filter: { type: string; query: string; negated?: boolean } | null,
 	) => void,
 ) {
 	return new Plugin({
+		key: autocompleteKey,
 		state: {
-			init: () => null,
-			apply: (tr, value, _oldState, newState) => {
+			init: () => ({
+				active: false,
+				filterType: "filter",
+				query: "",
+				negated: false,
+			}),
+			apply(tr, _old, oldState, newState) {
 				if (tr.getMeta("skipAutocomplete")) {
-					setFilter(null);
-					return null;
+					return {
+						active: false,
+						filterType: "filter",
+						query: "",
+						negated: false,
+					};
 				}
-				if (!tr.docChanged && !tr.selectionSet) return value;
+				if (!tr.docChanged && !tr.selectionSet) {
+					const prev = autocompleteKey.getState(oldState);
+					return (
+						prev ?? {
+							active: false,
+							filterType: "filter",
+							query: "",
+							negated: false,
+						}
+					);
+				}
 
-				setFilter(getFilterFromSelection(newState));
-				return null;
+				const filterInfo = getFilterFromSelection(newState);
+				const isActive = filterInfo !== null;
+				const next = filterInfo ?? {
+					type: "filter",
+					query: "",
+					negated: false,
+				};
+
+				return {
+					active: isActive,
+					filterType: next.type,
+					query: next.query ?? "",
+					negated: next.negated ?? false,
+				};
+			},
+		},
+		props: {
+			handleKeyDown(_view, event) {
+				// Let SolidJS / parent plugin handle navigation for now.
+				// Future: move ArrowDown/ArrowUp/Enter state entirely here.
+				if (event.key === "Escape") {
+					setFilter(null);
+					return true;
+				}
+				return false;
 			},
 		},
 	});

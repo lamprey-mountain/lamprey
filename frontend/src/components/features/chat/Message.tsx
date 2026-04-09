@@ -88,6 +88,7 @@ export function UserDisplayName(props: {
 	const handleClick = (e: MouseEvent) => {
 		if (!props.onClick) return;
 		e.stopPropagation();
+		e.preventDefault();
 		const currentTarget = e.currentTarget as HTMLElement;
 		if (userView()?.ref === currentTarget) {
 			setUserView(null);

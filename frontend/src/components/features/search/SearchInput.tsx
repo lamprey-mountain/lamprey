@@ -4,7 +4,6 @@ import { keymap } from "prosemirror-keymap";
 import type { Node } from "prosemirror-model";
 import { EditorState, Plugin } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
-import type { User } from "sdk";
 import { useFloating } from "solid-floating-ui";
 import { createEffect, createMemo, createSignal, Show } from "solid-js";
 import { Portal } from "solid-js/web";
@@ -25,6 +24,7 @@ import { useOptionalChannel } from "@/contexts/channel";
 import { type RoomSearch, useRoom } from "@/contexts/room";
 import type { RoomT, ThreadT } from "@/types";
 import type { ChannelSearch } from "@/types/chat";
+import { FILTER_NAMES } from "./filters.config";
 import {
 	autocompletePlugin,
 	getFilterFromSelection,
@@ -32,20 +32,15 @@ import {
 } from "./plugins";
 import { SearchAutocomplete } from "./SearchAutocomplete";
 import { schema } from "./schema";
-import {
-	addRecentSearch,
-	dateToBoundaryUUID,
-	getRecentSearches,
-	parseQueryToNodes,
-	serializeToQuery,
-} from "./utils";
+import { buildBackendSearchBody } from "./searchCompiler";
+import { addRecentSearch, parseQueryToNodes, serializeToQuery } from "./utils";
 
 export const SearchInput = (props: {
 	channel?: ThreadT;
 	room?: RoomT;
 	autofocus?: boolean;
 }) => {
-	const users2 = useUsers();
+	const usersStore = useUsers();
 	const messagesService = useMessages();
 	const [dropdownRef, setDropdownRef] = createSignal<HTMLDivElement>();
 	const [activeFilter, setActiveFilter] = createSignal<{
@@ -55,12 +50,31 @@ export const SearchInput = (props: {
 	} | null>(null);
 	const [hoveredIndex, setHoveredIndex] = createSignal<number>(0);
 	const [editorRef, setEditorRef] = createSignal<HTMLElement>();
-	const [userNavigated, setUserNavigated] = createSignal(false);
 
 	let currentItemsRef: {
-		items: { rawValue?: string; onSelect: () => void; isSeparator?: boolean }[];
+		items: { onSelect: () => void; isSeparator?: boolean }[];
 		selectItem: (idx: number) => void;
 	} | null = null;
+
+	// Shared context object passed to autocomplete suggestions
+	const searchContext = createMemo(() => {
+		const channelsStore = useChannels();
+		const roomThreads = () =>
+			[...channelsStore.cache.values()].filter(
+				(c) => c.room_id === (props.channel?.room_id ?? props.room?.id ?? ""),
+			);
+		return {
+			users: usersStore,
+			channels: channelsStore,
+			roomMembers: useRoomMembers(),
+			threadMembers: useThreadMembers(),
+			roles: useRoles(),
+			roomThreads,
+			roomId: props.channel?.room_id ?? props.room?.id ?? null,
+			channel: props.channel,
+			room: props.room,
+		};
+	});
 
 	const position = useFloating(editorRef, dropdownRef, {
 		whileElementsMounted: autoUpdate,
@@ -81,12 +95,6 @@ export const SearchInput = (props: {
 
 	const channelCtx = useOptionalChannel();
 	const roomCtx = useRoom();
-	const channels2 = useChannels();
-
-	const roomThreads = () =>
-		[...channels2.cache.values()].filter(
-			(c) => c.room_id === (props.channel?.room_id ?? props.room?.id ?? ""),
-		);
 
 	const currentSearch = () => {
 		if (props.channel) return channelCtx[0]?.search;
@@ -111,6 +119,10 @@ export const SearchInput = (props: {
 		}
 	});
 
+	/**
+	 * Build the backend query using the compiler and execute the search.
+	 * All backend-specific logic lives in `buildBackendSearchBody`.
+	 */
 	const handleSubmit = async () => {
 		if (!editor.view) return;
 		const queryString = serializeToQuery(editor.view.state);
@@ -121,230 +133,22 @@ export const SearchInput = (props: {
 
 		addRecentSearch(queryString);
 
-		const filters: {
-			author_ids?: string[];
-			not_author_ids?: string[];
-			thread_ids?: string[];
-			not_thread_ids?: string[];
-			before?: string;
-			after?: string;
-			has?: string[];
-			not_has?: string[];
-			pinned?: string;
-			mentions_ids?: string[];
-			not_mentions_ids?: string[];
-		} = {};
-
-		const textQueryParts: string[] = [];
-		const negatedTextQueryParts: string[] = [];
-
-		editor.view.state.doc.forEach((node) => {
-			node.forEach((inlineNode) => {
-				if (inlineNode.isText) {
-					const text = inlineNode.text?.trim();
-					if (text) {
-						const words = text.split(/\s+/);
-						for (const word of words) {
-							if (word.startsWith("-") && word.length > 1) {
-								negatedTextQueryParts.push(word.slice(1));
-							} else if (word) textQueryParts.push(word);
-						}
-					}
-				} else {
-					const type = inlineNode.type.name;
-					const negated = inlineNode.attrs.negated;
-
-					if (type === "author") {
-						if (negated) {
-							if (!filters.not_author_ids) filters.not_author_ids = [];
-							filters.not_author_ids.push(inlineNode.attrs.id);
-						} else {
-							if (!filters.author_ids) filters.author_ids = [];
-							filters.author_ids.push(inlineNode.attrs.id);
-						}
-					} else if (type === "channel") {
-						if (negated) {
-							if (!filters.not_thread_ids) filters.not_thread_ids = [];
-							filters.not_thread_ids.push(inlineNode.attrs.id);
-						} else {
-							if (!filters.thread_ids) filters.thread_ids = [];
-							filters.thread_ids.push(inlineNode.attrs.id);
-						}
-					} else if (type === "before") {
-						filters.before = inlineNode.attrs.date;
-					} else if (type === "after") {
-						filters.after = inlineNode.attrs.date;
-					} else if (type === "has") {
-						if (negated) {
-							if (!filters.not_has) filters.not_has = [];
-							filters.not_has.push(inlineNode.attrs.value);
-						} else {
-							if (!filters.has) filters.has = [];
-							filters.has.push(inlineNode.attrs.value);
-						}
-					} else if (type === "pinned") {
-						filters.pinned = inlineNode.attrs.value;
-					} else if (type === "mentions") {
-						if (negated) {
-							if (!filters.not_mentions_ids) filters.not_mentions_ids = [];
-							filters.not_mentions_ids.push(inlineNode.attrs.id);
-						} else {
-							if (!filters.mentions_ids) filters.mentions_ids = [];
-							filters.mentions_ids.push(inlineNode.attrs.id);
-						}
-					}
-				}
-			});
-		});
-
-		const textQuery = textQueryParts.join(" ");
 		const searchState: ChannelSearch = {
 			query: queryString,
 			results: (currentSearch()?.results as any) ?? null,
 			loading: true,
-			author: filters.author_ids,
-			before: filters.before,
-			after: filters.after,
-			channel: filters.thread_ids,
+			// Keep legacy fields for backward compat
+			author: undefined,
+			before: undefined,
+			after: undefined,
+			channel: undefined,
 		};
 		updateSearch(searchState);
 
-		const queryParts: string[] = [];
-
-		if (textQuery.trim()) queryParts.push(`+(${textQuery.trim()})`);
-		if (negatedTextQueryParts.length) {
-			queryParts.push(`-(${negatedTextQueryParts.join(" ")})`);
-		}
-
-		if (filters.author_ids?.length) {
-			queryParts.push(`+author_id: IN [${filters.author_ids.join(" ")}]`);
-		}
-		if (filters.not_author_ids?.length) {
-			queryParts.push(`-author_id: IN [${filters.not_author_ids.join(" ")}]`);
-		}
-
-		if (props.channel) {
-			if (props.channel.type === "Dm" || props.channel.type === "Gdm") {
-				queryParts.push(`+channel_id:${props.channel.id}`);
-			} else if (filters.thread_ids?.length) {
-				queryParts.push(`+channel_id: IN [${filters.thread_ids.join(" ")}]`);
-				if (props.channel.room_id) {
-					queryParts.push(`+room_id:${props.channel.room_id}`);
-				}
-			} else if (props.channel.room_id) {
-				queryParts.push(`+room_id:${props.channel.room_id}`);
-			} else {
-				queryParts.push(`+channel_id:${props.channel.id}`);
-			}
-		} else if (props.room) {
-			queryParts.push(`+room_id:${props.room.id}`);
-		}
-
-		if (filters.not_thread_ids?.length) {
-			queryParts.push(`-channel_id: IN [${filters.not_thread_ids.join(" ")}]`);
-		}
-
-		if (filters.before && filters.after) {
-			const from_uuid = dateToBoundaryUUID(filters.after, "start");
-			const to_uuid = dateToBoundaryUUID(filters.before, "end");
-			if (from_uuid && to_uuid) {
-				queryParts.push(`+created_at:[${from_uuid} TO ${to_uuid}]`);
-			}
-		} else if (filters.after) {
-			const from_uuid = dateToBoundaryUUID(filters.after, "start");
-			if (from_uuid) queryParts.push(`+created_at:[${from_uuid} TO *]`);
-		} else if (filters.before) {
-			const to_uuid = dateToBoundaryUUID(filters.before, "end");
-			if (to_uuid) queryParts.push(`+created_at:[* TO ${to_uuid}]`);
-		}
-
-		const mapHas = (hasVals: string[]) => {
-			const hasSubquery: string[] = [];
-			if (hasVals.includes("attachment")) {
-				hasSubquery.push(`metadata_fast.has_attachment:true`);
-			}
-			if (hasVals.includes("image")) {
-				hasSubquery.push(`metadata_fast.has_image:true`);
-			}
-			if (hasVals.includes("audio")) {
-				hasSubquery.push(`metadata_fast.has_audio:true`);
-			}
-			if (hasVals.includes("video")) {
-				hasSubquery.push(`metadata_fast.has_video:true`);
-			}
-			if (hasVals.includes("link")) {
-				hasSubquery.push(`metadata_fast.has_link:true`);
-			}
-			if (hasVals.includes("embed")) {
-				hasSubquery.push(`metadata_fast.has_embed:true`);
-			}
-			return hasSubquery;
-		};
-
-		if (filters.has?.length) {
-			const hasSubquery = mapHas(filters.has);
-			if (hasSubquery.length === 1) queryParts.push(`+${hasSubquery[0]}`);
-			else if (hasSubquery.length > 1) {
-				queryParts.push(`+(${hasSubquery.join(" ")})`);
-			}
-		}
-
-		if (filters.not_has?.length) {
-			const notHasSubquery = mapHas(filters.not_has);
-			if (notHasSubquery.length === 1) queryParts.push(`-${notHasSubquery[0]}`);
-			else if (notHasSubquery.length > 1) {
-				queryParts.push(`-(${notHasSubquery.join(" ")})`);
-			}
-		}
-
-		if (filters.pinned) {
-			queryParts.push(`+metadata_fast.pinned:${filters.pinned}`);
-		}
-
-		const mapMentions = (mentions: string[]) => {
-			const mentionSubquery: string[] = [];
-			for (const mentionId of mentions) {
-				if (mentionId.startsWith("user-")) {
-					mentionSubquery.push(
-						`metadata_fast.mentions_user:${mentionId.replace("user-", "")}`,
-					);
-				} else if (mentionId.startsWith("role-")) {
-					mentionSubquery.push(
-						`metadata_fast.mentions_role:${mentionId.replace("role-", "")}`,
-					);
-				} else if (
-					mentionId === "everyone-room" ||
-					mentionId === "everyone-thread"
-				)
-					mentionSubquery.push(`metadata_fast.mentions_everyone:true`);
-			}
-			return mentionSubquery;
-		};
-
-		if (filters.mentions_ids?.length) {
-			const mentionSubquery = mapMentions(filters.mentions_ids);
-			if (mentionSubquery.length === 1) {
-				queryParts.push(`+${mentionSubquery[0]}`);
-			} else if (mentionSubquery.length > 1) {
-				queryParts.push(`+(${mentionSubquery.join(" ")})`);
-			}
-		}
-
-		if (filters.not_mentions_ids?.length) {
-			const notMentionSubquery = mapMentions(filters.not_mentions_ids);
-			if (notMentionSubquery.length === 1) {
-				queryParts.push(`-${notMentionSubquery[0]}`);
-			} else if (notMentionSubquery.length > 1) {
-				queryParts.push(`-(${notMentionSubquery.join(" ")})`);
-			}
-		}
-
-		const body = {
-			query: queryParts.join(" ") || undefined,
-			sort_order: "desc" as const,
-			sort_field: "Created" as const,
-			limit: 100,
-		};
+		const body = buildBackendSearchBody(editor.view.state, {
+			channel: props.channel,
+			room: props.room,
+		}) as unknown as Record<string, unknown>;
 
 		const res = await messagesService.search(body);
 		updateSearch({ ...searchState, results: res || null, loading: false });
@@ -360,9 +164,8 @@ export const SearchInput = (props: {
 			" ",
 		);
 
-		const match = textBefore.match(
-			/-?(author|channel|before|after|has|pinned|mentions):(\S*)$/,
-		);
+		const filterRegex = new RegExp(`-?(${FILTER_NAMES.join("|")}):(\\S*)$`);
+		const match = textBefore.match(filterRegex);
 		if (match) {
 			const start = from - match[0].length;
 			const tr = view.state.tr.replaceWith(start, from, node);
@@ -375,114 +178,46 @@ export const SearchInput = (props: {
 		view.focus();
 	};
 
-	const insertFilter = (text: string) => {
-		requestAnimationFrame(() => {
-			const view = editor.view;
-			if (!view || !view.state || !view.dom?.isConnected) return;
+	const insertFilter = (text: string, isRecent?: boolean) => {
+		const view = editor.view;
+		if (!view) return;
 
-			try {
-				const { from } = view.state.selection;
-				const $pos = view.state.doc.resolve(from);
-				const nodeBefore = $pos.nodeBefore;
-				const textBefore = nodeBefore?.isText ? nodeBefore.text! : "";
+		try {
+			const { from } = view.state.selection;
+			const $pos = view.state.doc.resolve(from);
+			const nodeBefore = $pos.nodeBefore;
+			const textBefore = nodeBefore?.isText ? nodeBefore.text! : "";
 
-				const wordMatch = textBefore.match(/(\S+)$/);
-				const start = wordMatch ? from - wordMatch[0].length : from;
+			const wordMatch = textBefore.match(/(\S+)$/);
+			const start = wordMatch ? from - wordMatch[0].length : from;
 
-				const isNegatedSuggestion = text.startsWith("-");
-				const cleanText = isNegatedSuggestion ? text.slice(1) : text;
+			if (isRecent) {
+				const ctx = searchContext();
+				const nodes = parseQueryToNodes(text, ctx.users, ctx.roomThreads);
+				const tr = view.state.tr.delete(0, view.state.doc.content.size);
+				if (nodes.length > 0) tr.insert(0, nodes);
+				view.dispatch(tr);
 
-				const recent = getRecentSearches();
-				if (
-					recent.includes(text) &&
-					cleanText.length > 0 &&
-					!isNegatedSuggestion &&
-					!cleanText.match(/^(author|channel|mentions):/)
-				) {
-					const nodes = parseQueryToNodes(text, users2, roomThreads);
-					const tr = view.state.tr.delete(0, view.state.doc.content.size);
-					if (nodes.length > 0) tr.insert(0, nodes);
-					view.dispatch(tr);
-
-					setActiveFilter(null);
-					setHoveredIndex(0);
-					setTimeout(() => {
-						if (editor.view?.dom?.isConnected) {
-							handleSubmit();
-							editor.view.focus();
-						}
-					}, 50);
-					return;
-				}
-
-				const filterMatch = cleanText.match(
-					/^(author|channel|mentions):(\S*)$/,
-				);
-				if (filterMatch) {
-					const [, type, id] = filterMatch;
-					let node: Node | null = null;
-
-					if (type === "author") {
-						const user = users2.cache.get(id) as User | undefined;
-						if (user) {
-							node = schema.nodes.author.create({
-								id: user.id,
-								name: user.name,
-								negated: isNegatedSuggestion,
-							});
-						}
-					} else if (type === "channel") {
-						const thread = roomThreads()?.find((t) => t.id === id);
-						if (thread) {
-							node = schema.nodes.channel.create({
-								id: thread.id,
-								name: thread.name,
-								negated: isNegatedSuggestion,
-							});
-						}
-					} else if (type === "mentions") {
-						node = schema.nodes.mentions.create({
-							id,
-							name: id,
-							negated: isNegatedSuggestion,
-						});
-					}
-
-					if (node) {
-						const tr = view.state.tr.replaceWith(start, from, node);
-						tr.insertText(" ", tr.mapping.map(from));
-						view.dispatch(tr);
-
-						setActiveFilter(null);
-						setHoveredIndex(0);
-						setTimeout(() => {
-							if (editor.view?.dom?.isConnected) editor.view.focus();
-						}, 10);
-						return;
-					}
-				}
-
-				// Check if this is a full query string from history (may contain multiple filters)
-				if (
-					text.match(/\b(author|thread|before|after|has|pinned|mentions):\S+/)
-				) {
-					const nodes = parseQueryToNodes(text, users2, roomThreads);
-					if (nodes.length > 0) {
-						const tr = editor.view.state.tr.replaceWith(
-							start,
-							from,
-							nodes as any,
-						);
-						editor.view.dispatch(tr);
-						editor.view.focus();
-						setActiveFilter(null);
-						return;
-					}
-				}
-			} catch (e) {
-				console.warn("insertFilter error:", e);
+				setActiveFilter(null);
+				setHoveredIndex(0);
+				view.focus();
+				handleSubmit();
+				return;
 			}
-		});
+
+			// Fallback: Drop text cleanly since ID node could not be created
+			const tr = view.state.tr.replaceWith(
+				start,
+				from,
+				view.state.schema.text(text),
+			);
+			view.dispatch(tr);
+			setActiveFilter(null);
+			setHoveredIndex(0);
+			view.focus();
+		} catch (e) {
+			console.warn("insertFilter error:", e);
+		}
 	};
 
 	createEffect(() => {
@@ -503,12 +238,13 @@ export const SearchInput = (props: {
 		createState: (schema) => {
 			let docContent: Node | undefined;
 			const initialSearch = currentSearch();
+			const ctx = searchContext();
 
 			if (initialSearch?.query) {
 				const nodes = parseQueryToNodes(
 					initialSearch.query,
-					users2,
-					roomThreads,
+					ctx.users,
+					ctx.roomThreads,
 				);
 				if (nodes.length > 0) {
 					docContent = schema.nodes.doc.create(undefined, [
@@ -537,16 +273,14 @@ export const SearchInput = (props: {
 							handleKeyDown(_view, event) {
 								const filterActive = activeFilter();
 
-								const items = currentItemsRef?.items || [];
-								const hasSelectableItems =
-									items.length > 0 && items.some((i) => !i.isSeparator);
+								if (filterActive) {
+									const items = currentItemsRef?.items || [];
 
-								if (filterActive && hasSelectableItems) {
 									if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-										setUserNavigated(true);
 										event.preventDefault();
 										setHoveredIndex((prev) => {
 											const max = items.length - 1;
+											if (max < 0) return prev;
 											let next =
 												event.key === "ArrowDown"
 													? prev >= max
@@ -556,6 +290,7 @@ export const SearchInput = (props: {
 														? max
 														: prev - 1;
 
+											// Skip separators
 											if (items[next]?.isSeparator) {
 												next =
 													event.key === "ArrowDown"
@@ -572,14 +307,6 @@ export const SearchInput = (props: {
 									}
 
 									if (event.key === "Enter" || event.key === "Tab") {
-										if (
-											event.key === "Enter" &&
-											filterActive.type === "filter" &&
-											!userNavigated()
-										) {
-											return false;
-										}
-
 										event.preventDefault();
 										if (currentItemsRef) {
 											currentItemsRef.selectItem(hoveredIndex());
@@ -668,6 +395,7 @@ export const SearchInput = (props: {
 							onSelectFilter={insertFilter}
 							hoveredIndex={hoveredIndex()}
 							setHoveredIndex={setHoveredIndex}
+							searchContext={searchContext()}
 							onItemsChange={(its, selectItem) => {
 								currentItemsRef = { items: its, selectItem };
 							}}
@@ -675,7 +403,7 @@ export const SearchInput = (props: {
 					</div>
 				</Show>
 			</Portal>
-			<img class="icon" src={icSearch} />
+			<img class="icon" src={icSearch} alt="" aria-hidden="true" />
 		</div>
 	);
 };

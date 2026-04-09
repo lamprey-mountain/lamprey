@@ -1,4 +1,4 @@
-import { type Node, Schema } from "prosemirror-model";
+import { Schema } from "prosemirror-model";
 
 type FilterNodeSpec = {
 	group: string;
