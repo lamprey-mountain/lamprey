@@ -206,15 +206,22 @@ export const SearchInput = (props: {
 				return;
 			}
 
-			// Fallback: Drop text cleanly since ID node could not be created
+			// insert the text (e.g., "has:")
 			const tr = view.state.tr.replaceWith(
 				start,
 				from,
 				view.state.schema.text(text),
 			);
 			view.dispatch(tr);
-			setActiveFilter(null);
-			setHoveredIndex(0);
+
+			// keep the menu open we inserted a filter trigger
+			if (text.endsWith(":")) {
+				setHoveredIndex(0);
+			} else {
+				setActiveFilter(null);
+				setHoveredIndex(0);
+			}
+
 			view.focus();
 		} catch (e) {
 			console.warn("insertFilter error:", e);
@@ -366,7 +373,7 @@ export const SearchInput = (props: {
 				return false;
 			},
 			blur: () => {
-				setTimeout(() => setActiveFilter(null), 150);
+				setActiveFilter(null);
 				return false;
 			},
 		},
