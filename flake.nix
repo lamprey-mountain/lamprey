@@ -281,7 +281,7 @@
             mkdir -p $out
 
             # strip json
-            jq '[.[] | {u: .unified, x: .sheet_x, y: .sheet_y, s: .short_name}]' "$emojiJson" > "$out/data.json"
+            jq -c '[.[] | {u: .unified, x: .sheet_x, y: .sheet_y, s: .short_name}]' "$emojiJson" > "$out/data.json"
 
             # optimize -> webp
             cwebp -q 75 -m 6 ${emojiSheet} -o $out/sheet.webp
