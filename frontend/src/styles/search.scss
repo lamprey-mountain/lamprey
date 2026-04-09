@@ -85,6 +85,12 @@
 			background: $bg-250;
 			padding: 0 4px;
 			border-radius: 2px;
+			gap: 2px;
+
+			:global(.avatar),
+			:global(.channel-icon) {
+				flex-shrink: 0;
+			}
 		}
 
 		&.hovered .filter-atom {
@@ -125,13 +131,23 @@
 
 	& .filter-token,
 	& .filter-atom {
-		display: inline;
+		display: inline-flex;
+		align-items: center;
 		background: $bg-150;
-		padding: 0 2px;
-		border-radius: 2px;
+		padding: 0 4px;
+		margin: 0 2px;
+		border-radius: 4px;
+		vertical-align: middle;
+		line-height: 1.4;
+		user-select: none;
 
 		&.filter-negated > .filter-value {
 			color: $color-orange;
+		}
+
+		:global(.avatar),
+		:global(.channel-icon) {
+			flex-shrink: 0;
 		}
 	}
 
@@ -187,6 +203,13 @@
 		color: $fg-400;
 	}
 }
+
+/* // ensure NodeViews in ProseMirror don't allow cursor inside */
+/* .ProseMirror { */
+	/* span[data-node-view-placeholder] { */
+		/* display: inline-flex; */
+	/* } */
+/* } */
 
 // copied from prosemirror-gapcursor
 .ProseMirror-gapcursor {

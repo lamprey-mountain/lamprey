@@ -5,10 +5,20 @@ import { ChannelIcon } from "@/avatar/ChannelIcon";
 import { Avatar } from "@/avatar/UserAvatar";
 import type { RoomT, ThreadT } from "@/types";
 import { SEARCH_FILTERS, type SearchContext } from "./filters.config";
+import { FilterChipUI } from "./SearchFilterChip";
 import { schema } from "./schema";
 import { getRecentSearches, parseSearchQuery } from "./utils";
 
-type LabelPart = string | { type: string; value: string; parts?: LabelPart[] };
+type LabelPart =
+	| string
+	| {
+			type: string;
+			value: string;
+			user?: User;
+			channel?: ThreadT;
+			negated?: boolean;
+			parts?: LabelPart[];
+	  };
 
 export type AutocompleteItem = {
 	id: string;
@@ -179,8 +189,16 @@ export const SearchAutocomplete = (props: {
 									if (typeof part === "string") return <span>{part}</span>;
 
 									if (part.parts) {
+										// It's a filter chip with resolved user/channel
 										return (
-											<span class={part.type}>{renderLabel(part.parts)}</span>
+											<FilterChipUI
+												type={part.type}
+												label={part.value}
+												user={part.user}
+												channel={part.channel}
+												negated={part.negated}
+												animate={isHovered()}
+											/>
 										);
 									}
 
@@ -221,7 +239,7 @@ export const SearchAutocomplete = (props: {
 												</Show>
 											}
 										>
-											{(user) => <Avatar user={user()} />}
+											{(user) => <Avatar user={user()} animate={isHovered()} />}
 										</Show>
 										{renderLabel(item.label)}
 									</li>
@@ -422,22 +440,24 @@ function formatRecentSearch(
 			i--; // Step back because the for-loop increments i
 
 			const valueSeg = filterSegments.find((s) => s.type === "filter-value");
+
+			// 4. Resolve the display name and actual objects
+			let user: User | undefined;
+			let channel: ThreadT | undefined;
 			let displayValue = valueSeg?.value ?? "";
 
-			// 4. Resolve the display name (Usernames, Channel names, etc.)
 			if (valueSeg) {
 				if (groupType === "author") {
-					displayValue =
-						ctx.users.cache.get(valueSeg.value)?.name ?? valueSeg.value;
+					user = ctx.users.cache.get(valueSeg.value);
+					displayValue = user?.name ?? valueSeg.value;
 				} else if (groupType === "channel") {
-					displayValue =
-						ctx.roomThreads().find((t) => t.id === valueSeg.value)?.name ??
-						valueSeg.value;
+					channel = ctx.roomThreads().find((t) => t.id === valueSeg.value);
+					displayValue = channel?.name ?? valueSeg.value;
 				} else if (groupType === "mentions") {
 					const val = valueSeg.value;
 					if (val.startsWith("user-")) {
-						displayValue =
-							ctx.users.cache.get(val.replace("user-", ""))?.name ?? val;
+						user = ctx.users.cache.get(val.replace("user-", ""));
+						displayValue = user?.name ?? val;
 					} else if (val.startsWith("role-")) {
 						const role = [...ctx.roles.cache.values()].find(
 							(r) => r.id === val.replace("role-", ""),
@@ -448,20 +468,14 @@ function formatRecentSearch(
 				}
 			}
 
-			// 5. Create the nested "Atom" object
+			// 5. Create the nested "Atom" object with resolved objects
 			parts.push({
-				type: `filter-${groupType} filter-atom`, // Matches PM class
-				value: "",
-				parts: [
-					{
-						type: "filter-prefix",
-						value: `${isNegated ? "-" : ""}${groupType}:`,
-					},
-					{
-						type: isNegated ? "filter-negated-value" : "filter-value",
-						value: displayValue,
-					},
-				],
+				type: groupType,
+				value: displayValue,
+				user,
+				channel,
+				negated: isNegated,
+				parts: [], // Marker that this is a complex filter object
 			});
 
 			pos = filterSegments[filterSegments.length - 1].to;

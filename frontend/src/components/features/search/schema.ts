@@ -32,15 +32,10 @@ const createFilterNode = (
 		return [
 			"span",
 			{
-				class: `filter-${name}${node.attrs.negated ? " filter-negated" : ""}`,
+				class: `filter-${name} filter-atom${node.attrs.negated ? " filter-negated" : ""}`,
+				"data-node-view-placeholder": "true",
 				...(valueKey === "id" ? { "data-id": node.attrs.id } : {}),
 			},
-			[
-				"span",
-				{ class: "filter-prefix" },
-				node.attrs.negated ? `-${name}:` : `${name}:`,
-			],
-			["span", { class: "filter-value" }, displayValue],
 		];
 	},
 	parseDOM: [

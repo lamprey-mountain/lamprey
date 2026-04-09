@@ -4,10 +4,19 @@ import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import type { Node } from "prosemirror-model";
 import { EditorState, Plugin } from "prosemirror-state";
-import type { EditorView } from "prosemirror-view";
+import type { EditorView, NodeView } from "prosemirror-view";
+import type { User } from "sdk";
 import { useFloating } from "solid-floating-ui";
-import { createEffect, createMemo, createSignal, Show } from "solid-js";
-import { Portal } from "solid-js/web";
+import {
+	type Accessor,
+	createEffect,
+	createMemo,
+	createSignal,
+	getOwner,
+	runWithOwner,
+	Show,
+} from "solid-js";
+import { Portal, render } from "solid-js/web";
 import {
 	useChannels,
 	useMessages,
@@ -25,7 +34,11 @@ import { useOptionalChannel } from "@/contexts/channel";
 import { type RoomSearch, useRoom } from "@/contexts/room";
 import type { RoomT, ThreadT } from "@/types";
 import type { ChannelSearch } from "@/types/chat";
-import { FILTER_NAMES, SEARCH_FILTERS } from "./filters.config";
+import {
+	FILTER_NAMES,
+	SEARCH_FILTERS,
+	type SearchContext,
+} from "./filters.config";
 import {
 	autocompletePlugin,
 	getFilterFromSelection,
@@ -35,9 +48,69 @@ import {
 	type AutocompleteItem,
 	SearchAutocomplete,
 } from "./SearchAutocomplete";
+import { FilterChipUI } from "./SearchFilterChip";
 import { schema } from "./schema";
 import { buildBackendSearchBody } from "./searchCompiler";
 import { addRecentSearch, parseQueryToNodes, serializeToQuery } from "./utils";
+
+// ---------------------------------------------------------------------------
+// NodeView factory for rendering filter chips inside ProseMirror
+// ---------------------------------------------------------------------------
+
+const createFilterNodeView = (
+	type: string,
+	searchContext: () => SearchContext,
+	owner: ReturnType<typeof getOwner>,
+	animate: Accessor<boolean>,
+) => {
+	return (node: Node): NodeView => {
+		const dom = document.createElement("span");
+
+		const getProps = () => {
+			const id = node.attrs.id || node.attrs.value || node.attrs.date;
+			const ctx = searchContext();
+			let user: User | undefined;
+			let channel: ThreadT | undefined;
+
+			if (type === "author") {
+				user = ctx.users.cache.get(id);
+			} else if (type === "channel") {
+				channel = ctx.roomThreads().find((t) => t.id === id);
+			} else if (type === "mentions" && id.startsWith("user-")) {
+				user = ctx.users.cache.get(id.replace("user-", ""));
+			}
+
+			return {
+				type,
+				label: node.attrs.name || id,
+				user,
+				channel,
+				negated: node.attrs.negated,
+			};
+		};
+
+		// Capture props synchronously before rendering
+		const props = getProps();
+		let currentProps = props;
+
+		const dispose = render(
+			() =>
+				runWithOwner(owner, () => (
+					<FilterChipUI {...currentProps} animate={animate()} />
+				)),
+			dom,
+		);
+
+		return {
+			dom,
+			update: (newNode: Node) => {
+				currentProps = getProps();
+				return newNode.type === node.type;
+			},
+			destroy: () => dispose(),
+		};
+	};
+};
 
 export const SearchInput = (props: {
 	channel?: ThreadT;
@@ -46,6 +119,7 @@ export const SearchInput = (props: {
 }) => {
 	const usersStore = useUsers();
 	const messagesService = useMessages();
+	const owner = getOwner();
 	const [dropdownRef, setDropdownRef] = createSignal<HTMLDivElement>();
 	const [activeFilter, setActiveFilter] = createSignal<{
 		type: string;
@@ -56,6 +130,7 @@ export const SearchInput = (props: {
 	const filterActive = activeFilter;
 	const [hoveredIndex, setHoveredIndex] = createSignal<number>(0);
 	const [editorRef, setEditorRef] = createSignal<HTMLElement>();
+	const [editorFocused, setEditorFocused] = createSignal(false);
 
 	let currentItemsRef: {
 		items: AutocompleteItem[];
@@ -261,6 +336,26 @@ export const SearchInput = (props: {
 
 	const editor = createBaseEditor({
 		schema: schema as any,
+		nodeViews: () => ({
+			author: createFilterNodeView(
+				"author",
+				searchContext,
+				owner,
+				editorFocused,
+			),
+			channel: createFilterNodeView(
+				"channel",
+				searchContext,
+				owner,
+				editorFocused,
+			),
+			mentions: createFilterNodeView(
+				"mentions",
+				searchContext,
+				owner,
+				editorFocused,
+			),
+		}),
 		createState: (schema) => {
 			let docContent: Node | undefined;
 			const initialSearch = currentSearch();
@@ -389,10 +484,12 @@ export const SearchInput = (props: {
 		handleDOMEvents: {
 			focus: (view: EditorView) => {
 				setActiveFilter(getFilterFromSelection(view.state));
+				setEditorFocused(true);
 				return false;
 			},
 			blur: () => {
 				setActiveFilter(null);
+				setEditorFocused(false);
 				return false;
 			},
 		},
