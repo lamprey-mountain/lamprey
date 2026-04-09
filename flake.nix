@@ -478,7 +478,7 @@
         };
 
         devShells.default = craneLib.devShell {
-          packages = with pkgs; [nodejs pnpm chromium];
+          packages = with pkgs; [nodejs pnpm chromium lld clang mold wasm-pack];
           env = {
             PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
             PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = "${pkgs.chromium}/bin/chromium";

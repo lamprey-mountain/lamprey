@@ -238,12 +238,12 @@ impl<'a> EventIterator<'a> {
     }
 
     fn next_event(&mut self) -> Option<Event<'a>> {
-        // First, emit any pending events
-        if let Some(event) = self.pending.pop() {
-            return Some(event);
-        }
-
         loop {
+            // First, emit any pending events (using remove(0) ensures FIFO ordering)
+            if !self.pending.is_empty() {
+                return Some(self.pending.remove(0));
+            }
+
             // Get current state - clone what we need to avoid borrow conflicts
             let current_state = self.stack.last().cloned();
 
@@ -408,6 +408,7 @@ impl<'a> EventIterator<'a> {
 
                     let code = node.code();
                     if !code.is_empty() {
+                        self.pending.push(Event::End(Tag::CodeBlock));
                         return Some(Event::Code(code.into()));
                     }
 

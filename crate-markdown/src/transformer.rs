@@ -17,7 +17,6 @@
 //! ```
 //! use lamprey_markdown::{Parser, Ast};
 //! use lamprey_markdown::transformer::{Transformation, apply, Pipeline, StripEmoji};
-//! use lamprey_common::v1::types::EmojiId;
 //! use uuid::uuid;
 //!
 //! let parser = Parser::default();
@@ -31,6 +30,7 @@
 //! let transformed = pipeline.apply(&ast.syntax());
 //! ```
 
+#[cfg(feature = "default")]
 use lamprey_common::v1::types::EmojiId;
 use rowan::{GreenNode, GreenNodeBuilder, GreenToken, NodeOrToken, SyntaxNode, SyntaxToken};
 use uuid::Uuid;
@@ -150,22 +150,31 @@ impl Transformation for Pipeline {
 /// This transformation converts disallowed emoji (`<:name:uuid>` or `<a:name:uuid>`)
 /// to `:name:` format. Allowed emoji are preserved.
 pub struct StripEmoji {
-    pub allowed: Vec<EmojiId>,
+    pub allowed: Vec<Uuid>,
 }
 
 impl StripEmoji {
     /// Create a new StripEmoji transformation with the allowed emoji list.
-    pub fn new(allowed: Vec<EmojiId>) -> Self {
+    pub fn new(allowed: Vec<Uuid>) -> Self {
         Self { allowed }
     }
 
     /// Check if an emoji UUID is in the allowed list.
     fn is_allowed(&self, uuid_str: &str) -> bool {
         Uuid::parse_str(uuid_str)
-            .ok()
-            .map(EmojiId::from)
             .map(|id| self.allowed.contains(&id))
             .unwrap_or(false)
+    }
+}
+
+/// When lamprey-common is available, provide a constructor that accepts EmojiId.
+#[cfg(feature = "default")]
+impl StripEmoji {
+    /// Create a new StripEmoji transformation with EmojiId allowed list.
+    pub fn from_emoji_ids(allowed: Vec<EmojiId>) -> Self {
+        Self {
+            allowed: allowed.into_iter().map(Uuid::from).collect(),
+        }
     }
 }
 

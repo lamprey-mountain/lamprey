@@ -302,7 +302,7 @@ fn test_renderer_allowed_emoji_preserved() {
     let ast = Ast::new(parser.parse("<:smile:12345678-1234-1234-1234-123456789abc>"));
 
     let mut pipeline = Pipeline::default();
-    pipeline.add_transform(StripEmoji::new(allowed));
+    pipeline.add_transform(StripEmoji::from_emoji_ids(allowed));
 
     let transformed = pipeline.apply(&ast.syntax());
     let result =

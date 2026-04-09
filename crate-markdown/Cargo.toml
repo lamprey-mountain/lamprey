@@ -8,12 +8,22 @@ license.workspace = true
 repository.workspace = true
 keywords.workspace = true
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
-lamprey-common = { version = "0.1.1", path = "../crate-common" }
+# TODO: common refuses to compile without a random mishmash of features, i should clean up that code
+lamprey-common = { path = "../crate-common", optional = true, default-features = false, features = ["validator", "serde", "utoipa", "ptr_box", "feat_search_ordering", "feat_custom_emoji", "feat_thread_type_forums", "feat_interaction", "feat_interaction_reaction" ] }
 logos = "0.16.1"
 rowan = "0.16.1"
-uuid = "1.22.0"
-lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
+uuid = { version = "1.22.0", features = ["serde", "v7"] }
+wasm-bindgen = { version = "0.2.117", optional = true }
+serde = { version = "1.0.228", optional = true, features = ["derive"] }
+serde_json = { version = "1.0.149", optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+uuid = { version = "1.22.0", features = ["serde", "v7", "js"] }
 
 [features]
-wasm = []
+default = ["dep:lamprey-common"]
+wasm = ["dep:wasm-bindgen", "dep:serde", "dep:serde_json"]

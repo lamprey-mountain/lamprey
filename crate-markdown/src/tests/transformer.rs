@@ -28,7 +28,7 @@ fn test_strip_emoji_transformation_allowed() {
     let parser = Parser::new(ParseOptions::default());
     let ast = Ast::new(parser.parse("hello <:smile:12345678-1234-1234-1234-123456789abc> world"));
 
-    let transform = StripEmoji::new(allowed);
+    let transform = StripEmoji::from_emoji_ids(allowed);
     let transformed = apply(&transform, &ast.syntax());
     let node = SyntaxNode::<crate::parser::MyLang>::new_root(transformed);
     let result = node.text().to_string();
@@ -45,7 +45,7 @@ fn test_strip_emoji_transformation_mixed() {
     let parser = Parser::new(ParseOptions::default());
     let ast = Ast::new(parser.parse("<:allowed:11111111-1111-1111-1111-111111111111> <:not_allowed:22222222-2222-2222-2222-222222222222>"));
 
-    let transform = StripEmoji::new(allowed);
+    let transform = StripEmoji::from_emoji_ids(allowed);
     let transformed = apply(&transform, &ast.syntax());
     let node = SyntaxNode::<crate::parser::MyLang>::new_root(transformed);
     let result = node.text().to_string();
@@ -132,8 +132,8 @@ fn test_pipeline_multiple_transforms() {
     let ast = Ast::new(parser.parse("<:first:11111111-1111-1111-1111-111111111111> <:second:22222222-2222-2222-2222-222222222222>"));
 
     let mut pipeline = Pipeline::default();
-    pipeline.add_transform(StripEmoji::new(allowed_first));
-    pipeline.add_transform(StripEmoji::new(allowed_second));
+    pipeline.add_transform(StripEmoji::from_emoji_ids(allowed_first));
+    pipeline.add_transform(StripEmoji::from_emoji_ids(allowed_second));
 
     let transformed = pipeline.apply(&ast.syntax());
     let node = SyntaxNode::<crate::parser::MyLang>::new_root(transformed);

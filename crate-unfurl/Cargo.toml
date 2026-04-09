@@ -22,3 +22,4 @@ tokio = "1.50.0"
 tracing = "0.1.44"
 url = "2.5.8"
 utoipa = { version = "5.4.0", features = ["url"] }
+lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
