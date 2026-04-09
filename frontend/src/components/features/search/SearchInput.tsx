@@ -1,4 +1,5 @@
 import { autoUpdate, flip, offset, size } from "@floating-ui/dom";
+import { gapCursor } from "prosemirror-gapcursor";
 import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import type { Node } from "prosemirror-model";
@@ -354,6 +355,8 @@ export const SearchInput = (props: {
 							},
 						},
 					}),
+					// doesnt seem to do anything?
+					gapCursor(),
 				],
 			});
 		},
