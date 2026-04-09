@@ -25,13 +25,16 @@ import { useOptionalChannel } from "@/contexts/channel";
 import { type RoomSearch, useRoom } from "@/contexts/room";
 import type { RoomT, ThreadT } from "@/types";
 import type { ChannelSearch } from "@/types/chat";
-import { FILTER_NAMES } from "./filters.config";
+import { FILTER_NAMES, SEARCH_FILTERS } from "./filters.config";
 import {
 	autocompletePlugin,
 	getFilterFromSelection,
 	syntaxHighlightingPlugin,
 } from "./plugins";
-import { SearchAutocomplete } from "./SearchAutocomplete";
+import {
+	type AutocompleteItem,
+	SearchAutocomplete,
+} from "./SearchAutocomplete";
 import { schema } from "./schema";
 import { buildBackendSearchBody } from "./searchCompiler";
 import { addRecentSearch, parseQueryToNodes, serializeToQuery } from "./utils";
@@ -49,12 +52,14 @@ export const SearchInput = (props: {
 		query: string;
 		negated?: boolean;
 	} | null>(null);
+	// Alias used by the onItemsChange handler
+	const filterActive = activeFilter;
 	const [hoveredIndex, setHoveredIndex] = createSignal<number>(0);
 	const [editorRef, setEditorRef] = createSignal<HTMLElement>();
 
 	let currentItemsRef: {
-		items: { onSelect: () => void; isSeparator?: boolean }[];
-		selectItem: (idx: number) => void;
+		items: AutocompleteItem[];
+		selectItem: (idx: number, shouldSubmit: boolean) => void;
 	} | null = null;
 
 	// Shared context object passed to autocomplete suggestions
@@ -155,7 +160,7 @@ export const SearchInput = (props: {
 		updateSearch({ ...searchState, results: res || null, loading: false });
 	};
 
-	const insertNode = (node: Node) => {
+	const insertNode = (node: Node, shouldSubmit: boolean) => {
 		const view = editor.view;
 		if (!view) return;
 		const { from } = view.state.selection;
@@ -171,15 +176,24 @@ export const SearchInput = (props: {
 			const start = from - match[0].length;
 			const tr = view.state.tr.replaceWith(start, from, node);
 			tr.insertText(" ", tr.mapping.map(from));
+			tr.setMeta("skipAutocomplete", true);
 			view.dispatch(tr);
 		}
 
 		setActiveFilter(null);
 		setHoveredIndex(0);
 		view.focus();
+
+		if (shouldSubmit) {
+			handleSubmit();
+		}
 	};
 
-	const insertFilter = (text: string, isRecent?: boolean) => {
+	const insertFilter = (
+		text: string,
+		isRecent?: boolean,
+		shouldSubmit?: boolean,
+	) => {
 		const view = editor.view;
 		if (!view) return;
 
@@ -197,8 +211,8 @@ export const SearchInput = (props: {
 				const nodes = parseQueryToNodes(text, ctx.users, ctx.roomThreads);
 				const tr = view.state.tr.delete(0, view.state.doc.content.size);
 				if (nodes.length > 0) tr.insert(0, nodes);
+				tr.setMeta("skipAutocomplete", true);
 				view.dispatch(tr);
-
 				setActiveFilter(null);
 				setHoveredIndex(0);
 				view.focus();
@@ -212,14 +226,18 @@ export const SearchInput = (props: {
 				from,
 				view.state.schema.text(text),
 			);
-			view.dispatch(tr);
 
-			// keep the menu open we inserted a filter trigger
+			// If it's a keyword like "has:", we DON'T submit and DON'T close the menu
 			if (text.endsWith(":")) {
+				view.dispatch(tr);
 				setHoveredIndex(0);
 			} else {
+				// It's a full value or text
+				tr.setMeta("skipAutocomplete", true);
+				view.dispatch(tr);
 				setActiveFilter(null);
 				setHoveredIndex(0);
+				if (shouldSubmit) handleSubmit();
 			}
 
 			view.focus();
@@ -316,8 +334,9 @@ export const SearchInput = (props: {
 
 									if (event.key === "Enter" || event.key === "Tab") {
 										event.preventDefault();
+										const shouldSubmit = event.key === "Enter";
 										if (currentItemsRef) {
-											currentItemsRef.selectItem(hoveredIndex());
+											currentItemsRef.selectItem(hoveredIndex(), shouldSubmit);
 										}
 										return true;
 									}
@@ -401,13 +420,49 @@ export const SearchInput = (props: {
 							filter={activeFilter()!}
 							channel={props.channel}
 							room={props.room}
-							onSelect={insertNode}
-							onSelectFilter={insertFilter}
+							onSelect={(node) => insertNode(node, true)}
+							onSelectFilter={(text, isRecent) =>
+								insertFilter(text, isRecent, true)
+							}
 							hoveredIndex={hoveredIndex()}
 							setHoveredIndex={setHoveredIndex}
 							searchContext={searchContext()}
-							onItemsChange={(its, selectItem) => {
-								currentItemsRef = { items: its, selectItem };
+							onItemsChange={(its, _selectItem) => {
+								currentItemsRef = {
+									items: its,
+									selectItem: (idx, shouldSubmit) => {
+										const item = its[idx];
+										if (!item || item.isSeparator) return;
+
+										if (item.user || item.channel || item.id.includes("-")) {
+											const def = SEARCH_FILTERS[filterActive()?.type ?? ""];
+											if (def) {
+												const astNode = {
+													type: filterActive()?.type ?? "",
+													value: item.id.replace(
+														`${filterActive()?.type}-`,
+														"",
+													),
+													name:
+														typeof item.label === "string"
+															? item.label
+															: item.rawValue || "",
+													negated: filterActive()?.negated ?? false,
+												};
+												const pmNode = def.toPMNode(astNode, schema as any);
+												insertNode(pmNode, shouldSubmit);
+											} else {
+												insertFilter(item.label as string, false, shouldSubmit);
+											}
+										} else {
+											insertFilter(
+												item.rawValue || (item.label as string),
+												item.id.startsWith("recent"),
+												shouldSubmit,
+											);
+										}
+									},
+								};
 							}}
 						/>
 					</div>

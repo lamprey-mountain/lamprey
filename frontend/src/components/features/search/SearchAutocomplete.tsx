@@ -8,6 +8,18 @@ import { SEARCH_FILTERS, type SearchContext } from "./filters.config";
 import { schema } from "./schema";
 import { getRecentSearches, parseSearchQuery } from "./utils";
 
+type LabelPart = string | { type: string; value: string };
+
+export type AutocompleteItem = {
+	id: string;
+	label: string | LabelPart[];
+	rawValue?: string;
+	user?: User;
+	channel?: ThreadT;
+	onSelect: () => void;
+	isSeparator?: boolean;
+};
+
 export const SearchAutocomplete = (props: {
 	filter: { type: string; query: string; negated?: boolean };
 	channel?: ThreadT;
@@ -18,8 +30,8 @@ export const SearchAutocomplete = (props: {
 	setHoveredIndex?: (index: number) => void;
 	searchContext: SearchContext;
 	onItemsChange?: (
-		items: { onSelect: () => void; isSeparator?: boolean }[],
-		selectItem: (idx: number) => void,
+		items: AutocompleteItem[],
+		selectItem: (idx: number, shouldSubmit: boolean) => void,
 	) => void;
 }) => {
 	const _roomId = () => props.channel?.room_id ?? props.room?.id ?? null;
@@ -143,7 +155,7 @@ export const SearchAutocomplete = (props: {
 		return result;
 	});
 
-	const handleSelect = (idx: number) => {
+	const handleSelect = (idx: number, _shouldSubmit: boolean) => {
 		const its = items();
 		const item = its[idx];
 		if (item && !item.isSeparator) item.onSelect();
