@@ -8,7 +8,7 @@ import { SEARCH_FILTERS, type SearchContext } from "./filters.config";
 import { schema } from "./schema";
 import { getRecentSearches, parseSearchQuery } from "./utils";
 
-type LabelPart = string | { type: string; value: string };
+type LabelPart = string | { type: string; value: string; parts?: LabelPart[] };
 
 export type AutocompleteItem = {
 	id: string;
@@ -78,8 +78,6 @@ export const SearchAutocomplete = (props: {
 			def.getSuggestions(props.filter.query, props.searchContext).length > 0
 		);
 	});
-
-	type LabelPart = string | { type: string; value: string };
 
 	const items = createMemo(() => {
 		const type = props.filter.type;
@@ -174,18 +172,20 @@ export const SearchAutocomplete = (props: {
 						{(item, idx) => {
 							const isHovered = () => idx() === (props.hoveredIndex ?? 0);
 							const isSeparator = () => item.isSeparator;
-							const renderLabel = () => {
-								const label = item.label;
-								if (Array.isArray(label)) {
-									return label.map((part) =>
-										typeof part === "string" ? (
-											<span>{part}</span>
-										) : (
-											<span class={part.type}>{part.value}</span>
-										),
-									);
-								}
-								return label;
+
+							const renderLabel = (label: string | LabelPart[]): any => {
+								if (typeof label === "string") return label;
+								return label.map((part) => {
+									if (typeof part === "string") return <span>{part}</span>;
+
+									if (part.parts) {
+										return (
+											<span class={part.type}>{renderLabel(part.parts)}</span>
+										);
+									}
+
+									return <span class={part.type}>{part.value}</span>;
+								});
 							};
 
 							return (
@@ -223,7 +223,7 @@ export const SearchAutocomplete = (props: {
 										>
 											{(user) => <Avatar user={user()} />}
 										</Show>
-										{renderLabel()}
+										{renderLabel(item.label)}
 									</li>
 								</Show>
 							);
@@ -244,7 +244,6 @@ function formatRecentSearch(
 	query: string,
 	ctx: SearchContext,
 ): (string | { type: string; value: string })[] {
-	const parts: (string | { type: string; value: string })[] = [];
 	const tokens = parseSearchQuery(query);
 
 	// Collect phrase spans
@@ -397,59 +396,86 @@ function formatRecentSearch(
 	}
 	merged.sort((a, b) => a.from - b.from);
 
-	// Build final parts
+	const parts: LabelPart[] = [];
 	let pos = 0;
-	for (const seg of merged) {
+
+	// Use a while loop or reduce to handle grouping segments by filter
+	for (let i = 0; i < merged.length; i++) {
+		const seg = merged[i];
 		if (seg.from > pos) parts.push(query.slice(pos, seg.from));
 
-		if (seg.type === "filter-name") {
-			parts.push({ type: "filter-name", value: seg.value });
-		} else if (seg.type === "filter-syntax") {
-			parts.push({ type: "filter-syntax", value: seg.value });
-		} else if (seg.type === "filter-value") {
-			const { filterType, value, negated } = seg;
-			if (filterType === "author") {
-				const user = ctx.users.cache.get(value);
-				parts.push({
-					type: negated ? "filter-negated-value" : "filter-value",
-					value: user?.name ?? value,
-				});
-			} else if (filterType === "channel") {
-				const thread = ctx.roomThreads().find((t) => t.id === value);
-				parts.push({
-					type: negated ? "filter-negated-value" : "filter-value",
-					value: thread?.name ?? value,
-				});
-			} else if (filterType === "mentions") {
-				let displayName = value;
-				if (value.startsWith("user-")) {
-					const user = ctx.users.cache.get(value.replace("user-", ""));
-					displayName = user?.name ?? value.replace("user-", "");
-				} else if (value.startsWith("role-")) {
-					const role = [...ctx.roles.cache.values()].find(
-						(r) => r.id === value.replace("role-", ""),
-					);
-					displayName = role?.name ?? value.replace("role-", "");
-				} else if (value === "everyone-room") displayName = "@room";
-				else if (value === "everyone-thread") displayName = "@thread";
+		if (seg.filterType) {
+			// 3. Start building the "Atom" structure
+			const groupType = seg.filterType;
+			const isNegated = seg.negated;
 
-				parts.push({
-					type: negated ? "filter-negated-value" : "filter-value",
-					value: displayName,
-				});
-			} else {
-				parts.push({
-					type: negated ? "filter-negated-value" : "filter-value",
-					value,
-				});
+			// Collect all segments belonging to this specific filter
+			const filterSegments: Segment[] = [];
+			while (
+				i < merged.length &&
+				merged[i].filterType === groupType &&
+				merged[i].negated === isNegated
+			) {
+				filterSegments.push(merged[i]);
+				i++;
 			}
-		} else if (seg.type === "filter-phrase-content") {
-			parts.push({ type: "filter-phrase-content", value: seg.value });
-		} else if (seg.type === "filter-negation-content") {
-			parts.push({ type: "filter-negation-content", value: seg.value });
-		}
+			i--; // Step back because the for-loop increments i
 
-		pos = seg.to;
+			const valueSeg = filterSegments.find((s) => s.type === "filter-value");
+			let displayValue = valueSeg?.value ?? "";
+
+			// 4. Resolve the display name (Usernames, Channel names, etc.)
+			if (valueSeg) {
+				if (groupType === "author") {
+					displayValue =
+						ctx.users.cache.get(valueSeg.value)?.name ?? valueSeg.value;
+				} else if (groupType === "channel") {
+					displayValue =
+						ctx.roomThreads().find((t) => t.id === valueSeg.value)?.name ??
+						valueSeg.value;
+				} else if (groupType === "mentions") {
+					const val = valueSeg.value;
+					if (val.startsWith("user-")) {
+						displayValue =
+							ctx.users.cache.get(val.replace("user-", ""))?.name ?? val;
+					} else if (val.startsWith("role-")) {
+						const role = [...ctx.roles.cache.values()].find(
+							(r) => r.id === val.replace("role-", ""),
+						);
+						displayValue = role?.name ?? val;
+					} else if (val === "everyone-room") displayValue = "@room";
+					else if (val === "everyone-thread") displayValue = "@thread";
+				}
+			}
+
+			// 5. Create the nested "Atom" object
+			parts.push({
+				type: `filter-${groupType} filter-atom`, // Matches PM class
+				value: "",
+				parts: [
+					{
+						type: "filter-prefix",
+						value: `${isNegated ? "-" : ""}${groupType}:`,
+					},
+					{
+						type: isNegated ? "filter-negated-value" : "filter-value",
+						value: displayValue,
+					},
+				],
+			});
+
+			pos = filterSegments[filterSegments.length - 1].to;
+		} else {
+			// Handle plain text/phrases/negations as before
+			if (seg.type === "filter-phrase-content") {
+				parts.push({ type: "filter-phrase-content", value: seg.value });
+			} else if (seg.type === "filter-syntax") {
+				parts.push({ type: "filter-syntax", value: seg.value });
+			} else if (seg.type === "filter-negation-content") {
+				parts.push({ type: "filter-negation-content", value: seg.value });
+			}
+			pos = seg.to;
+		}
 	}
 
 	if (pos < query.length) parts.push(query.slice(pos));

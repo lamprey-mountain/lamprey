@@ -78,6 +78,18 @@
 				color: $fg-500;
 			}
 		}
+
+		.filter-atom {
+			display: inline-flex;
+			align-items: center;
+			background: $bg-250;
+			padding: 0 4px;
+			border-radius: 2px;
+		}
+
+		&.hovered .filter-atom {
+			background: $bg-300;
+		}
 	}
 
 	& ul li.autocomplete-separator {
