@@ -11,6 +11,10 @@ use tracing::error;
 use uuid::Uuid;
 
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::message::{
+    Message, MessageAttachmentCreateType, MessageAttachmentType, MessageDefaultMarkdown,
+    MessagePatch, MessageType, MessageVersion,
+};
 use common::v1::types::misc::Color;
 use common::v1::types::notifications::{Notification, NotificationType};
 use common::v1::types::util::{Diff, Time};
@@ -22,10 +26,6 @@ use common::v1::types::{
 };
 use common::v1::types::{MediaId, ThreadMemberPut, UserId};
 use common::v2::types::embed::{Embed, EmbedType};
-use common::v2::types::message::{
-    Message, MessageAttachmentCreateType, MessageDefaultMarkdown, MessagePatch, MessageType,
-    MessageVersion,
-};
 use http::StatusCode;
 use validator::Validate;
 
@@ -527,9 +527,7 @@ impl ServiceMessages {
                     .attachments
                     .iter()
                     .filter_map(|a| match &a.ty {
-                        common::v2::types::message::MessageAttachmentType::Media { media } => {
-                            Some(media.id)
-                        }
+                        MessageAttachmentType::Media { media } => Some(media.id),
                     })
                     .collect(),
                 _ => vec![],

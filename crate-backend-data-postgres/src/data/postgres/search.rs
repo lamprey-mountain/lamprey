@@ -1,10 +1,10 @@
 use async_trait::async_trait;
+use common::v1::types::message::Message;
 use common::v1::types::{
     search::{ChannelSearchRequest, MessageSearchRequest},
     Channel, ChannelId, ChannelType, MessageId, PaginationDirection, PaginationQuery,
     PaginationResponse, UserId,
 };
-use common::v2::types::message::Message;
 use sqlx::{query_file_as, query_file_scalar, Acquire};
 use uuid::Uuid;
 

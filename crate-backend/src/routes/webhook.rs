@@ -14,9 +14,8 @@ use common::v1::types::{
     sync::MessageSync,
     util::Changes,
     webhook::{Webhook, WebhookCreate, WebhookUpdate},
-    Message, MessageCreate, MessageId, Permission, UserId, WebhookId,
+    Message, MessageCreate, MessageId, MessagePatch, Permission, UserId, WebhookId,
 };
-use common::v2::types::message::MessagePatch;
 use serde_json::Value;
 use utoipa_axum::{router::OpenApiRouter, routes};
 

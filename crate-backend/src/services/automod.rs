@@ -1,19 +1,16 @@
 use std::{sync::Arc, time::Duration};
 
-use common::{
-    v1::types::{
-        automod::{
-            AutomodAction, AutomodMatches, AutomodRule, AutomodRuleStripped, AutomodRuleTest,
-            AutomodTarget, AutomodTextLocation, AutomodTrigger,
-        },
-        error::{ApiError, ErrorCode},
-        ids::AUTOMOD_USER_ID,
-        util::Time,
-        AutomodRuleId, Channel, ChannelCreate, ChannelId, ChannelPatch, Mentions, MentionsUser,
-        MessageAutomodExecution, MessageCreate, MessageId, MessagePatch, MessageSync, MessageType,
-        Permission, RoomId, RoomMember, RoomMemberPatch, User, UserId,
+use common::v1::types::{
+    automod::{
+        AutomodAction, AutomodMatches, AutomodRule, AutomodRuleStripped, AutomodRuleTest,
+        AutomodTarget, AutomodTextLocation, AutomodTrigger,
     },
-    v2::types::message::Message,
+    error::{ApiError, ErrorCode},
+    ids::AUTOMOD_USER_ID,
+    util::Time,
+    AutomodRuleId, Channel, ChannelCreate, ChannelId, ChannelPatch, Mentions, MentionsUser,
+    Message, MessageAutomodExecution, MessageCreate, MessageId, MessagePatch, MessageSync,
+    MessageType, Permission, RoomId, RoomMember, RoomMemberPatch, User, UserId,
 };
 use dashmap::DashMap;
 use tracing::{error, warn};

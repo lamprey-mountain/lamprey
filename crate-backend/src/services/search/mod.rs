@@ -1,12 +1,13 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use common::v1::types::search::{ChannelSearchOrderField, Order};
 use common::v1::types::{
-    search::{ChannelSearchRequest, MessageSearch, MessageSearchRequest},
-    Channel, ChannelId, MessageId, PaginationQuery, PaginationResponse, RoomId, UserId,
+    search::{
+        ChannelSearchOrderField, ChannelSearchRequest, MessageSearch, MessageSearchRequest, Order,
+    },
+    Channel, ChannelId, MessageId, MessageType, PaginationQuery, PaginationResponse, RoomId,
+    UserId,
 };
-use common::v2::types::message::MessageType;
 use futures::stream::{FuturesUnordered, StreamExt};
 use lamprey_backend_core::types::admin::SearchIndexStats;
 use tokio::sync::OnceCell;

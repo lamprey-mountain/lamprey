@@ -3,13 +3,13 @@
 use common::v1::types::automod::{AutomodAction, AutomodTarget, AutomodTrigger};
 use common::v1::types::calendar::{CalendarEvent, CalendarOverwrite};
 use common::v1::types::document::DocumentBranchState;
+use common::v1::types::message::MessageType;
 use common::v1::types::User;
 use common::v1::types::{
     util::Time, Channel, ChannelType, Embed, Permission, Puppet, Room, RoomType, Session,
     SessionStatus, SessionToken, SessionType,
 };
 use common::v1::types::{AuditLogEntryStatus, Mentions, RoomSecurity};
-use common::v2::types::message::MessageType;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::str::FromStr;

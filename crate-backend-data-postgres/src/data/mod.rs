@@ -8,6 +8,7 @@ use common::v1::types::document::{
     DocumentBranchState, DocumentPatch, DocumentTag, Wiki, WikiPatch,
 };
 use common::v1::types::email::EmailAddr;
+use common::v1::types::message::{Message, MessageVersion};
 use common::v1::types::oauth::Scopes;
 use common::v1::types::room_template::{RoomTemplateCode, RoomTemplateCreate, RoomTemplatePatch};
 use common::v1::types::util::Time;
@@ -20,7 +21,6 @@ use common::v1::types::{
 };
 use common::v2::types::embed::Embed;
 use common::v2::types::media::{Media, MediaPatch};
-use common::v2::types::message::{Message, MessageVersion};
 pub use lamprey_backend_core::data::{
     DataAdmin, DataApplication, DataAuditLogs, DataAutomod, DataCalendar, DataConfigInternal,
     DataConnection, DataDm, DataEmoji, DataInvite, DataMetrics, DataNotification, DataPermission,

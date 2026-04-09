@@ -2,14 +2,14 @@
 
 use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::message::{
+    Message, MessageAttachment, MessageAttachmentType, MessageDefaultMarkdown, MessageType,
+    MessageVersion,
+};
 use common::v1::types::reaction::ReactionCounts;
 use common::v1::types::util::Time;
 use common::v1::types::{ChannelType, Mentions, UserId};
 use common::v2::types::embed::Embed;
-use common::v2::types::message::{
-    Message, MessageAttachment, MessageAttachmentType, MessageDefaultMarkdown, MessageType,
-    MessageVersion,
-};
 use sqlx::{query, query_file_as, query_file_scalar, query_scalar, Acquire};
 use tracing::info;
 use uuid::Uuid;

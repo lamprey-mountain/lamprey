@@ -3,12 +3,8 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use common::v1::types::MessageSync;
-use common::v2::types::message::Message;
-use common::{
-    v1::types::{voice::SfuCommand, AuditLogEntry, ChannelId, RoomId, UserId},
-    v2::types::message::MessageVersion,
-};
+use common::v1::types::{voice::SfuCommand, AuditLogEntry, ChannelId, RoomId, UserId};
+use common::v1::types::{Message, MessageAttachmentType, MessageSync, MessageType, MessageVersion};
 use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -270,11 +266,11 @@ impl ServerStateInner {
     /// presigns every relevant url in a MessageVersion
     pub async fn presign_message_version(&self, ver: &mut MessageVersion) -> Result<()> {
         match &mut ver.message_type {
-            common::v2::types::message::MessageType::DefaultMarkdown(m) => {
+            MessageType::DefaultMarkdown(m) => {
                 for attachment in &mut m.attachments {
-                    let common::v2::types::message::MessageAttachmentType::Media { media } =
-                        &mut attachment.ty;
-                    self.presign(media).await?;
+                    if let MessageAttachmentType::Media { media } = &mut attachment.ty {
+                        self.presign(media).await?;
+                    }
                 }
                 for emb in &mut m.embeds {
                     if let Some(m) = &mut emb.media {

@@ -1,5 +1,5 @@
 use std::{
-    io::{BufWriter, Error as IoError, Read, Result as IoResult, Seek, SeekFrom, Write},
+    io::{Error as IoError, Read, Result as IoResult, Seek, SeekFrom, Write},
     ops::Range,
     path::{Path, PathBuf},
     sync::Arc,
@@ -15,9 +15,22 @@ use tantivy::{
     Directory, HasLen,
 };
 use tokio::runtime::Handle as TokioHandle;
-use tracing::debug;
+use tokio::task::JoinSet;
+use tracing::{debug, warn};
 
 use crate::ServerStateInner;
+
+/// block size for chunked caching (1MB)
+const BLOCK_SIZE: usize = 1024 * 1024;
+
+/// file extensions that are considered "hot" and should be eagerly downloaded in full
+const HOT_EXTENSIONS: &[&str] = &["term", "json", "idx", "del", "fieldnorm"];
+
+fn is_hot_file(path: &Path) -> bool {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| HOT_EXTENSIONS.contains(&ext))
+}
 
 /// a directory on object storage using a local filesystem cache
 #[derive(Debug, Clone)]
@@ -53,13 +66,14 @@ struct ObjectFile {
     path: String,
     len: usize,
     cache_path: PathBuf,
+    fully_cached: bool,
 }
 
-/// a handle to write to a file on object storage and local cache
 struct ObjectFileWrite {
     file: Option<std::fs::File>,
-    writer: opendal::Writer,
     rt: TokioHandle,
+    blobs: Operator,
+    remote_path: String,
     path: PathBuf,
     cache_file_path: PathBuf,
     temp_path: PathBuf,
@@ -80,7 +94,8 @@ impl ObjectDirectory {
     }
 
     fn path_str(&self, path: &Path) -> String {
-        self.base_path.join(path).to_str().unwrap().to_string()
+        let relative = path.strip_prefix("/").unwrap_or(path);
+        self.base_path.join(relative).to_str().unwrap().to_string()
     }
 
     /// get metadata for an object
@@ -113,21 +128,6 @@ impl ObjectDirectory {
 impl Directory for ObjectDirectory {
     fn get_file_handle(&self, path: &Path) -> Result<Arc<dyn FileHandle>, OpenReadError> {
         let cache_file = self.cache_path.join(path);
-        if cache_file.exists() {
-            let meta = std::fs::metadata(&cache_file).map_err(|err| OpenReadError::IoError {
-                io_error: Arc::new(err),
-                filepath: path.to_path_buf(),
-            })?;
-            return Ok(Arc::new(ObjectFile {
-                rt: self.rt.clone(),
-                blobs: self.blobs.clone(),
-                path: self.path_str(path),
-                len: meta.len() as usize,
-                cache_path: cache_file,
-            }));
-        }
-
-        debug!(path = ?path, "downloading file from object store to cache");
         let metadata = self.metadata(path)?;
 
         Ok(Arc::new(ObjectFile {
@@ -135,21 +135,38 @@ impl Directory for ObjectDirectory {
             blobs: self.blobs.clone(),
             path: self.path_str(path),
             len: metadata.len,
-            cache_path: cache_file,
+            cache_path: cache_file.clone(),
+            fully_cached: cache_file.exists(),
         }))
     }
 
     fn delete(&self, path: &Path) -> Result<(), DeleteError> {
-        // delete local file
         let cache_file = self.cache_path.join(path);
+        let chunk_prefix = format!(
+            "{}.",
+            cache_file
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or("")
+        );
+
         if cache_file.exists() {
-            std::fs::remove_file(&cache_file).map_err(|err| DeleteError::IoError {
-                io_error: Arc::new(err),
-                filepath: path.to_path_buf(),
-            })?;
+            let _ = std::fs::remove_file(&cache_file);
         }
 
-        // delete the remote file even if the file isn't found locally
+        // scan the actual parent directory of the file, not the root cache dir,
+        // so chunks in subdirectories are found and deleted
+        if let Some(parent) = cache_file.parent() {
+            if let Ok(entries) = std::fs::read_dir(parent) {
+                for entry in entries.flatten() {
+                    let name_str = entry.file_name().to_string_lossy().into_owned();
+                    if name_str.starts_with(&chunk_prefix) && name_str.ends_with(".chunk") {
+                        let _ = std::fs::remove_file(entry.path());
+                    }
+                }
+            }
+        }
+
         self.cache_metadata.remove(path);
         self.rt
             .block_on(self.blobs.delete(&self.path_str(path)))
@@ -180,14 +197,6 @@ impl Directory for ObjectDirectory {
     }
 
     fn open_write(&self, path: &Path) -> Result<WritePtr, OpenWriteError> {
-        let writer = self
-            .rt
-            .block_on(self.blobs.writer(&self.path_str(path)))
-            .map_err(|err| OpenWriteError::IoError {
-                io_error: Arc::new(IoError::new(std::io::ErrorKind::Other, err)),
-                filepath: path.to_path_buf(),
-            })?;
-
         let cache_file_path = self.cache_path.join(path);
         if let Some(parent) = cache_file_path.parent() {
             std::fs::create_dir_all(parent).map_err(|err| OpenWriteError::IoError {
@@ -204,15 +213,17 @@ impl Directory for ObjectDirectory {
                 .unwrap_or(""),
             uuid::Uuid::new_v4()
         ));
+
         let file = std::fs::File::create(&temp_path).map_err(|err| OpenWriteError::IoError {
             io_error: Arc::new(err),
             filepath: path.to_path_buf(),
         })?;
 
-        Ok(BufWriter::new(Box::new(ObjectFileWrite {
+        Ok(WritePtr::new(Box::new(ObjectFileWrite {
             file: Some(file),
-            writer,
             rt: self.rt.clone(),
+            blobs: self.blobs.clone(),
+            remote_path: self.path_str(path),
             path: path.to_path_buf(),
             cache_file_path,
             temp_path,
@@ -222,16 +233,16 @@ impl Directory for ObjectDirectory {
     }
 
     fn atomic_read(&self, path: &Path) -> Result<Vec<u8>, OpenReadError> {
-        if self.cache_path.join(path).exists() {
-            return std::fs::read(self.cache_path.join(path)).map_err(|err| {
-                OpenReadError::IoError {
-                    io_error: Arc::new(err),
-                    filepath: path.to_path_buf(),
-                }
+        let full_cache_path = self.cache_path.join(path);
+        if full_cache_path.exists() {
+            return std::fs::read(&full_cache_path).map_err(|err| OpenReadError::IoError {
+                io_error: Arc::new(err),
+                filepath: path.to_path_buf(),
             });
         }
 
-        self.rt
+        let buf = self
+            .rt
             .block_on(self.blobs.read(&self.path_str(path)))
             .map_err(|err| {
                 if err.kind() == ErrorKind::NotFound {
@@ -242,35 +253,47 @@ impl Directory for ObjectDirectory {
                         filepath: path.to_path_buf(),
                     }
                 }
-            })
-            .map(|buf| buf.to_vec())
+            })?
+            .to_vec();
+
+        // atomic write: temp file + rename, with parent dir creation
+        if let Some(parent) = full_cache_path.parent() {
+            std::fs::create_dir_all(parent).map_err(|err| OpenReadError::IoError {
+                io_error: Arc::new(err),
+                filepath: path.to_path_buf(),
+            })?;
+        }
+        let tmp_path = full_cache_path.with_extension("tmp");
+        std::fs::write(&tmp_path, &buf).map_err(|err| OpenReadError::IoError {
+            io_error: Arc::new(err),
+            filepath: path.to_path_buf(),
+        })?;
+        std::fs::rename(&tmp_path, &full_cache_path).map_err(|err| OpenReadError::IoError {
+            io_error: Arc::new(err),
+            filepath: path.to_path_buf(),
+        })?;
+
+        Ok(buf)
     }
 
     fn atomic_write(&self, path: &Path, data: &[u8]) -> IoResult<()> {
         let cache_file_path = self.cache_path.join(path);
-        let temp_path = cache_file_path.with_file_name(format!(
-            "{}.{}.tmp",
-            cache_file_path
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or(""),
-            uuid::Uuid::new_v4()
-        ));
 
-        // write to temp file
-        std::fs::write(&temp_path, data)?;
+        // write to temp file first, then rename for atomicity
+        if let Some(parent) = cache_file_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let tmp_path = cache_file_path.with_extension("tmp");
+        std::fs::write(&tmp_path, data)?;
+        std::fs::rename(&tmp_path, &cache_file_path)?;
 
         // write remotely
         self.rt
             .block_on(self.blobs.write(&self.path_str(path), data.to_vec()))
             .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?;
 
-        // rename temp file to cache file
-        std::fs::rename(&temp_path, &cache_file_path)?;
-
         self.cache_metadata
             .insert(path.to_path_buf(), ObjectMetadata { len: data.len() });
-
         Ok(())
     }
 
@@ -283,70 +306,137 @@ impl Directory for ObjectDirectory {
     }
 }
 
-const SMALL_FILE: usize = 512;
-
 impl FileHandle for ObjectFile {
     fn read_bytes(&self, range: Range<usize>) -> IoResult<OwnedBytes> {
-        match std::fs::File::open(&self.cache_path) {
-            Ok(mut file) => {
-                file.seek(SeekFrom::Start(range.start as u64))?;
-                let mut buf = vec![0u8; range.end - range.start];
-                file.read_exact(&mut buf)?;
-                return Ok(OwnedBytes::new(buf));
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                // file not in cache, fall through to download from object store
-            }
-            Err(e) => return Err(e),
+        // if the file is already fully cached, read directly from disk
+        if self.fully_cached {
+            let mut file = std::fs::File::open(&self.cache_path)?;
+            file.seek(SeekFrom::Start(range.start as u64))?;
+            let mut buf = vec![0u8; range.end - range.start];
+            file.read_exact(&mut buf)?;
+            return Ok(OwnedBytes::new(buf));
         }
 
-        let range_len = range.end - range.start;
+        // for hot files, download the entire file once and cache it
+        if is_hot_file(&self.cache_path) {
+            // check if another request already cached this file
+            if !self.cache_path.exists() {
+                debug!(path = ?self.path, len = self.len, "downloading hot file to cache");
+                let buf = self
+                    .rt
+                    .block_on(async { self.blobs.read(&self.path).await })
+                    .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?
+                    .to_vec();
 
-        // if the file is small enough, download the whole file and cache it
-        if self.len < SMALL_FILE {
-            debug!(path = ?self.path, len = self.len, "downloading small file to cache");
-            let buf = self
-                .rt
-                .block_on(async { self.blobs.read_with(&self.path).await })
-                .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?;
-
-            // convert buffer to bytes
-            let buf = buf.to_vec();
-
-            // write to cache
-            if let Some(parent) = self.cache_path.parent() {
-                std::fs::create_dir_all(parent)?;
-            }
-            std::fs::write(&self.cache_path, &buf)?;
-
-            if buf.len() != self.len {
-                return Err(IoError::new(
-                    std::io::ErrorKind::UnexpectedEof,
-                    "failed to read full file from object store",
-                ));
+                // atomic write with parent dir creation
+                if let Some(parent) = self.cache_path.parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                let tmp_path = self.cache_path.with_extension("tmp");
+                std::fs::write(&tmp_path, &buf)?;
+                std::fs::rename(&tmp_path, &self.cache_path)?;
             }
 
-            return Ok(OwnedBytes::new(buf[range.start..range.end].to_vec()));
+            // fall through to read from the now-cached file
+            let mut file = std::fs::File::open(&self.cache_path)?;
+            file.seek(SeekFrom::Start(range.start as u64))?;
+            let mut buf = vec![0u8; range.end - range.start];
+            file.read_exact(&mut buf)?;
+            return Ok(OwnedBytes::new(buf));
         }
 
-        let buf = self
-            .rt
-            .block_on(async {
-                self.blobs
-                    .read_with(&self.path)
-                    .range(range.start as u64..range.end as u64)
-                    .await
-            })
-            .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?;
+        // for all other files, use block-based caching
+        self.read_bytes_blocked(range)
+    }
+}
 
-        if buf.len() != range_len {
-            return Err(IoError::new(
-                std::io::ErrorKind::UnexpectedEof,
-                "failed to read full range from object store",
-            ));
+impl ObjectFile {
+    /// read bytes using block-based caching. downloads only the 1MB blocks that
+    /// overlap the requested range and persists them to disk for future reads.
+    fn read_bytes_blocked(&self, range: Range<usize>) -> IoResult<OwnedBytes> {
+        if range.start >= range.end {
+            return Ok(OwnedBytes::empty());
         }
 
-        Ok(OwnedBytes::new(buf.to_vec()))
+        let start_block = range.start / BLOCK_SIZE;
+        let end_block = (range.end - 1) / BLOCK_SIZE;
+
+        // 1. identify missing blocks and download them in parallel
+        let mut missing_blocks = Vec::new();
+        for idx in start_block..=end_block {
+            if !self.block_path(idx).exists() {
+                missing_blocks.push(idx);
+            }
+        }
+
+        if !missing_blocks.is_empty() {
+            self.rt.block_on(async {
+                let mut set = JoinSet::new();
+                for idx in missing_blocks {
+                    let blobs = self.blobs.clone();
+                    let path = self.path.clone();
+                    let block_path = self.block_path(idx);
+                    let file_len = self.len;
+
+                    set.spawn(async move {
+                        let b_start = idx * BLOCK_SIZE;
+                        let b_end = ((idx + 1) * BLOCK_SIZE).min(file_len);
+                        let buf = blobs
+                            .read_with(&path)
+                            .range(b_start as u64..b_end as u64)
+                            .await?;
+
+                        // create parent dirs and use uuid-named temp file to avoid
+                        // concurrent rename races
+                        if let Some(parent) = block_path.parent() {
+                            let _ = std::fs::create_dir_all(parent);
+                        }
+                        let tmp_path =
+                            block_path.with_extension(format!("tmp.{}", uuid::Uuid::new_v4()));
+                        std::fs::write(&tmp_path, buf.to_vec())?;
+                        std::fs::rename(&tmp_path, &block_path)?;
+
+                        Ok::<(), IoError>(())
+                    });
+                }
+
+                while let Some(res) = set.join_next().await {
+                    if let Err(e) = res {
+                        warn!("Block download task failed: {e}");
+                    }
+                }
+            });
+        }
+
+        // 2. read required ranges from (now existing) block files
+        let mut out_buf = vec![0u8; range.end - range.start];
+        let mut bytes_written = 0;
+
+        for idx in start_block..=end_block {
+            let block_data = std::fs::read(self.block_path(idx))?;
+            let b_start_offset = idx * BLOCK_SIZE;
+            let read_start = range.start.max(b_start_offset) - b_start_offset;
+            let read_end = range
+                .end
+                .min((idx + 1) * BLOCK_SIZE)
+                .min(b_start_offset + block_data.len())
+                - b_start_offset;
+            let len = read_end.saturating_sub(read_start);
+
+            out_buf[bytes_written..bytes_written + len]
+                .copy_from_slice(&block_data[read_start..read_end]);
+            bytes_written += len;
+        }
+
+        Ok(OwnedBytes::new(out_buf))
+    }
+
+    /// get the path for a specific block of this file
+    fn block_path(&self, block_idx: usize) -> PathBuf {
+        let mut p = self.cache_path.clone();
+        let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("data");
+        p.set_extension(format!("{block_idx}.{ext}.chunk"));
+        p
     }
 }
 
@@ -361,9 +451,6 @@ impl Write for ObjectFileWrite {
         if let Some(file) = &mut self.file {
             file.write_all(buf)?;
         }
-        self.rt
-            .block_on(self.writer.write(buf.to_vec()))
-            .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?;
         self.total_len += buf.len();
         Ok(buf.len())
     }
@@ -381,9 +468,24 @@ impl TerminatingWrite for ObjectFileWrite {
         if let Some(mut file) = self.file.take() {
             file.flush()?;
         }
+
+        // streaming upload to prevent oom
+        let mut file = std::fs::File::open(&self.temp_path)?;
         self.rt
-            .block_on(self.writer.close())
-            .map_err(|err| IoError::new(std::io::ErrorKind::Other, err))?;
+            .block_on(async {
+                let mut writer = self.blobs.writer(&self.remote_path).await?;
+                let mut buf = vec![0u8; 8 * 1024 * 1024]; // 8MB upload buffer
+                loop {
+                    let n = file.read(&mut buf)?;
+                    if n == 0 {
+                        break;
+                    }
+                    writer.write(buf[..n].to_vec()).await?;
+                }
+                writer.close().await?;
+                Ok::<(), IoError>(())
+            })
+            .map_err(|e| IoError::new(std::io::ErrorKind::Other, e))?;
 
         // rename temp file to cache file
         std::fs::rename(&self.temp_path, &self.cache_file_path)?;

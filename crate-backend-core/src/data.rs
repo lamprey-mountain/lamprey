@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::v1::types::Message as MessageV2;
 use common::v1::types::{
     ack::AckBulkItem,
     application::{Application, Connection, Scopes},
@@ -29,7 +30,6 @@ use common::v1::types::{
     RoomMemberSearchAdvanced, RoomMemberSearchResponse, TagId, ThreadMember, ThreadMemberPut,
     UserId, WebhookId,
 };
-use common::v2::types::message::Message as MessageV2;
 use std::collections::HashMap;
 use uuid::Uuid;
 

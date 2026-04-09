@@ -1,10 +1,10 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
+use common::v1::types::message::{Message, MessageAttachmentType, MessageType};
 use common::v1::types::util::Time;
 use common::v1::types::{Channel, ChannelId, ChannelType, Room, RoomId, User};
 use common::v2::types::media::Media;
-use common::v2::types::message::{Message, MessageType};
 use tantivy::schema::{OwnedValue, Schema};
 use tantivy::TantivyDocument;
 
@@ -104,15 +104,15 @@ pub fn tantivy_document_from_message(
             meta_fast.insert("has_attachment".to_string(), true.into());
 
             let has_audio = m.attachments.iter().any(|a| {
-                let common::v2::types::message::MessageAttachmentType::Media { media } = &a.ty;
+                let MessageAttachmentType::Media { media } = &a.ty;
                 media.content_type.to_string().starts_with("audio/")
             });
             let has_image = m.attachments.iter().any(|a| {
-                let common::v2::types::message::MessageAttachmentType::Media { media } = &a.ty;
+                let MessageAttachmentType::Media { media } = &a.ty;
                 media.content_type.to_string().starts_with("image/")
             });
             let has_video = m.attachments.iter().any(|a| {
-                let common::v2::types::message::MessageAttachmentType::Media { media } = &a.ty;
+                let MessageAttachmentType::Media { media } = &a.ty;
                 media.content_type.to_string().starts_with("video/")
             });
 
@@ -121,7 +121,7 @@ pub fn tantivy_document_from_message(
             meta_fast.insert("has_video".to_string(), has_video.into());
 
             for att in &m.attachments {
-                let common::v2::types::message::MessageAttachmentType::Media { media } = &att.ty;
+                let MessageAttachmentType::Media { media } = &att.ty;
                 // Helper to push to array
                 let push_val =
                     |map: &mut BTreeMap<String, OwnedValue>, key: &str, val: OwnedValue| {
