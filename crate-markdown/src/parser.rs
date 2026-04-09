@@ -733,8 +733,16 @@ impl<'a> ParseContext<'a> {
         self.parse_inline(line_end);
         self.builder.finish_node(); // Header
 
-        // Find next non-empty line
-        self.find_next_line_start(line_end)
+        // Store newlines before returning
+        let next_pos = self.find_next_line_start(line_end);
+        while self.pos < next_pos {
+            if let Some(range) = self.current_range() {
+                self.builder
+                    .token(SyntaxKind::Text.into(), self.text_for_range(range));
+            }
+            self.bump();
+        }
+        next_pos
     }
 
     /// List type for parsing
@@ -814,7 +822,16 @@ impl<'a> ParseContext<'a> {
             }
             self.builder.finish_node(); // ListItem
 
-            self.pos = self.find_next_line_start(line_end);
+            let new_pos = self.find_next_line_start(line_end);
+            // Store newlines
+            while self.pos < new_pos {
+                if let Some(range) = self.current_range() {
+                    self.builder
+                        .token(SyntaxKind::Text.into(), self.text_for_range(range));
+                }
+                self.bump();
+            }
+            self.pos = new_pos;
             if self.is_eof() {
                 break;
             }
@@ -852,7 +869,16 @@ impl<'a> ParseContext<'a> {
                 self.parse_inline(line_end);
             }
 
-            self.pos = self.find_next_line_start(line_end);
+            let new_pos = self.find_next_line_start(line_end);
+            // Store newlines
+            while self.pos < new_pos {
+                if let Some(range) = self.current_range() {
+                    self.builder
+                        .token(SyntaxKind::Text.into(), self.text_for_range(range));
+                }
+                self.bump();
+            }
+            self.pos = new_pos;
             if self.is_eof() || !self.at(TokenKind::AngleClose) {
                 break;
             }
@@ -913,6 +939,16 @@ impl<'a> ParseContext<'a> {
                 }
                 self.builder.finish_node(); // CodeBlockFence
                 self.builder.finish_node(); // CodeBlock
+
+                // Store newlines before returning
+                let next_pos = self.find_next_line_start(self.pos);
+                while self.pos < next_pos {
+                    if let Some(range) = self.current_range() {
+                        self.builder
+                            .token(SyntaxKind::Text.into(), self.text_for_range(range));
+                    }
+                    self.bump();
+                }
                 return self.pos;
             }
             // No closing fence found at this position, advance
@@ -933,6 +969,15 @@ impl<'a> ParseContext<'a> {
         }
         self.builder.finish_node(); // CodeBlockContent
         self.builder.finish_node(); // CodeBlock
+                                    // Store newlines before returning
+        let next_pos = self.find_next_line_start(self.pos);
+        while self.pos < next_pos {
+            if let Some(range) = self.current_range() {
+                self.builder
+                    .token(SyntaxKind::Text.into(), self.text_for_range(range));
+            }
+            self.bump();
+        }
         self.pos
     }
 
@@ -983,8 +1028,16 @@ impl<'a> ParseContext<'a> {
 
         self.builder.finish_node(); // Paragraph
 
-        // Move past any whitespace/newlines at the end
-        self.find_next_line_start(para_end)
+        // Store newlines before returning
+        let next_pos = self.find_next_line_start(para_end);
+        while self.pos < next_pos {
+            if let Some(range) = self.current_range() {
+                self.builder
+                    .token(SyntaxKind::Text.into(), self.text_for_range(range));
+            }
+            self.bump();
+        }
+        next_pos
     }
 
     /// Parse markdown source into block-level elements using the context
@@ -1002,6 +1055,11 @@ impl<'a> ParseContext<'a> {
 
             match token {
                 TokenKind::Newline | TokenKind::Whitespace => {
+                    // Store newlines in the tree so renderers can reconstruct them
+                    if let Some(range) = self.current_range() {
+                        self.builder
+                            .token(SyntaxKind::Text.into(), self.text_for_range(range));
+                    }
                     self.bump();
                 }
                 TokenKind::Hash => {

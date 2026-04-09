@@ -75,10 +75,6 @@ pub enum Event<'a> {
     Text(Cow<'a, str>),
     /// Code content (inside inline code or code blocks).
     Code(Cow<'a, str>),
-    /// Soft line break (single newline within paragraph).
-    SoftBreak,
-    /// Hard line break (double newline or explicit break).
-    HardBreak,
     /// Horizontal rule.
     Rule,
     /// HTML content (if supported).

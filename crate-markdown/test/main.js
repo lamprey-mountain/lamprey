@@ -85,13 +85,9 @@ function formatEvents(events) {
             case 'end':
                 return `◀ End: ${e.tag}`;
             case 'text':
-                return `   Text: "${e.content}"`;
+                return `   Text: "${e.content.replace(/\n/g, '\\n')}"`;
             case 'code':
                 return `   Code: "${e.content}"`;
-            case 'soft_break':
-                return `   SoftBreak`;
-            case 'hard_break':
-                return `   HardBreak`;
             case 'rule':
                 return `   Rule`;
             case 'html':

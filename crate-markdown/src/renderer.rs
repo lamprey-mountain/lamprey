@@ -97,13 +97,10 @@ fn collect_plaintext(node: &SyntaxNode<MyLang>) -> String {
     for child in node.children_with_tokens() {
         match child {
             NodeOrToken::Token(tok) => {
-                // Skip delimiter/marker tokens, keep text
-                match tok.kind() {
-                    SyntaxKind::Text => {
-                        result.push_str(tok.text());
-                    }
-                    // Skip all markers and delimiters
-                    _ => {}
+                // Keep text tokens (includes newlines now that parser stores them)
+                // Skip formatting markers
+                if tok.kind() == SyntaxKind::Text {
+                    result.push_str(tok.text());
                 }
             }
             NodeOrToken::Node(child_node) => {

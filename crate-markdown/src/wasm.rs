@@ -26,8 +26,6 @@ pub enum WasmEvent {
     End { tag: String },
     Text { content: String },
     Code { content: String },
-    SoftBreak,
-    HardBreak,
     Rule,
     Html { content: String },
 }
@@ -279,8 +277,6 @@ fn collect_events(ast: &Ast) -> Vec<WasmEvent> {
             Event::Code(c) => WasmEvent::Code {
                 content: c.into_owned(),
             },
-            Event::SoftBreak => WasmEvent::SoftBreak,
-            Event::HardBreak => WasmEvent::HardBreak,
             Event::Rule => WasmEvent::Rule,
             Event::Html(h) => WasmEvent::Html {
                 content: h.into_owned(),
