@@ -10,6 +10,7 @@ SELECT
     t.url,
     t.type as "ty: _",
     t.nsfw,
+    t.latest_seq,
     t.locked,
     t.locked_until,
     t.locked_roles,

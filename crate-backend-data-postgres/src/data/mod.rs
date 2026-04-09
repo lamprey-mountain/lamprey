@@ -11,7 +11,9 @@ use common::v1::types::email::EmailAddr;
 use common::v1::types::message::{Message, MessageVersion};
 use common::v1::types::oauth::Scopes;
 use common::v1::types::room_template::{RoomTemplateCode, RoomTemplateCreate, RoomTemplatePatch};
+use common::v1::types::sync::ChannelSync;
 use common::v1::types::util::Time;
+use common::v1::types::ChannelSeq;
 use common::v1::types::{
     ApplicationId, Channel, ChannelId, ChannelPatch, ChannelReorder, ChannelVerId,
     DocumentBranchId, DocumentTagId, MediaId, PaginationQuery, PaginationResponse, PinsReorder,
@@ -290,6 +292,15 @@ pub trait DataMessage {
         channel_id: ChannelId,
         version_id: MessageVerId,
     ) -> Result<MessageId>;
+
+    /// Get incremental sync events for a channel since the given sequence number.
+    async fn channel_sync(
+        &self,
+        channel_id: ChannelId,
+        since: ChannelSeq,
+        pagination: PaginationQuery<MessageId>,
+        user_id: Option<UserId>,
+    ) -> Result<ChannelSync>;
 }
 
 // DataSession trait

@@ -1056,6 +1056,33 @@ async fn channel_ratelimit_delete_all(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Channel sync
+#[handler(routes::channel_sync)]
+async fn channel_sync(
+    auth: AuthRelaxed2,
+    State(s): State<Arc<ServerState>>,
+    req: routes::channel_sync::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
+    let srv = s.services();
+    let data = s.data();
+
+    let user_id = auth.user.as_ref().map(|u| u.id);
+
+    srv.perms
+        .for_channel3(user_id, req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ChannelView)
+        .check()?;
+
+    let sync = data
+        .channel_sync(req.channel_id, req.since.since, req.pagination, user_id)
+        .await?;
+
+    Ok(Json(sync))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes2!(channel_create_room))
@@ -1074,4 +1101,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(channel_ratelimit_update))
         .routes(routes2!(channel_ratelimit_delete))
         .routes(routes2!(channel_ratelimit_delete_all))
+        .routes(routes2!(channel_sync))
 }

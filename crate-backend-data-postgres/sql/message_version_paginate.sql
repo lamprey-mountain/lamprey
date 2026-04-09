@@ -9,6 +9,7 @@ SELECT
     mv.embeds as "embeds",
     mv.created_at,
     mv.deleted_at,
+    mv.created_seq,
     coalesce(att_json.attachments, '{}') as "attachments!"
 FROM message_version AS mv
 JOIN message AS m ON m.id = mv.message_id

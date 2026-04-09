@@ -6,8 +6,8 @@ use common::v1::types::document::DocumentBranchState;
 use common::v1::types::message::MessageType;
 use common::v1::types::User;
 use common::v1::types::{
-    util::Time, Channel, ChannelType, Embed, Permission, Puppet, Room, RoomType, Session,
-    SessionStatus, SessionToken, SessionType,
+    util::Time, Channel, ChannelSeq, ChannelType, Embed, Permission, Puppet, Room, RoomType,
+    Session, SessionStatus, SessionToken, SessionType,
 };
 use common::v1::types::{AuditLogEntryStatus, Mentions, RoomSecurity};
 use serde::{Deserialize, Serialize};
@@ -19,7 +19,7 @@ use uuid::Uuid;
 pub use common::v1::types::ids::*;
 pub use common::v1::types::misc::{SessionIdReq, UserIdReq};
 
-#[derive(Debug, sqlx::Type)]
+#[derive(Debug, sqlx::Type, Clone, Copy)]
 #[sqlx(type_name = "message_type")]
 pub enum DbMessageType {
     DefaultMarkdown,
@@ -186,6 +186,7 @@ pub struct DbChannel {
     pub member_count: i64,
     pub permission_overwrites: serde_json::Value,
     pub nsfw: bool,
+    pub latest_seq: i64,
     pub locked: bool,
     pub locked_until: Option<PrimitiveDateTime>,
     pub locked_roles: Vec<Uuid>,
@@ -339,6 +340,7 @@ impl From<DbChannel> for Channel {
             archived_at: row.archived_at.map(|t| t.into()),
             deleted_at: row.deleted_at.map(|t| t.into()),
             ty: row.ty.into(),
+            latest_seq: ChannelSeq(row.latest_seq as u64),
             last_version_id: row.last_version_id.map(|i| i.into()),
             last_message_id: row.last_message_id.map(|i| i.into()),
             message_count: Some(row.message_count.try_into().expect("count is negative?")),

@@ -20,6 +20,8 @@ SELECT
     m.deleted_at,
     m.removed_at,
     m.pinned,
+    m.created_seq,
+    m.lifecycle_seq,
     mv.version_id,
     mv.author_id as version_author_id,
     mv.content,
@@ -29,6 +31,7 @@ SELECT
     mv.embeds as "embeds",
     mv.created_at as version_created_at,
     mv.deleted_at as version_deleted_at,
+    mv.created_seq as version_created_seq,
     coalesce(att_json.attachments, '{}') as "attachments!"
 FROM message AS m
 JOIN parents p ON m.id = p.id

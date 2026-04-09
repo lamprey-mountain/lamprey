@@ -31,7 +31,7 @@ impl DataReaction for Postgres {
         let key_str = key.to_string();
 
         let key_exists: bool = query_scalar!(
-            "SELECT EXISTS(SELECT 1 FROM reaction WHERE message_id = $1 AND key = $2)",
+            "SELECT EXISTS(SELECT 1 FROM reaction WHERE message_id = $1 AND key = $2 AND deleted_seq IS NULL)",
             *message_id,
             &key_str
         )
@@ -42,7 +42,7 @@ impl DataReaction for Postgres {
         if !key_exists {
             // new reaction, check limit
             let unique_reaction_count: i64 = query_scalar!(
-                "SELECT count(DISTINCT key) FROM reaction WHERE message_id = $1",
+                "SELECT count(DISTINCT key) FROM reaction WHERE message_id = $1 AND deleted_seq IS NULL",
                 *message_id
             )
             .fetch_one(&mut *tx)
@@ -55,27 +55,64 @@ impl DataReaction for Postgres {
                     crate::consts::MAX_UNIQUE_REACTIONS
                 )));
             }
-        }
 
-        query!(
-            r#"
-            WITH pos AS (
-                SELECT coalesce(
-                    (SELECT position FROM reaction WHERE message_id = $1 AND key = $4),
-                    (SELECT coalesce(max(position) + 1, 0) FROM reaction WHERE message_id = $1)
-                ) AS pos
+            // Atomically increment the channel's latest_seq and get the new value
+            let new_seq: i64 = query_scalar!(
+                r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
+                *channel_id
             )
-            INSERT INTO reaction (message_id, user_id, channel_id, key, position)
-            SELECT $1, $2, $3, $4, pos FROM pos
-            ON CONFLICT DO NOTHING
-            "#,
-            *message_id,
-            *user_id,
-            *channel_id,
-            key_str,
-        )
-        .execute(&mut *tx)
-        .await?;
+            .fetch_one(&mut *tx)
+            .await?;
+
+            // Check if this specific user+message+key was previously deleted (soft delete)
+            // If so, undelete it instead of inserting a new row
+            let was_deleted_before: bool = query_scalar!(
+                "SELECT EXISTS(SELECT 1 FROM reaction WHERE message_id = $1 AND user_id = $2 AND key = $3 AND deleted_seq IS NOT NULL)",
+                *message_id,
+                *user_id,
+                &key_str
+            )
+            .fetch_one(&mut *tx)
+            .await?
+            .unwrap_or(false);
+
+            if was_deleted_before {
+                query!(
+                    r#"
+                    UPDATE reaction
+                    SET deleted_seq = NULL, created_seq = $4
+                    WHERE message_id = $1 AND user_id = $2 AND key = $3
+                    "#,
+                    *message_id,
+                    *user_id,
+                    key_str,
+                    new_seq,
+                )
+                .execute(&mut *tx)
+                .await?;
+            } else {
+                query!(
+                    r#"
+                    WITH pos AS (
+                        SELECT coalesce(
+                            (SELECT position FROM reaction WHERE message_id = $1 AND key = $4 AND deleted_seq IS NULL),
+                            (SELECT coalesce(max(position) + 1, 0) FROM reaction WHERE message_id = $1)
+                        ) AS pos
+                    )
+                    INSERT INTO reaction (message_id, user_id, channel_id, key, position, created_seq)
+                    SELECT $1, $2, $3, $4, pos, $5 FROM pos
+                    ON CONFLICT DO NOTHING
+                    "#,
+                    *message_id,
+                    *user_id,
+                    *channel_id,
+                    key_str,
+                    new_seq,
+                )
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
 
         tx.commit().await?;
         Ok(())
@@ -84,23 +121,38 @@ impl DataReaction for Postgres {
     async fn reaction_delete(
         &self,
         user_id: UserId,
-        _channel_id: ChannelId,
+        channel_id: ChannelId,
         message_id: MessageId,
         key: ReactionKeyParam,
     ) -> Result<()> {
         debug!("reaction delete user_id={user_id} message_id={message_id} key={key:?}");
+        let mut tx = self.pool.begin().await?;
         let key = key.to_string();
+
+        // Atomically increment seq
+        let new_seq: i64 = query_scalar!(
+            r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
+            *channel_id
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+
+        // Soft delete by setting deleted_seq
         query!(
             r#"
-            DELETE FROM reaction
-            WHERE message_id = $1 AND user_id = $2 AND key = $3
+            UPDATE reaction
+            SET deleted_seq = $4
+            WHERE message_id = $1 AND user_id = $2 AND key = $3 AND deleted_seq IS NULL
             "#,
             *message_id,
             *user_id,
             key,
+            new_seq,
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+
+        tx.commit().await?;
         Ok(())
     }
 
@@ -122,7 +174,7 @@ impl DataReaction for Postgres {
                     ReactionListItem,
                     r#"
                     SELECT user_id, created_at FROM reaction
-                    WHERE message_id = $1 AND key = $2 AND user_id > $3 AND user_id < $4
+                    WHERE message_id = $1 AND key = $2 AND deleted_seq IS NULL AND user_id > $3 AND user_id < $4
                 	ORDER BY (CASE WHEN $5 = 'f' THEN user_id END), user_id DESC LIMIT $6
                     "#,
                     *message_id,
@@ -134,7 +186,7 @@ impl DataReaction for Postgres {
                 )
             },
             query_scalar!(
-                r#"SELECT count(*) FROM reaction WHERE message_id = $1 AND key = $2"#,
+                r#"SELECT count(*) FROM reaction WHERE message_id = $1 AND key = $2 AND deleted_seq IS NULL"#,
                 *message_id,
                 key,
             ),
@@ -144,29 +196,60 @@ impl DataReaction for Postgres {
 
     async fn reaction_delete_key(
         &self,
-        _channel_id: ChannelId,
+        channel_id: ChannelId,
         message_id: MessageId,
         key: ReactionKeyParam,
     ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
         let key = key.to_string();
+
+        // Atomically increment seq
+        let new_seq: i64 = query_scalar!(
+            r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
+            *channel_id
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+
+        // Soft delete all reactions with this key
         query!(
-            r#"DELETE FROM reaction WHERE message_id = $1 AND key = $2"#,
+            r#"UPDATE reaction SET deleted_seq = $3 WHERE message_id = $1 AND key = $2 AND deleted_seq IS NULL"#,
             *message_id,
             key,
+            new_seq,
         )
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+
+        tx.commit().await?;
         Ok(())
     }
 
     async fn reaction_delete_all(
         &self,
-        _channel_id: ChannelId,
+        channel_id: ChannelId,
         message_id: MessageId,
     ) -> Result<()> {
-        query!(r#"DELETE FROM reaction WHERE message_id = $1"#, *message_id,)
-            .execute(&self.pool)
-            .await?;
+        let mut tx = self.pool.begin().await?;
+
+        // Atomically increment seq
+        let new_seq: i64 = query_scalar!(
+            r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
+            *channel_id
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+
+        // Soft delete all reactions for this message
+        query!(
+            r#"UPDATE reaction SET deleted_seq = $2 WHERE message_id = $1 AND deleted_seq IS NULL"#,
+            *message_id,
+            new_seq,
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
         Ok(())
     }
 
@@ -182,6 +265,7 @@ impl DataReaction for Postgres {
             with reaction_counts as (
                 select message_id, key, min(position) as pos, count(*) as count, bool_or(user_id = $1) as self_reacted
                 from reaction
+                where deleted_seq IS NULL
                 group by message_id, key
             )
             select message_id,

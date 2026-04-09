@@ -25,11 +25,14 @@ select
     m.deleted_at,
     m.removed_at,
     m.pinned,
+    m.created_seq,
+    m.lifecycle_seq,
     coalesce(att_json.attachments, '[]'::json) as "attachments!",
     mv.embeds as "embeds",
     mv.author_id as version_author_id,
     mv.created_at as version_created_at,
-    mv.deleted_at as version_deleted_at
+    mv.deleted_at as version_deleted_at,
+    mv.created_seq as version_created_seq
 from message as m
 join message_version mv on m.latest_version_id = mv.version_id
 join channel_viewer on m.channel_id = channel_viewer.id

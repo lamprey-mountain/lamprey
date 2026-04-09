@@ -8,7 +8,27 @@ use utoipa::ToSchema;
 
 use crate::v1::types::{emoji::EmojiCustom, util::Time, EmojiId};
 
-use super::UserId;
+use super::{MessageId, UserId};
+
+/// A reaction with its creation timestamp, returned in sync events.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Reaction {
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub info: ReactionInfo,
+    pub created_at: Time,
+}
+
+/// Information identifying a reaction without its timestamp.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ReactionInfo {
+    pub user_id: UserId,
+    pub message_id: MessageId,
+    pub key: ReactionKey,
+}
 
 /// the total reaction counts for all keys
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

@@ -19,9 +19,30 @@ use crate::v1::types::{
 #[cfg(feature = "serde")]
 use crate::v1::types::util::some_option;
 
+use super::ChannelId;
+
+/// A monotonic sync token, incremented on every action in a channel.
+/// Used for incremental sync to determine what events the client is missing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ChannelSeq(pub u64);
+
+impl ChannelSeq {
+    pub fn is_zero(&self) -> bool {
+        self.0 == 0
+    }
+}
+
+impl std::fmt::Display for ChannelSeq {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 use super::calendar::{Calendar, CalendarPatch};
 use super::document::{Document, DocumentPatch, Wiki, WikiPatch};
-use super::{ChannelId, RoomId, UserId};
+use super::{RoomId, UserId};
 
 /// A channel
 // TODO(#878): minimal data for channels
@@ -116,7 +137,14 @@ pub struct Channel {
     #[cfg_attr(feature = "serde", serde(default))]
     pub nsfw: bool,
 
+    /// monotonic sync sequence number, incremented on every action.
+    /// used for incremental channel sync.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub latest_seq: ChannelSeq,
+
     pub last_version_id: Option<MessageVerId>,
+
+    /// the id of the last message in this channel, used for read marker handling
     pub last_message_id: Option<MessageId>,
     pub message_count: Option<u64>,
     pub root_message_count: Option<u64>,
@@ -243,6 +271,8 @@ impl Serialize for Channel {
             #[serde(skip_serializing_if = "is_false")]
             nsfw: bool,
 
+            #[serde(skip_serializing_if = "ChannelSeq::is_zero")]
+            latest_seq: ChannelSeq,
             #[serde(skip_serializing_if = "Option::is_none")]
             last_version_id: Option<MessageVerId>,
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -348,6 +378,7 @@ impl Serialize for Channel {
                 None
             },
             nsfw: self.nsfw,
+            latest_seq: self.latest_seq,
             last_version_id: self.last_version_id,
             last_message_id: self.last_message_id,
             message_count: if self.has_text() {

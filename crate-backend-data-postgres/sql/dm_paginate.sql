@@ -25,6 +25,7 @@ select
     channel.description,
     channel.url,
     channel.nsfw,
+    channel.latest_seq,
     channel.locked,
     channel.locked_until,
     channel.locked_roles,

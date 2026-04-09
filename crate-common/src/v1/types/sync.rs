@@ -25,6 +25,7 @@ use crate::v1::types::{
 
 use super::{
     calendar::{CalendarEvent, CalendarEventParticipant, CalendarOverwrite},
+    channel::ChannelSeq,
     emoji::EmojiCustom,
     harvest::Harvest,
     notifications::{Notification, NotificationFlush, NotificationMarkRead},
@@ -36,6 +37,22 @@ use super::{
     Channel, ChannelId, EmojiId, InviteCode, MessageId, MessageVerId, Role, RoleId, Room, RoomId,
     RoomMember, Session, SessionId, SessionToken, TagId, User, UserId,
 };
+
+/// Response from the channel sync endpoint.
+/// Contains incremental sync events to apply to local state.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ChannelSync {
+    /// sync events to apply to local state
+    pub events: Vec<MessageSync>,
+
+    /// the new latest sequence number you have
+    pub seq: ChannelSeq,
+
+    /// not all events were returned. call this endpoint again with the new `seq`
+    pub partial: bool,
+}
 
 // TODO: include nonce/seq for MessageClient too, so theres some way to associate an error response to a request
 #[derive(Debug, Clone)]
@@ -225,9 +242,13 @@ pub enum MessagePayload {
         /// the data for this sync event
         data: Box<MessageSync>,
 
-        /// the sequence number of this event, for resuming
+        /// the connection sequence number of this event, for resuming
+        // TODO: rename to connection_seq (keep seq for now for backwards compat)
         seq: u64,
 
+        // /// the channel sync sequence numb of this eventer, for offline sync
+        // TODO: add here
+        // channel_seq: Option<u64>,
         /// the nonce, if this is in response to a request with the `Idempotency-Key` header set
         #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
         nonce: Option<String>,
