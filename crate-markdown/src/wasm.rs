@@ -1,7 +1,7 @@
 //! WASM bindings for the markdown parser.
 //!
 //! This module exposes two use cases:
-//! 1. **SolidJS rendering** — one-shot `text → events` (JSON) for client-side rendering
+//! 1. **SolidJS rendering** — one-shot `text → events` (JS objects) for client-side rendering
 //! 2. **ProseMirror syntax highlighting** — incremental reparsing with token-level info
 
 use serde::Serialize;
@@ -42,43 +42,88 @@ pub struct WasmToken {
     pub text: String,
 }
 
-/// Result of parsing, containing events and tokens.
+/// A mention entity extracted from the markdown.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ParseResult {
+pub struct MentionEntity {
+    pub mention_type: String, // "user" | "role" | "channel"
+    pub id: String,
+}
+
+/// An emoji entity extracted from the markdown.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EmojiEntity {
+    pub animated: bool,
+    pub name: String,
+    pub id: String,
+}
+
+/// A spoiler entity extracted from the markdown.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpoilerEntity {
+    /// Byte range of the spoiler content (excluding delimiters)
+    pub content_start: u32,
+    pub content_end: u32,
+}
+
+/// Result of parsing, containing events, tokens, and extracted entities.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WasmParseResult {
     pub events: Vec<WasmEvent>,
+    pub tokens: Vec<WasmToken>,
+    pub mentions: Vec<MentionEntity>,
+    pub emoji: Vec<EmojiEntity>,
+    pub spoilers: Vec<SpoilerEntity>,
+    pub source_length: u32,
+}
+
+/// Result of an incremental edit, returning updated tokens.
+#[allow(dead_code)]
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WasmEditResult {
     pub tokens: Vec<WasmToken>,
     pub source_length: u32,
 }
 
 // ============ One-shot API (SolidJS rendering use case) ============
 
-/// Parse markdown and return events + tokens as JSON.
+/// Parse Markdown and return events + tokens as native JS objects.
 ///
 /// This is the primary API for SolidJS rendering: call this once with your
-/// markdown, and you get back a structured representation of the document.
+/// markdown, and you get back a structured representation of the document
+/// with extracted entities (mentions, emoji, spoilers).
 ///
 /// # Arguments
 /// * `markdown` - The markdown source to parse
 ///
 /// # Returns
-/// JSON string containing `ParseResult` with events and tokens
+/// Native JS object containing events, tokens, and extracted entities
 #[wasm_bindgen]
-pub fn parse_markdown(markdown: &str) -> String {
+pub fn parse_markdown(markdown: &str) -> Result<JsValue, JsValue> {
     let parser = Parser::default();
     let parsed = parser.parse(markdown);
     let ast = Ast::new(parsed.clone());
 
     let events = collect_events(&ast);
     let tokens = collect_tokens(&parsed);
+    let mentions = extract_mentions(&ast);
+    let emoji = extract_emoji(&ast);
+    let spoilers = extract_spoilers(&ast);
 
-    let result = ParseResult {
+    let result = WasmParseResult {
         events,
         tokens,
+        mentions,
+        emoji,
+        spoilers,
         source_length: markdown.len() as u32,
     };
 
-    serde_json::to_string(&result).unwrap_or_else(|e| format!("{{\"error\":\"{}\"}}", e))
+    Ok(serde_wasm_bindgen::to_value(&result)?)
 }
 
 /// Parse markdown and render to HTML-like markdown string (identity render).
@@ -104,7 +149,7 @@ pub fn render_plaintext(markdown: &str) -> String {
 /// Holds a parsed document for incremental editing.
 ///
 /// Use this when you need to reparse text incrementally, such as for
-/// ProseMirror syntax highlighting. Call `parse` once, then `edit`
+/// ProseMirror syntax highlighting. Call `new` once, then `edit_and_tokens`
 /// for each change.
 #[wasm_bindgen]
 pub struct WasmParsed {
@@ -138,11 +183,11 @@ impl WasmParsed {
 
     /// Get all tokens with their byte ranges for syntax highlighting.
     ///
-    /// Returns a JSON array of `{ kind, start, end, text }` objects.
+    /// Returns a JS array of `{ kind, start, end, text }` objects.
     /// Use `start` and `end` (byte offsets) to apply decorations in ProseMirror.
-    pub fn tokens(&self) -> String {
+    pub fn tokens(&self) -> Result<JsValue, JsValue> {
         let tokens = collect_tokens(&self.parsed);
-        serde_json::to_string(&tokens).unwrap_or_else(|_e| "[]".to_string())
+        Ok(serde_wasm_bindgen::to_value(&tokens)?)
     }
 
     /// Apply an incremental edit to the document and return the updated result.
@@ -163,10 +208,15 @@ impl WasmParsed {
         WasmParsed { parsed: new_parsed }
     }
 
-    /// Apply an incremental edit and return the updated tokens as JSON.
+    /// Apply an incremental edit and return the updated tokens as a JS array.
     ///
     /// Convenience method that calls `edit` and returns tokens directly.
-    pub fn edit_and_tokens(&mut self, delete_start: u32, delete_end: u32, insert: &str) -> String {
+    pub fn edit_and_tokens(
+        &mut self,
+        delete_start: u32,
+        delete_end: u32,
+        insert: &str,
+    ) -> Result<JsValue, JsValue> {
         let parser = Parser::default();
         let edit = Edit {
             delete: TextRange::new(delete_start.into(), delete_end.into()),
@@ -174,7 +224,7 @@ impl WasmParsed {
         };
         self.parsed = parser.edit(&self.parsed, edit);
         let tokens = collect_tokens(&self.parsed);
-        serde_json::to_string(&tokens).unwrap_or_else(|_e| "[]".to_string())
+        Ok(serde_wasm_bindgen::to_value(&tokens)?)
     }
 }
 
@@ -184,13 +234,13 @@ impl WasmParsed {
 ///
 /// # Arguments
 /// * `markdown` - The markdown source
-/// * `allowed_emojis` - JSON array of allowed emoji UUID strings
+/// * `allowed_emojis` - JS array of allowed emoji UUID strings
 ///
 /// # Returns
 /// Transformed markdown with disallowed emoji stripped
 #[wasm_bindgen]
-pub fn strip_emoji(markdown: &str, allowed_emojis: &str) -> String {
-    let allowed_ids: Vec<Uuid> = serde_json::from_str::<Vec<String>>(allowed_emojis)
+pub fn strip_emoji(markdown: &str, allowed_emojis: JsValue) -> Result<JsValue, JsValue> {
+    let allowed_ids: Vec<Uuid> = serde_wasm_bindgen::from_value::<Vec<String>>(allowed_emojis)
         .unwrap_or_default()
         .into_iter()
         .filter_map(|s| Uuid::from_str(&s).ok())
@@ -205,7 +255,9 @@ pub fn strip_emoji(markdown: &str, allowed_emojis: &str) -> String {
 
     let transformed = pipeline.apply(&ast.syntax());
     let transformed_node = rowan::SyntaxNode::new_root(transformed);
-    MarkdownRenderer.render(&transformed_node)
+    let result = MarkdownRenderer.render(&transformed_node);
+
+    Ok(serde_wasm_bindgen::to_value(&result)?)
 }
 
 // ============ Internal helpers ============
@@ -289,4 +341,132 @@ fn collect_tokens(parsed: &Parsed) -> Vec<WasmToken> {
     }
 
     tokens
+}
+
+fn extract_mentions(ast: &Ast) -> Vec<MentionEntity> {
+    use crate::parser::SyntaxKind;
+    let mut mentions = Vec::new();
+
+    for node in ast.syntax().descendants() {
+        match node.kind() {
+            SyntaxKind::Mention => {
+                if let Some(id) = extract_mention_id(&node) {
+                    mentions.push(MentionEntity {
+                        mention_type: "user".into(),
+                        id,
+                    });
+                }
+            }
+            SyntaxKind::MentionRole => {
+                if let Some(id) = extract_mention_id(&node) {
+                    mentions.push(MentionEntity {
+                        mention_type: "role".into(),
+                        id,
+                    });
+                }
+            }
+            SyntaxKind::MentionChannel => {
+                if let Some(id) = extract_mention_id(&node) {
+                    mentions.push(MentionEntity {
+                        mention_type: "channel".into(),
+                        id,
+                    });
+                }
+            }
+            _ => {}
+        }
+    }
+
+    mentions
+}
+
+fn extract_mention_id(node: &crate::parser::SyntaxNode) -> Option<String> {
+    use crate::parser::SyntaxKind;
+    for child in node.children() {
+        if child.kind() == SyntaxKind::Text {
+            let text = child.text().to_string();
+            // UUID is 36 chars with 4 dashes
+            if text.len() == 36 && text.chars().filter(|c| *c == '-').count() == 4 {
+                return Some(text);
+            }
+        }
+    }
+    None
+}
+
+fn extract_emoji(ast: &Ast) -> Vec<EmojiEntity> {
+    use crate::parser::SyntaxKind;
+    let mut emoji = Vec::new();
+
+    for node in ast.syntax().descendants() {
+        if node.kind() == SyntaxKind::Emoji {
+            if let Some(entity) = extract_emoji_entity(&node) {
+                emoji.push(entity);
+            }
+        }
+    }
+
+    emoji
+}
+
+fn extract_emoji_entity(node: &crate::parser::SyntaxNode) -> Option<EmojiEntity> {
+    use crate::parser::SyntaxKind;
+    let mut name = None;
+    let mut uuid = None;
+    let mut animated = false;
+
+    for child in node.children_with_tokens() {
+        match child {
+            NodeOrToken::Token(tok) => {
+                if tok.kind() == SyntaxKind::EmojiMarker && tok.text() == "a" {
+                    animated = true;
+                } else if tok.kind() == SyntaxKind::Text {
+                    let text = tok.text();
+                    if text.len() == 36 && text.chars().filter(|c| *c == '-').count() == 4 {
+                        uuid = Some(text.to_string());
+                    }
+                }
+            }
+            NodeOrToken::Node(n) => {
+                if n.kind() == SyntaxKind::EmojiName {
+                    name = Some(n.text().to_string());
+                }
+            }
+        }
+    }
+
+    match (name, uuid) {
+        (Some(n), Some(u)) => Some(EmojiEntity {
+            animated,
+            name: n,
+            id: u,
+        }),
+        _ => None,
+    }
+}
+
+fn extract_spoilers(ast: &Ast) -> Vec<SpoilerEntity> {
+    use crate::parser::SyntaxKind;
+    let mut spoilers = Vec::new();
+
+    for node in ast.syntax().descendants() {
+        if node.kind() == SyntaxKind::Spoiler {
+            // The spoiler node structure is:
+            // SpoilerDelimiter("||") + inline content + SpoilerDelimiter("||")
+            // We want the content range (excluding delimiters)
+            let children: Vec<_> = node.children_with_tokens().collect();
+            if children.len() >= 3 {
+                // Skip first delimiter, get start of content
+                // Skip last delimiter, get end of content
+                let content_start = children[1].text_range().start().into();
+                let content_end = children[children.len() - 2].text_range().end().into();
+                spoilers.push(SpoilerEntity {
+                    content_start,
+                    content_end,
+                });
+            }
+        }
+    }
+
+    spoilers
 }

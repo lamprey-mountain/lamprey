@@ -19,11 +19,11 @@ rowan = "0.16.1"
 uuid = { version = "1.22.0", features = ["serde", "v7"] }
 wasm-bindgen = { version = "0.2.117", optional = true }
 serde = { version = "1.0.228", optional = true, features = ["derive"] }
-serde_json = { version = "1.0.149", optional = true }
+serde-wasm-bindgen = { version = "0.6.5", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 uuid = { version = "1.22.0", features = ["serde", "v7", "js"] }
 
 [features]
 default = ["dep:lamprey-common"]
-wasm = ["dep:wasm-bindgen", "dep:serde", "dep:serde_json"]
+wasm = ["dep:wasm-bindgen", "dep:serde", "dep:serde-wasm-bindgen"]
