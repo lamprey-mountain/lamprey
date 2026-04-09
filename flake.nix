@@ -253,9 +253,49 @@
           inherit system;
           id = "agent";
         };
+
+        twemoji-spritesheets = pkgs.stdenv.mkDerivation rec {
+          pname = "twemoji-spritesheets";
+          version = "16.0.0";
+
+          emojiJson = pkgs.fetchurl {
+            url = "https://raw.githubusercontent.com/iamcal/emoji-data/v${version}/emoji.json";
+            hash = "sha256-HWAuZb6Idyv4zDaM4WuFXXGe7duv4SjUcbgCA/SU0p8=";
+          };
+
+          emojiSheet = pkgs.fetchurl {
+            url = "https://raw.githubusercontent.com/iamcal/emoji-data/v${version}/sheets-indexed-256/sheet_twitter_64_indexed_256.png";
+            hash = "sha256-OCNZhGRxmtfLOnuhRTe3hSyKMj4Ys598pPqbHpjpzGg=";
+          };
+
+          nativeBuildInputs = with pkgs; [
+            jq
+            libwebp
+            libavif
+            imagemagick
+          ];
+
+          dontUnpack = true;
+
+          buildPhase = ''
+            mkdir -p $out
+
+            # strip json
+            jq '[.[] | {u: .unified, x: .sheet_x, y: .sheet_y, s: .short_name}]' "$emojiJson" > "$out/data.json"
+
+            # optimize -> webp
+            cwebp -q 75 -m 6 ${emojiSheet} -o $out/sheet.webp
+
+            # optimize -> avif
+            avifenc --jobs all --speed 6 ${emojiSheet} $out/sheet.avif
+
+            # optimize -> png
+            magick ${emojiSheet} -colors 256 -quality 90 $out/sheet.png
+          '';
+        };
       in {
         packages = rec {
-          inherit backend bridge voice media frontend scanner-malware;
+          inherit backend bridge voice media frontend scanner-malware twemoji-spritesheets;
 
           scanner-nsfw = pkgs.writeShellApplication {
             name = "run-scanner-nsfw";
