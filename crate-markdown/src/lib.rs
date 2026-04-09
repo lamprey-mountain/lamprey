@@ -38,7 +38,6 @@
 pub mod ast;
 pub mod events;
 pub mod parser;
-pub mod render;
 pub mod renderer;
 pub mod transformer;
 
@@ -85,7 +84,3 @@ pub use parser::{Edit, ParseOptions, Parsed, Parser, SyntaxKind, TokenKind};
 // New architecture exports
 pub use renderer::{MarkdownRenderer, PlaintextRenderer, Renderer};
 pub use transformer::{apply, find_emoji_nodes, Pipeline, StripEmoji, Transformation};
-
-// Legacy exports (deprecated - use new architecture)
-#[deprecated(note = "Use new transformer module instead")]
-pub use render::{IdentityReader, MarkdownReader, PlainTextReader, StripEmojiReader};

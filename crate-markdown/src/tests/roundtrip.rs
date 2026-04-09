@@ -1,7 +1,8 @@
 //! Round-trip / Idempotency tests to ensure text fidelity preservation.
 
 use crate::parser::{ParseOptions, Parser};
-use crate::{Ast, IdentityReader};
+use crate::renderer::{MarkdownRenderer, Renderer};
+use crate::Ast;
 
 #[test]
 fn test_markdown_roundtrip_header() {
@@ -16,8 +17,8 @@ fn test_markdown_roundtrip_header() {
 
     for input in inputs {
         let ast = Ast::new(parser.parse(input));
-        let reader = IdentityReader;
-        let output = reader.read(&ast);
+        let renderer = MarkdownRenderer;
+        let output = renderer.render(&ast.syntax());
         assert_eq!(input, output);
     }
 }
@@ -34,8 +35,8 @@ fn test_markdown_roundtrip_blockquote() {
 
     for input in inputs {
         let ast = Ast::new(parser.parse(input));
-        let reader = IdentityReader;
-        let output = reader.read(&ast);
+        let renderer = MarkdownRenderer;
+        let output = renderer.render(&ast.syntax());
         assert_eq!(input, output);
     }
 }
@@ -56,8 +57,8 @@ fn test_markdown_roundtrip_list() {
 
     for input in inputs {
         let ast = Ast::new(parser.parse(input));
-        let reader = IdentityReader;
-        let output = reader.read(&ast);
+        let renderer = MarkdownRenderer;
+        let output = renderer.render(&ast.syntax());
         assert_eq!(input, output);
     }
 }
@@ -74,8 +75,8 @@ fn test_markdown_roundtrip_code_block() {
 
     for input in inputs {
         let ast = Ast::new(parser.parse(input));
-        let reader = IdentityReader;
-        let output = reader.read(&ast);
+        let renderer = MarkdownRenderer;
+        let output = renderer.render(&ast.syntax());
         assert_eq!(input, output);
     }
 }
@@ -88,8 +89,8 @@ fn test_markdown_roundtrip_strong() {
 
     for input in inputs {
         let ast = Ast::new(parser.parse(input));
-        let reader = IdentityReader;
-        let output = reader.read(&ast);
+        let renderer = MarkdownRenderer;
+        let output = renderer.render(&ast.syntax());
         assert_eq!(input, output);
     }
 }
@@ -102,8 +103,8 @@ fn test_markdown_roundtrip_emphasis() {
 
     for input in inputs {
         let ast = Ast::new(parser.parse(input));
-        let reader = IdentityReader;
-        let output = reader.read(&ast);
+        let renderer = MarkdownRenderer;
+        let output = renderer.render(&ast.syntax());
         assert_eq!(input, output);
     }
 }
@@ -120,8 +121,8 @@ fn test_markdown_roundtrip_strikethrough() {
 
     for input in inputs {
         let ast = Ast::new(parser.parse(input));
-        let reader = IdentityReader;
-        let output = reader.read(&ast);
+        let renderer = MarkdownRenderer;
+        let output = renderer.render(&ast.syntax());
         assert_eq!(input, output);
     }
 }
@@ -134,8 +135,8 @@ fn test_markdown_roundtrip_inline_code() {
 
     for input in inputs {
         let ast = Ast::new(parser.parse(input));
-        let reader = IdentityReader;
-        let output = reader.read(&ast);
+        let renderer = MarkdownRenderer;
+        let output = renderer.render(&ast.syntax());
         assert_eq!(input, output);
     }
 }
@@ -151,8 +152,8 @@ fn test_markdown_roundtrip_link() {
 
     for input in inputs {
         let ast = Ast::new(parser.parse(input));
-        let reader = IdentityReader;
-        let output = reader.read(&ast);
+        let renderer = MarkdownRenderer;
+        let output = renderer.render(&ast.syntax());
         assert_eq!(input, output);
     }
 }
@@ -168,8 +169,8 @@ fn test_markdown_roundtrip_mention() {
 
     for input in inputs {
         let ast = Ast::new(parser.parse(input));
-        let reader = IdentityReader;
-        let output = reader.read(&ast);
+        let renderer = MarkdownRenderer;
+        let output = renderer.render(&ast.syntax());
         assert_eq!(input, output);
     }
 }
@@ -186,8 +187,8 @@ fn test_markdown_roundtrip_emoji() {
 
     for input in inputs {
         let ast = Ast::new(parser.parse(input));
-        let reader = IdentityReader;
-        let output = reader.read(&ast);
+        let renderer = MarkdownRenderer;
+        let output = renderer.render(&ast.syntax());
         assert_eq!(input, output);
     }
 }
@@ -198,8 +199,8 @@ fn test_markdown_roundtrip_complex() {
 
     let parser = Parser::new(ParseOptions::default());
     let ast = Ast::new(parser.parse(input));
-    let reader = IdentityReader;
-    let output = reader.read(&ast);
+    let renderer = MarkdownRenderer;
+    let output = renderer.render(&ast.syntax());
 
     assert_eq!(input, output);
 }
@@ -210,8 +211,8 @@ fn test_markdown_roundtrip_escaped() {
 
     let parser = Parser::new(ParseOptions::default());
     let ast = Ast::new(parser.parse(input));
-    let reader = IdentityReader;
-    let output = reader.read(&ast);
+    let renderer = MarkdownRenderer;
+    let output = renderer.render(&ast.syntax());
 
     assert_eq!(input, output);
 }
@@ -227,12 +228,11 @@ fn test_identity_reader_preserves_source() {
     ];
 
     let parser = Parser::new(ParseOptions::default());
-    use crate::render::IdentityReader;
-    let reader = IdentityReader;
+    use crate::renderer::{MarkdownRenderer, Renderer};
 
     for input in inputs {
         let ast = Ast::new(parser.parse(input));
-        let output = reader.read(&ast);
+        let output = MarkdownRenderer.render(&ast.syntax());
         assert_eq!(input, output);
     }
 }

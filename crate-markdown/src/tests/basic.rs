@@ -197,14 +197,13 @@ fn test_bracket_without_url() {
 
 #[test]
 fn test_identity_reader() {
-    use crate::render::IdentityReader;
+    use crate::renderer::{MarkdownRenderer, Renderer};
 
     let source = "**hello** *world* https://example.com";
     let parser = Parser::new(ParseOptions::default());
     let parsed = parser.parse(source);
     let ast = Ast::new(parsed);
-    let reader = IdentityReader;
-    let result = reader.read(&ast);
+    let result = MarkdownRenderer.render(&ast.syntax());
     assert_eq!(result, source);
 }
 
@@ -309,14 +308,13 @@ fn test_code_block() {
 
 #[test]
 fn test_plain_text_reader() {
-    use crate::render::PlainTextReader;
+    use crate::renderer::{PlaintextRenderer, Renderer};
 
     let source = "**hello** *world* ~~deleted~~";
     let parser = Parser::new(ParseOptions::default());
     let parsed = parser.parse(source);
     let ast = Ast::new(parsed);
-    let reader = PlainTextReader::new();
-    let result = reader.read(&ast);
+    let result = PlaintextRenderer.render(&ast.syntax());
     assert!(result.contains("hello"));
     assert!(result.contains("world"));
     assert!(result.contains("deleted"));
@@ -324,7 +322,8 @@ fn test_plain_text_reader() {
 
 #[test]
 fn test_strip_emoji_reader() {
-    use crate::render::StripEmojiReader;
+    use crate::renderer::{MarkdownRenderer, Renderer};
+    use crate::transformer::{Pipeline, StripEmoji};
     use lamprey_common::v1::types::EmojiId;
     use uuid::uuid;
 
@@ -333,8 +332,13 @@ fn test_strip_emoji_reader() {
     let parser = Parser::new(ParseOptions::default());
     let parsed = parser.parse(source);
     let ast = Ast::new(parsed);
-    let reader = StripEmojiReader::new(allowed_emoji);
-    let result = reader.read(&ast);
+
+    let mut pipeline = Pipeline::new();
+    pipeline.add_transform(StripEmoji::from_emoji_ids(allowed_emoji));
+    let transformed = pipeline.apply(&ast.syntax());
+    let transformed_node = rowan::SyntaxNode::new_root(transformed);
+    let result = MarkdownRenderer.render(&transformed_node);
+
     assert!(
         result.contains("hello") || result.contains("world"),
         "Should contain text"
@@ -347,7 +351,8 @@ fn test_strip_emoji_reader() {
 
 #[test]
 fn test_strip_emoji_reader_filters_disallowed() {
-    use crate::render::StripEmojiReader;
+    use crate::renderer::{MarkdownRenderer, Renderer};
+    use crate::transformer::{Pipeline, StripEmoji};
     use lamprey_common::v1::types::EmojiId;
     use uuid::uuid;
 
@@ -356,8 +361,12 @@ fn test_strip_emoji_reader_filters_disallowed() {
     let parser = Parser::new(ParseOptions::default());
     let parsed = parser.parse(source);
     let ast = Ast::new(parsed);
-    let reader = StripEmojiReader::new(allowed_emoji);
-    let result = reader.read(&ast);
+
+    let mut pipeline = Pipeline::new();
+    pipeline.add_transform(StripEmoji::from_emoji_ids(allowed_emoji));
+    let transformed = pipeline.apply(&ast.syntax());
+    let transformed_node = rowan::SyntaxNode::new_root(transformed);
+    let result = MarkdownRenderer.render(&transformed_node);
 
     assert!(
         result.contains("hello") || result.contains("world"),
@@ -369,7 +378,8 @@ fn test_strip_emoji_reader_filters_disallowed() {
 
 #[test]
 fn test_strip_emoji_reader_mixed() {
-    use crate::render::StripEmojiReader;
+    use crate::renderer::{MarkdownRenderer, Renderer};
+    use crate::transformer::{Pipeline, StripEmoji};
     use lamprey_common::v1::types::EmojiId;
     use uuid::uuid;
 
@@ -379,8 +389,12 @@ fn test_strip_emoji_reader_mixed() {
     let parser = Parser::new(ParseOptions::default());
     let parsed = parser.parse(source);
     let ast = Ast::new(parsed);
-    let reader = StripEmojiReader::new(allowed_emoji);
-    let result = reader.read(&ast);
+
+    let mut pipeline = Pipeline::new();
+    pipeline.add_transform(StripEmoji::from_emoji_ids(allowed_emoji));
+    let transformed = pipeline.apply(&ast.syntax());
+    let transformed_node = rowan::SyntaxNode::new_root(transformed);
+    let result = MarkdownRenderer.render(&transformed_node);
 
     assert!(
         result.contains(":allowed:"),

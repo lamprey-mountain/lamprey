@@ -2,7 +2,7 @@
 
 use crate::ast::Ast;
 use crate::parser::{ParseOptions, Parser, SyntaxKind};
-use crate::render::PlainTextReader;
+use crate::renderer::{PlaintextRenderer, Renderer};
 
 #[test]
 fn test_escape_asterisk() {
@@ -60,8 +60,7 @@ fn test_plain_text_with_escapes() {
     let parser = Parser::new(ParseOptions::default());
     let parsed = parser.parse("hello world");
     let ast = Ast::new(parsed);
-    let reader = PlainTextReader::new();
-    let result = reader.read(&ast);
+    let result = PlaintextRenderer.render(&ast.syntax());
 
     assert!(result.contains("hello"), "Should contain hello");
     assert!(result.contains("world"), "Should contain world");
@@ -85,8 +84,7 @@ fn test_escape_multiple_in_row() {
     let parser = Parser::new(ParseOptions::default());
     let parsed = parser.parse("\\*\\*\\*");
     let ast = Ast::new(parsed);
-    let reader = PlainTextReader::new();
-    let result = reader.read(&ast);
+    let result = PlaintextRenderer.render(&ast.syntax());
 
     assert_eq!(result, "***", "Should have three asterisks");
 }
@@ -96,8 +94,7 @@ fn test_escape_mixed_chars() {
     let parser = Parser::new(ParseOptions::default());
     let parsed = parser.parse("\\*\\[\\]\\#");
     let ast = Ast::new(parsed);
-    let reader = PlainTextReader::new();
-    let result = reader.read(&ast);
+    let result = PlaintextRenderer.render(&ast.syntax());
 
     assert!(result.contains("*"), "Should contain asterisk");
     assert!(result.contains("["), "Should contain bracket");
@@ -111,8 +108,7 @@ fn test_escape_backtick_plain_text() {
     let parser = Parser::new(ParseOptions::default());
     let parsed = parser.parse("\\`not code\\`");
     let ast = Ast::new(parsed);
-    let reader = PlainTextReader::new();
-    let result = reader.read(&ast);
+    let result = PlaintextRenderer.render(&ast.syntax());
 
     assert!(result.contains('`'), "Should contain backtick");
     assert!(result.contains("code"), "Should contain code");
@@ -124,8 +120,7 @@ fn test_escape_in_link() {
     let parser = Parser::new(ParseOptions::default());
     let parsed = parser.parse("\\[not link\\](url)");
     let ast = Ast::new(parsed);
-    let reader = PlainTextReader::new();
-    let result = reader.read(&ast);
+    let result = PlaintextRenderer.render(&ast.syntax());
 
     assert!(result.contains('['), "Should contain bracket");
     assert!(result.contains(']'), "Should contain close bracket");
@@ -136,8 +131,7 @@ fn test_escape_at_end_of_text() {
     let parser = Parser::new(ParseOptions::default());
     let parsed = parser.parse("text\\");
     let ast = Ast::new(parsed);
-    let reader = PlainTextReader::new();
-    let result = reader.read(&ast);
+    let result = PlaintextRenderer.render(&ast.syntax());
 
     assert!(result.contains("text"), "Should contain text");
 }
@@ -147,8 +141,7 @@ fn test_escape_newline() {
     let parser = Parser::new(ParseOptions::default());
     let parsed = parser.parse("line1\\nline2");
     let ast = Ast::new(parsed);
-    let reader = PlainTextReader::new();
-    let result = reader.read(&ast);
+    let result = PlaintextRenderer.render(&ast.syntax());
 
     assert!(result.contains('n'), "Should contain n");
 }
@@ -158,8 +151,7 @@ fn test_escape_preserves_meaning() {
     let parser = Parser::new(ParseOptions::default());
     let parsed = parser.parse("\\* \\[ \\] \\# \\`");
     let ast = Ast::new(parsed);
-    let reader = PlainTextReader::new();
-    let result = reader.read(&ast);
+    let result = PlaintextRenderer.render(&ast.syntax());
 
     assert!(result.contains('*'), "Should contain asterisk");
     assert!(result.contains('['), "Should contain bracket");

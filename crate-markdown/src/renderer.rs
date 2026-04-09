@@ -106,6 +106,17 @@ fn collect_plaintext(node: &SyntaxNode<MyLang>) -> String {
             NodeOrToken::Node(child_node) => {
                 // Recurse into child nodes
                 match child_node.kind() {
+                    // For escape sequences, output just the escaped character
+                    SyntaxKind::Escape => {
+                        // Get the escaped character (second token child)
+                        for gc in child_node.children_with_tokens() {
+                            if let NodeOrToken::Token(t) = gc {
+                                if t.kind() == SyntaxKind::EscapedChar {
+                                    result.push_str(t.text());
+                                }
+                            }
+                        }
+                    }
                     // For inline code and code blocks, keep the content
                     SyntaxKind::InlineCode | SyntaxKind::CodeBlock => {
                         result.push_str(&collect_code_content(&child_node));
