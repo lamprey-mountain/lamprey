@@ -42,6 +42,7 @@ function UserMention(props: { id: string }) {
 			class="mention mention-user"
 			onClick={(e) => {
 				e.stopPropagation();
+				e.preventDefault();
 				const currentTarget = e.currentTarget as HTMLElement;
 				if (userView()?.ref === currentTarget) {
 					setUserView(null);
@@ -82,6 +83,7 @@ function ChannelMention(props: { id: string }) {
 			class="mention mention-channel"
 			onClick={(e) => {
 				e.stopPropagation();
+				e.preventDefault();
 				navigate(`/channel/${props.id}`);
 			}}
 		>
@@ -109,6 +111,7 @@ function Spoiler(props: { tokens: Token[] }) {
 			classList={{ shown: shown() }}
 			onClick={(e) => {
 				e.stopPropagation();
+				e.preventDefault();
 				setShown(!shown());
 			}}
 		>

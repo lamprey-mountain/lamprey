@@ -42,18 +42,18 @@
 			margin-right: 8px;
 		}
 
-		&[data-type="Mention"] {
+		&[data-type="Message"] {
 			border-left: 3px solid $link-500;
 		}
-		&[data-type="Reply"] {
+		&[data-type="Reaction"] {
 			border-left: 3px solid $color-green;
 		}
-		&[data-type="Reminder"] {
-			border-left: 3px solid $color-yellow;
-		}
-		&[data-type="MentionBulk"] {
-			border-left: 3px solid $color-orange;
-		}
+		/* &[data-type="Reminder"] { */
+			/* border-left: 3px solid $color-yellow; */
+		/* } */
+		/* &[data-type="MentionBulk"] { */
+			/* border-left: 3px solid $color-orange; */
+		/* } */
 
 		& > header {
 			display: flex;

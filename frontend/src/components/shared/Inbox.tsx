@@ -1,8 +1,10 @@
 import { A } from "@solidjs/router";
-import type { Message, Notification, Room } from "sdk";
+import type { Message, Notification } from "sdk";
 import { createSignal, For, Show } from "solid-js";
-import { useInbox } from "@/api";
+import { useChannels, useInbox, useRooms } from "@/api";
 import type { NotificationPagination } from "@/api/services/InboxService.ts";
+import { CheckboxOption } from "@/atoms/CheckboxOption";
+import { Checkbox } from "@/atoms/icons";
 import { Time } from "@/atoms/Time";
 import { MessageView } from "@/components/features/chat/Message.tsx";
 
@@ -47,45 +49,47 @@ export const Inbox = () => {
 		);
 	};
 
-	const toggleSelectAll = (e: Event) => {
-		const checked = (e.currentTarget as HTMLInputElement).checked;
-		if (checked) {
-			setSelected(inboxItems()?.items.map((i) => i.id) ?? []);
-		} else {
-			setSelected([]);
-		}
-	};
-
 	return (
 		<div class="inbox">
 			<header>
 				<h2>inbox</h2>
 				<div class="spacer" />
 				<div class="filters">
-					<label>
-						<input
-							type="checkbox"
+					<CheckboxOption
+						id="inbox-include-read"
+						checked={params().include_read}
+						onChange={(checked) =>
+							setParams({
+								...params(),
+								include_read: checked,
+							})
+						}
+						seed="inbox-include-read"
+					>
+						<Checkbox
 							checked={params().include_read}
-							onChange={(e) =>
-								setParams({
-									...params(),
-									include_read: e.currentTarget.checked,
-								})
-							}
+							seed="inbox-include-read"
 						/>
-						include read
-					</label>
+						<span>include read</span>
+					</CheckboxOption>
 				</div>
 			</header>
 			<div style="margin:8px;margin-bottom:0;margin-left: 16px;height:1rem;display:flex;align-items:center">
-				<label>
-					<input
-						type="checkbox"
-						onChange={toggleSelectAll}
-						style="margin-right:8px"
-					/>
-					select all
-				</label>
+				<CheckboxOption
+					id="inbox-select-all"
+					checked={false}
+					onChange={(checked) => {
+						if (checked) {
+							setSelected(inboxItems()?.items.map((i) => i.id) ?? []);
+						} else {
+							setSelected([]);
+						}
+					}}
+					seed="inbox-select-all"
+				>
+					<Checkbox checked={false} seed="inbox-select-all" />
+					<span>select all</span>
+				</CheckboxOption>
 				<Show when={selected().length > 0}>
 					<div style="margin-left: 8px">
 						<span>{selected().length} selected</span>
@@ -134,77 +138,63 @@ const NotificationItem = (props: {
 	refetch: () => void;
 	include_read: boolean;
 }) => {
-	const inbox2 = useInbox();
-	const thread = () => {
-		const threadId = (
-			props.notification as Notification & { thread_id?: string }
-		).thread_id;
-		if (!threadId) return undefined;
-		// Try to find the thread channel from channels array
-		return props.allData?.channels.find((c) => c.id === threadId);
+	const inbox = useInbox();
+	const channels = useChannels();
+	const rooms = useRooms();
+
+	const ty = () => props.notification.type;
+
+	const channel = () => {
+		const channelId = props.notification.channel_id;
+		if (!channelId) return undefined;
+		return channels.get(channelId);
 	};
+
 	const message = () =>
 		props.allData?.messages.find(
 			(m: Message) => m.id === props.notification.message_id,
 		);
+
 	const room = () => {
-		const t = thread();
+		const t = channel();
 		if (!t?.room_id) return;
-		return props.allData?.rooms.find((r: Room) => r.id === t.room_id);
+		return rooms.get(t.room_id);
 	};
 
 	const handleMarkRead = async () => {
-		await inbox2.markRead([props.notification.message_id]);
+		await inbox.markRead([props.notification.message_id]);
 		props.refetch();
 	};
 
 	const handleMarkUnread = async () => {
-		await inbox2.markUnread([props.notification.message_id]);
+		await inbox.markUnread([props.notification.message_id]);
 		props.refetch();
 	};
 
-	const reasonText = () => {
-		const reason = (props.notification as Notification & { reason?: string })
-			.reason;
-		switch (reason) {
-			case "Mention":
-				return "Mention";
-			case "MentionBulk":
-				return "Room Mention";
-			case "Reminder":
-				return "Reminder";
-			case "Reply":
-				return "Reply";
-			default:
-				return reason ?? "Unknown";
-		}
-	};
-
 	return (
-		<article
-			class="notification"
-			data-type={
-				(props.notification as Notification & { reason?: string }).reason
-			}
-		>
+		<article class="notification" data-type={ty()}>
 			<header>
-				<input
-					type="checkbox"
-					class="notification-checkbox"
+				<CheckboxOption
+					id={`inbox-notif-${props.notification.id}`}
 					checked={props.selected}
-					onChange={(e) =>
-						props.onSelect(props.notification.id, e.currentTarget.checked)
-					}
-				/>
+					onChange={(checked) => props.onSelect(props.notification.id, checked)}
+					seed={`inbox-notif-${props.notification.id}`}
+					class="notification-checkbox"
+				>
+					<Checkbox
+						checked={props.selected}
+						seed={`inbox-notif-${props.notification.id}`}
+					/>
+				</CheckboxOption>
 				<Show when={room()}>
 					<A href={`/room/${room()?.id}`}>{room()?.name}</A>
 					&nbsp;&gt;&nbsp;
 				</Show>
-				<A href={`/thread/${thread()?.id}`}>{thread()?.name ?? "..."}</A>
+				<A href={`/channel/${channel()?.id}`}>{channel()?.name ?? "..."}</A>
 				&nbsp;&bull;&nbsp;
 				<Time date={new Date(props.notification.added_at)} />
 				<div class="spacer"></div>
-				<div class="label">{reasonText()}</div>
+				<div class="label">{ty()}</div>
 				<Show
 					when={!props.notification.read_at}
 					fallback={
@@ -221,10 +211,10 @@ const NotificationItem = (props: {
 			<div class="notification-content">
 				<A
 					class="body-link"
-					href={`/thread/${thread()?.id}/message/${message()?.id}`}
+					href={`/channel/${channel()?.id}/message/${message()?.id}`}
 				>
 					<Show when={message()}>
-						<MessageView message={message() as Message} separate={true} />
+						{(msg) => <MessageView message={msg()} separate={true} />}
 					</Show>
 				</A>
 			</div>
