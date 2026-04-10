@@ -213,6 +213,53 @@
         media = mkCrate "lamprey-media";
         scanner-malware = mkCrate "scanner-malware";
 
+        wasm-bindgen-version = let
+          lock = builtins.fromTOML (builtins.readFile ./Cargo.lock);
+          pkg = builtins.head (builtins.filter (p: p.name == "wasm-bindgen") lock.package);
+        in pkg.version;
+
+        wasm-bindgen-cli = pkgs.wasm-bindgen-cli.overrideAttrs (old: rec {
+          version = wasm-bindgen-version;
+
+          src = pkgs.fetchCrate {
+            pname = "wasm-bindgen-cli";
+            inherit version;
+            hash = "sha256-vtDQXL8FSgdutqXG7/rBUWgrYCtzdmeVQQkWkjasvZU=";
+          };
+
+          cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
+            inherit src;
+            hash = "sha256-eKe7uwneUYxejSbG/1hKqg6bSmtL0KQ9ojlazeqTi88=";
+          };
+        });
+
+        wasm-markdown = craneLib.buildPackage (common // {
+          inherit cargoArtifacts;
+          pname = "lamprey-markdown-wasm";
+
+          CARGO_BUILD_TARGET = "wasm32-unknown-unknown";
+          cargoExtraArgs = "-p lamprey-markdown --features wasm";
+
+          nativeBuildInputs = common.nativeBuildInputs ++ [ wasm-bindgen-cli ];
+
+          postBuild = ''
+            ls
+            ls $TMPDIR
+            wasm-bindgen \
+              target/wasm32-unknown-unknown/release/lamprey_markdown.wasm \
+              --out-dir $TMPDIR/pkg \
+              --target web \
+              --no-typescript
+          '';
+
+          installPhase = ''
+            mkdir -p $out
+            cp -r $TMPDIR/pkg $out/pkg
+          '';
+
+          doCheck = false;
+        });
+
         frontend = pkgs.stdenvNoCC.mkDerivation (finalAttrs: rec {
           name = "frontend";
           pname = name;
@@ -223,6 +270,8 @@
 
           VITE_GIT_SHA = self.rev or self.dirtyRev or "unknown";
           VITE_GIT_DIRTY = if (self ? rev) then "false" else "true";
+          WASM_MARKDOWN_PKG = "${wasm-markdown}/pkg";
+          TWEMOJI_SPRITESHEETS = "${twemoji-spritesheets}";
 
           pnpmDepsHash = "sha256-y7Uh9zuovLpaZpxSSTuVTOL4e7+Z1FJxnqUtVR6GA8E=";
           pnpmDeps = pkgs.pnpm.fetchDeps {
@@ -295,7 +344,7 @@
         };
       in {
         packages = rec {
-          inherit backend bridge voice media frontend scanner-malware twemoji-spritesheets;
+          inherit backend bridge voice media frontend scanner-malware wasm-markdown twemoji-spritesheets;
 
           scanner-nsfw = pkgs.writeShellApplication {
             name = "run-scanner-nsfw";
@@ -482,6 +531,8 @@
           env = {
             PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
             PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = "${pkgs.chromium}/bin/chromium";
+            WASM_MARKDOWN_PKG = "${wasm-markdown}/pkg";
+            TWEMOJI_SPRITESHEETS = "${twemoji-spritesheets}";
           };
         };
       });
