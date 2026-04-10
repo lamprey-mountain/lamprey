@@ -2219,6 +2219,8 @@ table {
 
 	& > .avatar-wrap {
 		grid-area: avatar;
+		display: flex;
+		flex-direction: column;
 		padding-top: 4px;
 		margin: initial;
 
@@ -2226,6 +2228,17 @@ table {
 			height: 36px;
 			width: 36px;
 			margin-left: 8px;
+		}
+
+		& > .thread-spine {
+			flex: 1;
+			margin-left: 24px;
+			margin-right: 4px;
+			margin-top: 8px;
+			margin-bottom: 24px;
+			border-bottom: solid $sep-500 2px;
+			border-left: solid $sep-500 2px;
+			border-bottom-left-radius: 4px;
 		}
 	}
 
@@ -4279,19 +4292,10 @@ input[type="search"].tags-search {
 }
 
 .message-thread {
-	margin-left: -28px;
 	margin-top: 2px;
 	position: relative;
 	display: flex;
 	gap: 4px;
-
-	& > .spine {
-		height: 26px;
-		width: 22px;
-		border-bottom: solid $sep-500 2px;
-		border-left: solid $sep-500 2px;
-		border-bottom-left-radius: 4px;
-	}
 
 	& > .main {
 		border: solid $sep-300 1px;

@@ -323,7 +323,6 @@ export function MessageThread(props: {
 
 	return (
 		<div class="message-thread">
-			<div class="spine"></div>
 			<div class="main" onClick={openThreadClick}>
 				<div class="top">
 					<div class="name">{props.thread.name}</div>
@@ -948,6 +947,9 @@ function DefaultMessage(
 						}}
 					>
 						<Avatar user={props.user} animate={props.hovered} />
+						<Show when={props.message.thread}>
+							<div class="thread-spine"></div>
+						</Show>
 					</div>
 					<div class="author">
 						<UserDisplayName
