@@ -162,11 +162,43 @@
         pkgs = import nixpkgs { inherit system; };
 
         craneLib = crane.mkLib pkgs;
+
+        baseInternalDeps = [ "crate-common" "crate-hakari" "crate-macros" ];
+
+        filterSrcFor = dirs: pkgs.lib.cleanSourceWith {
+          src = pkgs.lib.fileset.toSource {
+            root = ./.;
+            fileset = pkgs.lib.fileset.unions (
+              [
+                ./Cargo.toml
+                ./Cargo.lock
+                ./.cargo
+
+                # include every Cargo.toml so workspace parsing passes
+                (pkgs.lib.fileset.fileFilter (f: f.name == "Cargo.toml") ./.)
+              ]
+              ++ (map (dir: ./. + "/${dir}") dirs)
+            );
+          };
+          filter = craneLib.filterCargoSources;
+        };
+
         src = ./.;
         common = {
           inherit src;
           strictDeps = true;
           doCheck = false;
+
+          # generate dummy sources for omitted crates
+          postUnpack = ''
+            find $sourceRoot -name Cargo.toml -print0 | while IFS= read -r -d "" toml; do
+              dir=$(dirname "$toml")
+              if [ "$dir" != "$sourceRoot" ] && [ ! -d "$dir/src" ]; then
+                mkdir -p "$dir/src"
+                touch "$dir/src/lib.rs" "$dir/src/main.rs"
+              fi
+            done
+          '';
 
           buildInputs = with pkgs; [
             openssl
@@ -189,11 +221,12 @@
         cargoArtifacts =
           craneLib.buildDepsOnly (common // { name = "(shared deps)"; });
 
-        mkCrate = name:
+        mkCrate = name: dirs:
           craneLib.buildPackage (common // {
             inherit cargoArtifacts;
             pname = name;
             cargoExtraArgs = "-p ${name}";
+            src = filterSrcFor (dirs ++ baseInternalDeps);
             env = {
               VERGEN_GIT_SHA = self.rev or self.dirtyRev;
             };
@@ -203,15 +236,23 @@
             inherit cargoArtifacts;
             pname = "lamprey-backend";
             cargoExtraArgs = "-p lamprey-backend --features lamprey-backend/embed-frontend";
+            src = filterSrcFor ([
+              "crate-backend"
+              "crate-backend-core"
+              "crate-backend-data-postgres"
+              "crate-markdown"
+              "crate-unfurl"
+            ] ++ baseInternalDeps);
             env = {
               VERGEN_GIT_SHA = self.rev or self.dirtyRev;
               FRONTEND_DIST = frontend;
             };
         });
-        bridge = mkCrate "lamprey-bridge";
-        voice = mkCrate "lamprey-voice";
-        media = mkCrate "lamprey-media";
-        scanner-malware = mkCrate "scanner-malware";
+
+        bridge = mkCrate "lamprey-bridge" [ "crate-bridge" "crate-sdk" ];
+        voice = mkCrate "lamprey-voice" [ "crate-voice" ];
+        media = mkCrate "lamprey-media" [ "crate-media" ];
+        scanner-malware = mkCrate "scanner-malware" [ "scanner-malware" ];
 
         wasm-bindgen-version = let
           lock = builtins.fromTOML (builtins.readFile ./Cargo.lock);
@@ -236,6 +277,8 @@
         wasm-markdown = craneLib.buildPackage (common // {
           inherit cargoArtifacts;
           pname = "lamprey-markdown-wasm";
+
+          src = filterSrcFor (baseInternalDeps ++ [ "crate-markdown" ]);
 
           CARGO_BUILD_TARGET = "wasm32-unknown-unknown";
           cargoExtraArgs = "-p lamprey-markdown --features wasm";
