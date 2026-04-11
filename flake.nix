@@ -291,8 +291,7 @@
             wasm-bindgen \
               target/wasm32-unknown-unknown/release/lamprey_markdown.wasm \
               --out-dir $TMPDIR/pkg \
-              --target web \
-              --no-typescript
+              --target web
           '';
 
           installPhase = ''
