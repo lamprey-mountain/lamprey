@@ -20,3 +20,12 @@ export function getColor(id: string) {
 			return "oklch(80% 0.128 168)"; // teal
 	}
 }
+
+export const colors = {
+	fg100: "oklch(var(--color-fg1))",
+	fg200: "oklch(var(--color-fg2))",
+	fg300: "oklch(var(--color-fg3))",
+	fg400: "oklch(var(--color-fg4))",
+	fg500: "oklch(var(--color-fg5))",
+	fg600: "oklch(var(--color-fg6))",
+};

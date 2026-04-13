@@ -8,6 +8,7 @@ import {
 	useSessions,
 	useUsers,
 } from "@/api";
+import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
 import { flags } from "@/lib/flags";
@@ -91,6 +92,7 @@ export const Home = () => {
 			<h2>home</h2>
 			<p>welcome to lamprey mountain, the internet's finest asylum</p>
 			<p>work in progress. expect bugs and missing polish.</p>
+			<UnicodeEmoji hex="1F345" />
 			<Show when={api2.session()?.status === "Unauthorized"}>
 				<div class="auth border">
 					<section class="form-wrapper">

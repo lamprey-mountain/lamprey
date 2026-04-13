@@ -160,51 +160,50 @@
 				font-size: 0.9rem;
 			}
 
-				& span {
-					&.filter-name {
-						color: $fg-300;
-					}
-
-					&.filter-syntax {
-						color: $fg-500;
-					}
-
-					&.filter-value {
-						color: $color-blue;
-					}
-
-					&.filter-negated-value {
-						color: $color-orange;
-					}
-
-					&.filter-phrase-content {
-						color: $fg-300;
-					}
-
-					&.filter-negation-content {
-						text-decoration: line-through;
-						color: $fg-500;
-					}
+			& span {
+				&.filter-name {
+					color: $fg-300;
 				}
 
-				.filter-atom {
-					display: inline-flex;
-					align-items: center;
-					background: $bg-250;
-					padding: 0 4px;
-					border-radius: 2px;
-					gap: 2px;
-
-					:global(.avatar),
-					:global(.channel-icon) {
-						flex-shrink: 0;
-					}
+				&.filter-syntax {
+					color: $fg-500;
 				}
 
-				&.hovered .filter-atom {
-					background: $bg-300;
+				&.filter-value {
+					color: $color-blue;
 				}
 
+				&.filter-negated-value {
+					color: $color-orange;
+				}
+
+				&.filter-phrase-content {
+					color: $fg-300;
+				}
+
+				&.filter-negation-content {
+					text-decoration: line-through;
+					color: $fg-500;
+				}
+			}
+
+			.filter-atom {
+				display: inline-flex;
+				align-items: center;
+				background: $bg-250;
+				padding: 0 4px;
+				border-radius: 2px;
+				gap: 2px;
+
+				:global(.avatar),
+				:global(.channel-icon) {
+					flex-shrink: 0;
+				}
+			}
+
+			&.hovered .filter-atom {
+				background: $bg-300;
+			}
 		}
 	}
 }

@@ -1241,6 +1241,13 @@ summary {
 	filter: invert(0.9);
 }
 
+.icon2 {
+	height: 1em;
+	width: 1em;
+	mask-size: contain;
+	mask-repeat: no-repeat;
+}
+
 .edit-roles {
 	position: fixed;
 	top: 0;
@@ -4398,4 +4405,8 @@ img.custom-emoji {
 
 button.link {
 	color: $link-500;
+}
+
+.emoji-sprite {
+	background-repeat: no-repeat;
 }

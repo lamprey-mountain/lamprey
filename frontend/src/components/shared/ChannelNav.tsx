@@ -16,11 +16,13 @@ import icHome from "@/assets/home.png";
 import icInbox from "@/assets/inbox.png";
 import icMemberAdd from "@/assets/member-add.png";
 import icSettings from "@/assets/settings.png";
+import { Icon } from "@/atoms/Icon";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useDisplay, useMenu } from "@/contexts/mod";
 import { useModals } from "@/contexts/modal";
 import { useVoice } from "@/contexts/voice";
 import { usePermissions } from "@/hooks/usePermissions";
+import { colors } from "@/lib/colors";
 import { useConfig } from "@/lib/config";
 import { flags } from "@/lib/flags";
 import {
@@ -667,8 +669,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 						draggable={false}
 						end
 					>
-						<img src={icHome} class="icon" alt="@/components/shared/Home" />{" "}
-						home
+						<Icon src={icHome} color={colors.fg500} /> home
 					</A>
 				</li>
 
@@ -676,7 +677,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					<Show when={flags.has("inbox")}>
 						<li class="channel-item">
 							<A href="/inbox" class="channel-link" draggable={false} end>
-								<img src={icInbox} class="icon" alt="Inbox" /> inbox
+								<Icon src={icInbox} color={colors.fg500} /> inbox
 							</A>
 						</li>
 					</Show>
