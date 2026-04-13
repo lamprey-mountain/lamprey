@@ -26,6 +26,7 @@ import {
 	useUsers,
 } from "@/api";
 import icSearch from "@/assets/search.png";
+import { Icon } from "@/atoms/Icon";
 import {
 	createEditor as createBaseEditor,
 	createPlaceholderPlugin,
@@ -586,7 +587,7 @@ export const SearchInput = (props: {
 			<div class="search-input" ref={setEditorRef}>
 				<editor.View placeholder="search" />
 			</div>
-			<img class="icon" src={icSearch} alt="" aria-hidden="true" />
+			<Icon src={icSearch} alt="" />
 			<Portal mount={document.getElementById("overlay")!}>
 				<Show when={hasSuggestions()}>
 					<div

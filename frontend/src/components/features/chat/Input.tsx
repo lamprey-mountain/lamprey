@@ -22,6 +22,7 @@ import icDelete from "@/assets/delete.png";
 import icEdit from "@/assets/edit.png";
 import cancelIc from "@/assets/x.png";
 import { EmojiButton } from "@/atoms/EmojiButton.tsx";
+import { Icon } from "@/atoms/Icon";
 import { createTooltip } from "@/atoms/Tooltip.tsx";
 import { createEditor } from "@/components/features/editor/Editor.tsx";
 import { useAutocomplete } from "@/contexts/autocomplete";
@@ -514,7 +515,7 @@ export function RenderUploadItem(props: {
 									})
 								}
 							>
-								<img class="icon" src={icEdit} />
+								<Icon src={icEdit} />
 							</button>
 						</Show>
 						<button
@@ -522,7 +523,7 @@ export function RenderUploadItem(props: {
 							class="button"
 							onClick={() => removeAttachment(props.att.local_id)}
 						>
-							<img class="icon" src={icDelete} />
+							<Icon src={icDelete} />
 						</button>
 					</menu>
 				</div>
@@ -560,7 +561,7 @@ const InputReply = (props: { thread: ThreadT; reply: MessageT }) => {
 				onClick={() => chUpdate("reply_id", undefined)}
 				ref={tip.content}
 			>
-				<img class="icon" src={cancelIc} />
+				<Icon src={cancelIc} />
 			</button>
 			<div class="info">
 				replying to{" "}

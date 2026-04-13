@@ -1246,6 +1246,8 @@ summary {
 	width: 1em;
 	mask-size: contain;
 	mask-repeat: no-repeat;
+	background: var(--icon-color);
+	display: inline-block;
 }
 
 .edit-roles {
@@ -1666,10 +1668,18 @@ input[type="text"].dropdown {
 			border: solid $link-500 1px;
 		}
 
-		& > .icon {
+		& > .icon,
+		& > .icon2 {
 			position: absolute;
 			left: 4px;
+		}
+
+		& > .icon {
 			filter: invert(0.6);
+		}
+
+		& > .icon2 {
+			background: $fg-200;
 		}
 	}
 }
@@ -1792,7 +1802,8 @@ input[type="text"].dropdown {
 		color: $link-500;
 	}
 
-	& .icon {
+	& .icon,
+	& .icon2 {
 		flex-shrink: 0;
 	}
 }
@@ -2502,7 +2513,29 @@ table {
 				}
 			}
 
-			.disconnect img {
+			button .icon2 {
+				height: 24px;
+				width: 24px;
+				padding: 8px;
+				border-radius: 50%;
+				background: $fg-300;
+				transition: background 0.2s;
+
+				&:hover {
+					background: $fg-100;
+				}
+
+				&[aria-checked="false"] {
+					background: $bg-200;
+
+					&:hover {
+						background: $bg-300;
+					}
+				}
+			}
+
+			.disconnect img,
+			.disconnect .icon2 {
 				height: 40px;
 				width: 40px;
 				background: $color-red;
@@ -3146,6 +3179,12 @@ article.message.oneline {
 		margin-top: 2px;
 	}
 
+	.icon2.main {
+		background: $fg-300;
+		margin-left: 28px;
+		margin-top: 2px;
+	}
+
 	.author {
 		padding: 0;
 	}
@@ -3246,6 +3285,12 @@ article.message.oneline {
 			width: 16px;
 			height: 16px;
 			filter: invert(0.7);
+		}
+
+		.icon2 {
+			width: 16px;
+			height: 16px;
+			background: $fg-300;
 		}
 
 		.avatar {
@@ -3372,12 +3417,17 @@ button.link {
 	& > .left,
 	& > .right {
 		& > .icon,
+		& > .icon2,
 		& > .avatar {
 			margin-right: 4px;
 		}
 
 		& > .icon {
 			filter: invert(0.7);
+		}
+
+		& > .icon2 {
+			background: $fg-300;
 		}
 
 		& > .avatar {
@@ -3401,8 +3451,18 @@ button.link {
 			height: 18px;
 		}
 
+		& > .icon2 {
+			background: $fg-300;
+			width: 18px;
+			height: 18px;
+		}
+
 		&:hover > .icon {
 			filter: invert(0.95);
+		}
+
+		&:hover > .icon2 {
+			background: $fg-100;
 		}
 	}
 
@@ -3493,7 +3553,8 @@ button.link {
 		cursor: pointer;
 	}
 
-	.button .icon {
+	.button .icon,
+	.button .icon2 {
 		display: contents;
 	}
 

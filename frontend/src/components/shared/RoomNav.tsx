@@ -13,6 +13,7 @@ import { useChannels, useRooms } from "@/api";
 import { useCtx } from "@/app/context";
 import icFolder1 from "@/assets/folder-1.png";
 import icHome from "@/assets/home.png";
+import { Icon } from "@/atoms/Icon";
 import { useMenu } from "@/contexts/mod";
 import { flags } from "@/lib/flags";
 import { RoomIcon } from "./User";
@@ -579,7 +580,7 @@ export const RoomNav = () => {
 				<ul class="room-list">
 					<li class="home-item">
 						<A href="/" end>
-							<img src={icHome} class="icon" alt="icon" />
+							<Icon src={icHome} alt="home" />
 						</A>
 					</li>
 					<For each={previewedItems()}>
@@ -635,7 +636,7 @@ export const RoomNav = () => {
 													});
 												}}
 											>
-												<img src={icFolder1} class="icon" alt="icon" />
+												<Icon src={icFolder1} alt="folder" />
 											</div>
 											<Show when={!collapsedFolders().has(folder.id)}>
 												<ul>

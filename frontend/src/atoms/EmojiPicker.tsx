@@ -11,6 +11,7 @@ import icEmojiObjects from "@/assets/emoji-objects.png";
 import icEmojiPeople from "@/assets/emoji-people.png";
 import icEmojiPlaces from "@/assets/emoji-places.png";
 import icEmojiSymbols from "@/assets/emoji-symbols.png";
+import { Icon } from "@/atoms/Icon";
 import { RoomIcon } from "@/components/shared/User";
 import { type EmojiData, emojiResource, getTwemoji } from "@/lib/emoji";
 import { getThumbFromId } from "@/media/util";
@@ -256,10 +257,7 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 							class="button"
 							onClick={() => scrollToCategory(cat.id)}
 						>
-							<Show
-								when={cat.room}
-								fallback={<img class="icon" src={cat.icon} />}
-							>
+							<Show when={cat.room} fallback={<Icon src={cat.icon!} />}>
 								<RoomIcon room={cat.room!} />
 							</Show>
 						</button>

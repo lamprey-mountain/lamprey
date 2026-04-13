@@ -977,7 +977,7 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 								});
 							}}
 						>
-							<img src={icMemberAdd} alt="Invite" />
+							<Icon src={icMemberAdd} color={colors.fg500} />
 						</button>
 					</Show>
 
@@ -991,7 +991,7 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 							nav(`/channel/${props.channel.id}/settings`);
 						}}
 					>
-						<img src={icSettings} alt="Settings" />
+						<Icon src={icSettings} color={colors.fg500} />
 					</button>
 				</div>
 			</Show>

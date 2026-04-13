@@ -13,6 +13,7 @@ import { createStore } from "solid-js/store";
 import { useApi, useChannels, useRooms } from "@/api";
 import { useCtx } from "@/app/context";
 import icX from "@/assets/x-1.png";
+import { Icon } from "@/atoms/Icon";
 import { Resizable } from "@/atoms/Resizable.tsx";
 import { ChannelSettings } from "@/components/features/channel_settings/index";
 import { ChatMain } from "@/components/features/chat/Chat.tsx";
@@ -279,7 +280,7 @@ const ThreadChatSidebar = (props: { thread_id: string }) => {
 									<ChannelContext.Provider value={cc()}>
 										<DocumentContext.Provider value={dc()}>
 											<button type="button" class="close" onClick={onClose}>
-												<img class="icon" src={icX} />
+												<Icon src={icX} />
 											</button>
 											<ChatMain channel={t()} />
 										</DocumentContext.Provider>

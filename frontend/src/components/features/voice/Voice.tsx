@@ -20,6 +20,7 @@ import iconMic from "@/assets/mic.png";
 import iconMusic from "@/assets/music.png";
 import iconScreenshare from "@/assets/screenshare.png";
 import iconSettings from "@/assets/settings.png";
+import { Icon } from "@/atoms/Icon";
 import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
 import { AvatarWithStatus } from "@/components/shared/User";
 import { useChannel } from "@/contexts/channel";
@@ -242,7 +243,7 @@ export const Voice = (p: { channel: Channel }) => {
 						</button>
 					</Show>
 					<button type="button" class="disconnect" onClick={actions.disconnect}>
-						<img class="icon" src={iconExit} />
+						<Icon src={iconExit} />
 					</button>
 				</div>
 			</div>
@@ -384,7 +385,7 @@ export const VoiceTray = () => {
 					<ToggleIcon checked={!voice.deafened} src={iconHeadphones} />
 				</button>
 				<button type="button" class="button" onClick={() => nav("/settings")}>
-					<img class="icon" src={iconSettings} />
+					<Icon src={iconSettings} />
 				</button>
 			</div>
 			<popup.View />

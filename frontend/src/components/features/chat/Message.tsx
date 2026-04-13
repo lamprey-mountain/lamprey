@@ -38,6 +38,7 @@ import icPin from "@/assets/pin.png";
 import icReactionAdd from "@/assets/reaction-add.png";
 import icReply from "@/assets/reply.png";
 import icThread from "@/assets/threads.png";
+import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown.tsx";
 import { Time } from "@/atoms/Time";
 import { createEditor } from "@/components/features/editor/Editor.tsx";
@@ -647,7 +648,7 @@ export const MessageToolbar = (props: { message: Message }) => {
 				title="Add reaction"
 				aria-label="Add reaction"
 			>
-				<img class="icon" src={icReactionAdd} />
+				<Icon src={icReactionAdd} />
 			</button>
 			<button
 				type="button"
@@ -656,7 +657,7 @@ export const MessageToolbar = (props: { message: Message }) => {
 				title="Reply"
 				aria-label="Reply"
 			>
-				<img class="icon" src={icReply} />
+				<Icon src={icReply} />
 			</button>
 			<Show when={canEditMessage()}>
 				<button
@@ -666,7 +667,7 @@ export const MessageToolbar = (props: { message: Message }) => {
 					title="Edit"
 					aria-label="Edit"
 				>
-					<img class="icon" src={icEdit} />
+					<Icon src={icEdit} />
 				</button>
 			</Show>
 			<button
@@ -676,7 +677,7 @@ export const MessageToolbar = (props: { message: Message }) => {
 				title="More options"
 				aria-label="More options"
 			>
-				<img class="icon" src={icMore} />
+				<Icon src={icMore} />
 			</button>
 		</div>
 	);

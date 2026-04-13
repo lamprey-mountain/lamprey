@@ -1,5 +1,6 @@
 import { createSignal } from "solid-js";
 import iconDownload from "@/assets/download.png";
+import { Icon } from "@/atoms/Icon";
 import { useModals } from "@/contexts/modal";
 import {
 	formatBytes,
@@ -64,7 +65,7 @@ export const ImageView = (props: ImageViewProps) => {
 					onClick={(e) => e.stopPropagation()}
 				>
 					<button type="button" class="button">
-						<img src={iconDownload} class="icon" alt="icon" />
+						<Icon src={iconDownload} alt="download" />
 					</button>
 				</a>
 				<footer class="info dim">

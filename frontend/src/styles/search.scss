@@ -10,7 +10,8 @@
 	background-color: $bg-300;
 	border: solid 1px $sep-500;
 
-	& > .icon {
+	& > .icon,
+	& > .icon2 {
 		position: absolute;
 		right: 4px;
 	}
@@ -65,6 +66,10 @@
 			filter: invert(0.6);
 		}
 
+		& .icon2 {
+			background: $fg-200;
+		}
+
 		&:hover,
 		&.hovered {
 			background-color: $bg-200;
@@ -111,6 +116,13 @@
 				height: 1rem;
 				width: 1rem;
 				filter: invert(0.6);
+			}
+
+			.icon2 {
+				grid-area: icon;
+				height: 1rem;
+				width: 1rem;
+				background: $fg-200;
 			}
 
 			.avatar {

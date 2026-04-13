@@ -29,6 +29,7 @@ import icFormatCode from "@/assets/format-code.png";
 import icFormatItalic from "@/assets/format-italic.png";
 import icFormatStrikethrough from "@/assets/format-strikethrough.png";
 import icFormatUrl from "@/assets/format-url.png";
+import { Icon } from "@/atoms/Icon";
 import { Time } from "@/atoms/Time.tsx";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useChannel } from "@/contexts/channel.tsx";
@@ -235,7 +236,7 @@ const DocumentHeader = (
 						applyFormat("**");
 					}}
 				>
-					<img class="icon" src={icFormatBold} />
+					<Icon src={icFormatBold} />
 				</button>
 				<button
 					type="button"
@@ -245,7 +246,7 @@ const DocumentHeader = (
 						applyFormat("*");
 					}}
 				>
-					<img class="icon" src={icFormatItalic} />
+					<Icon src={icFormatItalic} />
 				</button>
 				<button
 					type="button"
@@ -255,7 +256,7 @@ const DocumentHeader = (
 						applyFormat("~~");
 					}}
 				>
-					<img class="icon" src={icFormatStrikethrough} />
+					<Icon src={icFormatStrikethrough} />
 				</button>
 				<button
 					type="button"
@@ -265,7 +266,7 @@ const DocumentHeader = (
 						applyFormat("`");
 					}}
 				>
-					<img class="icon" src={icFormatCode} />
+					<Icon src={icFormatCode} />
 				</button>
 				<button
 					type="button"
@@ -275,7 +276,7 @@ const DocumentHeader = (
 						openLinkModal();
 					}}
 				>
-					<img class="icon" src={icFormatUrl} />
+					<Icon src={icFormatUrl} />
 				</button>
 				<button
 					type="button"
@@ -334,7 +335,7 @@ const DocumentHeader = (
 								}}
 							>
 								<button type="button" class="button">
-									<img class="icon" src={icBranchDefault} />
+									<Icon src={icBranchDefault} />
 									<div class="info">
 										<div>default</div>
 										<div class="dim">the main/master/default branch</div>
@@ -343,7 +344,7 @@ const DocumentHeader = (
 							</li>
 							<li>
 								<button type="button" class="button">
-									<img class="icon" src={icBranch} />
+									<Icon src={icBranch} />
 									<div class="info">
 										<div>branch name here</div>
 										<div class="dim">
@@ -354,7 +355,7 @@ const DocumentHeader = (
 							</li>
 							<li class="private">
 								<button type="button" class="button">
-									<img class="icon" src={icBranchPrivate} />
+									<Icon src={icBranchPrivate} />
 									<div class="info">
 										<div>branch name here</div>
 										<div class="dim">private branch; created n minutes ago</div>
@@ -364,7 +365,7 @@ const DocumentHeader = (
 							<li class="separator"></li>
 							<li class="new">
 								<button type="button" class="button">
-									<img class="icon" src={icBranchNew} />
+									<Icon src={icBranchNew} />
 									<div class="info">
 										<div>new</div>
 										<div class="dim">create a new branch</div>
@@ -373,7 +374,7 @@ const DocumentHeader = (
 							</li>
 							<li class="new">
 								<button type="button" class="button">
-									<img class="icon" src={icBranchFork} />
+									<Icon src={icBranchFork} />
 									<div class="info">
 										<div>new from changes</div>
 										<div class="dim">
@@ -384,7 +385,7 @@ const DocumentHeader = (
 							</li>
 							<li class="new">
 								<button type="button" class="button">
-									<img class="icon" src={icBranchFork} />
+									<Icon src={icBranchFork} />
 									<div class="info">
 										<div>new private</div>
 										<div class="dim">
@@ -413,7 +414,7 @@ const DocumentHeader = (
 						<ul>
 							<li>
 								<button type="button" class="button">
-									<img class="icon" src={icMergeFull} />
+									<Icon src={icMergeFull} />
 									<div class="info">
 										<div>full</div>
 										<div class="dim">
@@ -424,7 +425,7 @@ const DocumentHeader = (
 							</li>
 							<li>
 								<button type="button" class="button">
-									<img class="icon" src={icMergeCherrypick} />
+									<Icon src={icMergeCherrypick} />
 									<div class="info">
 										<div>cherry pick</div>
 										<div class="dim">view diff; merge specific changes</div>

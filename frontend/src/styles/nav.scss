@@ -186,6 +186,10 @@
 		& > .icon {
 			filter: invert(0.6);
 		}
+
+		& > .icon2 {
+			background: $fg-200;
+		}
 	}
 
 	.channel-details {
@@ -235,15 +239,14 @@
 		align-items: center;
 		justify-content: center;
 
-		img {
+		.icon2 {
 			width: 14px;
 			height: 14px;
-			filter: invert(0.6);
-			transition: filter 0.1s ease;
+			transition: background 0.1s ease;
 		}
 
-		&:hover img {
-			filter: invert(0.9);
+		&:hover .icon2 {
+			background: $fg-100;
 		}
 	}
 
@@ -414,10 +417,18 @@
 		}
 	}
 
-	.home-item .icon, .folder-header .icon {
+	.home-item .icon,
+	.folder-header .icon {
 		height: 32px;
 		width: 32px;
 		filter: invert(0.6);
+	}
+
+	.home-item .icon2,
+	.folder-header .icon2 {
+		height: 32px;
+		width: 32px;
+		background: $fg-200;
 	}
 
 	.home-item {

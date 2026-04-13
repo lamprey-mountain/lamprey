@@ -11,6 +11,7 @@ import {
 import { useApi, useChannels } from "@/api";
 import icDelete from "@/assets/delete.png";
 import icEdit from "@/assets/edit.png";
+import { Icon } from "@/atoms/Icon";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useModals } from "@/contexts/modal";
 import { usePermissions } from "@/hooks/usePermissions.ts";
@@ -168,7 +169,7 @@ const TagToolbar = (props: TagToolbarProps) => {
 					props.onEdit();
 				}}
 			>
-				<img class="icon" src={icEdit} />
+				<Icon src={icEdit} />
 			</button>
 			<button
 				type="button"
@@ -180,7 +181,7 @@ const TagToolbar = (props: TagToolbarProps) => {
 					props.onDelete();
 				}}
 			>
-				<img class="icon" src={icDelete} />
+				<Icon src={icDelete} />
 			</button>
 		</div>
 	);

@@ -6,6 +6,7 @@ import icCall from "@/assets/call.png";
 import icMembers from "@/assets/members.png";
 import icPin from "@/assets/pin.png";
 import icThreads from "@/assets/threads.png";
+import { Icon } from "@/atoms/Icon";
 import { SearchInput } from "@/components/features/search/SearchInput";
 import { ChannelIcon } from "@/components/shared/User";
 import { useChannel } from "@/contexts/channel";
@@ -209,7 +210,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 								}}
 								title="Start call"
 							>
-								<img class="icon" src={icCall} />
+								<Icon src={icCall} />
 							</button>
 						</Show>
 						<Show
@@ -234,7 +235,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 								}}
 								title="Threads"
 							>
-								<img class="icon" src={icThreads} />
+								<Icon src={icThreads} />
 							</button>
 						</Show>
 						<button
@@ -244,7 +245,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 							title="Show pinned messages"
 							style={!hasPins() ? "display:none" : undefined}
 						>
-							<img class="icon" src={icPin} />
+							<Icon src={icPin} />
 						</button>
 						<Show when={props.showMembersButton ?? true}>
 							<button
@@ -252,7 +253,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 								onClick={toggleMembers}
 								title="Show members"
 							>
-								<img class="icon" src={icMembers} />
+								<Icon src={icMembers} />
 							</button>
 						</Show>
 					</div>

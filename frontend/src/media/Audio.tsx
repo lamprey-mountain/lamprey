@@ -15,6 +15,7 @@ import iconVolumeLow from "@/assets/volume-low.png";
 import iconVolumeMax from "@/assets/volume-max.png";
 import iconVolumeMedium from "@/assets/volume-medium.png";
 import iconVolumeMute from "@/assets/volume-mute.png";
+import { Icon } from "@/atoms/Icon";
 import { tooltip } from "@/atoms/Tooltip.tsx";
 import {
 	formatBytes,
@@ -262,8 +263,7 @@ export const AudioView = (props: MediaProps) => {
 					onClick={togglePlayPause}
 					title={playing() ? "pause" : "play"}
 				>
-					<img
-						class="icon"
+					<Icon
 						src={playing() ? iconPause : iconPlay}
 						alt={playing() ? "pause" : "play"}
 					/>
@@ -301,7 +301,7 @@ export const AudioView = (props: MediaProps) => {
 							title={getVolumeText()}
 							onWheel={handleVolumeWheel}
 						>
-							<img class="icon" src={getVolumeIcon()} alt={getVolumeText()} />
+							<Icon src={getVolumeIcon()} alt={getVolumeText()} />
 						</button>
 					) as HTMLElement,
 				)}

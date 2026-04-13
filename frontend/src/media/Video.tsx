@@ -16,6 +16,7 @@ import iconVolumeLow from "@/assets/volume-low.png";
 import iconVolumeMax from "@/assets/volume-max.png";
 import iconVolumeMedium from "@/assets/volume-medium.png";
 import iconVolumeMute from "@/assets/volume-mute.png";
+import { Icon } from "@/atoms/Icon";
 import { createTooltip } from "@/atoms/Tooltip.tsx";
 import {
 	formatBytes,
@@ -329,8 +330,7 @@ export const VideoView = (props: MediaProps) => {
 							onClick={togglePlayPause}
 							title={playing() ? "pause" : "play"}
 						>
-							<img
-								class="icon"
+							<Icon
 								src={playing() ? iconPause : iconPlay}
 								alt={playing() ? "pause" : "play"}
 							/>
@@ -344,7 +344,7 @@ export const VideoView = (props: MediaProps) => {
 							// @ts-expect-error - use:vtc is a directive
 							use:vtc
 						>
-							<img class="icon" src={getVolumeIcon()} alt={getVolumeText()} />
+							<Icon src={getVolumeIcon()} alt={getVolumeText()} />
 						</button>
 						<button
 							type="button"
@@ -352,8 +352,7 @@ export const VideoView = (props: MediaProps) => {
 							onClick={toggleFullscreen}
 							title={fullscreen() ? "exit fullscreen" : "enter fullscreen"}
 						>
-							<img
-								class="icon"
+							<Icon
 								src={fullscreen() ? iconFullscreent : iconFullscreen}
 								alt=""
 							/>

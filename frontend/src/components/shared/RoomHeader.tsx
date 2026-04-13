@@ -1,6 +1,7 @@
 import type { Room } from "sdk";
 import { useCtx } from "@/app/context";
 import icMembers from "@/assets/members.png";
+import { Icon } from "@/atoms/Icon";
 import { SearchInput } from "@/components/features/search/SearchInput";
 
 type RoomHeaderProps = {
@@ -36,7 +37,7 @@ export const RoomHeader = (props: RoomHeaderProps) => {
 				onClick={toggleMembers}
 				title="Show members"
 			>
-				<img class="icon" src={icMembers} alt="Members" />
+				<Icon src={icMembers} alt="Members" />
 			</button>
 		</header>
 	);

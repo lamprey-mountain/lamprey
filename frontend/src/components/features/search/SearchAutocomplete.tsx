@@ -2,6 +2,7 @@ import type { Node } from "prosemirror-model";
 import type { User } from "sdk";
 import { createSignal, For, type JSX, Match, Show, Switch } from "solid-js";
 import icSearch from "@/assets/search.png";
+import { Icon } from "@/atoms/Icon";
 import { ChannelIcon } from "@/avatar/ChannelIcon";
 import { Avatar } from "@/avatar/UserAvatar";
 import type { RoomT, ThreadT } from "@/types";
@@ -419,7 +420,7 @@ const FilterValuesPanel = (props: {
 									}
 								}}
 							>
-								<img class="icon" src={icSearch} alt="" aria-hidden="true" />
+								<Icon src={icSearch} alt="" />
 								<div class="filter-label">{item.label}</div>
 								<div class="filter-desc dim">{item.desc}</div>
 							</li>

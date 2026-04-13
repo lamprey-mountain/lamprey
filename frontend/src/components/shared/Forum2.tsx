@@ -44,6 +44,7 @@ import icDelete from "@/assets/delete.png";
 import cancelIc from "@/assets/x.png";
 import { Dropdown } from "@/atoms/Dropdown";
 import { EmojiButton } from "@/atoms/EmojiButton";
+import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown";
 import { Resizable } from "@/atoms/Resizable";
 import { Time } from "@/atoms/Time";
@@ -183,7 +184,7 @@ const InputReply = (props: { thread: Channel; reply: Message }) => {
 				onClick={() => chUpdate("reply_id", undefined)}
 				ref={tip.content}
 			>
-				<img class="icon" src={cancelIc} />
+				<Icon src={cancelIc} />
 			</button>
 			<div class="info">
 				replying to{" "}
@@ -1518,7 +1519,7 @@ export function RenderUploadItem(props: {
 								)
 							}
 						>
-							<img class="icon" src={icDelete} />
+							<Icon src={icDelete} />
 						</button>
 					</menu>
 				</div>
