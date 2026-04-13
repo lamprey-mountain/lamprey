@@ -64,24 +64,6 @@ export function serializeToQuery(state: EditorState): string {
 }
 
 // ---------------------------------------------------------------------------
-// parseSearchQuery – now a thin wrapper around the tokenizer
-// ---------------------------------------------------------------------------
-
-export function parseSearchQuery(query: string) {
-	const tokens = tokenizeSearch(query);
-	return tokens
-		.filter((t): t is Token & { type: "filter" } => t.type === "filter")
-		.map((t) => ({
-			type: "filter" as const,
-			filterType: t.filterType,
-			value: t.value,
-			from: t.from,
-			to: t.to,
-			negated: t.negated,
-		}));
-}
-
-// ---------------------------------------------------------------------------
 // parseQueryToNodes – uses the registry to create PM nodes from a string
 // ---------------------------------------------------------------------------
 

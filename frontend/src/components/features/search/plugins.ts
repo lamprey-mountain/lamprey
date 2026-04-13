@@ -1,6 +1,6 @@
 import { type EditorState, Plugin, PluginKey } from "prosemirror-state";
 import { Decoration, DecorationSet } from "prosemirror-view";
-import { getActiveFilterAtCursor, tokenizeSearch } from "./tokenizer";
+import { tokenizeSearch } from "./tokenizer";
 
 // ---------------------------------------------------------------------------
 // Autocomplete plugin state
@@ -260,17 +260,6 @@ export function autocompletePlugin(
 					}
 				},
 			};
-		},
-		props: {
-			handleKeyDown(_view, event) {
-				// Let SolidJS / parent plugin handle navigation for now.
-				// Future: move ArrowDown/ArrowUp/Enter state entirely here.
-				if (event.key === "Escape") {
-					setFilter(null);
-					return true;
-				}
-				return false;
-			},
 		},
 	});
 }

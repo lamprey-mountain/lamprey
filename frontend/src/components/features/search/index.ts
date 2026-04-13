@@ -1,5 +1,4 @@
 export type {
-	FilterType,
 	SearchContext,
 	SearchFilterDef,
 	SuggestionItem,
@@ -17,12 +16,11 @@ export { schema } from "./schema";
 export type { SearchRequestBody } from "./searchCompiler";
 export { buildBackendSearchBody } from "./searchCompiler";
 export type { Token } from "./tokenizer";
-export { getActiveFilterAtCursor, tokenizeSearch } from "./tokenizer";
+export { tokenizeSearch } from "./tokenizer";
 export {
 	addRecentSearch,
 	dateToBoundaryUUID,
 	getRecentSearches,
 	parseQueryToNodes,
-	parseSearchQuery,
 	serializeToQuery,
 } from "./utils";

@@ -34,26 +34,17 @@ import { useOptionalChannel } from "@/contexts/channel";
 import { type RoomSearch, useRoom } from "@/contexts/room";
 import type { RoomT, ThreadT } from "@/types";
 import type { ChannelSearch } from "@/types/chat";
-import {
-	FILTER_NAMES,
-	SEARCH_FILTERS,
-	type SearchContext,
-} from "./filters.config";
+import { SEARCH_FILTERS, type SearchContext } from "./filters.config";
 import {
 	type ActiveFilter,
 	autocompletePlugin,
 	getFilterFromSelection,
 	syntaxHighlightingPlugin,
 } from "./plugins";
-import {
-	type AutocompleteItem,
-	type Completion,
-	SearchAutocomplete,
-} from "./SearchAutocomplete";
+import { type Completion, SearchAutocomplete } from "./SearchAutocomplete";
 import { FilterChipUI } from "./SearchFilterChip";
 import { schema } from "./schema";
 import { buildBackendSearchBody } from "./searchCompiler";
-import { tokenizeSearch } from "./tokenizer";
 import type { LabelPart } from "./types";
 import {
 	addRecentSearch,
@@ -284,6 +275,17 @@ export const SearchInput = (props: {
 		placement: "bottom-start",
 	});
 
+	const hasSuggestions = createMemo(() => {
+		const f = activeFilter();
+		if (!f) return false;
+		if (f.type === "filter") {
+			return filterSuggestions().length > 0 || recentSearches().length > 0;
+		}
+		const def = SEARCH_FILTERS[f.type];
+		if (!def) return false;
+		return def.getSuggestions(f.query, searchContext()).length > 0;
+	});
+
 	const channelCtx = useOptionalChannel();
 	const roomCtx = useRoom();
 
@@ -384,8 +386,12 @@ export const SearchInput = (props: {
 		if (isRecent) {
 			const ctx = searchContext();
 			const nodes = parseQueryToNodes(text, ctx);
-			const tr = view.state.tr.delete(0, view.state.doc.content.size);
-			if (nodes.length > 0) tr.insert(0, nodes);
+			const paragraph = schema.nodes.paragraph.create(null, nodes);
+			const tr = view.state.tr.replaceWith(
+				0,
+				view.state.doc.content.size,
+				paragraph,
+			);
 			tr.setMeta("skipAutocomplete", true);
 			view.dispatch(tr);
 			setActiveFilter(null);
@@ -477,9 +483,14 @@ export const SearchInput = (props: {
 						props: {
 							handleKeyDown(view, event) {
 								const items = autocompleteItems();
-								const f = activeFilter();
+								const { state } = view;
+								const isAutocompleteOpen = hasSuggestions();
 
-								if (f) {
+								// document open + paragraph open + paragraph close + document close = 4 nodes
+								const isEmpty =
+									!state.doc.textContent.length && state.doc.nodeSize === 4;
+
+								if (isAutocompleteOpen && !isEmpty) {
 									if (items.length > 0) {
 										if (event.key === "ArrowDown") {
 											setHoveredIndex((prev) => (prev + 1) % items.length);
@@ -511,26 +522,18 @@ export const SearchInput = (props: {
 									return true;
 								} else if (event.key === "Escape") {
 									event.preventDefault();
-									const { state } = view;
-									if (
-										state.doc.textContent.length > 0 ||
-										state.doc.childCount > 1 ||
-										(state.doc.firstChild &&
-											state.doc.firstChild.childCount > 0)
-									) {
+
+									if (!isEmpty) {
 										const tr = state.tr.delete(0, state.doc.content.size);
 										view.dispatch(tr);
-										handleSubmit();
 									} else {
-										if (currentSearch()) {
-											updateSearch(undefined);
-										} else {
-											const chatInput = document.querySelector(
-												".chat .ProseMirror",
-											) as HTMLInputElement | null;
-											chatInput?.focus();
-										}
+										updateSearch(undefined);
+										const chatInput = document.querySelector(
+											".chat .ProseMirror",
+										) as HTMLInputElement | null;
+										chatInput?.focus();
 									}
+
 									return true;
 								}
 
@@ -595,6 +598,7 @@ export const SearchInput = (props: {
 							autocompleteItems={autocompleteItems()}
 							filterSuggestions={filterSuggestions()}
 							recentSearches={recentSearches()}
+							hasSuggestions={hasSuggestions()}
 						/>
 					</div>
 				</Show>

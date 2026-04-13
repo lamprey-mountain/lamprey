@@ -1,7 +1,6 @@
 import type { Node } from "prosemirror-model";
 import type { User } from "sdk";
 import {
-	createEffect,
 	createMemo,
 	createSignal,
 	For,
@@ -16,13 +15,12 @@ import { Avatar } from "@/avatar/UserAvatar";
 import type { RoomT, ThreadT } from "@/types";
 import { SEARCH_FILTERS, type SearchContext } from "./filters.config";
 import { FilterChipUI } from "./SearchFilterChip";
-import { tokenizeSearch } from "./tokenizer";
 import type { LabelPart } from "./types";
-import {
-	formatRecentSearch,
-	getRecentSearches,
-	parseSearchQuery,
-} from "./utils";
+import { formatRecentSearch } from "./utils";
+
+const PRESET_SEARCHES = [
+	// TODO
+];
 
 // filter metadata for the left column display
 const FILTER_METADATA = [
@@ -138,27 +136,9 @@ export const SearchAutocomplete = (props: {
 	autocompleteItems: AutocompleteItem[];
 	filterSuggestions: string[];
 	recentSearches: string[];
+	hasSuggestions: boolean;
 }) => {
 	const [hoveredFilter, setHoveredFilter] = createSignal<string | null>(null);
-
-	const hasSuggestions = createMemo(() => {
-		const f = props.filter;
-		if (!f) return false;
-		if (f.type === "filter") {
-			return (
-				props.filterSuggestions.length > 0 || props.recentSearches.length > 0
-			);
-		}
-		const def = SEARCH_FILTERS[f.type];
-		if (!def) return false;
-		return def.getSuggestions(f.query, props.searchContext).length > 0;
-	});
-
-	// const handleSelect = (idx: number, _shouldSubmit: boolean) => {
-	// 	const its = props.autocompleteItems();
-	// 	const item = its[idx];
-	// 	if (item && !item.isSeparator) item.onSelect();
-	// };
 
 	const isShowingTwoColumn = () =>
 		props.filter?.type === "filter" && props.filter.query === "";
@@ -189,7 +169,7 @@ export const SearchAutocomplete = (props: {
 	};
 
 	return (
-		<Show when={hasSuggestions()}>
+		<Show when={props.hasSuggestions}>
 			<div
 				class="search-autocomplete"
 				onClick={(e) => {
@@ -315,7 +295,13 @@ export const SearchAutocomplete = (props: {
 													All images in this channel
 												</div>
 												<div class="preset-desc dim">
-													has:image channel:{props.channel?.name ?? "channel"}
+													{renderLabel(
+														formatRecentSearch(
+															`has:image channel:${props.channel?.name ?? "channel"}`,
+															props.searchContext,
+														),
+														false,
+													)}
 												</div>
 											</li>
 											<li>
@@ -323,7 +309,13 @@ export const SearchAutocomplete = (props: {
 													All links in this channel
 												</div>
 												<div class="preset-desc dim">
-													has:link channel:{props.channel?.name ?? "channel"}
+													{renderLabel(
+														formatRecentSearch(
+															`has:link channel:${props.channel?.name ?? "channel"}`,
+															props.searchContext,
+														),
+														false,
+													)}
 												</div>
 											</li>
 										</ul>

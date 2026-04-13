@@ -1,3 +1,5 @@
+// NOTE: a lot of these are rendered with solidjs, so toDOM/parseDOM could probably be simplified?
+
 import { Schema } from "prosemirror-model";
 
 type FilterNodeSpec = {
