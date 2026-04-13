@@ -221,9 +221,17 @@
         cargoArtifacts =
           craneLib.buildDepsOnly (common // { name = "(shared deps)"; });
 
+        # reuse commonly used lamprey crates
+        internalCratesArtifacts = craneLib.cargoBuild (common // {
+          pname = "lamprey-internal-crates";
+          cargoArtifacts = cargoArtifacts;
+          src = filterSrcFor baseInternalDeps;
+          cargoExtraArgs = pkgs.lib.concatMapStringsSep " " (dep: "-p ${dep}") baseInternalDeps;
+        });
+
         mkCrate = name: dirs:
           craneLib.buildPackage (common // {
-            inherit cargoArtifacts;
+            cargoArtifacts = internalCratesArtifacts;
             pname = name;
             cargoExtraArgs = "-p ${name}";
             src = filterSrcFor (dirs ++ baseInternalDeps);
@@ -233,7 +241,7 @@
           });
 
         backend = craneLib.buildPackage (common // {
-            inherit cargoArtifacts;
+            cargoArtifacts = internalCratesArtifacts;
             pname = "lamprey-backend";
             cargoExtraArgs = "-p lamprey-backend --features lamprey-backend/embed-frontend";
             src = filterSrcFor ([
@@ -253,6 +261,14 @@
         voice = mkCrate "lamprey-voice" [ "crate-voice" ];
         media = mkCrate "lamprey-media" [ "crate-media" ];
         scanner-malware = mkCrate "scanner-malware" [ "scanner-malware" ];
+
+        wasm-cargo-artifacts = craneLib.buildDepsOnly (common // {
+          pname = "lamprey-markdown-wasm-deps";
+          src = filterSrcFor (baseInternalDeps ++ [ "crate-markdown" ]);
+
+          CARGO_BUILD_TARGET = "wasm32-unknown-unknown";
+          cargoExtraArgs = "-p lamprey-markdown --features wasm";
+        });
 
         wasm-bindgen-version = let
           lock = builtins.fromTOML (builtins.readFile ./Cargo.lock);
@@ -275,7 +291,7 @@
         });
 
         wasm-markdown = craneLib.buildPackage (common // {
-          inherit cargoArtifacts;
+          cargoArtifacts = wasm-cargo-artifacts;
           pname = "lamprey-markdown-wasm";
 
           src = filterSrcFor (baseInternalDeps ++ [ "crate-markdown" ]);
