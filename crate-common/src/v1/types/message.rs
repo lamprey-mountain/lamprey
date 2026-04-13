@@ -418,6 +418,29 @@ pub enum MessageType {
     // Nudge,
 }
 
+// impl fmt::Display for MessageType {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         match self {
+//             MessageType::DefaultMarkdown(_) => write!(f, "DefaultMarkdown"),
+//             #[cfg(feature = "feat_e2ee")]
+//             MessageType::Encrypted(_) => write!(f, "Encrypted"),
+//             MessageType::MessagePinned(_) => write!(f, "MessagePinned"),
+//             #[cfg(feature = "feat_message_move")]
+//             MessageType::MessagesMoved(_) => write!(f, "MessagesMoved"),
+//             MessageType::MemberAdd(_) => write!(f, "MemberAdd"),
+//             MessageType::MemberRemove(_) => write!(f, "MemberRemove"),
+//             MessageType::MemberJoin => write!(f, "MemberJoin"),
+//             MessageType::Call(_) => write!(f, "Call"),
+//             MessageType::ChannelRename(_) => write!(f, "ChannelRename"),
+//             MessageType::ChannelPingback(_) => write!(f, "ChannelPingback"),
+//             MessageType::ChannelMoved(_) => write!(f, "ChannelMoved"),
+//             MessageType::ChannelIcon(_) => write!(f, "ChannelIcon"),
+//             MessageType::ThreadCreated(_) => write!(f, "ThreadCreated"),
+//             MessageType::AutomodExecution(_) => write!(f, "AutomodExecution"),
+//         }
+//     }
+// }
+
 /// Information about a message being pinned
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

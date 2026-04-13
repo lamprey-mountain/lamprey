@@ -1,5 +1,9 @@
 use std::sync::Arc;
 
+use axum::{extract::State, response::IntoResponse, Json};
+use lamprey_backend_core::Error;
+use serde::Serialize;
+use url::Url;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::ServerState;
@@ -92,6 +96,19 @@ fn routes_v1() -> OpenApiRouter<Arc<ServerState>> {
         .merge(user_email::routes())
         .merge(voice::routes())
         .merge(webhook::routes())
+}
+
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct LampreyWellKnown {
+    pub api_url: Url,
+    // do i need anything besides the bare minimum? i can fetch the full info endpoint after knowing api_url...
+}
+
+/// Get well known
+pub async fn well_known(State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse, Error> {
+    Ok(Json(LampreyWellKnown {
+        api_url: s.config().api_url.clone(),
+    }))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

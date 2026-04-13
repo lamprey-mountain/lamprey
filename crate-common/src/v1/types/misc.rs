@@ -14,6 +14,7 @@ pub use color::{Color, ColorSemantic, ColorThemed};
 pub use time::Time;
 
 use super::{ApplicationId, SessionId, UserId};
+use crate::util::is_valid_hostname;
 use crate::v1::routes::PathParam;
 
 #[derive(Debug)]
@@ -41,7 +42,6 @@ pub enum SessionIdReq {
     SessionId(SessionId),
 }
 
-// TODO: deserialize as @host and @client
 #[derive(Debug, Deserialize, ToSchema)]
 #[cfg_attr(feature = "serde", serde(untagged))]
 pub enum ServerReq {
@@ -56,8 +56,21 @@ pub enum ServerReq {
     ServerClient,
 
     /// references a server by its fully qualified domain name
-    // rename to ServerHostname?
-    ServerFqdn(String),
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_server_name"))]
+    ServerName(String),
+}
+
+#[cfg(feature = "serde")]
+fn deserialize_server_name<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    if is_valid_hostname(&s) {
+        Ok(s)
+    } else {
+        Err(serde::de::Error::custom(format!("invalid hostname: {}", s)))
+    }
 }
 
 fn const_self<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
@@ -173,6 +186,23 @@ impl PathParam for SessionIdReq {
     }
 }
 
+impl PathParam for ServerReq {
+    fn from_path_param(s: &str) -> Result<Self, crate::v1::routes::PathParamError> {
+        if s == "@host" {
+            Ok(ServerReq::ServerHost)
+        } else if s == "@client" {
+            Ok(ServerReq::ServerClient)
+        } else if is_valid_hostname(s) {
+            Ok(ServerReq::ServerName(s.to_owned()))
+        } else {
+            Err(crate::v1::routes::PathParamError(format!(
+                "invalid hostname: {}",
+                s
+            )))
+        }
+    }
+}
+
 impl Display for ApplicationIdReq {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -187,7 +217,10 @@ impl Display for ServerReq {
         match self {
             ServerReq::ServerHost => write!(f, "@host"),
             ServerReq::ServerClient => write!(f, "@client"),
-            ServerReq::ServerFqdn(fqdn) => write!(f, "{fqdn}"),
+            ServerReq::ServerName(fqdn) => write!(f, "{fqdn}"),
         }
     }
 }
+
+// TODO: add a utility to serialize bytes as either unpadded urlsafe base64 (json) or raw binary (msgpack)
+// struct Binary(Vec<u8>);

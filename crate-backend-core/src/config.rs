@@ -14,6 +14,25 @@ use url::Url;
 
 use crate::{Error, Result};
 
+use common::v1::types::federation::ServerKeyAlgorithm;
+use common::v1::types::util::Time;
+
+/// a server's signing key for internal use (includes private key)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServerKeyInternal {
+    /// the key algorithm
+    pub alg: ServerKeyAlgorithm,
+
+    /// public key (base64 url safe unpadded)
+    pub pubkey: String,
+
+    /// private key (base64 url safe unpadded)
+    pub privkey: String,
+
+    /// when this key expires
+    pub expires_at: Time,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub rust_log: String,
@@ -27,6 +46,9 @@ pub struct Config {
 
     /// public url for the web ui
     pub html_url: Url,
+
+    /// public hostname for federation
+    pub hostname: Option<String>,
 
     /// for media/file uploads
     #[serde(alias = "s3")]
@@ -275,6 +297,10 @@ pub struct ConfigInternal {
     /// - this gets rotated every 5 minutes
     /// - cli tools will fetch this token from the db, then do admin tasks through the http api
     pub admin_token: Option<String>,
+
+    /// federation signing keys
+    #[serde(default)]
+    pub federation_keys: Vec<ServerKeyInternal>,
 }
 
 // TODO: use this for loading secrets

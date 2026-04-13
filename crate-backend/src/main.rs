@@ -306,6 +306,7 @@ async fn main() -> Result<()> {
             vapid_public_key,
             oidc_jwk_key: serde_json::to_string(&jwk)?,
             admin_token: None,
+            federation_keys: vec![],
         })
         .await?;
     }
@@ -428,6 +429,7 @@ async fn serve(state: Arc<ServerState>) -> Result<()> {
     let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest("/api", routes::routes().fallback(api_fallback))
         .route("/metrics", get(routes::metrics::get_metrics))
+        .route("/.well-known/lamprey-mountain", get(routes::well_known))
         .with_state(state.clone())
         .split_for_parts();
     NestedTags.modify(&mut api);

@@ -6,6 +6,7 @@ use connections::ServiceConnections;
 use email::ServiceEmail;
 use embed::ServiceEmbed;
 use emoji::ServiceEmoji;
+use federation::ServiceFederation;
 use media::ServiceMedia;
 use messages::ServiceMessages;
 use oauth2::ServiceOauth;
@@ -41,6 +42,7 @@ pub mod documents;
 pub mod email;
 pub mod embed;
 pub mod emoji;
+pub mod federation;
 pub mod http;
 pub mod media;
 pub mod member_lists;
@@ -73,6 +75,7 @@ pub struct Services {
     pub email: ServiceEmail,
     pub embed: ServiceEmbed,
     pub emoji: ServiceEmoji,
+    pub federation: ServiceFederation,
     pub http: ServiceHttp,
     pub media: ServiceMedia,
     pub member_lists: ServiceMemberLists,
@@ -109,6 +112,7 @@ impl Services {
             email: ServiceEmail::new(state.clone()),
             embed: ServiceEmbed::new(state.clone()),
             emoji: ServiceEmoji::new(state.clone()),
+            federation: ServiceFederation::new(state.clone()),
             http: ServiceHttp::new(state.clone()),
             media: ServiceMedia::new(state.clone()),
             member_lists: ServiceMemberLists::new(state.clone()),
@@ -136,6 +140,7 @@ impl Services {
         self.admin.start_background_tasks();
         self.channels.start_background_tasks();
         self.documents.start_background_tasks();
+        self.federation.start_background_tasks();
         self.notifications.start_background_tasks();
         self.embed.start_workers().await;
         self.room_analytics.spawn_snapshot_task();

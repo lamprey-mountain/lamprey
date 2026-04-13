@@ -5,17 +5,17 @@ use lamprey_macros::endpoint;
 /// Get the signing keys of a server
 #[endpoint(
     get,
-    path = "/server/{hostname}",
+    path = "/server/{hostname}/keys",
     tags = ["federation"],
     scopes = [Full],
     response(OK, body = ServerKeys, description = "ok"),
 )]
 pub mod server_keys_get {
-    use crate::v1::types::federation::ServerKeys;
+    use crate::v1::types::{federation::ServerKeys, misc::ServerReq};
 
     pub struct Request {
         #[path]
-        pub hostname: String,
+        pub hostname: ServerReq,
     }
 
     pub struct Response {
@@ -35,11 +35,14 @@ pub mod server_keys_get {
     response(OK, body = ServerUserCreate, description = "ok"),
 )]
 pub mod server_user_ensure {
-    use crate::v1::types::federation::{ServerUserCreate, ServerUserCreateRequest};
+    use crate::v1::types::{
+        federation::{ServerUserCreate, ServerUserCreateRequest},
+        misc::ServerReq,
+    };
 
     pub struct Request {
         #[path]
-        pub hostname: String,
+        pub hostname: ServerReq,
 
         #[json]
         pub user: ServerUserCreateRequest,
@@ -59,16 +62,58 @@ pub mod server_user_ensure {
     path = "/server/{hostname}/sync",
     tags = ["federation"],
     scopes = [Full],
-    response(ACCEPTED, description = "ok"),
+    response(ACCEPTED, body = ServerSyncResponse, description = "ok"),
 )]
 pub mod server_sync_handle {
+    use crate::v1::types::{
+        federation::{ServerSyncRequest, ServerSyncResponse},
+        misc::ServerReq,
+    };
+
     pub struct Request {
         #[path]
-        pub hostname: String,
+        pub hostname: ServerReq,
 
         #[json]
-        pub sync: Vec<u8>,
+        pub sync: ServerSyncRequest,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[json]
+        pub resp: ServerSyncResponse,
+    }
+}
+
+/// Server ping
+///
+/// Check if a server is alive.
+#[endpoint(
+    post,
+    path = "/server/{hostname}/ping",
+    tags = ["federation"],
+    scopes = [Full],
+    response(OK, body = ServerPingResponse, description = "ok"),
+)]
+pub mod server_ping {
+    use serde::{Deserialize, Serialize};
+    use utoipa::ToSchema;
+
+    use crate::v1::types::misc::ServerReq;
+
+    pub struct Request {
+        #[path]
+        pub hostname: ServerReq,
+    }
+
+    #[derive(Serialize)]
+    pub struct Response {
+        #[json]
+        pub body: PingResponse,
+    }
+
+    #[derive(Debug, Serialize, Deserialize, ToSchema)]
+    pub struct PingResponse {
+        /// always true
+        pub ok: bool,
+    }
 }

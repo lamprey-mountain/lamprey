@@ -95,6 +95,8 @@ kameo = "0.19.2"
 lamprey-macros = { version = "0.1", path = "../crate-macros" }
 lamprey-unfurl = { version = "0.1", path = "../crate-unfurl" }
 pastey = "0.2.1"
+ed25519-dalek = { version = "2.2.0", features = ["rand_core"] }
+constant_time_eq = "0.4.2"
 # lamprey-backend-rest = { version = "0.1.1", path = "../crate-backend-rest" }
 # lamprey-backend-sync = { version = "0.1.1", path = "../crate-backend-sync" }
 

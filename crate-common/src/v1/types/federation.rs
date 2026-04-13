@@ -13,6 +13,7 @@ use crate::v1::types::{misc::Time, MessageSync, Session, User, UserId};
 
 /// A hostname, used to identify a server
 // NOTE: do i really want to use this as an id?
+// TODO: rename to ServerId? or ServerName?
 #[derive(Debug, Hash, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(examples("example.com")))]
@@ -36,9 +37,7 @@ pub struct Remote {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ServerKey {
     /// the key algorithm
-    ///
-    /// always the string `ed25519`
-    pub alg: String,
+    pub alg: ServerKeyAlgorithm,
 
     /// public key
     ///
@@ -65,6 +64,18 @@ pub struct ServerKey {
     pub expires_at: Time,
 }
 
+/// the algorithm to sign requests with
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(rename_all = "lowercase")
+)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum ServerKeyAlgorithm {
+    Ed25519,
+}
+
 /// A collection of server keys for a specific hostname
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -86,6 +97,7 @@ pub struct ServerUserCreate {
     pub user: User,
 
     /// an authenticated session for the user
+    // this seems somewhat pointless though?
     pub session: Session,
 }
 
@@ -131,4 +143,45 @@ pub struct ServerUserCreateRequest {
 
     /// if this is for the service itself. usually paired with bot: true
     pub system: bool,
+}
+
+/// a batch of sync events
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct ServerSyncRequest {
+    /// the events for this sync event
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 1024)
+    )]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
+    pub events: Vec<MessageSync>,
+    // resuming doesn't actually really make much sense here...?
+    // /// the connection sequence number of this event, for resuming
+    // pub seq: u64,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "op"))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum ServerMessagePayload {
+    ServerSyncStart {},
+    ServerSyncStop {},
+
+    /// a sync event
+    #[cfg_attr(feature = "serde", serde(untagged))]
+    Sync(MessageSync),
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct ServerSyncResponse {
+    /// how much time to delay until sending the next batch, in milliseconds
+    ///
+    /// this is to prevent servers from being overloaded
+    pub timeout: u64,
 }
