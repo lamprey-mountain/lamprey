@@ -1,6 +1,6 @@
 import { useNavigate } from "@solidjs/router";
 import type { Channel } from "sdk";
-import { createMemo, createSignal, For, Show } from "solid-js";
+import { createMemo, createSignal, For, onMount, Show } from "solid-js";
 import { useChannels, useThreads } from "@/api";
 import { useCtx } from "@/app/context";
 import { ChannelIcon } from "@/components/shared/User";
@@ -79,10 +79,17 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 
 	// TODO: show skeleton ui when loading threads
 
+	let searchInputRef: HTMLInputElement | undefined;
+
+	onMount(() => {
+		searchInputRef?.focus();
+	});
+
 	return (
 		<div class="threads-popout" onClick={(e) => e.stopPropagation()}>
 			<div class="header">
 				<input
+					ref={searchInputRef}
 					type="search"
 					placeholder="Search threads..."
 					value={search()}
