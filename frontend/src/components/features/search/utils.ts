@@ -4,7 +4,7 @@ import type { User } from "sdk";
 import { UUID } from "uuidv7";
 import type { useUsers } from "@/api";
 import type { ThreadT } from "@/types";
-import { SEARCH_FILTERS } from "./filters.config";
+import { SEARCH_FILTERS, type SearchContext } from "./filters.config";
 import { schema } from "./schema";
 import { type Token, tokenizeSearch } from "./tokenizer";
 
@@ -84,36 +84,21 @@ export function parseSearchQuery(query: string) {
 // parseQueryToNodes – uses the registry to create PM nodes from a string
 // ---------------------------------------------------------------------------
 
-export function parseQueryToNodes(
-	query: string,
-	users: ReturnType<typeof useUsers>,
-	roomThreads: () => ThreadT[],
-): Node[] {
+export function parseQueryToNodes(query: string, ctx: SearchContext): Node[] {
 	const nodes: Node[] = [];
 	let textBuffer = "";
-
 	const tokens = tokenizeSearch(query);
 	let lastTo = 0;
 
 	for (const token of tokens) {
-		// Text between tokens
-		if (token.from > lastTo) {
-			textBuffer += query.slice(lastTo, token.from);
-		}
+		if (token.from > lastTo) textBuffer += query.slice(lastTo, token.from);
 		lastTo = token.to;
 
-		if (token.type === "phrase") {
-			// Preserve quoted phrases as plain text
+		if (token.type === "phrase" || token.type === "text") {
 			textBuffer += token.value;
 			continue;
 		}
 
-		if (token.type === "text") {
-			textBuffer += token.value;
-			continue;
-		}
-
-		// Filter token – flush text buffer, then create node
 		if (textBuffer) {
 			nodes.push(schema.text(textBuffer));
 			textBuffer = "";
@@ -121,91 +106,28 @@ export function parseQueryToNodes(
 
 		const def = SEARCH_FILTERS[token.filterType];
 		if (!def) {
-			// Unknown filter – keep as text
 			textBuffer += query.slice(token.from, token.to);
 			continue;
 		}
 
-		// For id-type filters, look up the entity to get the display name
-		if (def.valueType === "id" && def.hasNameAttr) {
-			if (token.filterType === "author") {
-				const user = users.cache.get(token.value) as User | undefined;
-				if (user) {
-					nodes.push(
-						schema.nodes.author.create({
-							id: user.id,
-							name: user.name,
-							negated: token.negated,
-						}),
-					);
-				} else {
-					textBuffer += query.slice(token.from, token.to);
-				}
-				continue;
-			}
-			if (token.filterType === "channel") {
-				const thread = roomThreads().find((t) => t.id === token.value);
-				if (thread) {
-					nodes.push(
-						schema.nodes.channel.create({
-							id: thread.id,
-							name: thread.name,
-							negated: token.negated,
-						}),
-					);
-				} else {
-					textBuffer += query.slice(token.from, token.to);
-				}
-				continue;
-			}
-			if (token.filterType === "mentions") {
-				nodes.push(
-					schema.nodes.mentions.create({
-						id: token.value,
-						name: token.value,
-						negated: token.negated,
-					}),
-				);
-				continue;
-			}
+		let name = token.value;
+		if (def.resolveDisplayData) {
+			const resolved = def.resolveDisplayData(token.value, ctx);
+			if (resolved.name) name = resolved.name;
 		}
 
-		// Date, value, or id without name lookup
-		if (def.valueType === "date") {
-			nodes.push(
-				schema.nodes[token.filterType].create({
-					date: token.value,
-					negated: token.negated,
-				}),
-			);
-		} else if (def.valueType === "value") {
-			nodes.push(
-				schema.nodes[token.filterType].create({
-					value: token.value,
-					negated: token.negated,
-				}),
-			);
-		} else if (def.valueType === "id" && !def.hasNameAttr) {
-			// Fallback for id types that don't need name resolution
-			nodes.push(
-				schema.nodes[token.filterType].create({
-					id: token.value,
-					negated: token.negated,
-				}),
-			);
-		} else {
-			// Fallback: keep as text
-			textBuffer += query.slice(token.from, token.to);
-		}
+		nodes.push(
+			def.toPMNode({
+				type: token.filterType,
+				value: token.value,
+				name: name,
+				negated: token.negated ?? false,
+			}),
+		);
 	}
 
-	// Remaining text after last token
-	if (lastTo < query.length) {
-		textBuffer += query.slice(lastTo);
-	}
-	if (textBuffer) {
-		nodes.push(schema.text(textBuffer));
-	}
+	if (lastTo < query.length) textBuffer += query.slice(lastTo);
+	if (textBuffer) nodes.push(schema.text(textBuffer));
 
 	return nodes;
 }

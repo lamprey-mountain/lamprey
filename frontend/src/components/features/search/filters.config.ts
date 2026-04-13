@@ -8,6 +8,7 @@ import type {
 	useUsers,
 } from "@/api";
 import type { RoomT, ThreadT } from "@/types";
+import { schema } from "./schema";
 
 // ---------------------------------------------------------------------------
 // Filter registry – single source of truth for all search filters
@@ -53,20 +54,16 @@ export interface SearchFilterDef {
 	hasNameAttr: boolean;
 	/** Produce suggestion items given the current partial query */
 	getSuggestions: (query: string, ctx: SearchContext) => SuggestionItem[];
+	resolveDisplayData?: (
+		value: string,
+		ctx: SearchContext,
+	) => { name?: string; user?: User; channel?: ThreadT };
 	/** Convert a ProseMirror node → our intermediate FilterASTNode */
 	toAST: (node: Node) => FilterASTNode;
 	/** Convert a FilterASTNode → the backend query string fragment */
 	toBackendQuery: (node: FilterASTNode) => string[];
 	/** Convert a FilterASTNode → a ProseMirror node */
-	toPMNode: (ast: FilterASTNode, schema: ProseMirrorSchemaLike) => Node;
-}
-
-// Minimal shape we need from prosemirror-model (avoids a full import)
-interface ProseMirrorSchemaLike {
-	nodes: Record<
-		string,
-		{ create(attrs?: Record<string, unknown>, content?: Node[]): Node }
-	>;
+	toPMNode: (ast: FilterASTNode) => Node;
 }
 
 // ---------------------------------------------------------------------------
@@ -128,7 +125,7 @@ export const authorFilter: SearchFilterDef = {
 		const prefix = ast.negated ? "-" : "+";
 		return [`${prefix}author_id:${ast.value}`];
 	},
-	toPMNode(ast, schema) {
+	toPMNode(ast) {
 		return schema.nodes.author.create({
 			id: ast.value,
 			name: ast.name ?? ast.value,
@@ -170,7 +167,7 @@ export const channelFilter: SearchFilterDef = {
 		const prefix = ast.negated ? "-" : "+";
 		return [`${prefix}channel_id:${ast.value}`];
 	},
-	toPMNode(ast, schema) {
+	toPMNode(ast) {
 		return schema.nodes.channel.create({
 			id: ast.value,
 			name: ast.name ?? ast.value,
@@ -192,7 +189,7 @@ export const beforeFilter: SearchFilterDef = {
 		};
 	},
 	toBackendQuery: () => [], // handled specially by the compiler
-	toPMNode(ast, schema) {
+	toPMNode(ast) {
 		return schema.nodes.before.create({
 			date: ast.value,
 			negated: ast.negated,
@@ -213,7 +210,7 @@ export const afterFilter: SearchFilterDef = {
 		};
 	},
 	toBackendQuery: () => [], // handled specially by the compiler
-	toPMNode(ast, schema) {
+	toPMNode(ast) {
 		return schema.nodes.after.create({ date: ast.value, negated: ast.negated });
 	},
 };
@@ -254,7 +251,7 @@ export const hasFilter: SearchFilterDef = {
 		const prefix = ast.negated ? "-" : "+";
 		return [`${prefix}${backendVal}`];
 	},
-	toPMNode(ast, schema) {
+	toPMNode(ast) {
 		return schema.nodes.has.create({ value: ast.value, negated: ast.negated });
 	},
 };
@@ -283,7 +280,7 @@ export const pinnedFilter: SearchFilterDef = {
 	toBackendQuery(ast) {
 		return [`+metadata_fast.pinned:${ast.value}`];
 	},
-	toPMNode(ast, schema) {
+	toPMNode(ast) {
 		return schema.nodes.pinned.create({
 			value: ast.value,
 			negated: ast.negated,
@@ -385,7 +382,7 @@ export const mentionsFilter: SearchFilterDef = {
 		}
 		return [];
 	},
-	toPMNode(ast, schema) {
+	toPMNode(ast) {
 		return schema.nodes.mentions.create({
 			id: ast.value,
 			name: ast.name ?? ast.value,

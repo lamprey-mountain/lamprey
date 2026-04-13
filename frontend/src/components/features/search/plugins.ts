@@ -11,62 +11,98 @@ export interface AutocompleteState {
 	filterType: string;
 	query: string;
 	negated: boolean;
+	from: number;
+	to: number;
 }
 
 export const autocompleteKey = new PluginKey<AutocompleteState>("autocomplete");
+
+export type ActiveFilter = {
+	type: string;
+	query: string;
+	negated?: boolean;
+	from: number;
+	to: number;
+};
 
 /**
  * Get the active filter context from a plain text string (e.g. the text
  * before the cursor in the current paragraph node).
  */
-export function getFilterFromSelection(state: EditorState): {
-	type: string;
-	query: string;
-	negated?: boolean;
-} | null {
+export function getFilterFromSelection(
+	state: EditorState,
+): ActiveFilter | null {
 	const { selection } = state;
 	if (!selection.empty) return null;
 
-	const $pos = state.doc.resolve(selection.from);
-	const nodeBefore = $pos.nodeBefore;
+	const $pos = selection.$from;
+	const textBefore = $pos.nodeBefore?.isText ? $pos.nodeBefore.text! : "";
 
-	// at the start of doc or paragraph
-	if (!nodeBefore) return { type: "filter", query: "" };
+	// 'offset' is the absolute doc position where the current text node starts
+	const offset = $pos.pos - textBefore.length;
 
-	// after an atom node
-	if (!nodeBefore.isText) return { type: "filter", query: "" };
+	const tokens = tokenizeSearch(textBefore);
+	const lastToken = tokens[tokens.length - 1];
 
-	const textBeforeCursor = nodeBefore.text!;
-
-	// inside a filter value
-	const active = getActiveFilterAtCursor(
-		textBeforeCursor,
-		textBeforeCursor.length,
-	);
-	if (active) {
+	if (!lastToken) {
 		return {
-			type: active.filterType,
-			query: active.value,
-			negated: active.negated,
+			type: "filter",
+			query: "",
+			negated: false,
+			from: $pos.pos,
+			to: $pos.pos,
 		};
 	}
 
-	// trailing space
-	if (textBeforeCursor.match(/\s$/)) {
-		return { type: "filter", query: "" };
+	// 1. Check if we are inside a specific filter value (e.g., author:jo|)
+	if (lastToken.type === "filter") {
+		return {
+			type: lastToken.filterType,
+			query: lastToken.value,
+			negated: lastToken.negated,
+			from: offset + lastToken.from,
+			to: offset + lastToken.to,
+		};
 	}
 
-	// typing a word that isnt a filter yet
-	const wordMatch = textBeforeCursor.match(/(\S+)$/);
+	// 2. Trailing space means we are starting a fresh generic search
+	if (!textBefore || textBefore.match(/\s$/)) {
+		return {
+			type: "filter",
+			query: "",
+			negated: false,
+			from: $pos.pos,
+			to: $pos.pos,
+		};
+	}
+
+	// 3. We are typing a word that might become a filter (e.g. -aut|)
+	const wordMatch = textBefore.match(/(\S+)$/);
 	if (wordMatch) {
 		const word = wordMatch[1];
+
+		// If it already contains a colon but wasn't caught by getActiveFilterAtCursor, it's invalid
+		if (word.includes(":") && !word.endsWith(":")) return null;
+
 		const negated = word.startsWith("-");
-		const cleanWord = negated ? word.slice(1) : word;
-		if (cleanWord.includes(":")) return null;
-		return { type: "filter", query: cleanWord, negated };
+		const query = (negated ? word.slice(1) : word).replace(":", "");
+
+		return {
+			type: "filter",
+			query,
+			negated,
+			from: $pos.pos - word.length,
+			to: $pos.pos,
+		};
 	}
 
-	return { type: "filter", query: "" };
+	return {
+		type: "filter",
+		query: "",
+		negated: false,
+		from: $pos.pos,
+		to: $pos.pos,
+	};
 }
 
 // ---------------------------------------------------------------------------
@@ -133,7 +169,13 @@ export function syntaxHighlightingPlugin() {
 
 export function autocompletePlugin(
 	setFilter: (
-		filter: { type: string; query: string; negated?: boolean } | null,
+		filter: {
+			type: string;
+			query: string;
+			negated?: boolean;
+			from: number;
+			to: number;
+		} | null,
 	) => void,
 ) {
 	return new Plugin({
@@ -144,6 +186,8 @@ export function autocompletePlugin(
 				filterType: "filter",
 				query: "",
 				negated: false,
+				from: 0,
+				to: 0,
 			}),
 			apply(tr, _old, oldState, newState) {
 				if (tr.getMeta("skipAutocomplete")) {
@@ -152,8 +196,11 @@ export function autocompletePlugin(
 						filterType: "filter",
 						query: "",
 						negated: false,
+						from: 0,
+						to: 0,
 					};
 				}
+
 				if (!tr.docChanged && !tr.selectionSet) {
 					const prev = autocompleteKey.getState(oldState);
 					return (
@@ -162,6 +209,8 @@ export function autocompletePlugin(
 							filterType: "filter",
 							query: "",
 							negated: false,
+							from: 0,
+							to: 0,
 						}
 					);
 				}
@@ -179,6 +228,8 @@ export function autocompletePlugin(
 					filterType: next.type,
 					query: next.query ?? "",
 					negated: next.negated ?? false,
+					from: filterInfo?.from ?? 0,
+					to: filterInfo?.to ?? 0,
 				};
 			},
 		},
@@ -200,6 +251,8 @@ export function autocompletePlugin(
 								type: curr.filterType,
 								query: curr.query,
 								negated: curr.negated,
+								from: curr.from,
+								to: curr.to,
 							});
 						} else {
 							setFilter(null);

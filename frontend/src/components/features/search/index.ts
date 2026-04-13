@@ -1,4 +1,5 @@
 export type {
+	FilterType,
 	SearchContext,
 	SearchFilterDef,
 	SuggestionItem,

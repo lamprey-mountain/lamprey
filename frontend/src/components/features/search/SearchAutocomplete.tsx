@@ -1,24 +1,109 @@
 import type { Node } from "prosemirror-model";
 import type { User } from "sdk";
-import { createEffect, createMemo, For, Show } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	type JSX,
+	Match,
+	Show,
+	Switch,
+} from "solid-js";
+import icSearch from "@/assets/search.png";
 import { ChannelIcon } from "@/avatar/ChannelIcon";
 import { Avatar } from "@/avatar/UserAvatar";
 import type { RoomT, ThreadT } from "@/types";
 import { SEARCH_FILTERS, type SearchContext } from "./filters.config";
 import { FilterChipUI } from "./SearchFilterChip";
-import { schema } from "./schema";
+import { tokenizeSearch } from "./tokenizer";
+import type { LabelPart } from "./types";
 import { getRecentSearches, parseSearchQuery } from "./utils";
 
-type LabelPart =
-	| string
-	| {
-			type: string;
-			value: string;
-			user?: User;
-			channel?: ThreadT;
-			negated?: boolean;
-			parts?: LabelPart[];
-	  };
+// filter metadata for the left column display
+const FILTER_METADATA = [
+	{
+		key: "author",
+		label: "From a specific user",
+		desc: "author:user",
+	},
+	{
+		key: "channel",
+		label: "In a specific channel",
+		desc: "in:channel",
+	},
+	{
+		key: "has",
+		label: "Has specific data",
+		desc: "has:thing",
+	},
+	{
+		key: "before",
+		label: "Before a date",
+		desc: "before:date",
+	},
+	{
+		key: "after",
+		label: "After a date",
+		desc: "after:date",
+	},
+	{
+		key: "pinned",
+		label: "Pinned messages",
+		desc: "pinned:true",
+	},
+	{
+		key: "mentions",
+		label: "Mentions someone",
+		desc: "mentions:user",
+	},
+];
+
+// "has" filter value descriptions for the right column values panel
+const HAS_VALUE_DESCRIPTIONS = [
+	{
+		key: "image",
+		label: "Images",
+		desc: "Has attached image (png, jpeg, gif)",
+	},
+	{
+		key: "video",
+		label: "Videos",
+		desc: "Has attached video (mp4, webm, mov)",
+	},
+	{
+		key: "audio",
+		label: "Audio",
+		desc: "Has attached audio (mp3, ogg)",
+	},
+	{
+		key: "attachment",
+		label: "Attachments",
+		desc: "Has any file attachment",
+	},
+	{
+		key: "link",
+		label: "Links",
+		desc: "Content contains a link",
+	},
+	{
+		key: "embed",
+		label: "Embeds",
+		desc: "Message has an embed preview",
+	},
+];
+
+export type LabelType =
+	| "author"
+	| "channel"
+	| "before"
+	| "after"
+	| "has"
+	| "pinned"
+	| "mentions"
+	| "filter-phrase-content"
+	| "filter-syntax"
+	| "filter-negation-content";
 
 export type AutocompleteItem = {
 	id: string;
@@ -30,468 +115,430 @@ export type AutocompleteItem = {
 	isSeparator?: boolean;
 };
 
+export type Completion =
+	| { type: "recent_search"; query: string }
+	| { type: "text"; text: string }
+	| { type: "node"; node: Node };
+
 export const SearchAutocomplete = (props: {
-	filter: { type: string; query: string; negated?: boolean };
+	filter: { type: string; query: string; negated?: boolean } | null;
 	channel?: ThreadT;
 	room?: RoomT;
-	onSelect: (node: Node) => void;
-	onSelectFilter: (text: string, isRecent?: boolean) => void;
+	onCompletion: (c: Completion) => void;
 	hoveredIndex?: number;
 	setHoveredIndex?: (index: number) => void;
 	searchContext: SearchContext;
-	onItemsChange?: (
-		items: AutocompleteItem[],
-		selectItem: (idx: number, shouldSubmit: boolean) => void,
-	) => void;
+	onPointerDown?: (e: PointerEvent) => void;
+	onBlur?: (e: FocusEvent) => void;
+
+	autocompleteItems: AutocompleteItem[];
+	filterSuggestions: string[];
+	recentSearches: string[];
 }) => {
-	const _roomId = () => props.channel?.room_id ?? props.room?.id ?? null;
-
-	const allFilterSuggestions = [
-		"author:",
-		"channel:",
-		"before:",
-		"after:",
-		"has:",
-		"pinned:",
-		"mentions:",
-	];
-
-	const filterSuggestions = createMemo(() => {
-		const query = props.filter.query.toLowerCase();
-		const negated = props.filter.negated;
-		if (!query) {
-			return negated
-				? allFilterSuggestions.map((f) => `-${f}`)
-				: allFilterSuggestions;
-		}
-
-		return allFilterSuggestions
-			.filter((f) => f.toLowerCase().includes(query))
-			.map((f) => (negated ? `-${f}` : f));
-	});
-
-	const recentSearches = createMemo(() => {
-		if (props.filter.type === "filter" && props.filter.query === "") {
-			return getRecentSearches();
-		}
-		return [];
-	});
+	const [hoveredFilter, setHoveredFilter] = createSignal<string | null>(null);
 
 	const hasSuggestions = createMemo(() => {
-		const type = props.filter.type;
-		if (type === "filter") {
-			return filterSuggestions().length > 0 || recentSearches().length > 0;
-		}
-		const def = SEARCH_FILTERS[type];
-		if (!def) return false;
-		return (
-			def.getSuggestions(props.filter.query, props.searchContext).length > 0
-		);
-	});
-
-	const items = createMemo(() => {
-		const type = props.filter.type;
-		const result: {
-			id: string;
-			label: string | LabelPart[];
-			rawValue?: string;
-			user?: User;
-			channel?: ThreadT;
-			onSelect: () => void;
-			isSeparator?: boolean;
-		}[] = [];
-
-		if (type === "filter") {
-			// Filter keyword suggestions
-			filterSuggestions().forEach((filter) => {
-				result.push({
-					id: `filter-${filter}`,
-					label: filter,
-					onSelect: () => props.onSelectFilter(filter),
-				});
-			});
-
-			// Recent searches
-			const searches = recentSearches();
-			if (searches.length > 0) {
-				result.push({
-					id: "recent-separator",
-					label: "",
-					onSelect: () => {},
-					isSeparator: true,
-				});
-				searches.forEach((search, idx) => {
-					result.push({
-						id: `recent-${idx}`,
-						label: formatRecentSearch(search, props.searchContext),
-						rawValue: search,
-						onSelect: () => props.onSelectFilter(search, true),
-					});
-				});
-			}
-		} else {
-			// Delegate to the filter registry for suggestions
-			const def = SEARCH_FILTERS[type];
-			if (!def) return result;
-
-			const suggestions = def.getSuggestions(
-				props.filter.query,
-				props.searchContext,
+		const f = props.filter;
+		if (!f) return false;
+		if (f.type === "filter") {
+			return (
+				props.filterSuggestions.length > 0 || props.recentSearches.length > 0
 			);
-
-			suggestions.forEach((item) => {
-				result.push({
-					id: item.id,
-					label: item.label,
-					user: item.user,
-					channel: item.channel,
-					onSelect: () => {
-						// Create the PM node via the registry
-						const astNode = {
-							type,
-							value: item.id.replace(`${type}-`, ""),
-							name: item.label,
-							negated: props.filter.negated ?? false,
-						};
-						const pmNode = def.toPMNode(astNode, schema as any);
-						props.onSelect(pmNode);
-					},
-				});
-			});
 		}
-
-		return result;
+		const def = SEARCH_FILTERS[f.type];
+		if (!def) return false;
+		return def.getSuggestions(f.query, props.searchContext).length > 0;
 	});
 
-	const handleSelect = (idx: number, _shouldSubmit: boolean) => {
-		const its = items();
-		const item = its[idx];
-		if (item && !item.isSeparator) item.onSelect();
+	// const handleSelect = (idx: number, _shouldSubmit: boolean) => {
+	// 	const its = props.autocompleteItems();
+	// 	const item = its[idx];
+	// 	if (item && !item.isSeparator) item.onSelect();
+	// };
+
+	const isShowingTwoColumn = () =>
+		props.filter?.type === "filter" && props.filter.query === "";
+
+	const handleFilterHover = (key: string | null) => {
+		setHoveredFilter(key);
 	};
 
-	createEffect(() => {
-		const its = items();
-		props.onItemsChange?.(its, handleSelect);
-	});
+	const handleFilterSelect = (key: string) => {
+		props.onCompletion({ type: "text", text: `${key}:` });
+	};
+
+	const renderLabel = (
+		label: string | LabelPart[],
+		isHovered: boolean,
+	): JSX.Element => {
+		if (typeof label === "string") return label;
+		return label.map((part) => {
+			if (typeof part === "string") return <span>{part}</span>;
+
+			if (part.parts) {
+				return (
+					<FilterChipUI
+						type={part.type}
+						label={part.value}
+						user={part.user}
+						channel={part.channel}
+						negated={part.negated}
+						animate={isHovered}
+					/>
+				);
+			}
+
+			return <span class={part.type}>{part.value}</span>;
+		});
+	};
 
 	return (
 		<Show when={hasSuggestions()}>
-			<div class="search-autocomplete">
-				<ul>
-					<For each={items()}>
-						{(item, idx) => {
-							const isHovered = () => idx() === (props.hoveredIndex ?? 0);
-							const isSeparator = () => item.isSeparator;
+			<div
+				class="search-autocomplete"
+				onClick={(e) => {
+					e.stopPropagation(), e.stopImmediatePropagation();
+				}}
+				onPointerDown={props.onPointerDown}
+				onBlur={props.onBlur}
+			>
+				<Show
+					when={isShowingTwoColumn()}
+					fallback={
+						<div class="side right">
+							<ul>
+								<For each={props.autocompleteItems}>
+									{(item, idx) => {
+										const isHovered = () => idx() === (props.hoveredIndex ?? 0);
+										const isSeparator = () => item.isSeparator;
 
-							const renderLabel = (label: string | LabelPart[]): any => {
-								if (typeof label === "string") return label;
-								return label.map((part) => {
-									if (typeof part === "string") return <span>{part}</span>;
-
-									if (part.parts) {
-										// It's a filter chip with resolved user/channel
 										return (
-											<FilterChipUI
-												type={part.type}
-												label={part.value}
-												user={part.user}
-												channel={part.channel}
-												negated={part.negated}
-												animate={isHovered()}
-											/>
+											<Show
+												when={!isSeparator()}
+												fallback={
+													<li class="autocomplete-separator">
+														Recent Searches
+													</li>
+												}
+											>
+												<li
+													id={item.id}
+													class="autocomplete-item"
+													classList={{
+														hovered: isHovered(),
+														"not-recent": !item.id.startsWith("recent"),
+													}}
+													onMouseDown={(e) => {
+														e.preventDefault();
+														item.onSelect();
+													}}
+													onMouseEnter={() => props.setHoveredIndex?.(idx())}
+												>
+													<Show
+														when={item.user}
+														fallback={
+															<Show when={item.channel}>
+																{(ch) => (
+																	<ChannelIcon
+																		channel={ch()}
+																		style="width: 16px; height: 16px; flex: none;"
+																	/>
+																)}
+															</Show>
+														}
+													>
+														{(user) => (
+															<Avatar user={user()} animate={isHovered()} />
+														)}
+													</Show>
+													{renderLabel(item.label, isHovered())}
+												</li>
+											</Show>
 										);
-									}
-
-									return <span class={part.type}>{part.value}</span>;
-								});
-							};
-
-							return (
-								<Show
-									when={!isSeparator()}
-									fallback={
-										<li class="autocomplete-separator">Recent Searches</li>
-									}
-								>
-									<li
-										id={item.id}
-										class="autocomplete-item"
-										classList={{
-											hovered: isHovered(),
-											"not-recent": !item.id.startsWith("recent"),
-										}}
-										onMouseDown={(e) => {
-											e.preventDefault();
-											item.onSelect();
-										}}
-										onMouseEnter={() => props.setHoveredIndex?.(idx())}
-									>
-										<Show
-											when={item.user}
-											fallback={
-												<Show when={item.channel}>
-													{(ch) => (
-														<ChannelIcon
-															channel={ch()}
-															style="width: 16px; height: 16px; flex: none;"
-														/>
-													)}
-												</Show>
-											}
+									}}
+								</For>
+							</ul>
+						</div>
+					}
+				>
+					<div class="side left">
+						<h3 class="dim">filters</h3>
+						<ul class="filters-list">
+							<For each={FILTER_METADATA}>
+								{(meta) => {
+									const isHovered = () => hoveredFilter() === meta.key;
+									const handleSelect = () => handleFilterSelect(meta.key);
+									return (
+										<li
+											class="filter-item"
+											classList={{ hovered: isHovered() }}
+											onMouseEnter={() => handleFilterHover(meta.key)}
+											onMouseDown={() => {
+												handleSelect();
+											}}
+											onKeyDown={(e) => {
+												if (e.key === "Enter" || e.key === " ") {
+													e.preventDefault();
+													handleSelect();
+												}
+											}}
 										>
-											{(user) => <Avatar user={user()} animate={isHovered()} />}
+											<img
+												class="icon"
+												src={icSearch}
+												alt=""
+												aria-hidden="true"
+											/>
+											<div class="filter-label">{meta.label}</div>
+											<div class="filter-desc dim">{meta.desc}</div>
+										</li>
+									);
+								}}
+							</For>
+						</ul>
+					</div>
+					<Show when={hoveredFilter() || !props.filter?.query}>
+						<div class="side right">
+							<Show
+								when={hoveredFilter()}
+								fallback={
+									<>
+										<header class="presets-header">
+											<h3 class="dim">preset searches</h3>
+											<button
+												class="dim link"
+												type="button"
+												onClick={() => console.log("todo")}
+											>
+												edit presets
+											</button>
+										</header>
+										<ul class="presets-list">
+											<li>
+												<div class="preset-label">
+													All images in this channel
+												</div>
+												<div class="preset-desc dim">
+													has:image channel:{props.channel?.name ?? "channel"}
+												</div>
+											</li>
+											<li>
+												<div class="preset-label">
+													All links in this channel
+												</div>
+												<div class="preset-desc dim">
+													has:link channel:{props.channel?.name ?? "channel"}
+												</div>
+											</li>
+										</ul>
+										<Show when={props.recentSearches.length > 0}>
+											<h3 class="dim recent-searches">recent searches</h3>
+											<ul class="presets-list">
+												<For each={props.recentSearches}>
+													{(search, idx) => (
+														<li
+															class="preset-item"
+															onMouseDown={() =>
+																props.onCompletion({
+																	type: "recent_search",
+																	query: search,
+																})
+															}
+															onMouseEnter={() =>
+																props.setHoveredIndex?.(idx())
+															}
+														>
+															<div class="preset-label">{search}</div>
+														</li>
+													)}
+												</For>
+											</ul>
 										</Show>
-										{renderLabel(item.label)}
-									</li>
-								</Show>
-							);
-						}}
-					</For>
-				</ul>
+										<Show when={props.recentSearches.length === 0}>
+											<div
+												class="dim"
+												style="text-align: center; padding: 16px;"
+											>
+												no recent searches
+											</div>
+										</Show>
+									</>
+								}
+							>
+								{(filterKey) => (
+									<FilterValuesPanel
+										filterKey={filterKey()}
+										searchContext={props.searchContext}
+										onSelect={(value) => {
+											props.onCompletion({
+												type: "text",
+												text: `${filterKey()}:${value}`,
+											});
+										}}
+									/>
+								)}
+							</Show>
+						</div>
+					</Show>
+				</Show>
 			</div>
 		</Show>
 	);
 };
 
 // ---------------------------------------------------------------------------
-// Format a recent search string with syntax highlighting for display
-// Uses the tokenizer for consistent parsing
+// Filter Values Panel - shows when a filter is hovered in two-column mode
 // ---------------------------------------------------------------------------
 
-function formatRecentSearch(
-	query: string,
-	ctx: SearchContext,
-): (string | { type: string; value: string })[] {
-	const tokens = parseSearchQuery(query);
-
-	// Collect phrase spans
-	const phraseRegex = /"([^"]*)"/g;
-	const phrases: { from: number; to: number; text: string }[] = [];
-	for (
-		let m = phraseRegex.exec(query);
-		m !== null;
-		m = phraseRegex.exec(query)
-	) {
-		phrases.push({
-			from: m.index,
-			to: m.index + m[0].length,
-			text: m[0],
-		});
-	}
-
-	// Collect negated text spans (non-filter)
-	const negationRegex = /(^|\s)-\S+/g;
-	const negations: { from: number; to: number; text: string }[] = [];
-	for (
-		let m2 = negationRegex.exec(query);
-		m2 !== null;
-		m2 = negationRegex.exec(query)
-	) {
-		const from = m2.index + (m2[1]?.length ?? 0);
-		const to = from + m2[0].length - (m2[1]?.length ?? 0);
-		const text = m2[0].trimStart();
-
-		if (!text.match(/^-(author|channel|before|after|has|pinned|mentions):/)) {
-			negations.push({ from, to, text });
-		}
-	}
-
-	// Build segments from filter tokens
-	type Segment = {
-		from: number;
-		to: number;
-		type: string;
-		value: string;
-		filterType?: string;
-		negated?: boolean;
-	};
-	const segments: Segment[] = [];
-
-	for (const token of tokens) {
-		const negationPrefixLen = token.negated ? 1 : 0;
-		const filterNameStart = token.from + negationPrefixLen;
-		const filterNameEnd = filterNameStart + token.filterType.length;
-		const colonEnd = filterNameEnd + 1;
-
-		if (token.negated) {
-			segments.push({
-				from: token.from,
-				to: filterNameStart,
-				type: "filter-syntax",
-				value: "-",
-			});
-		}
-
-		segments.push({
-			from: filterNameStart,
-			to: filterNameEnd,
-			type: "filter-name",
-			value: token.filterType,
-			filterType: token.filterType,
-			negated: token.negated,
-		});
-
-		segments.push({
-			from: filterNameEnd,
-			to: colonEnd,
-			type: "filter-syntax",
-			value: ":",
-			filterType: token.filterType,
-			negated: token.negated,
-		});
-
-		if (token.value) {
-			segments.push({
-				from: colonEnd,
-				to: token.to,
-				type: "filter-value",
-				value: token.value,
-				filterType: token.filterType,
-				negated: token.negated,
-			});
-		}
-	}
-
-	// Add phrase segments
-	for (const phrase of phrases) {
-		segments.push({
-			from: phrase.from,
-			to: phrase.from + 1,
-			type: "filter-syntax",
-			value: '"',
-		});
-		if (phrase.text.length > 2) {
-			segments.push({
-				from: phrase.from + 1,
-				to: phrase.to - 1,
-				type: "filter-phrase-content",
-				value: phrase.text.slice(1, -1),
-			});
-		}
-		if (phrase.text.length > 1) {
-			segments.push({
-				from: phrase.to - 1,
-				to: phrase.to,
-				type: "filter-syntax",
-				value: '"',
-			});
-		}
-	}
-
-	// Add negation segments
-	for (const negation of negations) {
-		segments.push({
-			from: negation.from,
-			to: negation.from + 1,
-			type: "filter-syntax",
-			value: "-",
-		});
-		segments.push({
-			from: negation.from + 1,
-			to: negation.to,
-			type: "filter-negation-content",
-			value: negation.text.slice(1),
-		});
-	}
-
-	// Sort and merge overlapping segments
-	segments.sort((a, b) => a.from - b.from);
-
-	const merged: Segment[] = [];
-	for (const seg of segments) {
-		const overlaps = merged.find(
-			(m) => !(seg.to <= m.from || seg.from >= m.to),
-		);
-		if (!overlaps) {
-			merged.push(seg);
-		} else if (
-			seg.type.startsWith("filter-") &&
-			!overlaps.type.startsWith("filter-")
-		) {
-			const idx = merged.indexOf(overlaps);
-			merged.splice(idx, 1, seg);
-		}
-	}
-	merged.sort((a, b) => a.from - b.from);
-
-	const parts: LabelPart[] = [];
-	let pos = 0;
-
-	// Use a while loop or reduce to handle grouping segments by filter
-	for (let i = 0; i < merged.length; i++) {
-		const seg = merged[i];
-		if (seg.from > pos) parts.push(query.slice(pos, seg.from));
-
-		if (seg.filterType) {
-			// 3. Start building the "Atom" structure
-			const groupType = seg.filterType;
-			const isNegated = seg.negated;
-
-			// Collect all segments belonging to this specific filter
-			const filterSegments: Segment[] = [];
-			while (
-				i < merged.length &&
-				merged[i].filterType === groupType &&
-				merged[i].negated === isNegated
-			) {
-				filterSegments.push(merged[i]);
-				i++;
-			}
-			i--; // Step back because the for-loop increments i
-
-			const valueSeg = filterSegments.find((s) => s.type === "filter-value");
-
-			// 4. Resolve the display name and actual objects
-			let user: User | undefined;
-			let channel: ThreadT | undefined;
-			let displayValue = valueSeg?.value ?? "";
-
-			if (valueSeg) {
-				if (groupType === "author") {
-					user = ctx.users.cache.get(valueSeg.value);
-					displayValue = user?.name ?? valueSeg.value;
-				} else if (groupType === "channel") {
-					channel = ctx.roomThreads().find((t) => t.id === valueSeg.value);
-					displayValue = channel?.name ?? valueSeg.value;
-				} else if (groupType === "mentions") {
-					const val = valueSeg.value;
-					if (val.startsWith("user-")) {
-						user = ctx.users.cache.get(val.replace("user-", ""));
-						displayValue = user?.name ?? val;
-					} else if (val.startsWith("role-")) {
-						const role = [...ctx.roles.cache.values()].find(
-							(r) => r.id === val.replace("role-", ""),
+const FilterValuesPanel = (props: {
+	filterKey: string;
+	searchContext: SearchContext;
+	onSelect: (value: string) => void;
+}) => {
+	const renderHasValues = () => {
+		return (
+			<ul class="filters-list">
+				<For each={HAS_VALUE_DESCRIPTIONS}>
+					{(item) => {
+						const handleSelect = () => props.onSelect(item.key);
+						return (
+							<li
+								class="filter-item"
+								onMouseDown={() => handleSelect()}
+								onKeyDown={(e) => {
+									if (e.key === "Enter" || e.key === " ") {
+										e.preventDefault();
+										handleSelect();
+									}
+								}}
+							>
+								<img class="icon" src={icSearch} alt="" aria-hidden="true" />
+								<div class="filter-label">{item.label}</div>
+								<div class="filter-desc dim">{item.desc}</div>
+							</li>
 						);
-						displayValue = role?.name ?? val;
-					} else if (val === "everyone-room") displayValue = "@room";
-					else if (val === "everyone-thread") displayValue = "@thread";
-				}
-			}
+					}}
+				</For>
+			</ul>
+		);
+	};
 
-			// 5. Create the nested "Atom" object with resolved objects
-			parts.push({
-				type: groupType,
-				value: displayValue,
-				user,
-				channel,
-				negated: isNegated,
-				parts: [], // Marker that this is a complex filter object
-			});
+	const renderPinnedValues = () => {
+		const options = ["true", "false"];
+		return (
+			<ul class="filters-list">
+				<For each={options}>
+					{(value) => (
+						<li
+							class="filter-item"
+							onMouseDown={() => props.onSelect(value)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									e.preventDefault();
+									props.onSelect(value);
+								}
+							}}
+						>
+							<div class="filter-label">{value}</div>
+						</li>
+					)}
+				</For>
+			</ul>
+		);
+	};
 
-			pos = filterSegments[filterSegments.length - 1].to;
-		} else {
-			// Handle plain text/phrases/negations as before
-			if (seg.type === "filter-phrase-content") {
-				parts.push({ type: "filter-phrase-content", value: seg.value });
-			} else if (seg.type === "filter-syntax") {
-				parts.push({ type: "filter-syntax", value: seg.value });
-			} else if (seg.type === "filter-negation-content") {
-				parts.push({ type: "filter-negation-content", value: seg.value });
-			}
-			pos = seg.to;
-		}
-	}
+	const renderAuthorValues = () => {
+		const ctx = props.searchContext;
+		const allIds = [
+			...new Set([
+				...(ctx.channel
+					? [...ctx.threadMembers.cache.entries()]
+							.filter(([key]) => key.startsWith(`${ctx.channel?.id}:`))
+							.map(([, member]) => member.user_id)
+					: []),
+				...(ctx.roomId
+					? [...ctx.roomMembers.cache.entries()]
+							.filter(([key]) => key.startsWith(`${ctx.roomId}:`))
+							.map(([, member]) => member.user_id)
+					: []),
+			]),
+		];
+		const users = allIds
+			.map((id) => ctx.users.cache.get(id))
+			.filter((u): u is NonNullable<typeof u> => Boolean(u))
+			.slice(0, 10);
 
-	if (pos < query.length) parts.push(query.slice(pos));
-	return parts;
-}
+		return (
+			<ul class="filters-list">
+				<For each={users}>
+					{(user) => (
+						<li
+							class="filter-item"
+							onMouseDown={() => props.onSelect(user.id)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									e.preventDefault();
+									props.onSelect(user.id);
+								}
+							}}
+						>
+							<Avatar user={user} />
+							<div class="filter-label">{user.name}</div>
+						</li>
+					)}
+				</For>
+			</ul>
+		);
+	};
+
+	const renderChannelValues = () => {
+		const threads = props.searchContext.roomThreads();
+		return (
+			<ul class="filters-list">
+				<For each={threads}>
+					{(thread) => (
+						<li
+							class="filter-item"
+							onClick={() => props.onSelect(thread.id)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									e.preventDefault();
+									props.onSelect(thread.id);
+								}
+							}}
+						>
+							<ChannelIcon
+								channel={thread}
+								style="width: 16px; height: 16px; flex: none;"
+							/>
+							<div class="filter-label">{thread.name}</div>
+						</li>
+					)}
+				</For>
+			</ul>
+		);
+	};
+
+	return (
+		<>
+			<h3 class="dim">values</h3>
+			<Switch>
+				<Match when={props.filterKey === "has"}>{renderHasValues()}</Match>
+				<Match when={props.filterKey === "pinned"}>
+					{renderPinnedValues()}
+				</Match>
+				<Match when={props.filterKey === "author"}>
+					{renderAuthorValues()}
+				</Match>
+				<Match when={props.filterKey === "channel"}>
+					{renderChannelValues()}
+				</Match>
+				<Match when={true}>
+					<div class="dim" style="text-align: center; padding: 16px;">
+						type to search...
+					</div>
+				</Match>
+			</Switch>
+		</>
+	);
+};

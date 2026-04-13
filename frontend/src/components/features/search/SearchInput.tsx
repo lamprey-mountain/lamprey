@@ -40,18 +40,27 @@ import {
 	type SearchContext,
 } from "./filters.config";
 import {
+	type ActiveFilter,
 	autocompletePlugin,
 	getFilterFromSelection,
 	syntaxHighlightingPlugin,
 } from "./plugins";
 import {
 	type AutocompleteItem,
+	type Completion,
 	SearchAutocomplete,
 } from "./SearchAutocomplete";
 import { FilterChipUI } from "./SearchFilterChip";
 import { schema } from "./schema";
 import { buildBackendSearchBody } from "./searchCompiler";
-import { addRecentSearch, parseQueryToNodes, serializeToQuery } from "./utils";
+import { tokenizeSearch } from "./tokenizer";
+import type { LabelPart } from "./types";
+import {
+	addRecentSearch,
+	getRecentSearches,
+	parseQueryToNodes,
+	serializeToQuery,
+} from "./utils";
 
 // ---------------------------------------------------------------------------
 // NodeView factory for rendering filter chips inside ProseMirror
@@ -104,8 +113,10 @@ const createFilterNodeView = (
 		return {
 			dom,
 			update: (newNode: Node) => {
+				if (newNode.type !== node.type) return false;
+				node = newNode;
 				currentProps = getProps();
-				return newNode.type === node.type;
+				return true;
 			},
 			destroy: () => dispose(),
 		};
@@ -121,21 +132,119 @@ export const SearchInput = (props: {
 	const messagesService = useMessages();
 	const owner = getOwner();
 	const [dropdownRef, setDropdownRef] = createSignal<HTMLDivElement>();
-	const [activeFilter, setActiveFilter] = createSignal<{
-		type: string;
-		query: string;
-		negated?: boolean;
-	} | null>(null);
-	// Alias used by the onItemsChange handler
-	const filterActive = activeFilter;
+	const [activeFilter, setActiveFilter] = createSignal<ActiveFilter | null>(
+		null,
+	);
+
 	const [hoveredIndex, setHoveredIndex] = createSignal<number>(0);
 	const [editorRef, setEditorRef] = createSignal<HTMLElement>();
 	const [editorFocused, setEditorFocused] = createSignal(false);
 
-	let currentItemsRef: {
-		items: AutocompleteItem[];
-		selectItem: (idx: number, shouldSubmit: boolean) => void;
-	} | null = null;
+	const allFilterSuggestions = [
+		"author:",
+		"channel:",
+		"before:",
+		"after:",
+		"has:",
+		"pinned:",
+		"mentions:",
+	];
+
+	const filterSuggestions = createMemo(() => {
+		const f = activeFilter();
+		if (!f) return allFilterSuggestions;
+		const query = f.query.toLowerCase();
+		const negated = f.negated;
+		if (!query) {
+			return negated
+				? allFilterSuggestions.map((f) => `-${f}`)
+				: allFilterSuggestions;
+		}
+
+		return allFilterSuggestions
+			.filter((f) => f.toLowerCase().includes(query))
+			.map((f) => (negated ? `-${f}` : f));
+	});
+
+	const recentSearches = createMemo(() => {
+		const f = activeFilter();
+		if (f?.type === "filter" && f.query === "") {
+			return getRecentSearches();
+		}
+		return [];
+	});
+
+	const autocompleteItems = createMemo(() => {
+		const f = activeFilter();
+		if (!f) return [];
+		const type = f.type;
+		const result: {
+			id: string;
+			label: string | LabelPart[];
+			rawValue?: string;
+			user?: User;
+			channel?: ThreadT;
+			onSelect: () => void;
+			isSeparator?: boolean;
+		}[] = [];
+
+		if (type === "filter") {
+			// Filter keyword suggestions
+			filterSuggestions().forEach((filter) => {
+				result.push({
+					id: `filter-${filter}`,
+					label: filter,
+					onSelect: () => handleCompletion({ type: "text", text: filter }),
+				});
+			});
+
+			// Recent searches
+			const searches = recentSearches();
+			if (searches.length > 0) {
+				result.push({
+					id: "recent-separator",
+					label: "",
+					onSelect: () => {},
+					isSeparator: true,
+				});
+				searches.forEach((search, idx) => {
+					result.push({
+						id: `recent-${idx}`,
+						label: formatRecentSearch(search, searchContext()),
+						rawValue: search,
+						onSelect: () =>
+							handleCompletion({ type: "recent_search", query: search }),
+					});
+				});
+			}
+		} else {
+			const def = SEARCH_FILTERS[type];
+			if (!def) return result;
+
+			const suggestions = def.getSuggestions(f.query, searchContext());
+
+			suggestions.forEach((item) => {
+				result.push({
+					id: item.id,
+					label: item.label,
+					user: item.user,
+					channel: item.channel,
+					onSelect: () => {
+						const astNode = {
+							type,
+							value: item.id.replace(`${type}-`, ""),
+							name: item.label,
+							negated: f.negated ?? false,
+						};
+						const pmNode = def.toPMNode(astNode);
+						handleCompletion({ type: "node", node: pmNode });
+					},
+				});
+			});
+		}
+
+		return result;
+	});
 
 	// Shared context object passed to autocomplete suggestions
 	const searchContext = createMemo(() => {
@@ -235,33 +344,31 @@ export const SearchInput = (props: {
 		updateSearch({ ...searchState, results: res || null, loading: false });
 	};
 
+	const handleCompletion = (c: Completion) => {
+		if (c.type === "recent_search") {
+			insertFilter(c.query, true, true);
+		} else if (c.type === "text") {
+			insertFilter(c.text, false, true);
+		} else if (c.type === "node") {
+			insertNode(c.node, true);
+		}
+	};
+
 	const insertNode = (node: Node, shouldSubmit: boolean) => {
 		const view = editor.view;
-		if (!view) return;
-		const { from } = view.state.selection;
-		const textBefore = view.state.doc.textBetween(
-			Math.max(0, from - 100),
-			from,
-			" ",
-		);
+		const filter = activeFilter();
+		if (!view || !filter) return;
 
-		const filterRegex = new RegExp(`-?(${FILTER_NAMES.join("|")}):(\\S*)$`);
-		const match = textBefore.match(filterRegex);
-		if (match) {
-			const start = from - match[0].length;
-			const tr = view.state.tr.replaceWith(start, from, node);
-			tr.insertText(" ", tr.mapping.map(from));
-			tr.setMeta("skipAutocomplete", true);
-			view.dispatch(tr);
-		}
+		const tr = view.state.tr.replaceWith(filter.from, filter.to, node);
+		tr.insertText(" ", tr.mapping.map(filter.from));
+		tr.setMeta("skipAutocomplete", true);
+		view.dispatch(tr);
 
 		setActiveFilter(null);
 		setHoveredIndex(0);
 		view.focus();
 
-		if (shouldSubmit) {
-			handleSubmit();
-		}
+		if (shouldSubmit) handleSubmit();
 	};
 
 	const insertFilter = (
@@ -270,55 +377,33 @@ export const SearchInput = (props: {
 		shouldSubmit?: boolean,
 	) => {
 		const view = editor.view;
-		if (!view) return;
+		const filter = activeFilter();
+		if (!view || !filter) return;
 
-		try {
-			const { from } = view.state.selection;
-			const $pos = view.state.doc.resolve(from);
-			const nodeBefore = $pos.nodeBefore;
-			const textBefore = nodeBefore?.isText ? nodeBefore.text! : "";
-
-			const wordMatch = textBefore.match(/(\S+)$/);
-			const start = wordMatch ? from - wordMatch[0].length : from;
-
-			if (isRecent) {
-				const ctx = searchContext();
-				const nodes = parseQueryToNodes(text, ctx.users, ctx.roomThreads);
-				const tr = view.state.tr.delete(0, view.state.doc.content.size);
-				if (nodes.length > 0) tr.insert(0, nodes);
-				tr.setMeta("skipAutocomplete", true);
-				view.dispatch(tr);
-				setActiveFilter(null);
-				setHoveredIndex(0);
-				view.focus();
-				handleSubmit();
-				return;
-			}
-
-			// insert the text (e.g., "has:")
-			const tr = view.state.tr.replaceWith(
-				start,
-				from,
-				view.state.schema.text(text),
-			);
-
-			// If it's a keyword like "has:", we DON'T submit and DON'T close the menu
-			if (text.endsWith(":")) {
-				view.dispatch(tr);
-				setHoveredIndex(0);
-			} else {
-				// It's a full value or text
-				tr.setMeta("skipAutocomplete", true);
-				view.dispatch(tr);
-				setActiveFilter(null);
-				setHoveredIndex(0);
-				if (shouldSubmit) handleSubmit();
-			}
-
+		if (isRecent) {
+			const ctx = searchContext();
+			const nodes = parseQueryToNodes(text, ctx);
+			const tr = view.state.tr.delete(0, view.state.doc.content.size);
+			if (nodes.length > 0) tr.insert(0, nodes);
+			tr.setMeta("skipAutocomplete", true);
+			view.dispatch(tr);
+			setActiveFilter(null);
+			setHoveredIndex(0);
 			view.focus();
-		} catch (e) {
-			console.warn("insertFilter error:", e);
+			handleSubmit();
+			return;
 		}
+
+		const tr = view.state.tr.insertText(text, filter.from, filter.to);
+
+		if (!text.endsWith(":")) {
+			tr.setMeta("skipAutocomplete", true);
+			setActiveFilter(null);
+		}
+
+		view.dispatch(tr);
+		view.focus();
+		if (shouldSubmit && !text.endsWith(":")) handleSubmit();
 	};
 
 	createEffect(() => {
@@ -333,6 +418,8 @@ export const SearchInput = (props: {
 			items[hoveredIndex()].scrollIntoView({ block: "nearest" });
 		}
 	});
+
+	const [autocompleteFocused, setAutocompleteFocused] = createSignal(false);
 
 	const editor = createBaseEditor({
 		schema: schema as any,
@@ -362,11 +449,7 @@ export const SearchInput = (props: {
 			const ctx = searchContext();
 
 			if (initialSearch?.query) {
-				const nodes = parseQueryToNodes(
-					initialSearch.query,
-					ctx.users,
-					ctx.roomThreads,
-				);
+				const nodes = parseQueryToNodes(initialSearch.query, ctx);
 				if (nodes.length > 0) {
 					docContent = schema.nodes.doc.create(undefined, [
 						schema.nodes.paragraph.create(undefined, nodes),
@@ -391,49 +474,28 @@ export const SearchInput = (props: {
 					}),
 					new Plugin({
 						props: {
-							handleKeyDown(_view, event) {
-								const filterActive = activeFilter();
+							handleKeyDown(view, event) {
+								const items = autocompleteItems();
+								const f = activeFilter();
 
-								if (filterActive) {
-									const items = currentItemsRef?.items || [];
-
-									if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-										event.preventDefault();
-										setHoveredIndex((prev) => {
-											const max = items.length - 1;
-											if (max < 0) return prev;
-											let next =
-												event.key === "ArrowDown"
-													? prev >= max
-														? 0
-														: prev + 1
-													: prev <= 0
-														? max
-														: prev - 1;
-
-											// Skip separators
-											if (items[next]?.isSeparator) {
-												next =
-													event.key === "ArrowDown"
-														? next >= max
-															? 0
-															: next + 1
-														: next <= 0
-															? max
-															: next - 1;
-											}
-											return next;
-										});
-										return true;
-									}
-
-									if (event.key === "Enter" || event.key === "Tab") {
-										event.preventDefault();
-										const shouldSubmit = event.key === "Enter";
-										if (currentItemsRef) {
-											currentItemsRef.selectItem(hoveredIndex(), shouldSubmit);
+								if (f) {
+									if (items.length > 0) {
+										if (event.key === "ArrowDown") {
+											setHoveredIndex((prev) => (prev + 1) % items.length);
+											return true;
+										} else if (event.key === "ArrowDown") {
+											setHoveredIndex((prev) => (prev * 2 - 1) % items.length);
+											return true;
+										} else if (event.key === "Tab") {
+											const item = items[hoveredIndex()];
+											item.onSelect();
+											return true;
+										} else if (event.key === "Enter") {
+											const item = items[hoveredIndex()];
+											item.onSelect();
+											handleSubmit();
+											return true;
 										}
-										return true;
 									}
 
 									if (event.key === "Escape") {
@@ -441,37 +503,36 @@ export const SearchInput = (props: {
 										setActiveFilter(null);
 										return true;
 									}
-								} else {
-									if (event.key === "Enter" && !event.shiftKey) {
-										event.preventDefault();
-										handleSubmit();
-										return true;
-									}
-									if (event.key === "Escape") {
-										event.preventDefault();
-										const { state } = _view;
-										if (
-											state.doc.textContent.length > 0 ||
-											state.doc.childCount > 1 ||
-											(state.doc.firstChild &&
-												state.doc.firstChild.childCount > 0)
-										) {
-											const tr = state.tr.delete(0, state.doc.content.size);
-											_view.dispatch(tr);
-											handleSubmit();
-										} else {
-											if (currentSearch()) {
-												updateSearch(undefined);
-											} else {
-												const chatInput = document.querySelector(
-													".chat .ProseMirror",
-												) as HTMLInputElement | null;
-												chatInput?.focus();
-											}
-										}
-										return true;
-									}
 								}
+
+								if (event.key === "Enter" && !event.shiftKey) {
+									handleSubmit();
+									return true;
+								} else if (event.key === "Escape") {
+									event.preventDefault();
+									const { state } = view;
+									if (
+										state.doc.textContent.length > 0 ||
+										state.doc.childCount > 1 ||
+										(state.doc.firstChild &&
+											state.doc.firstChild.childCount > 0)
+									) {
+										const tr = state.tr.delete(0, state.doc.content.size);
+										view.dispatch(tr);
+										handleSubmit();
+									} else {
+										if (currentSearch()) {
+											updateSearch(undefined);
+										} else {
+											const chatInput = document.querySelector(
+												".chat .ProseMirror",
+											) as HTMLInputElement | null;
+											chatInput?.focus();
+										}
+									}
+									return true;
+								}
+
 								return false;
 							},
 						},
@@ -488,7 +549,11 @@ export const SearchInput = (props: {
 				return false;
 			},
 			blur: () => {
-				setActiveFilter(null);
+				if (autocompleteFocused()) {
+					setActiveFilter({ type: "filter", query: "", from: 1, to: 1 });
+				} else {
+					setActiveFilter(null);
+				}
 				setEditorFocused(false);
 				return false;
 			},
@@ -501,8 +566,9 @@ export const SearchInput = (props: {
 			<div class="search-input" ref={setEditorRef}>
 				<editor.View placeholder="search" />
 			</div>
-			<Portal>
-				<Show when={activeFilter()}>
+			<img class="icon" src={icSearch} alt="" aria-hidden="true" />
+			<Portal mount={document.getElementById("overlay")!}>
+				<Show when={true}>
 					<div
 						ref={setDropdownRef}
 						class="floating"
@@ -510,62 +576,73 @@ export const SearchInput = (props: {
 							position: position.strategy,
 							top: `${position.y ?? 0}px`,
 							left: `${position.x ?? 0}px`,
-							width: `${editorRef()?.offsetWidth || 0}px`,
+							// width: `${(editorRef()?.offsetWidth || 300) * 2}px`,
+							// TODO: handle responsive ui
+							width: "600px",
 						}}
 					>
 						<SearchAutocomplete
 							filter={activeFilter()!}
 							channel={props.channel}
 							room={props.room}
-							onSelect={(node) => insertNode(node, true)}
-							onSelectFilter={(text, isRecent) =>
-								insertFilter(text, isRecent, true)
-							}
+							onCompletion={handleCompletion}
 							hoveredIndex={hoveredIndex()}
 							setHoveredIndex={setHoveredIndex}
 							searchContext={searchContext()}
-							onItemsChange={(its, _selectItem) => {
-								currentItemsRef = {
-									items: its,
-									selectItem: (idx, shouldSubmit) => {
-										const item = its[idx];
-										if (!item || item.isSeparator) return;
-
-										if (item.user || item.channel || item.id.includes("-")) {
-											const def = SEARCH_FILTERS[filterActive()?.type ?? ""];
-											if (def) {
-												const astNode = {
-													type: filterActive()?.type ?? "",
-													value: item.id.replace(
-														`${filterActive()?.type}-`,
-														"",
-													),
-													name:
-														typeof item.label === "string"
-															? item.label
-															: item.rawValue || "",
-													negated: filterActive()?.negated ?? false,
-												};
-												const pmNode = def.toPMNode(astNode, schema as any);
-												insertNode(pmNode, shouldSubmit);
-											} else {
-												insertFilter(item.label as string, false, shouldSubmit);
-											}
-										} else {
-											insertFilter(
-												item.rawValue || (item.label as string),
-												item.id.startsWith("recent"),
-												shouldSubmit,
-											);
-										}
-									},
-								};
-							}}
+							onPointerDown={() => setAutocompleteFocused(true)}
+							onBlur={() => setAutocompleteFocused(false)}
+							autocompleteItems={autocompleteItems()}
+							filterSuggestions={filterSuggestions()}
+							recentSearches={recentSearches()}
 						/>
 					</div>
 				</Show>
 			</Portal>
-			<img class="icon" src={icSearch} alt="" aria-hidden="true" />
 		</div>
 	);
 };
+
+function formatRecentSearch(query: string, ctx: SearchContext): LabelPart[] {
+	const tokens = tokenizeSearch(query);
+	const parts: LabelPart[] = [];
+	let lastTo = 0;
+
+	for (const token of tokens) {
+		// 1. Push plain text between tokens
+		if (token.from > lastTo) {
+			parts.push(query.slice(lastTo, token.from));
+		}
+		lastTo = token.to;
+
+		// 2. Handle Text/Phrases
+		if (token.type !== "filter") {
+			parts.push(token.value);
+			continue;
+		}
+
+		// 3. Handle Filters cleanly using the registry
+		const def = SEARCH_FILTERS[token.filterType];
+		if (def && def.resolveDisplayData) {
+			const resolved = def.resolveDisplayData(token.value, ctx);
+			parts.push({
+				type: token.filterType,
+				value: resolved.name ?? token.value,
+				user: resolved.user,
+				channel: resolved.channel,
+				negated: token.negated,
+				parts: [], // Triggers FilterChipUI
+			});
+		} else {
+			// Fallback for simple filters like has:image
+			parts.push({
+				type: token.filterType,
+				value: token.value,
+				negated: token.negated,
+				parts: [],
+			});
+		}
+	}
+
+	if (lastTo < query.length) parts.push(query.slice(lastTo));
+	return parts;
+}

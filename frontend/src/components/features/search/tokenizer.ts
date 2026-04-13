@@ -146,23 +146,33 @@ function tryMatchFilter(
  *
  * Used by `getFilterFromSelection` in the PM plugin.
  */
+
 export function getActiveFilterAtCursor(
 	query: string,
 	cursorPos: number,
-): { filterType: string; value: string; negated: boolean } | null {
-	// Look at the text up to the cursor
+): {
+	filterType: string;
+	value: string;
+	negated: boolean;
+	from: number;
+	to: number;
+} | null {
+	// autocomplete starting from the user's cursor
 	const textBefore = query.slice(0, cursorPos);
 
-	// Build the regex dynamically from the registry so new filters are
-	// automatically recognized without touching this code.
+	// build the regex from filters
 	const filterNames = FILTER_NAMES.join("|");
-	const regex = new RegExp(`-?(${filterNames}):(\\S*)$`);
-	const filterMatch = textBefore.match(regex);
-	if (filterMatch) {
+	const regex = new RegExp(`(-)?(${filterNames}):(\\S*)$`);
+	const match = textBefore.match(regex);
+
+	if (match) {
+		const startPos = match.index!;
 		return {
-			filterType: filterMatch[1],
-			value: filterMatch[2] ?? "",
-			negated: filterMatch[0].startsWith("-"),
+			filterType: match[2],
+			value: match[3] ?? "",
+			negated: !!match[1],
+			from: startPos,
+			to: cursorPos,
 		};
 	}
 
