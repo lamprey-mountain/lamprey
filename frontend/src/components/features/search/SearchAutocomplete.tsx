@@ -290,7 +290,15 @@ export const SearchAutocomplete = (props: {
 											</button>
 										</header>
 										<ul class="presets-list">
-											<li>
+											<li
+												class="preset-item"
+												onMouseDown={() =>
+													props.onCompletion({
+														type: "recent_search",
+														query: `has:image channel:${props.channel?.name ?? "channel"}`,
+													})
+												}
+											>
 												<div class="preset-label">
 													All images in this channel
 												</div>
@@ -304,7 +312,15 @@ export const SearchAutocomplete = (props: {
 													)}
 												</div>
 											</li>
-											<li>
+											<li
+												class="preset-item"
+												onMouseDown={() =>
+													props.onCompletion({
+														type: "recent_search",
+														query: `has:link channel:${props.channel?.name ?? "channel"}`,
+													})
+												}
+											>
 												<div class="preset-label">
 													All links in this channel
 												</div>

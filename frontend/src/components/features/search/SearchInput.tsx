@@ -68,22 +68,38 @@ const createFilterNodeView = (
 		const dom = document.createElement("span");
 
 		const getProps = () => {
-			const id = node.attrs.id || node.attrs.value || node.attrs.date;
 			const ctx = searchContext();
 			let user: User | undefined;
 			let channel: ThreadT | undefined;
+			let label: string;
+
+			const valueKey = type === "author" || type === "channel" || type === "mentions"
+				? "id"
+				: type === "before" || type === "after"
+					? "date"
+					: "value";
+
+			const id = node.attrs.id || node.attrs.value || node.attrs.date;
 
 			if (type === "author") {
 				user = ctx.users.cache.get(id);
+				label = node.attrs.name || id;
 			} else if (type === "channel") {
 				channel = ctx.roomThreads().find((t) => t.id === id);
+				label = node.attrs.name || id;
 			} else if (type === "mentions" && id.startsWith("user-")) {
 				user = ctx.users.cache.get(id.replace("user-", ""));
+				label = node.attrs.name || id;
+			} else if (type === "mentions") {
+				label = node.attrs.name || id;
+			} else {
+				// TODO: handle before and after with <Time>?
+				label = String(id);
 			}
 
 			return {
 				type,
-				label: node.attrs.name || id,
+				label,
 				user,
 				channel,
 				negated: node.attrs.negated,
@@ -445,6 +461,25 @@ export const SearchInput = (props: {
 			),
 			mentions: createFilterNodeView(
 				"mentions",
+				searchContext,
+				owner,
+				editorFocused,
+			),
+			before: createFilterNodeView(
+				"before",
+				searchContext,
+				owner,
+				editorFocused,
+			),
+			after: createFilterNodeView(
+				"after",
+				searchContext,
+				owner,
+				editorFocused,
+			),
+			has: createFilterNodeView("has", searchContext, owner, editorFocused),
+			pinned: createFilterNodeView(
+				"pinned",
 				searchContext,
 				owner,
 				editorFocused,
