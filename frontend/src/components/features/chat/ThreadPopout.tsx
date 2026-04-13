@@ -124,7 +124,12 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 					</Show>
 					<For each={sortedThreads().joined}>
 						{(thread) => (
-							<div class="thread-item" onClick={() => onThreadClick(thread)}>
+							<div
+								class="thread-item menu-thread"
+								onClick={() => onThreadClick(thread)}
+								data-channel-id={thread.id}
+								data-room-id={thread.room_id}
+							>
 								<ChannelIcon channel={thread} />
 								<span>{thread.name}</span>
 							</div>
