@@ -1,4 +1,5 @@
 import type {
+	Channel,
 	Client,
 	MemberListGroup,
 	MemberListOp,
@@ -270,6 +271,25 @@ export class RootStore {
 		} else if (msg.type === "ChannelCreate" || msg.type === "ChannelUpdate") {
 			if ("channel" in msg) {
 				this.channels.upsert(msg.channel);
+
+				const channel = msg.channel as Channel & { parent_id?: string };
+				if (channel.parent_id) {
+					const messageRanges = this.messages._ranges.get(channel.parent_id);
+					if (messageRanges) {
+						const range = messageRanges.find(channel.id);
+						if (range) {
+							for (const message of range.items) {
+								if (message.id === channel.id && !message.thread) {
+									const updatedMessage = {
+										...message,
+										thread: channel,
+									};
+									this.messages.handleMessageUpdate(updatedMessage);
+								}
+							}
+						}
+					}
+				}
 			}
 		} else if (msg.type === "UserCreate" || msg.type === "UserUpdate") {
 			this.users.upsert(msg.user);
