@@ -279,11 +279,7 @@ function RouteSettings(p: RouteSectionProps): JSX.Element {
 		<>
 			<Title title={user() ? t("page.settings_user") : t("loading")} />
 			<Show when={user()}>
-				{(u) => (
-					<Show when={p.params.page}>
-						{(page) => <UserSettings user={u()} page={page()} />}
-					</Show>
-				)}
+				{(u) => <UserSettings user={u()} page={p.params.page ?? ""} />}
 			</Show>
 		</>
 	);

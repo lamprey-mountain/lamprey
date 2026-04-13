@@ -200,11 +200,7 @@ export const RouteRoomSettings = (
 		<>
 			<Title title={title()} />
 			<Show when={room()}>
-				{(r) => (
-					<Show when={p.params.page}>
-						{(page) => <RoomSettings room={r()} page={page()} />}
-					</Show>
-				)}
+				{(r) => <RoomSettings room={r()} page={p.params.page ?? ""} />}
 			</Show>
 		</>
 	);
@@ -224,11 +220,7 @@ export const RouteChannelSettings = (
 		<>
 			<Title title={title()} />
 			<Show when={channel()}>
-				{(c) => (
-					<Show when={p.params.page}>
-						{(page) => <ChannelSettings channel={c()} page={page()} />}
-					</Show>
-				)}
+				{(c) => <ChannelSettings channel={c()} page={p.params.page ?? ""} />}
 			</Show>
 		</>
 	);
