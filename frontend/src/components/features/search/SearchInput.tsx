@@ -34,7 +34,7 @@ import { useOptionalChannel } from "@/contexts/channel";
 import { type RoomSearch, useRoom } from "@/contexts/room";
 import type { RoomT, ThreadT } from "@/types";
 import type { ChannelSearch } from "@/types/chat";
-import { SEARCH_FILTERS, type SearchContext } from "./filters.config";
+import { SEARCH_FILTERS } from "./filters.config";
 import {
 	type ActiveFilter,
 	autocompletePlugin,
@@ -42,7 +42,7 @@ import {
 	syntaxHighlightingPlugin,
 } from "./plugins";
 import { type Completion, SearchAutocomplete } from "./SearchAutocomplete";
-import { FilterChipUI } from "./SearchFilterChip";
+import { FilterChip } from "./SearchFilterChip";
 import { schema } from "./schema";
 import { buildBackendSearchBody } from "./searchCompiler";
 import type { LabelPart } from "./types";
@@ -60,60 +60,30 @@ import {
 
 const createFilterNodeView = (
 	type: string,
-	searchContext: () => SearchContext,
+	roomId: string | null,
+	channelId: string | undefined,
 	owner: ReturnType<typeof getOwner>,
 	animate: Accessor<boolean>,
 ) => {
 	return (node: Node): NodeView => {
 		const dom = document.createElement("span");
 
-		const getProps = () => {
-			const ctx = searchContext();
-			let user: User | undefined;
-			let channel: ThreadT | undefined;
-			let label: string;
-
-			const valueKey = type === "author" || type === "channel" || type === "mentions"
-				? "id"
-				: type === "before" || type === "after"
-					? "date"
-					: "value";
-
-			const id = node.attrs.id || node.attrs.value || node.attrs.date;
-
-			if (type === "author") {
-				user = ctx.users.cache.get(id);
-				label = node.attrs.name || id;
-			} else if (type === "channel") {
-				channel = ctx.roomThreads().find((t) => t.id === id);
-				label = node.attrs.name || id;
-			} else if (type === "mentions" && id.startsWith("user-")) {
-				user = ctx.users.cache.get(id.replace("user-", ""));
-				label = node.attrs.name || id;
-			} else if (type === "mentions") {
-				label = node.attrs.name || id;
-			} else {
-				// TODO: handle before and after with <Time>?
-				label = String(id);
-			}
-
-			return {
-				type,
-				label,
-				user,
-				channel,
-				negated: node.attrs.negated,
-			};
-		};
-
-		// Capture props synchronously before rendering
-		const props = getProps();
-		let currentProps = props;
+		const getId = () => node.attrs.id || node.attrs.value || node.attrs.date;
+		const getName = () => node.attrs.name as string | undefined;
+		const getNegated = () => node.attrs.negated as boolean;
 
 		const dispose = render(
 			() =>
 				runWithOwner(owner, () => (
-					<FilterChipUI {...currentProps} animate={animate()} />
+					<FilterChip
+						type={type}
+						id={getId()}
+						name={getName()}
+						negated={getNegated()}
+						animate={animate()}
+						roomId={roomId}
+						channelId={channelId}
+					/>
 				)),
 			dom,
 		);
@@ -123,7 +93,6 @@ const createFilterNodeView = (
 			update: (newNode: Node) => {
 				if (newNode.type !== node.type) return false;
 				node = newNode;
-				currentProps = getProps();
 				return true;
 			},
 			destroy: () => dispose(),
@@ -136,7 +105,7 @@ export const SearchInput = (props: {
 	room?: RoomT;
 	autofocus?: boolean;
 }) => {
-	const usersStore = useUsers();
+	const users = useUsers();
 	const messagesService = useMessages();
 	const owner = getOwner();
 	const [dropdownRef, setDropdownRef] = createSignal<HTMLDivElement>();
@@ -256,14 +225,14 @@ export const SearchInput = (props: {
 
 	// Shared context object passed to autocomplete suggestions
 	const searchContext = createMemo(() => {
-		const channelsStore = useChannels();
+		const channels = useChannels();
 		const roomThreads = () =>
-			[...channelsStore.cache.values()].filter(
+			[...channels.cache.values()].filter(
 				(c) => c.room_id === (props.channel?.room_id ?? props.room?.id ?? ""),
 			);
 		return {
-			users: usersStore,
-			channels: channelsStore,
+			users,
+			channels,
 			roomMembers: useRoomMembers(),
 			threadMembers: useThreadMembers(),
 			roles: useRoles(),
@@ -444,43 +413,58 @@ export const SearchInput = (props: {
 
 	const [autocompleteFocused, setAutocompleteFocused] = createSignal(false);
 
+	const roomId = () => props.channel?.room_id ?? props.room?.id ?? null;
+	const channelId = () => props.channel?.id ?? undefined;
+
 	const editor = createBaseEditor({
 		schema: schema as any,
 		nodeViews: () => ({
 			author: createFilterNodeView(
 				"author",
-				searchContext,
+				roomId(),
+				channelId(),
 				owner,
 				editorFocused,
 			),
 			channel: createFilterNodeView(
 				"channel",
-				searchContext,
+				roomId(),
+				channelId(),
 				owner,
 				editorFocused,
 			),
 			mentions: createFilterNodeView(
 				"mentions",
-				searchContext,
+				roomId(),
+				channelId(),
 				owner,
 				editorFocused,
 			),
 			before: createFilterNodeView(
 				"before",
-				searchContext,
+				roomId(),
+				channelId(),
 				owner,
 				editorFocused,
 			),
 			after: createFilterNodeView(
 				"after",
-				searchContext,
+				roomId(),
+				channelId(),
 				owner,
 				editorFocused,
 			),
-			has: createFilterNodeView("has", searchContext, owner, editorFocused),
+			has: createFilterNodeView(
+				"has",
+				roomId(),
+				channelId(),
+				owner,
+				editorFocused,
+			),
 			pinned: createFilterNodeView(
 				"pinned",
-				searchContext,
+				roomId(),
+				channelId(),
 				owner,
 				editorFocused,
 			),

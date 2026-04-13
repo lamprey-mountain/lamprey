@@ -113,6 +113,13 @@ export const authorFilter: SearchFilterDef = {
 			onSelect: () => {},
 		}));
 	},
+	resolveDisplayData(value, ctx) {
+		const user = ctx.users.cache.get(value);
+		return {
+			name: user?.name ?? value,
+			user,
+		};
+	},
 	toAST(node) {
 		return {
 			type: "author",
@@ -154,6 +161,13 @@ export const channelFilter: SearchFilterDef = {
 			channel: t,
 			onSelect: () => {},
 		}));
+	},
+	resolveDisplayData(value, ctx) {
+		const channel = ctx.roomThreads().find((t) => t.id === value);
+		return {
+			name: channel?.name ?? value,
+			channel,
+		};
 	},
 	toAST(node) {
 		return {
@@ -356,6 +370,29 @@ export const mentionsFilter: SearchFilterDef = {
 			user: m.user,
 			onSelect: () => {},
 		}));
+	},
+	resolveDisplayData(value, ctx) {
+		if (value.startsWith("user-")) {
+			const userId = value.replace("user-", "");
+			const user = ctx.users.cache.get(userId);
+			return {
+				name: user?.name ?? value,
+				user,
+			};
+		}
+		if (value.startsWith("role-")) {
+			const roleId = value.replace("role-", "");
+			const role = [...ctx.roles.cache.values()].find((r) => r.id === roleId);
+			return {
+				name: role?.name ?? value,
+			};
+		}
+		if (value === "everyone-room" || value === "everyone-thread") {
+			return {
+				name: value === "everyone-room" ? "@room" : "@thread",
+			};
+		}
+		return { name: value };
 	},
 	toAST(node) {
 		return {
