@@ -40,7 +40,8 @@ export function shouldUseThreadSidebar(
 }
 
 /**
- * Open a thread in the sidebar if the preference is enabled, otherwise navigate to the thread page
+ * Open a thread in the sidebar if the preference is enabled, otherwise navigate to the thread page.
+ * If the thread is already open in the sidebar, close it.
  */
 export function openThread(
 	thread: Channel,
@@ -51,7 +52,12 @@ export function openThread(
 ) {
 	const shouldUseSidebar = shouldUseThreadSidebar(parentChannel, preferences);
 	if (shouldUseSidebar && setChannelState) {
-		setChannelState("thread_chat_sidebar_thread_id", thread.id);
+		setChannelState((prev) => ({
+			thread_chat_sidebar_thread_id:
+				prev.thread_chat_sidebar_thread_id === thread.id
+					? undefined
+					: thread.id,
+		}));
 	} else {
 		navigate(`/thread/${thread.id}`);
 	}
