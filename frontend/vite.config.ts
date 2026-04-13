@@ -1,8 +1,23 @@
 import { execSync, spawnSync } from "node:child_process";
 import path from "node:path";
-import { defineConfig } from "vite";
+import { defineConfig, searchForWorkspaceRoot } from "vite";
 import solid from "vite-plugin-solid";
 import pkg from "./package.json";
+
+const readEnv = (v: string) => {
+	const val = process.env[v];
+	if (val) {
+		return val;
+	} else {
+		console.error(
+			`Error: ${v} environment variable is required (are you using \`nix develop\`?)`,
+		);
+		process.exit(1);
+	}
+};
+
+const WASM_MARKDOWN_PKG = readEnv("WASM_MARKDOWN_PKG");
+const TWEMOJI_SPRITESHEETS = readEnv("TWEMOJI_SPRITESHEETS");
 
 function getGitCommit() {
 	if (process.env.VITE_GIT_SHA) {
@@ -31,6 +46,8 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
+			"@wasm-markdown": path.resolve(__dirname, WASM_MARKDOWN_PKG),
+			"@twemoji-spritesheets": path.resolve(__dirname, TWEMOJI_SPRITESHEETS),
 		},
 	},
 	define: {
@@ -43,6 +60,13 @@ export default defineConfig({
 		watch: {
 			// watching seems broken on my machine unfortunately
 			usePolling: true,
+		},
+		fs: {
+			allow: [
+				searchForWorkspaceRoot(process.cwd()),
+				path.resolve(WASM_MARKDOWN_PKG),
+				path.resolve(TWEMOJI_SPRITESHEETS),
+			],
 		},
 	},
 	build: {

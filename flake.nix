@@ -576,6 +576,21 @@
             WASM_MARKDOWN_PKG = "${wasm-markdown}/pkg";
             TWEMOJI_SPRITESHEETS = "${twemoji-spritesheets}";
           };
+          shellHook = ''
+            cat > tsconfig.paths.json <<EOF
+            {
+              "compilerOptions": {
+                "paths": {
+                  "@/*": ["frontend/src/*"],
+                  "@wasm-markdown": ["${wasm-markdown}/pkg"],
+                  "@wasm-markdown/*": ["${wasm-markdown}/pkg/*"],
+                  "@twemoji-spritesheets": ["${twemoji-spritesheets}"],
+                  "@twemoji-spritesheets/*": ["${twemoji-spritesheets}/*"]
+                }
+              }
+            }
+            EOF
+          '';
         };
       });
 }
