@@ -18,7 +18,11 @@ import { SEARCH_FILTERS, type SearchContext } from "./filters.config";
 import { FilterChipUI } from "./SearchFilterChip";
 import { tokenizeSearch } from "./tokenizer";
 import type { LabelPart } from "./types";
-import { getRecentSearches, parseSearchQuery } from "./utils";
+import {
+	formatRecentSearch,
+	getRecentSearches,
+	parseSearchQuery,
+} from "./utils";
 
 // filter metadata for the left column display
 const FILTER_METADATA = [
@@ -167,29 +171,21 @@ export const SearchAutocomplete = (props: {
 		props.onCompletion({ type: "text", text: `${key}:` });
 	};
 
-	const renderLabel = (
-		label: string | LabelPart[],
-		isHovered: boolean,
-	): JSX.Element => {
+	const renderLabel = (label: LabelPart, isHovered: boolean): JSX.Element => {
 		if (typeof label === "string") return label;
-		return label.map((part) => {
-			if (typeof part === "string") return <span>{part}</span>;
+		if (Array.isArray(label))
+			return label.map((part) => renderLabel(part, isHovered));
 
-			if (part.parts) {
-				return (
-					<FilterChipUI
-						type={part.type}
-						label={part.value}
-						user={part.user}
-						channel={part.channel}
-						negated={part.negated}
-						animate={isHovered}
-					/>
-				);
-			}
-
-			return <span class={part.type}>{part.value}</span>;
-		});
+		return (
+			<FilterChipUI
+				type={label.type}
+				label={label.value}
+				user={label.user}
+				channel={label.channel}
+				negated={label.negated}
+				animate={isHovered}
+			/>
+		);
 	};
 
 	return (
@@ -348,7 +344,15 @@ export const SearchAutocomplete = (props: {
 																props.setHoveredIndex?.(idx())
 															}
 														>
-															<div class="preset-label">{search}</div>
+															<div class="preset-label">
+																{renderLabel(
+																	formatRecentSearch(
+																		search,
+																		props.searchContext,
+																	),
+																	idx() === props.hoveredIndex,
+																)}
+															</div>
 														</li>
 													)}
 												</For>

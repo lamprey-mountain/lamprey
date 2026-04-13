@@ -57,6 +57,7 @@ import { tokenizeSearch } from "./tokenizer";
 import type { LabelPart } from "./types";
 import {
 	addRecentSearch,
+	formatRecentSearch,
 	getRecentSearches,
 	parseQueryToNodes,
 	serializeToQuery,
@@ -601,48 +602,3 @@ export const SearchInput = (props: {
 		</div>
 	);
 };
-
-function formatRecentSearch(query: string, ctx: SearchContext): LabelPart[] {
-	const tokens = tokenizeSearch(query);
-	const parts: LabelPart[] = [];
-	let lastTo = 0;
-
-	for (const token of tokens) {
-		// 1. Push plain text between tokens
-		if (token.from > lastTo) {
-			parts.push(query.slice(lastTo, token.from));
-		}
-		lastTo = token.to;
-
-		// 2. Handle Text/Phrases
-		if (token.type !== "filter") {
-			parts.push(token.value);
-			continue;
-		}
-
-		// 3. Handle Filters cleanly using the registry
-		const def = SEARCH_FILTERS[token.filterType];
-		if (def && def.resolveDisplayData) {
-			const resolved = def.resolveDisplayData(token.value, ctx);
-			parts.push({
-				type: token.filterType,
-				value: resolved.name ?? token.value,
-				user: resolved.user,
-				channel: resolved.channel,
-				negated: token.negated,
-				parts: [], // Triggers FilterChipUI
-			});
-		} else {
-			// Fallback for simple filters like has:image
-			parts.push({
-				type: token.filterType,
-				value: token.value,
-				negated: token.negated,
-				parts: [],
-			});
-		}
-	}
-
-	if (lastTo < query.length) parts.push(query.slice(lastTo));
-	return parts;
-}

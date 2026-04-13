@@ -1,7 +1,7 @@
 export type LabelPart =
 	| string
+	| LabelPart[]
 	| {
-			// type: LabelType;
 			type: string;
 			value: string;
 			user?: User;
