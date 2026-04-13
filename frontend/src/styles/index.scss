@@ -4108,6 +4108,11 @@ input[type="color"] {
 		&:hover {
 			background: $bg-300;
 		}
+
+		&.skeleton {
+			pointer-events: none;
+			border: solid $bg-100 1px;
+		}
 	}
 
 	.dim {

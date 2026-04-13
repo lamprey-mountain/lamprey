@@ -55,6 +55,13 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 		};
 	});
 
+	const isLoading = () => activeThreads.loading || archivedThreads.loading;
+	const isEmpty = () =>
+		!isLoading() &&
+		sortedThreads().joined.length === 0 &&
+		sortedThreads().notJoined.length === 0 &&
+		sortedThreads().archived.length === 0;
+
 	const [, modalctl] = useModals();
 	const nav = useNavigate();
 	const onCreateThread = () => {
@@ -77,7 +84,13 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 		ctx.setThreadsView(null);
 	};
 
-	// TODO: show skeleton ui when loading threads
+	const ThreadSkeletonItem = () => (
+		<div class="thread-item skeleton">&nbsp;</div>
+	);
+
+	const skeletonItems = Array.from({ length: 5 }, (_, i) => ({
+		id: `thread-skeleton-${i}`,
+	}));
 
 	let searchInputRef: HTMLInputElement | undefined;
 
@@ -101,32 +114,36 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 				</button>
 			</div>
 			<div class="thread-list">
-				<Show when={sortedThreads().joined.length}>
-					<h3 class="dim">joined threads</h3>
+				<Show when={isLoading()}>
+					<h3 class="dim">loading threads...</h3>
+					<For each={skeletonItems}>{() => <ThreadSkeletonItem />}</For>
 				</Show>
-				<For each={sortedThreads().joined}>
-					{(thread) => (
-						<div class="thread-item" onClick={() => onThreadClick(thread)}>
-							<ChannelIcon channel={thread} />
-							<span>{thread.name}</span>
-						</div>
-					)}
-				</For>
-				<Show when={sortedThreads().notJoined.length}>
-					<h3 class="dim">active threads</h3>
-				</Show>
-				<For each={sortedThreads().notJoined}>
-					{(thread) => (
-						<div class="thread-item" onClick={() => onThreadClick(thread)}>
-							<ChannelIcon channel={thread} />
-							<span>{thread.name}</span>
-						</div>
-					)}
-				</For>
-				<Show when={sortedThreads().archived.length}>
-					<h3 class="dim">archived threads</h3>
-				</Show>
-				<Show when={sortedThreads().archived.length > 0}>
+				<Show when={!isLoading()}>
+					<Show when={sortedThreads().joined.length}>
+						<h3 class="dim">joined threads</h3>
+					</Show>
+					<For each={sortedThreads().joined}>
+						{(thread) => (
+							<div class="thread-item" onClick={() => onThreadClick(thread)}>
+								<ChannelIcon channel={thread} />
+								<span>{thread.name}</span>
+							</div>
+						)}
+					</For>
+					<Show when={sortedThreads().notJoined.length}>
+						<h3 class="dim">active threads</h3>
+					</Show>
+					<For each={sortedThreads().notJoined}>
+						{(thread) => (
+							<div class="thread-item" onClick={() => onThreadClick(thread)}>
+								<ChannelIcon channel={thread} />
+								<span>{thread.name}</span>
+							</div>
+						)}
+					</For>
+					<Show when={sortedThreads().archived.length}>
+						<h3 class="dim">archived threads</h3>
+					</Show>
 					<For each={sortedThreads().archived}>
 						{(thread) => (
 							<div class="thread-item" onClick={() => onThreadClick(thread)}>
@@ -135,14 +152,7 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 							</div>
 						)}
 					</For>
-					<Show
-						when={
-							sortedThreads().joined.length +
-								sortedThreads().notJoined.length +
-								sortedThreads().archived.length ===
-							0
-						}
-					>
+					<Show when={isEmpty()}>
 						<div style="text-align:center">no threads :(</div>
 					</Show>
 				</Show>
