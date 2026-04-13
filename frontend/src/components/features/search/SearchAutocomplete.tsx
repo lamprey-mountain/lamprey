@@ -249,7 +249,8 @@ export const SearchAutocomplete = (props: {
 											class="filter-item"
 											classList={{ hovered: isHovered() }}
 											onMouseEnter={() => handleFilterHover(meta.key)}
-											onMouseDown={() => {
+											onMouseDown={(e) => {
+												e.preventDefault();
 												handleSelect();
 											}}
 											onKeyDown={(e) => {
@@ -292,12 +293,13 @@ export const SearchAutocomplete = (props: {
 										<ul class="presets-list">
 											<li
 												class="preset-item"
-												onMouseDown={() =>
+												onMouseDown={(e) => {
+													e.preventDefault();
 													props.onCompletion({
 														type: "recent_search",
 														query: `has:image channel:${props.channel?.name ?? "channel"}`,
-													})
-												}
+													});
+												}}
 											>
 												<div class="preset-label">
 													All images in this channel
@@ -314,12 +316,13 @@ export const SearchAutocomplete = (props: {
 											</li>
 											<li
 												class="preset-item"
-												onMouseDown={() =>
+												onMouseDown={(e) => {
+													e.preventDefault();
 													props.onCompletion({
 														type: "recent_search",
 														query: `has:link channel:${props.channel?.name ?? "channel"}`,
-													})
-												}
+													});
+												}}
 											>
 												<div class="preset-label">
 													All links in this channel
@@ -342,12 +345,13 @@ export const SearchAutocomplete = (props: {
 													{(search, idx) => (
 														<li
 															class="preset-item"
-															onMouseDown={() =>
+															onMouseDown={(e) => {
+																e.preventDefault();
 																props.onCompletion({
 																	type: "recent_search",
 																	query: search,
-																})
-															}
+																});
+															}}
 															onMouseEnter={() =>
 																props.setHoveredIndex?.(idx())
 															}
@@ -416,7 +420,10 @@ const FilterValuesPanel = (props: {
 						return (
 							<li
 								class="filter-item"
-								onMouseDown={() => handleSelect()}
+								onMouseDown={(e) => {
+									e.preventDefault();
+									handleSelect();
+								}}
 								onKeyDown={(e) => {
 									if (e.key === "Enter" || e.key === " ") {
 										e.preventDefault();
@@ -443,7 +450,10 @@ const FilterValuesPanel = (props: {
 					{(value) => (
 						<li
 							class="filter-item"
-							onMouseDown={() => props.onSelect(value)}
+							onMouseDown={(e) => {
+								e.preventDefault();
+								props.onSelect(value);
+							}}
 							onKeyDown={(e) => {
 								if (e.key === "Enter" || e.key === " ") {
 									e.preventDefault();
@@ -486,7 +496,10 @@ const FilterValuesPanel = (props: {
 					{(user) => (
 						<li
 							class="filter-item"
-							onMouseDown={() => props.onSelect(user.id)}
+							onMouseDown={(e) => {
+								e.preventDefault();
+								props.onSelect(user.id);
+							}}
 							onKeyDown={(e) => {
 								if (e.key === "Enter" || e.key === " ") {
 									e.preventDefault();
@@ -511,7 +524,10 @@ const FilterValuesPanel = (props: {
 					{(thread) => (
 						<li
 							class="filter-item"
-							onClick={() => props.onSelect(thread.id)}
+							onMouseDown={(e) => {
+								e.preventDefault();
+								props.onSelect(thread.id);
+							}}
 							onKeyDown={(e) => {
 								if (e.key === "Enter" || e.key === " ") {
 									e.preventDefault();

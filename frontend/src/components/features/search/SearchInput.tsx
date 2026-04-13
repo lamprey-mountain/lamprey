@@ -572,11 +572,8 @@ export const SearchInput = (props: {
 				return false;
 			},
 			blur: () => {
-				if (autocompleteFocused()) {
-					setActiveFilter({ type: "filter", query: "", from: 1, to: 1 });
-				} else {
-					setActiveFilter(null);
-				}
+				setActiveFilter(null);
+				setAutocompleteFocused(false);
 				setEditorFocused(false);
 				return false;
 			},
@@ -591,7 +588,7 @@ export const SearchInput = (props: {
 			</div>
 			<img class="icon" src={icSearch} alt="" aria-hidden="true" />
 			<Portal mount={document.getElementById("overlay")!}>
-				<Show when={true}>
+				<Show when={hasSuggestions()}>
 					<div
 						ref={setDropdownRef}
 						class="floating"
