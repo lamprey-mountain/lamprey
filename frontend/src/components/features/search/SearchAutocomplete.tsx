@@ -1,25 +1,20 @@
 import type { Node } from "prosemirror-model";
 import type { User } from "sdk";
-import {
-	createMemo,
-	createSignal,
-	For,
-	type JSX,
-	Match,
-	Show,
-	Switch,
-} from "solid-js";
+import { createSignal, For, type JSX, Match, Show, Switch } from "solid-js";
 import icSearch from "@/assets/search.png";
 import { ChannelIcon } from "@/avatar/ChannelIcon";
 import { Avatar } from "@/avatar/UserAvatar";
 import type { RoomT, ThreadT } from "@/types";
-import { SEARCH_FILTERS, type SearchContext } from "./filters.config";
+import type { SearchContext } from "./filters.config";
 import { FilterChipUI } from "./SearchFilterChip";
 import type { LabelPart } from "./types";
 import { formatRecentSearch } from "./utils";
 
-const PRESET_SEARCHES = [
-	// TODO
+type PresetDef = { label: string; query: string };
+
+const DEFAULT_PRESETS: PresetDef[] = [
+	{ label: "All images", query: "has:image" },
+	{ label: "All links", query: "has:link" },
 ];
 
 // filter metadata for the left column display
@@ -173,7 +168,8 @@ export const SearchAutocomplete = (props: {
 			<div
 				class="search-autocomplete"
 				onClick={(e) => {
-					e.stopPropagation(), e.stopImmediatePropagation();
+					e.stopPropagation();
+					e.stopImmediatePropagation();
 				}}
 				onPointerDown={props.onPointerDown}
 				onBlur={props.onBlur}
@@ -291,52 +287,44 @@ export const SearchAutocomplete = (props: {
 											</button>
 										</header>
 										<ul class="presets-list">
-											<li
-												class="preset-item"
-												onMouseDown={(e) => {
-													e.preventDefault();
-													props.onCompletion({
-														type: "recent_search",
-														query: `has:image channel:${props.channel?.name ?? "channel"}`,
-													});
+											<For each={DEFAULT_PRESETS}>
+												{(preset) => {
+													const query = () =>
+														props.channel
+															? `${preset.query} channel:${props.channel.id}`
+															: preset.query;
+													const label = () =>
+														props.channel
+															? `${preset.label} in this channel`
+															: preset.label;
+													return (
+														<li
+															class="preset-item"
+															onMouseDown={(e) => {
+																e.preventDefault();
+																props.onCompletion({
+																	type: "recent_search",
+																	query: query(),
+																});
+															}}
+														>
+															<div class="preset-label">{label()}</div>
+															<div
+																class="preset-desc dim"
+																style="margin-top:2px"
+															>
+																{renderLabel(
+																	formatRecentSearch(
+																		query(),
+																		props.searchContext,
+																	),
+																	false,
+																)}
+															</div>
+														</li>
+													);
 												}}
-											>
-												<div class="preset-label">
-													All images in this channel
-												</div>
-												<div class="preset-desc dim">
-													{renderLabel(
-														formatRecentSearch(
-															`has:image channel:${props.channel?.name ?? "channel"}`,
-															props.searchContext,
-														),
-														false,
-													)}
-												</div>
-											</li>
-											<li
-												class="preset-item"
-												onMouseDown={(e) => {
-													e.preventDefault();
-													props.onCompletion({
-														type: "recent_search",
-														query: `has:link channel:${props.channel?.name ?? "channel"}`,
-													});
-												}}
-											>
-												<div class="preset-label">
-													All links in this channel
-												</div>
-												<div class="preset-desc dim">
-													{renderLabel(
-														formatRecentSearch(
-															`has:link channel:${props.channel?.name ?? "channel"}`,
-															props.searchContext,
-														),
-														false,
-													)}
-												</div>
-											</li>
+											</For>
 										</ul>
 										<Show when={props.recentSearches.length > 0}>
 											<h3 class="dim recent-searches">recent searches</h3>
