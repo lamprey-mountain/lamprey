@@ -1472,7 +1472,10 @@ impl DataMessage for Postgres {
         let seq = if partial {
             ChannelSeq(all_events.last().map(|e| e.seq as u64).unwrap_or(since.0))
         } else {
-            let last_event_seq = all_events.last().map(|e| e.seq as i64).unwrap_or(since.0 as i64);
+            let last_event_seq = all_events
+                .last()
+                .map(|e| e.seq as i64)
+                .unwrap_or(since.0 as i64);
             ChannelSeq(std::cmp::max(channel_latest_seq, last_event_seq) as u64)
         };
 

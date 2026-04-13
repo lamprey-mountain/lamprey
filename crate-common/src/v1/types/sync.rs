@@ -7,6 +7,8 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+#[cfg(feature = "feat_e2ee")]
+use crate::v1::types::e2ee::{CrossSigningBundle, KeyshareRequest, KeyshareResponse};
 use crate::v1::types::error::SyncError;
 
 use crate::v1::types::Message;
@@ -22,6 +24,7 @@ use crate::v1::types::{
     DocumentTagId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember,
     WebhookId,
 };
+use crate::v2::types::media::Media;
 
 use super::{
     calendar::{CalendarEvent, CalendarEventParticipant, CalendarOverwrite},
@@ -685,6 +688,8 @@ pub enum MessageSync {
         user_id: UserId,
     },
 
+    // TODO: rename to MemberListDispatch
+    // "Dispatch" should be the term for when MessageSync is wrapping another enum
     MemberListSync {
         /// which user this list sync is for
         user_id: UserId,
@@ -882,12 +887,19 @@ pub enum MessageSync {
 
     /// A piece of media has processed and is now in the `Uploaded` state.
     MediaProcessed {
-        media: crate::v2::types::media::Media,
+        media: Media,
         session_id: SessionId,
     },
 
     MediaUpdate {
-        media: crate::v2::types::media::Media,
+        media: Media,
+    },
+
+    #[cfg(feature = "feat_e2ee")]
+    EncryptionDispatch {
+        /// who to send this dispatch to
+        user_id: UserId,
+        payload: E2EEMessage,
     },
 }
 
@@ -1029,6 +1041,7 @@ pub enum SyncCompression {
     Deflate,
 }
 
+// NOTE: room_id and channel_id methods dont seem to really be used much, maybe i should remove them? they are kind of a pain to deal with.
 impl MessageSync {
     /// the id of the room this message was emitted in, if it is known
     pub fn room_id(&self) -> Option<RoomId> {
@@ -1146,6 +1159,8 @@ impl MessageSync {
             Self::DocumentBranchDelete { .. } => None,
             Self::MediaProcessed { .. } => None,
             Self::MediaUpdate { .. } => None,
+            #[cfg(feature = "feat_e2ee")]
+            Self::EncryptionDispatch { .. } => None,
         }
     }
 
@@ -1259,6 +1274,8 @@ impl MessageSync {
             Self::DocumentBranchDelete { channel_id, .. } => Some(*channel_id),
             Self::MediaProcessed { .. } => None,
             Self::MediaUpdate { .. } => None,
+            #[cfg(feature = "feat_e2ee")]
+            Self::EncryptionDispatch { .. } => None,
         }
     }
 }

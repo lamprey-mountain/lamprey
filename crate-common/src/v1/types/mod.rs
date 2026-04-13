@@ -7,6 +7,7 @@ pub mod calendar;
 pub mod channel;
 pub mod components;
 pub mod document;
+pub mod e2ee;
 pub mod email;
 pub mod embed;
 pub mod emoji;

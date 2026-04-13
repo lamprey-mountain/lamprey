@@ -8,6 +8,7 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::automod::{AutomodAction, AutomodMatches, AutomodRuleStripped};
+use crate::v1::types::e2ee::MlsEpoch;
 use crate::v1::types::metadata::MessageMetadata;
 use crate::v1::types::moderation::Report;
 use crate::v1::types::reaction::ReactionCounts;
@@ -359,8 +360,11 @@ pub struct MessagePatch {
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum MessageType {
     /// a basic message, using markdown
-    // NOTE(v2): rename to Default
     DefaultMarkdown(MessageDefaultMarkdown),
+
+    /// an encrypted message
+    #[cfg(feature = "feat_e2ee")]
+    Encrypted(MessageEncrypted),
 
     /// a message was pinned
     MessagePinned(MessagePin),
@@ -593,6 +597,29 @@ pub struct MessageDefaultMarkdown {
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
     pub embeds: Vec<Embed>,
+}
+
+/// an encrypted message
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MessageEncrypted {
+    // TODO: use base64 for json, binary for msgpack
+    // TODO: find an appropriate size limit for this (how much overhead does mls cause?)
+    /// encrypted content of the message
+    ///
+    /// - decrypts into a MessageDefaultMarkdown struct
+    /// - encrypted with aes-256-gcm
+    pub ciphertext: Vec<u8>,
+
+    /// the nonce for the ciphertext
+    pub nonce: Vec<u8>,
+
+    /// what media this message is attached to, for garbage collection
+    pub attached_media_ids: Vec<MediaId>,
+
+    pub epoch: MlsEpoch,
 }
 
 /// used in `message_create` and `message_update`
@@ -952,6 +979,8 @@ impl MessageType {
     pub fn is_deletable(&self) -> bool {
         match self {
             MessageType::DefaultMarkdown(_) => true,
+            #[cfg(feature = "feat_e2ee")]
+            MessageType::Encrypted(_) => true,
             #[cfg(feature = "feat_message_forwarding")]
             MessageType::Forward(_) => true,
             MessageType::MessagePinned(_) => true,
@@ -989,6 +1018,8 @@ impl MessageType {
     pub fn is_activity(&self) -> bool {
         match self {
             MessageType::DefaultMarkdown(_) => false,
+            #[cfg(feature = "feat_e2ee")]
+            MessageType::Encrypted(_) => false,
             #[cfg(feature = "feat_message_forwarding")]
             MessageType::Forward(_) => false,
             MessageType::MessagePinned(_) => true,
@@ -1049,6 +1080,10 @@ impl MessageType {
                 } else {
                     write!(f, "")
                 }
+            }
+            #[cfg(feature = "feat_e2ee")]
+            MessageType::Encrypted(e) => {
+                write!(f, "encrypted ({} byte ciphertext)", e.ciphertext.len())
             }
             MessageType::MessagePinned(_) => {
                 write!(f, "message pinned")

@@ -10,6 +10,7 @@ pub mod calendar;
 pub mod channel;
 pub mod dm;
 pub mod document;
+pub mod e2ee;
 pub mod emoji;
 pub mod federation;
 pub mod invite;
