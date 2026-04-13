@@ -271,5 +271,6 @@ function shouldSplitInner(a: Message, b: Message) {
 	const ts_a = get_msg_ts(a);
 	const ts_b = get_msg_ts(b);
 	if (+ts_a - +ts_b > 1000 * 60 * 5) return true;
+	if (a.thread) return true;
 	return false;
 }
