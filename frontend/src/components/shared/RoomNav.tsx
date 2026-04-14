@@ -73,6 +73,11 @@ type ViewChannel = {
 };
 */
 
+type RoomNavMappedItem =
+	| Room
+	| { type: "folder"; id: string; name: string; items: Room[] }
+	| { type: "view"; name: string };
+
 type RoomNavConfig = Array<RoomNavItem>;
 
 export const RoomNav = () => {
@@ -210,7 +215,7 @@ export const RoomNav = () => {
 			return { ...item };
 		});
 
-		const findItem = (id: string, list: any[]) => {
+		const findItem = (id: string, list: RoomNavMappedItem[]) => {
 			for (let i = 0; i < list.length; i++) {
 				const item = list[i];
 				const itemId =
@@ -250,17 +255,25 @@ export const RoomNav = () => {
 			}
 
 			const [fromItem] = fromResult.parentList.splice(fromResult.index, 1);
-			const toIndex = newItems.findIndex(
-				(i: any) => (i.type === "folder" ? i.id : i.id) === toId,
-			);
+			const toIndex = newItems.findIndex((i: RoomNavMappedItem) => {
+				if (i.type === "folder") return i.id === toId;
+				if (i.type === "view") return false; // views can't be folder targets
+				return i.id === toId;
+			});
 			if (toIndex === -1) return items;
 
-			newItems[toIndex] = {
+			const toItem = newItems[toIndex];
+			if (toItem.type === "view") return items;
+			const folderItem: RoomNavMappedItem = {
 				type: "folder",
 				id: crypto.randomUUID(),
 				name: "New Folder",
-				items: [newItems[toIndex], fromItem],
+				items: [
+					toItem.type === "folder" ? toItem.items[0] : (toItem as Room),
+					fromItem.type === "folder" ? fromItem.items[0] : (fromItem as Room),
+				].filter(Boolean) as Room[],
 			};
+			newItems[toIndex] = folderItem;
 			return newItems;
 		}
 
@@ -273,7 +286,8 @@ export const RoomNav = () => {
 			const [movedItem] = from.parentList.splice(from.index, 1);
 			newItems.push(movedItem);
 			return newItems.filter(
-				(item: any) => !(item.type === "folder" && item.items.length === 0),
+				(item: RoomNavMappedItem) =>
+					!(item.type === "folder" && item.items.length === 0),
 			);
 		}
 
@@ -290,11 +304,16 @@ export const RoomNav = () => {
 
 		const [movedItem] = from.parentList.splice(from.index, 1);
 
-		if (to.item.type === "folder" && position === "inside" && movedItem.id) {
-			to.item.items.push(movedItem);
+		if (
+			to.item.type === "folder" &&
+			position === "inside" &&
+			movedItem.type !== "view" &&
+			movedItem.type !== "folder"
+		) {
+			to.item.items.push(movedItem as Room);
 		} else if (to.parent) {
 			const insertIndex = to.index + (position === "after" ? 1 : 0);
-			to.parent.items.splice(insertIndex, 0, movedItem);
+			to.parent.items.splice(insertIndex, 0, movedItem as Room);
 		} else {
 			let insertIndex = to.index + (position === "after" ? 1 : 0);
 			if (!from.parent && from.index < to.index) {
@@ -304,7 +323,8 @@ export const RoomNav = () => {
 		}
 
 		return newItems.filter(
-			(item: any) => !(item.type === "folder" && item.items.length === 0),
+			(item: RoomNavMappedItem) =>
+				!(item.type === "folder" && item.items.length === 0),
 		);
 	});
 

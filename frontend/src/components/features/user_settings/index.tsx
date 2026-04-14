@@ -1,6 +1,6 @@
 import { A } from "@solidjs/router";
 import type { User } from "sdk";
-import { createMemo, For, Show } from "solid-js";
+import { type Component, createMemo, For, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import {
 	Appearance,
@@ -25,7 +25,7 @@ type CategoryTab = { category: string };
 type PageTab = {
 	name: string;
 	path: string;
-	component: any;
+	component: Component<{ user: User }>;
 	noPad?: boolean;
 };
 

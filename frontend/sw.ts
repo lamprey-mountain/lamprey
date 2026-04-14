@@ -4,9 +4,29 @@
 
 // FIXME: firefox doesnt like it when i import?
 // import { stripMarkdownAndResolveMentions } from "./src/notification-util.ts";
-import type { Message } from "sdk";
+import type {
+	Channel,
+	MentionsChannel,
+	MentionsUser,
+	Message,
+	Role,
+} from "sdk";
 
 declare const self: ServiceWorkerGlobalScope;
+
+type MockApiClient = {
+	users: { cache: Map<string, unknown> };
+	channels: { cache: Map<string, Channel> };
+	roles: { cache: Map<string, Role> };
+	client: {
+		http: {
+			GET: <T = unknown>(
+				url: string,
+				options: { params?: { path?: Record<string, string> } },
+			) => Promise<{ data: T | null }>;
+		};
+	};
+};
 
 const CACHE_VALID: Array<string> = [];
 
@@ -111,13 +131,18 @@ self.addEventListener("push", (e) => {
 
 			const title = `${author.name} in #${channel.name}`;
 
-			const mockApi = {
-				users: { cache: new Map() },
+			const mockApi: MockApiClient = {
+				users: { cache: new Map<string, unknown>() },
 				channels: { cache: new Map([[data.channel_id, channel]]) },
-				roles: { cache: new Map() },
+				roles: { cache: new Map<string, Role>() },
 				client: {
 					http: {
-						GET: async (url: string, options: any) => {
+						GET: async (
+							url: string,
+							options: {
+								params?: { path?: Record<string, string> };
+							},
+						) => {
 							let finalUrl = url;
 							if (options.params?.path) {
 								for (const [key, value] of Object.entries(
@@ -187,7 +212,7 @@ self.addEventListener("notificationclick", (event) => {
 async function stripMarkdownAndResolveMentions(
 	content: string,
 	thread_id: string,
-	api: any,
+	api: MockApiClient,
 	mentions?: Message["mentions"],
 ) {
 	const { users, channels, roles, client } = api;
@@ -199,11 +224,11 @@ async function stripMarkdownAndResolveMentions(
 	processedContent = processedContent.replace(
 		userMentionRegex,
 		(match, userId) => {
-			const mentioned = (mentions?.users as any[])?.find(
-				(u) => u.id === userId,
+			const mentioned = mentions?.users?.find(
+				(u: MentionsUser) => u.id === userId,
 			);
 			if (mentioned) return `@${mentioned.resolved_name}`;
-			const user = users.cache.get(userId);
+			const user = users.cache.get(userId) as { name: string } | undefined;
 			return user ? `@${user.name}` : match; // Keep original if user not found
 		},
 	);
@@ -214,8 +239,8 @@ async function stripMarkdownAndResolveMentions(
 	processedContent = processedContent.replace(
 		channelMentionRegex,
 		(match, channelId) => {
-			const mentioned = (mentions?.channels as any[])?.find(
-				(c) => c.id === channelId,
+			const mentioned = mentions?.channels?.find(
+				(c: MentionsChannel) => c.id === channelId,
 			);
 			if (mentioned) return `#${mentioned.name}`;
 			const channel = channels.cache.get(channelId);
@@ -237,7 +262,7 @@ async function stripMarkdownAndResolveMentions(
 		if (cached) {
 			roleName = cached.name;
 		} else {
-			const { data } = await client.http.GET(
+			const { data } = await client.http.GET<Role>(
 				"/api/v1/room/{room_id}/role/{role_id}",
 				{
 					params: { path: { room_id: thread.room_id, role_id: roleId } },

@@ -75,7 +75,7 @@ export const createEditor = (
 	setState: (state?: import("prosemirror-state").EditorState) => void;
 	focus: () => void;
 	view: import("prosemirror-view").EditorView | undefined;
-	View: (props: any) => any;
+	View: (props: EditorViewProps) => import("solid-js").JSX.Element;
 	subscribe: (channelId: string, branchId: string) => void;
 	isSubscribed: () => boolean;
 	setDiffMarks: (marks: DiffMark[]) => void;

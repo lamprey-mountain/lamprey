@@ -1,5 +1,5 @@
 import type { ReferenceElement } from "@floating-ui/dom";
-import type { User } from "sdk";
+import type { Channel, User } from "sdk";
 import {
 	batch,
 	createContext,
@@ -38,7 +38,7 @@ export type AutocompleteKind =
 	  }
 	| {
 			type: "channel";
-			onSelect: (channelId: string, channelName: string) => void;
+			onSelect: (item: Extract<AutocompleteItem, { type: "channel" }>) => void;
 			channelId: string;
 	  }
 	| {
@@ -59,9 +59,33 @@ export type AutocompleteMentionItem =
 
 export type AutocompleteItem =
 	| AutocompleteMentionItem
-	| { type: "channel"; channel_id: string; name: string }
+	| { type: "channel"; channel: Channel; channel_id: string; name: string }
 	| { type: "emoji"; id: string; name: string; char?: string }
-	| { type: "command"; command: string };
+	| { type: "command"; command: string; id: string; description?: string };
+
+function isMentionKind(
+	kind: AutocompleteKind | null,
+): kind is Extract<AutocompleteKind, { type: "mention" }> {
+	return kind?.type === "mention";
+}
+
+function isChannelKind(
+	kind: AutocompleteKind | null,
+): kind is Extract<AutocompleteKind, { type: "channel" }> {
+	return kind?.type === "channel";
+}
+
+function isEmojiKind(
+	kind: AutocompleteKind | null,
+): kind is Extract<AutocompleteKind, { type: "emoji" }> {
+	return kind?.type === "emoji";
+}
+
+function isCommandKind(
+	kind: AutocompleteKind | null,
+): kind is Extract<AutocompleteKind, { type: "command" }> {
+	return kind?.type === "command";
+}
 
 const AutocompleteContext = createContext<AutocompleteContext>();
 
@@ -103,7 +127,21 @@ export const AutocompleteProvider: ParentComponent = (props) => {
 	const select = () => {
 		const item = state.items[state.activeIndex];
 		if (item && state.kind) {
-			(state.kind.onSelect as any)(item);
+			const kind = state.kind;
+			if (
+				isMentionKind(kind) &&
+				(item.type === "user" ||
+					item.type === "role" ||
+					item.type === "everyone")
+			) {
+				kind.onSelect(item);
+			} else if (isChannelKind(kind) && item.type === "channel") {
+				kind.onSelect(item);
+			} else if (isEmojiKind(kind) && item.type === "emoji") {
+				kind.onSelect(item.id, item.name, item.char);
+			} else if (isCommandKind(kind) && item.type === "command") {
+				kind.onSelect(item.command);
+			}
 			hide();
 		}
 	};

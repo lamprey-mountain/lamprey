@@ -3,6 +3,7 @@ import { Plugin, PluginKey, TextSelection } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
 import type {
 	AutocompleteContext,
+	AutocompleteItem,
 	AutocompleteKind,
 } from "@/contexts/autocomplete";
 
@@ -126,11 +127,36 @@ export function createAutocompletePlugin(
 				channelId: channelId(),
 				roomId: roomId(),
 			});
-		} else {
+		} else if (type === "channel") {
 			autocomplete.show(refElement, {
-				type,
-				onSelect: (item: any) => {
-					applyAutocompleteReplacement(view, triggerChar, type, item);
+				type: "channel",
+				onSelect: (item) => {
+					applyAutocompleteReplacement(view, triggerChar, "channel", item);
+				},
+				channelId: channelId(),
+			});
+		} else if (type === "emoji") {
+			autocomplete.show(refElement, {
+				type: "emoji",
+				onSelect: (id, name, char) => {
+					applyAutocompleteReplacement(view, triggerChar, "emoji", {
+						type: "emoji" as const,
+						id,
+						name,
+						char,
+					});
+				},
+				channelId: channelId(),
+			});
+		} else if (type === "command") {
+			autocomplete.show(refElement, {
+				type: "command",
+				onSelect: (command) => {
+					applyAutocompleteReplacement(view, triggerChar, "command", {
+						type: "command" as const,
+						command,
+						id: command,
+					});
 				},
 				channelId: channelId(),
 			});
@@ -146,7 +172,7 @@ export function createAutocompletePlugin(
 		view: EditorView,
 		triggerChar: string,
 		type: AutocompleteKind["type"],
-		item: any,
+		item: AutocompleteItem,
 	) => {
 		const state = view.state;
 		const triggerPos = findTriggerPosition(view, triggerChar);
@@ -158,23 +184,28 @@ export function createAutocompletePlugin(
 
 		let node;
 		if (type === "emoji") {
-			if (item.char) {
+			const emojiItem = item as Extract<AutocompleteItem, { type: "emoji" }>;
+			if (emojiItem.char) {
 				// Unicode emoji - insert as emojiUnicode atom node
 				node = state.schema.nodes.emojiUnicode.create({
-					char: item.char,
+					char: emojiItem.char,
 				});
 			} else {
 				// Custom emoji
 				node = state.schema.nodes.emojiCustom.create({
-					id: item.id,
-					name: item.label ?? item.name,
+					id: emojiItem.id,
+					name: emojiItem.name,
 				});
 			}
 		} else if (type === "command") {
+			const commandItem = item as Extract<
+				AutocompleteItem,
+				{ type: "command" }
+			>;
 			// For commands, replace from start of the current block/line
 			const $pos = state.selection.$from;
 			const parentStart = $pos.start($pos.depth);
-			const commandText = `/${item.id}`;
+			const commandText = `/${commandItem.id}`;
 			let tr = state.tr.replaceWith(
 				parentStart,
 				to,
@@ -205,8 +236,12 @@ export function createAutocompletePlugin(
 			}
 		} else {
 			// channel mention
+			const channelItem = item as Extract<
+				AutocompleteItem,
+				{ type: "channel" }
+			>;
 			const nodeType = state.schema.nodes.mentionChannel;
-			const attrs = { channel: item.id, name: item.name ?? "" };
+			const attrs = { channel: channelItem.channel_id, name: channelItem.name };
 			node = nodeType.create(attrs);
 		}
 

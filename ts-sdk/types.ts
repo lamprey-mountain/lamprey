@@ -120,6 +120,10 @@ export type AutomodAction = components["schemas"]["AutomodAction"];
 export type AutomodTarget = components["schemas"]["AutomodTarget"];
 export type ReactionCount = components["schemas"]["ReactionCount"];
 export type InviteTarget = components["schemas"]["InviteTarget"];
+export type MentionsUser = components["schemas"]["MentionsUser"];
+export type MentionsChannel = components["schemas"]["MentionsChannel"];
+export type MentionsRole = components["schemas"]["MentionsRole"];
+export type MentionsEmoji = components["schemas"]["MentionsEmoji"];
 
 // TODO: use openai schema
 export type MessageSearch = {
