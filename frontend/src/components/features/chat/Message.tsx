@@ -46,7 +46,7 @@ import { serializeToMarkdown } from "@/components/features/editor/serializer.ts"
 import { EmbedView } from "@/components/shared/UrlEmbed";
 import { Avatar } from "@/components/shared/User";
 import { useAutocomplete } from "@/contexts/autocomplete";
-import { useChannel, useOptionalChannel } from "@/contexts/channel";
+import { useOptionalChannel } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useMenu, useUserPopout } from "@/contexts/mod.tsx";

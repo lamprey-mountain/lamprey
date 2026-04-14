@@ -1,12 +1,9 @@
 import type { Node } from "prosemirror-model";
 import type { EditorState } from "prosemirror-state";
-import type { User } from "sdk";
 import { UUID } from "uuidv7";
-import type { useUsers } from "@/api";
-import type { ThreadT } from "@/types";
 import { SEARCH_FILTERS, type SearchContext } from "./filters.config";
 import { schema } from "./schema";
-import { type Token, tokenizeSearch } from "./tokenizer";
+import { tokenizeSearch } from "./tokenizer";
 import type { LabelPart } from "./types";
 
 const RECENT_SEARCHES_KEY = "recent_searches";

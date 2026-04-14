@@ -1,28 +1,4 @@
-import type { Placement } from "@floating-ui/dom";
-import type { Emitter } from "@solid-primitives/event-bus";
-import type * as i18n from "@solid-primitives/i18n";
-import type { ReactiveMap } from "@solid-primitives/map";
-import type {
-	Client,
-	Media,
-	MessageReady,
-	MessageSearch,
-	MessageSync,
-	Preferences,
-	Upload,
-} from "sdk";
-import {
-	type Accessor,
-	createContext,
-	type Setter,
-	useContext,
-} from "solid-js";
-import type { SetStoreFunction } from "solid-js/store";
-import type { ChannelContextT } from "@/contexts/channel";
-import type { DocumentContextT } from "@/contexts/document.tsx";
-import type { RoomContextT } from "@/contexts/room.tsx";
-import type { SlashCommands } from "@/contexts/slash-commands";
-import type en from "@/i18n/en.tsx";
+import { createContext, useContext } from "solid-js";
 
 // Re-export context types
 export type { Menu } from "@/contexts/menu.tsx";

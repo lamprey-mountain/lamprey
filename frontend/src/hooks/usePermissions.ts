@@ -6,7 +6,6 @@ import {
 	type PermissionContext,
 	type ResolvedPermissions,
 } from "@/lib/permissions/calculator";
-import { logger } from "@/utils/logger";
 
 export function usePermissions(
 	user_id: () => string | undefined,

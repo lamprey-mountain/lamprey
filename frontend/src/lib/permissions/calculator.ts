@@ -1,6 +1,5 @@
 import type { Channel, Permission, Role, RoomMember } from "sdk";
 import type { RootStore } from "@/api";
-import { logger } from "@/utils/logger";
 
 export interface PermissionContext {
 	api: RootStore;
