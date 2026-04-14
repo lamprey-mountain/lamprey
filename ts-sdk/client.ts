@@ -138,7 +138,8 @@ export function createClient(opts: ClientOptions): Client {
 		while (queue.length > 0 && state.get() === "ready") {
 			// TODO: can state can change from ready to something else (eg. disconnected)
 			// between the while condition and send function state.get()?
-			send(queue.shift()!);
+			const item = queue.shift();
+			if (item) send(item);
 		}
 	}
 

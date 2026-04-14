@@ -88,7 +88,7 @@ export type MemberListGroup = components["schemas"]["MemberListGroup"];
 export type MemberListOp = components["schemas"]["MemberListOp"];
 export type ChannelPatch = components["schemas"]["ChannelPatch"];
 export type HistoryPagination = components["schemas"]["HistoryPagination"];
-export type PaginationResponse<T = any> = {
+export type PaginationResponse<T = unknown> = {
 	items: Array<T>;
 	total: number;
 	has_more: boolean;
