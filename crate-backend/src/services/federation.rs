@@ -118,7 +118,7 @@ impl LocalSigningKey {
 
         let privkey_encoded = base64::Engine::encode(
             &base64::engine::general_purpose::URL_SAFE_NO_PAD,
-            self.signing_key.to_bytes(),
+            self.signing_key.to_keypair_bytes(),
         );
 
         ServerKeyInternal {
@@ -260,10 +260,10 @@ impl ServiceFederation {
 
     /// lookup the api_url for this hostname
     async fn fetch_api_url(&self, hostname: &Hostname) -> Result<Url> {
-        let mut url = Url::parse("https://")?;
-        url.set_host(Some(&hostname.0))
-            .map_err(|_| Error::BadStatic("invalid hostname in federation request"))?;
-        url.set_path("/.well-known/lamprey-mountain");
+        let mut url = Url::parse(&format!(
+            "https://{}/.well-known/lamprey-mountain",
+            hostname.0
+        ))?;
 
         let res = self.state.services().http.client.get(url).send().await?;
         if !res.status().is_success() {

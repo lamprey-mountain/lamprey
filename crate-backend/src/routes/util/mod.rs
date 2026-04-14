@@ -67,6 +67,7 @@ where
             .unwrap_or("")
             .to_string();
 
+        // FIXME: enforce max body length to prevent oom
         let bytes = axum::body::to_bytes(req.into_body(), usize::MAX)
             .await
             .map_err(|_| Error::BadStatic("failed to read body"))?;

@@ -105,6 +105,8 @@ impl SigningHeaders {
     }
 }
 
+// FIXME: ensure that none of these fields contain newlines
+// FIXME: i thought i had to hash before signing, turns out the crate already hashes for you so im double hashing
 /// compute the canonical hash input for a federation request
 ///
 /// format: `method\npath\norigin\nhost\ntimestamp\nbody`
