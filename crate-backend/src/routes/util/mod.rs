@@ -110,10 +110,9 @@ pub async fn federation_auth_middleware(
     }
 
     let (parts, body) = req.into_parts();
-    // FIXME: enforce max body length to prevent oom
-    let bytes = axum::body::to_bytes(body, usize::MAX)
+    let bytes = axum::body::to_bytes(body, 1024 * 1024 * 16)
         .await
-        .map_err(|_| Error::BadStatic("failed to read body"))?;
+        .map_err(|_| Error::BadStatic("failed to read body or body too large"))?;
 
     let origin = verify_server_request(&state, &parts, &bytes).await?;
 
@@ -154,10 +153,9 @@ where
             .unwrap_or("")
             .to_string();
 
-        // FIXME: enforce max body length to prevent oom
-        let bytes = axum::body::to_bytes(req.into_body(), usize::MAX)
+        let bytes = axum::body::to_bytes(req.into_body(), 1024 * 1024 * 16)
             .await
-            .map_err(|_| Error::BadStatic("failed to read body"))?;
+            .map_err(|_| Error::BadStatic("failed to read body or body too large"))?;
 
         let incoming = signing::IncomingRequest {
             origin: signing_headers.origin.clone(),

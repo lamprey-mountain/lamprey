@@ -68,7 +68,9 @@ impl Auth2 {
     pub fn user(&self) -> Result<&User, Error> {
         match &self.identity {
             AuthIdentity::Session { user, .. } => Ok(user),
-            AuthIdentity::Server { user: Some(user), .. } => Ok(user),
+            AuthIdentity::Server {
+                user: Some(user), ..
+            } => Ok(user),
             AuthIdentity::Server { user: None, .. } => Err(Error::MissingAuth),
         }
     }
