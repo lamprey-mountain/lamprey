@@ -8,6 +8,7 @@ use axum::{
     http::request::Parts,
 };
 use common::v1::types::{federation::Hostname, util::Time, UserId};
+use common::util::FederationBody;
 use http::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
 use time::OffsetDateTime;

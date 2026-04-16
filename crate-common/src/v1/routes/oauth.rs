@@ -78,7 +78,7 @@ pub mod oauth_introspect {
     use crate::v1::types::oauth::OauthIntrospectResponse;
     use serde::Deserialize;
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Debug, Deserialize, serde::Serialize)]
     #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
     pub struct IntrospectForm {
         pub token: String,
@@ -124,7 +124,7 @@ pub mod oauth_userinfo {
 pub mod oauth_revoke {
     use serde::Deserialize;
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Debug, Deserialize, serde::Serialize)]
     #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
     pub struct RevokeForm {
         pub token: String,

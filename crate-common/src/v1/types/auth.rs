@@ -170,8 +170,7 @@ impl AuthState {
 }
 
 /// Query parameters for oauth redirect callback
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Deserialize))]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct AuthOauthRedirectParams {

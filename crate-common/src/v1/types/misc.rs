@@ -34,12 +34,26 @@ pub enum ApplicationIdReq {
     ApplicationId(ApplicationId),
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
-#[cfg_attr(feature = "serde", serde(untagged))]
+#[derive(Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Deserialize, serde::Serialize),
+    serde(untagged)
+)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum SessionIdReq {
     #[cfg_attr(feature = "serde", serde(deserialize_with = "const_self"))]
     SessionSelf,
     SessionId(SessionId),
+}
+
+impl Display for SessionIdReq {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SessionIdReq::SessionSelf => write!(f, "@self"),
+            SessionIdReq::SessionId(id) => write!(f, "{}", id),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, ToSchema)]

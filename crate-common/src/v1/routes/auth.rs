@@ -22,7 +22,7 @@ pub mod auth_oauth_init {
 }
 
 /// Oauth init response
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct OauthInitResponse {
     pub url: url::Url,
@@ -83,7 +83,7 @@ pub mod auth_login {
     use crate::v1::types::SessionWithToken;
     use serde::Deserialize;
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Debug, Deserialize, serde::Serialize)]
     #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
     pub struct LoginRequest {
         pub username: String,

@@ -101,11 +101,15 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
         > {
             use ::axum::response::IntoResponse as _;
             let (__parts, __body) = __raw_req.into_parts();
-            let __bytes = ::axum::body::to_bytes(__body, ::core::primitive::usize::MAX)
-                .await
-                .map_err(|_| ::axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response())?;
+            let __bytes = if let Some(body) = __parts.extensions.get::<common::util::FederationBody>() {
+                body.0.clone()
+            } else {
+                ::axum::body::to_bytes(__body, ::core::primitive::usize::MAX)
+                    .await
+                    .map_err(|_| ::axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response())?
+            };
             let __bytes_req = ::http::Request::from_parts(__parts, __bytes);
-            let #req_ident = #endpoint_mod::__extract(__bytes_req).map_err(|e| {
+            let #req_ident = #endpoint_mod::extract_request(__bytes_req).map_err(|e| {
                 let (parts, body) = e.into_parts();
                 ::axum::response::Response::from_parts(parts, ::axum::body::Body::from(body))
             })?;

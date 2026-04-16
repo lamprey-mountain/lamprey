@@ -14,6 +14,6 @@ async fn user_get(
     __raw_req: ::axum::extract::Request,
 ) -> Result<impl ::axum::response::IntoResponse, ::axum::response::Response> {
     use ::axum::response::IntoResponse as _;
-    let req = user_get::__extract(__raw_req).await?;
+    let req = user_get::extract_request(__raw_req).await?;
     __user_get_inner(auth, _, req).await.map_err(|e| e.into_response())
 }

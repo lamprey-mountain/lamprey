@@ -269,7 +269,7 @@ pub mod user_presence_set {
 pub mod user_list {
     use crate::v1::types::{PaginationQuery, PaginationResponse, User, UserId, UserListFilter};
 
-    #[derive(Debug, serde::Deserialize)]
+    #[derive(Debug, serde::Deserialize, serde::Serialize)]
     #[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
     pub struct UserListQuery {
         pub pagination: PaginationQuery<UserId>,

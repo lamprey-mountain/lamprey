@@ -361,7 +361,7 @@ pub mod room_prune_begin {
 pub mod room_ban_search {
     use crate::v1::types::{PaginationQuery, PaginationResponse, RoomBan, RoomId, UserId};
 
-    #[derive(Debug, serde::Deserialize)]
+    #[derive(Debug, serde::Deserialize, serde::Serialize)]
     #[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
     pub struct BanSearchQuery {
         pub query: String,

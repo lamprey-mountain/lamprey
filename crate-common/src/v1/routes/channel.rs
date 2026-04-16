@@ -439,7 +439,7 @@ pub mod channel_sync {
     use crate::v1::types::{ChannelId, ChannelSeq, ChannelSync, MessageId, PaginationQuery};
     use utoipa::IntoParams;
 
-    #[derive(Debug, IntoParams, serde::Deserialize)]
+    #[derive(Debug, IntoParams, serde::Deserialize, serde::Serialize)]
     pub struct SinceQuery {
         /// the sequence number to sync from (exclusive). use 0 to get all events.
         pub since: ChannelSeq,

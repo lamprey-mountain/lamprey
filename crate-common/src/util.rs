@@ -1,3 +1,7 @@
+/// Wrapper for body bytes that can be cached in request extensions
+/// to avoid re-reading the body in federation scenarios
+pub struct FederationBody(pub ::bytes::Bytes);
+
 pub use lamprey_macros::Diff;
 
 pub trait Diff {

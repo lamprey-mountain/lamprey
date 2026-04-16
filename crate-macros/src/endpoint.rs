@@ -78,8 +78,10 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
 
     let request_clean = build_clean_struct(request_struct.clone())?;
     let response_clean = build_clean_struct(response_struct.clone())?;
-    let extract_fn = build_extract_fn(&req_fields, &args.path)?;
-    let encode_fn = build_encode_fn(response_struct)?;
+    let extract_request_fn = build_extract_request_fn(&req_fields, &args.path)?;
+    let encode_response_fn = build_encode_response_fn(response_struct)?;
+    let encode_request_fn = build_encode_request_fn(&req_fields, &args.path)?;
+    let extract_response_fn = build_extract_response_fn(response_struct)?;
     let meta_fn = build_meta_fn(&args, &mod_attrs)?;
     let openapi_ext_fn = build_openapi_ext_fn(&req_fields, &resp_fields)?;
 
@@ -106,8 +108,10 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
             #[derive(Debug)]
             #response_clean
 
-            #extract_fn
-            #encode_fn
+            #extract_request_fn
+            #encode_response_fn
+            #encode_request_fn
+            #extract_response_fn
             #meta_fn
             #openapi_ext_fn
 
@@ -119,10 +123,10 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
 }
 
 // ---------------------------------------------------------------------------
-// __extract
+// extract_request
 // ---------------------------------------------------------------------------
 
-fn build_extract_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<TokenStream> {
+fn build_extract_request_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<TokenStream> {
     let path_fields: Vec<_> = fields
         .iter()
         .filter(|f| matches!(f.kind, FieldKind::Path(_)))
@@ -331,7 +335,7 @@ fn build_extract_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<Toke
     let all_idents: Vec<_> = fields.iter().map(|f| &f.ident).collect();
 
     Ok(quote! {
-        pub fn __extract(
+        pub fn extract_request(
             req: ::http::Request<::bytes::Bytes>,
         ) -> Result<Request, ::http::Response<::bytes::Bytes>> {
             let (parts, body) = req.into_parts();
@@ -356,10 +360,10 @@ fn build_extract_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<Toke
 }
 
 // ---------------------------------------------------------------------------
-// __encode
+// encode_response
 // ---------------------------------------------------------------------------
 
-fn build_encode_fn(response_struct: &ItemStruct) -> syn::Result<TokenStream> {
+fn build_encode_response_fn(response_struct: &ItemStruct) -> syn::Result<TokenStream> {
     let has_json = extract_fields(response_struct)?
         .iter()
         .any(|f| matches!(f.kind, FieldKind::Json));
@@ -372,7 +376,7 @@ fn build_encode_fn(response_struct: &ItemStruct) -> syn::Result<TokenStream> {
         let ident = &json_field.ident;
 
         Ok(quote! {
-            pub fn __encode(resp: Response) -> ::http::Response<::bytes::Bytes> {
+            pub fn encode_response(resp: Response) -> ::http::Response<::bytes::Bytes> {
                 let json = ::serde_json::to_string(&resp.#ident)
                     .unwrap_or_else(|e| format!("{{\"error\": \"serialization failed\"}}"));
                 ::http::Response::builder()
@@ -384,7 +388,7 @@ fn build_encode_fn(response_struct: &ItemStruct) -> syn::Result<TokenStream> {
         })
     } else {
         Ok(quote! {
-            pub fn __encode(resp: Response) -> ::http::Response<::bytes::Bytes> {
+            pub fn encode_response(resp: Response) -> ::http::Response<::bytes::Bytes> {
                 ::http::Response::builder()
                     .status(::http::StatusCode::OK)
                     .body(::bytes::Bytes::new())
@@ -392,6 +396,249 @@ fn build_encode_fn(response_struct: &ItemStruct) -> syn::Result<TokenStream> {
             }
         })
     }
+}
+
+// ---------------------------------------------------------------------------
+// extract_response (client-side)
+// ---------------------------------------------------------------------------
+
+fn build_extract_response_fn(response_struct: &ItemStruct) -> syn::Result<TokenStream> {
+    let has_json = extract_fields(response_struct)?
+        .iter()
+        .any(|f| matches!(f.kind, FieldKind::Json));
+
+    if has_json {
+        let json_field = extract_fields(response_struct)?
+            .into_iter()
+            .find(|f| matches!(f.kind, FieldKind::Json))
+            .unwrap();
+        let ident = &json_field.ident;
+        let ty = &json_field.ty;
+
+        Ok(quote! {
+            pub fn extract_response(
+                resp: ::http::Response<::bytes::Bytes>,
+            ) -> Result<Response, ::http::Response<::bytes::Bytes>> {
+                let status = resp.status();
+                if !status.is_success() {
+                    return Err(resp);
+                }
+                let (_parts, body) = resp.into_parts();
+                let #ident: #ty = ::serde_json::from_slice(&body)
+                    .map_err(|e| {
+                        ::http::Response::builder()
+                            .status(::http::StatusCode::INTERNAL_SERVER_ERROR)
+                            .body(::bytes::Bytes::from(format!("failed to parse response json: {}", e)))
+                            .unwrap()
+                    })?;
+                Ok(Response { #ident })
+            }
+        })
+    } else {
+        // Check if Response has any fields
+        let all_fields = extract_fields(response_struct)?;
+        if all_fields.is_empty() {
+            Ok(quote! {
+                pub fn extract_response(
+                    resp: ::http::Response<::bytes::Bytes>,
+                ) -> Result<Response, ::http::Response<::bytes::Bytes>> {
+                    let status = resp.status();
+                    if !status.is_success() {
+                        return Err(resp);
+                    }
+                    Ok(Response {})
+                }
+            })
+        } else {
+            // Non-json fields would need header extraction etc.
+            // For now, just check status and return empty
+            Ok(quote! {
+                pub fn extract_response(
+                    resp: ::http::Response<::bytes::Bytes>,
+                ) -> Result<Response, ::http::Response<::bytes::Bytes>> {
+                    let status = resp.status();
+                    if !status.is_success() {
+                        return Err(resp);
+                    }
+                    let (parts, _body) = resp.into_parts();
+                    // TODO: extract headers if needed
+                    Ok(Response {})
+                }
+            })
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// encode_request (client-side)
+// ---------------------------------------------------------------------------
+
+fn build_encode_request_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<TokenStream> {
+    let path_fields: Vec<_> = fields
+        .iter()
+        .filter(|f| matches!(f.kind, FieldKind::Path(_)))
+        .collect();
+    let query_fields: Vec<_> = fields
+        .iter()
+        .filter(|f| matches!(f.kind, FieldKind::Query(_)))
+        .collect();
+    let header_fields: Vec<_> = fields
+        .iter()
+        .filter(|f| matches!(f.kind, FieldKind::Header(_)))
+        .collect();
+    let json_field: Option<&EndpointField> =
+        fields.iter().find(|f| matches!(f.kind, FieldKind::Json));
+    let form_field: Option<&EndpointField> =
+        fields.iter().find(|f| matches!(f.kind, FieldKind::Form));
+    let body_field: Option<&EndpointField> =
+        fields.iter().find(|f| matches!(f.kind, FieldKind::Body));
+
+    // Build path URL with substitutions
+    let path_template = path.value();
+    let path_build = if path_fields.is_empty() {
+        let quoted = path_template.clone();
+        quote! {
+            let mut url = String::from(#quoted);
+        }
+    } else {
+        // Replace {param} placeholders with actual values
+        let mut path_str = path_template.clone();
+        let mut replacements = Vec::new();
+        for f in &path_fields {
+            let param_name = f.ident.to_string();
+            let placeholder = format!("{{{}}}", param_name);
+            if path_str.contains(&placeholder) {
+                let ident = &f.ident;
+                replacements.push(quote! {
+                    url = url.replace(#placeholder, &::std::format!("{}", req.#ident));
+                });
+                path_str = path_str.replacen(&placeholder, &format!("{{}}"), 1);
+            } else {
+                // Check for rename
+                if let FieldKind::Path(Some(rename)) = &f.kind {
+                    let placeholder_renamed = format!("{{{}}}", rename);
+                    if path_str.contains(&placeholder_renamed) {
+                        let ident = &f.ident;
+                        replacements.push(quote! {
+                            url = url.replace(#placeholder_renamed, &::std::format!("{}", req.#ident));
+                        });
+                        path_str = path_str.replacen(&placeholder_renamed, &format!("{{}}"), 1);
+                    }
+                }
+            }
+        }
+        quote! {
+            let mut url = String::from(#path_template);
+            #(#replacements)*
+        }
+    };
+
+    // Build query string
+    let query_build = if query_fields.is_empty() {
+        quote! {}
+    } else {
+        let parts: Vec<_> = query_fields
+            .iter()
+            .map(|f| {
+                let ident = &f.ident;
+                quote! {
+                    let qs = ::serde_urlencoded::to_string(&req.#ident)
+                        .unwrap_or_else(|e| panic!("query serialization failed: {}", e));
+                    if !qs.is_empty() {
+                        query_parts.push(qs);
+                    }
+                }
+            })
+            .collect();
+        quote! {
+            let mut query_parts: Vec<String> = Vec::new();
+            #(#parts)*
+            if !query_parts.is_empty() {
+                url.push_str("?");
+                url.push_str(&query_parts.join("&"));
+            }
+        }
+    };
+
+    // Build headers
+    let header_build = if header_fields.is_empty() {
+        quote! {}
+    } else {
+        let stmts: Vec<_> = header_fields
+            .iter()
+            .map(|f| {
+                let ident = &f.ident;
+                let header_name = match &f.kind {
+                    FieldKind::Header(Some(n)) => n.clone(),
+                    _ => f.ident.to_string().replace('_', "-"),
+                };
+                let is_option = matches!(&f.ty, syn::Type::Path(tp) if tp.path.segments.last().map(|s| s.ident == "Option").unwrap_or(false));
+                if is_option {
+                    quote! {
+                        if let Some(ref val) = req.#ident {
+                            req_builder = req_builder.header(#header_name, ::std::format!("{}", val));
+                        }
+                    }
+                } else {
+                    quote! {
+                        req_builder = req_builder.header(#header_name, ::std::format!("{}", req.#ident));
+                    }
+                }
+            })
+            .collect();
+        quote! { #(#stmts)* }
+    };
+
+    // Build body
+    let body_build = if let Some(f) = json_field {
+        let ident = &f.ident;
+        quote! {
+            let body: ::bytes::Bytes = ::serde_json::to_vec(&req.#ident)
+                .unwrap_or_else(|e| panic!("json serialization failed: {}", e))
+                .into();
+            req_builder = req_builder.header(::http::header::CONTENT_TYPE, "application/json");
+        }
+    } else if let Some(f) = form_field {
+        let ident = &f.ident;
+        quote! {
+            let body: ::bytes::Bytes = ::serde_urlencoded::to_string(&req.#ident)
+                .unwrap_or_else(|e| panic!("form serialization failed: {}", e))
+                .into_bytes()
+                .into();
+            req_builder = req_builder.header(::http::header::CONTENT_TYPE, "application/x-www-form-urlencoded");
+        }
+    } else if let Some(_f) = body_field {
+        let ident = &body_field.unwrap().ident;
+        quote! {
+            let body: ::bytes::Bytes = req.#ident;
+        }
+    } else {
+        quote! {
+            let body = ::bytes::Bytes::new();
+        }
+    };
+
+    // Parse method from path attribute - we need access to it
+    // Since we don't have the method here, we'll use a placeholder
+    // The actual method will be set by the caller using metadata()
+    Ok(quote! {
+        pub fn encode_request(
+            req: Request,
+            method: ::http::Method,
+        ) -> ::http::Request<::bytes::Bytes> {
+            #path_build
+            #query_build
+
+            let mut req_builder = ::http::Request::builder()
+                .method(method)
+                .uri(&url);
+
+            #header_build
+            #body_build
+
+            req_builder.body(body).unwrap()
+        }
+    })
 }
 
 /// build the `route_module::meta()` function
