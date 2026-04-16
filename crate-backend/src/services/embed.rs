@@ -262,7 +262,7 @@ impl ServiceEmbed {
         message.latest_version = ver;
 
         let mut message_type = message.latest_version.message_type;
-        let (embeds, attachments) = match &mut message_type {
+        let (embeds, attachments, components) = match &mut message_type {
             MessageType::DefaultMarkdown(m) => {
                 if m.embeds
                     .iter()
@@ -308,6 +308,7 @@ impl ServiceEmbed {
                             MessageAttachmentType::Media { media } => Some(media.id),
                         })
                         .collect(),
+                    m.components.clone(),
                 )
             }
             _ => return Ok(()),
@@ -320,6 +321,7 @@ impl ServiceEmbed {
                 attachment_ids: attachments,
                 author_id: message.author_id,
                 embeds: embeds.into_iter().map(|e| e.into()).collect(),
+                components: components.into_thin().inner,
                 message_type,
                 created_at: Some(message.latest_version.created_at.into()),
                 mentions: message.latest_version.mentions,

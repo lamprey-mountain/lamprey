@@ -1,46 +1,35 @@
-use common::v1::types::components::ComponentThin;
+use common::v1::types::components::{self, ComponentThin, Components};
 use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::reaction::{ReactionCount, ReactionCounts, ReactionKey, ReactionKeyParam};
 use common::v2::types::media::{Media, MediaReference};
 use futures::{stream::FuturesUnordered, StreamExt};
 use moka::future::Cache;
-use std::collections::{HashMap, HashSet};
-use std::future::Future;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::error;
 use uuid::Uuid;
 
-use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::message::{
-    Message, MessageAttachmentCreateType, MessageAttachmentType, MessageDefaultMarkdown,
-    MessagePatch, MessageType, MessageVersion,
-};
+use common::v1::types::message::{Message, MessageType, MessageVersion};
 use common::v1::types::misc::Color;
-use common::v1::types::notifications::{Notification, NotificationType};
-use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
-    Channel, ChannelId, ChannelPatch, ContextQuery, ContextResponse, EmbedCreate, EmbedId,
-    Mentions, MentionsChannel, MentionsEmoji, MentionsRole, MentionsUser, MessageCreate, MessageId,
-    MessageSync, NotificationId, PaginationDirection, PaginationQuery, PaginationResponse,
-    Permission, RepliesQuery, RoomId, User,
+    Channel, ChannelId, ContextQuery, ContextResponse, EmbedCreate, EmbedId, Mentions,
+    MentionsChannel, MentionsEmoji, MentionsRole, MentionsUser, MessageId, PaginationDirection,
+    PaginationQuery, PaginationResponse, Permission, RepliesQuery, RoomId, SessionId, User,
 };
-use common::v1::types::{MediaId, ThreadMemberPut, UserId};
+use common::v1::types::{MediaId, UserId};
 use common::v2::types::embed::{Embed, EmbedType};
-use http::StatusCode;
-use validator::Validate;
 
-use crate::routes::util::Auth;
-use crate::services::notifications::preferences::NotificationAction;
-use crate::types::{DbMessageCreate, DbMessageUpdate, MediaLinkType, MentionsIds, MessageVerId};
+use crate::types::{DbMessageCreate, MediaLinkType, MentionsIds, MessageVerId};
 use crate::{Error, Result, ServerStateInner};
 
+pub mod create;
 pub mod links;
 pub mod mentions;
 
 pub struct ServiceMessages {
     state: Arc<ServerStateInner>,
-    pub idempotency_keys: Cache<String, Message>,
+    pub idempotency_keys: Cache<(SessionId, String), Message>,
 }
 
 impl ServiceMessages {
@@ -90,620 +79,41 @@ impl ServiceMessages {
         }
     }
 
-    fn handle_url_embed(
-        &self,
-        message: Message,
-        user_id: Option<UserId>,
-        content: String,
-    ) -> impl Future<Output = ()> + Send + 'static {
-        let s = self.state.clone();
-        let srv = s.services();
-        async move {
-            for url in links::extract_links(&content) {
-                if let Err(e) = srv
-                    .embed
-                    .queue(
-                        Some(crate::types::MessageRef {
-                            thread_id: message.channel_id,
-                            message_id: message.id,
-                            version_id: message.latest_version.version_id,
-                        }),
-                        user_id,
-                        url,
-                    )
-                    .await
-                {
-                    error!("Failed to queue embed generation: {:?}", e);
-                }
-            }
-        }
-    }
-
-    pub async fn create(
-        &self,
-        thread_id: ChannelId,
-        auth: &Auth,
-        nonce: Option<String>,
-        json: MessageCreate,
-        header_timestamp: Option<Time>,
-    ) -> Result<Message> {
-        if let Some(n) = &nonce {
-            self.idempotency_keys
-                .try_get_with(
-                    n.clone(),
-                    self.create_inner(
-                        thread_id,
-                        auth.user.id,
-                        Some(auth),
-                        nonce,
-                        json,
-                        header_timestamp,
-                    ),
-                )
-                .await
-                .map_err(|err| err.fake_clone())
-        } else {
-            self.create_inner(
-                thread_id,
-                auth.user.id,
-                Some(auth),
-                nonce,
-                json,
-                header_timestamp,
-            )
-            .await
-        }
-    }
-
-    pub async fn create_system(
-        &self,
-        thread_id: ChannelId,
-        user_id: UserId,
-        nonce: Option<String>,
-        json: MessageCreate,
-    ) -> Result<Message> {
-        if let Some(n) = &nonce {
-            self.idempotency_keys
-                .try_get_with(
-                    n.clone(),
-                    self.create_inner(thread_id, user_id, None, nonce, json, None),
-                )
-                .await
-                .map_err(|err| err.fake_clone())
-        } else {
-            self.create_inner(thread_id, user_id, None, nonce, json, None)
-                .await
-        }
-    }
-
-    async fn check_timestamp_override(
-        &self,
-        user_id: UserId,
-        thread_id: ChannelId,
-        timestamp: Time,
-    ) -> Result<Time> {
-        let user = self.state.data().user_get(user_id).await?;
-        let srv = self.state.services();
-
-        let owner_id = if let Some(puppet) = user.puppet {
-            puppet.owner_id.into_inner().into()
-        } else if user.bot {
-            let app = self
-                .state
-                .data()
-                .application_get(user_id.into_inner().into())
-                .await
-                .map_err(|_| {
-                    Error::BadStatic("MemberBridge permission required to override timestamp")
-                })?;
-            app.owner_id.into_inner().into()
-        } else {
-            return Err(Error::BadStatic(
-                "MemberBridge permission required to override timestamp",
-            ));
-        };
-
-        let owner_perms = srv.perms.for_channel(owner_id, thread_id).await?;
-        owner_perms.ensure_all(&[Permission::ChannelView, Permission::IntegrationsBridge])?;
-        Ok(timestamp)
-    }
-
-    fn extract_and_validate_media(
-        json: &MessageCreate,
-    ) -> Result<(Vec<MediaId>, HashSet<MediaId>)> {
-        let mut all_media_ids = HashSet::new();
-
-        let attachment_ids: Vec<_> = json
-            .attachments
-            .iter()
-            .filter_map(|r| match &r.ty {
-                MessageAttachmentCreateType::Media { media, .. } => match media {
-                    MediaReference::Media { media_id } => Some(*media_id),
-                    MediaReference::Url { .. } => None,
-                    MediaReference::Attachment { .. } => None,
-                },
-            })
-            .collect();
-
-        for id in &attachment_ids {
-            if !all_media_ids.insert(*id) {
-                return Err(Error::BadStatic("duplicate media id in request"));
-            }
-        }
-
-        for embed in &json.embeds {
-            if let Some(m) = &embed.media {
-                let Some(media_id) = m.media_id() else {
-                    return Err(Error::Unimplemented);
-                };
-                if !all_media_ids.insert(media_id) {
-                    return Err(Error::BadStatic("duplicate media id in request"));
-                }
-            }
-            if let Some(m) = &embed.thumbnail {
-                let Some(media_id) = m.media_id() else {
-                    return Err(Error::Unimplemented);
-                };
-                if !all_media_ids.insert(media_id) {
-                    return Err(Error::BadStatic("duplicate media id in request"));
-                }
-            }
-            if let Some(m) = &embed.author_avatar {
-                let Some(media_id) = m.media_id() else {
-                    return Err(Error::Unimplemented);
-                };
-                if !all_media_ids.insert(media_id) {
-                    return Err(Error::BadStatic("duplicate media id in request"));
-                }
-            }
-        }
-
-        for media_ref in json.components.get_media_refs() {
-            match media_ref {
-                MediaReference::Media { media_id } => {
-                    if !all_media_ids.insert(media_id) {
-                        return Err(Error::BadStatic("duplicate media id in request"));
-                    }
-                }
-                MediaReference::Url { .. } => return Err(Error::Unimplemented),
-                MediaReference::Attachment { .. } => return Err(Error::Unimplemented),
-            }
-        }
-
-        Ok((attachment_ids, all_media_ids))
-    }
-
-    // TODO: refactor create and edit together
-    // FIXME: webhook permisison checks
-    pub async fn edit(
-        &self,
-        thread_id: ChannelId,
-        message_id: MessageId,
-        user_id: UserId,
-        json: MessagePatch,
-        header_timestamp: Option<Time>,
-    ) -> Result<(StatusCode, Message)> {
-        json.validate()?;
-        let srv = self.state.services();
-        let user = srv.users.get(user_id, None).await?;
-        let thread = srv.channels.get(thread_id, Some(user_id)).await?;
-        let is_webhook = user.webhook.is_some();
-
-        // 1. Pre-flight checks
-        let (can_use_external_emoji, can_embed) = self
-            .enforce_edit_permissions(is_webhook, user_id, thread_id)
-            .await?;
-
-        let mut message = self
-            .get_message_for_edit(thread_id, message_id, Some(user_id), is_webhook)
-            .await?;
-
-        if !message.latest_version.message_type.is_editable() {
-            return Err(Error::BadStatic("cant edit that message"));
-        }
-        if !json.changes(&message) {
-            return Ok((StatusCode::NOT_MODIFIED, message));
-        }
-
-        // 2. Validate and prepare payload
-        let (attachment_ids, content, payload, mentions) = self
-            .prepare_edit_payload(
-                &json,
-                &message,
-                &thread,
-                can_use_external_emoji,
-                Some(user_id),
-            )
-            .await?;
-
-        // 3. Database update
-        let created_at = if let Some(ts) = header_timestamp {
-            Some(
-                self.check_timestamp_override(user_id, thread_id, ts)
-                    .await?,
-            )
-        } else {
-            None
-        };
-
-        let version_id = self
-            .update_message_in_db(
-                thread_id,
-                message_id,
-                attachment_ids,
-                user_id,
-                payload,
-                created_at,
-                mentions,
-            )
-            .await?;
-
-        // 4. Post-processing
-        self.finalize_edit(
-            &mut message,
-            thread_id,
-            version_id,
-            content.as_ref(),
-            Some(user_id),
-            can_embed,
-        )
-        .await?;
-
-        self.state.presign_message(&mut message).await?;
-        self.state
-            .broadcast_channel(
-                thread_id,
-                user_id,
-                MessageSync::MessageUpdate {
-                    message: message.clone(),
-                },
-            )
-            .await?;
-        self.state.services().channels.invalidate(thread_id).await;
-
-        Ok((StatusCode::OK, message))
-    }
-
-    async fn enforce_edit_permissions(
-        &self,
-        is_webhook: bool,
-        user_id: UserId,
-        thread_id: ChannelId,
-    ) -> Result<(bool, bool)> {
-        if is_webhook {
-            return Ok((true, true));
-        }
-
-        let perms = self
-            .state
-            .services()
-            .perms
-            .for_channel(user_id, thread_id)
-            .await?;
-        perms.ensure(Permission::ChannelView)?;
-        perms.ensure_unlocked()?;
-
-        Ok((
-            perms.has(Permission::EmojiUseExternal),
-            perms.has(Permission::MessageEmbeds),
-        ))
-    }
-
-    async fn get_message_for_edit(
-        &self,
-        thread_id: ChannelId,
-        message_id: MessageId,
-        user_id: Option<UserId>,
-        is_webhook: bool,
-    ) -> Result<Message> {
-        match self.get(thread_id, message_id, user_id).await {
-            Ok(m) => Ok(m),
-            Err(e) => {
-                if is_webhook {
-                    return Err(Error::ApiError(ApiError::from_code(
-                        ErrorCode::UnknownMessage,
-                    )));
-                }
-                Err(e)
-            }
-        }
-    }
-
-    async fn prepare_edit_payload(
-        &self,
-        json: &MessagePatch,
-        message: &Message,
-        thread: &Channel,
-        can_use_external_emoji: bool,
-        user_id: Option<UserId>,
-    ) -> Result<(Vec<MediaId>, Option<String>, MessageType, Mentions)> {
-        let has_components = !json.components.is_empty();
-        let has_content = json.content.is_some()
-            || json.attachments.as_ref().is_some_and(|a| !a.is_empty())
-            || json.embeds.as_ref().is_some_and(|a| !a.is_empty());
-
-        if has_content && has_components {
-            return Err(Error::BadStatic(
-                "cannot have both (content, attachments, or embeds) and components on the same message",
-            ));
-        }
-
-        if !has_content && !has_components {
-            return Err(Error::BadStatic(
-                "at least one of (content, attachments, or embeds) or components must be defined",
-            ));
-        }
-
-        let perms = self
-            .state
-            .services()
-            .perms
-            .for_channel(message.author_id, thread.id)
-            .await
-            .ok();
-        if let Some(perms) = &perms {
-            let mut required = vec![];
-            if json.attachments.as_ref().is_some_and(|a| !a.is_empty()) {
-                required.push(Permission::MessageAttachments);
-            }
-            if json.embeds.as_ref().is_some_and(|a| !a.is_empty()) {
-                required.push(Permission::MessageEmbeds);
-            }
-            perms.ensure_all(&required)?;
-        }
-
-        let attachment_ids = self.extract_attachment_ids(json, message)?;
-        self.validate_media_links(&attachment_ids, message.id)
-            .await?;
-
-        let embeds = self
-            .build_embeds(json.embeds.clone().unwrap_or_default(), message.author_id)
-            .await?;
-
-        let components_old = match &message.latest_version.message_type {
-            MessageType::DefaultMarkdown(m) => Some(m.components.clone().into_thin()),
-            _ => None,
-        };
-
-        let components =
-            json.components
-                .clone()
-                .parse_thin(components_old.as_ref(), &|m| match m {
-                    MediaReference::Media { media_id } => Ok(media_id),
-                    MediaReference::Url { .. } => {
-                        Err(ApiError::from_code(ErrorCode::Unimplemented))
-                    }
-                    MediaReference::Attachment { .. } => {
-                        Err(ApiError::from_code(ErrorCode::Unimplemented))
-                    }
-                })?;
-
-        let mut component_media_ids = vec![];
-        components.collect_media_refs(&mut component_media_ids);
-
-        let mut component_media_futs = FuturesUnordered::new();
-        for media_id in component_media_ids {
-            let data = self.state.data();
-            component_media_futs.push(async move {
-                let media = data.media_select(media_id).await?;
-                Ok::<_, Error>((media_id, media))
-            });
-        }
-
-        let mut component_media_map = HashMap::new();
-        while let Some(result) = component_media_futs.next().await {
-            let (id, media) = result?;
-
-            // ensure the user calling this actually owns the media they are putting on a component
-            if media.user_id != user_id {
-                return Err(Error::MissingPermissions);
-            }
-
-            component_media_map.insert(id, media);
-        }
-
-        let canonical_components = components.into_canonical(&|media_id| {
-            component_media_map
-                .get(&media_id)
-                .cloned()
-                .map(Into::into)
-                .ok_or_else(|| {
-                    error!(
-                        "Media {} missing from component map during canonicalization",
-                        media_id
-                    );
-                    ApiError::from_code(ErrorCode::Internal)
-                })
-        })?;
-
-        // Enforce automod
-        if let Some(room_id) = thread.room_id {
-            let automod = self.state.services().automod.load(room_id).await?;
-            let scan = automod.scan_message_update(message, json);
-            if scan.is_triggered() {
-                let removed = self
-                    .state
-                    .services()
-                    .automod
-                    .enforce_message_create(
-                        room_id,
-                        thread.id,
-                        message.id,
-                        message.author_id,
-                        &scan,
-                    )
-                    .await?;
-                if removed {
-                    self.state
-                        .data()
-                        .message_remove_bulk(thread.id, &[message.id])
-                        .await?;
-                }
-            }
-        }
-
-        let (content, payload, mentions) = match message.latest_version.message_type.clone() {
-            MessageType::DefaultMarkdown(msg) => {
-                let mut content = json.content.as_ref().cloned().unwrap_or(msg.content);
-                let mut mentions = message.latest_version.mentions.clone();
-
-                if json.content.is_some() {
-                    let parsed_mentions = mentions::parse(
-                        content.as_deref().unwrap_or_default(),
-                        &Default::default(),
-                    );
-                    mentions = self
-                        .fetch_full_mentions_from_ids(parsed_mentions, thread.room_id)
-                        .await?;
-                }
-
-                if let Some(room_id) = thread.room_id {
-                    if let Some(c) = &mut content {
-                        *c = self
-                            .enforce_emoji_use_external(
-                                &mentions,
-                                room_id,
-                                can_use_external_emoji,
-                                c,
-                            )
-                            .await?;
-                    }
-                }
-
-                (
-                    content.clone(),
-                    MessageType::DefaultMarkdown(MessageDefaultMarkdown {
-                        content,
-                        attachments: vec![],
-                        embeds: embeds.into_iter().map(|e| e.into()).collect(),
-                        components: canonical_components,
-                        metadata: None,
-                        reply_id: json.reply_id.unwrap_or(msg.reply_id),
-                    }),
-                    mentions,
-                )
-            }
-            _ => return Err(Error::Unimplemented),
-        };
-
-        Ok((attachment_ids, content, payload, mentions))
-    }
-
-    fn extract_attachment_ids(
-        &self,
-        json: &MessagePatch,
-        message: &Message,
-    ) -> Result<Vec<MediaId>> {
-        Ok(json
-            .attachments
-            .clone()
-            .map(|ats| {
-                ats.into_iter()
-                    .filter_map(|r| match r.ty {
-                        MessageAttachmentCreateType::Media { media, .. } => match media {
-                            MediaReference::Media { media_id } => Some(media_id),
-                            _ => None,
-                        },
-                    })
-                    .collect()
-            })
-            .unwrap_or_else(|| match &message.latest_version.message_type {
-                MessageType::DefaultMarkdown(msg) => msg
-                    .attachments
-                    .iter()
-                    .filter_map(|a| match &a.ty {
-                        MessageAttachmentType::Media { media } => Some(media.id),
-                    })
-                    .collect(),
-                _ => vec![],
-            }))
-    }
-
-    async fn validate_media_links(
-        &self,
-        attachment_ids: &[MediaId],
-        message_id: MessageId,
-    ) -> Result<()> {
-        let data = self.state.data();
-        for id in attachment_ids {
-            data.media_select(*id).await?;
-            let existing = data.media_link_select(*id).await?;
-            let has_link = existing.iter().any(|i| {
-                i.link_type == MediaLinkType::Message && i.target_id == message_id.into_inner()
-            });
-            if !has_link {
-                return Err(Error::BadStatic("cant reuse media"));
-            }
-        }
-        Ok(())
-    }
-
-    async fn update_message_in_db(
-        &self,
-        thread_id: ChannelId,
-        message_id: MessageId,
-        attachment_ids: Vec<MediaId>,
-        author_id: UserId,
-        payload: MessageType,
-        created_at: Option<Time>,
-        mentions: Mentions,
-    ) -> Result<MessageVerId> {
-        let data = self.state.data();
-
-        let version_id = data
-            .message_update(
-                thread_id,
-                message_id,
-                DbMessageUpdate {
-                    attachment_ids: attachment_ids.clone(),
-                    author_id,
-                    embeds: match payload {
-                        MessageType::DefaultMarkdown(ref md) => {
-                            md.embeds.iter().cloned().map(|e| e.into()).collect()
-                        }
-                        _ => vec![],
-                    },
-                    message_type: payload,
-                    created_at: created_at.map(|t| t.into()),
-                    mentions,
-                },
-            )
-            .await?;
-
-        for id in &attachment_ids {
-            data.media_link_insert(*id, *version_id, MediaLinkType::MessageVersion)
-                .await?;
-            data.media_link_insert(*id, *message_id, MediaLinkType::Message)
-                .await?;
-        }
-
-        Ok(version_id)
-    }
-
-    async fn finalize_edit(
-        &self,
-        message: &mut Message,
-        thread_id: ChannelId,
-        version_id: MessageVerId,
-        content: Option<&String>,
-        user_id: Option<UserId>,
-        can_embed: bool,
-    ) -> Result<()> {
-        let data = self.state.data();
-        let ver = data.message_version_get(thread_id, version_id).await?;
-        message.latest_version = ver;
-
-        self.populate_all(thread_id, user_id, std::slice::from_mut(message))
-            .await?;
-
-        if let Some(content) = content {
-            if can_embed {
-                tokio::spawn(self.handle_url_embed(message.clone(), user_id, content.clone()));
-            }
-        }
-
-        Ok(())
-    }
+    // pub async fn _create(
+    //     &self,
+    //     thread_id: ChannelId,
+    //     auth: &Auth,
+    //     nonce: Option<String>,
+    //     json: MessageCreate,
+    //     header_timestamp: Option<Time>,
+    // ) -> Result<Message> {
+    //     if let Some(n) = &nonce {
+    //         self.idempotency_keys
+    //             .try_get_with(
+    //                 n.clone(),
+    //                 self.create_inner(
+    //                     thread_id,
+    //                     auth.user.id,
+    //                     Some(auth),
+    //                     nonce,
+    //                     json,
+    //                     header_timestamp,
+    //                 ),
+    //             )
+    //             .await
+    //             .map_err(|err| err.fake_clone())
+    //     } else {
+    //         self.create_inner(
+    //             thread_id,
+    //             auth.user.id,
+    //             Some(auth),
+    //             nonce,
+    //             json,
+    //             header_timestamp,
+    //         )
+    //         .await
+    //     }
+    // }
 
     pub async fn fetch_full_mentions_from_ids(
         &self,
@@ -916,6 +326,60 @@ impl ServiceMessages {
         Ok(reactions_map)
     }
 
+    async fn fetch_components_data(
+        &self,
+        channel_id: ChannelId,
+        _user_id: Option<UserId>,
+        messages: &[Message],
+    ) -> Result<HashMap<MessageId, Components<components::Canonical>>> {
+        let data = self.state.data();
+        let version_ids: Vec<MessageVerId> = messages
+            .iter()
+            .map(|m| m.latest_version.version_id)
+            .collect();
+
+        let components_raw = data
+            .message_fetch_components(channel_id, &version_ids)
+            .await?;
+
+        let version_to_id: HashMap<_, _> = messages
+            .iter()
+            .map(|m| (m.latest_version.version_id, m.id))
+            .collect();
+
+        let mut components_map = HashMap::with_capacity(components_raw.len());
+        for (message_ver_id, components) in components_raw {
+            let mut media_ids = vec![];
+            let mut media_futs = FuturesUnordered::new();
+            let mut media_cache = HashMap::new();
+
+            components.collect_media_refs(&mut media_ids);
+
+            // PERF: fetch as a batch
+            for media_id in &media_ids {
+                media_futs.push(async { (*media_id, data.media_select(*media_id).await) });
+            }
+
+            while let Some((media_id, result)) = media_futs.next().await {
+                if let Ok(media) = result {
+                    media_cache.insert(media_id, media);
+                }
+            }
+
+            // Process components with a closure that resolves media from cache
+            let components = components.into_canonical(|media_id: MediaId| {
+                media_cache
+                    .get(&media_id)
+                    .cloned()
+                    .ok_or_else(|| Error::BadStatic("media not found in cache"))
+            });
+
+            components_map.insert(*version_to_id.get(&message_ver_id).unwrap(), components?);
+        }
+
+        Ok(components_map)
+    }
+
     pub async fn populate_all(
         &self,
         channel_id: ChannelId,
@@ -929,9 +393,10 @@ impl ServiceMessages {
         let mentions_fut = self.fetch_mentions_data(channel_id, user_id, messages);
         let threads_fut = self.fetch_threads_data(user_id, messages);
         let reactions_fut = self.fetch_reactions_data(channel_id, user_id, messages);
+        let components_fut = self.fetch_components_data(channel_id, user_id, messages);
 
-        let (mentions_data, threads_data, reactions_data) =
-            tokio::try_join!(mentions_fut, threads_fut, reactions_fut)?;
+        let (mentions_data, threads_data, reactions_data, components_data) =
+            tokio::try_join!(mentions_fut, threads_fut, reactions_fut, components_fut)?;
 
         for (i, message) in messages.iter_mut().enumerate() {
             if let Some(m) = mentions_data.get(i) {
@@ -943,6 +408,12 @@ impl ServiceMessages {
             }
             if let Some(r) = reactions_data.get(&message.id) {
                 message.reactions = r.clone();
+            }
+            if let Some(c) = components_data.get(&message.id) {
+                match &mut message.latest_version.message_type {
+                    MessageType::DefaultMarkdown(m) => m.components = c.clone(),
+                    _ => {}
+                }
             }
         }
 
@@ -1277,678 +748,5 @@ impl ServiceMessages {
             site_name: None,
             site_avatar: None,
         })
-    }
-
-    async fn create_inner(
-        &self,
-        thread_id: ChannelId,
-        user_id: UserId,
-        auth: Option<&Auth>,
-        nonce: Option<String>,
-        json: MessageCreate,
-        header_timestamp: Option<Time>,
-    ) -> Result<Message> {
-        json.validate()?;
-        let data = self.state.data();
-        let user = data.user_get(user_id).await?;
-        let chan = self
-            .state
-            .services()
-            .channels
-            .get(thread_id, Some(user_id))
-            .await?;
-        let is_webhook = user.webhook.is_some();
-
-        // 1. Pre-flight checks
-        let created_at = if let Some(ts) = header_timestamp {
-            Some(
-                self.check_timestamp_override(user_id, thread_id, ts)
-                    .await?,
-            )
-        } else {
-            None
-        };
-
-        let (can_use_external_emoji, can_embed) = self
-            .enforce_send_permissions(auth, &user, &chan, &json)
-            .await?;
-        let (attachment_ids, all_media_ids) = self.validate_and_claim_media(&json).await?;
-
-        // 2. Prepare payload (embeds, automod, mentions, components)
-        let embeds = self.build_embeds(json.embeds.clone(), user_id).await?;
-        let removed_at = self.enforce_automod(&chan, &json, user_id).await?;
-        let (content, mentions) = self
-            .process_mentions_and_emojis(&json, &chan, can_use_external_emoji)
-            .await?;
-
-        let components = json.components.parse_thin(None, &|m| match m {
-            MediaReference::Media { media_id } => Ok(media_id),
-            MediaReference::Url { .. } => Err(ApiError::from_code(ErrorCode::Unimplemented)),
-            MediaReference::Attachment { .. } => Err(ApiError::from_code(ErrorCode::Unimplemented)),
-        })?;
-
-        let mut component_media_ids = vec![];
-        components.collect_media_refs(&mut component_media_ids);
-
-        let mut component_media_futs = FuturesUnordered::new();
-        for media_id in component_media_ids {
-            let data = self.state.data();
-            component_media_futs.push(async move {
-                let media = data.media_select(media_id).await?;
-                Ok::<_, Error>((media_id, media))
-            });
-        }
-
-        let mut component_media_map = HashMap::new();
-        while let Some(result) = component_media_futs.next().await {
-            let (id, media) = result?;
-
-            // ensure the user calling this actually owns the media they are putting on a component
-            if media.user_id != Some(user_id) {
-                return Err(Error::MissingPermissions);
-            }
-
-            component_media_map.insert(id, media);
-        }
-
-        let canonical_components = components.clone().into_canonical(&|media_id| {
-            component_media_map
-                .get(&media_id)
-                .cloned()
-                .map(Into::into)
-                .ok_or_else(|| {
-                    error!(
-                        "Media {} missing from component map during canonicalization",
-                        media_id
-                    );
-                    ApiError::from_code(ErrorCode::Internal)
-                })
-        })?;
-
-        // 3. Database Insertion
-        let payload = MessageType::DefaultMarkdown(MessageDefaultMarkdown {
-            content: content.clone(),
-            attachments: vec![],
-            embeds,
-            components: canonical_components,
-            metadata: None,
-            reply_id: json.reply_id,
-        });
-
-        let message_id = MessageId::new();
-        let _message_uuid = self
-            .insert_message_to_db(
-                message_id,
-                thread_id,
-                user_id,
-                payload,
-                created_at,
-                removed_at,
-                &mentions,
-                &all_media_ids,
-                &attachment_ids,
-                components.inner,
-            )
-            .await?;
-
-        // 4. Post-processing & Cache updates
-        let mut message = self.get(thread_id, message_id, Some(user_id)).await?;
-        message.latest_version.mentions = mentions.clone();
-        self.ensure_thread_membership(thread_id, user_id, chan.room_id)
-            .await?;
-
-        if let Some(c) = content {
-            self.spawn_url_unfurling(message.clone(), Some(user_id), c, can_embed || is_webhook);
-        }
-
-        // 5. Broadcast & Notify
-        self.state
-            .broadcast_channel_with_nonce(
-                thread_id,
-                user_id,
-                nonce.as_deref(),
-                MessageSync::MessageCreate {
-                    message: message.clone(),
-                },
-            )
-            .await?;
-        self.state.services().channels.invalidate(thread_id).await;
-
-        self.dispatch_notifications(message.clone(), chan.clone(), mentions, user_id)
-            .await;
-
-        Ok(message)
-    }
-
-    async fn enforce_send_permissions(
-        &self,
-        auth: Option<&Auth>,
-        user: &User,
-        thread: &Channel,
-        json: &MessageCreate,
-    ) -> Result<(bool, bool)> {
-        // Webhooks bypass
-        if user.webhook.is_some() {
-            return Ok((true, true));
-        }
-
-        let srv = self.state.services();
-        let data = self.state.data();
-
-        // System messages bypass permissions but still handle archived channels
-        let Some(auth) = auth else {
-            if thread.is_archived() {
-                data.channel_update(
-                    thread.id,
-                    ChannelPatch {
-                        archived: Some(false),
-                        ..Default::default()
-                    },
-                )
-                .await?;
-                srv.channels.invalidate(thread.id).await;
-                let channel = srv.channels.get(thread.id, None).await?;
-                self.state
-                    .broadcast_channel(
-                        thread.id,
-                        user.id,
-                        MessageSync::ChannelUpdate {
-                            channel: Box::new(channel),
-                        },
-                    )
-                    .await?;
-            }
-            return Ok((true, true));
-        };
-
-        let perms = srv.perms.for_channel(user.id, thread.id).await?;
-        perms.ensure_unlocked()?;
-
-        // Build required perms array dynamically
-        let mut required = vec![Permission::ChannelView];
-        required.push(if thread.is_thread() {
-            Permission::MessageCreateThread
-        } else {
-            Permission::MessageCreate
-        });
-        if !json.attachments.is_empty() {
-            required.push(Permission::MessageAttachments);
-        }
-        if !json.embeds.is_empty() {
-            required.push(Permission::MessageEmbeds);
-        }
-        perms.ensure_all(&required)?;
-
-        // Handle Slowmode logic
-        if !perms.can_bypass_slowmode() {
-            if let Some(message_slowmode_expire_at) = data
-                .channel_get_message_slowmode_expire_at(thread.id, user.id)
-                .await?
-            {
-                if message_slowmode_expire_at > Time::now_utc() {
-                    return Err(Error::BadStatic("slowmode in effect"));
-                }
-            }
-
-            if let Some(slowmode_delay) = thread.slowmode_message {
-                let next_message_time =
-                    Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
-                data.channel_set_message_slowmode_expire_at(thread.id, user.id, next_message_time)
-                    .await?;
-            }
-        }
-
-        // Handle Unarchiving
-        if thread.is_archived() {
-            srv.channels
-                .update(
-                    auth,
-                    thread.id,
-                    ChannelPatch {
-                        archived: Some(false),
-                        ..Default::default()
-                    },
-                )
-                .await?;
-        }
-
-        Ok((
-            perms.has(Permission::EmojiUseExternal),
-            perms.has(Permission::MessageEmbeds),
-        ))
-    }
-
-    async fn validate_and_claim_media(
-        &self,
-        json: &MessageCreate,
-    ) -> Result<(Vec<MediaId>, HashSet<MediaId>)> {
-        let (attachment_ids, all_media_ids) = Self::extract_and_validate_media(json)?;
-
-        let data = self.state.data();
-        for id in &all_media_ids {
-            data.media_select(*id).await?;
-            let existing = data.media_link_select(*id).await?;
-            if existing
-                .iter()
-                .any(|l| l.link_type == MediaLinkType::Message)
-            {
-                return Err(Error::BadStatic("cant reuse media"));
-            }
-        }
-
-        Ok((attachment_ids, all_media_ids))
-    }
-
-    async fn build_embeds(
-        &self,
-        embeds_create: Vec<EmbedCreate>,
-        user_id: UserId,
-    ) -> Result<Vec<Embed>> {
-        if embeds_create.is_empty() {
-            return Ok(vec![]);
-        }
-
-        let mut embed_futs = Vec::new();
-        for embed_create in embeds_create {
-            embed_futs.push(self.embed_from_create(embed_create, user_id));
-        }
-        futures_util::future::try_join_all(embed_futs).await
-    }
-
-    async fn enforce_automod(
-        &self,
-        chan: &Channel,
-        json: &MessageCreate,
-        user_id: UserId,
-    ) -> Result<Option<Time>> {
-        let Some(room_id) = chan.room_id else {
-            return Ok(None);
-        };
-
-        let srv = self.state.services();
-        let automod = srv.automod.load(room_id).await?;
-        let scan = automod.scan_message_create(json);
-
-        if scan.is_triggered() {
-            let message_id = MessageId::new();
-            let removed = srv
-                .automod
-                .enforce_message_create(room_id, chan.id, message_id, user_id, &scan)
-                .await?;
-            if removed {
-                return Ok(Some(Time::now_utc()));
-            }
-        }
-        Ok(None)
-    }
-
-    async fn process_mentions_and_emojis(
-        &self,
-        json: &MessageCreate,
-        chan: &Channel,
-        can_use_external_emoji: bool,
-    ) -> Result<(Option<String>, Mentions)> {
-        let content = json.content.clone();
-        let parsed_mentions =
-            mentions::parse(content.as_deref().unwrap_or_default(), &json.mentions);
-        let mentions = self
-            .fetch_full_mentions_from_ids(parsed_mentions, chan.room_id)
-            .await?;
-
-        let mut final_content = content;
-        if let Some(room_id) = chan.room_id {
-            if let Some(c) = &mut final_content {
-                *c = self
-                    .enforce_emoji_use_external(&mentions, room_id, can_use_external_emoji, c)
-                    .await?;
-            }
-        }
-
-        Ok((final_content, mentions))
-    }
-
-    async fn insert_message_to_db(
-        &self,
-        message_id: MessageId,
-        channel_id: ChannelId,
-        author_id: UserId,
-        payload: MessageType,
-        created_at: Option<Time>,
-        removed_at: Option<Time>,
-        mentions: &Mentions,
-        all_media_ids: &HashSet<MediaId>,
-        attachment_ids: &[MediaId],
-        components: Vec<ComponentThin>,
-    ) -> Result<uuid::Uuid> {
-        let data = self.state.data();
-
-        let message_id_db = data
-            .message_create(DbMessageCreate {
-                id: Some(message_id),
-                channel_id,
-                attachment_ids: attachment_ids.to_vec(),
-                author_id,
-                embeds: match &payload {
-                    MessageType::DefaultMarkdown(md) => {
-                        md.embeds.iter().cloned().map(|e| e.into()).collect()
-                    }
-                    _ => vec![],
-                },
-                components,
-                message_type: payload,
-                created_at: created_at.map(|t| t.into()),
-                removed_at: removed_at.map(|t| t.into()),
-                mentions: mentions.clone(),
-            })
-            .await?;
-        let message_uuid = message_id_db.into_inner();
-
-        if message_id != message_id_db {
-            error!("Message id mismatch: {} != {}", message_id, message_id_db);
-        }
-
-        for id in all_media_ids {
-            data.media_link_insert(*id, message_uuid, MediaLinkType::Message)
-                .await?;
-            data.media_link_insert(*id, message_uuid, MediaLinkType::MessageVersion)
-                .await?;
-        }
-
-        Ok(message_uuid)
-    }
-
-    async fn ensure_thread_membership(
-        &self,
-        thread_id: ChannelId,
-        user_id: UserId,
-        room_id: Option<RoomId>,
-    ) -> Result<()> {
-        let data = self.state.data();
-        let tm = data.thread_member_get(thread_id, user_id).await;
-        if tm.is_err() {
-            data.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
-                .await?;
-            let thread_member = data.thread_member_get(thread_id, user_id).await?;
-            let msg = MessageSync::ThreadMemberUpsert {
-                room_id,
-                thread_id,
-                added: vec![thread_member],
-                removed: vec![],
-            };
-            self.state
-                .broadcast_channel(thread_id, user_id, msg)
-                .await?;
-        }
-        Ok(())
-    }
-
-    fn spawn_url_unfurling(
-        &self,
-        message: Message,
-        user_id: Option<UserId>,
-        content: String,
-        can_embed: bool,
-    ) {
-        if can_embed {
-            tokio::spawn(self.handle_url_embed(message, user_id, content));
-        }
-    }
-
-    async fn dispatch_notifications(
-        &self,
-        message: Message,
-        chan: Channel,
-        mentions: Mentions,
-        author_id: UserId,
-    ) {
-        let s_clone = self.state.clone();
-        let channel_id = message.channel_id;
-        let message_id = message.id;
-        let version_id = message.latest_version.version_id;
-        let room_id = chan.room_id;
-        let channel_is_thread = chan.is_thread();
-
-        tokio::spawn(async move {
-            let mut notified_users = HashSet::new();
-
-            // Direct user mentions
-            for u in mentions.users {
-                if u.id == author_id {
-                    continue;
-                }
-
-                if channel_is_thread {
-                    let member = s_clone.data().thread_member_get(channel_id, u.id).await;
-                    if member.is_err() {
-                        if s_clone
-                            .data()
-                            .thread_member_put(channel_id, u.id, Default::default())
-                            .await
-                            .is_ok()
-                        {
-                            if let Ok(thread_member) =
-                                s_clone.data().thread_member_get(channel_id, u.id).await
-                            {
-                                let msg = MessageSync::ThreadMemberUpsert {
-                                    room_id,
-                                    thread_id: channel_id,
-                                    added: vec![thread_member],
-                                    removed: vec![],
-                                };
-                                if let Err(e) =
-                                    s_clone.broadcast_channel(channel_id, author_id, msg).await
-                                {
-                                    error!("Failed to broadcast thread member upsert: {}", e);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if notified_users.insert(u.id) {
-                    if let Err(e) = s_clone
-                        .data()
-                        .unread_increment_mentions(u.id, channel_id, message_id, version_id, 1)
-                        .await
-                    {
-                        error!("Failed to increment mention count for user {}: {}", u.id, e);
-                    }
-
-                    let room_id = s_clone
-                        .services()
-                        .channels
-                        .get(channel_id, Some(u.id))
-                        .await
-                        .ok()
-                        .and_then(|ch| ch.room_id);
-
-                    let notification = Notification {
-                        id: NotificationId::new(),
-                        ty: NotificationType::Message {
-                            room_id: room_id,
-                            channel_id,
-                            message_id,
-                        },
-                        added_at: Time::now_utc(),
-                        read_at: None,
-                        note: None,
-                    };
-                    let action = s_clone
-                        .services()
-                        .notifications
-                        .calculator(u.id, &notification)
-                        .action()
-                        .await
-                        .unwrap_or(NotificationAction::Skip);
-
-                    if action.should_add_to_inbox() {
-                        if let Err(e) = s_clone.data().notification_add(u.id, notification).await {
-                            error!(
-                                "Failed to add mention notification for user {}: {}",
-                                u.id, e
-                            );
-                        }
-                    }
-                }
-            }
-
-            // Role mentions
-            if let Some(_room_id) = room_id {
-                for r in mentions.roles {
-                    let role_id = r.id;
-                    if let Ok(members) = s_clone
-                        .data()
-                        .role_member_list(role_id, Default::default())
-                        .await
-                    {
-                        if channel_is_thread
-                            && members.items.len()
-                                < crate::consts::MAX_ROLE_MENTION_MEMBERS_ADD as usize
-                        {
-                            for member in &members.items {
-                                if let Err(e) = s_clone
-                                    .data()
-                                    .thread_member_put(
-                                        channel_id,
-                                        member.user_id,
-                                        Default::default(),
-                                    )
-                                    .await
-                                {
-                                    error!(
-                                        "Failed to add mentioned role member {} to thread {}: {}",
-                                        member.user_id, channel_id, e
-                                    );
-                                }
-                            }
-                        }
-
-                        for member in members.items {
-                            if member.user_id == author_id {
-                                continue;
-                            }
-                            if notified_users.insert(member.user_id) {
-                                if let Err(e) = s_clone
-                                    .data()
-                                    .unread_increment_mentions(
-                                        member.user_id,
-                                        channel_id,
-                                        message_id,
-                                        version_id,
-                                        1,
-                                    )
-                                    .await
-                                {
-                                    error!(
-                                        "Failed to increment mention count for user {}: {}",
-                                        member.user_id, e
-                                    );
-                                }
-
-                                let room_id = s_clone
-                                    .services()
-                                    .channels
-                                    .get(channel_id, Some(member.user_id))
-                                    .await
-                                    .ok()
-                                    .and_then(|ch| ch.room_id);
-
-                                let notification = Notification {
-                                    id: NotificationId::new(),
-                                    ty: NotificationType::Message {
-                                        room_id,
-                                        channel_id,
-                                        message_id,
-                                    },
-                                    added_at: Time::now_utc(),
-                                    read_at: None,
-                                    note: None,
-                                };
-                                let action = s_clone
-                                    .services()
-                                    .notifications
-                                    .calculator(member.user_id, &notification)
-                                    .action()
-                                    .await
-                                    .unwrap_or(NotificationAction::Push);
-
-                                if action.should_add_to_inbox() {
-                                    if let Err(e) = s_clone
-                                        .data()
-                                        .notification_add(member.user_id, notification)
-                                        .await
-                                    {
-                                        error!(
-                                            "Failed to add role mention notification for user {}: {}",
-                                            member.user_id, e
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // @everyone mentions
-            if mentions.everyone {
-                let mut users_to_notify = Vec::new();
-                if channel_is_thread {
-                    if let Ok(members) = s_clone.data().thread_member_list_all(channel_id).await {
-                        users_to_notify.extend(members.into_iter().map(|m| m.user_id));
-                    }
-                } else if let Some(room_id) = room_id {
-                    if let Ok(members) = s_clone.data().room_member_list_all(room_id).await {
-                        users_to_notify.extend(members.into_iter().map(|m| m.user_id));
-                    }
-                }
-
-                for user_id in users_to_notify {
-                    if user_id == author_id {
-                        continue;
-                    }
-                    if notified_users.insert(user_id) {
-                        if let Err(e) = s_clone
-                            .data()
-                            .unread_increment_mentions(
-                                user_id, channel_id, message_id, version_id, 1,
-                            )
-                            .await
-                        {
-                            error!(
-                                "Failed to increment mention count for user {}: {}",
-                                user_id, e
-                            );
-                        }
-                        let room_id = s_clone
-                            .services()
-                            .channels
-                            .get(channel_id, Some(user_id))
-                            .await
-                            .ok()
-                            .and_then(|ch| ch.room_id);
-
-                        let notification = Notification {
-                            id: NotificationId::new(),
-                            ty: NotificationType::Message {
-                                room_id,
-                                channel_id,
-                                message_id,
-                            },
-                            added_at: Time::now_utc(),
-                            read_at: None,
-                            note: None,
-                        };
-                        if let Err(e) = s_clone.data().notification_add(user_id, notification).await
-                        {
-                            error!(
-                                "Failed to add everyone mention notification for user {}: {}",
-                                user_id, e
-                            );
-                        }
-                    }
-                }
-            }
-        });
     }
 }

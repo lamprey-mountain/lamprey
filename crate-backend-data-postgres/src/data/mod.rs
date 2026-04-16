@@ -1,4 +1,6 @@
 pub mod postgres;
+use std::collections::HashMap;
+
 use crate::EditContextId;
 
 use async_trait::async_trait;
@@ -39,6 +41,7 @@ use crate::types::{
     DocumentUpdateSummary, EmailPurpose, MediaLink, MediaLinkType, MentionsIds, MessageId,
     MessageRef, MessageVerId, PushData, UrlEmbedQueue, UserPatch, UserVerId,
 };
+use common::v1::types::components::{self, Components};
 
 // Data super-trait
 #[async_trait]
@@ -287,6 +290,11 @@ pub trait DataMessage {
         channel_id: ChannelId,
         version_ids: &[MessageVerId],
     ) -> Result<Vec<MentionsIds>>;
+    async fn message_fetch_components(
+        &self,
+        channel_id: ChannelId,
+        version_ids: &[MessageVerId],
+    ) -> Result<HashMap<MessageVerId, Components<components::Thin>>>;
     async fn message_id_get_by_version(
         &self,
         channel_id: ChannelId,

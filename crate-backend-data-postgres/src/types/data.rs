@@ -493,6 +493,7 @@ pub struct DbMessageUpdate {
     pub attachment_ids: Vec<MediaId>,
     pub author_id: UserId,
     pub embeds: Vec<Embed>,
+    pub components: Vec<ComponentThin>,
     pub message_type: MessageType,
     pub created_at: Option<time::PrimitiveDateTime>,
     pub mentions: Mentions,

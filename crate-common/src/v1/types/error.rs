@@ -284,9 +284,14 @@ pub enum ErrorCode {
     // cannot edit other user's messages
     // maximum number of pinned messages reached
     // invalid message content (must contain content, attachments, or embeds)
+    /// media already used
+    #[error("media already used")]
+    MediaAlreadyUsed,
 
-    // duplicate media id
-    // media already used
+    /// duplicate media id
+    #[error("duplicate media id")]
+    DuplicateMediaId,
+
     /// unknown room
     #[error("unknown room")]
     UnknownRoom,
@@ -1059,6 +1064,8 @@ impl ErrorCode {
             ErrorCode::Ratelimit => 429,
             ErrorCode::Unimplemented => 501,
             ErrorCode::Internal => 500,
+            ErrorCode::DuplicateMediaId => 400,
+            ErrorCode::MediaAlreadyUsed => 409,
         }
     }
 }

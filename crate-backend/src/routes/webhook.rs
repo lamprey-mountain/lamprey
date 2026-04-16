@@ -399,7 +399,7 @@ async fn webhook_update_with_token(
     Ok(Json(updated_webhook))
 }
 
-/// Webhook execute
+/// Webhook execute (TODO)
 #[utoipa::path(
     post,
     path = "/webhook/{webhook_id}/{token}",
@@ -420,19 +420,21 @@ async fn webhook_execute(
 ) -> Result<impl IntoResponse> {
     let webhook = s.data().webhook_get_with_token(webhook_id, &token).await?;
 
-    let author_id = (*webhook.id).into();
+    // let author_id = (*webhook.id).into();
     let channel_id = webhook.channel_id;
 
     let srv = s.services();
     let chan = srv.channels.get(channel_id, None).await?;
     chan.ensure_has_text()?;
 
-    let message = srv
-        .messages
-        .create_system(channel_id, author_id, None, json)
-        .await?;
+    // FIXME: add support for webhooks in new message system
+    // let message = srv
+    //     .messages
+    //     .create(channel_id, author_id, None, json)
+    //     .await?;
 
-    Ok((StatusCode::CREATED, Json(message)))
+    // Ok((StatusCode::CREATED, Json(message)))
+    Ok(StatusCode::NOT_IMPLEMENTED)
 }
 
 /// Webhook get message
@@ -474,7 +476,7 @@ async fn webhook_message_get(
     Ok(Json(message))
 }
 
-/// Webhook edit message
+/// Webhook edit message (TODO)
 #[utoipa::path(
     patch,
     path = "/webhook/{webhook_id}/{token}/message/{message_id}",
@@ -502,13 +504,15 @@ async fn webhook_message_edit(
     let chan = srv.channels.get(channel_id, None).await?;
     chan.ensure_has_text()?;
 
-    let (status, message) = s
-        .services()
-        .messages
-        .edit(channel_id, message_id, webhook_user_id, json, None)
-        .await?;
+    // FIXME: add support for webhooks in new message system
+    // let (status, message) = s
+    //     .services()
+    //     .messages
+    //     .edit(channel_id, message_id, webhook_user_id, json, None)
+    //     .await?;
 
-    Ok((status, Json(message)))
+    // Ok((status, Json(message)))
+    Ok(StatusCode::NOT_IMPLEMENTED)
 }
 
 /// Webhook delete message

@@ -260,7 +260,7 @@ impl ServiceFederation {
 
     /// lookup the api_url for this hostname
     async fn fetch_api_url(&self, hostname: &Hostname) -> Result<Url> {
-        let mut url = Url::parse(&format!(
+        let url = Url::parse(&format!(
             "https://{}/.well-known/lamprey-mountain",
             hostname.0
         ))?;

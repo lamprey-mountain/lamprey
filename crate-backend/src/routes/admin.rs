@@ -64,9 +64,7 @@ async fn admin_whisper(
         channel: Box::new(thread.clone()),
     })?;
 
-    srv.messages
-        .create_system(thread.id, SERVER_USER_ID, None, json.message)
-        .await?;
+    srv.messages.create_system(thread.id, json.message).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -137,9 +135,7 @@ async fn admin_broadcast(
                     channel: Box::new(thread.clone()),
                 })?;
 
-                srv.messages
-                    .create_system(thread.id, SERVER_USER_ID, None, msg)
-                    .await?;
+                srv.messages.create_system(thread.id, msg).await?;
 
                 Result::Ok(())
             });

@@ -67,7 +67,7 @@ pub struct Components<C: ComponentState> {
 mod _s {
     use serde::{Deserialize, Serialize};
 
-    use crate::v1::types::components::{Canonical, ComponentState, Create};
+    use crate::v1::types::components::{Canonical, ComponentState, Create, Thin};
 
     use super::{Component, ComponentCreate, ComponentId, ComponentType, Components};
 
@@ -114,6 +114,29 @@ mod _s {
 
                     #[serde(flatten)]
                     ty: ComponentType<Canonical>,
+                },
+            }
+
+            let helper = Helper::deserialize(deserializer)?;
+            match helper {
+                Helper::Struct { id, ty } => Ok(Component { id, ty }),
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Component<Thin> {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            #[derive(Deserialize)]
+            #[serde(untagged)]
+            enum Helper {
+                Struct {
+                    id: ComponentId,
+
+                    #[serde(flatten)]
+                    ty: ComponentType<Thin>,
                 },
             }
 

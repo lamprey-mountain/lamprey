@@ -170,7 +170,7 @@ async fn message_edit(
         .edit(
             req.channel_id,
             req.message_id,
-            auth.user.id,
+            &auth,
             req.patch,
             header_timestamp,
         )

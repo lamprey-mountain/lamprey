@@ -170,7 +170,7 @@ fn handle_pull_request_event(event: PullRequestEvent) -> Result<MessageCreate> {
     })
 }
 
-/// Webhook execute github (WIP)
+/// Webhook execute github (TODO)
 #[utoipa::path(
     post,
     path = "/webhook/{webhook_id}/{token}/github",
@@ -219,12 +219,15 @@ pub async fn webhook_execute_github(
         }
     };
 
-    let author_id = (*webhook.id).into();
+    // let author_id = (*webhook.id).into();
     let channel_id = webhook.channel_id;
 
     let srv = s.services();
+
+    // FIXME: use messages.create instead of create_system
     srv.messages
-        .create_system(channel_id, author_id, None, message_create)
+        // .create_system(channel_id, author_id, None, message_create)
+        .create_system(channel_id, message_create)
         .await?;
 
     Ok(StatusCode::NO_CONTENT)

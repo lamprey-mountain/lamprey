@@ -1,7 +1,9 @@
 // TODO: remove `user_id` params
 
+use std::collections::HashMap;
+
 use async_trait::async_trait;
-use common::v1::types::components::{Component, ComponentCanonical, Components};
+use common::v1::types::components::{self, Components};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::message::{
     Message, MessageAttachment, MessageAttachmentType, MessageDefaultMarkdown, MessageType,
@@ -119,11 +121,6 @@ impl From<DbMessageVersion> for MessageVersion {
                         .embeds
                         .and_then(|e| serde_json::from_value(e).ok())
                         .unwrap_or_default();
-                    let components: Vec<ComponentCanonical> = row
-                        .components
-                        .and_then(|e| serde_json::from_value(e).ok())
-                        .unwrap_or_default();
-                    let components = Components { inner: components };
                     MessageType::DefaultMarkdown(MessageDefaultMarkdown {
                         content: row.content,
                         attachments: attachments
@@ -142,7 +139,8 @@ impl From<DbMessageVersion> for MessageVersion {
                         metadata: row.metadata.and_then(|m| serde_json::from_value(m).ok()),
                         reply_id: row.reply_id.map(Into::into),
                         embeds,
-                        components,
+                        // NOTE: actual components are populated in the messages service
+                        components: Components::default(),
                     })
                 }
                 DbMessageType::ChannelRename => MessageType::ChannelRename(
@@ -238,6 +236,8 @@ impl DataMessage for Postgres {
 
         let embeds = create.embeds.clone();
         let embeds_json = serde_json::to_value(&embeds)?;
+        let components = create.components.clone();
+        let components_json = serde_json::to_value(&components)?;
         let mentions: MentionsIds = create.mentions.clone().into();
         let mentions_json = serde_json::to_value(mentions)?;
         let created_at = create
@@ -281,8 +281,8 @@ impl DataMessage for Postgres {
         .await?;
 
         query!(
-            r#"INSERT INTO message_version (version_id, message_id, author_id, type, content, metadata, reply_id, mentions, embeds, created_at, override_name, created_seq)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"#,
+            r#"INSERT INTO message_version (version_id, message_id, author_id, type, content, metadata, reply_id, mentions, embeds, created_at, override_name, created_seq, components)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"#,
             version_id,
             message_id,
             create.author_id.into_inner(),
@@ -295,6 +295,7 @@ impl DataMessage for Postgres {
             created_at,
             create.message_type.override_name(),
             new_seq,
+            components_json,
         )
         .execute(&mut *tx)
         .await?;
@@ -329,6 +330,8 @@ impl DataMessage for Postgres {
 
         let embeds = update.embeds.clone();
         let embeds_json = serde_json::to_value(&embeds)?;
+        let components = update.components.clone();
+        let components_json = serde_json::to_value(&components)?;
         let mentions: MentionsIds = update.mentions.clone().into();
         let mentions_json = serde_json::to_value(mentions)?;
         let created_at = update
@@ -355,8 +358,8 @@ impl DataMessage for Postgres {
         .await?;
 
         query!(
-            r#"INSERT INTO message_version (version_id, message_id, author_id, type, content, metadata, reply_id, mentions, embeds, created_at, override_name, created_seq)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"#,
+            r#"INSERT INTO message_version (version_id, message_id, author_id, type, content, metadata, reply_id, mentions, embeds, created_at, override_name, created_seq, components)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"#,
             ver_id,
             *message_id,
             update.author_id.into_inner(),
@@ -369,6 +372,7 @@ impl DataMessage for Postgres {
             created_at,
             update.message_type.override_name(),
             new_seq,
+            components_json,
         )
         .execute(&mut *tx)
         .await?;
@@ -411,6 +415,8 @@ impl DataMessage for Postgres {
         let mut tx = self.pool.begin().await?;
         let embeds = update.embeds.clone();
         let embeds_json = serde_json::to_value(&embeds)?;
+        let components = update.components.clone();
+        let components_json = serde_json::to_value(&components)?;
         let mentions: MentionsIds = update.mentions.clone().into();
         let mentions_json = serde_json::to_value(mentions)?;
         let created_at = update.created_at.map(|t| t.assume_utc());
@@ -427,7 +433,8 @@ impl DataMessage for Postgres {
                 override_name = $7,
                 embeds = $8,
                 mentions = $9,
-                created_at = $10
+                created_at = $10,
+                components = $11
             WHERE version_id = $1
         "#,
             *version_id,
@@ -440,6 +447,7 @@ impl DataMessage for Postgres {
             embeds_json,
             mentions_json,
             created_at,
+            components_json,
         )
         .execute(&mut *tx)
         .await?;
@@ -1005,6 +1013,41 @@ impl DataMessage for Postgres {
                 result.push(MentionsIds::default());
             }
         }
+
+        Ok(result)
+    }
+
+    async fn message_fetch_components(
+        &self,
+        channel_id: ChannelId,
+        version_ids: &[MessageVerId],
+    ) -> Result<HashMap<MessageVerId, Components<components::Thin>>> {
+        let version_uuids: Vec<Uuid> = version_ids.iter().map(|id| **id).collect();
+
+        let rows = query!(
+            r#"
+            SELECT components, mv.version_id
+            FROM message_version AS mv
+            JOIN message AS m ON mv.message_id = m.id
+            WHERE mv.version_id = ANY($1) AND m.channel_id = $2
+            "#,
+            &version_uuids[..],
+            *channel_id
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let result: HashMap<MessageVerId, _> = rows
+            .into_iter()
+            .filter_map(|r| {
+                if let Some(c) = r.components {
+                    let c: Components<components::Thin> = serde_json::from_value(c).ok()?;
+                    Some((r.version_id.into(), c))
+                } else {
+                    None
+                }
+            })
+            .collect();
 
         Ok(result)
     }
