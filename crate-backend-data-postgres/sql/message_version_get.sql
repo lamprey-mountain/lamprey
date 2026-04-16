@@ -7,6 +7,7 @@ SELECT
     mv.reply_id,
     mv.override_name,
     mv.embeds as "embeds",
+    mv.components as "components",
     mv.created_at,
     mv.deleted_at,
     mv.created_seq,

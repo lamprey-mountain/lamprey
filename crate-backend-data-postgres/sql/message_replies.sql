@@ -53,6 +53,7 @@ SELECT
     mv.reply_id,
     mv.override_name,
     mv.embeds as "embeds",
+    mv.components as "components",
     mv.created_at as version_created_at,
     mv.deleted_at as version_deleted_at,
     mv.created_seq as version_created_seq,

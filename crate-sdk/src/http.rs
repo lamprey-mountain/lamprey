@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use common::v1::types::message::Message;
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::presence::Presence;
 use common::v1::types::util::Time;
@@ -18,7 +19,6 @@ use common::v1::types::{
     MessageCreate, MessageMigrate, RoomBanCreate, SuspendRequest, TransferOwnership, UserCreate,
 };
 use common::v2::types::media::{Media, MediaCreate, MediaCreated, MediaDoneParams};
-use common::v1::types::message::Message;
 use headers::HeaderMapExt;
 use reqwest::{header::HeaderMap, StatusCode, Url};
 use serde_json::json;

@@ -9,7 +9,6 @@ use common::v1::types::auth::{
 };
 use common::v1::types::email::EmailAddr;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::oauth::Scopes;
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryStatus, AuditLogEntryType, MessageSync,

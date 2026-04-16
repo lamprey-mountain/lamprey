@@ -620,6 +620,7 @@ async fn message_pin(
             attachment_ids: vec![],
             author_id: auth.user.id,
             embeds: vec![],
+            components: vec![],
             message_type: MessageType::MessagePinned(MessagePin {
                 pinned_message_id: req.message_id,
             })

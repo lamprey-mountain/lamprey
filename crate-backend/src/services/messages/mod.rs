@@ -1,6 +1,7 @@
+use common::v1::types::components::ComponentThin;
 use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::reaction::{ReactionCount, ReactionCounts, ReactionKey, ReactionKeyParam};
-use common::v2::types::media::MediaReference;
+use common::v2::types::media::{Media, MediaReference};
 use futures::{stream::FuturesUnordered, StreamExt};
 use moka::future::Cache;
 use std::collections::{HashMap, HashSet};
@@ -257,6 +258,18 @@ impl ServiceMessages {
             }
         }
 
+        for media_ref in json.components.get_media_refs() {
+            match media_ref {
+                MediaReference::Media { media_id } => {
+                    if !all_media_ids.insert(media_id) {
+                        return Err(Error::BadStatic("duplicate media id in request"));
+                    }
+                }
+                MediaReference::Url { .. } => return Err(Error::Unimplemented),
+                MediaReference::Attachment { .. } => return Err(Error::Unimplemented),
+            }
+        }
+
         Ok((attachment_ids, all_media_ids))
     }
 
@@ -294,7 +307,13 @@ impl ServiceMessages {
 
         // 2. Validate and prepare payload
         let (attachment_ids, content, payload, mentions) = self
-            .prepare_edit_payload(&json, &message, &thread, can_use_external_emoji)
+            .prepare_edit_payload(
+                &json,
+                &message,
+                &thread,
+                can_use_external_emoji,
+                Some(user_id),
+            )
             .await?;
 
         // 3. Database update
@@ -396,13 +415,22 @@ impl ServiceMessages {
         message: &Message,
         thread: &Channel,
         can_use_external_emoji: bool,
+        user_id: Option<UserId>,
     ) -> Result<(Vec<MediaId>, Option<String>, MessageType, Mentions)> {
-        if json.content.is_none()
-            && json.attachments.as_ref().is_some_and(|a| a.is_empty())
-            && json.embeds.as_ref().is_some_and(|a| a.is_empty())
-        {
+        let has_components = !json.components.is_empty();
+        let has_content = json.content.is_some()
+            || json.attachments.as_ref().is_some_and(|a| !a.is_empty())
+            || json.embeds.as_ref().is_some_and(|a| !a.is_empty());
+
+        if has_content && has_components {
             return Err(Error::BadStatic(
-                "at least one of content, attachments, or embeds must be defined",
+                "cannot have both (content, attachments, or embeds) and components on the same message",
+            ));
+        }
+
+        if !has_content && !has_components {
+            return Err(Error::BadStatic(
+                "at least one of (content, attachments, or embeds) or components must be defined",
             ));
         }
 
@@ -431,6 +459,62 @@ impl ServiceMessages {
         let embeds = self
             .build_embeds(json.embeds.clone().unwrap_or_default(), message.author_id)
             .await?;
+
+        let components_old = match &message.latest_version.message_type {
+            MessageType::DefaultMarkdown(m) => Some(m.components.clone().into_thin()),
+            _ => None,
+        };
+
+        let components =
+            json.components
+                .clone()
+                .parse_thin(components_old.as_ref(), &|m| match m {
+                    MediaReference::Media { media_id } => Ok(media_id),
+                    MediaReference::Url { .. } => {
+                        Err(ApiError::from_code(ErrorCode::Unimplemented))
+                    }
+                    MediaReference::Attachment { .. } => {
+                        Err(ApiError::from_code(ErrorCode::Unimplemented))
+                    }
+                })?;
+
+        let mut component_media_ids = vec![];
+        components.collect_media_refs(&mut component_media_ids);
+
+        let mut component_media_futs = FuturesUnordered::new();
+        for media_id in component_media_ids {
+            let data = self.state.data();
+            component_media_futs.push(async move {
+                let media = data.media_select(media_id).await?;
+                Ok::<_, Error>((media_id, media))
+            });
+        }
+
+        let mut component_media_map = HashMap::new();
+        while let Some(result) = component_media_futs.next().await {
+            let (id, media) = result?;
+
+            // ensure the user calling this actually owns the media they are putting on a component
+            if media.user_id != user_id {
+                return Err(Error::MissingPermissions);
+            }
+
+            component_media_map.insert(id, media);
+        }
+
+        let canonical_components = components.into_canonical(&|media_id| {
+            component_media_map
+                .get(&media_id)
+                .cloned()
+                .map(Into::into)
+                .ok_or_else(|| {
+                    error!(
+                        "Media {} missing from component map during canonicalization",
+                        media_id
+                    );
+                    ApiError::from_code(ErrorCode::Internal)
+                })
+        })?;
 
         // Enforce automod
         if let Some(room_id) = thread.room_id {
@@ -492,6 +576,7 @@ impl ServiceMessages {
                         content,
                         attachments: vec![],
                         embeds: embeds.into_iter().map(|e| e.into()).collect(),
+                        components: canonical_components,
                         metadata: None,
                         reply_id: json.reply_id.unwrap_or(msg.reply_id),
                     }),
@@ -1150,7 +1235,7 @@ impl ServiceMessages {
         &self,
         media_ref: Option<MediaReference>,
         user_id: UserId,
-    ) -> Result<Option<common::v2::types::media::Media>> {
+    ) -> Result<Option<Media>> {
         let Some(media_ref) = media_ref else {
             return Ok(None);
         };
@@ -1229,18 +1314,63 @@ impl ServiceMessages {
             .await?;
         let (attachment_ids, all_media_ids) = self.validate_and_claim_media(&json).await?;
 
-        // 2. Prepare payload (Embeds, Automod, Mentions)
+        // 2. Prepare payload (embeds, automod, mentions, components)
         let embeds = self.build_embeds(json.embeds.clone(), user_id).await?;
         let removed_at = self.enforce_automod(&chan, &json, user_id).await?;
         let (content, mentions) = self
             .process_mentions_and_emojis(&json, &chan, can_use_external_emoji)
             .await?;
 
+        let components = json.components.parse_thin(None, &|m| match m {
+            MediaReference::Media { media_id } => Ok(media_id),
+            MediaReference::Url { .. } => Err(ApiError::from_code(ErrorCode::Unimplemented)),
+            MediaReference::Attachment { .. } => Err(ApiError::from_code(ErrorCode::Unimplemented)),
+        })?;
+
+        let mut component_media_ids = vec![];
+        components.collect_media_refs(&mut component_media_ids);
+
+        let mut component_media_futs = FuturesUnordered::new();
+        for media_id in component_media_ids {
+            let data = self.state.data();
+            component_media_futs.push(async move {
+                let media = data.media_select(media_id).await?;
+                Ok::<_, Error>((media_id, media))
+            });
+        }
+
+        let mut component_media_map = HashMap::new();
+        while let Some(result) = component_media_futs.next().await {
+            let (id, media) = result?;
+
+            // ensure the user calling this actually owns the media they are putting on a component
+            if media.user_id != Some(user_id) {
+                return Err(Error::MissingPermissions);
+            }
+
+            component_media_map.insert(id, media);
+        }
+
+        let canonical_components = components.clone().into_canonical(&|media_id| {
+            component_media_map
+                .get(&media_id)
+                .cloned()
+                .map(Into::into)
+                .ok_or_else(|| {
+                    error!(
+                        "Media {} missing from component map during canonicalization",
+                        media_id
+                    );
+                    ApiError::from_code(ErrorCode::Internal)
+                })
+        })?;
+
         // 3. Database Insertion
         let payload = MessageType::DefaultMarkdown(MessageDefaultMarkdown {
             content: content.clone(),
             attachments: vec![],
-            embeds: embeds.into_iter().map(|e| e.into()).collect(),
+            embeds,
+            components: canonical_components,
             metadata: None,
             reply_id: json.reply_id,
         });
@@ -1257,6 +1387,7 @@ impl ServiceMessages {
                 &mentions,
                 &all_media_ids,
                 &attachment_ids,
+                components.inner,
             )
             .await?;
 
@@ -1404,12 +1535,13 @@ impl ServiceMessages {
                 return Err(Error::BadStatic("cant reuse media"));
             }
         }
+
         Ok((attachment_ids, all_media_ids))
     }
 
     async fn build_embeds(
         &self,
-        embeds_create: Vec<common::v1::types::EmbedCreate>,
+        embeds_create: Vec<EmbedCreate>,
         user_id: UserId,
     ) -> Result<Vec<Embed>> {
         if embeds_create.is_empty() {
@@ -1486,6 +1618,7 @@ impl ServiceMessages {
         mentions: &Mentions,
         all_media_ids: &HashSet<MediaId>,
         attachment_ids: &[MediaId],
+        components: Vec<ComponentThin>,
     ) -> Result<uuid::Uuid> {
         let data = self.state.data();
 
@@ -1495,12 +1628,13 @@ impl ServiceMessages {
                 channel_id,
                 attachment_ids: attachment_ids.to_vec(),
                 author_id,
-                embeds: match payload {
-                    MessageType::DefaultMarkdown(ref md) => {
+                embeds: match &payload {
+                    MessageType::DefaultMarkdown(md) => {
                         md.embeds.iter().cloned().map(|e| e.into()).collect()
                     }
                     _ => vec![],
                 },
+                components,
                 message_type: payload,
                 created_at: created_at.map(|t| t.into()),
                 removed_at: removed_at.map(|t| t.into()),
@@ -1527,7 +1661,7 @@ impl ServiceMessages {
         &self,
         thread_id: ChannelId,
         user_id: UserId,
-        room_id: Option<common::v1::types::RoomId>,
+        room_id: Option<RoomId>,
     ) -> Result<()> {
         let data = self.state.data();
         let tm = data.thread_member_get(thread_id, user_id).await;

@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -7,6 +9,7 @@ use url::Url;
 use utoipa::ToSchema;
 
 use crate::v1::types::misc::Color;
+use crate::v1::types::MediaId;
 use crate::v2::types::media::{Media, MediaReference};
 
 /// maximum number of components in a tree
@@ -42,77 +45,272 @@ pub struct ComponentCustomId(pub String);
 
 /// a single component in a tree
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize))]
+pub struct Component<C: ComponentState> {
+    pub id: C::Id,
+
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub ty: ComponentType<C>,
+}
+
+pub type ComponentCreate = Component<Create>;
+pub type ComponentCanonical = Component<Canonical>;
+pub type ComponentThin = Component<Thin>;
+
+/// top-level container for components
+#[derive(Debug, Clone, PartialEq)]
+pub struct Components<C: ComponentState> {
+    pub inner: Vec<Component<C>>,
+}
+
+#[cfg(feature = "serde")]
+mod _s {
+    use serde::{Deserialize, Serialize};
+
+    use crate::v1::types::components::{Canonical, ComponentState, Create};
+
+    use super::{Component, ComponentCreate, ComponentId, ComponentType, Components};
+
+    impl<'de> Deserialize<'de> for Component<Create> {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            #[derive(Deserialize)]
+            #[serde(untagged)]
+            enum Helper {
+                // deserialize strings as a Text component without an id.
+                Text(String),
+                Struct {
+                    #[serde(default)]
+                    id: Option<ComponentId>,
+
+                    #[serde(flatten)]
+                    ty: ComponentType<Create>,
+                },
+            }
+
+            let helper = Helper::deserialize(deserializer)?;
+            match helper {
+                Helper::Text(content) => Ok(ComponentCreate {
+                    id: None,
+                    ty: ComponentType::Text { content },
+                }),
+                Helper::Struct { id, ty } => Ok(Component { id, ty }),
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Component<Canonical> {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            #[derive(Deserialize)]
+            #[serde(untagged)]
+            enum Helper {
+                Struct {
+                    id: ComponentId,
+
+                    #[serde(flatten)]
+                    ty: ComponentType<Canonical>,
+                },
+            }
+
+            let helper = Helper::deserialize(deserializer)?;
+            match helper {
+                Helper::Struct { id, ty } => Ok(Component { id, ty }),
+            }
+        }
+    }
+
+    impl<'de, C: ComponentState> Deserialize<'de> for Components<C>
+    where
+        Component<C>: Deserialize<'de>,
+        // C::Id: Deserialize<'de>,
+        // C::Media: Deserialize<'de>,
+    {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            let components = Vec::<Component<C>>::deserialize(deserializer)?;
+            Ok(Components { inner: components })
+        }
+    }
+
+    impl<C: ComponentState> Serialize for Components<C>
+    where
+        Component<C>: Serialize,
+    {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            self.inner.serialize(serializer)
+        }
+    }
+}
+
+#[cfg(feature = "utoipa")]
+mod _u {
+    use utoipa::{
+        openapi::{schema::Schema, RefOr},
+        schema, PartialSchema, ToSchema,
+    };
+
+    use crate::v1::types::components::{Canonical, ComponentType, Create};
+
+    use super::{Component, Components};
+
+    impl PartialSchema for Component<Create> {
+        fn schema() -> RefOr<Schema> {
+            schema!(Component<Create>).into()
+        }
+    }
+
+    impl PartialSchema for Component<Canonical> {
+        fn schema() -> RefOr<Schema> {
+            schema!(Component<Canonical>).into()
+        }
+    }
+
+    impl PartialSchema for ComponentType<Create> {
+        fn schema() -> RefOr<Schema> {
+            schema!(ComponentType<Create>).into()
+        }
+    }
+
+    impl PartialSchema for ComponentType<Canonical> {
+        fn schema() -> RefOr<Schema> {
+            schema!(ComponentType<Canonical>).into()
+        }
+    }
+
+    impl ToSchema for Component<Create> {}
+    impl ToSchema for Component<Canonical> {}
+    impl ToSchema for Components<Create> {}
+    impl ToSchema for Components<Canonical> {}
+    impl ToSchema for ComponentType<Create> {}
+    impl ToSchema for ComponentType<Canonical> {}
+
+    // HACK: get utoipa to stop complaining
+    impl utoipa::__dev::ComposeSchema for Components<Create> {
+        fn compose(_: Vec<RefOr<Schema>>) -> RefOr<Schema> {
+            schema!(Vec<Component<Create>>).into()
+        }
+    }
+
+    impl utoipa::__dev::ComposeSchema for Components<Canonical> {
+        fn compose(_: Vec<RefOr<Schema>>) -> RefOr<Schema> {
+            schema!(Vec<Component<Canonical>>).into()
+        }
+    }
+}
+
+mod flex {
+    pub trait Seal {}
+}
+
+/// needs to be created
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Component<M = Media> {
-    pub id: ComponentId,
+pub enum Create {}
 
-    #[cfg_attr(feature = "serde", serde(flatten))]
-    pub ty: ComponentType<Component<M>, M>,
-}
-
-/// a request body for creating or updating a component tree
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize))]
+/// has been created
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ComponentCreate<M = MediaReference> {
-    // populate with sequential ids server side if None
-    pub id: Option<ComponentId>,
+pub enum Canonical {}
 
-    #[cfg_attr(feature = "serde", serde(flatten))]
-    pub ty: ComponentType<ComponentCreate<M>, M>,
+/// has been created, only has media ids instead of full media
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum Thin {}
+
+pub trait ComponentStateMedia: flex::Seal {
+    fn media_id(&self) -> Option<MediaId>;
 }
 
-// deserialize strings as a Text component without an id.
-#[cfg(feature = "serde")]
-impl<'de, M: Deserialize<'de>> Deserialize<'de> for ComponentCreate<M> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        #[serde(untagged)]
-        enum Helper<M> {
-            Text(String),
-            Struct {
-                #[serde(default)]
-                id: Option<ComponentId>,
-                #[serde(flatten)]
-                ty: ComponentType<ComponentCreate<M>, M>,
-            },
-        }
+pub trait ComponentState: flex::Seal {
+    #[cfg(not(feature = "utoipa"))]
+    type Id: Debug + Clone + Copy + PartialEq + Eq + Serialize + for<'de> Deserialize<'de>;
 
-        let helper = Helper::<M>::deserialize(deserializer)?;
-        match helper {
-            Helper::Text(content) => Ok(ComponentCreate {
-                id: None,
-                ty: ComponentType::Text { content },
-            }),
-            Helper::Struct { id, ty } => Ok(ComponentCreate { id, ty }),
+    #[cfg(feature = "utoipa")]
+    type Id: Debug
+        + Clone
+        + Copy
+        + PartialEq
+        + Eq
+        + ToSchema
+        + Serialize
+        + for<'de> Deserialize<'de>;
+
+    type Media: Debug
+        + Clone
+        + PartialEq
+        + ComponentStateMedia
+        + Serialize
+        + for<'de> Deserialize<'de>
+        + Sync
+        + Send; // Added for safety in async contexts
+}
+
+/// Iterator over component children
+pub enum ComponentChildren<'a, C: ComponentState> {
+    Leaf,
+    Container {
+        children: std::slice::Iter<'a, Component<C>>,
+    },
+    Details {
+        summary: std::slice::Iter<'a, Component<C>>,
+        details: std::slice::Iter<'a, Component<C>>,
+    },
+}
+
+impl flex::Seal for Create {}
+impl flex::Seal for Canonical {}
+impl flex::Seal for Thin {}
+
+impl ComponentState for Create {
+    type Id = Option<ComponentId>;
+    type Media = MediaReference;
+}
+
+impl ComponentState for Canonical {
+    type Id = ComponentId;
+    type Media = Media;
+}
+
+impl ComponentState for Thin {
+    type Id = ComponentId;
+    type Media = MediaId;
+}
+
+impl flex::Seal for MediaReference {}
+impl flex::Seal for Media {}
+impl flex::Seal for MediaId {}
+
+impl ComponentStateMedia for Media {
+    fn media_id(&self) -> Option<MediaId> {
+        Some(self.id)
+    }
+}
+
+impl ComponentStateMedia for MediaReference {
+    fn media_id(&self) -> Option<MediaId> {
+        match self {
+            MediaReference::Media { media_id } => Some(*media_id),
+            _ => None,
         }
     }
 }
 
-mod ic {
-    pub trait Sealed {}
-}
-
-pub trait IsComponent<C, M>: ic::Sealed {
-    fn ty(&self) -> &ComponentType<C, M>;
-}
-
-impl<M> ic::Sealed for Component<M> {}
-impl<M> ic::Sealed for ComponentCreate<M> {}
-
-impl<M> IsComponent<Component<M>, M> for Component<M> {
-    fn ty(&self) -> &ComponentType<Component<M>, M> {
-        &self.ty
-    }
-}
-
-impl<M> IsComponent<ComponentCreate<M>, M> for ComponentCreate<M> {
-    fn ty(&self) -> &ComponentType<ComponentCreate<M>, M> {
-        &self.ty
+impl ComponentStateMedia for MediaId {
+    fn media_id(&self) -> Option<MediaId> {
+        Some(*self)
     }
 }
 
@@ -139,9 +337,18 @@ impl<M> IsComponent<ComponentCreate<M>, M> for ComponentCreate<M> {
 ///
 /// - `Reference` move or clone another component
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum ComponentType<C, M> {
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(
+        tag = "type",
+        bound(
+            serialize = "Component<C>: Serialize",
+            deserialize = "Component<C>: Deserialize<'de>"
+        )
+    )
+)]
+pub enum ComponentType<C: ComponentState> {
     /// a clickable button
     Button {
         label: String,
@@ -163,7 +370,7 @@ pub enum ComponentType<C, M> {
 
     /// a group of other components
     Container {
-        components: Vec<C>,
+        components: Vec<Component<C>>,
         color: Option<Color>,
     },
 
@@ -189,52 +396,68 @@ pub enum ComponentType<C, M> {
         #[cfg_attr(feature = "serde", serde(default))]
         open: bool,
         color: Option<Color>,
-        summary: Vec<C>,
-        details: Vec<C>,
+        summary: Vec<Component<C>>,
+        details: Vec<Component<C>>,
     },
 
     /// a section without any margin/padding
     Section {
         color: Option<Color>,
-        components: Vec<C>,
+        components: Vec<Component<C>>,
     },
 
     /// display media
     ///
     /// min 1 max 20 items
-    Media { items: Vec<ComponentMedia<M>> },
+    Media {
+        items: Vec<ComponentMedia<C::Media>>,
+    },
 
     /// display a carousel of media
     ///
     /// min 1 max 20 items
-    Gallery { items: Vec<ComponentMedia<M>> },
+    Gallery {
+        items: Vec<ComponentMedia<C::Media>>,
+    },
 }
 
-impl<M> Component<M> {
+impl<C: ComponentState> Component<C> {
+    // should i remove this and access .ty directly?
+    pub(super) fn ty(&self) -> &ComponentType<C> {
+        &self.ty
+    }
+}
+
+impl<C: ComponentState> Component<C> {
     /// Find a component by its ID recursively.
-    pub fn find_by_id(&self, id: ComponentId) -> Option<&Component<M>> {
+    pub fn find_by_id(&self, id: C::Id) -> Option<&Component<C>> {
         if self.id == id {
             return Some(self);
         }
+        self.children().find_map(|c| c.find_by_id(id))
+    }
+
+    /// get an iterator over this component's children.
+    pub fn children(&self) -> ComponentChildren<'_, C> {
         match &self.ty {
             ComponentType::Container { components, .. }
-            | ComponentType::Section { components, .. } => {
-                components.iter().find_map(|c| c.find_by_id(id))
-            }
+            | ComponentType::Section { components, .. } => ComponentChildren::Container {
+                children: components.iter(),
+            },
             ComponentType::Details {
                 summary, details, ..
-            } => summary
-                .iter()
-                .find_map(|c| c.find_by_id(id))
-                .or_else(|| details.iter().find_map(|c| c.find_by_id(id))),
-            _ => None,
+            } => ComponentChildren::Details {
+                summary: summary.iter(),
+                details: details.iter(),
+            },
+            _ => ComponentChildren::Leaf,
         }
     }
 
     /// Visit all component IDs in the tree recursively.
     pub fn visit_ids<F>(&self, f: &mut F)
     where
-        F: FnMut(ComponentId),
+        F: FnMut(C::Id),
     {
         f(self.id);
         match &self.ty {
@@ -257,18 +480,16 @@ impl<M> Component<M> {
             _ => {}
         }
     }
-}
 
-impl<M: Clone> Component<M> {
     /// Extract all media from the component tree.
-    pub fn media_ids(&self) -> Vec<M> {
+    pub fn media_ids(&self) -> Vec<MediaId> {
         let mut ids = vec![];
         self.collect_media(&mut ids);
         ids
     }
 
     /// Recursively collect all media from the component tree.
-    fn collect_media(&self, ids: &mut Vec<M>) {
+    fn collect_media(&self, ids: &mut Vec<MediaId>) {
         match &self.ty {
             ComponentType::Container { components, .. }
             | ComponentType::Section { components, .. } => {
@@ -288,7 +509,9 @@ impl<M: Clone> Component<M> {
             }
             ComponentType::Media { items } | ComponentType::Gallery { items } => {
                 for item in items {
-                    ids.push(item.media.clone());
+                    if let Some(id) = item.media.media_id() {
+                        ids.push(id);
+                    }
                 }
             }
             ComponentType::Button { .. }
@@ -323,4 +546,63 @@ pub enum ButtonStyle {
     Primary,
     Secondary,
     Danger,
+}
+
+impl<C: ComponentState> Components<C> {
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
+    pub fn children(&self) -> ComponentChildren<'_, C> {
+        ComponentChildren::Container {
+            children: self.inner.iter(),
+        }
+    }
+}
+
+impl<'a, C: ComponentState> Iterator for ComponentChildren<'a, C> {
+    type Item = &'a Component<C>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            ComponentChildren::Leaf => None,
+            ComponentChildren::Container { children } => children.next(),
+            ComponentChildren::Details { summary, details } => {
+                summary.next().or_else(|| details.next())
+            }
+        }
+    }
+}
+
+impl<C: ComponentState> Default for Components<C> {
+    fn default() -> Self {
+        Self { inner: Vec::new() }
+    }
+}
+
+impl ComponentMedia<Media> {
+    pub fn into_thin(self) -> ComponentMedia<MediaId> {
+        ComponentMedia {
+            media: self.media.id,
+            description: self.description,
+            spoiler: self.spoiler,
+        }
+    }
+}
+
+impl Component<Canonical> {
+    pub fn into_thin(self) -> Component<Thin> {
+        Component {
+            id: self.id,
+            ty: self.ty.into_thin(),
+        }
+    }
+}
+
+impl Components<Canonical> {
+    pub fn into_thin(self) -> Components<Thin> {
+        Components {
+            inner: self.inner.into_iter().map(|c| c.into_thin()).collect(),
+        }
+    }
 }

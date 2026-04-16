@@ -856,6 +856,14 @@ pub enum ErrorCode {
     /// not found
     #[error("not found")]
     NotFound,
+
+    /// unimplemented
+    #[error("unimplemented")]
+    Unimplemented,
+
+    /// internal error
+    #[error("internal")]
+    Internal,
 }
 
 impl ApiError {
@@ -1049,6 +1057,8 @@ impl ErrorCode {
             ErrorCode::UserIsNotABot => 403,
             ErrorCode::NotFound => 404,
             ErrorCode::Ratelimit => 429,
+            ErrorCode::Unimplemented => 501,
+            ErrorCode::Internal => 500,
         }
     }
 }

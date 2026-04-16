@@ -29,6 +29,7 @@ select
     m.lifecycle_seq,
     coalesce(att_json.attachments, '[]'::json) as "attachments!",
     mv.embeds as "embeds",
+    mv.components as "components",
     mv.author_id as version_author_id,
     mv.created_at as version_created_at,
     mv.deleted_at as version_deleted_at,

@@ -1,6 +1,7 @@
 // TODO: remove `user_id` params
 
 use async_trait::async_trait;
+use common::v1::types::components::{Component, ComponentCanonical, Components};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::message::{
     Message, MessageAttachment, MessageAttachmentType, MessageDefaultMarkdown, MessageType,
@@ -28,7 +29,7 @@ use crate::data::DataMessage;
 
 use super::{Pagination, Postgres};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, sqlx::FromRow)]
 pub struct DbMessage {
     pub id: Uuid,
     pub channel_id: Uuid,
@@ -46,6 +47,7 @@ pub struct DbMessage {
     pub reply_id: Option<uuid::Uuid>,
     pub override_name: Option<String>, // temp?
     pub embeds: Option<serde_json::Value>,
+    pub components: Option<serde_json::Value>,
     pub version_created_at: time::PrimitiveDateTime,
     pub version_deleted_at: Option<time::PrimitiveDateTime>,
     pub attachments: serde_json::Value,
@@ -54,7 +56,7 @@ pub struct DbMessage {
     pub lifecycle_seq: i64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, sqlx::FromRow)]
 pub struct DbMessageVersion {
     pub version_id: Uuid,
     pub author_id: Uuid,
@@ -64,6 +66,7 @@ pub struct DbMessageVersion {
     pub reply_id: Option<uuid::Uuid>,
     pub override_name: Option<String>,
     pub embeds: Option<serde_json::Value>,
+    pub components: Option<serde_json::Value>,
     pub created_at: time::PrimitiveDateTime,
     pub deleted_at: Option<time::PrimitiveDateTime>,
     pub attachments: serde_json::Value,
@@ -91,6 +94,7 @@ impl From<DbMessage> for Message {
                 reply_id: row.reply_id,
                 override_name: row.override_name,
                 embeds: row.embeds,
+                components: row.components,
                 created_at: row.version_created_at,
                 deleted_at: row.version_deleted_at,
                 attachments: row.attachments,
@@ -115,6 +119,11 @@ impl From<DbMessageVersion> for MessageVersion {
                         .embeds
                         .and_then(|e| serde_json::from_value(e).ok())
                         .unwrap_or_default();
+                    let components: Vec<ComponentCanonical> = row
+                        .components
+                        .and_then(|e| serde_json::from_value(e).ok())
+                        .unwrap_or_default();
+                    let components = Components { inner: components };
                     MessageType::DefaultMarkdown(MessageDefaultMarkdown {
                         content: row.content,
                         attachments: attachments
@@ -133,6 +142,7 @@ impl From<DbMessageVersion> for MessageVersion {
                         metadata: row.metadata.and_then(|m| serde_json::from_value(m).ok()),
                         reply_id: row.reply_id.map(Into::into),
                         embeds,
+                        components,
                     })
                 }
                 DbMessageType::ChannelRename => MessageType::ChannelRename(
@@ -1120,6 +1130,7 @@ impl DataMessage for Postgres {
                 mv.reply_id,
                 mv.override_name,
                 mv.embeds as "embeds",
+                mv.components as "components",
                 mv.created_at as "version_created_at",
                 mv.deleted_at as "version_deleted_at",
                 coalesce(att_json.attachments, '[]'::json) as "attachments!",

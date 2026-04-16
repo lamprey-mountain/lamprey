@@ -1,88 +1,37 @@
 use super::types::*;
-use crate::v1::types::error::{ApiError, ErrorCode, ErrorField, ErrorFieldType};
+use crate::{
+    v1::types::{
+        components::{IdAllocator, ValidationState},
+        error::{ApiError, ErrorCode},
+        MediaId,
+    },
+    v2::types::media::{Media, MediaReference},
+};
 
-/// Tracks validation state across the component tree.
-struct ValidationState {
-    path: Vec<String>,
-    component_count: usize,
-    depth: usize,
-    total_text_length: usize,
-}
+impl<C: ComponentState> Components<C> {
+    pub fn validate(&self) -> Result<(), ApiError> {
+        let mut state = ValidationState::new();
+        state.validate_count(self.inner.len(), 1, 20, "components");
 
-impl ValidationState {
-    /// Create a new validation state.
-    pub fn new() -> ValidationState {
-        ValidationState {
-            path: vec![],
-            component_count: 0,
-            depth: 1,
-            total_text_length: 0,
+        for (i, c) in self.inner.iter().enumerate() {
+            state.enter_index(i, |s| c.ty.validate_inner(s));
         }
-    }
 
-    /// Get the current path in the tree.
-    pub fn current_path(&self) -> Vec<String> {
-        self.path.clone()
-    }
-
-    /// Executes a closure at a deeper level and automatically pops the path.
-    pub fn enter<F>(&mut self, segment: String, f: F) -> Vec<ErrorField>
-    where
-        F: FnOnce(&mut Self) -> Vec<ErrorField>,
-    {
-        self.path.push(segment);
-        let res = f(self);
-        self.path.pop();
-        res
-    }
-
-    /// Executes a closure for a specific child index.
-    pub fn enter_index<F>(&mut self, index: usize, f: F) -> Vec<ErrorField>
-    where
-        F: FnOnce(&mut Self) -> Vec<ErrorField>,
-    {
-        self.enter(index.to_string(), f)
-    }
-
-    /// Enter a component and check for count and depth limits.
-    pub fn enter_component(&mut self) -> Vec<ErrorField> {
-        self.component_count += 1;
-        let mut errs = vec![];
-        if self.component_count > MAX_COMPONENTS {
-            errs.push(ErrorField {
-                key: self.current_path(),
-                message: format!("component tree exceeds maximum of {MAX_COMPONENTS} components"),
-                ty: ErrorFieldType::length(1, MAX_COMPONENTS as u64),
-            });
-        }
-        if self.depth > MAX_DEPTH {
-            errs.push(ErrorField {
-                key: self.current_path(),
-                message: format!("component tree exceeds maximum depth of {MAX_DEPTH}"),
-                ty: ErrorFieldType::length(1, MAX_DEPTH as u64),
-            });
-        }
-        errs
-    }
-
-    /// Add text length to the total and check for limits.
-    pub fn add_text(&mut self, len: usize) -> Vec<ErrorField> {
-        self.total_text_length += len;
-        if self.total_text_length > MAX_TOTAL_TEXT_LENGTH {
-            vec![ErrorField {
-                key: self.current_path(),
-                message: format!(
-                    "total text length exceeds maximum of {MAX_TOTAL_TEXT_LENGTH} bytes"
-                ),
-                ty: ErrorFieldType::length(1, MAX_TOTAL_TEXT_LENGTH as u64),
-            }]
+        if state.errors.is_empty() {
+            Ok(())
         } else {
-            vec![]
+            Err(ApiError {
+                fields: state.errors,
+                ..ApiError::with_message(
+                    ErrorCode::InvalidData,
+                    "invalid component data".to_owned(),
+                )
+            })
         }
     }
 }
 
-impl<C: IsComponent<C, M>, M> ComponentType<C, M> {
+impl<C: ComponentState> ComponentType<C> {
     /// Whether this component or any child component is interactive.
     pub fn is_interactive(&self) -> bool {
         match self {
@@ -105,16 +54,14 @@ impl<C: IsComponent<C, M>, M> ComponentType<C, M> {
         }
     }
 
-    /// Validate the component type recursively.
     pub fn validate(&self) -> Result<(), ApiError> {
         let mut state = ValidationState::new();
-        let errs = self.validate_inner(&mut state);
-
-        if errs.is_empty() {
+        self.validate_inner(&mut state);
+        if state.errors.is_empty() {
             Ok(())
         } else {
             Err(ApiError {
-                fields: errs,
+                fields: state.errors,
                 ..ApiError::with_message(
                     ErrorCode::InvalidData,
                     "invalid component data".to_owned(),
@@ -123,133 +70,57 @@ impl<C: IsComponent<C, M>, M> ComponentType<C, M> {
         }
     }
 
-    /// Recursively validate the component type and its children.
-    fn validate_inner(&self, state: &mut ValidationState) -> Vec<ErrorField> {
-        let mut errs = state.enter_component();
+    fn validate_inner(&self, state: &mut ValidationState) {
+        state.check_component();
 
         match self {
             ComponentType::Button {
                 label, custom_id, ..
             } => {
-                errs.extend(validate_length(
-                    &custom_id.0,
-                    1,
-                    128,
-                    "custom_id",
-                    state.current_path(),
-                ));
-                errs.extend(state.add_text(custom_id.0.len()));
-                errs.extend(validate_length(
-                    label,
-                    1,
-                    256,
-                    "label",
-                    state.current_path(),
-                ));
-                errs.extend(state.add_text(label.len()));
+                state.validate_length(&custom_id.0, 1, 128, "custom_id");
+                state.add_text(custom_id.0.len());
+                state.validate_length(label, 1, 256, "label");
+                state.add_text(label.len());
             }
             ComponentType::LinkButton { label, url, .. } => {
-                errs.extend(validate_length(
-                    label,
-                    1,
-                    256,
-                    "label",
-                    state.current_path(),
-                ));
-                errs.extend(state.add_text(label.len()));
+                state.validate_length(label, 1, 256, "label");
+                state.add_text(label.len());
                 if let Some(u) = url {
-                    errs.extend(state.add_text(u.as_str().len()));
+                    state.add_text(u.as_str().len());
                 }
             }
             ComponentType::Container { components, .. } => {
-                errs.extend(validate_count(
-                    components.len(),
-                    1,
-                    20,
-                    "container components",
-                    state.current_path(),
-                ));
-                state.depth += 1;
+                state.validate_count(components.len(), 1, 20, "container components");
                 for (i, c) in components.iter().enumerate() {
-                    errs.extend(state.enter_index(i, |s| {
-                        let mut e = vec![];
-                        if !matches!(
-                            c.ty(),
-                            ComponentType::Button { .. } | ComponentType::LinkButton { .. }
-                        ) {
-                            e.push(ErrorField {
-                                key: s.current_path(),
-                                message: "Containers can only contain Buttons or LinkButtons"
-                                    .into(),
-                                ty: ErrorFieldType::Other,
-                            });
-                        }
-                        e.extend(c.ty().validate_inner(s));
-                        e
-                    }));
+                    state.enter_index(i, |s| c.ty().validate_inner(s));
                 }
-                state.depth -= 1;
             }
             ComponentType::Section { components, .. } => {
-                errs.extend(validate_count(
-                    components.len(),
-                    1,
-                    20,
-                    "section components",
-                    state.current_path(),
-                ));
-                state.depth += 1;
+                state.validate_count(components.len(), 1, 20, "section components");
                 for (i, c) in components.iter().enumerate() {
-                    errs.extend(state.enter_index(i, |s| c.ty().validate_inner(s)));
+                    state.enter_index(i, |s| c.ty().validate_inner(s));
                 }
-                state.depth -= 1;
             }
             ComponentType::Text { content } => {
-                errs.extend(validate_length(
-                    content,
-                    1,
-                    8192,
-                    "text",
-                    state.current_path(),
-                ));
-                errs.extend(state.add_text(content.len()));
+                state.validate_length(content, 1, 8192, "text");
+                state.add_text(content.len());
             }
             ComponentType::Details {
                 summary, details, ..
             } => {
-                errs.extend(validate_count(
-                    summary.len(),
-                    1,
-                    20,
-                    "summary components",
-                    state.current_path(),
-                ));
-                errs.extend(state.enter("summary".into(), |s| {
-                    let mut e = vec![];
-                    s.depth += 1;
+                state.validate_count(summary.len(), 1, 20, "summary components");
+                state.enter("summary", |s| {
                     for (i, c) in summary.iter().enumerate() {
-                        e.extend(s.enter_index(i, |s2| c.ty().validate_inner(s2)));
+                        s.enter_index(i, |s2| c.ty().validate_inner(s2));
                     }
-                    s.depth -= 1;
-                    e
-                }));
+                });
 
-                errs.extend(validate_count(
-                    details.len(),
-                    1,
-                    20,
-                    "details components",
-                    state.current_path(),
-                ));
-                errs.extend(state.enter("details".into(), |s| {
-                    let mut e = vec![];
-                    s.depth += 1;
+                state.validate_count(details.len(), 1, 20, "details components");
+                state.enter("details", |s| {
                     for (i, c) in details.iter().enumerate() {
-                        e.extend(s.enter_index(i, |s2| c.ty().validate_inner(s2)));
+                        s.enter_index(i, |s2| c.ty().validate_inner(s2));
                     }
-                    s.depth -= 1;
-                    e
-                }));
+                });
             }
             ComponentType::Media { items } | ComponentType::Gallery { items } => {
                 let label = if matches!(self, ComponentType::Media { .. }) {
@@ -257,87 +128,22 @@ impl<C: IsComponent<C, M>, M> ComponentType<C, M> {
                 } else {
                     "gallery"
                 };
-                errs.extend(validate_count(
-                    items.len(),
-                    1,
-                    20,
-                    &format!("{label} items"),
-                    state.current_path(),
-                ));
-                state.depth += 1;
+                state.validate_count(items.len(), 1, 20, &format!("{label} items"));
                 for (i, item) in items.iter().enumerate() {
-                    errs.extend(state.enter_index(i, |s| {
-                        let mut e = vec![];
+                    state.enter_index(i, |s| {
                         if let Some(desc) = &item.description {
-                            e.extend(validate_length(
-                                desc,
-                                1,
-                                1024,
-                                "description",
-                                s.current_path(),
-                            ));
-                            e.extend(s.add_text(desc.len()));
+                            s.validate_length(desc, 1, 1024, "description");
+                            s.add_text(desc.len());
                         }
-                        e
-                    }));
+                    });
                 }
-                state.depth -= 1;
             }
             ComponentType::Reference { .. } => {}
         }
-        errs
     }
 }
 
-fn validate_count(
-    count: usize,
-    min: usize,
-    max: usize,
-    field: &str,
-    path: Vec<String>,
-) -> Vec<ErrorField> {
-    if count < min {
-        vec![ErrorField {
-            key: path,
-            message: format!("{field} cannot be empty"),
-            ty: ErrorFieldType::length(min as u64, max as u64),
-        }]
-    } else if count > max {
-        vec![ErrorField {
-            key: path,
-            message: format!("{field} can have up to {max}"),
-            ty: ErrorFieldType::length(min as u64, max as u64),
-        }]
-    } else {
-        vec![]
-    }
-}
-
-fn validate_length(
-    value: &str,
-    min: usize,
-    max: usize,
-    field: &str,
-    path: Vec<String>,
-) -> Vec<ErrorField> {
-    if value.is_empty() {
-        vec![ErrorField {
-            key: path,
-            message: format!("{field} cannot be empty"),
-            ty: ErrorFieldType::length(min as u64, max as u64),
-        }]
-    } else if value.len() > max {
-        vec![ErrorField {
-            key: path,
-            message: format!("{field} can have up to {max} chars"),
-            ty: ErrorFieldType::length(min as u64, max as u64),
-        }]
-    } else {
-        vec![]
-    }
-}
-
-impl<M> Component<M> {
+impl Component<Thin> {
     /// Append another component to this component tree.
     ///
     /// ## rules
@@ -346,51 +152,659 @@ impl<M> Component<M> {
     /// - Media can be appended to Gallery (added to items)
     /// - any component can be appended to Container and Section
     /// - any component can be appended to Details. it will be appended to `details`, not `summary`.
-    pub fn append(&mut self, other: Component<M>) -> Result<(), ApiError> {
-        match &mut self.ty {
-            ComponentType::Text { content } => {
-                if let ComponentType::Text {
-                    content: other_content,
-                } = other.ty
-                {
-                    content.push_str(&other_content);
-                } else {
-                    return Err(ApiError::with_message(
-                        ErrorCode::InvalidData,
-                        "only Text can be appended to Text".to_owned(),
-                    ));
-                }
-            }
-            ComponentType::Gallery { items } => {
-                if let ComponentType::Media { items: other_items } = other.ty {
-                    items.extend(other_items);
-                } else {
-                    return Err(ApiError::with_message(
-                        ErrorCode::InvalidData,
-                        "only Media can be appended to Gallery".to_owned(),
-                    ));
-                }
-            }
-            ComponentType::Container { components, .. } => {
-                components.push(other);
-            }
-            ComponentType::Section { components, .. } => {
-                components.push(other);
-            }
-            ComponentType::Details { details, .. } => {
-                details.push(other);
-            }
-            ComponentType::Button { .. }
-            | ComponentType::LinkButton { .. }
-            | ComponentType::Reference { .. }
-            | ComponentType::Media { .. } => {
-                return Err(ApiError::with_message(
-                    ErrorCode::InvalidData,
-                    "cannot append to this component type".to_owned(),
-                ));
+    pub fn append(&mut self, _other: Component<Create>) -> Result<(), ApiError> {
+        todo!()
+    }
+}
+
+// old code below
+// TODO: port to above
+// impl<C: ComponentState> ComponentType<C> {
+//     /// Append another component to this component tree.
+//     ///
+//     /// ## rules
+//     ///
+//     /// - Text can be appended to other Text (content is concatenated)
+//     /// - Media can be appended to Gallery (added to items)
+//     /// - any component can be appended to Container and Section
+//     /// - any component can be appended to Details. it will be appended to `details`, not `summary`.
+//     pub fn append(&mut self, other: Component<Create>) -> Result<(), ApiError> {
+//         match &mut self.ty {
+//             ComponentType::Text { content } => {
+//                 if let ComponentType::Text {
+//                     content: other_content,
+//                 } = other.ty
+//                 {
+//                     content.push_str(&other_content);
+//                 } else {
+//                     return Err(ApiError::with_message(
+//                         ErrorCode::InvalidData,
+//                         "only Text can be appended to Text".to_owned(),
+//                     ));
+//                 }
+//             }
+//             ComponentType::Gallery { items } => {
+//                 if let ComponentType::Media { items: other_items } = other.ty {
+//                     items.extend(other_items);
+//                 } else {
+//                     return Err(ApiError::with_message(
+//                         ErrorCode::InvalidData,
+//                         "only Media can be appended to Gallery".to_owned(),
+//                     ));
+//                 }
+//             }
+//             ComponentType::Container { components, .. } => {
+//                 components.push(other);
+//             }
+//             ComponentType::Section { components, .. } => {
+//                 components.push(other);
+//             }
+//             ComponentType::Details { details, .. } => {
+//                 details.push(other);
+//             }
+//             ComponentType::Button { .. }
+//             | ComponentType::LinkButton { .. }
+//             | ComponentType::Reference { .. }
+//             | ComponentType::Media { .. } => {
+//                 return Err(ApiError::with_message(
+//                     ErrorCode::InvalidData,
+//                     "cannot append to this component type".to_owned(),
+//                 ));
+//             }
+//         }
+//     }
+// }
+
+impl Components<Create> {
+    /// parse a Blueprint into a Canonical component
+    ///
+    /// if there is a previous version of a component tree, it is used
+    /// to resolve `Reference` components. resolve_media should resolve a
+    /// MediaReference into Media, use get_media_references first to process
+    /// media
+    pub fn parse<R>(
+        self,
+        prev: Option<&Components<Canonical>>,
+        resolve_media: &R,
+    ) -> Result<Components<Canonical>, ApiError>
+    where
+        R: Fn(MediaReference) -> Result<Media, ApiError>,
+    {
+        let mut id_allocator = IdAllocator::new();
+
+        // mark ids in old tree as used
+        if let Some(prev_tree) = prev {
+            for component in &prev_tree.inner {
+                component.visit_ids(&mut |id| id_allocator.mark_used(id.0));
             }
         }
 
-        self.ty.validate()
+        let mut parsed = Vec::with_capacity(self.inner.len());
+        for c in self.inner {
+            parsed.push(c.parse_inner(prev, &mut id_allocator, resolve_media)?);
+        }
+
+        let tree = Components { inner: parsed };
+        tree.validate()?;
+        Ok(tree)
+    }
+
+    /// parse a Blueprint into a Thin component
+    ///
+    /// if there is a previous version of a component tree, it is used
+    /// to resolve `Reference` components. resolve_media should resolve a
+    /// MediaReference into Media, use get_media_references first to process
+    /// media
+    pub fn parse_thin<R>(
+        self,
+        prev: Option<&Components<Thin>>,
+        resolve_media: &R,
+    ) -> Result<Components<Thin>, ApiError>
+    where
+        R: Fn(MediaReference) -> Result<MediaId, ApiError>,
+    {
+        let mut id_allocator = IdAllocator::new();
+
+        // mark ids in old tree as used
+        if let Some(prev_tree) = prev {
+            for component in &prev_tree.inner {
+                component.visit_ids(&mut |id| id_allocator.mark_used(id.0));
+            }
+        }
+
+        let mut parsed = Vec::with_capacity(self.inner.len());
+        for c in self.inner {
+            parsed.push(c.parse_thin_inner(prev, &mut id_allocator, resolve_media)?);
+        }
+
+        let tree = Components { inner: parsed };
+        tree.validate()?;
+        Ok(tree)
+    }
+
+    /// get all referenced media in this component tree
+    pub fn get_media_refs(&self) -> Vec<MediaReference> {
+        let mut refs = Vec::new();
+        for c in &self.inner {
+            c.ty.collect_media_refs(&mut refs);
+        }
+        refs
+    }
+}
+
+impl<C: ComponentState> ComponentType<C> {
+    fn collect_media_refs(&self, refs: &mut Vec<C::Media>) {
+        match self {
+            ComponentType::Container { components, .. }
+            | ComponentType::Section { components, .. } => {
+                for c in components {
+                    c.ty().collect_media_refs(refs);
+                }
+            }
+            ComponentType::Details {
+                summary, details, ..
+            } => {
+                for c in summary.iter().chain(details) {
+                    c.ty().collect_media_refs(refs);
+                }
+            }
+            ComponentType::Media { items } | ComponentType::Gallery { items } => {
+                for item in items {
+                    refs.push(item.media.clone());
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+impl<C: ComponentState> Components<C> {
+    pub fn collect_media_refs(&self, refs: &mut Vec<C::Media>) {
+        for c in &self.inner {
+            c.ty.collect_media_refs(refs);
+        }
+    }
+}
+
+impl Component<Create> {
+    fn parse_inner<R>(
+        self,
+        prev: Option<&Components<Canonical>>,
+        id_allocator: &mut IdAllocator,
+        resolve_media: &R,
+    ) -> Result<Component<Canonical>, ApiError>
+    where
+        R: Fn(MediaReference) -> Result<Media, ApiError>,
+    {
+        // handle `Reference`s
+        if let ComponentType::Reference { reference_id } = &self.ty {
+            let prev_tree = prev.ok_or_else(|| {
+                ApiError::with_message(
+                    ErrorCode::InvalidData,
+                    "Reference requires a previous version".into(),
+                )
+            })?;
+
+            let referenced = prev_tree.find_by_id(*reference_id).ok_or_else(|| {
+                ApiError::with_message(
+                    ErrorCode::NotFound,
+                    format!("Referenced component {} not found", reference_id.0),
+                )
+            })?;
+
+            return if self.id == Some(referenced.id) {
+                // MOVE: Return the existing canonical component
+                Ok(referenced.clone())
+            } else {
+                // CLONE: Deep clone existing canonical component with new IDs
+                referenced.clone_with_new_ids(id_allocator)
+            };
+        }
+
+        let id = id_allocator.allocate(self.id);
+        let ty = self.ty.try_map(
+            |child| child.parse_inner(prev, id_allocator, resolve_media),
+            |media| resolve_media(media),
+        )?;
+
+        Ok(Component { id, ty })
+    }
+
+    fn parse_thin_inner<R>(
+        self,
+        prev: Option<&Components<Thin>>,
+        id_allocator: &mut IdAllocator,
+        resolve_media: &R,
+    ) -> Result<Component<Thin>, ApiError>
+    where
+        R: Fn(MediaReference) -> Result<MediaId, ApiError>,
+    {
+        // handle `Reference`s
+        if let ComponentType::Reference { reference_id } = &self.ty {
+            let prev_tree = prev.ok_or_else(|| {
+                ApiError::with_message(
+                    ErrorCode::InvalidData,
+                    "Reference requires a previous version".into(),
+                )
+            })?;
+
+            let referenced = prev_tree.find_by_id(*reference_id).ok_or_else(|| {
+                ApiError::with_message(
+                    ErrorCode::NotFound,
+                    format!("Referenced component {} not found", reference_id.0),
+                )
+            })?;
+
+            return if self.id == Some(referenced.id) {
+                // MOVE: Return the existing canonical component
+                Ok(referenced.clone())
+            } else {
+                // CLONE: Deep clone existing canonical component with new IDs
+                referenced.clone_with_new_ids(id_allocator)
+            };
+        }
+
+        let id = id_allocator.allocate(self.id);
+        let ty = self.ty.try_map(
+            |child| child.parse_thin_inner(prev, id_allocator, resolve_media),
+            |media| resolve_media(media),
+        )?;
+
+        Ok(Component { id, ty })
+    }
+}
+
+impl Component<Canonical> {
+    fn clone_with_new_ids(
+        &self,
+        id_allocator: &mut IdAllocator,
+    ) -> Result<Component<Canonical>, ApiError> {
+        let id = id_allocator.allocate(None);
+
+        let ty = match &self.ty {
+            ComponentType::Container { components, color } => ComponentType::Container {
+                components: components
+                    .iter()
+                    .map(|child| child.clone_with_new_ids(id_allocator))
+                    .collect::<Result<Vec<_>, _>>()?,
+                color: color.clone(),
+            },
+            ComponentType::Section { components, color } => ComponentType::Section {
+                components: components
+                    .iter()
+                    .map(|child| child.clone_with_new_ids(id_allocator))
+                    .collect::<Result<Vec<_>, _>>()?,
+                color: color.clone(),
+            },
+            ComponentType::Details {
+                open,
+                color,
+                summary,
+                details,
+            } => ComponentType::Details {
+                open: *open,
+                color: color.clone(),
+                summary: summary
+                    .iter()
+                    .map(|child| child.clone_with_new_ids(id_allocator))
+                    .collect::<Result<Vec<_>, _>>()?,
+                details: details
+                    .iter()
+                    .map(|child| child.clone_with_new_ids(id_allocator))
+                    .collect::<Result<Vec<_>, _>>()?,
+            },
+            ComponentType::Text { content } => ComponentType::Text {
+                content: content.clone(),
+            },
+            ComponentType::Button {
+                label,
+                style,
+                custom_id,
+            } => ComponentType::Button {
+                label: label.clone(),
+                style: *style,
+                custom_id: custom_id.clone(),
+            },
+            ComponentType::LinkButton { label, url } => ComponentType::LinkButton {
+                label: label.clone(),
+                url: url.clone(),
+            },
+            ComponentType::Media { items } => ComponentType::Media {
+                items: items.clone(),
+            },
+            ComponentType::Gallery { items } => ComponentType::Gallery {
+                items: items.clone(),
+            },
+            ComponentType::Reference { .. } => {
+                return Err(ApiError::with_message(
+                    ErrorCode::InvalidData,
+                    "Cannot clone a reference".into(),
+                ))
+            }
+        };
+
+        Ok(Component { id, ty })
+    }
+}
+
+impl Component<Thin> {
+    fn clone_with_new_ids(
+        &self,
+        id_allocator: &mut IdAllocator,
+    ) -> Result<Component<Thin>, ApiError> {
+        let id = id_allocator.allocate(None);
+
+        let ty = match &self.ty {
+            ComponentType::Container { components, color } => ComponentType::Container {
+                components: components
+                    .iter()
+                    .map(|child| child.clone_with_new_ids(id_allocator))
+                    .collect::<Result<Vec<_>, _>>()?,
+                color: color.clone(),
+            },
+            ComponentType::Section { components, color } => ComponentType::Section {
+                components: components
+                    .iter()
+                    .map(|child| child.clone_with_new_ids(id_allocator))
+                    .collect::<Result<Vec<_>, _>>()?,
+                color: color.clone(),
+            },
+            ComponentType::Details {
+                open,
+                color,
+                summary,
+                details,
+            } => ComponentType::Details {
+                open: *open,
+                color: color.clone(),
+                summary: summary
+                    .iter()
+                    .map(|child| child.clone_with_new_ids(id_allocator))
+                    .collect::<Result<Vec<_>, _>>()?,
+                details: details
+                    .iter()
+                    .map(|child| child.clone_with_new_ids(id_allocator))
+                    .collect::<Result<Vec<_>, _>>()?,
+            },
+            ComponentType::Text { content } => ComponentType::Text {
+                content: content.clone(),
+            },
+            ComponentType::Button {
+                label,
+                style,
+                custom_id,
+            } => ComponentType::Button {
+                label: label.clone(),
+                style: *style,
+                custom_id: custom_id.clone(),
+            },
+            ComponentType::LinkButton { label, url } => ComponentType::LinkButton {
+                label: label.clone(),
+                url: url.clone(),
+            },
+            ComponentType::Media { items } => ComponentType::Media {
+                items: items.clone(),
+            },
+            ComponentType::Gallery { items } => ComponentType::Gallery {
+                items: items.clone(),
+            },
+            ComponentType::Reference { .. } => {
+                return Err(ApiError::with_message(
+                    ErrorCode::InvalidData,
+                    "Cannot clone a reference".into(),
+                ))
+            }
+        };
+
+        Ok(Component { id, ty })
+    }
+}
+
+impl Components<Canonical> {
+    /// look up a component by its id
+    pub fn find_by_id(&self, id: ComponentId) -> Option<&Component<Canonical>> {
+        self.inner.iter().find_map(|c| c.find_by_id(id))
+    }
+}
+
+impl Components<Thin> {
+    /// look up a component by its id
+    pub fn find_by_id(&self, id: ComponentId) -> Option<&Component<Thin>> {
+        self.inner.iter().find_map(|c| c.find_by_id(id))
+    }
+}
+
+impl<C1: ComponentState> ComponentType<C1> {
+    /// recursively transforms the state of the component tree from `C1` to `C2`.
+    pub fn try_map<C2, F1, F2, E>(
+        self,
+        mut map_child: F1,
+        mut map_media: F2,
+    ) -> Result<ComponentType<C2>, E>
+    where
+        C2: ComponentState,
+        F1: FnMut(Component<C1>) -> Result<Component<C2>, E>,
+        F2: FnMut(C1::Media) -> Result<C2::Media, E>,
+    {
+        Ok(match self {
+            ComponentType::Container { components, color } => ComponentType::Container {
+                components: components
+                    .into_iter()
+                    .map(&mut map_child)
+                    .collect::<Result<_, _>>()?,
+                color,
+            },
+            ComponentType::Section { components, color } => ComponentType::Section {
+                components: components
+                    .into_iter()
+                    .map(&mut map_child)
+                    .collect::<Result<_, _>>()?,
+                color,
+            },
+            ComponentType::Details {
+                open,
+                color,
+                summary,
+                details,
+            } => ComponentType::Details {
+                open,
+                color,
+                summary: summary
+                    .into_iter()
+                    .map(&mut map_child)
+                    .collect::<Result<_, _>>()?,
+                details: details
+                    .into_iter()
+                    .map(&mut map_child)
+                    .collect::<Result<_, _>>()?,
+            },
+
+            // Map variants with Media items
+            ComponentType::Media { items } => ComponentType::Media {
+                items: items
+                    .into_iter()
+                    .map(|c| {
+                        map_media(c.media).map(|media| ComponentMedia {
+                            media,
+                            description: c.description,
+                            spoiler: c.spoiler,
+                        })
+                    })
+                    .collect::<Result<_, _>>()?,
+            },
+            ComponentType::Gallery { items } => ComponentType::Gallery {
+                items: items
+                    .into_iter()
+                    .map(|c| {
+                        map_media(c.media).map(|media| ComponentMedia {
+                            media,
+                            description: c.description,
+                            spoiler: c.spoiler,
+                        })
+                    })
+                    .collect::<Result<_, _>>()?,
+            },
+
+            // Variants with no generic types can just be unpacked and repacked
+            ComponentType::Text { content } => ComponentType::Text { content },
+            ComponentType::Button {
+                label,
+                style,
+                custom_id,
+            } => ComponentType::Button {
+                label,
+                style,
+                custom_id,
+            },
+            ComponentType::LinkButton { label, url } => ComponentType::LinkButton { label, url },
+            ComponentType::Reference { reference_id } => ComponentType::Reference { reference_id },
+        })
+    }
+}
+
+impl ComponentType<Canonical> {
+    pub fn into_thin(self) -> ComponentType<Thin> {
+        match self {
+            ComponentType::Button {
+                label,
+                style,
+                custom_id,
+            } => ComponentType::Button {
+                label,
+                style,
+                custom_id,
+            },
+            ComponentType::LinkButton { label, url } => ComponentType::LinkButton { label, url },
+            ComponentType::Text { content } => ComponentType::Text { content },
+            ComponentType::Reference { reference_id } => ComponentType::Reference { reference_id },
+            ComponentType::Container { components, color } => ComponentType::Container {
+                components: components.into_iter().map(|c| c.into_thin()).collect(),
+                color,
+            },
+            ComponentType::Section { components, color } => ComponentType::Section {
+                components: components.into_iter().map(|c| c.into_thin()).collect(),
+                color,
+            },
+            ComponentType::Details {
+                open,
+                color,
+                summary,
+                details,
+            } => ComponentType::Details {
+                open,
+                color,
+                summary: summary.into_iter().map(|c| c.into_thin()).collect(),
+                details: details.into_iter().map(|c| c.into_thin()).collect(),
+            },
+            ComponentType::Media { items } => ComponentType::Media {
+                items: items.into_iter().map(|i| i.into_thin()).collect(),
+            },
+            ComponentType::Gallery { items } => ComponentType::Gallery {
+                items: items.into_iter().map(|i| i.into_thin()).collect(),
+            },
+        }
+    }
+}
+
+impl Component<Thin> {
+    pub fn into_canonical<F, E>(self, resolve_media: &F) -> Result<Component<Canonical>, E>
+    where
+        F: Fn(MediaId) -> Result<Media, E>,
+    {
+        let new_ty = match self.ty {
+            // leaf nodes with no media
+            ComponentType::Button {
+                label,
+                style,
+                custom_id,
+            } => ComponentType::Button {
+                label,
+                style,
+                custom_id,
+            },
+            ComponentType::LinkButton { label, url } => ComponentType::LinkButton { label, url },
+            ComponentType::Text { content } => ComponentType::Text { content },
+            ComponentType::Reference { reference_id } => ComponentType::Reference { reference_id },
+
+            // recursive containers
+            ComponentType::Container { components, color } => ComponentType::Container {
+                components: components
+                    .into_iter()
+                    .map(|c| c.into_canonical(resolve_media))
+                    .collect::<Result<_, _>>()?,
+                color,
+            },
+            ComponentType::Section { components, color } => ComponentType::Section {
+                components: components
+                    .into_iter()
+                    .map(|c| c.into_canonical(resolve_media))
+                    .collect::<Result<_, _>>()?,
+                color,
+            },
+            ComponentType::Details {
+                open,
+                color,
+                summary,
+                details,
+            } => ComponentType::Details {
+                open,
+                color,
+                summary: summary
+                    .into_iter()
+                    .map(|c| c.into_canonical(resolve_media))
+                    .collect::<Result<_, _>>()?,
+                details: details
+                    .into_iter()
+                    .map(|c| c.into_canonical(resolve_media))
+                    .collect::<Result<_, _>>()?,
+            },
+
+            // media nodes
+            ComponentType::Media { items } => ComponentType::Media {
+                items: items
+                    .into_iter()
+                    .map(|i| i.inflate(resolve_media))
+                    .collect::<Result<_, _>>()?,
+            },
+            ComponentType::Gallery { items } => ComponentType::Gallery {
+                items: items
+                    .into_iter()
+                    .map(|i| i.inflate(resolve_media))
+                    .collect::<Result<_, _>>()?,
+            },
+        };
+
+        Ok(Component {
+            id: self.id,
+            ty: new_ty,
+        })
+    }
+}
+
+impl ComponentMedia<MediaId> {
+    fn inflate<F, E>(self, resolve_media: &F) -> Result<ComponentMedia<Media>, E>
+    where
+        F: Fn(MediaId) -> Result<Media, E>,
+    {
+        Ok(ComponentMedia {
+            media: resolve_media(self.media)?,
+            description: self.description,
+            spoiler: self.spoiler,
+        })
+    }
+}
+
+impl Components<Thin> {
+    pub fn into_canonical<F, E>(self, resolve_media: F) -> Result<Components<Canonical>, E>
+    where
+        F: Fn(MediaId) -> Result<Media, E>,
+    {
+        let inner = self
+            .inner
+            .into_iter()
+            .map(|c| c.into_canonical(&resolve_media))
+            .collect::<Result<Vec<_>, E>>()?;
+
+        Ok(Components { inner })
     }
 }

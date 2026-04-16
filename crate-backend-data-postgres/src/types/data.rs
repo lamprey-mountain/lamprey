@@ -2,6 +2,7 @@
 
 use common::v1::types::automod::{AutomodAction, AutomodTarget, AutomodTrigger};
 use common::v1::types::calendar::{CalendarEvent, CalendarOverwrite};
+use common::v1::types::components::ComponentThin;
 use common::v1::types::document::DocumentBranchState;
 use common::v1::types::message::MessageType;
 use common::v1::types::User;
@@ -480,6 +481,7 @@ pub struct DbMessageCreate {
     pub attachment_ids: Vec<MediaId>,
     pub author_id: UserId,
     pub embeds: Vec<Embed>,
+    pub components: Vec<ComponentThin>,
     pub message_type: MessageType,
     pub created_at: Option<time::PrimitiveDateTime>,
     pub removed_at: Option<time::PrimitiveDateTime>,
@@ -1153,6 +1155,7 @@ pub struct DbMessage {
     pub reply_id: Option<uuid::Uuid>,
     pub override_name: Option<String>,
     pub embeds: Option<serde_json::Value>,
+    pub components: Option<serde_json::Value>,
     pub version_created_at: time::PrimitiveDateTime,
     pub version_deleted_at: Option<time::PrimitiveDateTime>,
     pub attachments: serde_json::Value,
@@ -1171,6 +1174,7 @@ pub struct DbMessageVersion {
     pub metadata: Option<serde_json::Value>,
     pub message_type: DbMessageType,
     pub attachments: serde_json::Value,
+    pub components: Option<serde_json::Value>,
 }
 
 #[derive(sqlx::FromRow)]

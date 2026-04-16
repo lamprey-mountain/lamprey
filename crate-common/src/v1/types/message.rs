@@ -8,6 +8,7 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::automod::{AutomodAction, AutomodMatches, AutomodRuleStripped};
+use crate::v1::types::components::{self, Canonical, Component, ComponentCreate, Components};
 use crate::v1::types::e2ee::MlsEpoch;
 use crate::v1::types::metadata::MessageMetadata;
 use crate::v1::types::moderation::Report;
@@ -114,6 +115,7 @@ impl MessageVersion {
                     metadata: None,
                     reply_id: m.reply_id,
                     embeds: vec![],
+                    components: Components::default(),
                 })
             }
             m => m,
@@ -319,6 +321,13 @@ pub struct MessageCreate {
 
     /// application defined metadata
     pub metadata: Option<MessageMetadata>,
+
+    /// the components for this message
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Components::is_empty")
+    )]
+    pub components: Components<components::Create>,
 }
 
 #[derive(Debug, Clone)]
@@ -351,6 +360,13 @@ pub struct MessagePatch {
     /// passing this will replace metadata
     #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub metadata: Option<Option<MessageMetadata>>,
+
+    /// the components for this message
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Components::is_empty")
+    )]
+    pub components: Components<components::Create>,
 }
 
 // NOTE: utoipa doesnt seem to like #[deprecated] here
@@ -620,6 +636,13 @@ pub struct MessageDefaultMarkdown {
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
     pub embeds: Vec<Embed>,
+
+    /// the components for this message
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Components::is_empty")
+    )]
+    pub components: Components<components::Canonical>,
 }
 
 /// an encrypted message

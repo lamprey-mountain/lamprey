@@ -811,6 +811,7 @@ impl ServiceAutomod {
                         attachment_ids: vec![],
                         author_id: AUTOMOD_USER_ID,
                         embeds: vec![],
+                        components: vec![],
                         message_type: MessageType::AutomodExecution(execution).into(),
                         created_at: None,
                         removed_at: None,
