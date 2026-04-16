@@ -121,4 +121,12 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 
 		return resource;
 	}
+
+	clear() {
+		super.clear();
+		for (const list of this._roomLists.values()) {
+			list.clear();
+		}
+		this._roomLists.clear();
+	}
 }

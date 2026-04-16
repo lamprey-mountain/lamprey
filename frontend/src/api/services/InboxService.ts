@@ -119,4 +119,12 @@ export class InboxService extends BaseService<Notification> {
 			}),
 		);
 	}
+
+	clear() {
+		super.clear();
+		for (const v of this._listings.values()) {
+			v.refetch();
+		}
+		this._listings.clear();
+	}
 }

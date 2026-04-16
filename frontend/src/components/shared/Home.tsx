@@ -14,12 +14,11 @@ import { useModals } from "@/contexts/modal";
 import { flags } from "@/lib/flags";
 
 export const Home = () => {
-	const api2 = useApi();
-	const auth2 = useAuth();
-	const rooms2 = useRooms();
-	const invites2 = useInvites();
-	const sessions2 = useSessions();
-	const users2 = useUsers();
+	const api = useApi();
+	const auth = useAuth();
+	const rooms = useRooms();
+	const invites = useInvites();
+	const users = useUsers();
 	const user = useCurrentUser();
 	const [email, setEmail] = createSignal("");
 	const [password, setPassword] = createSignal("");
@@ -30,7 +29,7 @@ export const Home = () => {
 			type: "room_create",
 			cont: (data: { name: string; public: boolean } | null) => {
 				if (!data) return;
-				rooms2.create({ name: data.name, public: data.public });
+				rooms.create({ name: data.name, public: data.public });
 			},
 		});
 	}
@@ -38,25 +37,22 @@ export const Home = () => {
 	function useInvite() {
 		modalctl.prompt("invite code?", (invite_code: string | null) => {
 			if (!invite_code) return;
-			invites2.accept(invite_code);
+			invites.accept(invite_code);
 		});
 	}
 
 	async function loginDiscord() {
-		const url = await auth2.oauthUrl("discord");
+		const url = await auth.oauthUrl("discord");
 		globalThis.open(url);
 	}
 
 	async function loginGithub() {
-		const url = await auth2.oauthUrl("github");
+		const url = await auth.oauthUrl("github");
 		globalThis.open(url);
 	}
 
 	async function logout() {
-		await sessions2.deleteSession("@self");
-		localStorage.clear();
-		// TODO: don't reload on auth change
-		location.reload();
+		await api.logout();
 	}
 
 	async function handleAuthSubmit(e: SubmitEvent) {
@@ -72,7 +68,7 @@ export const Home = () => {
 			return;
 		}
 
-		auth2.passwordLogin({
+		auth.passwordLogin({
 			type: "Email",
 			email: email(),
 			password: password(),
@@ -82,17 +78,13 @@ export const Home = () => {
 	async function createGuest() {
 		modalctl.prompt("name?", (name) => {
 			if (!name) return;
-			users2.createGuest(name).then(() => {
-				// TODO: don't reload on auth change
-				location.reload();
-			});
+			users.createGuest(name);
 		});
 	}
 
-	const isUnauthorized = () => api2.session()?.status === "Unauthorized";
-	const isAuthorized = () => api2.session()?.status === "Authorized";
-
-	createEffect(() => console.log("AAA", api2.session()));
+	const isUnauthorized = () =>
+		api.session() === null || api.session()?.status === "Unauthorized";
+	const isAuthorized = () => api.session()?.status === "Authorized";
 
 	return (
 		<div class="home">
@@ -156,6 +148,7 @@ export const Home = () => {
 				<button type="button" class="button" onClick={createGuest}>
 					create guest
 				</button>
+				<br />
 			</Show>
 
 			<Show when={isAuthorized()}>

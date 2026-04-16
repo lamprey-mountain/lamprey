@@ -194,4 +194,19 @@ export class InvitesService extends BaseService<Invite> {
 
 		return resource;
 	}
+
+	clear() {
+		super.clear();
+		for (const list of this._roomLists.values()) {
+			list.clear();
+		}
+		this._roomLists.clear();
+		for (const list of this._channelLists.values()) {
+			list.clear();
+		}
+		this._channelLists.clear();
+		if (this._serverList) {
+			this._serverList.clear();
+		}
+	}
 }

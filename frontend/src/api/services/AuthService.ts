@@ -33,12 +33,6 @@ export class AuthService extends BaseService<never> {
 				body,
 			}),
 		);
-		// // After successful login, restart the sync connection to get the updated session
-		// this.client.stop();
-		// const token = localStorage.getItem("token");
-		// if (token) {
-		// 	this.client.start(token);
-		// }
 	}
 
 	async createSession(): Promise<Session> {

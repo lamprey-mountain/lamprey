@@ -1,4 +1,10 @@
-import type { DBSchema, IDBPDatabase, IDBPTransaction, StoreNames } from "idb";
+import {
+	type DBSchema,
+	deleteDB,
+	type IDBPDatabase,
+	type IDBPTransaction,
+	type StoreNames,
+} from "idb";
 import type {
 	AuditLogEntry,
 	EmojiCustom,
@@ -181,3 +187,18 @@ export const migrations: Array<Migration> = [
 		},
 	},
 ];
+
+/** Clears all data from all object stores in the database */
+export async function clearApiDatabase(db: IDBPDatabase<ApiDB>) {
+	const storeNames = Array.from(db.objectStoreNames) as StoreNames<ApiDB>[];
+	const tx = db.transaction(storeNames, "readwrite");
+
+	await Promise.all(
+		storeNames.map((name) => {
+			const store = tx.objectStore(name);
+			return store.clear();
+		}),
+	);
+
+	return tx.done;
+}

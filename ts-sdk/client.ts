@@ -35,6 +35,9 @@ export type Client = {
 	/** Stop receiving events */
 	stop: () => void;
 
+	/** Stop receiving events, clear token and resume state */
+	stopAggressive: () => void;
+
 	state: Observer<ClientState>;
 
 	getWebsocket: () => WebSocket;
@@ -206,6 +209,13 @@ export function createClient(opts: ClientOptions): Client {
 		ws?.close();
 	}
 
+	function stopAggressive() {
+		opts.token = undefined;
+		setState("stopped");
+		ws?.close();
+		resume = null;
+	}
+
 	return {
 		state: state.observable,
 		opts,
@@ -214,6 +224,7 @@ export function createClient(opts: ClientOptions): Client {
 		stop,
 		getWebsocket: () => ws,
 		send,
+		stopAggressive,
 	};
 }
 

@@ -195,4 +195,16 @@ export class RoomMembersService extends BaseService<RoomMember> {
 
 		return resource;
 	}
+
+	clear() {
+		super.clear();
+		for (const list of this._roomLists.values()) {
+			list.clear();
+		}
+		this._roomLists.clear();
+		for (const r of this.membersByRoom.values()) {
+			r.clear();
+		}
+		this.membersByRoom.clear();
+	}
 }

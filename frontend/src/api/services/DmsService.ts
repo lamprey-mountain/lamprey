@@ -72,4 +72,11 @@ export class DmsService extends BaseService<Channel> {
 
 		return resource;
 	}
+
+	clear() {
+		super.clear();
+		if (this._list) {
+			this._list.clear();
+		}
+	}
 }

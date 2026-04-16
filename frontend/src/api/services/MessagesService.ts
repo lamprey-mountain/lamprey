@@ -1169,4 +1169,21 @@ export class MessagesService extends BaseService<Message> {
 
 		return cache;
 	}
+
+	clear() {
+		super.clear();
+		for (const ranges of this._ranges.values()) {
+			ranges.ranges.clear();
+			ranges.live = new MessageRange(false, true, []);
+		}
+		this._ranges.clear();
+		this._versions.clear();
+		this._pendingFetches.clear();
+		for (const v of this._pinnedListings.values()) {
+			v.refetch();
+		}
+		this._pinnedListings.clear();
+		this._pinnedListingMutators.clear();
+		this._hydrated.clear();
+	}
 }

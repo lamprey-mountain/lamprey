@@ -154,4 +154,10 @@ export class RoomsService extends BaseService<Room> {
 			from = data.items.at(-1)?.id;
 		}
 	}
+
+	clear() {
+		super.clear();
+		this.roomList.clear();
+		this.roomListAll.clear();
+	}
 }

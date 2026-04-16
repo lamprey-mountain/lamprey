@@ -173,4 +173,14 @@ export class ThreadsService extends BaseService<Channel> {
 			"channel_id",
 		);
 	}
+
+	clear() {
+		super.clear();
+		for (const listMap of this._roomLists.values()) {
+			for (const list of listMap.values()) {
+				list.clear();
+			}
+			listMap.clear();
+		}
+	}
 }

@@ -13,7 +13,10 @@ import { type Accessor, batch, createSignal } from "solid-js";
 import { ChannelsService } from "../services/ChannelsService";
 import { MessagesService } from "../services/MessagesService";
 import { NotificationService } from "../services/NotificationService";
-import { PreferencesService } from "../services/PreferencesService";
+import {
+	DEFAULT_PREFERENCES,
+	PreferencesService,
+} from "../services/PreferencesService";
 import { RolesService } from "../services/RolesService";
 import { RoomMembersService } from "../services/RoomMembersService";
 import { RoomsService } from "../services/RoomsService";
@@ -28,6 +31,7 @@ import { ReactiveMap } from "@solid-primitives/map";
 import type { IDBPDatabase } from "idb";
 import type { UserWithRelationship, VoiceState } from "sdk";
 import { stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal } from "@/lib/notifications/util";
+import { type ApiDB, clearApiDatabase } from "@/lib/sync/db";
 import { logger } from "@/utils/logger";
 import { AuditLogService } from "../services/AuditLogService";
 import { AuthService } from "../services/AuthService";
@@ -44,6 +48,7 @@ import { RoomBansService } from "../services/RoomBansService";
 import { TagsService } from "../services/TagsService";
 import { ThreadsService } from "../services/ThreadsService";
 import { WebhooksService } from "../services/WebhooksService";
+import { BaseService } from "./Service";
 
 const storeLog = logger.for("api/rooms");
 
@@ -57,11 +62,11 @@ type MemberListSyncMessage = {
 };
 
 export class RootStore {
-	client: Client;
 	private _events: Emitter<{
 		sync: [MessageSync, MessageEnvelope];
 		ready: MessageReady;
 	}>;
+
 	rooms: RoomsService;
 	channels: ChannelsService;
 	users: UsersService;
@@ -136,14 +141,13 @@ export class RootStore {
 	}
 
 	constructor(
-		client: Client,
+		public client: Client,
 		events: Emitter<{
 			sync: [MessageSync, MessageEnvelope];
 			ready: MessageReady;
 		}>,
-		getDb?: () => IDBPDatabase<unknown> | undefined,
+		private getDb?: () => IDBPDatabase<ApiDB> | undefined,
 	) {
-		this.client = client;
 		this._events = events;
 
 		const [session, setSession] = createSignal<Session | null>(null);
@@ -313,13 +317,22 @@ export class RootStore {
 				s?.status === "Unauthorized" &&
 				msg.session.status === "Authorized"
 			) {
-				// TODO: don't reload on auth change
-				location.reload();
+				// HACK: reconnect after auth for Ready/Ambient message
+				// TODO: send an Ambient message (with current user) on login
+				const token = this.client.opts.token!;
+				this.client.stopAggressive();
+				this.client.start(token);
 			}
 		} else if (msg.type === "SessionUpdate") {
 			if (msg.session?.id === this.session()?.id) {
 				this.setSession(msg.session);
 			}
+		} else if (msg.type === "SessionDelete") {
+			if (msg.id === this.session()?.id) {
+				this.handleLogout();
+			}
+		} else if (msg.type === "SessionDeleteAll") {
+			this.handleLogout();
 		} else if (
 			msg.type === "RoomMemberCreate" ||
 			msg.type === "RoomMemberUpdate"
@@ -392,11 +405,61 @@ export class RootStore {
 		}
 	}
 
-	async tempCreateSession() {
+	async initSession() {
 		const session = await this.auth.createSession();
 		const sessionWithToken = session as Session & { token: string };
 		localStorage.setItem("token", sessionWithToken.token);
 		this.setSession(session);
 		this.client.start(sessionWithToken.token);
+	}
+
+	async logout() {
+		// delete this session, handleLogout will be called once SessionDelete event is received
+		await this.sessions.deleteSession("@self");
+	}
+
+	private async handleLogout() {
+		// shut down connection
+		this.setSession(null);
+		this.client.stopAggressive();
+
+		// clear cached data
+		batch(() => {
+			for (const prop of Object.values(this)) {
+				if (prop instanceof BaseService) {
+					prop.clear();
+				}
+			}
+		});
+
+		// clear non-BaseService state
+		this.memberLists.clear();
+		this.voiceStates.clear();
+		for (const s of this.typing.values()) {
+			s.clear();
+		}
+		this.typing.clear();
+
+		// clear indexeddb caches
+		const db = this.getDb?.();
+		if (db) {
+			try {
+				await clearApiDatabase(db);
+				storeLog.info("IndexedDB cleared successfully");
+			} catch (e) {
+				storeLog.error("Failed to clear IndexedDB", e);
+			}
+		}
+
+		// clear preferences from localStorage
+		localStorage.removeItem("token");
+		this.preferences.cache.set("@self", DEFAULT_PREFERENCES);
+		this.preferences._loaded = false;
+
+		// create a new session
+		this.initSession().catch((err) => {
+			logger.for("auth").error("Failed to create temp session", err);
+			alert("oh no :(\nsomething went VERY wrong");
+		});
 	}
 }

@@ -170,4 +170,9 @@ export class RolesService extends BaseService<Role> {
 			.map((id) => this.cache.get(id))
 			.filter((r): r is Role => r != null);
 	}
+
+	clear() {
+		super.clear();
+		this.rolesByRoom.clear();
+	}
 }

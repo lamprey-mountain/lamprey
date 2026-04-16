@@ -116,4 +116,12 @@ export class EmojiService extends BaseService<EmojiCustom> {
 		);
 		return results.flat();
 	}
+
+	clear() {
+		super.clear();
+		for (const list of this._roomLists.values()) {
+			list.clear();
+		}
+		this._roomLists.clear();
+	}
 }

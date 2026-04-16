@@ -142,4 +142,9 @@ export class DocumentsService extends BaseService<RevisionContent> {
 			),
 		);
 	}
+
+	clear() {
+		super.clear();
+		this.revisionCache.clear();
+	}
 }

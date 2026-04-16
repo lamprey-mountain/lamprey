@@ -247,4 +247,12 @@ export class ChannelsService extends BaseService<Channel> {
 		}
 		return channel;
 	}
+
+	clear() {
+		super.clear();
+		for (const r of this.channelsByRoom.values()) {
+			r.clear();
+		}
+		this.channelsByRoom.clear();
+	}
 }

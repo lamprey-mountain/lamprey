@@ -4,7 +4,7 @@ import { BaseService } from "../core/Service";
 
 const log = logger.for("api/preferences");
 
-const DEFAULT_PREFERENCES: Preferences = {
+export const DEFAULT_PREFERENCES: Preferences = {
 	frontend: {
 		desktop_notifs: "yes",
 		push_notifs: "yes",
@@ -31,6 +31,7 @@ const DEFAULT_PREFERENCES: Preferences = {
 };
 
 // TODO: store preferences in db instead of localstorage
+// NOTE: when this is implemented, make sure to clear preferences on log out
 function _loadSavedPreferences(): Preferences | null {
 	const c = localStorage.getItem("preferences");
 	if (!c) return null;

@@ -71,4 +71,13 @@ export class PaginatedList {
 	setError(error: unknown) {
 		this.setState({ error, isLoading: false });
 	}
+
+	clear() {
+		this.setState({
+			ids: [],
+			has_more: true,
+			cursor: undefined,
+			isLoading: false,
+		});
+	}
 }

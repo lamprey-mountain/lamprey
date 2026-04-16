@@ -79,4 +79,12 @@ export class WebhooksService extends BaseService<Webhook> {
 
 		return resource;
 	}
+
+	clear() {
+		super.clear();
+		for (const list of this._channelLists.values()) {
+			list.clear();
+		}
+		this._channelLists.clear();
+	}
 }

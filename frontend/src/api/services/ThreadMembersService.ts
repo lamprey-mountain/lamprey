@@ -139,4 +139,12 @@ export class ThreadMembersService extends BaseService<ThreadMember> {
 
 		return resource;
 	}
+
+	clear() {
+		super.clear();
+		for (const list of this._threadLists.values()) {
+			list.clear();
+		}
+		this._threadLists.clear();
+	}
 }

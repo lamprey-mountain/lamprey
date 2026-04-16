@@ -220,4 +220,12 @@ export class MemberListService {
 			}
 		}
 	}
+
+	clear() {
+		for (const list of this.lists.values()) {
+			list.groups = [];
+			list.items = [];
+		}
+		this.lists.clear();
+	}
 }

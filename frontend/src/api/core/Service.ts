@@ -295,4 +295,8 @@ export abstract class BaseService<T> {
 		this.cache.delete(id);
 		this.afterDelete(id, item);
 	}
+
+	clear() {
+		this.cache.clear();
+	}
 }
