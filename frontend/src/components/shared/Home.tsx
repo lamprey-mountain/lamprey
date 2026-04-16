@@ -1,5 +1,5 @@
 import { A } from "@solidjs/router";
-import { createSignal, Show } from "solid-js";
+import { createEffect, createSignal, Show } from "solid-js";
 import {
 	useApi,
 	useAuth,
@@ -55,7 +55,8 @@ export const Home = () => {
 	async function logout() {
 		await sessions2.deleteSession("@self");
 		localStorage.clear();
-		location.reload(); // TODO: less hacky logout
+		// TODO: don't reload on auth change
+		location.reload();
 	}
 
 	async function handleAuthSubmit(e: SubmitEvent) {
@@ -82,10 +83,16 @@ export const Home = () => {
 		modalctl.prompt("name?", (name) => {
 			if (!name) return;
 			users2.createGuest(name).then(() => {
+				// TODO: don't reload on auth change
 				location.reload();
 			});
 		});
 	}
+
+	const isUnauthorized = () => api2.session()?.status === "Unauthorized";
+	const isAuthorized = () => api2.session()?.status === "Authorized";
+
+	createEffect(() => console.log("AAA", api2.session()));
 
 	return (
 		<div class="home">
@@ -93,7 +100,7 @@ export const Home = () => {
 			<p>welcome to lamprey mountain, the internet's finest asylum</p>
 			<p>work in progress. expect bugs and missing polish.</p>
 			<UnicodeEmoji hex="1F345" />
-			<Show when={api2.session()?.status === "Unauthorized"}>
+			<Show when={isUnauthorized()}>
 				<div class="auth border">
 					<section class="form-wrapper">
 						<form onSubmit={handleAuthSubmit}>
@@ -150,25 +157,27 @@ export const Home = () => {
 					create guest
 				</button>
 			</Show>
-			<Show when={api2.session() && api2.session()?.status !== "Unauthorized"}>
+
+			<Show when={isAuthorized()}>
 				<button type="button" class="button" onClick={logout}>
 					logout
 				</button>
+				<br />
+				<br />
+				<Show when={user()}>
+					<button type="button" class="button" onClick={createRoom}>
+						create room
+					</button>
+					<br />
+					<button type="button" class="button" onClick={useInvite}>
+						use invite
+					</button>
+					<br />
+					<A href="/settings">settings</A>
+					<br />
+				</Show>
 			</Show>
-			<br />
-			<br />
-			<Show when={user()}>
-				<button type="button" class="button" onClick={createRoom}>
-					create room
-				</button>
-				<br />
-				<button type="button" class="button" onClick={useInvite}>
-					use invite
-				</button>
-				<br />
-				<A href="/settings">settings</A>
-				<br />
-			</Show>
+
 			<A target="_self" href="/api/docs">
 				api docs
 			</A>

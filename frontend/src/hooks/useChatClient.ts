@@ -181,15 +181,12 @@ export function useChatClient(config: Config) {
 		if (TOKEN) {
 			client.start(TOKEN);
 		} else {
-			store.tempCreateSession();
+			store.tempCreateSession().catch((err) => {
+				logger.for("auth").error("Failed to create temp session", err);
+				alert("oh no :(\nsomething went VERY wrong");
+			});
 		}
 	});
-
-	if (!client.opts.token) {
-		queueMicrotask(() => {
-			store.tempCreateSession();
-		});
-	}
 
 	(store as any).ctx = ctx;
 

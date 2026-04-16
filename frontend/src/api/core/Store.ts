@@ -313,6 +313,7 @@ export class RootStore {
 				s?.status === "Unauthorized" &&
 				msg.session.status === "Authorized"
 			) {
+				// TODO: don't reload on auth change
 				location.reload();
 			}
 		} else if (msg.type === "SessionUpdate") {
@@ -392,12 +393,10 @@ export class RootStore {
 	}
 
 	async tempCreateSession() {
-		const session = await this.auth.createTempSession();
-		if (session.status !== "Unauthorized") {
-			const sessionWithToken = session as Session & { token: string };
-			localStorage.setItem("token", sessionWithToken.token);
-			this.setSession(session);
-			this.client.start(sessionWithToken.token);
-		}
+		const session = await this.auth.createSession();
+		const sessionWithToken = session as Session & { token: string };
+		localStorage.setItem("token", sessionWithToken.token);
+		this.setSession(session);
+		this.client.start(sessionWithToken.token);
 	}
 }
