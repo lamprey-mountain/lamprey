@@ -24,12 +24,16 @@ const B64: base64::engine::general_purpose::GeneralPurpose =
 pub struct SigningHeaders {
     /// the server this request *says* it came from
     pub origin: Hostname,
+
     /// the host this request was sent to
     pub host: String,
+
     /// unix timestamp as a decimal string
     pub timestamp: String,
+
     /// raw ed25519 signature bytes
     pub signature: Vec<u8>,
+
     /// raw ed25519 public key bytes
     pub pubkey: Vec<u8>,
 }

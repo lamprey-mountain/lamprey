@@ -14,7 +14,7 @@ use headers::{Authorization, HeaderMapExt};
 use http::request::Parts;
 
 use crate::routes::util::audit::AuditLoggerTransaction;
-use crate::routes::util::{HeaderPuppetId, HeaderReason};
+use crate::routes::util::{FederationIdentity, HeaderPuppetId, HeaderReason};
 use crate::Error;
 use crate::{routes::util::audit::AuditLogSlot, ServerState};
 
@@ -72,21 +72,26 @@ pub struct Auth2 {
 
 #[derive(Clone)]
 pub enum AuthIdentity3 {
-    /// Authenticated via a local user session
+    /// authenticated via a local user session
     Session {
         user: User,
         real_user: Option<User>,
         session: Session,
         scopes: Scopes,
     },
-    /// Authenticated via a remote server signature
+
+    /// authenticated via a remote server signature
     Server {
         origin: Hostname,
-        user: Option<User>, // for X-Puppet-Id
+
+        /// the user the server is puppetting
+        user: Option<User>,
     },
-    /// Unauthorized guest session (no user bound yet)
+
+    /// unauthorized guest session (no user bound yet)
     Guest { session: Session, scopes: Scopes },
-    /// Truly public request (no Authorization header)
+
+    /// truly public request (no authorization at all)
     Public,
 }
 
@@ -263,16 +268,16 @@ impl FromRequestParts<Arc<ServerState>> for Auth3 {
         }
 
         // try federation auth
-        let federation_identity = parts
-            .extensions
-            .get::<crate::routes::util::FederationIdentity>()
-            .cloned();
-        if let Some(crate::routes::util::FederationIdentity(origin)) = federation_identity {
+        let federation_identity = parts.extensions.get::<FederationIdentity>().cloned();
+        if let Some(FederationIdentity(origin)) = federation_identity {
             let HeaderPuppetId(puppet_id) = HeaderPuppetId::from_request_parts(parts, s).await?;
-            let user = if let Some(puppet_id) = puppet_id {
-                let user = s.services().users.get(puppet_id, None).await?;
-                // TODO: verify puppet belongs to this server
-                Some(user)
+            let user = if let Some(_puppet_id) = puppet_id {
+                // let user = s.services().users.get(puppet_id, None).await?;
+                // Some(user)
+
+                // TODO: user puppetting
+                // verify puppet belongs to this server
+                return Err(Error::Unimplemented);
             } else {
                 None
             };
@@ -393,11 +398,8 @@ impl FromRequestParts<Arc<ServerState>> for Auth2Relaxed {
         }
 
         // try federation auth
-        let federation_identity = parts
-            .extensions
-            .get::<crate::routes::util::FederationIdentity>()
-            .cloned();
-        if let Some(crate::routes::util::FederationIdentity(origin)) = federation_identity {
+        let federation_identity = parts.extensions.get::<FederationIdentity>().cloned();
+        if let Some(FederationIdentity(origin)) = federation_identity {
             let HeaderPuppetId(puppet_id) = HeaderPuppetId::from_request_parts(parts, s).await?;
             let user = if let Some(puppet_id) = puppet_id {
                 let user = s.services().users.get(puppet_id, None).await?;
