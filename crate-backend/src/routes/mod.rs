@@ -53,7 +53,7 @@ mod webhook;
 pub mod metrics;
 pub mod util;
 
-fn routes_v1() -> OpenApiRouter<Arc<ServerState>> {
+fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .merge(ack::routes())
         .merge(admin::routes())
@@ -66,7 +66,7 @@ fn routes_v1() -> OpenApiRouter<Arc<ServerState>> {
         .merge(dm::routes())
         .merge(document::routes())
         .merge(emoji::routes())
-        .merge(federation::routes())
+        .merge(federation::routes(Arc::clone(&s)))
         .merge(internal::routes())
         .merge(invite::routes())
         .merge(media::routes())
@@ -111,7 +111,7 @@ pub async fn well_known(State(s): State<Arc<ServerState>>) -> Result<impl IntoRe
     }))
 }
 
-pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
+pub fn routes(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
     // TODO: lamprey_backend_rest::router()
-    OpenApiRouter::new().nest("/v1", routes_v1())
+    OpenApiRouter::new().nest("/v1", routes_v1(s))
 }

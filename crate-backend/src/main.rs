@@ -427,7 +427,7 @@ async fn serve(state: Arc<ServerState>) -> Result<()> {
     info!("Starting server");
 
     let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
-        .nest("/api", routes::routes().fallback(api_fallback))
+        .nest("/api", routes::routes(Arc::clone(&state)).fallback(api_fallback))
         .route("/metrics", get(routes::metrics::get_metrics))
         .route("/.well-known/lamprey-mountain", get(routes::well_known))
         .with_state(state.clone())

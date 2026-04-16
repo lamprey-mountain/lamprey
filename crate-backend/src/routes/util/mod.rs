@@ -4,7 +4,7 @@ use std::{
 };
 
 use axum::{
-    extract::{FromRequest, FromRequestParts, Request},
+    extract::{FromRequest, FromRequestParts, Request, State},
     http::request::Parts,
 };
 use common::v1::types::{federation::Hostname, util::Time, UserId};
@@ -41,11 +41,87 @@ pub struct HeaderCache {
     if_modified_since: Option<HeaderValue>,
 }
 
+/// A verified federation identity
+#[derive(Debug, Clone)]
+pub struct FederationIdentity(pub Hostname);
+
 /// validate a server request and extract json
 #[derive(Clone)]
 pub struct ServerAuth<T> {
     pub origin: Hostname,
     pub body: T,
+}
+
+pub async fn verify_server_request(
+    state: &Arc<ServerState>,
+    parts: &http::request::Parts,
+    bytes: &::axum::body::Bytes,
+) -> Result<Hostname, Error> {
+    let signing_headers = signing::SigningHeaders::decode(&parts.headers)?;
+
+    let method = parts.method.as_str().to_string();
+    let path = parts.uri.path().to_string();
+    let host = parts
+        .headers
+        .get(http::header::HOST)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+
+    let incoming = signing::IncomingRequest {
+        origin: signing_headers.origin.clone(),
+        host: &host,
+        method: &method,
+        path: &path,
+        body: bytes,
+        headers: &signing_headers,
+    };
+
+    let srv = state.services();
+    let keys = srv.federation.fetch_keys(&signing_headers.origin).await?;
+
+    let mut verified = false;
+    for key in &keys {
+        let ValidatedKeyAlgo::Ed25519(verifying_key) = &key.alg;
+        if verifying_key.to_bytes() == signing_headers.pubkey[..] {
+            incoming.verify(verifying_key)?;
+            verified = true;
+            break;
+        }
+    }
+
+    if !verified {
+        return Err(Error::BadStatic(
+            "no matching key found (possibly expired?)",
+        ));
+    }
+
+    Ok(signing_headers.origin)
+}
+
+/// middleware to authenticate federation requests
+pub async fn federation_auth_middleware(
+    state: State<Arc<ServerState>>,
+    req: Request,
+    next: axum::middleware::Next,
+) -> Result<axum::response::Response, Error> {
+    if !req.headers().contains_key(signing::HEADER_SIGNATURE) {
+        return Ok(next.run(req).await);
+    }
+
+    let (parts, body) = req.into_parts();
+    // FIXME: enforce max body length to prevent oom
+    let bytes = axum::body::to_bytes(body, usize::MAX)
+        .await
+        .map_err(|_| Error::BadStatic("failed to read body"))?;
+
+    let origin = verify_server_request(&state, &parts, &bytes).await?;
+
+    let mut req = Request::from_parts(parts, axum::body::Body::from(bytes.clone()));
+    req.extensions_mut().insert(FederationIdentity(origin));
+    req.extensions_mut().insert(FederationBody(bytes));
+
+    Ok(next.run(req).await)
 }
 
 impl<T> FromRequest<Arc<ServerState>> for ServerAuth<T>
@@ -55,6 +131,17 @@ where
     type Rejection = Error;
 
     async fn from_request(req: Request, state: &Arc<ServerState>) -> Result<Self, Self::Rejection> {
+        if let Some(FederationBody(bytes)) = req.extensions().get::<FederationBody>() {
+            let origin = req
+                .extensions()
+                .get::<FederationIdentity>()
+                .cloned()
+                .ok_or(Error::MissingAuth)?
+                .0;
+            let body: T = serde_json::from_slice(bytes)?;
+            return Ok(ServerAuth { origin, body });
+        }
+
         let headers = req.headers();
 
         let signing_headers = signing::SigningHeaders::decode(headers)?;

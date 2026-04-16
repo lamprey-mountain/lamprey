@@ -8,6 +8,7 @@ use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::Result;
+use crate::routes::util::auth::Auth2;
 use crate::{routes2, Error, ServerState};
 
 /// Server keys get (TODO)
@@ -17,6 +18,7 @@ use crate::{routes2, Error, ServerState};
 async fn server_keys_get(
     State(_s): State<Arc<ServerState>>,
     _req: routes::server_keys_get::Request,
+    _auth: Auth2,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
 }
@@ -28,6 +30,7 @@ async fn server_keys_get(
 async fn server_user_ensure(
     State(_s): State<Arc<ServerState>>,
     _req: routes::server_user_ensure::Request,
+    _auth: Auth2,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
 }
@@ -40,6 +43,7 @@ async fn server_user_ensure(
 async fn server_sync_handle(
     State(_s): State<Arc<ServerState>>,
     _req: routes::server_sync_handle::Request,
+    _auth: Auth2,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
 }
@@ -51,18 +55,23 @@ async fn server_sync_handle(
 async fn server_ping(
     State(_s): State<Arc<ServerState>>,
     _req: routes::server_ping::Request,
+    auth: Auth2,
 ) -> Result<impl IntoResponse> {
-    // ...
+    auth.origin()?;
 
     Ok(Json(routes::server_ping::Response {
         body: routes::server_ping::PingResponse { ok: true },
     }))
 }
 
-pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
+pub fn routes(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes2!(server_keys_get))
         .routes(routes2!(server_user_ensure))
         .routes(routes2!(server_sync_handle))
         .routes(routes2!(server_ping))
+        .layer(axum::middleware::from_fn_with_state(
+            s,
+            crate::routes::util::federation_auth_middleware,
+        ))
 }

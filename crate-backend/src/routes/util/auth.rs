@@ -42,6 +42,168 @@ pub struct Auth {
     pub s: Arc<ServerState>,
 }
 
+#[derive(Clone)]
+pub enum AuthIdentity {
+    Session {
+        user: User,
+        real_user: Option<User>,
+        session: Session,
+        scopes: Scopes,
+    },
+    Server {
+        origin: common::v1::types::federation::Hostname,
+        user: Option<User>,
+    },
+}
+
+#[derive(Clone)]
+pub struct Auth2 {
+    pub identity: AuthIdentity,
+    pub reason: Option<String>,
+    pub audit_log_slot: Option<AuditLogSlot>,
+    pub s: Arc<ServerState>,
+}
+
+impl Auth2 {
+    pub fn user(&self) -> Result<&User, Error> {
+        match &self.identity {
+            AuthIdentity::Session { user, .. } => Ok(user),
+            AuthIdentity::Server { user: Some(user), .. } => Ok(user),
+            AuthIdentity::Server { user: None, .. } => Err(Error::MissingAuth),
+        }
+    }
+
+    pub fn origin(&self) -> Result<&common::v1::types::federation::Hostname, Error> {
+        match &self.identity {
+            AuthIdentity::Session { .. } => Err(Error::MissingAuth),
+            AuthIdentity::Server { origin, .. } => Ok(origin),
+        }
+    }
+
+    pub fn ensure_scopes(&self, scopes: &[Scope]) -> Result<(), Error> {
+        match &self.identity {
+            AuthIdentity::Session {
+                scopes: self_scopes,
+                ..
+            } => self_scopes.ensure_all(scopes).map_err(Into::into),
+            AuthIdentity::Server { .. } => Ok(()), // TODO: server scopes
+        }
+    }
+
+    pub fn ensure_sudo(&self) -> Result<(), Error> {
+        match &self.identity {
+            AuthIdentity::Session { session, .. } => match &session.status {
+                SessionStatus::Unauthorized => Err(Error::UnauthSession),
+                SessionStatus::Bound { .. } => Err(Error::UnauthSession),
+                SessionStatus::Authorized { .. } => Err(Error::BadStatic("needs sudo")),
+                SessionStatus::Sudo {
+                    sudo_expires_at, ..
+                } => {
+                    if *sudo_expires_at < Time::now_utc() {
+                        Err(Error::BadStatic("sudo session expired"))
+                    } else {
+                        Ok(())
+                    }
+                }
+            },
+            AuthIdentity::Server { .. } => Ok(()), // servers are sudo?
+        }
+    }
+}
+
+pub struct Auth2Relaxed {
+    pub identity: Option<AuthIdentity>,
+    pub reason: Option<String>,
+    pub audit_log_slot: Option<AuditLogSlot>,
+    pub s: Arc<ServerState>,
+}
+
+impl Auth2Relaxed {
+    pub fn upgrade(self) -> Result<Auth2, Error> {
+        let identity = self.identity.ok_or(Error::MissingAuth)?;
+        Ok(Auth2 {
+            identity,
+            reason: self.reason,
+            audit_log_slot: self.audit_log_slot,
+            s: self.s,
+        })
+    }
+}
+
+impl FromRequestParts<Arc<ServerState>> for Auth2Relaxed {
+    type Rejection = Error;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        s: &Arc<ServerState>,
+    ) -> Result<Self, Self::Rejection> {
+        // try session auth
+        if parts.headers.contains_key(http::header::AUTHORIZATION) {
+            let res = AuthRelaxed2::from_request_parts(parts, s).await;
+            if let Ok(relaxed) = res {
+                if let Some(user) = relaxed.user {
+                    return Ok(Auth2Relaxed {
+                        identity: Some(AuthIdentity::Session {
+                            user,
+                            real_user: relaxed.real_user,
+                            session: relaxed.session,
+                            scopes: relaxed.scopes,
+                        }),
+                        reason: relaxed.reason,
+                        audit_log_slot: relaxed.audit_log_slot,
+                        s: Arc::clone(&relaxed.s),
+                    });
+                }
+            }
+        }
+
+        // try federation auth
+        let federation_identity = parts
+            .extensions
+            .get::<crate::routes::util::FederationIdentity>()
+            .cloned();
+        if let Some(crate::routes::util::FederationIdentity(origin)) = federation_identity {
+            let HeaderPuppetId(puppet_id) = HeaderPuppetId::from_request_parts(parts, s).await?;
+            let user = if let Some(puppet_id) = puppet_id {
+                let user = s.services().users.get(puppet_id, None).await?;
+                // TODO: verify puppet belongs to this server
+                Some(user)
+            } else {
+                None
+            };
+
+            return Ok(Auth2Relaxed {
+                identity: Some(AuthIdentity::Server {
+                    origin: origin.clone(),
+                    user,
+                }),
+                reason: HeaderReason::from_request_parts(parts, s).await?.0,
+                audit_log_slot: parts.extensions.get::<AuditLogSlot>().cloned(),
+                s: Arc::clone(s),
+            });
+        }
+
+        Ok(Auth2Relaxed {
+            identity: None,
+            reason: HeaderReason::from_request_parts(parts, s).await?.0,
+            audit_log_slot: parts.extensions.get::<AuditLogSlot>().cloned(),
+            s: Arc::clone(s),
+        })
+    }
+}
+
+impl FromRequestParts<Arc<ServerState>> for Auth2 {
+    type Rejection = Error;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        s: &Arc<ServerState>,
+    ) -> Result<Self, Self::Rejection> {
+        let relaxed = Auth2Relaxed::from_request_parts(parts, s).await?;
+        relaxed.upgrade()
+    }
+}
+
 impl Auth {
     pub fn ensure_scopes(&self, scopes: &[Scope]) -> Result<(), Error> {
         self.scopes.ensure_all(scopes).map_err(Into::into)
@@ -172,7 +334,7 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
                 scopes: Scopes(vec![Scope::Full]),
                 reason: HeaderReason::from_request_parts(parts, s).await?.0,
                 audit_log_slot: parts.extensions.get::<AuditLogSlot>().cloned(),
-                s: s.clone(),
+                s: Arc::clone(s),
             });
         }
 
@@ -304,7 +466,7 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
             scopes,
             reason: reason.0,
             audit_log_slot,
-            s: s.clone(),
+            s: Arc::clone(s),
         })
     }
 }
