@@ -32,7 +32,7 @@ pub struct OauthInitResponse {
 #[endpoint(
     get,
     path = "/auth/oauth/{provider}/redirect",
-    tags = ["auth"],
+    tags = ["auth", "badge.unauthenticated"],
     response(OK, description = "success; responds with html + javascript"),
 )]
 pub mod auth_oauth_redirect {
@@ -221,7 +221,7 @@ pub mod auth_password_set {
 #[endpoint(
     post,
     path = "/auth/password",
-    tags = ["auth"],
+    tags = ["auth", "badge.public"],
     scopes = [Full],
     audit_log_events = ["AuthUpdate"],
     response(NO_CONTENT, description = "success"),
@@ -462,7 +462,7 @@ pub mod auth_oauth_delete {
 #[endpoint(
     post,
     path = "/auth/email/{addr}",
-    tags = ["auth"],
+    tags = ["auth", "badge.public"],
     response(ACCEPTED, description = "success"),
 )]
 pub mod auth_email_exec {
@@ -498,7 +498,7 @@ pub mod auth_email_reset {
 #[endpoint(
     post,
     path = "/auth/email/{addr}/complete",
-    tags = ["auth"],
+    tags = ["auth", "badge.unauthenticated"],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod auth_email_complete {
@@ -608,7 +608,7 @@ pub mod auth_password_delete {
 #[endpoint(
     get,
     path = "/auth/state",
-    tags = ["auth"],
+    tags = ["auth", "badge.public"],
     scopes = [Full],
     response(OK, body = AuthState, description = "success"),
 )]

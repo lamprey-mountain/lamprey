@@ -25,8 +25,7 @@ pub mod invite_delete {
 #[endpoint(
     get,
     path = "/invite/{invite_code}",
-    tags = ["invite"],
-    scopes = [Full],
+    tags = ["invite", "badge.unauthenticated"],
     response(OK, body = Invite, description = "success"),
     response(OK, body = InviteWithMetadata, description = "success with metadata"),
 )]

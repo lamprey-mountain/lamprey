@@ -66,7 +66,7 @@ pub mod channel_create_dm {
 #[endpoint(
     get,
     path = "/channel/{channel_id}",
-    tags = ["channel"],
+    tags = ["channel", "badge.public"],
     scopes = [Full],
     permissions = [ChannelView],
     response(OK, body = Channel, description = "Get thread success"),

@@ -17,7 +17,7 @@ use lamprey_macros::handler;
 use tracing::warn;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::routes::util::{Auth, AuthRelaxed2};
+use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
 use crate::types::{DbUserCreate, MediaLinkType, RoomMemberPut, UserIdReq};
 use crate::{routes2, ServerState};
 
@@ -228,25 +228,39 @@ async fn user_undelete(
 /// User get
 #[handler(routes::user_get)]
 async fn user_get(
-    auth: Auth,
+    auth: Auth3,
     State(s): State<Arc<ServerState>>,
     req: routes::user_get::Request,
 ) -> Result<impl IntoResponse> {
-    auth.ensure_scopes(&[Scope::Identify])?;
+    if !auth.is_public() {
+        auth.ensure_scopes(&[Scope::Identify])?;
+    }
+
     let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
+        UserIdReq::UserSelf => auth.user()?.id,
         UserIdReq::UserId(target_user_id) => target_user_id,
     };
     let srv = s.services();
     let data = s.data();
-    let mut user = srv.users.get(target_user_id, Some(auth.user.id)).await?;
-    if !auth.scopes.iter().any(|s| s.implies(&Scope::Email)) {
+    let mut user = srv.users.get(target_user_id, auth.user_id()).await?;
+
+    let has_email_scope = match &auth.identity {
+        crate::routes::util::auth::AuthIdentity3::Session { scopes, .. } => {
+            scopes.iter().any(|s| s.implies(&Scope::Email))
+        }
+        _ => false,
+    };
+    if !has_email_scope {
         user.emails = None;
     }
-    let relationship = data
-        .user_relationship_get(auth.user.id, target_user_id)
-        .await?
-        .unwrap_or_default();
+
+    let relationship = if let Ok(user) = auth.user() {
+        data.user_relationship_get(user.id, target_user_id)
+            .await?
+            .unwrap_or_default()
+    } else {
+        Default::default()
+    };
     Ok(Json(UserWithRelationship {
         inner: user,
         relationship,

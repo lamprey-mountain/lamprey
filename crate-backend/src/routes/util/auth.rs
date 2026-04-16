@@ -2,18 +2,24 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::extract::FromRequestParts;
+use common::v1::types::federation::Hostname;
+use common::v1::types::ids::SERVER_TOKEN_SESSION_ID;
 use common::v1::types::oauth::Scope;
 use common::v1::types::util::Time;
 use common::v1::types::{oauth::Scopes, Session, User};
-use common::v1::types::{SessionStatus, SessionToken, SessionType};
-use common::v1::types::{SERVER_TOKEN_SESSION_ID, SERVER_USER_ID};
+use common::v1::types::{RoomId, SessionType, UserId, SERVER_USER_ID};
+use common::v1::types::{SessionStatus, SessionToken};
 use headers::authorization::Bearer;
 use headers::{Authorization, HeaderMapExt};
 use http::request::Parts;
 
+use crate::routes::util::audit::AuditLoggerTransaction;
 use crate::routes::util::{HeaderPuppetId, HeaderReason};
 use crate::Error;
 use crate::{routes::util::audit::AuditLogSlot, ServerState};
+
+/// Empty scopes for Server/Public identities
+static SCOPES_EMPTY: std::sync::LazyLock<Scopes> = std::sync::LazyLock::new(Scopes::default);
 
 /// extract authentication info for a request
 #[derive(Clone)]
@@ -51,7 +57,7 @@ pub enum AuthIdentity {
         scopes: Scopes,
     },
     Server {
-        origin: common::v1::types::federation::Hostname,
+        origin: Hostname,
         user: Option<User>,
     },
 }
@@ -62,6 +68,233 @@ pub struct Auth2 {
     pub reason: Option<String>,
     pub audit_log_slot: Option<AuditLogSlot>,
     pub s: Arc<ServerState>,
+}
+
+#[derive(Clone)]
+pub enum AuthIdentity3 {
+    /// Authenticated via a local user session
+    Session {
+        user: User,
+        real_user: Option<User>,
+        session: Session,
+        scopes: Scopes,
+    },
+    /// Authenticated via a remote server signature
+    Server {
+        origin: Hostname,
+        user: Option<User>, // for X-Puppet-Id
+    },
+    /// Unauthorized guest session (no user bound yet)
+    Guest { session: Session, scopes: Scopes },
+    /// Truly public request (no Authorization header)
+    Public,
+}
+
+#[derive(Clone)]
+pub struct Auth3 {
+    pub identity: AuthIdentity3,
+    pub reason: Option<String>,
+    pub audit_log_slot: Option<AuditLogSlot>,
+    pub s: Arc<ServerState>,
+}
+
+impl Auth3 {
+    pub fn user(&self) -> Result<&User, Error> {
+        match &self.identity {
+            AuthIdentity3::Session { user, .. } => Ok(user),
+            AuthIdentity3::Server {
+                user: Some(user), ..
+            } => Ok(user),
+            _ => Err(Error::MissingAuth),
+        }
+    }
+
+    pub fn real_user(&self) -> Option<&User> {
+        match &self.identity {
+            AuthIdentity3::Session { real_user, .. } => real_user.as_ref(),
+            AuthIdentity3::Server { .. } => None,
+            _ => None,
+        }
+    }
+
+    pub fn user_id(&self) -> Option<UserId> {
+        match &self.identity {
+            AuthIdentity3::Session { user, .. } => Some(user.id),
+            AuthIdentity3::Server {
+                user: Some(user), ..
+            } => Some(user.id),
+            _ => None,
+        }
+    }
+
+    pub fn session(&self) -> Result<&Session, Error> {
+        match &self.identity {
+            AuthIdentity3::Session { session, .. } => Ok(session),
+            AuthIdentity3::Guest { session, .. } => Ok(session),
+            _ => Err(Error::MissingAuth),
+        }
+    }
+
+    pub fn origin(&self) -> Result<&Hostname, Error> {
+        match &self.identity {
+            AuthIdentity3::Server { origin, .. } => Ok(origin),
+            _ => Err(Error::MissingAuth),
+        }
+    }
+
+    pub fn is_public(&self) -> bool {
+        matches!(self.identity, AuthIdentity3::Public)
+    }
+
+    pub fn is_guest(&self) -> bool {
+        matches!(self.identity, AuthIdentity3::Guest { .. })
+    }
+
+    pub fn scopes(&self) -> &Scopes {
+        match &self.identity {
+            AuthIdentity3::Session { scopes, .. } => scopes,
+            AuthIdentity3::Guest { scopes, .. } => scopes,
+            AuthIdentity3::Server { .. } => &SCOPES_EMPTY,
+            AuthIdentity3::Public => &SCOPES_EMPTY,
+        }
+    }
+
+    pub fn ensure_scopes(&self, scopes: &[Scope]) -> Result<(), Error> {
+        match &self.identity {
+            AuthIdentity3::Session {
+                scopes: self_scopes,
+                ..
+            } => self_scopes.ensure_all(scopes).map_err(Into::into),
+            AuthIdentity3::Guest {
+                scopes: self_scopes,
+                ..
+            } => self_scopes.ensure_all(scopes).map_err(Into::into),
+            AuthIdentity3::Server { .. } => Ok(()),
+            AuthIdentity3::Public => {
+                if scopes.is_empty() {
+                    Ok(())
+                } else {
+                    Err(Error::MissingAuth)
+                }
+            }
+        }
+    }
+
+    pub fn ensure_sudo(&self) -> Result<(), Error> {
+        match &self.identity {
+            AuthIdentity3::Session { session, .. } => match &session.status {
+                SessionStatus::Unauthorized => Err(Error::UnauthSession),
+                SessionStatus::Bound { .. } => Err(Error::UnauthSession),
+                SessionStatus::Authorized { .. } => Err(Error::BadStatic("needs sudo")),
+                SessionStatus::Sudo {
+                    sudo_expires_at, ..
+                } => {
+                    if *sudo_expires_at < Time::now_utc() {
+                        Err(Error::BadStatic("sudo session expired"))
+                    } else {
+                        Ok(())
+                    }
+                }
+            },
+            AuthIdentity3::Server { .. } => Ok(()), // servers are sudo?
+            _ => Err(Error::MissingAuth),
+        }
+    }
+
+    pub fn audit_log(&self, context_id: RoomId) -> Result<AuditLoggerTransaction, Error> {
+        let user = self.user()?.clone();
+        let session = self.session()?.clone();
+        let real_user = self.real_user().cloned();
+
+        Ok(AuditLoggerTransaction {
+            context_id,
+            auth: Auth {
+                user,
+                real_user,
+                session,
+                scopes: self.scopes().clone(),
+                reason: self.reason.clone(),
+                audit_log_slot: self.audit_log_slot.clone(),
+                s: Arc::clone(&self.s),
+            },
+            reason: self.reason.clone(),
+            started_at: Time::now_utc(),
+            application_id: None,
+            ty: None,
+            status: None,
+        })
+    }
+}
+
+pub struct Auth3Relaxed {
+    pub auth: Auth3,
+}
+
+impl FromRequestParts<Arc<ServerState>> for Auth3 {
+    type Rejection = Error;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        s: &Arc<ServerState>,
+    ) -> Result<Self, Self::Rejection> {
+        // try session auth
+        if parts.headers.contains_key(http::header::AUTHORIZATION) {
+            let relaxed = AuthRelaxed2::from_request_parts(parts, s).await?;
+            let identity = if let Some(user) = relaxed.user {
+                AuthIdentity3::Session {
+                    user,
+                    real_user: relaxed.real_user,
+                    session: relaxed.session,
+                    scopes: relaxed.scopes,
+                }
+            } else {
+                AuthIdentity3::Guest {
+                    session: relaxed.session,
+                    scopes: relaxed.scopes,
+                }
+            };
+
+            return Ok(Auth3 {
+                identity,
+                reason: relaxed.reason,
+                audit_log_slot: relaxed.audit_log_slot,
+                s: Arc::clone(&relaxed.s),
+            });
+        }
+
+        // try federation auth
+        let federation_identity = parts
+            .extensions
+            .get::<crate::routes::util::FederationIdentity>()
+            .cloned();
+        if let Some(crate::routes::util::FederationIdentity(origin)) = federation_identity {
+            let HeaderPuppetId(puppet_id) = HeaderPuppetId::from_request_parts(parts, s).await?;
+            let user = if let Some(puppet_id) = puppet_id {
+                let user = s.services().users.get(puppet_id, None).await?;
+                // TODO: verify puppet belongs to this server
+                Some(user)
+            } else {
+                None
+            };
+
+            return Ok(Auth3 {
+                identity: AuthIdentity3::Server {
+                    origin: origin.clone(),
+                    user,
+                },
+                reason: HeaderReason::from_request_parts(parts, s).await?.0,
+                audit_log_slot: parts.extensions.get::<AuditLogSlot>().cloned(),
+                s: Arc::clone(s),
+            });
+        }
+
+        Ok(Auth3 {
+            identity: AuthIdentity3::Public,
+            reason: HeaderReason::from_request_parts(parts, s).await?.0,
+            audit_log_slot: parts.extensions.get::<AuditLogSlot>().cloned(),
+            s: Arc::clone(s),
+        })
+    }
 }
 
 impl Auth2 {
@@ -75,7 +308,7 @@ impl Auth2 {
         }
     }
 
-    pub fn origin(&self) -> Result<&common::v1::types::federation::Hostname, Error> {
+    pub fn origin(&self) -> Result<&Hostname, Error> {
         match &self.identity {
             AuthIdentity::Session { .. } => Err(Error::MissingAuth),
             AuthIdentity::Server { origin, .. } => Ok(origin),

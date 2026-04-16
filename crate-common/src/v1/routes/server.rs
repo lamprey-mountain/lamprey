@@ -4,8 +4,7 @@ use lamprey_macros::endpoint;
 #[endpoint(
     get,
     path = "/server/@self",
-    tags = ["server"],
-    scopes = [Full],
+    tags = ["server", "badge.unauthenticated"],
     response(OK, body = ServerInfo, description = "Get server info success"),
 )]
 pub mod server_info {
@@ -23,8 +22,7 @@ pub mod server_info {
 #[endpoint(
     get,
     path = "/server/@self/moderation",
-    tags = ["server"],
-    scopes = [Full],
+    tags = ["server", "badge.public"],
     response(OK, body = ServerModeration, description = "Get server moderation capabilities success"),
 )]
 pub mod server_moderation {

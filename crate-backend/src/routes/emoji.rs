@@ -16,7 +16,7 @@ use validator::Validate;
 use crate::error::Result;
 use crate::{routes2, ServerState};
 
-use super::util::Auth;
+use super::util::{Auth, Auth3};
 
 /// Emoji create
 #[handler(routes::emoji_create)]
@@ -48,7 +48,7 @@ async fn emoji_create(
 /// Emoji get
 #[handler(routes::emoji_get)]
 async fn emoji_get(
-    auth: Auth,
+    auth: Auth3,
     State(s): State<Arc<ServerState>>,
     req: routes::emoji_get::Request,
 ) -> Result<impl IntoResponse> {
@@ -60,7 +60,7 @@ async fn emoji_get(
     if let Some(EmojiOwner::Room { room_id }) = emoji.owner {
         s.services()
             .perms
-            .for_room3(Some(auth.user.id), room_id)
+            .for_room3(auth.user_id(), room_id)
             .await?
             .ensure_view()?
             .check()?;
@@ -165,7 +165,7 @@ async fn emoji_update(
 /// Emoji list
 #[handler(routes::emoji_list)]
 async fn emoji_list(
-    auth: Auth,
+    auth: Auth3,
     State(s): State<Arc<ServerState>>,
     req: routes::emoji_list::Request,
 ) -> Result<impl IntoResponse> {
@@ -173,7 +173,7 @@ async fn emoji_list(
     let srv = s.services();
     let data = s.data();
     srv.perms
-        .for_room3(Some(auth.user.id), req.room_id)
+        .for_room3(auth.user_id(), req.room_id)
         .await?
         .ensure_view()?
         .check()?;

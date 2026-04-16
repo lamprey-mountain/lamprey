@@ -41,7 +41,7 @@ pub mod message_create {
 #[endpoint(
     get,
     path = "/channel/{channel_id}/context/{message_id}",
-    tags = ["message"],
+    tags = ["message", "badge.public"],
     scopes = [Full],
     response(OK, body = ContextResponse, description = "List thread messages success"),
 )]
@@ -71,7 +71,7 @@ pub mod message_context {
 #[endpoint(
     get,
     path = "/channel/{channel_id}/message",
-    tags = ["message"],
+    tags = ["message", "badge.public"],
     scopes = [Full],
     permissions = [ChannelView],
     response(OK, body = PaginationResponse<Message>, description = "List thread messages success"),
@@ -97,7 +97,7 @@ pub mod message_list {
 #[endpoint(
     get,
     path = "/channel/{channel_id}/message/{message_id}",
-    tags = ["message"],
+    tags = ["message", "badge.public"],
     scopes = [Full],
     permissions = [ChannelView],
     response(OK, body = Message, description = "Get message success"),
@@ -365,7 +365,7 @@ pub mod message_unpin {
 #[endpoint(
     get,
     path = "/channel/{channel_id}/pin",
-    tags = ["message"],
+    tags = ["message", "badge.public"],
     scopes = [Full],
     permissions = [ChannelView],
     response(OK, body = PaginationResponse<MessagePin>, description = "success"),

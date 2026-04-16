@@ -9,6 +9,7 @@ use common::v1::types::auth::{
 };
 use common::v1::types::email::EmailAddr;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::oauth::Scopes;
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryStatus, AuditLogEntryType, MessageSync,
@@ -23,7 +24,7 @@ use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
 
 use crate::error::{Error, Result};
-use crate::routes::util::{Auth, AuthRelaxed2};
+use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
 use crate::types::DbUserCreate;
 use crate::types::EmailPurpose;
 use crate::{routes2, ServerState};
@@ -45,6 +46,7 @@ async fn auth_oauth_init(
 /// Auth oauth redirect
 #[handler(routes::auth_oauth_redirect)]
 async fn auth_oauth_redirect(
+    _auth: Auth3,
     State(s): State<Arc<ServerState>>,
     req: routes::auth_oauth_redirect::Request,
 ) -> Result<impl IntoResponse> {
@@ -504,11 +506,12 @@ async fn auth_password_set(
 /// Auth password exec
 #[handler(routes::auth_password_exec)]
 async fn auth_password_exec(
-    auth: Auth,
+    auth: Auth3,
     State(s): State<Arc<ServerState>>,
     req: routes::auth_password_exec::Request,
 ) -> Result<impl IntoResponse> {
-    if auth.session.status != SessionStatus::Unauthorized {
+    let session = auth.session()?;
+    if session.status != SessionStatus::Unauthorized {
         return Err(ApiError::from_code(ErrorCode::AlreadyAuthenticated).into());
     }
 
@@ -535,7 +538,7 @@ async fn auth_password_exec(
     }
 
     let user = s.services().users.get(user_id, None).await?;
-    let session = auth.session.clone();
+    let session = auth.session()?;
 
     let (_totp_secret, totp_enabled) = s
         .data()
@@ -557,7 +560,7 @@ async fn auth_password_exec(
             user: user.clone(),
             real_user: None,
             session: session.clone(),
-            scopes: auth.scopes.clone(),
+            scopes: auth.scopes().clone(),
             reason: auth.reason.clone(),
             audit_log_slot: auth.audit_log_slot.clone(),
             s: auth.s.clone(),
@@ -712,24 +715,20 @@ async fn auth_oauth_delete(
 /// Send a "magic link" email to login
 #[handler(routes::auth_email_exec)]
 async fn auth_email_exec(
-    auth: AuthRelaxed2,
+    auth: Auth3,
     State(s): State<Arc<ServerState>>,
     req: routes::auth_email_exec::Request,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let srv = s.services();
+    let session = auth.session()?;
     let code = Uuid::new_v4().to_string();
     let email: EmailAddr = req
         .addr
         .try_into()
         .map_err(|_| ApiError::from_code(ErrorCode::InvalidData))?;
-    d.auth_email_create(
-        code.clone(),
-        email.clone(),
-        auth.session.id,
-        EmailPurpose::Authn,
-    )
-    .await?;
+    d.auth_email_create(code.clone(), email.clone(), session.id, EmailPurpose::Authn)
+        .await?;
     let mut url = s.config.html_url.join("email-auth")?;
     url.set_query(Some(&format!("code={code}")));
     let message = format!(
@@ -778,12 +777,13 @@ async fn auth_email_reset(
 /// Consume an email auth code to log in
 #[handler(routes::auth_email_complete)]
 async fn auth_email_complete(
-    auth: AuthRelaxed2,
+    auth: Auth3,
     State(s): State<Arc<ServerState>>,
     req: routes::auth_email_complete::Request,
 ) -> Result<impl IntoResponse> {
     let d = s.data();
     let srv = s.services();
+    let session = auth.session()?;
     let email: EmailAddr = req
         .addr
         .try_into()
@@ -795,12 +795,12 @@ async fn auth_email_complete(
         return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
     }
 
-    if req_session != auth.session.id {
+    if req_session != session.id {
         debug!("wrong session");
         return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
     }
 
-    if auth.session.status != SessionStatus::Unauthorized {
+    if session.status != SessionStatus::Unauthorized {
         debug!("already authenticated");
         return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
     }
@@ -817,10 +817,9 @@ async fn auth_email_complete(
             sudo_expires_at: Time::now_utc().saturating_add(Duration::minutes(5)).into(),
         },
     };
-    d.session_set_status(auth.session.id, status.clone())
-        .await?;
-    srv.sessions.invalidate(auth.session.id).await;
-    let session = srv.sessions.get(auth.session.id).await?;
+    d.session_set_status(session.id, status.clone()).await?;
+    srv.sessions.invalidate(session.id).await;
+    let session = srv.sessions.get(session.id).await?;
     s.broadcast(MessageSync::SessionCreate {
         session: session.clone(),
     })?;
@@ -833,7 +832,7 @@ async fn auth_email_complete(
                 user: user.clone(),
                 real_user: None,
                 session: session.clone(),
-                scopes: auth.scopes.clone(),
+                scopes: auth.scopes().clone(),
                 reason: auth.reason.clone(),
                 audit_log_slot: auth.audit_log_slot.clone(),
                 s: auth.s.clone(),
@@ -852,7 +851,7 @@ async fn auth_email_complete(
                 user: user.clone(),
                 real_user: None,
                 session: session.clone(),
-                scopes: auth.scopes.clone(),
+                scopes: auth.scopes().clone(),
                 reason: auth.reason.clone(),
                 audit_log_slot: auth.audit_log_slot.clone(),
                 s: auth.s.clone(),
@@ -1046,13 +1045,13 @@ async fn auth_password_delete(
 /// Get the available auth methods for this user
 #[handler(routes::auth_state)]
 async fn auth_state(
-    auth: AuthRelaxed2,
+    auth: Auth3,
     State(_s): State<Arc<ServerState>>,
     _req: routes::auth_state::Request,
 ) -> Result<impl IntoResponse> {
     let s = auth.s.clone();
-    let user_id = auth
-        .session
+    let session = auth.session()?;
+    let user_id = session
         .user_id()
         .ok_or_else(|| Error::BadStatic("unknown user for session"))?;
     let state = fetch_auth_state(&s, user_id).await?;

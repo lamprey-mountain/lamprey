@@ -31,7 +31,7 @@ pub mod room_create {
 #[endpoint(
     get,
     path = "/room/{room_id}",
-    tags = ["room"],
+    tags = ["room", "badge.public"],
     scopes = [Rooms],
     response(OK, body = Room, description = "Get room success"),
     response(NOT_MODIFIED, description = "Not modified"),

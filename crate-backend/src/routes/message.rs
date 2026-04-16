@@ -13,7 +13,7 @@ use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
-use crate::routes::util::{Auth, AuthRelaxed2};
+use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
 use crate::routes2;
 use crate::types::{DbMessageCreate, MessageSync, Permission};
 use crate::{error::Result, Error, ServerState};
@@ -70,24 +70,22 @@ async fn message_create(
 /// Message context
 #[handler(routes::message_context)]
 async fn message_context(
-    auth: AuthRelaxed2,
+    auth: Auth3,
     State(s): State<Arc<ServerState>>,
     req: routes::message_context::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
 
-    let user_id = auth.user.as_ref().map(|u| u.id);
-
     srv.perms
-        .for_channel3(user_id, req.channel_id)
+        .for_channel3(auth.user_id(), req.channel_id)
         .await?
         .ensure_view()?
         .needs(Permission::ChannelView)
         .check()?;
     let res = srv
         .messages
-        .list_context(req.channel_id, req.message_id, user_id, req.context)
+        .list_context(req.channel_id, req.message_id, auth.user_id(), req.context)
         .await?;
 
     Ok(Json(res))
@@ -96,24 +94,22 @@ async fn message_context(
 /// Messages list
 #[handler(routes::message_list)]
 async fn message_list(
-    auth: AuthRelaxed2,
+    auth: Auth3,
     State(s): State<Arc<ServerState>>,
     req: routes::message_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
 
-    let user_id = auth.user.as_ref().map(|u| u.id);
-
     srv.perms
-        .for_channel3(user_id, req.channel_id)
+        .for_channel3(auth.user_id(), req.channel_id)
         .await?
         .ensure_view()?
         .needs(Permission::ChannelView)
         .check()?;
     let res = srv
         .messages
-        .list(req.channel_id, user_id, req.pagination)
+        .list(req.channel_id, auth.user_id(), req.pagination)
         .await?;
     Ok(Json(res))
 }
@@ -121,24 +117,22 @@ async fn message_list(
 /// Message get
 #[handler(routes::message_get)]
 async fn message_get(
-    auth: AuthRelaxed2,
+    auth: Auth3,
     State(s): State<Arc<ServerState>>,
     req: routes::message_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
 
-    let user_id = auth.user.as_ref().map(|u| u.id);
-
     srv.perms
-        .for_channel3(user_id, req.channel_id)
+        .for_channel3(auth.user_id(), req.channel_id)
         .await?
         .ensure_view()?
         .needs(Permission::ChannelView)
         .check()?;
     let message = srv
         .messages
-        .get(req.channel_id, req.message_id, user_id)
+        .get(req.channel_id, req.message_id, auth.user_id())
         .await?;
     Ok(Json(message))
 }

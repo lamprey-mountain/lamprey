@@ -21,7 +21,7 @@ pub mod auth;
 pub mod signing;
 
 pub use audit::audit_log_middleware;
-pub use auth::{Auth, AuthRelaxed2};
+pub use auth::{Auth, Auth3, AuthRelaxed2};
 
 /// extract the X-Reason header
 pub struct HeaderReason(pub Option<String>);

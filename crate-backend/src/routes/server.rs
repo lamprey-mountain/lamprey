@@ -15,13 +15,14 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::{routes2, ServerState};
 
-use super::util::Auth;
+use super::util::{Auth, Auth3};
 use crate::error::Result;
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 /// Server information
 #[handler(routes::server_info)]
 async fn server_info(
+    _auth: Auth3,
     State(s): State<Arc<ServerState>>,
     _req: routes::server_info::Request,
 ) -> Result<impl IntoResponse> {
@@ -68,7 +69,7 @@ async fn server_info(
 /// Server moderation capabilities
 #[handler(routes::server_moderation)]
 async fn server_moderation(
-    _auth: Auth,
+    _auth: Auth3,
     State(_s): State<Arc<ServerState>>,
     _req: routes::server_moderation::Request,
 ) -> Result<impl IntoResponse> {

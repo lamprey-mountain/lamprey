@@ -56,25 +56,23 @@ impl PermissionsCalculator {
             let mut bits = PermissionBits::default();
             let mut channel_locked = false;
 
-            if self.public {
-                // use default perms (everyone role)
-                let everyone_role_id: RoleId = self.room_id.into_inner().into();
+            // use default perms (everyone role)
+            let everyone_role_id: RoleId = self.room_id.into_inner().into();
 
-                if let Some(role) = data.roles.get(&everyone_role_id) {
-                    bits.add_all(role.allow);
-                    bits.remove_all(role.deny);
-                }
+            if let Some(role) = data.roles.get(&everyone_role_id) {
+                bits.add_all(role.allow);
+                bits.remove_all(role.deny);
+            }
 
-                if let Some(channel) = channel {
-                    if let Some(cached_channel) = data.channels.get(&channel.id) {
-                        self.apply_channel_overwrites(
-                            &mut bits,
-                            &mut channel_locked,
-                            &mut false,
-                            cached_channel,
-                            None,
-                        );
-                    }
+            if let Some(channel) = channel {
+                if let Some(cached_channel) = data.channels.get(&channel.id) {
+                    self.apply_channel_overwrites(
+                        &mut bits,
+                        &mut channel_locked,
+                        &mut false,
+                        cached_channel,
+                        None,
+                    );
                 }
             }
 

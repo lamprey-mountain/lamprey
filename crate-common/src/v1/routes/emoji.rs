@@ -39,7 +39,7 @@ pub mod emoji_create {
 #[endpoint(
     get,
     path = "/room/{room_id}/emoji/{emoji_id}",
-    tags = ["emoji"],
+    tags = ["emoji", "badge.public"],
     scopes = [Full],
     response(OK, body = EmojiCustom, description = "success"),
 )]
@@ -126,7 +126,7 @@ pub mod emoji_update {
 #[endpoint(
     get,
     path = "/room/{room_id}/emoji",
-    tags = ["emoji"],
+    tags = ["emoji", "badge.public"],
     scopes = [Full],
     response(OK, body = PaginationResponse<EmojiCustom>, description = "success"),
 )]

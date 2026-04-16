@@ -4,7 +4,7 @@ use lamprey_macros::endpoint;
 #[endpoint(
     post,
     path = "/session",
-    tags = ["session"],
+    tags = ["session", "badge.unauthenticated"],
     response(CREATED, body = SessionWithToken, description = "success"),
 )]
 pub mod session_create {

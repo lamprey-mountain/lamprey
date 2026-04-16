@@ -14,7 +14,7 @@ use lamprey_macros::handler;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::routes::util::Auth;
+use crate::routes::util::{Auth, Auth3};
 use crate::types::{DbSessionCreate, SessionIdReq};
 use crate::{routes2, ServerState};
 use utoipa_axum::router::OpenApiRouter;
@@ -24,6 +24,7 @@ use crate::error::{Error, Result};
 /// Session create
 #[handler(routes::session_create)]
 pub async fn session_create(
+    _auth: Auth3,
     State(s): State<Arc<ServerState>>,
     headers: HeaderMap,
     req: routes::session_create::Request,

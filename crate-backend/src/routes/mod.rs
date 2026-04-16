@@ -6,6 +6,7 @@ use serde::Serialize;
 use url::Url;
 use utoipa_axum::router::OpenApiRouter;
 
+use crate::routes::util::Auth3;
 use crate::ServerState;
 
 mod ack;

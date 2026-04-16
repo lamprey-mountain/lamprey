@@ -19,7 +19,7 @@ use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::routes::util::{Auth, AuthRelaxed2};
+use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
 use crate::routes2;
 use crate::types::{
     ChannelPatch, DbChannelCreate, DbChannelType, DbRoomCreate, MediaLinkType, MessageSync,
@@ -207,21 +207,23 @@ async fn channel_create_dm(
 /// Channel get
 #[handler(routes::channel_get)]
 async fn channel_get(
-    auth: AuthRelaxed2,
+    auth: Auth3,
     State(s): State<Arc<ServerState>>,
     req: routes::channel_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
 
-    let user_id = auth.user.as_ref().map(|u| u.id);
-
     s.services()
         .perms
-        .for_channel3(user_id, req.channel_id)
+        .for_channel3(auth.user_id(), req.channel_id)
         .await?
         .ensure_view()?
         .check()?;
-    let channel = s.services().channels.get(req.channel_id, user_id).await?;
+    let channel = s
+        .services()
+        .channels
+        .get(req.channel_id, auth.user_id())
+        .await?;
     Ok(Json(channel))
 }
 

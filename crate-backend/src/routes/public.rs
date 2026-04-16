@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
+use axum::extract::State;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::error::Result;
+use crate::routes::util::Auth3;
 use crate::{Error, ServerState};
 
 /// Public rooms list (TODO)
@@ -12,7 +14,7 @@ use crate::{Error, ServerState};
     tags = ["public"],
     responses((status = OK, body = (), description = "ok"))
 )]
-async fn public_rooms() -> Result<()> {
+async fn public_rooms(_auth: Auth3, State(_s): State<Arc<ServerState>>) -> Result<()> {
     Err(Error::Unimplemented)
 }
 
@@ -23,7 +25,7 @@ async fn public_rooms() -> Result<()> {
     tags = ["public"],
     responses((status = OK, body = (), description = "ok"))
 )]
-async fn public_channels() -> Result<()> {
+async fn public_channels(_auth: Auth3, State(_s): State<Arc<ServerState>>) -> Result<()> {
     Err(Error::Unimplemented)
 }
 

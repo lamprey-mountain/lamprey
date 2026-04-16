@@ -6,7 +6,7 @@ use lamprey_macros::endpoint;
 #[endpoint(
     get,
     path = "/user/{user_id}",
-    tags = ["user"],
+    tags = ["user", "badge.public"],
     scopes = [Identify],
     response(OK, body = UserWithRelationship, description = "success"),
     errors(UnknownUser),

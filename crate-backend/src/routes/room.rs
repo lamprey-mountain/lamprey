@@ -16,7 +16,7 @@ use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::routes::util::{Auth, AuthRelaxed2};
+use crate::routes::util::{Auth, Auth3};
 use crate::routes2;
 use crate::types::{DbRoomCreate, MediaLinkType, MessageSync, PaginationResponse, Permission};
 use crate::{error::Result, Error, ServerState};
@@ -110,22 +110,20 @@ async fn room_create(
 /// Room get
 #[handler(routes::room_get)]
 async fn room_get(
-    auth: AuthRelaxed2,
+    auth: Auth3,
     State(s): State<Arc<ServerState>>,
     req: routes::room_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Rooms])?;
     let srv = s.services();
 
-    let user_id = auth.user.as_ref().map(|u| u.id);
-
-    let room = srv.rooms.get(req.room_id, user_id).await?;
+    let room = srv.rooms.get(req.room_id, auth.user_id()).await?;
     if room.is_removed() {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)));
     }
 
     srv.perms
-        .for_room3(user_id, req.room_id)
+        .for_room3(auth.user_id(), req.room_id)
         .await?
         .ensure_view()?
         .check()?;

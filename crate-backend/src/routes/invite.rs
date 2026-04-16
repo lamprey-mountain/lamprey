@@ -24,7 +24,7 @@ use crate::error::Result;
 use crate::routes::auth::fetch_auth_state;
 use crate::{routes2, Error, ServerState};
 
-use super::util::Auth;
+use super::util::{Auth, Auth3};
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 /// Invite delete
@@ -173,44 +173,46 @@ async fn invite_delete(
 /// Invite resolve
 #[handler(routes::invite_resolve)]
 async fn invite_resolve(
-    auth: Auth,
+    auth: Auth3,
     State(s): State<Arc<ServerState>>,
     req: routes::invite_resolve::Request,
 ) -> Result<impl IntoResponse> {
-    auth.ensure_scopes(&[Scope::Full])?;
     let d = s.data();
     let s = s.services();
     let invite = d.invite_select(req.invite_code).await?;
-    if invite.invite.creator_id == auth.user.id {
-        return Ok(Json(invite).into_response());
+    if let Ok(user) = auth.user() {
+        if invite.invite.creator_id == user.id {
+            return Ok(Json(invite).into_response());
+        }
     }
     let should_strip = match &invite.invite.target {
         InviteTarget::Room { room, .. } => s
             .perms
-            .for_room3(Some(auth.user.id), room.id)
+            .for_room3(auth.user_id(), room.id)
             .await?
-            .ensure_view()?
+            .assume_visible()?
             .needs(Permission::InviteManage)
             .check()
             .is_err(),
         InviteTarget::Gdm { channel } => s
             .perms
-            .for_channel3(Some(auth.user.id), channel.id)
+            .for_channel3(auth.user_id(), channel.id)
             .await?
-            .ensure_view()?
+            .assume_visible()?
             .needs(Permission::InviteManage)
             .check()
             .is_err(),
         InviteTarget::Server => s
             .perms
-            .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+            .for_room3(auth.user_id(), SERVER_ROOM_ID)
             .await?
-            .ensure_view()?
+            .assume_visible()?
             .needs(Permission::InviteManage)
             .check()
             .is_err(),
-        InviteTarget::User { user: _ } => auth.user.id != invite.invite.creator_id,
+        InviteTarget::User { user } => auth.user_id() != Some(user.id),
     };
+
     if should_strip {
         Ok(Json(invite.strip_metadata()).into_response())
     } else {

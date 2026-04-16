@@ -420,6 +420,19 @@ impl Permissions2<CheckVisibility> {
         }
     }
 
+    /// Assume the user can view this resource, transitioning to CheckPermissions state.
+    ///
+    /// Used for eg. invites to private rooms.
+    pub fn assume_visible(self) -> Result<Permissions2<CheckPermissions>> {
+        Ok(Permissions2 {
+            visible: true,
+            bits: self.bits,
+            context: self.context,
+            metadata: self.metadata,
+            state: CheckPermissions::default(),
+        })
+    }
+
     /// Set whether thread slowmode is currently active for this user.
     pub fn with_thread_slowmode_active(mut self, active: bool) -> Self {
         self.metadata.channel_slowmode_thread_active = active;
