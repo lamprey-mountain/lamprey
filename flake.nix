@@ -331,7 +331,7 @@
           WASM_MARKDOWN_PKG = "${wasm-markdown}/pkg";
           TWEMOJI_SPRITESHEETS = "${twemoji-spritesheets}";
 
-          pnpmDepsHash = "sha256-y7Uh9zuovLpaZpxSSTuVTOL4e7+Z1FJxnqUtVR6GA8E=";
+          pnpmDepsHash = "sha256-MMHA3G35HUNW9qVQhr5R2z5C9NInn7/LgP6FHzJra14=";
           pnpmDeps = pkgs.pnpm.fetchDeps {
             inherit (finalAttrs) src pname version;
             fetcherVersion = 2;
@@ -339,6 +339,20 @@
           };
 
           buildPhase = ''
+            cat > tsconfig.paths.json <<EOF
+            {
+              "compilerOptions": {
+                "paths": {
+                  "@/*": ["frontend/src/*"],
+                  "@wasm-markdown": ["${wasm-markdown}/pkg"],
+                  "@wasm-markdown/*": ["${wasm-markdown}/pkg/*"],
+                  "@twemoji-spritesheets": ["${twemoji-spritesheets}"],
+                  "@twemoji-spritesheets/*": ["${twemoji-spritesheets}/*"]
+                }
+              }
+            }
+            EOF
+
             cd frontend
             pnpm run build
             mv dist $out

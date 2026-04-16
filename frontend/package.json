@@ -29,6 +29,7 @@
 		"highlight.js": "^11.11.1",
 		"idb": "^8.0.3",
 		"lib0": "^0.2.117",
+		"marked": "^18.0.0",
 		"msgpackr": "^1.11.9",
 		"prosemirror-commands": "^1.7.1",
 		"prosemirror-gapcursor": "^1.4.1",
