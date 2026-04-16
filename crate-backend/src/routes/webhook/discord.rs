@@ -524,11 +524,9 @@ pub async fn webhook_execute_discord(
 
     let srv = s.services();
 
-    // FIXME: use messages.create instead of create_system
     let message = srv
         .messages
-        // .create_system(webhook.channel_id, webhook_user_id, None, message_create)
-        .create_system(webhook.channel_id, message_create)
+        .create_as_webhook(webhook.channel_id, webhook_user_id, message_create)
         .await?;
 
     if query.wait.unwrap_or(false) {

@@ -420,21 +420,19 @@ async fn webhook_execute(
 ) -> Result<impl IntoResponse> {
     let webhook = s.data().webhook_get_with_token(webhook_id, &token).await?;
 
-    // let author_id = (*webhook.id).into();
+    let author_id: UserId = (*webhook.id).into();
     let channel_id = webhook.channel_id;
 
     let srv = s.services();
     let chan = srv.channels.get(channel_id, None).await?;
     chan.ensure_has_text()?;
 
-    // FIXME: add support for webhooks in new message system
-    // let message = srv
-    //     .messages
-    //     .create(channel_id, author_id, None, json)
-    //     .await?;
+    let message = srv
+        .messages
+        .create_as_webhook(channel_id, author_id, json)
+        .await?;
 
-    // Ok((StatusCode::CREATED, Json(message)))
-    Ok(StatusCode::NOT_IMPLEMENTED)
+    Ok((StatusCode::CREATED, Json(message)))
 }
 
 /// Webhook get message
@@ -504,15 +502,12 @@ async fn webhook_message_edit(
     let chan = srv.channels.get(channel_id, None).await?;
     chan.ensure_has_text()?;
 
-    // FIXME: add support for webhooks in new message system
-    // let (status, message) = s
-    //     .services()
-    //     .messages
-    //     .edit(channel_id, message_id, webhook_user_id, json, None)
-    //     .await?;
+    let (status, message) = srv
+        .messages
+        .edit_as_webhook(channel_id, message_id, webhook_user_id, json)
+        .await?;
 
-    // Ok((status, Json(message)))
-    Ok(StatusCode::NOT_IMPLEMENTED)
+    Ok((status, Json(message)))
 }
 
 /// Webhook delete message

@@ -425,6 +425,73 @@ impl ServiceMessages {
         Ok((StatusCode::OK, op.stage.message))
     }
 
+    pub async fn create_as_webhook(
+        &self,
+        channel_id: ChannelId,
+        webhook_user_id: UserId,
+        json: MessageCreate,
+    ) -> Result<Message> {
+        let srv = self.state.services();
+        let channel = srv.channels.get(channel_id, None).await?;
+        let user = srv.users.get(webhook_user_id, None).await?;
+
+        let op = MessageOperation {
+            channel,
+            message_id: MessageId::new(),
+            auth: AuthProvider::Webhook { user },
+            kind: MessageOperationKind::MessageCreate(MessageCreateOperation { json }),
+            nonce: None,
+            stage: New {
+                header_timestamp: None,
+            },
+            _ph: PhantomData,
+        };
+
+        let op = self.authorize(op).await?;
+        let op = self.prepare(op).await?;
+        let op = self.commit(op).await?;
+        let op = self.finalize(op).await?;
+        Ok(op.stage.message)
+    }
+
+    pub async fn edit_as_webhook(
+        &self,
+        channel_id: ChannelId,
+        message_id: MessageId,
+        webhook_user_id: UserId,
+        json: MessagePatch,
+    ) -> Result<(StatusCode, Message)> {
+        let srv = self.state.services();
+        let channel = srv.channels.get(channel_id, None).await?;
+        let user = srv.users.get(webhook_user_id, None).await?;
+
+        let original = self.get(channel_id, message_id, None).await?;
+
+        if original.author_id != webhook_user_id {
+            return Err(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownMessage,
+            )));
+        }
+
+        let op = MessageOperation {
+            channel,
+            message_id,
+            auth: AuthProvider::Webhook { user },
+            kind: MessageOperationKind::MessageEdit(MessageEditOperation { json, original }),
+            nonce: None,
+            stage: New {
+                header_timestamp: None,
+            },
+            _ph: PhantomData,
+        };
+
+        let op = self.authorize(op).await?;
+        let op = self.prepare(op).await?;
+        let op = self.commit(op).await?;
+        let op = self.finalize(op).await?;
+        Ok((StatusCode::OK, op.stage.message))
+    }
+
     async fn authorize<'a>(
         &'a self,
         mut op: MessageOperation<'a, New>,
