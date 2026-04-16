@@ -71,9 +71,9 @@ async fn auth_oauth_redirect(
             debug!("new discord user {:?}", u);
             let user_id = match data
                 .auth_oauth_get_remote("discord".into(), u.user.id.clone())
-                .await
+                .await?
             {
-                Ok(user_id) => {
+                Some(user_id) => {
                     let user = srv.users.get(user_id, None).await?;
                     data.room_member_put(SERVER_ROOM_ID, user.id, None, RoomMemberPut::default())
                         .await?;
@@ -110,10 +110,7 @@ async fn auth_oauth_redirect(
                     }
                     user_id
                 }
-                Err(Error::ApiError(ApiError {
-                    code: ErrorCode::UnknownUser,
-                    ..
-                })) => {
+                None => {
                     let registered_at = if provider_config.autoregister {
                         Some(Time::now_utc())
                     } else {
@@ -162,7 +159,6 @@ async fn auth_oauth_redirect(
                         .await?;
                     user.id
                 }
-                Err(err) => return Err(err),
             };
             data.session_set_status(session_id, SessionStatus::Authorized { user_id })
                 .await?;
@@ -206,9 +202,9 @@ async fn auth_oauth_redirect(
             debug!("new github user {:?}", u);
             let user_id = match data
                 .auth_oauth_get_remote("github".into(), u.id.to_string())
-                .await
+                .await?
             {
-                Ok(user_id) => {
+                Some(user_id) => {
                     let user = srv.users.get(user_id, None).await?;
                     data.room_member_put(SERVER_ROOM_ID, user.id, None, RoomMemberPut::default())
                         .await?;
@@ -245,10 +241,7 @@ async fn auth_oauth_redirect(
                     }
                     user_id
                 }
-                Err(Error::ApiError(ApiError {
-                    code: ErrorCode::UnknownUser,
-                    ..
-                })) => {
+                None => {
                     let registered_at = if provider_config.autoregister {
                         Some(Time::now_utc())
                     } else {
@@ -297,7 +290,6 @@ async fn auth_oauth_redirect(
                         .await?;
                     user.id
                 }
-                Err(err) => return Err(err),
             };
             data.session_set_status(session_id, SessionStatus::Authorized { user_id })
                 .await?;

@@ -40,15 +40,20 @@ impl DataAuth for Postgres {
         Ok(providers)
     }
 
-    async fn auth_oauth_get_remote(&self, provider: String, remote_id: String) -> Result<UserId> {
+    async fn auth_oauth_get_remote(
+        &self,
+        provider: String,
+        remote_id: String,
+    ) -> Result<Option<UserId>> {
         let remote_id = query_scalar!(
             "SELECT user_id FROM oauth WHERE remote_id = $1 AND provider = $2",
             remote_id,
             provider,
         )
-        .fetch_one(&self.pool)
-        .await?;
-        Ok(remote_id.into())
+        .fetch_optional(&self.pool)
+        .await?
+        .map(|i| i.into());
+        Ok(remote_id)
     }
 
     async fn auth_oauth_delete(&self, provider: String, user_id: UserId) -> Result<()> {
