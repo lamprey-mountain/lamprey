@@ -27,6 +27,7 @@ select
     m.pinned,
     m.created_seq,
     m.lifecycle_seq,
+    m.flume,
     coalesce(att_json.attachments, '[]'::json) as "attachments!",
     mv.embeds as "embeds",
     mv.components as "components",

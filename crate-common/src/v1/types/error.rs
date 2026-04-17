@@ -870,6 +870,10 @@ pub enum ErrorCode {
     /// internal error
     #[error("internal")]
     Internal,
+
+    /// only the message author can manage flume
+    #[error("only the message author can manage flume")]
+    OnlyMessageAuthorCanManageFlume,
 }
 
 impl ApiError {
@@ -1066,6 +1070,7 @@ impl ErrorCode {
             ErrorCode::Internal => StatusCode::INTERNAL_SERVER_ERROR,
             ErrorCode::DuplicateMediaId => StatusCode::BAD_REQUEST,
             ErrorCode::MediaAlreadyUsed => StatusCode::CONFLICT,
+            ErrorCode::OnlyMessageAuthorCanManageFlume => StatusCode::FORBIDDEN,
         }
     }
 }

@@ -3,6 +3,7 @@ use crate::{
     v1::types::{
         components::{IdAllocator, ValidationState},
         error::{ApiError, ErrorCode},
+        flume::FlumeDelta,
         MediaId,
     },
     v2::types::media::{Media, MediaReference},
@@ -152,68 +153,57 @@ impl Component<Thin> {
     /// - Media can be appended to Gallery (added to items)
     /// - any component can be appended to Container and Section
     /// - any component can be appended to Details. it will be appended to `details`, not `summary`.
-    pub fn append(&mut self, _other: Component<Create>) -> Result<(), ApiError> {
-        todo!()
+    pub fn append(
+        &mut self,
+        other: Component<Create>,
+        id_allocator: &mut IdAllocator,
+        resolve_media: impl Fn(MediaReference) -> Result<MediaId, ApiError>,
+    ) -> Result<(), ApiError> {
+        let other_thin = other.parse_thin_inner(None, id_allocator, &resolve_media)?;
+
+        match &mut self.ty {
+            ComponentType::Text { content } => {
+                if let ComponentType::Text {
+                    content: other_content,
+                } = other_thin.ty
+                {
+                    content.push_str(&other_content);
+                } else {
+                    return Err(ApiError::with_message(
+                        ErrorCode::InvalidData,
+                        "only Text can be appended to Text".to_owned(),
+                    ));
+                }
+            }
+            ComponentType::Gallery { items } => {
+                if let ComponentType::Media { items: other_items } = other_thin.ty {
+                    items.extend(other_items);
+                } else {
+                    return Err(ApiError::with_message(
+                        ErrorCode::InvalidData,
+                        "only Media can be appended to Gallery".to_owned(),
+                    ));
+                }
+            }
+            ComponentType::Container { components, .. } => {
+                components.push(other_thin);
+            }
+            ComponentType::Section { components, .. } => {
+                components.push(other_thin);
+            }
+            ComponentType::Details { details, .. } => {
+                details.push(other_thin);
+            }
+            _ => {
+                return Err(ApiError::with_message(
+                    ErrorCode::InvalidData,
+                    "cannot append to this component type".to_owned(),
+                ));
+            }
+        }
+        Ok(())
     }
 }
-
-// old code below
-// TODO: port to above
-// impl<C: ComponentState> ComponentType<C> {
-//     /// Append another component to this component tree.
-//     ///
-//     /// ## rules
-//     ///
-//     /// - Text can be appended to other Text (content is concatenated)
-//     /// - Media can be appended to Gallery (added to items)
-//     /// - any component can be appended to Container and Section
-//     /// - any component can be appended to Details. it will be appended to `details`, not `summary`.
-//     pub fn append(&mut self, other: Component<Create>) -> Result<(), ApiError> {
-//         match &mut self.ty {
-//             ComponentType::Text { content } => {
-//                 if let ComponentType::Text {
-//                     content: other_content,
-//                 } = other.ty
-//                 {
-//                     content.push_str(&other_content);
-//                 } else {
-//                     return Err(ApiError::with_message(
-//                         ErrorCode::InvalidData,
-//                         "only Text can be appended to Text".to_owned(),
-//                     ));
-//                 }
-//             }
-//             ComponentType::Gallery { items } => {
-//                 if let ComponentType::Media { items: other_items } = other.ty {
-//                     items.extend(other_items);
-//                 } else {
-//                     return Err(ApiError::with_message(
-//                         ErrorCode::InvalidData,
-//                         "only Media can be appended to Gallery".to_owned(),
-//                     ));
-//                 }
-//             }
-//             ComponentType::Container { components, .. } => {
-//                 components.push(other);
-//             }
-//             ComponentType::Section { components, .. } => {
-//                 components.push(other);
-//             }
-//             ComponentType::Details { details, .. } => {
-//                 details.push(other);
-//             }
-//             ComponentType::Button { .. }
-//             | ComponentType::LinkButton { .. }
-//             | ComponentType::Reference { .. }
-//             | ComponentType::Media { .. } => {
-//                 return Err(ApiError::with_message(
-//                     ErrorCode::InvalidData,
-//                     "cannot append to this component type".to_owned(),
-//                 ));
-//             }
-//         }
-//     }
-// }
 
 impl Components<Create> {
     /// parse a Blueprint into a Canonical component
@@ -806,5 +796,203 @@ impl Components<Thin> {
             .collect::<Result<Vec<_>, E>>()?;
 
         Ok(Components { inner })
+    }
+
+    pub fn apply_delta(
+        &mut self,
+        delta: FlumeDelta,
+        resolve_media: impl Fn(MediaReference) -> Result<MediaId, ApiError>,
+    ) -> Result<(), ApiError> {
+        let mut id_allocator = IdAllocator::new();
+        for c in &self.inner {
+            c.visit_ids(&mut |id| id_allocator.mark_used(id.0));
+        }
+
+        // 1. process deletes
+        for id in delta.delete {
+            self.delete_by_id(id);
+        }
+
+        // 2. process replacements
+        for r in delta.replace {
+            let target_id = r.target;
+            let mut parsed_replacements = Vec::with_capacity(r.components.len());
+
+            for comp_create in r.components {
+                let thin =
+                    comp_create.parse_thin_inner(Some(self), &mut id_allocator, &resolve_media)?;
+                parsed_replacements.push(thin);
+            }
+
+            if !self.replace_by_id(target_id, parsed_replacements) {
+                return Err(ApiError::with_message(
+                    ErrorCode::NotFound,
+                    format!("component {} not found for replacement", target_id.0),
+                ));
+            }
+        }
+
+        // 3. process appends
+        for a in delta.append {
+            let parent_id = a.target;
+
+            let Some(parent) = self.get_mut_by_id(parent_id) else {
+                return Err(ApiError::with_message(
+                    ErrorCode::NotFound,
+                    format!("parent component {} not found for append", parent_id.0),
+                ));
+            };
+
+            for c in a.components {
+                parent.append(c, &mut id_allocator, &resolve_media)?;
+            }
+        }
+
+        self.validate()?;
+
+        Ok(())
+    }
+
+    /// delete a component by its id
+    fn delete_by_id(&mut self, target_id: ComponentId) -> bool {
+        Self::recursive_delete(&mut self.inner, target_id)
+    }
+
+    /// helper for delete_by_id
+    fn recursive_delete(components: &mut Vec<Component<Thin>>, target_id: ComponentId) -> bool {
+        if let Some(pos) = components.iter().position(|c| c.id == target_id) {
+            components.remove(pos);
+            return true;
+        }
+
+        for c in components.iter_mut() {
+            match &mut c.ty {
+                ComponentType::Container {
+                    components: children,
+                    ..
+                }
+                | ComponentType::Section {
+                    components: children,
+                    ..
+                } => {
+                    if Self::recursive_delete(children, target_id) {
+                        return true;
+                    }
+                }
+                ComponentType::Details {
+                    summary, details, ..
+                } => {
+                    if Self::recursive_delete(summary, target_id) {
+                        return true;
+                    }
+                    if Self::recursive_delete(details, target_id) {
+                        return true;
+                    }
+                }
+                _ => {}
+            }
+        }
+        false
+    }
+
+    /// replace component with taret id with a sequence of new ones
+    fn replace_by_id(
+        &mut self,
+        target_id: ComponentId,
+        replacements: Vec<Component<Thin>>,
+    ) -> bool {
+        Self::recursive_replace(&mut self.inner, target_id, replacements)
+    }
+
+    /// recursively replace/splice a list of components
+    fn recursive_replace(
+        components: &mut Vec<Component<Thin>>,
+        target_id: ComponentId,
+        replacements: Vec<Component<Thin>>,
+    ) -> bool {
+        if let Some(pos) = components.iter().position(|c| c.id == target_id) {
+            components.splice(pos..pos + 1, replacements);
+            return true;
+        }
+
+        for c in components.iter_mut() {
+            let found = match &mut c.ty {
+                ComponentType::Container {
+                    components: children,
+                    ..
+                }
+                | ComponentType::Section {
+                    components: children,
+                    ..
+                } => {
+                    return Self::recursive_replace(children, target_id, replacements.clone());
+                }
+                ComponentType::Details {
+                    summary, details, ..
+                } => {
+                    if Self::recursive_replace(summary, target_id, replacements.clone()) {
+                        return true;
+                    }
+                    if Self::recursive_replace(details, target_id, replacements.clone()) {
+                        return true;
+                    }
+                    false
+                }
+                _ => false,
+            };
+
+            if found {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// get a mutable reference to a component from its id
+    fn get_mut_by_id(&mut self, target_id: ComponentId) -> Option<&mut Component<Thin>> {
+        for c in self.inner.iter_mut() {
+            if let Some(res) = c.get_mut_by_id(target_id) {
+                return Some(res);
+            }
+        }
+        None
+    }
+}
+
+impl Component<Thin> {
+    /// get a mutable reference to a component from its id
+    fn get_mut_by_id(&mut self, target_id: ComponentId) -> Option<&mut Component<Thin>> {
+        if self.id == target_id {
+            return Some(self);
+        }
+
+        match &mut self.ty {
+            ComponentType::Container { components, .. }
+            | ComponentType::Section { components, .. } => {
+                for c in components.iter_mut() {
+                    if let Some(res) = c.get_mut_by_id(target_id) {
+                        return Some(res);
+                    }
+                }
+            }
+            ComponentType::Details {
+                summary, details, ..
+            } => {
+                for c in summary.iter_mut() {
+                    if let Some(res) = c.get_mut_by_id(target_id) {
+                        return Some(res);
+                    }
+                }
+                for c in details.iter_mut() {
+                    if let Some(res) = c.get_mut_by_id(target_id) {
+                        return Some(res);
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        None
     }
 }

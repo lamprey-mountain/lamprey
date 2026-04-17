@@ -8,8 +8,9 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::automod::{AutomodAction, AutomodMatches, AutomodRuleStripped};
-use crate::v1::types::components::{self, Canonical, Component, ComponentCreate, Components};
+use crate::v1::types::components::{self, Components};
 use crate::v1::types::e2ee::MlsEpoch;
+use crate::v1::types::flume::MessageFlume;
 use crate::v1::types::metadata::MessageMetadata;
 use crate::v1::types::moderation::Report;
 use crate::v1::types::reaction::ReactionCounts;
@@ -29,6 +30,7 @@ use super::EmbedCreate;
 use super::{ChannelId, MessageId, MessageVerId};
 use std::fmt;
 
+pub mod flume;
 pub mod metadata;
 
 /// a message
@@ -71,6 +73,10 @@ pub struct Message {
     /// the associated thread for this message, if one exists.
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub thread: Option<Box<Channel>>,
+
+    /// the associated flume for this message, if one exists.
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub flume: Option<MessageFlume>,
 }
 
 /// a message's content at a point in time

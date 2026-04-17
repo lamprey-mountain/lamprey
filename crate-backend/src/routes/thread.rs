@@ -138,6 +138,7 @@ async fn thread_member_add(
                 message_type: MessageType::MemberAdd(MessageMember { target_user_id }).into(),
                 created_at: None,
                 removed_at: None,
+                flume: None,
                 mentions: Mentions {
                     users: vec![MentionsUser {
                         id: target_user_id,
@@ -236,6 +237,7 @@ async fn thread_member_delete(
                 message_type: MessageType::MemberRemove(MessageMember { target_user_id }).into(),
                 created_at: None,
                 removed_at: None,
+                flume: None,
                 mentions: Default::default(),
             })
             .await?;

@@ -20,6 +20,7 @@ mod dm;
 mod document;
 mod emoji;
 mod federation;
+mod flume;
 mod internal;
 mod invite;
 mod media;
@@ -67,6 +68,7 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(document::routes())
         .merge(emoji::routes())
         .merge(federation::routes(Arc::clone(&s)))
+        .merge(flume::routes())
         .merge(internal::routes())
         .merge(invite::routes())
         .merge(media::routes())

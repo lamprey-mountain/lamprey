@@ -199,6 +199,11 @@ pub trait DataMessage {
         version_id: MessageVerId,
         update: DbMessageUpdate,
     ) -> Result<()>;
+    async fn message_flume_update(
+        &self,
+        message_id: MessageId,
+        flume: serde_json::Value,
+    ) -> Result<()>;
     async fn message_get(&self, channel_id: ChannelId, message_id: MessageId) -> Result<Message>;
     async fn message_get_many(
         &self,

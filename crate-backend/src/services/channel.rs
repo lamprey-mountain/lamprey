@@ -632,6 +632,7 @@ impl ServiceChannels {
                         .into(),
                         created_at: None,
                         removed_at: None,
+                        flume: None,
                         mentions: Default::default(),
                     })
                     .await?;
@@ -781,6 +782,7 @@ impl ServiceChannels {
                     .into(),
                     created_at: None,
                     removed_at: None,
+                    flume: None,
                     mentions: Default::default(),
                 })
                 .await?;
@@ -1244,6 +1246,7 @@ impl ServiceChannels {
                     .into(),
                     created_at: None,
                     removed_at: None,
+                    flume: None,
                     mentions: Default::default(),
                 })
                 .await?;
@@ -1275,6 +1278,7 @@ impl ServiceChannels {
                     .into(),
                     created_at: None,
                     removed_at: None,
+                    flume: None,
                     mentions: Default::default(),
                 })
                 .await?;
@@ -1307,6 +1311,7 @@ impl ServiceChannels {
                     .into(),
                     created_at: None,
                     removed_at: None,
+                    flume: None,
                     mentions: Default::default(),
                 })
                 .await?;

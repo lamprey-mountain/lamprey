@@ -619,6 +619,7 @@ async fn message_pin(
             .into(),
             created_at: None,
             removed_at: None,
+            flume: None,
             mentions: Default::default(),
         })
         .await?;

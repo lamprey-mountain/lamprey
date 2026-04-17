@@ -56,6 +56,7 @@ pub struct DbMessage {
     pub created_seq: i64,
     pub version_created_seq: i64,
     pub lifecycle_seq: i64,
+    pub flume: Option<serde_json::Value>,
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -104,6 +105,7 @@ impl From<DbMessage> for Message {
             }
             .into(),
             thread: None,
+            flume: row.flume.and_then(|v| serde_json::from_value(v).ok()),
         }
     }
 }
@@ -257,9 +259,10 @@ impl DataMessage for Postgres {
         .fetch_one(&mut *tx)
         .await?;
 
+        let flume_json = create.flume.clone();
         query!(
-            r#"INSERT INTO message (id, channel_id, author_id, created_at, removed_at, latest_version_id, created_seq, lifecycle_seq)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $7)"#,
+            r#"INSERT INTO message (id, channel_id, author_id, created_at, removed_at, latest_version_id, created_seq, lifecycle_seq, flume)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8)"#,
             message_id,
             *create.channel_id,
             create.author_id.into_inner(),
@@ -267,6 +270,7 @@ impl DataMessage for Postgres {
             removed_at,
             version_id,
             new_seq,
+            flume_json,
         )
         .execute(&mut *tx)
         .await?;
@@ -453,6 +457,22 @@ impl DataMessage for Postgres {
         .await?;
         tx.commit().await?;
         info!("update message in place");
+        Ok(())
+    }
+
+    async fn message_flume_update(
+        &self,
+        message_id: MessageId,
+        flume: serde_json::Value,
+    ) -> Result<()> {
+        query!(
+            r#"UPDATE message SET flume = $1 WHERE id = $2"#,
+            flume,
+            *message_id,
+        )
+        .execute(&self.pool)
+        .await?;
+        info!("update message flume");
         Ok(())
     }
 
@@ -1179,7 +1199,8 @@ impl DataMessage for Postgres {
                 coalesce(att_json.attachments, '[]'::json) as "attachments!",
                 m.created_seq,
                 mv.created_seq as "version_created_seq",
-                m.lifecycle_seq
+                m.lifecycle_seq,
+                m.flume
             FROM message AS m
             JOIN message_version AS mv ON m.latest_version_id = mv.version_id
             LEFT JOIN att_json ON att_json.version_id = mv.version_id

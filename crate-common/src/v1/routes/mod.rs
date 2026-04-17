@@ -13,6 +13,7 @@ pub mod document;
 pub mod e2ee;
 pub mod emoji;
 pub mod federation;
+pub mod flume;
 pub mod invite;
 pub mod message;
 pub mod moderation;

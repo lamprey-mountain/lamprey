@@ -2,6 +2,7 @@ use common::v1::types::components::{self, ComponentThin, Components};
 use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::reaction::{ReactionCount, ReactionCounts, ReactionKey, ReactionKeyParam};
 use common::v2::types::media::{Media, MediaReference};
+use dashmap::DashMap;
 use futures::{stream::FuturesUnordered, StreamExt};
 use moka::future::Cache;
 use std::collections::HashMap;
@@ -24,15 +25,28 @@ use crate::types::{DbMessageCreate, MediaLinkType, MentionsIds, MessageVerId};
 use crate::{Error, Result, ServerStateInner};
 
 pub mod create;
+pub mod flume;
 pub mod links;
 pub mod mentions;
+pub mod util;
 
 pub struct ServiceMessages {
     state: Arc<ServerStateInner>,
+    flumes: DashMap<MessageId, flume::Flume>,
     pub idempotency_keys: Cache<(SessionId, String), Message>,
 }
 
 impl ServiceMessages {
+    pub fn new(state: Arc<ServerStateInner>) -> Self {
+        Self {
+            state,
+            flumes: DashMap::new(),
+            idempotency_keys: Cache::builder()
+                .time_to_live(Duration::from_secs(300))
+                .build(),
+        }
+    }
+
     pub async fn get(
         &self,
         thread_id: ChannelId,
@@ -68,15 +82,6 @@ impl ServiceMessages {
             .await?;
 
         Ok(messages)
-    }
-
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
-        Self {
-            state,
-            idempotency_keys: Cache::builder()
-                .time_to_live(Duration::from_secs(300))
-                .build(),
-        }
     }
 
     // pub async fn _create(
@@ -366,7 +371,7 @@ impl ServiceMessages {
                 }
             }
 
-            // Process components with a closure that resolves media from cache
+            // process components with a closure that resolves media from cache
             let components = components.into_canonical(|media_id: MediaId| {
                 media_cache
                     .get(&media_id)

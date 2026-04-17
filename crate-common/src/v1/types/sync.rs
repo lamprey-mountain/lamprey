@@ -11,6 +11,7 @@ use validator::Validate;
 use crate::v1::types::e2ee::{CrossSigningBundle, KeyshareRequest, KeyshareResponse};
 use crate::v1::types::error::SyncError;
 
+use crate::v1::types::message::flume::FlumeDelta;
 use crate::v1::types::Message;
 use crate::v1::types::{
     application::{Application, Connection},
@@ -901,6 +902,17 @@ pub enum MessageSync {
         user_id: UserId,
         payload: E2EEMessage,
     },
+
+    /// streaming message response
+    ///
+    /// when a user initially connects, a delta for all active flumes is sent
+    /// containing the full content of each flume (apply to empty component to
+    /// get current flume state)
+    FlumeDelta {
+        channel_id: ChannelId,
+        message_id: MessageId,
+        delta: FlumeDelta,
+    },
 }
 
 // TODO: skip sending room_members/thread_members/users if the client already has them
@@ -1161,6 +1173,8 @@ impl MessageSync {
             Self::MediaUpdate { .. } => None,
             #[cfg(feature = "feat_e2ee")]
             Self::EncryptionDispatch { .. } => None,
+            // FlumeDelta is channel-scoped; room_id requires a lookup
+            Self::FlumeDelta { .. } => None,
         }
     }
 
@@ -1276,6 +1290,7 @@ impl MessageSync {
             Self::MediaUpdate { .. } => None,
             #[cfg(feature = "feat_e2ee")]
             Self::EncryptionDispatch { .. } => None,
+            Self::FlumeDelta { channel_id, .. } => Some(*channel_id),
         }
     }
 }

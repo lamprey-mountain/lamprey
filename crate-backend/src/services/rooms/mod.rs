@@ -555,6 +555,7 @@ impl ServiceRooms {
                     message_type: MessageType::MemberJoin.into(),
                     created_at: None,
                     removed_at: None,
+                    flume: None,
                     mentions: Default::default(),
                 })
                 .await?;

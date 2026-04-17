@@ -337,6 +337,7 @@ impl AuthCheck {
                     AuthCheck::Any(auth_checks)
                 }
             }
+            MessageSync::FlumeDelta { channel_id, .. } => AuthCheck::Channel(*channel_id),
         }
     }
 }

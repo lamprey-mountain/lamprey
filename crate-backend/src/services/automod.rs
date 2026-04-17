@@ -816,6 +816,7 @@ impl ServiceAutomod {
                         created_at: None,
                         removed_at: None,
                         mentions,
+                        flume: None,
                     };
 
                     match data.message_create(message_create).await {

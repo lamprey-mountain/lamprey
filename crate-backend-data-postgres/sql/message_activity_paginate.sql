@@ -10,6 +10,7 @@ SELECT
     m.pinned,
     m.created_seq,
     m.lifecycle_seq,
+    m.flume,
     mv.version_id,
     mv.author_id as version_author_id,
     mv.content,

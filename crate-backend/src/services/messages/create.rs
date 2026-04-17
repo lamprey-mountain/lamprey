@@ -16,8 +16,10 @@ use common::v2::types::media::MediaReference;
 use http::StatusCode;
 use lamprey_backend_data_postgres::{MediaId, NotificationId, SERVER_USER_ID};
 use tracing::{error, warn};
+use uuid::Uuid;
 use validator::Validate;
 
+use crate::services::messages::util::MediaRegistry;
 use crate::services::messages::{links, mentions};
 use crate::services::notifications::preferences::NotificationAction;
 use crate::types::MediaLinkType;
@@ -104,7 +106,7 @@ struct Committed {
     sanitized: MessageSanitized,
 }
 
-struct MessagePermissions {
+pub(super) struct MessagePermissions {
     allow_external_emoji: bool,
     generate_embeds: bool,
 }
@@ -112,54 +114,6 @@ struct MessagePermissions {
 struct MessageSanitized {
     content: Option<String>,
     mentions: Mentions,
-}
-
-#[derive(Default)]
-struct MediaRegistry {
-    known: HashSet<MediaId>,
-    duplicates: HashSet<MediaId>,
-}
-
-impl MediaRegistry {
-    fn insert(&mut self, media_id: MediaId) {
-        if !self.known.insert(media_id) {
-            self.duplicates.insert(media_id);
-        }
-    }
-
-    fn insert_ref(&mut self, mr: &MediaReference) -> Result<()> {
-        let Some(media_id) = mr.media_id() else {
-            return Err(Error::Unimplemented);
-        };
-
-        self.insert(media_id);
-        Ok(())
-    }
-
-    // PERF: this could probably be improved
-    fn extend(&mut self, ids: &[MediaId]) {
-        for id in ids {
-            self.insert(*id);
-        }
-    }
-
-    fn extend_refs(&mut self, items: &[MediaReference]) {
-        for i in items {
-            let _ = self.insert_ref(i);
-        }
-    }
-
-    fn check(&self) -> Result<()> {
-        if self.duplicates.is_empty() {
-            Ok(())
-        } else {
-            let dupes: Vec<_> = self.duplicates.iter().map(|m| m.to_string()).collect();
-            Err(Error::ApiError(ApiError::with_message(
-                ErrorCode::DuplicateMediaId,
-                format!("You've used some media ids multiple times, but media can only be used once. Media ids: {}", dupes.join(", ")),
-            )))
-        }
-    }
 }
 
 impl<'a, S> MessageOperation<'a, S> {
@@ -640,89 +594,40 @@ impl ServiceMessages {
         Ok(())
     }
 
-    async fn validate_permissions(
+    /// Validates message creation/edit permissions for a session-authenticated user.
+    /// Returns (allow_external_emoji, generate_embeds, created_at).
+    pub(super) async fn validate_session_permissions(
         &self,
-        op: &mut MessageOperation<'_, New>,
+        auth: &Auth,
+        channel: &Channel,
+        has_attachments: bool,
+        has_embeds: bool,
+        header_timestamp: Option<Time>,
     ) -> Result<(MessagePermissions, Option<Time>)> {
         let srv = self.state.services();
         let data = self.state.data();
 
-        // 0. you can only edit your own messages
-        // (this *may* change in the future - dubious though)
-        // TODO: think about it
-        match &op.kind {
-            MessageOperationKind::MessageCreate(_) => {}
-            MessageOperationKind::MessageEdit(m) => {
-                if op.user_id() != Some(m.original.author_id) {
-                    // TODO: custom error code for this?
-                    return Err(Error::ApiError(ApiError::with_message(
-                        ErrorCode::MissingPermissions,
-                        "cannot edit other people's messages".to_owned(),
-                    )));
-                }
-            }
-        }
-
-        let auth = match &op.auth {
-            AuthProvider::Session(auth) => auth,
-            AuthProvider::Webhook { .. } => {
-                // 1. webhooks bypass permission checks (for now)
-                return Ok((
-                    MessagePermissions {
-                        allow_external_emoji: true,
-                        generate_embeds: true,
-                    },
-                    op.stage.header_timestamp,
-                ));
-            }
-            AuthProvider::Server => {
-                // 2. system messages bypass permission checks
-                return Ok((
-                    MessagePermissions {
-                        allow_external_emoji: true,
-                        generate_embeds: true,
-                    },
-                    op.stage.header_timestamp,
-                ));
-            }
-        };
-
-        // 3. basic permission checks
         let mut perms = srv
             .perms
-            .for_channel3(Some(auth.user.id), op.channel.id)
+            .for_channel3(Some(auth.user.id), channel.id)
             .await?
             .ensure_view()?;
         perms.needs_unlocked().needs_slowmode_message_bypass();
-        perms.needs(if op.channel.is_thread() {
+        perms.needs(if channel.is_thread() {
             Permission::MessageCreateThread
         } else {
             Permission::MessageCreate
         });
 
-        match &op.kind {
-            MessageOperationKind::MessageCreate(o) => {
-                if !o.json.attachments.is_empty() {
-                    perms.needs(Permission::MessageAttachments);
-                }
-                if !o.json.embeds.is_empty() {
-                    perms.needs(Permission::MessageEmbeds);
-                }
-            }
-            MessageOperationKind::MessageEdit(o) => {
-                if o.json.attachments.as_ref().is_some_and(|a| !a.is_empty()) {
-                    perms.needs(Permission::MessageAttachments);
-                }
-                if o.json.embeds.as_ref().is_some_and(|a| !a.is_empty()) {
-                    perms.needs(Permission::MessageEmbeds);
-                }
-            }
+        if has_attachments {
+            perms.needs(Permission::MessageAttachments);
         }
-
+        if has_embeds {
+            perms.needs(Permission::MessageEmbeds);
+        }
         perms.check()?;
 
-        // 5. timestamp massaging check
-        let created_at = if let Some(ts) = op.stage.header_timestamp {
+        let created_at = if let Some(ts) = header_timestamp {
             let owner_id = if let Some(puppet) = &auth.user.puppet {
                 (*puppet.owner_id).into()
             } else if auth.user.bot {
@@ -740,7 +645,7 @@ impl ServiceMessages {
             };
 
             srv.perms
-                .for_channel3(Some(owner_id), op.channel.id)
+                .for_channel3(Some(owner_id), channel.id)
                 .await?
                 .ensure_view()?
                 .needs(Permission::IntegrationsBridge)
@@ -758,6 +663,72 @@ impl ServiceMessages {
             },
             created_at,
         ))
+    }
+
+    /// Validates permissions for a message operation (create/edit).
+    async fn validate_permissions(
+        &self,
+        op: &mut MessageOperation<'_, New>,
+    ) -> Result<(MessagePermissions, Option<Time>)> {
+        let srv = self.state.services();
+
+        // 0. you can only edit your own messages
+        // (this *may* change in the future - dubious though)
+        // TODO: think about it
+        match &op.kind {
+            MessageOperationKind::MessageCreate(_) => {}
+            MessageOperationKind::MessageEdit(m) => {
+                if op.user_id() != Some(m.original.author_id) {
+                    // TODO: custom error code for this?
+                    return Err(Error::ApiError(ApiError::with_message(
+                        ErrorCode::MissingPermissions,
+                        "cannot edit other people's messages".to_owned(),
+                    )));
+                }
+            }
+        }
+
+        match &op.auth {
+            AuthProvider::Session(auth) => {
+                let (has_attachments, has_embeds) = match &op.kind {
+                    MessageOperationKind::MessageCreate(o) => {
+                        (!o.json.attachments.is_empty(), !o.json.embeds.is_empty())
+                    }
+                    MessageOperationKind::MessageEdit(o) => (
+                        o.json.attachments.as_ref().is_some_and(|a| !a.is_empty()),
+                        o.json.embeds.as_ref().is_some_and(|a| !a.is_empty()),
+                    ),
+                };
+                self.validate_session_permissions(
+                    auth,
+                    &op.channel,
+                    has_attachments,
+                    has_embeds,
+                    op.stage.header_timestamp,
+                )
+                .await
+            }
+            AuthProvider::Webhook { .. } => {
+                // 1. webhooks bypass permission checks (for now)
+                Ok((
+                    MessagePermissions {
+                        allow_external_emoji: true,
+                        generate_embeds: true,
+                    },
+                    op.stage.header_timestamp,
+                ))
+            }
+            AuthProvider::Server => {
+                // 2. system messages bypass permission checks
+                Ok((
+                    MessagePermissions {
+                        allow_external_emoji: true,
+                        generate_embeds: true,
+                    },
+                    op.stage.header_timestamp,
+                ))
+            }
+        }
     }
 
     async fn enforce_automod(&self, op: &mut MessageOperation<'_, New>) -> Result<Option<Time>> {
@@ -872,6 +843,28 @@ impl ServiceMessages {
         futures_util::future::try_join_all(embed_futs).await
     }
 
+    /// Parse components and collect media IDs into the registry.
+    /// Used by both the operation flow and flume_create.
+    pub(super) async fn process_components_with_media(
+        &self,
+        components_input: &Components<components::Create>,
+        old_components: Option<&Components<components::Thin>>,
+        all_media_ids: &mut MediaRegistry,
+    ) -> Result<Components<components::Thin>> {
+        let components = components_input
+            .clone()
+            .parse_thin(old_components, &|m| match m {
+                MediaReference::Media { media_id } => Ok(media_id),
+                _ => Err(ApiError::from_code(ErrorCode::Unimplemented)),
+            })?;
+
+        let mut media_ids = vec![];
+        components.collect_media_refs(&mut media_ids);
+        all_media_ids.extend(&media_ids);
+
+        Ok(components)
+    }
+
     async fn process_components(
         &self,
         op: &mut MessageOperation<'_, Authorized>,
@@ -891,17 +884,9 @@ impl ServiceMessages {
             }
         };
 
-        let components =
-            components_input
-                .clone()
-                .parse_thin(old_components.as_ref(), &|m| match m {
-                    MediaReference::Media { media_id } => Ok(media_id),
-                    _ => Err(ApiError::from_code(ErrorCode::Unimplemented)),
-                })?;
-
-        let mut media_ids = vec![];
-        components.collect_media_refs(&mut media_ids);
-        all_media_ids.extend(&media_ids);
+        let components = self
+            .process_components_with_media(components_input, old_components.as_ref(), all_media_ids)
+            .await?;
 
         Ok(components.inner)
     }
@@ -962,6 +947,7 @@ impl ServiceMessages {
                     message_type: payload,
                     created_at: op.stage.created_at.map(|t| t.into()),
                     removed_at: op.stage.removed_at.map(|t| t.into()),
+                    flume: None,
                     mentions: op.stage.sanitized.mentions.clone(),
                 })
                 .await?;
@@ -987,31 +973,31 @@ impl ServiceMessages {
         self.get(op.channel.id, op.message_id, None).await
     }
 
-    async fn validate_and_claim_media(
+    /// Validate media ownership and reuse, then insert media links.
+    /// Used by both the operation flow and flume_create.
+    pub(super) async fn validate_media_ownership(
         &self,
-        op: &mut MessageOperation<'_, Prepared>,
-        message: &Message,
+        all_media_ids: &mut MediaRegistry,
+        author_id: UserId,
+        message_id: MessageId,
+        version_id: Uuid,
     ) -> Result<()> {
         let data = self.state.data();
-        let user_id = op.author_id();
-        let all_media_ids = &mut op.stage.all_media_ids;
         all_media_ids.check()?;
-
-        let version_id = message.latest_version.version_id;
 
         for &id in &all_media_ids.known {
             // PERF: this should probably be batched
             let media = data.media_select(id).await?;
 
             // 1. ownership check: user must own the media they are trying to use
-            if media.user_id != Some(user_id) {
+            if media.user_id != Some(author_id) {
                 return Err(Error::MissingPermissions);
             }
 
             // 2. reuse check: media cannot be linked to a different message
             let existing = data.media_link_select(id).await?;
             let already_linked_to_this = existing.iter().any(|l| {
-                l.link_type == MediaLinkType::Message && l.target_id == op.message_id.into_inner()
+                l.link_type == MediaLinkType::Message && l.target_id == message_id.into_inner()
             });
 
             if !already_linked_to_this && !existing.is_empty() {
@@ -1021,13 +1007,30 @@ impl ServiceMessages {
             }
 
             // 3. insert media links
-            data.media_link_insert(id, op.message_id.into_inner(), MediaLinkType::Message)
+            data.media_link_insert(id, message_id.into_inner(), MediaLinkType::Message)
                 .await?;
-            data.media_link_insert(id, *version_id, MediaLinkType::MessageVersion)
+            data.media_link_insert(id, version_id, MediaLinkType::MessageVersion)
                 .await?;
         }
 
         Ok(())
+    }
+
+    async fn validate_and_claim_media(
+        &self,
+        op: &mut MessageOperation<'_, Prepared>,
+        message: &Message,
+    ) -> Result<()> {
+        let author_id = op.author_id();
+        let message_id = op.message_id;
+        let version_id = *message.latest_version.version_id;
+        self.validate_media_ownership(
+            &mut op.stage.all_media_ids,
+            author_id,
+            message_id,
+            version_id,
+        )
+        .await
     }
 
     async fn update_slowmode_timeout(&self, op: &mut MessageOperation<'_, Prepared>) -> Result<()> {
