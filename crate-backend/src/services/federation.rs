@@ -304,6 +304,7 @@ impl ServiceFederation {
             .into_iter()
             .filter(|k| k.expires_at > now)
             .map(|k| {
+                // TODO: validate key with signing.rs verify_server_key
                 let pubkey_bytes = base64::Engine::decode(
                     &base64::engine::general_purpose::URL_SAFE_NO_PAD,
                     &k.pubkey,

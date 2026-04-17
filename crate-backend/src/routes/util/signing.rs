@@ -5,19 +5,26 @@ use common::v1::types::{
 };
 use ed25519_dalek::{Signature, Signer, Verifier, VerifyingKey};
 use http::{HeaderMap, HeaderName, HeaderValue};
-use sha2::{Digest, Sha512_256};
 
 use crate::{error::Result, services::federation::LocalSigningKey, Error};
 
 /// how long a signed request is valid for
 pub const SIGNATURE_MAX_AGE: std::time::Duration = std::time::Duration::from_secs(30);
 
-/// header names for federation signing
+/// federation signing header: the hostname of the server thats sending this request
 pub const HEADER_ORIGIN: &str = "x-origin";
+
+/// federation signing header: the timestamp of this request
 pub const HEADER_TIMESTAMP: &str = "x-timestamp";
+
+/// federation signing header: the signature of this request
 pub const HEADER_SIGNATURE: &str = "x-signature";
+
+/// federation signing header: the public key that was used to sign this request
 pub const HEADER_PUBKEY: &str = "x-pubkey";
-pub const HEADER_HOST: &str = "x-host";
+
+/// standard http header: the target host of this request
+pub const HEADER_HOST: &str = "host";
 
 /// base64 engine used for encoding/decoding signature headers
 const B64: base64::engine::general_purpose::GeneralPurpose =
@@ -114,31 +121,40 @@ impl SigningHeaders {
 }
 
 // FIXME: ensure that none of these fields contain newlines
-// FIXME: i thought i had to hash before signing, turns out the crate already hashes for you so im double hashing
-/// compute the canonical hash input for a federation request
+/// compute the canonical payload to sign for a federation request
 ///
 /// format: `method\npath\norigin\nhost\ntimestamp\nbody`
-pub fn compute_hash(
+pub fn compute_payload(
     method: &str,
     path: &str,
     origin: &str,
     host: &str,
     timestamp: &str,
     body: &[u8],
-) -> Vec<u8> {
-    let mut hasher = Sha512_256::new();
-    hasher.update(method.as_bytes());
-    hasher.update(b"\n");
-    hasher.update(path.as_bytes());
-    hasher.update(b"\n");
-    hasher.update(origin.as_bytes());
-    hasher.update(b"\n");
-    hasher.update(host.as_bytes());
-    hasher.update(b"\n");
-    hasher.update(timestamp.as_bytes());
-    hasher.update(b"\n");
-    hasher.update(body);
-    hasher.finalize().to_vec()
+) -> Result<Vec<u8>> {
+    let has_newlines = [method, path, origin, host, timestamp]
+        .iter()
+        .any(|field| field.contains('\n'));
+
+    if has_newlines {
+        return Err(Error::BadStatic(
+            "newlines are not permitted in signing headers",
+        ));
+    }
+
+    let mut bytes = vec![];
+    bytes.extend(method.as_bytes());
+    bytes.extend(b"\n");
+    bytes.extend(path.as_bytes());
+    bytes.extend(b"\n");
+    bytes.extend(origin.as_bytes());
+    bytes.extend(b"\n");
+    bytes.extend(host.as_bytes());
+    bytes.extend(b"\n");
+    bytes.extend(timestamp.as_bytes());
+    bytes.extend(b"\n");
+    bytes.extend(body);
+    Ok(bytes)
 }
 
 /// an outgoing request that needs to be signed
@@ -155,16 +171,16 @@ impl OutgoingRequest<'_> {
     pub fn sign(&self, key: &LocalSigningKey) -> Result<SigningHeaders> {
         let timestamp = Time::now_utc().to_string();
 
-        let hash = compute_hash(
+        let payload = compute_payload(
             self.method,
             self.path,
             &self.origin.0,
             self.host,
             &timestamp,
             self.body,
-        );
+        )?;
 
-        let sig: ed25519_dalek::Signature = key.signing_key.sign(&hash);
+        let sig: ed25519_dalek::Signature = key.signing_key.sign(&payload);
 
         Ok(SigningHeaders {
             origin: self.origin.clone(),
@@ -192,14 +208,14 @@ impl IncomingRequest<'_> {
         let sig = Signature::from_slice(&self.headers.signature)
             .map_err(|_| Error::BadStatic("invalid signature encoding"))?;
 
-        let hash = compute_hash(
+        let hash = compute_payload(
             self.method,
             self.path,
             &self.origin.0,
             self.host,
             &self.headers.timestamp,
             self.body,
-        );
+        )?;
 
         verifying_key
             .verify(&hash, &sig)

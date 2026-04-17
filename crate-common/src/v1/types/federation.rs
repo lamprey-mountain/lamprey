@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use uuid::Uuid;
 
 #[cfg(feature = "serde")]
@@ -183,4 +185,12 @@ pub struct ServerSyncResponse {
     ///
     /// this is to prevent servers from being overloaded
     pub timeout: u64,
+}
+
+impl Deref for Hostname {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }

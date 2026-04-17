@@ -5,9 +5,8 @@ use axum::response::IntoResponse;
 use axum::Json;
 use base64::Engine;
 use common::v1::routes;
-use common::v1::types::federation::{ServerKey, ServerKeyAlgorithm, ServerKeys};
+use common::v1::types::federation::{ServerKey, ServerKeys};
 use common::v1::types::misc::ServerReq;
-use ed25519_dalek::Signer;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
@@ -24,18 +23,14 @@ async fn server_keys_get(
     State(s): State<Arc<ServerState>>,
     req: routes::server_keys_get::Request,
 ) -> Result<impl IntoResponse> {
-    let config = s.config();
-    let local_hostname = config
-        .hostname
-        .as_deref()
-        .ok_or_else(|| Error::BadStatic("hostname not configured for federation"))?;
+    let local_hostname = s.config().hostname()?;
 
     let requested = match &req.hostname {
         ServerReq::ServerName(name) => name.as_str(),
         ServerReq::ServerHost => local_hostname,
         ServerReq::ServerClient => {
             // TODO: let servers see what we think their keys are?
-            return Err(Error::BadStatic("cannot fetch your own server keys"));
+            return Err(Error::Unimplemented);
         }
     };
 
@@ -87,15 +82,28 @@ async fn server_sync_handle(
 /// Check if a server is alive.
 #[handler(routes::server_ping)]
 async fn server_ping(
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::server_ping::Request,
+    State(s): State<Arc<ServerState>>,
+    req: routes::server_ping::Request,
     auth: Auth3,
 ) -> Result<impl IntoResponse> {
-    auth.origin()?;
+    // TODO: allow local users to try to ping other servers
+    let origin = auth.origin()?;
 
-    // all we need to do is validate that auth is ok, which the auth extractor does for us
+    let local_hostname = s.config().hostname()?;
 
-    Ok(Json(routes::server_ping::PingResponse { ok: true }))
+    let requested = match &req.hostname {
+        ServerReq::ServerName(name) => name.as_str(),
+        ServerReq::ServerHost => local_hostname,
+        ServerReq::ServerClient => origin.as_ref(),
+    };
+
+    if requested != local_hostname {
+        // TODO: allow local users to ping remote servers
+        // probably should return err if origin != local_hostname though
+        return Err(Error::Unimplemented);
+    }
+
+    Ok(Json(routes::server_ping::PingResponse { federated: true }))
 }
 
 pub fn routes(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {

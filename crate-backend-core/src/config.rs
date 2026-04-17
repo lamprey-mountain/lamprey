@@ -334,3 +334,11 @@ impl Secret {
         }
     }
 }
+
+impl Config {
+    pub fn hostname(&self) -> Result<&str> {
+        self.hostname
+            .as_deref()
+            .ok_or_else(|| Error::Internal("federation hostname not configured".to_owned()))
+    }
+}

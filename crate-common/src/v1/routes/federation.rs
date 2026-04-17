@@ -113,7 +113,7 @@ pub mod server_ping {
 
     #[derive(Debug, Serialize, Deserialize, ToSchema)]
     pub struct PingResponse {
-        /// always true
-        pub ok: bool,
+        /// whether this is in response to a server authenticated request
+        pub federated: bool,
     }
 }
