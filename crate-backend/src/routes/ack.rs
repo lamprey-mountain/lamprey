@@ -33,7 +33,6 @@ async fn ack_bulk(
             .for_channel3(Some(auth.user.id), ack.channel_id)
             .await?
             .ensure_view()?
-            .needs(Permission::ChannelView)
             .check()?;
 
         if ack.message_id.is_none() {

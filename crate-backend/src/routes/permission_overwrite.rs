@@ -40,7 +40,6 @@ async fn permission_set(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?;
-    perms.needs(Permission::ChannelView);
     perms.needs(Permission::RoleManage);
     let channel = srv.channels.get(req.channel_id, None).await?;
     if channel.is_thread() {
@@ -180,7 +179,6 @@ async fn permission_remove(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?;
-    perms.needs(Permission::ChannelView);
     perms.needs(Permission::RoleManage);
 
     let channel = srv.channels.get(req.channel_id, None).await?;

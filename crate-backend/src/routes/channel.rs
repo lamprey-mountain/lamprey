@@ -288,7 +288,7 @@ async fn channel_list_removed(
             .perms
             .for_channel3(Some(auth.user.id), item.id)
             .await?
-            .has(Permission::ChannelView)
+            .visible
         {
             items.push(item);
         }
@@ -340,7 +340,6 @@ async fn channel_reorder(
             .for_channel3(Some(auth.user.id), channel.id)
             .await?
             .ensure_view()?
-            .needs(Permission::ChannelView)
             .needs(Permission::ChannelManage)
             .check()?;
 
@@ -349,7 +348,6 @@ async fn channel_reorder(
                 .for_channel3(Some(auth.user.id), parent_id)
                 .await?
                 .ensure_view()?
-                .needs(Permission::ChannelView)
                 .needs(Permission::ChannelManage)
                 .check()?;
 
@@ -1074,9 +1072,7 @@ async fn channel_sync(
     srv.perms
         .for_channel3(user_id, req.channel_id)
         .await?
-        .ensure_view()?
-        .needs(Permission::ChannelView)
-        .check()?;
+        .ensure_view()?;
 
     let sync = data
         .channel_sync(req.channel_id, req.since.since, req.pagination, user_id)

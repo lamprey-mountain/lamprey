@@ -80,9 +80,7 @@ async fn message_context(
     srv.perms
         .for_channel3(auth.user_id(), req.channel_id)
         .await?
-        .ensure_view()?
-        .needs(Permission::ChannelView)
-        .check()?;
+        .ensure_view()?;
     let res = srv
         .messages
         .list_context(req.channel_id, req.message_id, auth.user_id(), req.context)
@@ -105,7 +103,6 @@ async fn message_list(
         .for_channel3(auth.user_id(), req.channel_id)
         .await?
         .ensure_view()?
-        .needs(Permission::ChannelView)
         .check()?;
     let res = srv
         .messages
@@ -128,7 +125,6 @@ async fn message_get(
         .for_channel3(auth.user_id(), req.channel_id)
         .await?
         .ensure_view()?
-        .needs(Permission::ChannelView)
         .check()?;
     let message = srv
         .messages
@@ -265,7 +261,6 @@ async fn message_version_list(
         .for_channel3(user_id, req.channel_id)
         .await?
         .ensure_view()?
-        .needs(Permission::ChannelView)
         .check()?;
     let res = srv
         .messages
@@ -290,7 +285,6 @@ async fn message_version_get(
         .for_channel3(user_id, req.channel_id)
         .await?
         .ensure_view()?
-        .needs(Permission::ChannelView)
         .check()?;
     let message = srv
         .messages
@@ -320,7 +314,6 @@ async fn message_version_delete(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?;
-    perms.needs(Permission::ChannelView);
     perms.needs_unlocked();
 
     thread.ensure_unarchived()?;
@@ -416,7 +409,6 @@ async fn message_moderate(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?;
-    perms.needs(Permission::ChannelView);
     perms.needs_unlocked();
 
     thread.ensure_unarchived()?;
@@ -743,7 +735,6 @@ async fn message_pins_list(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?
-        .needs(Permission::ChannelView)
         .check()?;
     let res = srv
         .messages
@@ -828,7 +819,6 @@ async fn message_reply_roots(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?;
-    perms.needs(Permission::ChannelView);
     let res = srv
         .messages
         .list_replies(
@@ -857,7 +847,6 @@ async fn message_reply_list(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?;
-    perms.needs(Permission::ChannelView);
     let res = srv
         .messages
         .list_replies(
@@ -885,7 +874,6 @@ async fn message_list_deleted(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?;
-    perms.needs(Permission::ChannelView);
     perms.needs(Permission::MessageDelete);
     let res = srv
         .messages
@@ -918,7 +906,6 @@ async fn message_list_removed(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?;
-    perms.needs(Permission::ChannelView);
     perms.needs(Permission::MessageRemove);
     let res = srv
         .messages

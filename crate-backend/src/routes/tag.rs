@@ -170,7 +170,6 @@ async fn tag_list(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?
-        .needs(Permission::ChannelView)
         .check()?;
 
     let tags = s
@@ -193,7 +192,6 @@ async fn tag_get(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?
-        .needs(Permission::ChannelView)
         .check()?;
 
     let tag = s.data().tag_get(req.tag_id).await?;
@@ -213,7 +211,6 @@ async fn tag_search(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?
-        .needs(Permission::ChannelView)
         .check()?;
 
     let tags = s

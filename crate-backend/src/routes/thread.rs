@@ -292,8 +292,6 @@ async fn thread_list(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?;
-    perms.needs(Permission::ChannelView);
-    perms.check()?;
 
     let include_all = perms.has(Permission::ThreadManage);
     let mut res = data
@@ -322,8 +320,6 @@ async fn thread_list_archived(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?;
-    perms.needs(Permission::ChannelView);
-    perms.check()?;
 
     let include_all = perms.has(Permission::ThreadManage);
     let mut res = data
@@ -458,7 +454,7 @@ async fn thread_list_room(
 
         let perms = srv.perms.for_channel3(Some(user_id), thread_id).await?;
         let can_view = if thread_channel.ty == ChannelType::ThreadPublic {
-            perms.has(Permission::ChannelView)
+            perms.visible
         } else {
             perms.has(Permission::ThreadManage) || thread.members.contains_key(&user_id)
         };

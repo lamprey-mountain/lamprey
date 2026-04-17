@@ -32,7 +32,6 @@ async fn wiki_history(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?
-        .needs(Permission::ChannelView)
         .check()?;
 
     let summary = srv
@@ -78,7 +77,6 @@ async fn document_branch_list(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?
-        .needs(Permission::ChannelView)
         .check()?;
 
     let branches = data
@@ -103,7 +101,6 @@ async fn document_branch_get(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?
-        .needs(Permission::ChannelView)
         .check()?;
 
     let branch = data
@@ -249,7 +246,6 @@ async fn document_branch_fork(
         .for_channel3(Some(user_id), req.channel_id)
         .await?
         .ensure_view()?;
-    perms.needs(Permission::ChannelView);
     perms.needs(Permission::DocumentEdit);
 
     let parent_branch = data
@@ -624,7 +620,6 @@ async fn document_history(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?
-        .needs(Permission::ChannelView)
         .check()?;
 
     let branch = data
@@ -680,7 +675,6 @@ async fn document_crdt_diff(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?
-        .needs(Permission::ChannelView)
         .check()?;
 
     let branch = data
@@ -763,7 +757,6 @@ async fn document_content_get(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?
-        .needs(Permission::ChannelView)
         .check()?;
 
     let (branch_id, seq) = match req.revision_id {

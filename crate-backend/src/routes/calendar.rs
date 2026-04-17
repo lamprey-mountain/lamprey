@@ -815,7 +815,6 @@ async fn calendar_overwrite_rsvp_put(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?;
-    perms.needs(Permission::ChannelView);
     perms.needs(Permission::CalendarEventRsvp);
 
     if auth.user.id != user_id {
@@ -901,7 +900,6 @@ async fn calendar_overwrite_rsvp_delete(
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?;
-    perms.needs(Permission::ChannelView);
     if auth.user.id != user_id {
         perms.needs(Permission::CalendarEventManage);
     } else {
