@@ -38,6 +38,7 @@ import icPin from "@/assets/pin.png";
 import icReactionAdd from "@/assets/reaction-add.png";
 import icReply from "@/assets/reply.png";
 import icThread from "@/assets/threads.png";
+import { Components } from "@/atoms/Components.tsx";
 import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown.tsx";
 import { Time } from "@/atoms/Time";
@@ -985,6 +986,12 @@ function DefaultMessage(
 								{(embed) => <EmbedView embed={embed} />}
 							</For>
 						</ul>
+					</Show>
+					<Show when={version()?.components?.length}>
+						<Components
+							components={version()?.components ?? []}
+							channelId={props.message.channel_id}
+						/>
 					</Show>
 					<Show
 						when={props.message.reactions && props.message.reactions.length > 0}

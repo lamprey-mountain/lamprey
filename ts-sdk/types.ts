@@ -248,3 +248,32 @@ export type InboxListParams = {
 	channel_id?: string[];
 	include_read?: boolean;
 };
+
+export type LampreyComponent = {
+	id: string;
+} & LampreyComponentType;
+
+export type LampreyComponentType =
+	| { type: "Button"; label: string; style: ButtonStyle; custom_id: string }
+	| { type: "LinkButton"; label: string; url: string }
+	| { type: "Container"; components: LampreyComponent[]; color: string | null }
+	| { type: "Text"; content: string }
+	// | { type: "Reference"; reference_id: string }
+	| {
+			type: "Details";
+			open: boolean;
+			color: string | null;
+			summary: LampreyComponent[];
+			details: LampreyComponent[];
+	  }
+	| { type: "Section"; color: string | null; components: LampreyComponent[] }
+	| { type: "Media"; items: LampreyComponentMedia[] }
+	| { type: "Gallery"; items: LampreyComponentMedia[] };
+
+export type LampreyComponentMedia = {
+	media: Media;
+	description: string | null;
+	spoiler: boolean;
+};
+
+export type ButtonStyle = "Primary" | "Secondary" | "Danger";

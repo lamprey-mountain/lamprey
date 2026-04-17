@@ -1,0 +1,121 @@
+@use "./util.scss" as *;
+
+.components {
+	display: flex;
+	flex-direction: column;
+
+	--text-margin: 6px;
+	--accent-width: 3px;
+
+	.container, .details {
+		border: solid $sep-300 1px;
+		border-radius: 4px;
+		background: $bg-150;
+		padding: 2px 0;
+	}
+
+	.container,
+	.section {
+		border-left: solid var(--color) var(--accent-width);
+	}
+
+	.container,
+	.section,
+	.details {
+		display: flex;
+		flex-direction: column;
+		margin-top: var(--text-margin);
+		margin-bottom: var(--text-margin);
+
+		& > .text,
+		& > .button {
+			margin: 4px var(--text-margin);
+		}
+
+		& > .container {
+			margin: 8px;
+		}
+	}
+
+	.container > .section {
+		margin-left: calc(var(--accent-width) * -1);
+	}
+
+	.section {
+		background-color: color-mix(in srgb, var(--color) 10%, transparent);
+	}
+
+	.component-button {
+		align-self: start;
+		border: solid color-mix(in srgb, var(--button-color) 70%, transparent) 1px;
+		background: color-mix(in srgb, var(--button-color) 70%, transparent);
+		color: $fg-100;
+		border-radius: 3px;
+		padding: 3px 5px;
+
+		&:hover,
+		&:focus-visible {
+			background: color-mix(in srgb, var(--button-color) 50%, transparent);
+		}
+	}
+
+	.button-primary {
+		--button-color: oklch(var(--color-link-500));
+	}
+
+	.button-secondary {
+		--button-color: oklch(var(--color-sep));
+	}
+
+	.button-danger {
+		--button-color: oklch(var(--color-red));
+	}
+
+	.button-warning {
+		--button-color: oklch(var(--color-yellow));
+	}
+
+	.button-success {
+		--button-color: oklch(var(--color-green));
+	}
+
+	details {
+		margin: 4px var(--text-margin);
+	}
+
+	summary {
+		background: $bg-200;
+		list-style: none;
+		display: flex;
+		align-items: center;
+		cursor: pointer;
+
+		&::before {
+			content: "▶";
+			display: inline-block;
+			margin-right: 6px;
+			font-size: 0.7em;
+			color: $fg-500;
+			transition: transform 0.15s;
+			flex-shrink: 0;
+		}
+
+		&::-webkit-details-marker {
+			display: none;
+		}
+	}
+
+	details[open] > summary::before {
+		transform: rotate(90deg);
+	}
+
+	.media {
+		margin: 4px var(--text-margin);
+
+		& > .description {
+			font-size: 0.8em;
+			color: $fg-500;
+			margin-top: 4px;
+		}
+	}
+}
