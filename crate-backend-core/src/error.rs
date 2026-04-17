@@ -3,7 +3,7 @@ use std::num::{ParseFloatError, ParseIntError};
 use axum::extract::multipart::{MultipartError, MultipartRejection};
 use axum::{http::StatusCode, response::IntoResponse, Json};
 use common::v1::types::application::Scopes;
-use common::v1::types::error::{ApiError, ErrorCode, SyncError};
+use common::v1::types::error::{ApiError, SyncError};
 use common::v1::types::MessageSync;
 use opentelemetry_otlp::ExporterBuildError;
 use serde_json::json;
@@ -210,13 +210,7 @@ impl Error {
             Error::NotModified => StatusCode::NOT_MODIFIED,
             Error::Validation(_) => StatusCode::BAD_REQUEST,
             Error::ServiceUnavailable => StatusCode::SERVICE_UNAVAILABLE,
-            Error::ApiError(err) => {
-                if err.code == ErrorCode::UnknownRoom {
-                    StatusCode::NOT_FOUND
-                } else {
-                    StatusCode::from_u16(err.code.status()).unwrap()
-                }
-            }
+            Error::ApiError(err) => err.code.status(),
             Error::SyncError(err) => match err {
                 SyncError::InvalidSeq => StatusCode::BAD_REQUEST,
                 SyncError::Timeout => StatusCode::BAD_REQUEST,
