@@ -14,7 +14,8 @@ use crate::v1::types::{
     ThreadMember, User, UserId,
 };
 
-// TODO: remove irrelevant fields (tantivy filters using query)
+// TODO: remove most FooSearchRequest fields, since tantivy filters are parsed from query
+// they aren't used at all and should be cleaned up
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

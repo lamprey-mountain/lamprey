@@ -60,6 +60,7 @@ impl From<V1Media> for Media {
         let s = val.source;
         Media {
             id: val.id,
+            version_id: val.id.into_inner().into(),
             // WARNING: the database is going to need to correctly populate `status`
             status: MediaStatus::Consumed,
             filename: val.filename,

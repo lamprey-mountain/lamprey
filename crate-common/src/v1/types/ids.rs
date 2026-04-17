@@ -272,6 +272,7 @@ genid!(UserVer, "00000000-0000-0000-0ver-00000000user");
 genid!(Role, "00000000-0000-0000-0000-00000000role");
 genid!(RoleVer, "00000000-0000-0000-0ver-00000000role");
 genid!(Media, "00000000-0000-0000-0000-0000000media");
+genid!(MediaVer, "00000000-0000-0000-0ver-0000000media");
 genid!(Session, "00000000-0000-0000-0000-00000session");
 // genid!(SessionVer, "00000000-0000-0000-0ver-00000session");
 genid!(AuditLogEntry, "00000000-0000-0000-0000-0auditlogent");

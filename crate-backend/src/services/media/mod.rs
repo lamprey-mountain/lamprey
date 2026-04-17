@@ -16,7 +16,7 @@ use common::{
     v2::types::media::HashType,
 };
 use common::{
-    v1::types::{util::truncate::truncate_filename, MediaId, Mime, UserId},
+    v1::types::{util::truncate::truncate_filename, MediaId, MediaVerId, Mime, UserId},
     v2::types::media::scanner::{MediaScanResponse, ScanRequest},
 };
 use dashmap::DashMap;
@@ -25,6 +25,7 @@ use futures_util::{stream::FuturesUnordered, FutureExt, StreamExt};
 use sha2::{Digest, Sha512_256};
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader, BufWriter};
 use tracing::{debug, error, info, span, trace, Instrument, Level};
+use uuid::Uuid;
 
 use crate::{
     error::{Error, Result},
@@ -153,6 +154,7 @@ impl ServiceMedia {
         };
 
         let media = MediaV2 {
+            version_id: MediaVerId::from(media_id.into_inner()),
             id: media_id,
             status: MediaStatus::Transferring,
             filename,
@@ -329,6 +331,7 @@ impl ServiceMedia {
 
         trace!("inserting processing status to db");
         let media_processing = MediaV2 {
+            version_id: MediaVerId::new(),
             id: media_id,
             status: MediaStatus::Processing,
             filename: filename.to_owned(),
@@ -440,6 +443,7 @@ impl ServiceMedia {
         let scans = self.scan_media(&p).await;
 
         let mut media = MediaV2 {
+            version_id: MediaVerId::new(),
             id: media_id,
             status: MediaStatus::Uploaded,
             filename: filename.to_owned(),

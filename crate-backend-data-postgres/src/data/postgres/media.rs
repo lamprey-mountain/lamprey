@@ -9,7 +9,7 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 use crate::error::{Error, Result};
-use crate::types::{MediaId, MediaLink, MediaLinkType, UserId};
+use crate::types::{MediaId, MediaLink, MediaLinkType, MediaVerId, UserId};
 
 use crate::data::DataMedia;
 
@@ -19,6 +19,7 @@ use super::Postgres;
 pub struct DbMedia {
     pub user_id: Uuid,
     pub data: serde_json::Value,
+    pub version_id: Uuid,
     pub deleted_at: Option<PrimitiveDateTime>,
 }
 
@@ -27,6 +28,7 @@ pub struct DbMediaWithId {
     pub id: Uuid,
     pub user_id: Uuid,
     pub data: serde_json::Value,
+    pub version_id: Uuid,
     pub deleted_at: Option<PrimitiveDateTime>,
 }
 
@@ -109,12 +111,13 @@ impl DataMedia for Postgres {
             serde_json::to_value(&DbMediaData::V2(media)).expect("failed to serialize media");
         query!(
             r#"
-            INSERT INTO media (id, user_id, data)
-            VALUES ($1, $2, $3)
+            INSERT INTO media (id, user_id, data, version_id)
+            VALUES ($1, $2, $3, $4)
         "#,
             *media_id,
             *user_id,
             data,
+            *media_id,
         )
         .execute(&mut *tx)
         .await?;
@@ -127,7 +130,7 @@ impl DataMedia for Postgres {
         let media = query_as!(
             DbMedia,
             r#"
-            SELECT user_id, deleted_at, data
+            SELECT user_id, deleted_at, data, version_id
             FROM media
             WHERE id = $1
         "#,
@@ -145,6 +148,7 @@ impl DataMedia for Postgres {
             .unwrap()
             .into();
         parsed.deleted_at = media.deleted_at.map(Into::into);
+        parsed.version_id = media.version_id.into();
 
         let links = query_as!(
             MediaLink,
@@ -211,7 +215,7 @@ impl DataMedia for Postgres {
         let mut media = query_as!(
             DbMedia,
             r#"
-            SELECT user_id, deleted_at, data
+            SELECT user_id, deleted_at, data, version_id
             FROM media
             WHERE id = $1
             FOR UPDATE
@@ -273,11 +277,12 @@ impl DataMedia for Postgres {
         query!(
             r#"
             UPDATE media SET
-                data = $2
+                data = $2, version_id = $3
             WHERE id = $1
         "#,
             *media_id,
             media.data,
+            Uuid::now_v7(),
         )
         .execute(&mut *tx)
         .await?;
@@ -293,11 +298,12 @@ impl DataMedia for Postgres {
         query!(
             r#"
             UPDATE media SET
-                data = $2
+                data = $2, version_id = $3
             WHERE id = $1
         "#,
             *media_id,
             data,
+            Uuid::now_v7(),
         )
         .execute(&mut *tx)
         .await?;
@@ -440,7 +446,7 @@ impl DataMedia for Postgres {
         let rows = query_as!(
             DbMediaWithId,
             r#"
-            select id, user_id, data, deleted_at
+            select id, user_id, data, deleted_at, version_id
             from media
             where (data->>'v' is null or data->>'v' = 'V1') and deleted_at is null
             limit $1
@@ -475,5 +481,38 @@ impl DataMedia for Postgres {
         }
         tx.commit().await?;
         Ok(count)
+    }
+
+    async fn media_list_indexed(
+        &self,
+        after_version_id: Option<MediaVerId>,
+        limit: u32,
+    ) -> Result<Vec<MediaV2>> {
+        let rows = query_as!(
+            DbMediaWithId,
+            r#"
+            SELECT id, user_id, data, deleted_at, version_id
+            FROM media
+            WHERE version_id > $1
+            ORDER BY version_id ASC
+            LIMIT $2
+            "#,
+            after_version_id.map(|id| *id).unwrap_or(Uuid::nil()),
+            limit as i64,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows
+            .into_iter()
+            .map(|row| {
+                let mut parsed: MediaV2 = serde_json::from_value::<DbMediaData>(row.data)
+                    .unwrap()
+                    .into();
+                parsed.deleted_at = row.deleted_at.map(Into::into);
+                parsed.version_id = row.version_id.into();
+                parsed
+            })
+            .collect())
     }
 }

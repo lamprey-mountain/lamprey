@@ -18,10 +18,10 @@ use common::v1::types::util::Time;
 use common::v1::types::ChannelSeq;
 use common::v1::types::{
     ApplicationId, Channel, ChannelId, ChannelPatch, ChannelReorder, ChannelVerId,
-    DocumentBranchId, DocumentTagId, MediaId, PaginationQuery, PaginationResponse, PinsReorder,
-    Role, RoleId, RolePatch, RoleReorder, RoleVerId, Room, RoomCreate, RoomId, RoomPatch,
-    RoomVerId, Session, SessionId, SessionPatch, SessionStatus, SessionToken, Suspended, User,
-    UserId, UserListFilter,
+    DocumentBranchId, DocumentTagId, MediaId, MediaVerId, PaginationQuery, PaginationResponse,
+    PinsReorder, Role, RoleId, RolePatch, RoleReorder, RoleVerId, Room, RoomCreate, RoomId,
+    RoomPatch, RoomVerId, Session, SessionId, SessionPatch, SessionStatus, SessionToken, Suspended,
+    User, UserId, UserListFilter,
 };
 use common::v2::types::embed::Embed;
 use common::v2::types::media::{Media, MediaPatch};
@@ -176,6 +176,11 @@ pub trait DataMedia {
         link_type: MediaLinkType,
     ) -> Result<()>;
     async fn media_migrate_batch(&self, limit: u32) -> Result<u64>;
+    async fn media_list_indexed(
+        &self,
+        after_version_id: Option<MediaVerId>,
+        limit: u32,
+    ) -> Result<Vec<Media>>;
 }
 
 // DataMessage trait

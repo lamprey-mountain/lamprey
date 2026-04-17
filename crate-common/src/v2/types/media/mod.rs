@@ -12,8 +12,8 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::{
-    search::Order, util::Time, ChannelId, EmbedId, MediaId, MessageId, MessageVerId, Mime, RoomId,
-    UserId,
+    search::Order, util::Time, ChannelId, EmbedId, MediaId, MediaVerId, MessageId, MessageVerId,
+    Mime, RoomId, UserId,
 };
 
 pub mod proxy;
@@ -100,6 +100,7 @@ pub enum MediaStatus {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct Media {
     pub id: MediaId,
+    pub version_id: MediaVerId,
     pub status: MediaStatus,
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]

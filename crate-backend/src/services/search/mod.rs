@@ -2,9 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use common::v1::types::{
-    search::{
-        ChannelSearchOrderField, ChannelSearchRequest, MessageSearch, MessageSearchRequest, Order,
-    },
+    search::{ChannelSearchRequest, MessageSearch, MessageSearchRequest},
     Channel, ChannelId, MessageId, MessageType, PaginationQuery, PaginationResponse, RoomId,
     UserId,
 };
@@ -260,23 +258,12 @@ impl ServiceSearch {
             });
         }
 
-        let is_activity_sort = req.sort_field == ChannelSearchOrderField::Activity;
-
-        // HACK: for activity sorting, fetch more results to re-sort in memory
-        let search_req = if is_activity_sort {
-            let mut modified = req.clone();
-            modified.limit = req.limit.max(500);
-            modified.offset = 0;
-            modified
-        } else {
-            req.clone()
-        };
-
+        let req_clone = req.clone();
         trace!("starting channel search task");
         let searcher = self.get_content_searcher().await?;
         let raw_result = tokio::task::spawn_blocking(move || {
             searcher.search_channels(SearchChannels {
-                req: search_req,
+                req: req_clone,
                 visible_room_ids,
             })
         })
@@ -290,51 +277,6 @@ impl ServiceSearch {
         } else {
             srv.channels.get_many(&channel_ids, Some(user_id)).await?
         };
-
-        // re-sort if needed
-        if is_activity_sort {
-            channels.sort_by(|a, b| {
-                let a_time = a.archived_at.unwrap_or_else(|| {
-                    a.last_version_id
-                        .and_then(|id| id.try_into().ok())
-                        .unwrap_or_else(|| a.id.try_into().unwrap())
-                });
-                let b_time = b.archived_at.unwrap_or_else(|| {
-                    b.last_version_id
-                        .and_then(|id| id.try_into().ok())
-                        .unwrap_or_else(|| b.id.try_into().unwrap())
-                });
-
-                match req.sort_order {
-                    Order::Ascending => a_time.cmp(&b_time),
-                    Order::Descending => b_time.cmp(&a_time),
-                }
-            });
-
-            // re-apply pagination after resorting
-            let total = channels.len();
-            let start = req.offset as usize;
-            let end = (start + req.limit as usize).min(total);
-
-            if start >= total {
-                return Ok(PaginationResponse {
-                    items: vec![],
-                    has_more: false,
-                    total: raw_result.total,
-                    cursor: None,
-                });
-            }
-
-            let paged_channels = channels[start..end].to_vec();
-            let has_more = end < total || raw_result.total > req.limit as u64;
-
-            return Ok(PaginationResponse {
-                items: paged_channels,
-                has_more,
-                total: raw_result.total,
-                cursor: None,
-            });
-        }
 
         let has_more = (req.offset as u64 + channel_ids.len() as u64) < raw_result.total;
 
@@ -360,7 +302,8 @@ impl ServiceSearch {
             }
         }
 
-        data.search_reindex_queue_upsert(channel_id, None).await?;
+        data.search_reindex_queue_upsert("channel", *channel_id, None)
+            .await?;
         Ok(())
     }
 
@@ -400,7 +343,10 @@ impl ServiceSearch {
                 .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))?
                 .map_err(|e| Error::Internal(format!("Failed to count documents: {}", e)))?;
 
-        let last_message_id = data.search_reindex_queue_get(channel_id).await?;
+        let last_message_id = data
+            .search_reindex_queue_get("channel", *channel_id)
+            .await?
+            .map(Into::into);
 
         Ok(SearchIndexStats {
             documents_indexed,

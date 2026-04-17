@@ -1,11 +1,8 @@
 use async_trait::async_trait;
 use sqlx::query;
+use uuid::Uuid;
 
-use crate::{
-    data::DataSearchQueue,
-    error::Result,
-    types::{ChannelId, MessageId, RoomId},
-};
+use crate::{data::DataSearchQueue, error::Result, types::RoomId};
 
 use super::Postgres;
 
@@ -13,13 +10,15 @@ use super::Postgres;
 impl DataSearchQueue for Postgres {
     async fn search_reindex_queue_upsert(
         &self,
-        channel_id: ChannelId,
-        last_message_id: Option<MessageId>,
+        target_type: &str,
+        target_id: Uuid,
+        last_id: Option<Uuid>,
     ) -> Result<()> {
         query!(
-            "INSERT INTO search_reindex_queue (channel_id, last_message_id) VALUES ($1, $2) ON CONFLICT (channel_id) DO UPDATE SET last_message_id = $2, updated_at = NOW()",
-            *channel_id,
-            last_message_id.map(|id| *id),
+            "INSERT INTO search_reindex_queue (target_id, target_type, last_id) VALUES ($1, $2, $3) ON CONFLICT (target_id, target_type) DO UPDATE SET last_id = $3, updated_at = NOW()",
+            target_id,
+            target_type,
+            last_id,
         )
         .execute(&self.pool)
         .await?;
@@ -28,43 +27,48 @@ impl DataSearchQueue for Postgres {
 
     async fn search_reindex_queue_list(
         &self,
+        target_type: &str,
         limit: u32,
-    ) -> Result<Vec<(ChannelId, Option<MessageId>)>> {
+    ) -> Result<Vec<(Uuid, Option<Uuid>)>> {
         let rows = query!(
-            r#"SELECT channel_id, last_message_id FROM search_reindex_queue ORDER BY updated_at ASC LIMIT $1"#,
+            r#"SELECT target_id, last_id FROM search_reindex_queue WHERE target_type = $1 ORDER BY updated_at ASC LIMIT $2"#,
+            target_type,
             limit as i64
         )
         .fetch_all(&self.pool)
         .await?;
-        Ok(rows
-            .into_iter()
-            .map(|r| (r.channel_id.into(), r.last_message_id.map(|id| id.into())))
-            .collect())
+        Ok(rows.into_iter().map(|r| (r.target_id, r.last_id)).collect())
     }
 
-    async fn search_reindex_queue_delete(&self, channel_id: ChannelId) -> Result<()> {
+    async fn search_reindex_queue_delete(&self, target_type: &str, target_id: Uuid) -> Result<()> {
         query!(
-            "DELETE FROM search_reindex_queue WHERE channel_id = $1",
-            *channel_id
+            "DELETE FROM search_reindex_queue WHERE target_id = $1 AND target_type = $2",
+            target_id,
+            target_type
         )
         .execute(&self.pool)
         .await?;
         Ok(())
     }
 
-    async fn search_reindex_queue_get(&self, channel_id: ChannelId) -> Result<Option<MessageId>> {
+    async fn search_reindex_queue_get(
+        &self,
+        target_type: &str,
+        target_id: Uuid,
+    ) -> Result<Option<Uuid>> {
         let row = query!(
-            r#"SELECT last_message_id FROM search_reindex_queue WHERE channel_id = $1"#,
-            *channel_id
+            r#"SELECT last_id FROM search_reindex_queue WHERE target_id = $1 AND target_type = $2"#,
+            target_id,
+            target_type
         )
         .fetch_optional(&self.pool)
         .await?;
-        Ok(row.and_then(|r| r.last_message_id.map(|id| id.into())))
+        Ok(row.and_then(|r| r.last_id))
     }
 
     async fn search_reindex_queue_upsert_room(&self, room_id: RoomId) -> Result<()> {
         query!(
-            r#"INSERT INTO search_reindex_queue (channel_id) SELECT id FROM channel WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NULL ON CONFLICT (channel_id) DO NOTHING"#,
+            r#"INSERT INTO search_reindex_queue (target_id, target_type) SELECT id, 'channel' FROM channel WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NULL ON CONFLICT (target_id, target_type) DO NOTHING"#,
             *room_id,
         )
         .execute(&self.pool)
@@ -74,7 +78,7 @@ impl DataSearchQueue for Postgres {
 
     async fn search_reindex_queue_upsert_all(&self) -> Result<()> {
         query!(
-            r#"INSERT INTO search_reindex_queue (channel_id) SELECT id FROM channel WHERE deleted_at IS NULL AND archived_at IS NULL ON CONFLICT (channel_id) DO NOTHING"#,
+            r#"INSERT INTO search_reindex_queue (target_id, target_type) SELECT id, 'channel' FROM channel WHERE deleted_at IS NULL AND archived_at IS NULL ON CONFLICT (target_id, target_type) DO NOTHING"#,
         )
         .execute(&self.pool)
         .await?;

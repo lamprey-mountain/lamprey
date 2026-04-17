@@ -452,15 +452,21 @@ pub trait DataSearch {
 pub trait DataSearchQueue {
     async fn search_reindex_queue_upsert(
         &self,
-        channel_id: ChannelId,
-        last_message_id: Option<MessageId>,
+        target_type: &str,
+        target_id: Uuid,
+        last_id: Option<Uuid>,
     ) -> Result<()>;
     async fn search_reindex_queue_list(
         &self,
+        target_type: &str,
         limit: u32,
-    ) -> Result<Vec<(ChannelId, Option<MessageId>)>>;
-    async fn search_reindex_queue_delete(&self, channel_id: ChannelId) -> Result<()>;
-    async fn search_reindex_queue_get(&self, channel_id: ChannelId) -> Result<Option<MessageId>>;
+    ) -> Result<Vec<(Uuid, Option<Uuid>)>>;
+    async fn search_reindex_queue_delete(&self, target_type: &str, target_id: Uuid) -> Result<()>;
+    async fn search_reindex_queue_get(
+        &self,
+        target_type: &str,
+        target_id: Uuid,
+    ) -> Result<Option<Uuid>>;
     async fn search_reindex_queue_upsert_room(&self, room_id: RoomId) -> Result<()>;
     async fn search_reindex_queue_upsert_all(&self) -> Result<()>;
 }

@@ -1,8 +1,9 @@
 use std::{sync::Arc, time::Duration};
 
-use common::v1::types::{ChannelId, MessageSync, PaginationDirection, PaginationQuery};
+use common::v1::types::{ChannelId, MediaVerId, MessageSync, PaginationDirection, PaginationQuery};
 use dashmap::DashSet;
 use kameo::{actor::Spawn, Actor};
+use moka::future::Cache;
 use tantivy::Term;
 use tokio::task::JoinSet;
 use tokio_stream::StreamExt;
@@ -12,7 +13,10 @@ use uuid::Uuid;
 use crate::{
     services::search::{
         index::{AddDocument, CommitIndex, DeleteTerm, IndexActorRef, UpdateDocument},
-        schema::{content::ContentSchema, tantivy_document_from_message},
+        schema::{
+            content::ContentSchema, tantivy_document_from_channel, tantivy_document_from_media,
+            tantivy_document_from_message,
+        },
     },
     Result, ServerStateInner,
 };
@@ -23,6 +27,7 @@ pub struct ContentIngestionManager {
     index_writer: IndexActorRef,
     schema: ContentSchema,
     active_channels: Arc<DashSet<ChannelId>>,
+    update_throttle: Cache<String, ()>,
 }
 
 impl ContentIngestionManager {
@@ -32,10 +37,14 @@ impl ContentIngestionManager {
             index_writer,
             schema: ContentSchema::default(),
             active_channels: Arc::new(DashSet::new()),
+            update_throttle: Cache::builder()
+                .time_to_live(Duration::from_secs(5))
+                .build(),
         });
 
         Arc::clone(&manager).spawn_live_listener();
         Arc::clone(&manager).spawn_backfill_poller();
+        Arc::clone(&manager).spawn_media_backfill_poller();
 
         Ok(())
     }
@@ -61,7 +70,18 @@ impl ContentIngestionManager {
                                     );
                                     let _ = self.index_writer.tell(DeleteTerm(term)).await;
                                 }
-                                // TODO: handle delete bulk
+                                MessageSync::ChannelCreate { channel } => {
+                                    self.index_channel(*channel, false).await;
+                                }
+                                MessageSync::ChannelUpdate { channel } => {
+                                    self.index_channel(*channel, true).await;
+                                }
+                                MessageSync::MediaProcessed { media, .. } => {
+                                    self.index_media(media, false).await;
+                                }
+                                MessageSync::MediaUpdate { media } => {
+                                    self.index_media(media, true).await;
+                                }
                                 _ => continue,
                             }
                         }
@@ -92,12 +112,15 @@ impl ContentIngestionManager {
 
                 let concurrency_limit = 4i32; // TODO: allow configuring this
                 let available_slots = concurrency_limit.saturating_sub(workers.len() as i32);
-                if available_slots == 0 {
+                if available_slots <= 0 {
                     continue;
                 }
 
                 let data = self.s.data();
-                let queue = match data.search_reindex_queue_list(available_slots as u32).await {
+                let queue = match data
+                    .search_reindex_queue_list("channel", available_slots as u32)
+                    .await
+                {
                     Ok(q) => q,
                     Err(e) => {
                         error!("Failed to list reindex queue: {e}");
@@ -105,17 +128,24 @@ impl ContentIngestionManager {
                     }
                 };
 
-                for (channel_id, last_id) in queue {
+                let srv = self.s.services();
+                for (target_id, last_id) in queue {
+                    let channel_id = ChannelId::from(target_id);
                     if self.active_channels.contains(&channel_id) {
                         continue;
                     }
 
                     self.active_channels.insert(channel_id);
                     let this = self.clone();
+                    let srv = srv.clone();
 
                     workers.spawn(async move {
+                        if let Ok(chan) = srv.channels.get(channel_id, None).await {
+                            this.index_channel(chan, false).await;
+                        }
+
                         if let Err(e) = this
-                            .index_single_channel(channel_id, last_id.map(|i| *i))
+                            .index_single_channel_messages(channel_id, last_id)
                             .await
                         {
                             error!(channel_id = ?channel_id, "Reindex task failed: {e}");
@@ -127,7 +157,51 @@ impl ContentIngestionManager {
         });
     }
 
-    async fn index_single_channel(
+    fn spawn_media_backfill_poller(self: Arc<Self>) {
+        tokio::spawn(async move {
+            let data = self.s.data();
+            let mut last_version_id: Option<MediaVerId> = data
+                .search_reindex_queue_get("media", Uuid::nil())
+                .await
+                .ok()
+                .flatten()
+                .map(|id| id.into());
+
+            loop {
+                let data = self.s.data();
+                // TODO: there may be a race condition between MessageSync and data listing; verify that this isn't a problem
+                match data.media_list_indexed(last_version_id, 100).await {
+                    Ok(media_list) => {
+                        if media_list.is_empty() {
+                            tokio::time::sleep(Duration::from_secs(10)).await;
+                            continue;
+                        }
+
+                        for media in media_list {
+                            last_version_id = Some(media.version_id);
+                            self.index_media(media, false).await;
+                        }
+
+                        if let Some(vid) = last_version_id {
+                            let _ = data
+                                .search_reindex_queue_upsert("media", Uuid::nil(), Some(*vid))
+                                .await;
+                        }
+
+                        // Commit every batch
+                        let _ = self.index_writer.tell(CommitIndex).await;
+                    }
+                    Err(e) => {
+                        error!("Media backfill failed: {e}. Retrying in 10s...");
+                        tokio::time::sleep(Duration::from_secs(10)).await;
+                    }
+                }
+                tokio::task::yield_now().await;
+            }
+        });
+    }
+
+    async fn index_single_channel_messages(
         &self,
         channel_id: ChannelId,
         mut last_id: Option<Uuid>,
@@ -155,7 +229,8 @@ impl ContentIngestionManager {
                 .await?;
 
             if messages.items.is_empty() {
-                data.search_reindex_queue_delete(channel_id).await?;
+                data.search_reindex_queue_delete("channel", *channel_id)
+                    .await?;
                 // TODO: handle error
                 let _ = self.index_writer.tell(CommitIndex).await;
                 break;
@@ -171,12 +246,13 @@ impl ContentIngestionManager {
                 let _ = self.index_writer.tell(AddDocument(doc)).await;
             }
 
-            data.search_reindex_queue_upsert(channel_id, Some(last_processed_id.into()))
+            data.search_reindex_queue_upsert("channel", *channel_id, Some(*last_processed_id))
                 .await?;
             last_id = Some(last_processed_id.into());
 
             if !messages.has_more {
-                data.search_reindex_queue_delete(channel_id).await?;
+                data.search_reindex_queue_delete("channel", *channel_id)
+                    .await?;
                 let _ = self.index_writer.tell(CommitIndex).await;
                 break;
             }
@@ -192,16 +268,53 @@ impl ContentIngestionManager {
     async fn index_message(&self, message: common::v1::types::Message, is_update: bool) {
         let srv = self.s.services();
         // TODO: error handling instead of unwrap
-        let chan = srv.channels.get(message.channel_id, None).await.unwrap();
-        let doc = tantivy_document_from_message(
-            &self.schema,
-            message.clone(),
-            message.room_id,
-            chan.parent_id,
-        );
+        if let Ok(chan) = srv.channels.get(message.channel_id, None).await {
+            let doc = tantivy_document_from_message(
+                &self.schema,
+                message.clone(),
+                message.room_id,
+                chan.parent_id,
+            );
 
+            if is_update {
+                let term = Term::from_field_text(self.schema.id, &message.id.to_string());
+                let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
+            } else {
+                let _ = self.index_writer.tell(AddDocument(doc)).await;
+            }
+        }
+    }
+
+    async fn index_channel(&self, channel: common::v1::types::Channel, is_update: bool) {
         if is_update {
-            let term = Term::from_field_text(self.schema.id, &message.id.to_string());
+            let key = format!("channel:{}", channel.id);
+            if self.update_throttle.get(&key).await.is_some() {
+                return;
+            }
+            self.update_throttle.insert(key, ()).await;
+        }
+
+        let doc = tantivy_document_from_channel(&self.schema, channel.clone());
+        if is_update {
+            let term = Term::from_field_text(self.schema.id, &channel.id.to_string());
+            let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
+        } else {
+            let _ = self.index_writer.tell(AddDocument(doc)).await;
+        }
+    }
+
+    async fn index_media(&self, media: common::v2::types::media::Media, is_update: bool) {
+        if is_update {
+            let key = format!("media:{}", media.id);
+            if self.update_throttle.get(&key).await.is_some() {
+                return;
+            }
+            self.update_throttle.insert(key, ()).await;
+        }
+
+        let doc = tantivy_document_from_media(&self.schema, media.clone());
+        if is_update {
+            let term = Term::from_field_text(self.schema.id, &media.id.to_string());
             let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
         } else {
             let _ = self.index_writer.tell(AddDocument(doc)).await;

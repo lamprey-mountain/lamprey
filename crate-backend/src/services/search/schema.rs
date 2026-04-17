@@ -229,6 +229,12 @@ pub fn tantivy_document_from_channel(s: &LampreySchema, channel: Channel) -> Tan
     let mut doc = TantivyDocument::new();
     doc.add_text(s.id, channel.id.to_string());
     doc.add_text(s.doctype, "Channel");
+    let last_activity: Time = channel
+        .archived_at
+        .or_else(|| channel.last_version_id.and_then(|id| id.try_into().ok()))
+        .or_else(|| channel.id.try_into().ok())
+        .unwrap();
+    doc.add_date(s.updated_at, tantivy::DateTime::from_utc(*last_activity));
     doc.add_text(s.name, channel.name);
 
     if let Some(description) = channel.description {
@@ -292,13 +298,6 @@ pub fn tantivy_document_from_channel(s: &LampreySchema, channel: Channel) -> Tan
 
     meta_fast.insert("nsfw".to_string(), channel.nsfw.into());
 
-    if let Some(archived_at) = channel.archived_at {
-        meta_fast.insert(
-            "last_activity_at".to_string(),
-            tantivy::DateTime::from_utc(*archived_at).into(),
-        );
-    }
-
     if let Some(bitrate) = channel.bitrate {
         meta_fast.insert("bitrate".to_string(), bitrate.into());
     }
@@ -312,7 +311,7 @@ pub fn tantivy_document_from_channel(s: &LampreySchema, channel: Channel) -> Tan
     doc
 }
 
-pub fn _tantivy_document_from_media(s: &LampreySchema, media: Media) -> TantivyDocument {
+pub fn tantivy_document_from_media(s: &LampreySchema, media: Media) -> TantivyDocument {
     let mut doc = TantivyDocument::new();
 
     doc.add_text(s.id, media.id.to_string());
