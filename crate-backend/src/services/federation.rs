@@ -258,6 +258,11 @@ impl ServiceFederation {
             .collect()
     }
 
+    /// get the current local signing keys, incuding expired ones
+    pub async fn get_all_local_keys(&self) -> Vec<LocalSigningKey> {
+        self.local_keys.read().await.clone()
+    }
+
     /// lookup the api_url for this hostname
     async fn fetch_api_url(&self, hostname: &Hostname) -> Result<Url> {
         let url = Url::parse(&format!(

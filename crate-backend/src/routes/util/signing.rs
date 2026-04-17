@@ -1,4 +1,8 @@
-use common::v1::types::{federation::Hostname, util::Time};
+use base64::Engine;
+use common::v1::types::{
+    federation::{Hostname, ServerKey, ServerKeyAlgorithm},
+    util::Time,
+};
 use ed25519_dalek::{Signature, Signer, Verifier, VerifyingKey};
 use http::{HeaderMap, HeaderName, HeaderValue};
 use sha2::{Digest, Sha512_256};
@@ -227,4 +231,70 @@ impl IncomingRequest<'_> {
 
         self.verify_signature(verifying_key)
     }
+}
+
+/// create an api `ServerKey` from a `LocalSigningKey`
+pub fn sign_server_key(local_key: &LocalSigningKey, hostname: &str) -> ServerKey {
+    let b64 = base64::engine::general_purpose::URL_SAFE_NO_PAD;
+    let pubkey_b64 = b64.encode(local_key.pubkey.to_bytes());
+
+    let mut nonce = [0u8; 32];
+    rand::fill(&mut nonce);
+    let nonce_b64 = b64.encode(nonce);
+
+    let mut message = Vec::new();
+    message.extend_from_slice(&nonce);
+    message.extend_from_slice(&local_key.pubkey.to_bytes());
+    message.extend_from_slice(hostname.as_bytes());
+
+    let sig: ed25519_dalek::Signature = local_key.signing_key.sign(&message);
+    let signature_b64 = b64.encode(sig.to_bytes());
+
+    ServerKey {
+        alg: ServerKeyAlgorithm::Ed25519,
+        pubkey: pubkey_b64,
+        nonce: nonce_b64,
+        signature: signature_b64,
+        expires_at: local_key.expires_at,
+    }
+}
+
+/// verify an api `ServerKey`'s signature
+pub fn verify_server_key(key: &ServerKey, hostname: &str) -> bool {
+    let b64 = base64::engine::general_purpose::URL_SAFE_NO_PAD;
+
+    let pubkey_bytes = match b64.decode(&key.pubkey) {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+    let nonce = match b64.decode(&key.nonce) {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+    let signature_bytes = match b64.decode(&key.signature) {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+
+    let pubkey_array: [u8; 32] = match pubkey_bytes.clone().try_into() {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+
+    let verifying_key = match VerifyingKey::from_bytes(&pubkey_array) {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+
+    let sig = match Signature::from_slice(&signature_bytes) {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+
+    let mut message = Vec::new();
+    message.extend_from_slice(&nonce);
+    message.extend_from_slice(&pubkey_bytes);
+    message.extend_from_slice(hostname.as_bytes());
+
+    verifying_key.verify(&message, &sig).is_ok()
 }

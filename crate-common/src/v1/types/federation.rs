@@ -51,10 +51,9 @@ pub struct ServerKey {
 
     /// the signature
     ///
-    /// the bytes that were signed: nonce || "\xff" || pubkey || "\xff" | hostname
+    /// the bytes that were signed: nonce || pubkey || hostname
     ///
     /// base64 url safe unpadded
-    // NOTE: "\xff" is used because utf8 cant contain that char, but since nonce/pubkey are b64 and domain is ascii i could probably use some other char
     pub signature: String,
 
     /// when this key expires
