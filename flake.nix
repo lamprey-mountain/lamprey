@@ -164,6 +164,7 @@
         craneLib = crane.mkLib pkgs;
 
         baseInternalDeps = [ "crate-common" "crate-hakari" "crate-macros" ];
+        baseInternalDepsCrates = [ "lamprey-common" "lamprey-hakari" "lamprey-macros" ];
 
         filterSrcFor = dirs: pkgs.lib.cleanSourceWith {
           src = pkgs.lib.fileset.toSource {
@@ -226,7 +227,7 @@
           pname = "lamprey-internal-crates";
           cargoArtifacts = cargoArtifacts;
           src = filterSrcFor baseInternalDeps;
-          cargoExtraArgs = pkgs.lib.concatMapStringsSep " " (dep: "-p ${dep}") baseInternalDeps;
+          cargoExtraArgs = pkgs.lib.concatMapStringsSep " " (dep: "-p ${dep}") baseInternalDepsCrates;
         });
 
         mkCrate = name: dirs:
