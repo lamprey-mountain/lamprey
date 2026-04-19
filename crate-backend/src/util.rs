@@ -180,7 +180,7 @@ impl Modify for NestedTags {
             {
                 "name": "channel",
                 "description": "working with channels",
-                "tags": ["channel", "thread", "tag", "message", "reaction", "voice", "calendar", "document"],
+                "tags": ["channel", "thread", "tag", "message", "reaction", "voice", "calendar", "document", "flume"],
             },
             {
                 "name": "user",
@@ -195,7 +195,7 @@ impl Modify for NestedTags {
             {
                 "name": "other",
                 "description": "the rest of the routes",
-                "tags": ["debug", "invite", "media", "moderation", "sync", "search", "public", "admin"],
+                "tags": ["debug", "invite", "media", "moderation", "sync", "search", "public", "admin", "ack", "e2ee", "federation", "server"],
             },
         ]);
 
