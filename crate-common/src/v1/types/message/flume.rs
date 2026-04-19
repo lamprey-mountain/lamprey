@@ -42,6 +42,13 @@ pub struct FlumeCreate {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct FlumeDelta {
+    /// initial component tree (only present in the first delta for a new flume)
+    ///
+    /// when present, clients should replace their entire component tree with this.
+    /// subsequent deltas will then use append/replace/delete to modify it.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub init: Option<Components<components::Create>>,
+
     /// append components to an existing component
     #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 20)))]

@@ -629,3 +629,82 @@ impl Components<Canonical> {
         }
     }
 }
+
+impl ComponentType<Thin> {
+    /// Convert a thin component type back into a create component type.
+    ///
+    /// This is used for generating initial flume deltas where the client
+    /// needs to receive components in Create format.
+    pub fn into_create(self) -> ComponentType<Create> {
+        match self {
+            ComponentType::Button {
+                label,
+                style,
+                custom_id,
+            } => ComponentType::Button {
+                label,
+                style,
+                custom_id,
+            },
+            ComponentType::LinkButton { label, url } => ComponentType::LinkButton { label, url },
+            ComponentType::Text { content } => ComponentType::Text { content },
+            ComponentType::Reference { reference_id } => ComponentType::Reference { reference_id },
+            ComponentType::Container { components, color } => ComponentType::Container {
+                components: components.into_iter().map(|c| c.into_create()).collect(),
+                color,
+            },
+            ComponentType::Section { components, color } => ComponentType::Section {
+                components: components.into_iter().map(|c| c.into_create()).collect(),
+                color,
+            },
+            ComponentType::Details {
+                open,
+                color,
+                summary,
+                details,
+            } => ComponentType::Details {
+                open,
+                color,
+                summary: summary.into_iter().map(|c| c.into_create()).collect(),
+                details: details.into_iter().map(|c| c.into_create()).collect(),
+            },
+            ComponentType::Media { items } => ComponentType::Media {
+                items: items
+                    .into_iter()
+                    .map(|i| ComponentMedia {
+                        media: MediaReference::Media { media_id: i.media },
+                        description: i.description,
+                        spoiler: i.spoiler,
+                    })
+                    .collect(),
+            },
+            ComponentType::Gallery { items } => ComponentType::Gallery {
+                items: items
+                    .into_iter()
+                    .map(|i| ComponentMedia {
+                        media: MediaReference::Media { media_id: i.media },
+                        description: i.description,
+                        spoiler: i.spoiler,
+                    })
+                    .collect(),
+            },
+        }
+    }
+}
+
+impl Component<Thin> {
+    pub fn into_create(self) -> ComponentCreate {
+        ComponentCreate {
+            id: Some(self.id),
+            ty: self.ty.into_create(),
+        }
+    }
+}
+
+impl Components<Thin> {
+    pub fn into_create(self) -> Components<Create> {
+        Components {
+            inner: self.inner.into_iter().map(|c| c.into_create()).collect(),
+        }
+    }
+}

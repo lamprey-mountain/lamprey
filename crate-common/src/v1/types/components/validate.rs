@@ -808,6 +808,15 @@ impl Components<Thin> {
             c.visit_ids(&mut |id| id_allocator.mark_used(id.0));
         }
 
+        // 0. process init (replace entire tree)
+        if let Some(init_components) = delta.init {
+            let mut init_parsed = Vec::with_capacity(init_components.inner.len());
+            for c in init_components.inner {
+                init_parsed.push(c.parse_thin_inner(None, &mut id_allocator, &resolve_media)?);
+            }
+            self.inner = init_parsed;
+        }
+
         // 1. process deletes
         for id in delta.delete {
             self.delete_by_id(id);

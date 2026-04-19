@@ -29,13 +29,13 @@ use crate::types::DbMessageCreate;
 pub const FLUME_AUTOCOMMIT: Duration = Duration::from_secs(30);
 
 pub struct Flume {
-    channel_id: ChannelId,
-    content: FlumeContent,
+    pub channel_id: ChannelId,
+    pub content: FlumeContent,
     expire_handle: JoinHandle<Result<()>>,
 }
 
 #[derive(Debug)]
-struct FlumeContent {
+pub struct FlumeContent {
     components: Components<Thin>,
 }
 
@@ -47,6 +47,16 @@ impl FlumeContent {
         resolve_media: impl Fn(MediaReference) -> std::result::Result<MediaId, ApiError>,
     ) -> std::result::Result<(), ApiError> {
         self.components.apply_delta(delta, resolve_media)
+    }
+
+    /// get initial delta for sync
+    pub fn initial(&self) -> FlumeDelta {
+        FlumeDelta {
+            init: Some(self.components.clone().into_create()),
+            append: vec![],
+            replace: vec![],
+            delete: vec![],
+        }
     }
 }
 

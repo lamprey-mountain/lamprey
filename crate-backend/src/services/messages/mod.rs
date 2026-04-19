@@ -32,7 +32,7 @@ pub mod util;
 
 pub struct ServiceMessages {
     state: Arc<ServerStateInner>,
-    flumes: DashMap<MessageId, flume::Flume>,
+    pub flumes: DashMap<MessageId, flume::Flume>,
     pub idempotency_keys: Cache<(SessionId, String), Message>,
 }
 

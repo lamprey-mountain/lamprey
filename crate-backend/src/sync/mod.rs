@@ -1,5 +1,6 @@
 use common::v1::types::{
     document::{DocumentStateVector, DocumentUpdate},
+    flume::FlumeAppend,
     sync::{SyncParams, SyncResume},
     voice::VoiceStateScreenshare,
     ChannelId, ConnectionId, SessionToken, UserId,
@@ -359,6 +360,29 @@ impl Connection {
                     }
                 }
             }
+
+            // send flumes
+            for entry in &srv.messages.flumes {
+                let flume = entry.value();
+                if let Ok(perms) = srv
+                    .perms
+                    .for_channel3(Some(user_id), flume.channel_id)
+                    .await
+                {
+                    if perms.visible {
+                        self.queue.push_sync(
+                            MessageSync::FlumeDelta {
+                                channel_id: flume.channel_id,
+                                message_id: *entry.key(),
+                                delta: flume.content.initial(),
+                            },
+                            None,
+                        );
+                    }
+                }
+            }
+
+            // TODO: send document presence
         }
 
         self.member_list.set_user_id(session.user_id()).await;
