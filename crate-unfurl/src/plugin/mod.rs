@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use reqwest::Response;
 use url::Url;
 
-use crate::{error::UnfurlError, unfurler::EmbedGeneration};
+use crate::{error::UnfurlError, unfurler::EmbedGeneration, util::EmbedGenerationTemplate};
 
 pub mod direct_media;
 pub mod html;
@@ -11,6 +11,9 @@ pub mod html;
 pub trait UnfurlPlugin: Send + Sync {
     /// The name of the plugin for debugging
     fn name(&self) -> &'static str;
+
+    // // TODO: allow dynamic names
+    // fn name(&self) -> String; // maybe Cow
 
     /// Intercept and manually process a url
     ///
@@ -21,6 +24,7 @@ pub trait UnfurlPlugin: Send + Sync {
     }
 
     /// Check whether this plugin can accept this http response
+    // TODO: make this async to support script plugin
     fn accepts_response(&self, res: &Response) -> bool;
 
     /// Generate an embed from this http response.
@@ -31,4 +35,22 @@ pub trait UnfurlPlugin: Send + Sync {
         url: &Url,
         res: Response,
     ) -> Result<Vec<EmbedGeneration>, UnfurlError>;
+}
+
+// TODO: use these types
+pub enum ProcessResult {
+    /// this plugin doesnt know how to handle this url
+    Skip,
+
+    /// this plugin has fetched the url and needs someone else to finish generation
+    Fetch(Response),
+
+    /// this plugin has fetched the url and has generated these
+    Generate(PluginGeneration),
+}
+
+pub struct PluginGeneration {
+    /// the embeds that are being generated
+    // TODO: add `Components` to EmbedType for component based embeds
+    pub embeds: Vec<EmbedGenerationTemplate>,
 }

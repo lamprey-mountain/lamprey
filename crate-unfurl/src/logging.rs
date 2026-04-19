@@ -29,6 +29,7 @@ pub enum LogEntry {
 
     /// Fatal failure that prevented embed generation
     Failed(FailedEntry),
+    // TODO: custom errors for plugins
 }
 
 /// HTTP fetch log entry.

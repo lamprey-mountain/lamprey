@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use lamprey_common::{
     v1::types::{Embed, EmbedId, MediaId},
@@ -32,12 +32,19 @@ pub struct EmbedGeneration {
 
 pub struct Unfurler {
     client: Client,
-    plugins: Vec<Arc<dyn UnfurlPlugin>>,
+    plugins: Arc<RwLock<Vec<Arc<dyn UnfurlPlugin>>>>,
+    // id_counter: usize,
 }
 
 pub struct UnfurlerBuilder {
     client_builder: ClientBuilder,
-    plugins: Vec<Arc<dyn UnfurlPlugin>>,
+    plugins: Arc<RwLock<Vec<Arc<dyn UnfurlPlugin>>>>,
+}
+
+// TODO: use this
+struct UnfurlerPluginInstance {
+    id: usize,
+    plugin: Box<dyn UnfurlPlugin>,
 }
 
 impl Unfurler {
@@ -47,7 +54,7 @@ impl Unfurler {
             client_builder: Client::builder()
                 .timeout(std::time::Duration::from_secs(10))
                 .user_agent("Mozilla/5.0 (compatible; LampreyBot/1.0; +https://example.com)"),
-            plugins: Vec::new(),
+            plugins: Arc::new(RwLock::new(Vec::new())),
         }
     }
 
@@ -65,8 +72,10 @@ impl Unfurler {
         url: &Url,
         log_sink: &mut dyn LogSink,
     ) -> Result<Vec<EmbedGeneration>, UnfurlError> {
+        let plugins = self.plugins.read().unwrap();
+
         // 1. Try URL-based plugins (e.g. magnet://, ipfs://)
-        for plugin in &self.plugins {
+        for plugin in plugins.iter() {
             if let Some(generation) = plugin.process_url(url).await? {
                 log_sink.handle(LogEntry::SelectPlugin(SelectPluginEntry::new(
                     plugin.name(),
@@ -85,7 +94,7 @@ impl Unfurler {
         let final_url = res.url().clone();
 
         // 3. Find a plugin that handles this specific response
-        for plugin in &self.plugins {
+        for plugin in plugins.iter() {
             if plugin.accepts_response(&res) {
                 log_sink.handle(LogEntry::SelectPlugin(SelectPluginEntry::new(
                     plugin.name(),
@@ -108,9 +117,11 @@ impl UnfurlerBuilder {
         self
     }
 
-    pub fn add_plugin<P: UnfurlPlugin + 'static>(mut self, plugin: P) -> Self {
-        self.plugins.push(Arc::new(plugin));
-        self
+    pub fn add_plugin<P: UnfurlPlugin + 'static>(self, plugin: P) -> PluginRef {
+        let plugins = self.plugins.clone();
+        let index = plugins.read().unwrap().len();
+        plugins.write().unwrap().push(Arc::new(plugin));
+        PluginRef { plugins, index }
     }
 
     pub fn build(self) -> Result<Unfurler, reqwest::Error> {
@@ -180,3 +191,40 @@ impl EmbedGeneration {
         updated
     }
 }
+
+/// Handle to a plugin that allows dynamic replacement or removal.
+pub struct PluginRef {
+    plugins: Arc<RwLock<Vec<Arc<dyn UnfurlPlugin>>>>,
+    index: usize,
+}
+
+impl PluginRef {
+    /// Remove this plugin from the unfurler.
+    pub fn unload(self) {
+        let mut plugins = self.plugins.write().unwrap();
+        plugins.remove(self.index);
+    }
+
+    /// Atomically replace this plugin with a new one.
+    pub fn replace(self, plugin: impl UnfurlPlugin + 'static) -> PluginRef {
+        let plugins = self.plugins.clone();
+        let index = self.index;
+        {
+            let mut guard = plugins.write().unwrap();
+            guard[index] = Arc::new(plugin);
+        }
+        PluginRef { plugins, index }
+    }
+}
+
+// struct PluginGeneration {
+//     items: Vec<PluginGenerationKind>,
+// }
+
+// enum PluginGenerationKind {
+//     Embed,
+//     // raw media
+//     Media,
+//     // use the new components system
+//     Components,
+// }

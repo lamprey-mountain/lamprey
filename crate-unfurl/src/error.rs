@@ -20,6 +20,12 @@ pub enum UnfurlError {
     #[error(transparent)]
     JoinError(#[from] JoinError),
 
+    #[error("Rquickjs error: {0}")]
+    Rquickjs(#[from] rquickjs::Error),
+
     #[error(transparent)]
     Other(#[from] Box<dyn std::error::Error + Send + Sync>),
+
+    #[error("Missing implementation")]
+    MissingImplementation,
 }

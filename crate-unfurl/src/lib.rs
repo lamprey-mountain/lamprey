@@ -1,6 +1,7 @@
 pub mod error;
 pub mod logging;
 pub mod plugin;
+pub mod script;
 pub mod unfurler;
 pub mod util;
 
@@ -8,3 +9,6 @@ pub use plugin::direct_media::DirectMediaPlugin;
 pub use plugin::html::HtmlStreamPlugin;
 pub use plugin::UnfurlPlugin;
 pub use unfurler::Unfurler;
+
+#[cfg(test)]
+mod test;

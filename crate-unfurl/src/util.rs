@@ -4,6 +4,7 @@ use lamprey_common::{
 };
 use url::Url;
 
+// TODO: rename
 #[derive(Debug, Clone)]
 pub struct EmbedGenerationTemplate {
     pub ty: EmbedType,
