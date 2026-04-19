@@ -14,10 +14,9 @@ use common::v1::types::message::flume::{FlumeCreate, FlumeState, MessageFlume};
 use common::v1::types::message::{MessageDefaultMarkdown, MessageType};
 use common::v1::types::sync::MessageSync;
 use common::v1::types::util::Time;
-use common::v1::types::{ChannelId, Mentions, Message, MessageId};
+use common::v1::types::{ChannelId, MediaId, Mentions, Message, MessageId};
 
 use http::StatusCode;
-use lamprey_backend_data_postgres::MediaId;
 use time::PrimitiveDateTime;
 use tokio::task::JoinHandle;
 use tracing::debug;
@@ -47,16 +46,6 @@ impl FlumeContent {
         resolve_media: impl Fn(MediaReference) -> std::result::Result<MediaId, ApiError>,
     ) -> std::result::Result<(), ApiError> {
         self.components.apply_delta(delta, resolve_media)
-    }
-
-    /// get initial delta for sync
-    pub fn initial(&self) -> FlumeDelta {
-        FlumeDelta {
-            init: Some(self.components.clone().into_create()),
-            append: vec![],
-            replace: vec![],
-            delete: vec![],
-        }
     }
 }
 
@@ -322,10 +311,19 @@ impl ServiceMessages {
         data.message_flume_update(message_id, flume_json).await?;
 
         // 3. update version in place with accumulated components
+        let content = match &message.latest_version.message_type {
+            MessageType::DefaultMarkdown(m) => m,
+            _ => {
+                return Err(Error::Internal(
+                    "somehow message became not DefaultMarkdown?".to_string(),
+                ))
+            }
+        };
+
         let payload = MessageType::DefaultMarkdown(MessageDefaultMarkdown {
             content: None,
-            metadata: None,
-            reply_id: None,
+            metadata: content.metadata.clone(),
+            reply_id: content.reply_id,
             attachments: vec![],
             embeds: vec![],
             components: Components::default(),
@@ -381,5 +379,10 @@ impl ServiceMessages {
 
             Result::Ok(())
         })
+    }
+
+    /// get initial delta for sync
+    pub fn flume_initial(&self, flume: &Flume) -> FlumeDelta {
+        todo!()
     }
 }

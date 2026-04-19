@@ -268,6 +268,7 @@ export type FlumeCreate = {
 };
 
 export type FlumeDelta = {
+	init?: LampreyComponent[];
 	append?: FlumeAppend[];
 	replace?: FlumeReplace[];
 	delete?: string[];

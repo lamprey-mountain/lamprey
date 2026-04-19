@@ -14,6 +14,11 @@ export function applyDelta(
 ): LampreyComponent[] {
 	let result = [...components];
 
+	// 1. Process init
+	if (delta.init) {
+		result = delta.init;
+	}
+
 	// 1. Process deletes
 	for (const id of delta.delete) {
 		result = recursiveDelete(result, id);

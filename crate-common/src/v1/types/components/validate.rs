@@ -812,7 +812,7 @@ impl Components<Thin> {
         if let Some(init_components) = delta.init {
             let mut init_parsed = Vec::with_capacity(init_components.inner.len());
             for c in init_components.inner {
-                init_parsed.push(c.parse_thin_inner(None, &mut id_allocator, &resolve_media)?);
+                init_parsed.push(c.into_thin());
             }
             self.inner = init_parsed;
         }

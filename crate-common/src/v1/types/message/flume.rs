@@ -47,7 +47,7 @@ pub struct FlumeDelta {
     /// when present, clients should replace their entire component tree with this.
     /// subsequent deltas will then use append/replace/delete to modify it.
     #[cfg_attr(feature = "serde", serde(default))]
-    pub init: Option<Components<components::Create>>,
+    pub init: Option<Components<components::Canonical>>,
 
     /// append components to an existing component
     #[cfg_attr(feature = "serde", serde(default))]
