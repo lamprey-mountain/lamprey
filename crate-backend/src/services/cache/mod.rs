@@ -5,10 +5,11 @@ use std::time::Duration;
 
 use crate::{error::Result, types::PaginationQuery, Error, ServerStateInner};
 use common::v1::types::{
-    emoji::EmojiCustom,
+    emoji::{EmojiCustom, EmojiOwner},
     ids::EmojiId,
     preferences::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
-    ChannelId, MessageSync, Permission, Room, RoomId, RoomMember, User, UserId, SERVER_ROOM_ID,
+    ChannelId, InviteTarget, InviteTargetId, MessageSync, Permission, Room, RoomId, RoomMember,
+    User, UserId, SERVER_ROOM_ID,
 };
 use futures::{future::BoxFuture, StreamExt};
 use moka::future::Cache;
@@ -470,7 +471,7 @@ impl ServiceCache {
             return;
         }
 
-        if let Some(room_id) = event.room_id() {
+        if let Some(room_id) = cache_invalidate_room_id(event) {
             let rooms = self.state.services().rooms.clone();
             if let Some(handle) = rooms.actors.get(&room_id).await {
                 let _ = handle
@@ -571,5 +572,63 @@ impl ServiceCache {
             }
             _ => {}
         }
+    }
+}
+
+/// get which room id this message should update the cache of
+fn cache_invalidate_room_id(msg: &MessageSync) -> Option<RoomId> {
+    match msg {
+        MessageSync::RoomCreate { room } => Some(room.id),
+        MessageSync::RoomUpdate { room } => Some(room.id),
+        MessageSync::RoomDelete { room_id } => Some(*room_id),
+        MessageSync::ChannelCreate { channel } => channel.room_id,
+        MessageSync::ChannelUpdate { channel } => channel.room_id,
+        MessageSync::RoomMemberCreate { member, .. } => Some(member.room_id),
+        MessageSync::RoomMemberUpdate { member, .. } => Some(member.room_id),
+        MessageSync::RoomMemberDelete { room_id, .. } => Some(*room_id),
+        MessageSync::RoleCreate { role } => Some(role.room_id),
+        MessageSync::RoleUpdate { role } => Some(role.room_id),
+        MessageSync::RoleDelete { room_id, .. } => Some(*room_id),
+        MessageSync::RoleReorder { room_id, .. } => Some(*room_id),
+
+        // invites aren't cached; they may be in the future
+        MessageSync::InviteCreate { invite } => match &invite.invite.target {
+            InviteTarget::Room { room, .. } => Some(room.id),
+            _ => None,
+        },
+        MessageSync::InviteUpdate { invite } => match &invite.invite.target {
+            InviteTarget::Room { room, .. } => Some(room.id),
+            _ => None,
+        },
+        MessageSync::InviteDelete { target, .. } => match target {
+            InviteTargetId::Room { room_id, .. } => Some(*room_id),
+            _ => None,
+        },
+
+        // emoji aren't cached in rooms; they may be in the future
+        MessageSync::EmojiCreate { emoji } => match &emoji.owner {
+            Some(EmojiOwner::Room { room_id }) => Some(*room_id),
+            _ => None,
+        },
+        MessageSync::EmojiUpdate { emoji } => match &emoji.owner {
+            Some(EmojiOwner::Room { room_id }) => Some(*room_id),
+            _ => None,
+        },
+        MessageSync::EmojiDelete { room_id, .. } => Some(*room_id),
+
+        // audit log entries aren't cached yet; they may be in the future
+        MessageSync::AuditLogEntryCreate { entry } => Some(entry.room_id),
+
+        // automod rules aren't cached yet; they may be in the future
+        MessageSync::AutomodRuleCreate { rule } => Some(rule.room_id),
+        MessageSync::AutomodRuleUpdate { rule } => Some(rule.room_id),
+        MessageSync::AutomodRuleDelete { room_id, .. } => Some(*room_id),
+
+        // webhooks aren't cached yet; they may be in the future
+        MessageSync::WebhookCreate { webhook } => webhook.room_id,
+        MessageSync::WebhookUpdate { webhook } => webhook.room_id,
+        MessageSync::WebhookDelete { room_id, .. } => *room_id,
+
+        _ => None,
     }
 }
