@@ -1,6 +1,9 @@
 @use "./util.scss" as *;
 
 .calendar {
+	grid-area: main;
+	overflow-y: auto;
+
 	header {
 		display: flex;
 		align-items: center;
@@ -14,7 +17,7 @@
 	.month-view {
 		display: grid;
 		grid-template-columns: repeat(7, 1fr);
-		grid-template-rows: min-content repeat(4, 200px);
+		grid-template-rows: min-content repeat(5, 200px);
 		height: 100%;
 
 		.dayofweek {

@@ -602,7 +602,7 @@ export const Calendar = (props: { channel: Channel }) => {
 						<button type="button" class="button" onClick={nextMonth}>
 							next
 						</button>
-						<button type="button" class="primary" onClick={goToToday}>
+						<button type="button" class="button primary" onClick={goToToday}>
 							today
 						</button>
 					</div>
