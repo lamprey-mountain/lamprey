@@ -181,6 +181,10 @@ impl ServiceMessages {
             },
         );
 
+        self.state.broadcast(MessageSync::MessageCreate {
+            message: message.clone(),
+        })?;
+
         debug!(message_id = %message_id, "flume created");
         Ok((StatusCode::CREATED, message))
     }
@@ -326,7 +330,7 @@ impl ServiceMessages {
                 embeds: vec![],
                 components: flume.content.components.inner,
                 message_type: payload,
-                created_at: None,
+                created_at: Some(Time::now_utc().into()),
                 mentions: Mentions::default(),
             },
         )

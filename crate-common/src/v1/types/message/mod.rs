@@ -329,11 +329,7 @@ pub struct MessageCreate {
     pub metadata: Option<MessageMetadata>,
 
     /// the components for this message
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Components::is_empty")
-    )]
-    pub components: Components<components::Create>,
+    pub components: Option<Components<components::Create>>,
 }
 
 #[derive(Debug, Clone)]
@@ -368,11 +364,7 @@ pub struct MessagePatch {
     pub metadata: Option<Option<MessageMetadata>>,
 
     /// the components for this message
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Components::is_empty")
-    )]
-    pub components: Components<components::Create>,
+    pub components: Option<Components<components::Create>>,
 }
 
 // NOTE: utoipa doesnt seem to like #[deprecated] here

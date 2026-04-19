@@ -187,8 +187,8 @@ impl MessageOperationKind {
     pub fn will_have_components(&self) -> bool {
         // if you don't set any components, treat it like the user's trying to remove components from the message
         match self {
-            Self::MessageCreate(o) => !o.json.components.is_empty(),
-            Self::MessageEdit(o) => !o.json.components.is_empty(),
+            Self::MessageCreate(o) => o.json.components.is_some(),
+            Self::MessageEdit(o) => !o.json.components.is_some(),
         }
     }
 
@@ -882,6 +882,10 @@ impl ServiceMessages {
                     });
                 (&o.json.components, old)
             }
+        };
+
+        let Some(components_input) = components_input else {
+            return Ok(vec![]);
         };
 
         let components = self
