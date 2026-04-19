@@ -1049,6 +1049,10 @@ article.message {
 			font-size: 0.8rem;
 			cursor: pointer;
 		}
+
+		& > .components {
+			max-width: 60ch;
+		}
 	}
 
 	& > time {
