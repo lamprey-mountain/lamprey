@@ -11,6 +11,7 @@ export type {
 	DocumentsService,
 	RevisionContent,
 } from "./services/DocumentsService";
+export type { FlumeService } from "./services/FlumeService";
 // Re-export service types
 export type { InboxService } from "./services/InboxService";
 // Re-export other types
@@ -61,6 +62,10 @@ export function useSessions() {
 
 export function useMessages() {
 	return useApi().messages;
+}
+
+export function useFlumes() {
+	return useApi().flumes;
 }
 
 export function useRoomMembers() {

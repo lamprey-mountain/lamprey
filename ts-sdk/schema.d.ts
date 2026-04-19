@@ -4476,6 +4476,233 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/channel/{channel_id}/flume": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Flume create
+		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
+		 *     <div class="markdown-alert-permission-optional">MessageAttachments</div>
+		 *     <div class="markdown-alert-permission-optional">MessageEmbeds</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Create a live-updating message in a channel
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					"idempotency-key"?: string;
+					"x-timestamp"?: number;
+				};
+				path: {
+					channel_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						/** @description the message this flume is replying to */
+						reply_id?: null | components["schemas"]["Id"];
+						/** @description mentions to parse from initial components */
+						mentions?: components["schemas"]["ParseMentions"];
+						/** @description optional metadata */
+						metadata?: null | components["schemas"]["MessageMetadata"];
+						/** @description initial components */
+						components: components["schemas"]["FlumeComponentCreate"][];
+					};
+				};
+			};
+			responses: {
+				/** @description Flume created successfully */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							author_id: components["schemas"]["Id"];
+							channel_id: components["schemas"]["Id"];
+							created_at: components["schemas"]["Time"];
+							deleted_at?: null | components["schemas"]["Time"];
+							id: components["schemas"]["Id"];
+							latest_version: components["schemas"]["MessageVersion"];
+							pinned?: null | components["schemas"]["Pinned"];
+							reactions?: components["schemas"]["ReactionCounts"];
+							removed_at?: null | components["schemas"]["Time"];
+							room_id?: null | components["schemas"]["Id"];
+							thread?: null | components["schemas"]["Channel"];
+						};
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/flume/{message_id}/commit": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		post?: never;
+		/**
+		 * Flume commit
+		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Commit the flume content, creating a final message version
+		 */
+		put: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					message_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Flume committed successfully */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							author_id: components["schemas"]["Id"];
+							channel_id: components["schemas"]["Id"];
+							created_at: components["schemas"]["Time"];
+							deleted_at?: null | components["schemas"]["Time"];
+							id: components["schemas"]["Id"];
+							latest_version: components["schemas"]["MessageVersion"];
+							pinned?: null | components["schemas"]["Pinned"];
+							reactions?: components["schemas"]["ReactionCounts"];
+							removed_at?: null | components["schemas"]["Time"];
+							room_id?: null | components["schemas"]["Id"];
+							thread?: null | components["schemas"]["Channel"];
+						};
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/flume/{message_id}/delta": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		post?: never;
+		put?: never;
+		/**
+		 * Flume update
+		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Apply a patch to the flume's components
+		 */
+		patch: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					message_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": components["schemas"]["FlumeDelta"];
+				};
+			};
+			responses: {
+				/** @description Delta applied successfully */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				/** @description Delta did not cause any change */
+				304: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/flume/{message_id}/ping": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Flume ping
+		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Keep a flume alive by resetting its autocommit timer
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					message_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Flume pinged successfully */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		trace?: never;
+	};
 	"/api/v1/channel/{channel_id}/nudge": {
 		parameters: {
 			query?: never;
@@ -19143,6 +19370,8 @@ export interface components {
 			created_at: components["schemas"]["Time"];
 			deleted_at?: null | components["schemas"]["Time"];
 			id: components["schemas"]["Id"];
+			/** @description the associated flume for this message, if one exists */
+			flume?: null | components["schemas"]["MessageFlume"];
 			latest_version: components["schemas"]["MessageVersion"];
 			pinned?: null | components["schemas"]["Pinned"];
 			reactions?: components["schemas"]["ReactionCounts"];
@@ -19854,7 +20083,84 @@ export interface components {
 					media: components["schemas"]["Media"];
 					/** @enum {string} */
 					type: "MediaUpdate";
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					message_id: components["schemas"]["Id"];
+					/** @description the delta to apply to the flume */
+					delta: components["schemas"]["FlumeDelta"];
+					/** @enum {string} */
+					type: "FlumeDelta";
 			  };
+		/** @description Flume state for a message */
+		MessageFlume: {
+			/** @description current state of the flume */
+			state: "Live" | "Committed" | "Autocommitted";
+		};
+		/** @description a delta applied to a live flume */
+		FlumeDelta: {
+			/** @description append components to an existing component */
+			append: components["schemas"]["FlumeAppend"][];
+			/** @description replace a component with one or more components */
+			replace: components["schemas"]["FlumeReplace"][];
+			/** @description delete some components */
+			delete: components["schemas"]["Id"][];
+		};
+		/** @description append components to an existing component */
+		FlumeAppend: {
+			/** @description target component to append to */
+			target: components["schemas"]["Id"];
+			/** @description components to append */
+			components: components["schemas"]["FlumeComponentCreate"][];
+		};
+		/** @description replace a component with one or more components */
+		FlumeReplace: {
+			/** @description target component to replace */
+			target: components["schemas"]["Id"];
+			/** @description replacement components */
+			components: components["schemas"]["FlumeComponentCreate"][];
+		};
+		/** @description a component to create in a flume */
+		FlumeComponentCreate:
+			| {
+					type: "Button";
+					label: string;
+					style: "Primary" | "Secondary" | "Danger";
+					custom_id: string;
+			  }
+			| { type: "LinkButton"; label: string; url: string }
+			| {
+					type: "Container";
+					components: components["schemas"]["FlumeComponentCreate"][];
+					color: string | null;
+			  }
+			| { type: "Text"; content: string }
+			| {
+					type: "Details";
+					open: boolean;
+					color: string | null;
+					summary: components["schemas"]["FlumeComponentCreate"][];
+					details: components["schemas"]["FlumeComponentCreate"][];
+			  }
+			| {
+					type: "Section";
+					color: string | null;
+					components: components["schemas"]["FlumeComponentCreate"][];
+			  }
+			| {
+					type: "Media";
+					items: components["schemas"]["FlumeComponentMediaCreate"][];
+			  }
+			| {
+					type: "Gallery";
+					items: components["schemas"]["FlumeComponentMediaCreate"][];
+			  };
+		/** @description media to create in a flume component */
+		FlumeComponentMediaCreate: {
+			media_id: components["schemas"]["Id"];
+			description: string | null;
+			spoiler: boolean;
+		};
 		/** @description Information about a thread being created */
 		MessageThreadCreated: {
 			source_message_id?: null | components["schemas"]["Id"];

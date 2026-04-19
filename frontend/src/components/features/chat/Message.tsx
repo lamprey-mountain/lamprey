@@ -24,6 +24,7 @@ import {
 import {
 	useApi,
 	useChannels,
+	useFlumes,
 	useMessages,
 	useRoomMembers,
 	useUsers,
@@ -685,11 +686,11 @@ export const MessageToolbar = (props: { message: Message }) => {
 };
 
 export function MessageView(props: MessageProps) {
-	const channels2 = useChannels();
+	const channels = useChannels();
 	const messagesService = useMessages();
 	const ctx = useCtx();
 	const { menu } = useMenu();
-	const thread = channels2.use(() => props.message.channel_id);
+	const thread = channels.use(() => props.message.channel_id);
 	const [ch, chUpdate] = useOptionalChannel();
 	let messageArticleRef: HTMLElement | undefined;
 	const [hovered, setHovered] = createSignal(false);
@@ -874,7 +875,7 @@ export function MessageView(props: MessageProps) {
 					user={user()}
 					hovered={hovered()}
 					isEditing={isEditing()}
-					channels2={channels2}
+					channels2={channels}
 					ctx={ctx}
 				/>
 			</Match>
@@ -892,10 +893,14 @@ function DefaultMessage(
 		ctx: ReturnType<typeof useCtx>;
 	},
 ) {
+	const flumes = useFlumes();
+
 	const version = () =>
 		props.message.latest_version.type === "DefaultMarkdown"
 			? props.message.latest_version
 			: null;
+	const flume = () =>
+		props.message.flume?.state === "Live" && flumes.get(props.message.id);
 
 	return (
 		<article
@@ -987,7 +992,15 @@ function DefaultMessage(
 							</For>
 						</ul>
 					</Show>
-					<Show when={version()?.components?.length}>
+					<Show when={flume()}>
+						{(f) => (
+							<Components
+								components={f().components}
+								channelId={props.message.channel_id}
+							/>
+						)}
+					</Show>
+					<Show when={version()?.components?.length && !flume()}>
 						<Components
 							components={version()?.components ?? []}
 							channelId={props.message.channel_id}

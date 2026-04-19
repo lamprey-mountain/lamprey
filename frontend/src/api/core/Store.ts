@@ -38,6 +38,7 @@ import { AuthService } from "../services/AuthService";
 import { DmsService } from "../services/DmsService";
 import { DocumentsService } from "../services/DocumentsService";
 import { EmojiService } from "../services/EmojiService";
+import { FlumeService } from "../services/FlumeService";
 import { InboxService } from "../services/InboxService";
 import { InvitesService } from "../services/InvitesService";
 import { MemberListService } from "../services/MemberListService";
@@ -92,6 +93,7 @@ export class RootStore {
 	inbox: InboxService;
 	documents: DocumentsService;
 	preferences: PreferencesService;
+	flumes: FlumeService;
 	voiceStates: ReactiveMap<string, VoiceState>;
 	typing: ReactiveMap<string, Set<string>>;
 
@@ -160,6 +162,7 @@ export class RootStore {
 		this.dms = new DmsService(this, getDb);
 		this.documents = new DocumentsService(this, getDb);
 		this.emoji = new EmojiService(this, getDb);
+		this.flumes = new FlumeService(this);
 		this.inbox = new InboxService(this, getDb);
 		this.invites = new InvitesService(this, getDb);
 		this.memberLists = new MemberListService(this);
@@ -362,6 +365,9 @@ export class RootStore {
 			}
 			this.messages.handleMessageCreate(m);
 			this.notifications.handleMessageCreate(m);
+			if (m.flume?.state === "Live") {
+				this.flumes.handleCreate(m.channel_id, m);
+			}
 
 			const session = this.session();
 			const sessionUserId =
@@ -381,8 +387,13 @@ export class RootStore {
 				}
 			}
 		} else if (msg.type === "MessageUpdate") {
-			this.messages.handleMessageUpdate(msg.message);
+			const message = msg.message;
+			if (message.flume?.state !== "Live") {
+				this.flumes.handleCommit(message);
+			}
+			this.messages.handleMessageUpdate(message);
 		} else if (msg.type === "MessageDelete") {
+			this.flumes.handleDelete(msg.message_id);
 			this.messages.handleMessageDelete(msg.channel_id, msg.message_id);
 		} else if (msg.type === "PreferencesGlobal") {
 			const session = this.session();
@@ -396,6 +407,8 @@ export class RootStore {
 			}
 		} else if (msg.type === "MemberListSync") {
 			this.memberLists.handleSync(msg as MemberListSyncMessage);
+		} else if (msg.type === "FlumeDelta") {
+			this.flumes.handleApply(msg.channel_id, msg.message_id, msg.delta);
 		} else if (msg.type === "VoiceState") {
 			if (msg.state) {
 				this.voiceStates.set(msg.user_id, msg.state);

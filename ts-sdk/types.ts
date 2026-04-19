@@ -15,6 +15,8 @@ export type Message = components["schemas"]["Message"] & {
 	is_local?: true;
 	/** @description idempotency key nonce (client-side only) */
 	nonce?: string;
+	/** @description lamprey components (for flumes) */
+	components?: LampreyComponent[];
 };
 export type MessageVersion = components["schemas"]["MessageVersion"];
 export type Role = components["schemas"]["Role"];
@@ -124,8 +126,11 @@ export type MentionsUser = components["schemas"]["MentionsUser"];
 export type MentionsChannel = components["schemas"]["MentionsChannel"];
 export type MentionsRole = components["schemas"]["MentionsRole"];
 export type MentionsEmoji = components["schemas"]["MentionsEmoji"];
+export type ParseMentions = components["schemas"]["ParseMentions"];
+export type MessageMetadata = components["schemas"]["MessageMetadata"];
 
-// TODO: use openai schema
+// TODO: use openai schema for all of the types below
+
 export type MessageSearch = {
 	results: Array<string>; // MessageId[]
 	messages: Array<Message>;
@@ -247,6 +252,69 @@ export type InboxListParams = {
 	room_id?: string[];
 	channel_id?: string[];
 	include_read?: boolean;
+};
+
+export type FlumeState = "Live" | "Committed" | "Autocommitted";
+
+export type MessageFlume = {
+	state: FlumeState;
+};
+
+export type FlumeCreate = {
+	reply_id?: string | null;
+	mentions?: ParseMentions;
+	metadata?: MessageMetadata;
+	components: LampreyComponentCreate[];
+};
+
+export type FlumeDelta = {
+	append: FlumeAppend[];
+	replace: FlumeReplace[];
+	delete: string[];
+};
+
+export type FlumeAppend = {
+	target: string;
+	components: LampreyComponentCreate[];
+};
+
+export type FlumeReplace = {
+	target: string;
+	components: LampreyComponentCreate[];
+};
+
+export type LampreyComponentCreate = {
+	id?: string;
+} & LampreyComponentCreateType;
+
+export type LampreyComponentCreateType =
+	| { type: "Button"; label: string; style: ButtonStyle; custom_id: string }
+	| { type: "LinkButton"; label: string; url: string }
+	| {
+			type: "Container";
+			components: LampreyComponentCreate[];
+			color: string | null;
+	  }
+	| { type: "Text"; content: string }
+	| {
+			type: "Details";
+			open: boolean;
+			color: string | null;
+			summary: LampreyComponentCreate[];
+			details: LampreyComponentCreate[];
+	  }
+	| {
+			type: "Section";
+			color: string | null;
+			components: LampreyComponentCreate[];
+	  }
+	| { type: "Media"; items: LampreyComponentMediaCreate[] }
+	| { type: "Gallery"; items: LampreyComponentMediaCreate[] };
+
+export type LampreyComponentMediaCreate = {
+	media_id: string;
+	description: string | null;
+	spoiler: boolean;
 };
 
 export type LampreyComponent = {
