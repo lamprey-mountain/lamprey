@@ -874,6 +874,14 @@ pub enum ErrorCode {
     /// only the message author can manage flume
     #[error("only the message author can manage flume")]
     OnlyMessageAuthorCanManageFlume,
+
+    /// flume is committed and cannot be modified
+    #[error("flume is committed and cannot be modified")]
+    FlumeCommitted,
+
+    /// message exists but has no associated flume
+    #[error("message does not have a flume")]
+    MessageDoesntHaveFlume,
 }
 
 impl ApiError {
@@ -1071,6 +1079,8 @@ impl ErrorCode {
             ErrorCode::DuplicateMediaId => StatusCode::BAD_REQUEST,
             ErrorCode::MediaAlreadyUsed => StatusCode::CONFLICT,
             ErrorCode::OnlyMessageAuthorCanManageFlume => StatusCode::FORBIDDEN,
+            ErrorCode::FlumeCommitted => StatusCode::FORBIDDEN,
+            ErrorCode::MessageDoesntHaveFlume => StatusCode::NOT_FOUND,
         }
     }
 }

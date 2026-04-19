@@ -3,13 +3,14 @@ use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 use common::v2::types::media::MediaReference;
+use dashmap::mapref::one::RefMut;
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 
 use crate::services::messages::util::MediaRegistry;
 use crate::{routes::util::Auth, services::messages::ServiceMessages, Error, Result};
 
-use common::v1::types::components::{Components, Thin};
+use common::v1::types::components::{self, Components, Thin};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::flume::FlumeDelta;
 use common::v1::types::message::flume::{FlumeCreate, FlumeState, MessageFlume};
@@ -95,31 +96,7 @@ impl ServiceMessages {
             .process_components_with_media(&json.components, None, &mut all_media_ids)
             .await?;
 
-        // 3. prepare canonical components for flume storage
-        let media_ids: Vec<_> = all_media_ids.known.iter().copied().collect();
-        let mut media_cache = HashMap::new();
-        let mut media_futs = FuturesUnordered::new();
-        for media_id in &media_ids {
-            media_futs.push(async { (*media_id, self.state.data().media_select(*media_id).await) });
-        }
-        while let Some((media_id, result)) = media_futs.next().await {
-            if let Ok(media) = result {
-                media_cache.insert(media_id, media);
-            }
-        }
-
-        // TODO: remove?
-        let _components_canonical =
-            components_thin
-                .clone()
-                .into_canonical(|media_id: MediaId| {
-                    media_cache
-                        .get(&media_id)
-                        .cloned()
-                        .ok_or_else(|| Error::BadStatic("media not found in cache"))
-                })?;
-
-        // 4. commit
+        // 3. commit
         let message_id = MessageId::new();
         let version_id = (*message_id).into();
         let user_id = auth.user.id;
@@ -161,7 +138,7 @@ impl ServiceMessages {
         })
         .await?;
 
-        // 5. validate media ownership and insert links (reuses validate_media_ownership from create.rs)
+        // 4. validate media ownership and insert links (reuses validate_media_ownership from create.rs)
         self.validate_media_ownership(&mut all_media_ids, user_id, message_id, version_id)
             .await?;
 
@@ -198,10 +175,7 @@ impl ServiceMessages {
         auth: &Auth,
         delta: FlumeDelta,
     ) -> Result<StatusCode> {
-        let mut flume_ref = self
-            .flumes
-            .get_mut(&message_id)
-            .ok_or_else(|| ApiError::from_code(ErrorCode::UnknownMessage))?;
+        let mut flume_ref = self.flume_lookup(channel_id, message_id).await?;
 
         // check author: only author can update flume
         let message = self.get(channel_id, message_id, None).await?;
@@ -255,10 +229,7 @@ impl ServiceMessages {
         message_id: MessageId,
         auth: &Auth,
     ) -> Result<()> {
-        let mut flume_ref = self
-            .flumes
-            .get_mut(&message_id)
-            .ok_or_else(|| ApiError::from_code(ErrorCode::UnknownMessage))?;
+        let mut flume_ref = self.flume_lookup(channel_id, message_id).await?;
 
         // check author
         let message = self.get(channel_id, message_id, None).await?;
@@ -281,8 +252,13 @@ impl ServiceMessages {
         channel_id: ChannelId,
         message_id: MessageId,
     ) -> Result<Message> {
+        // use flume_lookup to validate
+        let _ = self.flume_lookup(channel_id, message_id).await?;
+
         let Some((_, flume)) = self.flumes.remove(&message_id) else {
-            return Err(ApiError::from_code(ErrorCode::UnknownMessage).into());
+            return Err(Error::Internal(
+                "flume disappeared while committing?".to_string(),
+            ));
         };
 
         self.flume_commit_inner(channel_id, message_id, flume, FlumeState::Committed)
@@ -357,6 +333,24 @@ impl ServiceMessages {
         Ok(message)
     }
 
+    /// attempt to lookup a flume, validating and returning errors if needed
+    async fn flume_lookup(
+        &self,
+        channel_id: ChannelId,
+        message_id: MessageId,
+    ) -> Result<RefMut<'_, MessageId, Flume>> {
+        let message = self.get(channel_id, message_id, None).await?;
+
+        if message.flume.is_none() {
+            return Err(ApiError::from_code(ErrorCode::MessageDoesntHaveFlume).into());
+        };
+
+        self.flumes
+            .get_mut(&message_id)
+            .ok_or_else(|| ApiError::from_code(ErrorCode::FlumeCommitted))
+            .map_err(Error::from)
+    }
+
     fn spawn_autocommit_timer(
         &self,
         channel_id: ChannelId,
@@ -383,10 +377,13 @@ impl ServiceMessages {
         })
     }
 
-    /// get initial delta for sync
-    pub async fn flume_initial(&self, flume: &Flume) -> Result<FlumeDelta> {
+    /// resolves components' media and makes them canonical
+    async fn resolve_media_and_make_canonical(
+        &self,
+        components: &Components<Thin>,
+    ) -> Result<Components<components::Canonical>> {
         let mut media_ids = Vec::new();
-        flume.content.components.collect_media_refs(&mut media_ids);
+        components.collect_media_refs(&mut media_ids);
 
         // deduplicate media ids
         let media_ids: Vec<_> = media_ids
@@ -395,7 +392,6 @@ impl ServiceMessages {
             .into_iter()
             .collect();
 
-        // fetch flume media
         let mut media_cache = HashMap::new();
         let mut media_futs = FuturesUnordered::new();
         for media_id in &media_ids {
@@ -407,17 +403,21 @@ impl ServiceMessages {
             }
         }
 
-        let components_canonical =
-            flume
-                .content
-                .components
-                .clone()
-                .into_canonical(|media_id: MediaId| {
-                    media_cache
-                        .get(&media_id)
-                        .cloned()
-                        .ok_or_else(|| Error::BadStatic("media not found in cache"))
-                })?;
+        let canonical = components.clone().into_canonical(|media_id: MediaId| {
+            media_cache
+                .get(&media_id)
+                .cloned()
+                .ok_or_else(|| Error::BadStatic("media not found in cache"))
+        })?;
+
+        Ok(canonical)
+    }
+
+    /// get initial delta for sync
+    pub async fn flume_initial(&self, flume: &Flume) -> Result<FlumeDelta> {
+        let components_canonical = self
+            .resolve_media_and_make_canonical(&flume.content.components)
+            .await?;
 
         Ok(FlumeDelta {
             init: Some(components_canonical),
