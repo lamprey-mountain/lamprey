@@ -90,6 +90,17 @@ export type MemberListGroup = components["schemas"]["MemberListGroup"];
 export type MemberListOp = components["schemas"]["MemberListOp"];
 export type ChannelPatch = components["schemas"]["ChannelPatch"];
 export type HistoryPagination = components["schemas"]["HistoryPagination"];
+export type DocumentBranchState = components["schemas"]["DocumentBranchState"];
+export type DocumentBranch = components["schemas"]["DocumentBranch"];
+export type DocumentBranchCreate =
+	components["schemas"]["DocumentBranchCreate"];
+export type DocumentBranchPatch = components["schemas"]["DocumentBranchPatch"];
+export type DocumentBranchMerge = components["schemas"]["DocumentBranchMerge"];
+export type DocumentTag = components["schemas"]["DocumentTag"];
+export type DocumentTagCreate = components["schemas"]["DocumentTagCreate"];
+export type DocumentTagPatch = components["schemas"]["DocumentTagPatch"];
+export type DocumentRevisionId = components["schemas"]["DocumentRevisionId"];
+export type DocumentVersionId = components["schemas"]["DocumentVersionId"];
 export type PaginationResponse<T = unknown> = {
 	items: Array<T>;
 	total: number;

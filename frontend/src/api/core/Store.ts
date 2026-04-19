@@ -36,7 +36,9 @@ import { logger } from "@/utils/logger";
 import { AuditLogService } from "../services/AuditLogService";
 import { AuthService } from "../services/AuthService";
 import { DmsService } from "../services/DmsService";
+import { DocumentBranchService } from "../services/DocumentBranchService";
 import { DocumentsService } from "../services/DocumentsService";
+import { DocumentTagService } from "../services/DocumentTagService";
 import { EmojiService } from "../services/EmojiService";
 import { FlumeService } from "../services/FlumeService";
 import { InboxService } from "../services/InboxService";
@@ -92,6 +94,8 @@ export class RootStore {
 	auditLog: AuditLogService;
 	inbox: InboxService;
 	documents: DocumentsService;
+	documentBranches: DocumentBranchService;
+	documentTags: DocumentTagService;
 	preferences: PreferencesService;
 	flumes: FlumeService;
 	voiceStates: ReactiveMap<string, VoiceState>;
@@ -161,6 +165,8 @@ export class RootStore {
 		this.channels = new ChannelsService(this, getDb);
 		this.dms = new DmsService(this, getDb);
 		this.documents = new DocumentsService(this, getDb);
+		this.documentBranches = new DocumentBranchService(this, getDb);
+		this.documentTags = new DocumentTagService(this, getDb);
 		this.emoji = new EmojiService(this, getDb);
 		this.flumes = new FlumeService(this);
 		this.inbox = new InboxService(this, getDb);
@@ -415,6 +421,18 @@ export class RootStore {
 			} else {
 				this.voiceStates.delete(msg.user_id);
 			}
+		} else if (msg.type === "DocumentTagCreate") {
+			this.documentTags.upsert(msg.tag);
+		} else if (msg.type === "DocumentTagUpdate") {
+			this.documentTags.upsert(msg.tag);
+		} else if (msg.type === "DocumentTagDelete") {
+			this.documentTags.delete(msg.tag_id);
+		} else if (msg.type === "DocumentBranchCreate") {
+			this.documentBranches.upsert(msg.branch);
+		} else if (msg.type === "DocumentBranchUpdate") {
+			this.documentBranches.upsert(msg.branch);
+		} else if (msg.type === "DocumentBranchDelete") {
+			this.documentBranches.delete(msg.branch_id);
 		}
 	}
 

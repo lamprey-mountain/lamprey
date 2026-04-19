@@ -7,10 +7,12 @@ export { RootStore } from "./core/Store.ts";
 import type { RootStore } from "./core/Store.ts";
 
 export type { ChannelsService } from "./services/ChannelsService";
+export type { DocumentBranchService } from "./services/DocumentBranchService";
 export type {
 	DocumentsService,
 	RevisionContent,
 } from "./services/DocumentsService";
+export type { DocumentTagService } from "./services/DocumentTagService";
 export type { FlumeService } from "./services/FlumeService";
 // Re-export service types
 export type { InboxService } from "./services/InboxService";
@@ -130,6 +132,14 @@ export function useAuditLog() {
 
 export function useInbox() {
 	return useApi().inbox;
+}
+
+export function useDocumentBranches() {
+	return useApi().documentBranches;
+}
+
+export function useDocumentTags() {
+	return useApi().documentTags;
 }
 
 export function usePreferences() {
