@@ -670,7 +670,7 @@ impl ServiceMessages {
         &self,
         op: &mut MessageOperation<'_, New>,
     ) -> Result<(MessagePermissions, Option<Time>)> {
-        let srv = self.state.services();
+        let _srv = self.state.services();
 
         // 0. you can only edit your own messages
         // (this *may* change in the future - dubious though)

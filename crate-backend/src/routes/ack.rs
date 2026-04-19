@@ -5,7 +5,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use common::v1::routes;
 use common::v1::types::application::Scope;
-use common::v1::types::{MessageSync, Permission};
+use common::v1::types::MessageSync;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 

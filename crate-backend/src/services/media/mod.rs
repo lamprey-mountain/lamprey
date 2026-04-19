@@ -25,7 +25,6 @@ use futures_util::{stream::FuturesUnordered, FutureExt, StreamExt};
 use sha2::{Digest, Sha512_256};
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader, BufWriter};
 use tracing::{debug, error, info, span, trace, Instrument, Level};
-use uuid::Uuid;
 
 use crate::{
     error::{Error, Result},

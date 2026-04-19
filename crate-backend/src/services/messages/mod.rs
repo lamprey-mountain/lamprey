@@ -1,4 +1,4 @@
-use common::v1::types::components::{self, ComponentThin, Components};
+use common::v1::types::components::{self, Components};
 use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::reaction::{ReactionCount, ReactionCounts, ReactionKey, ReactionKeyParam};
 use common::v2::types::media::{Media, MediaReference};
@@ -21,7 +21,7 @@ use common::v1::types::{
 use common::v1::types::{MediaId, UserId};
 use common::v2::types::embed::{Embed, EmbedType};
 
-use crate::types::{DbMessageCreate, MediaLinkType, MentionsIds, MessageVerId};
+use crate::types::{MentionsIds, MessageVerId};
 use crate::{Error, Result, ServerStateInner};
 
 pub mod create;

@@ -289,7 +289,7 @@ async fn thread_list(
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let mut perms = srv
+    let perms = srv
         .perms
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
@@ -317,7 +317,7 @@ async fn thread_list_archived(
 ) -> Result<impl IntoResponse> {
     let data = s.data();
     let srv = s.services();
-    let mut perms = srv
+    let perms = srv
         .perms
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?

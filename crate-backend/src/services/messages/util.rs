@@ -1,7 +1,5 @@
 use crate::{Error, Result};
-use common::v1::types::components::ComponentThin;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::message::MessageAttachmentCreateType;
 use common::v2::types::media::MediaReference;
 use lamprey_backend_data_postgres::MediaId;
 use std::collections::HashSet;

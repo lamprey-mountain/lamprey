@@ -815,7 +815,7 @@ async fn message_reply_roots(
     req.replies.validate()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let mut perms: Permissions2<CheckPermissions> = srv
+    let _perms: Permissions2<CheckPermissions> = srv
         .perms
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
@@ -843,7 +843,7 @@ async fn message_reply_list(
     req.replies.validate()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let mut perms: Permissions2<CheckPermissions> = srv
+    let _perms: Permissions2<CheckPermissions> = srv
         .perms
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?

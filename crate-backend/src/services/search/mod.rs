@@ -272,7 +272,7 @@ impl ServiceSearch {
         trace!("finished channel search task");
 
         let channel_ids: Vec<ChannelId> = raw_result.items.iter().map(|i| i.id).collect();
-        let mut channels = if channel_ids.is_empty() {
+        let channels = if channel_ids.is_empty() {
             vec![]
         } else {
             srv.channels.get_many(&channel_ids, Some(user_id)).await?

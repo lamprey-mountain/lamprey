@@ -1,17 +1,13 @@
 use std::cell::RefCell;
-use std::sync::Arc;
 use std::time::Duration;
 
 use common::v2::types::media::MediaReference;
 use futures::StreamExt;
 
 use crate::services::messages::util::MediaRegistry;
-use crate::{
-    routes::util::Auth, services::messages::ServiceMessages, services::Services, Error, Result,
-    ServerStateInner,
-};
+use crate::{routes::util::Auth, services::messages::ServiceMessages, Error, Result};
 
-use common::v1::types::components::{ComponentThin, Components, Thin};
+use common::v1::types::components::{Components, Thin};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::flume::FlumeDelta;
 use common::v1::types::message::flume::{FlumeCreate, FlumeState, MessageFlume};
