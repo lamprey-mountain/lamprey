@@ -1,7 +1,9 @@
 use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 use common::v2::types::media::MediaReference;
+use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 
 use crate::services::messages::util::MediaRegistry;
@@ -95,8 +97,8 @@ impl ServiceMessages {
 
         // 3. prepare canonical components for flume storage
         let media_ids: Vec<_> = all_media_ids.known.iter().copied().collect();
-        let mut media_cache = std::collections::HashMap::new();
-        let mut media_futs = futures::stream::FuturesUnordered::new();
+        let mut media_cache = HashMap::new();
+        let mut media_futs = FuturesUnordered::new();
         for media_id in &media_ids {
             media_futs.push(async { (*media_id, self.state.data().media_select(*media_id).await) });
         }
@@ -382,7 +384,46 @@ impl ServiceMessages {
     }
 
     /// get initial delta for sync
-    pub fn flume_initial(&self, flume: &Flume) -> FlumeDelta {
-        todo!()
+    pub async fn flume_initial(&self, flume: &Flume) -> Result<FlumeDelta> {
+        let mut media_ids = Vec::new();
+        flume.content.components.collect_media_refs(&mut media_ids);
+
+        // deduplicate media ids
+        let media_ids: Vec<_> = media_ids
+            .into_iter()
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect();
+
+        // fetch flume media
+        let mut media_cache = HashMap::new();
+        let mut media_futs = FuturesUnordered::new();
+        for media_id in &media_ids {
+            media_futs.push(async { (*media_id, self.state.data().media_select(*media_id).await) });
+        }
+        while let Some((media_id, result)) = media_futs.next().await {
+            if let Ok(media) = result {
+                media_cache.insert(media_id, media);
+            }
+        }
+
+        let components_canonical =
+            flume
+                .content
+                .components
+                .clone()
+                .into_canonical(|media_id: MediaId| {
+                    media_cache
+                        .get(&media_id)
+                        .cloned()
+                        .ok_or_else(|| Error::BadStatic("media not found in cache"))
+                })?;
+
+        Ok(FlumeDelta {
+            init: Some(components_canonical),
+            append: vec![],
+            replace: vec![],
+            delete: vec![],
+        })
     }
 }

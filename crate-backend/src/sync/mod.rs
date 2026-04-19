@@ -370,7 +370,7 @@ impl Connection {
                     .await
                 {
                     if perms.visible {
-                        let delta = srv.messages.flume_initial(flume);
+                        let delta = srv.messages.flume_initial(flume).await?;
                         self.queue.push_sync(
                             MessageSync::FlumeDelta {
                                 channel_id: flume.channel_id,
