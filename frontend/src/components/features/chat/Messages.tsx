@@ -1,7 +1,7 @@
 import type { Message, UserWithRelationship } from "sdk";
 import { createMemo, Show } from "solid-js";
 import { createMutable } from "solid-js/store";
-import { useRoomMembers } from "@/api";
+import { useFlumes, useRoomMembers } from "@/api";
 import { useCtx } from "@/app/context";
 import { ChannelIcon } from "@/components/shared/User";
 import { useChannel } from "@/contexts/channel";
@@ -35,9 +35,9 @@ export const TimelineItem = (props: {
 }) => {
 	switch (props.item.type) {
 		case "message": {
-			const _ctx = useCtx();
 			const roomMembersService = useRoomMembers();
 			const [ch] = useChannel()!;
+			const flumes = useFlumes();
 			const room_member = roomMembersService.useMember(
 				() => props.thread.room_id ?? "",
 				() => props.currentUser()?.id ?? "",
@@ -78,6 +78,11 @@ export const TimelineItem = (props: {
 				return selected?.includes(props.item.message.id) ?? false;
 			});
 
+			const hasFlume = createMemo(() => {
+				if (props.item.type !== "message") return false;
+				return flumes.cache.has(props.item.id);
+			});
+
 			return (
 				<li
 					class="message"
@@ -85,6 +90,7 @@ export const TimelineItem = (props: {
 						selected: props.item.message.id === ch.reply_id,
 						"message-selected": isSelected(),
 						mentioned: is_mentioned(),
+						flume: hasFlume(),
 					}}
 				>
 					<MessageView

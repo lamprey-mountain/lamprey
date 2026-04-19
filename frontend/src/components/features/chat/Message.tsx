@@ -31,6 +31,7 @@ import {
 } from "@/api";
 import { useCtx } from "@/app/context";
 import icEdit from "@/assets/edit.png";
+import icGear from "@/assets/gear.png";
 import icMemberAdd from "@/assets/member-add.png";
 import icMemberJoin from "@/assets/member-join.png";
 import icMemberRemove from "@/assets/member-remove.png";
@@ -53,6 +54,7 @@ import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useMenu, useUserPopout } from "@/contexts/mod.tsx";
 import { useModals } from "@/contexts/modal";
+import { colors } from "@/lib/colors.ts";
 import { countEmojiOnly } from "@/lib/markdown";
 import {
 	AudioView,
@@ -959,6 +961,11 @@ function DefaultMessage(
 						</Show>
 					</div>
 					<div class="author">
+						<Show when={flume()}>
+							<div class="flume-spinner">
+								<Icon src={icGear} color={colors.fg600} />
+							</div>
+						</Show>
 						<UserDisplayName
 							user_id={props.message.author_id}
 							room_id={props.room_id}

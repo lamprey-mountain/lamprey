@@ -79,12 +79,7 @@ export class FlumeService extends BaseService<Flume> {
 		const flume = message.flume;
 		if (!flume) return;
 
-		this.upsert({
-			channel_id: message.channel_id,
-			message_id: message.id,
-			state: flume.state,
-			components: message.components ?? [],
-		});
+		this.cache.delete(message.id);
 	}
 
 	/**

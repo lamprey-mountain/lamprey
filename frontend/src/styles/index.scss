@@ -948,6 +948,8 @@ article.message {
 	& .author {
 		text-align: right;
 		padding: 0 8px;
+		display: flex;
+		align-items: center;
 
 		.user {
 			@include truncate;
@@ -961,6 +963,19 @@ article.message {
 
 			&.override-name {
 				color: #9ca9db;
+			}
+		}
+
+		& > .flume-spinner {
+			display: grid;
+			place-items: center;
+			margin-right: 3px;
+			translate: 0 1px;
+
+			& > .icon2 {
+				animation: spin infinite 1.5s linear;
+				height: 16px;
+				width: 16px;
 			}
 		}
 	}
