@@ -235,6 +235,20 @@ pub enum Permission {
 
     /// can forcibly make other users join and leave rooms and gdms. can join any room and gdm.
     RoomJoinForce,
+
+    /// can create, edit, and delete scripts. can also stop runs.
+    ///
+    /// essentially admin perms for scripts
+    #[cfg(feature = "feat_script")]
+    ScriptManage,
+
+    /// can run scripts
+    #[cfg(feature = "feat_script")]
+    ScriptRun,
+
+    /// can view script logs, traces, metrics
+    #[cfg(feature = "feat_script")]
+    ScriptInspect,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -623,5 +623,23 @@
             EOF
           '';
         };
+
+        # minimal shell; building won't work, but its good enough to go in
+        # and check/build without needing to build twemoji-spritesheets or
+        # wasm-markdown
+        devShells.escape-hatch = craneLib.devShell {
+          packages = with pkgs; [nodejs pnpm lld clang mold];
+          shellHook = ''
+            cat > tsconfig.paths.json <<EOF
+            {
+              "compilerOptions": {
+                "paths": {
+                  "@/*": ["frontend/src/*"]
+                }
+              }
+            }
+            EOF
+          '';
+        };
       });
 }

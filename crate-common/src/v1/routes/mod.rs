@@ -40,6 +40,9 @@ pub mod user_email;
 pub mod voice;
 pub mod webhook;
 
+#[cfg(feature = "feat_script")]
+pub mod script;
+
 pub use ack::*;
 pub use application::*;
 pub use auth::*;

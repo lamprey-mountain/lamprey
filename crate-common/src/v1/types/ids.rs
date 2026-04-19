@@ -293,6 +293,9 @@ genid!(DocumentBranch);
 genid!(DocumentTag);
 genid!(Connection);
 genid!(PermissionOverwrite);
+genid!(Script, "00000000-0000-0000-0000-000000000script");
+genid!(ScriptVer, "00000000-0000-0000-0ver-00000script");
+genid!(Run, "00000000-0000-0000-0000-000000000000rus");
 
 #[cfg(feature = "feat_interaction")]
 genid!(Interaction, "00000000-0000-0000-0000-00interaction");
