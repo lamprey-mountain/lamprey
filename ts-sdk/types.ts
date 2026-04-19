@@ -268,9 +268,9 @@ export type FlumeCreate = {
 };
 
 export type FlumeDelta = {
-	append: FlumeAppend[];
-	replace: FlumeReplace[];
-	delete: string[];
+	append?: FlumeAppend[];
+	replace?: FlumeReplace[];
+	delete?: string[];
 };
 
 export type FlumeAppend = {
@@ -283,9 +283,11 @@ export type FlumeReplace = {
 	components: LampreyComponentCreate[];
 };
 
-export type LampreyComponentCreate = {
-	id?: string;
-} & LampreyComponentCreateType;
+export type LampreyComponentCreate =
+	| string
+	| ({
+			id?: number;
+	  } & LampreyComponentCreateType);
 
 export type LampreyComponentCreateType =
 	| { type: "Button"; label: string; style: ButtonStyle; custom_id: string }
@@ -318,7 +320,7 @@ export type LampreyComponentMediaCreate = {
 };
 
 export type LampreyComponent = {
-	id: string;
+	id: number;
 } & LampreyComponentType;
 
 export type LampreyComponentType =

@@ -20122,6 +20122,7 @@ export interface components {
 		};
 		/** @description a component to create in a flume */
 		FlumeComponentCreate:
+			| string
 			| {
 					type: "Button";
 					label: string;
