@@ -514,13 +514,21 @@ async fn room_member_update(
     let mut perms: Permissions2<CheckPermissions> = perms.ensure_view()?;
     let srv = s.services();
 
-    // FIXME: allow editing self nickname (override_name)
     let room = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
     if room.security.require_mfa {
-        let user = srv.users.get(auth.user.id, None).await?;
-        let totp = d.auth_totp_get(user.id).await?;
-        if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
-            return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
+        let is_self_nickname_change = target_user_id == auth.user.id
+            && req.patch.override_description.is_none()
+            && req.patch.mute.is_none()
+            && req.patch.deaf.is_none()
+            && req.patch.roles.is_none()
+            && req.patch.timeout_until.is_none();
+
+        if !is_self_nickname_change {
+            let user = srv.users.get(auth.user.id, None).await?;
+            let totp = d.auth_totp_get(user.id).await?;
+            if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+                return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
+            }
         }
     }
 
@@ -694,9 +702,8 @@ async fn room_member_delete(
     let d = s.data();
     let srv = s.services();
 
-    // FIXME: allow leaving rooms
     let room = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
-    if room.security.require_mfa {
+    if room.security.require_mfa && target_user_id != auth.user.id {
         let user = srv.users.get(auth.user.id, None).await?;
         let totp = d.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
