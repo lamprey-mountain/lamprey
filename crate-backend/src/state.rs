@@ -365,7 +365,6 @@ impl ServerState {
             });
             Services::new(inner.clone())
         });
-        services.start_background_tasks().await;
         Self {
             inner: services.state.clone(),
             // channel_user: Arc::new(DashMap::new()),

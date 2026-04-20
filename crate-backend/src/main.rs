@@ -426,6 +426,8 @@ async fn api_fallback() -> impl IntoResponse {
 async fn serve(state: Arc<ServerState>) -> Result<()> {
     info!("Starting server");
 
+    state.services.start_background_tasks().await;
+
     let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest(
             "/api",

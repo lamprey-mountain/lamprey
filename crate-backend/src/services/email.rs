@@ -26,17 +26,17 @@ impl ServiceEmail {
             .credentials(creds)
             .build();
 
-        let num_workers = state.config.email_queue_workers;
-        info!("Starting {} email queue workers", num_workers);
+        Self { state, mailer }
+    }
 
-        let me = Self { state, mailer };
+    pub fn start_background_tasks(&self) {
+        let num_workers = self.state.config.email_queue_workers;
+        info!("Starting {} email queue workers", num_workers);
 
         for i in 0..num_workers {
             info!("Email worker {} started", i);
-            tokio::spawn(me.clone().worker());
+            tokio::spawn(self.clone().worker());
         }
-
-        me
     }
 
     pub async fn send(
