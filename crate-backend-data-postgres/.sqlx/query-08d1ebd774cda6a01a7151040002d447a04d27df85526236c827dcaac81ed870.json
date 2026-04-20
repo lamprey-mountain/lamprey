@@ -1,0 +1,72 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                r.message_id as \"message_id: Uuid\",\n                r.user_id as \"user_id: Uuid\",\n                r.key,\n                r.created_at,\n                e.id as \"emoji_id?\",\n                e.name as \"emoji_name?\",\n                e.animated as \"emoji_animated?\",\n                e.media_id as \"emoji_media_id?\",\n                r.created_seq as \"seq!\"\n            FROM reaction r\n            LEFT JOIN custom_emoji e ON (\n                CASE WHEN r.key LIKE 'c:%' THEN\n                    SUBSTRING(r.key FROM 3)::uuid = e.id\n                ELSE false END\n            )\n            WHERE r.channel_id = $1\n            AND r.created_seq > $2\n            AND r.created_seq <= $3\n            ORDER BY r.created_seq ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "message_id: Uuid",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id: Uuid",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "key",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 4,
+        "name": "emoji_id?",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "emoji_name?",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "emoji_animated?",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "emoji_media_id?",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 8,
+        "name": "seq!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "08d1ebd774cda6a01a7151040002d447a04d27df85526236c827dcaac81ed870"
+}
