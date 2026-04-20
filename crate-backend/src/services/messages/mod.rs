@@ -1,14 +1,14 @@
 use common::v1::types::components::{self, Components};
 use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::reaction::{ReactionCount, ReactionCounts, ReactionKey, ReactionKeyParam};
-use common::v2::types::media::{Media, MediaReference};
+use common::v2::types::media::{Media, MediaErrorReason, MediaReference};
 use dashmap::DashMap;
 use futures::{stream::FuturesUnordered, StreamExt};
 use moka::future::Cache;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::error;
+use tracing::{error, warn};
 use uuid::Uuid;
 
 use common::v1::types::message::{Message, MessageType, MessageVersion};
@@ -373,13 +373,14 @@ impl ServiceMessages {
 
             // process components with a closure that resolves media from cache
             let components = components.into_canonical(|media_id: MediaId| {
-                media_cache
+                let media = media_cache
                     .get(&media_id)
                     .cloned()
-                    .ok_or_else(|| {
-                        error!(message_ver_id = ?message_ver_id, media_id = ?media_id, "media not found in cache");
-                        Error::BadStatic("media not found in cache")
-                    })
+                    .unwrap_or_else(|| {
+                        warn!(message_ver_id = ?message_ver_id, media_id = ?media_id, "media not found");
+                        Media::errored(media_id, (*media_id).into(), MediaErrorReason::NotFound)
+                    });
+                Result::Ok(media)
             });
 
             components_map.insert(*version_to_id.get(&message_ver_id).unwrap(), components?);

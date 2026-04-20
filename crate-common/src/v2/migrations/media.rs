@@ -42,6 +42,7 @@ impl From<Media> for V1Media {
                         })
                     }
                     MediaMetadata::File => crate::v1::types::MediaTrackInfo::Other,
+                    MediaMetadata::Errored { .. } => crate::v1::types::MediaTrackInfo::Other,
                 },
                 size: val.size,
                 mime: val.content_type,

@@ -91,6 +91,9 @@ pub enum MediaStatus {
 
     /// This media is `Uploaded` and linked to some resource. `strip_exif` can no longer be edited. The underlying blob is now immutable and can be fetched via cdn routes.
     Consumed,
+
+    /// This piece of media has errored
+    Errored,
 }
 
 /// A piece of media.
@@ -180,6 +183,17 @@ pub struct Media {
     pub strip_exif: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum MediaErrorReason {
+    /// this piece of media was not found
+    NotFound,
+
+    /// this piece of media was corrupted
+    Corrupted,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -246,6 +260,12 @@ pub enum MediaMetadata {
 
     /// A generic file
     File,
+
+    /// A piece of errored media
+    Errored {
+        /// Why this media is errored
+        reason: MediaErrorReason,
+    },
 }
 
 impl MediaMetadata {
@@ -584,6 +604,35 @@ impl MediaReference {
             MediaReference::Media { media_id } => Some(*media_id),
             MediaReference::Url { .. } => None,
             MediaReference::Attachment { .. } => None,
+        }
+    }
+}
+
+impl Media {
+    /// create a new errored media
+    pub fn errored(id: MediaId, version_id: MediaVerId, reason: MediaErrorReason) -> Self {
+        Self {
+            id,
+            version_id,
+            status: MediaStatus::Errored,
+            filename: "".to_string(),
+            alt: None,
+            size: 0,
+            content_type: Mime::from_str("application/lamprey-errored-media")
+                .expect("always valid"),
+            source_url: None,
+            metadata: MediaMetadata::Errored { reason },
+            user_id: None,
+            deleted_at: None,
+            quarantine: None,
+            scans: vec![],
+            has_thumbnail: false,
+            has_gifv: false,
+            links: vec![],
+            room_id: None,
+            channel_id: None,
+            hashes: HashMap::new(),
+            strip_exif: false,
         }
     }
 }
