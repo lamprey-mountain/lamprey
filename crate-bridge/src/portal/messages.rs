@@ -2,10 +2,10 @@
 #[derive(Debug, Clone)]
 pub enum PortalMessage {
     LampreyMessageCreate {
-        message: common::v2::types::message::Message,
+        message: common::v1::types::Message,
     },
     LampreyMessageUpdate {
-        message: common::v2::types::message::Message,
+        message: common::v1::types::Message,
     },
     LampreyMessageDelete {
         message_id: common::v1::types::MessageId,

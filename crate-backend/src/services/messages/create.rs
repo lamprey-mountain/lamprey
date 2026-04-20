@@ -197,10 +197,9 @@ impl MessageOperationKind {
             Self::MessageCreate(o) => {
                 let mut ids = Vec::new();
                 for attachment in &o.json.attachments {
-                    if let MessageAttachmentCreateType::Media { media, .. } = &attachment.ty {
-                        if let Some(media_id) = media.media_id() {
-                            ids.push(media_id);
-                        }
+                    let MessageAttachmentCreateType::Media { media, .. } = &attachment.ty;
+                    if let Some(media_id) = media.media_id() {
+                        ids.push(media_id);
                     }
                 }
                 ids
@@ -209,10 +208,9 @@ impl MessageOperationKind {
                 let mut ids = Vec::new();
                 if let Some(attachments) = &o.json.attachments {
                     for attachment in attachments {
-                        if let MessageAttachmentCreateType::Media { media, .. } = &attachment.ty {
-                            if let Some(media_id) = media.media_id() {
-                                ids.push(media_id);
-                            }
+                        let MessageAttachmentCreateType::Media { media, .. } = &attachment.ty;
+                        if let Some(media_id) = media.media_id() {
+                            ids.push(media_id);
                         }
                     }
                 } else {
@@ -474,11 +472,8 @@ impl ServiceMessages {
         match &op.kind {
             MessageOperationKind::MessageCreate(m) => {
                 for m in &m.json.attachments {
-                    match &m.ty {
-                        MessageAttachmentCreateType::Media { media, .. } => {
-                            all_media_ids.insert_ref(media)?;
-                        }
-                    }
+                    let MessageAttachmentCreateType::Media { media, .. } = &m.ty;
+                    all_media_ids.insert_ref(media)?;
                 }
                 for embed in &m.json.embeds {
                     if let Some(m) = &embed.media {
@@ -495,11 +490,8 @@ impl ServiceMessages {
             MessageOperationKind::MessageEdit(m) => {
                 if let Some(atts) = &m.json.attachments {
                     for m in atts {
-                        match &m.ty {
-                            MessageAttachmentCreateType::Media { media, .. } => {
-                                all_media_ids.insert_ref(media)?;
-                            }
-                        }
+                        let MessageAttachmentCreateType::Media { media, .. } = &m.ty;
+                        all_media_ids.insert_ref(media)?;
                     }
                 }
                 if let Some(embeds) = &m.json.embeds {

@@ -3,7 +3,6 @@ use std::sync::Arc;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::Json;
-use base64::Engine;
 use common::v1::routes;
 use common::v1::types::federation::{ServerKey, ServerKeys};
 use common::v1::types::misc::ServerReq;

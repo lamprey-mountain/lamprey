@@ -7,7 +7,7 @@ use common::v1::types::{
     voice::{SignallingMessage, VoiceState, VoiceStateUpdate},
     MessageClient, MessageCreate, MessageSync, Session, User,
 };
-use common::v2::types::message::Message;
+use common::v1::types::Message;
 use figment::providers::{Env, Format, Toml};
 use sdk::{Client, EventHandler, Http};
 use sqlx::SqlitePool;
@@ -160,7 +160,7 @@ impl Handle {
 
     async fn handle_message(&mut self, message: Message) -> anyhow::Result<()> {
         let content = match &message.latest_version.message_type {
-            common::v2::types::message::MessageType::DefaultMarkdown(m) => m.content.as_deref(),
+            common::v1::types::MessageType::DefaultMarkdown(m) => m.content.as_deref(),
             // MessageType::MessagePinned(message_pin) => todo!(),
             // MessageType::MessageUnpinned(message_pin) => todo!(),
             // MessageType::MemberAdd(message_member) => todo!(),
@@ -178,10 +178,10 @@ impl Handle {
             debug!("message from {} without content", message.author_id);
         }
 
-        if let Some(command) = content.and_then(|c| c.strip_prefix("!")) {
+        if let Some(command) = content.and_then(|c: &str| c.strip_prefix("!")) {
             debug!("got raw command {command:?}");
             let command =
-                Command::try_parse_from(std::iter::once("bot").chain(command.split_whitespace()));
+                Command::try_parse_from(std::iter::once("bot".to_string()).chain(command.split_whitespace().map(|s| s.to_string())));
             let resp = match command {
                 Ok(command) => {
                     debug!("got command {command:?}");
@@ -199,6 +199,7 @@ impl Handle {
                 reply_id: Some(message.id),
                 embeds: vec![],
                 mentions: Default::default(),
+                components: None,
             };
             self.http.message_create(message.channel_id, &resp).await?;
         }
@@ -395,6 +396,7 @@ impl Handle {
                                 reply_id: None,
                                 embeds: vec![],
                                 mentions: Default::default(),
+                                components: None,
                             };
                             if let Err(err) = http.message_create(thread_id, &msg).await {
                                 error!("couldn't send message: {err}");

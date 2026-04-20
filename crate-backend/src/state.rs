@@ -268,9 +268,8 @@ impl ServerStateInner {
         match &mut ver.message_type {
             MessageType::DefaultMarkdown(m) => {
                 for attachment in &mut m.attachments {
-                    if let MessageAttachmentType::Media { media } = &mut attachment.ty {
-                        self.presign(media).await?;
-                    }
+                    let MessageAttachmentType::Media { media } = &mut attachment.ty;
+                    self.presign(media).await?;
                 }
                 for emb in &mut m.embeds {
                     if let Some(m) = &mut emb.media {

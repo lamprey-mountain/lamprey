@@ -2,7 +2,6 @@ use std::{sync::Arc, time::Duration};
 
 use common::v1::types::{ChannelId, MediaVerId, MessageSync, PaginationDirection, PaginationQuery};
 use dashmap::DashSet;
-use kameo::{actor::Spawn, Actor};
 use moka::future::Cache;
 use tantivy::Term;
 use tokio::task::JoinSet;

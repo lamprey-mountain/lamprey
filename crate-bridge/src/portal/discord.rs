@@ -186,6 +186,7 @@ impl Portal {
             reply_id: None,
             embeds: vec![],
             mentions: Default::default(),
+            components: None,
         };
 
         // Process attachments concurrently for better performance
@@ -384,6 +385,7 @@ impl Portal {
             reply_id: None,
             embeds: None,
             metadata: None,
+            components: None,
         };
         req.attachments = if let Some(atts) = &update.attachments {
             let mut v = vec![];

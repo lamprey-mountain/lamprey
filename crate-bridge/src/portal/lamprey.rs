@@ -1,5 +1,5 @@
 use anyhow::Result;
-use common::v2::types::message::Message;
+use common::v1::types::Message;
 use futures::future::try_join_all;
 use serenity::all::{
     CreateAttachment, CreateEmbed, EditAttachments, EditWebhookMessage, ExecuteWebhook, Mentionable,
@@ -43,7 +43,7 @@ impl Portal {
 
         let existing = self.globals.get_message(message.id).await?;
         let msg_inner = match message.latest_version.message_type {
-            common::v2::types::message::MessageType::DefaultMarkdown(m) => m,
+            common::v1::types::MessageType::DefaultMarkdown(m) => m,
             _ => {
                 debug!("unsupported lamprey message type");
                 return Ok(());
@@ -93,7 +93,7 @@ impl Portal {
         if let Some(edit) = existing {
             let mut files = EditAttachments::new();
             for attachment in &msg_inner.attachments {
-                let common::v2::types::message::MessageAttachmentType::Media { media } =
+                let common::v1::types::MessageAttachmentType::Media { media } =
                     &attachment.ty;
                 let existing = self.globals.get_attachment(media.id.to_owned()).await?;
                 if let Some(existing) = existing {
@@ -153,7 +153,7 @@ impl Portal {
                 .await?;
 
             for (att, attachment) in discord_msg.attachments.iter().zip(msg_inner.attachments) {
-                let common::v2::types::message::MessageAttachmentType::Media { media } =
+                let common::v1::types::MessageAttachmentType::Media { media } =
                     attachment.ty;
                 self.globals
                     .insert_attachment(AttachmentMetadata {
@@ -167,7 +167,7 @@ impl Portal {
             let download_futures = msg_inner.attachments.iter().map(|attachment| {
                 let globals = &self.globals;
                 async move {
-                    let common::v2::types::message::MessageAttachmentType::Media { media } =
+                    let common::v1::types::MessageAttachmentType::Media { media } =
                         &attachment.ty;
                     let url = format!(
                         "{}/media/{}",
@@ -243,7 +243,7 @@ impl Portal {
                 .await?;
 
             for (att, attachment) in discord_msg.attachments.iter().zip(msg_inner.attachments) {
-                let common::v2::types::message::MessageAttachmentType::Media { media } =
+                let common::v1::types::MessageAttachmentType::Media { media } =
                     attachment.ty;
                 self.globals
                     .insert_attachment(AttachmentMetadata {

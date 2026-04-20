@@ -1,6 +1,5 @@
 use common::v1::types::{
     document::{DocumentStateVector, DocumentUpdate},
-    flume::FlumeAppend,
     sync::{SyncParams, SyncResume},
     voice::VoiceStateScreenshare,
     ChannelId, ConnectionId, SessionToken, UserId,

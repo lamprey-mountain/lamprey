@@ -8,7 +8,7 @@ use common::v1::types::{
     self, presence, Channel, ChannelId, ChannelType, MessageCreate, MessageId, RoomId, User, UserId,
 };
 use common::v2::types::media::Media;
-use common::v2::types::message::Message;
+use common::v1::types::Message;
 
 /// Lamprey actor messages - request/response pattern
 #[derive(Debug)]

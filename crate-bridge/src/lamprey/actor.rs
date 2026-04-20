@@ -9,7 +9,7 @@ use common::v1::types::{
     presence, Channel, ChannelId, ChannelType, MessageCreate, MessageId, MessageSync, RoomId,
     Session, User, UserId,
 };
-use common::v2::types::message::Message as LMessage;
+use common::v1::types::Message as LMessage;
 use common::{v1::types::util::Time, v2::types::media::Media};
 use kameo::message::Context;
 use kameo::prelude::*;
