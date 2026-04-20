@@ -22,7 +22,7 @@ use common::v1::types::{ChannelId, MediaId, Mentions, Message, MessageId};
 use http::StatusCode;
 use time::PrimitiveDateTime;
 use tokio::task::JoinHandle;
-use tracing::debug;
+use tracing::{debug, error};
 use validator::Validate;
 
 use crate::types::DbMessageCreate;
@@ -404,10 +404,10 @@ impl ServiceMessages {
         }
 
         let canonical = components.clone().into_canonical(|media_id: MediaId| {
-            media_cache
-                .get(&media_id)
-                .cloned()
-                .ok_or_else(|| Error::BadStatic("media not found in cache"))
+            media_cache.get(&media_id).cloned().ok_or_else(|| {
+                error!(media_id = ?media_id, "media not found in cache");
+                Error::BadStatic("media not found in cache")
+            })
         })?;
 
         Ok(canonical)

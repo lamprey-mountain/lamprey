@@ -376,7 +376,10 @@ impl ServiceMessages {
                 media_cache
                     .get(&media_id)
                     .cloned()
-                    .ok_or_else(|| Error::BadStatic("media not found in cache"))
+                    .ok_or_else(|| {
+                        error!(message_ver_id = ?message_ver_id, media_id = ?media_id, "media not found in cache");
+                        Error::BadStatic("media not found in cache")
+                    })
             });
 
             components_map.insert(*version_to_id.get(&message_ver_id).unwrap(), components?);
