@@ -204,7 +204,7 @@ export const cursorPlugin = (
 				}
 			};
 
-			api.events.on("sync", onSync);
+			const unsubscribe = api.events.on("sync", onSync);
 
 			return {
 				update(view, prevState) {
@@ -245,9 +245,7 @@ export const cursorPlugin = (
 					}
 				},
 				destroy() {
-					// NOTE: api.events is a solidjs emitter, which doesn't have .off
-					// it's supposed to be automatically cleaned up, but i'm not sure if it actually works here?
-					// api.events.off("sync", onSync);
+					unsubscribe();
 				},
 			};
 		},

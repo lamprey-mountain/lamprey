@@ -143,6 +143,20 @@ export class DocumentsService extends BaseService<RevisionContent> {
 		);
 	}
 
+	async merge(channel_id: string, branch_id: string): Promise<void> {
+		await this.retryWithBackoff(() =>
+			this.client.http.POST(
+				"/api/v1/document/{channel_id}/branch/{branch_id}/merge",
+				{
+					params: {
+						path: { channel_id, branch_id },
+					},
+					body: {},
+				},
+			),
+		);
+	}
+
 	clear() {
 		super.clear();
 		this.revisionCache.clear();

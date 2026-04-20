@@ -3,7 +3,7 @@ import { diffWords } from "diff";
 import type { Tokens } from "marked";
 import { DOMParser, type Node as PMNode } from "prosemirror-model";
 import { TextSelection } from "prosemirror-state";
-import type { Channel, HistoryPagination } from "sdk";
+import type { Channel, DocumentBranch, HistoryPagination } from "sdk";
 import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
@@ -16,7 +16,8 @@ import {
 	Show,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import { useApi } from "@/api";
+import { useApi, useDocumentBranches, useUsers } from "@/api";
+import icDelete from "@/assets/delete.png";
 import icBranchDefault from "@/assets/edit.png";
 import icBranchPrivate from "@/assets/edit.png";
 import icBranchNew from "@/assets/edit.png";
@@ -24,13 +25,15 @@ import icBranchFork from "@/assets/edit.png";
 import icBranch from "@/assets/edit.png";
 import icMergeFull from "@/assets/edit.png";
 import icMergeCherrypick from "@/assets/edit.png";
+import icRename from "@/assets/edit.png";
+import icSync from "@/assets/edit.png";
 import icFormatBold from "@/assets/format-bold.png";
 import icFormatCode from "@/assets/format-code.png";
 import icFormatItalic from "@/assets/format-italic.png";
 import icFormatStrikethrough from "@/assets/format-strikethrough.png";
 import icFormatUrl from "@/assets/format-url.png";
 import { Icon } from "@/atoms/Icon";
-import { Time } from "@/atoms/Time.tsx";
+import { Time, timeAgo } from "@/atoms/Time.tsx";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useChannel } from "@/contexts/channel.tsx";
 import { useDocument } from "@/contexts/document.tsx";
@@ -94,8 +97,77 @@ const DocumentHeader = (
 		"branches" | "merge" | "export" | "insert" | null
 	>(null);
 
+	const branches = useDocumentBranches();
+	const users = useUsers();
+	const api = useApi();
+	const [filterText, setFilterText] = createSignal("");
+
+	// Paginated list of branches for this channel
+	const branchList = branches.useList(() => props.channel.id);
+
+	// Filtered branches based on search text
+	const filteredBranches = createMemo(() => {
+		const list = branchList();
+		if (!list) return [];
+		const filter = filterText().toLowerCase();
+		return list.state.ids
+			.map((id) => branches.cache.get(id))
+			.filter((b): b is DocumentBranch => b !== undefined)
+			.filter((b) => !b.default)
+			.filter(
+				(b) => !filter || (b.name?.toLowerCase().includes(filter) ?? false),
+			);
+	});
+
+	const currentBranch = createMemo(() => {
+		return branches.cache.get(doc.branchId);
+	});
+
+	// Default branch: the one with default === true
+	const defaultBranch = createMemo(() => {
+		const list = branchList();
+		if (!list) return undefined;
+		return list.state.ids
+			.map((id) => branches.cache.get(id))
+			.find((b): b is DocumentBranch => b?.default === true);
+	});
+
+	// Resolve the default branch ID (fall back to channel id if not yet loaded)
+	const defaultBranchId = createMemo(() => {
+		const db = defaultBranch();
+		return db?.id ?? props.channel.id;
+	});
+
 	const toggleHistory = () => {
 		setCh("history_view", !ch.history_view);
+	};
+
+	const handleNewBranch = async () => {
+		try {
+			const parent = defaultBranchId();
+			const branch = await api.documentBranches.fork(props.channel.id, parent, {
+				name: "untitled branch",
+				private: false,
+			});
+			update("branchId", branch.id);
+			setActive(null);
+		} catch (e) {
+			console.error("Failed to create new branch:", e);
+		}
+	};
+
+	const handleNewPrivateBranch = async () => {
+		try {
+			const parent = defaultBranchId();
+			const branch = await api.documentBranches.fork(props.channel.id, parent, {
+				name: "untitled private branch",
+				private: true,
+			});
+			update("branchId", branch.id);
+			setActive(null);
+		} catch (e) {
+			console.error("Failed to create new private branch:", e);
+		}
 	};
 
 	const applyFormat = (wrap: string) => {
@@ -149,6 +221,69 @@ const DocumentHeader = (
 		setActive(null);
 	};
 
+	const handleMergeFull = async () => {
+		try {
+			await api.documents.merge(props.channel.id, doc.branchId);
+			update("branchId", defaultBranchId());
+			setActive(null);
+		} catch (e) {
+			console.error("Failed to merge branch:", e);
+		}
+	};
+
+	const handleRenameBranch = () => {
+		const branch = currentBranch();
+		if (!branch) return;
+
+		modalCtl.prompt("rename branch", (newName) => {
+			if (newName && newName !== branch.name) {
+				api.documentBranches.update(props.channel.id, branch.id, {
+					name: newName,
+				});
+			}
+		});
+		setActive(null);
+	};
+
+	const handleDeleteBranch = () => {
+		const branch = currentBranch();
+		if (!branch) return;
+
+		// TODO: warn if there are changes between the branch and its parent
+		modalCtl.confirm(
+			`Are you sure you want to delete the branch "${
+				branch.name || "unnamed"
+			}"?`,
+			async (confirmed) => {
+				if (confirmed) {
+					try {
+						await api.documentBranches.close(props.channel.id, branch.id);
+						update("branchId", defaultBranchId());
+					} catch (e) {
+						console.error("Failed to delete branch:", e);
+					}
+				}
+			},
+		);
+		setActive(null);
+	};
+
+	const handleSyncBranch = async () => {
+		try {
+			await api.documentBranches.sync(props.channel.id, doc.branchId);
+			setActive(null);
+		} catch (e) {
+			console.error("Failed to sync branch:", e);
+		}
+	};
+
+	const suggestedRenames = [
+		"fix/typos",
+		"feature/content-update",
+		"docs/clarification",
+		"refactor/intro",
+	];
+
 	const [branchBtn, setBranchBtn] = createSignal<HTMLElement>();
 	const [branchMenu, setBranchMenu] = createSignal<HTMLElement>();
 	const branchPos = useFloating(branchBtn, branchMenu, {
@@ -200,9 +335,10 @@ const DocumentHeader = (
 					}}
 					classList={{ active: active() === "branches" }}
 				>
-					branches
+					{currentBranch()?.name ||
+						(currentBranch()?.default ? "main" : "unnamed")}
 				</button>
-				<Show when={true}>
+				<Show when={currentBranch()?.parent_id}>
 					<button
 						type="button"
 						class="button"
@@ -213,7 +349,7 @@ const DocumentHeader = (
 						}}
 						classList={{ active: active() === "merge" }}
 					>
-						merge
+						branch
 					</button>
 				</Show>
 				<button
@@ -324,13 +460,15 @@ const DocumentHeader = (
 							placeholder="filter branches..."
 							style="margin:4px 8px;padding:2px 4px;border-radius:2px"
 							ref={(el) => queueMicrotask(() => el.focus())}
+							onInput={(e) => setFilterText(e.currentTarget.value)}
 						/>
 						<ul>
+							{/* Default branch */}
 							<li
 								class="default"
-								classList={{ selected: doc.branchId === props.channel.id }}
+								classList={{ selected: doc.branchId === defaultBranchId() }}
 								onClick={() => {
-									update("branchId", props.channel.id);
+									update("branchId", defaultBranchId());
 									setActive(null);
 								}}
 							>
@@ -342,29 +480,60 @@ const DocumentHeader = (
 									</div>
 								</button>
 							</li>
-							<li>
-								<button type="button" class="button">
-									<Icon src={icBranch} />
-									<div class="info">
-										<div>branch name here</div>
-										<div class="dim">
-											created by <b>@user</b> n minutes ago
-										</div>
-									</div>
-								</button>
-							</li>
-							<li class="private">
-								<button type="button" class="button">
-									<Icon src={icBranchPrivate} />
-									<div class="info">
-										<div>branch name here</div>
-										<div class="dim">private branch; created n minutes ago</div>
-									</div>
-								</button>
-							</li>
+							<For each={filteredBranches()}>
+								{(branch) => {
+									const creator = users.cache.get(branch.creator_id);
+									const stateColor =
+										branch.state === "Active"
+											? "color: $color-green"
+											: branch.state === "Closed"
+												? "color: $color-warn"
+												: "color: $color-fg-500";
+									return (
+										<li classList={{ private: branch.private }}>
+											<button
+												type="button"
+												class="button"
+												onClick={() => {
+													update("branchId", branch.id);
+													setActive(null);
+												}}
+												classList={{ selected: doc.branchId === branch.id }}
+											>
+												<Icon
+													src={branch.private ? icBranchPrivate : icBranch}
+												/>
+												<div class="info">
+													<div>
+														{branch.name || "unnamed"}
+														{branch.private && (
+															<span class="dim"> (private)</span>
+														)}
+													</div>
+													<div class="dim" style={stateColor}>
+														{branch.state.toLowerCase()}
+														{creator && (
+															<>
+																{" "}
+																· created by{" "}
+																<b>
+																	{creator.relationship.petname || creator.name}
+																</b>
+															</>
+														)}
+														{branch.created_at && (
+															<> · {timeAgo(new Date(branch.created_at))}</>
+														)}
+													</div>
+												</div>
+											</button>
+										</li>
+									);
+								}}
+							</For>
 							<li class="separator"></li>
 							<li class="new">
-								<button type="button" class="button">
+								<button type="button" class="button" onClick={handleNewBranch}>
 									<Icon src={icBranchNew} />
 									<div class="info">
 										<div>new</div>
@@ -384,7 +553,11 @@ const DocumentHeader = (
 								</button>
 							</li>
 							<li class="new">
-								<button type="button" class="button">
+								<button
+									type="button"
+									class="button"
+									onClick={handleNewPrivateBranch}
+								>
 									<Icon src={icBranchFork} />
 									<div class="info">
 										<div>new private</div>
@@ -401,7 +574,7 @@ const DocumentHeader = (
 			<Show when={active() === "merge"}>
 				<Portal>
 					<menu
-						class="merge-menu document-menu"
+						class="branch-action-menu document-menu"
 						ref={setMergeMenu}
 						style={{
 							position: mergePos.strategy,
@@ -413,13 +586,33 @@ const DocumentHeader = (
 					>
 						<ul>
 							<li>
-								<button type="button" class="button">
+								<button
+									type="button"
+									class="button"
+									onClick={handleRenameBranch}
+								>
+									<Icon src={icRename} />
+									<div class="info">
+										<div>rename</div>
+										<div class="dim">change the name of this branch</div>
+									</div>
+								</button>
+							</li>
+							<li>
+								<button type="button" class="button" onClick={handleSyncBranch}>
+									<Icon src={icSync} />
+									<div class="info">
+										<div>sync</div>
+										<div class="dim">pull changes from parent</div>
+									</div>
+								</button>
+							</li>
+							<li>
+								<button type="button" class="button" onClick={handleMergeFull}>
 									<Icon src={icMergeFull} />
 									<div class="info">
-										<div>full</div>
-										<div class="dim">
-											fully merge all changes in this branch
-										</div>
+										<div>merge</div>
+										<div class="dim">fully merge all changes</div>
 									</div>
 								</button>
 							</li>
@@ -428,10 +621,57 @@ const DocumentHeader = (
 									<Icon src={icMergeCherrypick} />
 									<div class="info">
 										<div>cherry pick</div>
-										<div class="dim">view diff; merge specific changes</div>
+										<div class="dim">merge specific changes</div>
 									</div>
 								</button>
 							</li>
+							<li>
+								<button
+									type="button"
+									class="button"
+									onClick={handleDeleteBranch}
+								>
+									<Icon src={icDelete} />
+									<div class="info">
+										<div style="color: $color-warn">delete</div>
+										<div class="dim">permanently remove this branch</div>
+									</div>
+								</button>
+							</li>
+							<li class="separator"></li>
+							<li
+								class="header"
+								style="padding: 4px 12px; font-weight: bold; font-size: 0.8em; opacity: 0.7"
+							>
+								suggested renames
+							</li>
+							<For each={suggestedRenames}>
+								{(name) => (
+									<li>
+										<button
+											type="button"
+											class="button"
+											onClick={() => {
+												const branch = currentBranch();
+												if (branch) {
+													api.documentBranches.update(
+														props.channel.id,
+														branch.id,
+														{
+															name,
+														},
+													);
+												}
+												setActive(null);
+											}}
+										>
+											<div class="info">
+												<div>{name}</div>
+											</div>
+										</button>
+									</li>
+								)}
+							</For>
 						</ul>
 					</menu>
 				</Portal>
@@ -582,6 +822,7 @@ const DocumentMain = (
 	},
 ) => {
 	const api2 = useApi();
+	const [doc] = useDocument();
 	const [ch, _setCh] = useChannel()!;
 	const [diffLoading, setDiffLoading] = createSignal(false);
 	const [history, setHistory] = createSignal<HistoryPagination | null>(null);
@@ -665,18 +906,24 @@ const DocumentMain = (
 	const [lastSubscribedChannel, setLastSubscribedChannel] = createSignal<
 		string | null
 	>(null);
+	const [lastSubscribedBranch, setLastSubscribedBranch] = createSignal<
+		string | null
+	>(null);
 
-	// Subscribe to channel only when channel actually changes
+	// Subscribe to channel/branch only when they actually change
 	createEffect(() => {
 		const chId = props.channel.id;
+		const bId = doc.branchId;
 		const ed = editor();
 		const m = mode();
 
 		if (!ed || m !== "edit") return;
-		if (lastSubscribedChannel() === chId) return;
+		if (lastSubscribedChannel() === chId && lastSubscribedBranch() === bId)
+			return;
 
-		ed.subscribe(chId, chId);
+		ed.subscribe(chId, bId);
 		setLastSubscribedChannel(chId);
+		setLastSubscribedBranch(bId);
 	});
 
 	// Handle readonly/preview mode: load historical revision

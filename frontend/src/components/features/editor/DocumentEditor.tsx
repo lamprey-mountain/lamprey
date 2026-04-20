@@ -10,7 +10,7 @@ import { keymap } from "prosemirror-keymap";
 import { DOMParser } from "prosemirror-model";
 import { type Command, EditorState, TextSelection } from "prosemirror-state";
 import type { MessageSync } from "sdk";
-import { createSignal } from "solid-js";
+import { createSignal, onCleanup } from "solid-js";
 import {
 	initProseMirrorDoc,
 	redo,
@@ -146,7 +146,8 @@ export const createEditor = (
 		}
 	};
 
-	api2.events.on("sync", onSync);
+	const unsub = api2.events.on("sync", onSync);
+	onCleanup(unsub);
 
 	const createState = () => {
 		const type = ydoc.get("doc", Y.XmlFragment);
@@ -238,14 +239,14 @@ export const createEditor = (
 		const channel = channels2.cache.get(channelId);
 		const roomId = channel?.room_id ?? "";
 
-		// reset document state
-		ydoc = createYDoc();
-		editor.setState(createState());
-
 		setCurrentChannelId(channelId);
 		setCurrentRoomId(roomId);
 		setCurrentBranchId(branchId);
 		setIsSubscribed(false);
+
+		// reset document state
+		ydoc = createYDoc();
+		editor.setState(createState());
 
 		api2.client.send({
 			type: "DocumentSubscribe",

@@ -185,6 +185,38 @@ export class DocumentBranchService extends BaseService<DocumentBranch> {
 		);
 	}
 
+	async sync(channel_id: string, branch_id: string): Promise<void> {
+		await this.retryWithBackoff(() =>
+			this.client.http.POST(
+				"/api/v1/document/{channel_id}/branch/{branch_id}/sync",
+				{
+					params: {
+						path: { channel_id, branch_id },
+					},
+					body: {
+						sync_from_branch_id: null,
+					},
+				},
+			),
+		);
+	}
+
+	protected afterUpsert(item: DocumentBranch): void {
+		const list = this.branchLists.get(item.document_id);
+		if (list) {
+			list.prependId(item.id);
+		}
+	}
+
+	protected afterDelete(id: string, item?: DocumentBranch): void {
+		if (item) {
+			const list = this.branchLists.get(item.document_id);
+			if (list) {
+				list.removeId(id);
+			}
+		}
+	}
+
 	clear() {
 		super.clear();
 		for (const list of this.branchLists.values()) {
