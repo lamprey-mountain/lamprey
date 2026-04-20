@@ -30,6 +30,7 @@ export function createList2<
 	const [visibleRange, setVisibleRange] = createSignal({ start: 0, end: 0 });
 
 	let wrapperEl: HTMLElement | undefined;
+	let spacerEl: HTMLDivElement | undefined;
 	let containerEl: HTMLDivElement | undefined;
 
 	let isProgrammaticScroll = false;
@@ -108,7 +109,7 @@ export function createList2<
 				// If item's original top offset is above the current viewport,
 				// its expansion will push the viewport's current items down.
 				// We adjust the scroll position to perfectly track the visual location.
-				if (oldOffset < currentScrollTop + 1) {
+				if (oldOffset < currentScrollTop - 1) {
 					heightDiff += newH - oldH;
 				}
 			}
@@ -124,6 +125,12 @@ export function createList2<
 		if (changed) {
 			queueMicrotask(() => {
 				if (!wrapperEl) return;
+
+				// Force update container height to prevent browser from clamping scrollTop
+				if (spacerEl) {
+					spacerEl.style.height = `${untrack(() => totalHeight())}px`;
+				}
+
 				const oldPos = wrapperEl.scrollTop;
 
 				if (wasAtBottom && options.autoscroll?.()) {
@@ -238,9 +245,19 @@ export function createList2<
 		let isSameList = false;
 
 		// 1. Prioritize finding a pivot in the CURRENTLY VISIBLE range so content doesn't jump
-		const visStart = untrack(() => visibleRange().start);
-		const startIdx = Math.max(0, Math.min(visStart, prevLen - 1));
 		const oldScrollTop = wrapperEl ? wrapperEl.scrollTop : 0;
+
+		let trueVisStart = 0;
+		const currentOffsets = untrack(() => offsets());
+		for (let i = 0; i < prevLen; i++) {
+			const h = heights[getItemKey(prevItems[i])] ?? ESTIMATED_H;
+			if ((currentOffsets[i] ?? 0) + h > oldScrollTop) {
+				trueVisStart = i;
+				break;
+			}
+		}
+
+		const startIdx = Math.max(0, Math.min(trueVisStart, prevLen - 1));
 
 		for (let i = startIdx; i < prevLen; i++) {
 			if (
@@ -296,6 +313,12 @@ export function createList2<
 
 			queueMicrotask(() => {
 				if (!wrapperEl) return;
+
+				// Force update container height to prevent browser from clamping scrollTop
+				if (spacerEl) {
+					spacerEl.style.height = `${untrack(() => totalHeight())}px`;
+				}
+
 				const oldPos = wrapperEl.scrollTop;
 
 				if (wasAtBottom && options.autoscroll?.()) {
@@ -388,6 +411,9 @@ export function createList2<
 					style="position: relative; overflow-y: scroll; overflow-anchor: none; height: 100%; width: 100%;"
 				>
 					<div
+						ref={(el) => {
+							spacerEl = el;
+						}}
 						style={`width: 100%; position: relative; height: ${totalHeight()}px;`}
 					>
 						<div
