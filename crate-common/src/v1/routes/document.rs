@@ -200,6 +200,33 @@ pub mod document_branch_merge {
     pub struct Response {}
 }
 
+/// Document branch sync
+#[endpoint(
+    post,
+    path = "/document/{channel_id}/branch/{branch_id}/sync",
+    tags = ["document"],
+    scopes = [Full],
+    permissions = [DocumentEdit],
+    response(OK, description = "ok"),
+)]
+pub mod document_branch_sync {
+    use crate::v1::types::document::DocumentBranchSync;
+    use crate::v1::types::{ChannelId, DocumentBranchId};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub branch_id: DocumentBranchId,
+
+        #[json]
+        pub sync: DocumentBranchSync,
+    }
+
+    pub struct Response {}
+}
+
 /// Document tag create
 #[endpoint(
     post,

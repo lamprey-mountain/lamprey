@@ -166,6 +166,13 @@ pub struct DocumentBranchMerge {
     // pub target_branch_id: Option<DocumentBranchId>,
 }
 
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct DocumentBranchSync {
+    pub sync_from_branch_id: Option<DocumentBranchId>,
+}
+
 // NOTE: not useful; may be removed later?
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

@@ -8,6 +8,7 @@ use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::document::serialized::Serdoc;
 use common::v1::types::document::{DocumentBranchState, DocumentRevisionId, HistoryPagination};
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{MessageSync, Permission};
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
@@ -108,11 +109,9 @@ async fn document_branch_get(
         .await?;
 
     if branch.private && branch.creator_id != auth.user.id {
-        return Err(Error::ApiError(
-            common::v1::types::error::ApiError::from_code(
-                common::v1::types::error::ErrorCode::UnknownDocumentBranch,
-            ),
-        ));
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownDocumentBranch,
+        )));
     }
 
     Ok(Json(branch))
@@ -144,11 +143,9 @@ async fn document_branch_update(
 
     if branch_before.creator_id != auth.user.id {
         if branch_before.private {
-            return Err(Error::ApiError(
-                common::v1::types::error::ApiError::from_code(
-                    common::v1::types::error::ErrorCode::UnknownDocumentBranch,
-                ),
-            ));
+            return Err(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownDocumentBranch,
+            )));
         }
         perms.needs(Permission::ThreadManage);
     }
@@ -193,20 +190,16 @@ async fn document_branch_close(
         .await?;
 
     if branch.default {
-        return Err(Error::ApiError(
-            common::v1::types::error::ApiError::from_code(
-                common::v1::types::error::ErrorCode::CannotCloseDefaultBranch,
-            ),
-        ));
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::CannotCloseDefaultBranch,
+        )));
     }
 
     if branch.creator_id != auth.user.id {
         if branch.private {
-            return Err(Error::ApiError(
-                common::v1::types::error::ApiError::from_code(
-                    common::v1::types::error::ErrorCode::UnknownDocumentBranch,
-                ),
-            ));
+            return Err(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownDocumentBranch,
+            )));
         }
         perms.needs(Permission::ThreadManage);
     }
@@ -252,11 +245,9 @@ async fn document_branch_fork(
         .document_branch_get(req.channel_id, req.parent_id)
         .await?;
     if parent_branch.private && parent_branch.creator_id != user_id {
-        return Err(Error::ApiError(
-            common::v1::types::error::ApiError::from_code(
-                common::v1::types::error::ErrorCode::UnknownDocumentBranch,
-            ),
-        ));
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownDocumentBranch,
+        )));
     }
 
     let branch_id = data
@@ -308,11 +299,9 @@ async fn document_branch_merge(
         .await?;
 
     if branch.private && branch.creator_id != user_id {
-        return Err(Error::ApiError(
-            common::v1::types::error::ApiError::from_code(
-                common::v1::types::error::ErrorCode::UnknownDocumentBranch,
-            ),
-        ));
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownDocumentBranch,
+        )));
     }
 
     if branch.creator_id != user_id {
@@ -320,29 +309,23 @@ async fn document_branch_merge(
     }
 
     if branch.default {
-        return Err(Error::ApiError(
-            common::v1::types::error::ApiError::from_code(
-                common::v1::types::error::ErrorCode::CannotMergeDefaultBranch,
-            ),
-        ));
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::CannotMergeDefaultBranch,
+        )));
     }
 
-    let parent_id = branch.parent_id.ok_or_else(|| {
-        Error::ApiError(common::v1::types::error::ApiError::from_code(
-            common::v1::types::error::ErrorCode::BranchHasNoParent,
-        ))
-    })?;
+    let parent_id = branch
+        .parent_id
+        .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::BranchHasNoParent)))?;
     let target_branch_id = parent_id.branch_id;
 
     let target_branch = data
         .document_branch_get(req.channel_id, target_branch_id)
         .await?;
     if target_branch.private && target_branch.creator_id != user_id {
-        return Err(Error::ApiError(
-            common::v1::types::error::ApiError::from_code(
-                common::v1::types::error::ErrorCode::UnknownDocumentBranch,
-            ),
-        ));
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownDocumentBranch,
+        )));
     }
 
     let target_context = (req.channel_id, target_branch_id);
@@ -372,6 +355,76 @@ async fn document_branch_merge(
     })?;
 
     Ok(Json(branch))
+}
+
+/// Document branch sync
+#[handler(routes::document_branch_sync)]
+async fn document_branch_sync(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::document_branch_sync::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
+    auth.user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let data = s.data();
+    let user_id = auth.user.id;
+
+    let perms = &srv.perms;
+    let mut perms = perms
+        .for_channel3(Some(user_id), req.channel_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::DocumentEdit);
+
+    let branch = data
+        .document_branch_get(req.channel_id, req.branch_id)
+        .await?;
+
+    if branch.private && branch.creator_id != user_id {
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownDocumentBranch,
+        )));
+    }
+
+    if branch.creator_id != user_id {
+        perms.needs(Permission::ThreadManage);
+    }
+    perms.check()?;
+
+    let source_branch_id = req
+        .sync
+        .sync_from_branch_id
+        .or_else(|| branch.parent_id.map(|p| p.branch_id))
+        .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::BranchHasNoParent)))?;
+
+    let source_branch = data
+        .document_branch_get(req.channel_id, source_branch_id)
+        .await?;
+
+    if source_branch.private && source_branch.creator_id != user_id {
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownDocumentBranch,
+        )));
+    }
+
+    let source_context = (req.channel_id, source_branch_id);
+    let target_context = (req.channel_id, req.branch_id);
+
+    let target_sv = srv.documents.get_state_vector(target_context).await?;
+    let update = srv
+        .documents
+        .diff(source_context, Some(user_id), &target_sv)
+        .await?;
+
+    if !update.is_empty() {
+        srv.documents
+            .apply_update(target_context, user_id, None, &update)
+            .await?;
+    }
+
+    Ok(StatusCode::OK)
 }
 
 /// Document tag create
@@ -404,21 +457,17 @@ async fn document_tag_create(
             (version_id.branch_id, version_id.seq)
         }
         common::v1::types::document::DocumentRevisionId::Tag { .. } => {
-            return Err(Error::ApiError(
-                common::v1::types::error::ApiError::from_code(
-                    common::v1::types::error::ErrorCode::CannotTagAnotherTag,
-                ),
-            ));
+            return Err(Error::ApiError(ApiError::from_code(
+                ErrorCode::CannotTagAnotherTag,
+            )));
         }
     };
 
     let branch = data.document_branch_get(req.channel_id, branch_id).await?;
     if branch.private && branch.creator_id != user_id {
-        return Err(Error::ApiError(
-            common::v1::types::error::ApiError::from_code(
-                common::v1::types::error::ErrorCode::UnknownDocumentBranch,
-            ),
-        ));
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownDocumentBranch,
+        )));
     }
 
     let tag_id = data
@@ -489,11 +538,9 @@ async fn document_tag_get(
         .document_branch_get(req.channel_id, tag.branch_id)
         .await?;
     if branch.private && branch.creator_id != user_id {
-        return Err(Error::ApiError(
-            common::v1::types::error::ApiError::from_code(
-                common::v1::types::error::ErrorCode::UnknownDocumentBranch,
-            ),
-        ));
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownDocumentBranch,
+        )));
     }
 
     Ok(Json(tag))
@@ -526,11 +573,9 @@ async fn document_tag_update(
         .document_branch_get(req.channel_id, tag.branch_id)
         .await?;
     if branch.private && branch.creator_id != user_id {
-        return Err(Error::ApiError(
-            common::v1::types::error::ApiError::from_code(
-                common::v1::types::error::ErrorCode::UnknownDocumentBranch,
-            ),
-        ));
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownDocumentBranch,
+        )));
     }
 
     if tag.creator_id != Some(user_id) {
@@ -579,11 +624,9 @@ async fn document_tag_delete(
         .document_branch_get(req.channel_id, tag.branch_id)
         .await?;
     if branch.private && branch.creator_id != user_id {
-        return Err(Error::ApiError(
-            common::v1::types::error::ApiError::from_code(
-                common::v1::types::error::ErrorCode::UnknownDocumentBranch,
-            ),
-        ));
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownDocumentBranch,
+        )));
     }
 
     if tag.creator_id != Some(user_id) {
@@ -626,11 +669,9 @@ async fn document_history(
         .document_branch_get(req.channel_id, req.branch_id)
         .await?;
     if branch.private && branch.creator_id != auth.user.id {
-        return Err(Error::ApiError(
-            common::v1::types::error::ApiError::from_code(
-                common::v1::types::error::ErrorCode::UnknownDocumentBranch,
-            ),
-        ));
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownDocumentBranch,
+        )));
     }
 
     let summary = srv
@@ -681,11 +722,9 @@ async fn document_crdt_diff(
         .document_branch_get(req.channel_id, req.branch_id)
         .await?;
     if branch.private && branch.creator_id != auth.user.id {
-        return Err(Error::ApiError(
-            common::v1::types::error::ApiError::from_code(
-                common::v1::types::error::ErrorCode::UnknownDocumentBranch,
-            ),
-        ));
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownDocumentBranch,
+        )));
     }
 
     let sv = req
@@ -723,11 +762,9 @@ async fn document_crdt_apply(
         .document_branch_get(req.channel_id, req.branch_id)
         .await?;
     if branch.private && branch.creator_id != auth.user.id {
-        return Err(Error::ApiError(
-            common::v1::types::error::ApiError::from_code(
-                common::v1::types::error::ErrorCode::UnknownDocumentBranch,
-            ),
-        ));
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownDocumentBranch,
+        )));
     }
 
     let update_data = req.data;
@@ -770,11 +807,9 @@ async fn document_content_get(
 
     let branch = data.document_branch_get(req.channel_id, branch_id).await?;
     if branch.private && branch.creator_id != auth.user.id {
-        return Err(Error::ApiError(
-            common::v1::types::error::ApiError::from_code(
-                common::v1::types::error::ErrorCode::UnknownDocumentBranch,
-            ),
-        ));
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownDocumentBranch,
+        )));
     }
 
     let serdoc = match seq {
@@ -815,11 +850,9 @@ async fn document_content_put(
         .document_branch_get(req.channel_id, req.branch_id)
         .await?;
     if branch.private && branch.creator_id != auth.user.id {
-        return Err(Error::ApiError(
-            common::v1::types::error::ApiError::from_code(
-                common::v1::types::error::ErrorCode::UnknownDocumentBranch,
-            ),
-        ));
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownDocumentBranch,
+        )));
     }
 
     srv.documents
@@ -841,6 +874,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(document_branch_list))
         .routes(routes2!(document_branch_get))
         .routes(routes2!(document_branch_update))
+        .routes(routes2!(document_branch_sync))
         .routes(routes2!(document_branch_close))
         .routes(routes2!(document_branch_fork))
         .routes(routes2!(document_branch_merge))
