@@ -86,7 +86,6 @@ pub struct AuditLogChange {
     serde(tag = "type", content = "metadata")
 )]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[allow(deprecated)]
 pub enum AuditLogEntryType {
     RoomCreate {
         changes: Vec<AuditLogChange>,
@@ -168,13 +167,6 @@ pub enum AuditLogEntryType {
         changes: Vec<AuditLogChange>,
     },
 
-    /// remove all reactions
-    #[deprecated = "renamed to ReactionDeleteAll"]
-    ReactionPurge {
-        channel_id: ChannelId,
-        message_id: MessageId,
-    },
-
     /// remove all reactions from a message
     ReactionDeleteAll {
         channel_id: ChannelId,
@@ -208,15 +200,6 @@ pub enum AuditLogEntryType {
         emoji_id: EmojiId,
 
         #[cfg_attr(feature = "serde", serde(default))]
-        changes: Vec<AuditLogChange>,
-    },
-
-    #[deprecated = "this has been split into PermissionOverwriteCreate and PermissionOverwriteUpdate"]
-    PermissionOverwriteSet {
-        channel_id: ChannelId,
-        overwrite_id: Uuid,
-        #[cfg_attr(feature = "serde", serde(rename = "type"))]
-        ty: PermissionOverwriteType,
         changes: Vec<AuditLogChange>,
     },
 
@@ -751,14 +734,14 @@ impl AuditLogEntryType {
                 | InviteCreate { .. }
                 | InviteUpdate { .. }
                 | InviteDelete { .. }
-                | ReactionPurge { .. }
                 | ReactionDeleteAll { .. }
                 | ReactionDeleteKey { .. }
                 | ReactionDeleteUser { .. }
                 | EmojiCreate { .. }
                 | EmojiUpdate { .. }
                 | EmojiDelete { .. }
-                | PermissionOverwriteSet { .. }
+                | PermissionOverwriteCreate { .. }
+                | PermissionOverwriteUpdate { .. }
                 | PermissionOverwriteDelete { .. }
                 | MemberKick { .. }
                 | MemberBan { .. }
