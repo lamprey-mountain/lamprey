@@ -32,7 +32,7 @@ der = { version = "0.7", default-features = false, features = ["oid", "pem", "st
 deranged = { version = "0.5", features = ["powerfmt", "serde"] }
 digest = { version = "0.10", features = ["mac", "oid", "std"] }
 ed25519 = { version = "2", default-features = false, features = ["alloc", "pkcs8", "std"] }
-ed25519-dalek = { version = "2", features = ["digest", "pkcs8"] }
+ed25519-dalek = { version = "2", features = ["digest", "pkcs8", "rand_core"] }
 either = { version = "1", features = ["serde", "use_std"] }
 fastrand = { version = "2", features = ["js"] }
 figment = { version = "0.10", default-features = false, features = ["env", "json", "toml"] }
@@ -120,7 +120,7 @@ der = { version = "0.7", default-features = false, features = ["oid", "pem", "st
 deranged = { version = "0.5", features = ["powerfmt", "serde"] }
 digest = { version = "0.10", features = ["mac", "oid", "std"] }
 ed25519 = { version = "2", default-features = false, features = ["alloc", "pkcs8", "std"] }
-ed25519-dalek = { version = "2", features = ["digest", "pkcs8"] }
+ed25519-dalek = { version = "2", features = ["digest", "pkcs8", "rand_core"] }
 either = { version = "1", features = ["serde", "use_std"] }
 fastrand = { version = "2", features = ["js"] }
 figment = { version = "0.10", default-features = false, features = ["env", "json", "toml"] }
