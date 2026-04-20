@@ -2,7 +2,7 @@ use crate::data::postgres::{Pagination, Postgres};
 use crate::data::DataDocument;
 use crate::error::{Error, Result};
 use crate::types::{DehydratedDocument, DocumentUpdateSummary, PaginationDirection};
-use crate::EditContextId;
+use crate::{gen_paginate, EditContextId};
 use async_trait::async_trait;
 use common::v1::types::document::{
     DocumentBranch, DocumentBranchCreate, DocumentBranchListParams, DocumentBranchPatch,
@@ -525,37 +525,41 @@ impl DataDocument for Postgres {
         filter: DocumentBranchListParams,
         pagination: PaginationQuery<DocumentBranchId>,
     ) -> Result<PaginationResponse<DocumentBranch>> {
-        let p: Pagination<_> = pagination.try_into()?;
-        let states: Vec<DbBranchState> = filter.state.into_iter().map(Into::into).collect();
+        let p: Pagination<DocumentBranchId> = pagination.try_into()?;
 
-        // if states is empty, default to Active
-        let states = if states.is_empty() {
+        let states: Vec<DbBranchState> = if filter.state.is_empty() {
             vec![DbBranchState::Active]
         } else {
-            states
+            filter.state.into_iter().map(Into::into).collect()
         };
 
-        let branches = query_as!(
+        let dir_str = match p.dir {
+            PaginationDirection::F => "f",
+            PaginationDirection::B => "b",
+        };
+
+        let q_list = query_as!(
             DbDocumentBranch,
             r#"
             SELECT id, document_id, creator_id, name, created_at, is_default, private, state as "state: DbBranchState", parent_branch_id, parent_seq
             FROM document_branch
-            WHERE document_id = $1 AND state = ANY($2::branch_state[])
-            AND (private = false OR creator_id = $5)
-            AND ($3::uuid IS NULL OR created_at < (SELECT created_at FROM document_branch WHERE id = $3))
-            ORDER BY created_at DESC
-            LIMIT $4
+            WHERE document_id = $1
+              AND state = ANY($2::branch_state[])
+              AND (private = false OR creator_id = $3)
+              AND id > $4 AND id < $5
+            ORDER BY (CASE WHEN $6 = 'f' THEN id END) ASC, id DESC
+            LIMIT $7
             "#,
             document_id.into_inner(),
             &states as &[DbBranchState],
+            user_id.into_inner(),
             p.after.into_inner(),
+            p.before.into_inner(),
+            dir_str,
             (p.limit + 1) as i64,
-            user_id.into_inner()
-        )
-        .fetch_all(&self.pool)
-        .await?;
+        );
 
-        let total = query_scalar!(
+        let q_total = query_scalar!(
             r#"
             SELECT count(*)
             FROM document_branch
@@ -565,30 +569,16 @@ impl DataDocument for Postgres {
             document_id.into_inner(),
             &states as &[DbBranchState],
             user_id.into_inner()
+        );
+
+        gen_paginate!(
+            p,
+            self.pool,
+            q_list,
+            q_total,
+            |row: DbDocumentBranch| DocumentBranch::from(row),
+            |item: &DocumentBranch| item.id.to_string()
         )
-        .fetch_one(&self.pool)
-        .await?
-        .unwrap_or(0);
-
-        let has_more = branches.len() > p.limit as usize;
-        let mut items: Vec<DocumentBranch> = branches
-            .into_iter()
-            .take(p.limit as usize)
-            .map(Into::into)
-            .collect();
-
-        if p.dir == PaginationDirection::B {
-            items.reverse();
-        }
-
-        let cursor = items.last().map(|i| i.id.to_string());
-
-        Ok(PaginationResponse {
-            items,
-            total: total as u64,
-            has_more,
-            cursor,
-        })
     }
 
     async fn document_tag_create(
@@ -801,7 +791,7 @@ impl DataDocument for Postgres {
         let updates = query_as!(
             DbUpdateSummary,
             r#"
-            SELECT 
+            SELECT
                 u.author_id as user_id, u.created_at, u.stat_added, u.stat_removed, u.seq, u.document_id
             FROM document_update u
             JOIN channel c ON c.id = u.document_id
