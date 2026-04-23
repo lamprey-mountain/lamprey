@@ -281,6 +281,8 @@ export class RootStore {
 			process();
 		} else if (msg.type === "RoomCreate" || msg.type === "RoomUpdate") {
 			this.rooms.upsert(msg.room);
+		} else if (msg.type === "RoomDelete") {
+			this.rooms.delete(msg.room_id);
 		} else if (msg.type === "ChannelCreate" || msg.type === "ChannelUpdate") {
 			if ("channel" in msg) {
 				this.channels.upsert(msg.channel);

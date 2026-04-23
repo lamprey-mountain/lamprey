@@ -155,6 +155,11 @@ export class RoomsService extends BaseService<Room> {
 		}
 	}
 
+	protected afterDelete(id: string): void {
+		this.roomList.removeId(id);
+		this.roomListAll.removeId(id);
+	}
+
 	clear() {
 		super.clear();
 		this.roomList.clear();
