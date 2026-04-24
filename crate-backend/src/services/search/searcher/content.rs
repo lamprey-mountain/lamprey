@@ -128,7 +128,7 @@ impl ContentSearcher {
                         &query,
                         &(TopDocs::with_limit(limit).and_offset(cursor), Count),
                     )
-                    .expect("search failed");
+                    .map_err(|e| Error::Internal(format!("Search failed: {e}")))?;
                 let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
                 (top_docs, count as u64)
             }
@@ -149,7 +149,7 @@ impl ContentSearcher {
                             Count,
                         ),
                     )
-                    .expect("search failed");
+                    .map_err(|e| Error::Internal(format!("Search failed: {e}")))?;
                 let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
                 (top_docs, count as u64)
             }
@@ -308,7 +308,7 @@ impl ContentSearcher {
                         &query,
                         &(TopDocs::with_limit(limit).and_offset(cursor), Count),
                     )
-                    .expect("search failed");
+                    .map_err(|e| Error::Internal(format!("Search failed: {e}")))?;
                 let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
                 (top_docs, count as u64)
             }
@@ -329,7 +329,7 @@ impl ContentSearcher {
                             Count,
                         ),
                     )
-                    .expect("search failed");
+                    .map_err(|e| Error::Internal(format!("Search failed: {e}")))?;
                 let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
                 (top_docs, count as u64)
             }
@@ -350,7 +350,7 @@ impl ContentSearcher {
                             Count,
                         ),
                     )
-                    .expect("search failed");
+                    .map_err(|e| Error::Internal(format!("Search failed: {e}")))?;
                 let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
                 (top_docs, count as u64)
             }
@@ -372,7 +372,7 @@ impl ContentSearcher {
                             Count,
                         ),
                     )
-                    .expect("search failed");
+                    .map_err(|e| Error::Internal(format!("Search failed: {e}")))?;
                 let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
                 (top_docs, count as u64)
             }

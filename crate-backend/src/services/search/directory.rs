@@ -1,11 +1,11 @@
-use std::{
-    io::{Error as IoError, Read, Result as IoResult, Seek, SeekFrom, Write},
-    ops::Range,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::io::{Error as IoError, Read, Result as IoResult, Seek, SeekFrom, Write};
+use std::ops::Range;
+use std::os::unix::fs::FileExt;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use dashmap::DashMap;
+use once_cell::sync::OnceCell;
 use opendal::{ErrorKind, Operator};
 use tantivy::{
     directory::{
@@ -67,6 +67,7 @@ struct ObjectFile {
     len: usize,
     cache_path: PathBuf,
     fully_cached: bool,
+    handle: OnceCell<std::fs::File>,
 }
 
 struct ObjectFileWrite {
@@ -130,6 +131,13 @@ impl Directory for ObjectDirectory {
         let cache_file = self.cache_path.join(path);
         let metadata = self.metadata(path)?;
 
+        let handle = OnceCell::new();
+        if cache_file.exists() {
+            if let Ok(f) = std::fs::File::open(&cache_file) {
+                let _ = handle.set(f);
+            }
+        }
+
         Ok(Arc::new(ObjectFile {
             rt: self.rt.clone(),
             blobs: self.blobs.clone(),
@@ -137,6 +145,7 @@ impl Directory for ObjectDirectory {
             len: metadata.len,
             cache_path: cache_file.clone(),
             fully_cached: cache_file.exists(),
+            handle,
         }))
     }
 
@@ -309,11 +318,10 @@ impl Directory for ObjectDirectory {
 impl FileHandle for ObjectFile {
     fn read_bytes(&self, range: Range<usize>) -> IoResult<OwnedBytes> {
         // if the file is already fully cached, read directly from disk
-        if self.fully_cached {
-            let mut file = std::fs::File::open(&self.cache_path)?;
-            file.seek(SeekFrom::Start(range.start as u64))?;
+        if self.fully_cached || self.cache_path.exists() {
+            let mut file = self.handle.get_or_try_init(|| std::fs::File::open(&self.cache_path))?;
             let mut buf = vec![0u8; range.end - range.start];
-            file.read_exact(&mut buf)?;
+            file.read_exact_at(&mut buf, range.start as u64)?;
             return Ok(OwnedBytes::new(buf));
         }
 
