@@ -14,7 +14,7 @@ use rand::RngCore;
 use rust_embed::RustEmbed;
 use serde::Serialize;
 
-use crate::Result;
+use crate::{Error, Result};
 
 #[derive(RustEmbed)]
 #[folder = "$RUST_EMBED_FRONTEND_PATH"]

@@ -166,6 +166,13 @@
         baseInternalDeps = [ "crate-common" "crate-hakari" "crate-macros" ];
         baseInternalDepsCrates = [ "lamprey-common" "lamprey-hakari" "lamprey-macros" ];
 
+        # this filter could probably be made stricter
+        includeFilter = path: type:
+          (builtins.match ".*\\.sql" path != null) ||
+          (builtins.match ".*/\\.sqlx(/.*)?" path != null) ||
+          (builtins.match ".*\\.html" path != null) ||
+          (builtins.match ".*/docs(/.*)?" path != null);
+
         filterSrcFor = dirs: pkgs.lib.cleanSourceWith {
           src = pkgs.lib.fileset.toSource {
             root = ./.;
@@ -181,7 +188,9 @@
               ++ (map (dir: ./. + "/${dir}") dirs)
             );
           };
-          filter = craneLib.filterCargoSources;
+
+          filter = path: type:
+            (includeFilter path type) || (craneLib.filterCargoSources path type);
         };
 
         src = ./.;
