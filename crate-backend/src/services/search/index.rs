@@ -17,7 +17,7 @@ use tracing::error;
 use crate::{
     services::search::{
         directory::ObjectDirectory,
-        schema::{content::ContentSchema, IndexDefinition},
+        schema::{unified::UnifiedSchema, IndexDefinition},
         tokenizer::DynamicTokenizer,
     },
     ServerStateInner,
@@ -94,7 +94,7 @@ impl IndexManager {
 
 /// Helper to create a delete term for channel_id
 pub fn delete_term_for_channel(channel_id: ChannelId) -> DeleteTerm {
-    let schema = ContentSchema::default();
+    let schema = UnifiedSchema::default();
     DeleteTerm(Term::from_field_text(
         schema.channel_id,
         &channel_id.to_string(),
@@ -103,7 +103,7 @@ pub fn delete_term_for_channel(channel_id: ChannelId) -> DeleteTerm {
 
 /// Helper to create a delete term for room_id
 pub fn delete_term_for_room(room_id: RoomId) -> DeleteTerm {
-    let schema = ContentSchema::default();
+    let schema = UnifiedSchema::default();
     DeleteTerm(Term::from_field_text(schema.room_id, &room_id.to_string()))
 }
 

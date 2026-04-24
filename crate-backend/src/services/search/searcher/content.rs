@@ -14,15 +14,15 @@ use tantivy::{
 };
 use tracing::warn;
 
-use crate::services::search::schema::content::ContentSchema;
+use crate::services::search::schema::unified::UnifiedSchema;
 
 pub struct ContentSearcher {
     reader: IndexReader,
-    schema: ContentSchema,
+    schema: UnifiedSchema,
 }
 
 impl ContentSearcher {
-    pub fn new(reader: IndexReader, schema: ContentSchema) -> Self {
+    pub fn new(reader: IndexReader, schema: UnifiedSchema) -> Self {
         Self { reader, schema }
     }
 }

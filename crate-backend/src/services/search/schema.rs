@@ -18,18 +18,13 @@ pub trait IndexDefinition {
     fn name(&self) -> String;
 }
 
-pub mod abuse_monitoring;
-pub mod content;
-pub mod document_history;
-pub mod room_analytics;
+pub mod unified;
 
-pub use content::ContentIndex;
-
-use content::ContentSchema as LampreySchema;
+pub use unified::UnifiedSchema;
 
 /// create a tantivy document from a message
 pub fn tantivy_document_from_message(
-    s: &LampreySchema,
+    s: &UnifiedSchema,
     message: Message,
     room_id: Option<RoomId>,
     parent_channel_id: Option<ChannelId>,
@@ -217,15 +212,15 @@ pub fn tantivy_document_from_message(
     doc
 }
 
-pub fn _tantivy_document_from_user(_user: User) -> TantivyDocument {
+pub fn _tantivy_document_from_user(s: &UnifiedSchema, _user: User) -> TantivyDocument {
     todo!()
 }
 
-pub fn _tantivy_document_from_room(_room: Room) -> TantivyDocument {
+pub fn _tantivy_document_from_room(s: &UnifiedSchema, _room: Room) -> TantivyDocument {
     todo!()
 }
 
-pub fn tantivy_document_from_channel(s: &LampreySchema, channel: Channel) -> TantivyDocument {
+pub fn tantivy_document_from_channel(s: &UnifiedSchema, channel: Channel) -> TantivyDocument {
     let mut doc = TantivyDocument::new();
     doc.add_text(s.id, channel.id.to_string());
     doc.add_text(s.doctype, "Channel");
@@ -311,7 +306,7 @@ pub fn tantivy_document_from_channel(s: &LampreySchema, channel: Channel) -> Tan
     doc
 }
 
-pub fn tantivy_document_from_media(s: &LampreySchema, media: Media) -> TantivyDocument {
+pub fn tantivy_document_from_media(s: &UnifiedSchema, media: Media) -> TantivyDocument {
     let mut doc = TantivyDocument::new();
 
     doc.add_text(s.id, media.id.to_string());

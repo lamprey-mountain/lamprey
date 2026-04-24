@@ -13,7 +13,7 @@ use crate::{
     services::search::{
         index::{AddDocument, CommitIndex, DeleteTerm, IndexActorRef, UpdateDocument},
         schema::{
-            content::ContentSchema, tantivy_document_from_channel, tantivy_document_from_media,
+            unified::UnifiedSchema, tantivy_document_from_channel, tantivy_document_from_media,
             tantivy_document_from_message,
         },
     },
@@ -24,17 +24,26 @@ use crate::{
 pub struct ContentIngestionManager {
     s: Arc<ServerStateInner>,
     index_writer: IndexActorRef,
-    schema: ContentSchema,
+    schema: UnifiedSchema,
     active_channels: Arc<DashSet<ChannelId>>,
     update_throttle: Cache<String, ()>,
 }
+
+// /// importer for the content index
+// pub struct ContentIngestionManager2 {
+//     s: Arc<ServerStateInner>,
+//     index_writer: IndexActorRef,
+//     schema: ContentSchema,
+//     active_channels: Arc<DashSet<ChannelId>>,
+//     update_throttle: Cache<String, ()>,
+// }
 
 impl ContentIngestionManager {
     pub async fn start(s: Arc<ServerStateInner>, index_writer: IndexActorRef) -> Result<()> {
         let manager = Arc::new(Self {
             s: s.clone(),
             index_writer,
-            schema: ContentSchema::default(),
+            schema: UnifiedSchema::default(),
             active_channels: Arc::new(DashSet::new()),
             update_throttle: Cache::builder()
                 .time_to_live(Duration::from_secs(5))
@@ -217,11 +226,9 @@ impl ContentIngestionManager {
                     channel_id,
                     None,
                     PaginationQuery {
-                        from: last_id
-                            .map(|id| id.into())
-                            .or_else(|| Some(Uuid::nil().into())),
+                        from: last_id.map(|id| id.into()),
                         to: None,
-                        dir: Some(PaginationDirection::F),
+                        dir: Some(PaginationDirection::B),
                         limit: Some(500), // TODO: extract this into a const (configurable?)
                     },
                 )
@@ -239,10 +246,15 @@ impl ContentIngestionManager {
             let chan = srv.channels.get(channel_id, None).await?;
 
             for msg in messages.items {
-                // FIXME: live listener handles MessageUpdate before we handle an old message
+                let key = format!("message:{}", msg.id);
+                if self.update_throttle.get(&key).await.is_some() {
+                    continue;
+                }
+
+                let term = Term::from_field_text(self.schema.id, &msg.id.to_string());
                 let doc =
                     tantivy_document_from_message(&self.schema, msg, chan.room_id, chan.parent_id);
-                let _ = self.index_writer.tell(AddDocument(doc)).await;
+                let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
             }
 
             data.search_reindex_queue_upsert("channel", *channel_id, Some(*last_processed_id))
@@ -265,9 +277,18 @@ impl ContentIngestionManager {
     }
 
     async fn index_message(&self, message: common::v1::types::Message, is_update: bool) {
+        if is_update {
+            let key = format!("message:{}", message.id);
+            if self.update_throttle.get(&key).await.is_some() {
+                return;
+            }
+            self.update_throttle.insert(key, ()).await;
+        }
+
         let srv = self.s.services();
         // TODO: error handling instead of unwrap
         if let Ok(chan) = srv.channels.get(message.channel_id, None).await {
+            let term = Term::from_field_text(self.schema.id, &message.id.to_string());
             let doc = tantivy_document_from_message(
                 &self.schema,
                 message.clone(),
@@ -275,12 +296,7 @@ impl ContentIngestionManager {
                 chan.parent_id,
             );
 
-            if is_update {
-                let term = Term::from_field_text(self.schema.id, &message.id.to_string());
-                let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
-            } else {
-                let _ = self.index_writer.tell(AddDocument(doc)).await;
-            }
+            let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
         }
     }
 
@@ -294,12 +310,8 @@ impl ContentIngestionManager {
         }
 
         let doc = tantivy_document_from_channel(&self.schema, channel.clone());
-        if is_update {
-            let term = Term::from_field_text(self.schema.id, &channel.id.to_string());
-            let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
-        } else {
-            let _ = self.index_writer.tell(AddDocument(doc)).await;
-        }
+        let term = Term::from_field_text(self.schema.id, &channel.id.to_string());
+        let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
     }
 
     async fn index_media(&self, media: common::v2::types::media::Media, is_update: bool) {
@@ -312,11 +324,7 @@ impl ContentIngestionManager {
         }
 
         let doc = tantivy_document_from_media(&self.schema, media.clone());
-        if is_update {
-            let term = Term::from_field_text(self.schema.id, &media.id.to_string());
-            let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
-        } else {
-            let _ = self.index_writer.tell(AddDocument(doc)).await;
-        }
+        let term = Term::from_field_text(self.schema.id, &media.id.to_string());
+        let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
     }
 }

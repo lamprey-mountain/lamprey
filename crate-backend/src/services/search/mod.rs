@@ -13,8 +13,7 @@ use tracing::trace;
 
 use crate::services::search::import::ContentIngestionManager;
 use crate::services::search::index::IndexManager;
-use crate::services::search::schema::content::ContentSchema;
-use crate::services::search::schema::ContentIndex;
+use crate::services::search::schema::unified::{UnifiedIndex, UnifiedSchema};
 use crate::services::search::searcher::content::{ContentSearcher, SearchChannels, SearchMessages};
 use crate::Error;
 use crate::{error::Result, ServerStateInner};
@@ -59,14 +58,14 @@ impl ServiceSearch {
         self.content_searcher
             .get_or_try_init(|| async {
                 // open or create the index
-                let (writer, reader) = self.index_manager.open(ContentIndex::default()).await?;
+                let (writer, reader) = self.index_manager.open(UnifiedIndex::default()).await?;
 
                 // begin (re)indexing channels
                 ContentIngestionManager::start(server_state, writer).await?;
 
                 Ok(Arc::new(ContentSearcher::new(
                     reader,
-                    ContentSchema::default(),
+                    UnifiedSchema::default(),
                 )))
             })
             .await
