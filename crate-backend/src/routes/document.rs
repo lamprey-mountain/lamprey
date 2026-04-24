@@ -6,7 +6,6 @@ use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
-use common::v1::types::document::serialized::Serdoc;
 use common::v1::types::document::{DocumentBranchState, DocumentRevisionId, HistoryPagination};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{MessageSync, Permission};
@@ -859,9 +858,7 @@ async fn document_content_put(
         .set_content(
             (req.channel_id, req.branch_id),
             auth.user.id,
-            Serdoc {
-                root: req.content.root,
-            },
+            req.content.components,
         )
         .await?;
 

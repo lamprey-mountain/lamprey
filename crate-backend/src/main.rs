@@ -98,8 +98,6 @@ mod frontend;
         common::v1::types::document::Wiki,
         common::v1::types::document::WikiPatch,
         common::v1::types::document::serialized::Serdoc,
-        common::v1::types::document::serialized::SerdocRoot,
-        common::v1::types::document::serialized::SerdocBlock,
         // ack types
         common::v1::types::ack::AckBulk,
         common::v1::types::ack::AckBulkItem,

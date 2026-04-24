@@ -8,30 +8,12 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::v1::types::components::ComponentCanonical;
+
 /// serialized document
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Serdoc {
-    pub root: SerdocRoot,
-}
-
-/// serialized document root element
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct SerdocRoot {
-    pub blocks: Vec<SerdocBlock>,
-}
-
-// TODO: serde(tag = type)
-/// serialized document block element
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum SerdocBlock {
-    Markdown {
-        /// the markdown content
-        content: String,
-    },
+    pub components: Vec<ComponentCanonical>,
 }

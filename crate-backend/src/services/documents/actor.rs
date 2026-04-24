@@ -4,7 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use common::v1::types::document::serialized::Serdoc;
+use common::v1::types::{components::{Component, ComponentCanonical, ComponentCreate, ComponentType, IdAllocator}, document::serialized::Serdoc};
 use kameo::{
     prelude::{Context, Message},
     Actor,
@@ -107,7 +107,7 @@ pub struct SerdocGet;
 /// replace the document content from a Serdoc
 pub struct SerdocPut {
     pub author_id: UserId,
-    pub serdoc: Serdoc,
+    pub components: Vec<ComponentCreate>,
 }
 
 /// get document state vector
@@ -420,25 +420,24 @@ impl Message<SerdocPut> for DocumentActor {
         // calculate stats
         let old_serdoc = serdoc::doc_to_serdoc(&self.doc);
         let stat_removed = old_serdoc
-            .root
-            .blocks
+            .components
             .iter()
-            .map(|b| match b {
-                common::v1::types::document::serialized::SerdocBlock::Markdown { content } => {
+            .map(|c| match &c.ty {
+                ComponentType::Text { content } => {
                     content.chars().count()
                 }
+                _ => 0,
             })
             .sum::<usize>() as u32;
 
         let stat_added = msg
-            .serdoc
-            .root
-            .blocks
+            .components
             .iter()
-            .map(|b| match b {
-                common::v1::types::document::serialized::SerdocBlock::Markdown { content } => {
+            .map(|c| match &c.ty {
+                ComponentType::Text { content } => {
                     content.chars().count()
                 }
+                _ => 0,
             })
             .sum::<usize>() as u32;
 
@@ -450,7 +449,25 @@ impl Message<SerdocPut> for DocumentActor {
             *u = event.update.to_vec();
         });
 
-        serdoc::serdoc_apply_to_doc(&self.doc, &msg.serdoc);
+        let mut allocator = IdAllocator::new();
+        let canonical_components: Vec<ComponentCanonical> = msg
+            .components
+            .into_iter()
+            .map(|c| {
+                let id = allocator.allocate(c.id);
+                match c.ty {
+                    ComponentType::Text { content } => {
+                        Component {
+                            id,
+                            ty: ComponentType::Text { content },
+                        }
+                    }
+                    _ => unimplemented!("only text components are supported for now"),
+                }
+            })
+            .collect();
+
+        serdoc::serdoc_apply_to_doc(&self.doc, &canonical_components);
 
         drop(_sub_update);
 

@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use common::v1::types::components::ComponentCreate;
 use common::v1::types::document::serialized::Serdoc;
 use common::v1::types::document::{Changeset, DocumentTag, HistoryParams};
 use common::v1::types::error::{ApiError, ErrorCode};
@@ -278,13 +279,13 @@ impl ServiceDocuments {
         &self,
         context_id: EditContextId,
         author_id: UserId,
-        content: Serdoc,
+        components: Vec<ComponentCreate>,
     ) -> Result<()> {
         let actor_ref = self.load(context_id, Some(author_id)).await?;
         actor_ref
             .ask(SerdocPut {
                 author_id,
-                serdoc: content,
+                components,
             })
             .send()
             .await

@@ -8,10 +8,7 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::{
-    ids::{DocumentBranchId, DocumentTagId},
-    misc::Time,
-    util::Diff,
-    ChannelId, RoomMember, ThreadMember, User, UserId,
+    ChannelId, RoomMember, ThreadMember, User, UserId, components::ComponentCreate, ids::{DocumentBranchId, DocumentTagId}, misc::Time, util::Diff
 };
 
 #[cfg(feature = "serde")]
@@ -541,7 +538,7 @@ pub struct DocumentPublished {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct SerdocPut {
-    pub root: serialized::SerdocRoot,
+    pub components: Vec<ComponentCreate>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
