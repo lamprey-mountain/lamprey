@@ -162,6 +162,8 @@ pub struct UpdateDocument {
     pub doc: TantivyDocument,
 }
 
+pub struct UpdateDocuments(pub Vec<(Term, TantivyDocument)>);
+
 impl Message<UpdateDocument> for IndexActor {
     type Reply = ();
     async fn handle(&mut self, msg: UpdateDocument, _ctx: &mut Context<Self, Self::Reply>) {
@@ -177,6 +179,28 @@ impl Message<UpdateDocument> for IndexActor {
         .unwrap();
 
         self.uncommitted_count += 1;
+        self.check_auto_commit().await;
+    }
+}
+
+impl Message<UpdateDocuments> for IndexActor {
+    type Reply = ();
+    async fn handle(&mut self, msg: UpdateDocuments, _ctx: &mut Context<Self, Self::Reply>) {
+        let writer = self.writer.clone();
+        let count = msg.0.len();
+        tokio::task::spawn_blocking(move || {
+            let writer = writer.lock().unwrap();
+            for (term, doc) in msg.0 {
+                writer.delete_term(term);
+                if let Err(e) = writer.add_document(doc) {
+                    tracing::error!("failed to add document in bulk: {}", e);
+                }
+            }
+        })
+        .await
+        .unwrap();
+
+        self.uncommitted_count += count;
         self.check_auto_commit().await;
     }
 }

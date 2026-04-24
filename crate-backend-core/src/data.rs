@@ -469,6 +469,13 @@ pub trait DataSearchQueue {
     ) -> Result<Option<Uuid>>;
     async fn search_reindex_queue_upsert_room(&self, room_id: RoomId) -> Result<()>;
     async fn search_reindex_queue_upsert_all(&self) -> Result<()>;
+
+    async fn search_ingestion_dlq_insert(
+        &self,
+        entity_id: Uuid,
+        entity_type: &str,
+        error_message: &str,
+    ) -> Result<()>;
 }
 
 #[async_trait]

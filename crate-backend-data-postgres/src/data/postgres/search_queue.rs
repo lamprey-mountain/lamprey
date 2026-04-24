@@ -84,4 +84,22 @@ impl DataSearchQueue for Postgres {
         .await?;
         Ok(())
     }
+
+    async fn search_ingestion_dlq_insert(
+        &self,
+        entity_id: Uuid,
+        entity_type: &str,
+        error_message: &str,
+    ) -> Result<()> {
+        query!(
+            "INSERT INTO search_ingestion_dlq (id, entity_id, entity_type, error_message) VALUES ($1, $2, $3, $4)",
+            Uuid::now_v7(),
+            entity_id,
+            entity_type,
+            error_message
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
 }

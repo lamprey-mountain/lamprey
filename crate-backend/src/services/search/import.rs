@@ -11,10 +11,12 @@ use uuid::Uuid;
 
 use crate::{
     services::search::{
-        index::{AddDocument, CommitIndex, DeleteTerm, IndexActorRef, UpdateDocument},
+        index::{
+            AddDocument, CommitIndex, DeleteTerm, IndexActorRef, UpdateDocument, UpdateDocuments,
+        },
         schema::{
-            unified::UnifiedSchema, tantivy_document_from_channel, tantivy_document_from_media,
-            tantivy_document_from_message,
+            tantivy_document_from_channel, tantivy_document_from_media,
+            tantivy_document_from_message, unified::UnifiedSchema,
         },
     },
     Result, ServerStateInner,
@@ -243,8 +245,18 @@ impl ContentIngestionManager {
             }
 
             let last_processed_id = messages.items.last().unwrap().id;
-            let chan = srv.channels.get(channel_id, None).await?;
+            let chan = match srv.channels.get(channel_id, None).await {
+                Ok(c) => c,
+                Err(e) => {
+                    tracing::error!("Could not get channel for backfill: {}", e);
+                    let _ = data
+                        .search_ingestion_dlq_insert(*channel_id, "channel", &e.to_string())
+                        .await;
+                    break;
+                }
+            };
 
+            let mut batch = Vec::with_capacity(messages.items.len());
             for msg in messages.items {
                 let key = format!("message:{}", msg.id);
                 if self.update_throttle.get(&key).await.is_some() {
@@ -254,7 +266,11 @@ impl ContentIngestionManager {
                 let term = Term::from_field_text(self.schema.id, &msg.id.to_string());
                 let doc =
                     tantivy_document_from_message(&self.schema, msg, chan.room_id, chan.parent_id);
-                let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
+                batch.push((term, doc));
+            }
+
+            if !batch.is_empty() {
+                let _ = self.index_writer.tell(UpdateDocuments(batch)).await;
             }
 
             data.search_reindex_queue_upsert("channel", *channel_id, Some(*last_processed_id))

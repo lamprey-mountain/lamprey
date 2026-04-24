@@ -16,5 +16,3 @@ pub const MAX_UNCOMMITTED: usize = 1000;
 
 // TODO: finetune these numbers. maybe dynamically change them based on what's happening, eg. raise limits during bulk imports?
 // TODO: make these numbers adjustable via config
-
-
