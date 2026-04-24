@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use common::v1::types::{MessageCreate, MessageId, UserId};
+use common::v1::types::util::Time;
+use common::v1::types::{MessageCreate, MessageId, SearchDlqId, UserId};
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AdminPurgeCache {
@@ -116,4 +118,25 @@ pub struct SearchIndexStats {
 
     /// The last message ID that was indexed, if any
     pub last_message_id: Option<MessageId>,
+}
+
+/// Overall search index statistics
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SearchStats {
+    /// Total number of documents in the index
+    pub document_count: u64,
+    /// Size of the index in bytes
+    pub index_size_bytes: u64,
+    /// Number of entries in the backfill queue
+    pub backfill_queue_size: u64,
+}
+
+/// A dead letter queue entry for search ingestion
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct DlqEntry {
+    pub id: Uuid,
+    pub entity_id: Uuid,
+    pub entity_type: String,
+    pub error_message: String,
+    pub created_at: Time,
 }

@@ -289,13 +289,14 @@ genid!(AutomodRule, "00000000-0000-0000-0000-0automodrule");
 genid!(Webhook, "00000000-0000-0000-0000-00000webhook");
 genid!(CalendarEvent, "00000000-0000-0000-0000-calendarevent");
 genid!(Harvest);
+genid!(SearchDlq); // NOTE: this should probably not be in common as it's a backend specific type
 genid!(DocumentBranch);
 genid!(DocumentTag);
 genid!(Connection);
 genid!(PermissionOverwrite);
 genid!(Script, "00000000-0000-0000-0000-000000000script");
 genid!(ScriptVer, "00000000-0000-0000-0ver-00000script");
-genid!(Run, "00000000-0000-0000-0000-000000000000rus");
+genid!(Run, "00000000-0000-0000-0000-000000000000run");
 
 #[cfg(feature = "feat_interaction")]
 genid!(Interaction, "00000000-0000-0000-0000-00interaction");

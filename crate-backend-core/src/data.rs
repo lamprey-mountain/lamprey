@@ -27,7 +27,7 @@ use common::v1::types::{
     MessageVerId, NotificationId, PaginationQuery, PaginationResponse, Permission,
     PermissionOverwriteType, Relationship, RelationshipPatch, RelationshipWithUserId, RoleId,
     RoomBan, RoomId, RoomMember, RoomMemberOrigin, RoomMemberPatch, RoomMemberPut,
-    RoomMemberSearchAdvanced, RoomMemberSearchResponse, TagId, ThreadMember, ThreadMemberPut,
+    RoomMemberSearchAdvanced, RoomMemberSearchResponse, SearchDlqId, TagId, ThreadMember, ThreadMemberPut,
     UserId, WebhookId,
 };
 use std::collections::HashMap;
@@ -476,6 +476,11 @@ pub trait DataSearchQueue {
         entity_type: &str,
         error_message: &str,
     ) -> Result<()>;
+    async fn search_ingestion_dlq_list(
+        &self,
+        pagination: PaginationQuery<SearchDlqId>,
+    ) -> Result<PaginationResponse<crate::types::admin::DlqEntry>>;
+    async fn search_ingestion_dlq_delete(&self, id: SearchDlqId) -> Result<()>;
 }
 
 #[async_trait]

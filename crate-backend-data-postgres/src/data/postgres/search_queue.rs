@@ -1,6 +1,9 @@
 use async_trait::async_trait;
+use lamprey_backend_core::types::admin::DlqEntry;
 use sqlx::query;
 use uuid::Uuid;
+
+use common::v1::types::{PaginationQuery, PaginationResponse, SearchDlqId};
 
 use crate::{data::DataSearchQueue, error::Result, types::RoomId};
 
@@ -97,6 +100,47 @@ impl DataSearchQueue for Postgres {
             entity_id,
             entity_type,
             error_message
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn search_ingestion_dlq_list(
+        &self,
+        pagination: PaginationQuery<SearchDlqId>,
+    ) -> Result<PaginationResponse<DlqEntry>> {
+        let items = query!(
+            r#"SELECT id, entity_id, entity_type, error_message, created_at FROM search_ingestion_dlq WHERE id > $1 ORDER BY id ASC LIMIT $2"#,
+            *pagination.from.unwrap_or_default(),
+            pagination.limit.unwrap_or(100) as i64
+        )
+        .fetch_all(&self.pool)
+        .await?
+        .into_iter()
+        .map(|r| DlqEntry {
+            id: r.id.into(),
+            entity_id: r.entity_id,
+            entity_type: r.entity_type,
+            error_message: r.error_message,
+            created_at: r.created_at.into(),
+        })
+        .collect::<Vec<_>>();
+
+        let has_more = items.len() as u16 >= pagination.limit.unwrap_or(100);
+
+        Ok(PaginationResponse {
+            items,
+            has_more,
+            total: 0, // TODO: implement count if needed
+            cursor: None,
+        })
+    }
+
+    async fn search_ingestion_dlq_delete(&self, id: SearchDlqId) -> Result<()> {
+        query!(
+            "DELETE FROM search_ingestion_dlq WHERE id = $1",
+            *id
         )
         .execute(&self.pool)
         .await?;

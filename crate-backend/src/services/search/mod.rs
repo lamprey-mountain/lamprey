@@ -352,4 +352,23 @@ impl ServiceSearch {
             last_message_id,
         })
     }
+
+    pub async fn get_overall_stats(&self) -> Result<lamprey_backend_core::types::admin::SearchStats> {
+        let searcher = self.get_content_searcher().await?;
+        let data = self.state.data();
+
+        let (document_count, index_size_bytes) =
+            tokio::task::spawn_blocking(move || searcher.get_index_stats())
+                .await
+                .map_err(|e| crate::Error::Internal(format!("Search task failed: {}", e)))?
+                .map_err(|e| crate::Error::Internal(format!("Failed to get index stats: {}", e)))?;
+
+        let backfill_queue_size = data.search_reindex_queue_list("channel", 1000).await?.len() as u64;
+
+        Ok(lamprey_backend_core::types::admin::SearchStats {
+            document_count,
+            index_size_bytes,
+            backfill_queue_size,
+        })
+    }
 }

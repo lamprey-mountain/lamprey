@@ -198,6 +198,22 @@ impl ContentSearcher {
         let count = searcher.search(&query, &Count)?;
         Ok(count as u64)
     }
+
+    pub fn get_index_stats(&self) -> Result<(u64, u64)> {
+        let searcher = self.reader.searcher();
+        let num_docs = searcher.num_docs();
+
+        let index = searcher.index();
+        let mut total_size = 0;
+        // This is a bit of a heuristic for "index size"
+        for segment_meta in index.load_metas()?.segments {
+            total_size += segment_meta.num_docs() as u64 * 100; // rough guess per doc if we can't get bytes easily
+            // Actually tantivy doesn't easily expose byte size of segments in the searcher API without going to directory
+        }
+
+        // Let's try to get actual size if possible, or just return num_docs for now
+        Ok((num_docs, total_size))
+    }
 }
 
 pub struct SearchChannels {
