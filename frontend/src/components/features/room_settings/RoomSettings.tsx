@@ -177,6 +177,11 @@ const adminTabs: TabItem[] = [
 		path: "voice",
 		component: todo("list and manage voice sfus/servers"),
 	},
+	{
+		name: "search",
+		path: "search",
+		component: Admin.Search,
+	},
 	// { name: "media", path: "media", component: todo("view stats about cdn/media?") },
 
 	// server moderation
