@@ -306,22 +306,17 @@ pub fn tantivy_document_from_channel(s: &UnifiedSchema, channel: Channel) -> Tan
     doc
 }
 
-pub fn tantivy_document_from_media(s: &UnifiedSchema, media: Media) -> TantivyDocument {
+pub fn tantivy_document_from_media(s: &UnifiedSchema, media: Media) -> Option<TantivyDocument> {
+    let user_id = media.user_id?;
+
     let mut doc = TantivyDocument::new();
 
     doc.add_text(s.id, media.id.to_string());
     doc.add_text(s.doctype, "Media");
 
-    let created_at: Time = media.id.try_into().unwrap();
+    let created_at: Time = media.id.try_into().ok()?;
     doc.add_date(s.created_at, tantivy::DateTime::from_utc(*created_at));
-    doc.add_text(
-        s.author_id,
-        media
-            .user_id
-            .as_ref()
-            .expect("the server should always have user_id")
-            .to_string(),
-    );
+    doc.add_text(s.author_id, user_id.to_string());
 
     if let Some(r) = media.room_id {
         doc.add_text(s.room_id, r.to_string());
@@ -358,5 +353,5 @@ pub fn tantivy_document_from_media(s: &UnifiedSchema, media: Media) -> TantivyDo
     doc.add_object(s.metadata_fast, meta_fast);
     doc.add_object(s.metadata_text, meta_text);
 
-    doc
+    Some(doc)
 }

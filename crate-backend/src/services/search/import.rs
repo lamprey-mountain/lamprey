@@ -6,7 +6,7 @@ use moka::future::Cache;
 use tantivy::Term;
 use tokio::task::JoinSet;
 use tokio_stream::StreamExt;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 use crate::{
@@ -347,8 +347,11 @@ impl ContentIngestionManager {
             self.update_throttle.insert(key, ()).await;
         }
 
-        let doc = tantivy_document_from_media(&self.schema, media.clone());
-        let term = Term::from_field_text(self.schema.id, &media.id.to_string());
-        let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
+        if let Some(doc) = tantivy_document_from_media(&self.schema, media.clone()) {
+            let term = Term::from_field_text(self.schema.id, &media.id.to_string());
+            let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
+        } else {
+            warn!(media_id = ?media.id, "Skipping media without user_id");
+        }
     }
 }
