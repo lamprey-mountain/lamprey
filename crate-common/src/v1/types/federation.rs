@@ -11,7 +11,11 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{misc::Time, MessageSync, Session, User, UserId};
+use crate::v1::types::{
+    error::{ApiError, ErrorCode},
+    misc::Time,
+    MessageSync, Session, User, UserId,
+};
 
 /// A hostname, used to identify a server
 // NOTE: do i really want to use this as an id?
@@ -192,5 +196,18 @@ impl Deref for Hostname {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl Hostname {
+    pub fn new(s: String) -> Result<Self, ApiError> {
+        if crate::util::is_valid_hostname(&s) {
+            Ok(Self(s))
+        } else {
+            Err(ApiError::with_message(
+                ErrorCode::InvalidData,
+                format!("invalid hostname: {}", s),
+            ))
+        }
     }
 }
