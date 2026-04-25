@@ -8,6 +8,7 @@ import {
 	createResource,
 	type Resource,
 } from "solid-js";
+import type { ApiDB } from "@/lib/sync/db";
 import { logger } from "@/utils/logger";
 import type { RootStore } from "./Store";
 
@@ -22,13 +23,10 @@ export abstract class BaseService<T> {
 	protected store: RootStore;
 	cache = new ReactiveMap<string, T>();
 	protected inflight = new Map<string, Promise<T>>();
-	protected getDb?: () => IDBPDatabase<unknown> | undefined;
+	protected getDb?: () => IDBPDatabase<ApiDB> | undefined;
 	protected abstract cacheName: string;
 
-	constructor(
-		store: RootStore,
-		getDb?: () => IDBPDatabase<unknown> | undefined,
-	) {
+	constructor(store: RootStore, getDb?: () => IDBPDatabase<ApiDB> | undefined) {
 		this.store = store;
 		this.client = store.client;
 		this.getDb = getDb;
@@ -37,7 +35,7 @@ export abstract class BaseService<T> {
 	/**
 	 * Get the current database instance (may be undefined during initialization)
 	 */
-	protected get db(): IDBPDatabase<unknown> | undefined {
+	protected get db(): IDBPDatabase<ApiDB> | undefined {
 		return this.getDb?.();
 	}
 

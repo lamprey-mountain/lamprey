@@ -20099,24 +20099,26 @@ export interface components {
 		};
 		/** @description a delta applied to a live flume */
 		FlumeDelta: {
+			/** @description initial component tree (only present in the first delta for a new flume) */
+			init?: components["schemas"]["FlumeComponentCreate"][];
 			/** @description append components to an existing component */
 			append: components["schemas"]["FlumeAppend"][];
 			/** @description replace a component with one or more components */
 			replace: components["schemas"]["FlumeReplace"][];
 			/** @description delete some components */
-			delete: components["schemas"]["Id"][];
+			delete: number[];
 		};
 		/** @description append components to an existing component */
 		FlumeAppend: {
 			/** @description target component to append to */
-			target: components["schemas"]["Id"];
+			target: number;
 			/** @description components to append */
 			components: components["schemas"]["FlumeComponentCreate"][];
 		};
 		/** @description replace a component with one or more components */
 		FlumeReplace: {
 			/** @description target component to replace */
-			target: components["schemas"]["Id"];
+			target: number;
 			/** @description replacement components */
 			components: components["schemas"]["FlumeComponentCreate"][];
 		};
@@ -20124,12 +20126,13 @@ export interface components {
 		FlumeComponentCreate:
 			| string
 			| {
+					id?: number;
 					type: "Button";
 					label: string;
 					style: "Primary" | "Secondary" | "Danger";
 					custom_id: string;
 			  }
-			| { type: "LinkButton"; label: string; url: string }
+			| { type: "LinkButton"; label: string; url: string | null }
 			| {
 					type: "Container";
 					components: components["schemas"]["FlumeComponentCreate"][];

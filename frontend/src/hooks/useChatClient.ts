@@ -91,11 +91,7 @@ export function useChatClient(config: Config) {
 		}
 	})();
 
-	const store = new RootStore(
-		client,
-		events,
-		() => db() as IDBPDatabase<unknown> | undefined,
-	);
+	const store = new RootStore(client, events, db);
 
 	const cs = from(client.state);
 	createEffect(() => {

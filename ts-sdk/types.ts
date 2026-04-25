@@ -279,19 +279,19 @@ export type FlumeCreate = {
 };
 
 export type FlumeDelta = {
-	init?: LampreyComponent[];
-	append?: FlumeAppend[];
-	replace?: FlumeReplace[];
-	delete?: string[];
+	init?: LampreyComponentCreate[];
+	append: FlumeAppend[];
+	replace: FlumeReplace[];
+	delete: number[];
 };
 
 export type FlumeAppend = {
-	target: string;
+	target: number;
 	components: LampreyComponentCreate[];
 };
 
 export type FlumeReplace = {
-	target: string;
+	target: number;
 	components: LampreyComponentCreate[];
 };
 
@@ -303,7 +303,7 @@ export type LampreyComponentCreate =
 
 export type LampreyComponentCreateType =
 	| { type: "Button"; label: string; style: ButtonStyle; custom_id: string }
-	| { type: "LinkButton"; label: string; url: string }
+	| { type: "LinkButton"; label: string; url: string | null }
 	| {
 			type: "Container";
 			components: LampreyComponentCreate[];
@@ -337,7 +337,7 @@ export type LampreyComponent = {
 
 export type LampreyComponentType =
 	| { type: "Button"; label: string; style: ButtonStyle; custom_id: string }
-	| { type: "LinkButton"; label: string; url: string }
+	| { type: "LinkButton"; label: string; url: string | null }
 	| { type: "Container"; components: LampreyComponent[]; color: string | null }
 	| { type: "Text"; content: string }
 	// | { type: "Reference"; reference_id: string }

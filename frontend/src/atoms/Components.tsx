@@ -106,7 +106,7 @@ const ComponentRenderer = (props: { component: LampreyComponent }) => {
 				{(m) => (
 					<a
 						class="button"
-						href={m().url}
+						href={m().url ?? undefined}
 						target="_blank"
 						rel="noopener noreferrer"
 					>

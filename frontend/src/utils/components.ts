@@ -16,20 +16,24 @@ export function applyDelta(
 
 	// 1. Process init
 	if (delta.init) {
-		result = delta.init;
+		result = delta.init.map((c) =>
+			typeof c === "string"
+				? { id: 0, type: "Text", content: c }
+				: createComponentFromCreate(c),
+		);
 	}
 
-	// 1. Process deletes
+	// 2. Process deletes
 	for (const id of delta.delete) {
 		result = recursiveDelete(result, id);
 	}
 
-	// 2. Process replacements
+	// 3. Process replacements
 	for (const r of delta.replace) {
 		result = recursiveReplace(result, r.target, r.components);
 	}
 
-	// 3. Process appends
+	// 4. Process appends
 	for (const a of delta.append) {
 		result = recursiveAppend(result, a.target, a.components);
 	}
@@ -42,7 +46,7 @@ export function applyDelta(
  */
 export function recursiveDelete(
 	components: LampreyComponent[],
-	targetId: string,
+	targetId: number,
 ): LampreyComponent[] {
 	const result: LampreyComponent[] = [];
 
@@ -73,7 +77,7 @@ export function recursiveDelete(
  */
 export function recursiveReplace(
 	components: LampreyComponent[],
-	targetId: string,
+	targetId: number,
 	replacements: LampreyComponentCreate[],
 ): LampreyComponent[] {
 	const result: LampreyComponent[] = [];
@@ -119,7 +123,7 @@ export function recursiveReplace(
  */
 export function findComponentById(
 	components: LampreyComponent[],
-	targetId: string,
+	targetId: number,
 ): LampreyComponent | null {
 	for (const comp of components) {
 		if (comp.id === targetId) {
@@ -148,31 +152,28 @@ export function appendComponents(
 	parent: LampreyComponent,
 	components: LampreyComponentCreate[],
 ): void {
-	if (parent.type === "Container" || parent.type === "Section") {
-		for (const comp of components) {
-			parent.components.push(createComponentFromCreate(comp));
-		}
-	} else if (parent.type === "Details") {
-		// Append to details (not summary)
-		for (const comp of components) {
-			parent.details.push(createComponentFromCreate(comp));
-		}
-	} else if (parent.type === "Text") {
-		// Text components concatenate content
-		for (const comp of components) {
-			if (comp.type === "Text") {
-				parent.content += comp.content;
+	for (const comp of components) {
+		const parsed: LampreyComponent =
+			typeof comp === "string"
+				? { id: 0, type: "Text", content: comp }
+				: createComponentFromCreate(comp);
+		if (parent.type === "Container" || parent.type === "Section") {
+			parent.components.push(parsed);
+		} else if (parent.type === "Details") {
+			parent.details.push(parsed);
+		} else if (parent.type === "Text") {
+			// Text components concatenate content
+			if (parsed.type === "Text") {
+				parent.content += parsed.content;
+			}
+		} else if (parent.type === "Gallery") {
+			// Media can be appended to Gallery
+			if (parsed.type === "Media") {
+				parent.items.push(...parsed.items);
 			}
 		}
-	} else if (parent.type === "Gallery") {
-		// Media can be appended to Gallery
-		for (const comp of components) {
-			if (comp.type === "Media") {
-				parent.items.push(...(comp.items as any));
-			}
-		}
+		// Other component types don't support appending
 	}
-	// Other component types don't support appending
 }
 
 /**
@@ -181,14 +182,19 @@ export function appendComponents(
 export function createComponentFromCreate(
 	create: LampreyComponentCreate,
 ): LampreyComponent {
-	const base: any = {
-		id: create.id ?? crypto.randomUUID(),
-	};
+	const id: number =
+		typeof create === "string"
+			? 0
+			: (create.id ?? Math.floor(Math.random() * 0xffff));
+
+	if (typeof create === "string") {
+		return { id, type: "Text", content: create };
+	}
 
 	switch (create.type) {
 		case "Button":
 			return {
-				...base,
+				id,
 				type: "Button",
 				label: create.label,
 				style: create.style,
@@ -196,27 +202,27 @@ export function createComponentFromCreate(
 			};
 		case "LinkButton":
 			return {
-				...base,
+				id,
 				type: "LinkButton",
 				label: create.label,
-				url: create.url,
+				url: create.url ?? null,
 			};
 		case "Container":
 			return {
-				...base,
+				id,
 				type: "Container",
 				components: create.components.map(createComponentFromCreate),
 				color: create.color ?? null,
 			};
 		case "Text":
 			return {
-				...base,
+				id,
 				type: "Text",
 				content: create.content,
 			};
 		case "Details":
 			return {
-				...base,
+				id,
 				type: "Details",
 				open: create.open,
 				color: create.color ?? null,
@@ -225,22 +231,30 @@ export function createComponentFromCreate(
 			};
 		case "Section":
 			return {
-				...base,
+				id,
 				type: "Section",
 				color: create.color ?? null,
 				components: create.components.map(createComponentFromCreate),
 			};
 		case "Media":
 			return {
-				...base,
+				id,
 				type: "Media",
-				items: create.items as any,
+				items: create.items.map((item) => ({
+					media: { id: item.media_id } as any,
+					description: item.description,
+					spoiler: item.spoiler,
+				})),
 			};
 		case "Gallery":
 			return {
-				...base,
+				id,
 				type: "Gallery",
-				items: create.items as any,
+				items: create.items.map((item) => ({
+					media: { id: item.media_id } as any,
+					description: item.description,
+					spoiler: item.spoiler,
+				})),
 			};
 		default:
 			// Should never happen with proper typing
@@ -253,20 +267,23 @@ export function createComponentFromCreate(
  */
 export function recursiveAppend(
 	components: LampreyComponent[],
-	targetId: string,
+	targetId: number,
 	appends: LampreyComponentCreate[],
 ): LampreyComponent[] {
 	return components.map((comp): LampreyComponent => {
 		if (comp.id === targetId) {
 			if (comp.type === "Text") {
 				const extraText = appends
-					.filter((a) => a.type === "Text")
-					.map((a) => (a as any).content)
+					.map((a) => {
+						const parsed =
+							typeof a === "string" ? a : a.type === "Text" ? a.content : null;
+						return parsed ?? "";
+					})
 					.join("");
 				return {
 					...comp,
 					content: comp.content + extraText,
-				} as LampreyComponent;
+				};
 			}
 
 			if (comp.type === "Container" || comp.type === "Section") {
@@ -276,14 +293,14 @@ export function recursiveAppend(
 						...comp.components,
 						...appends.map(createComponentFromCreate),
 					],
-				} as LampreyComponent;
+				};
 			}
 
 			if (comp.type === "Details") {
 				return {
 					...comp,
 					details: [...comp.details, ...appends.map(createComponentFromCreate)],
-				} as LampreyComponent;
+				};
 			}
 
 			if (comp.type === "Gallery") {
@@ -291,14 +308,15 @@ export function recursiveAppend(
 					...comp,
 					items: [
 						...comp.items,
-						// TODO: type FlumeDelta from server differently, we have the canonical component
-						...appends.flatMap((a) =>
-							a.type === "Gallery" || a.type === "Media"
-								? (a.items as any)
-								: [],
-						),
+						...appends.flatMap((a) => {
+							const parsed = createComponentFromCreate(a);
+							if (parsed.type === "Media") {
+								return parsed.items;
+							}
+							return [];
+						}),
 					],
-				} as LampreyComponent;
+				};
 			}
 
 			return comp;
@@ -307,7 +325,7 @@ export function recursiveAppend(
 		if (comp.type === "Container" || comp.type === "Section") {
 			const newChildren = recursiveAppend(comp.components, targetId, appends);
 			if (newChildren !== comp.components) {
-				return { ...comp, components: newChildren } as LampreyComponent;
+				return { ...comp, components: newChildren };
 			}
 		} else if (comp.type === "Details") {
 			const newSummary = recursiveAppend(comp.summary, targetId, appends);
@@ -317,7 +335,7 @@ export function recursiveAppend(
 					...comp,
 					summary: newSummary,
 					details: newDetails,
-				} as LampreyComponent;
+				};
 			}
 		}
 
