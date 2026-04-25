@@ -202,7 +202,7 @@ const QuickCreate = (props: { channel: Channel }) => {
 	const n = useNavigate();
 	const channelCtx = useChannel();
 	const uploads = useUploads();
-	const submit = useMessageSubmit(props.channel.id);
+	const submit = useMessageSubmit(() => props.channel.id);
 	const toolbar = useFormattingToolbar();
 	const autocomplete = useAutocomplete();
 

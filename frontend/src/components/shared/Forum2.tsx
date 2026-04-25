@@ -595,7 +595,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	const channels2 = useChannels();
 	const messagesService = useMessages();
 	const [ch, chUpdate] = useChannel();
-	const submit = useMessageSubmit(props.channel.id);
+	const submit = useMessageSubmit(() => props.channel.id);
 	const uploads = useUploads();
 	const currentUser = useCurrentUser();
 	const reply_id = () => ch.reply_id;

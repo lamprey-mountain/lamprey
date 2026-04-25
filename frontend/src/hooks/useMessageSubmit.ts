@@ -1,31 +1,30 @@
 import { useApi, useChannels } from "@/api";
 import { useCtx } from "@/app/context";
-import { useChannel } from "@/contexts/channel";
 
-export function useMessageSubmit(channel_id: string) {
+export function useMessageSubmit(channel_id: string | (() => string)) {
 	const ctx = useCtx();
 	const api2 = useApi();
 	const channels2 = useChannels();
 	const store = useApi();
-	const channelContext = useChannel();
 
 	return async (
 		text: string,
 		bypassSlowmode?: boolean,
 		target_channel_id?: string,
 	) => {
-		if (!channelContext) return false;
-		const [ch, chUpdate] = channelContext;
+		const cid = typeof channel_id === "function" ? channel_id() : channel_id;
+		const dest = target_channel_id ?? cid;
 
-		const dest = target_channel_id ?? channel_id;
+		const channelContext = ctx.channel_contexts.get(cid);
+		const [ch, chUpdate] = channelContext ?? [null, null];
 
 		if (text.startsWith("/")) {
 			await ctx.slashCommands.run(ctx, api2, channels2, dest, text, store);
 			return true;
 		}
 
-		const atts = ch.attachments;
-		const reply_id = ch.reply_id;
+		const atts = ch?.attachments ?? [];
+		const reply_id = ch?.reply_id;
 		if (text.length === 0 && atts.length === 0) return false;
 		if (!atts.every((i) => i.status === "uploaded")) return false;
 
@@ -51,11 +50,11 @@ export function useMessageSubmit(channel_id: string) {
 			const expireAt = new Date(
 				now.getTime() + channel.slowmode_message * 1000,
 			);
-			chUpdate("slowmode_expire_at", expireAt);
+			chUpdate?.("slowmode_expire_at", expireAt);
 		}
 
-		chUpdate("attachments", []);
-		chUpdate("reply_id", undefined);
+		chUpdate?.("attachments", []);
+		chUpdate?.("reply_id", undefined);
 		return true;
 	};
 }

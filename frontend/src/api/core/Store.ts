@@ -43,6 +43,7 @@ import { EmojiService } from "../services/EmojiService";
 import { FlumeService } from "../services/FlumeService";
 import { InboxService } from "../services/InboxService";
 import { InvitesService } from "../services/InvitesService";
+import { MediaService } from "../services/MediaService";
 import { MemberListService } from "../services/MemberListService";
 import { PushService } from "../services/PushService";
 import { ReactionsService } from "../services/ReactionsService";
@@ -79,6 +80,7 @@ export class RootStore {
 	threadMembers: ThreadMembersService;
 	messages: MessagesService;
 	notifications: NotificationService;
+	media: MediaService;
 	memberLists: MemberListService;
 	invites: InvitesService;
 	auth: AuthService;
@@ -162,6 +164,7 @@ export class RootStore {
 
 		this.auditLog = new AuditLogService(this, getDb);
 		this.auth = new AuthService(this, getDb);
+		this.media = new MediaService(this, getDb);
 		this.channels = new ChannelsService(this, getDb);
 		this.dms = new DmsService(this, getDb);
 		this.documents = new DocumentsService(this, getDb);
@@ -435,6 +438,10 @@ export class RootStore {
 			this.documentBranches.upsert(msg.branch);
 		} else if (msg.type === "DocumentBranchDelete") {
 			this.documentBranches.delete(msg.branch_id);
+		} else if (msg.type === "MediaProcessed") {
+			this.media.upsert(msg.media);
+		} else if (msg.type === "MediaUpdate") {
+			this.media.upsert(msg.media);
 		}
 	}
 

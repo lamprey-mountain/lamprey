@@ -48,7 +48,7 @@ export function Input(props: InputProps) {
 	const roomMembers2 = useRoomMembers();
 	const store = useApi();
 	const [ch, chUpdate] = useChannel()!;
-	const submit = useMessageSubmit(props.channel.id);
+	const submit = useMessageSubmit(() => props.channel.id);
 	const reply_id = () => ch.reply_id;
 	const reply = () => messagesService.cache.get(reply_id()!);
 	const uploads = useUploads();
