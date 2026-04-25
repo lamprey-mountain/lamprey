@@ -353,7 +353,9 @@ impl ServiceSearch {
         })
     }
 
-    pub async fn get_overall_stats(&self) -> Result<lamprey_backend_core::types::admin::SearchStats> {
+    pub async fn get_overall_stats(
+        &self,
+    ) -> Result<lamprey_backend_core::types::admin::SearchStats> {
         let searcher = self.get_content_searcher().await?;
         let data = self.state.data();
 
@@ -363,7 +365,8 @@ impl ServiceSearch {
                 .map_err(|e| crate::Error::Internal(format!("Search task failed: {}", e)))?
                 .map_err(|e| crate::Error::Internal(format!("Failed to get index stats: {}", e)))?;
 
-        let backfill_queue_size = data.search_reindex_queue_list("channel", 1000).await?.len() as u64;
+        let backfill_queue_size =
+            data.search_reindex_queue_list("channel", 1000).await?.len() as u64;
 
         Ok(lamprey_backend_core::types::admin::SearchStats {
             document_count,

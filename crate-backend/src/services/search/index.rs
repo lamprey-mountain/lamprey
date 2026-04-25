@@ -213,7 +213,10 @@ impl Message<CommitIndex> for IndexActor {
         _msg: CommitIndex,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        Ok(self.commit().await?)
+        if self.uncommitted_count > 0 {
+            self.commit().await?;
+        }
+        Ok(())
     }
 }
 
@@ -310,6 +313,9 @@ impl IndexActor {
         let writer = self.writer.clone();
         let reader = self.reader.clone();
 
+        self.uncommitted_count = 0;
+        self.last_commit = Instant::now();
+
         let res = tokio::task::spawn_blocking(move || {
             let mut writer_lock = writer.lock().unwrap();
             writer_lock.commit()?;
@@ -319,11 +325,7 @@ impl IndexActor {
         .await;
 
         match res {
-            Ok(Ok(_)) => {
-                self.uncommitted_count = 0;
-                self.last_commit = Instant::now();
-                Ok(())
-            }
+            Ok(Ok(_)) => Ok(()),
             Ok(Err(e)) => Err(Error::Internal(format!("Tantivy commit error: {e}"))),
             Err(e) => Err(Error::Internal(format!("Blocking task error: {e}"))),
         }

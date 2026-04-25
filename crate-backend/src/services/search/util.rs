@@ -1,8 +1,5 @@
 use std::time::Duration;
 
-use common::v1::types::util::Time;
-use uuid::Uuid;
-
 /// buffer size split between indexing threads
 ///
 /// currently set to 100mb
@@ -12,7 +9,7 @@ pub const INDEXING_BUFFER_SIZE: usize = 100_000_000;
 pub const COMMIT_INTERVAL: Duration = Duration::from_secs(5);
 
 /// the maximum of uncommitted documents before needing to commit
-pub const MAX_UNCOMMITTED: usize = 1000;
+pub const MAX_UNCOMMITTED: usize = 50_000;
 
 // TODO: finetune these numbers. maybe dynamically change them based on what's happening, eg. raise limits during bulk imports?
 // TODO: make these numbers adjustable via config

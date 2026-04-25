@@ -11,9 +11,7 @@ use uuid::Uuid;
 
 use crate::{
     services::search::{
-        index::{
-            AddDocument, CommitIndex, DeleteTerm, IndexActorRef, UpdateDocument, UpdateDocuments,
-        },
+        index::{CommitIndex, DeleteTerm, IndexActorRef, UpdateDocument, UpdateDocuments},
         schema::{
             tantivy_document_from_channel, tantivy_document_from_media,
             tantivy_document_from_message, unified::UnifiedSchema,
@@ -22,13 +20,20 @@ use crate::{
     Result, ServerStateInner,
 };
 
+#[derive(Hash, Eq, PartialEq, Clone)]
+pub enum IngestKey {
+    Message(Uuid),
+    Channel(Uuid),
+    Media(Uuid),
+}
+
 /// importer for the content index
 pub struct ContentIngestionManager {
     s: Arc<ServerStateInner>,
     index_writer: IndexActorRef,
     schema: UnifiedSchema,
     active_channels: Arc<DashSet<ChannelId>>,
-    update_throttle: Cache<String, ()>,
+    update_throttle: Cache<IngestKey, ()>,
 }
 
 // /// importer for the content index
@@ -252,13 +257,16 @@ impl ContentIngestionManager {
                     let _ = data
                         .search_ingestion_dlq_insert(*channel_id, "channel", &e.to_string())
                         .await;
+                    let _ = data
+                        .search_reindex_queue_delete("channel", *channel_id)
+                        .await;
                     break;
                 }
             };
 
             let mut batch = Vec::with_capacity(messages.items.len());
             for msg in messages.items {
-                let key = format!("message:{}", msg.id);
+                let key = IngestKey::Message(*msg.id);
                 if self.update_throttle.get(&key).await.is_some() {
                     continue;
                 }
@@ -294,7 +302,7 @@ impl ContentIngestionManager {
 
     async fn index_message(&self, message: common::v1::types::Message, is_update: bool) {
         if is_update {
-            let key = format!("message:{}", message.id);
+            let key = IngestKey::Message(*message.id);
             if self.update_throttle.get(&key).await.is_some() {
                 return;
             }
@@ -318,7 +326,7 @@ impl ContentIngestionManager {
 
     async fn index_channel(&self, channel: common::v1::types::Channel, is_update: bool) {
         if is_update {
-            let key = format!("channel:{}", channel.id);
+            let key = IngestKey::Channel(*channel.id);
             if self.update_throttle.get(&key).await.is_some() {
                 return;
             }
@@ -332,7 +340,7 @@ impl ContentIngestionManager {
 
     async fn index_media(&self, media: common::v2::types::media::Media, is_update: bool) {
         if is_update {
-            let key = format!("media:{}", media.id);
+            let key = IngestKey::Media(*media.id);
             if self.update_throttle.get(&key).await.is_some() {
                 return;
             }

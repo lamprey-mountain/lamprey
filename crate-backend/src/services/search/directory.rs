@@ -169,7 +169,9 @@ impl Directory for ObjectDirectory {
             if let Ok(entries) = std::fs::read_dir(parent) {
                 for entry in entries.flatten() {
                     let name_str = entry.file_name().to_string_lossy().into_owned();
-                    if name_str.starts_with(&chunk_prefix) && name_str.ends_with(".chunk") {
+                    if (name_str.starts_with(&chunk_prefix) && name_str.ends_with(".chunk"))
+                        || (name_str.starts_with(&chunk_prefix) && name_str.contains(".tmp"))
+                    {
                         let _ = std::fs::remove_file(entry.path());
                     }
                 }
@@ -272,7 +274,7 @@ impl Directory for ObjectDirectory {
                 filepath: path.to_path_buf(),
             })?;
         }
-        let tmp_path = full_cache_path.with_extension("tmp");
+        let tmp_path = full_cache_path.with_extension(format!("tmp.{}", uuid::Uuid::new_v4()));
         std::fs::write(&tmp_path, &buf).map_err(|err| OpenReadError::IoError {
             io_error: Arc::new(err),
             filepath: path.to_path_buf(),
@@ -292,7 +294,7 @@ impl Directory for ObjectDirectory {
         if let Some(parent) = cache_file_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        let tmp_path = cache_file_path.with_extension("tmp");
+        let tmp_path = cache_file_path.with_extension(format!("tmp.{}", uuid::Uuid::new_v4()));
         std::fs::write(&tmp_path, data)?;
         std::fs::rename(&tmp_path, &cache_file_path)?;
 
@@ -319,7 +321,9 @@ impl FileHandle for ObjectFile {
     fn read_bytes(&self, range: Range<usize>) -> IoResult<OwnedBytes> {
         // if the file is already fully cached, read directly from disk
         if self.fully_cached || self.cache_path.exists() {
-            let mut file = self.handle.get_or_try_init(|| std::fs::File::open(&self.cache_path))?;
+            let mut file = self
+                .handle
+                .get_or_try_init(|| std::fs::File::open(&self.cache_path))?;
             let mut buf = vec![0u8; range.end - range.start];
             file.read_exact_at(&mut buf, range.start as u64)?;
             return Ok(OwnedBytes::new(buf));
@@ -340,7 +344,9 @@ impl FileHandle for ObjectFile {
                 if let Some(parent) = self.cache_path.parent() {
                     let _ = std::fs::create_dir_all(parent);
                 }
-                let tmp_path = self.cache_path.with_extension("tmp");
+                let tmp_path = self
+                    .cache_path
+                    .with_extension(format!("tmp.{}", uuid::Uuid::new_v4()));
                 std::fs::write(&tmp_path, &buf)?;
                 std::fs::rename(&tmp_path, &self.cache_path)?;
             }
@@ -401,8 +407,8 @@ impl ObjectFile {
                         }
                         let tmp_path =
                             block_path.with_extension(format!("tmp.{}", uuid::Uuid::new_v4()));
-                        std::fs::write(&tmp_path, buf.to_vec())?;
-                        std::fs::rename(&tmp_path, &block_path)?;
+                        tokio::fs::write(&tmp_path, buf.to_vec()).await?;
+                        tokio::fs::rename(&tmp_path, &block_path).await?;
 
                         Ok::<(), IoError>(())
                     });
@@ -488,7 +494,9 @@ impl TerminatingWrite for ObjectFileWrite {
                     if n == 0 {
                         break;
                     }
-                    writer.write(buf[..n].to_vec()).await?;
+                    writer
+                        .write(bytes::Bytes::copy_from_slice(&buf[..n]))
+                        .await?;
                 }
                 writer.close().await?;
                 Ok::<(), IoError>(())

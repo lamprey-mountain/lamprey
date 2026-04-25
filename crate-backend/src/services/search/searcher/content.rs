@@ -111,6 +111,15 @@ impl ContentSearcher {
             }
         }
 
+        let doctype_term = Term::from_field_text(self.schema.doctype, "Message");
+        query_clauses.push((
+            tantivy::query::Occur::Must,
+            Box::new(tantivy::query::TermQuery::new(
+                doctype_term,
+                tantivy::schema::IndexRecordOption::Basic,
+            )),
+        ));
+
         query_clauses.push((
             tantivy::query::Occur::Must,
             Box::new(self.generate_visibility_query(&msg.visible_channel_ids)),
@@ -208,7 +217,7 @@ impl ContentSearcher {
         // This is a bit of a heuristic for "index size"
         for segment_meta in index.load_metas()?.segments {
             total_size += segment_meta.num_docs() as u64 * 100; // rough guess per doc if we can't get bytes easily
-            // Actually tantivy doesn't easily expose byte size of segments in the searcher API without going to directory
+                                                                // Actually tantivy doesn't easily expose byte size of segments in the searcher API without going to directory
         }
 
         // Let's try to get actual size if possible, or just return num_docs for now
