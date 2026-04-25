@@ -34,6 +34,7 @@ import {
 	FolderMenu,
 	MessageMenu,
 	RoomMenu,
+	TopicMenu,
 	UserMenu,
 } from "@/menus/mod.ts";
 import { getModal } from "@/modals/mod.tsx";
@@ -278,6 +279,9 @@ export function OverlayProvider(props: ParentProps) {
 			}
 			case "folder": {
 				return <FolderMenu folder_id={menu.folder_id} />;
+			}
+			case "topic": {
+				return <TopicMenu channel_id={menu.channel_id} />;
 			}
 		}
 	}

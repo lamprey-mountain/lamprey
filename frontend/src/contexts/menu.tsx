@@ -27,6 +27,7 @@ export type Menu = {
 			admin: boolean;
 	  }
 	| { type: "folder"; folder_id: string }
+	| { type: "topic"; channel_id: string }
 );
 
 export type MenuContextT = {

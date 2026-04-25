@@ -11,6 +11,7 @@ import { SearchInput } from "@/components/features/search/SearchInput";
 import { ChannelIcon } from "@/components/shared/User";
 import { useChannel } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useMenu } from "@/contexts/menu.tsx";
 import { useModals } from "@/contexts/modal.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
 import { md } from "@/lib/markdown";
@@ -26,6 +27,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 	const messagesService = useMessages();
 	const [channelState, setChannelState] = useChannel()!;
 	const [, modalctl] = useModals();
+	const { setMenu } = useMenu();
 	const [hovered, setHovered] = createSignal(false);
 	const currentUser = useCurrentUser();
 	const [editingName, setEditingName] = createSignal<string | undefined>();
@@ -189,6 +191,17 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 											channel_id: props.channel.id,
 										});
 									}
+								}}
+								onContextMenu={(e) => {
+									e.preventDefault();
+									queueMicrotask(() => {
+										setMenu({
+											x: e.clientX,
+											y: e.clientY,
+											type: "topic",
+											channel_id: props.channel.id,
+										});
+									});
 								}}
 								title="click to view topic"
 							></span>

@@ -490,3 +490,35 @@ function ChannelNotificationMenu(props: { channel: Channel }) {
 		</>
 	);
 }
+
+export function TopicMenu(props: { channel_id: string }) {
+	const channels2 = useChannels();
+	const channel = channels2.use(() => props.channel_id);
+	const nav = useNavigate();
+	const currentUser = useCurrentUser();
+
+	const { has: hasPermission } = usePermissions(
+		() => currentUser()?.id,
+		() => channel()?.room_id ?? undefined,
+		() => props.channel_id,
+	);
+
+	const canEdit = () => hasPermission("ChannelEdit");
+
+	const copyTopic = () => {
+		navigator.clipboard.writeText(channel()?.description ?? "");
+	};
+
+	const editTopic = () => {
+		nav(`/channel/${props.channel_id}/settings`);
+	};
+
+	return (
+		<Menu>
+			<Show when={canEdit()}>
+				<Item onClick={editTopic}>edit</Item>
+			</Show>
+			<Item onClick={copyTopic}>copy text</Item>
+		</Menu>
+	);
+}
