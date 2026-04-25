@@ -28,6 +28,13 @@ export type Menu = {
 	  }
 	| { type: "folder"; folder_id: string }
 	| { type: "topic"; channel_id: string }
+	| {
+			type: "permission_overwrite";
+			channel_id: string;
+			overwrite_id: string;
+			overwrite_type: "Role" | "User" | "Everyone";
+			onDelete?: () => void;
+	  }
 );
 
 export type MenuContextT = {

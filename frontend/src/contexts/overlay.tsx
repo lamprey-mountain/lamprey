@@ -33,6 +33,7 @@ import {
 	ChannelMenu,
 	FolderMenu,
 	MessageMenu,
+	PermissionOverwriteMenu,
 	RoomMenu,
 	TopicMenu,
 	UserMenu,
@@ -282,6 +283,16 @@ export function OverlayProvider(props: ParentProps) {
 			}
 			case "topic": {
 				return <TopicMenu channel_id={menu.channel_id} />;
+			}
+			case "permission_overwrite": {
+				return (
+					<PermissionOverwriteMenu
+						channel_id={menu.channel_id}
+						overwrite_id={menu.overwrite_id}
+						overwrite_type={menu.overwrite_type}
+						onDelete={menu.onDelete}
+					/>
+				);
 			}
 		}
 	}

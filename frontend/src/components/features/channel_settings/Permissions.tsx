@@ -17,11 +17,11 @@ import {
 } from "solid-js";
 import { createStore, produce } from "solid-js/store";
 import { useApi, useRoles, useRooms } from "@/api";
-import { useCtx } from "@/app/context";
 import { Resizable } from "@/atoms/Resizable";
 import { Savebar } from "@/atoms/Savebar";
 import { OverwriteDropdown } from "@/components/shared/OverwriteDropdown";
 import { PermissionSelector } from "@/components/shared/PermissionSelector";
+import { useMenu } from "@/contexts/mod.tsx";
 import { permissions } from "@/lib/permissions";
 import { Copyable } from "@/utils/general";
 
@@ -93,6 +93,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 	const api2 = useApi();
 	const rooms2 = useRooms();
 	const roles2 = useRoles();
+	const { setMenu } = useMenu();
 	const roles = [...roles2.cache.values()].filter(
 		(r) => r.room_id === props.channel.room_id,
 	);
@@ -335,8 +336,6 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		}
 	};
 
-	const { t } = useCtx();
-
 	const roleName = (id: string) => {
 		if (isEveryoneRole(id, props.channel.room_id!)) {
 			return "@everyone";
@@ -348,6 +347,25 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		if (user) return user.name;
 
 		return null;
+	};
+
+	const openOverwriteMenu = (
+		e: MouseEvent,
+		overwriteId: string,
+		overwriteType: "Role" | "User" | "Everyone",
+	) => {
+		e.preventDefault();
+		queueMicrotask(() => {
+			setMenu({
+				type: "permission_overwrite",
+				channel_id: props.channel.id,
+				overwrite_id: overwriteId,
+				overwrite_type: overwriteType,
+				x: e.clientX,
+				y: e.clientY,
+				onDelete: () => remove(overwriteId),
+			});
+		});
 	};
 
 	const addOverwrite = (id: string, type: "Role" | "User") => {
@@ -379,19 +397,32 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 						<div>
 							<ul>
 								<For each={overwritesWithEveryone()}>
-									{(o) => (
-										<li
-											class={editingId() === o.id ? "editing" : ""}
-											onClick={() => setEditingId(o.id)}
-										>
-											{roleName(o.id) ?? <Copyable>{o.id}</Copyable>}
-											<Show
-												when={dirtyOverwrites[o.id] || deletedOverwrites[o.id]}
+									{(o) => {
+										const isEveryone = isEveryoneRole(
+											o.id,
+											props.channel.room_id!,
+										);
+										const overwriteType: "Role" | "User" | "Everyone" =
+											isEveryone ? "Everyone" : o.type;
+										return (
+											<li
+												class={editingId() === o.id ? "editing" : ""}
+												onClick={() => setEditingId(o.id)}
+												onContextMenu={(e) =>
+													openOverwriteMenu(e, o.id, overwriteType)
+												}
 											>
-												<span class="dirty-indicator">*</span>
-											</Show>
-										</li>
-									)}
+												{roleName(o.id) ?? <Copyable>{o.id}</Copyable>}
+												<Show
+													when={
+														dirtyOverwrites[o.id] || deletedOverwrites[o.id]
+													}
+												>
+													<span class="dirty-indicator">*</span>
+												</Show>
+											</li>
+										);
+									}}
 								</For>
 							</ul>
 						</div>
