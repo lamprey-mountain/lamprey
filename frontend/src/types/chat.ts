@@ -5,6 +5,7 @@ import type { ReactiveMap } from "@solid-primitives/map";
 import type {
 	Client,
 	Media,
+	MessageEnvelope,
 	MessageReady,
 	MessageSearch,
 	MessageSync,
@@ -117,6 +118,6 @@ export type MediaCtx = {
 };
 
 export type Events = {
-	sync: MessageSync;
+	sync: [MessageSync, MessageEnvelope];
 	ready: MessageReady;
 };

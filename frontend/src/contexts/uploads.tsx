@@ -24,6 +24,7 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 	// Listen for MediaProcessed and MediaUpdate events
 	onMount(() => {
 		const handleMediaProcessed = (media: Media) => {
+			console.debug("[uploads] handleMediaProcessed", media.id);
 			// Find the attachment that was waiting for this media to be processed
 			const pending = pendingUploads.get(media.id);
 			if (pending) {
@@ -33,12 +34,12 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 				const atts = ch.attachments;
 				const idx = atts.findIndex((a) => a.local_id === pending.local_id);
 				if (idx !== -1) {
+					const oldAtt = atts[idx];
 					const att: Attachment = {
 						status: "uploaded",
 						media,
-						local_id: pending.local_id,
-						spoiler:
-							atts[idx].status === "uploading" ? atts[idx].spoiler : false,
+						local_id: oldAtt.local_id,
+						spoiler: oldAtt.spoiler,
 					};
 					chUpdate("attachments", [
 						...atts.slice(0, idx),
@@ -72,8 +73,9 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 			}
 		};
 
-		props.ctx.events.on("sync", (msg: MessageSync) => {
+		props.ctx.events.on("sync", ([msg]) => {
 			if (msg.type === "MediaProcessed") {
+				console.debug("[uploads] recv MediaProcessed", msg.media.id);
 				handleMediaProcessed(msg.media);
 			} else if (msg.type === "MediaUpdate") {
 				handleMediaUpdate(msg.media);
@@ -106,11 +108,9 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 				const idx = atts.findIndex((i) => i.local_id === local_id);
 				if (idx === -1) return;
 				const att: Attachment = {
+					...(atts[idx] as any),
 					status: "uploading",
-					file,
-					local_id,
 					progress,
-					paused: false,
 				};
 				chUpdate("attachments", [
 					...atts.slice(0, idx),
@@ -133,10 +133,12 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 				const atts = ch.attachments;
 				const idx = atts.findIndex((i) => i.local_id === local_id);
 				if (idx === -1) return;
+				const oldAtt = atts[idx];
 				const att: Attachment = {
 					status: "uploaded",
 					media,
-					local_id: local_id,
+					local_id: oldAtt.local_id,
+					spoiler: oldAtt.spoiler,
 				};
 				chUpdate("attachments", [
 					...atts.slice(0, idx),
