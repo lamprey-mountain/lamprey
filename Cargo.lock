@@ -3774,6 +3774,7 @@ dependencies = [
  "opentelemetry_sdk",
  "regex",
  "reqwest 0.12.28",
+ "rustls 0.23.37",
  "serde",
  "serenity",
  "sqlx",
