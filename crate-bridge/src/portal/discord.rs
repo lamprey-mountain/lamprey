@@ -9,7 +9,7 @@ use serenity::all::{
     MessageType as DcMessageType, MessageUpdateEvent as DcMessageUpdate, Reaction as DcReaction,
 };
 use std::str::FromStr;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use crate::db::{AttachmentMetadata, Data, MessageMetadata, Puppet};
 use crate::mentions;
@@ -161,7 +161,9 @@ impl Portal {
         }
 
         if user_patch.changes(&puppet) {
-            puppet = ly.user_update(user_id, user_patch).await?;
+            if let Err(e) = ly.user_update(user_id, user_patch).await {
+                warn!("failed to update user profile: {e}");
+            }
         }
 
         self.globals
