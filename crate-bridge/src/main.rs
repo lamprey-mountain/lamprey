@@ -33,6 +33,10 @@ mod portal;
 async fn main() -> Result<()> {
     let _ = dotenvy::dotenv();
 
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
+
     let config: Config = figment::Figment::new()
         .merge(Toml::file("config.toml"))
         .merge(Env::raw().only(&["RUST_LOG"]))

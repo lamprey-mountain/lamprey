@@ -197,6 +197,10 @@ struct ApiDoc;
 async fn main() -> Result<()> {
     let _ = dotenvy::dotenv();
 
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
+
     let args = cli::Args::parse();
 
     let config: Config = figment::Figment::new()
