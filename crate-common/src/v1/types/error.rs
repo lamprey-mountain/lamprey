@@ -794,6 +794,10 @@ pub enum ErrorCode {
     #[error("friend requests are paused")]
     FriendRequestsPaused,
 
+    /// invites are paused
+    #[error("invites are paused")]
+    InvitesPaused,
+
     /// unblock this user first
     #[error("unblock this user first")]
     UnblockUserFirst,
@@ -1061,6 +1065,7 @@ impl ErrorCode {
             ErrorCode::CannotTagAnotherTag => StatusCode::BAD_REQUEST,
             ErrorCode::CannotFriendThisUser => StatusCode::FORBIDDEN,
             ErrorCode::FriendRequestsPaused => StatusCode::BAD_REQUEST,
+            ErrorCode::InvitesPaused => StatusCode::BAD_REQUEST,
             ErrorCode::UnblockUserFirst => StatusCode::FORBIDDEN,
             ErrorCode::SudoSessionExpired => StatusCode::UNAUTHORIZED,
             ErrorCode::InvalidOrExpiredCode => StatusCode::BAD_REQUEST,

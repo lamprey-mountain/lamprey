@@ -265,6 +265,12 @@ async fn invite_use(
                 }
             }
 
+            if let Some(paused_until) = room.invites_paused_until {
+                if Time::now_utc() < paused_until {
+                    return Err(ApiError::from_code(ErrorCode::InvitesPaused).into());
+                }
+            }
+
             let origin = RoomMemberOrigin::Invite {
                 code: invite.invite.code,
                 inviter: invite.invite.creator_id,

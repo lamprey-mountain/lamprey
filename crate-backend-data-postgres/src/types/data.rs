@@ -110,6 +110,7 @@ pub struct DbRoom {
     pub security_require_sudo: bool,
     pub afk_channel_id: Option<Uuid>,
     pub afk_channel_timeout: i64,
+    pub invites_paused_until: Option<PrimitiveDateTime>,
     pub deleted_at: Option<PrimitiveDateTime>,
 }
 
@@ -165,6 +166,7 @@ impl From<DbRoom> for Room {
             },
             afk_channel_id: row.afk_channel_id.map(|i| i.into()),
             afk_channel_timeout: row.afk_channel_timeout as u64,
+            invites_paused_until: row.invites_paused_until.map(|t| Time::from(t.assume_utc())),
         }
     }
 }

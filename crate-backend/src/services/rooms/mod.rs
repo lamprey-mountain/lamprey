@@ -391,6 +391,11 @@ impl ServiceRooms {
                 &start.afk_channel_timeout,
                 &end.afk_channel_timeout,
             )
+            .change(
+                "invites_paused_until",
+                &start.invites_paused_until,
+                &end.invites_paused_until,
+            )
             .build();
 
         al.commit(

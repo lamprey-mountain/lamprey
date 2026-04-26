@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
 use sqlx::{query, query_as, query_scalar, Acquire};
+use time::PrimitiveDateTime;
 use tracing::info;
 use uuid::Uuid;
 
@@ -23,8 +24,8 @@ impl DataRoom for Postgres {
         let ty: DbRoomType = extra.ty.into();
         query!(
             "
-    	    INSERT INTO room (id, version_id, name, description, icon, banner, public, type, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout)
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    	    INSERT INTO room (id, version_id, name, description, icon, banner, public, type, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout, invites_paused_until)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NULL)
         ",
             room_id,
             room_id,
@@ -72,6 +73,7 @@ impl DataRoom for Postgres {
                 room.security_require_sudo,
                 room.afk_channel_id,
                 room.afk_channel_timeout,
+                room.invites_paused_until,
                 room.deleted_at
             FROM room
             WHERE id = $1
@@ -122,6 +124,7 @@ impl DataRoom for Postgres {
                     room.security_require_sudo,
                     room.afk_channel_id,
                     room.afk_channel_timeout,
+                    room.invites_paused_until,
                     room.deleted_at
                 FROM room_member
             	JOIN room ON room_member.room_id = room.id
@@ -182,6 +185,7 @@ impl DataRoom for Postgres {
                     room.security_require_sudo,
                     room.afk_channel_id,
                     room.afk_channel_timeout,
+                    room.invites_paused_until,
                     room.deleted_at
                 FROM room
                 WHERE room.id > $1 AND room.id < $2
@@ -221,7 +225,7 @@ impl DataRoom for Postgres {
         let mut tx = conn.begin().await?;
         let room = query!(
             r#"
-            SELECT id, name, description, icon, banner, archived_at, public, welcome_channel_id, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout
+            SELECT id, name, description, icon, banner, archived_at, public, welcome_channel_id, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout, invites_paused_until
             FROM room
             WHERE id = $1
             FOR UPDATE
@@ -232,7 +236,7 @@ impl DataRoom for Postgres {
         .await?;
         let version_id = RoomVerId::new();
         query!(
-            "UPDATE room SET version_id = $2, name = $3, description = $4, icon = $5, banner = $6, public = $7, welcome_channel_id = $8, afk_channel_id = $9, afk_channel_timeout = $10 WHERE id = $1",
+            "UPDATE room SET version_id = $2, name = $3, description = $4, icon = $5, banner = $6, public = $7, welcome_channel_id = $8, afk_channel_id = $9, afk_channel_timeout = $10, invites_paused_until = $11 WHERE id = $1",
             id.into_inner(),
             version_id.into_inner(),
             patch.name.unwrap_or(room.name),
@@ -243,6 +247,11 @@ impl DataRoom for Postgres {
             patch.welcome_channel_id.map(|i| i.map(|i| *i)).unwrap_or(room.welcome_channel_id),
             patch.afk_channel_id.map(|i| i.map(|i| *i)).unwrap_or(room.afk_channel_id),
             patch.afk_channel_timeout.map(|i| i as i64).unwrap_or(room.afk_channel_timeout),
+            match patch.invites_paused_until {
+                Some(Some(t)) => Some(PrimitiveDateTime::new(t.date(), t.time())),
+                Some(None) => None,
+                None => room.invites_paused_until,
+            },
         )
         .execute(&mut *tx)
         .await?;
@@ -280,6 +289,7 @@ impl DataRoom for Postgres {
                     r.security_require_sudo,
                     r.afk_channel_id,
                     r.afk_channel_timeout,
+                    r.invites_paused_until,
                     r.deleted_at,
                     (SELECT COUNT(*) FROM room_member WHERE room_id = r.id AND membership = 'Join') AS "member_count!",
                     (SELECT COUNT(*) FROM channel WHERE room_id = r.id AND deleted_at IS NULL AND archived_at IS NULL) AS "channel_count!",

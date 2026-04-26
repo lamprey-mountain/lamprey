@@ -97,6 +97,9 @@ pub struct Room {
     /// how long to wait before moving idle people to the afk channel, in milliseconds
     pub afk_channel_timeout: u64,
 
+    /// if set, invites to this room cannot be used until this time has passed
+    pub invites_paused_until: Option<Time>,
+
     #[cfg(any())]
     pub remote: Option<Remote>,
 }
@@ -217,6 +220,9 @@ pub struct RoomPatch {
     pub afk_channel_id: Option<Option<ChannelId>>,
     /// how long to wait before moving idle people to the afk channel, in milliseconds
     pub afk_channel_timeout: Option<u64>,
+    /// if set, invites to this room cannot be used until this time has passed
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    pub invites_paused_until: Option<Option<Time>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
