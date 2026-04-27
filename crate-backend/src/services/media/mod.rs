@@ -6,6 +6,8 @@ use std::{
     time::Instant,
 };
 
+use bytes::Bytes;
+
 use async_tempfile::TempFile;
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use common::v2::types::media::{
@@ -67,24 +69,7 @@ impl MediaUpload {
     }
 }
 
-/// web scale
-// HACK: get arc to work with cursor/imagereader
-// https://stackoverflow.com/a/77743548
-#[derive(Debug, Clone)]
-struct BigData(Arc<Vec<u8>>);
 
-impl AsRef<[u8]> for BigData {
-    fn as_ref(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl From<Vec<u8>> for BigData {
-    fn from(value: Vec<u8>) -> Self {
-        // not great that it creates an arc every time, but eh
-        Self(Arc::new(value))
-    }
-}
 
 impl ServiceMedia {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
@@ -268,14 +253,14 @@ impl ServiceMedia {
             if thumb.codec_type == MediaType::Attachment {
                 debug!("extract thumb attachment from container");
                 let bytes = ffmpeg::extract_attachment(path, thumb.index).await?;
-                let bytes = BigData::from(bytes);
+                let bytes = Bytes::from(bytes);
                 fut.push(
                     upload_extracted_thumb(self.state.clone(), bytes.clone(), media_id).boxed(),
                 );
             } else if thumb.disposition.attached_pic == 1 {
                 debug!("extract thumb stream from container");
                 let bytes = ffmpeg::extract_stream(path, thumb.index).await?;
-                let bytes = BigData::from(bytes);
+                let bytes = Bytes::from(bytes);
                 fut.push(
                     upload_extracted_thumb(self.state.clone(), bytes.clone(), media_id).boxed(),
                 );
@@ -740,13 +725,12 @@ impl ServiceMedia {
 #[tracing::instrument(skip(state, bytes))]
 async fn upload_extracted_thumb(
     state: Arc<ServerStateInner>,
-    bytes: BigData,
+    bytes: Bytes,
     media_id: MediaId,
 ) -> Result<()> {
-    let _len = bytes.0.len();
     let span_probe = span!(Level::DEBUG, "probe thumbnail image");
     let (_width, _height, mime) = async {
-        let cursor = Cursor::new(&bytes);
+        let cursor = Cursor::new(bytes.clone());
         let reader = image::ImageReader::new(cursor).with_guessed_format()?;
         let mime: Mime = reader
             .format()
@@ -767,8 +751,7 @@ async fn upload_extracted_thumb(
             .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
             .content_type(mime.as_str())
             .await?;
-        // HACK: extremely ugly clone
-        w.write(bytes.0.to_vec()).await?;
+        w.write(bytes.clone()).await?;
         w.close().await?;
         Result::Ok(())
     }
