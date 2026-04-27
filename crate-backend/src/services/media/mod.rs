@@ -10,9 +10,6 @@ use bytes::Bytes;
 
 use async_tempfile::TempFile;
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
-use common::v2::types::media::{
-    Media as MediaV2, MediaCreate, MediaCreateSource, MediaMetadata, MediaScan, MediaStatus,
-};
 use common::{
     v1::types::error::{ApiError, ErrorCode},
     v2::types::media::HashType,
@@ -20,6 +17,12 @@ use common::{
 use common::{
     v1::types::{util::truncate::truncate_filename, MediaId, MediaVerId, Mime, UserId},
     v2::types::media::scanner::{MediaScanResponse, ScanRequest},
+};
+use common::{
+    v1::types::{MessageSync, SessionId},
+    v2::types::media::{
+        Media as MediaV2, MediaCreate, MediaCreateSource, MediaMetadata, MediaScan, MediaStatus,
+    },
 };
 use dashmap::DashMap;
 use ffprobe::{MediaType, Metadata};
@@ -68,8 +71,6 @@ impl MediaUpload {
         Ok(())
     }
 }
-
-
 
 impl ServiceMedia {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
@@ -301,6 +302,7 @@ impl ServiceMedia {
         media_id: MediaId,
         user_id: UserId,
         filename: &str,
+        session_id: Option<SessionId>,
     ) -> Result<MediaV2> {
         debug!("processing upload");
 
@@ -487,6 +489,17 @@ impl ServiceMedia {
         trace!("final media update in db");
         drop(tmp);
         self.state.data().media_replace(media.clone()).await?;
+
+        if let Some(session_id) = session_id {
+            let msg = MessageSync::MediaProcessed {
+                media: media.clone(),
+                session_id,
+            };
+            if let Err(e) = self.state.broadcast(msg) {
+                error!("failed to broadcast MediaProcessed: {}", e);
+            }
+        }
+
         Ok(media)
     }
 
@@ -521,7 +534,7 @@ impl ServiceMedia {
             _ => {}
         }
 
-        self.import_from_response_inner(user_id, media_id, json, res, max_size)
+        self.import_from_response_inner(user_id, media_id, json, res, max_size, None)
             .await
     }
 
@@ -531,10 +544,11 @@ impl ServiceMedia {
         json: MediaCreate,
         res: reqwest::Response,
         max_size: u64,
+        session_id: Option<SessionId>,
     ) -> Result<MediaV2> {
         let media_id = MediaId::new();
         self.create_upload(media_id, user_id, json.clone()).await?;
-        self.import_from_response_inner(user_id, media_id, json, res, max_size)
+        self.import_from_response_inner(user_id, media_id, json, res, max_size, session_id)
             .await
     }
 
@@ -545,6 +559,7 @@ impl ServiceMedia {
         json: MediaCreate,
         res: reqwest::Response,
         max_size: u64,
+        session_id: Option<SessionId>,
     ) -> Result<MediaV2> {
         let (filename, size, source_url) = match &json.source {
             MediaCreateSource::Upload { .. } => unreachable!(),
@@ -610,7 +625,13 @@ impl ServiceMedia {
                     .map(|s| s.to_owned())
                     .unwrap_or_else(|| "unknown".to_owned());
                 let media = self
-                    .process_upload(up, media_id, user_id, &truncate_filename(&filename, 256))
+                    .process_upload(
+                        up,
+                        media_id,
+                        user_id,
+                        &truncate_filename(&filename, 256),
+                        session_id,
+                    )
                     .await?;
                 debug!("finished processing media");
                 Ok(media)
@@ -662,7 +683,13 @@ impl ServiceMedia {
             .expect("it was there a few milliseconds ago");
         trace!("processing upload");
         let media = self
-            .process_upload(up, media_id, user_id, &truncate_filename(filename, 256))
+            .process_upload(
+                up,
+                media_id,
+                user_id,
+                &truncate_filename(filename, 256),
+                None,
+            )
             .await?;
         debug!("finished processing media");
         Ok(media)

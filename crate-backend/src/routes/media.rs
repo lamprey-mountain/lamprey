@@ -216,18 +216,11 @@ async fn media_done(
                         match state
                             .services()
                             .media
-                            .process_upload(up, media_id, user_id, &filename)
+                            .process_upload(up, media_id, user_id, &filename, Some(session_id))
                             .await
                         {
-                            Ok(media) => {
+                            Ok(_media) => {
                                 debug!("finished processing media asynchronously");
-                                let msg = MessageSync::MediaProcessed {
-                                    media: media.clone(),
-                                    session_id,
-                                };
-                                if let Err(e) = state.broadcast(msg) {
-                                    error!("failed to broadcast MediaProcessed: {}", e);
-                                }
                             }
                             Err(e) => {
                                 error!("failed to process media asynchronously: {}", e);
@@ -239,7 +232,7 @@ async fn media_done(
                     let media = s
                         .services()
                         .media
-                        .process_upload(up, media_id, auth.user.id, &filename)
+                        .process_upload(up, media_id, auth.user.id, &filename, None)
                         .await?;
                     let mut headers = HeaderMap::new();
                     headers.insert("upload-offset", media.size.into());
@@ -357,18 +350,11 @@ async fn media_upload(
                 match state
                     .services()
                     .media
-                    .process_upload(up, media_id, user_id, &filename)
+                    .process_upload(up, media_id, user_id, &filename, Some(session_id))
                     .await
                 {
-                    Ok(media) => {
+                    Ok(_media) => {
                         debug!("finished processing media from upload");
-                        let msg = MessageSync::MediaProcessed {
-                            media: media.clone(),
-                            session_id,
-                        };
-                        if let Err(e) = state.broadcast(msg) {
-                            error!("failed to broadcast MediaProcessed: {}", e);
-                        }
                     }
                     Err(e) => {
                         error!("failed to process media from upload: {}", e);
@@ -648,18 +634,11 @@ async fn media_upload_direct(
             match state
                 .services()
                 .media
-                .process_upload(up, media_id, auth.user.id, &filename)
+                .process_upload(up, media_id, auth.user.id, &filename, Some(session_id))
                 .await
             {
-                Ok(media) => {
+                Ok(_media) => {
                     debug!("finished processing media from direct upload");
-                    let msg = MessageSync::MediaProcessed {
-                        media: media.clone(),
-                        session_id,
-                    };
-                    if let Err(e) = state.broadcast(msg) {
-                        error!("failed to broadcast MediaProcessed: {}", e);
-                    }
                 }
                 Err(e) => {
                     error!("failed to process media from direct upload: {}", e);
@@ -678,7 +657,7 @@ async fn media_upload_direct(
         let media = s
             .services()
             .media
-            .process_upload(up, media_id, auth.user.id, &filename)
+            .process_upload(up, media_id, auth.user.id, &filename, None)
             .await?;
 
         Ok((
