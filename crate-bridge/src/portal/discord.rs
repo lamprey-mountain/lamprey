@@ -122,9 +122,11 @@ impl Portal {
                     .error_for_status()?
                     .bytes()
                     .await?;
+                debug!("downloaded user pfp for {}", user_id);
                 let media = ly
                     .media_upload(name.to_owned(), bytes.to_vec(), user_id)
                     .await?;
+                debug!("uploaded user pfp for {}", user_id);
                 user_patch.avatar = Some(Some(media.id));
             } else {
                 info!("remove user pfp for {}", user_id);
@@ -152,9 +154,11 @@ impl Portal {
                     .error_for_status()?
                     .bytes()
                     .await?;
+                debug!("downloaded user banner for {}", user_id);
                 let media = ly
                     .media_upload(name.to_owned(), bytes.to_vec(), user_id)
                     .await?;
+                debug!("uploaded user banner for {}", user_id);
                 user_patch.banner = Some(Some(media.id));
             } else {
                 info!("remove user banner for {}", user_id);
@@ -163,6 +167,7 @@ impl Portal {
         }
 
         if user_patch.changes(&puppet) {
+            debug!("attempt to patch user {}", user_id);
             if let Err(e) = ly.user_update(user_id, user_patch).await {
                 warn!("failed to update user profile: {e}");
             }
@@ -351,9 +356,7 @@ impl Portal {
         {
             Ok(res) => res,
             Err(e) => {
-                warn!(
-                    "failed to send message (discord msg {message_id}, author {author}): {e}"
-                );
+                warn!("failed to send message (discord msg {message_id}, author {author}): {e}");
                 return Ok(());
             }
         };

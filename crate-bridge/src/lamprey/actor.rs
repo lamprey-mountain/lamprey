@@ -3,20 +3,20 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use common::v1::types::Message as LMessage;
 use common::v1::types::{
     self,
     pagination::{PaginationQuery, PaginationResponse},
     presence, Channel, ChannelId, ChannelType, MediaId, MessageCreate, MessageId, MessageSync,
     RoomId, Session, User, UserId,
 };
-use common::v1::types::Message as LMessage;
 use common::{v1::types::util::Time, v2::types::media::Media};
+use dashmap::DashMap;
 use kameo::message::Context;
 use kameo::prelude::*;
 use sdk::{Client, Http};
 use tokio::sync::oneshot;
-use dashmap::DashMap;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 use crate::bridge_common::Globals;
 use crate::db::Data;
@@ -524,8 +524,11 @@ impl LampreyEventHandler {
                     .await;
             }
             MessageSync::MediaProcessed { media, .. } => {
+                info!("media processed {}", media.id);
                 if let Some((_, tx)) = self.media_processed.remove(&media.id) {
                     let _ = tx.send(media);
+                } else {
+                    warn!("media processed channel not found for {}", media.id);
                 }
             }
             _ => {} // Other sync messages are ignored

@@ -111,9 +111,12 @@ impl Syncer {
                             }
                         },
                         msg = controller.recv() => {
-                            client
-                                .send(WsMessage::text(serde_json::to_string(&msg)?))
-                                .await?;
+                            if let Some(msg) = msg {
+                                client.send(WsMessage::text(serde_json::to_string(&msg)?)).await?;
+                            } else {
+                                warn!("controller disconnected");
+                                self.controller = None;
+                            }
                         },
                     }
                 } else {

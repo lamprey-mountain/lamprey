@@ -9,7 +9,7 @@ use dashmap::DashMap;
 use sdk::Http;
 use std::sync::Arc;
 use tokio::sync::oneshot;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use crate::bridge_common::Globals;
 use crate::lamprey::messages::{LampreyMessage, LampreyResponse};
@@ -59,7 +59,8 @@ pub(super) async fn handle_lamprey_message(
 
             let media = match rx.await {
                 Ok(media) => media,
-                Err(_) => {
+                Err(err) => {
+                    warn!("failed to upload media: {err}");
                     return Err(anyhow::anyhow!(
                         "media processed handler dropped the channel"
                     ));

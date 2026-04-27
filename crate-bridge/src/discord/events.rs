@@ -9,7 +9,7 @@ use serenity::all::{
 };
 use serenity::model::prelude::{ChannelId, GuildId, MessageId, Reaction, TypingStartEvent};
 use serenity::prelude::*;
-use tracing::{debug, error, info, Instrument};
+use tracing::{debug, error, info, trace, Instrument};
 
 use crate::bridge::BridgeMessage;
 use crate::bridge_common::{Globals, GlobalsTrait};
@@ -396,7 +396,7 @@ impl EventHandler for Handler {
     }
 
     async fn presence_update(&self, ctx: Context, presence: Presence) {
-        debug!("discord presence update for user {}", presence.user.id);
+        trace!("discord presence update for user {}", presence.user.id);
         let ctx_data = ctx.data.read().await;
         let globals = ctx_data.get::<GlobalsKey>().unwrap().clone();
 
