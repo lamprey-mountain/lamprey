@@ -1,15 +1,33 @@
 use std::{path::Path, process::Stdio};
 
 use tokio::process::Command;
-use tracing::error;
+use tracing::{error, trace};
 
 use crate::{error::Error, Result};
 
-async fn run_ffmpeg_with_timeout(cmd: &mut Command) -> Result<std::process::Output> {
-    tokio::time::timeout(std::time::Duration::from_secs(10), cmd.output())
+async fn run_ffmpeg(cmd: &mut Command, context: &str) -> Result<Vec<u8>> {
+    let out = tokio::time::timeout(std::time::Duration::from_secs(10), cmd.output())
         .await
-        .map_err(|_| Error::Ffmpeg)?
-        .map_err(Into::into)
+        .map_err(|_| Error::Ffmpeg)??;
+
+    // HACK: currently, some ffmpeg commands technically work but always gives error output. check stdout instead.
+    if out.status.success() || !out.stdout.is_empty() {
+        if !out.status.success() {
+            trace!(
+                stderr = %String::from_utf8_lossy(&out.stderr),
+                stdout = %String::from_utf8_lossy(&out.stdout),
+                "{context} exited with non-zero status but produced output",
+            );
+        }
+        Ok(out.stdout)
+    } else {
+        error!(
+            stderr = %String::from_utf8_lossy(&out.stderr),
+            stdout = %String::from_utf8_lossy(&out.stdout),
+            "{context} failed",
+        );
+        Err(Error::Ffmpeg)
+    }
 }
 
 pub async fn extract_attachment(path: &Path, index: u64) -> Result<Vec<u8>> {
@@ -23,21 +41,9 @@ pub async fn extract_attachment(path: &Path, index: u64) -> Result<Vec<u8>> {
     .arg(path)
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
-    .stderr(Stdio::inherit());
+    .stderr(Stdio::piped());
 
-    let out = run_ffmpeg_with_timeout(&mut cmd).await?;
-    // HACK: currently, this ffmpeg command technically works but always gives error output
-    // if cmd.status.success() {
-    if !out.stdout.is_empty() {
-        Ok(out.stdout)
-    } else {
-        error!(
-            stderr = String::from_utf8_lossy(&out.stderr).to_string(),
-            stdout = String::from_utf8_lossy(&out.stdout).to_string(),
-            "extract attachment failed",
-        );
-        Err(Error::Ffmpeg)
-    }
+    run_ffmpeg(&mut cmd, "extract attachment").await
 }
 
 pub async fn extract_stream(path: &Path, index: u64) -> Result<Vec<u8>> {
@@ -55,19 +61,9 @@ pub async fn extract_stream(path: &Path, index: u64) -> Result<Vec<u8>> {
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::inherit());
+        .stderr(Stdio::piped());
 
-    let out = run_ffmpeg_with_timeout(&mut cmd).await?;
-    if out.status.success() {
-        Ok(out.stdout)
-    } else {
-        error!(
-            stderr = String::from_utf8_lossy(&out.stderr).to_string(),
-            stdout = String::from_utf8_lossy(&out.stdout).to_string(),
-            "extract stream failed",
-        );
-        Err(Error::Ffmpeg)
-    }
+    run_ffmpeg(&mut cmd, "extract stream").await
 }
 
 pub async fn generate_thumb(path: &Path) -> Result<Vec<u8>> {
@@ -77,19 +73,9 @@ pub async fn generate_thumb(path: &Path) -> Result<Vec<u8>> {
         .args(["-vf", "thumbnail", "-frames:v", "1", "-f", "webp", "-"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::inherit());
+        .stderr(Stdio::piped());
 
-    let out = run_ffmpeg_with_timeout(&mut cmd).await?;
-    if out.status.success() {
-        Ok(out.stdout)
-    } else {
-        error!(
-            stderr = String::from_utf8_lossy(&out.stderr).to_string(),
-            stdout = String::from_utf8_lossy(&out.stdout).to_string(),
-            "generate thumb failed",
-        );
-        Err(Error::Ffmpeg)
-    }
+    run_ffmpeg(&mut cmd, "generate thumb").await
 }
 
 pub async fn strip_metadata(path: &Path, format: &str) -> Result<Vec<u8>> {
@@ -101,17 +87,7 @@ pub async fn strip_metadata(path: &Path, format: &str) -> Result<Vec<u8>> {
         .arg("-")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::inherit());
+        .stderr(Stdio::piped());
 
-    let out = run_ffmpeg_with_timeout(&mut cmd).await?;
-    if out.status.success() {
-        Ok(out.stdout)
-    } else {
-        error!(
-            stderr = String::from_utf8_lossy(&out.stderr).to_string(),
-            stdout = String::from_utf8_lossy(&out.stdout).to_string(),
-            "strip metadata failed",
-        );
-        Err(Error::Ffmpeg)
-    }
+    run_ffmpeg(&mut cmd, "strip metadata").await
 }
