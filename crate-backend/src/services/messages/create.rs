@@ -510,9 +510,6 @@ impl ServiceMessages {
             }
         };
 
-        // just to be safe
-        all_media_ids.extend(&op.kind.attachment_ids());
-
         Ok(op.transition(|old| Prepared {
             permissions: old.permissions,
             sanitized,
@@ -529,8 +526,15 @@ impl ServiceMessages {
         &self,
         mut op: MessageOperation<'a, Prepared>,
     ) -> Result<MessageOperation<'a, Committed>> {
+        let author_id = op.author_id();
+        let message_id = op.message_id;
+        self.validate_media(&op.stage.all_media_ids, message_id, author_id)
+            .await?;
+
         let message = self.persist_to_database(&mut op).await?;
-        self.validate_and_claim_media(&mut op, &message).await?;
+        let version_id = *message.latest_version.version_id;
+        self.claim_media(&mut op.stage.all_media_ids, message_id, version_id)
+            .await?;
         self.update_slowmode_timeout(&mut op).await?;
 
         Ok(op.transition(|old| Committed {
@@ -969,18 +973,17 @@ impl ServiceMessages {
         self.get(op.channel.id, op.message_id, None).await
     }
 
-    /// Validate media ownership and reuse, then insert media links.
-    /// Used by both the operation flow and flume_create.
-    pub(super) async fn validate_media_ownership(
+    /// Validate media ownership and reuse (no side effects).
+    /// Called before persisting the message so failures don't leave ghost records.
+    pub(super) async fn validate_media(
         &self,
-        all_media_ids: &mut MediaRegistry,
-        author_id: UserId,
+        all_media_ids: &MediaRegistry,
         message_id: MessageId,
-        version_id: Uuid,
+        author_id: UserId,
     ) -> Result<()> {
-        let data = self.state.data();
         all_media_ids.check()?;
 
+        let data = self.state.data();
         for &id in &all_media_ids.known {
             // PERF: this should probably be batched
             let media = data.media_select(id).await?;
@@ -1001,7 +1004,21 @@ impl ServiceMessages {
                     ErrorCode::MediaAlreadyUsed,
                 )));
             }
+        }
 
+        Ok(())
+    }
+
+    /// Insert media links for a message (assumes validation already passed).
+    /// Used by both the operation flow and flume_create.
+    pub(super) async fn claim_media(
+        &self,
+        all_media_ids: &mut MediaRegistry,
+        message_id: MessageId,
+        version_id: Uuid,
+    ) -> Result<()> {
+        let data = self.state.data();
+        for &id in &all_media_ids.known {
             // 3. insert media links
             data.media_link_insert(id, message_id.into_inner(), MediaLinkType::Message)
                 .await?;
@@ -1010,23 +1027,6 @@ impl ServiceMessages {
         }
 
         Ok(())
-    }
-
-    async fn validate_and_claim_media(
-        &self,
-        op: &mut MessageOperation<'_, Prepared>,
-        message: &Message,
-    ) -> Result<()> {
-        let author_id = op.author_id();
-        let message_id = op.message_id;
-        let version_id = *message.latest_version.version_id;
-        self.validate_media_ownership(
-            &mut op.stage.all_media_ids,
-            author_id,
-            message_id,
-            version_id,
-        )
-        .await
     }
 
     async fn update_slowmode_timeout(&self, op: &mut MessageOperation<'_, Prepared>) -> Result<()> {

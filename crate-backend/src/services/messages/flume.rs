@@ -138,8 +138,11 @@ impl ServiceMessages {
         })
         .await?;
 
-        // 4. validate media ownership and insert links (reuses validate_media_ownership from create.rs)
-        self.validate_media_ownership(&mut all_media_ids, user_id, message_id, version_id)
+        // 4. validate media ownership
+        self.validate_media(&all_media_ids, message_id, user_id)
+            .await?;
+        // 5. insert media links
+        self.claim_media(&mut all_media_ids, message_id, version_id)
             .await?;
 
         let message = self.get(channel_id, message_id, None).await?;
@@ -205,7 +208,9 @@ impl ServiceMessages {
         // 3. validate media ownership if there are new media IDs
         if !all_media_ids.known.is_empty() {
             let version_id = (*message_id).into();
-            self.validate_media_ownership(&mut all_media_ids, auth.user.id, message_id, version_id)
+            self.validate_media(&all_media_ids, message_id, auth.user.id)
+                .await?;
+            self.claim_media(&mut all_media_ids, message_id, version_id)
                 .await?;
         }
 
