@@ -171,94 +171,96 @@ async fn media_done(
     Json(params): Json<MediaDoneParams>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let srv = s.services();
-    let mut up =
-        srv.media
-            .uploads
-            .get_mut(&media_id)
-            .ok_or(Error::ApiError(ApiError::from_code(
+
+    if let Some(mut up) = s.services().media.uploads.get_mut(&media_id) {
+        if up.user_id != auth.user.id {
+            return Err(Error::ApiError(ApiError::from_code(
                 ErrorCode::UnknownMedia,
-            )))?;
-    if up.user_id != auth.user.id {
-        return Err(Error::ApiError(ApiError::from_code(
-            ErrorCode::UnknownMedia,
-        )));
-    }
-    let user_id = up.user_id;
-
-    let source_size = up
-        .create
-        .source
-        .size()
-        .expect("can only patch source upload");
-    match up.current_size.cmp(&source_size) {
-        Ordering::Greater => {
-            s.services().media.uploads.remove(&media_id);
-            Err(Error::TooBig)
+            )));
         }
-        Ordering::Equal => {
-            up.temp_writer.flush().await?;
-            drop(up);
-            let (_, up) = s
-                .services()
-                .media
-                .uploads
-                .remove(&media_id)
-                .expect("it was there a few milliseconds ago");
-            let filename = match &up.create.source {
-                MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
-                MediaCreateSource::Download { .. } => {
-                    panic!("can only patch upload")
-                }
-            };
+        let user_id = up.user_id;
 
-            if params.process_async {
-                let state = s.clone();
-                let session_id = auth.session.id;
-                let mut headers = HeaderMap::new();
-                headers.insert("upload-offset", source_size.into());
-                headers.insert("upload-length", source_size.into());
-                tokio::spawn(async move {
-                    match state
-                        .services()
-                        .media
-                        .process_upload(up, media_id, user_id, &filename)
-                        .await
-                    {
-                        Ok(media) => {
-                            debug!("finished processing media asynchronously");
-                            let msg = MessageSync::MediaProcessed {
-                                media: media.clone(),
-                                session_id,
-                            };
-                            if let Err(e) = state.broadcast(msg) {
-                                error!("failed to broadcast MediaProcessed: {}", e);
-                            }
-                        }
-                        Err(e) => {
-                            error!("failed to process media asynchronously: {}", e);
-                        }
-                    }
-                });
-                Ok((StatusCode::ACCEPTED, headers, Json(None)))
-            } else {
-                let media = s
+        let source_size = up
+            .create
+            .source
+            .size()
+            .expect("can only patch source upload");
+        match up.current_size.cmp(&source_size) {
+            Ordering::Greater => {
+                s.services().media.uploads.remove(&media_id);
+                return Err(Error::TooBig);
+            }
+            Ordering::Equal => {
+                up.temp_writer.flush().await?;
+                drop(up);
+                let (_, up) = s
                     .services()
                     .media
-                    .process_upload(up, media_id, auth.user.id, &filename)
-                    .await?;
+                    .uploads
+                    .remove(&media_id)
+                    .expect("it was there a few milliseconds ago");
+                let filename = match &up.create.source {
+                    MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
+                    MediaCreateSource::Download { .. } => {
+                        panic!("can only patch upload")
+                    }
+                };
+
+                if params.process_async {
+                    let state = s.clone();
+                    let session_id = auth.session.id;
+                    let mut headers = HeaderMap::new();
+                    headers.insert("upload-offset", source_size.into());
+                    headers.insert("upload-length", source_size.into());
+                    tokio::spawn(async move {
+                        match state
+                            .services()
+                            .media
+                            .process_upload(up, media_id, user_id, &filename)
+                            .await
+                        {
+                            Ok(media) => {
+                                debug!("finished processing media asynchronously");
+                                let msg = MessageSync::MediaProcessed {
+                                    media: media.clone(),
+                                    session_id,
+                                };
+                                if let Err(e) = state.broadcast(msg) {
+                                    error!("failed to broadcast MediaProcessed: {}", e);
+                                }
+                            }
+                            Err(e) => {
+                                error!("failed to process media asynchronously: {}", e);
+                            }
+                        }
+                    });
+                    Ok((StatusCode::ACCEPTED, headers, Json(None)))
+                } else {
+                    let media = s
+                        .services()
+                        .media
+                        .process_upload(up, media_id, auth.user.id, &filename)
+                        .await?;
+                    let mut headers = HeaderMap::new();
+                    headers.insert("upload-offset", media.size.into());
+                    headers.insert("upload-length", media.size.into());
+                    Ok((StatusCode::OK, headers, Json(Some(media))))
+                }
+            }
+            Ordering::Less => {
                 let mut headers = HeaderMap::new();
-                headers.insert("upload-offset", media.size.into());
-                headers.insert("upload-length", media.size.into());
-                Ok((StatusCode::OK, headers, Json(Some(media))))
+                headers.insert("upload-offset", up.current_size.into());
+                headers.insert("upload-length", source_size.into());
+                drop(up);
+                Err(Error::BadStatic("incomplete upload"))
             }
         }
-        Ordering::Less => {
-            let mut headers = HeaderMap::new();
-            headers.insert("upload-offset", up.current_size.into());
-            headers.insert("upload-length", source_size.into());
-            Ok((StatusCode::NO_CONTENT, headers, Json(None)))
-        }
+    } else {
+        let media = s.data().media_select(media_id).await?;
+        let mut headers = HeaderMap::new();
+        headers.insert("upload-offset", media.size.into());
+        headers.insert("upload-length", media.size.into());
+        Ok((StatusCode::OK, headers, Json(Some(media))))
     }
 }
 
