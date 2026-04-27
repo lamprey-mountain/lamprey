@@ -8,7 +8,8 @@ use common::v1::types::{
     application::Application,
     util::{Changes, Diff, Time},
     AuditLogChange, AuditLogEntryType, MessageSync, Permission, Puppet, RoomMemberOrigin,
-    RoomMemberPut, SessionStatus, SessionToken, SessionType, SessionWithToken, UserId,
+    RoomMemberPut, SERVER_ROOM_ID, SessionStatus, SessionToken, SessionType, SessionWithToken,
+    UserId,
 };
 use http::StatusCode;
 use lamprey_macros::handler;
@@ -37,7 +38,7 @@ async fn app_create(
 
     let srv = s.services();
     srv.perms
-        .for_room3(Some(auth.user.id), common::v1::types::SERVER_ROOM_ID)
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
         .await?
         .ensure_view()?
         .needs(Permission::ApplicationCreate)
@@ -385,6 +386,9 @@ async fn puppet_ensure(
             system: false,
         })
         .await?;
+    data.room_member_put(SERVER_ROOM_ID, user.id, None, RoomMemberPut::default())
+        .await?;
+    srv.perms.invalidate_room(user.id, SERVER_ROOM_ID).await;
     Ok((StatusCode::CREATED, Json(user)))
 }
 
