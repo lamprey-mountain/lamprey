@@ -2,20 +2,24 @@
 
 use anyhow::Result;
 use common::v1::types::util::Time;
+use common::v1::types::MediaId;
 use common::v1::types::{self, misc::UserIdReq, pagination::PaginationQuery, RoomMemberPut};
-use common::v2::types::media::{MediaCreate, MediaCreateSource};
+use common::v2::types::media::{Media, MediaCreate, MediaCreateSource};
+use dashmap::DashMap;
 use sdk::Http;
 use std::sync::Arc;
-use tokio::sync::broadcast;
+use tokio::sync::oneshot;
 use tracing::{debug, info};
 
 use crate::bridge_common::Globals;
 use crate::lamprey::messages::{LampreyMessage, LampreyResponse};
 
+type TokioHashMap = DashMap<MediaId, oneshot::Sender<Media>>;
+
 pub(super) async fn handle_lamprey_message(
     http: &Http,
     globals: Arc<Globals>,
-    media_processed_tx: broadcast::Sender<common::v2::types::media::Media>,
+    media_processed: Arc<TokioHashMap>,
     msg: LampreyMessage,
 ) -> Result<LampreyResponse> {
     match msg {
@@ -34,7 +38,9 @@ pub(super) async fn handle_lamprey_message(
             };
             let upload = http.for_puppet(user_id).media_create(&req).await?;
 
-            let mut rx = media_processed_tx.subscribe();
+            let upload_id = upload.media_id;
+            let (tx, rx) = oneshot::channel();
+            media_processed.insert(upload_id, tx);
 
             http.for_puppet(user_id)
                 .media_upload(&upload, bytes)
@@ -51,22 +57,16 @@ pub(super) async fn handle_lamprey_message(
             //     )
             //     .await?;
 
-            loop {
-                match rx.recv().await {
-                    Ok(media) => {
-                        if media.id == upload.media_id {
-                            break Ok(LampreyResponse::Media(media));
-                        }
-                    }
-                    Err(broadcast::error::RecvError::Lagged(n)) => {
-                        tracing::warn!("lagged behind on media_processed events: {n}");
-                        continue;
-                    }
-                    Err(broadcast::error::RecvError::Closed) => {
-                        break Err(anyhow::anyhow!("media_processed channel closed"));
-                    }
+            let media = match rx.await {
+                Ok(media) => media,
+                Err(_) => {
+                    return Err(anyhow::anyhow!(
+                        "media processed handler dropped the channel"
+                    ));
                 }
-            }
+            };
+
+            Ok(LampreyResponse::Media(media))
         }
         LampreyMessage::MessageGet {
             thread_id,
@@ -186,9 +186,7 @@ pub(super) async fn handle_lamprey_message(
         {
             Ok(user) => Ok(LampreyResponse::User(user)),
             Err(e) => {
-                tracing::warn!(
-                    "failed to update user {user_id}: {e}"
-                );
+                tracing::warn!("failed to update user {user_id}: {e}");
                 Ok(LampreyResponse::Empty)
             }
         },
