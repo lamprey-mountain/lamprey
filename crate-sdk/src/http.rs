@@ -491,11 +491,13 @@ impl Http {
             .json(body);
 
         let res = req.send().await?;
-        let res = res.error_for_status()?;
+        let status = res.status();
         let text = res.text().await?;
+        if !status.is_success() {
+            anyhow::bail!("message_create_with_timestamp failed: status={status} body={text}");
+        }
         serde_json::from_str(&text).with_context(|| {
-            error!(response_body = %text, "failed to decode response body");
-            "failed to decode response body for message_create_with_timestamp".to_string()
+            format!("failed to decode response body for message_create_with_timestamp (body: {text})")
         })
     }
 }

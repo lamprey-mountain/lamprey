@@ -106,7 +106,7 @@ impl Message<LampreyMessage> for Lamprey {
         .await;
 
         if let Err(e) = res {
-            error!("lamprey actor handler failed: {:?}", e);
+            error!("lamprey actor handler failed: {e:#}");
             return Err(e);
         }
 

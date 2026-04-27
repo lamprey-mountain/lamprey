@@ -179,11 +179,19 @@ pub(super) async fn handle_lamprey_message(
             .user_get(UserIdReq::UserId(user_id))
             .await
             .map(|res| LampreyResponse::User(res.inner)),
-        LampreyMessage::UserUpdate { user_id, patch } => http
+        LampreyMessage::UserUpdate { user_id, patch } => match http
             .for_puppet(user_id)
             .user_update(UserIdReq::UserId(user_id), &patch)
             .await
-            .map(LampreyResponse::User),
+        {
+            Ok(user) => Ok(LampreyResponse::User(user)),
+            Err(e) => {
+                tracing::warn!(
+                    "failed to update user {user_id}: {e}"
+                );
+                Ok(LampreyResponse::Empty)
+            }
+        },
         LampreyMessage::UserSetPresence { user_id, patch } => http
             .for_puppet(user_id)
             .user_set_presence(UserIdReq::UserId(user_id), &patch)

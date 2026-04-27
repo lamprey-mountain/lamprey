@@ -71,6 +71,8 @@ impl Portal {
     }
 
     pub(super) async fn handle_discord_message_create(&mut self, message: DcMessage) -> Result<()> {
+        let message_id = message.id;
+        let author = message.author.id;
         if let Some(member) = &message.member {
             self.sync_discord_member_nick(message.author.id, member.nick.clone())
                 .await?;
@@ -343,9 +345,18 @@ impl Portal {
             time::OffsetDateTime::from_unix_timestamp(message.timestamp.unix_timestamp())
                 .unwrap_or_else(|_| time::OffsetDateTime::now_utc())
                 .into();
-        let res = ly
-            .message_create_with_timestamp(thread_id, user_id, req, timestamp)
-            .await?;
+        let res = match ly
+            .message_create_with_timestamp(thread_id, user_id, dbg!(req), timestamp)
+            .await
+        {
+            Ok(res) => res,
+            Err(e) => {
+                warn!(
+                    "failed to send message (discord msg {message_id}, author {author}): {e}"
+                );
+                return Ok(());
+            }
+        };
         debug!("sent message");
         self.globals
             .insert_message(MessageMetadata {

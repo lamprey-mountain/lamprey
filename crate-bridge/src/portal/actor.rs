@@ -78,7 +78,7 @@ impl Message<PortalMessage> for Portal {
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
         if let Err(e) = self.handle_inner(msg).await {
-            error!("portal actor handler failed: {:?}", e);
+            error!("portal actor handler failed: {e:#}");
             return Err(e);
         }
         Ok(())
@@ -87,10 +87,21 @@ impl Message<PortalMessage> for Portal {
 
 impl Portal {
     #[tracing::instrument(
-        skip(self),
+        skip(self, msg),
         fields(
             lamprey_thread_id = %self.config.lamprey_thread_id,
             discord_channel_id = %self.config.discord_channel_id,
+            msg = %match &msg {
+                PortalMessage::LampreyMessageCreate { .. } => "LampreyMessageCreate",
+                PortalMessage::LampreyMessageUpdate { .. } => "LampreyMessageUpdate",
+                PortalMessage::LampreyMessageDelete { .. } => "LampreyMessageDelete",
+                PortalMessage::DiscordMessageCreate { .. } => "DiscordMessageCreate",
+                PortalMessage::DiscordMessageUpdate { .. } => "DiscordMessageUpdate",
+                PortalMessage::DiscordMessageDelete { .. } => "DiscordMessageDelete",
+                PortalMessage::DiscordReactionAdd { .. } => "DiscordReactionAdd",
+                PortalMessage::DiscordReactionRemove { .. } => "DiscordReactionRemove",
+                PortalMessage::DiscordTyping { .. } => "DiscordTyping",
+            }
         )
     )]
     async fn handle_inner(&mut self, msg: PortalMessage) -> Result<()> {

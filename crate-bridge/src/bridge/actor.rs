@@ -56,7 +56,7 @@ impl Message<BridgeMessage> for Bridge {
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
         if let Err(e) = self.handle_inner(msg).await {
-            error!("bridge actor handler failed: {:?}", e);
+            error!("bridge actor handler failed: {e:#}");
             return Err(e);
         }
         Ok(())
@@ -64,7 +64,10 @@ impl Message<BridgeMessage> for Bridge {
 }
 
 impl Bridge {
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip(self, msg), fields(msg = %match &msg {
+        BridgeMessage::LampreyThreadCreate { .. } => "LampreyThreadCreate",
+        BridgeMessage::DiscordChannelCreate { .. } => "DiscordChannelCreate",
+    }))]
     async fn handle_inner(&mut self, msg: BridgeMessage) -> Result<()> {
         match msg {
             BridgeMessage::LampreyThreadCreate {
