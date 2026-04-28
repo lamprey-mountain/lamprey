@@ -7,16 +7,15 @@ use common::v1::types::Message as LMessage;
 use common::v1::types::{
     self,
     pagination::{PaginationQuery, PaginationResponse},
-    presence, Channel, ChannelId, ChannelType, MediaId, MessageCreate, MessageId, MessageSync,
+    presence, Channel, ChannelId, ChannelType, MessageCreate, MessageId, MessageSync,
     RoomId, Session, User, UserId,
 };
-use common::{v1::types::util::Time, v2::types::media::Media};
-use dashmap::DashMap;
+use common::v1::types::util::Time;
+use common::v2::types::media::Media;
 use kameo::message::Context;
 use kameo::prelude::*;
 use sdk::{Client, Http};
-use tokio::sync::oneshot;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 use crate::bridge_common::Globals;
 use crate::db::Data;
@@ -27,7 +26,6 @@ pub use crate::lamprey::messages::{LampreyMessage, LampreyResponse};
 pub struct Lamprey {
     http: Http,
     globals: Arc<Globals>,
-    media_processed: Arc<DashMap<MediaId, oneshot::Sender<Media>>>,
 }
 
 impl kameo::Actor for Lamprey {
@@ -41,11 +39,8 @@ impl kameo::Actor for Lamprey {
         let token = globals.config.lamprey_token.clone();
         let base_url = globals.config.lamprey_base_url.clone();
         let ws_url = globals.config.lamprey_ws_url.clone();
-        let media_processed: Arc<DashMap<MediaId, oneshot::Sender<Media>>> =
-            Arc::new(DashMap::new());
         let handle = LampreyEventHandler {
             globals: globals.clone(),
-            media_processed: media_processed.clone(),
         };
         let mut client = Client::new(token.clone().into()).with_handler(Box::new(handle));
         client.http = if let Some(base_url) = base_url {
@@ -68,7 +63,6 @@ impl kameo::Actor for Lamprey {
         Ok(Self {
             http: client.http,
             globals,
-            media_processed,
         })
     }
 
@@ -102,7 +96,6 @@ impl Message<LampreyMessage> for Lamprey {
         let res = crate::lamprey::handlers::handle_lamprey_message(
             &self.http,
             self.globals.clone(),
-            self.media_processed.clone(),
             msg,
         )
         .await;
@@ -424,7 +417,6 @@ impl LampreyHandle {
 
 pub struct LampreyEventHandler {
     pub globals: Arc<Globals>,
-    pub media_processed: Arc<DashMap<MediaId, oneshot::Sender<Media>>>,
 }
 
 #[async_trait::async_trait]
@@ -522,14 +514,6 @@ impl LampreyEventHandler {
                 let _ = portal_ref
                     .tell(PortalMessage::LampreyMessageDelete { message_id })
                     .await;
-            }
-            MessageSync::MediaProcessed { media, .. } => {
-                info!("media processed {}", media.id);
-                if let Some((_, tx)) = self.media_processed.remove(&media.id) {
-                    let _ = tx.send(media);
-                } else {
-                    warn!("media processed channel not found for {}", media.id);
-                }
             }
             _ => {} // Other sync messages are ignored
         }

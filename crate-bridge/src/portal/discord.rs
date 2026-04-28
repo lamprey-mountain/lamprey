@@ -351,7 +351,7 @@ impl Portal {
                 .unwrap_or_else(|_| time::OffsetDateTime::now_utc())
                 .into();
         let res = match ly
-            .message_create_with_timestamp(thread_id, user_id, dbg!(req), timestamp)
+            .message_create_with_timestamp(thread_id, user_id, req, timestamp)
             .await
         {
             Ok(res) => res,

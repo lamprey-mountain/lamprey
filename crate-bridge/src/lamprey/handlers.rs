@@ -2,24 +2,18 @@
 
 use anyhow::Result;
 use common::v1::types::util::Time;
-use common::v1::types::MediaId;
 use common::v1::types::{self, misc::UserIdReq, pagination::PaginationQuery, RoomMemberPut};
-use common::v2::types::media::{Media, MediaCreate, MediaCreateSource};
-use dashmap::DashMap;
+use common::v2::types::media::{MediaCreate, MediaCreateSource, MediaDoneParams};
 use sdk::Http;
 use std::sync::Arc;
-use tokio::sync::oneshot;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use crate::bridge_common::Globals;
 use crate::lamprey::messages::{LampreyMessage, LampreyResponse};
 
-type TokioHashMap = DashMap<MediaId, oneshot::Sender<Media>>;
-
 pub(super) async fn handle_lamprey_message(
     http: &Http,
     globals: Arc<Globals>,
-    media_processed: Arc<TokioHashMap>,
     msg: LampreyMessage,
 ) -> Result<LampreyResponse> {
     match msg {
@@ -38,36 +32,16 @@ pub(super) async fn handle_lamprey_message(
             };
             let upload = http.for_puppet(user_id).media_create(&req).await?;
 
-            let upload_id = upload.media_id;
-            let (tx, rx) = oneshot::channel();
-            media_processed.insert(upload_id, tx);
-
             http.for_puppet(user_id)
                 .media_upload(&upload, bytes)
                 .await?;
 
-            // HACK: media_done seems to be broken currently, so i have to do some channel gymnastics to get this to work :(
-            // let media = http
-            //     .for_puppet(user_id)
-            //     .media_done(
-            //         upload.media_id,
-            //         &MediaDoneParams {
-            //             process_async: true,
-            //         },
-            //     )
-            //     .await?;
+            let media = http
+                .for_puppet(user_id)
+                .media_done(upload.media_id, &MediaDoneParams { process_async: false })
+                .await?;
 
-            let media = match rx.await {
-                Ok(media) => media,
-                Err(err) => {
-                    warn!("failed to upload media: {err}");
-                    return Err(anyhow::anyhow!(
-                        "media processed handler dropped the channel"
-                    ));
-                }
-            };
-
-            Ok(LampreyResponse::Media(media))
+            Ok(LampreyResponse::Media(media.expect("sync media_done should return Some")))
         }
         LampreyMessage::MessageGet {
             thread_id,
