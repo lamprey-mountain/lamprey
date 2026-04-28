@@ -39,11 +39,6 @@ use crate::{
 mod ffmpeg;
 mod ffprobe;
 
-pub struct ServiceMedia {
-    pub state: Arc<ServerStateInner>,
-    pub uploads: Arc<DashMap<MediaId, MediaUpload>>,
-}
-
 pub struct MediaUpload {
     pub create: MediaCreate,
     pub user_id: UserId,
@@ -52,6 +47,26 @@ pub struct MediaUpload {
     pub current_size: u64,
     pub max_size: u64,
     pub finished_at: Instant,
+    pub processed_notify: Arc<tokio::sync::Notify>,
+}
+
+pub struct ServiceMedia {
+    pub state: Arc<ServerStateInner>,
+    pub uploads: Arc<DashMap<MediaId, MediaUpload>>,
+    pub processing: Arc<DashMap<MediaId, Arc<tokio::sync::Notify>>>,
+}
+
+struct ProcessNotifyGuard {
+    media_id: MediaId,
+    processing: Arc<DashMap<MediaId, Arc<tokio::sync::Notify>>>,
+    notify: Arc<tokio::sync::Notify>,
+}
+
+impl Drop for ProcessNotifyGuard {
+    fn drop(&mut self) {
+        self.processing.remove(&self.media_id);
+        self.notify.notify_waiters();
+    }
 }
 
 impl MediaUpload {
@@ -77,6 +92,7 @@ impl ServiceMedia {
         Self {
             state,
             uploads: Arc::new(DashMap::new()),
+            processing: Arc::new(DashMap::new()),
         }
     }
 
@@ -118,6 +134,7 @@ impl ServiceMedia {
         let temp_file = TempFile::new().await.expect("failed to create temp file!");
         let temp_writer = BufWriter::new(temp_file.open_rw().await?);
         trace!("create temp_file {:?}", temp_file.file_path());
+        let processed_notify = Arc::new(tokio::sync::Notify::new());
         self.uploads.insert(
             media_id,
             MediaUpload {
@@ -128,8 +145,10 @@ impl ServiceMedia {
                 current_size: 0,
                 max_size: self.state.config.media_max_size,
                 finished_at: Instant::now(),
+                processed_notify: Arc::clone(&processed_notify),
             },
         );
+        self.processing.insert(media_id, processed_notify);
 
         let filename = match &create.source {
             MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
@@ -295,8 +314,26 @@ impl ServiceMedia {
         Ok(())
     }
 
-    #[tracing::instrument(skip(self, up))]
     pub async fn process_upload(
+        &self,
+        up: MediaUpload,
+        media_id: MediaId,
+        user_id: UserId,
+        filename: &str,
+        session_id: Option<SessionId>,
+    ) -> Result<MediaV2> {
+        let _guard = ProcessNotifyGuard {
+            media_id,
+            processing: self.processing.clone(),
+            notify: up.processed_notify.clone(),
+        };
+
+        self.process_upload_inner(up, media_id, user_id, filename, session_id)
+            .await
+    }
+
+    #[tracing::instrument(skip(self, up))]
+    async fn process_upload_inner(
         &self,
         up: MediaUpload,
         media_id: MediaId,
@@ -611,6 +648,8 @@ impl ServiceMedia {
                 trace!("flush media");
                 up.temp_writer.flush().await?;
                 trace!("flushed media");
+                self.processing
+                    .insert(media_id, up.processed_notify.clone());
                 drop(up);
                 trace!("dropped upload");
                 let (_, up) = self
@@ -675,6 +714,8 @@ impl ServiceMedia {
         trace!("flush media");
         up.temp_writer.flush().await?;
         trace!("flushed media");
+        self.processing
+            .insert(media_id, up.processed_notify.clone());
         drop(up);
         trace!("dropped upload");
         let (_, up) = self

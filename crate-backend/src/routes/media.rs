@@ -249,6 +249,11 @@ async fn media_done(
             }
         }
     } else {
+        if let Some(notify) = s.services().media.processing.get(&media_id) {
+            let n = notify.clone();
+            drop(notify);
+            n.notified().await;
+        }
         let media = s.data().media_select(media_id).await?;
         let mut headers = HeaderMap::new();
         headers.insert("upload-offset", media.size.into());
@@ -327,6 +332,8 @@ async fn media_upload(
             up.temp_writer.flush().await?;
             drop(up);
 
+            let (_, up) = s.services().media.uploads.remove(&media_id).expect("should exist");
+
             let mut headers = HeaderMap::new();
             headers.insert("upload-offset", source_size.into());
             headers.insert("upload-length", source_size.into());
@@ -334,13 +341,6 @@ async fn media_upload(
             let state = s.clone();
             let session_id = auth.session.id;
             tokio::spawn(async move {
-                let up = match state.services().media.uploads.remove(&media_id) {
-                    Some((_, up)) => up,
-                    None => {
-                        error!("upload was removed before processing");
-                        return;
-                    }
-                };
                 let filename = match &up.create.source {
                     MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
                     MediaCreateSource::Download { .. } => {
