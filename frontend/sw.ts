@@ -2,6 +2,8 @@
 /// <reference lib="webworker" />
 /// <reference no-default-lib="true"/>
 
+declare const __PRECACHE_MANIFEST__: string[];
+
 // FIXME: firefox doesnt like it when i import?
 // import { stripMarkdownAndResolveMentions } from "./src/notification-util.ts";
 import type {
@@ -28,7 +30,9 @@ type MockApiClient = {
 	};
 };
 
-const CACHE_VALID: Array<string> = [];
+const PRECACHE_CACHE = "precache-v1";
+
+const CACHE_VALID: Array<string> = [PRECACHE_CACHE];
 
 const _makeError = (error: string, status = 400) => {
 	return new Response(JSON.stringify({ error }), {
@@ -50,6 +54,11 @@ const deleteOldCaches = async () => {
 	);
 };
 
+const precache = async () => {
+	const cache = await caches.open(PRECACHE_CACHE);
+	await cache.addAll(__PRECACHE_MANIFEST__);
+};
+
 const _shouldCache = (req: Request) => {
 	if (req.method !== "GET" && req.method !== "HEAD") return false;
 	// const url = new URL(req.url, self.location.href);
@@ -69,8 +78,37 @@ self.addEventListener("activate", (e) => {
 			deleteOldCaches(),
 			self.registration.navigationPreload.enable(),
 			self.clients.claim(),
+			precache(),
 		]),
 	);
+});
+
+self.addEventListener("fetch", (event) => {
+	const url = new URL(event.request.url);
+
+	// 1. navigation requests (index.html) -> network first
+	if (event.request.mode === "navigate") {
+		event.respondWith(
+			fetch(event.request).catch((err) =>
+				caches.match("/index.html").then((res) => {
+					if (!res) throw err;
+					return res;
+				}),
+			),
+		);
+		return;
+	}
+
+	// 2. static assets (js/css) -> cache first
+	if (url.pathname.startsWith("/assets/")) {
+		event.respondWith(
+			caches.match(event.request).then((hit) => hit ?? fetch(event.request)),
+		);
+		return;
+	}
+
+	// 3. everything else (api) -> network only
+	return;
 });
 
 async function getState(

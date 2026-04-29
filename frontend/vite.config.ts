@@ -55,7 +55,27 @@ export default defineConfig({
 		__VITE_GIT_COMMIT__: JSON.stringify(getGitCommit()),
 		__VITE_GIT_DIRTY__: isGitDirty(),
 	},
-	plugins: [solid()],
+	plugins: [
+		solid(),
+		{
+			name: "sw-manifest",
+			generateBundle(_, bundle) {
+				const assets = Object.values(bundle)
+					.filter((chunk) => chunk.type === "chunk" || chunk.type === "asset")
+					.filter((chunk) => !chunk.fileName.endsWith(".map"))
+					.map((chunk) => "/" + chunk.fileName);
+
+				for (const chunk of Object.values(bundle)) {
+					if (chunk.type === "chunk" && chunk.facadeModuleId?.includes("sw.")) {
+						chunk.code = chunk.code.replace(
+							"__PRECACHE_MANIFEST__",
+							JSON.stringify(assets),
+						);
+					}
+				}
+			},
+		},
+	],
 	server: {
 		watch: {
 			// watching seems broken on my machine unfortunately
