@@ -18,12 +18,15 @@ import {
 
 export function AuditLog(props: VoidProps<{ room: Room }>) {
 	const api2 = useApi();
-	const log = api2.audit_logs.use(() => props.room.id);
+	const log = api2.auditLog.useList(() => props.room.id);
 	const [members, setMembers] = createSignal<
 		Array<{ item: string; label: string }>
 	>([]);
 	const collapsed = new ReactiveSet();
 
+	createEffect(() => {
+		console.log("AAA", log()?.state);
+	});
 	createEffect(() => {
 		const roomMembers = api2.room_members.cache;
 		const membersInRoom = Array.from(roomMembers.values()).filter(
@@ -74,48 +77,55 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 				</div>
 			</div>
 			<Show when={log()}>
-				<ul class="room-settings-audit-log">
-					<For each={mergeAuditLogEntries((log()! as any).items ?? [])}>
-						{(mergedEntry) => {
-							const firstEntry = mergedEntry.entries[0];
-							const ts = () => getTimestampFromUUID(firstEntry.id);
-							const entryDescription = () =>
-								formatAuditLogEntry(props.room.id, mergedEntry);
+				{(l) => (
+					<ul class="room-settings-audit-log">
+						<For
+							each={mergeAuditLogEntries(
+								l().state.ids.map((id) => api2.auditLog.cache.get(id)!),
+							)}
+						>
+							{(mergedEntry) => {
+								const firstEntry = mergedEntry.entries[0];
+								const ts = () => getTimestampFromUUID(firstEntry.id);
+								const entryDescription = () =>
+									formatAuditLogEntry(props.room.id, mergedEntry);
 
-							return (
-								<li data-id={firstEntry.id}>
-									<div
-										class="info"
-										onClick={() =>
-											collapsed.has(firstEntry.id)
-												? collapsed.delete(firstEntry.id)
-												: collapsed.add(firstEntry.id)
-										}
-									>
-										<div style="display:flex;gap:4px">
-											<h3>{entryDescription()}</h3>
+								return (
+									<li data-id={firstEntry.id}>
+										<div
+											class="info"
+											onClick={() =>
+												collapsed.has(firstEntry.id)
+													? collapsed.delete(firstEntry.id)
+													: collapsed.add(firstEntry.id)
+											}
+										>
+											<div style="display:flex;gap:4px">
+												<h3>{entryDescription()}</h3>
+											</div>
+											<Time date={ts()} />
 										</div>
-										<Time date={ts()} />
-									</div>
-									<Show
-										when={
-											(formatChanges(props.room.id, mergedEntry).length !== 0 ||
-												mergedEntry.reason) &&
-											!collapsed.has(firstEntry.id)
-										}
-									>
-										<ul class="metadata">
-											<Show when={mergedEntry.reason}>
-												<li>reason: {mergedEntry.reason}</li>
-											</Show>
-											{formatChanges(props.room.id, mergedEntry)}
-										</ul>
-									</Show>
-								</li>
-							);
-						}}
-					</For>
-				</ul>
+										<Show
+											when={
+												(formatChanges(props.room.id, mergedEntry).length !==
+													0 ||
+													mergedEntry.reason) &&
+												!collapsed.has(firstEntry.id)
+											}
+										>
+											<ul class="metadata">
+												<Show when={mergedEntry.reason}>
+													<li>reason: {mergedEntry.reason}</li>
+												</Show>
+												{formatChanges(props.room.id, mergedEntry)}
+											</ul>
+										</Show>
+									</li>
+								);
+							}}
+						</For>
+					</ul>
+				)}
 			</Show>
 		</>
 	);
