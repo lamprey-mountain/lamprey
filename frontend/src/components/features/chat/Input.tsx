@@ -215,6 +215,13 @@ export function Input(props: InputProps) {
 	});
 
 	createEffect(() => {
+		const rid = reply_id();
+		if (rid) {
+			queueMicrotask(() => editor.focus());
+		}
+	});
+
+	createEffect(() => {
 		const expireAt = props.channel.slowmode_message_expire_at;
 		if (expireAt) {
 			const currentExpireAt = ch.slowmode_expire_at;
