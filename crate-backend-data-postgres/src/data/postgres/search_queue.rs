@@ -138,12 +138,9 @@ impl DataSearchQueue for Postgres {
     }
 
     async fn search_ingestion_dlq_delete(&self, id: SearchDlqId) -> Result<()> {
-        query!(
-            "DELETE FROM search_ingestion_dlq WHERE id = $1",
-            *id
-        )
-        .execute(&self.pool)
-        .await?;
+        query!("DELETE FROM search_ingestion_dlq WHERE id = $1", *id)
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 }

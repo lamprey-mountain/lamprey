@@ -4,11 +4,11 @@ use std::sync::Arc;
 
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::util::Time;
+use common::v1::types::Message;
 use common::v1::types::{
     self, presence, Channel, ChannelId, ChannelType, MessageCreate, MessageId, RoomId, User, UserId,
 };
 use common::v2::types::media::Media;
-use common::v1::types::Message;
 
 /// Lamprey actor messages - request/response pattern
 #[derive(Debug)]

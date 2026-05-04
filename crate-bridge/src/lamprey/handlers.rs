@@ -38,10 +38,17 @@ pub(super) async fn handle_lamprey_message(
 
             let media = http
                 .for_puppet(user_id)
-                .media_done(upload.media_id, &MediaDoneParams { process_async: false })
+                .media_done(
+                    upload.media_id,
+                    &MediaDoneParams {
+                        process_async: false,
+                    },
+                )
                 .await?;
 
-            Ok(LampreyResponse::Media(media.expect("sync media_done should return Some")))
+            Ok(LampreyResponse::Media(
+                media.expect("sync media_done should return Some"),
+            ))
         }
         LampreyMessage::MessageGet {
             thread_id,

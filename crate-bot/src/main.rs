@@ -3,11 +3,11 @@ use std::sync::Arc;
 
 use anyhow::anyhow;
 use clap::Parser;
+use common::v1::types::Message;
 use common::v1::types::{
     voice::{SignallingMessage, VoiceState, VoiceStateUpdate},
     MessageClient, MessageCreate, MessageSync, Session, User,
 };
-use common::v1::types::Message;
 use figment::providers::{Env, Format, Toml};
 use sdk::{Client, EventHandler, Http};
 use sqlx::SqlitePool;
@@ -180,8 +180,10 @@ impl Handle {
 
         if let Some(command) = content.and_then(|c: &str| c.strip_prefix("!")) {
             debug!("got raw command {command:?}");
-            let command =
-                Command::try_parse_from(std::iter::once("bot".to_string()).chain(command.split_whitespace().map(|s| s.to_string())));
+            let command = Command::try_parse_from(
+                std::iter::once("bot".to_string())
+                    .chain(command.split_whitespace().map(|s| s.to_string())),
+            );
             let resp = match command {
                 Ok(command) => {
                     debug!("got command {command:?}");

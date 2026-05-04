@@ -8,8 +8,8 @@ use common::v1::types::{
     application::Application,
     util::{Changes, Diff, Time},
     AuditLogChange, AuditLogEntryType, MessageSync, Permission, Puppet, RoomMemberOrigin,
-    RoomMemberPut, SERVER_ROOM_ID, SessionStatus, SessionToken, SessionType, SessionWithToken,
-    UserId,
+    RoomMemberPut, SessionStatus, SessionToken, SessionType, SessionWithToken, UserId,
+    SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use lamprey_macros::handler;

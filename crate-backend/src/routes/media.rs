@@ -332,7 +332,12 @@ async fn media_upload(
             up.temp_writer.flush().await?;
             drop(up);
 
-            let (_, up) = s.services().media.uploads.remove(&media_id).expect("should exist");
+            let (_, up) = s
+                .services()
+                .media
+                .uploads
+                .remove(&media_id)
+                .expect("should exist");
 
             let mut headers = HeaderMap::new();
             headers.insert("upload-offset", source_size.into());

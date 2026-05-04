@@ -93,8 +93,7 @@ impl Portal {
         if let Some(edit) = existing {
             let mut files = EditAttachments::new();
             for attachment in &msg_inner.attachments {
-                let common::v1::types::MessageAttachmentType::Media { media } =
-                    &attachment.ty;
+                let common::v1::types::MessageAttachmentType::Media { media } = &attachment.ty;
                 let existing = self.globals.get_attachment(media.id.to_owned()).await?;
                 if let Some(existing) = existing {
                     files = files.keep(existing.discord_id);
@@ -153,8 +152,7 @@ impl Portal {
                 .await?;
 
             for (att, attachment) in discord_msg.attachments.iter().zip(msg_inner.attachments) {
-                let common::v1::types::MessageAttachmentType::Media { media } =
-                    attachment.ty;
+                let common::v1::types::MessageAttachmentType::Media { media } = attachment.ty;
                 self.globals
                     .insert_attachment(AttachmentMetadata {
                         chat_id: media.id,
@@ -167,8 +165,7 @@ impl Portal {
             let download_futures = msg_inner.attachments.iter().map(|attachment| {
                 let globals = &self.globals;
                 async move {
-                    let common::v1::types::MessageAttachmentType::Media { media } =
-                        &attachment.ty;
+                    let common::v1::types::MessageAttachmentType::Media { media } = &attachment.ty;
                     let url = format!(
                         "{}/media/{}",
                         globals
@@ -243,8 +240,7 @@ impl Portal {
                 .await?;
 
             for (att, attachment) in discord_msg.attachments.iter().zip(msg_inner.attachments) {
-                let common::v1::types::MessageAttachmentType::Media { media } =
-                    attachment.ty;
+                let common::v1::types::MessageAttachmentType::Media { media } = attachment.ty;
                 self.globals
                     .insert_attachment(AttachmentMetadata {
                         chat_id: media.id,

@@ -497,7 +497,9 @@ impl Http {
             anyhow::bail!("message_create_with_timestamp failed: status={status} body={text}");
         }
         serde_json::from_str(&text).with_context(|| {
-            format!("failed to decode response body for message_create_with_timestamp (body: {text})")
+            format!(
+                "failed to decode response body for message_create_with_timestamp (body: {text})"
+            )
         })
     }
 }
