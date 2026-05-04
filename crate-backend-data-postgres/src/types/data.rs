@@ -945,6 +945,7 @@ impl From<DbUser> for User {
             emails: None,
             preferences: None,
             has_mfa: None,
+            remote: None,
         }
     }
 }

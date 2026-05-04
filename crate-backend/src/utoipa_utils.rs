@@ -273,7 +273,10 @@ impl Modify for ComponentModifier {
                 .property("ty", Ref::new("#/components/schemas/ComponentType_Create"))
                 .required("ty")
                 .build();
-            components.schemas.insert("Component_Create".to_string(), RefOr::T(component_create.into()));
+            components.schemas.insert(
+                "Component_Create".to_string(),
+                RefOr::T(component_create.into()),
+            );
 
             let component_canonical = ObjectBuilder::new()
                 .property("id", Ref::new("#/components/schemas/ComponentId"))
@@ -295,9 +298,10 @@ impl Modify for ComponentModifier {
                 .required("id")
                 .required("ty")
                 .build();
-            components
-                .schemas
-                .insert("Component_Thin".to_string(), RefOr::T(component_thin.into()));
+            components.schemas.insert(
+                "Component_Thin".to_string(),
+                RefOr::T(component_thin.into()),
+            );
 
             let components_create = ArrayBuilder::new()
                 .items(Ref::new("#/components/schemas/Component_Create"))

@@ -16,7 +16,6 @@ use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
-use crate::types::UserIdReq;
 use crate::ServerState;
 
 use super::util::Auth;
@@ -48,10 +47,7 @@ async fn thread_member_get(
     State(s): State<Arc<ServerState>>,
     req: routes::thread_member_get::Request,
 ) -> Result<impl IntoResponse> {
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     let d = s.data();
     s.services()
         .perms
@@ -72,10 +68,7 @@ async fn thread_member_add(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     // ThreadMemberPut is empty, no validation needed
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     let d = s.data();
     let srv = s.services();
     let mut perms = srv
@@ -194,10 +187,7 @@ async fn thread_member_delete(
     req: routes::thread_member_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     let d = s.data();
     let srv = s.services();
     let mut perms = srv

@@ -12,8 +12,8 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::{
-    search::Order, util::Time, ChannelId, EmbedId, MediaId, MediaVerId, MessageId, MessageVerId,
-    Mime, RoomId, UserId,
+    federation::Remote, search::Order, util::Time, ChannelId, EmbedId, MediaId, MediaVerId,
+    MessageId, MessageVerId, Mime, RoomId, UserId,
 };
 
 pub mod proxy;
@@ -181,6 +181,8 @@ pub struct Media {
     /// Once set to `true`, this cannot be unset.
     #[cfg_attr(feature = "serde", serde(default))]
     pub strip_exif: bool,
+
+    pub remote: Option<Remote>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -633,6 +635,7 @@ impl Media {
             channel_id: None,
             hashes: HashMap::new(),
             strip_exif: false,
+            remote: None,
         }
     }
 }

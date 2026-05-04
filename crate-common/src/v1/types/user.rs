@@ -9,6 +9,7 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::error::{ApiError, ErrorCode};
+use crate::v1::types::federation::Remote;
 use crate::v1::types::preferences::PreferencesUser;
 use crate::v1::types::presence::Presence;
 use crate::v1::types::search::Order;
@@ -82,7 +83,6 @@ pub struct User {
     /// public connections on this user that you can view
     pub connections: Vec<Connection>,
 
-    #[cfg(any())]
     pub remote: Option<Remote>,
 }
 

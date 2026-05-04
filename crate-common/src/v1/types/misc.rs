@@ -15,7 +15,8 @@ pub use time::Time;
 
 use super::{ApplicationId, SessionId, UserId};
 use crate::util::is_valid_hostname;
-use crate::v1::routes::PathParam;
+use crate::v1::routes::{PathParam, PathParamError};
+use crate::v1::types::federation::Hostname;
 
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Deserialize), serde(untagged))]
@@ -23,6 +24,7 @@ use crate::v1::routes::PathParam;
 pub enum UserIdReq {
     #[cfg_attr(feature = "serde", serde(deserialize_with = "const_self"))]
     UserSelf,
+    RemoteUser(UserId, Hostname),
     UserId(UserId),
 }
 
@@ -146,6 +148,7 @@ impl UserIdReq {
     pub fn unwrap_or(self, self_id: UserId) -> UserId {
         match self {
             UserIdReq::UserSelf => self_id,
+            UserIdReq::RemoteUser(user_id, _) => user_id,
             UserIdReq::UserId(user_id) => user_id,
         }
     }
@@ -155,53 +158,64 @@ impl Display for UserIdReq {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             UserIdReq::UserSelf => write!(f, "@self"),
+            UserIdReq::RemoteUser(user_id, host) => write!(f, "{user_id}:{host}"),
             UserIdReq::UserId(user_id) => write!(f, "{user_id}"),
         }
     }
 }
 
 impl PathParam for UserIdReq {
-    fn from_path_param(s: &str) -> Result<Self, crate::v1::routes::PathParamError> {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
         if s == "@self" {
             Ok(UserIdReq::UserSelf)
+        } else if let Some((uuid_str, host_str)) = s.split_once(':') {
+            let user_id = UserId::from_str(uuid_str).map_err(|_| {
+                PathParamError(format!("invalid remote user id uuid: {}", uuid_str))
+            })?;
+            if !is_valid_hostname(host_str) {
+                return Err(PathParamError(format!(
+                    "invalid hostname in remote user id: {}",
+                    host_str
+                )));
+            }
+            Ok(UserIdReq::RemoteUser(
+                user_id,
+                Hostname(host_str.to_string()),
+            ))
         } else {
             UserId::from_str(s)
                 .map(UserIdReq::UserId)
-                .map_err(|_| crate::v1::routes::PathParamError(format!("invalid user id: {}", s)))
+                .map_err(|_| PathParamError(format!("invalid user id: {}", s)))
         }
     }
 }
 
 impl PathParam for ApplicationIdReq {
-    fn from_path_param(s: &str) -> Result<Self, crate::v1::routes::PathParamError> {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
         if s == "@self" {
             Ok(ApplicationIdReq::AppSelf)
         } else {
             ApplicationId::from_str(s)
                 .map(ApplicationIdReq::ApplicationId)
-                .map_err(|_| {
-                    crate::v1::routes::PathParamError(format!("invalid application id: {}", s))
-                })
+                .map_err(|_| PathParamError(format!("invalid application id: {}", s)))
         }
     }
 }
 
 impl PathParam for SessionIdReq {
-    fn from_path_param(s: &str) -> Result<Self, crate::v1::routes::PathParamError> {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
         if s == "@self" {
             Ok(SessionIdReq::SessionSelf)
         } else {
             SessionId::from_str(s)
                 .map(SessionIdReq::SessionId)
-                .map_err(|_| {
-                    crate::v1::routes::PathParamError(format!("invalid session id: {}", s))
-                })
+                .map_err(|_| PathParamError(format!("invalid session id: {}", s)))
         }
     }
 }
 
 impl PathParam for ServerReq {
-    fn from_path_param(s: &str) -> Result<Self, crate::v1::routes::PathParamError> {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
         if s == "@host" {
             Ok(ServerReq::ServerHost)
         } else if s == "@client" {
@@ -209,10 +223,7 @@ impl PathParam for ServerReq {
         } else if is_valid_hostname(s) {
             Ok(ServerReq::ServerName(s.to_owned()))
         } else {
-            Err(crate::v1::routes::PathParamError(format!(
-                "invalid hostname: {}",
-                s
-            )))
+            Err(PathParamError(format!("invalid hostname: {}", s)))
         }
     }
 }

@@ -89,6 +89,7 @@ impl From<DbUser> for User {
             emails: None,
             preferences: None,
             has_mfa: None,
+            remote: None,
         }
     }
 }
@@ -115,6 +116,7 @@ impl DataUser for Postgres {
             preferences: Default::default(),
             emails: None,
             has_mfa: None,
+            remote: None,
         };
 
         let mut tx = self.pool.begin().await?;

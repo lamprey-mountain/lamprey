@@ -340,10 +340,7 @@ async fn calendar_event_rsvp_get(
     req: routes::calendar_event_rsvp_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let user_id = req.user_id.unwrap_or(auth.user.id);
 
     let srv = s.services();
     srv.perms
@@ -377,10 +374,7 @@ async fn calendar_event_rsvp_put(
     req: routes::calendar_event_rsvp_put::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let user_id = req.user_id.unwrap_or(auth.user.id);
 
     let srv = s.services();
     srv.perms
@@ -459,10 +453,7 @@ async fn calendar_event_rsvp_delete(
     req: routes::calendar_event_rsvp_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let user_id = req.user_id.unwrap_or(auth.user.id);
 
     let srv = s.services();
 
@@ -804,10 +795,7 @@ async fn calendar_overwrite_rsvp_put(
     req: routes::calendar_overwrite_rsvp_put::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let user_id = req.user_id.unwrap_or(auth.user.id);
 
     let srv = s.services();
     let mut perms = srv
@@ -888,10 +876,7 @@ async fn calendar_overwrite_rsvp_delete(
     req: routes::calendar_overwrite_rsvp_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let user_id = req.user_id.unwrap_or(auth.user.id);
 
     let srv = s.services();
 

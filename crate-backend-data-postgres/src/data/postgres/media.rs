@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::federation::{Hostname, Remote};
 use common::v1::types::{MediaTrack as MediaTrackV1, MediaV0 as MediaV1};
 use common::v2::types::media::{Media as MediaV2, MediaPatch as MediaPatchV2, MediaStatus};
 use serde::{Deserialize, Serialize};
@@ -21,6 +22,8 @@ pub struct DbMedia {
     pub data: serde_json::Value,
     pub version_id: Uuid,
     pub deleted_at: Option<PrimitiveDateTime>,
+    pub remote_origin_id: Option<Uuid>,
+    pub remote_hostname: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -30,6 +33,8 @@ pub struct DbMediaWithId {
     pub data: serde_json::Value,
     pub version_id: Uuid,
     pub deleted_at: Option<PrimitiveDateTime>,
+    pub remote_origin_id: Option<Uuid>,
+    pub remote_hostname: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -107,17 +112,23 @@ impl DataMedia for Postgres {
         let mut tx = self.pool.begin().await?;
         let media_id = media.id;
         let user_id = media.user_id.expect("server always has user id");
+
+        let remote_origin_id = media.remote.as_ref().map(|r| r.origin_id);
+        let remote_hostname = media.remote.as_ref().map(|r| r.hostname.0.clone());
+
         let data =
             serde_json::to_value(&DbMediaData::V2(media)).expect("failed to serialize media");
         query!(
             r#"
-            INSERT INTO media (id, user_id, data, version_id)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO media (id, user_id, data, version_id, remote_origin_id, remote_hostname)
+            VALUES ($1, $2, $3, $4, $5, $6)
         "#,
             *media_id,
             *user_id,
             data,
             *media_id,
+            remote_origin_id,
+            remote_hostname,
         )
         .execute(&mut *tx)
         .await?;
@@ -130,7 +141,7 @@ impl DataMedia for Postgres {
         let media = query_as!(
             DbMedia,
             r#"
-            SELECT user_id, deleted_at, data, version_id
+            SELECT user_id, deleted_at, data, version_id, remote_origin_id, remote_hostname
             FROM media
             WHERE id = $1
         "#,
@@ -149,6 +160,13 @@ impl DataMedia for Postgres {
             .into();
         parsed.deleted_at = media.deleted_at.map(Into::into);
         parsed.version_id = media.version_id.into();
+
+        if let (Some(origin_id), Some(hostname)) = (media.remote_origin_id, media.remote_hostname) {
+            parsed.remote = Some(Remote {
+                origin_id,
+                hostname: Hostname(hostname),
+            });
+        }
 
         let links = query_as!(
             MediaLink,
@@ -215,7 +233,7 @@ impl DataMedia for Postgres {
         let mut media = query_as!(
             DbMedia,
             r#"
-            SELECT user_id, deleted_at, data, version_id
+            SELECT user_id, deleted_at, data, version_id, remote_origin_id, remote_hostname
             FROM media
             WHERE id = $1
             FOR UPDATE
@@ -293,17 +311,23 @@ impl DataMedia for Postgres {
     async fn media_replace(&self, media: MediaV2) -> Result<()> {
         let mut tx = self.pool.begin().await?;
         let media_id = media.id;
+
+        let remote_origin_id = media.remote.as_ref().map(|r| r.origin_id);
+        let remote_hostname = media.remote.as_ref().map(|r| r.hostname.0.clone());
+
         let data =
             serde_json::to_value(&DbMediaData::V2(media)).expect("failed to serialize media");
         query!(
             r#"
             UPDATE media SET
-                data = $2, version_id = $3
+                data = $2, version_id = $3, remote_origin_id = $4, remote_hostname = $5
             WHERE id = $1
         "#,
             *media_id,
             data,
             Uuid::now_v7(),
+            remote_origin_id,
+            remote_hostname,
         )
         .execute(&mut *tx)
         .await?;
@@ -446,7 +470,7 @@ impl DataMedia for Postgres {
         let rows = query_as!(
             DbMediaWithId,
             r#"
-            select id, user_id, data, deleted_at, version_id
+            select id, user_id, data, deleted_at, version_id, remote_origin_id, remote_hostname
             from media
             where (data->>'v' is null or data->>'v' = 'V1') and deleted_at is null
             limit $1
@@ -491,7 +515,7 @@ impl DataMedia for Postgres {
         let rows = query_as!(
             DbMediaWithId,
             r#"
-            SELECT id, user_id, data, deleted_at, version_id
+            SELECT id, user_id, data, deleted_at, version_id, remote_origin_id, remote_hostname
             FROM media
             WHERE version_id > $1
             ORDER BY version_id ASC
@@ -511,8 +535,57 @@ impl DataMedia for Postgres {
                     .into();
                 parsed.deleted_at = row.deleted_at.map(Into::into);
                 parsed.version_id = row.version_id.into();
+
+                if let (Some(origin_id), Some(hostname)) =
+                    (row.remote_origin_id, row.remote_hostname)
+                {
+                    parsed.remote = Some(Remote {
+                        origin_id,
+                        hostname: Hostname(hostname),
+                    });
+                }
+
                 parsed
             })
             .collect())
+    }
+
+    async fn media_select_by_remote(
+        &self,
+        hostname: &Hostname,
+        origin_id: Uuid,
+    ) -> Result<Option<MediaV2>> {
+        let media = query_as!(
+            DbMedia,
+            r#"
+            SELECT user_id, deleted_at, data, version_id, remote_origin_id, remote_hostname
+            FROM media
+            WHERE remote_hostname = $1 AND remote_origin_id = $2
+            LIMIT 1
+        "#,
+            hostname.0,
+            origin_id,
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let Some(media) = media else {
+            return Ok(None);
+        };
+
+        let mut parsed: MediaV2 = serde_json::from_value::<DbMediaData>(media.data)
+            .unwrap()
+            .into();
+        parsed.deleted_at = media.deleted_at.map(Into::into);
+        parsed.version_id = media.version_id.into();
+
+        if let (Some(origin_id), Some(hostname)) = (media.remote_origin_id, media.remote_hostname) {
+            parsed.remote = Some(Remote {
+                origin_id,
+                hostname: Hostname(hostname),
+            });
+        }
+
+        Ok(Some(parsed))
     }
 }

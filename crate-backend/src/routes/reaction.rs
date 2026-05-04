@@ -4,7 +4,6 @@ use axum::{extract::State, response::IntoResponse, Json};
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::misc::UserIdReq;
 use common::v1::types::reaction::{ReactionKey, ReactionKeyParam};
 use common::v1::types::{AuditLogEntryType, MessageSync, Permission};
 use http::StatusCode;
@@ -53,10 +52,7 @@ async fn reaction_add(
     State(s): State<Arc<ServerState>>,
     req: routes::reaction_add::Request,
 ) -> Result<impl IntoResponse> {
-    let user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let user_id = req.user_id.unwrap_or(auth.user.id);
 
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
@@ -124,10 +120,7 @@ async fn reaction_remove(
     req: routes::reaction_remove::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let user_id = req.user_id.unwrap_or(auth.user.id);
 
     let srv = s.services();
     let mut perms = srv

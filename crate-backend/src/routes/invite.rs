@@ -7,7 +7,6 @@ use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::automod::AutomodAction;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::misc::UserIdReq;
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
     AuditLogEntryType, ChannelType, Invite, InviteCode, InviteTarget, InviteTargetId,
@@ -1003,10 +1002,7 @@ async fn invite_user_create(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
 
     if auth.user.id != target_user_id {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
@@ -1054,10 +1050,7 @@ async fn invite_user_list(
     req: routes::invite_user_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
 
     if auth.user.id != target_user_id {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));

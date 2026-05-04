@@ -26,7 +26,7 @@ use crate::v1::types::{
 pub struct Hostname(pub String);
 
 /// a piece of content on a remote server
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Remote {
@@ -34,7 +34,7 @@ pub struct Remote {
     pub origin_id: Uuid,
 
     /// the hostname of the server
-    pub hostname: String,
+    pub hostname: Hostname,
 }
 
 /// a server's signing key
@@ -209,5 +209,11 @@ impl Hostname {
                 format!("invalid hostname: {}", s),
             ))
         }
+    }
+}
+
+impl std::fmt::Display for Hostname {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }

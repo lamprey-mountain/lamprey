@@ -13,7 +13,6 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::{Error, Result};
 use crate::routes::util::Auth;
-use crate::types::UserIdReq;
 use crate::{routes2, ServerState};
 
 // TODO: merge with channel_create_dm
@@ -108,10 +107,7 @@ async fn dm_list(
     req: routes::dm_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
 
     if auth.user.id != target_user_id {
         return Err(Error::MissingPermissions);

@@ -60,7 +60,7 @@ async fn media_create(
             let media_id = MediaId::new();
             let srv = s.services();
             srv.media
-                .create_upload(media_id, auth.user.id, json.clone().into())
+                .create_upload(media_id, auth.user.id, json.clone().into(), None)
                 .await?;
             let upload_url = Some(
                 s.config()
@@ -612,6 +612,7 @@ async fn media_upload_direct(
                     size: Some(data.len() as u64),
                 },
             },
+            None,
         )
         .await?;
 

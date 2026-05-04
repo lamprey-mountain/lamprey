@@ -11,11 +11,15 @@ use bytes::Bytes;
 use async_tempfile::TempFile;
 use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
 use common::{
-    v1::types::error::{ApiError, ErrorCode},
+    v1::types::{
+        error::{ApiError, ErrorCode},
+        federation::Remote,
+        MediaId,
+    },
     v2::types::media::HashType,
 };
 use common::{
-    v1::types::{util::truncate::truncate_filename, MediaId, MediaVerId, Mime, UserId},
+    v1::types::{util::truncate::truncate_filename, MediaVerId, Mime, UserId},
     v2::types::media::scanner::{MediaScanResponse, ScanRequest},
 };
 use common::{
@@ -48,6 +52,7 @@ pub struct MediaUpload {
     pub max_size: u64,
     pub finished_at: Instant,
     pub processed_notify: Arc<tokio::sync::Notify>,
+    pub remote: Option<Remote>,
 }
 
 pub struct ServiceMedia {
@@ -130,6 +135,7 @@ impl ServiceMedia {
         media_id: MediaId,
         user_id: UserId,
         create: MediaCreate,
+        remote: Option<Remote>,
     ) -> Result<()> {
         let temp_file = TempFile::new().await.expect("failed to create temp file!");
         let temp_writer = BufWriter::new(temp_file.open_rw().await?);
@@ -146,6 +152,7 @@ impl ServiceMedia {
                 max_size: self.state.config.media_max_size,
                 finished_at: Instant::now(),
                 processed_notify: Arc::clone(&processed_notify),
+                remote: remote.clone(),
             },
         );
         self.processing.insert(media_id, processed_notify);
@@ -181,6 +188,7 @@ impl ServiceMedia {
             channel_id: None,
             hashes: HashMap::new(),
             strip_exif: create.strip_exif,
+            remote,
         };
         self.state.data().media_insert(media).await?;
 
@@ -374,6 +382,7 @@ impl ServiceMedia {
             channel_id: None,
             hashes: HashMap::new(),
             strip_exif: create.strip_exif,
+            remote: None,
         };
         self.state.data().media_replace(media_processing).await?;
 
@@ -486,6 +495,7 @@ impl ServiceMedia {
             channel_id: None,
             hashes,
             strip_exif: create.strip_exif,
+            remote: up.remote,
         };
 
         debug!("finish upload for {}, mime {}", media_id, mime);
@@ -561,7 +571,8 @@ impl ServiceMedia {
         };
 
         let media_id = MediaId::new();
-        self.create_upload(media_id, user_id, json.clone()).await?;
+        self.create_upload(media_id, user_id, json.clone(), None)
+            .await?;
 
         let res = self.state.services().http.get(source_url.clone()).await?;
 
@@ -584,7 +595,8 @@ impl ServiceMedia {
         session_id: Option<SessionId>,
     ) -> Result<MediaV2> {
         let media_id = MediaId::new();
-        self.create_upload(media_id, user_id, json.clone()).await?;
+        self.create_upload(media_id, user_id, json.clone(), None)
+            .await?;
         self.import_from_response_inner(user_id, media_id, json, res, max_size, session_id)
             .await
     }
@@ -695,7 +707,8 @@ impl ServiceMedia {
         }
 
         let media_id = MediaId::new();
-        self.create_upload(media_id, user_id, json.clone()).await?;
+        self.create_upload(media_id, user_id, json.clone(), None)
+            .await?;
 
         let mut up =
             self.uploads
@@ -734,6 +747,63 @@ impl ServiceMedia {
             .await?;
         debug!("finished processing media");
         Ok(media)
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub async fn load_remote_media(
+        &self,
+        user_id: UserId,
+        remote_media_id: MediaId,
+        remote: Remote,
+    ) -> Result<MediaV2> {
+        if let Some(media) = self
+            .state
+            .data()
+            .media_select_by_remote(&remote.hostname, remote.origin_id)
+            .await?
+        {
+            return Ok(media);
+        }
+
+        let api_url = self
+            .state
+            .services()
+            .federation
+            .fetch_api_url(&remote.hostname)
+            .await?;
+        let url = api_url.join(&format!("/v1/media/{}/file", remote_media_id))?;
+
+        let res = self
+            .state
+            .services()
+            .http
+            .client
+            .get(url.clone())
+            .send()
+            .await?;
+        if !res.status().is_success() {
+            return Err(Error::BadStatic("failed to fetch remote media"));
+        }
+
+        let bytes = res.bytes().await?;
+
+        let json = MediaCreate {
+            alt: None,
+            strip_exif: false,
+            source: MediaCreateSource::Download {
+                filename: None,
+                size: Some(bytes.len() as u64),
+                source_url: url,
+            },
+        };
+
+        let media_id = MediaId::new();
+        self.create_upload(media_id, user_id, json, Some(remote))
+            .await?;
+
+        let up = self.uploads.remove(&media_id).unwrap().1;
+        self.process_upload(up, media_id, user_id, "remote_media", None)
+            .await
     }
 
     /// Strip EXIF metadata from an image file.

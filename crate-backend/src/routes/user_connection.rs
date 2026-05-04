@@ -4,7 +4,6 @@ use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::routes;
-use common::v1::types::misc::UserIdReq;
 use common::v1::types::{AuditLogEntryType, MessageSync};
 use http::StatusCode;
 use lamprey_macros::handler;
@@ -21,10 +20,7 @@ async fn user_connection_list(
     State(s): State<Arc<ServerState>>,
     req: routes::user_connection_list::Request,
 ) -> Result<impl IntoResponse> {
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
 
     if auth.user.id != target_user_id {
         return Err(Error::MissingPermissions);
@@ -54,10 +50,7 @@ async fn user_connection_delete(
     State(s): State<Arc<ServerState>>,
     req: routes::user_connection_delete::Request,
 ) -> Result<impl IntoResponse> {
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
 
     if auth.user.id != target_user_id {
         return Err(Error::MissingPermissions);

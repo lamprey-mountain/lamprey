@@ -32,6 +32,7 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::config::{ListenComponent, ListenTransport};
 
+use common::v1::types::misc::ApplicationIdReq;
 use lamprey_backend::{
     cli, config, error,
     routes::{self},
@@ -41,7 +42,6 @@ use lamprey_backend::{
     },
     Error, ServerState,
 };
-use common::v1::types::misc::ApplicationIdReq;
 
 use config::Config;
 use error::Result;
@@ -49,7 +49,6 @@ use error::Result;
 use crate::utoipa_utils::{cors, BadgeModifier, ComponentModifier, NestedTags};
 
 mod utoipa_utils;
-
 
 #[cfg(feature = "embed-frontend")]
 mod frontend;

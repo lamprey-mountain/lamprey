@@ -122,6 +122,7 @@ impl From<V1Media> for Media {
             channel_id: None,
             hashes: HashMap::default(),
             strip_exif: false,
+            remote: None,
         }
     }
 }

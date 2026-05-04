@@ -32,10 +32,7 @@ async fn user_update(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     let srv = s.services();
     let mut perms = srv
         .perms
@@ -122,10 +119,7 @@ async fn user_delete(
     State(s): State<Arc<ServerState>>,
     req: routes::user_delete::Request,
 ) -> Result<impl IntoResponse> {
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     let srv = s.services();
     let data = s.data();
     let mut perms = srv
@@ -172,10 +166,7 @@ async fn user_undelete(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
 
     let srv = s.services();
     let data = s.data();
@@ -236,13 +227,17 @@ async fn user_get(
         auth.ensure_scopes(&[Scope::Identify])?;
     }
 
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user()?.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
     let srv = s.services();
     let data = s.data();
-    let mut user = srv.users.get(target_user_id, auth.user_id()).await?;
+
+    let mut user = match req.user_id {
+        UserIdReq::UserSelf => srv.users.get(auth.user()?.id, auth.user_id()).await?,
+        UserIdReq::UserId(target_user_id) => srv.users.get(target_user_id, auth.user_id()).await?,
+        UserIdReq::RemoteUser(user_id, hostname) => {
+            srv.federation.load_remote_user(user_id, &hostname).await?
+        }
+    };
+    let target_user_id = user.id;
 
     let has_email_scope = match &auth.identity {
         crate::routes::util::auth::AuthIdentity3::Session { scopes, .. } => {
@@ -276,10 +271,7 @@ async fn user_room_list(
     State(s): State<Arc<ServerState>>,
     req: routes::user_room_list::Request,
 ) -> Result<impl IntoResponse> {
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
 
     let data = s.data();
     let srv = s.services();
@@ -306,10 +298,7 @@ async fn user_audit_logs(
     State(s): State<Arc<ServerState>>,
     req: routes::user_audit_logs::Request,
 ) -> Result<impl IntoResponse> {
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
 
     if auth.user.id != target_user_id {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
@@ -410,10 +399,7 @@ async fn user_suspend(
     auth.user.ensure_unsuspended()?;
     let d = s.data();
     let srv = s.services();
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     if target_user_id != auth.user.id {
         srv.perms
             .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
@@ -453,10 +439,7 @@ async fn user_unsuspend(
     auth.user.ensure_unsuspended()?;
     let d = s.data();
     let srv = s.services();
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     srv.perms
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
         .await?
@@ -486,10 +469,7 @@ async fn user_presence_set(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(id) => id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
 
     if auth.user.id != target_user_id {
         return Err(Error::MissingPermissions);

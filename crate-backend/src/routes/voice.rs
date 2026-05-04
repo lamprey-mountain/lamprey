@@ -6,7 +6,6 @@ use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::misc::UserIdReq;
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::voice::{RingEligibility, SfuCommand, SfuPermissions, VoiceState};
 use common::v1::types::{
@@ -29,10 +28,7 @@ async fn voice_state_get(
     req: routes::voice_state_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     let srv = s.services();
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
@@ -56,10 +52,7 @@ async fn voice_state_patch(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     let srv = s.services();
     let mut perms = srv
         .perms
@@ -232,10 +225,7 @@ async fn voice_state_disconnect(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     let srv = s.services();
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
@@ -312,10 +302,7 @@ async fn voice_state_move(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     let srv = s.services();
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)

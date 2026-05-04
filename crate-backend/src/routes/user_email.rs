@@ -16,7 +16,6 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::Result;
 use crate::routes::util::Auth;
-use crate::types::UserIdReq;
 use crate::{routes2, Error, ServerState};
 
 use super::auth::fetch_auth_state;
@@ -55,10 +54,7 @@ async fn email_add(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let email_addr: EmailAddr = req.addr.try_into()?;
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     if auth.user.id != target_user_id {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
@@ -137,10 +133,7 @@ async fn email_delete(
     auth.user.ensure_unsuspended()?;
 
     let email: EmailAddr = req.addr.try_into()?;
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     if auth.user.id != target_user_id {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
@@ -188,10 +181,7 @@ async fn email_list(
     req: routes::email_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     if auth.user.id != target_user_id {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
@@ -210,10 +200,7 @@ async fn email_update(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let email_addr: EmailAddr = req.addr.try_into()?;
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     if auth.user.id != target_user_id {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
@@ -278,10 +265,7 @@ async fn email_verification_resend(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let email_addr: EmailAddr = req.addr.try_into()?;
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     if auth.user.id != target_user_id {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
@@ -338,10 +322,7 @@ async fn email_verification_finish(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let email_addr: EmailAddr = req.addr.try_into()?;
-    let target_user_id = match req.user_id {
-        UserIdReq::UserSelf => auth.user.id,
-        UserIdReq::UserId(target_user_id) => target_user_id,
-    };
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     if auth.user.id != target_user_id {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }

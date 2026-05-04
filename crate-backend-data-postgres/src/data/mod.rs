@@ -10,6 +10,7 @@ use common::v1::types::document::{
     DocumentBranchState, DocumentPatch, DocumentTag, Wiki, WikiPatch,
 };
 use common::v1::types::email::EmailAddr;
+use common::v1::types::federation::Hostname;
 use common::v1::types::message::{Message, MessageVersion};
 use common::v1::types::oauth::Scopes;
 use common::v1::types::room_template::{RoomTemplateCode, RoomTemplateCreate, RoomTemplatePatch};
@@ -181,6 +182,11 @@ pub trait DataMedia {
         after_version_id: Option<MediaVerId>,
         limit: u32,
     ) -> Result<Vec<Media>>;
+    async fn media_select_by_remote(
+        &self,
+        hostname: &Hostname,
+        origin_id: Uuid,
+    ) -> Result<Option<Media>>;
 }
 
 // DataMessage trait
