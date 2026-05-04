@@ -278,6 +278,86 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/admin/search/dlq": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Admin search DLQ list
+		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
+		 */
+		get: operations["admin_search_dlq_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/admin/search/dlq/{id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		/**
+		 * Admin search DLQ delete
+		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
+		 */
+		delete: operations["admin_search_dlq_delete"];
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/admin/search/dlq/{id}/retry": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Admin search DLQ retry
+		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
+		 */
+		post: operations["admin_search_dlq_retry"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/admin/search/stats": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Admin search stats
+		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
+		 */
+		get: operations["admin_search_stats"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/admin/whisper": {
 		parameters: {
 			query?: never;
@@ -2691,6 +2771,9 @@ export interface paths {
 							last_message_id?: null | components["schemas"]["Id"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
+							/** @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync. */
+							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
 							 * Format: int64
@@ -2843,6 +2926,9 @@ export interface paths {
 							last_message_id?: null | components["schemas"]["Id"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
+							/** @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync. */
+							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
 							 * Format: int64
@@ -3026,6 +3112,9 @@ export interface paths {
 							last_message_id?: null | components["schemas"]["Id"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
+							/** @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync. */
+							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
 							 * Format: int64
@@ -3276,6 +3365,249 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/channel/{channel_id}/flume": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Flume create
+		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
+		 *     <div class="markdown-alert-permission-optional">MessageAttachments</div>
+		 *     <div class="markdown-alert-permission-optional">MessageEmbeds</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Create a live-updating message in a channel. Flumes allow real-time
+		 *     content updates until committed.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					"idempotency-key"?: string;
+					"x-timestamp"?: number;
+				};
+				path: {
+					channel_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						/** @description initial components */
+						components: components["schemas"]["Components_Create"];
+						/** @description mentions to parse from initial components
+						 *
+						 *     note that you can *only* mention on flume create; editing in a mention later will *not* create a notification */
+						mentions?: components["schemas"]["ParseMentions"];
+						metadata?: null | components["schemas"]["MessageMetadata"];
+						reply_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description the id of who sent this message */
+							author_id: components["schemas"]["Id"];
+							channel_id: components["schemas"]["Id"];
+							/** @description when this message was created */
+							created_at: components["schemas"]["Time"];
+							deleted_at?: null | components["schemas"]["Time"];
+							flume?: null | components["schemas"]["MessageFlume"];
+							id: components["schemas"]["Id"];
+							latest_version: components["schemas"]["MessageVersion"];
+							pinned?: null | components["schemas"]["Pinned"];
+							reactions?: components["schemas"]["ReactionCounts"];
+							removed_at?: null | components["schemas"]["Time"];
+							room_id?: null | components["schemas"]["Id"];
+							thread?: null | components["schemas"]["Channel"];
+						};
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/flume/{message_id}/commit": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Flume commit
+		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Commit the flume content, creating a final message version. After commit,
+		 *     no further updates can be applied to this flume.
+		 */
+		put: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					message_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description the id of who sent this message */
+							author_id: components["schemas"]["Id"];
+							channel_id: components["schemas"]["Id"];
+							/** @description when this message was created */
+							created_at: components["schemas"]["Time"];
+							deleted_at?: null | components["schemas"]["Time"];
+							flume?: null | components["schemas"]["MessageFlume"];
+							id: components["schemas"]["Id"];
+							latest_version: components["schemas"]["MessageVersion"];
+							pinned?: null | components["schemas"]["Pinned"];
+							reactions?: components["schemas"]["ReactionCounts"];
+							removed_at?: null | components["schemas"]["Time"];
+							room_id?: null | components["schemas"]["Id"];
+							thread?: null | components["schemas"]["Channel"];
+						};
+					};
+				};
+			};
+		};
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/flume/{message_id}/delta": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		/**
+		 * Flume update
+		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Apply a patch to the flume's components. This can append, replace, update,
+		 *     or delete components. The flume must be in the Live state.
+		 */
+		patch: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					message_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						/** @description append components to an existing component */
+						append?: components["schemas"]["FlumeAppend"][];
+						/** @description delete some components */
+						delete?: components["schemas"]["ComponentId"][];
+						init?: null | components["schemas"]["Components_Canonical"];
+						/** @description replace a component with one or more components
+						 *
+						 *     - replacing a component with children will delete the children
+						 *     - replacing a component with a single component will always work
+						 *     - replacing a component with multiple components will work if the parent has children (Root, Details, Container, Section) */
+						replace?: components["schemas"]["FlumeReplace"][];
+					};
+				};
+			};
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/flume/{message_id}/ping": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Flume ping
+		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Keep a flume alive by resetting its autocommit timer. If no ping is
+		 *     received within the autocommit window, the flume will be autocommitted.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					message_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/channel/{channel_id}/invite": {
 		parameters: {
 			query?: never;
@@ -3518,6 +3850,7 @@ export interface paths {
 					"application/json": {
 						/** @description message attachments */
 						attachments?: components["schemas"]["MessageAttachmentCreate"][];
+						components?: null | components["schemas"]["Components_Create"];
 						/** @description the message's content in markdown */
 						content?: string | null;
 						embeds?: components["schemas"]["EmbedCreate"][];
@@ -3541,6 +3874,7 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
+							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
 							latest_version: components["schemas"]["MessageVersion"];
 							pinned?: null | components["schemas"]["Pinned"];
@@ -3837,6 +4171,7 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
+							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
 							latest_version: components["schemas"]["MessageVersion"];
 							pinned?: null | components["schemas"]["Pinned"];
@@ -3905,6 +4240,7 @@ export interface paths {
 						attachments?:
 							| components["schemas"]["MessageAttachmentCreate"][]
 							| null;
+						components?: null | components["schemas"]["Components_Create"];
 						/** @description the new message content in markdown */
 						content?: string | null;
 						embeds?: components["schemas"]["EmbedCreate"][] | null;
@@ -3927,6 +4263,7 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
+							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
 							latest_version: components["schemas"]["MessageVersion"];
 							pinned?: null | components["schemas"]["Pinned"];
@@ -4251,6 +4588,9 @@ export interface paths {
 							last_message_id?: null | components["schemas"]["Id"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
+							/** @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync. */
+							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
 							 * Format: int64
@@ -4429,6 +4769,7 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
+							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
 							latest_version: components["schemas"]["MessageVersion"];
 							pinned?: null | components["schemas"]["Pinned"];
@@ -4474,233 +4815,6 @@ export interface paths {
 		options?: never;
 		head?: never;
 		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/flume": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Flume create
-		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
-		 *     <div class="markdown-alert-permission-optional">MessageAttachments</div>
-		 *     <div class="markdown-alert-permission-optional">MessageEmbeds</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Create a live-updating message in a channel
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: {
-					"idempotency-key"?: string;
-					"x-timestamp"?: number;
-				};
-				path: {
-					channel_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description the message this flume is replying to */
-						reply_id?: null | components["schemas"]["Id"];
-						/** @description mentions to parse from initial components */
-						mentions?: components["schemas"]["ParseMentions"];
-						/** @description optional metadata */
-						metadata?: null | components["schemas"]["MessageMetadata"];
-						/** @description initial components */
-						components: components["schemas"]["FlumeComponentCreate"][];
-					};
-				};
-			};
-			responses: {
-				/** @description Flume created successfully */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							author_id: components["schemas"]["Id"];
-							channel_id: components["schemas"]["Id"];
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							latest_version: components["schemas"]["MessageVersion"];
-							pinned?: null | components["schemas"]["Pinned"];
-							reactions?: components["schemas"]["ReactionCounts"];
-							removed_at?: null | components["schemas"]["Time"];
-							room_id?: null | components["schemas"]["Id"];
-							thread?: null | components["schemas"]["Channel"];
-						};
-					};
-				};
-			};
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/flume/{message_id}/commit": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		post?: never;
-		/**
-		 * Flume commit
-		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Commit the flume content, creating a final message version
-		 */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Flume committed successfully */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							author_id: components["schemas"]["Id"];
-							channel_id: components["schemas"]["Id"];
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							latest_version: components["schemas"]["MessageVersion"];
-							pinned?: null | components["schemas"]["Pinned"];
-							reactions?: components["schemas"]["ReactionCounts"];
-							removed_at?: null | components["schemas"]["Time"];
-							room_id?: null | components["schemas"]["Id"];
-							thread?: null | components["schemas"]["Channel"];
-						};
-					};
-				};
-			};
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/flume/{message_id}/delta": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		post?: never;
-		put?: never;
-		/**
-		 * Flume update
-		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Apply a patch to the flume's components
-		 */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody: {
-				content: {
-					"application/json": components["schemas"]["FlumeDelta"];
-				};
-			};
-			responses: {
-				/** @description Delta applied successfully */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-				/** @description Delta did not cause any change */
-				304: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/flume/{message_id}/ping": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Flume ping
-		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Keep a flume alive by resetting its autocommit timer
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Flume pinged successfully */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
 		trace?: never;
 	};
 	"/api/v1/channel/{channel_id}/nudge": {
@@ -5295,6 +5409,65 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/channel/{channel_id}/sync": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Channel sync
+		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Get incremental sync events for a channel since a given sequence number.
+		 *     Use this to catch up when reconnecting or after being offline.
+		 */
+		get: {
+			parameters: {
+				query: {
+					/** @description the sequence number to sync from (exclusive). use 0 to get all events. */
+					since: components["schemas"]["ChannelSeq"];
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
+				};
+				header?: never;
+				path: {
+					channel_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description sync events to apply to local state */
+							events: components["schemas"]["MessageSync"][];
+							/** @description not all events were returned. call this endpoint again with the new `seq` */
+							partial: boolean;
+							/** @description the new latest sequence number you have */
+							seq: components["schemas"]["ChannelSeq"];
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/channel/{channel_id}/tag": {
 		parameters: {
 			query?: never;
@@ -5755,6 +5928,9 @@ export interface paths {
 							last_message_id?: null | components["schemas"]["Id"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
+							/** @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync. */
+							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
 							 * Format: int64
@@ -6063,6 +6239,9 @@ export interface paths {
 							last_message_id?: null | components["schemas"]["Id"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
+							/** @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync. */
+							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
 							 * Format: int64
@@ -6248,6 +6427,7 @@ export interface paths {
 							icon?: null | components["schemas"]["Id"];
 							/** @description A unique identifier for this room */
 							id: components["schemas"]["Id"];
+							invites_paused_until?: null | components["schemas"]["Time"];
 							/**
 							 * Format: int64
 							 * @description number of people in this room
@@ -6889,6 +7069,53 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/document/{channel_id}/branch/{branch_id}/sync": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Document branch sync
+		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					branch_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						sync_from_branch_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/document/{channel_id}/branch/{parent_id}/fork": {
 		parameters: {
 			query?: never;
@@ -6977,31 +7204,7 @@ export interface paths {
 				header?: never;
 				path: {
 					channel_id: string;
-					revision_id:
-						| {
-								/** @description the current head of this branch
-								 *
-								 *     serialized as `branch-id` */
-								Branch: {
-									branch_id: components["schemas"]["Id"];
-								};
-						  }
-						| {
-								/** @description this one specific revision
-								 *
-								 *     serialized as `branch-uuid@seq` */
-								Revision: {
-									version_id: components["schemas"]["DocumentVersionId"];
-								};
-						  }
-						| {
-								/** @description this one specific revision
-								 *
-								 *     serialized as `~tag` */
-								Tag: {
-									tag_id: components["schemas"]["Id"];
-								};
-						  };
+					revision_id: string;
 				};
 				cookie?: never;
 			};
@@ -7779,7 +7982,7 @@ export interface paths {
 		};
 		/**
 		 * Invite resolve
-		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 * @description
 		 */
 		get: {
 			parameters: {
@@ -9028,6 +9231,7 @@ export interface paths {
 							icon?: null | components["schemas"]["Id"];
 							/** @description A unique identifier for this room */
 							id: components["schemas"]["Id"];
+							invites_paused_until?: null | components["schemas"]["Time"];
 							/**
 							 * Format: int64
 							 * @description number of people in this room
@@ -9482,6 +9686,7 @@ export interface paths {
 							icon?: null | components["schemas"]["Id"];
 							/** @description A unique identifier for this room */
 							id: components["schemas"]["Id"];
+							invites_paused_until?: null | components["schemas"]["Time"];
 							/**
 							 * Format: int64
 							 * @description number of people in this room
@@ -9569,6 +9774,7 @@ export interface paths {
 						banner?: null | components["schemas"]["Id"];
 						description?: string | null;
 						icon?: null | components["schemas"]["Id"];
+						invites_paused_until?: null | components["schemas"]["Time"];
 						name?: string | null;
 						public?: boolean | null;
 						welcome_channel_id?: null | components["schemas"]["Id"];
@@ -9606,6 +9812,7 @@ export interface paths {
 							icon?: null | components["schemas"]["Id"];
 							/** @description A unique identifier for this room */
 							id: components["schemas"]["Id"];
+							invites_paused_until?: null | components["schemas"]["Time"];
 							/**
 							 * Format: int64
 							 * @description number of people in this room
@@ -10789,6 +10996,9 @@ export interface paths {
 							last_message_id?: null | components["schemas"]["Id"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
+							/** @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync. */
+							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
 							 * Format: int64
@@ -11866,6 +12076,7 @@ export interface paths {
 							icon?: null | components["schemas"]["Id"];
 							/** @description A unique identifier for this room */
 							id: components["schemas"]["Id"];
+							invites_paused_until?: null | components["schemas"]["Time"];
 							/**
 							 * Format: int64
 							 * @description number of people in this room
@@ -11944,6 +12155,7 @@ export interface paths {
 							icon?: null | components["schemas"]["Id"];
 							/** @description A unique identifier for this room */
 							id: components["schemas"]["Id"];
+							invites_paused_until?: null | components["schemas"]["Time"];
 							/**
 							 * Format: int64
 							 * @description number of people in this room
@@ -12589,6 +12801,7 @@ export interface paths {
 							icon?: null | components["schemas"]["Id"];
 							/** @description A unique identifier for this room */
 							id: components["schemas"]["Id"];
+							invites_paused_until?: null | components["schemas"]["Time"];
 							/**
 							 * Format: int64
 							 * @description number of people in this room
@@ -12733,6 +12946,7 @@ export interface paths {
 							icon?: null | components["schemas"]["Id"];
 							/** @description A unique identifier for this room */
 							id: components["schemas"]["Id"];
+							invites_paused_until?: null | components["schemas"]["Time"];
 							/**
 							 * Format: int64
 							 * @description number of people in this room
@@ -13147,7 +13361,7 @@ export interface paths {
 		};
 		/**
 		 * Server information
-		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 * @description
 		 */
 		get: {
 			parameters: {
@@ -13209,7 +13423,7 @@ export interface paths {
 		};
 		/**
 		 * Server moderation
-		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 * @description
 		 */
 		get: {
 			parameters: {
@@ -13482,7 +13696,7 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/server/{hostname}": {
+	"/api/v1/server/{hostname}/keys": {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -13500,7 +13714,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					hostname: string;
+					hostname: null | string;
 				};
 				cookie?: never;
 			};
@@ -13530,6 +13744,52 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/server/{hostname}/ping": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Server ping
+		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Check if a server is alive.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					hostname: null | string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description whether this is in response to a server authenticated request */
+							federated: boolean;
+						};
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/server/{hostname}/sync": {
 		parameters: {
 			query?: never;
@@ -13550,13 +13810,16 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					hostname: string;
+					hostname: null | string;
 				};
 				cookie?: never;
 			};
 			requestBody: {
 				content: {
-					"application/json": number[];
+					"application/json": {
+						/** @description the events for this sync event */
+						events?: components["schemas"]["MessageSync"][];
+					};
 				};
 			};
 			responses: {
@@ -13565,7 +13828,17 @@ export interface paths {
 					headers: {
 						[name: string]: unknown;
 					};
-					content?: never;
+					content: {
+						"application/json": {
+							/**
+							 * Format: int64
+							 * @description how much time to delay until sending the next batch, in milliseconds
+							 *
+							 *     this is to prevent servers from being overloaded
+							 */
+							timeout: number;
+						};
+					};
 				};
 			};
 		};
@@ -13595,7 +13868,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					hostname: string;
+					hostname: null | string;
 				};
 				cookie?: never;
 			};
@@ -14395,6 +14668,9 @@ export interface paths {
 							last_message_id?: null | components["schemas"]["Id"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
+							/** @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync. */
+							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
 							 * Format: int64
@@ -14537,6 +14813,9 @@ export interface paths {
 							last_message_id?: null | components["schemas"]["Id"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
+							/** @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync. */
+							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
 							 * Format: int64
@@ -16801,7 +17080,7 @@ export interface paths {
 		get: operations["webhook_get_with_token"];
 		put?: never;
 		/**
-		 * Webhook execute
+		 * Webhook execute (TODO)
 		 * @description
 		 */
 		post: operations["webhook_execute"];
@@ -16829,7 +17108,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Webhook execute discord
+		 * Webhook execute discord (TODO)
 		 * @description
 		 */
 		post: operations["webhook_execute_discord"];
@@ -16849,7 +17128,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Webhook execute github (WIP)
+		 * Webhook execute github (TODO)
 		 * @description
 		 */
 		post: operations["webhook_execute_github"];
@@ -16881,7 +17160,7 @@ export interface paths {
 		options?: never;
 		head?: never;
 		/**
-		 * Webhook edit message
+		 * Webhook edit message (TODO)
 		 * @description
 		 */
 		patch: operations["webhook_message_edit"];
@@ -17244,18 +17523,6 @@ export interface components {
 					type: "InviteDelete";
 			  }
 			| {
-					/**
-					 * @deprecated
-					 * @description remove all reactions
-					 */
-					metadata: {
-						channel_id: components["schemas"]["Id"];
-						message_id: components["schemas"]["Id"];
-					};
-					/** @enum {string} */
-					type: "ReactionPurge";
-			  }
-			| {
 					/** @description remove all reactions from a message */
 					metadata: {
 						channel_id: components["schemas"]["Id"];
@@ -17306,18 +17573,6 @@ export interface components {
 					};
 					/** @enum {string} */
 					type: "EmojiDelete";
-			  }
-			| {
-					/** @deprecated */
-					metadata: {
-						changes: components["schemas"]["AuditLogChange"][];
-						channel_id: components["schemas"]["Id"];
-						/** Format: uuid */
-						overwrite_id: string;
-						type: components["schemas"]["PermissionOverwriteType"];
-					};
-					/** @enum {string} */
-					type: "PermissionOverwriteSet";
 			  }
 			| {
 					metadata: {
@@ -18130,6 +18385,9 @@ export interface components {
 			/** @description the url where this platform can be reached */
 			platform_url?: string | null;
 		};
+		BrokenGenericPlaceholder: Record<string, never>;
+		/** @enum {string} */
+		ButtonStyle: "Primary" | "Secondary" | "Danger";
 		/** @description channel metadata for a calendar */
 		Calendar: {
 			color?: null | components["schemas"]["Color"];
@@ -18256,6 +18514,9 @@ export interface components {
 			last_message_id?: null | components["schemas"]["Id"];
 			last_read_id?: null | components["schemas"]["Id"];
 			last_version_id?: null | components["schemas"]["Id"];
+			/** @description monotonic sync sequence number, incremented on every action.
+			 *     used for incremental channel sync. */
+			latest_seq?: components["schemas"]["ChannelSeq"];
 			locked?: null | components["schemas"]["Locked"];
 			/**
 			 * Format: int64
@@ -18411,6 +18672,12 @@ export interface components {
 		 * @enum {string}
 		 */
 		ChannelSearchOrderField: "Created" | "Relevancy" | "Activity" | "Archived";
+		/**
+		 * Format: int64
+		 * @description A monotonic sync token, incremented on every action in a channel.
+		 *     Used for incremental sync to determine what events the client is missing.
+		 */
+		ChannelSeq: number;
 		/** @enum {string} */
 		ChannelType:
 			| "Text"
@@ -18433,6 +18700,34 @@ export interface components {
 			| "Wiki";
 		/** @description a color */
 		Color: string;
+		Component: components["schemas"]["Component_Create"];
+		/** @description A developer-defined identifier for an interactive component.
+		 *
+		 *     Min 1 char, max 128 chars. */
+		ComponentCustomId: string;
+		/**
+		 * Format: int32
+		 * @description An identifier for a component
+		 */
+		ComponentId: number;
+		ComponentType_Canonical: Record<string, never>;
+		ComponentType_Create: Record<string, never>;
+		ComponentType_Thin: Record<string, never>;
+		Component_Canonical: {
+			id: components["schemas"]["ComponentId"];
+			ty: components["schemas"]["ComponentType_Canonical"];
+		};
+		Component_Create: {
+			id?: components["schemas"]["ComponentId"];
+			ty: components["schemas"]["ComponentType_Create"];
+		};
+		Component_Thin: {
+			id: components["schemas"]["ComponentId"];
+			ty: components["schemas"]["ComponentType_Thin"];
+		};
+		Components_Canonical: components["schemas"]["Component_Canonical"][];
+		Components_Create: components["schemas"]["Component_Create"][];
+		Components_Thin: components["schemas"]["Component_Thin"][];
 		/** @description an application that is authorized to a user */
 		Connection: {
 			application: components["schemas"]["Application"];
@@ -18475,6 +18770,16 @@ export interface components {
 			embeds: components["schemas"]["Embed"][];
 			/** @description unfurler log */
 			log: components["schemas"]["LogEntry"][];
+		};
+		/** @description A dead letter queue entry for search ingestion */
+		DlqEntry: {
+			created_at: components["schemas"]["Time"];
+			/** Format: uuid */
+			entity_id: string;
+			entity_type: string;
+			error_message: string;
+			/** Format: uuid */
+			id: string;
 		};
 		/** @description channel metadata for a document
 		 *
@@ -18559,32 +18864,13 @@ export interface components {
 			revision?: null | components["schemas"]["DocumentRevisionId"];
 			unlisted?: boolean | null;
 		};
-		/** @description a revision of a document at a point in time */
-		DocumentRevisionId:
-			| {
-					/** @description the current head of this branch
-					 *
-					 *     serialized as `branch-id` */
-					Branch: {
-						branch_id: components["schemas"]["Id"];
-					};
-			  }
-			| {
-					/** @description this one specific revision
-					 *
-					 *     serialized as `branch-uuid@seq` */
-					Revision: {
-						version_id: components["schemas"]["DocumentVersionId"];
-					};
-			  }
-			| {
-					/** @description this one specific revision
-					 *
-					 *     serialized as `~tag` */
-					Tag: {
-						tag_id: components["schemas"]["Id"];
-					};
-			  };
+		/** @description A revision of a document at a point in time.
+		 *
+		 *     Serialized as:
+		 *     - `branch-id` for the current head of a branch
+		 *     - `branch-uuid@seq` for a specific revision
+		 *     - `~tag` for a specific tag */
+		DocumentRevisionId: string;
 		/** @description Base64 encoded state vector */
 		DocumentStateVector: string;
 		/** @description a named version */
@@ -18796,6 +19082,50 @@ export interface components {
 			 */
 			min?: string;
 		} | null;
+		/** @description append components to an existing component */
+		FlumeAppend: {
+			/** @description components to append */
+			components: components["schemas"]["Component"][];
+			/** @description target component to append to */
+			target: components["schemas"]["ComponentId"];
+		};
+		/** @description request to create a new flume */
+		FlumeCreate: {
+			/** @description initial components */
+			components: components["schemas"]["Components_Create"];
+			/** @description mentions to parse from initial components
+			 *
+			 *     note that you can *only* mention on flume create; editing in a mention later will *not* create a notification */
+			mentions?: components["schemas"]["ParseMentions"];
+			metadata?: null | components["schemas"]["MessageMetadata"];
+			reply_id?: null | components["schemas"]["Id"];
+		};
+		/** @description a delta applied to a live flume */
+		FlumeDelta: {
+			/** @description append components to an existing component */
+			append?: components["schemas"]["FlumeAppend"][];
+			/** @description delete some components */
+			delete?: components["schemas"]["ComponentId"][];
+			init?: null | components["schemas"]["Components_Canonical"];
+			/** @description replace a component with one or more components
+			 *
+			 *     - replacing a component with children will delete the children
+			 *     - replacing a component with a single component will always work
+			 *     - replacing a component with multiple components will work if the parent has children (Root, Details, Container, Section) */
+			replace?: components["schemas"]["FlumeReplace"][];
+		};
+		/** @description replace a component with one or more components */
+		FlumeReplace: {
+			/** @description replacement components */
+			components: components["schemas"]["Component"][];
+			/** @description target component to replace */
+			target: components["schemas"]["ComponentId"];
+		};
+		/**
+		 * @description current state of a flume
+		 * @enum {string}
+		 */
+		FlumeState: "Live" | "Committed" | "Autocommitted";
 		Harvest: components["schemas"]["HarvestStatus"] & {
 			created_at: components["schemas"]["Time"];
 			id: components["schemas"]["Id"];
@@ -19037,6 +19367,7 @@ export interface components {
 			 *     Once set to `true`, this cannot be unset. */
 			strip_exif?: boolean;
 			user_id?: null | components["schemas"]["Id"];
+			version_id: components["schemas"]["Id"];
 		};
 		MediaClone: {
 			/** @description Descriptive alt text, not entirely unlike a caption */
@@ -19095,6 +19426,8 @@ export interface components {
 			 *     If this is true, return 202 Accepted immediately and send a `MediaProcessed` event when your media is done processing. */
 			async?: boolean;
 		};
+		/** @enum {string} */
+		MediaErrorReason: "NotFound" | "Corrupted";
 		/**
 		 * @description the kind of media this track is for
 		 * @enum {string}
@@ -19204,6 +19537,12 @@ export interface components {
 			| {
 					/** @enum {string} */
 					type: "File";
+			  }
+			| {
+					/** @description Why this media is errored */
+					reason: components["schemas"]["MediaErrorReason"];
+					/** @enum {string} */
+					type: "Errored";
 			  };
 		/** @description An update to a piece of media */
 		MediaPatch: {
@@ -19268,7 +19607,12 @@ export interface components {
 		 * @description The status for this media
 		 * @enum {string}
 		 */
-		MediaStatus: "Transferring" | "Processing" | "Uploaded" | "Consumed";
+		MediaStatus:
+			| "Transferring"
+			| "Processing"
+			| "Uploaded"
+			| "Consumed"
+			| "Errored";
 		MemberListGroup: {
 			/** Format: int64 */
 			count: number;
@@ -19369,9 +19713,8 @@ export interface components {
 			/** @description when this message was created */
 			created_at: components["schemas"]["Time"];
 			deleted_at?: null | components["schemas"]["Time"];
-			id: components["schemas"]["Id"];
-			/** @description the associated flume for this message, if one exists */
 			flume?: null | components["schemas"]["MessageFlume"];
+			id: components["schemas"]["Id"];
 			latest_version: components["schemas"]["MessageVersion"];
 			pinned?: null | components["schemas"]["Pinned"];
 			reactions?: components["schemas"]["ReactionCounts"];
@@ -19444,6 +19787,7 @@ export interface components {
 		MessageCreate: {
 			/** @description message attachments */
 			attachments?: components["schemas"]["MessageAttachmentCreate"][];
+			components?: null | components["schemas"]["Components_Create"];
 			/** @description the message's content in markdown */
 			content?: string | null;
 			embeds?: components["schemas"]["EmbedCreate"][];
@@ -19454,11 +19798,18 @@ export interface components {
 		/** @description a basic message, written using markdown */
 		MessageDefaultMarkdown: {
 			attachments: components["schemas"]["MessageAttachment"][];
+			/** @description the components for this message */
+			components?: components["schemas"]["Components_Canonical"];
 			/** @description the message's content in markdown */
 			content?: string | null;
 			embeds: components["schemas"]["Embed"][];
 			metadata?: null | components["schemas"]["MessageMetadata"];
 			reply_id?: null | components["schemas"]["Id"];
+		};
+		/** @description flume metadata for a message */
+		MessageFlume: {
+			/** @description current state of the flume */
+			state: components["schemas"]["FlumeState"];
 		};
 		/** @description Information about a member being added or removed from a thread */
 		MessageMember: {
@@ -19478,6 +19829,7 @@ export interface components {
 		MessagePatch: {
 			/** @description message attachments */
 			attachments?: components["schemas"]["MessageAttachmentCreate"][] | null;
+			components?: null | components["schemas"]["Components_Create"];
 			/** @description the new message content in markdown */
 			content?: string | null;
 			embeds?: components["schemas"]["EmbedCreate"][] | null;
@@ -20086,85 +20438,11 @@ export interface components {
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
-					message_id: components["schemas"]["Id"];
-					/** @description the delta to apply to the flume */
 					delta: components["schemas"]["FlumeDelta"];
+					message_id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "FlumeDelta";
 			  };
-		/** @description Flume state for a message */
-		MessageFlume: {
-			/** @description current state of the flume */
-			state: "Live" | "Committed" | "Autocommitted";
-		};
-		/** @description a delta applied to a live flume */
-		FlumeDelta: {
-			/** @description initial component tree (only present in the first delta for a new flume) */
-			init?: components["schemas"]["FlumeComponentCreate"][];
-			/** @description append components to an existing component */
-			append: components["schemas"]["FlumeAppend"][];
-			/** @description replace a component with one or more components */
-			replace: components["schemas"]["FlumeReplace"][];
-			/** @description delete some components */
-			delete: number[];
-		};
-		/** @description append components to an existing component */
-		FlumeAppend: {
-			/** @description target component to append to */
-			target: number;
-			/** @description components to append */
-			components: components["schemas"]["FlumeComponentCreate"][];
-		};
-		/** @description replace a component with one or more components */
-		FlumeReplace: {
-			/** @description target component to replace */
-			target: number;
-			/** @description replacement components */
-			components: components["schemas"]["FlumeComponentCreate"][];
-		};
-		/** @description a component to create in a flume */
-		FlumeComponentCreate:
-			| string
-			| {
-					id?: number;
-					type: "Button";
-					label: string;
-					style: "Primary" | "Secondary" | "Danger";
-					custom_id: string;
-			  }
-			| { type: "LinkButton"; label: string; url: string | null }
-			| {
-					type: "Container";
-					components: components["schemas"]["FlumeComponentCreate"][];
-					color: string | null;
-			  }
-			| { type: "Text"; content: string }
-			| {
-					type: "Details";
-					open: boolean;
-					color: string | null;
-					summary: components["schemas"]["FlumeComponentCreate"][];
-					details: components["schemas"]["FlumeComponentCreate"][];
-			  }
-			| {
-					type: "Section";
-					color: string | null;
-					components: components["schemas"]["FlumeComponentCreate"][];
-			  }
-			| {
-					type: "Media";
-					items: components["schemas"]["FlumeComponentMediaCreate"][];
-			  }
-			| {
-					type: "Gallery";
-					items: components["schemas"]["FlumeComponentMediaCreate"][];
-			  };
-		/** @description media to create in a flume component */
-		FlumeComponentMediaCreate: {
-			media_id: components["schemas"]["Id"];
-			description: string | null;
-			spoiler: boolean;
-		};
 		/** @description Information about a thread being created */
 		MessageThreadCreated: {
 			source_message_id?: null | components["schemas"]["Id"];
@@ -20376,6 +20654,21 @@ export interface components {
 			 */
 			to?: string;
 		};
+		PaginationResponse_DlqEntry: {
+			cursor?: string | null;
+			has_more: boolean;
+			items: {
+				created_at: components["schemas"]["Time"];
+				/** Format: uuid */
+				entity_id: string;
+				entity_type: string;
+				error_message: string;
+				/** Format: uuid */
+				id: string;
+			}[];
+			/** Format: int64 */
+			total: number;
+		};
 		PaginationResponse_Message: {
 			cursor?: string | null;
 			has_more: boolean;
@@ -20386,6 +20679,7 @@ export interface components {
 				/** @description when this message was created */
 				created_at: components["schemas"]["Time"];
 				deleted_at?: null | components["schemas"]["Time"];
+				flume?: null | components["schemas"]["MessageFlume"];
 				id: components["schemas"]["Id"];
 				latest_version: components["schemas"]["MessageVersion"];
 				pinned?: null | components["schemas"]["Pinned"];
@@ -20833,6 +21127,7 @@ export interface components {
 			icon?: null | components["schemas"]["Id"];
 			/** @description A unique identifier for this room */
 			id: components["schemas"]["Id"];
+			invites_paused_until?: null | components["schemas"]["Time"];
 			/**
 			 * Format: int64
 			 * @description number of people in this room
@@ -21030,6 +21325,7 @@ export interface components {
 			banner?: null | components["schemas"]["Id"];
 			description?: string | null;
 			icon?: null | components["schemas"]["Id"];
+			invites_paused_until?: null | components["schemas"]["Time"];
 			name?: string | null;
 			public?: boolean | null;
 			welcome_channel_id?: null | components["schemas"]["Id"];
@@ -21102,6 +21398,24 @@ export interface components {
 			documents_indexed: number;
 			last_message_id?: null | components["schemas"]["Id"];
 		};
+		/** @description Overall search index statistics */
+		SearchStats: {
+			/**
+			 * Format: int64
+			 * @description Number of entries in the backfill queue
+			 */
+			backfill_queue_size: number;
+			/**
+			 * Format: int64
+			 * @description Total number of documents in the index
+			 */
+			document_count: number;
+			/**
+			 * Format: int64
+			 * @description Size of the index in bytes
+			 */
+			index_size_bytes: number;
+		};
 		/** @description Plugin selection log entry. */
 		SelectPluginEntry: {
 			/** @description The name of the selected plugin */
@@ -21160,10 +21474,8 @@ export interface components {
 		};
 		/** @description a server's signing key */
 		ServerKey: {
-			/** @description the key algorithm
-			 *
-			 *     always the string `ed25519` */
-			alg: string;
+			/** @description the key algorithm */
+			alg: components["schemas"]["ServerKeyAlgorithm"];
 			/** @description when this key expires
 			 *
 			 *     maximum Date + 72h, should be Date + 48h and rotated every 24h */
@@ -21178,11 +21490,16 @@ export interface components {
 			pubkey: string;
 			/** @description the signature
 			 *
-			 *     the bytes that were signed: nonce || "\xff" || pubkey || "\xff" | hostname
+			 *     the bytes that were signed: nonce || pubkey || hostname
 			 *
 			 *     base64 url safe unpadded */
 			signature: string;
 		};
+		/**
+		 * @description the algorithm to sign requests with
+		 * @enum {string}
+		 */
+		ServerKeyAlgorithm: "ed25519";
 		ServerMediaScanner: {
 			description: string;
 			name: string;
@@ -21758,6 +22075,93 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+		};
+	};
+	admin_search_dlq_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List of search ingestion failures */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["PaginationResponse_DlqEntry"];
+				};
+			};
+		};
+	};
+	admin_search_dlq_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description DLQ entry ID to delete */
+				id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description DLQ entry deleted */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	admin_search_dlq_retry: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description DLQ entry ID to retry */
+				id: components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description DLQ entry queued for retry */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	admin_search_stats: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Overall search index statistics */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SearchStats"];
+				};
 			};
 		};
 	};
