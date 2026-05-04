@@ -11,7 +11,6 @@ use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use clap::Parser;
 use common::v1::types::{
     error::{ApiError, ErrorCode},
-    misc::ApplicationIdReq,
     util::Time,
     AuditLogEntry, AuditLogEntryType,
 };
@@ -42,13 +41,15 @@ use lamprey_backend::{
     },
     Error, ServerState,
 };
+use common::v1::types::misc::ApplicationIdReq;
 
 use config::Config;
 use error::Result;
 
-use crate::util::{cors, BadgeModifier, NestedTags};
+use crate::utoipa_utils::{cors, BadgeModifier, ComponentModifier, NestedTags};
 
-mod util;
+mod utoipa_utils;
+
 
 #[cfg(feature = "embed-frontend")]
 mod frontend;
@@ -181,7 +182,19 @@ mod frontend;
         // relationship types
         common::v1::types::user::RelationshipWithUserId,
         common::v1::types::user::UserWithRelationship,
+        // component types
+        common::v1::types::components::ComponentId,
+        common::v1::types::components::ComponentCustomId,
+        common::v1::types::components::ButtonStyle,
+        // flume types
+        common::v1::types::message::flume::FlumeCreate,
+        common::v1::types::message::flume::FlumeDelta,
+        common::v1::types::message::flume::FlumeAppend,
+        common::v1::types::message::flume::FlumeReplace,
+        common::v1::types::message::flume::FlumeState,
+        common::v1::types::message::flume::MessageFlume,
     )),
+    modifiers(&BadgeModifier, &NestedTags, &ComponentModifier),
     info(
         title = "api doccery",
         description = include_str!("../docs/index.md"),

@@ -238,3 +238,95 @@ pub fn cors() -> CorsLayer {
             PUPPET_ID,
         ])
 }
+
+pub struct ComponentModifier;
+
+impl Modify for ComponentModifier {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        use utoipa::openapi::schema::{ArrayBuilder, ObjectBuilder, Ref, SchemaType, Type};
+        use utoipa::openapi::RefOr;
+
+        if let Some(components) = openapi.components.as_mut() {
+            let empty_obj = ObjectBuilder::new()
+                .schema_type(SchemaType::Type(Type::Object))
+                .build();
+
+            // Injections
+            let component_type_create = ObjectBuilder::new().build();
+            components.schemas.insert(
+                "ComponentType_Create".to_string(),
+                RefOr::T(component_type_create.into()),
+            );
+            let component_type_canonical = ObjectBuilder::new().build();
+            components.schemas.insert(
+                "ComponentType_Canonical".to_string(),
+                RefOr::T(component_type_canonical.into()),
+            );
+            let component_type_thin = ObjectBuilder::new().build();
+            components.schemas.insert(
+                "ComponentType_Thin".to_string(),
+                RefOr::T(component_type_thin.into()),
+            );
+
+            let component_create = ObjectBuilder::new()
+                .property("id", Ref::new("#/components/schemas/ComponentId"))
+                .property("ty", Ref::new("#/components/schemas/ComponentType_Create"))
+                .required("ty")
+                .build();
+            components.schemas.insert("Component_Create".to_string(), RefOr::T(component_create.into()));
+
+            let component_canonical = ObjectBuilder::new()
+                .property("id", Ref::new("#/components/schemas/ComponentId"))
+                .property(
+                    "ty",
+                    Ref::new("#/components/schemas/ComponentType_Canonical"),
+                )
+                .required("id")
+                .required("ty")
+                .build();
+            components.schemas.insert(
+                "Component_Canonical".to_string(),
+                RefOr::T(component_canonical.into()),
+            );
+
+            let component_thin = ObjectBuilder::new()
+                .property("id", Ref::new("#/components/schemas/ComponentId"))
+                .property("ty", Ref::new("#/components/schemas/ComponentType_Thin"))
+                .required("id")
+                .required("ty")
+                .build();
+            components
+                .schemas
+                .insert("Component_Thin".to_string(), RefOr::T(component_thin.into()));
+
+            let components_create = ArrayBuilder::new()
+                .items(Ref::new("#/components/schemas/Component_Create"))
+                .build();
+            components.schemas.insert(
+                "Components_Create".to_string(),
+                RefOr::T(components_create.into()),
+            );
+
+            let components_canonical = ArrayBuilder::new()
+                .items(Ref::new("#/components/schemas/Component_Canonical"))
+                .build();
+            components.schemas.insert(
+                "Components_Canonical".to_string(),
+                RefOr::T(components_canonical.into()),
+            );
+
+            let components_thin = ArrayBuilder::new()
+                .items(Ref::new("#/components/schemas/Component_Thin"))
+                .build();
+            components.schemas.insert(
+                "Components_Thin".to_string(),
+                RefOr::T(components_thin.into()),
+            );
+
+            components.schemas.insert(
+                "BrokenGenericPlaceholder".to_string(),
+                RefOr::T(empty_obj.into()),
+            );
+        }
+    }
+}
