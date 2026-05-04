@@ -183,12 +183,12 @@ impl MessageOperationKind {
         }
     }
 
-    /// will the resulting message will have components?
+    /// will the resulting message have components?
     pub fn will_have_components(&self) -> bool {
         // if you don't set any components, treat it like the user's trying to remove components from the message
         match self {
             Self::MessageCreate(o) => o.json.components.is_some(),
-            Self::MessageEdit(o) => !o.json.components.is_some(),
+            Self::MessageEdit(o) => o.json.components.is_some(),
         }
     }
 
