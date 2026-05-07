@@ -345,8 +345,7 @@ impl ServiceFederation {
             return Err(Error::BadStatic("failed to fetch remote user"));
         }
 
-        let user_res: common::v1::types::UserWithRelationship = res.json().await?;
-        let mut user = user_res.inner;
+        let mut user: User = res.json().await?;
         user.remote = Some(Remote {
             origin_id: user_id.into_inner(),
             hostname: hostname.clone(),
