@@ -889,6 +889,10 @@ pub enum ErrorCode {
     /// message exists but has no associated flume
     #[error("message does not have a flume")]
     MessageDoesntHaveFlume,
+
+    /// cannot manage remote user
+    #[error("cannot manage remote user")]
+    CannotManageRemoteUser,
 }
 
 impl ApiError {

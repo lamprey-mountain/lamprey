@@ -14,9 +14,11 @@ pub mod time;
 pub use color::Color;
 pub use time::Time;
 
+use super::error::ApiError;
 use super::{ApplicationId, SessionId, UserId};
 use crate::util::is_valid_hostname;
 use crate::v1::routes::{PathParam, PathParamError};
+use crate::v1::types::error::{ApiResult, ErrorCode};
 use crate::v1::types::federation::Hostname;
 
 #[derive(Debug)]
@@ -144,13 +146,23 @@ where
 
 impl UserIdReq {
     /// retrieve the user id, falling back to self_id if this is UserSelf
-    // TODO: use this instead of manually matching
-    // TODO: impl this for other FooIdReq types
+    #[deprecated = "use local_unwrap_or"]
     pub fn unwrap_or(self, self_id: UserId) -> UserId {
         match self {
             UserIdReq::UserSelf => self_id,
             UserIdReq::RemoteUser(user_id, _) => user_id,
             UserIdReq::UserId(user_id) => user_id,
+        }
+    }
+
+    /// retrieve the user id, rejecting remote users references, and falling back to self_id for UserSelf
+    pub fn local_unwrap_or(self, self_id: UserId) -> ApiResult<UserId> {
+        match self {
+            UserIdReq::UserSelf => Ok(self_id),
+            UserIdReq::RemoteUser(_, _) => {
+                Err(ApiError::from_code(ErrorCode::CannotManageRemoteUser))
+            }
+            UserIdReq::UserId(user_id) => Ok(user_id),
         }
     }
 }

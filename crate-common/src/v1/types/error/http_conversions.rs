@@ -164,6 +164,7 @@ impl ErrorCode {
             ErrorCode::OnlyMessageAuthorCanManageFlume => StatusCode::FORBIDDEN,
             ErrorCode::FlumeCommitted => StatusCode::FORBIDDEN,
             ErrorCode::MessageDoesntHaveFlume => StatusCode::NOT_FOUND,
+            ErrorCode::CannotManageRemoteUser => StatusCode::FORBIDDEN,
         }
     }
 }

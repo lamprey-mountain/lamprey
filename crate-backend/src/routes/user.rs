@@ -32,7 +32,7 @@ async fn user_update(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    let target_user_id = req.user_id.unwrap_or(auth.user.id);
+    let target_user_id = req.user_id.local_unwrap_or(auth.user.id)?;
     let srv = s.services();
     let mut perms = srv
         .perms
@@ -119,7 +119,7 @@ async fn user_delete(
     State(s): State<Arc<ServerState>>,
     req: routes::user_delete::Request,
 ) -> Result<impl IntoResponse> {
-    let target_user_id = req.user_id.unwrap_or(auth.user.id);
+    let target_user_id = req.user_id.local_unwrap_or(auth.user.id)?;
     let srv = s.services();
     let mut data = s.data();
     let mut perms = srv
@@ -166,7 +166,7 @@ async fn user_undelete(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
-    let target_user_id = req.user_id.unwrap_or(auth.user.id);
+    let target_user_id = req.user_id.local_unwrap_or(auth.user.id)?;
 
     let srv = s.services();
     let mut data = s.data();
@@ -271,7 +271,7 @@ async fn user_room_list(
     State(s): State<Arc<ServerState>>,
     req: routes::user_room_list::Request,
 ) -> Result<impl IntoResponse> {
-    let target_user_id = req.user_id.unwrap_or(auth.user.id);
+    let target_user_id = req.user_id.local_unwrap_or(auth.user.id)?;
 
     let mut data = s.data();
     let srv = s.services();
@@ -298,7 +298,7 @@ async fn user_audit_logs(
     State(s): State<Arc<ServerState>>,
     req: routes::user_audit_logs::Request,
 ) -> Result<impl IntoResponse> {
-    let target_user_id = req.user_id.unwrap_or(auth.user.id);
+    let target_user_id = req.user_id.local_unwrap_or(auth.user.id)?;
 
     if auth.user.id != target_user_id {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
@@ -400,7 +400,7 @@ async fn user_suspend(
     auth.user.ensure_unsuspended()?;
     let mut d = s.data();
     let srv = s.services();
-    let target_user_id = req.user_id.unwrap_or(auth.user.id);
+    let target_user_id = req.user_id.local_unwrap_or(auth.user.id)?;
     if target_user_id != auth.user.id {
         srv.perms
             .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
@@ -440,7 +440,7 @@ async fn user_unsuspend(
     auth.user.ensure_unsuspended()?;
     let mut d = s.data();
     let srv = s.services();
-    let target_user_id = req.user_id.unwrap_or(auth.user.id);
+    let target_user_id = req.user_id.local_unwrap_or(auth.user.id)?;
     srv.perms
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
         .await?
@@ -470,7 +470,7 @@ async fn user_presence_set(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
-    let target_user_id = req.user_id.unwrap_or(auth.user.id);
+    let target_user_id = req.user_id.local_unwrap_or(auth.user.id)?;
 
     if auth.user.id != target_user_id {
         return Err(Error::MissingPermissions);
