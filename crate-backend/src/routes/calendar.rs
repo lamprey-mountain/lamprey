@@ -11,7 +11,6 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
 use common::v1::types::{
     calendar::{CalendarEventParticipant, CalendarRsvpStatus},
-    misc::UserIdReq,
     AuditLogEntryType, MessageSync, Permission, UserId,
 };
 use lamprey_macros::handler;

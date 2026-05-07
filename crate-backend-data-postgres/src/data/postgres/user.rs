@@ -206,7 +206,7 @@ impl DataUser for Postgres {
         let now = time::OffsetDateTime::now_utc();
         let now = time::PrimitiveDateTime::new(now.date(), now.time());
         query!(
-           "UPDATE usr SET deleted_at = $2 WHERE id = $1",
+            "UPDATE usr SET deleted_at = $2 WHERE id = $1",
             *user_id,
             now
         )

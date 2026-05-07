@@ -510,12 +510,12 @@ async fn admin_search_dlq_delete(
 async fn admin_search_dlq_retry(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Path(id): Path<SearchDlqId>,
+    Path(_id): Path<SearchDlqId>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let mut d = s.data();
+    let d = s.data();
 
     srv.perms
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)

@@ -8,7 +8,7 @@ use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::misc::time::Time;
-use common::v1::types::util::{Changes, Diff};
+use common::v1::types::util::Changes;
 use common::v1::types::{AuditLogEntryType, RoomType, SERVER_ROOM_ID};
 use http::header::{HeaderMap, HeaderName, HeaderValue};
 use lamprey_macros::handler;
