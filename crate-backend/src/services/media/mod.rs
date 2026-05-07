@@ -765,13 +765,15 @@ impl ServiceMedia {
             return Ok(media);
         }
 
-        let api_url = self
+        let info = self
             .state
             .services()
             .federation
-            .fetch_api_url(&remote.hostname)
+            .fetch_server_info(&remote.hostname)
             .await?;
-        let url = api_url.join(&format!("/v1/media/{}/file", remote_media_id))?;
+        let url = info
+            .cdn_url
+            .join(&format!("/v1/media/{}/file", remote_media_id))?;
 
         let res = self
             .state

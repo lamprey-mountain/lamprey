@@ -40,15 +40,16 @@ pub struct ValidatedKey {
 }
 
 #[derive(Debug, Deserialize)]
-struct WellKnownResponse {
-    api_url: Url,
+pub struct WellKnownResponse {
+    pub api_url: Url,
+    pub cdn_url: Url,
 }
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // api_url cached for potential future use
-struct ServerInfo {
-    api_url: Url,
-    keys: Vec<ValidatedKey>,
+pub struct ServerInfo {
+    pub api_url: Url,
+    pub cdn_url: Url,
+    pub keys: Vec<ValidatedKey>,
 }
 
 /// a local signing key with its public key pre-parsed
@@ -264,35 +265,44 @@ impl ServiceFederation {
         self.local_keys.read().await.clone()
     }
 
-    /// lookup the api_url for this hostname
-    pub async fn fetch_api_url(&self, hostname: &Hostname) -> Result<Url> {
-        let url = Url::parse(&format!(
+    /// lookup the server info for this hostname
+    pub async fn fetch_server_info(&self, hostname: &Hostname) -> Result<ServerInfo> {
+        if let Some(info) = self.cache.get(hostname).await {
+            return Ok(info);
+        }
+
+        let well_known_url = Url::parse(&format!(
             "https://{}/.well-known/lamprey-mountain",
             hostname.0
         ))?;
 
-        let res = self.state.services().http.client.get(url).send().await?;
+        let res = self
+            .state
+            .services()
+            .http
+            .client
+            .get(well_known_url)
+            .send()
+            .await?;
         if !res.status().is_success() {
             return Err(Error::BadStatic("failed to fetch well-known"));
         }
 
         let well_known: WellKnownResponse = res.json().await?;
 
-        Ok(well_known.api_url)
-    }
-
-    /// fetch the signing keys for this hostname
-    pub async fn fetch_keys(&self, hostname: &Hostname) -> Result<Vec<ValidatedKey>> {
-        if let Some(info) = self.cache.get(hostname).await {
-            return Ok(info.keys);
-        }
-
-        let api_url = self.fetch_api_url(hostname).await?;
-
         // TODO: use strongly typed request structs like `common::v1::routes::federation::server_keys_get::Request` instead of manually building urls
-        let url = api_url.join(&format!("/v1/server/{}/keys", &hostname.0))?;
+        let keys_url = well_known
+            .api_url
+            .join(&format!("/api/v1/server/{}/keys", &hostname.0))?;
 
-        let res = self.state.services().http.client.get(url).send().await?;
+        let res = self
+            .state
+            .services()
+            .http
+            .client
+            .get(keys_url)
+            .send()
+            .await?;
         if !res.status().is_success() {
             return Err(Error::BadStatic("failed to fetch server keys"));
         }
@@ -305,7 +315,6 @@ impl ServiceFederation {
             .into_iter()
             .filter(|k| k.expires_at > now)
             .map(|k| {
-                // TODO: validate key with signing.rs verify_server_key
                 let pubkey_bytes = base64::Engine::decode(
                     &base64::engine::general_purpose::URL_SAFE_NO_PAD,
                     &k.pubkey,
@@ -327,25 +336,34 @@ impl ServiceFederation {
             .collect::<Result<Vec<_>>>()?;
 
         let info = ServerInfo {
-            api_url,
-            keys: validated.clone(),
+            api_url: well_known.api_url,
+            cdn_url: well_known.cdn_url,
+            keys: validated,
         };
-        self.cache.insert(hostname.to_owned(), info).await;
 
-        Ok(validated)
+        self.cache.insert(hostname.to_owned(), info.clone()).await;
+        Ok(info)
+    }
+
+    /// fetch the signing keys for this hostname
+    pub async fn fetch_keys(&self, hostname: &Hostname) -> Result<Vec<ValidatedKey>> {
+        let info = self.fetch_server_info(hostname).await?;
+        Ok(info.keys)
     }
 
     /// Load a user from a remote server, fetching and caching it locally.
     pub async fn load_remote_user(&self, user_id: UserId, hostname: &Hostname) -> Result<User> {
-        let api_url = self.fetch_api_url(hostname).await?;
-        let url = api_url.join(&format!("/v1/user/{}", user_id))?;
+        let info = self.fetch_server_info(hostname).await?;
+        let url = info.api_url.join(&format!("/api/v1/user/{}", user_id))?;
 
         let res = self.state.services().http.client.get(url).send().await?;
         if !res.status().is_success() {
             return Err(Error::BadStatic("failed to fetch remote user"));
         }
 
-        let mut user: User = res.json().await?;
+        let user: serde_json::Value = res.json().await?;
+        dbg!(&user);
+        let mut user: User = serde_json::from_value(user)?;
         user.remote = Some(Remote {
             origin_id: user_id.into_inner(),
             hostname: hostname.clone(),
