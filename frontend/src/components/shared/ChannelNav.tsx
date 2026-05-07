@@ -4,6 +4,7 @@ import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 
 type ChannelWithThreads = Channel & { threads?: Channel[] };
 
+import type { DOMElement } from "solid-js/jsx-runtime";
 import {
 	useApi,
 	useChannels,
@@ -617,6 +618,21 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		target()?.id === id &&
 		target()?.mode === "inside";
 
+	let buttonRef: HTMLButtonElement;
+	const openRoomMenu = () => {
+		const roomId = props.room_id;
+		if (!roomId) return;
+		setTimeout(() => {
+			const rect = buttonRef!.getBoundingClientRect();
+			setMenu({
+				x: rect.left + 8,
+				y: rect.bottom + 8,
+				type: "room",
+				room_id: roomId,
+			});
+		});
+	};
+
 	return (
 		<nav id="channel-nav">
 			<Show when={flags.has("nav_header")}>
@@ -627,33 +643,12 @@ export const ChannelNav = (props: { room_id?: string }) => {
 						"menu-room": !!props.room_id,
 					}}
 					data-room-id={props.room_id}
-					onClick={(e) => {
-						if (props.room_id) {
-							const roomId = props.room_id;
-							queueMicrotask(() => {
-								setMenu({
-									x: e.clientX,
-									y: e.clientY,
-									type: "room",
-									room_id: roomId,
-								});
-							});
-						}
-					}}
+					ref={buttonRef!}
+					onClick={openRoomMenu}
 					onKeyDown={(e) => {
 						if (e.key === "Enter" || e.key === " ") {
 							e.preventDefault();
-							if (props.room_id) {
-								const roomId = props.room_id;
-								queueMicrotask(() => {
-									setMenu({
-										x: 0,
-										y: 0,
-										type: "room",
-										room_id: roomId,
-									});
-								});
-							}
+							openRoomMenu();
 						}
 					}}
 				>

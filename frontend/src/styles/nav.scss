@@ -61,7 +61,8 @@
 			border-radius: 4px;
 		}
 
-		&:hover > div {
+		&:hover > div,
+		&:focus > div {
 			background-color: $bg-300;
 		}
 	}
