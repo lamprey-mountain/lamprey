@@ -393,6 +393,10 @@ impl ServiceFederation {
                 remote: Some(remote.clone()),
             })
             .await?;
+
+            // commit so that the media service sees the user
+            txn.commit().await?;
+            txn = self.state.acquire_data().await?;
         }
 
         let mut patch = UserPatch {
