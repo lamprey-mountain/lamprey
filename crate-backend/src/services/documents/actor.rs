@@ -4,7 +4,10 @@ use std::{
     time::{Duration, Instant},
 };
 
-use common::v1::types::{components::{Component, ComponentCanonical, ComponentCreate, ComponentType, IdAllocator}, document::serialized::Serdoc};
+use common::v1::types::{
+    components::{Component, ComponentCanonical, ComponentCreate, ComponentType, IdAllocator},
+    document::serialized::Serdoc,
+};
 use kameo::{
     prelude::{Context, Message},
     Actor,
@@ -423,9 +426,7 @@ impl Message<SerdocPut> for DocumentActor {
             .components
             .iter()
             .map(|c| match &c.ty {
-                ComponentType::Text { content } => {
-                    content.chars().count()
-                }
+                ComponentType::Text { content } => content.chars().count(),
                 _ => 0,
             })
             .sum::<usize>() as u32;
@@ -434,9 +435,7 @@ impl Message<SerdocPut> for DocumentActor {
             .components
             .iter()
             .map(|c| match &c.ty {
-                ComponentType::Text { content } => {
-                    content.chars().count()
-                }
+                ComponentType::Text { content } => content.chars().count(),
                 _ => 0,
             })
             .sum::<usize>() as u32;
@@ -456,12 +455,10 @@ impl Message<SerdocPut> for DocumentActor {
             .map(|c| {
                 let id = allocator.allocate(c.id);
                 match c.ty {
-                    ComponentType::Text { content } => {
-                        Component {
-                            id,
-                            ty: ComponentType::Text { content },
-                        }
-                    }
+                    ComponentType::Text { content } => Component {
+                        id,
+                        ty: ComponentType::Text { content },
+                    },
                     _ => unimplemented!("only text components are supported for now"),
                 }
             })
