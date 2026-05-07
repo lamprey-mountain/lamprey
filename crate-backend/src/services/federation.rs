@@ -361,9 +361,7 @@ impl ServiceFederation {
             return Err(Error::BadStatic("failed to fetch remote user"));
         }
 
-        let user: serde_json::Value = res.json().await?;
-        dbg!(&user);
-        let mut user: User = serde_json::from_value(user)?;
+        let mut user: User = res.json().await?;
         user.remote = Some(Remote {
             origin_id: user_id.into_inner(),
             hostname: hostname.clone(),
@@ -401,11 +399,11 @@ impl ServiceFederation {
                             .media
                             .load_remote_media(
                                 user_id,
-                                avatar_id,
                                 Remote {
                                     origin_id: avatar_id.into(),
                                     hostname: hostname.clone(),
                                 },
+                                info.cdn_url.clone(),
                             )
                             .await?
                             .id,
@@ -421,11 +419,11 @@ impl ServiceFederation {
                             .media
                             .load_remote_media(
                                 user_id,
-                                banner_id,
                                 Remote {
                                     origin_id: banner_id.into(),
                                     hostname: hostname.clone(),
                                 },
+                                info.cdn_url.clone(),
                             )
                             .await?
                             .id,

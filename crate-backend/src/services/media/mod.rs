@@ -34,6 +34,7 @@ use futures_util::{stream::FuturesUnordered, FutureExt, StreamExt};
 use sha2::{Digest, Sha512_256};
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader, BufWriter};
 use tracing::{debug, error, info, span, trace, Instrument, Level};
+use url::Url;
 
 use crate::{
     error::{Error, Result},
@@ -753,8 +754,8 @@ impl ServiceMedia {
     pub async fn load_remote_media(
         &self,
         user_id: UserId,
-        remote_media_id: MediaId,
         remote: Remote,
+        cdn_url: Url,
     ) -> Result<MediaV2> {
         if let Some(media) = self
             .state
@@ -771,9 +772,7 @@ impl ServiceMedia {
             .federation
             .fetch_server_info(&remote.hostname)
             .await?;
-        let url = info
-            .cdn_url
-            .join(&format!("/v1/media/{}/file", remote_media_id))?;
+        let url = info.cdn_url.join(&format!("/media/{}", remote.origin_id))?;
 
         let res = self
             .state
