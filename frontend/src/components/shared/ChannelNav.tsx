@@ -44,7 +44,6 @@ function setLastViewedChannel(roomId: string, channelId: string): void {
 }
 
 export const ChannelNav = (props: { room_id?: string }) => {
-	const _config = useConfig();
 	const api2 = useApi();
 	const dms2 = useDms();
 	const rooms2 = useRooms();
@@ -94,7 +93,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	// Load DMs when not in a room
 	const _dms = !props.room_id ? dms2.useList() : null;
 
-	const room = props.room_id ? rooms2.use(() => props.room_id) : () => null;
+	const room = rooms2.use(() => props.room_id);
 	const roomMembers2 = useRoomMembers();
 
 	const canViewChannel = (channel: Channel): boolean => {
