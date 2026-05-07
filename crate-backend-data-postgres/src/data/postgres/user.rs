@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::federation::Remote;
 use common::v1::types::util::Time;
 use common::v1::types::{
     self, PaginationDirection, PaginationQuery, PaginationResponse, Suspended, User, UserId,
@@ -116,15 +117,15 @@ impl DataUser for Postgres {
             preferences: Default::default(),
             emails: None,
             has_mfa: None,
-            remote: None,
+            remote: patch.remote,
         };
 
         let mut tx = self.begin_tx().await?;
 
         query!(
             r#"
-            INSERT INTO usr (id, version_id, parent_id, name, description, avatar, suspended, can_fork, registered_at, system, bot, totp_enabled)
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7, false, $8, $9, false, false)
+            INSERT INTO usr (id, version_id, parent_id, name, description, avatar, suspended, can_fork, registered_at, system, bot, totp_enabled, remote_origin_id, remote_hostname)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, false, $8, $9, false, false, $10, $11)
         "#,
             *user.id,
             *user.version_id,
@@ -135,6 +136,8 @@ impl DataUser for Postgres {
             serde_json::to_value(user.suspended)?,
             user.registered_at.map(|t| time::PrimitiveDateTime::from(t)),
             user.system,
+            user.remote.as_ref().map(|r| r.origin_id),
+            user.remote.as_ref().map(|r| &r.hostname.0),
         )
         .execute(tx.ext())
         .await?;
@@ -203,7 +206,7 @@ impl DataUser for Postgres {
         let now = time::OffsetDateTime::now_utc();
         let now = time::PrimitiveDateTime::new(now.date(), now.time());
         query!(
-            "UPDATE usr SET deleted_at = $2 WHERE id = $1",
+           "UPDATE usr SET deleted_at = $2 WHERE id = $1",
             *user_id,
             now
         )
@@ -235,6 +238,34 @@ impl DataUser for Postgres {
             WHERE u.id = $1
             "#,
             *id
+        )
+        .fetch_one(conn.ext())
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownUser,
+            )),
+            e => Error::Sqlx(e),
+        })?;
+        Ok(row.into())
+    }
+
+    async fn user_get_remote(&mut self, remote: &Remote) -> Result<User> {
+        let mut conn = self.acquire().await?;
+        let row = query_as!(
+            DbUser,
+            r#"
+            SELECT u.id, u.version_id, u.parent_id, u.name, u.description, u.avatar, u.banner, u.system, u.bot, u.registered_at, u.deleted_at, u.suspended,
+                   w.channel_id as "webhook_channel_id?", w.creator_id as "webhook_creator_id?", c.room_id as "webhook_room_id?",
+                   p.application_id as "puppet_application_id?", p.external_id as "puppet_external_id?", p.external_url as "puppet_external_url?", p.alias_id as "puppet_alias_id?"
+            FROM usr u
+            LEFT JOIN webhook w ON u.id = w.id
+            LEFT JOIN channel c ON w.channel_id = c.id
+            LEFT JOIN puppet p ON u.id = p.id
+            WHERE u.remote_origin_id = $1 AND u.remote_hostname = $2
+            "#,
+            remote.origin_id,
+            remote.hostname.0,
         )
         .fetch_one(conn.ext())
         .await

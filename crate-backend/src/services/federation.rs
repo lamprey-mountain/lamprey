@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use common::v1::types::federation::{Hostname, Remote, ServerKeyAlgorithm, ServerKeys};
 use common::v1::types::util::Time;
-use common::v1::types::{User, UserId};
+use common::v1::types::{User, UserId, UserPatch};
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use lamprey_backend_core::config::ServerKeyInternal;
 use moka::future::Cache;
@@ -11,6 +11,7 @@ use tokio::sync::RwLock;
 use tracing::error;
 use url::Url;
 
+use crate::types::MediaLinkType;
 use crate::{
     error::{Error, Result},
     ServerStateInner,
@@ -352,9 +353,15 @@ impl ServiceFederation {
     }
 
     /// Load a user from a remote server, fetching and caching it locally.
-    pub async fn load_remote_user(&self, user_id: UserId, hostname: &Hostname) -> Result<User> {
+    pub async fn load_remote_user(
+        &self,
+        origin_user_id: UserId,
+        hostname: &Hostname,
+    ) -> Result<User> {
         let info = self.fetch_server_info(hostname).await?;
-        let url = info.api_url.join(&format!("/api/v1/user/{}", user_id))?;
+        let url = info
+            .api_url
+            .join(&format!("/api/v1/user/{}", origin_user_id))?;
 
         let res = self.state.services().http.client.get(url).send().await?;
         if !res.status().is_success() {
@@ -362,88 +369,140 @@ impl ServiceFederation {
         }
 
         let mut user: User = res.json().await?;
-        user.remote = Some(Remote {
-            origin_id: user_id.into_inner(),
+        let remote = Remote {
+            origin_id: origin_user_id.into_inner(),
             hostname: hostname.clone(),
-        });
+        };
+        user.remote = Some(remote.clone());
 
-        let mut data = self.state.data();
-        if data.user_get(user_id).await.is_ok() {
-            data.user_update(
-                user_id,
-                common::v1::types::UserPatch {
-                    name: Some(user.name.clone()),
-                    description: Some(user.description.clone()),
-                    avatar: Some(user.avatar),
-                    banner: Some(user.banner),
-                },
-            )
-            .await?;
-        } else {
-            data.user_create(crate::types::DbUserCreate {
-                id: Some(user_id),
+        let mut txn = self.state.acquire_data().await?;
+        let srv = self.state.services();
+        let existing = txn.user_get_remote(&remote).await.ok();
+
+        let local_user_id = existing.as_ref().map_or_else(UserId::new, |u| u.id);
+
+        if existing.is_none() {
+            txn.user_create(crate::types::DbUserCreate {
+                id: Some(local_user_id),
                 parent_id: None,
                 name: user.name.clone(),
                 description: user.description.clone(),
                 puppet: user.puppet.clone(),
                 registered_at: user.registered_at,
                 system: user.system,
+                remote: Some(remote.clone()),
             })
             .await?;
+        }
 
-            if user.avatar.is_some() || user.banner.is_some() {
-                let avatar_id_res = if let Some(avatar_id) = user.avatar {
-                    Some(
-                        self.state
-                            .services()
-                            .media
-                            .load_remote_media(
-                                user_id,
-                                Remote {
-                                    origin_id: avatar_id.into(),
-                                    hostname: hostname.clone(),
-                                },
-                                info.cdn_url.clone(),
-                            )
-                            .await?
-                            .id,
+        let mut patch = UserPatch {
+            name: Some(user.name.clone()),
+            description: Some(user.description.clone()),
+            avatar: None,
+            banner: None,
+        };
+
+        match (user.avatar, existing.as_ref().and_then(|e| e.avatar)) {
+            (None, None) => {
+                // no op
+            }
+            (None, Some(_)) => {
+                patch.avatar = Some(None);
+                txn.media_link_delete(*local_user_id, MediaLinkType::UserAvatar)
+                    .await?;
+            }
+            (Some(origin_avatar_id), None) => {
+                let media = srv
+                    .media
+                    .load_remote_media(
+                        local_user_id,
+                        Remote {
+                            origin_id: origin_avatar_id.into(),
+                            hostname: hostname.clone(),
+                        },
+                        info.cdn_url.clone(),
                     )
-                } else {
-                    None
-                };
-
-                let banner_id_res = if let Some(banner_id) = user.banner {
-                    Some(
-                        self.state
-                            .services()
-                            .media
-                            .load_remote_media(
-                                user_id,
-                                Remote {
-                                    origin_id: banner_id.into(),
-                                    hostname: hostname.clone(),
-                                },
-                                info.cdn_url.clone(),
-                            )
-                            .await?
-                            .id,
+                    .await?;
+                patch.avatar = Some(Some(media.id));
+                txn.media_link_insert(media.id, *local_user_id, MediaLinkType::UserAvatar)
+                    .await?;
+            }
+            (Some(new), Some(old)) if new == old => {
+                // no op
+            }
+            (Some(origin_avatar_id), Some(_)) => {
+                let media = srv
+                    .media
+                    .load_remote_media(
+                        local_user_id,
+                        Remote {
+                            origin_id: origin_avatar_id.into(),
+                            hostname: hostname.clone(),
+                        },
+                        info.cdn_url.clone(),
                     )
-                } else {
-                    None
-                };
-
-                data.user_update(
-                    user_id,
-                    common::v1::types::UserPatch {
-                        name: None,
-                        description: None,
-                        avatar: Some(avatar_id_res),
-                        banner: Some(banner_id_res),
-                    },
-                )
-                .await?;
+                    .await?;
+                patch.avatar = Some(Some(media.id));
+                txn.media_link_delete(*local_user_id, MediaLinkType::UserAvatar)
+                    .await?;
+                txn.media_link_insert(media.id, *local_user_id, MediaLinkType::UserAvatar)
+                    .await?;
             }
         }
+
+        // theres probably some way to deduplicate this code
+        match (user.banner, existing.as_ref().and_then(|e| e.banner)) {
+            (None, None) => {
+                // no op
+            }
+            (None, Some(_)) => {
+                patch.banner = Some(None);
+                txn.media_link_delete(*local_user_id, MediaLinkType::UserBanner)
+                    .await?;
+            }
+            (Some(origin_banner_id), None) => {
+                let media = srv
+                    .media
+                    .load_remote_media(
+                        local_user_id,
+                        Remote {
+                            origin_id: origin_banner_id.into(),
+                            hostname: hostname.clone(),
+                        },
+                        info.cdn_url.clone(),
+                    )
+                    .await?;
+                patch.banner = Some(Some(media.id));
+                txn.media_link_insert(media.id, *local_user_id, MediaLinkType::UserBanner)
+                    .await?;
+            }
+            (Some(new), Some(old)) if new == old => {
+                // no op
+            }
+            (Some(origin_banner_id), Some(_)) => {
+                let media = srv
+                    .media
+                    .load_remote_media(
+                        local_user_id,
+                        Remote {
+                            origin_id: origin_banner_id.into(),
+                            hostname: hostname.clone(),
+                        },
+                        info.cdn_url.clone(),
+                    )
+                    .await?;
+                patch.banner = Some(Some(media.id));
+                txn.media_link_delete(*local_user_id, MediaLinkType::UserBanner)
+                    .await?;
+                txn.media_link_insert(media.id, *local_user_id, MediaLinkType::UserBanner)
+                    .await?;
+            }
+        }
+
+        // PERF: don't update if nothing changed
+        txn.user_update(local_user_id, patch).await?;
+
+        txn.commit().await?;
 
         Ok(user)
     }

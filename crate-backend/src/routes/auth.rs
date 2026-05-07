@@ -124,6 +124,7 @@ async fn auth_oauth_redirect(
                             puppet: None,
                             registered_at,
                             system: false,
+                            remote: None,
                         })
                         .await?;
                     data.room_member_put(SERVER_ROOM_ID, user.id, None, RoomMemberPut::default())
@@ -255,6 +256,7 @@ async fn auth_oauth_redirect(
                             puppet: None,
                             registered_at,
                             system: false,
+                            remote: None,
                         })
                         .await?;
                     data.room_member_put(SERVER_ROOM_ID, user.id, None, RoomMemberPut::default())

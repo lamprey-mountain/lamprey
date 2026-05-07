@@ -62,6 +62,7 @@ async fn app_create(
             puppet: None,
             registered_at: Some(Time::now_utc()),
             system: false,
+            remote: None,
         })
         .await?;
     let app = Application {
@@ -384,6 +385,7 @@ async fn puppet_ensure(
             }),
             registered_at: Some(Time::now_utc()),
             system: false,
+            remote: None,
         })
         .await?;
     data.room_member_put(SERVER_ROOM_ID, user.id, None, RoomMemberPut::default())

@@ -341,6 +341,7 @@ async fn main() -> Result<()> {
             puppet: None,
             registered_at: Some(Time::now_utc()),
             system: true,
+            remote: None,
         })
         .await?;
     }

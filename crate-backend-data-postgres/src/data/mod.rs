@@ -10,7 +10,7 @@ use common::v1::types::document::{
     DocumentBranchState, DocumentPatch, DocumentTag, Wiki, WikiPatch,
 };
 use common::v1::types::email::EmailAddr;
-use common::v1::types::federation::Hostname;
+use common::v1::types::federation::{Hostname, Remote};
 use common::v1::types::message::{Message, MessageVersion};
 use common::v1::types::oauth::Scopes;
 use common::v1::types::room_template::{RoomTemplateCode, RoomTemplateCreate, RoomTemplatePatch};
@@ -454,6 +454,7 @@ pub trait DataUser {
     async fn user_delete(&mut self, user_id: UserId) -> Result<()>;
     async fn user_undelete(&mut self, user_id: UserId) -> Result<()>;
     async fn user_get(&mut self, user_id: UserId) -> Result<User>;
+    async fn user_get_remote(&mut self, remote: &Remote) -> Result<User>;
     async fn user_get_many(&mut self, user_ids: &[UserId]) -> Result<Vec<User>>;
     async fn user_list(
         &mut self,

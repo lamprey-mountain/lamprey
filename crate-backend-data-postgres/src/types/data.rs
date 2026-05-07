@@ -4,6 +4,7 @@ use common::v1::types::automod::{AutomodAction, AutomodTarget, AutomodTrigger};
 use common::v1::types::calendar::{CalendarEvent, CalendarOverwrite};
 use common::v1::types::components::ComponentThin;
 use common::v1::types::document::DocumentBranchState;
+use common::v1::types::federation::Remote;
 use common::v1::types::message::MessageType;
 use common::v1::types::User;
 use common::v1::types::{
@@ -128,6 +129,7 @@ pub struct DbUserCreate {
     pub puppet: Option<Puppet>,
     pub registered_at: Option<Time>,
     pub system: bool,
+    pub remote: Option<Remote>,
 }
 
 #[derive(sqlx::Type, PartialEq)]
