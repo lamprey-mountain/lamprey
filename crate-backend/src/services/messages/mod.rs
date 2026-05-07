@@ -743,12 +743,13 @@ impl ServiceMessages {
             description: value.description,
             color: value
                 .color
-                .map(|s| csscolorparser::parse(&s))
+                .map(|s| csscolorparser::parse(&s)) // TODO: replace with `Color::from_str_strict` directly?
                 .transpose()
                 .map_err(|e| error!("Failed to parse color: {:?}", e))
                 .ok()
                 .flatten()
-                .map(|c| Color::from_hex_string(c.to_css_hex())),
+                .map(|c| Color::from_str_strict(&c.to_css_hex()))
+                .transpose()?,
             media: media.map(|m| m.into()),
             thumbnail: thumbnail.map(|m| m.into()),
             author_name: value.author_name,

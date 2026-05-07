@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, str::FromStr};
 
 use async_trait::async_trait;
 use html5ever::{
@@ -96,7 +96,8 @@ impl UnfurlPlugin for HtmlStreamPlugin {
             site_name: data.og_site_name,
             color: data
                 .theme_color
-                .and_then(|c| Color::try_from_hex_string(c).ok()),
+                .as_ref()
+                .and_then(|c| Color::from_str(c).ok()),
             media: None,
             thumbnail: None,
             author_name: None,

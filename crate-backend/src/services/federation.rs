@@ -382,10 +382,14 @@ impl ServiceFederation {
                         self.state
                             .services()
                             .media
-                            .load_remote_media(user_id, avatar_id, Remote {
-                                origin_id: avatar_id.into(),
-                                hostname: hostname.clone(),
-                            })
+                            .load_remote_media(
+                                user_id,
+                                avatar_id,
+                                Remote {
+                                    origin_id: avatar_id.into(),
+                                    hostname: hostname.clone(),
+                                },
+                            )
                             .await?
                             .id,
                     )
@@ -398,10 +402,14 @@ impl ServiceFederation {
                         self.state
                             .services()
                             .media
-                            .load_remote_media(user_id, banner_id, Remote {
-                                origin_id: banner_id.into(),
-                                hostname: hostname.clone(),
-                            })
+                            .load_remote_media(
+                                user_id,
+                                banner_id,
+                                Remote {
+                                    origin_id: banner_id.into(),
+                                    hostname: hostname.clone(),
+                                },
+                            )
                             .await?
                             .id,
                     )

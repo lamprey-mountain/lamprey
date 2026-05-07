@@ -10,7 +10,8 @@ use utoipa::ToSchema;
 
 pub mod color;
 pub mod time;
-pub use color::{Color, ColorSemantic, ColorThemed};
+
+pub use color::Color;
 pub use time::Time;
 
 use super::{ApplicationId, SessionId, UserId};

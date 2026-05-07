@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use async_trait::async_trait;
 use common::v1::types::calendar::{Calendar, CalendarPatch, Timezone};
 use common::v1::types::document::{
@@ -771,7 +773,7 @@ impl DataChannel for Postgres {
 
         if let Some(cal) = row {
             Ok(Some(Calendar {
-                color: cal.color.map(|c| Color::from_hex_string(c)),
+                color: cal.color.as_ref().and_then(|c| Color::from_str(c).ok()),
                 default_timezone: Timezone(cal.default_timezone),
             }))
         } else {
@@ -1030,7 +1032,7 @@ impl Postgres {
             VALUES ($1, $2, $3)
             "#,
             channel_id.into_inner(),
-            calendar.color.as_ref().map(|c| c.as_ref()),
+            calendar.color.as_ref().map(|c| c.to_string()),
             calendar.default_timezone.0
         )
         .execute(&mut **tx)
@@ -1057,10 +1059,10 @@ impl Postgres {
         .await?;
 
         if let Some(current) = current_cal {
-            let new_color: Option<&str> = match &calendar_patch.color {
-                Some(Some(c)) => Some(c.as_ref()),
+            let new_color: Option<String> = match &calendar_patch.color {
+                Some(Some(c)) => Some(c.to_string()),
                 Some(None) => None,
-                None => current.color.as_deref(),
+                None => current.color,
             };
 
             let new_default_timezone = calendar_patch

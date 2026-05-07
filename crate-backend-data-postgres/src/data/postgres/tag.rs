@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use async_trait::async_trait;
 use common::v1::types::{
     misc::Color,
@@ -35,7 +37,7 @@ impl From<DbTag> for Tag {
             channel_id: tag.channel_id.into(),
             name: tag.name,
             description: tag.description,
-            color: tag.color.map(Color::Srgb),
+            color: tag.color.as_ref().and_then(|c| Color::from_str(c).ok()),
             archived: tag.is_archived,
             restricted: tag.is_restricted,
             active_thread_count: tag.active_thread_count as u64,
@@ -50,7 +52,7 @@ impl DataTag for Postgres {
         let tag_id = TagId::new();
         let mut tx = self.pool.begin().await?;
 
-        let color = create.color.map(|c| c.as_ref().to_string());
+        let color = create.color.map(|c| c.to_string());
 
         let tag = query_as!(
             DbTag,
@@ -82,7 +84,7 @@ impl DataTag for Postgres {
 
         let old_tag = self.tag_get(tag_id).await?;
 
-        let color = patch.color.map(|c| c.map(|c| c.as_ref().to_string()));
+        let color = patch.color.map(|c| c.map(|c| c.to_string()));
 
         let tag = query_as!(
             DbTag,
@@ -109,7 +111,7 @@ impl DataTag for Postgres {
             *tag_id,
             patch.name.unwrap_or(old_tag.name),
             patch.description.unwrap_or(old_tag.description),
-            color.unwrap_or(old_tag.color.map(|c| c.as_ref().to_string())),
+            color.unwrap_or(old_tag.color.map(|c| c.to_string())),
             patch.archived.unwrap_or(old_tag.archived),
             patch.restricted.unwrap_or(old_tag.restricted),
         )
