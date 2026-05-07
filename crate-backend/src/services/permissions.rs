@@ -123,7 +123,7 @@ impl ServicePermissions {
 
             // load slowmode fields
             if let Some(uid) = user_id {
-                let data = self.state.data();
+                let mut data = self.state.data();
 
                 if let Some(expire_at) = data
                     .channel_get_message_slowmode_expire_at(channel_id, uid)
@@ -247,7 +247,7 @@ impl ServicePermissions {
             return Ok(true);
         }
         let (a, b) = if a < b { (a, b) } else { (b, a) };
-        let data = self.state.data();
+        let mut data = self.state.data();
         self.cache_is_mutual
             .try_get_with((a, b), data.permission_is_mutual(a, b))
             .await
@@ -268,7 +268,7 @@ impl ServicePermissions {
         allow: Vec<Permission>,
         deny: Vec<Permission>,
     ) -> Result<()> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         data.permission_overwrite_upsert(thread_id.into(), overwrite_id, ty, allow, deny)
             .await?;
 
@@ -282,7 +282,7 @@ impl ServicePermissions {
         thread_id: ChannelId,
         overwrite_id: Uuid,
     ) -> Result<()> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         data.permission_overwrite_delete(thread_id, overwrite_id)
             .await?;
 
@@ -318,7 +318,7 @@ impl ServicePermissions {
     /// for public room joining
     // TODO: move to permissions cache
     pub async fn default_for_room(&self, room_id: RoomId) -> Result<Permissions> {
-        let data = self.state.data();
+        let mut data = self.state.data();
 
         let everyone_role_id = room_id.into_inner().into();
         let role = data.role_select(room_id, everyone_role_id).await?;
@@ -338,7 +338,7 @@ impl ServicePermissions {
         &self,
         room_id: RoomId,
     ) -> Result<Permissions2<CheckVisibility>> {
-        let data = self.state.data();
+        let mut data = self.state.data();
 
         let everyone_role_id = room_id.into_inner().into();
         let role = data.role_select(room_id, everyone_role_id).await?;
@@ -364,7 +364,7 @@ impl ServicePermissions {
         source_user_id: UserId,
         target_user_id: UserId,
     ) -> Result<bool> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         data.permission_allows_dm_from_user(source_user_id, target_user_id)
             .await
     }
@@ -375,7 +375,7 @@ impl ServicePermissions {
         source_user_id: UserId,
         target_user_id: UserId,
     ) -> Result<bool> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         data.permission_allows_friend_request_from_user(source_user_id, target_user_id)
             .await
     }

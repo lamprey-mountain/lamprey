@@ -52,7 +52,7 @@ async fn app_create(
         }
     }
 
-    let data = s.data();
+    let mut data = s.data();
     let user = data
         .user_create(DbUserCreate {
             id: None,
@@ -96,7 +96,7 @@ async fn app_list(
     State(s): State<Arc<ServerState>>,
     req: routes::app_list::Request,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
+    let mut data = s.data();
     let mut list = data.application_list(auth.user.id, req.pagination).await?;
     for app in &mut list.items {
         app.oauth_secret = None;
@@ -115,7 +115,7 @@ async fn app_get(
         ApplicationIdReq::AppSelf => (*auth.user.id).into(),
         ApplicationIdReq::ApplicationId(id) => id,
     };
-    let data = s.data();
+    let mut data = s.data();
     let mut app = data.application_get(app_id).await?;
     app.oauth_secret = None;
     if app.owner_id == auth.user.id || app.public || *app.id == *auth.user.id {
@@ -142,7 +142,7 @@ async fn app_patch(
     let al = auth.audit_log(auth.user.id.into_inner().into());
     let patch = req.patch;
     patch.validate()?;
-    let data = s.data();
+    let mut data = s.data();
     let start = data.application_get(app_id).await?;
     if start.owner_id != auth.user.id && *start.id != *auth.user.id {
         return Err(Error::MissingPermissions);
@@ -201,7 +201,7 @@ async fn app_delete(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let al = auth.audit_log(auth.user.id.into_inner().into());
-    let data = s.data();
+    let mut data = s.data();
     let app = data.application_get(req.app_id).await?;
     if app.owner_id == auth.user.id {
         data.application_delete(req.app_id).await?;
@@ -235,7 +235,7 @@ async fn app_create_session(
     let al = auth.audit_log(auth.user.id.into_inner().into());
     let json = req.session;
     json.validate()?;
-    let data = s.data();
+    let mut data = s.data();
     let app = data.application_get(app_id).await?;
     if app.owner_id == auth.user.id || *app.id == *auth.user.id {
         let token = SessionToken(Uuid::new_v4().to_string()); // TODO: is this secure enough
@@ -280,7 +280,7 @@ async fn app_invite_bot(
     req: routes::app_invite_bot::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    let data = s.data();
+    let mut data = s.data();
     let app = data.application_get(req.app_id).await?;
 
     if !app.public && app.owner_id != auth.user.id {
@@ -356,7 +356,7 @@ async fn puppet_ensure(
     }
 
     let parent_id = Some(auth.user.id);
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
     let parent = srv.users.get(auth.user.id, None).await?;
     if !parent.bot {
@@ -404,7 +404,7 @@ async fn app_rotate_secret(
         ApplicationIdReq::ApplicationId(id) => id,
     };
     let al = auth.audit_log(auth.user.id.into_inner().into());
-    let data = s.data();
+    let mut data = s.data();
     let mut app = data.application_get(app_id).await?;
     if app.owner_id != auth.user.id && *app.id != *auth.user.id {
         return Err(Error::MissingPermissions);

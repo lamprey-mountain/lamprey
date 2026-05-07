@@ -101,7 +101,7 @@ impl ServiceEmbed {
     }
 
     async fn worker(state: &Arc<ServerStateInner>) -> Result<()> {
-        let data = state.data();
+        let mut data = state.data();
         let Some(job) = data.url_embed_queue_claim().await? else {
             return Ok(());
         };
@@ -254,7 +254,7 @@ impl ServiceEmbed {
         let Some(mref) = message_ref else {
             return Ok(());
         };
-        let data = state.data();
+        let mut data = state.data();
         let mut message = data.message_get(mref.thread_id, mref.message_id).await?;
         let ver = data
             .message_version_get(mref.thread_id, mref.version_id)

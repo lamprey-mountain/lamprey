@@ -8,7 +8,7 @@ use common::v1::types::{
 use lamprey_backend_core::Error;
 use serde::Deserialize;
 use serde_json::Value;
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_as, query_scalar};
 use uuid::Uuid;
 
 use crate::data::postgres::Pagination;
@@ -96,7 +96,7 @@ impl From<DbUser> for User {
 
 #[async_trait]
 impl DataUser for Postgres {
-    async fn user_create(&self, patch: DbUserCreate) -> Result<User> {
+    async fn user_create(&mut self, patch: DbUserCreate) -> Result<User> {
         let user_id = patch.id.unwrap_or_else(|| Uuid::now_v7().into());
         let user = User {
             id: user_id,
@@ -119,7 +119,7 @@ impl DataUser for Postgres {
             remote: None,
         };
 
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         query!(
             r#"
@@ -136,7 +136,7 @@ impl DataUser for Postgres {
             user.registered_at.map(|t| time::PrimitiveDateTime::from(t)),
             user.system,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         if let Some(puppet) = &user.puppet {
@@ -151,7 +151,7 @@ impl DataUser for Postgres {
                 puppet.external_url.as_ref().map(|u| u.as_str()),
                 puppet.alias_id.map(|id| *id),
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
 
@@ -160,9 +160,8 @@ impl DataUser for Postgres {
         self.user_get(user_id).await
     }
 
-    async fn user_update(&self, user_id: UserId, patch: UserPatch) -> Result<UserVerId> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+    async fn user_update(&mut self, user_id: UserId, patch: UserPatch) -> Result<UserVerId> {
+        let mut tx = self.begin_tx().await?;
         let user = query_as!(
             DbUser,
             r#"
@@ -178,7 +177,7 @@ impl DataUser for Postgres {
             "#,
             *user_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
         let user: User = user.into();
         let version_id = UserVerId::new();
@@ -193,13 +192,14 @@ impl DataUser for Postgres {
             avatar,
             banner,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         Ok(version_id)
     }
 
-    async fn user_delete(&self, user_id: UserId) -> Result<()> {
+    async fn user_delete(&mut self, user_id: UserId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let now = time::OffsetDateTime::now_utc();
         let now = time::PrimitiveDateTime::new(now.date(), now.time());
         query!(
@@ -207,19 +207,21 @@ impl DataUser for Postgres {
             *user_id,
             now
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn user_undelete(&self, user_id: UserId) -> Result<()> {
+    async fn user_undelete(&mut self, user_id: UserId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!("UPDATE usr SET deleted_at = NULL WHERE id = $1", *user_id,)
-            .execute(&self.pool)
+            .execute(conn.ext())
             .await?;
         Ok(())
     }
 
-    async fn user_get(&self, id: UserId) -> Result<User> {
+    async fn user_get(&mut self, id: UserId) -> Result<User> {
+        let mut conn = self.acquire().await?;
         let row = query_as!(
             DbUser,
             r#"
@@ -234,7 +236,7 @@ impl DataUser for Postgres {
             "#,
             *id
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
@@ -246,7 +248,7 @@ impl DataUser for Postgres {
     }
 
     async fn user_list(
-        &self,
+        &mut self,
         pagination: PaginationQuery<UserId>,
         filter: Option<UserListFilter>,
     ) -> Result<PaginationResponse<User>> {
@@ -254,8 +256,7 @@ impl DataUser for Postgres {
         match filter {
             Some(UserListFilter::Guest) => {
                 gen_paginate!(
-                    p,
-                    self.pool,
+                    p, self,
                     query_as!(
                         DbUser,
                         r#"
@@ -281,8 +282,7 @@ impl DataUser for Postgres {
             }
             Some(UserListFilter::Registered) => {
                 gen_paginate!(
-                    p,
-                    self.pool,
+                    p, self,
                     query_as!(
                         DbUser,
                         r#"
@@ -309,7 +309,7 @@ impl DataUser for Postgres {
             Some(UserListFilter::Bot) => {
                 gen_paginate!(
                     p,
-                    self.pool,
+                    self,
                     query_as!(
                         DbUser,
                         r#"
@@ -336,7 +336,7 @@ impl DataUser for Postgres {
             Some(UserListFilter::Puppet) => {
                 gen_paginate!(
                     p,
-                    self.pool,
+                    self,
                     query_as!(
                         DbUser,
                         r#"
@@ -361,8 +361,7 @@ impl DataUser for Postgres {
             }
             None => {
                 gen_paginate!(
-                    p,
-                    self.pool,
+                    p, self,
                     query_as!(
                         DbUser,
                         r#"
@@ -390,10 +389,11 @@ impl DataUser for Postgres {
     }
 
     async fn user_lookup_puppet(
-        &self,
+        &mut self,
         owner_id: UserId,
         external_id: &str,
     ) -> Result<Option<UserId>> {
+        let mut conn = self.acquire().await?;
         let id = query_scalar!(
             r#"
             SELECT p.id FROM puppet p
@@ -402,12 +402,13 @@ impl DataUser for Postgres {
             *owner_id,
             external_id,
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
         Ok(id.map(Into::into))
     }
 
-    async fn user_get_many(&self, user_ids: &[UserId]) -> Result<Vec<User>> {
+    async fn user_get_many(&mut self, user_ids: &[UserId]) -> Result<Vec<User>> {
+        let mut conn = self.acquire().await?;
         let ids: Vec<Uuid> = user_ids.iter().map(|id| id.into_inner()).collect();
         let rows = query_as!(
             DbUser,
@@ -423,17 +424,18 @@ impl DataUser for Postgres {
             "#,
             &ids
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
         Ok(rows.into_iter().map(Into::into).collect())
     }
 
     async fn user_set_registered(
-        &self,
+        &mut self,
         user_id: UserId,
         registered_at: Option<Time>,
         parent_invite: Option<String>,
     ) -> Result<UserVerId> {
+        let mut conn = self.acquire().await?;
         let version_id = UserVerId::new();
         query!(
             "UPDATE usr SET version_id = $2, registered_at = $3, parent_invite = $4 WHERE id = $1",
@@ -442,16 +444,17 @@ impl DataUser for Postgres {
             registered_at.map(|t| time::PrimitiveDateTime::from(t)),
             parent_invite,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(version_id)
     }
 
     async fn user_suspended(
-        &self,
+        &mut self,
         user_id: UserId,
         suspended: Option<Suspended>,
     ) -> Result<UserVerId> {
+        let mut conn = self.acquire().await?;
         let version_id = UserVerId::new();
         query!(
             "UPDATE usr SET version_id = $2, suspended = $3 WHERE id = $1",
@@ -459,7 +462,7 @@ impl DataUser for Postgres {
             *version_id,
             suspended.map(|t| serde_json::to_value(t).unwrap()),
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(version_id)
     }

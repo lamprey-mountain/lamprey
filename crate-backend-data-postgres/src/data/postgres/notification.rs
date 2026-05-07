@@ -3,7 +3,7 @@ use common::v1::types::notifications::{
     InboxListParams, Notification, NotificationFlush, NotificationMarkRead, NotificationType,
 };
 use common::v1::types::{NotificationId, PaginationDirection, PaginationQuery, PaginationResponse};
-use sqlx::{query, query_file, query_file_as, query_file_scalar, Acquire};
+use sqlx::{query, query_file, query_file_as, query_file_scalar};
 use uuid::Uuid;
 
 use crate::{
@@ -41,8 +41,8 @@ impl From<DbNotification> for Notification {
 
 #[async_trait]
 impl DataNotification for Postgres {
-    async fn notification_add(&self, user_id: UserId, notif: Notification) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
+    async fn notification_add(&mut self, user_id: UserId, notif: Notification) -> Result<()> {
+        let mut conn = self.acquire().await?;
 
         let (room_id, channel_id, message_id, ty) = match &notif.ty {
             NotificationType::Message {
@@ -78,25 +78,29 @@ impl DataNotification for Postgres {
             ty as _,
             added_at,
         )
-        .execute(&mut *conn)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn notification_delete(&self, user_id: UserId, notif_id: NotificationId) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
+    async fn notification_delete(
+        &mut self,
+        user_id: UserId,
+        notif_id: NotificationId,
+    ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "DELETE FROM inbox WHERE id = $1 AND user_id = $2",
             notif_id.into_inner(),
             user_id.into_inner()
         )
-        .execute(&mut *conn)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn notification_list(
-        &self,
+        &mut self,
         user_id: UserId,
         pagination: PaginationQuery<NotificationId>,
         params: InboxListParams,
@@ -108,7 +112,7 @@ impl DataNotification for Postgres {
 
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_file_as!(
                 DbNotification,
                 "sql/notification_list.sql",
@@ -133,17 +137,17 @@ impl DataNotification for Postgres {
     }
 
     async fn notification_mark_read(
-        &self,
+        &mut self,
         user_id: UserId,
         params: NotificationMarkRead,
     ) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
+        let mut conn = self.acquire().await?;
         if params.everything {
             query!(
                 "UPDATE inbox SET read_at = now() WHERE user_id = $1",
                 user_id.into_inner()
             )
-            .execute(&mut *conn)
+            .execute(conn.ext())
             .await?;
         } else if !params.message_ids.is_empty()
             || !params.channel_ids.is_empty()
@@ -172,24 +176,24 @@ impl DataNotification for Postgres {
                 &channel_ids,
                 &room_ids,
             )
-            .execute(&mut *conn)
+            .execute(conn.ext())
             .await?;
         }
         Ok(())
     }
 
     async fn notification_mark_unread(
-        &self,
+        &mut self,
         user_id: UserId,
         params: NotificationMarkRead,
     ) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
+        let mut conn = self.acquire().await?;
         if params.everything {
             query!(
                 "UPDATE inbox SET read_at = NULL WHERE user_id = $1",
                 user_id.into_inner()
             )
-            .execute(&mut *conn)
+            .execute(conn.ext())
             .await?;
         } else if !params.message_ids.is_empty()
             || !params.channel_ids.is_empty()
@@ -218,14 +222,18 @@ impl DataNotification for Postgres {
                 &channel_ids,
                 &room_ids,
             )
-            .execute(&mut *conn)
+            .execute(conn.ext())
             .await?;
         }
         Ok(())
     }
 
-    async fn notification_flush(&self, user_id: UserId, params: NotificationFlush) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
+    async fn notification_flush(
+        &mut self,
+        user_id: UserId,
+        params: NotificationFlush,
+    ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let message_ids: Option<Vec<Uuid>> = params
             .message_ids
             .map(|ids| ids.iter().map(|id| id.into_inner()).collect());
@@ -253,15 +261,19 @@ impl DataNotification for Postgres {
             channel_ids.as_deref(),
             room_ids.as_deref(),
         )
-        .execute(&mut *conn)
+        .execute(conn.ext())
         .await?;
 
         Ok(())
     }
 
-    async fn notification_get_unpushed(&self, limit: u32) -> Result<Vec<(UserId, Notification)>> {
+    async fn notification_get_unpushed(
+        &mut self,
+        limit: u32,
+    ) -> Result<Vec<(UserId, Notification)>> {
+        let mut conn = self.acquire().await?;
         let rows = query_file!("sql/notification_get_unpushed.sql", limit as i32)
-            .fetch_all(&self.pool)
+            .fetch_all(conn.ext())
             .await?;
 
         Ok(rows
@@ -283,13 +295,14 @@ impl DataNotification for Postgres {
             .collect())
     }
 
-    async fn notification_set_pushed(&self, ids: &[NotificationId]) -> Result<()> {
+    async fn notification_set_pushed(&mut self, ids: &[NotificationId]) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let ids: Vec<Uuid> = ids.iter().map(|id| id.into_inner()).collect();
         query!(
             "UPDATE inbox SET pushed_at = now() WHERE id = ANY($1)",
             &ids
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }

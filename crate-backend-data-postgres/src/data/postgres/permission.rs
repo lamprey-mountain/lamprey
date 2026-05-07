@@ -10,7 +10,8 @@ use super::Postgres;
 // TODO: remove this trait and move all permission calculations into permissions.rs
 #[async_trait]
 impl DataPermission for Postgres {
-    async fn permission_is_mutual(&self, a: UserId, b: UserId) -> Result<bool> {
+    async fn permission_is_mutual(&mut self, a: UserId, b: UserId) -> Result<bool> {
+        let mut conn = self.acquire().await?;
         let exists = query_scalar!(
             r#"
             select 1
@@ -21,20 +22,21 @@ impl DataPermission for Postgres {
             a.into_inner(),
             b.into_inner(),
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?
         .is_some();
         Ok(exists)
     }
 
     async fn permission_overwrite_upsert(
-        &self,
+        &mut self,
         target_id: ChannelId,
         actor_id: Uuid,
         ty: PermissionOverwriteType,
         allow: Vec<Permission>,
         deny: Vec<Permission>,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         sqlx::query!(
             r#"
             INSERT INTO permission_overwrite (target_id, actor_id, type, allow, deny)
@@ -50,31 +52,33 @@ impl DataPermission for Postgres {
             serde_json::to_value(&allow)?,
             serde_json::to_value(&deny)?,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn permission_overwrite_delete(
-        &self,
+        &mut self,
         thread_id: ChannelId,
         overwrite_id: Uuid,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         sqlx::query!(
             "DELETE FROM permission_overwrite WHERE target_id = $1 AND actor_id = $2",
             *thread_id,
             overwrite_id,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn permission_allows_dm_from_user(
-        &self,
+        &mut self,
         source_user_id: UserId,
         target_user_id: UserId,
     ) -> Result<bool> {
+        let mut conn = self.acquire().await?;
         // Check if target user allows DMs:
         // 1. If global dms setting is true, allow
         // 2. Otherwise, check if any shared room has dms enabled
@@ -100,16 +104,17 @@ impl DataPermission for Postgres {
             source_user_id.into_inner(),
             target_user_id.into_inner(),
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
         Ok(allows)
     }
 
     async fn permission_allows_friend_request_from_user(
-        &self,
+        &mut self,
         source_user_id: UserId,
         target_user_id: UserId,
     ) -> Result<bool> {
+        let mut conn = self.acquire().await?;
         // Check if target user allows friend requests:
         // 1. If global allow_everyone is true, allow
         // 2. If global allow_mutual_room is true, check if any shared room has friends enabled
@@ -142,7 +147,7 @@ impl DataPermission for Postgres {
             source_user_id.into_inner(),
             target_user_id.into_inner(),
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
         Ok(allows)
     }

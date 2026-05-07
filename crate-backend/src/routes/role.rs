@@ -48,7 +48,7 @@ async fn role_update(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     req.patch.validate()?;
-    let d = s.data();
+    let mut d = s.data();
     let srv = s.services();
 
     let room = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
@@ -177,7 +177,7 @@ async fn role_delete(
     if req.room_id.into_inner() == req.role_id.into_inner() {
         return Err(ApiError::from_code(ErrorCode::CannotModifyDefaultRole).into());
     }
-    let d = s.data();
+    let mut d = s.data();
     let srv = s.services();
 
     let room = srv.rooms.get(req.room_id, None).await?;
@@ -246,7 +246,7 @@ async fn role_get(
     req: routes::role_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let d = s.data();
+    let mut d = s.data();
     let _perms = s
         .services()
         .perms
@@ -278,7 +278,7 @@ async fn role_member_list(
     req: routes::role_member_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let d = s.data();
+    let mut d = s.data();
     let _perms = s
         .services()
         .perms
@@ -300,7 +300,7 @@ async fn role_member_add(
     if req.room_id.into_inner() == req.role_id.into_inner() {
         return Err(ApiError::from_code(ErrorCode::CannotModifyDefaultRole).into());
     }
-    let d = s.data();
+    let mut d = s.data();
     let srv = s.services();
 
     let room = srv.rooms.get(req.room_id, None).await?;
@@ -360,7 +360,7 @@ async fn role_member_remove(
     if req.room_id.into_inner() == req.role_id.into_inner() {
         return Err(ApiError::from_code(ErrorCode::CannotModifyDefaultRole).into());
     }
-    let d = s.data();
+    let mut d = s.data();
     let srv = s.services();
 
     let room = srv.rooms.get(req.room_id, None).await?;
@@ -420,7 +420,7 @@ async fn role_member_bulk_patch(
     if req.room_id.into_inner() == req.role_id.into_inner() {
         return Err(ApiError::from_code(ErrorCode::CannotModifyDefaultRole).into());
     }
-    let d = s.data();
+    let mut d = s.data();
     let srv = s.services();
 
     let room = srv.rooms.get(req.room_id, None).await?;
@@ -523,7 +523,7 @@ async fn role_reorder(
     auth.user.ensure_unsuspended()?;
     req.reorder.validate()?;
 
-    let d = s.data();
+    let mut d = s.data();
     let srv = s.services();
 
     let room = srv.rooms.get(req.room_id, None).await?;

@@ -82,7 +82,7 @@ async fn room_create(
 
     let icon = req.room.icon;
     if let Some(media_id) = icon {
-        let data = s.data();
+        let mut data = s.data();
         let media = data.media_select(media_id).await?;
         if !media.metadata.is_image() {
             return Err(ApiError::from_code(ErrorCode::MediaNotAnImage).into());
@@ -99,7 +99,7 @@ async fn room_create(
         .create(req.room, &auth, extra, req.idempotency_key)
         .await?;
     if let Some(media_id) = icon {
-        let data = s.data();
+        let mut data = s.data();
         data.media_link_create_exclusive(media_id, *room.id, MediaLinkType::RoomIcon)
             .await?;
     }
@@ -141,7 +141,7 @@ async fn room_list(
     req: routes::room_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Rooms])?;
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
     let is_admin = srv
         .perms
@@ -209,7 +209,7 @@ async fn room_edit(
         .get(req.room_id, Some(auth.user.id))
         .await?;
     if room.security.require_mfa {
-        let data = s.data();
+        let mut data = s.data();
         let totp = data.auth_totp_get(auth.user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
             return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
@@ -217,7 +217,7 @@ async fn room_edit(
     }
 
     if let Some(Some(media_id)) = req.patch.icon {
-        let data = s.data();
+        let mut data = s.data();
         let media = data.media_select(media_id).await?;
         if !media.metadata.is_image() {
             return Err(ApiError::from_code(ErrorCode::MediaNotAnImage).into());
@@ -233,7 +233,7 @@ async fn room_edit(
         .await?;
 
     if let Some(maybe_media_id) = req.patch.icon {
-        let data = s.data();
+        let mut data = s.data();
         data.media_link_delete(req.room_id.into_inner(), MediaLinkType::RoomIcon)
             .await?;
         if let Some(media_id) = maybe_media_id {
@@ -262,7 +262,7 @@ async fn room_delete(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     let perms = srv
         .perms
@@ -325,7 +325,7 @@ async fn room_undelete(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     srv.perms
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
@@ -388,7 +388,7 @@ async fn room_ack(
     req: routes::room_ack::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Rooms])?;
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
     srv.perms
         .for_room3(Some(auth.user.id), req.room_id)
@@ -424,7 +424,7 @@ async fn room_transfer_ownership(
     auth.ensure_sudo()?;
 
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     let target_user_id = req.transfer.owner_id;
 
     data.room_member_get(req.room_id, target_user_id).await?;
@@ -463,19 +463,20 @@ async fn room_integration_list(
         .await?
         .ensure_view()?
         .check()?;
-    let data = s.data();
+    let mut data = s.data();
     let ids = data.room_bot_list(req.room_id, req.pagination).await?;
     let mut integrations = vec![];
+    // PERF: fetch in parallel
     for id in ids.items {
-        let (app, bot, member) = tokio::join!(
-            data.application_get(id),
-            data.user_get(id.into_inner().into()),
-            data.room_member_get(req.room_id, id.into_inner().into()),
-        );
+        let app = data.application_get(id).await?;
+        let bot = data.user_get(id.into_inner().into()).await?;
+        let member = data
+            .room_member_get(req.room_id, id.into_inner().into())
+            .await?;
         integrations.push(common::v1::types::application::Integration {
-            application: app?,
-            bot: bot?,
-            member: member?,
+            application: app,
+            bot,
+            member,
         });
     }
     Ok(Json(PaginationResponse {
@@ -497,7 +498,7 @@ async fn room_quarantine(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     srv.perms
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
@@ -542,7 +543,7 @@ async fn room_unquarantine(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     srv.perms
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
@@ -588,7 +589,7 @@ async fn room_security_set(
     auth.ensure_sudo()?;
 
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     let room = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
 

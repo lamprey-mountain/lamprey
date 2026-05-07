@@ -77,7 +77,7 @@ impl ServiceEmail {
     }
 
     async fn process_email_queue_item(&self) -> Result<bool> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let email_item = data.email_queue_claim().await?;
 
         if let Some(item) = email_item {

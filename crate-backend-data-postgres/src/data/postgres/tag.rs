@@ -6,7 +6,7 @@ use common::v1::types::{
     tag::{Tag, TagCreate, TagPatch},
     ChannelId, TagId,
 };
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_as, query_scalar};
 use uuid::Uuid;
 
 use crate::{data::DataTag, error::Result};
@@ -48,9 +48,9 @@ impl From<DbTag> for Tag {
 
 #[async_trait]
 impl DataTag for Postgres {
-    async fn tag_create(&self, forum_channel_id: ChannelId, create: TagCreate) -> Result<Tag> {
+    async fn tag_create(&mut self, forum_channel_id: ChannelId, create: TagCreate) -> Result<Tag> {
         let tag_id = TagId::new();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         let color = create.color.map(|c| c.to_string());
 
@@ -71,7 +71,7 @@ impl DataTag for Postgres {
             color,
             create.restricted,
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -79,10 +79,9 @@ impl DataTag for Postgres {
         Ok(tag.into())
     }
 
-    async fn tag_update(&self, tag_id: TagId, patch: TagPatch) -> Result<Tag> {
-        let mut tx = self.pool.begin().await?;
-
+    async fn tag_update(&mut self, tag_id: TagId, patch: TagPatch) -> Result<Tag> {
         let old_tag = self.tag_get(tag_id).await?;
+        let mut tx = self.begin_tx().await?;
 
         let color = patch.color.map(|c| c.map(|c| c.to_string()));
 
@@ -115,7 +114,7 @@ impl DataTag for Postgres {
             patch.archived.unwrap_or(old_tag.archived),
             patch.restricted.unwrap_or(old_tag.restricted),
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -123,14 +122,16 @@ impl DataTag for Postgres {
         Ok(tag.into())
     }
 
-    async fn tag_delete(&self, tag_id: TagId) -> Result<()> {
+    async fn tag_delete(&mut self, tag_id: TagId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!("DELETE FROM tag WHERE id = $1", *tag_id)
-            .execute(&self.pool)
+            .execute(conn.ext())
             .await?;
         Ok(())
     }
 
-    async fn tag_get(&self, tag_id: TagId) -> Result<Tag> {
+    async fn tag_get(&mut self, tag_id: TagId) -> Result<Tag> {
+        let mut conn = self.acquire().await?;
         let tag = query_as!(
             DbTag,
             r#"
@@ -149,21 +150,22 @@ impl DataTag for Postgres {
             "#,
             *tag_id
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
 
         Ok(tag.into())
     }
 
-    async fn tag_get_forum_id(&self, tag_id: TagId) -> Result<ChannelId> {
+    async fn tag_get_forum_id(&mut self, tag_id: TagId) -> Result<ChannelId> {
+        let mut conn = self.acquire().await?;
         let forum_id = sqlx::query_scalar!("SELECT channel_id FROM tag WHERE id = $1", *tag_id)
-            .fetch_one(&self.pool)
+            .fetch_one(conn.ext())
             .await?;
         Ok(forum_id.into())
     }
 
     async fn tag_search(
-        &self,
+        &mut self,
         forum_channel_id: ChannelId,
         query: String,
         archived: Option<bool>,
@@ -175,8 +177,7 @@ impl DataTag for Postgres {
         match archived {
             Some(true) => {
                 gen_paginate!(
-                    p,
-                    self.pool,
+                    p, self,
                     query_as!(
                         DbTag,
                         r#"
@@ -206,8 +207,7 @@ impl DataTag for Postgres {
             }
             Some(false) => {
                 gen_paginate!(
-                    p,
-                    self.pool,
+                    p, self,
                     query_as!(
                         DbTag,
                         r#"
@@ -238,7 +238,7 @@ impl DataTag for Postgres {
             None => {
                 gen_paginate!(
                     p,
-                    self.pool,
+                    self,
                     query_as!(
                         DbTag,
                         r#"
@@ -270,7 +270,7 @@ impl DataTag for Postgres {
     }
 
     async fn tag_list(
-        &self,
+        &mut self,
         forum_channel_id: ChannelId,
         archived: Option<bool>,
         pagination: PaginationQuery<TagId>,
@@ -281,7 +281,7 @@ impl DataTag for Postgres {
             Some(true) => {
                 gen_paginate!(
                     p,
-                    self.pool,
+                    self,
                     query_as!(
                         DbTag,
                         r#"
@@ -310,7 +310,7 @@ impl DataTag for Postgres {
             Some(false) => {
                 gen_paginate!(
                     p,
-                    self.pool,
+                    self,
                     query_as!(
                         DbTag,
                         r#"
@@ -339,7 +339,7 @@ impl DataTag for Postgres {
             None => {
                 gen_paginate!(
                     p,
-                    self.pool,
+                    self,
                     query_as!(
                         DbTag,
                         r#"

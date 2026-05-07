@@ -35,7 +35,7 @@ async fn invite_delete(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    let d = s.data();
+    let mut d = s.data();
     let invite = d.invite_select(req.invite_code.clone()).await?;
     let (has_perm, id_target) = match &invite.invite.target {
         InviteTarget::Room {
@@ -176,7 +176,7 @@ async fn invite_resolve(
     State(s): State<Arc<ServerState>>,
     req: routes::invite_resolve::Request,
 ) -> Result<impl IntoResponse> {
-    let d = s.data();
+    let mut d = s.data();
     let s = s.services();
     let invite = d.invite_select(req.invite_code).await?;
     if let Ok(user) = auth.user() {
@@ -236,7 +236,7 @@ async fn invite_use(
     req: routes::invite_use::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let d = s.data();
+    let mut d = s.data();
     let srv = s.services();
     let invite = d.invite_select(req.invite_code.clone()).await?;
     if invite.is_dead() {
@@ -453,7 +453,7 @@ async fn invite_room_create(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
-    let d = s.data();
+    let mut d = s.data();
     let mut perms: Permissions2<CheckPermissions> = s
         .services
         .perms
@@ -543,7 +543,7 @@ async fn invite_room_list(
     req: routes::invite_room_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let d = s.data();
+    let mut d = s.data();
     let has_manage = s
         .services
         .perms
@@ -593,7 +593,7 @@ async fn invite_channel_create(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
-    let d = s.data();
+    let mut d = s.data();
     let channel = d.channel_get(req.channel_id).await?;
 
     let room_id = if channel.ty == ChannelType::Gdm {
@@ -696,7 +696,7 @@ async fn invite_channel_list(
     req: routes::invite_channel_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let d = s.data();
+    let mut d = s.data();
     let channel = d.channel_get(req.channel_id).await?;
 
     let has_perm = if channel.ty == ChannelType::Gdm {
@@ -753,7 +753,7 @@ async fn invite_update(
     req: routes::invite_update::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let d = s.data();
+    let mut d = s.data();
     let start_invite = d.invite_select(req.invite_code.clone()).await?;
 
     let (has_perm, _id_target) = match &start_invite.invite.target {
@@ -905,7 +905,7 @@ async fn invite_server_create(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
-    let d = s.data();
+    let mut d = s.data();
     let srv = s.services();
     let user = srv.users.get(auth.user.id, None).await?;
     if user.registered_at.is_none() {
@@ -967,7 +967,7 @@ async fn invite_server_list(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let d = s.data();
+    let mut d = s.data();
     let user = srv.users.get(auth.user.id, None).await?;
     if user.registered_at.is_none() {
         return Err(ApiError::from_code(ErrorCode::GuestsCannotListServerInvites).into());
@@ -1008,7 +1008,7 @@ async fn invite_user_create(
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
 
-    let d = s.data();
+    let mut d = s.data();
 
     let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         .chars()
@@ -1056,7 +1056,7 @@ async fn invite_user_list(
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
 
-    let d = s.data();
+    let mut d = s.data();
     let res = d.invite_list_user(target_user_id, req.pagination).await?;
 
     let items: Vec<_> = res

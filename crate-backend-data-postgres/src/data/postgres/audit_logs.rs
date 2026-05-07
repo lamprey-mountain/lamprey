@@ -3,7 +3,7 @@ use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogFilter, PaginationDirection, PaginationQuery,
     PaginationResponse, RoomId,
 };
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_as, query_scalar};
 use uuid::Uuid;
 
 use crate::error::Result;
@@ -30,7 +30,7 @@ struct DbAuditLogEntry {
 #[async_trait]
 impl DataAuditLogs for Postgres {
     async fn audit_logs_room_fetch(
-        &self,
+        &mut self,
         room_id: RoomId,
         paginate: PaginationQuery<AuditLogEntryId>,
         filter: AuditLogFilter,
@@ -44,7 +44,7 @@ impl DataAuditLogs for Postgres {
 
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_as!(
                 DbAuditLogEntry,
                 r#"
@@ -96,7 +96,8 @@ impl DataAuditLogs for Postgres {
         )
     }
 
-    async fn audit_logs_room_append(&self, entry: AuditLogEntry) -> Result<()> {
+    async fn audit_logs_room_append(&mut self, entry: AuditLogEntry) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let status: DbAuditLogEntryStatus = entry.status.into();
         query!(
             "
@@ -116,7 +117,7 @@ impl DataAuditLogs for Postgres {
             entry.user_agent,
             entry.application_id.map(|id| *id),
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }

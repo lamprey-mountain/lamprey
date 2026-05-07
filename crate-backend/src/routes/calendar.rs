@@ -581,7 +581,7 @@ async fn calendar_overwrite_update(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?

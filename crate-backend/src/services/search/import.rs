@@ -131,7 +131,7 @@ impl ContentIngestionManager {
                     continue;
                 }
 
-                let data = self.s.data();
+                let mut data = self.s.data();
                 let queue = match data
                     .search_reindex_queue_list("channel", available_slots as u32)
                     .await
@@ -174,7 +174,7 @@ impl ContentIngestionManager {
 
     fn spawn_media_backfill_poller(self: Arc<Self>) {
         tokio::spawn(async move {
-            let data = self.s.data();
+            let mut data = self.s.data();
             let mut last_version_id: Option<MediaVerId> = data
                 .search_reindex_queue_get("media", Uuid::nil())
                 .await
@@ -183,7 +183,7 @@ impl ContentIngestionManager {
                 .map(|id| id.into());
 
             loop {
-                let data = self.s.data();
+                let mut data = self.s.data();
                 // TODO: there may be a race condition between MessageSync and data listing; verify that this isn't a problem
                 match data.media_list_indexed(last_version_id, 100).await {
                     Ok(media_list) => {
@@ -221,7 +221,7 @@ impl ContentIngestionManager {
         channel_id: ChannelId,
         mut last_id: Option<Uuid>,
     ) -> Result<()> {
-        let data = self.s.data();
+        let mut data = self.s.data();
         let srv = self.s.services();
 
         info!(channel_id = ?channel_id, "Starting channel backfill");

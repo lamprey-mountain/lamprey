@@ -88,7 +88,7 @@ async fn admin_broadcast(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let d = s.data();
+    let mut d = s.data();
 
     srv.perms
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
@@ -168,7 +168,7 @@ async fn admin_register_user(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let d = s.data();
+    let mut d = s.data();
 
     srv.perms
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
@@ -449,7 +449,7 @@ async fn admin_search_dlq_list(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let d = s.data();
+    let mut d = s.data();
 
     srv.perms
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
@@ -482,7 +482,7 @@ async fn admin_search_dlq_delete(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let d = s.data();
+    let mut d = s.data();
 
     srv.perms
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
@@ -515,7 +515,7 @@ async fn admin_search_dlq_retry(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let d = s.data();
+    let mut d = s.data();
 
     srv.perms
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)

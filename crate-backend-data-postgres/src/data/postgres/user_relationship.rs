@@ -3,7 +3,7 @@ use common::v1::types::{
     Ignore, PaginationDirection, PaginationQuery, PaginationResponse, Relationship,
     RelationshipPatch, RelationshipType, RelationshipWithUserId, RoomId,
 };
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_as, query_scalar};
 use time::PrimitiveDateTime;
 use uuid::Uuid;
 
@@ -106,11 +106,12 @@ impl From<DbUserRelWithId> for RelationshipWithUserId {
 #[async_trait]
 impl DataUserRelationship for Postgres {
     async fn user_relationship_put(
-        &self,
+        &mut self,
         user_id: UserId,
         other_id: UserId,
         rel: Relationship,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let rel: DbUserRel = rel.into();
         query!(
             r#"
@@ -127,18 +128,18 @@ impl DataUserRelationship for Postgres {
             rel.ignore,
             rel.ignore_until,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn user_relationship_edit(
-        &self,
+        &mut self,
         user_id: UserId,
         other_id: UserId,
         patch: RelationshipPatch,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let row = query_as!(
             DbUserRel,
             r#"
@@ -149,7 +150,7 @@ impl DataUserRelationship for Postgres {
             user_id.into_inner(),
             other_id.into_inner(),
         )
-        .fetch_optional(&mut *tx)
+        .fetch_optional(tx.ext())
         .await?;
         let rel: Relationship = row.map(Into::into).unwrap_or_default();
         let rel = Relationship {
@@ -172,28 +173,30 @@ impl DataUserRelationship for Postgres {
             rel.ignore,
             rel.ignore_until,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         Ok(())
     }
 
-    async fn user_relationship_delete(&self, user_id: UserId, other_id: UserId) -> Result<()> {
+    async fn user_relationship_delete(&mut self, user_id: UserId, other_id: UserId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"DELETE FROM user_relationship WHERE user_id = $1 AND other_id = $2"#,
             user_id.into_inner(),
             other_id.into_inner(),
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn user_relationship_get(
-        &self,
+        &mut self,
         user_id: UserId,
         other_id: UserId,
     ) -> Result<Option<Relationship>> {
+        let mut conn = self.acquire().await?;
         let row = query_as!(
             DbUserRel,
             r#"
@@ -203,20 +206,20 @@ impl DataUserRelationship for Postgres {
             user_id.into_inner(),
             other_id.into_inner(),
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
         Ok(row.map(Into::into))
     }
 
     async fn user_relationship_list_blocked(
-        &self,
+        &mut self,
         user_id: UserId,
         pagination: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<RelationshipWithUserId>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_as!(
                 DbUserRelWithId,
                 r#"
@@ -239,14 +242,14 @@ impl DataUserRelationship for Postgres {
     }
 
     async fn user_relationship_list_friends(
-        &self,
+        &mut self,
         user_id: UserId,
         pagination: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<RelationshipWithUserId>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_as!(
                 DbUserRelWithId,
                 r#"
@@ -269,14 +272,14 @@ impl DataUserRelationship for Postgres {
     }
 
     async fn user_relationship_list_pending(
-        &self,
+        &mut self,
         user_id: UserId,
         pagination: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<RelationshipWithUserId>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_as!(
                 DbUserRelWithId,
                 r#"
@@ -299,14 +302,14 @@ impl DataUserRelationship for Postgres {
     }
 
     async fn user_relationship_list_ignored(
-        &self,
+        &mut self,
         user_id: UserId,
         pagination: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<RelationshipWithUserId>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_as!(
                 DbUserRelWithId,
                 r#"
@@ -328,7 +331,8 @@ impl DataUserRelationship for Postgres {
         )
     }
 
-    async fn user_shares_room(&self, user_a: UserId, user_b: UserId) -> Result<bool> {
+    async fn user_shares_room(&mut self, user_a: UserId, user_b: UserId) -> Result<bool> {
+        let mut conn = self.acquire().await?;
         let exists = query_scalar!(
             r#"
             SELECT EXISTS(
@@ -341,12 +345,13 @@ impl DataUserRelationship for Postgres {
             user_a.into_inner(),
             user_b.into_inner()
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
         Ok(exists.unwrap_or(false))
     }
 
-    async fn user_shared_rooms(&self, user_a: UserId, user_b: UserId) -> Result<Vec<RoomId>> {
+    async fn user_shared_rooms(&mut self, user_a: UserId, user_b: UserId) -> Result<Vec<RoomId>> {
+        let mut conn = self.acquire().await?;
         let rooms = query_scalar!(
             r#"
             SELECT rm1.room_id
@@ -358,12 +363,13 @@ impl DataUserRelationship for Postgres {
             user_a.into_inner(),
             user_b.into_inner()
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
         Ok(rooms.into_iter().map(|r| r.into()).collect())
     }
 
-    async fn user_has_mutual_friend(&self, user_a: UserId, user_b: UserId) -> Result<bool> {
+    async fn user_has_mutual_friend(&mut self, user_a: UserId, user_b: UserId) -> Result<bool> {
+        let mut conn = self.acquire().await?;
         let exists = query_scalar!(
             r#"
             SELECT EXISTS(
@@ -376,7 +382,7 @@ impl DataUserRelationship for Postgres {
             user_a.into_inner(),
             user_b.into_inner()
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
         Ok(exists.unwrap_or(false))
     }

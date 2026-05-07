@@ -88,7 +88,7 @@ pub async fn invite_meta_handler(
     Path(code): Path<String>,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    let d = s.data();
+    let mut d = s.data();
     let invite = d.invite_select(InviteCode(code.clone())).await?;
 
     let title = match &invite.invite.target {

@@ -27,7 +27,7 @@ async fn wiki_history(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
@@ -72,7 +72,7 @@ async fn document_branch_list(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
@@ -96,7 +96,7 @@ async fn document_branch_get(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
@@ -128,7 +128,7 @@ async fn document_branch_update(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     let perms = &srv.perms;
     let mut perms = perms
@@ -176,7 +176,7 @@ async fn document_branch_close(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     let perms = &srv.perms;
     let mut perms = perms
@@ -231,7 +231,7 @@ async fn document_branch_fork(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     let user_id = auth.user.id;
 
     let perms = &srv.perms;
@@ -284,7 +284,7 @@ async fn document_branch_merge(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     let user_id = auth.user.id;
 
     let perms = &srv.perms;
@@ -368,7 +368,7 @@ async fn document_branch_sync(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     let user_id = auth.user.id;
 
     let perms = &srv.perms;
@@ -438,7 +438,7 @@ async fn document_tag_create(
     auth.user.ensure_unsuspended()?;
 
     let user_id = auth.user.id;
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
 
     let perms = &srv.perms;
@@ -499,7 +499,7 @@ async fn document_tag_list(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let user_id = auth.user.id;
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
 
     srv.perms
@@ -531,7 +531,7 @@ async fn document_tag_get(
         .ensure_view()?
         .check()?;
 
-    let data = s.data();
+    let mut data = s.data();
     let tag = data.document_tag_get(req.tag_id).await?;
 
     let branch = data
@@ -558,7 +558,7 @@ async fn document_tag_update(
 
     let user_id = auth.user.id;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     let perms = &srv.perms;
     let mut perms = perms
@@ -609,7 +609,7 @@ async fn document_tag_delete(
 
     let user_id = auth.user.id;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     let perms = &srv.perms;
     let mut perms = perms
@@ -657,7 +657,7 @@ async fn document_history(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
@@ -711,7 +711,7 @@ async fn document_crdt_diff(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
@@ -750,7 +750,7 @@ async fn document_crdt_apply(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
@@ -789,7 +789,7 @@ async fn document_content_get(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
@@ -838,7 +838,7 @@ async fn document_content_put(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?

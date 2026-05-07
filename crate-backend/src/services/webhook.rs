@@ -59,7 +59,7 @@ impl ServiceWebhooks {
         nonce: Option<String>,
     ) -> Result<Webhook> {
         json.validate()?;
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
 
         let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
@@ -106,7 +106,7 @@ impl ServiceWebhooks {
         auth: &Auth,
         json: WebhookUpdate,
     ) -> Result<Webhook> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let webhook = data.webhook_get(webhook_id).await?;
 
         let chan = self
@@ -155,7 +155,7 @@ impl ServiceWebhooks {
     }
 
     pub async fn delete(&self, webhook_id: WebhookId, auth: &Auth) -> Result<()> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let webhook = data.webhook_get(webhook_id).await?;
 
         let chan = self

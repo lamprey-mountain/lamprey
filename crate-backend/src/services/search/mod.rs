@@ -77,7 +77,7 @@ impl ServiceSearch {
         auth_user_id: UserId,
         req: MessageSearchRequest,
     ) -> Result<MessageSearch> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
 
         let vis = srv.channels.list_user_room_channels(auth_user_id).await?;
@@ -288,7 +288,7 @@ impl ServiceSearch {
     }
 
     pub async fn reindex_channel(&self, channel_id: ChannelId) -> Result<()> {
-        let data = self.state.data();
+        let mut data = self.state.data();
 
         if let Some(index_actor) = self.index_manager.get_index_actor("content") {
             let delete_term = index::delete_term_for_channel(channel_id);
@@ -307,7 +307,7 @@ impl ServiceSearch {
     }
 
     pub async fn reindex_room(&self, room_id: RoomId) -> Result<()> {
-        let data = self.state.data();
+        let mut data = self.state.data();
 
         if let Some(index_actor) = self.index_manager.get_index_actor("content") {
             let delete_term = index::delete_term_for_room(room_id);
@@ -327,13 +327,13 @@ impl ServiceSearch {
             }
         }
 
-        let data = self.state.data();
+        let mut data = self.state.data();
         data.search_reindex_queue_upsert_all().await?;
         Ok(())
     }
 
     pub async fn get_channel_stats(&self, channel_id: ChannelId) -> Result<SearchIndexStats> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let searcher = self.get_content_searcher().await?;
 
         let documents_indexed =
@@ -357,7 +357,7 @@ impl ServiceSearch {
         &self,
     ) -> Result<lamprey_backend_core::types::admin::SearchStats> {
         let searcher = self.get_content_searcher().await?;
-        let data = self.state.data();
+        let mut data = self.state.data();
 
         let (document_count, index_size_bytes) =
             tokio::task::spawn_blocking(move || searcher.get_index_stats())

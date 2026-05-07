@@ -68,7 +68,7 @@ impl ServiceAdmin {
         tokio::spawn(async move {
             let srv = state.services();
             if !state.config.enable_admin_token {
-                let data = state.data();
+                let mut data = state.data();
                 if let Ok(Some(mut config_internal)) = data.config_get().await {
                     config_internal.admin_token = None;
                     if let Ok(()) = data.config_put(config_internal.clone()).await {
@@ -80,7 +80,7 @@ impl ServiceAdmin {
 
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(300));
             loop {
-                let data = state.data();
+                let mut data = state.data();
                 if let Ok(Some(mut config_internal)) = data.config_get().await {
                     let token = nanoid::nanoid!(32);
                     config_internal.admin_token = Some(token);
@@ -100,7 +100,7 @@ impl ServiceAdmin {
         req: AdminCollectGarbage,
     ) -> Result<AdminCollectGarbageResponse> {
         let mut stats = vec![];
-        let data = self.state.data();
+        let mut data = self.state.data();
 
         for target in req.targets {
             let start_time = std::time::Instant::now();
@@ -129,7 +129,7 @@ impl ServiceAdmin {
     }
 
     async fn gc_media(&self, mode: AdminCollectGarbageMode) -> Result<(u64, u64)> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let blobs = &self.state.blobs;
         match mode {
             AdminCollectGarbageMode::Mark => {

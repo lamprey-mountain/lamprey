@@ -72,7 +72,7 @@ async fn channel_create_dm(
     auth.ensure_scopes(&[Scope::Full])?;
     req.channel.validate()?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     srv.perms
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
         .await?
@@ -235,7 +235,7 @@ async fn channel_list(
     req: routes::channel_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
 
     let user_id = auth.user.as_ref().map(|u| u.id);
@@ -270,7 +270,7 @@ async fn channel_list_removed(
     req: routes::channel_list_removed::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
     srv.perms
         .for_room3(Some(auth.user.id), req.room_id)
@@ -319,7 +319,7 @@ async fn channel_reorder(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
     srv.perms
         .for_room3(Some(auth.user.id), req.room_id)
@@ -439,7 +439,7 @@ async fn channel_ack(
     req: routes::channel_ack::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
@@ -485,7 +485,7 @@ async fn channel_remove(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
 
     let chan_before = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
@@ -564,7 +564,7 @@ async fn channel_restore(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     let channel = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if let Some(room_id) = channel.room_id {
@@ -691,7 +691,7 @@ async fn channel_upgrade(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
 
@@ -1025,7 +1025,7 @@ async fn channel_ratelimit_delete_all(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     let perms = srv
         .perms
         .for_channel3(Some(auth.user.id), req.channel_id)
@@ -1065,7 +1065,7 @@ async fn channel_sync(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     let user_id = auth.user.as_ref().map(|u| u.id);
 

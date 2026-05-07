@@ -45,12 +45,10 @@ impl<K: PaginationKey> TryInto<Pagination<K>> for PaginationQuery<K> {
 
 #[macro_export]
 macro_rules! gen_paginate {
-    ($p:expr, $pool:expr, $qlist:expr, $qtotal:expr, $map:expr, $id:expr) => {{
-        let mut conn = $pool.acquire().await?;
-        let mut tx = conn.begin().await?;
-
-        let items = $qlist.fetch_all(&mut *tx).await?;
-        let total = $qtotal.fetch_one(&mut *tx).await?;
+    ($p:expr, $pg:expr, $qlist:expr, $qtotal:expr, $map:expr, $id:expr) => {{
+        let mut conn = $pg.acquire().await?;
+        let items = $qlist.fetch_all(conn.ext()).await?;
+        let total = $qtotal.fetch_one(conn.ext()).await?;
         let has_more = items.len() > $p.limit as usize;
         let mut items: Vec<_> = items
             .into_iter()
@@ -62,8 +60,6 @@ macro_rules! gen_paginate {
         }
         let cursor = items.last().map($id);
 
-        // tx intentionally dropped to rollback here
-
         Ok(PaginationResponse {
             items,
             total: total.unwrap_or(0) as u64,
@@ -71,7 +67,7 @@ macro_rules! gen_paginate {
             cursor,
         })
     }};
-    ($p:expr, $pool:expr, $qlist:expr, $qtotal:expr, $id:expr) => {
-        gen_paginate!($p, $pool, $qlist, $qtotal, Into::into, $id)
+    ($p:expr, $pg:expr, $qlist:expr, $qtotal:expr, $id:expr) => {
+        gen_paginate!($p, $pg, $qlist, $qtotal, Into::into, $id)
     };
 }

@@ -61,7 +61,7 @@ impl ServiceRoles {
         nonce: Option<String>,
     ) -> Result<Role> {
         json.validate()?;
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
 
         let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
@@ -157,7 +157,7 @@ impl ServiceRoles {
         auth: &Auth,
         json: RolePatch,
     ) -> Result<Role> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
 
         let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
@@ -223,7 +223,7 @@ impl ServiceRoles {
     }
 
     pub async fn delete(&self, room_id: RoomId, role_id: RoleId, auth: &Auth) -> Result<()> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
 
         let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
@@ -273,7 +273,7 @@ impl ServiceRoles {
     }
 
     pub async fn reorder(&self, room_id: RoomId, auth: &Auth, reorder: RoleReorder) -> Result<()> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
 
         let perms = srv.perms.for_room(auth.user.id, room_id).await?;
@@ -294,7 +294,7 @@ impl ServiceRoles {
         remove_user_ids: &[UserId],
         auth: &Auth,
     ) -> Result<()> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
 
         let perms = srv.perms.for_room(auth.user.id, room_id).await?;

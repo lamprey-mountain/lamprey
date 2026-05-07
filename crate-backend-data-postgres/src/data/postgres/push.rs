@@ -44,7 +44,8 @@ impl From<&PushData> for DbPushData {
 
 #[async_trait]
 impl DataPush for Postgres {
-    async fn push_insert(&self, push: PushData) -> Result<()> {
+    async fn push_insert(&mut self, push: PushData) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let db_push: DbPushData = (&push).into();
 
         query!(
@@ -58,13 +59,14 @@ impl DataPush for Postgres {
             db_push.key_p256dh,
             db_push.key_auth
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
 
         Ok(())
     }
 
-    async fn push_get(&self, session_id: SessionId) -> Result<PushData> {
+    async fn push_get(&mut self, session_id: SessionId) -> Result<PushData> {
+        let mut conn = self.acquire().await?;
         let row = query_as!(
             DbPushData,
             r#"
@@ -79,13 +81,14 @@ impl DataPush for Postgres {
             "#,
             *session_id,
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
 
         Ok(row.into())
     }
 
-    async fn push_delete(&self, session_id: SessionId) -> Result<()> {
+    async fn push_delete(&mut self, session_id: SessionId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"
             DELETE FROM push_subscription
@@ -93,13 +96,14 @@ impl DataPush for Postgres {
             "#,
             *session_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
 
         Ok(())
     }
 
-    async fn push_list_for_user(&self, user_id: UserId) -> Result<Vec<PushData>> {
+    async fn push_list_for_user(&mut self, user_id: UserId) -> Result<Vec<PushData>> {
+        let mut conn = self.acquire().await?;
         let rows = query_as!(
             DbPushData,
             r#"
@@ -114,13 +118,14 @@ impl DataPush for Postgres {
             "#,
             *user_id,
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         Ok(rows.into_iter().map(PushData::from).collect())
     }
 
-    async fn push_delete_for_user(&self, user_id: UserId) -> Result<()> {
+    async fn push_delete_for_user(&mut self, user_id: UserId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"
             DELETE FROM push_subscription
@@ -128,7 +133,7 @@ impl DataPush for Postgres {
             "#,
             *user_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
 
         Ok(())

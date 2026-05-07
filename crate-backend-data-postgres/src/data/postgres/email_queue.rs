@@ -11,13 +11,14 @@ use super::Postgres;
 #[async_trait]
 impl DataEmailQueue for Postgres {
     async fn email_queue_insert(
-        &self,
+        &mut self,
         to: String,
         from: String,
         subject: String,
         plain_text_body: String,
         html_body: Option<String>,
     ) -> Result<Uuid> {
+        let mut conn = self.acquire().await?;
         let id = Uuid::new_v4();
         query!(
             r#"
@@ -31,12 +32,13 @@ impl DataEmailQueue for Postgres {
             plain_text_body,
             html_body
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(id)
     }
 
-    async fn email_queue_claim(&self) -> Result<Option<DbEmailQueue>> {
+    async fn email_queue_claim(&mut self) -> Result<Option<DbEmailQueue>> {
+        let mut conn = self.acquire().await?;
         let email_item = query_as!(
             DbEmailQueue,
             r#"
@@ -53,12 +55,13 @@ impl DataEmailQueue for Postgres {
             RETURNING id, to_addr, from_addr, subject, plain_text_body, html_body
             "#
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
         Ok(email_item)
     }
 
-    async fn email_queue_finish(&self, id: Uuid) -> Result<()> {
+    async fn email_queue_finish(&mut self, id: Uuid) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"
             UPDATE email_queue
@@ -67,12 +70,13 @@ impl DataEmailQueue for Postgres {
             "#,
             id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn email_queue_fail(&self, error_message: String, id: Uuid) -> Result<()> {
+    async fn email_queue_fail(&mut self, error_message: String, id: Uuid) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"
             UPDATE email_queue
@@ -82,7 +86,7 @@ impl DataEmailQueue for Postgres {
             error_message,
             id,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }

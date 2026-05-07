@@ -31,7 +31,7 @@ pub async fn session_create(
 ) -> Result<impl IntoResponse> {
     let json = req.session;
     json.validate()?;
-    let data = s.data();
+    let mut data = s.data();
     let user_agent = headers
         .get("user-agent")
         .and_then(|v| v.to_str().ok())
@@ -60,7 +60,7 @@ pub async fn session_list(
     req: routes::session_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let res = data.session_list(auth.user.id, req.pagination).await?;
     Ok(Json(res))
 }
@@ -79,7 +79,7 @@ pub async fn session_update(
         SessionIdReq::SessionSelf => auth.session.id,
         SessionIdReq::SessionId(session_id) => session_id,
     };
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
     let target_session = srv.sessions.get(target_session_id).await?;
 
@@ -149,7 +149,7 @@ pub async fn session_delete(
             ErrorCode::UnknownSession,
         )));
     }
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
     let target_session = srv.sessions.get(target_session_id).await?;
 
@@ -211,7 +211,7 @@ pub async fn session_delete_all(
         return Err(Error::UnauthSession);
     };
 
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
 
     // TODO: should i restrict deleting other sessions to sudo mode?

@@ -57,7 +57,7 @@ impl ServiceEmoji {
         nonce: Option<String>,
     ) -> Result<EmojiCustom> {
         json.validate()?;
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
 
         let perms = srv.perms.for_room(auth.user.id, room_id).await?;
@@ -104,7 +104,7 @@ impl ServiceEmoji {
         auth: &Auth,
         patch: EmojiCustomPatch,
     ) -> Result<EmojiCustom> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
 
         let perms = srv.perms.for_room(auth.user.id, room_id).await?;
@@ -135,7 +135,7 @@ impl ServiceEmoji {
     }
 
     pub async fn delete(&self, room_id: RoomId, emoji_id: EmojiId, auth: &Auth) -> Result<()> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let emoji = data.emoji_get(emoji_id).await?;
 
         let perms = self
@@ -201,7 +201,7 @@ impl ServiceEmoji {
     }
 
     pub async fn lookup(&self, emoji_id: EmojiId, auth: &Auth) -> Result<EmojiCustom> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let mut emoji = data.emoji_get(emoji_id).await?;
 
         let original_owner = emoji.owner.clone();

@@ -12,7 +12,7 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::util::Time;
 use common::v1::types::{ChannelId, DocumentBranchId, DocumentTagId, UserId};
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_as, query_scalar};
 use uuid::Uuid;
 
 #[derive(sqlx::FromRow)]
@@ -106,12 +106,13 @@ impl From<DbDocumentTag> for DocumentTag {
 #[async_trait]
 impl DataDocument for Postgres {
     async fn document_compact(
-        &self,
+        &mut self,
         context_id: EditContextId,
         last_snapshot_id: Uuid,
         last_seq: u32,
         snapshot: Vec<u8>,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let (document_id, branch_id) = context_id;
         query!(
             r#"
@@ -124,12 +125,13 @@ impl DataDocument for Postgres {
             snapshot,
             last_seq as i32
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn document_load(&self, context_id: EditContextId) -> Result<DehydratedDocument> {
+    async fn document_load(&mut self, context_id: EditContextId) -> Result<DehydratedDocument> {
+        let mut conn = self.acquire().await?;
         let (_, branch_id) = context_id;
         let snapshot = query!(
             r#"
@@ -141,7 +143,7 @@ impl DataDocument for Postgres {
             "#,
             branch_id.into_inner()
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
 
         let (last_snapshot, start_seq) = match snapshot {
@@ -163,7 +165,7 @@ impl DataDocument for Postgres {
             branch_id.into_inner(),
             start_seq
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         Ok(DehydratedDocument {
@@ -174,10 +176,11 @@ impl DataDocument for Postgres {
     }
 
     async fn document_load_at_seq(
-        &self,
+        &mut self,
         context_id: EditContextId,
         target_seq: u32,
     ) -> Result<DehydratedDocument> {
+        let mut conn = self.acquire().await?;
         let (_, branch_id) = context_id;
 
         // Find the latest snapshot at or before the target seq
@@ -192,7 +195,7 @@ impl DataDocument for Postgres {
             branch_id.into_inner(),
             target_seq as i64
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
 
         let (last_snapshot, start_seq) = match snapshot {
@@ -216,7 +219,7 @@ impl DataDocument for Postgres {
             start_seq,
             target_seq as i64
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         Ok(DehydratedDocument {
@@ -227,14 +230,14 @@ impl DataDocument for Postgres {
     }
 
     async fn document_create(
-        &self,
+        &mut self,
         context_id: EditContextId,
         creator_id: UserId,
         snapshot: Vec<u8>,
     ) -> Result<()> {
         let (document_id, branch_id) = context_id;
 
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         query!(
             r#"
@@ -246,7 +249,7 @@ impl DataDocument for Postgres {
             document_id.into_inner(),
             creator_id.into_inner(),
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         // Create initial snapshot
@@ -261,7 +264,7 @@ impl DataDocument for Postgres {
             branch_id.into_inner(),
             snapshot
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -270,7 +273,7 @@ impl DataDocument for Postgres {
     }
 
     async fn document_update(
-        &self,
+        &mut self,
         context_id: EditContextId,
         author_id: UserId,
         update: Vec<u8>,
@@ -278,7 +281,7 @@ impl DataDocument for Postgres {
         stat_removed: u32,
     ) -> Result<u32> {
         let (document_id, branch_id) = context_id;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         // get latest snapshot
         let snapshot = query!(
@@ -291,7 +294,7 @@ impl DataDocument for Postgres {
             "#,
             branch_id.into_inner()
         )
-        .fetch_optional(&mut *tx)
+        .fetch_optional(tx.ext())
         .await?;
 
         let (snapshot_id, snapshot_seq) = match snapshot {
@@ -312,7 +315,7 @@ impl DataDocument for Postgres {
             "#,
             branch_id.into_inner()
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?
         .seq;
 
@@ -332,7 +335,7 @@ impl DataDocument for Postgres {
             stat_added as i32,
             stat_removed as i32,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -341,20 +344,20 @@ impl DataDocument for Postgres {
     }
 
     async fn document_fork(
-        &self,
+        &mut self,
         context_id: EditContextId,
         creator_id: UserId,
         create: DocumentBranchCreate,
     ) -> Result<DocumentBranchId> {
         let (document_id, parent_branch_id) = context_id;
 
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         let count: i64 = query_scalar!(
             "SELECT count(*) FROM document_branch WHERE document_id = $1 AND state = 'Active'::branch_state",
             document_id.into_inner()
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?
         .unwrap_or(0);
 
@@ -375,7 +378,7 @@ impl DataDocument for Postgres {
             "#,
             parent_branch_id.into_inner()
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?
         .unwrap_or(0) as i64;
 
@@ -394,7 +397,7 @@ impl DataDocument for Postgres {
             parent_branch_id.into_inner(),
             parent_seq
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -403,10 +406,11 @@ impl DataDocument for Postgres {
     }
 
     async fn document_branch_get(
-        &self,
+        &mut self,
         _document_id: ChannelId,
         branch_id: DocumentBranchId,
     ) -> Result<DocumentBranch> {
+        let mut conn = self.acquire().await?;
         let branch = query_as!(
             DbDocumentBranch,
             r#"
@@ -416,7 +420,7 @@ impl DataDocument for Postgres {
             "#,
             branch_id.into_inner()
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?
         .ok_or_else(|| Error::ApiError(ApiError::from_code(
             ErrorCode::UnknownDocumentBranch,
@@ -426,12 +430,12 @@ impl DataDocument for Postgres {
     }
 
     async fn document_branch_update(
-        &self,
+        &mut self,
         _document_id: ChannelId,
         branch_id: DocumentBranchId,
         patch: DocumentBranchPatch,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         if let Some(name) = patch.name {
             query!(
@@ -439,7 +443,7 @@ impl DataDocument for Postgres {
                 name,
                 branch_id.into_inner()
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
 
@@ -448,7 +452,7 @@ impl DataDocument for Postgres {
                 "UPDATE document_branch SET private = true WHERE id = $1",
                 branch_id.into_inner()
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
 
@@ -457,26 +461,26 @@ impl DataDocument for Postgres {
     }
 
     async fn document_branch_set_state(
-        &self,
+        &mut self,
         _document_id: ChannelId,
         branch_id: DocumentBranchId,
         status: DocumentBranchState,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         if status == DocumentBranchState::Active {
             let document_id = query_scalar!(
                 "SELECT document_id FROM document_branch WHERE id = $1",
                 branch_id.into_inner()
             )
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.ext())
             .await?;
 
             let count: i64 = query_scalar!(
                 "SELECT count(*) FROM document_branch WHERE document_id = $1 AND state = 'Active'::branch_state",
                 document_id
             )
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.ext())
             .await?
             .unwrap_or(0);
 
@@ -494,14 +498,18 @@ impl DataDocument for Postgres {
             status as DbBranchState,
             branch_id.into_inner()
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
         Ok(())
     }
 
-    async fn document_branch_list(&self, document_id: ChannelId) -> Result<Vec<DocumentBranch>> {
+    async fn document_branch_list(
+        &mut self,
+        document_id: ChannelId,
+    ) -> Result<Vec<DocumentBranch>> {
+        let mut conn = self.acquire().await?;
         let branches = query_as!(
             DbDocumentBranch,
             r#"
@@ -512,14 +520,14 @@ impl DataDocument for Postgres {
             "#,
             document_id.into_inner()
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         Ok(branches.into_iter().map(Into::into).collect())
     }
 
     async fn document_branch_paginate(
-        &self,
+        &mut self,
         document_id: ChannelId,
         user_id: UserId,
         filter: DocumentBranchListParams,
@@ -573,7 +581,7 @@ impl DataDocument for Postgres {
 
         gen_paginate!(
             p,
-            self.pool,
+            self,
             q_list,
             q_total,
             |row: DbDocumentBranch| DocumentBranch::from(row),
@@ -582,13 +590,14 @@ impl DataDocument for Postgres {
     }
 
     async fn document_tag_create(
-        &self,
+        &mut self,
         branch_id: DocumentBranchId,
         creator_id: UserId,
         summary: String,
         description: Option<String>,
         revision_seq: u64,
     ) -> Result<DocumentTagId> {
+        let mut conn = self.acquire().await?;
         let tag_id = query!(
             r#"
             INSERT INTO document_tag (branch_id, revision_seq, creator_id, summary, description)
@@ -601,13 +610,14 @@ impl DataDocument for Postgres {
             summary,
             description
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
 
         Ok(tag_id.id.into())
     }
 
-    async fn document_tag_get(&self, tag_id: DocumentTagId) -> Result<DocumentTag> {
+    async fn document_tag_get(&mut self, tag_id: DocumentTagId) -> Result<DocumentTag> {
+        let mut conn = self.acquire().await?;
         let tag = query_as!(
             DbDocumentTag,
             r#"
@@ -617,20 +627,19 @@ impl DataDocument for Postgres {
             "#,
             tag_id.into_inner()
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
 
         Ok(tag.into())
     }
 
     async fn document_tag_update(
-        &self,
+        &mut self,
         tag_id: DocumentTagId,
         summary: Option<String>,
         description: Option<Option<String>>,
     ) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         let tag = query!(
             r#"
@@ -641,7 +650,7 @@ impl DataDocument for Postgres {
             "#,
             tag_id.into_inner()
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         let new_summary = summary.unwrap_or(tag.summary);
@@ -657,14 +666,15 @@ impl DataDocument for Postgres {
             new_summary,
             new_description
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
         Ok(())
     }
 
-    async fn document_tag_delete(&self, tag_id: DocumentTagId) -> Result<()> {
+    async fn document_tag_delete(&mut self, tag_id: DocumentTagId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"
             DELETE FROM document_tag
@@ -672,13 +682,14 @@ impl DataDocument for Postgres {
             "#,
             tag_id.into_inner()
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
 
         Ok(())
     }
 
-    async fn document_tag_list(&self, branch_id: DocumentBranchId) -> Result<Vec<DocumentTag>> {
+    async fn document_tag_list(&mut self, branch_id: DocumentBranchId) -> Result<Vec<DocumentTag>> {
+        let mut conn = self.acquire().await?;
         let tags = query_as!(
             DbDocumentTag,
             r#"
@@ -689,17 +700,18 @@ impl DataDocument for Postgres {
             "#,
             branch_id.into_inner()
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         Ok(tags.into_iter().map(Into::into).collect())
     }
 
     async fn document_tag_list_by_document(
-        &self,
+        &mut self,
         document_id: ChannelId,
         user_id: UserId,
     ) -> Result<Vec<DocumentTag>> {
+        let mut conn = self.acquire().await?;
         let tags = query_as!(
             DbDocumentTag,
             r#"
@@ -713,16 +725,17 @@ impl DataDocument for Postgres {
             document_id.into_inner(),
             user_id.into_inner()
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         Ok(tags.into_iter().map(Into::into).collect())
     }
 
     async fn document_history(
-        &self,
+        &mut self,
         context_id: EditContextId,
     ) -> Result<(Vec<DocumentUpdateSummary>, Vec<DocumentTag>)> {
+        let mut conn = self.acquire().await?;
         let (document_id, branch_id) = context_id;
 
         struct DbUpdateSummary {
@@ -743,7 +756,7 @@ impl DataDocument for Postgres {
             "#,
             branch_id.into_inner()
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         let tags = query_as!(
@@ -756,7 +769,7 @@ impl DataDocument for Postgres {
             "#,
             branch_id.into_inner()
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         Ok((
@@ -776,9 +789,10 @@ impl DataDocument for Postgres {
     }
 
     async fn wiki_history(
-        &self,
+        &mut self,
         wiki_id: ChannelId,
     ) -> Result<(Vec<DocumentUpdateSummary>, Vec<DocumentTag>)> {
+        let mut conn = self.acquire().await?;
         struct DbUpdateSummary {
             user_id: Uuid,
             created_at: time::PrimitiveDateTime,
@@ -800,7 +814,7 @@ impl DataDocument for Postgres {
             "#,
             wiki_id.into_inner()
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         let tags = query_as!(
@@ -815,7 +829,7 @@ impl DataDocument for Postgres {
             "#,
             wiki_id.into_inner()
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         Ok((

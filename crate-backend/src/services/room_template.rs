@@ -220,7 +220,7 @@ impl ServiceRoomTemplates {
         creator_id: UserId,
         snapshot: RoomTemplateSnapshot,
     ) -> Result<(Vec<Role>, Vec<Channel>)> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let mut role_map = HashMap::new();
         let mut channel_map = HashMap::new();
         let mut created_roles = Vec::new();

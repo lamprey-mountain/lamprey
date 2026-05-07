@@ -144,7 +144,7 @@ impl DocumentActor {
 
     async fn flush(&mut self) -> Result<()> {
         while let Some(change) = self.pending_changes.pop_front() {
-            let data = self.state.data();
+            let mut data = self.state.data();
             let new_seq = data
                 .document_update(
                     self.context_id,
@@ -161,7 +161,7 @@ impl DocumentActor {
     }
 
     async fn snapshot(&mut self) -> Result<()> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let snapshot = self
             .doc
             .transact()
@@ -512,7 +512,7 @@ impl Message<PersistAndUnload> for DocumentActor {
         _msg: PersistAndUnload,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        let data = self.state.data();
+        let mut data = self.state.data();
 
         // flush changes
         while let Some(change) = self.pending_changes.pop_front() {

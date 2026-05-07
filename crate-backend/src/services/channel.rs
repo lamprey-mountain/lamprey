@@ -66,7 +66,7 @@ impl ServiceChannels {
             return Ok(());
         }
 
-        let data = self.state.data();
+        let mut data = self.state.data();
 
         // collect all channel ids for batch fetching
         let channel_ids: Vec<_> = channels.iter().map(|c| c.id).collect();
@@ -299,7 +299,7 @@ impl ServiceChannels {
             None
         };
         let srv = self.state.services();
-        let data = self.state.data();
+        let mut data = self.state.data();
         let perms = if let Some(parent_id) = json.parent_id {
             srv.perms.for_channel(auth.user.id, parent_id).await?
         } else if let Some(room_id) = room_id {
@@ -678,7 +678,7 @@ impl ServiceChannels {
         mut json: ChannelCreate,
     ) -> Result<Channel> {
         let srv = self.state.services();
-        let data = self.state.data();
+        let mut data = self.state.data();
 
         let perms = srv
             .perms
@@ -839,7 +839,7 @@ impl ServiceChannels {
             .for_channel(auth.user.id, thread_id)
             .await?;
         perms.ensure(Permission::ChannelView)?;
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
         let chan_old = srv.channels.get(thread_id, None).await?;
         if chan_old.is_archived() {
@@ -1412,7 +1412,7 @@ impl ServiceChannels {
         let mut interval = tokio::time::interval(Duration::from_secs(60));
         loop {
             interval.tick().await;
-            let data = state.data();
+            let mut data = state.data();
             let srv = state.services();
 
             match data.thread_auto_archive().await {

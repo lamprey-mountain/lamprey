@@ -28,7 +28,7 @@ async fn dm_init(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     srv.perms
         .for_room3(Some(auth.user.id), crate::types::SERVER_ROOM_ID)
@@ -85,7 +85,7 @@ async fn dm_get(
     req: routes::dm_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let Some(thread_id) = data.dm_get(auth.user.id, req.target_id).await? else {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownDm)));
     };
@@ -113,7 +113,7 @@ async fn dm_list(
         return Err(Error::MissingPermissions);
     }
 
-    let data = s.data();
+    let mut data = s.data();
     let mut res = data.dm_list(auth.user.id, req.pagination).await?;
 
     let srv = s.services();

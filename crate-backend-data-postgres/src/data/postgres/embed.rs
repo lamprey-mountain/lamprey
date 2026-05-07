@@ -13,11 +13,12 @@ use crate::Result;
 #[async_trait]
 impl DataEmbed for Postgres {
     async fn url_embed_queue_insert(
-        &self,
+        &mut self,
         message_ref: Option<crate::types::MessageRef>,
         user_id: Option<UserId>,
         url: String,
     ) -> Result<Uuid> {
+        let mut conn = self.acquire().await?;
         let id = Uuid::now_v7();
         query!(
             "INSERT INTO url_embed_queue (id, message_ref, user_id, url) VALUES ($1, $2, $3, $4)",
@@ -26,24 +27,26 @@ impl DataEmbed for Postgres {
             user_id.map(|u| *u),
             url
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(id)
     }
 
-    async fn url_embed_queue_claim(&self) -> Result<Option<UrlEmbedQueue>> {
+    async fn url_embed_queue_claim(&mut self) -> Result<Option<UrlEmbedQueue>> {
+        let mut conn = self.acquire().await?;
         let row = query_as!(UrlEmbedQueue, "UPDATE url_embed_queue SET claimed_at = NOW() WHERE id = (SELECT id FROM url_embed_queue WHERE claimed_at IS NULL AND finished_at IS NULL ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING *")
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
         Ok(row)
     }
 
-    async fn url_embed_queue_finish(&self, id: Uuid, _embed: Option<&Embed>) -> Result<()> {
+    async fn url_embed_queue_finish(&mut self, id: Uuid, _embed: Option<&Embed>) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "UPDATE url_embed_queue SET finished_at = NOW() WHERE id = $1",
             id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }

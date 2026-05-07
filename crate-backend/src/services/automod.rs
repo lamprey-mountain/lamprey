@@ -690,7 +690,7 @@ impl ServiceAutomod {
         let mut block_message = None;
 
         let srv = self.state.services();
-        let data = self.state.data();
+        let mut data = self.state.data();
 
         let ruleset = self.load(room_id).await?;
         let perms = srv.perms.for_room(user_id, room_id).await?;

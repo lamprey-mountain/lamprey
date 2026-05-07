@@ -314,7 +314,7 @@ impl ServiceRooms {
 
     pub async fn update(&self, room_id: RoomId, auth: Auth, patch: RoomPatch) -> Result<Room> {
         let al = auth.audit_log(room_id);
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
         let user_id = auth.user.id;
         let start = data.room_get(room_id).await?;
@@ -454,7 +454,7 @@ impl ServiceRooms {
         nonce: Option<String>,
     ) -> Result<Room> {
         create.validate()?;
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
         let welcome_channel_id = extra.welcome_channel_id;
         let mut room = data.room_create(create.clone(), extra).await?;
@@ -548,7 +548,7 @@ impl ServiceRooms {
         let room = self.get(room_id, None).await?;
 
         if let Some(wti) = room.welcome_channel_id {
-            let data = self.state.data();
+            let mut data = self.state.data();
             let welcome_message_id = data
                 .message_create(DbMessageCreate {
                     id: None,
@@ -600,7 +600,7 @@ impl ServiceRooms {
             return Ok(());
         }
 
-        let data = self.state.data();
+        let mut data = self.state.data();
 
         // collect all room ids for batch fetching
         let room_ids: Vec<_> = rooms.iter().map(|r| r.id).collect();

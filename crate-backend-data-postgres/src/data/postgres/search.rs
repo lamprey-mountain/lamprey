@@ -5,7 +5,7 @@ use common::v1::types::{
     Channel, ChannelId, ChannelType, MessageId, PaginationDirection, PaginationQuery,
     PaginationResponse, UserId,
 };
-use sqlx::{query_file_as, query_file_scalar, Acquire};
+use sqlx::{query_file_as, query_file_scalar};
 use uuid::Uuid;
 
 use crate::{
@@ -23,7 +23,7 @@ use super::Postgres;
 #[async_trait]
 impl DataSearch for Postgres {
     async fn search_message(
-        &self,
+        &mut self,
         user_id: UserId,
         query: MessageSearchRequest,
         paginate: PaginationQuery<MessageId>,
@@ -48,7 +48,7 @@ impl DataSearch for Postgres {
         let mentions_roles: Vec<Uuid> = query.mentions_roles.iter().map(|id| **id).collect();
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_file_as!(
                 DbMessage,
                 "sql/search_message.sql",
@@ -101,7 +101,7 @@ impl DataSearch for Postgres {
     }
 
     async fn search_channel(
-        &self,
+        &mut self,
         user_id: UserId,
         query: ChannelSearchRequest,
         paginate: PaginationQuery<ChannelId>,
@@ -152,7 +152,7 @@ impl DataSearch for Postgres {
 
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_file_as!(
                 DbChannel,
                 "sql/search_channel.sql",

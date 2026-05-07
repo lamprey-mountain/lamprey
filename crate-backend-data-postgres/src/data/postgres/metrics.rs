@@ -9,7 +9,8 @@ use super::Postgres;
 
 #[async_trait]
 impl DataMetrics for Postgres {
-    async fn get_metrics(&self) -> Result<InstanceMetrics> {
+    async fn get_metrics(&mut self) -> Result<InstanceMetrics> {
+        let mut conn = self.acquire().await?;
         let metrics = query_as!(
             InstanceMetrics,
             r#"
@@ -35,7 +36,7 @@ impl DataMetrics for Postgres {
                 (SELECT count(*) FROM channel WHERE type = 'Gdm') AS "channel_count_gdm!"
             "#
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
         Ok(metrics)
     }

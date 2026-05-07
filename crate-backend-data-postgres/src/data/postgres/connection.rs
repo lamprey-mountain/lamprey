@@ -3,7 +3,7 @@ use common::v1::types::{
     application::{Application, Connection, Scopes},
     ApplicationId, PaginationDirection, PaginationQuery, PaginationResponse, UserId,
 };
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_as, query_scalar};
 
 use crate::{
     data::{postgres::Pagination, DataConnection},
@@ -63,11 +63,12 @@ impl From<DbConnection> for Connection {
 #[async_trait]
 impl DataConnection for Postgres {
     async fn connection_create(
-        &self,
+        &mut self,
         user_id: UserId,
         application_id: ApplicationId,
         scopes: Scopes,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"
             insert into connection (user_id, application_id, scopes, created_at)
@@ -79,16 +80,17 @@ impl DataConnection for Postgres {
             *application_id,
             serde_json::to_value(&scopes).unwrap(),
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn connection_get(
-        &self,
+        &mut self,
         user_id: UserId,
         application_id: ApplicationId,
     ) -> Result<Connection> {
+        let mut conn = self.acquire().await?;
         let conn = query_as!(
             DbConnection,
             r#"
@@ -106,21 +108,21 @@ impl DataConnection for Postgres {
             *user_id,
             *application_id
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
 
         Ok(conn.into())
     }
 
     async fn connection_list(
-        &self,
+        &mut self,
         user_id: UserId,
         pagination: PaginationQuery<ApplicationId>,
     ) -> Result<PaginationResponse<Connection>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_as!(
                 DbConnection,
                 r#"
@@ -151,16 +153,17 @@ impl DataConnection for Postgres {
     }
 
     async fn connection_delete(
-        &self,
+        &mut self,
         user_id: UserId,
         application_id: ApplicationId,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "delete from connection where user_id = $1 and application_id = $2",
             *user_id,
             *application_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }

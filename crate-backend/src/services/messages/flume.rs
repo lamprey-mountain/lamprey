@@ -121,7 +121,7 @@ impl ServiceMessages {
                 PrimitiveDateTime::new(now.date(), now.time())
             });
 
-        let data = self.state.data();
+        let mut data = self.state.data();
         let components_inner = components_thin.inner.clone();
         data.message_create(DbMessageCreate {
             id: Some(message_id),
@@ -282,7 +282,7 @@ impl ServiceMessages {
             return self.get(channel_id, message_id, None).await;
         }
 
-        let data = self.state.data();
+        let mut data = self.state.data();
 
         // 1. get the message to get author_id and version_id
         let message = self.get(channel_id, message_id, None).await?;

@@ -32,7 +32,7 @@ async fn push_register(
         .await?
         .ensure_view()?;
     perms.needs(Permission::Admin);
-    let data = s.data();
+    let mut data = s.data();
 
     let push_data = PushData {
         session_id: auth.session.id,
@@ -89,7 +89,7 @@ async fn push_get(
         .await?
         .ensure_view()?;
     perms.needs(Permission::Admin);
-    let data = s.data();
+    let mut data = s.data();
     let push = data.push_get(auth.session.id).await?;
     let config_internal = data
         .config_get()

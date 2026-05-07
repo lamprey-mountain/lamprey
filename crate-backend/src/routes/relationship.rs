@@ -29,7 +29,7 @@ async fn friend_list(
     req: routes::friend_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let rels = data
         .user_relationship_list_friends(auth.user.id, req.pagination)
         .await?;
@@ -46,7 +46,7 @@ async fn friend_list_pending(
     req: routes::friend_list_pending::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let rels = data
         .user_relationship_list_pending(auth.user.id, req.pagination)
         .await?;
@@ -65,7 +65,7 @@ async fn friend_add(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
 
     let target_user = data.user_get(req.target_id).await?;
@@ -226,7 +226,7 @@ async fn friend_remove(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
-    let data = s.data();
+    let mut data = s.data();
 
     let existing = data
         .user_relationship_get(auth.user.id, req.target_id)
@@ -287,7 +287,7 @@ async fn block_list(
     req: routes::block_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let rels = data
         .user_relationship_list_blocked(auth.user.id, req.pagination)
         .await?;
@@ -304,7 +304,7 @@ async fn block_add(
     req: routes::block_add::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
 
     data.user_relationship_edit(
         auth.user.id,
@@ -363,7 +363,7 @@ async fn block_remove(
     req: routes::block_remove::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
 
     let existing = data
         .user_relationship_get(auth.user.id, req.target_id)
@@ -401,7 +401,7 @@ async fn ignore_list(
     req: routes::ignore_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let rels = data
         .user_relationship_list_ignored(auth.user.id, req.pagination)
         .await?;
@@ -418,7 +418,7 @@ async fn ignore_add(
     req: routes::ignore_add::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
 
     data.user_relationship_edit(
         auth.user.id,
@@ -460,7 +460,7 @@ async fn ignore_remove(
     req: routes::ignore_remove::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
 
     let existing = data
         .user_relationship_get(auth.user.id, req.target_id)

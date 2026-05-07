@@ -5,7 +5,7 @@ use common::v1::types::{
     ApplicationId, PaginationDirection, PaginationQuery, PaginationResponse, UserId,
 };
 use lamprey_backend_core::Error;
-use sqlx::{query, query_scalar, Acquire};
+use sqlx::{query, query_scalar};
 
 use crate::{
     data::{postgres::Pagination, DataApplication},
@@ -17,8 +17,8 @@ use crate::Result;
 
 #[async_trait]
 impl DataApplication for Postgres {
-    async fn application_insert(&self, app: Application) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+    async fn application_insert(&mut self, app: Application) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
         query!(
             r#"
             insert into application (id, owner_id, name, description, public, oauth_secret, oauth_redirect_uris, oauth_confidential)
@@ -33,7 +33,7 @@ impl DataApplication for Postgres {
             serde_json::to_value(app.oauth_redirect_uris).unwrap(),
             app.oauth_confidential,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         if let Some(bridge) = app.bridge {
@@ -47,7 +47,7 @@ impl DataApplication for Postgres {
                 bridge.platform_url,
                 bridge.platform_description,
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
 
@@ -55,8 +55,8 @@ impl DataApplication for Postgres {
         Ok(())
     }
 
-    async fn application_update(&self, app: Application) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+    async fn application_update(&mut self, app: Application) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
         query!(
             r#"
             update application set
@@ -76,7 +76,7 @@ impl DataApplication for Postgres {
             serde_json::to_value(app.oauth_redirect_uris).unwrap(),
             app.oauth_confidential,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         if let Some(bridge) = app.bridge {
@@ -94,14 +94,14 @@ impl DataApplication for Postgres {
                 bridge.platform_url,
                 bridge.platform_description,
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         } else {
             query!(
                 "delete from application_bridge where application_id = $1",
                 *app.id
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
 
@@ -109,17 +109,19 @@ impl DataApplication for Postgres {
         Ok(())
     }
 
-    async fn application_delete(&self, id: ApplicationId) -> Result<()> {
+    async fn application_delete(&mut self, id: ApplicationId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "UPDATE application SET deleted_at = now() WHERE id = $1",
             *id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn application_get(&self, id: ApplicationId) -> Result<Application> {
+    async fn application_get(&mut self, id: ApplicationId) -> Result<Application> {
+        let mut conn = self.acquire().await?;
         let app = query!(
             r#"
         	SELECT
@@ -131,7 +133,7 @@ impl DataApplication for Postgres {
             "#,
             *id
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
@@ -165,14 +167,14 @@ impl DataApplication for Postgres {
     }
 
     async fn application_list(
-        &self,
+        &mut self,
         owner_id: UserId,
         q: PaginationQuery<ApplicationId>,
     ) -> Result<PaginationResponse<Application>> {
         let p: Pagination<_> = q.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query!(
                 r#"
             	SELECT

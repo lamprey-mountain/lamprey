@@ -35,7 +35,7 @@ async fn oauth_info(
     req: routes::oauth_info::Request,
 ) -> Result<impl IntoResponse> {
     let (app, _redirect_uri, scopes) = validate_authorize(&s, &auth, &req.params).await?;
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
     let auth_user = srv.users.get(auth.user.id, None).await?;
     let bot_user = srv.users.get(app.id.into_inner().into(), None).await?;
@@ -60,7 +60,7 @@ async fn oauth_authorize(
     req: routes::oauth_authorize::Request,
 ) -> Result<impl IntoResponse> {
     let (app, redirect_uri, scopes) = validate_authorize(&s, &auth, &req.params).await?;
-    let data = s.data();
+    let mut data = s.data();
     let scopes = Scopes(scopes.into_iter().collect());
     data.connection_create(auth.user.id, app.id, scopes.clone())
         .await?;
@@ -97,7 +97,7 @@ async fn validate_authorize(
     auth: &Auth,
     q: &common::v1::types::oauth::OauthAuthorizeParams,
 ) -> Result<(Application, url::Url, HashSet<Scope>)> {
-    let data = s.data();
+    let mut data = s.data();
     let app = data.application_get(q.client_id).await?;
     if app.owner_id != auth.user.id && !app.public {
         return Err(Error::ApiError(ApiError::from_code(
@@ -164,7 +164,7 @@ async fn oauth_token(
         return Err(Error::InvalidCredentials);
     };
 
-    let data = s.data();
+    let mut data = s.data();
     let app = data.application_get(client_id).await?;
     if app.id != client_id {
         return Err(Error::InvalidCredentials);
@@ -345,7 +345,7 @@ async fn oauth_revoke(
     State(s): State<Arc<ServerState>>,
     _req: routes::oauth_revoke::Request,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
     data.session_delete(auth.session.id).await?;
     srv.sessions.invalidate(auth.session.id).await;
@@ -388,7 +388,7 @@ async fn oauth_userinfo(
     _req: routes::oauth_userinfo::Request,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     let user = srv.users.get(auth.user.id, None).await?;
     let email = data
         .user_email_list(auth.user.id)

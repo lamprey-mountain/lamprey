@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::{PaginationDirection, PaginationQuery, PaginationResponse, RoomMember};
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_as, query_scalar};
 use tracing::info;
 
 use crate::error::Result;
@@ -14,51 +14,50 @@ use super::{Pagination, Postgres};
 #[async_trait]
 impl DataRoleMember for Postgres {
     async fn role_member_put(
-        &self,
+        &mut self,
         room_id: RoomId,
         user_id: UserId,
         role_id: RoleId,
     ) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
+        let mut conn = self.acquire().await?;
         query!(
             "INSERT INTO role_member (user_id, role_id, room_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
             user_id.into_inner(),
             role_id.into_inner(),
             room_id.into_inner()
         )
-        .execute(&mut *conn)
+        .execute(conn.ext())
         .await?;
         info!("inserted role member");
         Ok(())
     }
 
     async fn role_member_delete(
-        &self,
+        &mut self,
         room_id: RoomId,
         user_id: UserId,
         role_id: RoleId,
     ) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
+        let mut conn = self.acquire().await?;
         query!(
             "DELETE FROM role_member WHERE room_id = $1 AND role_id = $2 AND user_id = $3",
             room_id.into_inner(),
             role_id.into_inner(),
             user_id.into_inner(),
         )
-        .execute(&mut *conn)
+        .execute(conn.ext())
         .await?;
         info!("deleted role member");
         Ok(())
     }
 
     async fn role_member_list(
-        &self,
+        &mut self,
         role_id: RoleId,
         paginate: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<RoomMember>> {
         let p: Pagination<_> = paginate.try_into()?;
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let items = query_as!(
             DbRoomMember,
             r#"
@@ -92,13 +91,13 @@ impl DataRoleMember for Postgres {
             p.dir.to_string(),
             (p.limit + 1) as i32
         )
-        .fetch_all(&mut *tx)
+        .fetch_all(tx.ext())
         .await?;
         let total = query_scalar!(
             "SELECT count(*) FROM role_member WHERE role_id = $1",
             role_id.into_inner()
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
         tx.rollback().await?;
         let has_more = items.len() > p.limit as usize;
@@ -119,25 +118,26 @@ impl DataRoleMember for Postgres {
         })
     }
 
-    async fn role_member_count(&self, room_id: RoomId, role_id: RoleId) -> Result<u64> {
+    async fn role_member_count(&mut self, room_id: RoomId, role_id: RoleId) -> Result<u64> {
+        let mut conn = self.acquire().await?;
         let total = query_scalar!(
             "SELECT count(*) FROM role_member WHERE room_id = $1 AND role_id = $2",
             room_id.into_inner(),
             role_id.into_inner()
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
         Ok(total.unwrap_or(0) as u64)
     }
 
     async fn role_member_bulk_edit(
-        &self,
+        &mut self,
         room_id: RoomId,
         role_id: RoleId,
         apply_user_ids: &[UserId],
         remove_user_ids: &[UserId],
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         if !apply_user_ids.is_empty() {
             let apply_user_ids: Vec<uuid::Uuid> =
@@ -148,7 +148,7 @@ impl DataRoleMember for Postgres {
                 role_id.into_inner(),
                 room_id.into_inner()
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
 
@@ -161,7 +161,7 @@ impl DataRoleMember for Postgres {
                 role_id.into_inner(),
                 &remove_user_ids,
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
 

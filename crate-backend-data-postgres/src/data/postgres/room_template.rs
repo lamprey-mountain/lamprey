@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use nanoid::nanoid;
-use sqlx::{query, query_as, Acquire};
+use sqlx::{query, query_as};
 use uuid::Uuid;
 
 use crate::{
@@ -18,13 +18,13 @@ use super::Postgres;
 #[async_trait]
 impl DataRoomTemplate for Postgres {
     async fn room_template_create(
-        &self,
+        &mut self,
         creator_id: UserId,
         snapshot: serde_json::Value,
         create: RoomTemplateCreate,
     ) -> Result<DbRoomTemplate> {
         let code = RoomTemplateCode(nanoid!(12));
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         query!(
             r#"
@@ -38,7 +38,7 @@ impl DataRoomTemplate for Postgres {
             Some::<Uuid>(create.room_id.into()),
             snapshot,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -46,7 +46,8 @@ impl DataRoomTemplate for Postgres {
         self.room_template_get(code).await
     }
 
-    async fn room_template_get(&self, code: RoomTemplateCode) -> Result<DbRoomTemplate> {
+    async fn room_template_get(&mut self, code: RoomTemplateCode) -> Result<DbRoomTemplate> {
+        let mut conn = self.acquire().await?;
         let row = query_as!(
             DbRoomTemplate,
             r#"
@@ -65,7 +66,7 @@ impl DataRoomTemplate for Postgres {
             "#,
             code.0,
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => {
@@ -78,7 +79,7 @@ impl DataRoomTemplate for Postgres {
     }
 
     async fn room_template_list(
-        &self,
+        &mut self,
         creator_id: UserId,
         pagination: common::v1::types::PaginationQuery<RoomTemplateCode>,
     ) -> Result<common::v1::types::PaginationResponse<DbRoomTemplate>> {
@@ -86,7 +87,7 @@ impl DataRoomTemplate for Postgres {
 
         gen_paginate!(
             p,
-            self.pool,
+            self,
             sqlx::query_as!(
                 DbRoomTemplate,
                 r#"
@@ -121,11 +122,11 @@ impl DataRoomTemplate for Postgres {
     }
 
     async fn room_template_update(
-        &self,
+        &mut self,
         code: RoomTemplateCode,
         patch: RoomTemplatePatch,
     ) -> Result<DbRoomTemplate> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         let existing = query!(
             r#"
@@ -136,7 +137,7 @@ impl DataRoomTemplate for Postgres {
             "#,
             code.0,
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => {
@@ -158,7 +159,7 @@ impl DataRoomTemplate for Postgres {
             new_description,
             code.0,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -167,11 +168,11 @@ impl DataRoomTemplate for Postgres {
     }
 
     async fn room_template_update_snapshot(
-        &self,
+        &mut self,
         code: RoomTemplateCode,
         snapshot: serde_json::Value,
     ) -> Result<DbRoomTemplate> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         query!(
             r#"
@@ -182,7 +183,7 @@ impl DataRoomTemplate for Postgres {
             snapshot,
             code.0,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -190,7 +191,8 @@ impl DataRoomTemplate for Postgres {
         self.room_template_get(code).await
     }
 
-    async fn room_template_mark_dirty(&self, source_room_id: RoomId) -> Result<()> {
+    async fn room_template_mark_dirty(&mut self, source_room_id: RoomId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"
             UPDATE room_templates
@@ -199,14 +201,15 @@ impl DataRoomTemplate for Postgres {
             "#,
             *source_room_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn room_template_delete(&self, code: RoomTemplateCode) -> Result<()> {
+    async fn room_template_delete(&mut self, code: RoomTemplateCode) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(r#"DELETE FROM room_templates WHERE code = $1"#, code.0,)
-            .execute(&self.pool)
+            .execute(conn.ext())
             .await?;
         Ok(())
     }

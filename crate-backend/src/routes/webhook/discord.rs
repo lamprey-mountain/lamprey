@@ -264,6 +264,7 @@ async fn parse_webhook_body(req: Request, s: &Arc<ServerState>) -> Result<Parsed
     let mut attachment_metadata: Vec<DiscordPartialAttachment> = Vec::new();
     let mut parsed_embeds: Vec<ParsedEmbed> = Vec::new();
 
+    // TODO: deduplicate embed parsing code
     if ct.contains("application/json") {
         let body = req.into_body();
         let bytes = to_bytes(body, usize::MAX).await?;

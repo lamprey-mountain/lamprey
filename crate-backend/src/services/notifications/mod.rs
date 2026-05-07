@@ -55,7 +55,7 @@ impl ServiceNotifications {
 
     /// Helper to fetch and parse VAPID keys from configuration
     async fn get_vapid_keys(&self) -> Result<Option<(EncodingKey, String)>> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let config_internal = data.config_get().await?;
 
         let (vapid_private, vapid_public) = match config_internal {
@@ -84,7 +84,7 @@ impl ServiceNotifications {
 
     /// send a notification to a user through the web push api
     pub async fn push(&self, user_id: UserId, mut payload: NotificationPayload) -> Result<()> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let subscriptions = data.push_list_for_user(user_id).await?;
 
         if subscriptions.is_empty() {
@@ -203,7 +203,7 @@ impl ServiceNotifications {
         let mut interval = tokio::time::interval(Duration::from_secs(5));
         loop {
             interval.tick().await;
-            let data = state.data();
+            let mut data = state.data();
             let srv = state.services();
 
             match data.notification_get_unpushed(50).await {

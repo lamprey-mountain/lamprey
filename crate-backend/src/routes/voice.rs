@@ -198,7 +198,7 @@ async fn voice_state_patch(
     perms.check()?;
 
     if let Some(room_id) = chan.room_id {
-        let d = s.data();
+        let mut d = s.data();
         let res = d.room_member_get(room_id, target_user_id).await?;
         let user = srv.users.get(target_user_id, None).await?;
         s.broadcast_room(

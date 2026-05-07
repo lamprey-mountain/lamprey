@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::EmojiId;
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_as, query_scalar};
 use uuid::Uuid;
 
 use crate::consts::MAX_CUSTOM_EMOJI;
@@ -43,18 +43,18 @@ impl From<DbEmojiCustom> for EmojiCustom {
 #[async_trait]
 impl DataEmoji for Postgres {
     async fn emoji_create(
-        &self,
+        &mut self,
         creator_id: UserId,
         room_id: RoomId,
         create: EmojiCustomCreate,
     ) -> Result<EmojiCustom> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         let links = sqlx::query!(
             "SELECT media_id FROM media_link WHERE media_id = $1",
             *create.media_id
         )
-        .fetch_all(&mut *tx)
+        .fetch_all(tx.ext())
         .await?;
 
         if !links.is_empty() {
@@ -65,7 +65,7 @@ impl DataEmoji for Postgres {
             "SELECT count(*) FROM custom_emoji WHERE room_id = $1",
             *room_id,
         )
-        .fetch_optional(&mut *tx)
+        .fetch_optional(tx.ext())
         .await?
         .flatten()
         .unwrap_or(0) as u32;
@@ -88,7 +88,7 @@ impl DataEmoji for Postgres {
             *create.media_id,
             *room_id,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         query!(
@@ -100,7 +100,7 @@ impl DataEmoji for Postgres {
             *emoji_id,
             MediaLinkType::CustomEmoji as _
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -108,15 +108,15 @@ impl DataEmoji for Postgres {
         self.emoji_get(emoji_id).await
     }
 
-    async fn emoji_get(&self, emoji_id: EmojiId) -> Result<EmojiCustom> {
+    async fn emoji_get(&mut self, emoji_id: EmojiId) -> Result<EmojiCustom> {
         let id: Uuid = emoji_id.into();
-        let mut conn = self.pool.acquire().await?;
+        let mut conn = self.acquire().await?;
         let row = query_as!(
             DbEmojiCustom,
             r#"SELECT id, name, creator_id, animated, media_id, room_id FROM custom_emoji WHERE id = $1"#,
             id
         )
-        .fetch_one(&mut *conn)
+        .fetch_one(conn.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
@@ -127,28 +127,28 @@ impl DataEmoji for Postgres {
         Ok(row.into())
     }
 
-    async fn emoji_get_many(&self, emoji_ids: &[EmojiId]) -> Result<Vec<EmojiCustom>> {
+    async fn emoji_get_many(&mut self, emoji_ids: &[EmojiId]) -> Result<Vec<EmojiCustom>> {
         let ids: Vec<Uuid> = emoji_ids.iter().map(|id| id.into_inner()).collect();
-        let mut conn = self.pool.acquire().await?;
+        let mut conn = self.acquire().await?;
         let rows = query_as!(
             DbEmojiCustom,
             r#"SELECT id, name, creator_id, animated, media_id, room_id FROM custom_emoji WHERE id = ANY($1)"#,
             &ids
         )
-        .fetch_all(&mut *conn)
+        .fetch_all(conn.ext())
         .await?;
         Ok(rows.into_iter().map(Into::into).collect())
     }
 
     async fn emoji_list(
-        &self,
+        &mut self,
         room_id: RoomId,
         pagination: PaginationQuery<EmojiId>,
     ) -> Result<PaginationResponse<EmojiCustom>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_as!(
                 DbEmojiCustom,
                 r#"
@@ -171,32 +171,34 @@ impl DataEmoji for Postgres {
         )
     }
 
-    async fn emoji_update(&self, emoji_id: EmojiId, patch: EmojiCustomPatch) -> Result<()> {
+    async fn emoji_update(&mut self, emoji_id: EmojiId, patch: EmojiCustomPatch) -> Result<()> {
+        let mut conn = self.acquire().await?;
         if let Some(name) = patch.name {
             query!(
                 "UPDATE custom_emoji SET name = $1 WHERE id = $2",
                 name,
                 *emoji_id
             )
-            .execute(&self.pool)
+            .execute(conn.ext())
             .await?;
         }
 
         Ok(())
     }
 
-    async fn emoji_delete(&self, emoji_id: EmojiId) -> Result<()> {
+    async fn emoji_delete(&mut self, emoji_id: EmojiId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "UPDATE custom_emoji SET deleted_at = now() WHERE id = $1",
             *emoji_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn emoji_search(
-        &self,
+        &mut self,
         user_id: UserId,
         query: String,
         pagination: PaginationQuery<EmojiId>,
@@ -206,7 +208,7 @@ impl DataEmoji for Postgres {
 
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_as!(
                 DbEmojiCustom,
                 r#"
