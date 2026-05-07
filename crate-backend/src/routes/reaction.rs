@@ -25,7 +25,7 @@ async fn reaction_list(
     req: routes::reaction_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
@@ -78,7 +78,7 @@ async fn reaction_add(
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
 
-    let data = s.data();
+    let mut data = s.data();
     data.reaction_put(
         user_id,
         req.channel_id,
@@ -146,7 +146,7 @@ async fn reaction_remove(
     chan.ensure_unarchived()?;
     chan.ensure_unremoved()?;
 
-    let data = s.data();
+    let mut data = s.data();
     data.reaction_delete(
         user_id,
         req.channel_id,
@@ -200,7 +200,7 @@ async fn reaction_remove_emoji(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
 
     srv.perms
@@ -261,7 +261,7 @@ async fn reaction_remove_all(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
 
     srv.perms

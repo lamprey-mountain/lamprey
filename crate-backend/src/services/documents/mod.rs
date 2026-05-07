@@ -106,7 +106,7 @@ impl ServiceDocuments {
         }
 
         debug!(context_id = ?context_id, maybe_author = ?maybe_author, "load document");
-        let data = self.state.data();
+        let mut data = self.state.data();
         let loaded = data.document_load(context_id).await;
 
         let actor_ref = match loaded {
@@ -252,7 +252,7 @@ impl ServiceDocuments {
     }
 
     pub async fn get_content_at_seq(&self, context_id: EditContextId, seq: u64) -> Result<Serdoc> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let dehydrated = data.document_load_at_seq(context_id, seq as u32).await?;
 
         let doc = yrs::Doc::new();
@@ -412,7 +412,7 @@ impl ServiceDocuments {
         context_id: EditContextId,
         query: HistoryParams,
     ) -> Result<HistoryPaginationSummary> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let (updates, tags) = data.document_history(context_id).await?;
         self.process_history(updates, tags, query)
     }
@@ -422,7 +422,7 @@ impl ServiceDocuments {
         wiki_id: ChannelId,
         query: HistoryParams,
     ) -> Result<HistoryPaginationSummary> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let (updates, tags) = data.wiki_history(wiki_id).await?;
         self.process_history(updates, tags, query)
     }

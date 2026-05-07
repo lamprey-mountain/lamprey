@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{SessionPatch, SessionStatus, SessionToken};
 use lamprey_backend_core::Error;
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_as, query_scalar};
 use time::PrimitiveDateTime;
 use uuid::Uuid;
 
@@ -19,7 +19,8 @@ use super::{Pagination, Postgres};
 
 #[async_trait]
 impl DataSession for Postgres {
-    async fn session_create(&self, create: DbSessionCreate) -> Result<Session> {
+    async fn session_create(&mut self, create: DbSessionCreate) -> Result<Session> {
+        let mut conn = self.acquire().await?;
         let session_id = Uuid::now_v7();
         let session = query_as!(
             DbSession,
@@ -36,19 +37,20 @@ impl DataSession for Postgres {
             create.ip_addr,
             create.user_agent,
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
         Ok(session.into())
     }
 
-    async fn session_get(&self, id: SessionId) -> Result<Session> {
+    async fn session_get(&mut self, id: SessionId) -> Result<Session> {
+        let mut conn = self.acquire().await?;
         tracing::debug!("session_get: {:?}", id);
         let session = query_as!(
             DbSession,
             r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, authorized_at, deauthorized_at FROM session WHERE id = $1"#,
             *id,
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => {
@@ -62,14 +64,15 @@ impl DataSession for Postgres {
         Ok(session.into())
     }
 
-    async fn session_get_by_token(&self, token: SessionToken) -> Result<Session> {
+    async fn session_get_by_token(&mut self, token: SessionToken) -> Result<Session> {
+        let mut conn = self.acquire().await?;
         tracing::debug!("session_get_by_token: {:?}", token);
         let session = query_as!(
             DbSession,
             r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, authorized_at, deauthorized_at FROM session WHERE token = $1"#,
             token.0
         )
-            .fetch_one(&self.pool)
+            .fetch_one(conn.ext())
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => {
@@ -83,7 +86,12 @@ impl DataSession for Postgres {
         Ok(session.into())
     }
 
-    async fn session_set_status(&self, session_id: SessionId, status: SessionStatus) -> Result<()> {
+    async fn session_set_status(
+        &mut self,
+        session_id: SessionId,
+        status: SessionStatus,
+    ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let user_id = status.user_id().map(|i| *i);
         let is_authorized = matches!(
             status,
@@ -102,20 +110,20 @@ impl DataSession for Postgres {
             user_id,
             is_authorized,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn session_list(
-        &self,
+        &mut self,
         user_id: UserId,
         pagination: PaginationQuery<SessionId>,
     ) -> Result<PaginationResponse<Session>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_as!(
                 DbSession,
                 r#"
@@ -137,26 +145,27 @@ impl DataSession for Postgres {
         )
     }
 
-    async fn session_delete(&self, session_id: SessionId) -> Result<()> {
+    async fn session_delete(&mut self, session_id: SessionId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"DELETE FROM session WHERE id = $1"#,
             session_id.into_inner()
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn session_delete_all(&self, user_id: UserId) -> Result<()> {
+    async fn session_delete_all(&mut self, user_id: UserId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!("DELETE FROM session WHERE user_id = $1", *user_id)
-            .execute(&self.pool)
+            .execute(conn.ext())
             .await?;
         Ok(())
     }
 
-    async fn session_update(&self, session_id: SessionId, patch: SessionPatch) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+    async fn session_update(&mut self, session_id: SessionId, patch: SessionPatch) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
         let session = query_as!(
             DbSession,
             r#"
@@ -167,25 +176,26 @@ impl DataSession for Postgres {
             "#,
             session_id.into_inner()
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
         query!(
             "UPDATE session SET name = $2 WHERE id = $1",
             *session_id,
             patch.name.unwrap_or(session.name),
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         Ok(())
     }
 
-    async fn session_set_last_seen_at(&self, session_id: SessionId) -> Result<()> {
+    async fn session_set_last_seen_at(&mut self, session_id: SessionId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "UPDATE session SET last_seen_at = now() WHERE id = $1",
             *session_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }

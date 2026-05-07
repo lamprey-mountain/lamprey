@@ -45,7 +45,7 @@ async fn user_update(
         perms.needs(Permission::UserProfileSelf);
     }
     perms.check()?;
-    let data = s.data();
+    let mut data = s.data();
     let start = srv.users.get(target_user_id, Some(auth.user.id)).await?;
     if !req.patch.changes(&start) {
         return Ok(Json(start));
@@ -121,7 +121,7 @@ async fn user_delete(
 ) -> Result<impl IntoResponse> {
     let target_user_id = req.user_id.unwrap_or(auth.user.id);
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     let mut perms = srv
         .perms
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
@@ -169,7 +169,7 @@ async fn user_undelete(
     let target_user_id = req.user_id.unwrap_or(auth.user.id);
 
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     srv.perms
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
         .await?
@@ -228,7 +228,7 @@ async fn user_get(
     }
 
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     let mut user = match req.user_id {
         UserIdReq::UserSelf => srv.users.get(auth.user()?.id, auth.user_id()).await?,
@@ -273,7 +273,7 @@ async fn user_room_list(
 ) -> Result<impl IntoResponse> {
     let target_user_id = req.user_id.unwrap_or(auth.user.id);
 
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
     let mut rooms = if auth.user.id == target_user_id {
         data.room_list(auth.user.id, req.pagination, false).await?
@@ -330,7 +330,7 @@ async fn guest_create(
     req: routes::guest_create::Request,
 ) -> Result<impl IntoResponse> {
     let session = auth.session;
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
 
     let user = data
@@ -397,7 +397,7 @@ async fn user_suspend(
     req: routes::user_suspend::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    let d = s.data();
+    let mut d = s.data();
     let srv = s.services();
     let target_user_id = req.user_id.unwrap_or(auth.user.id);
     if target_user_id != auth.user.id {
@@ -437,7 +437,7 @@ async fn user_unsuspend(
     req: routes::user_unsuspend::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
-    let d = s.data();
+    let mut d = s.data();
     let srv = s.services();
     let target_user_id = req.user_id.unwrap_or(auth.user.id);
     srv.perms
@@ -502,7 +502,7 @@ async fn user_list(
         .needs(Permission::MemberBan)
         .check()?;
 
-    let data = s.data();
+    let mut data = s.data();
     let mut users = data
         .user_list(req.query.pagination, req.query.filter)
         .await?;

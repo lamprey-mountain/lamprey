@@ -6,6 +6,7 @@ use std::{
 use common::v1::types::{voice::SfuCommand, AuditLogEntry, ChannelId, RoomId, UserId};
 use common::v1::types::{Message, MessageAttachmentType, MessageSync, MessageType, MessageVersion};
 use futures::{Stream, StreamExt};
+use lamprey_backend_data_postgres::data::{postgres::PostgresPool, Data2};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use tokio::{runtime::Handle as TokioHandle, sync::broadcast::Sender};
@@ -36,7 +37,8 @@ pub struct MessageBroadcastInner {
 pub struct ServerStateInner {
     pub tokio: TokioHandle,
     pub config: Config,
-    pub pool: PgPool,
+    // pub database: Box<dyn Data2>, // TEMP
+    pub database: Box<PostgresPool>,
     pub services: Weak<Services>,
     pub blobs: opendal::Operator,
     pub jetstream: Option<async_nats::jetstream::Context>,
@@ -71,8 +73,24 @@ pub struct ServerState {
 }
 
 impl ServerStateInner {
+    /// legacy: acquire a connection to the database that auto-commits on every query
+    // TODO: remove
     pub fn data(&self) -> Box<dyn Data> {
-        Box::new(Postgres::new(self.pool.clone()))
+        Box::new(Postgres {
+            pool: self.database.pool.clone(),
+            txn: None,
+            use_legacy_behavior: true,
+        })
+    }
+
+    pub fn database(&self) -> Box<dyn Data2<DataTxn = Postgres>> {
+        Box::new((*self.database).clone())
+    }
+
+    /// acquire a transaction
+    pub async fn acquire_data(&self) -> Result<Box<dyn Data>> {
+        let txn_wrapped = self.database.begin().await?;
+        Ok(Box::new(txn_wrapped))
     }
 
     pub fn services(&self) -> Arc<Services> {
@@ -80,12 +98,6 @@ impl ServerStateInner {
             .upgrade()
             .expect("services should always exist while serverstateinner is alive")
     }
-
-    // fn acquire_data(&self) -> Box<dyn Data> {
-    //     Box::new(Postgres {
-    //         pool: self.pool.clone(),
-    //     })
-    // }
 
     /// emit a message to everyone in a room
     pub async fn broadcast_room(
@@ -302,7 +314,7 @@ impl ServerState {
             let inner = Arc::new(ServerStateInner {
                 tokio: TokioHandle::current(),
                 config,
-                pool,
+                database: Box::new(PostgresPool::new(pool)),
                 services: weak.to_owned(),
                 blobs,
                 jetstream: nats.clone().map(async_nats::jetstream::new),

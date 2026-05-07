@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{RoleReorder, UserId};
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_as, query_scalar};
 use tracing::info;
 
 use crate::error::Result;
@@ -50,25 +50,25 @@ impl From<DbRole> for Role {
 
 #[async_trait]
 impl DataRole for Postgres {
-    async fn role_create(&self, create: DbRoleCreate, position: u64) -> Result<Role> {
+    async fn role_create(&mut self, create: DbRoleCreate, position: u64) -> Result<Role> {
         let role_id = *create.id;
         let allow_perms: Vec<DbPermission> = create.allow.into_iter().map(Into::into).collect();
         let deny_perms: Vec<DbPermission> = create.deny.into_iter().map(Into::into).collect();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         // lock all roles to prevent race conditions
         query!(
             "select from role where room_id = $1 for update",
             *create.room_id
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         let count = query_scalar!(
             r#"select count(*) from role where room_id = $1"#,
             *create.room_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?
         .unwrap_or_default() as u32;
         if count >= crate::consts::MAX_ROLE_COUNT {
@@ -81,7 +81,7 @@ impl DataRole for Postgres {
             r#"update role set position = position + 1 where id != room_id and room_id = $1"#,
             *create.room_id
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         let role = query_as!(DbRole, r#"
             INSERT INTO role (id, version_id, room_id, name, description, allow, deny, is_mentionable, is_self_applicable, position, hoist, sticky)
@@ -100,19 +100,18 @@ impl DataRole for Postgres {
             create.hoist,
             create.sticky,
         )
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.ext())
         	.await?;
         tx.commit().await?;
         info!("inserted role");
         Ok(role.into())
     }
 
-    async fn role_list(&self, room_id: RoomId) -> Result<Vec<Role>> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+    async fn role_list(&mut self, room_id: RoomId) -> Result<Vec<Role>> {
+        let mut tx = self.begin_tx().await?;
 
         query!("select from role where room_id = $1 for share", *room_id)
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
 
         let items = query_as!(
@@ -143,7 +142,7 @@ impl DataRole for Postgres {
             "#,
             room_id.into_inner()
         )
-        .fetch_all(&mut *tx)
+        .fetch_all(tx.ext())
         .await?;
 
         let items: Vec<_> = items.into_iter().map(Into::into).collect();
@@ -153,23 +152,23 @@ impl DataRole for Postgres {
         Ok(items)
     }
 
-    async fn role_delete(&self, _room_id: RoomId, role_id: RoleId) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+    async fn role_delete(&mut self, _room_id: RoomId, role_id: RoleId) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
         query!(
             "DELETE FROM role_member WHERE role_id = $1",
             role_id.into_inner()
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         query!("DELETE FROM role WHERE id = $1", role_id.into_inner())
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         tx.commit().await?;
         Ok(())
     }
 
-    async fn role_select(&self, room_id: RoomId, role_id: RoleId) -> Result<Role> {
+    async fn role_select(&mut self, room_id: RoomId, role_id: RoleId) -> Result<Role> {
+        let mut conn = self.acquire().await?;
         let role = query_as!(
             DbRole,
             r#"
@@ -191,7 +190,7 @@ impl DataRole for Postgres {
             *room_id,
             *role_id,
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => {
@@ -202,7 +201,8 @@ impl DataRole for Postgres {
         Ok(role.into())
     }
 
-    async fn role_get_many(&self, room_id: RoomId, role_ids: &[RoleId]) -> Result<Vec<Role>> {
+    async fn role_get_many(&mut self, room_id: RoomId, role_ids: &[RoleId]) -> Result<Vec<Role>> {
+        let mut conn = self.acquire().await?;
         let ids: Vec<uuid::Uuid> = role_ids.iter().map(|id| id.into_inner()).collect();
         let roles = query_as!(
             DbRole,
@@ -225,19 +225,18 @@ impl DataRole for Postgres {
             *room_id,
             &ids,
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
         Ok(roles.into_iter().map(Into::into).collect())
     }
 
     async fn role_update(
-        &self,
+        &mut self,
         room_id: RoomId,
         role_id: RoleId,
         patch: RolePatch,
     ) -> Result<RoleVerId> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let allow_perms = patch.allow.as_ref().map(|p| {
             p.iter()
                 .cloned()
@@ -263,7 +262,7 @@ impl DataRole for Postgres {
             *room_id,
             *role_id,
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
         let version_id = RoleVerId::new();
         query!(
@@ -293,16 +292,16 @@ impl DataRole for Postgres {
             patch.hoist.unwrap_or(role.hoist),
             patch.sticky.unwrap_or(role.sticky),
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         Ok(version_id)
     }
 
-    async fn role_reorder(&self, room_id: RoomId, reorder: RoleReorder) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+    async fn role_reorder(&mut self, room_id: RoomId, reorder: RoleReorder) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
         query!("select from role where room_id = $1 for update", *room_id)
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         for r in reorder.roles {
             if *r.role_id == *room_id {
@@ -321,7 +320,7 @@ impl DataRole for Postgres {
                 *room_id,
                 pos,
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
         query!(
@@ -340,13 +339,14 @@ impl DataRole for Postgres {
         "#,
             *room_id
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         Ok(())
     }
 
-    async fn role_user_rank(&self, room_id: RoomId, user_id: UserId) -> Result<u64> {
+    async fn role_user_rank(&mut self, room_id: RoomId, user_id: UserId) -> Result<u64> {
+        let mut conn = self.acquire().await?;
         let rank = query_scalar!(
             r#"
             select max(role.position) from room_member
@@ -357,7 +357,7 @@ impl DataRole for Postgres {
             *room_id,
             *user_id,
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
         Ok(rank.unwrap_or_default() as u64)
     }

@@ -6,7 +6,7 @@ use common::v1::types::{
     RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMemberSearchAdvanced,
     RoomMemberSearchResponse, User,
 };
-use sqlx::{query, query_as, query_file_as, query_scalar, Acquire};
+use sqlx::{query, query_as, query_file_as, query_scalar};
 use time::PrimitiveDateTime;
 use tracing::info;
 use uuid::Uuid;
@@ -161,21 +161,22 @@ impl From<DbRoomMemberWithUser> for (RoomMember, User) {
 #[async_trait]
 impl DataRoomMember for Postgres {
     async fn room_member_put(
-        &self,
+        &mut self,
         room_id: RoomId,
         user_id: UserId,
         origin: Option<RoomMemberOrigin>,
         put: RoomMemberPut,
     ) -> Result<()> {
+        let room_count = self.user_room_count(user_id).await?;
+        let mut conn = self.acquire().await?;
         let is_member: bool = query_scalar!(
             "SELECT EXISTS(SELECT 1 FROM room_member WHERE room_id = $1 AND user_id = $2 AND membership = 'Join')",
             *room_id,
             *user_id
         )
-        .fetch_one(&self.pool).await?.unwrap_or(false);
+        .fetch_one(conn.ext()).await?.unwrap_or(false);
 
         if !is_member {
-            let room_count = self.user_room_count(user_id).await?;
             if room_count >= consts::MAX_ROOM_JOINS as u64 {
                 return Err(Error::BadRequest(
                     "User has reached the maximum number of rooms".to_string(),
@@ -205,33 +206,34 @@ impl DataRoomMember for Postgres {
             put.deaf.unwrap_or(false),
             put.timeout_until.map(|t| PrimitiveDateTime::new(t.date(), t.time())),
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         info!("inserted room member");
         Ok(())
     }
 
-    async fn room_member_delete(&self, room_id: RoomId, user_id: UserId) -> Result<()> {
+    async fn room_member_delete(&mut self, room_id: RoomId, user_id: UserId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "DELETE FROM room_member WHERE room_id = $1 AND user_id = $2",
             *room_id,
             *user_id,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         info!("deleted room member");
         Ok(())
     }
 
     async fn room_member_list(
-        &self,
+        &mut self,
         room_id: RoomId,
         pagination: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<RoomMember>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_as!(
                 DbRoomMember,
                 r#"
@@ -272,7 +274,8 @@ impl DataRoomMember for Postgres {
         )
     }
 
-    async fn room_member_get(&self, room_id: RoomId, user_id: UserId) -> Result<RoomMember> {
+    async fn room_member_get(&mut self, room_id: RoomId, user_id: UserId) -> Result<RoomMember> {
+        let mut conn = self.acquire().await?;
         let item = query_as!(
             DbRoomMember,
             r#"
@@ -301,7 +304,7 @@ impl DataRoomMember for Postgres {
             *room_id,
             *user_id,
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => {
@@ -313,10 +316,11 @@ impl DataRoomMember for Postgres {
     }
 
     async fn room_member_get_many(
-        &self,
+        &mut self,
         room_id: RoomId,
         user_ids: &[UserId],
     ) -> Result<Vec<RoomMember>> {
+        let mut conn = self.acquire().await?;
         let user_ids: Vec<Uuid> = user_ids.iter().map(|id| id.into_inner()).collect();
         let items = query_as!(
             DbRoomMember,
@@ -346,19 +350,18 @@ impl DataRoomMember for Postgres {
             *room_id,
             &user_ids
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
         Ok(items.into_iter().map(Into::into).collect())
     }
 
     async fn room_member_patch(
-        &self,
+        &mut self,
         room_id: RoomId,
         user_id: UserId,
         patch: RoomMemberPatch,
     ) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let item = query_as!(
             DbRoomMember,
             r#"
@@ -387,7 +390,7 @@ impl DataRoomMember for Postgres {
             *room_id,
             *user_id,
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
         query!(
             r#"
@@ -408,18 +411,19 @@ impl DataRoomMember for Postgres {
                 .map(|t| t.map(|t| PrimitiveDateTime::new(t.date(), t.time())))
                 .unwrap_or(item.timeout_until),
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         Ok(())
     }
 
     async fn room_member_set_quarantined(
-        &self,
+        &mut self,
         room_id: RoomId,
         user_id: UserId,
         quarantined: bool,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"
             UPDATE room_member
@@ -430,12 +434,13 @@ impl DataRoomMember for Postgres {
             *user_id,
             quarantined
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn room_member_leave(&self, room_id: RoomId, user_id: UserId) -> Result<()> {
+    async fn room_member_leave(&mut self, room_id: RoomId, user_id: UserId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         // Remove non-sticky roles when leaving
         query!(
             r#"
@@ -449,7 +454,7 @@ impl DataRoomMember for Postgres {
             *user_id,
             *room_id,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
 
         query!(
@@ -461,18 +466,19 @@ impl DataRoomMember for Postgres {
             *room_id,
             *user_id,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn room_ban_create(
-        &self,
+        &mut self,
         room_id: RoomId,
         ban_id: UserId,
         reason: Option<String>,
         expires_at: Option<Time>,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"
             INSERT INTO room_ban (room_id, user_id, reason, created_at, expires_at)
@@ -485,25 +491,27 @@ impl DataRoomMember for Postgres {
             reason,
             expires_at.map(|t| PrimitiveDateTime::new(t.date(), t.time())),
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         info!("inserted room ban");
         Ok(())
     }
 
-    async fn room_ban_delete(&self, room_id: RoomId, ban_id: UserId) -> Result<()> {
+    async fn room_ban_delete(&mut self, room_id: RoomId, ban_id: UserId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "DELETE FROM room_ban WHERE room_id = $1 AND user_id = $2",
             *room_id,
             *ban_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         info!("deleted room ban");
         Ok(())
     }
 
-    async fn room_ban_get(&self, room_id: RoomId, ban_id: UserId) -> Result<RoomBan> {
+    async fn room_ban_get(&mut self, room_id: RoomId, ban_id: UserId) -> Result<RoomBan> {
+        let mut conn = self.acquire().await?;
         let row = query_as!(
             DbRoomBan,
             r#"
@@ -514,7 +522,7 @@ impl DataRoomMember for Postgres {
             *room_id,
             *ban_id
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => {
@@ -526,14 +534,14 @@ impl DataRoomMember for Postgres {
     }
 
     async fn room_ban_list(
-        &self,
+        &mut self,
         room_id: RoomId,
         paginate: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<RoomBan>> {
         let p: Pagination<_> = paginate.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_as!(
                 DbRoomBan,
                 r#"
@@ -555,7 +563,7 @@ impl DataRoomMember for Postgres {
     }
 
     async fn room_ban_search(
-        &self,
+        &mut self,
         room_id: RoomId,
         query: String,
         paginate: PaginationQuery<UserId>,
@@ -565,7 +573,7 @@ impl DataRoomMember for Postgres {
 
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_as!(
                 DbRoomBan,
                 r#"
@@ -598,12 +606,13 @@ impl DataRoomMember for Postgres {
     }
 
     async fn room_ban_create_bulk(
-        &self,
+        &mut self,
         room_id: RoomId,
         ban_ids: &[UserId],
         reason: Option<String>,
         expires_at: Option<Time>,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let ban_ids: Vec<Uuid> = ban_ids.iter().map(|id| id.into_inner()).collect();
         query!(
             r#"
@@ -618,21 +627,20 @@ impl DataRoomMember for Postgres {
             reason,
             expires_at.map(|t| PrimitiveDateTime::new(t.date(), t.time())),
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         info!("inserted room bans");
         Ok(())
     }
 
     async fn room_bot_list(
-        &self,
+        &mut self,
         room_id: RoomId,
         paginate: PaginationQuery<ApplicationId>,
     ) -> Result<PaginationResponse<ApplicationId>> {
         let p: Pagination<_> = paginate.try_into()?;
         gen_paginate!(
-            p,
-            self.pool,
+            p, self,
             query_scalar!(
                 r#"
                 SELECT user_id FROM room_member
@@ -651,7 +659,8 @@ impl DataRoomMember for Postgres {
         )
     }
 
-    async fn room_member_list_all(&self, room_id: RoomId) -> Result<Vec<RoomMember>> {
+    async fn room_member_list_all(&mut self, room_id: RoomId) -> Result<Vec<RoomMember>> {
+        let mut conn = self.acquire().await?;
         let items = query_as!(
             DbRoomMember,
             r#"
@@ -679,17 +688,18 @@ impl DataRoomMember for Postgres {
             "#,
             *room_id,
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
         Ok(items.into_iter().map(Into::into).collect())
     }
 
     async fn room_member_search(
-        &self,
+        &mut self,
         room_id: RoomId,
         query: String,
         limit: u16,
     ) -> Result<Vec<RoomMember>> {
+        let mut conn = self.acquire().await?;
         let query = format!("%{}%", query);
         let items = query_as!(
             DbRoomMember,
@@ -723,17 +733,18 @@ impl DataRoomMember for Postgres {
             query,
             limit as i64
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         Ok(items.into_iter().map(Into::into).collect())
     }
 
     async fn room_member_search_advanced(
-        &self,
+        &mut self,
         room_id: RoomId,
         search: RoomMemberSearchAdvanced,
     ) -> Result<RoomMemberSearchResponse> {
+        let mut conn = self.acquire().await?;
         let limit = search.limit.unwrap_or(10).min(1024);
         let query = search.query.map(|q| format!("%{}%", q));
         let role_ids: Vec<Uuid> = search.roles.iter().map(|r| r.into_inner()).collect();
@@ -756,7 +767,7 @@ impl DataRoomMember for Postgres {
             search.create_before.map(PrimitiveDateTime::from),
             search.create_after.map(PrimitiveDateTime::from)
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         let (room_members, users) = rows.into_iter().map(Into::into).unzip();

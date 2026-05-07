@@ -112,7 +112,7 @@ impl ServiceUsers {
         locked: bool,
     ) -> Result<(Channel, bool)> {
         let (user_id, other_id) = ensure_dm_canonical(user_id, other_id)?;
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
         let _lock = self.dm_lock.entry((user_id, other_id)).or_default();
         if let Some(thread_id) = data.dm_get(user_id, other_id).await? {

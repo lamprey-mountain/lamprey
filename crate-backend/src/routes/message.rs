@@ -51,7 +51,7 @@ async fn message_create(
         .await?;
 
     // automatically ack the channel for the user who sent the message
-    let data = s.data();
+    let mut data = s.data();
     data.unread_ack(
         auth.user.id,
         req.channel_id,
@@ -183,7 +183,7 @@ async fn message_delete(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
 
     let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
@@ -302,7 +302,7 @@ async fn message_version_delete(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
 
     let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
@@ -399,7 +399,7 @@ async fn message_moderate(
         return Ok(StatusCode::OK);
     }
 
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
 
     let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
@@ -562,7 +562,7 @@ async fn message_pin(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
 
@@ -673,7 +673,7 @@ async fn message_unpin(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if let Some(room_id) = thread.room_id {
@@ -755,7 +755,7 @@ async fn message_pins_reorder(
     auth.ensure_scopes(&[Scope::Full])?;
     req.reorder.validate()?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     if let Some(room_id) = thread.room_id {

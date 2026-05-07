@@ -558,7 +558,7 @@ async fn debug_ready(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<im
     perms.needs(Permission::Admin);
     perms.check()?;
 
-    let database_ok = s.data().check_database().await.is_ok();
+    let database_ok = s.database().check_database().await.is_ok();
 
     let object_store_ok = s.blobs.check().await.is_ok();
 

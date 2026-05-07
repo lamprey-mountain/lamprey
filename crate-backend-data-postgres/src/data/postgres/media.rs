@@ -108,8 +108,8 @@ impl From<DbMediaRaw> for MediaV1 {
 
 #[async_trait]
 impl DataMedia for Postgres {
-    async fn media_insert(&self, media: MediaV2) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+    async fn media_insert(&mut self, media: MediaV2) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
         let media_id = media.id;
         let user_id = media.user_id.expect("server always has user id");
 
@@ -130,14 +130,15 @@ impl DataMedia for Postgres {
             remote_origin_id,
             remote_hostname,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         info!("inserted media v2");
         Ok(())
     }
 
-    async fn media_select(&self, media_id: MediaId) -> Result<MediaV2> {
+    async fn media_select(&mut self, media_id: MediaId) -> Result<MediaV2> {
+        let mut conn = self.acquire().await?;
         let media = query_as!(
             DbMedia,
             r#"
@@ -147,7 +148,7 @@ impl DataMedia for Postgres {
         "#,
             *media_id,
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => {
@@ -177,7 +178,7 @@ impl DataMedia for Postgres {
         "#,
             *media_id,
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         parsed.links = links
@@ -228,8 +229,8 @@ impl DataMedia for Postgres {
         Ok(parsed)
     }
 
-    async fn media_update(&self, media_id: MediaId, patch: MediaPatchV2) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+    async fn media_update(&mut self, media_id: MediaId, patch: MediaPatchV2) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
         let mut media = query_as!(
             DbMedia,
             r#"
@@ -240,7 +241,7 @@ impl DataMedia for Postgres {
         "#,
             *media_id,
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         if media.deleted_at.is_some() {
@@ -271,7 +272,7 @@ impl DataMedia for Postgres {
             "#,
                 *media_id,
             )
-            .fetch_all(&mut *tx)
+            .fetch_all(tx.ext())
             .await?;
 
             if !links.is_empty() {
@@ -302,14 +303,14 @@ impl DataMedia for Postgres {
             media.data,
             Uuid::now_v7(),
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         Ok(())
     }
 
-    async fn media_replace(&self, media: MediaV2) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+    async fn media_replace(&mut self, media: MediaV2) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
         let media_id = media.id;
 
         let remote_origin_id = media.remote.as_ref().map(|r| r.origin_id);
@@ -329,25 +330,26 @@ impl DataMedia for Postgres {
             remote_origin_id,
             remote_hostname,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         info!("replaced media v2");
         Ok(())
     }
 
-    async fn media_delete(&self, media_id: MediaId) -> Result<()> {
+    async fn media_delete(&mut self, media_id: MediaId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "UPDATE media SET deleted_at = now() WHERE id = $1",
             *media_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn media_link_insert(
-        &self,
+        &mut self,
         media_id: MediaId,
         target_id: Uuid,
         link_type: MediaLinkType,
@@ -357,6 +359,7 @@ impl DataMedia for Postgres {
             return Err(Error::BadStatic("media not uploaded"));
         }
 
+        let mut conn = self.acquire().await?;
         query!(
             r#"
             INSERT INTO media_link (media_id, target_id, link_type)
@@ -367,12 +370,13 @@ impl DataMedia for Postgres {
             target_id,
             link_type as _
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn media_link_select(&self, media_id: MediaId) -> Result<Vec<MediaLink>> {
+    async fn media_link_select(&mut self, media_id: MediaId) -> Result<Vec<MediaLink>> {
+        let mut conn = self.acquire().await?;
         let links = query_as!(
             MediaLink,
             r#"
@@ -382,43 +386,45 @@ impl DataMedia for Postgres {
         "#,
             *media_id,
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
         Ok(links)
     }
 
-    async fn media_link_delete(&self, target_id: Uuid, link_type: MediaLinkType) -> Result<()> {
+    async fn media_link_delete(&mut self, target_id: Uuid, link_type: MediaLinkType) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "DELETE FROM media_link WHERE target_id = $1 AND link_type = $2",
             target_id,
             link_type as _
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn media_link_delete_all(&self, target_id: Uuid) -> Result<()> {
+    async fn media_link_delete_all(&mut self, target_id: Uuid) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!("DELETE FROM media_link WHERE target_id = $1", target_id)
-            .execute(&self.pool)
+            .execute(conn.ext())
             .await?;
         Ok(())
     }
 
     async fn media_link_create_exclusive(
-        &self,
+        &mut self,
         media_id: MediaId,
         target_id: Uuid,
         link_type: MediaLinkType,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         // Lock the media row to serialize access to linking this media
         let row = query!(
             "SELECT id, data FROM media WHERE id = $1 FOR UPDATE",
             media_id.into_inner()
         )
-        .fetch_optional(&mut *tx)
+        .fetch_optional(tx.ext())
         .await?
         .ok_or(Error::ApiError(ApiError::from_code(
             ErrorCode::UnknownMedia,
@@ -442,7 +448,7 @@ impl DataMedia for Postgres {
         "#,
             media_id.into_inner(),
         )
-        .fetch_all(&mut *tx)
+        .fetch_all(tx.ext())
         .await?;
 
         if !links.is_empty() {
@@ -458,15 +464,15 @@ impl DataMedia for Postgres {
             target_id,
             link_type as _
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
         Ok(())
     }
 
-    async fn media_migrate_batch(&self, limit: u32) -> Result<u64> {
-        let mut tx = self.pool.begin().await?;
+    async fn media_migrate_batch(&mut self, limit: u32) -> Result<u64> {
+        let mut tx = self.begin_tx().await?;
         let rows = query_as!(
             DbMediaWithId,
             r#"
@@ -478,7 +484,7 @@ impl DataMedia for Postgres {
             "#,
             limit as i64
         )
-        .fetch_all(&mut *tx)
+        .fetch_all(tx.ext())
         .await?;
 
         if rows.is_empty() {
@@ -499,7 +505,7 @@ impl DataMedia for Postgres {
             let data =
                 serde_json::to_value(&DbMediaData::V2(media)).expect("failed to serialize media");
             query!("update media set data = $1 where id = $2", data, *media_id)
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
             info!("migrate {}", media_id);
         }
@@ -508,10 +514,11 @@ impl DataMedia for Postgres {
     }
 
     async fn media_list_indexed(
-        &self,
+        &mut self,
         after_version_id: Option<MediaVerId>,
         limit: u32,
     ) -> Result<Vec<MediaV2>> {
+        let mut conn = self.acquire().await?;
         let rows = query_as!(
             DbMediaWithId,
             r#"
@@ -524,7 +531,7 @@ impl DataMedia for Postgres {
             after_version_id.map(|id| *id).unwrap_or(Uuid::nil()),
             limit as i64,
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         Ok(rows
@@ -551,10 +558,11 @@ impl DataMedia for Postgres {
     }
 
     async fn media_select_by_remote(
-        &self,
+        &mut self,
         hostname: &Hostname,
         origin_id: Uuid,
     ) -> Result<Option<MediaV2>> {
+        let mut conn = self.acquire().await?;
         let media = query_as!(
             DbMedia,
             r#"
@@ -566,7 +574,7 @@ impl DataMedia for Postgres {
             hostname.0,
             origin_id,
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
 
         let Some(media) = media else {

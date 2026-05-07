@@ -29,7 +29,7 @@ async fn thread_member_list(
     State(s): State<Arc<ServerState>>,
     req: routes::thread_member_list::Request,
 ) -> Result<impl IntoResponse> {
-    let d = s.data();
+    let mut d = s.data();
     s.services()
         .perms
         .for_channel3(Some(auth.user.id), req.thread_id)
@@ -48,7 +48,7 @@ async fn thread_member_get(
     req: routes::thread_member_get::Request,
 ) -> Result<impl IntoResponse> {
     let target_user_id = req.user_id.unwrap_or(auth.user.id);
-    let d = s.data();
+    let mut d = s.data();
     s.services()
         .perms
         .for_channel3(Some(auth.user.id), req.thread_id)
@@ -69,7 +69,7 @@ async fn thread_member_add(
     auth.user.ensure_unsuspended()?;
     // ThreadMemberPut is empty, no validation needed
     let target_user_id = req.user_id.unwrap_or(auth.user.id);
-    let d = s.data();
+    let mut d = s.data();
     let srv = s.services();
     let mut perms = srv
         .perms
@@ -188,7 +188,7 @@ async fn thread_member_delete(
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     let target_user_id = req.user_id.unwrap_or(auth.user.id);
-    let d = s.data();
+    let mut d = s.data();
     let srv = s.services();
     let mut perms = srv
         .perms
@@ -277,7 +277,7 @@ async fn thread_list(
     State(s): State<Arc<ServerState>>,
     req: routes::thread_list::Request,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
     let perms = srv
         .perms
@@ -305,7 +305,7 @@ async fn thread_list_archived(
     State(s): State<Arc<ServerState>>,
     req: routes::thread_list_archived::Request,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
     let perms = srv
         .perms
@@ -333,7 +333,7 @@ async fn thread_list_removed(
     State(s): State<Arc<ServerState>>,
     req: routes::thread_list_removed::Request,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
     let mut perms = srv
         .perms

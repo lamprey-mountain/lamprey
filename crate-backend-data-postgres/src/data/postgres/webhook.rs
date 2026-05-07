@@ -4,7 +4,7 @@ use common::v1::types::{
     webhook::{Webhook, WebhookCreate, WebhookUpdate},
     ChannelId, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId, WebhookId,
 };
-use sqlx::Acquire;
+
 use uuid::Uuid;
 
 use crate::{
@@ -28,18 +28,18 @@ struct DbWebhook {
 #[async_trait]
 impl DataWebhook for Postgres {
     async fn webhook_create(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         creator_id: UserId,
         create: WebhookCreate,
     ) -> Result<Webhook> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         let count: i64 = sqlx::query_scalar!(
             "SELECT count(*) FROM webhook w JOIN usr u ON w.id = u.id WHERE w.channel_id = $1 AND u.deleted_at IS NULL",
             *channel_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?
         .unwrap_or(0);
 
@@ -65,7 +65,7 @@ impl DataWebhook for Postgres {
             Option::<String>::None,
             create.avatar.map(|i| *i)
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         if let Some(avatar_id) = create.avatar {
@@ -74,7 +74,7 @@ impl DataWebhook for Postgres {
                 *avatar_id,
                 *webhook_id
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
 
@@ -90,7 +90,7 @@ impl DataWebhook for Postgres {
             *channel_id,
             *creator_id
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -98,7 +98,8 @@ impl DataWebhook for Postgres {
         self.webhook_get(webhook_id).await
     }
 
-    async fn webhook_get(&self, webhook_id: WebhookId) -> Result<Webhook> {
+    async fn webhook_get(&mut self, webhook_id: WebhookId) -> Result<Webhook> {
+        let mut conn = self.acquire().await?;
         let row = sqlx::query!(
             r#"
             SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.token, w.creator_id
@@ -109,7 +110,7 @@ impl DataWebhook for Postgres {
             "#,
             *webhook_id
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => {
@@ -129,7 +130,12 @@ impl DataWebhook for Postgres {
         })
     }
 
-    async fn webhook_get_with_token(&self, webhook_id: WebhookId, token: &str) -> Result<Webhook> {
+    async fn webhook_get_with_token(
+        &mut self,
+        webhook_id: WebhookId,
+        token: &str,
+    ) -> Result<Webhook> {
+        let mut conn = self.acquire().await?;
         let row = sqlx::query!(
             r#"
             SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.token, w.creator_id
@@ -141,7 +147,7 @@ impl DataWebhook for Postgres {
             *webhook_id,
             token
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => {
@@ -162,15 +168,14 @@ impl DataWebhook for Postgres {
     }
 
     async fn webhook_list_channel(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         pagination: PaginationQuery<WebhookId>,
     ) -> Result<PaginationResponse<Webhook>> {
         let p: Pagination<_> = pagination.try_into()?;
 
         gen_paginate!(
-            p,
-            self.pool,
+            p, self,
             sqlx::query_as!(
                 DbWebhook,
                 r#"
@@ -205,15 +210,14 @@ impl DataWebhook for Postgres {
     }
 
     async fn webhook_list_room(
-        &self,
+        &mut self,
         room_id: RoomId,
         pagination: PaginationQuery<WebhookId>,
     ) -> Result<PaginationResponse<Webhook>> {
         let p: Pagination<_> = pagination.try_into()?;
 
         gen_paginate!(
-            p,
-            self.pool,
+            p, self,
             sqlx::query_as!(
                 DbWebhook,
                 r#"
@@ -247,12 +251,16 @@ impl DataWebhook for Postgres {
         )
     }
 
-    async fn webhook_update(&self, webhook_id: WebhookId, patch: WebhookUpdate) -> Result<Webhook> {
-        let mut tx = self.pool.begin().await?;
+    async fn webhook_update(
+        &mut self,
+        webhook_id: WebhookId,
+        patch: WebhookUpdate,
+    ) -> Result<Webhook> {
+        let mut tx = self.begin_tx().await?;
 
         if let Some(name) = patch.name {
             sqlx::query!("UPDATE usr SET name = $1 WHERE id = $2", name, *webhook_id)
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
         }
         if let Some(avatar) = patch.avatar {
@@ -260,18 +268,18 @@ impl DataWebhook for Postgres {
                 "DELETE FROM media_link WHERE target_id = $1 AND link_type = 'UserAvatar'",
                 *webhook_id
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
             if let Some(avatar_id) = avatar {
                 sqlx::query!("INSERT INTO media_link (media_id, target_id, link_type) VALUES ($1, $2, 'UserAvatar')", *avatar_id, *webhook_id)
-                    .execute(&mut *tx).await?;
+                    .execute(tx.ext()).await?;
             }
             sqlx::query!(
                 "UPDATE usr SET avatar = $1 WHERE id = $2",
                 avatar.map(|i| *i),
                 *webhook_id
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
         if let Some(channel_id) = patch.channel_id {
@@ -284,7 +292,7 @@ impl DataWebhook for Postgres {
                 "#,
                 *webhook_id
             )
-            .fetch_optional(&mut *tx)
+            .fetch_optional(tx.ext())
             .await?
             .ok_or(Error::ApiError(ApiError::from_code(
                 ErrorCode::UnknownWebhook,
@@ -292,7 +300,7 @@ impl DataWebhook for Postgres {
 
             let new_channel_room =
                 sqlx::query!("SELECT room_id FROM channel WHERE id = $1", *channel_id)
-                    .fetch_optional(&mut *tx)
+                    .fetch_optional(tx.ext())
                     .await?
                     .ok_or(Error::ApiError(ApiError::from_code(
                         ErrorCode::UnknownWebhook,
@@ -309,7 +317,7 @@ impl DataWebhook for Postgres {
                 *channel_id,
                 *webhook_id
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
         if patch.rotate_token {
@@ -319,7 +327,7 @@ impl DataWebhook for Postgres {
                 token,
                 *webhook_id
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
 
@@ -328,12 +336,12 @@ impl DataWebhook for Postgres {
     }
 
     async fn webhook_update_with_token(
-        &self,
+        &mut self,
         webhook_id: WebhookId,
         token: &str,
         patch: WebhookUpdate,
     ) -> Result<Webhook> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         let res = sqlx::query!(
             "SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.token, w.creator_id
@@ -344,7 +352,7 @@ impl DataWebhook for Postgres {
             *webhook_id,
             token
         )
-        .fetch_optional(&mut *tx)
+        .fetch_optional(tx.ext())
         .await?;
 
         let original = match res {
@@ -358,7 +366,7 @@ impl DataWebhook for Postgres {
 
         if let Some(name) = &patch.name {
             sqlx::query!("UPDATE usr SET name = $1 WHERE id = $2", name, *webhook_id)
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
         }
         if let Some(avatar) = patch.avatar {
@@ -366,25 +374,25 @@ impl DataWebhook for Postgres {
                 "DELETE FROM media_link WHERE target_id = $1 AND link_type = 'UserAvatar'",
                 *webhook_id
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
             if let Some(avatar_id) = avatar {
                 sqlx::query!("INSERT INTO media_link (media_id, target_id, link_type) VALUES ($1, $2, 'UserAvatar')", *avatar_id, *webhook_id)
-                    .execute(&mut *tx).await?;
+                    .execute(tx.ext()).await?;
             }
             sqlx::query!(
                 "UPDATE usr SET avatar = $1 WHERE id = $2",
                 avatar.map(|i| *i),
                 *webhook_id
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
         if let Some(channel_id) = patch.channel_id {
             // Get the room of the new channel
             let new_channel_room =
                 sqlx::query!("SELECT room_id FROM channel WHERE id = $1", *channel_id)
-                    .fetch_optional(&mut *tx)
+                    .fetch_optional(tx.ext())
                     .await?
                     .ok_or(Error::ApiError(ApiError::from_code(
                         ErrorCode::UnknownChannel,
@@ -402,7 +410,7 @@ impl DataWebhook for Postgres {
                 *channel_id,
                 *webhook_id
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
         let new_token = if patch.rotate_token {
@@ -412,7 +420,7 @@ impl DataWebhook for Postgres {
                 new_token,
                 *webhook_id
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
             Some(new_token)
         } else {
@@ -444,7 +452,8 @@ impl DataWebhook for Postgres {
         })
     }
 
-    async fn webhook_delete(&self, webhook_id: WebhookId) -> Result<()> {
+    async fn webhook_delete(&mut self, webhook_id: WebhookId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let now = time::OffsetDateTime::now_utc();
         let now = time::PrimitiveDateTime::new(now.date(), now.time());
         sqlx::query!(
@@ -452,19 +461,23 @@ impl DataWebhook for Postgres {
             *webhook_id,
             now
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn webhook_delete_with_token(&self, webhook_id: WebhookId, token: &str) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+    async fn webhook_delete_with_token(
+        &mut self,
+        webhook_id: WebhookId,
+        token: &str,
+    ) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
         let res = sqlx::query!(
             "SELECT id FROM webhook WHERE id = $1 AND token = $2",
             *webhook_id,
             token
         )
-        .fetch_optional(&mut *tx)
+        .fetch_optional(tx.ext())
         .await?;
         if res.is_none() {
             return Err(Error::ApiError(ApiError::from_code(
@@ -479,7 +492,7 @@ impl DataWebhook for Postgres {
             *webhook_id,
             now
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         Ok(())

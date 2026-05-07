@@ -11,7 +11,8 @@ use super::Postgres;
 
 #[async_trait]
 impl DataConfigInternal for Postgres {
-    async fn config_put(&self, config: ConfigInternal) -> Result<()> {
+    async fn config_put(&mut self, config: ConfigInternal) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "INSERT INTO config_internal (key, vapid_private_key, vapid_public_key, oidc_jwk_key, admin_token, federation_keys)
              VALUES ('main', $1, $2, $3, $4, $5)
@@ -27,17 +28,18 @@ impl DataConfigInternal for Postgres {
             config.admin_token,
             serde_json::to_value(&config.federation_keys)?,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn config_get(&self) -> Result<Option<ConfigInternal>> {
+    async fn config_get(&mut self) -> Result<Option<ConfigInternal>> {
+        let mut conn = self.acquire().await?;
         let row = query!(
             "SELECT vapid_private_key, vapid_public_key, oidc_jwk_key, admin_token, federation_keys
              FROM config_internal WHERE key = 'main'"
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
 
         if let Some(row) = row {

@@ -4,7 +4,7 @@ use common::v1::types::{
     ChannelId, MessageId, PaginationDirection, PaginationQuery, PaginationResponse,
 };
 use serde::Deserialize;
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_as, query_scalar};
 use tracing::debug;
 use uuid::Uuid;
 
@@ -20,14 +20,14 @@ use super::Postgres;
 #[async_trait]
 impl DataReaction for Postgres {
     async fn reaction_put(
-        &self,
+        &mut self,
         user_id: UserId,
         channel_id: ChannelId,
         message_id: MessageId,
         key: ReactionKeyParam,
     ) -> Result<()> {
         debug!("reaction put user_id={user_id} message_id={message_id} key={key:?}");
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let key_str = key.to_string();
 
         let key_exists: bool = query_scalar!(
@@ -35,7 +35,7 @@ impl DataReaction for Postgres {
             *message_id,
             &key_str
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?
         .unwrap_or(false);
 
@@ -45,7 +45,7 @@ impl DataReaction for Postgres {
                 "SELECT count(DISTINCT key) FROM reaction WHERE message_id = $1 AND deleted_seq IS NULL",
                 *message_id
             )
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.ext())
             .await?
             .unwrap_or(0);
 
@@ -61,7 +61,7 @@ impl DataReaction for Postgres {
                 r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
                 *channel_id
             )
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.ext())
             .await?;
 
             // Check if this specific user+message+key was previously deleted (soft delete)
@@ -72,7 +72,7 @@ impl DataReaction for Postgres {
                 *user_id,
                 &key_str
             )
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.ext())
             .await?
             .unwrap_or(false);
 
@@ -88,7 +88,7 @@ impl DataReaction for Postgres {
                     key_str,
                     new_seq,
                 )
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
             } else {
                 query!(
@@ -109,7 +109,7 @@ impl DataReaction for Postgres {
                     key_str,
                     new_seq,
                 )
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
             }
         }
@@ -119,14 +119,14 @@ impl DataReaction for Postgres {
     }
 
     async fn reaction_delete(
-        &self,
+        &mut self,
         user_id: UserId,
         channel_id: ChannelId,
         message_id: MessageId,
         key: ReactionKeyParam,
     ) -> Result<()> {
         debug!("reaction delete user_id={user_id} message_id={message_id} key={key:?}");
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let key = key.to_string();
 
         // Atomically increment seq
@@ -134,7 +134,7 @@ impl DataReaction for Postgres {
             r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
             *channel_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         // Soft delete by setting deleted_seq
@@ -149,7 +149,7 @@ impl DataReaction for Postgres {
             key,
             new_seq,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -157,7 +157,7 @@ impl DataReaction for Postgres {
     }
 
     async fn reaction_list(
-        &self,
+        &mut self,
         _channel_id: ChannelId,
         message_id: MessageId,
         key: ReactionKeyParam,
@@ -168,7 +168,7 @@ impl DataReaction for Postgres {
 
         gen_paginate!(
             p,
-            self.pool,
+            self,
             {
                 query_as!(
                     ReactionListItem,
@@ -195,12 +195,12 @@ impl DataReaction for Postgres {
     }
 
     async fn reaction_delete_key(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         message_id: MessageId,
         key: ReactionKeyParam,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let key = key.to_string();
 
         // Atomically increment seq
@@ -208,7 +208,7 @@ impl DataReaction for Postgres {
             r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
             *channel_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         // Soft delete all reactions with this key
@@ -218,7 +218,7 @@ impl DataReaction for Postgres {
             key,
             new_seq,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -226,18 +226,18 @@ impl DataReaction for Postgres {
     }
 
     async fn reaction_delete_all(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         message_id: MessageId,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         // Atomically increment seq
         let new_seq: i64 = query_scalar!(
             r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
             *channel_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         // Soft delete all reactions for this message
@@ -246,7 +246,7 @@ impl DataReaction for Postgres {
             *message_id,
             new_seq,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -255,11 +255,12 @@ impl DataReaction for Postgres {
 
     // TODO: refactor to make this code less horrible
     async fn reaction_fetch_all(
-        &self,
+        &mut self,
         _channel_id: ChannelId,
         user_id: UserId,
         messages: &[MessageId],
     ) -> Result<Vec<(MessageId, Vec<(ReactionKeyParam, u64, bool)>)>> {
+        let mut conn = self.acquire().await?;
         let message_ids: Vec<Uuid> = messages.iter().map(|id| id.into_inner()).collect();
         let reactions = query!(r#"
             with reaction_counts as (
@@ -281,7 +282,7 @@ impl DataReaction for Postgres {
             *user_id,
             &message_ids,
         )
-            .fetch_all(&self.pool)
+            .fetch_all(conn.ext())
             .await?;
 
         #[derive(Deserialize)]

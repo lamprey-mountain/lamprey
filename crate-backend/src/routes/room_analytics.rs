@@ -24,7 +24,7 @@ async fn room_analytics_members_count(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
 
     let mut perms = srv
         .perms

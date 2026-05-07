@@ -62,10 +62,11 @@ fn aggregate_points<T: Clone + Send>(
 #[async_trait]
 impl DataRoomAnalytics for Postgres {
     async fn room_analytics_members_count(
-        &self,
+        &mut self,
         room_id: RoomId,
         q: RoomAnalyticsParams,
     ) -> Result<Vec<RoomAnalyticsMembersCount>> {
+        let mut conn = self.acquire().await?;
         let start_time: Option<PrimitiveDateTime> = q.start.map(|t| t.into());
         let end_time: Option<PrimitiveDateTime> = q.end.map(|t| t.into());
 
@@ -75,7 +76,7 @@ impl DataRoomAnalytics for Postgres {
             start_time,
             end_time
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?
         .into_iter()
         .map(|p| RoomAnalyticsMembersCount {
@@ -88,10 +89,11 @@ impl DataRoomAnalytics for Postgres {
     }
 
     async fn room_analytics_members_join(
-        &self,
+        &mut self,
         room_id: RoomId,
         q: RoomAnalyticsParams,
     ) -> Result<Vec<RoomAnalyticsMembersJoin>> {
+        let mut conn = self.acquire().await?;
         let start_time: Option<PrimitiveDateTime> = q.start.map(|t| t.into());
         let end_time: Option<PrimitiveDateTime> = q.end.map(|t| t.into());
 
@@ -101,7 +103,7 @@ impl DataRoomAnalytics for Postgres {
             start_time,
             end_time
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?
         .into_iter()
         .map(|p| RoomAnalyticsMembersJoin {
@@ -114,10 +116,11 @@ impl DataRoomAnalytics for Postgres {
     }
 
     async fn room_analytics_members_leave(
-        &self,
+        &mut self,
         room_id: RoomId,
         q: RoomAnalyticsParams,
     ) -> Result<Vec<RoomAnalyticsMembersLeave>> {
+        let mut conn = self.acquire().await?;
         let start_time: Option<PrimitiveDateTime> = q.start.map(|t| t.into());
         let end_time: Option<PrimitiveDateTime> = q.end.map(|t| t.into());
 
@@ -127,7 +130,7 @@ impl DataRoomAnalytics for Postgres {
             start_time,
             end_time
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?
         .into_iter()
         .map(|p| RoomAnalyticsMembersLeave {
@@ -140,11 +143,12 @@ impl DataRoomAnalytics for Postgres {
     }
 
     async fn room_analytics_channels(
-        &self,
+        &mut self,
         room_id: RoomId,
         q: RoomAnalyticsParams,
         q2: RoomAnalyticsChannelParams,
     ) -> Result<Vec<RoomAnalyticsChannel>> {
+        let mut conn = self.acquire().await?;
         let start_time: Option<PrimitiveDateTime> = q.start.map(|t| t.into());
         let end_time: Option<PrimitiveDateTime> = q.end.map(|t| t.into());
 
@@ -158,7 +162,7 @@ impl DataRoomAnalytics for Postgres {
             start_time,
             end_time
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?
         .into_iter()
         .map(|p| RoomAnalyticsChannel {
@@ -174,10 +178,11 @@ impl DataRoomAnalytics for Postgres {
     }
 
     async fn room_analytics_overview(
-        &self,
+        &mut self,
         room_id: RoomId,
         q: RoomAnalyticsParams,
     ) -> Result<Vec<RoomAnalyticsOverview>> {
+        let mut conn = self.acquire().await?;
         let start_time: Option<PrimitiveDateTime> = q.start.map(|t| t.into());
         let end_time: Option<PrimitiveDateTime> = q.end.map(|t| t.into());
 
@@ -191,7 +196,7 @@ impl DataRoomAnalytics for Postgres {
             start_time,
             end_time
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?
         .into_iter()
         .map(|p| RoomAnalyticsOverview {
@@ -206,15 +211,15 @@ impl DataRoomAnalytics for Postgres {
     }
 
     async fn room_analytics_invites(
-        &self,
+        &mut self,
         _room_id: RoomId,
         _q: RoomAnalyticsParams,
     ) -> Result<Vec<RoomAnalyticsInvites>> {
         todo!()
     }
 
-    async fn room_analytics_snapshot_all(&self) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+    async fn room_analytics_snapshot_all(&mut self) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
 
         // snapshot channel metrics
         query!(
@@ -265,12 +270,12 @@ impl DataRoomAnalytics for Postgres {
                 media_size = EXCLUDED.media_size;
             "#,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         // snapshot room metrics
         let last_ts = query_scalar!("SELECT max(ts) FROM metric_room")
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.ext())
             .await?
             .unwrap_or_else(|| {
                 let epoch = OffsetDateTime::UNIX_EPOCH;
@@ -321,7 +326,7 @@ impl DataRoomAnalytics for Postgres {
             "#,
             last_ts
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         // TODO: snapshot invite metrics
@@ -331,9 +336,12 @@ impl DataRoomAnalytics for Postgres {
         Ok(())
     }
 
-    async fn room_analytics_get_last_snapshot_ts(&self) -> Result<Option<time::PrimitiveDateTime>> {
+    async fn room_analytics_get_last_snapshot_ts(
+        &mut self,
+    ) -> Result<Option<time::PrimitiveDateTime>> {
+        let mut conn = self.acquire().await?;
         let ts = query_scalar!("SELECT max(ts) FROM metric_room")
-            .fetch_one(&self.pool)
+            .fetch_one(conn.ext())
             .await?;
         Ok(ts)
     }

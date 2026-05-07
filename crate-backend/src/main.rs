@@ -17,6 +17,7 @@ use common::v1::types::{
 use figment::providers::{Env, Format, Toml};
 use http::{header, HeaderName};
 use lamprey_backend_core::types::admin::AdminCollectGarbageMode;
+use lamprey_backend_data_postgres::data::Data2;
 use opendal::layers::LoggingLayer;
 use opentelemetry_otlp::WithExportConfig;
 use sqlx::postgres::PgPoolOptions;
@@ -291,12 +292,13 @@ async fn main() -> Result<()> {
 
     let state = Arc::new(ServerState::init(config, pool, blobs, nats).await);
 
-    state.data().migrate().await?;
+    state.database.migrate().await?;
 
     let srv = state.services();
-    let data = state.data();
 
-    if data.config_get().await?.is_none() {
+    // setup internal vapid config
+    let mut txn = state.acquire_data().await?;
+    if txn.config_get().await?.is_none() {
         info!("initializing internal config");
         let (keypair, _) = ece::generate_keypair_and_auth_secret()
             .map_err(|e| Error::Internal(format!("VAPID key generation failed: {}", e)))?;
@@ -317,7 +319,7 @@ async fn main() -> Result<()> {
         jwk.key_id = Some(nanoid::nanoid!());
         jwk.key_use = Some(jsonwebkey::KeyUse::Signing);
 
-        data.config_put(config::ConfigInternal {
+        txn.config_put(config::ConfigInternal {
             vapid_private_key,
             vapid_public_key,
             oidc_jwk_key: serde_json::to_string(&jwk)?,
@@ -326,9 +328,12 @@ async fn main() -> Result<()> {
         })
         .await?;
     }
+    txn.commit().await?;
 
-    if data.user_get(SERVER_USER_ID).await.is_err() {
-        data.user_create(DbUserCreate {
+    // setup server room
+    let mut txn = state.acquire_data().await?;
+    if txn.user_get(SERVER_USER_ID).await.is_err() {
+        txn.user_create(DbUserCreate {
             id: Some(SERVER_USER_ID),
             parent_id: None,
             name: "root".to_string(),
@@ -339,7 +344,7 @@ async fn main() -> Result<()> {
         })
         .await?;
     }
-    if data.room_get(SERVER_ROOM_ID).await.is_err() {
+    if txn.room_get(SERVER_ROOM_ID).await.is_err() {
         srv.rooms
             .create_system(
                 RoomCreate {
@@ -358,6 +363,7 @@ async fn main() -> Result<()> {
             )
             .await?;
     }
+    txn.commit().await?;
 
     match &args.command {
         cli::Command::Serve {} => serve(state).await?,
@@ -370,10 +376,13 @@ async fn main() -> Result<()> {
         cli::Command::GcRoomAnalytics {} => gc_room_analytics(state).await?,
         cli::Command::GcAll {} => gc_all(state).await?,
         cli::Command::Register { user_id, reason } => {
-            data.user_set_registered(*user_id, Some(Time::now_utc()), None)
+            let mut txn = state.acquire_data().await?;
+            txn.user_set_registered(*user_id, Some(Time::now_utc()), None)
                 .await?;
-            data.room_member_put(SERVER_ROOM_ID, *user_id, None, RoomMemberPut::default())
+            txn.room_member_put(SERVER_ROOM_ID, *user_id, None, RoomMemberPut::default())
                 .await?;
+            // TODO: append audit log in same txn
+            // only broadcast on successful commit
             state
                 .audit_log_append(AuditLogEntry {
                     id: AuditLogEntryId::new(),
@@ -390,21 +399,24 @@ async fn main() -> Result<()> {
                     application_id: None,
                 })
                 .await?;
+            txn.commit().await?;
             // TODO: invalidate cache
             // right now i'd need to restart backend or it would think the user is still a guest
             info!("registered!");
         }
         cli::Command::MakeAdmin { user_id } => {
-            data.room_member_put(
+            let mut txn = state.acquire_data().await?;
+            txn.room_member_put(
                 SERVER_ROOM_ID,
                 *user_id,
                 None,
                 types::RoomMemberPut::default(),
             )
             .await?;
-            let roles = data.role_list(SERVER_ROOM_ID).await?;
-            data.role_member_put(SERVER_ROOM_ID, *user_id, roles[1].id)
+            let roles = txn.role_list(SERVER_ROOM_ID).await?;
+            txn.role_member_put(SERVER_ROOM_ID, *user_id, roles[1].id)
                 .await?;
+            txn.commit().await?;
         }
     }
 

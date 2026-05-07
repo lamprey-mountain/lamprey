@@ -5,7 +5,7 @@ use common::v1::types::{
     ThreadMemberPut, UserId,
 };
 use lamprey_backend_core::Error;
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_as, query_scalar};
 use tracing::info;
 use uuid::Uuid;
 
@@ -37,11 +37,12 @@ impl From<DbThreadMember> for ThreadMember {
 #[async_trait]
 impl DataThreadMember for Postgres {
     async fn thread_member_put(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         user_id: UserId,
         _put: ThreadMemberPut,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"
             INSERT INTO thread_member (user_id, channel_id, membership, joined_at)
@@ -58,13 +59,14 @@ impl DataThreadMember for Postgres {
             *channel_id,
             DbMembership::Join as _,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         info!("inserted thread member");
         Ok(())
     }
 
-    async fn thread_member_leave(&self, channel_id: ChannelId, user_id: UserId) -> Result<()> {
+    async fn thread_member_leave(&mut self, channel_id: ChannelId, user_id: UserId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"
             UPDATE thread_member
@@ -74,28 +76,30 @@ impl DataThreadMember for Postgres {
             *channel_id,
             *user_id,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn thread_member_delete(&self, channel_id: ChannelId, user_id: UserId) -> Result<()> {
+    async fn thread_member_delete(&mut self, channel_id: ChannelId, user_id: UserId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "DELETE FROM thread_member WHERE channel_id = $1 AND user_id = $2",
             *channel_id,
             *user_id,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         info!("deleted thread member");
         Ok(())
     }
 
     async fn thread_member_get(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         user_id: UserId,
     ) -> Result<ThreadMember> {
+        let mut conn = self.acquire().await?;
         let item = query_as!(
             DbThreadMember,
             r#"
@@ -110,7 +114,7 @@ impl DataThreadMember for Postgres {
             *channel_id,
             *user_id,
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => {
@@ -122,10 +126,11 @@ impl DataThreadMember for Postgres {
     }
 
     async fn thread_member_get_many(
-        &self,
+        &mut self,
         thread_id: ChannelId,
         user_ids: &[UserId],
     ) -> Result<Vec<ThreadMember>> {
+        let mut conn = self.acquire().await?;
         let user_ids: Vec<Uuid> = user_ids.iter().map(|id| id.into_inner()).collect();
         let items = query_as!(
             DbThreadMember,
@@ -141,20 +146,20 @@ impl DataThreadMember for Postgres {
             *thread_id,
             &user_ids
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
         Ok(items.into_iter().map(Into::into).collect())
     }
 
     async fn thread_member_list(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         pagination: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<ThreadMember>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_as!(
                 DbThreadMember,
                 r#"
@@ -181,7 +186,8 @@ impl DataThreadMember for Postgres {
         )
     }
 
-    async fn thread_member_list_all(&self, channel_id: ChannelId) -> Result<Vec<ThreadMember>> {
+    async fn thread_member_list_all(&mut self, channel_id: ChannelId) -> Result<Vec<ThreadMember>> {
+        let mut conn = self.acquire().await?;
         let items = query_as!(
             DbThreadMember,
             r#"
@@ -195,16 +201,17 @@ impl DataThreadMember for Postgres {
             "#,
             *channel_id,
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
         Ok(items.into_iter().map(Into::into).collect())
     }
 
     async fn thread_member_bulk_fetch(
-        &self,
+        &mut self,
         user_id: UserId,
         thread_ids: &[ChannelId],
     ) -> Result<Vec<(ChannelId, ThreadMember)>> {
+        let mut conn = self.acquire().await?;
         let thread_uuids: Vec<Uuid> = thread_ids.iter().map(|id| id.into_inner()).collect();
         if thread_uuids.is_empty() {
             return Ok(vec![]);
@@ -223,7 +230,7 @@ impl DataThreadMember for Postgres {
             user_id.into_inner(),
             &thread_uuids
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         let result = items

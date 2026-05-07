@@ -9,7 +9,7 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::misc::Color;
 use common::v1::types::util::Time;
 use common::v1::types::{ChannelReorder, RoomVerId};
-use sqlx::{query, query_file_as, query_scalar, Acquire};
+use sqlx::{query, query_file_as, query_scalar};
 use time::PrimitiveDateTime;
 use tracing::{info, warn};
 
@@ -26,25 +26,25 @@ use super::{Pagination, Postgres};
 
 #[async_trait]
 impl DataChannel for Postgres {
-    async fn channel_create(&self, create: DbChannelCreate) -> Result<ChannelId> {
+    async fn channel_create(&mut self, create: DbChannelCreate) -> Result<ChannelId> {
         let channel_id = ChannelId::new();
         self.channel_create_with_id(channel_id, create).await?;
         Ok(channel_id)
     }
 
     async fn channel_create_with_id(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         create: DbChannelCreate,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         if let Some(room_id) = create.room_id {
             let count: i64 = query_scalar!(
                 "SELECT count(*) FROM channel WHERE room_id = $1 AND archived_at IS NULL AND deleted_at IS NULL",
                 room_id
             )
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.ext())
             .await?
             .unwrap_or(0);
 
@@ -84,7 +84,7 @@ impl DataChannel for Postgres {
             create.locked,
             &[],
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         if let Some(tags) = &create.tags {
@@ -95,7 +95,7 @@ impl DataChannel for Postgres {
                     channel_id.into_inner(),
                     &tag_ids
                 )
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
             }
         }
@@ -105,9 +105,10 @@ impl DataChannel for Postgres {
         Ok(())
     }
 
-    async fn channel_get(&self, channel_id: ChannelId) -> Result<Channel> {
+    async fn channel_get(&mut self, channel_id: ChannelId) -> Result<Channel> {
+        let mut conn = self.acquire().await?;
         let thread = query_file_as!(DbChannel, "sql/channel_get.sql", channel_id.into_inner())
-            .fetch_one(&self.pool)
+            .fetch_one(conn.ext())
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => {
@@ -118,23 +119,25 @@ impl DataChannel for Postgres {
         Ok(thread.into())
     }
 
-    async fn channel_get_many(&self, channel_ids: &[ChannelId]) -> Result<Vec<Channel>> {
+    async fn channel_get_many(&mut self, channel_ids: &[ChannelId]) -> Result<Vec<Channel>> {
+        let mut conn = self.acquire().await?;
         let ids: Vec<uuid::Uuid> = channel_ids.iter().map(|id| id.into_inner()).collect();
         let threads = query_file_as!(DbChannel, "sql/channel_get_many.sql", &ids)
-            .fetch_all(&self.pool)
+            .fetch_all(conn.ext())
             .await?;
         Ok(threads.into_iter().map(Into::into).collect())
     }
 
-    async fn channel_list(&self, room_id: RoomId) -> Result<Vec<Channel>> {
+    async fn channel_list(&mut self, room_id: RoomId) -> Result<Vec<Channel>> {
+        let mut conn = self.acquire().await?;
         let channels = query_file_as!(DbChannel, "sql/channel_list.sql", *room_id)
-            .fetch_all(&self.pool)
+            .fetch_all(conn.ext())
             .await?;
         Ok(channels.into_iter().map(Into::into).collect())
     }
 
     async fn channel_list_removed(
-        &self,
+        &mut self,
         room_id: RoomId,
         pagination: PaginationQuery<ChannelId>,
         parent_id: Option<ChannelId>,
@@ -142,7 +145,7 @@ impl DataChannel for Postgres {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_file_as!(
                 DbChannel,
                 "sql/channel_paginate_removed.sql",
@@ -163,29 +166,30 @@ impl DataChannel for Postgres {
     }
 
     async fn channel_get_private(
-        &self,
+        &mut self,
         thread_id: ChannelId,
         user_id: UserId,
     ) -> Result<DbChannelPrivate> {
+        let mut conn = self.acquire().await?;
         let thread_private = query_file_as!(
             DbChannelPrivate,
             "sql/channel_get_private.sql",
             *thread_id,
             *user_id,
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
         Ok(thread_private)
     }
 
     async fn channel_update(
-        &self,
+        &mut self,
         thread_id: ChannelId,
         patch: ChannelPatch,
     ) -> Result<ChannelVerId> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let db_chan = query_file_as!(DbChannel, "sql/channel_get.sql", *thread_id)
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.ext())
             .await?;
         let mut last_activity_at = db_chan.last_activity_at;
         let thread: Channel = db_chan.into();
@@ -196,7 +200,7 @@ impl DataChannel for Postgres {
                     "SELECT count(*) FROM channel WHERE room_id = $1 AND archived_at IS NULL AND deleted_at IS NULL",
                     *room_id
                 )
-                .fetch_one(&mut *tx)
+                .fetch_one(tx.ext())
                 .await?
                 .unwrap_or(0);
 
@@ -214,7 +218,7 @@ impl DataChannel for Postgres {
                 "DELETE FROM channel_tag WHERE channel_id = $1",
                 thread_id.into_inner()
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
 
             if !tags.is_empty() {
@@ -224,7 +228,7 @@ impl DataChannel for Postgres {
                     thread_id.into_inner(),
                     &tag_ids
                 )
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
             }
         }
@@ -340,7 +344,7 @@ impl DataChannel for Postgres {
             locked_until,
             &locked_roles,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         if let Some(ref document_patch) = patch.document {
@@ -348,7 +352,7 @@ impl DataChannel for Postgres {
                 "SELECT EXISTS(SELECT 1 FROM channel_document WHERE channel_id = $1)",
                 thread_id.into_inner()
             )
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.ext())
             .await?
             .unwrap_or(false);
 
@@ -357,12 +361,12 @@ impl DataChannel for Postgres {
                     "INSERT INTO channel_document (channel_id) VALUES ($1)",
                     *thread_id
                 )
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
             }
 
-            self.channel_document_update_impl(&mut tx, thread_id, document_patch)
-                .await?;
+            // reborrow tx
+            Postgres::channel_document_update_impl(&mut *tx, thread_id, document_patch).await?;
         }
 
         if let Some(ref wiki_patch) = patch.wiki {
@@ -370,7 +374,7 @@ impl DataChannel for Postgres {
                 "SELECT EXISTS(SELECT 1 FROM channel_wiki WHERE channel_id = $1)",
                 thread_id.into_inner()
             )
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.ext())
             .await?
             .unwrap_or(false);
 
@@ -379,12 +383,11 @@ impl DataChannel for Postgres {
                     "INSERT INTO channel_wiki (channel_id) VALUES ($1)",
                     *thread_id
                 )
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
             }
 
-            self.channel_wiki_update_impl(&mut tx, thread_id, wiki_patch)
-                .await?;
+            Postgres::channel_wiki_update_impl(&mut tx, thread_id, wiki_patch).await?;
         }
 
         if let Some(ref calendar_patch) = patch.calendar {
@@ -392,7 +395,7 @@ impl DataChannel for Postgres {
                 "SELECT EXISTS(SELECT 1 FROM channel_calendar WHERE channel_id = $1)",
                 *thread_id
             )
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.ext())
             .await?
             .unwrap_or(false);
 
@@ -401,21 +404,19 @@ impl DataChannel for Postgres {
                     "INSERT INTO channel_calendar (channel_id) VALUES ($1)",
                     thread_id.into_inner()
                 )
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
             }
 
-            self.channel_calendar_update_impl(&mut tx, thread_id, calendar_patch)
-                .await?;
+            Postgres::channel_calendar_update_impl(&mut tx, thread_id, calendar_patch).await?;
         }
 
         tx.commit().await?;
         Ok(version_id)
     }
 
-    async fn channel_delete(&self, thread_id: ChannelId) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+    async fn channel_delete(&mut self, thread_id: ChannelId) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
         let version_id = ChannelVerId::new();
         let room_version_id = RoomVerId::new();
 
@@ -429,7 +430,7 @@ impl DataChannel for Postgres {
             *thread_id,
             *room_version_id,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         query!(
@@ -442,25 +443,25 @@ impl DataChannel for Postgres {
             thread_id.into_inner(),
             version_id.into_inner(),
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         Ok(())
     }
 
-    async fn channel_undelete(&self, thread_id: ChannelId) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+    async fn channel_undelete(&mut self, thread_id: ChannelId) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
 
         if let Some(room_id) =
             query_scalar!("SELECT room_id FROM channel WHERE id = $1", *thread_id)
-                .fetch_one(&mut *tx)
+                .fetch_one(tx.ext())
                 .await?
         {
             let count: i64 = query_scalar!(
                 "SELECT count(*) FROM channel WHERE room_id = $1 AND archived_at IS NULL AND deleted_at IS NULL",
                 room_id
             )
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.ext())
             .await?
             .unwrap_or(0);
 
@@ -483,22 +484,21 @@ impl DataChannel for Postgres {
             thread_id.into_inner(),
             version_id.into_inner(),
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         Ok(())
     }
 
-    async fn channel_reorder(&self, data: ChannelReorder) -> Result<()> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+    async fn channel_reorder(&mut self, data: ChannelReorder) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
 
         for thread in data.channels {
             let old = query!(
                 r#"SELECT position, parent_id FROM channel WHERE id = $1"#,
                 *thread.id,
             )
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.ext())
             .await?;
             let new_position = thread
                 .position
@@ -519,7 +519,7 @@ impl DataChannel for Postgres {
                     thread.position.map(|i| i.map(|i| i as i32)).unwrap_or(old.position),
                     thread.parent_id.map(|i| i.map(|i| *i)).unwrap_or(old.parent_id),
                 )
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
             }
         }
@@ -528,7 +528,8 @@ impl DataChannel for Postgres {
         Ok(())
     }
 
-    async fn channel_upgrade_gdm(&self, thread_id: ChannelId, room_id: RoomId) -> Result<()> {
+    async fn channel_upgrade_gdm(&mut self, thread_id: ChannelId, room_id: RoomId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let version_id = ChannelVerId::new();
         let ty = DbChannelType::Text;
         query!(
@@ -544,33 +545,35 @@ impl DataChannel for Postgres {
             *room_id,
             ty as _,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn channel_get_message_slowmode_expire_at(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         user_id: UserId,
     ) -> Result<Option<Time>> {
+        let mut conn = self.acquire().await?;
         let row = query_scalar!(
             "SELECT expires_at FROM channel_slowmode_message WHERE channel_id = $1 AND user_id = $2",
             *channel_id,
             *user_id
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
 
         Ok(row.map(Time::from))
     }
 
     async fn channel_set_message_slowmode_expire_at(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         user_id: UserId,
         expires_at: Time,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "INSERT INTO channel_slowmode_message (channel_id, user_id, expires_at)
              VALUES ($1, $2, $3)
@@ -583,33 +586,35 @@ impl DataChannel for Postgres {
                 expires_at.into_inner().time()
             )
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn channel_get_thread_slowmode_expire_at(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         user_id: UserId,
     ) -> Result<Option<Time>> {
+        let mut conn = self.acquire().await?;
         let row = query_scalar!(
             "SELECT expires_at FROM channel_slowmode_thread WHERE channel_id = $1 AND user_id = $2",
             *channel_id,
             *user_id
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
 
         Ok(row.map(Time::from))
     }
 
     async fn channel_set_thread_slowmode_expire_at(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         user_id: UserId,
         expires_at: Time,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "INSERT INTO channel_slowmode_thread (channel_id, user_id, expires_at)
              VALUES ($1, $2, $3)
@@ -622,24 +627,24 @@ impl DataChannel for Postgres {
                 expires_at.into_inner().time()
             )
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn channel_document_insert(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         document: &Document,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
-        self.channel_document_insert_impl(&mut tx, channel_id, document)
-            .await?;
+        let mut tx = self.begin_tx().await?;
+        Postgres::channel_document_insert_impl(&mut *tx, channel_id, document).await?;
         tx.commit().await?;
         Ok(())
     }
 
-    async fn channel_document_get(&self, channel_id: ChannelId) -> Result<Option<Document>> {
+    async fn channel_document_get(&mut self, channel_id: ChannelId) -> Result<Option<Document>> {
+        let mut conn = self.acquire().await?;
         let row = query!(
             r#"
             SELECT draft, archived_at, archived_reason, template, slug,
@@ -649,7 +654,7 @@ impl DataChannel for Postgres {
             "#,
             channel_id.into_inner()
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
 
         if let Some(doc) = row {
@@ -693,26 +698,27 @@ impl DataChannel for Postgres {
     }
 
     async fn channel_document_update(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         document_patch: &DocumentPatch,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
-        self.channel_document_update_impl(&mut tx, channel_id, document_patch)
-            .await?;
+        let mut tx = self.begin_tx().await?;
+        Postgres::channel_document_update_impl(&mut *tx, channel_id, document_patch).await?;
         tx.commit().await?;
         Ok(())
     }
 
-    async fn channel_wiki_insert(&self, channel_id: ChannelId, wiki: &Wiki) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
-        self.channel_wiki_insert_impl(&mut tx, channel_id, wiki)
-            .await?;
+    async fn channel_wiki_insert(&mut self, channel_id: ChannelId, wiki: &Wiki) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
+        {
+            Postgres::channel_wiki_insert_impl(&mut *tx, channel_id, wiki).await?;
+        }
         tx.commit().await?;
         Ok(())
     }
 
-    async fn channel_wiki_get(&self, channel_id: ChannelId) -> Result<Option<Wiki>> {
+    async fn channel_wiki_get(&mut self, channel_id: ChannelId) -> Result<Option<Wiki>> {
+        let mut conn = self.acquire().await?;
         let row = query!(
             r#"
             SELECT allow_indexing, page_index, page_notfound
@@ -721,7 +727,7 @@ impl DataChannel for Postgres {
             "#,
             channel_id.into_inner()
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
 
         if let Some(wiki) = row {
@@ -736,30 +742,33 @@ impl DataChannel for Postgres {
     }
 
     async fn channel_wiki_update(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         wiki_patch: &WikiPatch,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
-        self.channel_wiki_update_impl(&mut tx, channel_id, wiki_patch)
-            .await?;
+        let mut tx = self.begin_tx().await?;
+        {
+            Postgres::channel_wiki_update_impl(&mut *tx, channel_id, wiki_patch).await?;
+        }
         tx.commit().await?;
         Ok(())
     }
 
     async fn channel_calendar_insert(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         calendar: &Calendar,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
-        self.channel_calendar_insert_impl(&mut tx, channel_id, calendar)
-            .await?;
+        let mut tx = self.begin_tx().await?;
+        {
+            Postgres::channel_calendar_insert_impl(&mut *tx, channel_id, calendar).await?;
+        }
         tx.commit().await?;
         Ok(())
     }
 
-    async fn channel_calendar_get(&self, channel_id: ChannelId) -> Result<Option<Calendar>> {
+    async fn channel_calendar_get(&mut self, channel_id: ChannelId) -> Result<Option<Calendar>> {
+        let mut conn = self.acquire().await?;
         let row = query!(
             r#"
             SELECT color, default_timezone
@@ -768,7 +777,7 @@ impl DataChannel for Postgres {
             "#,
             *channel_id
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
 
         if let Some(cal) = row {
@@ -782,30 +791,32 @@ impl DataChannel for Postgres {
     }
 
     async fn channel_calendar_update(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         calendar_patch: &CalendarPatch,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
-        self.channel_calendar_update_impl(&mut tx, channel_id, calendar_patch)
-            .await?;
+        let mut tx = self.begin_tx().await?;
+        {
+            Postgres::channel_calendar_update_impl(&mut *tx, channel_id, calendar_patch).await?;
+        }
         tx.commit().await?;
         Ok(())
     }
 
-    async fn channel_ratelimit_delete_all(&self, channel_id: ChannelId) -> Result<()> {
+    async fn channel_ratelimit_delete_all(&mut self, channel_id: ChannelId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "DELETE FROM channel_slowmode_message WHERE channel_id = $1",
             *channel_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
 
         query!(
             "DELETE FROM channel_slowmode_thread WHERE channel_id = $1",
             *channel_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
 
         Ok(())
@@ -814,8 +825,7 @@ impl DataChannel for Postgres {
 
 impl Postgres {
     async fn channel_document_insert_impl(
-        &self,
-        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        tx: &mut sqlx::PgConnection,
         channel_id: ChannelId,
         document: &Document,
     ) -> Result<()> {
@@ -849,15 +859,14 @@ impl Postgres {
             document.published.as_ref().map(|p| p.revision.to_string()),
             document.published.as_ref().map(|p| p.unlisted)
         )
-        .execute(&mut **tx)
+        .execute(tx)
         .await?;
 
         Ok(())
     }
 
     async fn channel_document_update_impl(
-        &self,
-        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        tx: &mut sqlx::PgConnection,
         channel_id: ChannelId,
         document_patch: &DocumentPatch,
     ) -> Result<()> {
@@ -870,7 +879,7 @@ impl Postgres {
             "#,
             channel_id.into_inner()
         )
-        .fetch_optional(&mut **tx)
+        .fetch_optional(&mut *tx)
         .await?;
 
         if let Some(current) = current_doc {
@@ -940,7 +949,7 @@ impl Postgres {
                 published_revision,
                 published_unlisted,
             )
-            .execute(&mut **tx)
+            .execute(&mut *tx)
             .await?;
         } else {
             warn!("channel_document not found");
@@ -950,8 +959,7 @@ impl Postgres {
     }
 
     async fn channel_wiki_insert_impl(
-        &self,
-        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        tx: &mut sqlx::PgConnection,
         channel_id: ChannelId,
         wiki: &Wiki,
     ) -> Result<()> {
@@ -967,15 +975,14 @@ impl Postgres {
             wiki.page_index.map(|id| *id),
             wiki.page_notfound.map(|id| *id)
         )
-        .execute(&mut **tx)
+        .execute(tx)
         .await?;
 
         Ok(())
     }
 
     async fn channel_wiki_update_impl(
-        &self,
-        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        tx: &mut sqlx::PgConnection,
         channel_id: ChannelId,
         wiki_patch: &WikiPatch,
     ) -> Result<()> {
@@ -987,7 +994,7 @@ impl Postgres {
             "#,
             channel_id.into_inner()
         )
-        .fetch_optional(&mut **tx)
+        .fetch_optional(&mut *tx)
         .await?;
 
         if let Some(current) = current_wiki {
@@ -1011,7 +1018,7 @@ impl Postgres {
                     .map(|p| p.map(|p| *p))
                     .unwrap_or(current.page_notfound),
             )
-            .execute(&mut **tx)
+            .execute(&mut *tx)
             .await?;
         }
 
@@ -1019,8 +1026,7 @@ impl Postgres {
     }
 
     async fn channel_calendar_insert_impl(
-        &self,
-        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        tx: &mut sqlx::PgConnection,
         channel_id: ChannelId,
         calendar: &Calendar,
     ) -> Result<()> {
@@ -1035,15 +1041,14 @@ impl Postgres {
             calendar.color.as_ref().map(|c| c.to_string()),
             calendar.default_timezone.0
         )
-        .execute(&mut **tx)
+        .execute(tx)
         .await?;
 
         Ok(())
     }
 
     async fn channel_calendar_update_impl(
-        &self,
-        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        tx: &mut sqlx::PgConnection,
         channel_id: ChannelId,
         calendar_patch: &CalendarPatch,
     ) -> Result<()> {
@@ -1055,7 +1060,7 @@ impl Postgres {
             "#,
             *channel_id,
         )
-        .fetch_optional(&mut **tx)
+        .fetch_optional(&mut *tx)
         .await?;
 
         if let Some(current) = current_cal {
@@ -1083,7 +1088,7 @@ impl Postgres {
                 new_color,
                 new_default_timezone
             )
-            .execute(&mut **tx)
+            .execute(&mut *tx)
             .await?;
         }
 

@@ -22,7 +22,7 @@ impl ServiceAuditLogs {
         paginate: PaginationQuery<AuditLogEntryId>,
         filter: AuditLogFilter,
     ) -> Result<AuditLogPaginationResponse> {
-        let data = self.state.data();
+        let mut data = self.state.data();
 
         let entries = data
             .audit_logs_room_fetch(room_id, paginate, filter.clone())

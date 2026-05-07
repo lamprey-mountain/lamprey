@@ -369,7 +369,7 @@ impl ServiceFederation {
             hostname: hostname.clone(),
         });
 
-        let data = self.state.data();
+        let mut data = self.state.data();
         if data.user_get(user_id).await.is_ok() {
             data.user_update(
                 user_id,

@@ -22,17 +22,17 @@ struct DbUserEmail {
 #[async_trait]
 impl DataUserEmail for Postgres {
     async fn user_email_add(
-        &self,
+        &mut self,
         user_id: UserId,
         email: EmailInfo,
         max_user_emails: usize,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         let email_count: i64 =
             query_scalar("SELECT count(*) FROM user_email_addresses WHERE user_id = $1")
                 .bind(*user_id)
-                .fetch_one(&mut *tx)
+                .fetch_one(tx.ext())
                 .await?;
 
         if email_count >= max_user_emails as i64 {
@@ -45,7 +45,7 @@ impl DataUserEmail for Postgres {
             "SELECT EXISTS(SELECT 1 FROM user_email_addresses WHERE addr = $1 AND is_verified = true)",
             email.email.as_ref()
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?.unwrap_or(false);
 
         if is_verified_by_anyone {
@@ -61,7 +61,7 @@ impl DataUserEmail for Postgres {
             email.is_verified,
             email.is_primary,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await;
 
         if let Err(e) = res {
@@ -78,13 +78,14 @@ impl DataUserEmail for Postgres {
         Ok(())
     }
 
-    async fn user_email_delete(&self, user_id: UserId, email_addr: EmailAddr) -> Result<()> {
+    async fn user_email_delete(&mut self, user_id: UserId, email_addr: EmailAddr) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let res = query!(
             "DELETE FROM user_email_addresses WHERE user_id = $1 AND addr = $2",
             *user_id,
             email_addr.into_inner()
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
 
         if res.rows_affected() == 0 {
@@ -96,13 +97,14 @@ impl DataUserEmail for Postgres {
         Ok(())
     }
 
-    async fn user_email_list(&self, user_id: UserId) -> Result<Vec<EmailInfo>> {
+    async fn user_email_list(&mut self, user_id: UserId) -> Result<Vec<EmailInfo>> {
+        let mut conn = self.acquire().await?;
         let db_emails = query_as!(
             DbUserEmail,
             r#"SELECT addr, is_verified, is_primary FROM user_email_addresses WHERE user_id = $1"#,
             *user_id,
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         let mut emails = Vec::with_capacity(db_emails.len());
@@ -118,18 +120,18 @@ impl DataUserEmail for Postgres {
     }
 
     async fn user_email_verify_use(
-        &self,
+        &mut self,
         user_id: UserId,
         email_addr: EmailAddr,
         code: String,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         let existing_verified_owner: Option<Uuid> = query_scalar(
             "SELECT user_id FROM user_email_addresses WHERE addr = $1 AND is_verified = true",
         )
         .bind(email_addr.as_ref())
-        .fetch_optional(&mut *tx)
+        .fetch_optional(tx.ext())
         .await?;
 
         if let Some(owner_id) = existing_verified_owner {
@@ -146,7 +148,7 @@ impl DataUserEmail for Postgres {
             email_addr.as_ref(),
             code
         )
-        .fetch_optional(&mut *tx)
+        .fetch_optional(tx.ext())
         .await?;
 
         if let Some(verification) = verification {
@@ -157,7 +159,7 @@ impl DataUserEmail for Postgres {
                     *user_id,
                     email_addr.as_ref()
                 )
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
 
                 // Delete other unverified entries for this email.
@@ -166,7 +168,7 @@ impl DataUserEmail for Postgres {
                     email_addr.as_ref(),
                     *user_id
                 )
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
 
                 // Delete the used verification code.
@@ -176,7 +178,7 @@ impl DataUserEmail for Postgres {
                     email_addr.as_ref(),
                     code
                 )
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
 
                 tx.commit().await?;
@@ -189,21 +191,21 @@ impl DataUserEmail for Postgres {
     }
 
     async fn user_email_verify_create(
-        &self,
+        &mut self,
         user_id: UserId,
         email_addr: EmailAddr,
     ) -> Result<String> {
         let code = ((Uuid::new_v4().as_u128() % 900_000) + 100_000).to_string();
         let expires_at = OffsetDateTime::now_utc() + Duration::minutes(15);
 
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         query!(
             "DELETE FROM email_address_verification WHERE user_id = $1 AND addr = $2",
             *user_id,
             email_addr.as_ref()
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         query!(
@@ -213,7 +215,7 @@ impl DataUserEmail for Postgres {
             *user_id,
             PrimitiveDateTime::new(expires_at.date(), expires_at.time())
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         let res = query!(
@@ -222,7 +224,7 @@ impl DataUserEmail for Postgres {
             *user_id,
             email_addr.as_ref(),
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         if res.rows_affected() == 0 {
@@ -237,24 +239,25 @@ impl DataUserEmail for Postgres {
         Ok(code)
     }
 
-    async fn user_email_lookup(&self, email_addr: &EmailAddr) -> Result<UserId> {
+    async fn user_email_lookup(&mut self, email_addr: &EmailAddr) -> Result<UserId> {
+        let mut conn = self.acquire().await?;
         let user_id = query_scalar!(
             "SELECT user_id FROM user_email_addresses WHERE addr = $1 AND is_verified = true",
             email_addr.as_ref()
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?
         .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownUserEmail)))?;
         Ok(user_id.into())
     }
 
     async fn user_email_update(
-        &self,
+        &mut self,
         user_id: UserId,
         email_addr: EmailAddr,
         patch: EmailInfoPatch,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         if patch.is_primary == Some(true) {
             // Ensure other emails are not primary
@@ -263,7 +266,7 @@ impl DataUserEmail for Postgres {
                 *user_id,
                 email_addr.as_ref()
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
 
@@ -273,7 +276,7 @@ impl DataUserEmail for Postgres {
             email_addr.as_ref(),
             patch.is_primary.unwrap_or(false)
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         if res.rows_affected() == 0 {

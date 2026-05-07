@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::{ChannelId, PaginationQuery, PaginationResponse, RoomId, UserId};
-use sqlx::{query, query_as, query_file_as, query_file_scalar, Acquire};
+use sqlx::{query, query_as, query_file_as, query_file_scalar};
 
 use crate::data::postgres::Pagination;
 use crate::data::DataThread;
@@ -13,7 +13,7 @@ use super::Postgres;
 #[async_trait]
 impl DataThread for Postgres {
     async fn thread_list_active(
-        &self,
+        &mut self,
         user_id: UserId,
         pagination: PaginationQuery<ChannelId>,
         parent_id: ChannelId,
@@ -22,7 +22,7 @@ impl DataThread for Postgres {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_file_as!(
                 DbChannel,
                 "sql/thread_list_active.sql",
@@ -45,7 +45,7 @@ impl DataThread for Postgres {
     }
 
     async fn thread_list_archived(
-        &self,
+        &mut self,
         user_id: UserId,
         pagination: PaginationQuery<ChannelId>,
         parent_id: ChannelId,
@@ -54,7 +54,7 @@ impl DataThread for Postgres {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_file_as!(
                 DbChannel,
                 "sql/thread_list_archived.sql",
@@ -77,7 +77,7 @@ impl DataThread for Postgres {
     }
 
     async fn thread_list_removed(
-        &self,
+        &mut self,
         user_id: UserId,
         pagination: PaginationQuery<ChannelId>,
         parent_id: ChannelId,
@@ -86,7 +86,7 @@ impl DataThread for Postgres {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_file_as!(
                 DbChannel,
                 "sql/thread_list_removed.sql",
@@ -108,7 +108,8 @@ impl DataThread for Postgres {
         )
     }
 
-    async fn thread_auto_archive(&self) -> Result<Vec<ChannelId>> {
+    async fn thread_auto_archive(&mut self) -> Result<Vec<ChannelId>> {
+        let mut conn = self.acquire().await?;
         let archived_threads = query!(
             r#"
             UPDATE channel
@@ -126,7 +127,7 @@ impl DataThread for Postgres {
             "#,
             ChannelVerId::new().into_inner()
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?
         .into_iter()
         .map(|row| ChannelId::from(row.id))
@@ -135,7 +136,8 @@ impl DataThread for Postgres {
         Ok(archived_threads)
     }
 
-    async fn thread_all_active_room(&self, room_id: RoomId) -> Result<Vec<Channel>> {
+    async fn thread_all_active_room(&mut self, room_id: RoomId) -> Result<Vec<Channel>> {
+        let mut conn = self.acquire().await?;
         let items = query_as!(
             DbChannel,
             r#"
@@ -164,7 +166,7 @@ impl DataThread for Postgres {
             "#,
             room_id.into_inner()
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
         Ok(items.into_iter().map(Into::into).collect())
     }

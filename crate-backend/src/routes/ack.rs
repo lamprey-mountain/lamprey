@@ -23,7 +23,7 @@ async fn ack_bulk(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
 
-    let data = s.data();
+    let mut data = s.data();
     let srv = s.services();
 
     let mut valid_acks = Vec::new();

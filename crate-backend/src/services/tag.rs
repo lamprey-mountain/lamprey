@@ -57,7 +57,7 @@ impl ServiceTags {
         nonce: Option<String>,
     ) -> Result<Tag> {
         create.validate()?;
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
 
         let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
@@ -104,7 +104,7 @@ impl ServiceTags {
         auth: &Auth,
         patch: TagPatch,
     ) -> Result<Tag> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
 
         let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
@@ -150,7 +150,7 @@ impl ServiceTags {
         auth: &Auth,
         force: bool,
     ) -> Result<()> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
 
         let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;

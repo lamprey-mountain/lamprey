@@ -109,30 +109,32 @@ impl RoomActor {
     }
 
     async fn load_initial_state(&mut self) -> Result<()> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
 
         let root_span = tracing::info_span!("room_load", room_id = ?self.room_id);
 
-        let (room, room_members, roles_data, channels_data, active_threads_vec) = async {
-            tokio::try_join!(
-                data.room_get(self.room_id)
-                    .instrument(tracing::info_span!("room_load.query.room")),
-                data.room_member_list_all(self.room_id)
-                    .instrument(tracing::info_span!("room_load.query.members")),
-                async {
-                    data.role_list(self.room_id)
-                        .instrument(tracing::info_span!("room_load.query.roles"))
-                        .await
-                },
-                data.channel_list(self.room_id)
-                    .instrument(tracing::info_span!("room_load.query.channels")),
-                data.thread_all_active_room(self.room_id)
-                    .instrument(tracing::info_span!("room_load.query.threads")),
-            )
-        }
-        .instrument(root_span.clone())
-        .await?;
+        // PERF: fetch these all in parallel
+        let room = data
+            .room_get(self.room_id)
+            .instrument(tracing::info_span!("room_load.query.room"))
+            .await?;
+        let room_members = data
+            .room_member_list_all(self.room_id)
+            .instrument(tracing::info_span!("room_load.query.members"))
+            .await?;
+        let roles_data = data
+            .role_list(self.room_id)
+            .instrument(tracing::info_span!("room_load.query.roles"))
+            .await?;
+        let channels_data = data
+            .channel_list(self.room_id)
+            .instrument(tracing::info_span!("room_load.query.channels"))
+            .await?;
+        let active_threads_vec = data
+            .thread_all_active_room(self.room_id)
+            .instrument(tracing::info_span!("room_load.query.threads"))
+            .await?;
 
         root_span.record("room_members_count", room_members.len());
         root_span.record("roles_count", roles_data.len());
@@ -140,17 +142,19 @@ impl RoomActor {
         root_span.record("threads_count", active_threads_vec.len());
 
         let user_ids: Vec<_> = room_members.iter().map(|m| m.user_id).collect();
-        let thread_member_futs = active_threads_vec.iter().map(|t| {
-            data.thread_member_list_all(t.id).instrument(
-                tracing::info_span!("room_load.query.thread_members", thread_id = ?t.id),
-            )
-        });
 
-        let (users, all_thread_members) = tokio::try_join!(
-            srv.users.get_many(&user_ids),
-            async { futures::future::try_join_all(thread_member_futs).await }
-                .instrument(tracing::info_span!("room_load.query.thread_members_all")),
-        )?;
+        // PERF: fetch thread members in parallel
+        let thread_ids: Vec<_> = active_threads_vec.iter().map(|t| t.id).collect();
+
+        let users = srv.users.get_many(&user_ids).await?;
+        let mut all_thread_members = Vec::with_capacity(thread_ids.len());
+        for tid in thread_ids {
+            let members = data
+                .thread_member_list_all(tid)
+                .instrument(tracing::info_span!("room_load.query.thread_members", thread_id = ?tid))
+                .await?;
+            all_thread_members.push(members);
+        }
 
         let users_map: HashMap<UserId, Arc<User>> =
             users.into_iter().map(|u| (u.id, Arc::new(u))).collect();
@@ -239,7 +243,7 @@ impl RoomActor {
 
     /// Load members for a room that is in WithoutMembers state.
     async fn load_members(&mut self) -> Result<()> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
 
         let current_data = match self.snapshot.as_ref() {

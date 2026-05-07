@@ -13,12 +13,12 @@ use crate::types::{AutomodRuleData, DbAutomodTarget};
 #[async_trait]
 impl DataAutomod for Postgres {
     async fn automod_rule_create(
-        &self,
+        &mut self,
         room_id: RoomId,
         create: AutomodRuleCreate,
     ) -> Result<AutomodRule> {
         let rule_id = AutomodRuleId::new();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         let data = AutomodRuleData {
             trigger: create.trigger,
@@ -35,7 +35,7 @@ impl DataAutomod for Postgres {
             create.include_everyone,
             DbAutomodTarget::from(create.target) as DbAutomodTarget
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         for role_id in create.except_roles {
@@ -45,7 +45,7 @@ impl DataAutomod for Postgres {
                 *room_id,
                 *role_id
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
 
@@ -56,7 +56,7 @@ impl DataAutomod for Postgres {
                 *room_id,
                 *channel_id
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
 
@@ -65,7 +65,8 @@ impl DataAutomod for Postgres {
         self.automod_rule_get(rule_id).await
     }
 
-    async fn automod_rule_get(&self, rule_id: AutomodRuleId) -> Result<AutomodRule> {
+    async fn automod_rule_get(&mut self, rule_id: AutomodRuleId) -> Result<AutomodRule> {
+        let mut conn = self.acquire().await?;
         let row = query!(
             r#"
             SELECT
@@ -77,7 +78,7 @@ impl DataAutomod for Postgres {
             "#,
             *rule_id
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
@@ -104,12 +105,12 @@ impl DataAutomod for Postgres {
     }
 
     async fn automod_rule_update(
-        &self,
+        &mut self,
         rule_id: AutomodRuleId,
         update: AutomodRuleUpdate,
     ) -> Result<AutomodRule> {
-        let mut tx = self.pool.begin().await?;
         let old = self.automod_rule_get(rule_id).await?;
+        let mut tx = self.begin_tx().await?;
 
         let name = update.name.unwrap_or(old.name);
         let enabled = update.enabled.unwrap_or(old.enabled);
@@ -131,7 +132,7 @@ impl DataAutomod for Postgres {
             include_everyone,
             DbAutomodTarget::from(target) as DbAutomodTarget
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         if let Some(except_roles) = update.except_roles {
@@ -139,7 +140,7 @@ impl DataAutomod for Postgres {
                 "DELETE FROM automod_rule_except_role WHERE rule_id = $1",
                 *rule_id
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
             for role_id in except_roles {
                 query!(
@@ -148,7 +149,7 @@ impl DataAutomod for Postgres {
                     *old.room_id,
                     *role_id
                 )
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
             }
         }
@@ -158,7 +159,7 @@ impl DataAutomod for Postgres {
                 "DELETE FROM automod_rule_except_channel WHERE rule_id = $1",
                 *rule_id
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
             for channel_id in except_channels {
                 query!(
@@ -167,7 +168,7 @@ impl DataAutomod for Postgres {
                     *old.room_id,
                     *channel_id
                 )
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
             }
         }
@@ -176,14 +177,16 @@ impl DataAutomod for Postgres {
         self.automod_rule_get(rule_id).await
     }
 
-    async fn automod_rule_delete(&self, rule_id: AutomodRuleId) -> Result<()> {
+    async fn automod_rule_delete(&mut self, rule_id: AutomodRuleId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!("DELETE FROM automod_rule WHERE id = $1", *rule_id)
-            .execute(&self.pool)
+            .execute(conn.ext())
             .await?;
         Ok(())
     }
 
-    async fn automod_rule_list(&self, room_id: RoomId) -> Result<Vec<AutomodRule>> {
+    async fn automod_rule_list(&mut self, room_id: RoomId) -> Result<Vec<AutomodRule>> {
+        let mut conn = self.acquire().await?;
         let rows = query!(
             r#"
             SELECT
@@ -195,7 +198,7 @@ impl DataAutomod for Postgres {
             "#,
             *room_id
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         let mut rules = Vec::new();

@@ -14,13 +14,14 @@ use super::Postgres;
 #[async_trait]
 impl DataUnread for Postgres {
     async fn unread_ack(
-        &self,
+        &mut self,
         user_id: UserId,
         channel_id: ChannelId,
         message_id: MessageId,
         version_id: MessageVerId,
         mention_count: Option<u64>,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let mention_count = mention_count.unwrap_or(0) as i32;
         query!(
             r#"
@@ -37,12 +38,13 @@ impl DataUnread for Postgres {
             *version_id,
             mention_count
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn unread_ack_bulk(&self, user_id: UserId, acks: Vec<AckBulkItem>) -> Result<()> {
+    async fn unread_ack_bulk(&mut self, user_id: UserId, acks: Vec<AckBulkItem>) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let channel_ids: Vec<Uuid> = acks.iter().map(|a| *a.channel_id).collect();
         let message_ids: Vec<Uuid> = acks
             .iter()
@@ -66,23 +68,24 @@ impl DataUnread for Postgres {
             &version_ids,
             &mention_counts
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
 
         Ok(())
     }
 
     async fn unread_put_all_in_room(
-        &self,
+        &mut self,
         user_id: UserId,
         room_id: RoomId,
     ) -> Result<Vec<(ChannelId, MessageId, MessageVerId)>> {
+        let mut conn = self.acquire().await?;
         let records = query_file!(
             "sql/unread_put_all_in_room.sql",
             user_id.into_inner(),
             room_id.into_inner()
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         Ok(records
@@ -98,13 +101,14 @@ impl DataUnread for Postgres {
     }
 
     async fn unread_increment_mentions(
-        &self,
+        &mut self,
         user_id: UserId,
         channel_id: ChannelId,
         message_id: MessageId,
         version_id: MessageVerId,
         count: u32,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"
             INSERT INTO unread (channel_id, user_id, message_id, version_id, mention_count, is_unread)
@@ -121,7 +125,7 @@ impl DataUnread for Postgres {
             *version_id,
             count as i32
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }

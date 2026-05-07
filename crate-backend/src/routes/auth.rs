@@ -50,7 +50,7 @@ async fn auth_oauth_redirect(
     req: routes::auth_oauth_redirect::Request,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     let provider_config = s
         .config
         .oauth_provider
@@ -408,7 +408,7 @@ async fn auth_totp_recovery_codes_get(
     _req: routes::auth_totp_recovery_codes_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
-    let data = s.data();
+    let mut data = s.data();
 
     // Get existing recovery codes without generating new ones
     let existing_codes: Vec<(String, Option<Time>)> =
@@ -684,7 +684,7 @@ async fn auth_oauth_delete(
     ensure_can_still_login_after_removal(&s, auth.user.id, "oauth", Some(&req.provider)).await?;
 
     let start_state = fetch_auth_state(&s, auth.user.id).await?;
-    let data = s.data();
+    let mut data = s.data();
     data.auth_oauth_delete(req.provider, auth.user.id).await?;
     let end_state = fetch_auth_state(&s, auth.user.id).await?;
     let al = auth.audit_log(auth.user.id.into_inner().into());
@@ -710,7 +710,7 @@ async fn auth_email_exec(
     State(s): State<Arc<ServerState>>,
     req: routes::auth_email_exec::Request,
 ) -> Result<impl IntoResponse> {
-    let d = s.data();
+    let mut d = s.data();
     let srv = s.services();
     let session = auth.session()?;
     let code = Uuid::new_v4().to_string();
@@ -740,7 +740,7 @@ async fn auth_email_reset(
     State(s): State<Arc<ServerState>>,
     req: routes::auth_email_reset::Request,
 ) -> Result<impl IntoResponse> {
-    let d = s.data();
+    let mut d = s.data();
     let srv = s.services();
     let code = Uuid::new_v4().to_string();
     let email: EmailAddr = req
@@ -772,7 +772,7 @@ async fn auth_email_complete(
     State(s): State<Arc<ServerState>>,
     req: routes::auth_email_complete::Request,
 ) -> Result<impl IntoResponse> {
-    let d = s.data();
+    let mut d = s.data();
     let srv = s.services();
     let session = auth.session()?;
     let email: EmailAddr = req
@@ -922,7 +922,7 @@ async fn auth_totp_recovery_exec(
     State(s): State<Arc<ServerState>>,
     req: routes::auth_totp_recovery_exec::Request,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
+    let mut data = s.data();
 
     let (_secret, enabled) = data
         .auth_totp_get(auth.user.id)
@@ -1012,7 +1012,7 @@ async fn auth_password_delete(
     ensure_can_still_login_after_removal(&s, auth.user.id, "password", None).await?;
 
     let start_state = fetch_auth_state(&s, auth.user.id).await?;
-    let data = s.data();
+    let mut data = s.data();
     data.auth_password_delete(auth.user.id).await?;
     let end_state = fetch_auth_state(&s, auth.user.id).await?;
 
@@ -1079,7 +1079,7 @@ async fn ensure_can_still_login_after_removal(
 
 // Helper function - used by other routes
 pub async fn fetch_auth_state(s: &ServerState, user_id: UserId) -> Result<AuthState> {
-    let data = s.data();
+    let mut data = s.data();
 
     let (_totp_secret, totp_enabled) = data
         .auth_totp_get(user_id)

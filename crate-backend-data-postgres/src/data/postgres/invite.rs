@@ -5,7 +5,7 @@ use common::v1::types::{
     ChannelId, InviteTarget, InviteWithMetadata, PaginationDirection, PaginationQuery,
     PaginationResponse, RoleId,
 };
-use sqlx::{query, query_scalar, Acquire};
+use sqlx::{query, query_scalar};
 
 use crate::data::{DataChannel, DataInvite, DataRole, DataRoom, DataUser};
 use crate::error::{Error, Result};
@@ -18,7 +18,7 @@ use super::{Pagination, Postgres};
 #[async_trait]
 impl DataInvite for Postgres {
     async fn invite_insert_room(
-        &self,
+        &mut self,
         room_id: RoomId,
         creator_id: UserId,
         code: InviteCode,
@@ -26,6 +26,7 @@ impl DataInvite for Postgres {
         max_uses: Option<u16>,
         role_ids: &[RoleId],
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let role_ids: Vec<uuid::Uuid> = role_ids.iter().map(|id| id.into_inner()).collect();
         query!(
             r#"
@@ -39,13 +40,13 @@ impl DataInvite for Postgres {
             max_uses.map(|n| n as i32),
             &role_ids,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn invite_insert_channel(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         creator_id: UserId,
         code: InviteCode,
@@ -58,6 +59,7 @@ impl DataInvite for Postgres {
         let max_uses = max_uses.map(|n| n as i32);
         let role_ids: Vec<uuid::Uuid> = role_ids.iter().map(|id| id.into_inner()).collect();
 
+        let mut conn = self.acquire().await?;
         if channel.ty == common::v1::types::ChannelType::Gdm {
             query!(
                 r#"
@@ -71,7 +73,7 @@ impl DataInvite for Postgres {
                 max_uses,
                 &role_ids,
             )
-            .execute(&self.pool)
+            .execute(conn.ext())
             .await?;
         } else if let Some(room_id) = channel.room_id {
             query!(
@@ -87,7 +89,7 @@ impl DataInvite for Postgres {
                 max_uses,
                 &role_ids,
             )
-            .execute(&self.pool)
+            .execute(conn.ext())
             .await?;
         } else {
             return Err(Error::BadStatic("Channel is not a GDM or in a room"));
@@ -97,12 +99,13 @@ impl DataInvite for Postgres {
     }
 
     async fn invite_insert_server(
-        &self,
+        &mut self,
         creator_id: UserId,
         code: InviteCode,
         expires_at: Option<Time>,
         max_uses: Option<u16>,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"
             insert into invite (target_type, code, creator_id, expires_at, max_uses)
@@ -113,14 +116,13 @@ impl DataInvite for Postgres {
             expires_at.map(|t| PrimitiveDateTime::new(t.date(), t.time())),
             max_uses.map(|n| n as i32),
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn invite_select(&self, code: InviteCode) -> Result<InviteWithMetadata> {
-        let mut conn = self.pool.begin().await?;
-        let mut tx = conn.begin().await?;
+    async fn invite_select(&mut self, code: InviteCode) -> Result<InviteWithMetadata> {
+        let mut tx = self.begin_tx().await?;
         let row = query!(
             r#"
             select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description, role_ids
@@ -129,7 +131,7 @@ impl DataInvite for Postgres {
         "#,
             code.0
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
@@ -211,24 +213,24 @@ impl DataInvite for Postgres {
         Ok(invite_with_meta)
     }
 
-    async fn invite_delete(&self, code: InviteCode) -> Result<()> {
+    async fn invite_delete(&mut self, code: InviteCode) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "update invite set deleted_at = now() where code = $1",
             code.0
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn invite_list_room(
-        &self,
+        &mut self,
         room_id: RoomId,
         paginate: PaginationQuery<InviteCode>,
     ) -> Result<PaginationResponse<InviteWithMetadata>> {
         let p: Pagination<_> = paginate.try_into()?;
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let raw = query!(
             "
             select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description, role_ids
@@ -242,13 +244,13 @@ impl DataInvite for Postgres {
             p.dir.to_string(),
             (p.limit + 1) as i32
         )
-        .fetch_all(&mut *tx)
+        .fetch_all(tx.ext())
         .await?;
         let total = query_scalar!(
             "SELECT count(*) FROM invite WHERE target_id = $1 AND target_type = 'room' and deleted_at is null",
             *room_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
         tx.rollback().await?;
         let has_more = raw.len() > p.limit as usize;
@@ -304,15 +306,13 @@ impl DataInvite for Postgres {
     }
 
     async fn invite_list_channel(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         paginate: PaginationQuery<InviteCode>,
     ) -> Result<PaginationResponse<InviteWithMetadata>> {
         let p: Pagination<_> = paginate.try_into()?;
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
-
         let channel = self.channel_get(channel_id).await?;
+        let mut tx = self.begin_tx().await?;
 
         if channel.ty == common::v1::types::ChannelType::Gdm {
             let raw = query!(
@@ -328,14 +328,14 @@ impl DataInvite for Postgres {
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             )
-            .fetch_all(&mut *tx)
+            .fetch_all(tx.ext())
             .await?;
 
             let total = query_scalar!(
                 "SELECT count(*) FROM invite WHERE target_type = 'gdm' AND target_id = $1 and deleted_at is null",
                 *channel_id
             )
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.ext())
             .await?;
 
             tx.rollback().await?;
@@ -419,14 +419,14 @@ impl DataInvite for Postgres {
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             )
-            .fetch_all(&mut *tx)
+            .fetch_all(tx.ext())
             .await?;
 
             let total = query_scalar!(
                 "SELECT count(*) FROM invite WHERE target_channel_id = $1 and deleted_at is null",
                 *channel_id
             )
-            .fetch_one(&mut *tx)
+            .fetch_one(tx.ext())
             .await?;
             tx.rollback().await?;
             let has_more = raw.len() > p.limit as usize;
@@ -501,12 +501,11 @@ impl DataInvite for Postgres {
     }
 
     async fn invite_list_server(
-        &self,
+        &mut self,
         paginate: PaginationQuery<InviteCode>,
     ) -> Result<PaginationResponse<InviteWithMetadata>> {
         let p: Pagination<_> = paginate.try_into()?;
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let raw = query!(
             r#"
             select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description, role_ids
@@ -519,12 +518,12 @@ impl DataInvite for Postgres {
             p.dir.to_string(),
             (p.limit + 1) as i32
         )
-        .fetch_all(&mut *tx)
+        .fetch_all(tx.ext())
         .await?;
         let total = query_scalar!(
             "SELECT count(*) FROM invite WHERE target_type = 'server' and deleted_at is null",
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
         tx.rollback().await?;
         let has_more = raw.len() > p.limit as usize;
@@ -567,13 +566,12 @@ impl DataInvite for Postgres {
     }
 
     async fn invite_list_server_by_creator(
-        &self,
+        &mut self,
         creator_id: UserId,
         paginate: PaginationQuery<InviteCode>,
     ) -> Result<PaginationResponse<InviteWithMetadata>> {
         let p: Pagination<_> = paginate.try_into()?;
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let raw = query!(
             r#"
             select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description, role_ids
@@ -587,13 +585,13 @@ impl DataInvite for Postgres {
             p.dir.to_string(),
             (p.limit + 1) as i32
         )
-        .fetch_all(&mut *tx)
+        .fetch_all(tx.ext())
         .await?;
         let total = query_scalar!(
             "SELECT count(*) FROM invite WHERE target_type = 'server' and creator_id = $1 and deleted_at is null",
             *creator_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
         tx.rollback().await?;
         let has_more = raw.len() > p.limit as usize;
@@ -636,13 +634,14 @@ impl DataInvite for Postgres {
     }
 
     async fn invite_insert_user(
-        &self,
+        &mut self,
         user_id: UserId,
         creator_id: UserId,
         code: InviteCode,
         expires_at: Option<Time>,
         max_uses: Option<u16>,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"
             insert into invite (target_type, target_id, code, creator_id, expires_at, max_uses)
@@ -654,19 +653,18 @@ impl DataInvite for Postgres {
             expires_at.map(|t| PrimitiveDateTime::new(t.date(), t.time())),
             max_uses.map(|n| n as i32),
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn invite_list_user(
-        &self,
+        &mut self,
         user_id: UserId,
         paginate: PaginationQuery<InviteCode>,
     ) -> Result<PaginationResponse<InviteWithMetadata>> {
         let p: Pagination<_> = paginate.try_into()?;
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let raw = query!(
             r#"
             select target_type, target_id, target_channel_id, code, creator_id, created_at, expires_at, uses, max_uses, description, role_ids
@@ -680,13 +678,13 @@ impl DataInvite for Postgres {
             p.dir.to_string(),
             (p.limit + 1) as i32
         )
-        .fetch_all(&mut *tx)
+        .fetch_all(tx.ext())
         .await?;
         let total = query_scalar!(
             "SELECT count(*) FROM invite WHERE target_type = 'user' and target_id = $1 and deleted_at is null",
             *user_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
         tx.rollback().await?;
         let has_more = raw.len() > p.limit as usize;
@@ -730,20 +728,20 @@ impl DataInvite for Postgres {
         })
     }
 
-    async fn invite_incr_use(&self, code: InviteCode) -> Result<()> {
+    async fn invite_incr_use(&mut self, code: InviteCode) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!("update invite set uses = uses + 1 where code = $1", code.0)
-            .execute(&self.pool)
+            .execute(conn.ext())
             .await?;
         Ok(())
     }
 
     async fn invite_update(
-        &self,
+        &mut self,
         code: InviteCode,
         patch: InvitePatch,
     ) -> Result<InviteWithMetadata> {
-        let mut conn = self.pool.begin().await?;
-        let mut tx = conn.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         let invite = query!(
             r#"
@@ -754,7 +752,7 @@ impl DataInvite for Postgres {
             "#,
             code.0
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         let expires_at = patch.expires_at.map_or(invite.expires_at, |ea| {
@@ -788,7 +786,7 @@ impl DataInvite for Postgres {
             &role_ids_inner,
             code.0
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;

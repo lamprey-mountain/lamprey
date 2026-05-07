@@ -12,7 +12,7 @@ use common::v1::types::{
 use lamprey_backend_core::Error;
 use std::collections::HashSet;
 
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_as, query_scalar};
 use time::PrimitiveDateTime;
 use uuid::Uuid;
 
@@ -87,11 +87,12 @@ impl From<DbCalendarOverwrite> for CalendarOverwrite {
 #[async_trait]
 impl DataCalendar for Postgres {
     async fn calendar_event_create(
-        &self,
+        &mut self,
         create: CalendarEventCreate,
         channel_id: ChannelId,
         creator_id: UserId,
     ) -> Result<CalendarEvent> {
+        let mut conn = self.acquire().await?;
         let event_id = CalendarEventId::new();
         let recurrence = if let Some(rec) = create.recurrence {
             Some(serde_json::to_value(&rec)?)
@@ -117,13 +118,14 @@ impl DataCalendar for Postgres {
             PrimitiveDateTime::from(create.starts_at),
             create.ends_at.map(PrimitiveDateTime::from)
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
 
         Ok(event.into())
     }
 
-    async fn calendar_event_get(&self, event_id: CalendarEventId) -> Result<CalendarEvent> {
+    async fn calendar_event_get(&mut self, event_id: CalendarEventId) -> Result<CalendarEvent> {
+        let mut conn = self.acquire().await?;
         let event = query_as!(
             DbCalendarEvent,
             r#"
@@ -133,7 +135,7 @@ impl DataCalendar for Postgres {
             "#,
             *event_id
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
@@ -146,7 +148,7 @@ impl DataCalendar for Postgres {
     }
 
     async fn calendar_event_list(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         query: CalendarEventListQuery,
     ) -> Result<PaginationResponse<CalendarEvent>> {
@@ -178,8 +180,7 @@ impl DataCalendar for Postgres {
             .unwrap_or(PrimitiveDateTime::MAX);
 
         gen_paginate!(
-            p,
-            self.pool,
+            p, self,
             query_as!(
                 DbCalendarEvent,
                 r#"
@@ -207,17 +208,17 @@ impl DataCalendar for Postgres {
     }
 
     async fn calendar_event_update(
-        &self,
+        &mut self,
         event_id: CalendarEventId,
         patch: CalendarEventPatch,
     ) -> Result<CalendarEvent> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let event = query_as!(
             DbCalendarEvent,
             "SELECT id, channel_id, creator_id, title, description, location, url, timezone, recurrence, start_at, end_at FROM calendar_event WHERE id = $1 FOR UPDATE",
             *event_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         let title = patch.title.unwrap_or(event.title);
@@ -253,7 +254,7 @@ impl DataCalendar for Postgres {
             start_at,
             end_at
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -261,57 +262,61 @@ impl DataCalendar for Postgres {
         Ok(updated_event.into())
     }
 
-    async fn calendar_event_delete(&self, event_id: CalendarEventId) -> Result<()> {
+    async fn calendar_event_delete(&mut self, event_id: CalendarEventId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "UPDATE calendar_event SET deleted_at = now() WHERE id = $1",
             *event_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn calendar_event_rsvp_put(
-        &self,
+        &mut self,
         event_id: CalendarEventId,
         user_id: UserId,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "INSERT INTO calendar_event_rsvp (event_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
             *event_id,
             *user_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn calendar_event_rsvp_delete(
-        &self,
+        &mut self,
         event_id: CalendarEventId,
         user_id: UserId,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "DELETE FROM calendar_event_rsvp WHERE event_id = $1 AND user_id = $2",
             *event_id,
             *user_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn calendar_event_rsvp_get(
-        &self,
+        &mut self,
         event_id: CalendarEventId,
         user_id: UserId,
     ) -> Result<CalendarEventParticipant> {
+        let mut conn = self.acquire().await?;
         let exists = query_scalar!(
             "SELECT 1 FROM calendar_event_rsvp WHERE event_id = $1 AND user_id = $2",
             *event_id,
             *user_id
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
 
         if exists.is_some() {
@@ -329,15 +334,16 @@ impl DataCalendar for Postgres {
     }
 
     async fn calendar_event_rsvp_list(
-        &self,
+        &mut self,
         event_id: CalendarEventId,
         _query: CalendarEventParticipantQuery,
     ) -> Result<Vec<CalendarEventParticipant>> {
+        let mut conn = self.acquire().await?;
         let user_ids = query_scalar!(
             "SELECT user_id FROM calendar_event_rsvp WHERE event_id = $1",
             *event_id
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         Ok(user_ids
@@ -352,11 +358,12 @@ impl DataCalendar for Postgres {
     }
 
     async fn calendar_overwrite_put(
-        &self,
+        &mut self,
         event_id: CalendarEventId,
         seq: u64,
         put: CalendarOverwritePut,
     ) -> Result<CalendarOverwrite> {
+        let mut conn = self.acquire().await?;
         let overwrite = query_as!(
             DbCalendarOverwrite,
             r#"
@@ -378,17 +385,18 @@ impl DataCalendar for Postgres {
             put.ends_at.flatten().map(PrimitiveDateTime::from),
             put.cancelled.unwrap_or(false)
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
 
         Ok(overwrite.into())
     }
 
     async fn calendar_overwrite_get(
-        &self,
+        &mut self,
         event_id: CalendarEventId,
         seq: u64,
     ) -> Result<CalendarOverwrite> {
+        let mut conn = self.acquire().await?;
         let overwrite = query_as!(
             DbCalendarOverwrite,
             r#"
@@ -399,16 +407,17 @@ impl DataCalendar for Postgres {
             *event_id,
             seq as i64
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
 
         Ok(overwrite.into())
     }
 
     async fn calendar_overwrite_list(
-        &self,
+        &mut self,
         event_id: CalendarEventId,
     ) -> Result<Vec<CalendarOverwrite>> {
+        let mut conn = self.acquire().await?;
         let overwrites = query_as!(
             DbCalendarOverwrite,
             r#"
@@ -418,38 +427,43 @@ impl DataCalendar for Postgres {
             "#,
             *event_id
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         Ok(overwrites.into_iter().map(Into::into).collect())
     }
 
-    async fn calendar_overwrite_delete(&self, event_id: CalendarEventId, seq: u64) -> Result<()> {
+    async fn calendar_overwrite_delete(
+        &mut self,
+        event_id: CalendarEventId,
+        seq: u64,
+    ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "DELETE FROM calendar_overwrite WHERE event_id = $1 AND seq = $2",
             *event_id,
             seq as i64
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn calendar_overwrite_rsvp_put(
-        &self,
+        &mut self,
         event_id: CalendarEventId,
         seq: u64,
         user_id: UserId,
         attending: bool,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
         // Ensure overwrite row exists to satisfy foreign key
         query!(
             "INSERT INTO calendar_overwrite (event_id, seq) VALUES ($1, $2) ON CONFLICT DO NOTHING",
             *event_id,
             seq as i64
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         query!(
@@ -460,24 +474,25 @@ impl DataCalendar for Postgres {
             *user_id,
             attending
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         Ok(())
     }
 
     async fn calendar_overwrite_rsvp_delete(
-        &self,
+        &mut self,
         event_id: CalendarEventId,
         seq: u64,
         user_id: UserId,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let series_rsvped = query_scalar!(
             "SELECT EXISTS (SELECT 1 FROM calendar_event_rsvp WHERE event_id = $1 AND user_id = $2)",
             *event_id,
             *user_id
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?
         .unwrap_or(false);
 
@@ -493,7 +508,7 @@ impl DataCalendar for Postgres {
                 seq as i64,
                 *user_id
             )
-            .execute(&self.pool)
+            .execute(conn.ext())
             .await?;
         }
 
@@ -501,16 +516,17 @@ impl DataCalendar for Postgres {
     }
 
     async fn calendar_overwrite_rsvp_list(
-        &self,
+        &mut self,
         event_id: CalendarEventId,
         seq: u64,
         _query: CalendarEventParticipantQuery,
     ) -> Result<Vec<CalendarEventParticipant>> {
+        let mut conn = self.acquire().await?;
         let parent_rsvps: Vec<Uuid> = query_scalar!(
             "SELECT user_id FROM calendar_event_rsvp WHERE event_id = $1",
             *event_id
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         struct OverwriteRsvp {
@@ -524,7 +540,7 @@ impl DataCalendar for Postgres {
             *event_id,
             seq as i64
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         let mut participants: HashSet<Uuid> = parent_rsvps.into_iter().collect();

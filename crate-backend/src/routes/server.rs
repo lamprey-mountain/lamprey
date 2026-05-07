@@ -26,7 +26,7 @@ async fn server_info(
     State(s): State<Arc<ServerState>>,
     _req: routes::server_info::Request,
 ) -> Result<impl IntoResponse> {
-    let data = s.data();
+    let mut data = s.data();
     let config_internal = data.config_get().await?;
 
     let info = ServerInfo {

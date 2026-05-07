@@ -232,7 +232,7 @@ impl ServiceMessages {
             return Ok(vec![]);
         }
 
-        let data = self.state.data();
+        let mut data = self.state.data();
         let channel = self
             .state
             .services()
@@ -295,7 +295,7 @@ impl ServiceMessages {
         user_id: Option<UserId>,
         messages: &[Message],
     ) -> Result<HashMap<MessageId, ReactionCounts>> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let message_ids: Vec<MessageId> = messages.iter().map(|m| m.id).collect();
         let reactions = data
             .reaction_fetch_all(
@@ -337,7 +337,7 @@ impl ServiceMessages {
         _user_id: Option<UserId>,
         messages: &[Message],
     ) -> Result<HashMap<MessageId, Components<components::Canonical>>> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let version_ids: Vec<MessageVerId> = messages
             .iter()
             .map(|m| m.latest_version.version_id)
@@ -355,19 +355,14 @@ impl ServiceMessages {
         let mut components_map = HashMap::with_capacity(components_raw.len());
         for (message_ver_id, components) in components_raw {
             let mut media_ids = vec![];
-            let mut media_futs = FuturesUnordered::new();
             let mut media_cache = HashMap::new();
 
             components.collect_media_refs(&mut media_ids);
 
             // PERF: fetch as a batch
             for media_id in &media_ids {
-                media_futs.push(async { (*media_id, data.media_select(*media_id).await) });
-            }
-
-            while let Some((media_id, result)) = media_futs.next().await {
-                if let Ok(media) = result {
-                    media_cache.insert(media_id, media);
+                if let Ok(media) = data.media_select(*media_id).await {
+                    media_cache.insert(*media_id, media);
                 }
             }
 
@@ -453,7 +448,7 @@ impl ServiceMessages {
             .await?;
         perms.ensure(Permission::ChannelView)?;
 
-        let data = self.state.data();
+        let mut data = self.state.data();
         let mut ancestors = data
             .message_get_ancestors(start_message_id, context)
             .await?;
@@ -548,7 +543,7 @@ impl ServiceMessages {
         query: ContextQuery,
     ) -> Result<ContextResponse> {
         let s = &self.state;
-        let data = s.data();
+        let mut data = s.data();
 
         let limit = query.limit.unwrap_or(10);
         if limit > 1024 {
@@ -569,11 +564,10 @@ impl ServiceMessages {
             limit: Some(limit),
         };
 
-        let (before_res, after_res, message_res) = tokio::join!(
-            data.message_list(channel_id, before_q),
-            data.message_list(channel_id, after_q),
-            data.message_get(channel_id, message_id)
-        );
+        // PERF: fetch in parallel
+        let before_res = data.message_list(channel_id, before_q).await;
+        let after_res = data.message_list(channel_id, after_q).await;
+        let message_res = data.message_get(channel_id, message_id).await;
 
         let before = before_res?;
         let after = after_res?;
@@ -608,7 +602,7 @@ impl ServiceMessages {
         pagination: PaginationQuery<MessageVerId>,
     ) -> Result<PaginationResponse<MessageVersion>> {
         let s = &self.state;
-        let data = s.data();
+        let mut data = s.data();
         let mut res = data
             .message_version_list(channel_id, message_id, pagination)
             .await?;
@@ -627,7 +621,7 @@ impl ServiceMessages {
         _user_id: Option<UserId>,
     ) -> Result<MessageVersion> {
         let s = &self.state;
-        let data = s.data();
+        let mut data = s.data();
         let mut message = data.message_version_get(channel_id, version_id).await?;
         s.presign_message_version(&mut message).await?;
         Ok(message)
@@ -650,7 +644,7 @@ impl ServiceMessages {
         };
 
         let s = &self.state;
-        let data = s.data();
+        let mut data = s.data();
         let mut res = data
             .message_replies(
                 channel_id,

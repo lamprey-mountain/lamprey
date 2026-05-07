@@ -16,20 +16,22 @@ use super::Postgres;
 
 #[async_trait]
 impl DataPreferences for Postgres {
-    async fn preferences_set(&self, user_id: UserId, config: &PreferencesGlobal) -> Result<()> {
+    async fn preferences_set(&mut self, user_id: UserId, config: &PreferencesGlobal) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "update usr set config = $2 where id = $1",
             *user_id,
             serde_json::to_value(config)?,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn preferences_get(&self, user_id: UserId) -> Result<PreferencesGlobal> {
+    async fn preferences_get(&mut self, user_id: UserId) -> Result<PreferencesGlobal> {
+        let mut conn = self.acquire().await?;
         let conf = query_scalar!("select config from usr where id = $1", *user_id)
-            .fetch_one(&self.pool)
+            .fetch_one(conn.ext())
             .await?;
         let conf = conf
             .map(serde_json::from_value)
@@ -39,11 +41,12 @@ impl DataPreferences for Postgres {
     }
 
     async fn preferences_room_set(
-        &self,
+        &mut self,
         user_id: UserId,
         room_id: RoomId,
         config: &PreferencesRoom,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "
             INSERT INTO preferences_room (user_id, room_id, config)
@@ -54,22 +57,23 @@ impl DataPreferences for Postgres {
             *room_id,
             serde_json::to_value(config)?,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn preferences_room_get(
-        &self,
+        &mut self,
         user_id: UserId,
         room_id: RoomId,
     ) -> Result<PreferencesRoom> {
+        let mut conn = self.acquire().await?;
         let conf = query_scalar!(
             "SELECT config FROM preferences_room WHERE user_id = $1 AND room_id = $2",
             *user_id,
             *room_id
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
         let conf = conf
             .map(serde_json::from_value)
@@ -79,10 +83,11 @@ impl DataPreferences for Postgres {
     }
 
     async fn preferences_room_get_many(
-        &self,
+        &mut self,
         user_id: UserId,
         room_ids: &[RoomId],
     ) -> Result<HashMap<RoomId, PreferencesRoom>> {
+        let mut conn = self.acquire().await?;
         if room_ids.is_empty() {
             return Ok(HashMap::new());
         }
@@ -93,7 +98,7 @@ impl DataPreferences for Postgres {
             *user_id,
             &room_ids[..],
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         let mut map = HashMap::with_capacity(room_ids.len());
@@ -107,11 +112,12 @@ impl DataPreferences for Postgres {
     }
 
     async fn preferences_channel_set(
-        &self,
+        &mut self,
         user_id: UserId,
         channel_id: ChannelId,
         config: &PreferencesChannel,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "
             INSERT INTO preferences_channel (user_id, channel_id, config)
@@ -122,22 +128,23 @@ impl DataPreferences for Postgres {
             *channel_id,
             serde_json::to_value(config)?,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn preferences_channel_get(
-        &self,
+        &mut self,
         user_id: UserId,
         channel_id: ChannelId,
     ) -> Result<PreferencesChannel> {
+        let mut conn = self.acquire().await?;
         let conf = query_scalar!(
             "SELECT config FROM preferences_channel WHERE user_id = $1 AND channel_id = $2",
             *user_id,
             *channel_id,
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
         let conf = conf
             .map(serde_json::from_value)
@@ -147,10 +154,11 @@ impl DataPreferences for Postgres {
     }
 
     async fn preferences_channel_get_many(
-        &self,
+        &mut self,
         user_id: UserId,
         channel_ids: &[ChannelId],
     ) -> Result<HashMap<ChannelId, PreferencesChannel>> {
+        let mut conn = self.acquire().await?;
         if channel_ids.is_empty() {
             return Ok(HashMap::new());
         }
@@ -161,7 +169,7 @@ impl DataPreferences for Postgres {
             *user_id,
             &channel_ids[..],
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         let mut map = HashMap::with_capacity(channel_ids.len());
@@ -175,11 +183,12 @@ impl DataPreferences for Postgres {
     }
 
     async fn preferences_user_set(
-        &self,
+        &mut self,
         user_id: UserId,
         other_id: UserId,
         config: &PreferencesUser,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "
             INSERT INTO preferences_user (user_id, other_id, config)
@@ -190,22 +199,23 @@ impl DataPreferences for Postgres {
             *other_id,
             serde_json::to_value(config)?,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn preferences_user_get(
-        &self,
+        &mut self,
         user_id: UserId,
         other_id: UserId,
     ) -> Result<PreferencesUser> {
+        let mut conn = self.acquire().await?;
         let conf = query_scalar!(
             "SELECT config FROM preferences_user WHERE user_id = $1 AND other_id = $2",
             *user_id,
             *other_id
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
         let conf = conf
             .map(serde_json::from_value)

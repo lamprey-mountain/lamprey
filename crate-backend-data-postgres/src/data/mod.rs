@@ -44,7 +44,6 @@ use crate::types::{
 };
 use common::v1::types::components::{self, Components};
 
-// Data super-trait
 #[async_trait]
 pub trait Data:
     DataRoom
@@ -90,192 +89,199 @@ pub trait Data:
     + Send
     + Sync
 {
-    async fn migrate(&self) -> Result<()>;
-    async fn check_database(&self) -> Result<bool>;
-    // async fn commit(self) -> Result<()>;
+    async fn rollback(self: Box<Self>) -> Result<()>;
+    async fn commit(self: Box<Self>) -> Result<()>;
 }
 
-// Blanket implementation for Postgres
+#[async_trait]
+pub trait Data2: Send + Sync {
+    // TODO: find a way to erase this type
+    type DataTxn: Data;
 
-// DataRoom trait
+    async fn migrate(&self) -> Result<()>;
+    async fn check_database(&self) -> Result<bool>;
+    async fn begin(&self) -> Result<Self::DataTxn>;
+}
+
 #[async_trait]
 pub trait DataRoom {
-    async fn room_create(&self, create: RoomCreate, extra: DbRoomCreate) -> Result<Room>;
-    async fn room_get(&self, room_id: RoomId) -> Result<Room>;
+    async fn room_create(&mut self, create: RoomCreate, extra: DbRoomCreate) -> Result<Room>;
+    async fn room_get(&mut self, room_id: RoomId) -> Result<Room>;
     async fn room_list(
-        &self,
+        &mut self,
         user_id: UserId,
         pagination: PaginationQuery<RoomId>,
         include_server_room: bool,
     ) -> Result<PaginationResponse<Room>>;
     async fn room_list_all(
-        &self,
+        &mut self,
         pagination: PaginationQuery<RoomId>,
     ) -> Result<PaginationResponse<Room>>;
-    async fn room_list_user_all(&self, user_id: UserId) -> Result<Vec<RoomId>>;
+    async fn room_list_user_all(&mut self, user_id: UserId) -> Result<Vec<RoomId>>;
     async fn room_list_mutual(
-        &self,
+        &mut self,
         user_a_id: UserId,
         user_b_id: UserId,
         pagination: PaginationQuery<RoomId>,
     ) -> Result<PaginationResponse<Room>>;
-    async fn room_update(&self, room_id: RoomId, patch: RoomPatch) -> Result<RoomVerId>;
-    async fn room_set_owner(&self, id: RoomId, owner_id: UserId) -> Result<RoomVerId>;
-    async fn room_delete(&self, room_id: RoomId) -> Result<()>;
-    async fn room_undelete(&self, room_id: RoomId) -> Result<()>;
-    async fn room_quarantine(&self, room_id: RoomId) -> Result<RoomVerId>;
-    async fn room_unquarantine(&self, room_id: RoomId) -> Result<RoomVerId>;
-    async fn user_room_count(&self, user_id: UserId) -> Result<u64>;
+    async fn room_update(&mut self, room_id: RoomId, patch: RoomPatch) -> Result<RoomVerId>;
+    async fn room_set_owner(&mut self, id: RoomId, owner_id: UserId) -> Result<RoomVerId>;
+    async fn room_delete(&mut self, room_id: RoomId) -> Result<()>;
+    async fn room_undelete(&mut self, room_id: RoomId) -> Result<()>;
+    async fn room_quarantine(&mut self, room_id: RoomId) -> Result<RoomVerId>;
+    async fn room_unquarantine(&mut self, room_id: RoomId) -> Result<RoomVerId>;
+    async fn user_room_count(&mut self, user_id: UserId) -> Result<u64>;
     async fn room_security_update(
-        &self,
+        &mut self,
         room_id: RoomId,
         require_mfa: Option<bool>,
         require_sudo: Option<bool>,
     ) -> Result<RoomVerId>;
-    async fn user_owns_room_requiring_mfa(&self, user_id: UserId) -> Result<bool>;
+    async fn user_owns_room_requiring_mfa(&mut self, user_id: UserId) -> Result<bool>;
 }
 
-// DataRole trait
 #[async_trait]
 pub trait DataRole {
-    async fn role_create(&self, create: DbRoleCreate, position: u64) -> Result<Role>;
-    async fn role_list(&self, room_id: RoomId) -> Result<Vec<Role>>;
-    async fn role_delete(&self, room_id: RoomId, role_id: RoleId) -> Result<()>;
-    async fn role_select(&self, room_id: RoomId, role_id: RoleId) -> Result<Role>;
-    async fn role_get_many(&self, room_id: RoomId, role_ids: &[RoleId]) -> Result<Vec<Role>>;
+    async fn role_create(&mut self, create: DbRoleCreate, position: u64) -> Result<Role>;
+    async fn role_list(&mut self, room_id: RoomId) -> Result<Vec<Role>>;
+    async fn role_delete(&mut self, room_id: RoomId, role_id: RoleId) -> Result<()>;
+    async fn role_select(&mut self, room_id: RoomId, role_id: RoleId) -> Result<Role>;
+    async fn role_get_many(&mut self, room_id: RoomId, role_ids: &[RoleId]) -> Result<Vec<Role>>;
     async fn role_update(
-        &self,
+        &mut self,
         room_id: RoomId,
         role_id: RoleId,
         patch: RolePatch,
     ) -> Result<RoleVerId>;
-    async fn role_reorder(&self, room_id: RoomId, reorder: RoleReorder) -> Result<()>;
-    async fn role_user_rank(&self, room_id: RoomId, user_id: UserId) -> Result<u64>;
+    async fn role_reorder(&mut self, room_id: RoomId, reorder: RoleReorder) -> Result<()>;
+    async fn role_user_rank(&mut self, room_id: RoomId, user_id: UserId) -> Result<u64>;
 }
 
-// DataMedia trait
 #[async_trait]
 pub trait DataMedia {
-    async fn media_insert(&self, media: Media) -> Result<()>;
-    async fn media_select(&self, media_id: MediaId) -> Result<Media>;
-    async fn media_update(&self, media_id: MediaId, patch: MediaPatch) -> Result<()>;
-    async fn media_replace(&self, media: Media) -> Result<()>;
-    async fn media_delete(&self, media_id: MediaId) -> Result<()>;
+    async fn media_insert(&mut self, media: Media) -> Result<()>;
+    async fn media_select(&mut self, media_id: MediaId) -> Result<Media>;
+    async fn media_update(&mut self, media_id: MediaId, patch: MediaPatch) -> Result<()>;
+    async fn media_replace(&mut self, media: Media) -> Result<()>;
+    async fn media_delete(&mut self, media_id: MediaId) -> Result<()>;
     async fn media_link_insert(
-        &self,
+        &mut self,
         media_id: MediaId,
         target_id: Uuid,
         link_type: MediaLinkType,
     ) -> Result<()>;
-    async fn media_link_select(&self, media_id: MediaId) -> Result<Vec<MediaLink>>;
-    async fn media_link_delete(&self, target_id: Uuid, link_type: MediaLinkType) -> Result<()>;
-    async fn media_link_delete_all(&self, target_id: Uuid) -> Result<()>;
+    async fn media_link_select(&mut self, media_id: MediaId) -> Result<Vec<MediaLink>>;
+    async fn media_link_delete(&mut self, target_id: Uuid, link_type: MediaLinkType) -> Result<()>;
+    async fn media_link_delete_all(&mut self, target_id: Uuid) -> Result<()>;
     async fn media_link_create_exclusive(
-        &self,
+        &mut self,
         media_id: MediaId,
         target_id: Uuid,
         link_type: MediaLinkType,
     ) -> Result<()>;
-    async fn media_migrate_batch(&self, limit: u32) -> Result<u64>;
+    async fn media_migrate_batch(&mut self, limit: u32) -> Result<u64>;
     async fn media_list_indexed(
-        &self,
+        &mut self,
         after_version_id: Option<MediaVerId>,
         limit: u32,
     ) -> Result<Vec<Media>>;
     async fn media_select_by_remote(
-        &self,
+        &mut self,
         hostname: &Hostname,
         origin_id: Uuid,
     ) -> Result<Option<Media>>;
 }
 
-// DataMessage trait
 #[async_trait]
 pub trait DataMessage {
-    async fn message_create(&self, create: DbMessageCreate) -> Result<MessageId>;
+    async fn message_create(&mut self, create: DbMessageCreate) -> Result<MessageId>;
     async fn message_update(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         message_id: MessageId,
         update: DbMessageUpdate,
     ) -> Result<MessageVerId>;
     async fn message_update_in_place(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         version_id: MessageVerId,
         update: DbMessageUpdate,
     ) -> Result<()>;
     async fn message_flume_update(
-        &self,
+        &mut self,
         message_id: MessageId,
         flume: serde_json::Value,
     ) -> Result<()>;
-    async fn message_get(&self, channel_id: ChannelId, message_id: MessageId) -> Result<Message>;
+    async fn message_get(
+        &mut self,
+        channel_id: ChannelId,
+        message_id: MessageId,
+    ) -> Result<Message>;
     async fn message_get_many(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         message_ids: &[MessageId],
     ) -> Result<Vec<Message>>;
     async fn message_list(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
     async fn message_list_deleted(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
     async fn message_list_removed(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
     async fn message_list_activity(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
     async fn message_list_all(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
-    async fn message_delete(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()>;
+    async fn message_delete(&mut self, channel_id: ChannelId, message_id: MessageId) -> Result<()>;
     async fn message_delete_bulk(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         message_ids: &[MessageId],
     ) -> Result<()>;
     async fn message_remove_bulk(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         message_ids: &[MessageId],
     ) -> Result<()>;
     async fn message_restore_bulk(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         message_ids: &[MessageId],
     ) -> Result<()>;
     async fn message_version_get(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         version_id: MessageVerId,
     ) -> Result<MessageVersion>;
     async fn message_version_delete(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         version_id: MessageVerId,
     ) -> Result<()>;
     async fn message_version_list(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         message_id: MessageId,
         pagination: PaginationQuery<MessageVerId>,
     ) -> Result<PaginationResponse<MessageVersion>>;
     async fn message_replies(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         root_message_id: Option<MessageId>,
         user_id: UserId,
@@ -284,42 +290,50 @@ pub trait DataMessage {
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
     async fn message_pin_create(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         message_id: MessageId,
     ) -> Result<bool>;
-    async fn message_pin_delete(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()>;
-    async fn message_pin_reorder(&self, channel_id: ChannelId, reorder: PinsReorder) -> Result<()>;
+    async fn message_pin_delete(
+        &mut self,
+        channel_id: ChannelId,
+        message_id: MessageId,
+    ) -> Result<()>;
+    async fn message_pin_reorder(
+        &mut self,
+        channel_id: ChannelId,
+        reorder: PinsReorder,
+    ) -> Result<()>;
     async fn message_pin_list(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         user_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
     async fn message_get_ancestors(
-        &self,
+        &mut self,
         message_id: MessageId,
         limit: u16,
     ) -> Result<Vec<Message>>;
     async fn message_fetch_mention_ids(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         version_ids: &[MessageVerId],
     ) -> Result<Vec<MentionsIds>>;
     async fn message_fetch_components(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         version_ids: &[MessageVerId],
     ) -> Result<HashMap<MessageVerId, Components<components::Thin>>>;
     async fn message_id_get_by_version(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         version_id: MessageVerId,
     ) -> Result<MessageId>;
 
     /// Get incremental sync events for a channel since the given sequence number.
     async fn channel_sync(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         since: ChannelSeq,
         pagination: PaginationQuery<MessageId>,
@@ -327,182 +341,193 @@ pub trait DataMessage {
     ) -> Result<ChannelSync>;
 }
 
-// DataSession trait
 #[async_trait]
 pub trait DataSession {
-    async fn session_create(&self, create: DbSessionCreate) -> Result<Session>;
-    async fn session_get(&self, session_id: SessionId) -> Result<Session>;
-    async fn session_get_by_token(&self, token: SessionToken) -> Result<Session>;
-    async fn session_set_status(&self, session_id: SessionId, status: SessionStatus) -> Result<()>;
+    async fn session_create(&mut self, create: DbSessionCreate) -> Result<Session>;
+    async fn session_get(&mut self, session_id: SessionId) -> Result<Session>;
+    async fn session_get_by_token(&mut self, token: SessionToken) -> Result<Session>;
+    async fn session_set_status(
+        &mut self,
+        session_id: SessionId,
+        status: SessionStatus,
+    ) -> Result<()>;
     async fn session_list(
-        &self,
+        &mut self,
         user_id: UserId,
         pagination: PaginationQuery<SessionId>,
     ) -> Result<PaginationResponse<Session>>;
-    async fn session_update(&self, session_id: SessionId, patch: SessionPatch) -> Result<()>;
-    async fn session_delete(&self, session_id: SessionId) -> Result<()>;
-    async fn session_delete_all(&self, user_id: UserId) -> Result<()>;
-    async fn session_set_last_seen_at(&self, session_id: SessionId) -> Result<()>;
+    async fn session_update(&mut self, session_id: SessionId, patch: SessionPatch) -> Result<()>;
+    async fn session_delete(&mut self, session_id: SessionId) -> Result<()>;
+    async fn session_delete_all(&mut self, user_id: UserId) -> Result<()>;
+    async fn session_set_last_seen_at(&mut self, session_id: SessionId) -> Result<()>;
 }
 
-// DataChannel trait
 #[async_trait]
 pub trait DataChannel {
-    async fn channel_create(&self, create: DbChannelCreate) -> Result<ChannelId>;
-    async fn channel_create_with_id(&self, id: ChannelId, create: DbChannelCreate) -> Result<()>;
-    async fn channel_get(&self, channel_id: ChannelId) -> Result<Channel>;
-    async fn channel_get_many(&self, channel_ids: &[ChannelId]) -> Result<Vec<Channel>>;
+    async fn channel_create(&mut self, create: DbChannelCreate) -> Result<ChannelId>;
+    async fn channel_create_with_id(
+        &mut self,
+        id: ChannelId,
+        create: DbChannelCreate,
+    ) -> Result<()>;
+    async fn channel_get(&mut self, channel_id: ChannelId) -> Result<Channel>;
+    async fn channel_get_many(&mut self, channel_ids: &[ChannelId]) -> Result<Vec<Channel>>;
     async fn channel_get_private(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         user_id: UserId,
     ) -> Result<DbChannelPrivate>;
-    async fn channel_list(&self, room_id: RoomId) -> Result<Vec<Channel>>;
+    async fn channel_list(&mut self, room_id: RoomId) -> Result<Vec<Channel>>;
     async fn channel_list_removed(
-        &self,
+        &mut self,
         room_id: RoomId,
         pagination: PaginationQuery<ChannelId>,
         parent_id: Option<ChannelId>,
     ) -> Result<PaginationResponse<Channel>>;
     async fn channel_update(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         patch: ChannelPatch,
     ) -> Result<ChannelVerId>;
-    async fn channel_delete(&self, channel_id: ChannelId) -> Result<()>;
-    async fn channel_undelete(&self, channel_id: ChannelId) -> Result<()>;
-    async fn channel_reorder(&self, data: ChannelReorder) -> Result<()>;
-    async fn channel_upgrade_gdm(&self, channel_id: ChannelId, room_id: RoomId) -> Result<()>;
+    async fn channel_delete(&mut self, channel_id: ChannelId) -> Result<()>;
+    async fn channel_undelete(&mut self, channel_id: ChannelId) -> Result<()>;
+    async fn channel_reorder(&mut self, data: ChannelReorder) -> Result<()>;
+    async fn channel_upgrade_gdm(&mut self, channel_id: ChannelId, room_id: RoomId) -> Result<()>;
     async fn channel_get_message_slowmode_expire_at(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         user_id: UserId,
     ) -> Result<Option<Time>>;
     async fn channel_set_message_slowmode_expire_at(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         user_id: UserId,
         expires_at: Time,
     ) -> Result<()>;
     async fn channel_get_thread_slowmode_expire_at(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         user_id: UserId,
     ) -> Result<Option<Time>>;
     async fn channel_set_thread_slowmode_expire_at(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         user_id: UserId,
         expires_at: Time,
     ) -> Result<()>;
-    async fn channel_ratelimit_delete_all(&self, channel_id: ChannelId) -> Result<()>;
+    async fn channel_ratelimit_delete_all(&mut self, channel_id: ChannelId) -> Result<()>;
     async fn channel_document_insert(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         document: &Document,
     ) -> Result<()>;
-    async fn channel_document_get(&self, channel_id: ChannelId) -> Result<Option<Document>>;
+    async fn channel_document_get(&mut self, channel_id: ChannelId) -> Result<Option<Document>>;
     async fn channel_document_update(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         document_patch: &DocumentPatch,
     ) -> Result<()>;
-    async fn channel_wiki_insert(&self, channel_id: ChannelId, wiki: &Wiki) -> Result<()>;
-    async fn channel_wiki_get(&self, channel_id: ChannelId) -> Result<Option<Wiki>>;
+    async fn channel_wiki_insert(&mut self, channel_id: ChannelId, wiki: &Wiki) -> Result<()>;
+    async fn channel_wiki_get(&mut self, channel_id: ChannelId) -> Result<Option<Wiki>>;
     async fn channel_wiki_update(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         wiki_patch: &WikiPatch,
     ) -> Result<()>;
     async fn channel_calendar_insert(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         calendar: &Calendar,
     ) -> Result<()>;
-    async fn channel_calendar_get(&self, channel_id: ChannelId) -> Result<Option<Calendar>>;
+    async fn channel_calendar_get(&mut self, channel_id: ChannelId) -> Result<Option<Calendar>>;
     async fn channel_calendar_update(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         calendar_patch: &CalendarPatch,
     ) -> Result<()>;
 }
 
-// DataUser trait
 #[async_trait]
 pub trait DataUser {
-    async fn user_create(&self, patch: DbUserCreate) -> Result<User>;
-    async fn user_update(&self, user_id: UserId, patch: UserPatch) -> Result<UserVerId>;
-    async fn user_delete(&self, user_id: UserId) -> Result<()>;
-    async fn user_undelete(&self, user_id: UserId) -> Result<()>;
-    async fn user_get(&self, user_id: UserId) -> Result<User>;
-    async fn user_get_many(&self, user_ids: &[UserId]) -> Result<Vec<User>>;
+    async fn user_create(&mut self, patch: DbUserCreate) -> Result<User>;
+    async fn user_update(&mut self, user_id: UserId, patch: UserPatch) -> Result<UserVerId>;
+    async fn user_delete(&mut self, user_id: UserId) -> Result<()>;
+    async fn user_undelete(&mut self, user_id: UserId) -> Result<()>;
+    async fn user_get(&mut self, user_id: UserId) -> Result<User>;
+    async fn user_get_many(&mut self, user_ids: &[UserId]) -> Result<Vec<User>>;
     async fn user_list(
-        &self,
+        &mut self,
         pagination: PaginationQuery<UserId>,
         filter: Option<UserListFilter>,
     ) -> Result<PaginationResponse<User>>;
     async fn user_lookup_puppet(
-        &self,
+        &mut self,
         owner_id: UserId,
         external_id: &str,
     ) -> Result<Option<UserId>>;
     async fn user_set_registered(
-        &self,
+        &mut self,
         user_id: UserId,
         registered_at: Option<Time>,
         parent_invite: Option<String>,
     ) -> Result<UserVerId>;
     async fn user_suspended(
-        &self,
+        &mut self,
         user_id: UserId,
         suspended: Option<Suspended>,
     ) -> Result<UserVerId>;
 }
 
-// DataAuth trait
 #[async_trait]
 pub trait DataAuth {
     async fn auth_oauth_put(
-        &self,
+        &mut self,
         provider: String,
         user_id: UserId,
         remote_id: String,
         can_auth: bool,
     ) -> Result<()>;
-    async fn auth_oauth_get_all(&self, user_id: UserId) -> Result<Vec<String>>;
+    async fn auth_oauth_get_all(&mut self, user_id: UserId) -> Result<Vec<String>>;
     async fn auth_oauth_get_remote(
-        &self,
+        &mut self,
         provider: String,
         remote_id: String,
     ) -> Result<Option<UserId>>;
-    async fn auth_oauth_delete(&self, provider: String, user_id: UserId) -> Result<()>;
-    async fn auth_password_set(&self, user_id: UserId, hash: &[u8], salt: &[u8]) -> Result<()>;
-    async fn auth_password_get(&self, user_id: UserId) -> Result<Option<(Vec<u8>, Vec<u8>)>>;
-    async fn auth_password_delete(&self, user_id: UserId) -> Result<()>;
+    async fn auth_oauth_delete(&mut self, provider: String, user_id: UserId) -> Result<()>;
+    async fn auth_password_set(&mut self, user_id: UserId, hash: &[u8], salt: &[u8]) -> Result<()>;
+    async fn auth_password_get(&mut self, user_id: UserId) -> Result<Option<(Vec<u8>, Vec<u8>)>>;
+    async fn auth_password_delete(&mut self, user_id: UserId) -> Result<()>;
     async fn auth_email_create(
-        &self,
+        &mut self,
         code: String,
         addr: EmailAddr,
         session_id: SessionId,
         purpose: EmailPurpose,
     ) -> Result<()>;
-    async fn auth_email_use(&self, code: String) -> Result<(EmailAddr, SessionId, EmailPurpose)>;
+    async fn auth_email_use(
+        &mut self,
+        code: String,
+    ) -> Result<(EmailAddr, SessionId, EmailPurpose)>;
     async fn auth_totp_set(
-        &self,
+        &mut self,
         user_id: UserId,
         secret: Option<String>,
         enabled: bool,
     ) -> Result<()>;
-    async fn auth_totp_get(&self, user_id: UserId) -> Result<Option<(String, bool)>>;
-    async fn auth_totp_recovery_generate(&self, user_id: UserId, codes: &[String]) -> Result<()>;
+    async fn auth_totp_get(&mut self, user_id: UserId) -> Result<Option<(String, bool)>>;
+    async fn auth_totp_recovery_generate(
+        &mut self,
+        user_id: UserId,
+        codes: &[String],
+    ) -> Result<()>;
     async fn auth_totp_recovery_get_all(
-        &self,
+        &mut self,
         user_id: UserId,
     ) -> Result<Vec<(String, Option<Time>)>>;
-    async fn auth_totp_recovery_use(&self, user_id: UserId, code: &str) -> Result<()>;
-    async fn auth_totp_recovery_delete_all(&self, user_id: UserId) -> Result<()>;
+    async fn auth_totp_recovery_use(&mut self, user_id: UserId, code: &str) -> Result<()>;
+    async fn auth_totp_recovery_delete_all(&mut self, user_id: UserId) -> Result<()>;
     async fn oauth_auth_code_create(
-        &self,
+        &mut self,
         code: String,
         application_id: ApplicationId,
         user_id: UserId,
@@ -512,7 +537,7 @@ pub trait DataAuth {
         code_challenge_method: Option<String>,
     ) -> Result<()>;
     async fn oauth_auth_code_use(
-        &self,
+        &mut self,
         code: String,
     ) -> Result<(
         ApplicationId,
@@ -522,63 +547,64 @@ pub trait DataAuth {
         Option<String>,
         Option<String>,
     )>;
-    async fn oauth_refresh_token_create(&self, token: String, session_id: SessionId) -> Result<()>;
-    async fn oauth_refresh_token_use(&self, token: String) -> Result<SessionId>;
+    async fn oauth_refresh_token_create(
+        &mut self,
+        token: String,
+        session_id: SessionId,
+    ) -> Result<()>;
+    async fn oauth_refresh_token_use(&mut self, token: String) -> Result<SessionId>;
 }
 
-// DataEmbed trait
 #[async_trait]
 pub trait DataEmbed {
     async fn url_embed_queue_insert(
-        &self,
+        &mut self,
         message_ref: Option<MessageRef>,
         user_id: Option<UserId>,
         url: String,
     ) -> Result<Uuid>;
-    async fn url_embed_queue_claim(&self) -> Result<Option<UrlEmbedQueue>>;
-    async fn url_embed_queue_finish(&self, id: Uuid, embed: Option<&Embed>) -> Result<()>;
+    async fn url_embed_queue_claim(&mut self) -> Result<Option<UrlEmbedQueue>>;
+    async fn url_embed_queue_finish(&mut self, id: Uuid, embed: Option<&Embed>) -> Result<()>;
 }
 
-// DataEmailQueue trait
 #[async_trait]
 pub trait DataEmailQueue {
     async fn email_queue_insert(
-        &self,
+        &mut self,
         to: String,
         from: String,
         subject: String,
         plain_text_body: String,
         html_body: Option<String>,
     ) -> Result<Uuid>;
-    async fn email_queue_claim(&self) -> Result<Option<DbEmailQueue>>;
-    async fn email_queue_finish(&self, id: Uuid) -> Result<()>;
-    async fn email_queue_fail(&self, error_message: String, id: Uuid) -> Result<()>;
+    async fn email_queue_claim(&mut self) -> Result<Option<DbEmailQueue>>;
+    async fn email_queue_finish(&mut self, id: Uuid) -> Result<()>;
+    async fn email_queue_fail(&mut self, error_message: String, id: Uuid) -> Result<()>;
 }
 
-// DataDocument trait
 #[async_trait]
 pub trait DataDocument {
     async fn document_compact(
-        &self,
+        &mut self,
         context_id: EditContextId,
         last_snapshot_id: Uuid,
         last_seq: u32,
         snapshot: Vec<u8>,
     ) -> Result<()>;
-    async fn document_load(&self, context_id: EditContextId) -> Result<DehydratedDocument>;
+    async fn document_load(&mut self, context_id: EditContextId) -> Result<DehydratedDocument>;
     async fn document_load_at_seq(
-        &self,
+        &mut self,
         context_id: EditContextId,
         seq: u32,
     ) -> Result<DehydratedDocument>;
     async fn document_create(
-        &self,
+        &mut self,
         context_id: EditContextId,
         creator_id: UserId,
         snapshot: Vec<u8>,
     ) -> Result<()>;
     async fn document_update(
-        &self,
+        &mut self,
         context_id: EditContextId,
         author_id: UserId,
         update: Vec<u8>,
@@ -586,103 +612,102 @@ pub trait DataDocument {
         stat_removed: u32,
     ) -> Result<u32>;
     async fn document_fork(
-        &self,
+        &mut self,
         context_id: EditContextId,
         creator_id: UserId,
         create: DocumentBranchCreate,
     ) -> Result<DocumentBranchId>;
     async fn document_branch_get(
-        &self,
+        &mut self,
         document_id: ChannelId,
         branch_id: DocumentBranchId,
     ) -> Result<DocumentBranch>;
     async fn document_branch_update(
-        &self,
+        &mut self,
         document_id: ChannelId,
         branch_id: DocumentBranchId,
         patch: DocumentBranchPatch,
     ) -> Result<()>;
     async fn document_branch_set_state(
-        &self,
+        &mut self,
         document_id: ChannelId,
         branch_id: DocumentBranchId,
         status: DocumentBranchState,
     ) -> Result<()>;
-    async fn document_branch_list(&self, document_id: ChannelId) -> Result<Vec<DocumentBranch>>;
+    async fn document_branch_list(&mut self, document_id: ChannelId)
+        -> Result<Vec<DocumentBranch>>;
     async fn document_branch_paginate(
-        &self,
+        &mut self,
         document_id: ChannelId,
         user_id: UserId,
         filter: DocumentBranchListParams,
         pagination: PaginationQuery<DocumentBranchId>,
     ) -> Result<PaginationResponse<DocumentBranch>>;
     async fn document_tag_create(
-        &self,
+        &mut self,
         branch_id: DocumentBranchId,
         creator_id: UserId,
         summary: String,
         description: Option<String>,
         revision_seq: u64,
     ) -> Result<DocumentTagId>;
-    async fn document_tag_get(&self, tag_id: DocumentTagId) -> Result<DocumentTag>;
+    async fn document_tag_get(&mut self, tag_id: DocumentTagId) -> Result<DocumentTag>;
     async fn document_tag_update(
-        &self,
+        &mut self,
         tag_id: DocumentTagId,
         summary: Option<String>,
         description: Option<Option<String>>,
     ) -> Result<()>;
-    async fn document_tag_delete(&self, tag_id: DocumentTagId) -> Result<()>;
-    async fn document_tag_list(&self, branch_id: DocumentBranchId) -> Result<Vec<DocumentTag>>;
+    async fn document_tag_delete(&mut self, tag_id: DocumentTagId) -> Result<()>;
+    async fn document_tag_list(&mut self, branch_id: DocumentBranchId) -> Result<Vec<DocumentTag>>;
     async fn document_tag_list_by_document(
-        &self,
+        &mut self,
         document_id: ChannelId,
         user_id: UserId,
     ) -> Result<Vec<DocumentTag>>;
     async fn document_history(
-        &self,
+        &mut self,
         context_id: EditContextId,
     ) -> Result<(Vec<DocumentUpdateSummary>, Vec<DocumentTag>)>;
     async fn wiki_history(
-        &self,
+        &mut self,
         wiki_id: ChannelId,
     ) -> Result<(Vec<DocumentUpdateSummary>, Vec<DocumentTag>)>;
 }
 
-// DataPush trait
 #[async_trait]
 pub trait DataPush {
-    async fn push_insert(&self, push: PushData) -> Result<()>;
-    async fn push_get(&self, session_id: SessionId) -> Result<PushData>;
-    async fn push_delete(&self, session_id: SessionId) -> Result<()>;
-    async fn push_list_for_user(&self, user_id: UserId) -> Result<Vec<PushData>>;
-    async fn push_delete_for_user(&self, user_id: UserId) -> Result<()>;
+    async fn push_insert(&mut self, push: PushData) -> Result<()>;
+    async fn push_get(&mut self, session_id: SessionId) -> Result<PushData>;
+    async fn push_delete(&mut self, session_id: SessionId) -> Result<()>;
+    async fn push_list_for_user(&mut self, user_id: UserId) -> Result<Vec<PushData>>;
+    async fn push_delete_for_user(&mut self, user_id: UserId) -> Result<()>;
 }
 
-// DataRoomTemplate trait
 #[async_trait]
 pub trait DataRoomTemplate {
     async fn room_template_create(
-        &self,
+        &mut self,
         creator_id: UserId,
         snapshot: serde_json::Value,
         create: RoomTemplateCreate,
     ) -> Result<DbRoomTemplate>;
-    async fn room_template_get(&self, code: RoomTemplateCode) -> Result<DbRoomTemplate>;
+    async fn room_template_get(&mut self, code: RoomTemplateCode) -> Result<DbRoomTemplate>;
     async fn room_template_list(
-        &self,
+        &mut self,
         creator_id: UserId,
         pagination: PaginationQuery<RoomTemplateCode>,
     ) -> Result<PaginationResponse<DbRoomTemplate>>;
     async fn room_template_update(
-        &self,
+        &mut self,
         code: RoomTemplateCode,
         patch: RoomTemplatePatch,
     ) -> Result<DbRoomTemplate>;
     async fn room_template_update_snapshot(
-        &self,
+        &mut self,
         code: RoomTemplateCode,
         snapshot: serde_json::Value,
     ) -> Result<DbRoomTemplate>;
-    async fn room_template_mark_dirty(&self, source_room_id: RoomId) -> Result<()>;
-    async fn room_template_delete(&self, code: RoomTemplateCode) -> Result<()>;
+    async fn room_template_mark_dirty(&mut self, source_room_id: RoomId) -> Result<()>;
+    async fn room_template_delete(&mut self, code: RoomTemplateCode) -> Result<()>;
 }

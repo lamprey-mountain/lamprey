@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
-use sqlx::{query, query_as, query_scalar, Acquire};
+use sqlx::{query, query_as, query_scalar};
 use time::PrimitiveDateTime;
 use tracing::info;
 use uuid::Uuid;
@@ -18,10 +18,10 @@ use super::{Pagination, Postgres};
 
 #[async_trait]
 impl DataRoom for Postgres {
-    async fn room_create(&self, create: RoomCreate, extra: DbRoomCreate) -> Result<Room> {
-        let mut conn = self.pool.acquire().await?;
+    async fn room_create(&mut self, create: RoomCreate, extra: DbRoomCreate) -> Result<Room> {
         let room_id = extra.id.map(|i| *i).unwrap_or_else(Uuid::now_v7);
         let ty: DbRoomType = extra.ty.into();
+        let mut conn = self.acquire().await?;
         query!(
             "
     	    INSERT INTO room (id, version_id, name, description, icon, banner, public, type, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout, invites_paused_until)
@@ -41,15 +41,15 @@ impl DataRoom for Postgres {
             None::<uuid::Uuid>,
             300000,
         )
-        .execute(&mut *conn)
+        .execute(conn.ext())
         .await?;
         info!("inserted room");
         self.room_get(room_id.into()).await
     }
 
-    async fn room_get(&self, id: RoomId) -> Result<Room> {
+    async fn room_get(&mut self, id: RoomId) -> Result<Room> {
         let id: Uuid = id.into();
-        let mut conn = self.pool.acquire().await?;
+        let mut conn = self.acquire().await?;
         let room = query_as!(
             DbRoom,
             r#"
@@ -80,7 +80,7 @@ impl DataRoom for Postgres {
             "#,
             id
         )
-        .fetch_one(&mut *conn)
+        .fetch_one(conn.ext())
         .await
         .map_err(|e| match e {
             sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
@@ -92,7 +92,7 @@ impl DataRoom for Postgres {
     }
 
     async fn room_list(
-        &self,
+        &mut self,
         user_id: UserId,
         pagination: PaginationQuery<RoomId>,
         include_server_room: bool,
@@ -100,7 +100,7 @@ impl DataRoom for Postgres {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_as!(
                 DbRoom,
                 r#"
@@ -155,13 +155,13 @@ impl DataRoom for Postgres {
     }
 
     async fn room_list_all(
-        &self,
+        &mut self,
         pagination: PaginationQuery<RoomId>,
     ) -> Result<PaginationResponse<Room>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_as!(
                 DbRoom,
                 r#"
@@ -205,7 +205,8 @@ impl DataRoom for Postgres {
         )
     }
 
-    async fn room_list_user_all(&self, user_id: UserId) -> Result<Vec<RoomId>> {
+    async fn room_list_user_all(&mut self, user_id: UserId) -> Result<Vec<RoomId>> {
+        let mut conn = self.acquire().await?;
         let rooms = query_scalar!(
             r#"
             SELECT room_id
@@ -214,15 +215,14 @@ impl DataRoom for Postgres {
             "#,
             *user_id
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         Ok(rooms.into_iter().map(Into::into).collect())
     }
 
-    async fn room_update(&self, id: RoomId, patch: RoomPatch) -> Result<RoomVerId> {
-        let mut conn = self.pool.acquire().await?;
-        let mut tx = conn.begin().await?;
+    async fn room_update(&mut self, id: RoomId, patch: RoomPatch) -> Result<RoomVerId> {
+        let mut tx = self.begin_tx().await?;
         let room = query!(
             r#"
             SELECT id, name, description, icon, banner, archived_at, public, welcome_channel_id, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout, invites_paused_until
@@ -232,7 +232,7 @@ impl DataRoom for Postgres {
             "#,
             id.into_inner()
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
         let version_id = RoomVerId::new();
         query!(
@@ -253,14 +253,14 @@ impl DataRoom for Postgres {
                 None => room.invites_paused_until,
             },
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         Ok(version_id)
     }
 
     async fn room_list_mutual(
-        &self,
+        &mut self,
         user_a_id: UserId,
         user_b_id: UserId,
         pagination: PaginationQuery<RoomId>,
@@ -268,7 +268,7 @@ impl DataRoom for Postgres {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_as!(
                 DbRoom,
                 r#"
@@ -328,7 +328,8 @@ impl DataRoom for Postgres {
         )
     }
 
-    async fn room_set_owner(&self, id: RoomId, owner_id: UserId) -> Result<RoomVerId> {
+    async fn room_set_owner(&mut self, id: RoomId, owner_id: UserId) -> Result<RoomVerId> {
+        let mut conn = self.acquire().await?;
         let version_id = RoomVerId::new();
         query!(
             r#"update room set owner_id = $2, version_id = $3 where id = $1"#,
@@ -336,37 +337,37 @@ impl DataRoom for Postgres {
             *owner_id,
             *version_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(version_id)
     }
 
-    async fn room_delete(&self, room_id: RoomId) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+    async fn room_delete(&mut self, room_id: RoomId) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
         let version_id = RoomVerId::new();
         query!(
             r#"update room set deleted_at = now(), version_id = $2 where id = $1"#,
             *room_id,
             *version_id
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         query!(
             r#"update room_member set membership = 'Leave', left_at = now() where room_id = $1 and membership = 'Join'"#,
             *room_id,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         Ok(())
     }
 
-    async fn room_undelete(&self, room_id: RoomId) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+    async fn room_undelete(&mut self, room_id: RoomId) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
 
         let room_deleted_at =
             query_scalar!(r#"select deleted_at from room where id = $1"#, *room_id)
-                .fetch_one(&mut *tx)
+                .fetch_one(tx.ext())
                 .await?
                 .ok_or(Error::BadStatic("room is not deleted"))?;
 
@@ -376,7 +377,7 @@ impl DataRoom for Postgres {
             *room_id,
             *version_id
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         query!(
@@ -390,38 +391,41 @@ impl DataRoom for Postgres {
             *room_id,
             room_deleted_at
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
         Ok(())
     }
 
-    async fn room_quarantine(&self, room_id: RoomId) -> Result<RoomVerId> {
+    async fn room_quarantine(&mut self, room_id: RoomId) -> Result<RoomVerId> {
+        let mut conn = self.acquire().await?;
         let version_id = RoomVerId::new();
         query!(
             r#"update room set quarantined = true, version_id = $2 where id = $1"#,
             *room_id,
             *version_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(version_id)
     }
 
-    async fn room_unquarantine(&self, room_id: RoomId) -> Result<RoomVerId> {
+    async fn room_unquarantine(&mut self, room_id: RoomId) -> Result<RoomVerId> {
+        let mut conn = self.acquire().await?;
         let version_id = RoomVerId::new();
         query!(
             r#"update room set quarantined = false, version_id = $2 where id = $1"#,
             *room_id,
             *version_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(version_id)
     }
 
-    async fn user_room_count(&self, user_id: UserId) -> Result<u64> {
+    async fn user_room_count(&mut self, user_id: UserId) -> Result<u64> {
+        let mut conn = self.acquire().await?;
         let count = query_scalar!(
             r#"
             SELECT count(*) FROM room_member
@@ -429,19 +433,19 @@ impl DataRoom for Postgres {
             "#,
             *user_id
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
 
         Ok(count.unwrap_or(0) as u64)
     }
 
     async fn room_security_update(
-        &self,
+        &mut self,
         room_id: RoomId,
         require_mfa: Option<bool>,
         require_sudo: Option<bool>,
     ) -> Result<RoomVerId> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let room = query!(
             r#"
             SELECT security_require_mfa, security_require_sudo
@@ -451,7 +455,7 @@ impl DataRoom for Postgres {
             "#,
             room_id.into_inner()
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         let new_require_mfa = require_mfa.unwrap_or(room.security_require_mfa);
@@ -465,13 +469,14 @@ impl DataRoom for Postgres {
             new_require_mfa,
             new_require_sudo
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         Ok(version_id)
     }
 
-    async fn user_owns_room_requiring_mfa(&self, user_id: UserId) -> Result<bool> {
+    async fn user_owns_room_requiring_mfa(&mut self, user_id: UserId) -> Result<bool> {
+        let mut conn = self.acquire().await?;
         let result = sqlx::query_scalar!(
             r#"
             SELECT EXISTS(
@@ -481,7 +486,7 @@ impl DataRoom for Postgres {
             "#,
             user_id.into_inner()
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
         Ok(result)
     }

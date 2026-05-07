@@ -53,7 +53,7 @@ async fn emoji_get(
     req: routes::emoji_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let emoji = data.emoji_get(req.emoji_id).await?;
 
     // Check permission based on emoji ownership
@@ -79,7 +79,7 @@ async fn emoji_delete(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     let emoji = data.emoji_get(req.emoji_id).await?;
     srv.perms
         .for_room3(Some(auth.user.id), req.room_id)
@@ -124,7 +124,7 @@ async fn emoji_update(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     srv.perms
         .for_room3(Some(auth.user.id), req.room_id)
         .await?
@@ -171,7 +171,7 @@ async fn emoji_list(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let data = s.data();
+    let mut data = s.data();
     srv.perms
         .for_room3(auth.user_id(), req.room_id)
         .await?
@@ -190,7 +190,7 @@ async fn emoji_search(
     req: routes::emoji_search::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let emojis = data
         .emoji_search(auth.user.id, req.search.query, req.pagination)
         .await?;
@@ -207,7 +207,7 @@ async fn emoji_lookup(
     req: routes::emoji_lookup::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let data = s.data();
+    let mut data = s.data();
     let mut emoji = data.emoji_get(req.emoji_id).await?;
 
     let original_owner = emoji.owner.clone();

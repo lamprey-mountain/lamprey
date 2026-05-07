@@ -343,7 +343,7 @@ impl ServiceCache {
     /// generate an ambient message for a user containing all their initial state
     // PERF: fetch in parallel
     pub async fn generate_ambient_message(&self, user_id: UserId) -> Result<MessageSync> {
-        let data = self.state.data();
+        let mut data = self.state.data();
 
         let mut room_items = Vec::new();
 

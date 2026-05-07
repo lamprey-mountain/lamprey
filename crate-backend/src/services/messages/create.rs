@@ -601,7 +601,7 @@ impl ServiceMessages {
         header_timestamp: Option<Time>,
     ) -> Result<(MessagePermissions, Option<Time>)> {
         let srv = self.state.services();
-        let data = self.state.data();
+        let mut data = self.state.data();
 
         let mut perms = srv
             .perms
@@ -895,7 +895,7 @@ impl ServiceMessages {
         &self,
         op: &mut MessageOperation<'_, Prepared>,
     ) -> Result<Message> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let user_id = op.author_id();
 
         let attachment_ids = op.kind.attachment_ids();
@@ -983,7 +983,7 @@ impl ServiceMessages {
     ) -> Result<()> {
         all_media_ids.check()?;
 
-        let data = self.state.data();
+        let mut data = self.state.data();
         for &id in &all_media_ids.known {
             // PERF: this should probably be batched
             let media = data.media_select(id).await?;
@@ -1017,7 +1017,7 @@ impl ServiceMessages {
         message_id: MessageId,
         version_id: Uuid,
     ) -> Result<()> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         for &id in &all_media_ids.known {
             // 3. insert media links
             data.media_link_insert(id, message_id.into_inner(), MediaLinkType::Message)
@@ -1035,7 +1035,7 @@ impl ServiceMessages {
         };
 
         if let Some(slowmode_delay) = op.channel.slowmode_message {
-            let data = self.state.data();
+            let mut data = self.state.data();
             let next_message_time =
                 Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
             data.channel_set_message_slowmode_expire_at(op.channel.id, user_id, next_message_time)
@@ -1078,7 +1078,7 @@ impl ServiceMessages {
         &self,
         op: &mut MessageOperation<'_, Committed>,
     ) -> Result<()> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
 
         if !op.channel.is_thread() {
@@ -1220,7 +1220,7 @@ impl NotificationProcessor {
         let mut users_to_notify = HashSet::new();
         let is_thread = self.channel.ty.is_thread();
         let mentions = &self.message.latest_version.mentions;
-        let data = self.state.data();
+        let mut data = self.state.data();
         let author_id = self.message.author_id;
         let channel_id = self.channel.id;
 
@@ -1286,7 +1286,7 @@ impl NotificationProcessor {
     }
 
     async fn process_mention(&self, user_id: UserId) -> Result<Option<ThreadMember>> {
-        let data = self.state.data();
+        let mut data = self.state.data();
         let srv = self.state.services();
         let is_thread = self.channel.ty.is_thread();
         let channel_id = self.channel.id;

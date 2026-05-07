@@ -12,88 +12,99 @@ use super::Postgres;
 #[async_trait]
 impl DataSearchQueue for Postgres {
     async fn search_reindex_queue_upsert(
-        &self,
+        &mut self,
         target_type: &str,
         target_id: Uuid,
         last_id: Option<Uuid>,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "INSERT INTO search_reindex_queue (target_id, target_type, last_id) VALUES ($1, $2, $3) ON CONFLICT (target_id, target_type) DO UPDATE SET last_id = $3, updated_at = NOW()",
             target_id,
             target_type,
             last_id,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn search_reindex_queue_list(
-        &self,
+        &mut self,
         target_type: &str,
         limit: u32,
     ) -> Result<Vec<(Uuid, Option<Uuid>)>> {
+        let mut conn = self.acquire().await?;
         let rows = query!(
             r#"SELECT target_id, last_id FROM search_reindex_queue WHERE target_type = $1 ORDER BY updated_at ASC LIMIT $2"#,
             target_type,
             limit as i64
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
         Ok(rows.into_iter().map(|r| (r.target_id, r.last_id)).collect())
     }
 
-    async fn search_reindex_queue_delete(&self, target_type: &str, target_id: Uuid) -> Result<()> {
+    async fn search_reindex_queue_delete(
+        &mut self,
+        target_type: &str,
+        target_id: Uuid,
+    ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "DELETE FROM search_reindex_queue WHERE target_id = $1 AND target_type = $2",
             target_id,
             target_type
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn search_reindex_queue_get(
-        &self,
+        &mut self,
         target_type: &str,
         target_id: Uuid,
     ) -> Result<Option<Uuid>> {
+        let mut conn = self.acquire().await?;
         let row = query!(
             r#"SELECT last_id FROM search_reindex_queue WHERE target_id = $1 AND target_type = $2"#,
             target_id,
             target_type
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
         Ok(row.and_then(|r| r.last_id))
     }
 
-    async fn search_reindex_queue_upsert_room(&self, room_id: RoomId) -> Result<()> {
+    async fn search_reindex_queue_upsert_room(&mut self, room_id: RoomId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"INSERT INTO search_reindex_queue (target_id, target_type) SELECT id, 'channel' FROM channel WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NULL ON CONFLICT (target_id, target_type) DO NOTHING"#,
             *room_id,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn search_reindex_queue_upsert_all(&self) -> Result<()> {
+    async fn search_reindex_queue_upsert_all(&mut self) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"INSERT INTO search_reindex_queue (target_id, target_type) SELECT id, 'channel' FROM channel WHERE deleted_at IS NULL AND archived_at IS NULL ON CONFLICT (target_id, target_type) DO NOTHING"#,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn search_ingestion_dlq_insert(
-        &self,
+        &mut self,
         entity_id: Uuid,
         entity_type: &str,
         error_message: &str,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "INSERT INTO search_ingestion_dlq (id, entity_id, entity_type, error_message) VALUES ($1, $2, $3, $4)",
             Uuid::now_v7(),
@@ -101,21 +112,22 @@ impl DataSearchQueue for Postgres {
             entity_type,
             error_message
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn search_ingestion_dlq_list(
-        &self,
+        &mut self,
         pagination: PaginationQuery<SearchDlqId>,
     ) -> Result<PaginationResponse<DlqEntry>> {
+        let mut conn = self.acquire().await?;
         let items = query!(
             r#"SELECT id, entity_id, entity_type, error_message, created_at FROM search_ingestion_dlq WHERE id > $1 ORDER BY id ASC LIMIT $2"#,
             *pagination.from.unwrap_or_default(),
             pagination.limit.unwrap_or(100) as i64
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?
         .into_iter()
         .map(|r| DlqEntry {
@@ -137,9 +149,10 @@ impl DataSearchQueue for Postgres {
         })
     }
 
-    async fn search_ingestion_dlq_delete(&self, id: SearchDlqId) -> Result<()> {
+    async fn search_ingestion_dlq_delete(&mut self, id: SearchDlqId) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!("DELETE FROM search_ingestion_dlq WHERE id = $1", *id)
-            .execute(&self.pool)
+            .execute(conn.ext())
             .await?;
         Ok(())
     }

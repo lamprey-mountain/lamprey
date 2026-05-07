@@ -14,7 +14,7 @@ use common::v1::types::sync::ChannelSync;
 use common::v1::types::util::Time;
 use common::v1::types::{ChannelSeq, ChannelType, Mentions, UserId};
 use common::v2::types::embed::Embed;
-use sqlx::{query, query_as, query_file_as, query_file_scalar, query_scalar, Acquire};
+use sqlx::{query, query_as, query_file_as, query_file_scalar, query_scalar};
 use tracing::info;
 use uuid::Uuid;
 
@@ -209,7 +209,7 @@ impl From<DbMessageVersion> for MessageVersion {
 
 #[async_trait]
 impl DataMessage for Postgres {
-    async fn message_create(&self, create: DbMessageCreate) -> Result<MessageId> {
+    async fn message_create(&mut self, create: DbMessageCreate) -> Result<MessageId> {
         let message_id = create
             .id
             .map(|i| i.into_inner())
@@ -217,13 +217,13 @@ impl DataMessage for Postgres {
         // the version_id of the first version of a message is the same as the message id itself
         let version_id = message_id;
         let message_type: DbMessageType = create.message_type.clone().into();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         let channel_type: ChannelType = query_scalar!(
             r#"SELECT type as "type: DbChannelType" FROM channel WHERE id = $1"#,
             *create.channel_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?
         .into();
 
@@ -232,7 +232,7 @@ impl DataMessage for Postgres {
                 "UPDATE channel SET last_activity_at = NOW() WHERE id = $1",
                 *create.channel_id
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
 
@@ -256,7 +256,7 @@ impl DataMessage for Postgres {
             r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
             *create.channel_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         let flume_json = create.flume.clone();
@@ -272,7 +272,7 @@ impl DataMessage for Postgres {
             new_seq,
             flume_json,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         query!(
@@ -281,7 +281,7 @@ impl DataMessage for Postgres {
             version_id,
             *create.channel_id
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         query!(
@@ -301,7 +301,7 @@ impl DataMessage for Postgres {
             new_seq,
             components_json,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         for (ord, att) in create.attachment_ids.iter().enumerate() {
@@ -314,7 +314,7 @@ impl DataMessage for Postgres {
                 att.into_inner(),
                 ord as i32
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
         tx.commit().await?;
@@ -323,14 +323,14 @@ impl DataMessage for Postgres {
     }
 
     async fn message_update(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         message_id: MessageId,
         update: DbMessageUpdate,
     ) -> Result<MessageVerId> {
         let ver_id = Uuid::now_v7();
         let message_type: DbMessageType = update.message_type.clone().into();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         let embeds = update.embeds.clone();
         let embeds_json = serde_json::to_value(&embeds)?;
@@ -349,7 +349,7 @@ impl DataMessage for Postgres {
             r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
             *channel_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         // Also bump the message's version
@@ -358,7 +358,7 @@ impl DataMessage for Postgres {
             ver_id,
             *message_id,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         query!(
@@ -378,7 +378,7 @@ impl DataMessage for Postgres {
             new_seq,
             components_json,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         for (ord, att) in update.attachment_ids.iter().enumerate() {
@@ -391,7 +391,7 @@ impl DataMessage for Postgres {
                 att.into_inner(),
                 ord as i32
             )
-            .execute(&mut *tx)
+            .execute(tx.ext())
             .await?;
         }
 
@@ -400,7 +400,7 @@ impl DataMessage for Postgres {
             ver_id,
             *channel_id
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -410,13 +410,13 @@ impl DataMessage for Postgres {
 
     // NOTE: ignores channel_id, attachment_ids in update
     async fn message_update_in_place(
-        &self,
+        &mut self,
         _channel_id: ChannelId,
         version_id: MessageVerId,
         update: DbMessageUpdate,
     ) -> Result<()> {
         let message_type: DbMessageType = update.message_type.clone().into();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let embeds = update.embeds.clone();
         let embeds_json = serde_json::to_value(&embeds)?;
         let components = update.components.clone();
@@ -453,7 +453,7 @@ impl DataMessage for Postgres {
             created_at,
             components_json,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
         tx.commit().await?;
         info!("update message in place");
@@ -461,24 +461,26 @@ impl DataMessage for Postgres {
     }
 
     async fn message_flume_update(
-        &self,
+        &mut self,
         message_id: MessageId,
         flume: serde_json::Value,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             r#"UPDATE message SET flume = $1 WHERE id = $2"#,
             flume,
             *message_id,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         info!("update message flume");
         Ok(())
     }
 
-    async fn message_get(&self, channel_id: ChannelId, id: MessageId) -> Result<Message> {
+    async fn message_get(&mut self, channel_id: ChannelId, id: MessageId) -> Result<Message> {
+        let mut conn = self.acquire().await?;
         let row = query_file_as!(DbMessage, "sql/message_get.sql", *channel_id, *id)
-            .fetch_one(&self.pool)
+            .fetch_one(conn.ext())
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => {
@@ -490,26 +492,27 @@ impl DataMessage for Postgres {
     }
 
     async fn message_get_many(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         message_ids: &[MessageId],
     ) -> Result<Vec<Message>> {
+        let mut conn = self.acquire().await?;
         let ids: Vec<Uuid> = message_ids.iter().map(|id| **id).collect();
         let rows = query_file_as!(DbMessage, "sql/message_get_many.sql", *channel_id, &ids)
-            .fetch_all(&self.pool)
+            .fetch_all(conn.ext())
             .await?;
         Ok(rows.into_iter().map(|r| r.into()).collect())
     }
 
     async fn message_list(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_file_as!(
                 DbMessage,
                 r"sql/message_paginate.sql",
@@ -525,14 +528,14 @@ impl DataMessage for Postgres {
     }
 
     async fn message_list_deleted(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_file_as!(
                 DbMessage,
                 r"sql/message_paginate_deleted.sql",
@@ -548,14 +551,14 @@ impl DataMessage for Postgres {
     }
 
     async fn message_list_removed(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_file_as!(
                 DbMessage,
                 r"sql/message_paginate_removed.sql",
@@ -571,7 +574,7 @@ impl DataMessage for Postgres {
     }
 
     async fn message_list_activity(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
@@ -579,7 +582,7 @@ impl DataMessage for Postgres {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_file_as!(
                 DbMessage,
                 r"sql/message_activity_paginate.sql",
@@ -594,8 +597,8 @@ impl DataMessage for Postgres {
         )
     }
 
-    async fn message_delete(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+    async fn message_delete(&mut self, channel_id: ChannelId, message_id: MessageId) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
         let now = time::OffsetDateTime::now_utc();
         let now = time::PrimitiveDateTime::new(now.date(), now.time());
 
@@ -604,7 +607,7 @@ impl DataMessage for Postgres {
             r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
             *channel_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         query!(
@@ -613,7 +616,7 @@ impl DataMessage for Postgres {
             now,
             new_seq,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -621,11 +624,11 @@ impl DataMessage for Postgres {
     }
 
     async fn message_delete_bulk(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         message_ids: &[MessageId],
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let now = time::OffsetDateTime::now_utc();
         let now = time::PrimitiveDateTime::new(now.date(), now.time());
         let ids: Vec<Uuid> = message_ids.iter().map(|i| i.into_inner()).collect();
@@ -635,7 +638,7 @@ impl DataMessage for Postgres {
             r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
             *channel_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         query!(
@@ -644,7 +647,7 @@ impl DataMessage for Postgres {
             now,
             new_seq,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -652,11 +655,11 @@ impl DataMessage for Postgres {
     }
 
     async fn message_remove_bulk(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         message_ids: &[MessageId],
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let now = time::OffsetDateTime::now_utc();
         let now = time::PrimitiveDateTime::new(now.date(), now.time());
         let ids: Vec<Uuid> = message_ids.iter().map(|i| i.into_inner()).collect();
@@ -666,7 +669,7 @@ impl DataMessage for Postgres {
             r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
             *channel_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         query!(
@@ -675,7 +678,7 @@ impl DataMessage for Postgres {
             now,
             new_seq,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -683,11 +686,11 @@ impl DataMessage for Postgres {
     }
 
     async fn message_restore_bulk(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         message_ids: &[MessageId],
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let ids: Vec<Uuid> = message_ids.iter().map(|i| i.into_inner()).collect();
 
         // Atomically increment seq
@@ -695,7 +698,7 @@ impl DataMessage for Postgres {
             r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
             *channel_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         query!(
@@ -703,7 +706,7 @@ impl DataMessage for Postgres {
             &ids[..],
             new_seq,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -711,27 +714,28 @@ impl DataMessage for Postgres {
     }
 
     async fn message_version_get(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         version_id: MessageVerId,
     ) -> Result<MessageVersion> {
+        let mut conn = self.acquire().await?;
         let row = query_file_as!(
             DbMessageVersion,
             "sql/message_version_get.sql",
             *channel_id,
             *version_id,
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
         Ok(row.into())
     }
 
     async fn message_version_delete(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         version_id: MessageVerId,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
         let now = time::OffsetDateTime::now_utc();
         let now = time::PrimitiveDateTime::new(now.date(), now.time());
         let version_uuid = version_id.into_inner();
@@ -741,7 +745,7 @@ impl DataMessage for Postgres {
             r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
             *channel_id
         )
-        .fetch_one(&mut *tx)
+        .fetch_one(tx.ext())
         .await?;
 
         query!(
@@ -758,21 +762,21 @@ impl DataMessage for Postgres {
             now,
             new_seq,
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         query!(
             "DELETE FROM message_attachment WHERE version_id = $1",
             version_uuid
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         query!(
             "DELETE FROM media_link WHERE target_id = $1 AND link_type = 'MessageVersion'",
             version_uuid
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -780,7 +784,7 @@ impl DataMessage for Postgres {
     }
 
     async fn message_version_list(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         message_id: MessageId,
         pagination: PaginationQuery<MessageVerId>,
@@ -788,7 +792,7 @@ impl DataMessage for Postgres {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_file_as!(
                 DbMessageVersion,
                 "sql/message_version_paginate.sql",
@@ -809,7 +813,7 @@ impl DataMessage for Postgres {
     }
 
     async fn message_replies(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         root_message_id: Option<MessageId>,
         _user_id: UserId,
@@ -821,7 +825,7 @@ impl DataMessage for Postgres {
         let rmid = root_message_id.map(|i| *i);
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_file_as!(
                 DbMessage,
                 r"sql/message_replies.sql",
@@ -846,16 +850,17 @@ impl DataMessage for Postgres {
     }
 
     async fn message_pin_create(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         message_id: MessageId,
     ) -> Result<bool> {
+        let mut conn = self.acquire().await?;
         let pinned: Option<serde_json::Value> = query_scalar!(
             "select pinned from message where id = $1 and channel_id = $2",
             *message_id,
             *channel_id
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?
         .flatten();
 
@@ -867,7 +872,7 @@ impl DataMessage for Postgres {
             "select count(*) from message where channel_id = $1 and pinned is not null",
             *channel_id
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?
         .unwrap_or_default();
 
@@ -875,13 +880,13 @@ impl DataMessage for Postgres {
             return Err(Error::BadStatic("too many pins"));
         }
 
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
 
         query!(
             "update message set pinned = jsonb_set(pinned, '{position}', ((pinned->>'position')::int + 1)::text::jsonb) where channel_id = $1 and pinned is not null",
             *channel_id
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         let pinned = serde_json::json!({
@@ -895,7 +900,7 @@ impl DataMessage for Postgres {
             *message_id,
             *channel_id
         )
-        .execute(&mut *tx)
+        .execute(tx.ext())
         .await?;
 
         tx.commit().await?;
@@ -903,23 +908,28 @@ impl DataMessage for Postgres {
         Ok(true)
     }
 
-    async fn message_pin_delete(&self, channel_id: ChannelId, message_id: MessageId) -> Result<()> {
+    async fn message_pin_delete(
+        &mut self,
+        channel_id: ChannelId,
+        message_id: MessageId,
+    ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         query!(
             "update message set pinned = null where id = $1 and channel_id = $2",
             *message_id,
             *channel_id
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
     async fn message_pin_reorder(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         reorder: common::v1::types::PinsReorder,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin_tx().await?;
         for item in reorder.messages {
             if let Some(Some(pos)) = item.position {
                 let old_pinned: Option<serde_json::Value> = query_scalar!(
@@ -927,7 +937,7 @@ impl DataMessage for Postgres {
                     *item.id,
                     *channel_id
                 )
-                .fetch_one(&mut *tx)
+                .fetch_one(tx.ext())
                 .await?;
 
                 let time = if let Some(p) = old_pinned {
@@ -948,7 +958,7 @@ impl DataMessage for Postgres {
                     *item.id,
                     *channel_id
                 )
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
             } else if let Some(None) = item.position {
                 // unpin
@@ -957,7 +967,7 @@ impl DataMessage for Postgres {
                     *item.id,
                     *channel_id
                 )
-                .execute(&mut *tx)
+                .execute(tx.ext())
                 .await?;
             }
         }
@@ -966,7 +976,7 @@ impl DataMessage for Postgres {
     }
 
     async fn message_pin_list(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         _user_id: UserId,
         pagination: PaginationQuery<MessageId>,
@@ -974,7 +984,7 @@ impl DataMessage for Postgres {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_file_as!(
                 DbMessage,
                 r"sql/message_pin_list.sql",
@@ -990,27 +1000,29 @@ impl DataMessage for Postgres {
     }
 
     async fn message_get_ancestors(
-        &self,
+        &mut self,
         message_id: MessageId,
         limit: u16,
     ) -> Result<Vec<Message>> {
+        let mut conn = self.acquire().await?;
         let rows = query_file_as!(
             DbMessage,
             "sql/message_get_ancestors.sql",
             *message_id,
             limit as i32
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         Ok(rows.into_iter().map(Into::into).collect())
     }
 
     async fn message_fetch_mention_ids(
-        &self,
+        &mut self,
         _channel_id: ChannelId,
         version_ids: &[MessageVerId],
     ) -> Result<Vec<MentionsIds>> {
+        let mut conn = self.acquire().await?;
         let version_uuids: Vec<Uuid> = version_ids.iter().map(|id| **id).collect();
 
         let rows = query!(
@@ -1021,7 +1033,7 @@ impl DataMessage for Postgres {
             "#,
             &version_uuids[..]
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         let mut result = Vec::with_capacity(rows.len());
@@ -1038,10 +1050,11 @@ impl DataMessage for Postgres {
     }
 
     async fn message_fetch_components(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         version_ids: &[MessageVerId],
     ) -> Result<HashMap<MessageVerId, Components<components::Thin>>> {
+        let mut conn = self.acquire().await?;
         let version_uuids: Vec<Uuid> = version_ids.iter().map(|id| **id).collect();
 
         let rows = query!(
@@ -1054,7 +1067,7 @@ impl DataMessage for Postgres {
             &version_uuids[..],
             *channel_id
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         let result: HashMap<MessageVerId, _> = rows
@@ -1073,14 +1086,14 @@ impl DataMessage for Postgres {
     }
 
     async fn message_list_all(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_file_as!(
                 DbMessage,
                 r"sql/message_list_all.sql",
@@ -1096,10 +1109,11 @@ impl DataMessage for Postgres {
     }
 
     async fn message_id_get_by_version(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         version_id: MessageVerId,
     ) -> Result<MessageId> {
+        let mut conn = self.acquire().await?;
         let message_id = query_scalar!(
             r#"
             SELECT m.id
@@ -1110,13 +1124,13 @@ impl DataMessage for Postgres {
             *version_id,
             *channel_id
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
         Ok(message_id.into())
     }
 
     async fn channel_sync(
-        &self,
+        &mut self,
         channel_id: ChannelId,
         since: ChannelSeq,
         pagination: PaginationQuery<MessageId>,
@@ -1127,6 +1141,7 @@ impl DataMessage for Postgres {
         use common::v1::types::MessageSync;
         use std::str::FromStr;
 
+        let mut conn = self.acquire().await?;
         let p: Pagination<_> = pagination.try_into()?;
         let limit = p.limit;
 
@@ -1136,7 +1151,7 @@ impl DataMessage for Postgres {
             r#"SELECT latest_seq as "latest_seq!" FROM channel WHERE id = $1"#,
             *channel_id
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
 
         // Bound by the exact number of allowed distinctive `seq` sequences. (Prevents row limitations
@@ -1161,7 +1176,7 @@ impl DataMessage for Postgres {
             since.0 as i64,
             (limit + 1) as i32
         )
-        .fetch_one(&self.pool)
+        .fetch_one(conn.ext())
         .await?;
 
         let Some(max_seq) = cutoff_seq else {
@@ -1214,7 +1229,7 @@ impl DataMessage for Postgres {
             since.0 as i64,
             max_seq
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         // Fetch message lifecycle events (delete/remove/restore) since the given seq
@@ -1232,7 +1247,7 @@ impl DataMessage for Postgres {
             since.0 as i64,
             max_seq
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         // Fetch message versions that changed since the given seq (edits, version deletes)
@@ -1251,7 +1266,7 @@ impl DataMessage for Postgres {
             since.0 as i64,
             max_seq
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         // Batch fetch full messages for non-deleted changed versions
@@ -1269,7 +1284,7 @@ impl DataMessage for Postgres {
                 *channel_id,
                 &version_message_ids[..]
             )
-            .fetch_all(&self.pool)
+            .fetch_all(conn.ext())
             .await?
         };
         let version_message_map: std::collections::HashMap<Uuid, DbMessage> =
@@ -1303,7 +1318,7 @@ impl DataMessage for Postgres {
             since.0 as i64,
             max_seq
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         // Fetch reaction deletes since the given seq, with emoji data
@@ -1334,7 +1349,7 @@ impl DataMessage for Postgres {
             since.0 as i64,
             max_seq
         )
-        .fetch_all(&self.pool)
+        .fetch_all(conn.ext())
         .await?;
 
         // Helper to build ReactionKey from key string + optional emoji data.

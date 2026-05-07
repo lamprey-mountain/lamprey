@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use common::v1::types::{
     Channel, MessageVerId, PaginationDirection, PaginationQuery, PaginationResponse,
 };
-use sqlx::{query, query_file_as, query_scalar, Acquire};
+use sqlx::{query, query_file_as, query_scalar};
 
 use crate::error::Result;
 use crate::gen_paginate;
@@ -23,11 +23,12 @@ fn ensure_canonical(a: UserId, b: UserId) -> (UserId, UserId) {
 #[async_trait]
 impl DataDm for Postgres {
     async fn dm_put(
-        &self,
+        &mut self,
         user_a_id: UserId,
         user_b_id: UserId,
         channel_id: ChannelId,
     ) -> Result<()> {
+        let mut conn = self.acquire().await?;
         let (user_a_id, user_b_id) = ensure_canonical(user_a_id, user_b_id);
         query!(
             r#"
@@ -39,12 +40,13 @@ impl DataDm for Postgres {
             *user_b_id,
             *channel_id,
         )
-        .execute(&self.pool)
+        .execute(conn.ext())
         .await?;
         Ok(())
     }
 
-    async fn dm_get(&self, user_a_id: UserId, user_b_id: UserId) -> Result<Option<ChannelId>> {
+    async fn dm_get(&mut self, user_a_id: UserId, user_b_id: UserId) -> Result<Option<ChannelId>> {
+        let mut conn = self.acquire().await?;
         let (user_a_id, user_b_id) = ensure_canonical(user_a_id, user_b_id);
         let row = query!(
             r#"
@@ -54,20 +56,20 @@ impl DataDm for Postgres {
             *user_a_id,
             *user_b_id,
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(conn.ext())
         .await?;
         Ok(row.map(|r| r.channel_id.into()))
     }
 
     async fn dm_list(
-        &self,
+        &mut self,
         user_id: UserId,
         pagination: PaginationQuery<MessageVerId>,
     ) -> Result<PaginationResponse<Channel>> {
         let p: Pagination<_> = pagination.try_into()?;
         gen_paginate!(
             p,
-            self.pool,
+            self,
             query_file_as!(
                 DbChannel,
                 "sql/dm_paginate.sql",
