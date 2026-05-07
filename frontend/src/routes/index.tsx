@@ -583,7 +583,7 @@ export const RouteInvite = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 
 export const RouteUser = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 	const api2 = useApi();
-	const user = () => api2.users.cache.get(p.params.user_id!);
+	const user = api2.users.use(() => p.params.user_id!);
 
 	return (
 		<LayoutDefault
