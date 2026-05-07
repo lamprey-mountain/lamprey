@@ -948,7 +948,7 @@ article.message {
 	& .author {
 		text-align: right;
 		padding: 0 8px;
-		display: flex;
+		display: inline-flex;
 		align-items: center;
 
 		.user {
