@@ -12,6 +12,7 @@ import {
 	useRooms,
 	useUsers,
 } from "@/api";
+import icChevron from "@/assets/chevron.png";
 import icHome from "@/assets/home.png";
 import icInbox from "@/assets/inbox.png";
 import icMemberAdd from "@/assets/member-add.png";
@@ -656,7 +657,10 @@ export const ChannelNav = (props: { room_id?: string }) => {
 						}
 					}}
 				>
-					{props.room_id ? (room()?.name ?? "loading...") : "home"}
+					<div>
+						{/* <Icon src={icChevron} alt="" /> */}
+						{props.room_id ? (room()?.name ?? "loading...") : "home"}
+					</div>
 				</button>
 			</Show>
 
