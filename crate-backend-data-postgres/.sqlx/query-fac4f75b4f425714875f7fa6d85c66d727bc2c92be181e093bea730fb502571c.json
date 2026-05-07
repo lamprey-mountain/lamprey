@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE media SET\n                data = $2, version_id = $3, remote_origin_id = $4, remote_hostname = $5\n            WHERE id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb",
+        "Uuid",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fac4f75b4f425714875f7fa6d85c66d727bc2c92be181e093bea730fb502571c"
+}

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT user_id, deleted_at, data, version_id\n            FROM media\n            WHERE id = $1\n            FOR UPDATE\n        ",
+  "query": "\n            SELECT user_id, deleted_at, data, version_id, remote_origin_id, remote_hostname\n            FROM media\n            WHERE id = $1\n        ",
   "describe": {
     "columns": [
       {
@@ -22,6 +22,16 @@
         "ordinal": 3,
         "name": "version_id",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "remote_origin_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "remote_hostname",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -33,8 +43,10 @@
       false,
       true,
       false,
-      false
+      false,
+      true,
+      true
     ]
   },
-  "hash": "3605f85afa292b01f80bf0b3c8c5291a977c3005215a51fb75a4d2af1ce28024"
+  "hash": "75a8cfd6aeb7a95a5b4afbfdc94a98493bb78ba690df0bad6dbccd2d1d5aded5"
 }

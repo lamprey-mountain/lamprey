@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            select id, user_id, data, deleted_at, version_id\n            from media\n            where (data->>'v' is null or data->>'v' = 'V1') and deleted_at is null\n            limit $1\n            for update\n            ",
+  "query": "\n            select id, user_id, data, deleted_at, version_id, remote_origin_id, remote_hostname\n            from media\n            where (data->>'v' is null or data->>'v' = 'V1') and deleted_at is null\n            limit $1\n            for update\n            ",
   "describe": {
     "columns": [
       {
@@ -27,6 +27,16 @@
         "ordinal": 4,
         "name": "version_id",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "remote_origin_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "remote_hostname",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -39,8 +49,10 @@
       false,
       false,
       true,
-      false
+      false,
+      true,
+      true
     ]
   },
-  "hash": "14da9107b7691f05cda430f3f1fc9587543b824cf73671e7419ebc10617d6538"
+  "hash": "e88642be75720f43851f6e643c1960d8344fb1aa564fdd8e403d6d2ca33c3922"
 }

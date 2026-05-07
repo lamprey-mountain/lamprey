@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT user_id, deleted_at, data, version_id, remote_origin_id, remote_hostname\n            FROM media\n            WHERE remote_hostname = $1 AND remote_origin_id = $2\n            LIMIT 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "deleted_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 2,
+        "name": "data",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 3,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "remote_origin_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "remote_hostname",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "b62841b8bbf58445c78694834be6097345208ec5f5fef6a1b514f8a7cb59b695"
+}

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT id, user_id, data, deleted_at, version_id\n            FROM media\n            WHERE version_id > $1\n            ORDER BY version_id ASC\n            LIMIT $2\n            ",
+  "query": "\n            SELECT id, user_id, data, deleted_at, version_id, remote_origin_id, remote_hostname\n            FROM media\n            WHERE version_id > $1\n            ORDER BY version_id ASC\n            LIMIT $2\n            ",
   "describe": {
     "columns": [
       {
@@ -27,6 +27,16 @@
         "ordinal": 4,
         "name": "version_id",
         "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "remote_origin_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "remote_hostname",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -40,8 +50,10 @@
       false,
       false,
       true,
-      false
+      false,
+      true,
+      true
     ]
   },
-  "hash": "fcb4a251a84726cfd247cc703158b462127abb4d4ae2b58069300e4d40481c70"
+  "hash": "500e857086c49cbea3b865630e885068bc38976d642a91d97ee5c59f5fdc27ca"
 }
