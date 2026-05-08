@@ -128,10 +128,7 @@ pub struct ScriptExtracted {
 
 impl LoadedScript {
     /// extract the inputs/outputs this script supports
-    pub async fn extract_inputs(
-        &self,
-        runtime: &rquickjs::AsyncRuntime,
-    ) -> Result<ScriptExtracted> {
+    pub async fn extract(&self, runtime: &rquickjs::AsyncRuntime) -> Result<ScriptExtracted> {
         let context = rquickjs::AsyncContext::full(runtime).await.unwrap();
 
         let extracted = Arc::new(std::sync::Mutex::new(ScriptExtracted::default()));
@@ -339,23 +336,71 @@ impl ServiceScripts {
     }
 
     /// create a script
-    // TODO: start async processing task to validate the script and transition to Valid/Invalid
+    // TODO: process script (and script version) in background
     pub async fn create_script(&self, script: Script) -> Result<()> {
-        self.process(script, None).await
-        // TODO: insert script into database
+        let inputs = self.process(script.clone(), None).await?;
+        let extracted_metadata = inputs.metadata;
+
+        let mut data = self.state.data();
+
+        // persist the script to the database
+        data.script_create(&script).await?;
+
+        // store the extracted inputs as cached_inputs on the version
+        let inputs_json = serde_json::to_value(&inputs.inputs).ok();
+        let _ = data
+            .script_version_create(
+                script.id,
+                script.channel_id,
+                script.creator_id,
+                script.latest_version.format.clone(),
+                script.latest_version.location.clone(),
+                extracted_metadata.clone(),
+                inputs_json,
+            )
+            .await?;
+
+        // update the script's latest_version metadata with extracted data
+        let format = script.latest_version.format.clone();
+        let location = script.latest_version.location.clone();
+        data.script_update(script.id, format, location, extracted_metadata)
+            .await?;
+
+        Ok(())
     }
 
     /// create a script version
     pub async fn create_script_version(&self, script: Script, ver: ScriptVersion) -> Result<()> {
-        self.process(script, Some(ver)).await
-        // TODO: insert script version into database
+        let ver_format = ver.format.clone();
+        let ver_location = ver.location.clone();
+        let ver_metadata = ver.metadata.clone();
+        let inputs = self.process(script.clone(), Some(ver)).await?;
+
+        let mut data = self.state.data();
+
+        // store the extracted inputs as cached_inputs on the new version
+        let inputs_json = serde_json::to_value(&inputs.inputs).ok();
+        let _ = data
+            .script_version_create(
+                script.id,
+                script.channel_id,
+                script.creator_id,
+                ver_format,
+                ver_location,
+                ver_metadata,
+                inputs_json,
+            )
+            .await?;
+
+        Ok(())
     }
 
     /// process a script
     ///
     /// - does basic validation
-    /// - extracts script inputs
-    async fn process(&self, script: Script, ver: Option<ScriptVersion>) -> Result<()> {
+    /// - extracts script inputs and metadata
+    /// - optionally process a specific version of a script
+    async fn process(&self, script: Script, ver: Option<ScriptVersion>) -> Result<ScriptExtracted> {
         let srv = self.state.services();
 
         let bytes = srv
@@ -368,15 +413,14 @@ impl ServiceScripts {
                 .unwrap(),
             )
             .await?;
-        let source = str::from_utf8(&bytes).unwrap();
+        let source = str::from_utf8(&bytes)
+            .map_err(|e| Error::BadRequest(format!("script is not valid utf-8: {e}")))?;
 
         let rt = self.init_rt(script.channel_id).await?;
         let loaded = rt.load_script(script.id, "strobbery", source).await?;
-        let inputs = loaded.extract_inputs(&rt.runtime).await?;
+        let extracted = loaded.extract(&rt.runtime).await?;
 
-        dbg!(inputs);
-
-        Ok(())
+        Ok(extracted)
     }
 
     /// create a new script syncer for a session

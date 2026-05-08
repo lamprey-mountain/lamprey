@@ -218,6 +218,15 @@ impl DataMedia for Postgres {
                     DbMediaLinkType::CustomEmoji => Some(MediaLinkTypeV2::CustomEmoji {
                         room_id: link.target_id.into(),
                     }),
+                    DbMediaLinkType::Script => match parsed.channel_id {
+                        Some(channel_id) => Some(MediaLinkTypeV2::Script {
+                            channel_id,
+                            script_id: link.target_id.into(),
+                        }),
+                        // FIXME: populate channel_id for old media
+                        None => None,
+                    },
+                    DbMediaLinkType::ScriptVersion => None,
                 }
             })
             .collect();

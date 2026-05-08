@@ -683,6 +683,8 @@ pub enum MediaLinkType {
     RoomBanner,
     Embed,
     CustomEmoji,
+    Script,
+    ScriptVersion,
 }
 
 // TODO: surely there's a better way than manually managing media links/references
