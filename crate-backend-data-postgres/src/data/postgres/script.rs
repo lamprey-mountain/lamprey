@@ -260,6 +260,26 @@ impl DataScript for Postgres {
         Ok(())
     }
 
+    async fn script_version_get(
+        &mut self,
+        script_id: ScriptId,
+        channel_id: ChannelId,
+        version_id: ScriptVerId,
+    ) -> Result<Option<ScriptVersion>> {
+        let mut conn = self.acquire().await?;
+        let row = query_file_as!(
+            DbScriptVersion,
+            "sql/script_version_get.sql",
+            *script_id,
+            *channel_id,
+            *version_id
+        )
+        .fetch_optional(conn.ext())
+        .await?;
+
+        Ok(row.map(ScriptVersion::from))
+    }
+
     async fn script_get(&mut self, script_id: ScriptId) -> Result<Option<Script>> {
         let mut conn = self.acquire().await?;
         let row = query_file_as!(DbScriptWithLatestVersion, "sql/script_get.sql", *script_id)

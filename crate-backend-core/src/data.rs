@@ -1014,6 +1014,12 @@ pub trait DataScript {
         script_id: ScriptId,
         version_id: ScriptVerId,
     ) -> Result<()>;
+    async fn script_version_get(
+        &mut self,
+        script_id: ScriptId,
+        channel_id: ChannelId,
+        version_id: ScriptVerId,
+    ) -> Result<Option<ScriptVersion>>;
     async fn script_get(&mut self, script_id: ScriptId) -> Result<Option<Script>>;
     async fn script_list_by_channel(
         &mut self,

@@ -371,9 +371,13 @@ async fn script_version_get(
         .ensure_view()?
         .check()?;
 
-    // TODO: data.script_version_get
+    let version = s
+        .data()
+        .script_version_get(req.script_id, req.channel_id, req.version_id)
+        .await?
+        .ok_or(Error::NotFound)?;
 
-    Ok(Error::Unimplemented)
+    Ok((StatusCode::OK, Json(version)))
 }
 
 /// Script version delete
