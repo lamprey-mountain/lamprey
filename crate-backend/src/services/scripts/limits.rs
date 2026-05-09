@@ -1,51 +1,59 @@
 // TODO: allow configuring max cpu time per time period
 // TODO: allow bursts of mem/cpu/etc usage
 
-struct RuntimeLimits {
-    max_runtime_memory: u64,
-    max_context_stack_size: u64,
-    max_context_instructions: u64,
-    // instructions is per-context but memory is per-runtime. maybe i should create more runtimes?
+#[derive(Debug, Clone)]
+pub struct ChannelLimits {
+    pub runtime: RuntimeLimits,
+    pub run: RunLimits,
 }
 
-struct RuntimeStats {
-    instruction_count: u64,
-    // ...
+#[derive(Debug, Clone)]
+pub struct RuntimeLimits {
+    pub max_memory_bytes: usize,
+    pub max_stack_size_bytes: usize,
 }
 
-impl Default for RuntimeLimits {
+#[derive(Debug, Clone)]
+pub struct RunLimits {
+    pub max_instructions: u64,
+    // TODO: execution time, API limits, etc.
+}
+
+impl Default for ChannelLimits {
     fn default() -> Self {
         Self {
-            max_runtime_memory: Default::default(),
-            max_context_stack_size: Default::default(),
-            max_context_instructions: Default::default(),
+            runtime: RuntimeLimits {
+                max_memory_bytes: 8 * 1024 * 1024,
+                max_stack_size_bytes: 512 * 1024,
+            },
+            run: RunLimits {
+                max_instructions: 100_000,
+            },
         }
     }
 }
 
-impl RuntimeLimits {
-    /// returns whether these stats exceed the configured limits
-    pub fn exceeds_limit(&self, stats: &RuntimeStats) -> bool {
-        todo!()
-    }
+pub struct RuntimeStats {
+    pub instruction_count: u64,
+    // ...
 }
 
-trait MetricsSink {
+pub trait MetricsSink {
     fn measure(&self, memory_bytes: usize, total_instruction_count: u64);
 }
 
-struct MetricsCollector {
-    samples: Vec<MetricsCollectorSample>,
+pub struct MetricsCollector {
+    pub samples: Vec<MetricsCollectorSample>,
 }
 
-struct MetricsCollectorSample {
-    timestamp: std::time::Instant,
-    memory_bytes: usize,
-    instruction_count: u64,
+pub struct MetricsCollectorSample {
+    pub timestamp: std::time::Instant,
+    pub memory_bytes: usize,
+    pub instruction_count: u64,
 }
 
 impl MetricsSink for MetricsCollector {
-    fn measure(&self, memory_bytes: usize, total_instruction_count: u64) {
+    fn measure(&self, _memory_bytes: usize, _total_instruction_count: u64) {
         todo!()
     }
 }

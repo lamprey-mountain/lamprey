@@ -40,8 +40,9 @@ struct ChannelRuntime {
     scripts: HashMap<ScriptId, LoadedScript>,
 
     runs: HashMap<RunId, RunController>,
-    // TODO: per-channel limits
-    // limits: limits::Limits,
+    limits: limits::ChannelLimits,
+
+    active_instruction_count: Arc<std::sync::atomic::AtomicU64>,
 }
 
 /// a single script loaded in memory
@@ -58,27 +59,25 @@ pub struct RunController {
 }
 
 impl ChannelRuntime {
-    pub async fn new() -> Result<Self> {
+    pub async fn new(limits: limits::ChannelLimits) -> Result<Self> {
         let rt = rquickjs::AsyncRuntime::new().unwrap();
 
-        // TODO: move these to ~~consts~~ limits
-        rt.set_memory_limit(8 * 1024 * 1024).await;
-        rt.set_max_stack_size(512 * 1024).await;
+        rt.set_memory_limit(limits.runtime.max_memory_bytes).await;
+        rt.set_max_stack_size(limits.runtime.max_stack_size_bytes)
+            .await;
+
+        let active_instruction_count = Arc::new(std::sync::atomic::AtomicU64::new(0));
+        let count_clone = active_instruction_count.clone();
+        let max_instructions = limits.run.max_instructions;
+
+        rt.set_interrupt_handler(Some(Box::new(move || {
+            let count = count_clone.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            count > max_instructions
+        })))
+        .await;
 
         // rt.memory_usage().await;
         // rt.set_host_promise_rejection_tracker(tracker);
-
-        // let instruction_count = Arc::new(AtomicU64::new(0));
-        // let count_clone = instruction_count.clone();
-
-        // rt.set_interrupt_handler(Some(Box::new(move || {
-        //     let count = count_clone.fetch_add(1, Ordering::Relaxed);
-
-        //     // interrupt js at 1 million instructions
-        //     // TODO: move to const
-        //     // count > 1_000_000
-        //     false
-        // })));
 
         // rt.idle().await;
 
@@ -86,6 +85,8 @@ impl ChannelRuntime {
             runtime: rt,
             scripts: HashMap::new(),
             runs: HashMap::new(),
+            limits,
+            active_instruction_count,
         })
     }
 
@@ -128,11 +129,14 @@ pub struct ScriptExtracted {
 
 impl LoadedScript {
     /// extract the inputs/outputs this script supports
-    pub async fn extract(&self, runtime: &rquickjs::AsyncRuntime) -> Result<ScriptExtracted> {
-        let context = rquickjs::AsyncContext::full(runtime).await.unwrap();
+    pub async fn extract(&self, rt: &ChannelRuntime) -> Result<ScriptExtracted> {
+        let context = rquickjs::AsyncContext::full(&rt.runtime).await.unwrap();
 
         let extracted = Arc::new(std::sync::Mutex::new(ScriptExtracted::default()));
         let extracted_for_ctx = extracted.clone();
+
+        rt.active_instruction_count
+            .store(0, std::sync::atomic::Ordering::Relaxed);
 
         async_with!(context => |ctx| {
             // create the controller js object
@@ -208,13 +212,16 @@ impl LoadedScript {
     /// create a new run for this script
     pub async fn spawn(
         &self,
-        runtime: &rquickjs::AsyncRuntime,
+        rt: &ChannelRuntime,
         _input: ScriptInputData,
     ) -> Result<RunController> {
-        let context = rquickjs::AsyncContext::full(runtime).await.unwrap();
+        let context = rquickjs::AsyncContext::full(&rt.runtime).await.unwrap();
 
         // TODO: handle http
         // tokio::spawn(async move {});
+
+        rt.active_instruction_count
+            .store(0, std::sync::atomic::Ordering::Relaxed);
 
         async_with!(context => |ctx| {
             // SAFETY: the bytecode was compiled ourselves in `load_script`
@@ -296,7 +303,8 @@ impl ServiceScripts {
             return Ok(Arc::clone(rt.value()));
         }
 
-        let rt = Arc::new(ChannelRuntime::new().await?);
+        let limits = limits::ChannelLimits::default();
+        let rt = Arc::new(ChannelRuntime::new(limits).await?);
 
         // create a broadcast channel for script events on this channel
         let (tx, _) = broadcast::channel(100);
@@ -418,7 +426,7 @@ impl ServiceScripts {
 
         let rt = self.init_rt(script.channel_id).await?;
         let loaded = rt.load_script(script.id, "strobbery", source).await?;
-        let extracted = loaded.extract(&rt.runtime).await?;
+        let extracted = loaded.extract(&rt).await?;
 
         Ok(extracted)
     }
@@ -461,7 +469,7 @@ impl ServiceScripts {
 
         let rt = self.init_rt(channel_id).await?;
         let script = rt.load_script(script_id, "strobbery", source).await?;
-        let ctl = script.spawn(&rt.runtime, input).await?;
+        let ctl = script.spawn(&rt, input).await?;
 
         Ok(ctl)
     }
