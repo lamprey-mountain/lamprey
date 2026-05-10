@@ -714,6 +714,7 @@ export interface paths {
 							presence: components["schemas"]["Presence"];
 							puppet?: null | components["schemas"]["Puppet"];
 							registered_at?: null | components["schemas"]["Time"];
+							remote?: null | components["schemas"]["Remote"];
 							suspended?: null | components["schemas"]["Suspended"];
 							/** @description whether this user is an official system user */
 							system: boolean;
@@ -2447,7 +2448,7 @@ export interface paths {
 					channel_id: string;
 					event_id: string;
 					seq: number;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -2483,7 +2484,7 @@ export interface paths {
 					channel_id: string;
 					event_id: string;
 					seq: number;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -2573,7 +2574,7 @@ export interface paths {
 				path: {
 					channel_id: string;
 					event_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -2608,7 +2609,7 @@ export interface paths {
 				path: {
 					channel_id: string;
 					event_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -2643,7 +2644,7 @@ export interface paths {
 				path: {
 					channel_id: string;
 					event_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -4431,7 +4432,7 @@ export interface paths {
 					channel_id: string;
 					message_id: string;
 					reaction_key: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -4463,7 +4464,7 @@ export interface paths {
 					channel_id: string;
 					message_id: string;
 					reaction_key: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -5403,6 +5404,825 @@ export interface paths {
 		};
 		put?: never;
 		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/script": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Script list
+		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     List scripts in a channel
+		 */
+		get: {
+			parameters: {
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
+				};
+				header?: never;
+				path: {
+					channel_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							cursor?: string | null;
+							has_more: boolean;
+							items: components["schemas"]["Script"][];
+							/** Format: int64 */
+							total: number;
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		/**
+		 * Script create
+		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Create a new script in a channel
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						format: components["schemas"]["ScriptFormat"];
+						location: components["schemas"]["ScriptLocationSet"];
+					};
+				};
+			};
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							channel_id: components["schemas"]["Id"];
+							created_at: components["schemas"]["Time"];
+							creator_id: components["schemas"]["Id"];
+							deleted_at?: null | components["schemas"]["Time"];
+							id: components["schemas"]["Id"];
+							/** @description detected inputs for this script */
+							inputs: components["schemas"]["ScriptInput"][];
+							latest_version: components["schemas"]["ScriptVersion"];
+							/** @description the effects that this script is allowed to run */
+							permissions: components["schemas"]["ScriptPermission"][];
+							status: components["schemas"]["ScriptStatus"];
+						};
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/script/{script_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Script get
+		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Get a script by ID
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					script_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							channel_id: components["schemas"]["Id"];
+							created_at: components["schemas"]["Time"];
+							creator_id: components["schemas"]["Id"];
+							deleted_at?: null | components["schemas"]["Time"];
+							id: components["schemas"]["Id"];
+							/** @description detected inputs for this script */
+							inputs: components["schemas"]["ScriptInput"][];
+							latest_version: components["schemas"]["ScriptVersion"];
+							/** @description the effects that this script is allowed to run */
+							permissions: components["schemas"]["ScriptPermission"][];
+							status: components["schemas"]["ScriptStatus"];
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		/**
+		 * Script delete
+		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ScriptDelete</div>
+		 *
+		 *     Delete a script
+		 */
+		delete: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					script_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/script/{script_id}/content": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Script content update
+		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Update the content of a script (creates a new version)
+		 */
+		put: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					script_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						format: components["schemas"]["ScriptFormat"];
+						location: components["schemas"]["ScriptLocationSet"];
+					};
+				};
+			};
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							created_at: components["schemas"]["Time"];
+							deleted_at?: null | components["schemas"]["Time"];
+							format: components["schemas"]["ScriptFormat"];
+							location: components["schemas"]["ScriptLocation"];
+							metadata: components["schemas"]["ScriptMetadata"];
+							status: components["schemas"]["ScriptVersionStatus"];
+							version_id: components["schemas"]["Id"];
+						};
+					};
+				};
+			};
+		};
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/script/{script_id}/depends": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Script dependency graph
+		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Get the dependency graph for a script
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					script_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description all dependencies of this script, including transitive ones */
+							dependencies: components["schemas"]["ScriptDependency"][];
+							/** @description what depends on what */
+							links: components["schemas"]["ScriptDependencyLink"][];
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/script/{script_id}/depends/update": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Script dependency update
+		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Update script dependencies, creates a new version
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					script_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": Record<string, never>;
+				};
+			};
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							created_at: components["schemas"]["Time"];
+							deleted_at?: null | components["schemas"]["Time"];
+							format: components["schemas"]["ScriptFormat"];
+							location: components["schemas"]["ScriptLocation"];
+							metadata: components["schemas"]["ScriptMetadata"];
+							status: components["schemas"]["ScriptVersionStatus"];
+							version_id: components["schemas"]["Id"];
+						};
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/script/{script_id}/run": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Script run list
+		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     List runs for a script
+		 */
+		get: {
+			parameters: {
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
+				};
+				header?: never;
+				path: {
+					channel_id: string;
+					script_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							cursor?: string | null;
+							has_more: boolean;
+							items: components["schemas"]["Run"][];
+							/** Format: int64 */
+							total: number;
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/script/{script_id}/run/{run_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Script run get
+		 * @description <div class="markdown-alert-permission-required">ScriptInspect</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Get a specific run
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					script_id: string;
+					run_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							created_at: components["schemas"]["Time"];
+							id: components["schemas"]["Id"];
+							script_id: components["schemas"]["Id"];
+							status: components["schemas"]["RunStatus"];
+							stopped_at?: null | components["schemas"]["Time"];
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/script/{script_id}/run/{run_id}/log": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Script run log
+		 * @description <div class="markdown-alert-permission-required">ScriptInspect</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Get logs from a script run
+		 */
+		get: {
+			parameters: {
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
+				};
+				header?: never;
+				path: {
+					channel_id: string;
+					script_id: string;
+					run_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							cursor?: string | null;
+							has_more: boolean;
+							items: components["schemas"]["RunLogEntry"][];
+							/** Format: int64 */
+							total: number;
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/script/{script_id}/run/{run_id}/stop": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Script run stop
+		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Stop a running script
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					script_id: string;
+					run_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/script/{script_id}/trigger": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Script trigger
+		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Run a script with a trigger input
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					script_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						/** @description start in the background
+						 *
+						 *     returns 202 accepted instead of blocking until it can return 200 ok */
+						async: boolean;
+						/** @description whether only one instance should be running at a time
+						 *
+						 *     will stop other runs of this script if true */
+						exclusive: boolean;
+					};
+				};
+			};
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							created_at: components["schemas"]["Time"];
+							id: components["schemas"]["Id"];
+							script_id: components["schemas"]["Id"];
+							status: components["schemas"]["RunStatus"];
+							stopped_at?: null | components["schemas"]["Time"];
+						};
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/script/{script_id}/version": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Script version list
+		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Get version history for a script
+		 */
+		get: {
+			parameters: {
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
+				};
+				header?: never;
+				path: {
+					channel_id: string;
+					script_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							cursor?: string | null;
+							has_more: boolean;
+							items: components["schemas"]["ScriptVersion"][];
+							/** Format: int64 */
+							total: number;
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/script/{script_id}/version/{version_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Script version get
+		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Get a specific script version
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					script_id: string;
+					version_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							created_at: components["schemas"]["Time"];
+							deleted_at?: null | components["schemas"]["Time"];
+							format: components["schemas"]["ScriptFormat"];
+							location: components["schemas"]["ScriptLocation"];
+							metadata: components["schemas"]["ScriptMetadata"];
+							status: components["schemas"]["ScriptVersionStatus"];
+							version_id: components["schemas"]["Id"];
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		/**
+		 * Script version delete
+		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ScriptVersionDelete</div>
+		 *
+		 *     Delete a specific script version
+		 */
+		delete: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					script_id: string;
+					version_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/script/{script_id}/version/{version_id}/restore": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Script version restore
+		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Restore a deleted script version
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					script_id: string;
+					version_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							created_at: components["schemas"]["Time"];
+							deleted_at?: null | components["schemas"]["Time"];
+							format: components["schemas"]["ScriptFormat"];
+							location: components["schemas"]["ScriptLocation"];
+							metadata: components["schemas"]["ScriptMetadata"];
+							status: components["schemas"]["ScriptVersionStatus"];
+							version_id: components["schemas"]["Id"];
+						};
+					};
+				};
+			};
+		};
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -6860,7 +7680,7 @@ export interface paths {
 			requestBody: {
 				content: {
 					"application/json": {
-						root: components["schemas"]["SerdocRoot"];
+						components: components["schemas"]["Component"][];
 					};
 				};
 			};
@@ -7217,7 +8037,7 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
-							root: components["schemas"]["SerdocRoot"];
+							components: components["schemas"]["Component"][];
 						};
 					};
 				};
@@ -7618,6 +8438,7 @@ export interface paths {
 							presence: components["schemas"]["Presence"];
 							puppet?: null | components["schemas"]["Puppet"];
 							registered_at?: null | components["schemas"]["Time"];
+							remote?: null | components["schemas"]["Remote"];
 							suspended?: null | components["schemas"]["Suspended"];
 							/** @description whether this user is an official system user */
 							system: boolean;
@@ -10757,7 +11578,7 @@ export interface paths {
 				header?: never;
 				path: {
 					room_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -10794,7 +11615,7 @@ export interface paths {
 				header?: never;
 				path: {
 					room_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -10828,7 +11649,7 @@ export interface paths {
 				header?: never;
 				path: {
 					room_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -11752,7 +12573,7 @@ export interface paths {
 				header?: never;
 				path: {
 					room_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -11803,7 +12624,7 @@ export interface paths {
 				header?: never;
 				path: {
 					room_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -11868,7 +12689,7 @@ export interface paths {
 				header?: never;
 				path: {
 					room_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -11903,7 +12724,7 @@ export interface paths {
 				header?: never;
 				path: {
 					room_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -14224,7 +15045,7 @@ export interface paths {
 				header?: never;
 				path: {
 					thread_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -14257,7 +15078,7 @@ export interface paths {
 				header?: never;
 				path: {
 					thread_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -14295,7 +15116,7 @@ export interface paths {
 				header?: never;
 				path: {
 					thread_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -15362,7 +16183,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -15394,7 +16215,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -15423,7 +16244,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -15462,6 +16283,7 @@ export interface paths {
 							presence: components["schemas"]["Presence"];
 							puppet?: null | components["schemas"]["Puppet"];
 							registered_at?: null | components["schemas"]["Time"];
+							remote?: null | components["schemas"]["Remote"];
 							suspended?: null | components["schemas"]["Suspended"];
 							/** @description whether this user is an official system user */
 							system: boolean;
@@ -15503,7 +16325,7 @@ export interface paths {
 				};
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -15570,7 +16392,7 @@ export interface paths {
 				};
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -15620,7 +16442,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 					app_id: string;
 				};
 				cookie?: never;
@@ -15647,7 +16469,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 					app_id: string;
 				};
 				cookie?: never;
@@ -15700,7 +16522,7 @@ export interface paths {
 				};
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -15747,7 +16569,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -15797,7 +16619,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 					addr: string;
 				};
 				cookie?: never;
@@ -15824,7 +16646,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 					addr: string;
 				};
 				cookie?: never;
@@ -15852,7 +16674,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 					addr: string;
 				};
 				cookie?: never;
@@ -15907,7 +16729,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 					addr: string;
 				};
 				cookie?: never;
@@ -15947,7 +16769,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 					addr: string;
 					code: string;
 				};
@@ -15991,7 +16813,7 @@ export interface paths {
 				};
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -16025,7 +16847,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -16100,7 +16922,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -16151,7 +16973,7 @@ export interface paths {
 				};
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -16203,7 +17025,7 @@ export interface paths {
 					reason?: string;
 				};
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -16239,6 +17061,7 @@ export interface paths {
 							presence: components["schemas"]["Presence"];
 							puppet?: null | components["schemas"]["Puppet"];
 							registered_at?: null | components["schemas"]["Time"];
+							remote?: null | components["schemas"]["Remote"];
 							suspended?: null | components["schemas"]["Suspended"];
 							/** @description whether this user is an official system user */
 							system: boolean;
@@ -16259,7 +17082,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -16289,6 +17112,7 @@ export interface paths {
 							presence: components["schemas"]["Presence"];
 							puppet?: null | components["schemas"]["Puppet"];
 							registered_at?: null | components["schemas"]["Time"];
+							remote?: null | components["schemas"]["Remote"];
 							suspended?: null | components["schemas"]["Suspended"];
 							/** @description whether this user is an official system user */
 							system: boolean;
@@ -16325,7 +17149,7 @@ export interface paths {
 				query?: never;
 				header?: never;
 				path: {
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -16647,7 +17471,7 @@ export interface paths {
 				header?: never;
 				path: {
 					channel_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -16703,7 +17527,7 @@ export interface paths {
 				header?: never;
 				path: {
 					channel_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -16734,7 +17558,7 @@ export interface paths {
 				header?: never;
 				path: {
 					channel_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -16813,7 +17637,7 @@ export interface paths {
 				header?: never;
 				path: {
 					channel_id: string;
-					user_id: null | components["schemas"]["Id"];
+					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
 				};
 				cookie?: never;
 			};
@@ -18188,6 +19012,24 @@ export interface components {
 					};
 					/** @enum {string} */
 					type: "TagDelete";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						channel_id: components["schemas"]["Id"];
+						script_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "ScriptCreate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						channel_id: components["schemas"]["Id"];
+						script_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "ScriptDelete";
 			  };
 		AutomodAction:
 			| {
@@ -18697,8 +19539,9 @@ export interface components {
 			| "Ticket"
 			| "Document"
 			| "DocumentComment"
-			| "Wiki";
-		/** @description a color */
+			| "Wiki"
+			| "Scripts";
+		/** @description A color string. Supports hex (#rgb, #rrggbb), rgb(), oklch(), or named colors (name-variant:alpha) */
 		Color: string;
 		Component: components["schemas"]["Component_Create"];
 		/** @description A developer-defined identifier for an interactive component.
@@ -19200,6 +20043,8 @@ export interface components {
 			 */
 			limit?: number | null;
 		};
+		/** @description A hostname, used to identify a server */
+		Hostname: string;
 		/** @description webrtc ice candidate */
 		IceCandidate: string;
 		/**
@@ -19348,6 +20193,7 @@ export interface components {
 			/** @description Additional filetype-specific metadata for the file */
 			metadata: components["schemas"]["MediaMetadata"];
 			quarantine?: null | components["schemas"]["MediaQuarantine"];
+			remote?: null | components["schemas"]["Remote"];
 			room_id?: null | components["schemas"]["Id"];
 			/** @description The results of automated scans. */
 			scans: components["schemas"]["MediaScan"][];
@@ -19485,6 +20331,19 @@ export interface components {
 					room_id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "RoomBanner";
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					script_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Script";
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					script_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ScriptVersion";
+					version_id: components["schemas"]["Id"];
 			  };
 		/** @description Filetype-specific metadata */
 		MediaMetadata:
@@ -20442,6 +21301,75 @@ export interface components {
 					message_id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "FlumeDelta";
+			  }
+			| {
+					script: components["schemas"]["Script"];
+					/** @enum {string} */
+					type: "ScriptCreate";
+			  }
+			| {
+					script: components["schemas"]["Script"];
+					/** @enum {string} */
+					type: "ScriptUpdate";
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					script_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ScriptDelete";
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					script_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ScriptVersionCreate";
+					version: components["schemas"]["ScriptVersion"];
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					script_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ScriptVersionUpdate";
+					version: components["schemas"]["ScriptVersion"];
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					script_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ScriptVersionDelete";
+					version_id: components["schemas"]["Id"];
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					run: components["schemas"]["Run"];
+					/** @enum {string} */
+					type: "ScriptRunCreate";
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					run: components["schemas"]["Run"];
+					/** @enum {string} */
+					type: "ScriptRunUpdate";
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					entry: components["schemas"]["RunLogEntry"];
+					run_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ScriptLogCreate";
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					memory_usage: number;
+					/** @enum {string} */
+					type: "ScriptChannelMetrics";
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					connection_id: components["schemas"]["Id"];
+					script_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ScriptSubscribed";
 			  };
 		/** @description Information about a thread being created */
 		MessageThreadCreated: {
@@ -20800,7 +21728,9 @@ export interface components {
 			| "FriendCreate"
 			| "RoomJoin"
 			| "CallUpdate"
-			| "RoomJoinForce";
+			| "RoomJoinForce"
+			| "ScriptManage"
+			| "ScriptInspect";
 		PermissionOverwrite: {
 			/** @description extra permissions allowed here */
 			allow: components["schemas"]["Permission"][];
@@ -21022,6 +21952,16 @@ export interface components {
 		RelationshipType: "Friend" | "Outgoing" | "Incoming" | "Block";
 		RelationshipWithUserId: components["schemas"]["Relationship"] & {
 			user_id: components["schemas"]["Id"];
+		};
+		/** @description a piece of content on a remote server */
+		Remote: {
+			/** @description the hostname of the server */
+			hostname: components["schemas"]["Hostname"];
+			/**
+			 * Format: uuid
+			 * @description the id of this resource on the origin server
+			 */
+			origin_id: string;
 		};
 		/**
 		 * @description who the report is sent to
@@ -21383,12 +22323,229 @@ export interface components {
 		};
 		/** @enum {string} */
 		RoomType: "Default" | "Server";
+		/** @description a script execution run */
+		Run: {
+			created_at: components["schemas"]["Time"];
+			id: components["schemas"]["Id"];
+			script_id: components["schemas"]["Id"];
+			status: components["schemas"]["RunStatus"];
+			stopped_at?: null | components["schemas"]["Time"];
+		};
+		/** @description request to start a script run via trigger */
+		RunCreateTrigger: {
+			/** @description start in the background
+			 *
+			 *     returns 202 accepted instead of blocking until it can return 200 ok */
+			async: boolean;
+			/** @description whether only one instance should be running at a time
+			 *
+			 *     will stop other runs of this script if true */
+			exclusive: boolean;
+		};
+		/** @description a log entry from a script run */
+		RunLogEntry: {
+			/** @description arbitrary metadata associated with this log line */
+			attributes: components["schemas"]["MessageMetadata"];
+			/** @description arbitrary content for this log line */
+			content: string;
+			created_at: components["schemas"]["Time"];
+			/** Format: int64 */
+			id: number;
+			level: components["schemas"]["RunLogLevel"];
+			/** @description where this log came from */
+			source: components["schemas"]["RunLogSource"];
+		};
+		/**
+		 * @description log level for a run log entry
+		 * @enum {string}
+		 */
+		RunLogLevel: "Trace" | "Debug" | "Info" | "Warning" | "Error";
+		/** @description source information for a log entry */
+		RunLogSource: {
+			run_id: components["schemas"]["Id"];
+			script_id: components["schemas"]["Id"];
+			/**
+			 * Format: int64
+			 * @description the end of the span in utf8 codepoints (rust `char`s)
+			 */
+			span_end: number;
+			/**
+			 * Format: int64
+			 * @description the start of the span in utf8 codepoints (rust `char`s)
+			 */
+			span_start: number;
+			/** @description target (like rust foo::bar::baz) (like otel InstrumentationScope) */
+			target: string;
+			/** Format: int64 */
+			trace_id?: number | null;
+		};
+		/** @description metrics collected from a single script run */
+		RunMetrics: Record<string, never>;
+		RunMetricsQuery: Record<string, never>;
+		/**
+		 * @description status of a script run
+		 * @enum {string}
+		 */
+		RunStatus:
+			| "Creating"
+			| "Active"
+			| "Sleeping"
+			| "Waking"
+			| "Exited"
+			| "Borked"
+			| "Crashed";
+		/** @description a trace span from a script run */
+		RunTrace: {
+			/** @description arbitrary metadata associated with this trace */
+			attributes: components["schemas"]["MessageMetadata"];
+			created_at: components["schemas"]["Time"];
+			ended_at?: null | components["schemas"]["Time"];
+			/** Format: int64 */
+			id: number;
+			label: string;
+			source: components["schemas"]["RunLogSource"];
+		};
 		/**
 		 * @description an oauth scope
 		 * @enum {string}
 		 */
 		Scope: "identify" | "email" | "rooms" | "relationships" | "full" | "auth";
 		Scopes: components["schemas"]["Scope"][];
+		/** @description a script that can run */
+		Script: {
+			channel_id: components["schemas"]["Id"];
+			created_at: components["schemas"]["Time"];
+			creator_id: components["schemas"]["Id"];
+			deleted_at?: null | components["schemas"]["Time"];
+			id: components["schemas"]["Id"];
+			/** @description detected inputs for this script */
+			inputs: components["schemas"]["ScriptInput"][];
+			latest_version: components["schemas"]["ScriptVersion"];
+			/** @description the effects that this script is allowed to run */
+			permissions: components["schemas"]["ScriptPermission"][];
+			status: components["schemas"]["ScriptStatus"];
+		};
+		/** @description request body for updating script content */
+		ScriptContentUpdate: {
+			format: components["schemas"]["ScriptFormat"];
+			location: components["schemas"]["ScriptLocationSet"];
+		};
+		/** @description request body for creating a new script */
+		ScriptCreate: {
+			format: components["schemas"]["ScriptFormat"];
+			location: components["schemas"]["ScriptLocationSet"];
+		};
+		/** @description request body for updating script dependencies */
+		ScriptDependenciesUpdate: Record<string, never>;
+		/** @description a single script dependency */
+		ScriptDependency: {
+			/** @description the script that is being depended on */
+			script: components["schemas"]["Script"];
+		};
+		/** @description response body for the dependency graph */
+		ScriptDependencyGraph: {
+			/** @description all dependencies of this script, including transitive ones */
+			dependencies: components["schemas"]["ScriptDependency"][];
+			/** @description what depends on what */
+			links: components["schemas"]["ScriptDependencyLink"][];
+		};
+		ScriptDependencyLink: {
+			dependency_id: components["schemas"]["Id"];
+			dependent_id: components["schemas"]["Id"];
+		};
+		/**
+		 * @description a capability this script requires
+		 *
+		 *     can also be viewed as an effect that running this script may cause
+		 * @enum {string}
+		 */
+		ScriptEffect: never;
+		/**
+		 * @description the format of a script
+		 * @enum {string}
+		 */
+		ScriptFormat: "Javascript" | "Webassembly";
+		/** @description the valid inputs to this script */
+		ScriptInput: {
+			/** @description the {side effects, capabilities, outputs} of this script */
+			effects: components["schemas"]["ScriptEffect"][];
+			/** @description unique identifier for this input */
+			id: string;
+			/** @description human readable label */
+			label: string;
+			type: components["schemas"]["ScriptInputType"];
+		};
+		ScriptInputType: {
+			/** @enum {string} */
+			type: "Manual";
+		};
+		/** @description where a script is stored */
+		ScriptLocation:
+			| {
+					path: string;
+					/** @enum {string} */
+					type: "Local";
+			  }
+			| {
+					media: components["schemas"]["Media"];
+					/** @enum {string} */
+					type: "Remote";
+					/** Format: uri */
+					url: string;
+			  }
+			| {
+					media: components["schemas"]["Media"];
+					/** @enum {string} */
+					type: "Hosted";
+			  };
+		/** @description used to set a ScriptLocation */
+		ScriptLocationSet:
+			| {
+					path: string;
+					/** @enum {string} */
+					type: "Local";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Remote";
+					/** Format: uri */
+					url: string;
+			  }
+			| (components["schemas"]["MediaReference"] & {
+					/** @enum {string} */
+					type: "Hosted";
+			  });
+		/** @description metadata about a script */
+		ScriptMetadata: {
+			authors: string[];
+			description?: string | null;
+			homepage_url: string;
+			/** @description a spdx license identifier */
+			license: string;
+			name: string;
+			version: string;
+		};
+		ScriptPermission: {
+			effect: components["schemas"]["ScriptEffect"];
+			/** @description whether this should be allowed or denied */
+			grant: components["schemas"]["ScriptPermissionGrant"];
+		};
+		/** @enum {string} */
+		ScriptPermissionGrant: "Allow" | "Deny" | "Prompt";
+		/** @enum {string} */
+		ScriptStatus: "Empty" | "Creating" | "Processing" | "Valid" | "Invalid";
+		/** @description information about a script version */
+		ScriptVersion: {
+			created_at: components["schemas"]["Time"];
+			deleted_at?: null | components["schemas"]["Time"];
+			format: components["schemas"]["ScriptFormat"];
+			location: components["schemas"]["ScriptLocation"];
+			metadata: components["schemas"]["ScriptMetadata"];
+			status: components["schemas"]["ScriptVersionStatus"];
+			version_id: components["schemas"]["Id"];
+		};
+		/** @enum {string} */
+		ScriptVersionStatus: "Processing" | "Valid" | "Invalid";
 		/** @description Search index statistics for a channel */
 		SearchIndexStats: {
 			/**
@@ -21430,22 +22587,11 @@ export interface components {
 		SelectPluginReason: "Url" | "Response";
 		/** @description serialized document */
 		Serdoc: {
-			root: components["schemas"]["SerdocRoot"];
-		};
-		/** @description serialized document block element */
-		SerdocBlock: {
-			Markdown: {
-				/** @description the markdown content */
-				content: string;
-			};
+			components: components["schemas"]["Component"][];
 		};
 		/** @description update a serdoc */
 		SerdocPut: {
-			root: components["schemas"]["SerdocRoot"];
-		};
-		/** @description serialized document root element */
-		SerdocRoot: {
-			blocks: components["schemas"]["SerdocBlock"][];
+			components: components["schemas"]["Component"][];
 		};
 		ServerAutomodList: {
 			description: string;
@@ -21738,13 +22884,14 @@ export interface components {
 			presence: components["schemas"]["Presence"];
 			puppet?: null | components["schemas"]["Puppet"];
 			registered_at?: null | components["schemas"]["Time"];
+			remote?: null | components["schemas"]["Remote"];
 			suspended?: null | components["schemas"]["Suspended"];
 			/** @description whether this user is an official system user */
 			system: boolean;
 			version_id: components["schemas"]["Id"];
 			webhook?: null | components["schemas"]["UserWebhook"];
 		};
-		UserIdReq: null | components["schemas"]["Id"];
+		UserIdReq: null | Record<string, never>[] | components["schemas"]["Id"];
 		/** @enum {string} */
 		UserListFilter: "guest" | "registered" | "bot" | "puppet";
 		UserListParams: {
