@@ -516,14 +516,12 @@ async fn script_run_list(
 
     auth.ensure_scopes(&[Scope::Full])?;
 
-    let srv = s.services();
-    srv.perms
-        .for_channel3(auth.user_id(), req.channel_id)
-        .await?
-        .ensure_view()?
-        .check()?;
+    let runs = s
+        .data()
+        .script_run_list(req.script_id, req.pagination)
+        .await?;
 
-    Ok(Error::Unimplemented)
+    Ok(Json(runs))
 }
 
 /// Script run get
@@ -539,14 +537,13 @@ async fn script_run_get(
 
     auth.ensure_scopes(&[Scope::Full])?;
 
-    let srv = s.services();
-    srv.perms
-        .for_channel3(auth.user_id(), req.channel_id)
+    let run = s
+        .data()
+        .script_run_get(req.run_id)
         .await?
-        .ensure_view()?
-        .check()?;
+        .ok_or(Error::NotFound)?;
 
-    Ok(Error::Unimplemented)
+    Ok(Json(run))
 }
 
 /// Script run stop
@@ -554,7 +551,7 @@ async fn script_run_get(
 async fn script_run_stop(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_run_stop::Request,
+    _req: routes::script_run_stop::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -586,7 +583,9 @@ async fn script_run_log(
         .ensure_view()?
         .check()?;
 
-    Ok(Error::Unimplemented)
+    let logs = s.data().script_log_list(req.run_id, req.pagination).await?;
+
+    Ok(Json(logs))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

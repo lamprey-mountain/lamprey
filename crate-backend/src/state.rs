@@ -124,6 +124,26 @@ impl ServerStateInner {
         })
     }
 
+    // TODO: use this instead
+    /// emit a message to everyone in a room
+    pub async fn broadcast_room2(&self, room_id: RoomId, msg: MessageSync) -> Result<()> {
+        self.broadcast_room_with_nonce2(room_id, None, msg).await
+    }
+
+    // TODO: use this instead
+    /// emit a message to everyone in a room with a nonce
+    pub async fn broadcast_room_with_nonce2(
+        &self,
+        _room_id: RoomId,
+        nonce: Option<&str>,
+        msg: MessageSync,
+    ) -> Result<()> {
+        self.broadcast_inner(MessageBroadcastInner {
+            message: msg,
+            nonce: nonce.map(|s| s.to_string()),
+        })
+    }
+
     /// emit a message to everyone in a channel
     pub async fn broadcast_channel(
         &self,

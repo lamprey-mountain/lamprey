@@ -12,7 +12,7 @@ use crate::v1::types::e2ee::{CrossSigningBundle, KeyshareRequest, KeyshareRespon
 use crate::v1::types::error::SyncError;
 
 use crate::v1::types::message::flume::FlumeDelta;
-use crate::v1::types::script::{Run, Script, ScriptVersion};
+use crate::v1::types::script::{Run, RunLogEntry, Script, ScriptVersion};
 use crate::v1::types::{
     application::{Application, Connection},
     automod::{AutomodRule, AutomodRuleExecution},
@@ -969,9 +969,7 @@ pub enum MessageSync {
     ScriptLogCreate {
         channel_id: ChannelId,
         run_id: RunId,
-
-        // TEMP: just a string, for debugging
-        content: String,
+        entry: RunLogEntry,
     },
 
     /// metrics for the channel a script is in

@@ -12,6 +12,16 @@ pub trait PaginationKey: Display + Clone + PartialEq + Eq + PartialOrd + Ord {
 }
 
 // TODO: use strings instead of PaginationKey?
+impl PaginationKey for u64 {
+    fn min() -> Self {
+        u64::MIN
+    }
+
+    fn max() -> Self {
+        u64::MAX
+    }
+}
+
 #[derive(Debug, Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

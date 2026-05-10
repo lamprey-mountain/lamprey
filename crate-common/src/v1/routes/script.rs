@@ -473,7 +473,9 @@ pub mod script_run_stop {
     response(OK, body = Vec<RunLogEntry>, description = "Get script run logs success"),
 )]
 pub mod script_run_log {
-    use crate::v1::types::{script::RunLogEntry, ChannelId, PaginationResponse, RunId, ScriptId};
+    use crate::v1::types::{
+        script::RunLogEntry, ChannelId, PaginationQuery, PaginationResponse, RunId, ScriptId,
+    };
 
     pub struct Request {
         #[path]
@@ -484,9 +486,9 @@ pub mod script_run_log {
 
         #[path]
         pub run_id: RunId,
-        // FIXME: pagination query for u64
-        // #[query]
-        // pub query: PaginationQuery<u64>,
+
+        #[query]
+        pub pagination: PaginationQuery<u64>,
     }
 
     pub struct Response {

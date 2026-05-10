@@ -1,15 +1,17 @@
+// TODO: create enum variants in db
+
 use async_trait::async_trait;
 use common::v1::types::script::{
-    Script, ScriptFormat, ScriptInput, ScriptLocation, ScriptMetadata, ScriptStatus, ScriptVersion,
-    ScriptVersionStatus,
+    Run, RunLogEntry, RunLogLevel, RunStatus, Script, ScriptFormat, ScriptInput, ScriptLocation,
+    ScriptMetadata, ScriptStatus, ScriptVersion, ScriptVersionStatus,
 };
 use common::v1::types::{
-    ChannelId, PaginationDirection, PaginationQuery, PaginationResponse, ScriptId, ScriptVerId,
-    UserId,
+    ChannelId, PaginationDirection, PaginationQuery, PaginationResponse, RunId, ScriptId,
+    ScriptVerId, UserId,
 };
 use lamprey_backend_core::data::DataScript;
 use serde::Deserialize;
-use sqlx::{query, query_file_as, query_file_scalar};
+use sqlx::{query, query_file, query_file_as, query_file_scalar};
 use time::PrimitiveDateTime;
 use tracing::warn;
 use uuid::Uuid;
@@ -46,6 +48,37 @@ pub struct DbScriptWithLatestVersion {
     pub version_data: serde_json::Value,
     pub cached_inputs: Option<serde_json::Value>,
     pub version_status: String,
+}
+
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct DbRun {
+    pub id: Uuid,
+    pub script_id: Uuid,
+    pub created_at: PrimitiveDateTime,
+    pub stopped_at: Option<PrimitiveDateTime>,
+    pub status: i16,
+}
+
+impl From<DbRun> for Run {
+    fn from(row: DbRun) -> Self {
+        let status = match row.status {
+            0 => RunStatus::Creating,
+            1 => RunStatus::Active,
+            2 => RunStatus::Sleeping,
+            3 => RunStatus::Waking,
+            4 => RunStatus::Exited,
+            5 => RunStatus::Borked,
+            6 => RunStatus::Crashed,
+            _ => RunStatus::Crashed,
+        };
+        Run {
+            id: row.id.into(),
+            script_id: row.script_id.into(),
+            created_at: row.created_at.into(),
+            stopped_at: row.stopped_at.map(Into::into),
+            status,
+        }
+    }
 }
 
 impl From<DbScriptWithLatestVersion> for Script {
@@ -337,5 +370,162 @@ impl DataScript for Postgres {
             |v: DbScriptVersion| ScriptVersion::from(v),
             |v: &ScriptVersion| v.version_id.to_string()
         )
+    }
+
+    async fn script_log_insert(&mut self, run_id: RunId, entry: &RunLogEntry) -> Result<()> {
+        let mut conn = self.acquire().await?;
+
+        let level_int = match entry.level {
+            RunLogLevel::Trace => 0,
+            RunLogLevel::Debug => 1,
+            RunLogLevel::Info => 2,
+            RunLogLevel::Warning => 3,
+            RunLogLevel::Error => 4,
+        };
+
+        let attrs = serde_json::to_value(&entry.attributes)?;
+
+        query!(
+            r#"
+            INSERT INTO script_log (run_id, line_id, created_at, level, target, span_start, span_end, content, attributes)
+            VALUES ($1, (SELECT COALESCE(MAX(line_id), -1) + 1 FROM script_log WHERE run_id = $1), CURRENT_TIMESTAMP, $2, $3, $4, $5, $6, $7)
+            "#,
+            *run_id,
+            level_int,
+            &entry.source.target,
+            entry.source.span_start as i64,
+            entry.source.span_end as i64,
+            &entry.content,
+            attrs,
+        )
+        .execute(conn.ext())
+        .await?;
+
+        Ok(())
+    }
+
+    async fn script_log_list(
+        &mut self,
+        run_id: RunId,
+        pagination: PaginationQuery<u64>,
+    ) -> Result<PaginationResponse<RunLogEntry>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        let run_id_uuid = *run_id;
+
+        gen_paginate!(
+            p,
+            self,
+            query_file!(
+                "sql/script_log_list.sql",
+                run_id_uuid,
+                p.after as i64,
+                p.before as i64,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_file_scalar!("sql/script_log_count.sql", run_id_uuid),
+            |row| {
+                let level_int: i16 = row.level;
+                let level = match level_int {
+                    0 => RunLogLevel::Trace,
+                    1 => RunLogLevel::Debug,
+                    2 => RunLogLevel::Info,
+                    3 => RunLogLevel::Warning,
+                    4 => RunLogLevel::Error,
+                    _ => RunLogLevel::Info,
+                };
+                RunLogEntry {
+                    id: row.line_id as u64,
+                    created_at: row.created_at.into(),
+                    level,
+                    source: common::v1::types::script::RunLogSource {
+                        // TODO: return this
+                        script_id: ScriptId::from(uuid::Uuid::nil()),
+                        run_id,
+                        trace_id: None, // TODO
+                        target: row.target,
+                        span_start: row.span_start as u64,
+                        span_end: row.span_end as u64,
+                    },
+                    content: row.content,
+                    attributes: serde_json::from_value(row.attributes).unwrap_or_default(),
+                }
+            },
+            |v: &RunLogEntry| v.id.to_string()
+        )
+    }
+
+    async fn script_run_create(&mut self, run: &Run) -> Result<()> {
+        let mut conn = self.acquire().await?;
+        let status_int = match run.status {
+            RunStatus::Creating => 0,
+            RunStatus::Active => 1,
+            RunStatus::Sleeping => 2,
+            RunStatus::Waking => 3,
+            RunStatus::Exited => 4,
+            RunStatus::Borked => 5,
+            RunStatus::Crashed => 6,
+        };
+
+        query!(
+            r#"
+            INSERT INTO script_run (id, script_id, created_at, stopped_at, status)
+            VALUES ($1, $2, $3, $4, $5)
+            "#,
+            *run.id,
+            *run.script_id,
+            PrimitiveDateTime::from(run.created_at),
+            run.stopped_at.map(PrimitiveDateTime::from),
+            status_int
+        )
+        .execute(conn.ext())
+        .await?;
+
+        Ok(())
+    }
+
+    async fn script_run_get(&mut self, run_id: RunId) -> Result<Option<Run>> {
+        let mut conn = self.acquire().await?;
+        let row = query_file_as!(DbRun, "sql/script_run_get.sql", *run_id)
+            .fetch_optional(conn.ext())
+            .await?;
+
+        Ok(row.map(Into::into))
+    }
+
+    async fn script_run_list(
+        &mut self,
+        script_id: ScriptId,
+        pagination: PaginationQuery<RunId>,
+    ) -> Result<PaginationResponse<Run>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self,
+            query_file_as!(
+                DbRun,
+                "sql/script_run_list.sql",
+                *script_id,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_file_scalar!("sql/script_run_count.sql", *script_id),
+            |row: DbRun| Run::from(row),
+            |r: &Run| r.id.to_string()
+        )
+    }
+
+    async fn script_run_stop(&mut self, run_id: RunId) -> Result<()> {
+        let mut conn = self.acquire().await?;
+        query!(
+            "UPDATE script_run SET stopped_at = CURRENT_TIMESTAMP, status = 4 WHERE id = $1",
+            *run_id
+        )
+        .execute(conn.ext())
+        .await?;
+
+        Ok(())
     }
 }

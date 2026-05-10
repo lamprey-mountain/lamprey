@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::script::{
-    Script, ScriptFormat, ScriptLocation, ScriptMetadata, ScriptVersion,
+    Run, RunLogEntry, Script, ScriptFormat, ScriptLocation, ScriptMetadata, ScriptVersion,
 };
 use common::v1::types::{
     ack::AckBulkItem,
@@ -32,7 +32,7 @@ use common::v1::types::{
     RoomMemberSearchAdvanced, RoomMemberSearchResponse, SearchDlqId, TagId, ThreadMember,
     ThreadMemberPut, UserId, WebhookId,
 };
-use common::v1::types::{Message as MessageV2, ScriptId, ScriptVerId};
+use common::v1::types::{Message as MessageV2, RunId, ScriptId, ScriptVerId};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -1032,4 +1032,20 @@ pub trait DataScript {
         script_id: ScriptId,
         pagination: PaginationQuery<ScriptVerId>,
     ) -> Result<PaginationResponse<ScriptVersion>>;
+
+    async fn script_log_insert(&mut self, run_id: RunId, entry: &RunLogEntry) -> Result<()>;
+    async fn script_log_list(
+        &mut self,
+        run_id: RunId,
+        pagination: PaginationQuery<u64>,
+    ) -> Result<PaginationResponse<RunLogEntry>>;
+
+    async fn script_run_create(&mut self, run: &Run) -> Result<()>;
+    async fn script_run_get(&mut self, run_id: RunId) -> Result<Option<Run>>;
+    async fn script_run_list(
+        &mut self,
+        script_id: ScriptId,
+        pagination: PaginationQuery<RunId>,
+    ) -> Result<PaginationResponse<Run>>;
+    async fn script_run_stop(&mut self, run_id: RunId) -> Result<()>;
 }

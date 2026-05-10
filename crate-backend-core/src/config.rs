@@ -15,6 +15,7 @@ use url::Url;
 use crate::{Error, Result};
 
 use common::v1::types::federation::ServerKeyAlgorithm;
+use common::v1::types::script::ChannelLimits;
 use common::v1::types::util::Time;
 
 /// a server's signing key for internal use (includes private key)
@@ -181,6 +182,10 @@ pub struct ConfigScripts {
     ///
     /// setting to `example.com` will cause `random-uuid-here.example.com` domains to be handed to http scripts
     pub suffix: Option<String>,
+
+    /// default limits for scripts
+    #[serde(default)]
+    pub limits: ChannelLimits,
 }
 
 #[derive(Debug, Deserialize)]
