@@ -10,7 +10,9 @@ use common::v1::types::script::{
     ScriptVersion, ScriptVersionStatus,
 };
 use common::v1::types::util::{Changes, Time};
-use common::v1::types::{AuditLogEntryType, ChannelType, MessageSync, ScriptId, ScriptVerId};
+use common::v1::types::{
+    AuditLogEntryType, ChannelType, MessageSync, Permission, ScriptId, ScriptVerId,
+};
 use common::v2::types::media::MediaReference;
 use http::StatusCode;
 use lamprey_macros::handler;
@@ -301,8 +303,11 @@ async fn script_trigger(
         .spawn(
             req.channel_id,
             req.script_id,
-            ScriptInputData::Manual {
-                id: "banana".to_owned(),
+            match req.run.trigger_id {
+                Some(id) => ScriptInputData::Manual { id },
+                None => ScriptInputData::Manual {
+                    id: "default".to_owned(),
+                },
             },
         )
         .await?;
@@ -551,7 +556,7 @@ async fn script_run_get(
 async fn script_run_stop(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    _req: routes::script_run_stop::Request,
+    req: routes::script_run_stop::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -560,7 +565,19 @@ async fn script_run_stop(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
-    Ok(Error::Unimplemented)
+    let srv = s.services();
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ScriptManage)
+        .check()?;
+
+    srv.scripts
+        .stop_run(req.channel_id, req.script_id, req.run_id)
+        .await?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Script run log

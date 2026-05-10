@@ -16,6 +16,7 @@ pub struct Run {
     pub created_at: Time,
     pub stopped_at: Option<Time>,
     pub status: RunStatus,
+    // pub input: RunInput,
 }
 
 /// request to start a script run via trigger
@@ -33,7 +34,9 @@ pub struct RunCreateTrigger {
     ///
     /// will stop other runs of this script if true
     pub exclusive: bool,
-    // TODO: pass trigger_id
+
+    /// the id of the input that triggered this run
+    pub trigger_id: Option<String>,
 }
 
 /// status of a script run
@@ -75,6 +78,27 @@ pub enum RunStatus {
     ///
     /// valid transitions: (none)
     Crashed,
+
+    /// the run was stopped manually
+    ///
+    /// valid transitions: (none)
+    Stopped,
+}
+
+// pub enum RunStopReason {
+//     Killed(UserId, Reason),
+//     ExtractionFailure(ErrorMessage),
+//     RuntimeFailure(ErrorMessage),
+//     Exited(Message),
+// }
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum RunInput {
+    Extraction,
+    Trigger { id: String },
+    // http, cron, etc
 }
 
 impl RunStatus {
@@ -82,28 +106,39 @@ impl RunStatus {
     ///
     /// Returns `true` if the transition is allowed, `false` otherwise.
     ///
-    /// Terminal states (`Exited`, `Borked`, `Crashed`) cannot transition to any other state.
+    /// Terminal states (`Exited`, `Borked`, `Crashed`, `Stopped`) cannot transition to any other state.
     pub fn transition_to(&self, next: RunStatus) -> bool {
         match (self, next) {
             // Creating can go to any active or terminal state
             (
                 RunStatus::Creating,
-                RunStatus::Active | RunStatus::Sleeping | RunStatus::Exited | RunStatus::Crashed,
+                RunStatus::Active
+                | RunStatus::Sleeping
+                | RunStatus::Exited
+                | RunStatus::Crashed
+                | RunStatus::Stopped,
             ) => true,
 
-            // Active can go to sleeping, exited, or crashed
-            (RunStatus::Active, RunStatus::Sleeping | RunStatus::Exited | RunStatus::Crashed) => {
-                true
-            }
+            // Active can go to sleeping, exited, crashed, or stopped
+            (
+                RunStatus::Active,
+                RunStatus::Sleeping | RunStatus::Exited | RunStatus::Crashed | RunStatus::Stopped,
+            ) => true,
 
             // Sleeping can only wake up
             (RunStatus::Sleeping, RunStatus::Waking) => true,
 
-            // Waking can go to active, exited, or crashed
-            (RunStatus::Waking, RunStatus::Active | RunStatus::Exited | RunStatus::Crashed) => true,
+            // Waking can go to active, exited, crashed, or stopped
+            (
+                RunStatus::Waking,
+                RunStatus::Active | RunStatus::Exited | RunStatus::Crashed | RunStatus::Stopped,
+            ) => true,
 
             // Terminal states cannot transition anywhere
-            (RunStatus::Exited | RunStatus::Borked | RunStatus::Crashed, _) => false,
+            (
+                RunStatus::Exited | RunStatus::Borked | RunStatus::Crashed | RunStatus::Stopped,
+                _,
+            ) => false,
 
             // Anything else is invalid
             _ => false,

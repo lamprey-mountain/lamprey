@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::script::{
-    Run, RunLogEntry, Script, ScriptFormat, ScriptLocation, ScriptMetadata, ScriptVersion,
+    Run, RunLogEntry, RunStatus, Script, ScriptFormat, ScriptLocation, ScriptMetadata,
+    ScriptVersion, ScriptVersionStatus,
 };
 use common::v1::types::{
     ack::AckBulkItem,
@@ -1009,6 +1010,12 @@ pub trait DataScript {
         metadata: ScriptMetadata,
         cached_inputs: Option<serde_json::Value>,
     ) -> Result<ScriptVerId>;
+    async fn script_version_update_status(
+        &mut self,
+        script_id: ScriptId,
+        version_id: ScriptVerId,
+        status: ScriptVersionStatus,
+    ) -> Result<()>;
     async fn script_version_delete(
         &mut self,
         script_id: ScriptId,
@@ -1047,5 +1054,6 @@ pub trait DataScript {
         script_id: ScriptId,
         pagination: PaginationQuery<RunId>,
     ) -> Result<PaginationResponse<Run>>;
+    async fn script_run_update_status(&mut self, run_id: RunId, status: RunStatus) -> Result<()>;
     async fn script_run_stop(&mut self, run_id: RunId) -> Result<()>;
 }

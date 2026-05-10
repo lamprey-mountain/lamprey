@@ -69,6 +69,7 @@ impl From<DbRun> for Run {
             4 => RunStatus::Exited,
             5 => RunStatus::Borked,
             6 => RunStatus::Crashed,
+            7 => RunStatus::Stopped,
             _ => RunStatus::Crashed,
         };
         Run {
@@ -275,6 +276,30 @@ impl DataScript for Postgres {
         Ok(version_id)
     }
 
+    async fn script_version_update_status(
+        &mut self,
+        _script_id: ScriptId,
+        version_id: ScriptVerId,
+        status: ScriptVersionStatus,
+    ) -> Result<()> {
+        let mut conn = self.acquire().await?;
+        let status_str = match status {
+            ScriptVersionStatus::Processing => "Processing",
+            ScriptVersionStatus::Valid => "Valid",
+            ScriptVersionStatus::Invalid => "Invalid",
+        };
+
+        query!(
+            "UPDATE script_version SET status = $2 WHERE version_id = $1",
+            *version_id,
+            status_str
+        )
+        .execute(conn.ext())
+        .await?;
+
+        Ok(())
+    }
+
     async fn script_version_delete(
         &mut self,
         script_id: ScriptId,
@@ -465,6 +490,7 @@ impl DataScript for Postgres {
             RunStatus::Exited => 4,
             RunStatus::Borked => 5,
             RunStatus::Crashed => 6,
+            RunStatus::Stopped => 7,
         };
 
         query!(
@@ -517,15 +543,47 @@ impl DataScript for Postgres {
         )
     }
 
-    async fn script_run_stop(&mut self, run_id: RunId) -> Result<()> {
+    async fn script_run_update_status(&mut self, run_id: RunId, status: RunStatus) -> Result<()> {
         let mut conn = self.acquire().await?;
-        query!(
-            "UPDATE script_run SET stopped_at = CURRENT_TIMESTAMP, status = 4 WHERE id = $1",
-            *run_id
-        )
-        .execute(conn.ext())
-        .await?;
+        let status_int = match status {
+            RunStatus::Creating => 0,
+            RunStatus::Active => 1,
+            RunStatus::Sleeping => 2,
+            RunStatus::Waking => 3,
+            RunStatus::Exited => 4,
+            RunStatus::Borked => 5,
+            RunStatus::Crashed => 6,
+            RunStatus::Stopped => 7,
+        };
+
+        let is_terminal = matches!(
+            status,
+            RunStatus::Exited | RunStatus::Borked | RunStatus::Crashed | RunStatus::Stopped
+        );
+
+        if is_terminal {
+            query!(
+                "UPDATE script_run SET status = $2, stopped_at = CURRENT_TIMESTAMP WHERE id = $1",
+                *run_id,
+                status_int
+            )
+            .execute(conn.ext())
+            .await?;
+        } else {
+            query!(
+                "UPDATE script_run SET status = $2 WHERE id = $1",
+                *run_id,
+                status_int
+            )
+            .execute(conn.ext())
+            .await?;
+        }
 
         Ok(())
+    }
+
+    async fn script_run_stop(&mut self, run_id: RunId) -> Result<()> {
+        self.script_run_update_status(run_id, RunStatus::Stopped)
+            .await
     }
 }

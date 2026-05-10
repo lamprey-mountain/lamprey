@@ -1,11 +1,12 @@
 use common::v1::types::script::{
     Run, RunLogEntry, RunLogLevel, RunLogSource, RunStatus, Script, ScriptInput, ScriptInputType,
-    ScriptMetadata, ScriptVersion,
+    ScriptMetadata, ScriptVersion, ScriptVersionStatus,
 };
 use common::v1::types::util::Time;
 use common::v1::types::{ChannelId, ConnectionId, MessageSync, RunId, ScriptId, UserId};
 use rquickjs::async_with;
 use std::collections::{HashMap, VecDeque};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 // use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -40,10 +41,11 @@ struct ChannelRuntime {
     // TODO: cache scripts
     scripts: HashMap<ScriptId, LoadedScript>,
 
-    runs: HashMap<RunId, RunController>,
+    runs: Arc<DashMap<RunId, RunController>>,
     limits: limits::ChannelLimits,
 
-    active_instruction_count: Arc<std::sync::atomic::AtomicU64>,
+    active_run: Arc<std::sync::Mutex<Option<RunId>>>,
+    active_instruction_count: Arc<AtomicU64>,
 }
 
 /// a single script loaded in memory
@@ -54,9 +56,11 @@ struct LoadedScript {
 
 /// controls a script run
 // what does this even do?
+#[derive(Clone)]
 pub struct RunController {
     pub context: rquickjs::AsyncContext,
-    pub run: Run,
+    pub run: Arc<Run>,
+    pub stop_signal: Arc<AtomicBool>,
 }
 
 impl ChannelRuntime {
@@ -71,28 +75,43 @@ impl ChannelRuntime {
         rt.set_max_stack_size(limits.runtime.max_stack_size_bytes)
             .await;
 
-        let active_instruction_count = Arc::new(std::sync::atomic::AtomicU64::new(0));
+        let active_instruction_count = Arc::new(AtomicU64::new(0));
         let count_clone = active_instruction_count.clone();
         let max_instructions = limits.run.max_instructions;
 
+        let runs: Arc<DashMap<RunId, RunController>> = Arc::new(DashMap::new());
+        let runs_clone = runs.clone();
+        let active_run = Arc::new(std::sync::Mutex::new(None));
+        let active_run_clone = active_run.clone();
+
         rt.set_interrupt_handler(Some(Box::new(move || {
-            let count = count_clone.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            // check stop signal
+            if let Ok(active) = active_run_clone.lock() {
+                if let Some(run_id) = *active {
+                    if let Some(ctl) = runs_clone.get(&run_id) {
+                        if ctl.stop_signal.load(Ordering::Relaxed) {
+                            return true;
+                        }
+                    } else {
+                        // if the run was removed from the map, it should stop
+                        return true;
+                    }
+                }
+            }
+
+            let count = count_clone.fetch_add(1, Ordering::Relaxed);
             count > max_instructions
         })))
         .await;
-
-        // rt.memory_usage().await;
-        // rt.set_host_promise_rejection_tracker(tracker);
-
-        // rt.idle().await;
 
         Ok(Self {
             state,
             channel_id,
             runtime: rt,
             scripts: HashMap::new(),
-            runs: HashMap::new(),
+            runs,
             limits,
+            active_run,
             active_instruction_count,
         })
     }
@@ -142,25 +161,24 @@ impl LoadedScript {
         let extracted = Arc::new(std::sync::Mutex::new(ScriptExtracted::default()));
         let extracted_for_ctx = extracted.clone();
 
-        rt.active_instruction_count
-            .store(0, std::sync::atomic::Ordering::Relaxed);
+        rt.active_instruction_count.store(0, Ordering::Relaxed);
 
         async_with!(context => |ctx| {
-            // create the controller js object
-            let controller = rquickjs::Object::new(ctx.clone()).unwrap();
-            let ext = extracted_for_ctx.clone();
-            controller.set("button", rquickjs::Function::new(ctx.clone(), move |id: String, label: Option<String>| {
-                if let Ok(mut data) = ext.lock() {
-                    data.inputs.push(ScriptInput {
-                        id: id.clone(),
-                        label: label.unwrap_or(id),
-                        ty: ScriptInputType::Manual,
-                        effects: vec![], // TODO: effect extraction
-                    });
-                }
-            })).unwrap();
+            // Set up the glue classes
+            let _ = rquickjs::Class::<glue::ScriptRegister>::define(&ctx.globals());
+            let _ = rquickjs::Class::<glue::InputBuilder>::define(&ctx.globals());
 
-            // call register with the controller
+            // Set up __registry for callbacks and inputs (used by InputBuilder::run)
+            let registry = rquickjs::Object::new(ctx.clone()).unwrap();
+            let callbacks = rquickjs::Object::new(ctx.clone()).unwrap();
+            let inputs = rquickjs::Array::new(ctx.clone()).unwrap();
+            registry.set("callbacks", callbacks).unwrap();
+            registry.set("inputs", inputs).unwrap();
+            ctx.globals().set("__registry", registry).unwrap();
+
+            let controller = rquickjs::Class::instance(ctx.clone(), glue::ScriptRegister {}).unwrap();
+
+            // SAFETY: the bytecode was compiled ourselves in `load_script`
             let raw_module = unsafe { rquickjs::Module::load(ctx.clone(), &self.bytecode).unwrap() };
             let (module, _promise) = raw_module.eval().unwrap();
 
@@ -192,8 +210,26 @@ impl LoadedScript {
                 }
             }
 
-            // extract some metadata
+            // extract registered inputs from __registry.inputs
             if let Ok(mut data) = extracted_for_ctx.lock() {
+                if let Ok(registry) = ctx.globals().get::<_, rquickjs::Object>("__registry") {
+                    if let Ok(inputs) = registry.get::<_, rquickjs::Array>("inputs") {
+                        for i in 0..inputs.len() {
+                            if let Ok(input_obj) = inputs.get::<rquickjs::Object>(i) {
+                                let id: String = input_obj.get("id").unwrap_or_default();
+                                let label: String = input_obj.get("label").unwrap_or_default();
+                                data.inputs.push(ScriptInput {
+                                    id,
+                                    label,
+                                    ty: ScriptInputType::Manual,
+                                    effects: vec![],
+                                });
+                            }
+                        }
+                    }
+                }
+
+                // extract some metadata
                 if let Some(name_val) = get_export("name") {
                     if let Ok(name_str) = name_val.get::<String>() {
                         data.metadata.name = name_str;
@@ -220,12 +256,11 @@ impl LoadedScript {
     pub async fn spawn(
         &self,
         rt: &ChannelRuntime,
-        _input: ScriptInputData,
+        input: ScriptInputData,
     ) -> Result<RunController> {
         let context = rquickjs::AsyncContext::full(&rt.runtime).await.unwrap();
 
-        rt.active_instruction_count
-            .store(0, std::sync::atomic::Ordering::Relaxed);
+        rt.active_instruction_count.store(0, Ordering::Relaxed);
 
         let run_id = RunId::new();
         let created_at = Time::now_utc();
@@ -233,16 +268,18 @@ impl LoadedScript {
         let channel_id = rt.channel_id;
         let script_id = self.script_id;
 
-        let run = Run {
+        // TODO: mark this run as an "extraction run"
+        let run = Arc::new(Run {
             id: run_id,
             script_id,
             created_at,
             stopped_at: None,
             status: RunStatus::Creating,
-        };
+        });
         state.data().script_run_create(&run).await?;
+        let run_for_ctl = run.clone();
 
-        async_with!(context => |ctx| {
+        let res = async_with!(context => |ctx| {
             let globals = ctx.globals();
             macro_rules! make_log_fn {
                 ($level:expr, $state:expr) => {
@@ -291,18 +328,11 @@ impl LoadedScript {
                         tokio::spawn(async move {
                             let mut data = state_clone.data();
                             let _ = data.script_log_insert(run_id, &entry_clone).await;
-
-                            let chan = state_clone.services().channels.get(channel_id, None).await.unwrap();
-                            if let Some(room_id) = chan.room_id {
-                                state_clone.broadcast_room2(
-                                    room_id,
-                                    MessageSync::ScriptLogCreate {
-                                        channel_id,
-                                        run_id,
-                                        entry: entry_clone,
-                                    },
-                                ).await.unwrap();
-                            }
+                            state_clone.services().scripts.broadcast(channel_id, MessageSync::ScriptLogCreate {
+                                channel_id,
+                                run_id,
+                                entry: entry_clone,
+                            }).await;
                         });
                     })
                 }
@@ -316,6 +346,16 @@ impl LoadedScript {
 
             let state_error = state.clone();
             globals.set("__log_error", make_log_fn!(RunLogLevel::Error, state_error)).unwrap();
+
+            state.services().scripts.broadcast(channel_id, MessageSync::ScriptRunCreate {
+                channel_id,
+                run: (*run).clone(),
+            }).await;
+
+            // Set active run
+            if let Ok(mut active) = rt.active_run.lock() {
+                *active = Some(run_id);
+            }
 
             ctx.eval::<(), _>(r#"
                 globalThis.log = {
@@ -340,24 +380,139 @@ impl LoadedScript {
                 };
             "#).unwrap();
 
+            // update status to Active
+            let mut data = state.data();
+            let _ = data.script_run_update_status(run_id, RunStatus::Active).await;
+            state.services().scripts.broadcast(channel_id, MessageSync::ScriptRunUpdate {
+                channel_id,
+                run: Run {
+                    id: run_id,
+                    script_id,
+                    created_at,
+                    stopped_at: None,
+                    status: RunStatus::Active,
+                },
+            }).await;
+
             // SAFETY: the bytecode was compiled ourselves in `load_script`
             let raw_module = unsafe { rquickjs::Module::load(ctx.clone(), &self.bytecode).unwrap() };
-            let (_module, _promise) = raw_module.eval().unwrap();
+            let res = raw_module.eval();
+
+            match res {
+                Ok((module, _promise)) => {
+                    // set up the registry for callbacks
+                    let registry = rquickjs::Object::new(ctx.clone()).unwrap();
+                    let callbacks = rquickjs::Object::new(ctx.clone()).unwrap();
+                    let inputs = rquickjs::Array::new(ctx.clone()).unwrap();
+                    registry.set("callbacks", callbacks).unwrap();
+                    registry.set("inputs", inputs).unwrap();
+                    ctx.globals().set("__registry", registry).unwrap();
+
+                    // helper to get exports (named or from default object)
+                    let get_export = |key: &str| -> Option<rquickjs::Value> {
+                        if let Ok(val) = module.get::<_, rquickjs::Value>(key) {
+                            if !val.is_undefined() && !val.is_null() {
+                                return Some(val);
+                            }
+                        }
+                        if let Ok(default_val) = module.get::<_, rquickjs::Value>("default") {
+                            if let Some(obj) = default_val.as_object() {
+                                if let Ok(val) = obj.get::<_, rquickjs::Value>(key) {
+                                    if !val.is_undefined() && !val.is_null() {
+                                        return Some(val);
+                                    }
+                                }
+                            }
+                        }
+                        None
+                    };
+
+                    if let Some(reg_val) = get_export("register") {
+                        if let Some(func) = reg_val.into_function() {
+                            let _ = rquickjs::Class::<glue::ScriptRegister>::define(&ctx.globals());
+                            let _ = rquickjs::Class::<glue::InputBuilder>::define(&ctx.globals());
+                            let controller = rquickjs::Class::instance(ctx.clone(), glue::ScriptRegister {}).unwrap();
+                            let _ = func.call::<_, ()>((controller, ));
+                        }
+                    }
+
+                    // if we have a manual trigger, call the callback
+                    let ScriptInputData::Manual { id } = input;
+                    let registry = ctx.globals().get::<_, rquickjs::Object>("__registry").unwrap();
+                    let callbacks = registry.get::<_, rquickjs::Object>("callbacks").unwrap();
+                    if let Ok(func) = callbacks.get::<_, rquickjs::Function>(id) {
+                        let _ = func.call::<_, ()>(());
+                    }
+
+                    // Unset active run
+                    if let Ok(mut active) = rt.active_run.lock() {
+                        *active = None;
+                    }
+
+                    // update status to Exited
+                    let mut data = state.data();
+                    let _ = data.script_run_update_status(run_id, RunStatus::Exited).await;
+
+                    rt.runs.remove(&run_id);
+
+                    state.services().scripts.broadcast(channel_id, MessageSync::ScriptRunUpdate {
+                        channel_id,
+                        run: Run {
+                            id: run_id,
+                            script_id,
+                            created_at,
+                            stopped_at: Some(Time::now_utc()),
+                            status: RunStatus::Exited,
+                        },
+                    }).await;
+                }
+                Err(e) => {
+                    // Unset active run
+                    if let Ok(mut active) = rt.active_run.lock() {
+                        *active = None;
+                    }
+
+                    // update status to Crashed
+                    let mut data = state.data();
+                    let _ = data.script_run_update_status(run_id, RunStatus::Crashed).await;
+
+                    rt.runs.remove(&run_id);
+
+                    state.services().scripts.broadcast(channel_id, MessageSync::ScriptRunUpdate {
+                        channel_id,
+                        run: Run {
+                            id: run_id,
+                            script_id,
+                            created_at,
+                            stopped_at: Some(Time::now_utc()),
+                            status: RunStatus::Crashed,
+                        },
+                    }).await;
+                    return rquickjs::Result::Err(e);
+                }
+            }
 
             rquickjs::Result::Ok(())
         })
-        .await
-        .unwrap();
+        .await;
+
+        match res {
+            Ok(_) => {
+                // if it finished successfully (and wasn't async/didn't register hooks?)
+                // actually, for many scripts they just register hooks and return.
+                // so we probably shouldn't set it to Exited immediately if there are pending hooks.
+                // but we don't have a way to know that yet.
+            }
+            Err(e) => {
+                // already handled inside async_with for status update
+                return Err(Error::BadRequest(format!("script evaluation failed: {e}")));
+            }
+        }
 
         Ok(RunController {
-            run: Run {
-                id: run_id,
-                script_id: self.script_id,
-                created_at,
-                stopped_at: None,
-                status: RunStatus::Creating,
-            },
             context,
+            run: run_for_ctl,
+            stop_signal: Arc::new(AtomicBool::new(false)),
         })
     }
 }
@@ -366,7 +521,7 @@ impl LoadedScript {
 // TODO: automatically awaken runs when triggered
 impl RunController {
     pub fn to_run(&self) -> Run {
-        self.run.clone()
+        (*self.run).clone()
     }
 
     // dubious apis, unsure about them
@@ -436,7 +591,19 @@ impl ServiceScripts {
     /// broadcast a message sync event to all subscribers of a channel
     pub async fn broadcast(&self, channel_id: ChannelId, msg: MessageSync) {
         if let Some(entry) = self.script_event_txs.get(&channel_id) {
-            let _ = entry.value().send(msg);
+            let _ = entry.value().send(msg.clone());
+        }
+
+        // broadcast to the room as well
+        let chan = self
+            .state
+            .services()
+            .channels
+            .get(channel_id, None)
+            .await
+            .ok();
+        if let Some(room_id) = chan.and_then(|c| c.room_id) {
+            let _ = self.state.broadcast_room2(room_id, msg).await;
         }
     }
 
@@ -469,7 +636,7 @@ impl ServiceScripts {
 
         // store the extracted inputs as cached_inputs on the version
         let inputs_json = serde_json::to_value(&inputs.inputs).ok();
-        let _ = data
+        let version_id = data
             .script_version_create(
                 script.id,
                 script.channel_id,
@@ -481,11 +648,26 @@ impl ServiceScripts {
             )
             .await?;
 
+        // update status to Valid
+        data.script_version_update_status(script.id, version_id, ScriptVersionStatus::Valid)
+            .await?;
+
         // update the script's latest_version metadata with extracted data
         let format = script.latest_version.format.clone();
         let location = script.latest_version.location.clone();
         data.script_update(script.id, format, location, extracted_metadata)
             .await?;
+
+        // broadcast the newly created script
+        if let Some(full_script) = data.script_get(script.id).await? {
+            self.broadcast(
+                script.channel_id,
+                MessageSync::ScriptCreate {
+                    script: full_script,
+                },
+            )
+            .await;
+        }
 
         Ok(())
     }
@@ -501,7 +683,7 @@ impl ServiceScripts {
 
         // store the extracted inputs as cached_inputs on the new version
         let inputs_json = serde_json::to_value(&inputs.inputs).ok();
-        let _ = data
+        let version_id = data
             .script_version_create(
                 script.id,
                 script.channel_id,
@@ -512,6 +694,26 @@ impl ServiceScripts {
                 inputs_json,
             )
             .await?;
+
+        // update status to Valid
+        data.script_version_update_status(script.id, version_id, ScriptVersionStatus::Valid)
+            .await?;
+
+        // broadcast the new version
+        if let Some(full_ver) = data
+            .script_version_get(script.id, script.channel_id, version_id)
+            .await?
+        {
+            self.broadcast(
+                script.channel_id,
+                MessageSync::ScriptVersionCreate {
+                    channel_id: script.channel_id,
+                    script_id: script.id,
+                    version: full_ver,
+                },
+            )
+            .await;
+        }
 
         Ok(())
     }
@@ -584,7 +786,45 @@ impl ServiceScripts {
         let script = rt.load_script(script_id, "strobbery", source).await?;
         let ctl = script.spawn(&rt, input).await?;
 
+        rt.runs.insert(ctl.run.id, ctl.clone());
+
         Ok(ctl)
+    }
+
+    /// stop a script run
+    pub async fn stop_run(
+        &self,
+        channel_id: ChannelId,
+        _script_id: ScriptId,
+        run_id: RunId,
+    ) -> Result<()> {
+        let rt = self.get_rt(&channel_id).ok_or(Error::NotFound)?;
+
+        let ctl = rt.runs.remove(&run_id).ok_or(Error::NotFound)?;
+        let (_, ctl) = ctl;
+        ctl.stop_signal.store(true, Ordering::Relaxed);
+
+        let mut data = self.state.data();
+        let _ = data
+            .script_run_update_status(run_id, RunStatus::Stopped)
+            .await;
+
+        self.broadcast(
+            channel_id,
+            MessageSync::ScriptRunUpdate {
+                channel_id,
+                run: Run {
+                    id: run_id,
+                    script_id: ctl.run.script_id,
+                    created_at: ctl.run.created_at,
+                    stopped_at: Some(Time::now_utc()),
+                    status: RunStatus::Stopped,
+                },
+            },
+        )
+        .await;
+
+        Ok(())
     }
 }
 
