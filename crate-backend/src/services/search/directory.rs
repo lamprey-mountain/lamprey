@@ -321,7 +321,7 @@ impl FileHandle for ObjectFile {
     fn read_bytes(&self, range: Range<usize>) -> IoResult<OwnedBytes> {
         // if the file is already fully cached, read directly from disk
         if self.fully_cached || self.cache_path.exists() {
-            let mut file = self
+            let file = self
                 .handle
                 .get_or_try_init(|| std::fs::File::open(&self.cache_path))?;
             let mut buf = vec![0u8; range.end - range.start];

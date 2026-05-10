@@ -212,11 +212,11 @@ pub fn tantivy_document_from_message(
     doc
 }
 
-pub fn _tantivy_document_from_user(s: &UnifiedSchema, _user: User) -> TantivyDocument {
+pub fn _tantivy_document_from_user(_s: &UnifiedSchema, _user: User) -> TantivyDocument {
     todo!()
 }
 
-pub fn _tantivy_document_from_room(s: &UnifiedSchema, _room: Room) -> TantivyDocument {
+pub fn _tantivy_document_from_room(_s: &UnifiedSchema, _room: Room) -> TantivyDocument {
     todo!()
 }
 

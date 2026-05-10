@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use common::v1::types::util::Time;
-use common::v1::types::{MessageCreate, MessageId, SearchDlqId, UserId};
+use common::v1::types::{MessageCreate, MessageId, UserId};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
