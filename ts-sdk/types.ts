@@ -2,8 +2,10 @@ import type { components } from "./schema.d.ts";
 
 export type Room = components["schemas"]["Room"];
 export type RolePatch = components["schemas"]["RolePatch"];
-export type Channel = components["schemas"]["Channel"];
-export type ChannelType = components["schemas"]["ChannelType"];
+export type Channel = Omit<components["schemas"]["Channel"], "type"> & {
+	type: ChannelType;
+};
+export type ChannelType = components["schemas"]["ChannelType"] | "Scripts";
 export type User = components["schemas"]["User"] & {
 	/** @description relationship with current user (for UserWithRelationship endpoints) */
 	relationship?: components["schemas"]["Relationship"];
@@ -67,7 +69,7 @@ export type Application = components["schemas"]["Application"] & {
 	version_id?: components["schemas"]["Id"];
 };
 export type RoomMemberOrigin = components["schemas"]["RoomMemberOrigin"];
-export type MessageSync = components["schemas"]["MessageSync"];
+export type MessageSync = components["schemas"]["MessageSync"] | ScriptSync;
 export type RoomBan = components["schemas"]["RoomBan"] & {
 	/** @description room id (client-side context, not in canonical schema) */
 	room_id?: components["schemas"]["Id"];
@@ -113,6 +115,87 @@ export type Time = components["schemas"]["Time"];
 export type PermissionOverwriteType =
 	components["schemas"]["PermissionOverwriteType"];
 export type NotifsRoom = components["schemas"]["NotifsRoom"];
+export type ScriptId = string;
+export type RunId = string;
+export type ScriptVerId = string;
+
+export type Script = {
+	id: ScriptId;
+	channel_id: string;
+	creator_id: string;
+	created_at: string;
+	deleted_at?: string | null;
+	latest_version: ScriptVersion;
+	status: ScriptStatus;
+	permissions: string[];
+	inputs: any[];
+};
+
+export type ScriptStatus = "Creating" | "Active" | "Borked" | "Deleted";
+
+export type ScriptVersion = {
+	version_id: ScriptVerId;
+	created_at: string;
+	deleted_at?: string | null;
+	format: ScriptFormat;
+	location: ScriptLocation;
+	metadata: any;
+	status: ScriptVersionStatus;
+};
+
+export type ScriptFormat = "Javascript" | "Webassembly";
+export type ScriptLocation = { Hosted: { media: Media } };
+export type ScriptVersionStatus = "Processing" | "Ready" | "Error";
+
+export type ScriptCreate = {
+	format: ScriptFormat;
+	location: any;
+};
+
+export type Run = {
+	id: RunId;
+	script_id: ScriptId;
+	created_at: string;
+	stopped_at?: string | null;
+	status: RunStatus;
+};
+
+export type RunStatus =
+	| "Creating"
+	| "Active"
+	| "Sleeping"
+	| "Waking"
+	| "Exited"
+	| "Borked"
+	| "Crashed";
+
+export type RunLogEntry = {
+	run_id: RunId;
+	seq: number;
+	time: string;
+	level: "Info" | "Warn" | "Error";
+	content: string;
+	attrs?: any;
+};
+
+export type ScriptSubscribe = {
+	type: "ScriptSubscribe";
+	channel_id: string;
+	script_id: ScriptId;
+};
+
+export type ScriptSync =
+	| { type: "ScriptCreate"; script: Script }
+	| { type: "ScriptUpdate"; script: Script }
+	| { type: "ScriptDelete"; script_id: ScriptId; channel_id: string }
+	| { type: "ScriptRunCreate"; run: Run; channel_id: string }
+	| { type: "ScriptRunUpdate"; run: Run; channel_id: string }
+	| {
+			type: "ScriptLogCreate";
+			entry: RunLogEntry;
+			channel_id: string;
+			run_id: string;
+	  };
 
 export type RoomAnalyticsChannel =
 	components["schemas"]["RoomAnalyticsChannel"];

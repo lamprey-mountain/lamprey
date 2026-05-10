@@ -20,6 +20,9 @@ import {
 import { RolesService } from "../services/RolesService";
 import { RoomMembersService } from "../services/RoomMembersService";
 import { RoomsService } from "../services/RoomsService";
+import { ScriptLogsService } from "../services/ScriptLogsService";
+import { ScriptRunsService } from "../services/ScriptRunsService";
+import { ScriptsService } from "../services/ScriptsService";
 import { SessionsService } from "../services/SessionsService";
 import { ThreadMembersService } from "../services/ThreadMembersService";
 import { UsersService } from "../services/UsersService";
@@ -100,6 +103,9 @@ export class RootStore {
 	documentTags: DocumentTagService;
 	preferences: PreferencesService;
 	flumes: FlumeService;
+	scripts: ScriptsService;
+	scriptRuns: ScriptRunsService;
+	scriptLogs: ScriptLogsService;
 	voiceStates: ReactiveMap<string, VoiceState>;
 	typing: ReactiveMap<string, Set<string>>;
 
@@ -191,6 +197,9 @@ export class RootStore {
 		this.threads = new ThreadsService(this, getDb);
 		this.users = new UsersService(this, getDb);
 		this.webhooks = new WebhooksService(this, getDb);
+		this.scripts = new ScriptsService(this, getDb);
+		this.scriptRuns = new ScriptRunsService(this, getDb);
+		this.scriptLogs = new ScriptLogsService(this, getDb);
 
 		this.voiceStates = new ReactiveMap();
 		this.typing = new ReactiveMap();
@@ -442,6 +451,17 @@ export class RootStore {
 			this.media.upsert(msg.media);
 		} else if (msg.type === "MediaUpdate") {
 			this.media.upsert(msg.media);
+		} else if (msg.type === "ScriptCreate" || msg.type === "ScriptUpdate") {
+			this.scripts.upsert(msg.script);
+		} else if (msg.type === "ScriptDelete") {
+			this.scripts.cache.delete(msg.script_id);
+		} else if (
+			msg.type === "ScriptRunCreate" ||
+			msg.type === "ScriptRunUpdate"
+		) {
+			this.scriptRuns.upsert(msg.run);
+		} else if (msg.type === "ScriptLogCreate") {
+			this.scriptLogs.upsert(msg.entry);
 		}
 	}
 

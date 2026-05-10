@@ -24,10 +24,10 @@ export type {
 } from "./services/MessagesService";
 export type { NotificationService } from "./services/NotificationService";
 export type { PreferencesService } from "./services/PreferencesService";
-export type {
-	Aggregation,
-	RoomAnalyticsService,
-} from "./services/RoomAnalyticsService";
+export type { RoomAnalyticsService } from "./services/RoomAnalyticsService";
+export type { ScriptLogsService } from "./services/ScriptLogsService";
+export type { ScriptRunsService } from "./services/ScriptRunsService";
+export type { ScriptsService } from "./services/ScriptsService";
 
 // Backwards compatibility type - maps old Api property names to RootStore
 export type Api = RootStore;
@@ -144,6 +144,18 @@ export function useDocumentTags() {
 
 export function usePreferences() {
 	return useApi().preferences;
+}
+
+export function useScripts() {
+	return useApi().scripts;
+}
+
+export function useScriptRuns() {
+	return useApi().scriptRuns;
+}
+
+export function useScriptLogs() {
+	return useApi().scriptLogs;
 }
 
 export type Listing<T> = {
