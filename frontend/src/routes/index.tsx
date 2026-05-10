@@ -24,6 +24,7 @@ import { ThreadMembers } from "@/components/features/chat/Thread.tsx";
 import { Document } from "@/components/features/editor/Document.tsx";
 import { DocumentHistory } from "@/components/features/editor/DocumentHistory.tsx";
 import { RoomSettings } from "@/components/features/room_settings/RoomSettings";
+import { Scripts } from "@/components/features/scripts/Scripts";
 import { Voice, VoiceTray } from "@/components/features/voice/Voice.tsx";
 import { Calendar } from "@/components/shared/Calendar";
 import { Category } from "@/components/shared/Category";
@@ -38,7 +39,6 @@ import { RouteInviteInner } from "@/components/shared/Invite";
 import { RoomHome, RoomMembers } from "@/components/shared/Room";
 import { RoomHeader } from "@/components/shared/RoomHeader";
 import { RoomNav } from "@/components/shared/RoomNav";
-import { Scripts } from "@/components/shared/Scripts";
 import { UserProfile } from "@/components/shared/UserProfile";
 import { Wiki } from "@/components/shared/Wiki";
 import {
