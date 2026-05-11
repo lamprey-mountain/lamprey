@@ -1,3 +1,4 @@
+import { useNavigate } from "@solidjs/router";
 import fuzzysort from "fuzzysort";
 import {
 	createEffect,
@@ -11,6 +12,7 @@ import {
 import type { Channel, Script } from "ts-sdk";
 import { useScriptLogs, useScriptRuns, useScripts } from "@/api";
 import { Time } from "@/atoms/Time";
+import { useChannel } from "@/contexts/channel";
 import {
 	createScriptContext,
 	ScriptContext,
@@ -33,6 +35,7 @@ export const Scripts = (props: { channel: Channel }) => {
 	);
 
 	const [search, setSearch] = createSignal("");
+	const navigate = useNavigate();
 
 	const filteredScripts = () => {
 		const items = scriptsResource()?.items ?? [];
@@ -46,6 +49,19 @@ export const Scripts = (props: { channel: Channel }) => {
 	};
 
 	const openScript = (script: Script) => {
+		navigate(`/channel/${props.channel.id}/script/${script.id}`);
+	};
+
+	// Auto-open script when script_id is set in channel state
+	const ch = useChannel();
+	createEffect(() => {
+		const scriptId = ch[0].script_id;
+		if (!scriptId) return;
+
+		const items = scriptsResource()?.items ?? [];
+		const script = items.find((s) => s.id === scriptId);
+		if (!script) return;
+
 		s.reset();
 		s.createPane({
 			id: 0,
@@ -64,7 +80,8 @@ export const Scripts = (props: { channel: Channel }) => {
 			script_id: script.id,
 		});
 		logs.subscribe(props.channel.id, script.id);
-	};
+		ch[1]("script_id", undefined);
+	});
 
 	return (
 		<ScriptContext.Provider value={s}>

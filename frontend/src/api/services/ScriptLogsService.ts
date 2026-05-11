@@ -3,6 +3,8 @@ import type { PaginationResponse, RunId, RunLogEntry, ScriptId } from "sdk";
 import { batch } from "solid-js";
 import { BaseService } from "../core/Service";
 
+// FIXME: run_id and seq don't exist
+
 export class ScriptLogsService extends BaseService<RunLogEntry> {
 	protected cacheName = "script_log";
 
@@ -79,18 +81,16 @@ export class ScriptLogsService extends BaseService<RunLogEntry> {
 		script_id: ScriptId,
 		run_id: RunId,
 	): Promise<PaginationResponse<RunLogEntry>> {
-		const data = await this.retryWithBackoff<PaginationResponse<RunLogEntry>>(
-			() =>
-				(this.client.http as any).GET(
-					"/api/v1/channel/{channel_id}/script/{script_id}/run/{run_id}/log",
-					{
-						params: { path: { channel_id, script_id, run_id } },
-					},
-				),
+		const data = await this.retryWithBackoff(() =>
+			this.client.http.GET(
+				"/api/v1/channel/{channel_id}/script/{script_id}/run/{run_id}/log",
+				{
+					params: { path: { channel_id, script_id, run_id } },
+				},
+			),
 		);
-		const logs = (data as any).logs as PaginationResponse<RunLogEntry>;
-		this.upsertBulk(logs.items);
-		return logs;
+		this.upsertBulk(data.items);
+		return data;
 	}
 
 	override clear() {

@@ -431,7 +431,7 @@ export const RouteChannel = (
 
 	// Handle message anchor logic
 	createEffect(() => {
-		const { channel_id, message_id } = p.params;
+		const { channel_id, message_id, script_id } = p.params;
 		const c = channelCtx();
 		if (!c) return;
 
@@ -444,10 +444,9 @@ export const RouteChannel = (
 				message_id: message_id,
 			});
 			setChannelState("highlight", message_id);
-		} else if (channel_id) {
-			if (c[0].anchor?.type === "context") {
-				setChannelState("anchor", undefined);
-			}
+		}
+		if (channel_id && script_id) {
+			setChannelState("script_id", script_id);
 		}
 	});
 

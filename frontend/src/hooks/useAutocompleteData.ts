@@ -66,7 +66,7 @@ export const useAutocompleteData = () => {
 	const [allRoles, setAllRoles] = createSignal<Role[]>([]);
 
 	const threadMembersResource = threadMembers2.useList(() =>
-		state.kind?.type === "mention" ? state.kind.channelId : undefined
+		state.kind?.type === "mention" ? state.kind.channelId : undefined,
 	);
 
 	const roomMembersResource = roomMembers2.useList(() => {

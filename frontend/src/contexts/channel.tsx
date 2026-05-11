@@ -39,6 +39,7 @@ export type ChannelState = {
 	input_focus?: () => void;
 	reply_jump_source?: string;
 	editing_name?: string | null;
+	script_id?: string;
 };
 
 export function createInitialChannelState(): ChannelState {

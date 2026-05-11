@@ -121,6 +121,7 @@ export type ScriptVerId = string;
 
 export type Script = components["schemas"]["Script"];
 export type RunCreateTrigger = components["schemas"]["RunCreateTrigger"];
+export type RunLogEntry = components["schemas"]["RunLogEntry"];
 
 export type ScriptStatus = "Creating" | "Active" | "Borked" | "Deleted";
 
@@ -159,15 +160,6 @@ export type RunStatus =
 	| "Exited"
 	| "Borked"
 	| "Crashed";
-
-export type RunLogEntry = {
-	run_id: RunId;
-	seq: number;
-	time: string;
-	level: "Info" | "Warn" | "Error";
-	content: string;
-	attrs?: any;
-};
 
 export type ScriptSubscribe = {
 	type: "ScriptSubscribe";

@@ -76,6 +76,10 @@ const App: Component = () => {
 				component={RouteChannel}
 			/>
 			<Route
+				path="/channel/:channel_id/script/:script_id"
+				component={RouteChannel}
+			/>
+			<Route
 				path="/thread/:channel_id/settings/:page?"
 				component={RouteChannelSettings}
 			/>

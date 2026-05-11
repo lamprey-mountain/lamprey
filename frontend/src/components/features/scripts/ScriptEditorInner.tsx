@@ -1,4 +1,6 @@
 import {
+	autocompletion,
+	CompletionContext,
 	// autocompletion, completionKeymap, closeBrackets,
 	closeBracketsKeymap,
 } from "@codemirror/autocomplete";
@@ -16,10 +18,17 @@ import {
 } from "@codemirror/language";
 import { EditorState, Extension } from "@codemirror/state";
 import {
+	Decoration,
+	DecorationSet,
 	drawSelection,
 	EditorView,
 	keymap,
 	lineNumbers,
+	MatchDecorator,
+	placeholder,
+	ViewPlugin,
+	ViewUpdate,
+	WidgetType,
 } from "@codemirror/view";
 import { onMount } from "solid-js";
 import { syntaxHighlightingPlugin } from "../search";

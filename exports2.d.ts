@@ -388,6 +388,10 @@ declare module "lamprey:http" {
 		// also getSetCookie?
 	}
 
+	export class Router {
+		// write server router in rust for performance
+	}
+
 	// probably copy https://developers.cloudflare.com/workers/runtime-apis/fetch/
 }
 
