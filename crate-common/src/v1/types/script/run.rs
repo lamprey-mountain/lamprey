@@ -122,6 +122,7 @@ pub struct HttpRequestSummary {
     pub method: String,
     pub url: String,
     // TODO: headers
+    // TODO: also store response info?
 }
 
 /// valid input for a script

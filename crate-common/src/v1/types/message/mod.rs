@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 #[cfg(feature = "validator")]
-use validator::Validate;
+use validator::{Validate, ValidateLength, ValidationError, ValidationErrors};
 
 use crate::v1::types::automod::{AutomodAction, AutomodMatches, AutomodRuleStripped};
 use crate::v1::types::components::{self, Components};
@@ -713,7 +713,6 @@ pub struct MessageSnapshot {
     pub mentions: Mentions,
 }
 
-// FIXME: validator
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -724,7 +723,6 @@ pub enum MessageAttachmentCreateType {
 
         /// Shortcut for setting alt text on the media item
         #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-        // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
         alt: Option<Option<String>>,
 
         /// Shortcut for setting filename on the media item
@@ -732,7 +730,6 @@ pub enum MessageAttachmentCreateType {
             feature = "utoipa",
             schema(required = false, min_length = 1, max_length = 256)
         )]
-        // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
         filename: Option<String>,
     },
 
@@ -741,6 +738,46 @@ pub enum MessageAttachmentCreateType {
         channel_id: ChannelId,
         message_id: MessageId,
     },
+}
+
+#[cfg(feature = "validator")]
+impl Validate for MessageAttachmentCreateType {
+    fn validate(&self) -> Result<(), ValidationErrors> {
+        use serde_json::json;
+
+        let mut errors = ValidationErrors::new();
+
+        match self {
+            MessageAttachmentCreateType::Media { alt, filename, .. } => {
+                if let Some(Some(alt_val)) = alt {
+                    if !alt_val.validate_length(None, Some(8192), None) {
+                        let mut err = ValidationError::new("length");
+                        err.add_param("max".into(), &json!(8192));
+                        err.add_param("actual".into(), &(alt_val.len() as i64));
+                        errors.add("alt", err);
+                    }
+                }
+
+                if let Some(ref filename_val) = filename {
+                    if !filename_val.validate_length(Some(1), Some(256), None) {
+                        let mut err = ValidationError::new("length");
+                        err.add_param("min".into(), &json!(1));
+                        err.add_param("max".into(), &json!(256));
+                        err.add_param("actual".into(), &(filename_val.len() as i64));
+                        errors.add("filename", err);
+                    }
+                }
+            }
+            #[cfg(feature = "feat_message_forwarding")]
+            MessageAttachmentCreateType::Forward { .. } => {}
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
