@@ -18,6 +18,7 @@ use crate::{error::Error, services::federation::ValidatedKeyAlgo, ServerState};
 
 pub mod audit;
 pub mod auth;
+pub mod script_http;
 pub mod signing;
 
 pub use audit::audit_log_middleware;

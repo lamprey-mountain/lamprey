@@ -8,6 +8,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+use crate::v1::types::federation::{Hostname, Remote};
 use crate::v1::types::misc::Time;
 
 use crate::v1::types::{ChannelId, MediaId, ScriptId, ScriptVerId, UserId};
@@ -55,18 +56,20 @@ pub struct ScriptInput {
     // pub capabilities: Vec<ScriptCapability>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum ScriptInputType {
-    // TODO: rename trigger to manual
+    // TODO: rename trigger elsewhere to manual
     /// a manual trigger/button
     Manual,
-    // /// an http request
-    // Http {
-    //     /// the domain name requests should go to
-    //     endpoint: String,
-    // },
+
+    /// an http request
+    Http {
+        // TODO: configurable endpoints. for now, run_id.suffix is used.
+        // /// the domain name requests should go to
+        // endpoint: String,
+    },
 }
 
 /// a capability this script requires
@@ -90,6 +93,7 @@ pub enum ScriptEffect {
 
 // TODO: validate that ScriptInput has a valid ScriptEffect
 
+// TODO: remove
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -100,6 +104,7 @@ pub struct ScriptPermission {
     pub grant: ScriptPermissionGrant,
 }
 
+// TODO: remove
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -244,13 +249,60 @@ pub struct ScriptMetadata {
     pub description: Option<String>,
 
     pub homepage_url: String,
+    // pub authors: Vec<ScriptAuthor>,
     pub authors: Vec<String>,
     pub version: String,
 
-    /// a spdx license identifier
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
-    pub license: String,
+    pub license: ScriptLicense,
+    // pub origin: Option<ScriptOrigin>,
+}
+
+/// a spdx license identifier
+// TODO: validate that this actually is a spdx license
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(transparent))]
+pub struct ScriptLicense(pub String);
+
+#[cfg(feature = "utoipa")]
+mod u {
+    use utoipa::{openapi::ObjectBuilder, PartialSchema, ToSchema};
+
+    use crate::v1::types::script::ScriptLicense;
+
+    impl ToSchema for ScriptLicense {}
+
+    impl PartialSchema for ScriptLicense {
+        fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+            ObjectBuilder::new()
+                .schema_type(utoipa::openapi::schema::Type::String)
+                .min_length(Some(1))
+                .max_length(Some(64))
+                .build()
+                .into()
+        }
+    }
+}
+
+#[cfg(feature = "validator")]
+mod v {
+    use validator::{Validate, ValidateLength, ValidationError, ValidationErrors};
+
+    use crate::v1::types::script::ScriptLicense;
+
+    impl Validate for ScriptLicense {
+        fn validate(&self) -> Result<(), ValidationErrors> {
+            if self.0.validate_length(Some(1), Some(64), None) {
+                Ok(())
+            } else {
+                let mut errors = ValidationErrors::new();
+                let mut err = ValidationError::new("length");
+                err.add_param("min".into(), &1);
+                err.add_param("max".into(), &64);
+                errors.add("license", err);
+                Err(errors)
+            }
+        }
+    }
 }
 
 /// a script signature

@@ -1,6 +1,6 @@
 use rquickjs::{
     class::{Trace, Tracer},
-    Ctx, Function, JsLifetime, Persistent,
+    Ctx, Function, JsLifetime, Persistent, Result as JsResult,
 };
 
 /// manages key value stores
@@ -133,6 +133,14 @@ pub struct CreateSnapshot {
 #[rquickjs::methods]
 #[qjs(rename_all = "camelCase")]
 impl StorageManager {
+    #[qjs(constructor)]
+    fn new() -> JsResult<Self> {
+        Err(rquickjs::Error::new_from_js(
+            "Request",
+            "Can't manually construct this!",
+        ))
+    }
+
     /// open a named store
     fn open<'js>(&self, _name: String, _cx: Ctx<'js>) -> rquickjs::Result<rquickjs::Value<'js>> {
         todo!()

@@ -86,6 +86,7 @@ impl ServiceScripts {
     // TODO: process script (and script version) in background
     pub async fn create_script(&self, script: Script) -> Result<()> {
         let inputs = self.process(script.clone(), None).await?;
+        dbg!(&inputs);
         let extracted_metadata = inputs.metadata;
 
         let mut data = self.state.data();
@@ -255,7 +256,7 @@ impl ServiceScripts {
             created_at: Time::now_utc(),
             stopped_at: None,
             status: RunStatus::Creating,
-            input: input.clone(),
+            input: input.clone().into(),
         };
         let mut data = self.state.data();
         data.script_run_create(&run).await?;
@@ -332,6 +333,7 @@ impl ServiceScripts {
                         }
                     }
                     ExecutionEvent::Extracted(_) => {}
+                    ExecutionEvent::HttpResponse(_) => {}
                 }
             }
 

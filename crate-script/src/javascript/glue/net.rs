@@ -1,4 +1,4 @@
-use rquickjs::{class::Trace, Ctx, JsLifetime};
+use rquickjs::{class::Trace, Ctx, JsLifetime, Result as JsResult};
 
 /// network manager for making HTTP requests and future protocols
 #[rquickjs::class]
@@ -25,6 +25,14 @@ pub struct IpAddress {
 #[rquickjs::methods]
 #[qjs(rename_all = "camelCase")]
 impl NetworkManager {
+    #[qjs(constructor)]
+    fn new() -> JsResult<Self> {
+        Err(rquickjs::Error::new_from_js(
+            "Request",
+            "Can't manually construct this!",
+        ))
+    }
+
     /// make an http request
     fn fetch<'js>(
         &self,
@@ -46,4 +54,9 @@ impl IpAddress {
     fn equals(&self, _other: rquickjs::Object<'_>) -> bool {
         todo!()
     }
+}
+
+#[rquickjs::module(rename = "lamprey:net")]
+pub mod inner {
+    pub use super::{IpAddress, NetworkManager};
 }

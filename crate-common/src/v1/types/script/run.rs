@@ -1,3 +1,4 @@
+use bytes::Bytes;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -16,7 +17,7 @@ pub struct Run {
     pub created_at: Time,
     pub stopped_at: Option<Time>,
     pub status: RunStatus,
-    pub input: RunInput,
+    pub input: RunInputSummary,
 }
 
 /// request to start a script run via trigger
@@ -95,10 +96,55 @@ pub enum RunStatus {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum RunInput {
+pub enum RunInputSummary {
     Extraction,
+
+    /// manual trigger
+    Trigger {
+        id: String,
+    },
+
+    /// http request
+    Http {
+        request: HttpRequestSummary,
+    },
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct HttpRequestSummary {
+    pub method: String,
+    pub url: String,
+    // headers: todo!(),
+}
+
+/// valid input for a script
+#[derive(Debug, Clone)]
+pub enum RunInput {
+    /// only extract
+    Extraction,
+
+    /// manual trigger
     Trigger { id: String },
-    // http, cron, etc
+
+    /// http request
+    Http { request: http::Request<Bytes> },
+}
+
+impl From<RunInput> for RunInputSummary {
+    fn from(value: RunInput) -> Self {
+        match value {
+            RunInput::Extraction => RunInputSummary::Extraction,
+            RunInput::Trigger { id } => RunInputSummary::Trigger { id },
+            RunInput::Http { request } => RunInputSummary::Http {
+                request: HttpRequestSummary {
+                    method: request.method().to_string(),
+                    url: request.uri().to_string(),
+                },
+            },
+        }
+    }
 }
 
 impl RunStatus {

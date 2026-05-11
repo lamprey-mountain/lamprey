@@ -1,8 +1,10 @@
+use common::v1::types::script::{ScriptInput, ScriptInputType};
 use nanoid::nanoid;
 use rquickjs::{
     class::{Trace, Tracer},
-    Ctx, Function, JsLifetime, Object, Persistent, Result as JsResult,
+    Ctx, Function, JsLifetime, Persistent, Result as JsResult,
 };
+use std::sync::{Arc, Mutex};
 
 /// lets scripts register inputs and stuff
 ///
@@ -24,15 +26,27 @@ use rquickjs::{
 /// - `spawn`: when a new run is spawned for this script
 /// - `message`: when a message is sent to this script
 #[rquickjs::class]
-#[derive(Clone, Trace, JsLifetime)]
-pub struct ScriptRegister {}
+#[derive(Clone, JsLifetime)]
+pub struct ScriptRegister {
+    pub registry: Arc<Mutex<ScriptRegistry>>,
+}
 
-#[rquickjs::methods]
-#[qjs(rename_all = "camelCase")]
 impl ScriptRegister {
-    /// create a new input that runs when manually triggered
-    #[qjs(rename = "onTrigger")]
-    fn on_trigger(&self) -> InputBuilder {
+    pub fn new() -> Self {
+        Self {
+            registry: Arc::new(Mutex::new(ScriptRegistry::new())),
+        }
+    }
+}
+
+impl ScriptRegistry {
+    pub fn new() -> Self {
+        Self { inputs: vec![] }
+    }
+}
+
+impl ScriptRegister {
+    fn input(&self, ty: ScriptInputType) -> InputBuilder {
         let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
             .chars()
             .collect();
@@ -41,32 +55,42 @@ impl ScriptRegister {
             id: nanoid!(8, &alphabet),
             label: None,
             permissions: vec![],
-            callback: None,
+            ty,
+            registry: Arc::clone(&self.registry),
         }
+    }
+}
+
+#[rquickjs::methods]
+#[qjs(rename_all = "camelCase")]
+impl ScriptRegister {
+    /// create a new input that runs when manually triggered
+    fn on_trigger(&self) -> InputBuilder {
+        self.input(ScriptInputType::Manual)
     }
 
     /// create a new input that runs when a http request is received
     fn on_http(&self) -> InputBuilder {
-        todo!()
+        self.input(ScriptInputType::Http {})
     }
 
-    /// create a new input that runs every once in a while
-    fn on_cron(&self) -> InputBuilder {
-        todo!()
-    }
+    // /// create a new input that runs every once in a while
+    // fn on_cron(&self) -> InputBuilder {
+    //     todo!()
+    // }
 
-    fn on_spawn(&self) -> InputBuilder {
-        todo!()
-    }
+    // fn on_spawn(&self) -> InputBuilder {
+    //     todo!()
+    // }
 
-    fn on_message(&self) -> InputBuilder {
-        todo!()
-    }
+    // fn on_message(&self) -> InputBuilder {
+    //     todo!()
+    // }
 
-    /// create a new input that runs when an api event is received
-    fn on_event(&self) -> InputBuilder {
-        todo!()
-    }
+    // /// create a new input that runs when an api event is received
+    // fn on_event(&self) -> InputBuilder {
+    //     todo!()
+    // }
 }
 
 #[rquickjs::class]
@@ -75,12 +99,17 @@ pub struct InputBuilder {
     pub id: String,
     pub label: Option<String>,
     pub permissions: Vec<String>,
-    pub callback: Option<Persistent<Function<'static>>>,
+    pub ty: ScriptInputType,
+    pub registry: Arc<Mutex<ScriptRegistry>>,
 }
 
 // manually implement Trace because Persistent doesn't implement it
 // since Persistent is a root, we don't need to visit it during tracing
 impl<'js> Trace<'js> for InputBuilder {
+    fn trace<'a>(&self, _tracer: Tracer<'a, 'js>) {}
+}
+
+impl<'js> Trace<'js> for ScriptRegister {
     fn trace<'a>(&self, _tracer: Tracer<'a, 'js>) {}
 }
 
@@ -102,24 +131,39 @@ impl InputBuilder {
         self
     }
 
-    fn run<'js>(mut self, cx: Ctx<'js>, cb: Function<'js>) -> JsResult<()> {
-        self.label.get_or_insert_with(|| self.id.clone());
+    fn run<'js>(mut self, ctx: Ctx<'js>, cb: Function<'js>) -> JsResult<()> {
+        let label = self.label.get_or_insert_with(|| self.id.clone());
 
-        let cb_static = Persistent::save(&cx, cb);
-        self.callback = Some(cb_static);
+        let callback = Persistent::save(&ctx, cb);
 
-        let registry = cx.globals().get::<_, Object>("__registry")?;
-        let callbacks: Object = registry.get("callbacks")?;
-        callbacks.set(self.id.clone(), self.callback.as_ref().unwrap().clone())?;
-
-        // Also store input metadata for extract
-        let inputs: rquickjs::Array = registry.get("inputs")?;
-        let input_obj = Object::new(cx.clone())?;
-        input_obj.set("id", self.id.clone())?;
-        input_obj.set("label", self.label.clone())?;
-        input_obj.set("type", "manual")?;
-        inputs.set(inputs.len(), input_obj)?;
+        let mut reg = self.registry.lock().unwrap();
+        reg.inputs.push(ScriptInputCallback {
+            definition: ScriptInput {
+                id: self.id,
+                label: label.to_owned(),
+                ty: self.ty,
+                effects: vec![], // TODO
+            },
+            callback,
+        });
 
         Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct ScriptInputCallback {
+    pub callback: Persistent<Function<'static>>,
+    pub definition: ScriptInput,
+}
+
+pub struct ScriptRegistry {
+    pub inputs: Vec<ScriptInputCallback>,
+}
+
+impl ScriptRegistry {
+    /// get a script input by id
+    pub fn find(&self, id: &str) -> Option<&ScriptInputCallback> {
+        self.inputs.iter().find(|i| i.definition.id == id)
     }
 }

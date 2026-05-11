@@ -1,31 +1,36 @@
 use std::{
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc,
+        Arc, Mutex,
     },
     time::Instant,
 };
 
 use async_trait::async_trait;
 use common::v1::types::{
-    script::{Run, RunInput, RunStatus, ScriptInput, ScriptInputType},
+    script::{Run, RunInput, RunStatus, ScriptInputType},
     util::Time,
     RunId, ScriptId,
 };
 use cpu_time::ProcessTime;
 use dashmap::DashMap;
-use rquickjs::{async_with, Ctx};
+use rquickjs::{async_with, Ctx, FromJs};
 use tokio::sync::broadcast;
 use tracing::error;
 
 use crate::{
     engine::{ExecutionEvent, ScriptExtracted},
+    javascript::{
+        glue::register::ScriptRegistry,
+        loader::{ModuleLoader, ModuleResolver},
+    },
     limits::Limits,
     Error, ExecutionHandle, Executor, Result,
 };
 
 mod glue;
 mod loader;
+// mod record;
 
 /// manager for all js executions
 pub struct JsManager {
@@ -46,6 +51,7 @@ pub struct JsCompiledScript {
 pub struct JsExecutor {
     limits: Limits,
     script: Arc<JsCompiledScript>,
+    // replay: Replay,
 }
 
 /// a handle to a live javascript execution
@@ -87,6 +93,8 @@ impl JsManager {
 
         rt.set_memory_limit(self.limits.max_memory).await;
         rt.set_max_stack_size(512 * 1024).await;
+        rt.set_loader(ModuleResolver::new(), ModuleLoader::new())
+            .await;
 
         let start_time_wall = Instant::now();
         let start_time_process = ProcessTime::now();
@@ -109,9 +117,9 @@ impl JsManager {
         // TODO: try to reuse cache
         let context = rquickjs::AsyncContext::full(&rt).await?;
         let bytecode = async_with!(context => |ctx| {
-            let module = rquickjs::Module::declare(ctx.clone(), module_name, module_source)?;
+            let module = dbg!(rquickjs::Module::declare(ctx.clone(), module_name, module_source))?;
             let opts = rquickjs::WriteOptions::default();
-            let bytes = module.write(opts)?;
+            let bytes = dbg!(module.write(opts))?;
 
             rquickjs::Result::Ok(bytes)
         })
@@ -138,6 +146,8 @@ impl Executor for JsExecutor {
         let rt = rquickjs::AsyncRuntime::new()?;
         rt.set_memory_limit(self.limits.max_memory).await;
         rt.set_max_stack_size(512 * 1024).await;
+        rt.set_loader(ModuleResolver::new(), ModuleLoader::new())
+            .await;
 
         let stop_signal = Arc::new(AtomicBool::new(false));
         let stop_signal_clone = stop_signal.clone();
@@ -178,7 +188,7 @@ impl Executor for JsExecutor {
             created_at,
             stopped_at: None,
             status: RunStatus::Creating,
-            input: input.clone(),
+            input: input.clone().into(),
         });
 
         let script = Arc::clone(&self.script);
@@ -239,11 +249,6 @@ fn setup_environment(
 
     globals.set("log", glue::log::Logger::new(sender, script_id))?;
 
-    let registry = rquickjs::Object::new(ctx.clone())?;
-    registry.set("callbacks", rquickjs::Object::new(ctx.clone())?)?;
-    registry.set("inputs", rquickjs::Array::new(ctx.clone())?)?;
-    globals.set("__registry", registry)?;
-
     Ok(())
 }
 
@@ -266,11 +271,7 @@ async fn exec_inner<'js>(
     let (module, promise) = raw_module.eval()?;
     promise.finish::<()>()?; // ensure top-level async code finishes
 
-    if let Ok(reg_fn) = module.get::<_, rquickjs::Function>("register") {
-        let controller = rquickjs::Class::instance(ctx.clone(), glue::register::ScriptRegister {})?;
-        reg_fn.call::<_, ()>((controller,))?;
-    }
-
+    let registry = Arc::new(Mutex::new(ScriptRegistry::new()));
     let mut extracted = ScriptExtracted::default();
 
     // helper to get exports (named or from default object)
@@ -296,61 +297,104 @@ async fn exec_inner<'js>(
         None
     };
 
-    // extract registered inputs from __registry.inputs
-    if let Ok(registry) = ctx.globals().get::<_, rquickjs::Object>("__registry") {
-        if let Ok(inputs) = registry.get::<_, rquickjs::Array>("inputs") {
-            for i in 0..inputs.len() {
-                if let Ok(input_obj) = inputs.get::<rquickjs::Object>(i) {
-                    let id: String = input_obj.get("id").unwrap_or_default();
-                    let label: String = input_obj.get("label").unwrap_or_default();
-                    extracted.inputs.push(ScriptInput {
-                        id,
-                        label,
-                        ty: ScriptInputType::Manual,
-                        effects: vec![],
-                    });
-                }
-            }
+    if let Some(reg_fn) = get_export("register") {
+        if let Some(reg_fn) = reg_fn.into_function() {
+            let controller = rquickjs::Class::instance(
+                ctx.clone(),
+                glue::register::ScriptRegister {
+                    registry: Arc::clone(&registry),
+                },
+            )?;
+            reg_fn.call::<_, ()>((controller,))?;
+        } else {
+            // TODO: send warn or error to user
         }
+    }
+
+    let r = registry.lock().unwrap();
+    for input in dbg!(&r.inputs) {
+        extracted.inputs.push(input.definition.clone());
     }
 
     // extract some metadata
     if let Some(name_val) = get_export("name") {
         if let Ok(name_str) = name_val.get::<String>() {
             extracted.metadata.name = name_str;
+        } else {
+            extracted.metadata.name = "Untitled".to_string();
         }
     } else {
         extracted.metadata.name = "Untitled".to_string();
     }
 
-    if let Some(reg_val) = get_export("register") {
-        if let Some(func) = reg_val.into_function() {
-            let _ = rquickjs::Class::<glue::register::ScriptRegister>::define(&ctx.globals());
-            let _ = rquickjs::Class::<glue::register::InputBuilder>::define(&ctx.globals());
-            let controller =
-                rquickjs::Class::instance(ctx.clone(), glue::register::ScriptRegister {})?;
-            let _ = func.call::<_, ()>((controller,));
+    if let Some(desc_val) = get_export("description") {
+        if let Ok(desc_str) = desc_val.get::<String>() {
+            extracted.metadata.description = Some(desc_str);
         }
     }
 
-    match input {
+    if let Some(version_val) = get_export("version") {
+        if let Ok(version_str) = version_val.get::<String>() {
+            extracted.metadata.version = version_str;
+        }
+    }
+
+    if let Some(license_val) = get_export("license") {
+        if let Ok(license_str) = license_val.get::<String>() {
+            extracted.metadata.license = common::v1::types::script::ScriptLicense(license_str);
+        }
+    }
+
+    match dbg!(input) {
         RunInput::Extraction => {
             // don't do anything just extract
         }
         RunInput::Trigger { id } => {
-            let registry = ctx.globals().get::<_, rquickjs::Object>("__registry")?;
-            let callbacks = registry.get::<_, rquickjs::Object>("callbacks")?;
-            if let Ok(func) = callbacks.get::<_, rquickjs::Function>(&id) {
-                let _ = func.call::<_, ()>(());
+            if let Some(input) = r.find(&id) {
+                let _ = input.callback.clone().restore(&ctx)?.call::<_, ()>(());
+            }
+        }
+        RunInput::Http { request } => {
+            if let Some(input) = r
+                .inputs
+                .iter()
+                .find(|i| i.definition.ty == ScriptInputType::Http {})
+            {
+                let handler = input.callback.clone().restore(&ctx)?;
+
+                let response: rquickjs::Value = handler.call((glue::http::Request {
+                    method: request.method().to_string(),
+                    url: request.uri().to_string(),
+                    headers: request.headers().to_owned(),
+                    body: request.into_body(),
+                },))?;
+
+                let response: rquickjs::Value = match response.try_into_promise() {
+                    Ok(p) => p.finish()?,
+                    Err(val) => val,
+                };
+
+                let response = glue::http::Response::from_js(&ctx, response)?;
+
+                let mut builder = http::Response::builder().status(response.status);
+                if let Some(h) = builder.headers_mut() {
+                    *h = response.headers;
+                }
+                let response = builder.body(response.body).unwrap();
+
+                events_sender
+                    .send(Arc::new(ExecutionEvent::HttpResponse(response)))
+                    .map_err(|e| Error::BroadcastSend(e.to_string()))?;
             }
         }
     }
 
+    // TODO: error handling
+    let _ = ext_send.send(Some(extracted));
+
     events_sender
         .send(Arc::new(ExecutionEvent::Status(RunStatus::Exited)))
         .map_err(|e| Error::BroadcastSend(e.to_string()))?;
-
-    let _ = ext_send.send(Some(extracted));
 
     Ok(())
 }
@@ -382,7 +426,7 @@ impl ExecutionHandle for JsExecutionHandle {
             .await
             .map_err(|e| Error::WatchChanged(e.to_string()))?;
 
-        if let Some(e) = &*self.ext_recv.borrow() {
+        if let Some(e) = dbg!(&*self.ext_recv.borrow()) {
             Ok(e.clone())
         } else {
             Err(Error::ExtractionDataMissing)

@@ -88,6 +88,9 @@ pub trait ExecutionHandle: Send + Sync {
     /// wait for this execution to finish, returning the extraction data if extraction was successful
     async fn done(&mut self) -> Result<ScriptExtracted>;
 
+    // /// wait for this execution to finish, returning the returned http response if this used an http input
+    // async fn done_http_response(&mut self) -> Result<()>;
+
     // HACK: get cloning to work
     fn clone_box(&self) -> Box<dyn ExecutionHandle>;
 }
@@ -104,6 +107,7 @@ pub struct ScriptExtracted {
     pub inputs: Vec<ScriptInput>,
 }
 
+#[derive(Debug)]
 pub enum ExecutionEvent {
     /// a log event was received
     Log(RunLogEntry),
@@ -115,6 +119,7 @@ pub enum ExecutionEvent {
     Extracted(ScriptExtracted),
     // /// metrics were received
     // Metrics,
+    HttpResponse(http::Response<bytes::Bytes>),
 }
 
 pub type AnyExecutionHandle = Box<dyn ExecutionHandle>;

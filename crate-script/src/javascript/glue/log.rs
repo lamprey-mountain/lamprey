@@ -54,9 +54,13 @@ impl<'js> FromParam<'js> for LoggerParams {
             .ok_or(rquickjs::Error::new_from_js("your data", "string"))?
             .to_string()?;
 
-        let attrs: HashMap<String, String> = match params.arg() {
-            m if m.is_null() || m.is_undefined() => HashMap::new(),
-            m => HashMap::from_js(params.ctx(), m)?,
+        let attrs: HashMap<String, String> = if params.is_empty() {
+            HashMap::new()
+        } else {
+            match params.arg() {
+                m if m.is_null() || m.is_undefined() => HashMap::new(),
+                m => HashMap::from_js(params.ctx(), m)?,
+            }
         };
 
         let attrs = MessageMetadata(attrs);
@@ -71,7 +75,7 @@ impl<'js> FromParam<'js> for LoggerParams {
 impl Logger {
     fn log_impl<'js>(
         &self,
-        ctx: Ctx<'js>,
+        _ctx: Ctx<'js>, // TODO: remove
         level: RunLogLevel,
         params: LoggerParams,
     ) -> rquickjs::Result<()> {

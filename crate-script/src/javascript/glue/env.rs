@@ -1,4 +1,4 @@
-use rquickjs::{class::Trace, JsLifetime};
+use rquickjs::{class::Trace, JsLifetime, Result as JsResult};
 
 /// global configuration data
 #[rquickjs::class]
@@ -17,6 +17,14 @@ pub struct Opaque {
 #[rquickjs::methods]
 #[qjs(rename_all = "camelCase")]
 impl EnvManager {
+    #[qjs(constructor)]
+    fn new() -> JsResult<Self> {
+        Err(rquickjs::Error::new_from_js(
+            "Request",
+            "Can't manually construct this!",
+        ))
+    }
+
     /// lookup a public env value or non opaque secret
     fn get(&self) -> Option<String> {
         todo!()
@@ -35,4 +43,9 @@ impl Opaque {
     fn read(&self) -> String {
         todo!()
     }
+}
+
+#[rquickjs::module(rename = "lamprey:env")]
+pub mod inner {
+    pub use super::{EnvManager, Opaque};
 }

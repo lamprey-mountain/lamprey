@@ -37,6 +37,12 @@ pub struct Remote {
     pub hostname: Hostname,
 }
 
+// TODO: more type safety?
+// pub struct Remote<M: Marker> {
+//     pub origin_id: Id<M>,
+//     pub hostname: Hostname,
+// }
+
 /// a server's signing key
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

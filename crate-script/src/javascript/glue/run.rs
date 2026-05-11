@@ -1,4 +1,4 @@
-use rquickjs::{class::Trace, Ctx, JsLifetime};
+use rquickjs::{class::Trace, Ctx, JsLifetime, Result as JsResult};
 
 /// manages other runs: spawning, sending messages, stopping, etc.
 #[rquickjs::class]
@@ -31,6 +31,14 @@ pub struct RunSet {
 #[rquickjs::methods]
 #[qjs(rename_all = "camelCase")]
 impl RunManager {
+    #[qjs(constructor)]
+    fn new() -> JsResult<Self> {
+        Err(rquickjs::Error::new_from_js(
+            "Request",
+            "Can't manually construct this!",
+        ))
+    }
+
     /// lookup the caller's own run process
     fn lookup_self<'js>(&self, _cx: Ctx<'js>) -> rquickjs::Result<rquickjs::Value<'js>> {
         todo!()
@@ -124,4 +132,9 @@ impl RunSelf {
     ) -> rquickjs::Result<rquickjs::Value<'js>> {
         todo!()
     }
+}
+
+#[rquickjs::module(rename = "lamprey:run")]
+pub mod inner {
+    pub use super::{Run, RunManager, RunSelf, RunSet};
 }

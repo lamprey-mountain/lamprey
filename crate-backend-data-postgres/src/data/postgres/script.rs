@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 use common::v1::types::script::{
-    Run, RunInput, RunLogEntry, RunLogLevel, RunStatus, Script, ScriptFormat, ScriptInput,
+    Run, RunInputSummary, RunLogEntry, RunLogLevel, RunStatus, Script, ScriptFormat, ScriptInput,
     ScriptLocation, ScriptMetadata, ScriptStatus, ScriptVersion, ScriptVersionStatus,
 };
 use common::v1::types::{
@@ -73,7 +73,7 @@ impl From<DbRun> for Run {
             7 => RunStatus::Stopped,
             _ => RunStatus::Crashed,
         };
-        let input = serde_json::from_value(row.input).unwrap_or(RunInput::Extraction);
+        let input = serde_json::from_value(row.input).unwrap_or(RunInputSummary::Extraction);
         Run {
             id: row.id.into(),
             script_id: row.script_id.into(),

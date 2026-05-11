@@ -2,7 +2,7 @@ use std::{str::FromStr, sync::Arc, time::Duration};
 
 use axum::{
     extract::DefaultBodyLimit,
-    middleware,
+    middleware::{self},
     response::{Html, IntoResponse},
     routing::get,
     Json,
@@ -36,7 +36,7 @@ use crate::config::{ListenComponent, ListenTransport};
 use common::v1::types::misc::ApplicationIdReq;
 use lamprey_backend::{
     cli, config, error,
-    routes::{self},
+    routes::{self, util::script_http::script_http},
     types::{
         self, AuditLogEntryId, DbRoomCreate, DbUserCreate, MessageId, MessageSync, PaginationQuery,
         RoomCreate, RoomMemberPut, RoomType, SERVER_ROOM_ID, SERVER_USER_ID,
@@ -518,6 +518,10 @@ async fn serve(state: Arc<ServerState>) -> Result<()> {
         )
         .fallback_service(axum::routing::get(frontend::frontend_handler).with_state(state.clone()));
     let router = router
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            script_http,
+        ))
         .layer(DefaultBodyLimit::max(1024 * 1024 * 16))
         .layer(cors())
         .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
