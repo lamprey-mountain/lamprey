@@ -988,10 +988,12 @@ impl ServiceChannels {
                 return Err(Error::BadStatic("channel is not taggable"));
             }
 
-            // FIXME: permissions for tagging
-            // - allow creator to edit tags
-            // - require ThreadEdit OR ThreadManage
-            perms.ensure(Permission::ThreadEdit)?;
+            // allow creator to edit tags, otherwise require ThreadEdit or ThreadManage
+            if chan_old.creator_id != auth.user.id {
+                if !perms.has(Permission::ThreadEdit) && !perms.has(Permission::ThreadManage) {
+                    return Err(Error::MissingPermissions);
+                }
+            }
 
             // check if all tags are valid for this forum
             let forum_id = chan_old
