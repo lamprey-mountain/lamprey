@@ -11,8 +11,8 @@ use std::sync::{Arc, Mutex};
 /// ## basic inputs
 ///
 /// - `trigger`: manually ran
-/// - `cron`: runs automatically on a timer
 /// - `http`: runs when an http request comes in
+/// - todo: `cron`: runs automatically on a timer
 ///
 /// ## api inputs
 ///
@@ -23,8 +23,8 @@ use std::sync::{Arc, Mutex};
 ///
 /// ## script inputs
 ///
-/// - `spawn`: when a new run is spawned for this script
-/// - `message`: when a message is sent to this script
+/// - todo: `spawn`: when a new run is spawned for this script
+/// - todo: `message`: when a message is sent to this script
 #[rquickjs::class]
 #[derive(Clone, JsLifetime)]
 pub struct ScriptRegister {
@@ -74,6 +74,11 @@ impl ScriptRegister {
         self.input(ScriptInputType::Http {})
     }
 
+    /// create a new input that runs when an api event is received
+    fn on_event(&self) -> InputBuilder {
+        self.input(ScriptInputType::Event)
+    }
+
     // /// create a new input that runs every once in a while
     // fn on_cron(&self) -> InputBuilder {
     //     todo!()
@@ -84,11 +89,6 @@ impl ScriptRegister {
     // }
 
     // fn on_message(&self) -> InputBuilder {
-    //     todo!()
-    // }
-
-    // /// create a new input that runs when an api event is received
-    // fn on_event(&self) -> InputBuilder {
     //     todo!()
     // }
 }

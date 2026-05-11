@@ -8,7 +8,6 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::federation::{Hostname, Remote};
 use crate::v1::types::misc::Time;
 
 use crate::v1::types::{ChannelId, MediaId, ScriptId, ScriptVerId, UserId};
@@ -70,6 +69,9 @@ pub enum ScriptInputType {
         // /// the domain name requests should go to
         // endpoint: String,
     },
+
+    /// an api event (MessageSync)
+    Event,
 }
 
 /// a capability this script requires

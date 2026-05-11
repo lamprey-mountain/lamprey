@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{misc::Time, RunId, ScriptId};
+use crate::v1::types::{misc::Time, MessageSync, RunId, ScriptId};
 
 /// a script execution run
 #[derive(Debug, Clone)]
@@ -108,15 +108,20 @@ pub enum RunInputSummary {
     Http {
         request: HttpRequestSummary,
     },
+
+    /// api event
+    Event {
+        event: Box<MessageSync>,
+    },
 }
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct HttpRequestSummary {
     pub method: String,
     pub url: String,
-    // headers: todo!(),
+    // TODO: headers
 }
 
 /// valid input for a script
@@ -130,6 +135,9 @@ pub enum RunInput {
 
     /// http request
     Http { request: http::Request<Bytes> },
+
+    /// api event (MessageSync)
+    Event { event: Box<MessageSync> },
 }
 
 impl From<RunInput> for RunInputSummary {
@@ -143,6 +151,7 @@ impl From<RunInput> for RunInputSummary {
                     url: request.uri().to_string(),
                 },
             },
+            RunInput::Event { event } => RunInputSummary::Event { event },
         }
     }
 }

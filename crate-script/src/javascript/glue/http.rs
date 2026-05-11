@@ -2,9 +2,9 @@ use bytes::Bytes;
 use http::{HeaderMap, HeaderName, HeaderValue};
 use rquickjs::{
     class::{Trace, Tracer},
-    Ctx, IntoJs, Iterable, JsLifetime, Result as JsResult,
+    prelude::Opt,
+    Ctx, FromJs, IntoJs, Iterable, JsLifetime, Result as JsResult,
 };
-use serde::Deserialize;
 
 /// http request object
 #[rquickjs::class]
@@ -48,14 +48,14 @@ impl<'js> Trace<'js> for Headers {
     fn trace<'a>(&self, _tracer: Tracer<'a, 'js>) {}
 }
 
-/// how redirects should be handled
-#[derive(Debug, Default)]
-pub enum RequestRedirect {
-    #[default]
-    Follow,
-    Error,
-    Manual,
-}
+// /// how redirects should be handled
+// #[derive(Debug, Default)]
+// pub enum RequestRedirect {
+//     #[default]
+//     Follow,
+//     Error,
+//     Manual,
+// }
 
 #[rquickjs::methods]
 #[qjs(rename_all = "camelCase")]
@@ -104,55 +104,125 @@ impl Request {
     //     todo!()
     // }
 
-    // TODO: body retrieval: body, blob, arrayBuffer, bytes, json, text
-}
+    /// returns the body as text
+    fn text<'js>(&self, ctx: Ctx<'js>) -> JsResult<rquickjs::Promise<'js>> {
+        let (promise, resolve, _reject) = ctx.promise()?;
+        let text = String::from_utf8_lossy(&self.body).to_string();
+        resolve.call::<_, ()>((text,))?;
+        Ok(promise)
+    }
 
-#[derive(Deserialize)]
-struct ResponseInit {
-    status: Option<u16>,
-    // TODO: headers
+    /// returns the body parsed as JSON
+    fn json<'js>(&self, ctx: Ctx<'js>) -> JsResult<rquickjs::Promise<'js>> {
+        let (promise, resolve, reject) = ctx.promise()?;
+
+        match serde_json::from_slice::<serde_json::Value>(&self.body) {
+            Ok(value) => {
+                match rquickjs_serde::to_value(ctx.clone(), value) {
+                    Ok(js_val) => resolve.call::<_, ()>((js_val,)),
+                    Err(e) => reject.call::<_, ()>((rquickjs::Exception::from_message(
+                        ctx,
+                        &format!("Failed to serialize JSON: {}", e),
+                    )
+                    .map_err(|_| rquickjs::Error::Exception)?,)),
+                }?;
+            }
+            Err(e) => {
+                let error_msg = format!("Failed to parse JSON: {}", e);
+                let js_error = rquickjs::Exception::from_message(ctx, &error_msg)?;
+                reject.call::<_, ()>((js_error,))?;
+            }
+        }
+
+        Ok(promise)
+    }
+
+    /// returns the body as an ArrayBuffer
+    fn array_buffer<'js>(&self, ctx: Ctx<'js>) -> JsResult<rquickjs::Promise<'js>> {
+        let (promise, resolve, _reject) = ctx.promise()?;
+        let ab = rquickjs::ArrayBuffer::new(ctx, self.body.as_ref())?;
+        resolve.call::<_, ()>((ab,))?;
+        Ok(promise)
+    }
 }
 
 #[rquickjs::methods]
 #[qjs(rename_all = "camelCase")]
 impl Response {
-    // FIXME: make init optional
     #[qjs(constructor)]
-    fn new(body: rquickjs::Value<'_>, init: rquickjs::Value<'_>) -> JsResult<Self> {
-        let init: ResponseInit = rquickjs_serde::from_value_strict(init)
-            .map_err(|_| rquickjs::Error::new_from_js("your data", "RequestInit"))?;
-        let status = init.status.unwrap_or(200);
+    fn new<'js>(
+        body: rquickjs::Value<'js>,
+        init: Opt<rquickjs::Value<'js>>,
+        ctx: Ctx<'js>,
+    ) -> JsResult<Self> {
+        let mut status = 200;
+        let mut headers_js: Option<rquickjs::Value<'js>> = None;
+
+        // extract values from init object directly
+        if let Some(init_val) = init.0 {
+            if !init_val.is_undefined() && !init_val.is_null() {
+                let obj = init_val.into_object().ok_or_else(|| {
+                    rquickjs::Error::new_from_js("ResponseInit", "expected object")
+                })?;
+
+                if let Some(s) = obj.get::<_, Option<u16>>("status")? {
+                    status = s;
+                }
+
+                headers_js = obj.get::<_, Option<rquickjs::Value<'js>>>("headers")?;
+            }
+        }
+
+        // parse headers
+        let mut headers = HeaderMap::new();
+        if let Some(h_val) = headers_js {
+            if let Ok(headers_class) = rquickjs::Class::<Headers>::from_js(&ctx, h_val.clone()) {
+                // headers class
+                headers = headers_class.borrow().headers.clone();
+            } else if let Some(obj) = h_val.as_object() {
+                // plain js object
+                for pair in obj.props::<String, String>() {
+                    let (key, value) = pair?;
+                    let name = HeaderName::from_bytes(key.as_bytes()).map_err(|e| {
+                        rquickjs::Error::new_from_js_message(
+                            "header",
+                            "invalid name",
+                            e.to_string(),
+                        )
+                    })?;
+                    let val = HeaderValue::from_str(&value).map_err(|e| {
+                        rquickjs::Error::new_from_js_message(
+                            "header",
+                            "invalid value",
+                            e.to_string(),
+                        )
+                    })?;
+                    headers.append(name, val);
+                }
+            } else if !h_val.is_undefined() && !h_val.is_null() {
+                // ignore undefined/null, reject everything else
+                return Err(rquickjs::Error::new_from_js(
+                    "Headers",
+                    "expected object or Headers instance",
+                ));
+            }
+        }
 
         let body_bytes = if body.is_string() {
-            Bytes::from(
-                body.into_string()
-                    .ok_or(rquickjs::Error::new_from_js("your data", "string"))?
-                    .to_string()?,
-            )
+            Bytes::from(body.into_string().unwrap().to_string()?)
         } else {
             // TODO: support other bodies like uint8 array
             Bytes::new()
         };
 
-        // TODO: support init with headers
-
         Ok(Self {
             status,
-            url: String::new(),
-            headers: HeaderMap::new(),
+            headers,
             body: body_bytes,
+            url: String::new(),
             redirected: false,
         })
     }
-
-    // #[qjs(static)]
-    // fn json() -> JsResult<Self> {}
-
-    // #[qjs(static)]
-    // fn error() -> JsResult<Self> {}
-
-    // #[qjs(static)]
-    // fn redirect() -> JsResult<Self> {}
 
     // /// response body
     // fn body<'js>(&self, _ctx: Ctx<'js>) -> rquickjs::Result<rquickjs::Value<'js>> {
@@ -204,27 +274,110 @@ impl Response {
         Ok(self.redirected)
     }
 
-    // fn text(&self, _ctx: Ctx<'_>) -> rquickjs::Result<()> {
-    //     todo!()
-    // }
+    /// returns the body as text
+    fn text<'js>(&self, ctx: Ctx<'js>) -> JsResult<rquickjs::Promise<'js>> {
+        let (promise, resolve, _reject) = ctx.promise()?;
+        let text = String::from_utf8_lossy(&self.body).to_string();
+        resolve.call::<_, ()>((text,))?;
+        Ok(promise)
+    }
 
-    // fn json(&self, _ctx: Ctx<'_>) -> rquickjs::Result<()> {
-    //     todo!()
-    // }
+    /// returns the body parsed as JSON
+    fn json<'js>(&self, ctx: Ctx<'js>) -> JsResult<rquickjs::Promise<'js>> {
+        let (promise, resolve, reject) = ctx.promise()?;
 
-    // fn array_buffer(&self, _ctx: Ctx<'_>) -> rquickjs::Result<()> {
-    //     todo!()
-    // }
+        match serde_json::from_slice::<serde_json::Value>(&self.body) {
+            Ok(value) => {
+                match rquickjs_serde::to_value(ctx.clone(), value) {
+                    Ok(js_val) => resolve.call::<_, ()>((js_val,)),
+                    Err(e) => reject.call::<_, ()>((rquickjs::Exception::from_message(
+                        ctx,
+                        &format!("Failed to serialize JSON: {}", e),
+                    )
+                    .map_err(|_| rquickjs::Error::Exception)?,)),
+                }?;
+            }
+            Err(e) => {
+                let error_msg = format!("Failed to parse JSON: {}", e);
+                let js_error = rquickjs::Exception::from_message(ctx, &error_msg)?;
+                reject.call::<_, ()>((js_error,))?;
+            }
+        }
 
-    // qjs doesnt have Blob built in
-    // fn blob(&self, _ctx: Ctx<'_>) -> rquickjs::Result<()> {
-    //     todo!()
-    // }
+        Ok(promise)
+    }
 
-    // qjs doesnt have FormData built in
-    // fn form_data(&self, _ctx: Ctx<'_>) -> rquickjs::Result<()> {
-    //     todo!()
-    // }
+    /// returns the body as an ArrayBuffer
+    fn array_buffer<'js>(&self, ctx: Ctx<'js>) -> JsResult<rquickjs::Promise<'js>> {
+        let (promise, resolve, _reject) = ctx.promise()?;
+        let ab = rquickjs::ArrayBuffer::new(ctx, self.body.as_ref())?;
+        resolve.call::<_, ()>((ab,))?;
+        Ok(promise)
+    }
+
+    #[qjs(static, rename = "json")]
+    fn new_json<'js>(
+        ctx: Ctx<'js>,
+        data: rquickjs::Value<'js>,
+        init: Opt<rquickjs::Value<'js>>,
+    ) -> JsResult<Self> {
+        let data_str = ctx
+            .json_stringify(data)?
+            .ok_or_else(|| rquickjs::Error::new_from_js("your data", "string"))?
+            .into_value();
+
+        let mut response = Self::new(data_str, init, ctx.clone())?;
+
+        let ctype_name = HeaderName::from_static("content-type");
+        if !response.headers.contains_key(&ctype_name) {
+            response
+                .headers
+                .insert(ctype_name, HeaderValue::from_static("application/json"));
+        }
+
+        Ok(response)
+    }
+
+    /// create a new network error response
+    #[qjs(static, rename = "error")]
+    fn new_error() -> Self {
+        Self {
+            status: 0,
+            url: String::new(),
+            headers: HeaderMap::new(),
+            body: Bytes::new(),
+            redirected: false,
+        }
+    }
+
+    /// create a new redirect response
+    #[qjs(static, rename = "redirect")]
+    fn new_redirect(url: String, status: Opt<u16>) -> JsResult<Self> {
+        let status = status.0.unwrap_or(302);
+
+        if !matches!(status, 301 | 302 | 303 | 307 | 308) {
+            return Err(rquickjs::Error::new_from_js(
+                "RangeError",
+                "Invalid redirect status code",
+            ));
+        }
+
+        let mut headers = HeaderMap::new();
+        let loc_val = HeaderValue::from_str(&url).map_err(|e| {
+            // TODO: double check that new_from_js_message is being used correctly
+            rquickjs::Error::new_from_js_message("TypeError", "Invalid redirect URL", e.to_string())
+        })?;
+
+        headers.insert(HeaderName::from_static("location"), loc_val);
+
+        Ok(Self {
+            status,
+            url: String::new(),
+            headers,
+            body: Bytes::new(),
+            redirected: false,
+        })
+    }
 }
 
 #[rquickjs::methods]
@@ -335,3 +488,5 @@ impl Headers {
 pub mod inner {
     pub use super::{Headers, Request, Response};
 }
+
+// TODO: .blob() and .formData() extractors for Request/Response? (quickjs doesnt have these built in) (necessary for compatibility but low priority)

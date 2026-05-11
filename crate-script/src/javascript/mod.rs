@@ -387,6 +387,22 @@ async fn exec_inner<'js>(
                     .map_err(|e| Error::BroadcastSend(e.to_string()))?;
             }
         }
+        RunInput::Event { event } => {
+            for input in r
+                .inputs
+                .iter()
+                .filter(|i| i.definition.ty == ScriptInputType::Event)
+            {
+                let handler = input.callback.clone().restore(&ctx)?;
+
+                let js_event = rquickjs_serde::to_value(ctx.clone(), &*event).map_err(|e| {
+                    rquickjs::Error::new_from_js_message("object", "MessageSync", e.to_string())
+                })?;
+
+                // TODO: error handling
+                let _ = handler.call::<_, ()>((js_event,));
+            }
+        }
     }
 
     // TODO: error handling
