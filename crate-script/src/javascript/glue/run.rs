@@ -101,6 +101,7 @@ impl Run {
     }
 
     /// the script id this run belongs to
+    #[qjs(get)]
     fn script_id(&self, _cx: Ctx<'_>) -> rquickjs::Result<String> {
         todo!()
     }

@@ -28,6 +28,7 @@ use rquickjs::{
 pub struct ScriptRegister {}
 
 #[rquickjs::methods]
+#[qjs(rename_all = "camelCase")]
 impl ScriptRegister {
     /// create a new input that runs when manually triggered
     #[qjs(rename = "onTrigger")]
@@ -84,6 +85,7 @@ impl<'js> Trace<'js> for InputBuilder {
 }
 
 #[rquickjs::methods]
+#[qjs(rename_all = "camelCase")]
 impl InputBuilder {
     fn needs(mut self, perms: Vec<String>) -> Self {
         self.permissions.extend(perms);

@@ -303,7 +303,7 @@ async fn script_trigger(
             },
         )
         .await?;
-    let run = run_ctl.to_run();
+    let run = run_ctl.run().to_owned();
 
     s.broadcast_room(
         room_id,

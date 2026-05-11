@@ -33,6 +33,7 @@ tower-http = { version = "0.6.8", features = ["catch-panic", "cors", "limit", "p
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common", features = ["utoipa", "validator"] }
+lamprey-script = { package = "lamprey-script", version = "0.1.0", path = "../crate-script" }
 url = { version = "2.5.8", features = ["serde"] }
 utoipa = { version = "5.4.0", features = ["axum_extras", "url", "uuid"] }
 uuid = { version = "1.22.0", features = ["v7", "serde", "v4", "fast-rng", "macro-diagnostics"] }

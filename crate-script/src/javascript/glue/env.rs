@@ -7,7 +7,7 @@ pub struct EnvManager {
     // ...
 }
 
-/// an opaue secret that can be used in some apis
+/// an opaque secret that can be used in some apis
 #[rquickjs::class]
 #[derive(Clone, Trace, JsLifetime)]
 pub struct Opaque {
@@ -15,6 +15,7 @@ pub struct Opaque {
 }
 
 #[rquickjs::methods]
+#[qjs(rename_all = "camelCase")]
 impl EnvManager {
     /// lookup a public env value or non opaque secret
     fn get(&self) -> Option<String> {
@@ -22,13 +23,13 @@ impl EnvManager {
     }
 
     /// lookup an opaque env secret
-    #[qjs(rename = "get_secret")]
     fn get_secret(&self) -> Option<Opaque> {
         todo!()
     }
 }
 
 #[rquickjs::methods]
+#[qjs(rename_all = "camelCase")]
 impl Opaque {
     /// attempt to read this data if available
     fn read(&self) -> String {

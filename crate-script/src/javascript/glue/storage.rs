@@ -131,6 +131,7 @@ pub struct CreateSnapshot {
 }
 
 #[rquickjs::methods]
+#[qjs(rename_all = "camelCase")]
 impl StorageManager {
     /// open a named store
     fn open<'js>(&self, _name: String, _cx: Ctx<'js>) -> rquickjs::Result<rquickjs::Value<'js>> {
@@ -566,6 +567,7 @@ impl IndexEntry {
 }
 
 #[rquickjs::methods]
+#[qjs(rename_all = "camelCase")]
 impl IndexScanner {
     /// filter by start key
     fn start<'js>(
@@ -601,6 +603,7 @@ impl IndexScanner {
 }
 
 #[rquickjs::methods]
+#[qjs(rename_all = "camelCase")]
 impl Scanner {
     /// filter by prefix
     fn prefix<'js>(

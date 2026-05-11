@@ -11,7 +11,7 @@ members = [
   "crate-common",
   "crate-hakari", "crate-markdown",
   # "crate-macros",
-  "crate-media",
+  "crate-media", "crate-script",
   "crate-sdk", "crate-unfurl",
   # "crate-unfurl",
   "crate-voice",

@@ -40,6 +40,8 @@ declare global {
 	export type Capability =
 		| { type: "env"; secrets?: string[] }
 		| { type: "run" }
+		// | { type: "run_supervise" } // can manage child runs
+		// | { type: "run_manage" } // can manage all runs
 		| { type: "net"; allow?: string[] }
 		| { type: "storage" }
 		| { type: "message" }
@@ -99,6 +101,8 @@ declare global {
 
 		/** respond when there is an api event (MessageSync )*/
 		onEvent(eventTypes?: string[]): Input<["api_event"]>;
+
+		// TODO: maybe have onChildStopped
 	};
 
 	// TODO: rename this?
@@ -237,6 +241,12 @@ declare module "lamprey:run" {
 
 		// maybe make async
 		spawn(scriptId: string, data?: RunSendable): Run;
+
+		// // if child dies, kill parent
+		// spawnLink(scriptId: string, data?: RunSendable): Run;
+
+		// // get signal when child dies
+		// spawnMonitor(scriptId: string, data?: RunSendable): Run;
 	}
 
 	// NOTE: unsure how exactly this would work?
@@ -290,7 +300,20 @@ declare module "lamprey:service" {
 		tell(msg: ServiceTell<S>): void;
 	}
 
+	// maybe some more erlang stuff
+	// export type SupervisorStrategy =
+	// 	| { type: "one_for_one" }  // restart only the crashed child
+	// 	| { type: "one_for_all" }  // restart all children if one crashes
+	// 	| { type: "rest_for_one" } // restart crashed child + all started after it
+
+	// export type SupervisorConfig = {
+	// 	strategy: SupervisorStrategy;
+	// 	maxRestarts: number;   // max N restarts...
+	// 	maxWindow: number;     // ...within this many ms (then supervisor itself exits)
+	// };
+
 	// what else needs to be here?
+	// one issue with an elixir-style api is that scripts/runs aren't really long lived processes. they're triggered (receive input), do some processing, then exit.
 }
 
 /** network types */

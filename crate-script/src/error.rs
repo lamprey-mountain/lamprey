@@ -1,0 +1,27 @@
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[cfg(feature = "javascript")]
+    #[error("rquickjs: {0}")]
+    Rquickjs(#[from] rquickjs::Error),
+
+    #[cfg(feature = "wasm")]
+    #[error("wasmtime: {0}")]
+    Wasmtime(#[from] wasmtime::Error),
+
+    #[error("validation errors: {0}")]
+    Validation(#[from] validator::ValidationErrors),
+
+    #[error("broadcast channel send failed: {0}")]
+    BroadcastSend(String),
+
+    #[error("broadcast channel recv failed: {0}")]
+    BroadcastRecv(String),
+
+    #[error("watch channel changed failed: {0}")]
+    WatchChanged(String),
+
+    #[error("extraction data is None")]
+    ExtractionDataMissing,
+}
+
+pub type Result<T> = ::core::result::Result<T, Error>;

@@ -23,6 +23,7 @@ pub struct IpAddress {
 // }
 
 #[rquickjs::methods]
+#[qjs(rename_all = "camelCase")]
 impl NetworkManager {
     /// make an http request
     fn fetch<'js>(
@@ -39,6 +40,7 @@ impl NetworkManager {
 }
 
 #[rquickjs::methods]
+#[qjs(rename_all = "camelCase")]
 impl IpAddress {
     /// compare two IP addresses for equality
     fn equals(&self, _other: rquickjs::Object<'_>) -> bool {
