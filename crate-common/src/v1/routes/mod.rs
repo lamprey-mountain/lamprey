@@ -29,6 +29,7 @@ pub mod room;
 pub mod room_analytics;
 pub mod room_member;
 pub mod room_template;
+pub mod script;
 pub mod search;
 pub mod server;
 pub mod session;
@@ -39,9 +40,6 @@ pub mod user_connection;
 pub mod user_email;
 pub mod voice;
 pub mod webhook;
-
-#[cfg(feature = "feat_script")]
-pub mod script;
 
 pub use ack::*;
 pub use application::*;
@@ -68,6 +66,7 @@ pub use room::*;
 pub use room_analytics::*;
 pub use room_member::*;
 pub use room_template::*;
+pub use script::*;
 pub use search::*;
 pub use server::*;
 pub use session::*;

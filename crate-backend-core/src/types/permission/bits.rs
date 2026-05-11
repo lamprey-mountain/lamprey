@@ -101,6 +101,8 @@ impl PermissionBits {
             Permission::RoomJoin => 63,
             Permission::CallUpdate => 64,
             Permission::RoomJoinForce => 65,
+            Permission::ScriptManage => 66,
+            Permission::ScriptInspect => 67,
         }
     }
 
@@ -173,6 +175,8 @@ impl PermissionBits {
             63 => Some(Permission::RoomJoin),
             64 => Some(Permission::CallUpdate),
             65 => Some(Permission::RoomJoinForce),
+            66 => Some(Permission::ScriptManage),
+            67 => Some(Permission::ScriptInspect),
             _ => None,
         }
     }

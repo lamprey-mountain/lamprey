@@ -69,3 +69,6 @@ pub const MAX_LOADED_DOCUMENT_BRANCHES: usize = 32;
 // TODO: pinning documents to sidebar in ui
 // /// the maximum number of pinned documents per wiki a user can have
 // pub const MAX_DOCUMENT_PINS: usize = 32;
+
+/// the maximum file size of a script
+pub const MAX_SCRIPT_FILE_SIZE: u64 = 64 * 1024; // 64 kb for now

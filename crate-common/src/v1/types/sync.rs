@@ -12,7 +12,7 @@ use crate::v1::types::e2ee::{CrossSigningBundle, KeyshareRequest, KeyshareRespon
 use crate::v1::types::error::SyncError;
 
 use crate::v1::types::message::flume::FlumeDelta;
-use crate::v1::types::Message;
+use crate::v1::types::script::{Run, Script, ScriptVersion};
 use crate::v1::types::{
     application::{Application, Connection},
     automod::{AutomodRule, AutomodRuleExecution},
@@ -25,6 +25,7 @@ use crate::v1::types::{
     DocumentTagId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember,
     WebhookId,
 };
+use crate::v1::types::{Message, RunId, ScriptId, ScriptVerId};
 use crate::v2::types::media::Media;
 
 use super::{
@@ -136,6 +137,12 @@ pub enum MessageClient {
         branch_id: DocumentBranchId,
         cursor_head: String,
         cursor_tail: Option<String>,
+    },
+
+    /// subscribe to a script
+    ScriptSubscribe {
+        channel_id: ChannelId,
+        script_id: ScriptId,
     },
 
     // TODO: centralize into one single Subscribe message
@@ -912,6 +919,75 @@ pub enum MessageSync {
         channel_id: ChannelId,
         message_id: MessageId,
         delta: FlumeDelta,
+    },
+
+    ScriptCreate {
+        script: Script,
+    },
+
+    ScriptUpdate {
+        script: Script,
+    },
+
+    ScriptDelete {
+        channel_id: ChannelId,
+        script_id: ScriptId,
+    },
+
+    ScriptVersionCreate {
+        channel_id: ChannelId,
+        script_id: ScriptId,
+        version: ScriptVersion,
+    },
+
+    // eg. when a script's inputs are done being processed
+    ScriptVersionUpdate {
+        channel_id: ChannelId,
+        script_id: ScriptId,
+        version: ScriptVersion,
+    },
+
+    ScriptVersionDelete {
+        channel_id: ChannelId,
+        script_id: ScriptId,
+        version_id: ScriptVerId,
+    },
+
+    ScriptRunCreate {
+        channel_id: ChannelId,
+        run: Run,
+    },
+
+    ScriptRunUpdate {
+        channel_id: ChannelId,
+        run: Run,
+    },
+
+    /// receive logs from a script
+    ///
+    /// must be subscribed to the script
+    ScriptLogCreate {
+        channel_id: ChannelId,
+        run_id: RunId,
+
+        // TEMP: just a string, for debugging
+        content: String,
+    },
+
+    /// metrics for the channel a script is in
+    ///
+    /// must be subscribed to the script
+    // HACK: this api design is a bit dubious, will clean it up later
+    ScriptChannelMetrics {
+        channel_id: ChannelId,
+        memory_usage: usize,
+    },
+
+    /// client is now subscribed to a script
+    ScriptSubscribed {
+        channel_id: ChannelId,
+        script_id: ScriptId,
+        connection_id: ConnectionId,
     },
 }
 

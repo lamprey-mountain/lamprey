@@ -158,7 +158,8 @@ where
 
 impl UserIdReq {
     /// retrieve the user id, falling back to self_id if this is UserSelf
-    #[deprecated = "use local_unwrap_or"]
+    // TEMP: prevent warning spam
+    // #[deprecated = "use local_unwrap_or"]
     pub fn unwrap_or(self, self_id: UserId) -> UserId {
         match self {
             UserIdReq::UserSelf => self_id,

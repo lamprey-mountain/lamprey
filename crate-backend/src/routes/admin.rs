@@ -515,7 +515,7 @@ async fn admin_search_dlq_retry(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let d = s.data();
+    let _d = s.data();
 
     srv.perms
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)

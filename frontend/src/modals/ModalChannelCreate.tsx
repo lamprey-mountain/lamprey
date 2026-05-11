@@ -86,6 +86,15 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 										},
 									]
 								: []),
+							...(flags.has("channel_script")
+								? [
+										{
+											label: "scripts channel",
+											type: "Scripts",
+											description: "what the fuck is this",
+										},
+									]
+								: []),
 						]}
 					>
 						{(c) => (

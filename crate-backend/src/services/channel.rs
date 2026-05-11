@@ -333,7 +333,8 @@ impl ServiceChannels {
             | ChannelType::Calendar
             | ChannelType::Ticket
             | ChannelType::Info
-            | ChannelType::Wiki => {
+            | ChannelType::Wiki
+            | ChannelType::Scripts => {
                 perms.ensure(Permission::ChannelManage)?;
             }
             ChannelType::ThreadPublic => {

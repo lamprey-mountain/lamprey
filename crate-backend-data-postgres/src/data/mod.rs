@@ -26,6 +26,7 @@ use common::v1::types::{
 };
 use common::v2::types::embed::Embed;
 use common::v2::types::media::{Media, MediaPatch};
+use lamprey_backend_core::data::DataScript;
 pub use lamprey_backend_core::data::{
     DataAdmin, DataApplication, DataAuditLogs, DataAutomod, DataCalendar, DataConfigInternal,
     DataConnection, DataDm, DataEmoji, DataInvite, DataMetrics, DataNotification, DataPermission,
@@ -85,6 +86,7 @@ pub trait Data:
     + DataPush
     + DataConfigInternal
     + DataRoomTemplate
+    + DataScript
     + Send
     + Sync
 {

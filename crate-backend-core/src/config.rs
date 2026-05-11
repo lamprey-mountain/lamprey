@@ -92,6 +92,9 @@ pub struct Config {
     /// static admin token override
     pub admin_token: Option<String>,
 
+    #[serde(default)]
+    pub scripts: ConfigScripts,
+
     /// experimental features to enable
     #[serde(default)]
     pub experiments: ConfigExperiments,
@@ -167,6 +170,17 @@ pub struct ConfigSmtp {
     pub password: String,
     pub host: String,
     pub from: String,
+}
+
+#[derive(Debug, Default, Clone, Deserialize)]
+pub struct ConfigScripts {
+    /// whether to enable the script system
+    pub enabled: bool,
+
+    /// the domain suffix for http handlers
+    ///
+    /// setting to `example.com` will cause `random-uuid-here.example.com` domains to be handed to http scripts
+    pub suffix: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

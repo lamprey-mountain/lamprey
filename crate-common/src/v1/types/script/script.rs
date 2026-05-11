@@ -10,7 +10,7 @@ use validator::Validate;
 
 use crate::v1::types::misc::Time;
 
-use crate::v1::types::{ScriptId, ScriptVerId, UserId};
+use crate::v1::types::{ChannelId, MediaId, ScriptId, ScriptVerId, UserId};
 use crate::v2::types::media::{Media, MediaReference};
 
 /// a script that can run
@@ -19,17 +19,125 @@ use crate::v2::types::media::{Media, MediaReference};
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Script {
     pub id: ScriptId,
+    pub channel_id: ChannelId,
     pub creator_id: UserId,
     pub created_at: Time,
     pub deleted_at: Option<Time>,
-    pub trust: ScriptTrust,
-
     pub latest_version: ScriptVersion,
+    pub status: ScriptStatus,
 
-    // TODO: being able to set what permissions are available to a script
-    // though what perms are available may change with what its purpose is
-    pub permissions: (),
-    // autoupdate info: fetch error, error count, retry update at
+    /// the effects that this script is allowed to run
+    pub permissions: Vec<ScriptPermission>,
+
+    /// detected inputs for this script
+    pub inputs: Vec<ScriptInput>,
+    // TODO: pub signatures: Vec<ScriptSignature>,
+    // TODO: autoupdate info: fetch error, error count, retry update at
+}
+
+/// the valid inputs to this script
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ScriptInput {
+    /// unique identifier for this input
+    pub id: String,
+
+    /// human readable label
+    pub label: String,
+
+    #[cfg_attr(feature = "serde", serde(rename = "type"))]
+    pub ty: ScriptInputType,
+
+    /// the {side effects, capabilities, outputs} of this script
+    pub effects: Vec<ScriptEffect>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum ScriptInputType {
+    /// a manual trigger/button
+    Manual,
+    // /// an http request
+    // Http {
+    //     /// the domain name requests should go to
+    //     endpoint: String,
+    // },
+}
+
+/// a capability this script requires
+///
+/// can also be viewed as an effect that running this script may cause
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum ScriptEffect {
+    // logging is considered pure for now
+
+    // /// an http response
+    // Http,
+}
+
+// TODO: validate that ScriptInput has a valid ScriptEffect
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ScriptPermission {
+    pub effect: ScriptEffect,
+
+    /// whether this should be allowed or denied
+    pub grant: ScriptPermissionGrant,
+}
+
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum ScriptPermissionGrant {
+    Allow,
+    Deny,
+
+    #[default]
+    Prompt,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum ScriptStatus {
+    /// this script has no content
+    Empty,
+
+    /// this script is being processed/validated for the first time
+    Creating,
+
+    /// this script is being processed and validated
+    ///
+    /// old versions of the script *may* be used while processing
+    Processing,
+
+    /// this script is runnable
+    Valid,
+
+    /// this script is invalid
+    // TODO: add a way to find out why its invalid
+    Invalid,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum ScriptVersionStatus {
+    /// this script version is being processed and validated
+    Processing,
+
+    /// this script version is runnable
+    Valid,
+
+    /// this script version is invalid
+    // TODO: add a way to find out why its invalid
+    Invalid,
 }
 
 /// information about a script version
@@ -43,6 +151,7 @@ pub struct ScriptVersion {
     pub format: ScriptFormat,
     pub location: ScriptLocation,
     pub metadata: ScriptMetadata,
+    pub status: ScriptVersionStatus,
 }
 
 /// the format of a script
@@ -53,6 +162,7 @@ pub enum ScriptFormat {
     /// javascript via quickjs
     ///
     /// uses [rquickjs](https://lib.rs/crates/rquickjs) bindings
+    // may use v8 isolates in the future
     Javascript,
 
     /// webassembly script
@@ -108,7 +218,7 @@ pub enum ScriptLocationSet {
 }
 
 /// metadata about a script
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
@@ -134,30 +244,15 @@ pub struct ScriptMetadata {
     pub license: String,
 }
 
-/// trust level for a script
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum ScriptTrust {
-    /// this script isn't trusted at all
-    Untrusted,
-
-    /// the server doesnt trust this script but the person whos running it does
-    Restricted,
-
-    /// this script is trusted because it's local
-    Local,
-
-    /// this script is trusted because its signed
-    Signed { signature: ScriptSignature },
-}
-
 /// a script signature
 // probably use ed25519, copy federation
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ScriptSignature(pub String);
+pub struct ScriptSignature {
+    pub signature: String,
+    // key, ids, etc
+}
 
 /// request body for creating a new script
 #[derive(Debug, Clone)]
@@ -216,3 +311,13 @@ pub struct ScriptDependencyGraph {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ScriptDependenciesUpdate {}
+
+impl ScriptLocation {
+    pub fn media_id(&self) -> Option<MediaId> {
+        match self {
+            ScriptLocation::Local { .. } => None,
+            ScriptLocation::Remote { media, .. } => Some(media.id),
+            ScriptLocation::Hosted { media } => Some(media.id),
+        }
+    }
+}

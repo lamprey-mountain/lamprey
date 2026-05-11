@@ -338,6 +338,17 @@ impl AuthCheck {
                 }
             }
             MessageSync::FlumeDelta { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::ScriptCreate { script } => AuthCheck::Channel(script.channel_id),
+            MessageSync::ScriptUpdate { script } => AuthCheck::Channel(script.channel_id),
+            MessageSync::ScriptDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::ScriptVersionCreate { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::ScriptVersionUpdate { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::ScriptVersionDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::ScriptRunCreate { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::ScriptRunUpdate { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::ScriptLogCreate { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::ScriptChannelMetrics { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::ScriptSubscribed { channel_id, .. } => AuthCheck::Channel(*channel_id),
         }
     }
 }

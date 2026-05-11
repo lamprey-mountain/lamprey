@@ -38,6 +38,7 @@ import { RouteInviteInner } from "@/components/shared/Invite";
 import { RoomHome, RoomMembers } from "@/components/shared/Room";
 import { RoomHeader } from "@/components/shared/RoomHeader";
 import { RoomNav } from "@/components/shared/RoomNav";
+import { Scripts } from "@/components/shared/Scripts";
 import { UserProfile } from "@/components/shared/UserProfile";
 import { Wiki } from "@/components/shared/Wiki";
 import {
@@ -518,6 +519,9 @@ export const RouteChannel = (
 													</Match>
 													<Match when={ch().type === "Calendar"}>
 														<Calendar channel={ch()} />
+													</Match>
+													<Match when={ch().type === "Scripts"}>
+														<Scripts channel={ch()} />
 													</Match>
 													<Match when={ch().type === "Category"}>
 														<Category channel={ch()} />

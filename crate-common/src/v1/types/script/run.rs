@@ -18,26 +18,11 @@ pub struct Run {
     pub status: RunStatus,
 }
 
-/// status of a script run
+/// request to start a script run via trigger
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum RunStatus {
-    Running,
-    Success,
-
-    /// error while running the script
-    RuntimeFailure,
-
-    /// error with types, syntax, etc
-    PreflightFailure,
-}
-
-/// request to start a script run
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct RunCreate {
+pub struct RunCreateTrigger {
     /// start in the background
     ///
     /// returns 202 accepted instead of blocking until it can return 200 ok
@@ -48,4 +33,80 @@ pub struct RunCreate {
     ///
     /// will stop other runs of this script if true
     pub exclusive: bool,
+    // TODO: pass trigger_id
+}
+
+/// status of a script run
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum RunStatus {
+    /// the run is being created and started
+    ///
+    /// valid transitions: Active, Sleeping, Exited, Crashed
+    Creating,
+
+    /// the run is active
+    ///
+    /// valid transitions: Sleeping, Exited, Crashed
+    Active,
+
+    /// the run is pausing or paused and stored on disk
+    ///
+    /// valid transitions: Waking
+    Sleeping,
+
+    /// the run is starting up
+    ///
+    /// valid transitions: Active, Exited, Crashed
+    Waking,
+
+    /// the run has exited cleanly
+    ///
+    /// valid transitions: (none)
+    Exited,
+
+    /// the run is borked (preflight failure: syntax, types, compile time, etc)
+    ///
+    /// valid transitions: (none)
+    Borked,
+
+    /// the run has crashed (runtime failure)
+    ///
+    /// valid transitions: (none)
+    Crashed,
+}
+
+impl RunStatus {
+    /// Transition to the given status if the transition is valid.
+    ///
+    /// Returns `true` if the transition is allowed, `false` otherwise.
+    ///
+    /// Terminal states (`Exited`, `Borked`, `Crashed`) cannot transition to any other state.
+    pub fn transition_to(&self, next: RunStatus) -> bool {
+        match (self, next) {
+            // Creating can go to any active or terminal state
+            (
+                RunStatus::Creating,
+                RunStatus::Active | RunStatus::Sleeping | RunStatus::Exited | RunStatus::Crashed,
+            ) => true,
+
+            // Active can go to sleeping, exited, or crashed
+            (RunStatus::Active, RunStatus::Sleeping | RunStatus::Exited | RunStatus::Crashed) => {
+                true
+            }
+
+            // Sleeping can only wake up
+            (RunStatus::Sleeping, RunStatus::Waking) => true,
+
+            // Waking can go to active, exited, or crashed
+            (RunStatus::Waking, RunStatus::Active | RunStatus::Exited | RunStatus::Crashed) => true,
+
+            // Terminal states cannot transition anywhere
+            (RunStatus::Exited | RunStatus::Borked | RunStatus::Crashed, _) => false,
+
+            // Anything else is invalid
+            _ => false,
+        }
+    }
 }

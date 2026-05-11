@@ -286,6 +286,7 @@ pub fn tantivy_document_from_channel(s: &UnifiedSchema, channel: Channel) -> Tan
             ChannelType::Document => "Document",
             ChannelType::DocumentComment => "DocumentComment",
             ChannelType::Wiki => "Wiki",
+            ChannelType::Scripts => "Scripts",
         },
     );
 

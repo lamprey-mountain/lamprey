@@ -96,6 +96,31 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, ws: WebSocket) {
                     }
                 }
             }
+            script_res = conn.scripts.poll() => {
+                match script_res {
+                    Ok(msg) => {
+                        if let Err(err) = conn.queue_message(Box::new(msg), None).await {
+                            tracing::error!("failed to queue script message: {err}");
+                        }
+                    }
+                    Err(err) => {
+                        tracing::error!("script poll error: {err}");
+                        let err_str: String = err.to_string();
+                        if let Err(send_err) = transport.send(MessageEnvelope {
+                            payload: MessagePayload::Error { error: err_str, code: None },
+                        }).await {
+                            tracing::error!("failed to send error message: {send_err}");
+                        }
+                        if let Err(err) = conn.drain(&mut *transport).await {
+                            tracing::error!("failed to drain messages on error: {err}");
+                        }
+                        if let Err(err) = transport.close().await {
+                            tracing::error!("failed to close websocket: {err}");
+                        }
+                        break;
+                    }
+                }
+            }
             ws_msg = client_messages.next() => {
                 match ws_msg {
                     Some(Ok(TransportEvent::Closed(clean))) => {

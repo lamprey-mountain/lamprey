@@ -12,7 +12,7 @@ use common::v1::types::util::Time;
 use common::v1::types::voice::{SfuCommand, SfuPermissions, SignallingMessage, VoiceState};
 use common::v1::types::{self, SERVER_ROOM_ID};
 use common::v1::types::{
-    DocumentBranchId, MessageClient, MessageEnvelope, MessageSync, Permission,
+    DocumentBranchId, MessageClient, MessageEnvelope, MessageSync, Permission, ScriptId,
 };
 use tokio::time::Instant;
 use tracing::{debug, error, trace, warn};
@@ -29,6 +29,7 @@ use crate::ServerState;
 use crate::{
     error::{Error, Result},
     services::documents::DocumentSyncer,
+    services::scripts::ScriptSyncer,
 };
 use crate::{
     services::member_lists::{syncer::MemberListSyncer, util::MemberListTarget},
@@ -44,6 +45,7 @@ pub struct Connection {
     id: ConnectionId,
     pub member_list: MemberListSyncer,
     pub document: Box<DocumentSyncer>,
+    pub scripts: Box<ScriptSyncer>,
 }
 
 impl Connection {
@@ -51,6 +53,7 @@ impl Connection {
         let id = ConnectionId::new();
 
         let member_list = s.services().member_lists.create_syncer(id.into());
+        let scripts = s.services().scripts.create_syncer(id);
 
         Self {
             state: ConnectionState::Unauthed,
@@ -58,6 +61,7 @@ impl Connection {
             id,
             member_list,
             document: Box::new(s.services().documents.create_syncer(id)),
+            scripts: Box::new(scripts),
             s,
         }
     }
@@ -194,6 +198,10 @@ impl Connection {
                 ))
                 .await?
             }
+            MessageClient::ScriptSubscribe {
+                channel_id,
+                script_id,
+            } => Box::pin(self.handle_script_subscribe(channel_id, script_id)).await?,
         }
         Ok(())
     }
@@ -230,6 +238,27 @@ impl Connection {
                 cursor_tail,
             )
             .await?;
+        Ok(())
+    }
+
+    async fn handle_script_subscribe(
+        &mut self,
+        channel_id: ChannelId,
+        script_id: ScriptId,
+    ) -> Result<()> {
+        let session = self
+            .state
+            .session()
+            .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+        let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+
+        let srv = self.s.services();
+        let perms = srv.perms.for_channel2(Some(user_id), channel_id).await?;
+        perms.ensure(Permission::ChannelView)?;
+
+        // Set the script syncer to subscribe to this script
+        self.scripts.set_context_id(channel_id, script_id).await?;
+
         Ok(())
     }
 
@@ -387,6 +416,7 @@ impl Connection {
 
         self.member_list.set_user_id(session.user_id()).await;
         self.document.set_user_id(session.user_id()).await;
+        self.scripts.set_user_id(session.user_id()).await;
         self.state = ConnectionState::Authenticated { session };
         Ok(())
     }

@@ -859,6 +859,14 @@ impl ServiceMedia {
         info!("stripped EXIF from media {}", media_id);
         Ok(())
     }
+
+    /// fully download a file from the media server
+    pub async fn download(&self, media_id: MediaId) -> Result<Bytes> {
+        let media = self.state.data().media_select(media_id).await?;
+        let url = self.state.get_s3_url(&format!("media/{media_id}/file"))?;
+        let data = self.state.blobs.read(url.path()).await?;
+        Ok(data.to_bytes())
+    }
 }
 
 #[tracing::instrument(skip(state, bytes))]

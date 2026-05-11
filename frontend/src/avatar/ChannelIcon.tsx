@@ -4,6 +4,7 @@ import icChanCalendar1 from "@/assets/channel-calendar-1.png";
 import icChanDocument1 from "@/assets/channel-document-1.png";
 import icChanForum1 from "@/assets/channel-forum-1.png";
 import icChanNsfw from "@/assets/channel-nsfw.png";
+import icChanScripts1 from "@/assets/channel-scripts-1.png";
 import icChanText1 from "@/assets/channel-text-1.png";
 import icChanText2 from "@/assets/channel-text-2.png";
 import icChanText3 from "@/assets/channel-text-3.png";
@@ -38,6 +39,8 @@ export const ChannelIcon = (props: {
 				return rnd([icChanDocument1]);
 			case "Wiki":
 				return rnd([icChanWiki1]);
+			case "Scripts":
+				return rnd([icChanScripts1]);
 			default:
 				return rnd([icChanText1, icChanText2, icChanText3, icChanText4]);
 		}
@@ -72,6 +75,7 @@ export const ChannelIcon = (props: {
 					"Calendar",
 					"Document",
 					"Wiki",
+					"Scripts",
 				].includes(props.channel.type)}
 			>
 				<svg

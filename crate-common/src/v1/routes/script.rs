@@ -149,20 +149,19 @@ pub mod script_content_update {
     }
 }
 
-/// Script run
+/// Script trigger
 ///
-/// Execute a script
+/// Run a script with a trigger input
 #[endpoint(
     post,
-    path = "/channel/{channel_id}/script/{script_id}/run",
+    path = "/channel/{channel_id}/script/{script_id}/trigger",
     tags = ["script"],
     scopes = [Full],
-    permissions = [ScriptRun],
-    response(OK, body = Run, description = "Start script run success"),
+    response(CREATED, body = Run, description = "Start script run success"),
 )]
-pub mod script_run {
+pub mod script_trigger {
     use crate::v1::types::{
-        script::{Run, RunCreate},
+        script::{Run, RunCreateTrigger},
         ChannelId, ScriptId,
     };
 
@@ -174,7 +173,7 @@ pub mod script_run {
         pub script_id: ScriptId,
 
         #[json]
-        pub run: RunCreate,
+        pub run: RunCreateTrigger,
     }
 
     pub struct Response {

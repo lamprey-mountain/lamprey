@@ -15,6 +15,7 @@ use role::ServiceRoles;
 use room_analytics::ServiceRoomAnalytics;
 use room_template::ServiceRoomTemplates;
 use rooms::ServiceRooms;
+use scripts::ServiceScripts;
 use sessions::ServiceSessions;
 use tag::ServiceTags;
 use users::ServiceUsers;
@@ -55,6 +56,7 @@ pub mod role;
 pub mod room_analytics;
 pub mod room_template;
 pub mod rooms;
+pub mod scripts;
 pub mod search;
 pub mod sessions;
 pub mod tag;
@@ -81,6 +83,7 @@ pub struct Services {
     pub member_lists: ServiceMemberLists,
     pub messages: ServiceMessages,
     pub notifications: ServiceNotifications,
+    pub scripts: ServiceScripts,
     pub oauth: ServiceOauth,
     pub perms: ServicePermissions,
     pub presence: ServicePresence,
@@ -118,6 +121,7 @@ impl Services {
             member_lists: ServiceMemberLists::new(state.clone()),
             messages: ServiceMessages::new(state.clone()),
             notifications: ServiceNotifications::new(state.clone()),
+            scripts: ServiceScripts::new(state.clone()),
             oauth: ServiceOauth::new(state.clone()),
             perms: ServicePermissions::new(state.clone()),
             presence: ServicePresence::new(state.clone()),

@@ -25,7 +25,6 @@ import { useModals } from "@/contexts/modal";
 import { useVoice } from "@/contexts/voice";
 import { usePermissions } from "@/hooks/usePermissions";
 import { colors } from "@/lib/colors";
-import { useConfig } from "@/lib/config";
 import { flags } from "@/lib/flags";
 import {
 	calculatePermissions,

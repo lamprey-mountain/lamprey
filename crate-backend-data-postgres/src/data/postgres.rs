@@ -190,6 +190,7 @@ mod room;
 mod room_analytics;
 mod room_member;
 mod room_template;
+mod script;
 mod search_queue;
 mod session;
 mod tag;

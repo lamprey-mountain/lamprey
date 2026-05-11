@@ -14,7 +14,7 @@ use crate::v1::types::{
     tag::Tag, util::Time, webhook::Webhook, ApplicationId, AuditLogEntryId, AutomodRuleId,
     CalendarEventId, Channel, ChannelId, ChannelReorderItem, ChannelType, EmojiId, HarvestId,
     InviteCode, MessageId, MessageVerId, PermissionOverwriteType, RoleId, RoomId, RoomMember,
-    SessionId, TagId, User, UserId, WebhookId,
+    ScriptId, SessionId, TagId, User, UserId, WebhookId,
 };
 
 pub mod resolve;
@@ -608,6 +608,20 @@ pub enum AuditLogEntryType {
         #[cfg_attr(feature = "serde", serde(default))]
         changes: Vec<AuditLogChange>,
     },
+
+    ScriptCreate {
+        channel_id: ChannelId,
+        script_id: ScriptId,
+        changes: Vec<AuditLogChange>,
+    },
+
+    ScriptDelete {
+        channel_id: ChannelId,
+        script_id: ScriptId,
+        changes: Vec<AuditLogChange>,
+    },
+    // TODO: add ScriptVersionCreate
+    // TODO: add ScriptVersionDelete
 }
 
 #[derive(Debug, Default, Clone)]

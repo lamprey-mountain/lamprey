@@ -539,6 +539,10 @@ pub enum ChannelType {
 
     /// a channel that holds documents
     Wiki,
+
+    // FIXME: add a sql migration for this
+    /// a channel that holds scripts
+    Scripts,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -1322,11 +1326,24 @@ impl ChannelType {
         matches!(self, ChannelType::Calendar)
     }
 
+    pub fn has_scripts(&self) -> bool {
+        matches!(self, ChannelType::Scripts)
+    }
+
     pub fn ensure_has_calendar(&self) -> Result<(), ApiError> {
         if self.has_calendar() {
             Ok(())
         } else {
             // NOTE: Using a generic error as there isn't a specific one for calendar yet
+            Err(ApiError::from_code(ErrorCode::InvalidData))
+        }
+    }
+
+    pub fn ensure_has_scripts(&self) -> Result<(), ApiError> {
+        if self.has_scripts() {
+            Ok(())
+        } else {
+            // NOTE: Using a generic error as there isn't a specific one for scripts yet
             Err(ApiError::from_code(ErrorCode::InvalidData))
         }
     }
@@ -1385,6 +1402,7 @@ impl ChannelType {
             (ChannelType::Ticket, Some(ChannelType::Category) | None) => true,
             (ChannelType::Wiki, Some(ChannelType::Category) | None) => true,
             (ChannelType::Document, Some(ChannelType::Category) | None) => true,
+            (ChannelType::Scripts, Some(ChannelType::Category) | None) => true,
 
             // categories can be in room top level
             (ChannelType::Category, None) => true,

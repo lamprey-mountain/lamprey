@@ -1,5 +1,7 @@
 use async_trait::async_trait;
-use common::v1::types::Message as MessageV2;
+use common::v1::types::script::{
+    Script, ScriptFormat, ScriptLocation, ScriptMetadata, ScriptVersion,
+};
 use common::v1::types::{
     ack::AckBulkItem,
     application::{Application, Connection, Scopes},
@@ -30,6 +32,7 @@ use common::v1::types::{
     RoomMemberSearchAdvanced, RoomMemberSearchResponse, SearchDlqId, TagId, ThreadMember,
     ThreadMemberPut, UserId, WebhookId,
 };
+use common::v1::types::{Message as MessageV2, ScriptId, ScriptVerId};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -982,4 +985,45 @@ pub trait DataAdmin {
 pub trait DataConfigInternal {
     async fn config_put(&mut self, config: ConfigInternal) -> Result<()>;
     async fn config_get(&mut self) -> Result<Option<ConfigInternal>>;
+}
+
+#[async_trait]
+pub trait DataScript {
+    /// create a new script and script version
+    async fn script_create(&mut self, script: &Script) -> Result<()>;
+    async fn script_update(
+        &mut self,
+        script_id: ScriptId,
+        format: ScriptFormat,
+        location: ScriptLocation,
+        metadata: ScriptMetadata,
+    ) -> Result<()>;
+    async fn script_delete(&mut self, script_id: ScriptId) -> Result<()>;
+    async fn script_version_create(
+        &mut self,
+        script_id: ScriptId,
+        channel_id: ChannelId,
+        creator_id: UserId,
+        format: ScriptFormat,
+        location: ScriptLocation,
+        metadata: ScriptMetadata,
+        cached_inputs: Option<serde_json::Value>,
+    ) -> Result<ScriptVerId>;
+    async fn script_version_delete(
+        &mut self,
+        script_id: ScriptId,
+        version_id: ScriptVerId,
+    ) -> Result<()>;
+    async fn script_get(&mut self, script_id: ScriptId) -> Result<Option<Script>>;
+    async fn script_list_by_channel(
+        &mut self,
+        channel_id: ChannelId,
+        pagination: PaginationQuery<ScriptId>,
+    ) -> Result<PaginationResponse<Script>>;
+    async fn script_version_list_by_script(
+        &mut self,
+        channel_id: ChannelId,
+        script_id: ScriptId,
+        pagination: PaginationQuery<ScriptVerId>,
+    ) -> Result<PaginationResponse<ScriptVersion>>;
 }
