@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO script (id, channel_id, creator_id, created_at, deleted_at, data)\n            VALUES ($1, $2, $3, CURRENT_TIMESTAMP, NULL, $4)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "342b30d956a6bfad027cb6442fa5874be5e18f908eae0ffd4d4c4ca3d5702785"
+}

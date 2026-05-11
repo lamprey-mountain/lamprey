@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE script_version SET deleted_at = now() WHERE version_id = $1 AND script_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c96bf4fa8fca1503af917fcea8784af126886b70ce00b654837f4f84c4510369"
+}

@@ -105,7 +105,9 @@
                       "FriendCreate",
                       "RoomJoin",
                       "CallUpdate",
-                      "RoomJoinForce"
+                      "RoomJoinForce",
+                      "ScriptManage",
+                      "ScriptInspect"
                     ]
                   }
                 }
@@ -191,7 +193,9 @@
                       "FriendCreate",
                       "RoomJoin",
                       "CallUpdate",
-                      "RoomJoinForce"
+                      "RoomJoinForce",
+                      "ScriptManage",
+                      "ScriptInspect"
                     ]
                   }
                 }
@@ -311,7 +315,9 @@
                       "FriendCreate",
                       "RoomJoin",
                       "CallUpdate",
-                      "RoomJoinForce"
+                      "RoomJoinForce",
+                      "ScriptManage",
+                      "ScriptInspect"
                     ]
                   }
                 }
@@ -393,7 +399,9 @@
                       "FriendCreate",
                       "RoomJoin",
                       "CallUpdate",
-                      "RoomJoinForce"
+                      "RoomJoinForce",
+                      "ScriptManage",
+                      "ScriptInspect"
                     ]
                   }
                 }

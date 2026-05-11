@@ -20,7 +20,9 @@
                 "RoomIcon",
                 "UserBanner",
                 "ChannelIcon",
-                "RoomBanner"
+                "RoomBanner",
+                "Script",
+                "ScriptVersion"
               ]
             }
           }

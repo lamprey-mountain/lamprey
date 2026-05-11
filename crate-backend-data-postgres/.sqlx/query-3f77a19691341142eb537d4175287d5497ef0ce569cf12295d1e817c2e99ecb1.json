@@ -34,7 +34,8 @@
                 "Ticket",
                 "Document",
                 "DocumentComment",
-                "Wiki"
+                "Wiki",
+                "Scripts"
               ]
             }
           }
