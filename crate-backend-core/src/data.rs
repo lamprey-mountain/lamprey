@@ -442,24 +442,6 @@ pub trait DataInvite {
 }
 
 #[async_trait]
-pub trait DataSearch {
-    async fn search_message(
-        &mut self,
-        user_id: UserId,
-        query: MessageSearchRequest,
-        paginate: PaginationQuery<MessageId>,
-        channel_visibility: &[(ChannelId, bool)],
-    ) -> Result<PaginationResponse<MessageV2>>;
-    async fn search_channel(
-        &mut self,
-        user_id: UserId,
-        query: ChannelSearchRequest,
-        paginate: PaginationQuery<ChannelId>,
-        channel_visibility: &[(ChannelId, bool)],
-    ) -> Result<PaginationResponse<Channel>>;
-}
-
-#[async_trait]
 pub trait DataSearchQueue {
     async fn search_reindex_queue_upsert(
         &mut self,

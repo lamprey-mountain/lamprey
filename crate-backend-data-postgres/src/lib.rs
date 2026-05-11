@@ -15,8 +15,7 @@ pub use data::{
     DataConfigInternal, DataConnection, DataDm, DataDocument, DataEmailQueue, DataEmbed, DataEmoji,
     DataInvite, DataMedia, DataMessage, DataMetrics, DataNotification, DataPermission,
     DataPreferences, DataPush, DataReaction, DataRole, DataRoleMember, DataRoom, DataRoomAnalytics,
-    DataRoomMember, DataRoomTemplate, DataSearch, DataSearchQueue, DataSession, DataTag,
-    DataThread, DataThreadMember, DataUnread, DataUser, DataUserEmail, DataUserRelationship,
-    DataWebhook,
+    DataRoomMember, DataRoomTemplate, DataSearchQueue, DataSession, DataTag, DataThread,
+    DataThreadMember, DataUnread, DataUser, DataUserEmail, DataUserRelationship, DataWebhook,
 };
 // gen_paginate is macro_exported to root

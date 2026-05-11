@@ -29,7 +29,7 @@ use common::v2::types::media::{Media, MediaPatch};
 pub use lamprey_backend_core::data::{
     DataAdmin, DataApplication, DataAuditLogs, DataAutomod, DataCalendar, DataConfigInternal,
     DataConnection, DataDm, DataEmoji, DataInvite, DataMetrics, DataNotification, DataPermission,
-    DataPreferences, DataReaction, DataRoleMember, DataRoomAnalytics, DataRoomMember, DataSearch,
+    DataPreferences, DataReaction, DataRoleMember, DataRoomAnalytics, DataRoomMember,
     DataSearchQueue, DataTag, DataThread, DataThreadMember, DataUnread, DataUserEmail,
     DataUserRelationship, DataWebhook,
 };
@@ -58,7 +58,6 @@ pub trait Data:
     + DataChannel
     + DataUnread
     + DataUser
-    + DataSearch
     + DataSearchQueue
     + DataAuth
     + DataAuditLogs

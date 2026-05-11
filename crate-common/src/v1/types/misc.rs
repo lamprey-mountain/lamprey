@@ -20,6 +20,7 @@ use crate::util::is_valid_hostname;
 use crate::v1::routes::{PathParam, PathParamError};
 use crate::v1::types::error::{ApiResult, ErrorCode};
 use crate::v1::types::federation::Hostname;
+use crate::v1::types::MediaId;
 
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Deserialize), serde(untagged))]
@@ -27,8 +28,19 @@ use crate::v1::types::federation::Hostname;
 pub enum UserIdReq {
     #[cfg_attr(feature = "serde", serde(deserialize_with = "const_self"))]
     UserSelf,
+
+    // TODO: rename to UserRemote
     RemoteUser(UserId, Hostname),
+
     UserId(UserId),
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Deserialize), serde(untagged))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum MediaIdReq {
+    MediaRemote(MediaId, Hostname),
+    MediaId(MediaId),
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
