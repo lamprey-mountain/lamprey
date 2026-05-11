@@ -65,19 +65,26 @@ export const useAutocompleteData = () => {
 	const [allCommands, setAllCommands] = createSignal<Command[]>([]);
 	const [allRoles, setAllRoles] = createSignal<Role[]>([]);
 
+	const threadMembersResource = threadMembers2.useList(() =>
+		state.kind?.type === "mention" ? state.kind.channelId : undefined
+	);
+
+	const roomMembersResource = roomMembers2.useList(() => {
+		if (state.kind?.type !== "mention") return;
+		const channel = channels2.cache.get(state.kind.channelId);
+		return state.kind.roomId ?? channel?.room_id ?? undefined;
+	});
+
+	const channel = () => channels2.get(state.kind?.channelId ?? "");
+
 	// Fetch data based on autocomplete type
 	createEffect(() => {
 		const kind = state.kind;
 		if (!kind) return;
 
 		if (kind.type === "mention") {
-			const channel = channels2.cache.get(kind.channelId);
-			const roomId = kind.roomId ?? channel?.room_id;
-
-			const threadMembers = threadMembers2.useList(() => kind.channelId)();
-			const roomMembers = roomId
-				? roomMembers2.useList(() => roomId)()
-				: undefined;
+			const threadMembers = threadMembersResource();
+			const roomMembers = roomMembersResource();
 
 			const userIds = new Set<string>();
 			// Access ids from PaginatedList state and fetch members from cache
@@ -119,6 +126,7 @@ export const useAutocompleteData = () => {
 			setAllUsers(users);
 
 			// Also fetch mentionable roles for combined autocomplete
+			const roomId = kind.roomId ?? channel()?.room_id;
 			if (roomId) {
 				const mentionableRoles = [...rolesApi.cache.values()].filter(
 					(r) => r.room_id === roomId && r.is_mentionable && r.id !== roomId,
@@ -302,7 +310,10 @@ export const useAutocompleteData = () => {
 
 	// NOTE: this is kind of ugly, maybe i should remove it?
 	createEffect(() => {
-		setResults(filtered().map((i: AutocompleteSearchResult) => i.obj));
+		const results = filtered().map((i) => i.obj);
+		// Use untrack if setResults ends up touching parts of 'state'
+		// that the logic above depends on
+		setResults(results);
 	});
 
 	return {
