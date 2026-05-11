@@ -341,7 +341,7 @@
           WASM_MARKDOWN_PKG = "${wasm-markdown}/pkg";
           TWEMOJI_SPRITESHEETS = "${twemoji-spritesheets}";
 
-          pnpmDepsHash = "sha256-MMHA3G35HUNW9qVQhr5R2z5C9NInn7/LgP6FHzJra14=";
+          pnpmDepsHash = "sha256-C972zg0tzaa9N/bty0aisDMpzWHnjiWcbdCvFCnugQw=";
           pnpmDeps = pkgs.pnpm.fetchDeps {
             inherit (finalAttrs) src pname version;
             fetcherVersion = 2;
