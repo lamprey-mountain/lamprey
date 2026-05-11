@@ -35,6 +35,7 @@ pub struct Script {
     // TODO: autoupdate info: fetch error, error count, retry update at
 }
 
+// TODO: rename to trigger
 /// the valid inputs to this script
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -46,17 +47,19 @@ pub struct ScriptInput {
     /// human readable label
     pub label: String,
 
-    #[cfg_attr(feature = "serde", serde(rename = "type"))]
+    #[cfg_attr(feature = "serde", serde(rename = "type", flatten))]
     pub ty: ScriptInputType,
 
     /// the {side effects, capabilities, outputs} of this script
     pub effects: Vec<ScriptEffect>,
+    // pub capabilities: Vec<ScriptCapability>,
 }
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum ScriptInputType {
+    // TODO: rename trigger to manual
     /// a manual trigger/button
     Manual,
     // /// an http request
@@ -73,10 +76,16 @@ pub enum ScriptInputType {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum ScriptEffect {
-    // logging is considered pure for now
+    // NOTE: logging is considered pure for now
 
-    // /// an http response
-    // Http,
+    // TODO: add these
+    // Env { secrets: Vec<String> },
+    // Run,
+    // Net { allow: Vec<String> },
+    // Storage,
+    // Api,
+
+    // do i add other stuff like Http/Message/etc?
 }
 
 // TODO: validate that ScriptInput has a valid ScriptEffect
@@ -321,3 +330,10 @@ impl ScriptLocation {
         }
     }
 }
+
+// TODO
+// export type EnvDisposition =
+// 	| "template" // public + cloning the script also copies over this value
+// 	| "public" // all runs can read this
+// 	| "secret" // access must be requested
+// 	| "opaque"; // access must be requested, code cannot read data

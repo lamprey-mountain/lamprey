@@ -16,7 +16,7 @@ pub struct Run {
     pub created_at: Time,
     pub stopped_at: Option<Time>,
     pub status: RunStatus,
-    // pub input: RunInput,
+    pub input: RunInput,
 }
 
 /// request to start a script run via trigger
@@ -36,7 +36,7 @@ pub struct RunCreateTrigger {
     pub exclusive: bool,
 
     /// the id of the input that triggered this run
-    pub trigger_id: Option<String>,
+    pub trigger_id: String,
 }
 
 /// status of a script run

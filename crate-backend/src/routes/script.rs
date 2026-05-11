@@ -6,8 +6,8 @@ use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::script::{
-    Script, ScriptFormat, ScriptLocation, ScriptLocationSet, ScriptMetadata, ScriptStatus,
-    ScriptVersion, ScriptVersionStatus,
+    RunInput, Script, ScriptFormat, ScriptLocation, ScriptLocationSet, ScriptMetadata,
+    ScriptStatus, ScriptVersion, ScriptVersionStatus,
 };
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
@@ -20,7 +20,6 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::consts::MAX_SCRIPT_FILE_SIZE;
 use crate::error::Result;
-use crate::services::scripts::ScriptInputData;
 use crate::{routes2, Error, ServerState};
 
 use super::util::{Auth, Auth3};
@@ -79,10 +78,6 @@ async fn script_create(
     let media_id = media.id;
     let location = ScriptLocation::Hosted { media };
 
-    // TODO: extract metadata from userscript-like comments in the script source
-    // alternatively, i could extract similarly to import extraction (read exported data)
-    let metadata = ScriptMetadata::default();
-
     let script = Script {
         id: script_id,
         channel_id: req.channel_id,
@@ -95,7 +90,7 @@ async fn script_create(
             deleted_at: None,
             format: format.clone(),
             location,
-            metadata,
+            metadata: ScriptMetadata::default(), // will be replaced
             status: ScriptVersionStatus::Processing,
         },
         status: ScriptStatus::Creating,
@@ -303,17 +298,12 @@ async fn script_trigger(
         .spawn(
             req.channel_id,
             req.script_id,
-            match req.run.trigger_id {
-                Some(id) => ScriptInputData::Manual { id },
-                None => ScriptInputData::Manual {
-                    id: "default".to_owned(),
-                },
+            RunInput::Trigger {
+                id: req.run.trigger_id,
             },
         )
         .await?;
     let run = run_ctl.to_run();
-
-    // TODO: create a run record in the database
 
     s.broadcast_room(
         room_id,

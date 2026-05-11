@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use common::v1::types::script::{
-    Run, RunLogEntry, RunLogLevel, RunStatus, Script, ScriptFormat, ScriptInput, ScriptLocation,
-    ScriptMetadata, ScriptStatus, ScriptVersion, ScriptVersionStatus,
+    Run, RunInput, RunLogEntry, RunLogLevel, RunStatus, Script, ScriptFormat, ScriptInput,
+    ScriptLocation, ScriptMetadata, ScriptStatus, ScriptVersion, ScriptVersionStatus,
 };
 use common::v1::types::{
     ChannelId, PaginationDirection, PaginationQuery, PaginationResponse, RunId, ScriptId,
@@ -57,6 +57,7 @@ pub struct DbRun {
     pub created_at: PrimitiveDateTime,
     pub stopped_at: Option<PrimitiveDateTime>,
     pub status: i16,
+    pub input: serde_json::Value,
 }
 
 impl From<DbRun> for Run {
@@ -72,12 +73,14 @@ impl From<DbRun> for Run {
             7 => RunStatus::Stopped,
             _ => RunStatus::Crashed,
         };
+        let input = serde_json::from_value(row.input).unwrap_or(RunInput::Extraction);
         Run {
             id: row.id.into(),
             script_id: row.script_id.into(),
             created_at: row.created_at.into(),
             stopped_at: row.stopped_at.map(Into::into),
             status,
+            input,
         }
     }
 }
@@ -493,16 +496,19 @@ impl DataScript for Postgres {
             RunStatus::Stopped => 7,
         };
 
+        let input_json = serde_json::to_value(&run.input).unwrap_or(serde_json::Value::Null);
+
         query!(
             r#"
-            INSERT INTO script_run (id, script_id, created_at, stopped_at, status)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO script_run (id, script_id, created_at, stopped_at, status, input)
+            VALUES ($1, $2, $3, $4, $5, $6)
             "#,
             *run.id,
             *run.script_id,
             PrimitiveDateTime::from(run.created_at),
             run.stopped_at.map(PrimitiveDateTime::from),
-            status_int
+            status_int,
+            input_json
         )
         .execute(conn.ext())
         .await?;

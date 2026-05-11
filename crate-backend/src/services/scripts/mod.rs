@@ -1,16 +1,14 @@
 use common::v1::types::script::{
-    Run, RunLogEntry, RunLogLevel, RunLogSource, RunStatus, Script, ScriptInput, ScriptInputType,
-    ScriptMetadata, ScriptVersion, ScriptVersionStatus,
+    Run, RunInput, RunLogEntry, RunLogLevel, RunLogSource, RunStatus, Script, ScriptInput,
+    ScriptInputType, ScriptMetadata, ScriptVersion, ScriptVersionStatus,
 };
 use common::v1::types::util::Time;
-use common::v1::types::{ChannelId, ConnectionId, MessageSync, RunId, ScriptId, UserId};
-use rquickjs::async_with;
-use std::collections::{HashMap, VecDeque};
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-// use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
-
+use common::v1::types::{ChannelId, ConnectionId, MessageSync, RunId, ScriptId};
 use dashmap::DashMap;
+use rquickjs::async_with;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::Arc;
 use tokio::sync::broadcast;
 
 use crate::error::Result;
@@ -18,6 +16,10 @@ use crate::{Error, ServerStateInner};
 
 mod glue;
 mod limits;
+mod sync;
+mod loader;
+
+pub use sync::ScriptSyncer;
 
 /// the service that manages all scripts
 pub struct ServiceScripts {
@@ -55,12 +57,11 @@ struct LoadedScript {
 }
 
 /// controls a script run
-// what does this even do?
 #[derive(Clone)]
 pub struct RunController {
-    pub context: rquickjs::AsyncContext,
-    pub run: Arc<Run>,
-    pub stop_signal: Arc<AtomicBool>,
+    context: rquickjs::AsyncContext,
+    run: Arc<Run>,
+    stop_signal: Arc<AtomicBool>,
 }
 
 impl ChannelRuntime {
@@ -143,10 +144,6 @@ impl ChannelRuntime {
     }
 }
 
-pub enum ScriptInputData {
-    Manual { id: String },
-}
-
 #[derive(Debug, Default)]
 pub struct ScriptExtracted {
     pub metadata: ScriptMetadata,
@@ -165,8 +162,8 @@ impl LoadedScript {
 
         async_with!(context => |ctx| {
             // Set up the glue classes
-            let _ = rquickjs::Class::<glue::ScriptRegister>::define(&ctx.globals());
-            let _ = rquickjs::Class::<glue::InputBuilder>::define(&ctx.globals());
+            let _ = rquickjs::Class::<glue::register::ScriptRegister>::define(&ctx.globals());
+            let _ = rquickjs::Class::<glue::register::InputBuilder>::define(&ctx.globals());
 
             // Set up __registry for callbacks and inputs (used by InputBuilder::run)
             let registry = rquickjs::Object::new(ctx.clone()).unwrap();
@@ -176,7 +173,7 @@ impl LoadedScript {
             registry.set("inputs", inputs).unwrap();
             ctx.globals().set("__registry", registry).unwrap();
 
-            let controller = rquickjs::Class::instance(ctx.clone(), glue::ScriptRegister {}).unwrap();
+            let controller = rquickjs::Class::instance(ctx.clone(), glue::register::ScriptRegister {}).unwrap();
 
             // SAFETY: the bytecode was compiled ourselves in `load_script`
             let raw_module = unsafe { rquickjs::Module::load(ctx.clone(), &self.bytecode).unwrap() };
@@ -253,11 +250,7 @@ impl LoadedScript {
     }
 
     /// create a new run for this script
-    pub async fn spawn(
-        &self,
-        rt: &ChannelRuntime,
-        input: ScriptInputData,
-    ) -> Result<RunController> {
+    pub async fn spawn(&self, rt: &ChannelRuntime, input: RunInput) -> Result<RunController> {
         let context = rquickjs::AsyncContext::full(&rt.runtime).await.unwrap();
 
         rt.active_instruction_count.store(0, Ordering::Relaxed);
@@ -268,13 +261,13 @@ impl LoadedScript {
         let channel_id = rt.channel_id;
         let script_id = self.script_id;
 
-        // TODO: mark this run as an "extraction run"
         let run = Arc::new(Run {
             id: run_id,
             script_id,
             created_at,
             stopped_at: None,
             status: RunStatus::Creating,
+            input: input.clone(),
         });
         state.data().script_run_create(&run).await?;
         let run_for_ctl = run.clone();
@@ -378,7 +371,7 @@ impl LoadedScript {
                         );
                     }
                 };
-            "#).unwrap();
+            "#)?;
 
             // update status to Active
             let mut data = state.data();
@@ -391,6 +384,7 @@ impl LoadedScript {
                     created_at,
                     stopped_at: None,
                     status: RunStatus::Active,
+                    input: (*run).input.clone(),
                 },
             }).await;
 
@@ -429,18 +423,21 @@ impl LoadedScript {
 
                     if let Some(reg_val) = get_export("register") {
                         if let Some(func) = reg_val.into_function() {
-                            let _ = rquickjs::Class::<glue::ScriptRegister>::define(&ctx.globals());
-                            let _ = rquickjs::Class::<glue::InputBuilder>::define(&ctx.globals());
-                            let controller = rquickjs::Class::instance(ctx.clone(), glue::ScriptRegister {}).unwrap();
+                            let _ = rquickjs::Class::<glue::register::ScriptRegister>::define(&ctx.globals());
+                            let _ = rquickjs::Class::<glue::register::InputBuilder>::define(&ctx.globals());
+                            let controller = rquickjs::Class::instance(ctx.clone(), glue::register::ScriptRegister {}).unwrap();
                             let _ = func.call::<_, ()>((controller, ));
                         }
                     }
 
                     // if we have a manual trigger, call the callback
-                    let ScriptInputData::Manual { id } = input;
+                    let trigger_id = match &input {
+                        RunInput::Trigger { id } => id.clone(),
+                        RunInput::Extraction => "default".to_string(),
+                    };
                     let registry = ctx.globals().get::<_, rquickjs::Object>("__registry").unwrap();
                     let callbacks = registry.get::<_, rquickjs::Object>("callbacks").unwrap();
-                    if let Ok(func) = callbacks.get::<_, rquickjs::Function>(id) {
+                    if let Ok(func) = callbacks.get::<_, rquickjs::Function>(&trigger_id) {
                         let _ = func.call::<_, ()>(());
                     }
 
@@ -463,6 +460,7 @@ impl LoadedScript {
                             created_at,
                             stopped_at: Some(Time::now_utc()),
                             status: RunStatus::Exited,
+                            input: (*run).input.clone(),
                         },
                     }).await;
                 }
@@ -486,6 +484,7 @@ impl LoadedScript {
                             created_at,
                             stopped_at: Some(Time::now_utc()),
                             status: RunStatus::Crashed,
+                            input: (*run).input.clone(),
                         },
                     }).await;
                     return rquickjs::Result::Err(e);
@@ -522,6 +521,11 @@ impl LoadedScript {
 impl RunController {
     pub fn to_run(&self) -> Run {
         (*self.run).clone()
+    }
+
+    /// stop this run
+    pub fn stop(&self) {
+        self.stop_signal.store(true, Ordering::Relaxed);
     }
 
     // dubious apis, unsure about them
@@ -748,16 +752,7 @@ impl ServiceScripts {
 
     /// create a new script syncer for a session
     pub fn create_syncer(&self, conn_id: ConnectionId) -> ScriptSyncer {
-        let (query_tx, query_rx) = tokio::sync::watch::channel(None);
-        ScriptSyncer {
-            s: self.state.clone(),
-            query_tx,
-            query_rx,
-            current_rx: None,
-            conn_id,
-            pending_sync: VecDeque::new(),
-            user_id: None,
-        }
+        ScriptSyncer::new(Arc::clone(&self.state), conn_id)
     }
 
     /// spawn a script
@@ -765,7 +760,7 @@ impl ServiceScripts {
         &self,
         channel_id: ChannelId,
         script_id: ScriptId,
-        input: ScriptInputData,
+        input: RunInput,
     ) -> Result<RunController> {
         let srv = self.state.services();
         let mut data = self.state.data();
@@ -786,6 +781,8 @@ impl ServiceScripts {
         let script = rt.load_script(script_id, "strobbery", source).await?;
         let ctl = script.spawn(&rt, input).await?;
 
+        // TODO: create a run record in the database
+
         rt.runs.insert(ctl.run.id, ctl.clone());
 
         Ok(ctl)
@@ -802,7 +799,7 @@ impl ServiceScripts {
 
         let ctl = rt.runs.remove(&run_id).ok_or(Error::NotFound)?;
         let (_, ctl) = ctl;
-        ctl.stop_signal.store(true, Ordering::Relaxed);
+        ctl.stop();
 
         let mut data = self.state.data();
         let _ = data
@@ -819,125 +816,12 @@ impl ServiceScripts {
                     created_at: ctl.run.created_at,
                     stopped_at: Some(Time::now_utc()),
                     status: RunStatus::Stopped,
+                    input: ctl.run.input.clone(),
                 },
             },
         )
         .await;
 
         Ok(())
-    }
-}
-
-// copied from document syncer, probably need to review this code
-/// Handles script synchronization for a single client connection.
-///
-/// This struct manages the lifecycle of script subscriptions for a connection,
-/// including subscribing/unsubscribing to script channels, broadcasting log
-/// lines and metrics, and tracking run events.
-pub struct ScriptSyncer {
-    /// Reference to the server state for accessing services
-    s: Arc<ServerStateInner>,
-
-    /// Sends subscription requests to switch to a different script.
-    /// When a client subscribes to a new script, the (channel_id, script_id) tuple is
-    /// sent through this channel.
-    query_tx: tokio::sync::watch::Sender<Option<(ChannelId, ScriptId)>>,
-
-    /// Receives subscription requests from `query_tx`. The poll() loop monitors
-    /// this receiver for changes. When a new query arrives, it sets up a
-    /// subscription to the requested script and moves the subscription to `current_rx`.
-    query_rx: tokio::sync::watch::Receiver<Option<(ChannelId, ScriptId)>>,
-
-    /// The active script subscription. Contains the current (channel_id, script_id) tuple
-    /// and a broadcast receiver for receiving script events (logs, metrics, runs).
-    current_rx: Option<((ChannelId, ScriptId), broadcast::Receiver<MessageSync>)>,
-
-    /// The connection ID associated with this syncer, used to filter out
-    /// self-originated events.
-    conn_id: ConnectionId,
-
-    /// Queue of pending sync messages to be sent to the client.
-    pending_sync: VecDeque<MessageSync>,
-
-    /// The user ID of the authenticated user.
-    user_id: Option<UserId>,
-}
-
-impl ScriptSyncer {
-    pub async fn set_user_id(&mut self, user_id: Option<UserId>) {
-        self.user_id = user_id;
-    }
-
-    /// Set the script to subscribe to.
-    pub async fn set_context_id(&self, channel_id: ChannelId, script_id: ScriptId) -> Result<()> {
-        self.query_tx
-            .send(Some((channel_id, script_id)))
-            .map_err(|_| Error::Internal("query channel closed".to_string()))?;
-        Ok(())
-    }
-
-    /// Check if client is actively subscribed to a script.
-    pub fn is_subscribed(&self, channel_id: &ChannelId, script_id: &ScriptId) -> bool {
-        self.current_rx
-            .as_ref()
-            .map(|((current_channel, current_script), _)| {
-                current_channel == channel_id && current_script == script_id
-            })
-            .unwrap_or(false)
-    }
-
-    pub async fn poll(&mut self) -> Result<MessageSync> {
-        loop {
-            if let Some(msg) = self.pending_sync.pop_front() {
-                return Ok(msg);
-            }
-
-            if self.query_rx.has_changed().unwrap_or(false) {
-                let _ = self.query_rx.borrow_and_update();
-                let query = self.query_rx.borrow().clone();
-
-                match query {
-                    Some((channel_id, script_id)) => {
-                        let rx = self
-                            .s
-                            .services()
-                            .scripts
-                            .subscribe_channel(channel_id)
-                            .await?;
-                        self.current_rx = Some(((channel_id, script_id), rx));
-
-                        return Ok(MessageSync::ScriptSubscribed {
-                            channel_id,
-                            script_id,
-                            connection_id: self.conn_id,
-                        });
-                    }
-                    None => {
-                        self.current_rx = None;
-                        continue;
-                    }
-                }
-            }
-
-            if let Some(((_channel_id, _script_id), rx)) = &mut self.current_rx {
-                tokio::select! {
-                    res = rx.recv() => {
-                        match res {
-                            Ok(msg) => {
-                                return Ok(msg);
-                            }
-                            Err(_) => continue,
-                        }
-                    }
-                    _ = self.query_rx.changed() => continue,
-                }
-            } else {
-                self.query_rx
-                    .changed()
-                    .await
-                    .map_err(|_| Error::Internal("query channel closed".to_string()))?;
-                continue;
-            }
-        }
     }
 }

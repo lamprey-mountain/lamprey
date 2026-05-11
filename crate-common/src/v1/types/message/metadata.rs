@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+// TODO: rename to Metadata, this isnt just used for messages
 /// arbitrary key-value metadata included for a message.
 ///
 /// - max 8 keys
