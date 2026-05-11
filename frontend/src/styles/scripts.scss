@@ -1,5 +1,259 @@
 @use "./util.scss" as *;
 
 .scripts {
-  // TODO
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	width: 100%;
+	background-color: $bg-200;
+	overflow: hidden;
+}
+
+.pane-container {
+	/* display: flex; */
+	/* flex-direction: column; */
+	/* height: 100%; */
+	/* width: 100%; */
+	/* overflow: hidden; */
+	/* position: relative; */
+}
+
+.split-horizontal {
+	display: flex;
+	flex-direction: row;
+	height: 100%;
+	width: 100%;
+
+	& > .pane-container + .pane-container {
+		border-left: 1px solid $sep-500;
+	}
+}
+
+.split-vertical {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	width: 100%;
+
+	& > .pane-container + .pane-container {
+		border-top: 1px solid $sep-500;
+	}
+}
+
+.script-pane {
+	display: flex;
+	flex-direction: column;
+	/* height: 100%; */
+	/* width: 100%; */
+
+	header {
+		display: flex;
+		align-items: center;
+		padding: 4px 8px;
+		background-color: $bg-150;
+		border-bottom: 1px solid $sep-300;
+		gap: 8px;
+		min-height: 32px;
+
+		nav {
+			font-size: 0.8rem;
+			color: $fg-400;
+		}
+
+		.title {
+			font-weight: bold;
+			flex: 1;
+			font-size: 0.9rem;
+		}
+
+		button.close {
+			color: $fg-500;
+			cursor: pointer;
+			padding: 0 4px;
+			font-size: 1.2rem;
+			line-height: 1;
+
+			&:hover {
+				color: $fg-100;
+			}
+		}
+	}
+
+	.pane-content {
+		flex: 1;
+		overflow: auto;
+		position: relative;
+	}
+}
+
+.script-list {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	padding: 16px;
+	gap: 16px;
+	overflow-y: auto;
+
+	header {
+		input {
+			width: 100%;
+			padding: 4px 8px;
+			background-color: $bg-150;
+			border: solid $sep-300 1px;
+			border-radius: 2px;
+
+			&:focus {
+				border-color: $link-500;
+			}
+		}
+	}
+
+	ul {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+
+		li {
+			button {
+				width: 100%;
+				padding: 8px;
+				background-color: $bg-300;
+				border: 1px solid $sep-400;
+				border-radius: 2px;
+				cursor: pointer;
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+
+				&:hover {
+					background-color: $bg-200;
+				}
+
+				.name {
+					font-weight: bold;
+					color: $fg-300;
+				}
+
+				.description {
+					font-size: 0.85rem;
+					color: $fg-200;
+				}
+			}
+		}
+	}
+}
+
+.script-inputs {
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	overflow-y: auto;
+
+	section {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+
+		h3 {
+			font-size: 0.75rem;
+			color: $fg-500;
+			font-weight: bold;
+		}
+	}
+
+	.input-list {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+
+		.script-input {
+			display: flex;
+
+			&[data-input-type="Manual"] {
+				color: $color-blue;
+			}
+		}
+
+		.script-input > .inner {
+			flex: 1;
+			padding: 4px 8px;
+			background-color: $bg-300;
+			border: 1px solid $sep-500;
+			cursor: pointer;
+
+			&:hover {
+				background-color: $bg-100;
+			}
+		}
+	}
+
+	.run-list {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+
+		li {
+			display: flex;
+			align-items: center;
+			padding: 4px 8px;
+			background-color: $bg-150;
+			border: 1px solid $sep-400;
+			border-radius: 4px;
+
+			.run-item {
+				.run-info {
+					display: flex;
+					gap: 8px;
+					align-items: start;
+
+					.status {
+						font-size: 0.65rem;
+						padding: 2px 4px;
+						border-radius: 4px;
+						color: $bg-100;
+						background-color: $bg-400;
+						text-transform: uppercase;
+						font-weight: bold;
+
+						&[data-status="Active"] {
+							color: $color-blue;
+						}
+
+						&[data-status="Exited"] {
+							color: $color-green;
+						}
+
+						&[data-status="Crashed"] {
+							color: $color-red;
+						}
+
+						&[data-status="Borked"] {
+							color: $color-orange;
+						}
+
+						&[data-status="Creating"] {
+							color: $color-teal;
+						}
+					}
+
+					time {
+						color: $fg-400;
+						font-size: 0.85rem;
+					}
+				}
+
+				& > menu {
+					font-size: 0.8rem;
+					color: $fg-400;
+					font-weight: bold;
+					cursor: pointer;
+
+					& button:hover {
+						text-decoration: underline;
+					}
+				}
+			}
+		}
+	}
 }

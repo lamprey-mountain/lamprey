@@ -4,8 +4,11 @@ import {
 	type ParentProps,
 	useContext,
 } from "solid-js";
+import type { Script } from "ts-sdk";
 
 type ScriptContextT = {
+	channel_id: string;
+	script?: Script;
 	root?: ScriptPane;
 
 	createPane(create: ScriptPaneCreate): void;
@@ -36,32 +39,27 @@ export type ScriptPaneType =
 	| { type: "run_logs"; script_id: string; run_id: string };
 // future: run_traces (needs api design and backend support first)
 
-export type ScriptPaneCreate = {
-	/** unque identifier for this pane, if empty create one automatically */
+export type ScriptPaneCreate = (
+	| { type: "split_horizontal" }
+	| { type: "split_vertical" }
+	| { type: "script_code"; script_id: string }
+	| { type: "script_inputs"; script_id: string }
+	| { type: "script_preview"; script_id: string }
+	| { type: "run_logs"; script_id: string; run_id: string }
+) & {
+	/** unique identifier for this pane, if empty create one automatically */
 	id?: number;
 
 	parentId?: number;
-
-	type: ScriptPaneType["type"];
 };
 
 export const ScriptContext = createContext<ScriptContextT>();
-
-export const ScriptContextProvider = (props: ParentProps) => {
-	const ctx = createScriptContext();
-
-	return (
-		<ScriptContext.Provider value={ctx}>
-			{props.children}
-		</ScriptContext.Provider>
-	);
-};
 
 // maybe don't use a global counter? this is probably fine though.
 let nextPaneId = 1;
 const assignTabId = () => nextPaneId++;
 
-const findParent = (
+const _findParent = (
 	root: ScriptPane,
 	parentId: number,
 ): ScriptPane | undefined => {
@@ -71,7 +69,7 @@ const findParent = (
 			? root.children
 			: [];
 	for (const child of children) {
-		const found = findParent(child, parentId);
+		const found = _findParent(child, parentId);
 		if (found) return found;
 	}
 	return undefined;
@@ -115,7 +113,7 @@ const removeTab = (root: ScriptPane, tabId: number): ScriptPane | null => {
 	return root;
 };
 
-const removeChildByParent = (
+const _removeChildByParent = (
 	root: ScriptPane,
 	parentId: number,
 	tabId: number,
@@ -141,14 +139,14 @@ const removeChildByParent = (
 		return {
 			...root,
 			children: root.children.map((c) =>
-				removeChildByParent(c, parentId, tabId),
+				_removeChildByParent(c, parentId, tabId),
 			),
 		};
 	}
 	return root;
 };
 
-const replaceTab = (
+const _replaceTab = (
 	root: ScriptPane,
 	tabId: number,
 	replacement: ScriptPane,
@@ -158,16 +156,17 @@ const replaceTab = (
 	if (type === "split_horizontal" || type === "split_vertical") {
 		return {
 			...root,
-			children: root.children.map((c) => replaceTab(c, tabId, replacement)),
+			children: root.children.map((c) => _replaceTab(c, tabId, replacement)),
 		};
 	}
 	return root;
 };
 
-export const createScriptContext = () => {
+export const createScriptContext = (channel_id: string) => {
 	const [root, setRoot] = createSignal<ScriptPane | undefined>();
 
 	const ctx: ScriptContextT = {
+		channel_id,
 		get root() {
 			return root();
 		},
@@ -177,6 +176,10 @@ export const createScriptContext = () => {
 			const tab: ScriptPane = {
 				id: tabId,
 				...create,
+				...(create.type === "split_horizontal" ||
+				create.type === "split_vertical"
+					? { children: [] }
+					: {}),
 			} as ScriptPane;
 			setRoot((prev) => {
 				if (!prev) return tab;
@@ -207,8 +210,12 @@ export const createScriptContext = () => {
 						node.type === "script_inputs" ||
 						node.type === "script_preview"
 					) {
-						if ((node as any).script_id === scriptId) {
-							return { type: "script_code", script_id: scriptId, id: node.id };
+						if (node.script_id === scriptId) {
+							return {
+								type: "script_code",
+								script_id: scriptId,
+								id: node.id,
+							} as ScriptPane;
 						}
 						return node;
 					}

@@ -21,32 +21,28 @@ export class ScriptsService extends BaseService<Script> {
 			throw new Error("Invalid script fetch ID, expected channel_id:script_id");
 		}
 
-		return await this.retryWithBackoff<Script>(() =>
-			(this.client.http as any).GET(
-				"/api/v1/channel/{channel_id}/script/{script_id}",
-				{
-					params: { path: { channel_id, script_id } },
-				},
-			),
+		return await this.retryWithBackoff(() =>
+			this.client.http.GET("/api/v1/channel/{channel_id}/script/{script_id}", {
+				params: { path: { channel_id, script_id } },
+			}),
 		);
 	}
 
 	async list(channel_id: string): Promise<PaginationResponse<Script>> {
-		const data = await this.retryWithBackoff<PaginationResponse<Script>>(() =>
-			(this.client.http as any).GET("/api/v1/channel/{channel_id}/script", {
-				params: { path: { channel_id } },
+		const data = await this.retryWithBackoff(() =>
+			this.client.http.GET("/api/v1/channel/{channel_id}/script", {
+				params: { path: { channel_id }, query: { limit: 1024 } },
 			}),
 		);
-		const scripts = (data as any).scripts as PaginationResponse<Script>;
-		this.upsertBulk(scripts.items);
-		return scripts;
+		this.upsertBulk(data.items);
+		return data;
 	}
 
 	async create(channel_id: string, script: ScriptCreate): Promise<Script> {
-		const data = await this.retryWithBackoff<Script>(() =>
-			(this.client.http as any).POST("/api/v1/channel/{channel_id}/script", {
+		const data = await this.retryWithBackoff(() =>
+			this.client.http.POST("/api/v1/channel/{channel_id}/script", {
 				params: { path: { channel_id } },
-				body: { script },
+				body: script,
 			}),
 		);
 		this.upsert(data);
@@ -55,7 +51,7 @@ export class ScriptsService extends BaseService<Script> {
 
 	async deleteScript(channel_id: string, script_id: string): Promise<void> {
 		await this.retryWithBackoff(() =>
-			(this.client.http as any).DELETE(
+			this.client.http.DELETE(
 				"/api/v1/channel/{channel_id}/script/{script_id}",
 				{
 					params: { path: { channel_id, script_id } },

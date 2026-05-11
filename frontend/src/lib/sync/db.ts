@@ -12,6 +12,9 @@ import type {
 	Notification,
 	PushInfo,
 	RoomBan,
+	Run,
+	RunLogEntry,
+	Script,
 	Tag,
 	ThreadMember,
 	Webhook,
@@ -111,6 +114,21 @@ export interface ApiDB extends DBSchema {
 		value: AuditLogEntry;
 		key: string;
 	};
+	script: {
+		value: Script;
+		key: string;
+		indexes: { channel_id: string };
+	};
+	script_run: {
+		value: Run;
+		key: string;
+		indexes: { script_id: string };
+	};
+	script_log: {
+		value: RunLogEntry;
+		key: [string, number];
+		indexes: { run_id: string };
+	};
 }
 
 interface IDBMessageRange {
@@ -184,6 +202,21 @@ export const migrations: Array<Migration> = [
 			});
 			db.createObjectStore("tag", { keyPath: "id" });
 			db.createObjectStore("audit_log", { keyPath: "id" });
+		},
+	},
+	{
+		description: "stores for scripts, runs, and logs",
+		migrate(db) {
+			const script = db.createObjectStore("script", { keyPath: "id" });
+			script.createIndex("channel_id", "channel_id");
+
+			const run = db.createObjectStore("script_run", { keyPath: "id" });
+			run.createIndex("script_id", "script_id");
+
+			const log = db.createObjectStore("script_log", {
+				keyPath: ["run_id", "seq"],
+			});
+			log.createIndex("run_id", "run_id");
 		},
 	},
 ];

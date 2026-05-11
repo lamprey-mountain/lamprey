@@ -1,4 +1,10 @@
-import type { PaginationResponse, Run, RunId, ScriptId } from "sdk";
+import type {
+	PaginationResponse,
+	Run,
+	RunCreateTrigger,
+	RunId,
+	ScriptId,
+} from "sdk";
 import { BaseService } from "../core/Service";
 
 export class ScriptRunsService extends BaseService<Run> {
@@ -17,8 +23,8 @@ export class ScriptRunsService extends BaseService<Run> {
 			);
 		}
 
-		return await this.retryWithBackoff<Run>(() =>
-			(this.client.http as any).GET(
+		return await this.retryWithBackoff(() =>
+			this.client.http.GET(
 				"/api/v1/channel/{channel_id}/script/{script_id}/run/{run_id}",
 				{
 					params: { path: { channel_id, script_id, run_id } },
@@ -31,30 +37,29 @@ export class ScriptRunsService extends BaseService<Run> {
 		channel_id: string,
 		script_id: ScriptId,
 	): Promise<PaginationResponse<Run>> {
-		const data = await this.retryWithBackoff<PaginationResponse<Run>>(() =>
-			(this.client.http as any).GET(
+		const data = await this.retryWithBackoff(() =>
+			this.client.http.GET(
 				"/api/v1/channel/{channel_id}/script/{script_id}/run",
 				{
 					params: { path: { channel_id, script_id } },
 				},
 			),
 		);
-		const runs = (data as any).runs as PaginationResponse<Run>;
-		this.upsertBulk(runs.items);
-		return runs;
+		this.upsertBulk(data.items);
+		return data;
 	}
 
 	async trigger(
 		channel_id: string,
 		script_id: ScriptId,
-		run: any,
+		create: RunCreateTrigger,
 	): Promise<Run> {
-		const data = await this.retryWithBackoff<Run>(() =>
-			(this.client.http as any).POST(
+		const data = await this.retryWithBackoff(() =>
+			this.client.http.POST(
 				"/api/v1/channel/{channel_id}/script/{script_id}/trigger",
 				{
 					params: { path: { channel_id, script_id } },
-					body: { run },
+					body: create,
 				},
 			),
 		);
@@ -68,11 +73,10 @@ export class ScriptRunsService extends BaseService<Run> {
 		run_id: RunId,
 	): Promise<void> {
 		await this.retryWithBackoff(() =>
-			(this.client.http as any).POST(
+			this.client.http.POST(
 				"/api/v1/channel/{channel_id}/script/{script_id}/run/{run_id}/stop",
 				{
 					params: { path: { channel_id, script_id, run_id } },
-					body: {},
 				},
 			),
 		);

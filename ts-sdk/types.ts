@@ -119,17 +119,8 @@ export type ScriptId = string;
 export type RunId = string;
 export type ScriptVerId = string;
 
-export type Script = {
-	id: ScriptId;
-	channel_id: string;
-	creator_id: string;
-	created_at: string;
-	deleted_at?: string | null;
-	latest_version: ScriptVersion;
-	status: ScriptStatus;
-	permissions: string[];
-	inputs: any[];
-};
+export type Script = components["schemas"]["Script"];
+export type RunCreateTrigger = components["schemas"]["RunCreateTrigger"];
 
 export type ScriptStatus = "Creating" | "Active" | "Borked" | "Deleted";
 
