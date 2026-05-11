@@ -7,7 +7,7 @@ use thiserror::Error;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{application::Scope, Permission};
+use crate::v1::types::{application::Scope, Permission, RunId, ScriptId};
 
 mod http_conversions;
 
@@ -66,6 +66,11 @@ pub struct ApiError {
     /// ratelimit that you ran into
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub ratelimit: Option<Ratelimit>,
+
+    /// errors with your script
+    // TODO: use this
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
+    pub script: Vec<ScriptError>,
 }
 
 /// warnings that require forcing
@@ -188,6 +193,37 @@ pub struct Ratelimit {
     ///
     /// if false, this only affects this bucket
     pub global: bool,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct ScriptError {
+    pub message: String,
+    pub stack: String,
+
+    #[cfg_attr(feature = "serde", serde(rename = "type"))]
+    pub ty: ScriptErrorType,
+
+    pub line: u64,
+    pub column: u64,
+
+    pub script_id: ScriptId,
+    pub run_id: RunId,
+}
+
+#[derive(Debug, Clone)]
+// #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum ScriptErrorType {
+    Type,
+    Syntax,
+    Internal,
+    Generic,
+    Reference,
+    Range,
+    // capability/permission error?
 }
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
@@ -893,23 +929,22 @@ pub enum ErrorCode {
     /// cannot manage remote user
     #[error("cannot manage remote user")]
     CannotManageRemoteUser,
+
+    /// script error
+    #[error("script error")]
+    ScriptError,
 }
 
 impl ApiError {
+    #[inline]
     pub fn with_message(code: ErrorCode, message: String) -> Self {
         Self {
             message,
-            code,
-            fields: vec![],
-            required_permissions: vec![],
-            required_permissions_server: vec![],
-            required_scopes: vec![],
-            warnings: vec![],
-            automod_message: None,
-            ratelimit: None,
+            ..Self::from_code(code)
         }
     }
 
+    #[inline]
     pub fn from_code(code: ErrorCode) -> Self {
         Self {
             message: code.to_string(),
@@ -921,6 +956,7 @@ impl ApiError {
             warnings: vec![],
             automod_message: None,
             ratelimit: None,
+            script: vec![],
         }
     }
 

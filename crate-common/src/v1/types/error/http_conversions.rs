@@ -165,6 +165,7 @@ impl ErrorCode {
             ErrorCode::FlumeCommitted => StatusCode::FORBIDDEN,
             ErrorCode::MessageDoesntHaveFlume => StatusCode::NOT_FOUND,
             ErrorCode::CannotManageRemoteUser => StatusCode::FORBIDDEN,
+            ErrorCode::ScriptError => StatusCode::BAD_REQUEST,
         }
     }
 }

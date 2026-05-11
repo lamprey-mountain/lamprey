@@ -1,3 +1,7 @@
+use rquickjs::Exception;
+
+pub type Result<T> = ::core::result::Result<T, Error>;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[cfg(feature = "javascript")]
@@ -22,6 +26,20 @@ pub enum Error {
 
     #[error("extraction data is None")]
     ExtractionDataMissing,
+
+    #[error("runtime error: {message}")]
+    RuntimeError { message: String, stack: String },
 }
 
-pub type Result<T> = ::core::result::Result<T, Error>;
+impl Error {
+    pub fn from_exception<'js>(exception: Exception<'js>) -> Self {
+        Self::RuntimeError {
+            message: exception
+                .message()
+                .unwrap_or_else(|| "Unknown JS error".to_string()),
+            stack: exception
+                .stack()
+                .unwrap_or_else(|| "No stack trace".to_string()),
+        }
+    }
+}

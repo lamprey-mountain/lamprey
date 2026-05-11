@@ -189,7 +189,7 @@ impl Executor for JsExecutor {
             let events_sender_clone = events_sender.clone();
 
             let res = async_with!(context => |ctx| {
-                match exec_inner(ctx.clone(), script_id, run_id, input, events_sender_clone, script, ext_send).await {
+                match exec_inner(ctx.clone(), script_id, input, events_sender_clone, script, ext_send).await {
                     Ok(_) => Ok(()),
                     Err(err) => {
                         if let Some(exception) = ctx.catch().into_object().and_then(rquickjs::Exception::from_object) {
@@ -200,10 +200,11 @@ impl Executor for JsExecutor {
                                 stack = %exception.stack().unwrap_or_else(|| "No stack trace".to_string()),
                                 "script javascript exception"
                             );
+                            Err(Error::from_exception(exception))
                         } else {
                             error!(%script_id, %run_id, "script runtime error: {:?}", err);
+                            Err(err)
                         }
-                        Err(err)
                     }
                 }
             })
@@ -230,14 +231,13 @@ fn setup_environment(
     ctx: &Ctx<'_>,
     sender: broadcast::Sender<Arc<ExecutionEvent>>,
     script_id: ScriptId,
-    run_id: RunId,
 ) -> Result<()> {
     let globals = ctx.globals();
 
     rquickjs::Class::<glue::register::ScriptRegister>::define(&globals)?;
     rquickjs::Class::<glue::register::InputBuilder>::define(&globals)?;
 
-    globals.set("log", glue::log::Logger::new(sender, script_id, run_id))?;
+    globals.set("log", glue::log::Logger::new(sender, script_id))?;
 
     let registry = rquickjs::Object::new(ctx.clone())?;
     registry.set("callbacks", rquickjs::Object::new(ctx.clone())?)?;
@@ -250,13 +250,12 @@ fn setup_environment(
 async fn exec_inner<'js>(
     ctx: Ctx<'js>,
     script_id: ScriptId,
-    run_id: RunId,
     input: RunInput,
     events_sender: broadcast::Sender<Arc<ExecutionEvent>>,
     script: Arc<JsCompiledScript>,
     ext_send: tokio::sync::watch::Sender<Option<ScriptExtracted>>,
 ) -> Result<()> {
-    setup_environment(&ctx, events_sender.clone(), script_id, run_id)?;
+    setup_environment(&ctx, events_sender.clone(), script_id)?;
 
     events_sender
         .send(Arc::new(ExecutionEvent::Status(RunStatus::Active)))

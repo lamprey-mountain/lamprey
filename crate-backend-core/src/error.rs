@@ -172,6 +172,9 @@ pub enum Error {
 
     #[error("frontend response builder error: {0}")]
     FrontendResponseBuilder(String),
+
+    #[error("script error: {0}")]
+    Script(#[from] lamprey_script::Error),
 }
 
 impl From<sqlx::Error> for Error {
@@ -227,6 +230,10 @@ impl Error {
             Error::FrontendAssetInvalidUtf8(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::FrontendTemplate(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::FrontendResponseBuilder(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Script(s) => match s {
+                lamprey_script::Error::RuntimeError { .. } => StatusCode::BAD_REQUEST,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            },
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

@@ -19,6 +19,7 @@ chrono = "0.4.44"
 chrono-tz = "0.10.4"
 clap = { version = "4.5.60", features = ["derive"] }
 common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common", features = ["utoipa", "validator"] }
+lamprey-script = { package = "lamprey-script", version = "0.1.0", path = "../crate-script" }
 csscolorparser = { version = "0.7.2", features = ["lab"] }
 dashmap = "6.1.0"
 decancer = "3.3.3"

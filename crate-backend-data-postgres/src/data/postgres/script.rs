@@ -411,18 +411,17 @@ impl DataScript for Postgres {
             RunLogLevel::Error => 4,
         };
 
+        let source_json = serde_json::to_value(&entry.source)?;
         let attrs = serde_json::to_value(&entry.attributes)?;
 
         query!(
             r#"
-            INSERT INTO script_log (run_id, line_id, created_at, level, target, span_start, span_end, content, attributes)
-            VALUES ($1, (SELECT COALESCE(MAX(line_id), -1) + 1 FROM script_log WHERE run_id = $1), CURRENT_TIMESTAMP, $2, $3, $4, $5, $6, $7)
+            INSERT INTO script_log (run_id, line_id, created_at, level, source, content, attributes)
+            VALUES ($1, (SELECT COALESCE(MAX(line_id), -1) + 1 FROM script_log WHERE run_id = $1), CURRENT_TIMESTAMP, $2, $3, $4, $5)
             "#,
             *run_id,
             level_int,
-            &entry.source.target,
-            entry.source.span_start as i64,
-            entry.source.span_end as i64,
+            &source_json,
             &entry.content,
             attrs,
         )
@@ -447,7 +446,7 @@ impl DataScript for Postgres {
                 "sql/script_log_list.sql",
                 run_id_uuid,
                 p.after as i64,
-                p.before as i64,
+                p.before.min(i64::MAX as u64) as i64,
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
@@ -466,15 +465,7 @@ impl DataScript for Postgres {
                     id: row.line_id as u64,
                     created_at: row.created_at.into(),
                     level,
-                    source: common::v1::types::script::RunLogSource {
-                        // TODO: return this
-                        script_id: ScriptId::from(uuid::Uuid::nil()),
-                        run_id,
-                        trace_id: None, // TODO
-                        target: row.target,
-                        span_start: row.span_start as u64,
-                        span_end: row.span_end as u64,
-                    },
+                    source: serde_json::from_value(row.source).expect("invalid data in db"),
                     content: row.content,
                     attributes: serde_json::from_value(row.attributes).unwrap_or_default(),
                 }

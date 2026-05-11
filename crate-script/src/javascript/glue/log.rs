@@ -4,10 +4,11 @@ use common::v1::types::{
     metadata::MessageMetadata,
     script::{RunLogEntry, RunLogLevel, RunLogSource},
     util::Time,
-    RunId, ScriptId,
+    ScriptId,
 };
 use rquickjs::{
     class::{Trace, Tracer},
+    function::{FromParam, ParamRequirement},
     Ctx, FromJs, JsLifetime,
 };
 use tokio::sync::broadcast::Sender;
@@ -21,7 +22,6 @@ use crate::engine::ExecutionEvent;
 pub struct Logger {
     sender: Sender<Arc<ExecutionEvent>>,
     script_id: ScriptId,
-    run_id: RunId,
 }
 
 // none of these fields need to be traced
@@ -30,16 +30,73 @@ impl<'js> Trace<'js> for Logger {
 }
 
 impl Logger {
-    pub(crate) fn new(
-        sender: Sender<Arc<ExecutionEvent>>,
-        script_id: ScriptId,
-        run_id: RunId,
-    ) -> Self {
-        Self {
-            sender,
-            script_id,
-            run_id,
-        }
+    pub(crate) fn new(sender: Sender<Arc<ExecutionEvent>>, script_id: ScriptId) -> Self {
+        Self { sender, script_id }
+    }
+}
+
+struct LoggerParams {
+    content: String,
+    attrs: MessageMetadata,
+}
+
+impl<'js> FromParam<'js> for LoggerParams {
+    fn param_requirement() -> ParamRequirement {
+        ParamRequirement::single().combine(ParamRequirement::optional())
+    }
+
+    fn from_param<'a>(
+        params: &mut rquickjs::function::ParamsAccessor<'a, 'js>,
+    ) -> rquickjs::Result<Self> {
+        let content = params
+            .arg()
+            .into_string()
+            .ok_or(rquickjs::Error::new_from_js("your data", "string"))?
+            .to_string()?;
+
+        let attrs: HashMap<String, String> = match params.arg() {
+            m if m.is_null() || m.is_undefined() => HashMap::new(),
+            m => HashMap::from_js(params.ctx(), m)?,
+        };
+
+        let attrs = MessageMetadata(attrs);
+        attrs.validate().map_err(|err| {
+            rquickjs::Error::new_from_js_message("object", "MessageMetadata", err.to_string())
+        })?;
+
+        Ok(Self { content, attrs })
+    }
+}
+
+impl Logger {
+    fn log_impl<'js>(
+        &self,
+        ctx: Ctx<'js>,
+        level: RunLogLevel,
+        params: LoggerParams,
+    ) -> rquickjs::Result<()> {
+        // TODO: get source span/line/column for logging
+        // this kinda works: dbg!(Exception::from_message(ctx.clone(), "testing"));
+        // but i'd have to manually parse the stack trace
+
+        let entry = RunLogEntry {
+            id: 0,
+            created_at: Time::now_utc(),
+            level,
+            source: RunLogSource::Script {
+                script_id: self.script_id,
+                trace_id: None,
+                target: "script".to_string(),
+                span_start: 0,
+                span_end: 0,
+            },
+            content: params.content,
+            attributes: params.attrs,
+        };
+
+        let _ = self.sender.send(Arc::new(ExecutionEvent::Log(entry)));
+
+        Ok(())
     }
 }
 
@@ -48,142 +105,26 @@ impl Logger {
     // maybe make this an actual tracer?
     // /// trace level log
     // fn trace(&self, _content: String, _metadata: rquickjs::Object<'_>, _ctx: Ctx<'_>) {
-    //     todo!()
+    //     self.log_impl(ctx, RunLogLevel::Trace, content, metadata)
     // }
 
     /// debug level log
-    fn debug<'js>(
-        &self,
-        content: String,
-        metadata: rquickjs::Value<'js>,
-        ctx: Ctx<'js>,
-    ) -> rquickjs::Result<()> {
-        let attrs: HashMap<String, String> = HashMap::from_js(&ctx, metadata)?;
-        let attrs = MessageMetadata(attrs);
-        attrs.validate().map_err(|err| {
-            rquickjs::Error::new_from_js_message("object", "MessageMetadata", err.to_string())
-        })?;
-
-        let entry = RunLogEntry {
-            id: 0, // will be filled in by db
-            created_at: Time::now_utc(),
-            level: RunLogLevel::Debug,
-            source: RunLogSource {
-                script_id: self.script_id,
-                run_id: self.run_id,
-                trace_id: None,
-                target: "script".to_string(),
-                span_start: 0, // TODO
-                span_end: 0,   // TODO
-            },
-            content,
-            attributes: attrs,
-        };
-
-        let _ = self.sender.send(Arc::new(ExecutionEvent::Log(entry)));
-
-        Ok(())
+    fn debug<'js>(&self, ctx: Ctx<'js>, params: LoggerParams) -> rquickjs::Result<()> {
+        self.log_impl(ctx, RunLogLevel::Debug, params)
     }
 
     /// info level log
-    fn info<'js>(
-        &self,
-        content: String,
-        metadata: rquickjs::Value<'js>,
-        ctx: Ctx<'js>,
-    ) -> rquickjs::Result<()> {
-        let attrs: HashMap<String, String> = HashMap::from_js(&ctx, metadata)?;
-        let attrs = MessageMetadata(attrs);
-        attrs.validate().map_err(|err| {
-            rquickjs::Error::new_from_js_message("object", "MessageMetadata", err.to_string())
-        })?;
-
-        let entry = RunLogEntry {
-            id: 0, // will be filled in by db
-            created_at: Time::now_utc(),
-            level: RunLogLevel::Info,
-            source: RunLogSource {
-                script_id: self.script_id,
-                run_id: self.run_id,
-                trace_id: None,
-                target: "script".to_string(),
-                span_start: 0, // TODO
-                span_end: 0,   // TODO
-            },
-            content,
-            attributes: attrs,
-        };
-
-        let _ = self.sender.send(Arc::new(ExecutionEvent::Log(entry)));
-
-        Ok(())
+    fn info<'js>(&self, ctx: Ctx<'js>, params: LoggerParams) -> rquickjs::Result<()> {
+        self.log_impl(ctx, RunLogLevel::Info, params)
     }
 
     /// warn level log
-    fn warn<'js>(
-        &self,
-        content: String,
-        metadata: rquickjs::Value<'js>,
-        ctx: Ctx<'js>,
-    ) -> rquickjs::Result<()> {
-        let attrs: HashMap<String, String> = HashMap::from_js(&ctx, metadata)?;
-        let attrs = MessageMetadata(attrs);
-        attrs.validate().map_err(|err| {
-            rquickjs::Error::new_from_js_message("object", "MessageMetadata", err.to_string())
-        })?;
-
-        let entry = RunLogEntry {
-            id: 0, // will be filled in by db
-            created_at: Time::now_utc(),
-            level: RunLogLevel::Warning,
-            source: RunLogSource {
-                script_id: self.script_id,
-                run_id: self.run_id,
-                trace_id: None,
-                target: "script".to_string(),
-                span_start: 0, // TODO
-                span_end: 0,   // TODO
-            },
-            content,
-            attributes: attrs,
-        };
-
-        let _ = self.sender.send(Arc::new(ExecutionEvent::Log(entry)));
-
-        Ok(())
+    fn warn<'js>(&self, ctx: Ctx<'js>, params: LoggerParams) -> rquickjs::Result<()> {
+        self.log_impl(ctx, RunLogLevel::Warning, params)
     }
 
     /// error level log
-    fn error<'js>(
-        &self,
-        content: String,
-        metadata: rquickjs::Value<'js>,
-        ctx: Ctx<'js>,
-    ) -> rquickjs::Result<()> {
-        let attrs: HashMap<String, String> = HashMap::from_js(&ctx, metadata)?;
-        let attrs = MessageMetadata(attrs);
-        attrs.validate().map_err(|err| {
-            rquickjs::Error::new_from_js_message("object", "MessageMetadata", err.to_string())
-        })?;
-
-        let entry = RunLogEntry {
-            id: 0, // will be filled in by db
-            created_at: Time::now_utc(),
-            level: RunLogLevel::Error,
-            source: RunLogSource {
-                script_id: self.script_id,
-                run_id: self.run_id,
-                trace_id: None,
-                target: "script".to_string(),
-                span_start: 0, // TODO
-                span_end: 0,   // TODO
-            },
-            content,
-            attributes: attrs,
-        };
-
-        let _ = self.sender.send(Arc::new(ExecutionEvent::Log(entry)));
-
-        Ok(())
+    fn error<'js>(&self, ctx: Ctx<'js>, params: LoggerParams) -> rquickjs::Result<()> {
+        self.log_impl(ctx, RunLogLevel::Error, params)
     }
 }
