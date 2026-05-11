@@ -540,7 +540,6 @@ pub enum ChannelType {
     /// a channel that holds documents
     Wiki,
 
-    // FIXME: add a sql migration for this
     /// a channel that holds scripts
     Scripts,
 }

@@ -236,7 +236,6 @@ pub enum Permission {
     /// can forcibly make other users join and leave rooms and gdms. can join any room and gdm.
     RoomJoinForce,
 
-    // FIXME: add a sql migration for these
     /// can create, edit, and delete scripts. can also stop runs.
     ScriptManage,
 
