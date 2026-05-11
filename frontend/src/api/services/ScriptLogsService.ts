@@ -1,67 +1,27 @@
 import { ReactiveMap } from "@solid-primitives/map";
 import type { PaginationResponse, RunId, RunLogEntry, ScriptId } from "sdk";
-import { batch } from "solid-js";
 import { BaseService } from "../core/Service";
-
-// FIXME: run_id and seq don't exist
 
 export class ScriptLogsService extends BaseService<RunLogEntry> {
 	protected cacheName = "script_log";
 
 	getKey(item: RunLogEntry): string {
-		return `${item.run_id}:${item.seq}`;
+		return item.id.toString();
 	}
+
 	private logsByRun = new ReactiveMap<string, string[]>();
 
-	protected override afterUpsert(log: RunLogEntry) {
-		const runId = log.run_id;
-		const logs = this.logsByRun.get(runId) ?? [];
-		const key = this.getKey(log);
-		if (!logs.includes(key)) {
-			// Insert while maintaining sequence order
-			// Usually we just append since logs arrive in order, but let's be safe
-			const newLogs = [...logs, key].sort((a, b) => {
-				const seqA = Number.parseInt(a.split(":")[1], 10);
-				const seqB = Number.parseInt(b.split(":")[1], 10);
-				return seqA - seqB;
-			});
-			this.logsByRun.set(runId, newLogs);
-		}
-	}
+	// add runId to logs since backend doesnt include it
+	private processLogs(runId: string, items: RunLogEntry[]) {
+		const keys = items.map((item) => this.getKey(item));
 
-	protected override afterUpsertBulk(logs: RunLogEntry[]) {
-		const byRun = new Map<string, string[]>();
-		for (const log of logs) {
-			const runId = log.run_id;
-			let s = byRun.get(runId);
-			if (!s) {
-				s = [...(this.logsByRun.get(runId) ?? [])];
-				byRun.set(runId, s);
-			}
-			const key = this.getKey(log);
-			if (!s.includes(key)) {
-				s.push(key);
-			}
-		}
-
-		batch(() => {
-			for (const [runId, ids] of byRun) {
-				const sortedIds = ids.sort((a, b) => {
-					const seqA = Number.parseInt(a.split(":")[1], 10);
-					const seqB = Number.parseInt(b.split(":")[1], 10);
-					return seqA - seqB;
-				});
-				this.logsByRun.set(runId, sortedIds);
-			}
+		const existing = this.logsByRun.get(runId) ?? [];
+		const merged = Array.from(new Set([...existing, ...keys])).sort((a, b) => {
+			return Number(a) - Number(b);
 		});
-	}
 
-	getLogsForRun(run_id: string): RunLogEntry[] {
-		const ids = this.logsByRun.get(run_id);
-		if (!ids) return [];
-		return ids
-			.map((id) => this.cache.get(id))
-			.filter((l): l is RunLogEntry => l != null);
+		this.logsByRun.set(runId, merged);
+		this.upsertBulk(items);
 	}
 
 	subscribe(channel_id: string, script_id: ScriptId) {
@@ -89,8 +49,16 @@ export class ScriptLogsService extends BaseService<RunLogEntry> {
 				},
 			),
 		);
-		this.upsertBulk(data.items);
+		this.processLogs(run_id, data.items);
 		return data;
+	}
+
+	getLogsForRun(run_id: string): RunLogEntry[] {
+		const ids = this.logsByRun.get(run_id);
+		if (!ids) return [];
+		return ids
+			.map((id) => this.cache.get(id))
+			.filter((l): l is RunLogEntry => l != null);
 	}
 
 	override clear() {

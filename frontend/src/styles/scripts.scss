@@ -81,7 +81,6 @@
 
 	.pane-content {
 		flex: 1;
-		overflow: auto;
 		position: relative;
 	}
 }
@@ -148,7 +147,6 @@
 	display: flex;
 	flex-direction: column;
 	gap: 16px;
-	overflow-y: auto;
 
 	section {
 		display: flex;
@@ -252,6 +250,201 @@
 					& button:hover {
 						text-decoration: underline;
 					}
+				}
+			}
+		}
+	}
+}
+
+.run-logs {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	gap: 8px;
+
+	& > .top {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 4px 8px;
+
+		.status {
+			font-size: 0.65rem;
+			padding: 2px 6px;
+			border-radius: 4px;
+			color: $bg-100;
+			background-color: $bg-400;
+			text-transform: uppercase;
+			font-weight: bold;
+
+			&[data-status="Active"] {
+				color: $color-blue;
+			}
+
+			&[data-status="Exited"] {
+				color: $color-green;
+			}
+
+			&[data-status="Crashed"] {
+				color: $color-red;
+			}
+
+			&[data-status="Borked"] {
+				color: $color-orange;
+			}
+
+			&[data-status="Creating"] {
+				color: $color-teal;
+			}
+		}
+
+		button {
+			font-size: 0.8rem;
+			padding: 2px 8px;
+			cursor: pointer;
+			background-color: $bg-300;
+			border: 1px solid $sep-400;
+			border-radius: 2px;
+			color: $fg-300;
+
+			&:hover {
+				background-color: $bg-200;
+			}
+		}
+	}
+
+	& > .log-filters {
+		display: flex;
+		gap: 4px;
+		margin: 2px 8px;
+		flex-wrap: wrap;
+
+		button {
+			font-size: 0.75rem;
+			padding: 2px 8px;
+			cursor: pointer;
+			background-color: $bg-300;
+			border: 1px solid $sep-400;
+			border-radius: 2px;
+			color: $fg-400;
+
+			&:hover {
+				background-color: $bg-200;
+				color: $fg-300;
+			}
+
+			&[aria-pressed="true"],
+			&:active {
+				background-color: $bg-400;
+				color: $fg-200;
+			}
+		}
+	}
+
+	ul[role="log"] {
+		flex: 1;
+		overflow-y: auto;
+		// FIXME: make this scrollable
+
+		li {
+			display: flex;
+			align-items: baseline;
+			padding: 4px 8px;
+			font-family: monospace;
+			font-size: 0.8rem;
+			line-height: 1.4;
+
+			&:hover {
+				background-color: $bg-150;
+			}
+
+			& .main {
+				display: flex;
+				gap: 4px;
+				width: 100%;
+			}
+
+			&.expanded {
+				background-color: $bg-150;
+				flex-direction: column;
+			}
+
+			.time {
+				color: $fg-500;
+				flex-shrink: 0;
+			}
+
+			.level {
+				font-size: 0.7rem;
+				padding: 1px 4px;
+				border-radius: 3px;
+				font-weight: bold;
+				text-transform: uppercase;
+				flex-shrink: 0;
+
+				&[data-level="Trace"] {
+					color: $fg-500;
+					background-color: $bg-300;
+				}
+
+				&[data-level="Debug"] {
+					color: $color-teal;
+					background-color: oklch(calc(var(--color-teal) * 0.15) / 0.3);
+				}
+
+				&[data-level="Info"] {
+					color: $color-blue;
+					background-color: oklch(calc(var(--color-blue) * 0.15) / 0.3);
+				}
+
+				&[data-level="Warning"] {
+					color: $color-orange;
+					background-color: oklch(calc(var(--color-orange) * 0.15) / 0.3);
+				}
+
+				&[data-level="Error"] {
+					color: $color-red;
+					background-color: oklch(calc(var(--color-red) * 0.15) / 0.3);
+				}
+			}
+
+			.content {
+				color: $fg-200;
+				white-space: pre;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				flex-shrink: 0;
+			}
+
+			.attrs-summary {
+				color: $fg-500;
+				overflow: hidden;
+				white-space: nowrap;
+				text-overflow: ellipsis;
+				flex-shrink: 1;
+			}
+
+			.attrs {
+				display: none;
+				flex-direction: column;
+				padding-left: 2em;
+				font-size: 0.75rem;
+
+				&.expanded {
+					display: flex;
+				}
+
+				.key {
+					color: $fg-400;
+				}
+
+				.syn {
+					color: $fg-600;
+					margin: 0 2px;
+				}
+
+				.val {
+					color: $fg-300;
 				}
 			}
 		}

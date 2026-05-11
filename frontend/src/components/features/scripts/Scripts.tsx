@@ -330,6 +330,7 @@ export const ScriptPreview = () => {
 	return "todo";
 };
 
+// TODO: use table instead of flex
 export const RunLogs = (props: {
 	pane: Extract<ScriptPaneT, { type: "run_logs" }>;
 }) => {
@@ -351,6 +352,7 @@ export const RunLogs = (props: {
 	);
 
 	const [levelFilter, setLevelFilter] = createSignal<string>("all");
+	const [expandedEntry, setExpandedEntry] = createSignal<number | null>(null);
 
 	const filteredLogs = () => {
 		const filter = levelFilter();
@@ -358,12 +360,32 @@ export const RunLogs = (props: {
 		return logs.getLogsForRun(run_id).filter((e) => e.level === filter);
 	};
 
+	const hasAttrs = (entry: { attributes?: Record<string, unknown> }) =>
+		entry.attributes && Object.keys(entry.attributes).length > 0;
+
+	const toggleExpand = (entryId: number) => {
+		setExpandedEntry((prev) => (prev === entryId ? null : entryId));
+	};
+
 	const handleStop = async () => {
 		await runsService.stop(channel_id, script_id, run_id);
 	};
 
+	const formatAttrsSummary = (attrs?: Record<string, unknown>) => {
+		if (!attrs) return "";
+		return Object.entries(attrs)
+			.map(([key, val]) => {
+				let valStr = String(val);
+				if (valStr.length > 20) {
+					valStr = valStr.substring(0, 17) + "...";
+				}
+				return `${key}=${valStr}`;
+			})
+			.join(" ");
+	};
+
 	return (
-		<div>
+		<div class="run-logs">
 			<Show when={logResource.loading}>
 				<div>Loading logs...</div>
 			</Show>
@@ -371,68 +393,91 @@ export const RunLogs = (props: {
 				<div>Error: {logResource.error}</div>
 			</Show>
 			<Show when={!logResource.loading && !logResource.error}>
-				<div>
-					<Show when={runInfo()}>
-						{(run) => (
-							<div>
-								<span class="status" data-status={run().status}>
-									{run().status}
-								</span>
-								<Show
-									when={
-										run().status === "Active" || run().status === "Creating"
-									}
-								>
-									<button type="button" onClick={handleStop}>
-										Stop
-									</button>
-								</Show>
-							</div>
-						)}
-					</Show>
-					<div>
-						<button type="button" onClick={() => setLevelFilter("all")}>
-							All
-						</button>
-						<button type="button" onClick={() => setLevelFilter("Info")}>
-							Info
-						</button>
-						<button type="button" onClick={() => setLevelFilter("Warn")}>
-							Warn
-						</button>
-						<button type="button" onClick={() => setLevelFilter("Error")}>
-							Error
-						</button>
-					</div>
-					<ul role="log">
-						<For each={filteredLogs()}>
-							{(entry) => (
-								<li>
-									<Time date={new Date(entry.time)} />
+				<Show when={runInfo()}>
+					{(run) => (
+						<div class="top">
+							<span class="status" data-status={run().status}>
+								{run().status}
+							</span>
+							<Show
+								when={run().status === "Active" || run().status === "Creating"}
+							>
+								<button type="button" onClick={handleStop}>
+									Stop
+								</button>
+							</Show>
+						</div>
+					)}
+				</Show>
+				<div class="log-filters">
+					<button
+						type="button"
+						onClick={() => setLevelFilter("all")}
+						aria-pressed={levelFilter() === "all"}
+					>
+						All
+					</button>
+					<button
+						type="button"
+						onClick={() => setLevelFilter("Info")}
+						aria-pressed={levelFilter() === "Info"}
+					>
+						Info
+					</button>
+					<button
+						type="button"
+						onClick={() => setLevelFilter("Warning")}
+						aria-pressed={levelFilter() === "Warning"}
+					>
+						Warning
+					</button>
+					<button
+						type="button"
+						onClick={() => setLevelFilter("Error")}
+						aria-pressed={levelFilter() === "Error"}
+					>
+						Error
+					</button>
+				</div>
+				<ul role="log">
+					<For each={filteredLogs()}>
+						{(entry) => (
+							<li
+								classList={{ expanded: expandedEntry() === entry.id }}
+								onclick={() => toggleExpand(entry.id)}
+								style="cursor: pointer"
+							>
+								<div class="main">
+									<span class="time">
+										<Time date={new Date(entry.created_at)} />
+									</span>
 									<span class="level" data-level={entry.level}>
 										{entry.level}
 									</span>
-									<span>{entry.content}</span>
-									<Show
-										when={entry.attrs && Object.keys(entry.attrs).length > 0}
-									>
-										<span class="attrs">
-											<For each={Object.entries(entry.attrs)}>
-												{([key, val]) => (
-													<span>
-														<span class="key">{key}</span>
-														<span>=</span>
-														<span class="val">{String(val)}</span>
-													</span>
-												)}
-											</For>
+									<span class="content">{entry.content}</span>
+									<Show when={hasAttrs(entry)}>
+										<span class="attrs-summary">
+											{formatAttrsSummary(entry.attributes)}
 										</span>
 									</Show>
-								</li>
-							)}
-						</For>
-					</ul>
-				</div>
+								</div>
+								<Show when={expandedEntry() === entry.id && hasAttrs(entry)}>
+									<ul class="attrs expanded">
+										<For each={Object.entries(entry.attributes ?? {})}>
+											{([key, val]) => (
+												<li>
+													<span class="key">{key}</span>
+													<span class="syn">=</span>
+													<span class="val">{String(val)}</span>
+												</li>
+											)}
+										</For>
+									</ul>
+								</Show>
+							</li>
+						)}
+					</For>
+				</ul>
 			</Show>
 		</div>
 	);
