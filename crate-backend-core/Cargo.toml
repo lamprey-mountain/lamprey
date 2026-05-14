@@ -83,3 +83,4 @@ uuid = { version = "1.22.0", features = ["v7", "serde", "v4", "fast-rng", "macro
 validator = "0.20.0"
 webpage = { version = "2.0.1", default-features = false, features = ["serde"] }
 yrs = { version = "0.25.0", features = ["sync"] }
+multer = "3.1.0"

@@ -16,7 +16,7 @@ use common::{
         federation::Remote,
         MediaId,
     },
-    v2::types::media::HashType,
+    v2::types::media::{HashType, MediaReference},
 };
 use common::{
     v1::types::{util::truncate::truncate_filename, MediaVerId, Mime, UserId},
@@ -38,6 +38,7 @@ use url::Url;
 
 use crate::{
     error::{Error, Result},
+    routes::util::body::MultipartFiles,
     ServerStateInner,
 };
 
@@ -549,6 +550,40 @@ impl ServiceMedia {
         }
 
         Ok(media)
+    }
+
+    // TODO: impl this
+    // TODO: use this for all media hadling
+    pub async fn import_from_reference(
+        &self,
+        user_id: UserId,
+        media_ref: MediaReference,
+        files: &MultipartFiles,
+    ) -> Result<MediaV2> {
+        match media_ref {
+            MediaReference::Media { media_id } => {
+                todo!()
+            }
+            MediaReference::Url { source_url } => {
+                self.import_from_url(
+                    user_id,
+                    MediaCreate {
+                        strip_exif: false,
+                        alt: None,
+                        source: MediaCreateSource::Download {
+                            filename: None,
+                            size: None,
+                            source_url,
+                        },
+                    },
+                )
+                .await
+            }
+            MediaReference::Attachment { media_index } => {
+                files.inner.get(media_index);
+                todo!()
+            }
+        }
     }
 
     pub async fn import_from_url(&self, user_id: UserId, json: MediaCreate) -> Result<MediaV2> {

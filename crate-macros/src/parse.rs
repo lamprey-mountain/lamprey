@@ -1,5 +1,3 @@
-#![allow(dead_code)] // TEMP: suppress errors during initial dev
-
 use proc_macro2::TokenStream;
 use syn::{
     parse::{Parse, ParseStream},

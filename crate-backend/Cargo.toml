@@ -100,6 +100,8 @@ pastey = "0.2.1"
 ed25519-dalek = { version = "2.2.0", features = ["rand_core"] }
 constant_time_eq = "0.4.2"
 rquickjs = { version = "0.11.0", features = ["futures", "loader", "macro", "parallel"] }
+serde_path_to_error = "0.1.20"
+multer = "3.1.0"
 # lamprey-backend-rest = { version = "0.1.1", path = "../crate-backend-rest" }
 # lamprey-backend-sync = { version = "0.1.1", path = "../crate-backend-sync" }
 

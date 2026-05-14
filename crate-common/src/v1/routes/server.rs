@@ -1,5 +1,7 @@
 use lamprey_macros::endpoint;
 
+// TODO: use standard @host/@client/name parameters for servers
+
 /// Server information
 #[endpoint(
     get,

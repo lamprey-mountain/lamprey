@@ -1,4 +1,6 @@
 use crate::v1::types::{oauth::Scope, Permission};
+use bytes::Bytes;
+use serde::de::DeserializeOwned;
 
 // export all routes
 
@@ -154,4 +156,16 @@ impl From<EndpointMethod> for ::utoipa::openapi::HttpMethod {
             EndpointMethod::Head => ::utoipa::openapi::HttpMethod::Head,
         }
     }
+}
+
+/// can extract body separately then extract with explicitly deserialized body later
+pub trait ExtractableRoute: Sized {
+    /// the request body
+    type Body: DeserializeOwned;
+
+    /// extract full request from parts and deserialized Body
+    fn extract(
+        parts: http::request::Parts,
+        body: Self::Body,
+    ) -> Result<Self, http::Response<Bytes>>;
 }

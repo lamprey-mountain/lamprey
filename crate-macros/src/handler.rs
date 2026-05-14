@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse2, spanned::Spanned, FnArg, ItemFn, Pat, Path};
+use syn::{parse2, FnArg, ItemFn, Pat, Path};
 
 pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> {
     let endpoint_mod: Path = parse2(args)?;
@@ -15,17 +15,18 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     let all_inputs = &func.sig.inputs;
 
     let mut req_ident = quote! { __req };
-    let mut req_found = false;
     let mut forward_args: Vec<TokenStream> = vec![];
     let mut outer_inputs: Vec<TokenStream> = vec![];
+    let mut wants_universal = false;
 
     for (idx, arg) in all_inputs.iter().enumerate() {
         if let FnArg::Typed(pt) = arg {
             if let syn::Type::Path(tp) = &*pt.ty {
-                // check if type path starts with endpoint_mod and ends with ::Request
                 let type_segs: Vec<_> = tp.path.segments.iter().collect();
                 let mod_segs: Vec<_> = endpoint_mod.segments.iter().collect();
-                let is_request = type_segs.len() == mod_segs.len() + 1
+
+                // Check if it's the raw Request object
+                let is_plain_request = type_segs.len() == mod_segs.len() + 1
                     && type_segs
                         .last()
                         .map(|s| s.ident == "Request")
@@ -34,15 +35,50 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
                         .iter()
                         .zip(mod_segs.iter())
                         .all(|(a, b)| a.ident == b.ident);
-                if is_request {
+
+                // Check if it's UniversalExtractor<Request>
+                let mut is_universal_request = false;
+                if !is_plain_request
+                    && type_segs.len() == 1
+                    && type_segs[0].ident == "UniversalExtractor"
+                {
+                    if let syn::PathArguments::AngleBracketed(args) = &type_segs[0].arguments {
+                        if let Some(syn::GenericArgument::Type(syn::Type::Path(inner_tp))) =
+                            args.args.first()
+                        {
+                            let inner_segs: Vec<_> = inner_tp.path.segments.iter().collect();
+                            if inner_segs.len() == mod_segs.len() + 1
+                                && inner_segs
+                                    .last()
+                                    .map(|s| s.ident == "Request")
+                                    .unwrap_or(false)
+                                && inner_segs[..mod_segs.len()]
+                                    .iter()
+                                    .zip(mod_segs.iter())
+                                    .all(|(a, b)| a.ident == b.ident)
+                            {
+                                is_universal_request = true;
+                            }
+                        }
+                    }
+                }
+
+                // If it matches either, intercept it so Axum doesn't try to extract it
+                if is_plain_request || is_universal_request {
                     let ident = if let Pat::Ident(pi) = &*pt.pat {
                         &pi.ident
                     } else {
                         &format_ident!("__req")
                     };
                     req_ident = quote! { #ident };
-                    forward_args.push(quote! { #req_ident });
-                    req_found = true;
+
+                    if is_universal_request {
+                        wants_universal = true;
+                        forward_args.push(quote! { __extractor });
+                    } else {
+                        forward_args.push(quote! { #req_ident });
+                    }
+
                     continue;
                 }
             }
@@ -64,17 +100,9 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
             continue;
         }
 
-        // unlikely but just in case
         if let FnArg::Receiver(_) = arg {
             forward_args.push(quote! { self });
         }
-    }
-
-    if !req_found {
-        return Err(syn::Error::new(
-            all_inputs.span(),
-            "handler must take exactly one Request argument",
-        ));
     }
 
     let fn_name_struct = {
@@ -92,31 +120,41 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
         format_ident!("{}Path", pascal)
     };
 
+    let request_type_path = quote! { #endpoint_mod::Request };
+
+    // TODO: extract automatically?
+    let state_type = quote! { ::std::sync::Arc<crate::ServerState> };
+
+    let unpack_stmt = if wants_universal {
+        quote! {}
+    } else {
+        quote! { let #req_ident = __extractor.into_inner(); }
+    };
+
     Ok(quote! {
         async fn #inner_name(#all_inputs) #fn_output #fn_block
 
         #(#fn_attrs)*
         #fn_vis async fn #fn_name(
             #(#outer_inputs,)*
+            ::axum::extract::State(__state): ::axum::extract::State<#state_type>,
             __raw_req: ::axum::extract::Request,
         ) -> ::core::result::Result<
             ::axum::response::Response,
             ::axum::response::Response,
         > {
             use ::axum::response::IntoResponse as _;
-            let (__parts, __body) = __raw_req.into_parts();
-            let __bytes = if let Some(body) = __parts.extensions.get::<common::util::FederationBody>() {
-                body.0.clone()
-            } else {
-                ::axum::body::to_bytes(__body, ::core::primitive::usize::MAX)
-                    .await
-                    .map_err(|_| ::axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response())?
-            };
-            let __bytes_req = ::http::Request::from_parts(__parts, __bytes);
-            let #req_ident = #endpoint_mod::extract_request(__bytes_req).map_err(|e| {
-                let (parts, body) = e.into_parts();
-                ::axum::response::Response::from_parts(parts, ::axum::body::Body::from(body))
-            })?;
+            use ::axum::extract::FromRequest;
+
+            let __extractor = crate::routes::util::body::UniversalExtractor::<#request_type_path>::from_request(
+                __raw_req,
+                &__state,
+            )
+            .await
+            .map_err(|e| e.into_response())?;
+
+            #unpack_stmt
+
             #inner_name(#(#forward_args),*)
                 .await
                 .map_err(|e| e.into_response())

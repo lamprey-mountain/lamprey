@@ -79,6 +79,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     let request_clean = build_clean_struct(request_struct.clone())?;
     let response_clean = build_clean_struct(response_struct.clone())?;
     let extract_request_fn = build_extract_request_fn(&req_fields, &args.path)?;
+    let extract_impl = build_extract_impl(&req_fields, &args.path)?;
     let encode_response_fn = build_encode_response_fn(response_struct)?;
     let encode_request_fn = build_encode_request_fn(&req_fields, &args.path)?;
     let extract_response_fn = build_extract_response_fn(response_struct)?;
@@ -108,6 +109,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
             #[derive(Debug)]
             #response_clean
 
+            #extract_impl
             #extract_request_fn
             #encode_response_fn
             #encode_request_fn
@@ -357,6 +359,215 @@ fn build_extract_request_fn(fields: &[EndpointField], path: &LitStr) -> syn::Res
             })
         }
     })
+}
+
+fn build_extract_impl(fields: &[EndpointField], path: &LitStr) -> syn::Result<TokenStream> {
+    let path_fields: Vec<_> = fields
+        .iter()
+        .filter(|f| matches!(f.kind, FieldKind::Path(_)))
+        .collect();
+    let query_fields: Vec<_> = fields
+        .iter()
+        .filter(|f| matches!(f.kind, FieldKind::Query(_)))
+        .collect();
+    let header_fields: Vec<_> = fields
+        .iter()
+        .filter(|f| matches!(f.kind, FieldKind::Header(_)))
+        .collect();
+    let body_field = fields
+        .iter()
+        .find(|f| matches!(f.kind, FieldKind::Json | FieldKind::Form | FieldKind::Body));
+
+    // Parse path template at compile time to build match pattern
+    let path_template = path.value();
+    let (match_arm_pattern, extract_bindings) = build_path_match_pattern(&path_template)?;
+
+    // Build path extraction with match statement
+    let path_extraction = if path_fields.is_empty() {
+        quote! {}
+    } else {
+        let conversions: Vec<TokenStream> = path_fields
+            .iter()
+            .map(|f| {
+                let ident = &f.ident;
+                let ty = &f.ty;
+                let raw_name = format_ident!("{}_raw", f.ident);
+                quote! {
+                    let #ident: #ty = crate::v1::routes::PathParam::from_path_param(#raw_name)?;
+                }
+            })
+            .collect();
+        quote! {
+            let decoded_path = percent_encoding::percent_decode_str(path)
+                .decode_utf8()
+                .unwrap_or_else(|_| path.into());
+            let segments = decoded_path.split('/').collect::<Vec<_>>();
+            let (#extract_bindings) = match segments.as_slice() {
+                #match_arm_pattern => (#extract_bindings),
+                _ => return Err(crate::v1::routes::invalid_path_error()),
+            };
+            #(#conversions)*
+        }
+    };
+
+    // --- query extraction ---
+    let query_extraction = if query_fields.is_empty() {
+        quote! {}
+    } else {
+        let mut stmts = Vec::new();
+        let mut named_idents = Vec::new();
+        let mut named_tys = Vec::new();
+        let mut named_renames = Vec::new();
+
+        for f in &query_fields {
+            match &f.kind {
+                FieldKind::Query(Some(name)) => {
+                    named_idents.push(&f.ident);
+                    named_tys.push(&f.ty);
+                    named_renames.push(quote! { #[serde(rename = #name)] });
+                }
+                FieldKind::Query(None) => {
+                    let ident = &f.ident;
+                    let ty = &f.ty;
+                    stmts.push(quote! {
+                        let #ident: #ty = ::serde_urlencoded::from_str(query_str)
+                            .map_err(|e| {
+                                ::http::Response::builder()
+                                    .status(::http::StatusCode::BAD_REQUEST)
+                                    .body(::bytes::Bytes::from(format!("invalid query: {}", e)))
+                                    .unwrap()
+                            })?;
+                    });
+                }
+                _ => {}
+            }
+        }
+
+        let named_extraction = if named_idents.is_empty() {
+            quote! {}
+        } else {
+            quote! {
+                #[derive(::serde::Deserialize)]
+                struct __QueryParams {
+                    #(#named_renames #named_idents: #named_tys,)*
+                }
+                let __qp: __QueryParams = ::serde_urlencoded::from_str(query_str)
+                    .map_err(|e| {
+                        ::http::Response::builder()
+                            .status(::http::StatusCode::BAD_REQUEST)
+                            .body(::bytes::Bytes::from(format!("invalid query: {}", e)))
+                            .unwrap()
+                    })?;
+                #(let #named_idents = __qp.#named_idents;)*
+            }
+        };
+
+        quote! {
+            #named_extraction
+            #(#stmts)*
+        }
+    };
+
+    // --- header extraction ---
+    let header_extraction = if header_fields.is_empty() {
+        quote! {}
+    } else {
+        let stmts: Vec<_> = header_fields
+            .iter()
+            .map(|f| {
+                let ident = &f.ident;
+                let ty = &f.ty;
+                let header_name = match &f.kind {
+                    FieldKind::Header(Some(n)) => n.clone(),
+                    _ => ident.to_string().replace('_', "-"),
+                };
+                // Check if type is Option<T>
+                let is_option = matches!(ty, syn::Type::Path(tp) if tp.path.segments.last().map(|s| s.ident == "Option").unwrap_or(false));
+                if is_option {
+                    quote! {
+                        let #ident: #ty = parts
+                            .headers
+                            .get(#header_name)
+                            .and_then(|v| v.to_str().ok())
+                            .and_then(|v| v.parse().ok());
+                    }
+                } else {
+                    quote! {
+                        let #ident: #ty = parts
+                            .headers
+                            .get(#header_name)
+                            .and_then(|v| v.to_str().ok())
+                            .and_then(|v| v.parse().ok())
+                            .ok_or_else(|| {
+                                ::http::Response::builder()
+                                    .status(::http::StatusCode::BAD_REQUEST)
+                                    .body(::bytes::Bytes::from(
+                                        format!("missing or invalid header: {}", #header_name)
+                                    ))
+                                    .unwrap()
+                            })?;
+                    }
+                }
+            })
+            .collect();
+        quote! { #(#stmts)* }
+    };
+
+    let metadata_idents: Vec<_> = fields
+        .iter()
+        .filter(|f| !matches!(f.kind, FieldKind::Json | FieldKind::Form | FieldKind::Body))
+        .map(|f| &f.ident)
+        .collect();
+
+    if let Some(body) = body_field {
+        let body_type = &body.ty;
+        let body_ident = &body.ident;
+
+        Ok(quote! {
+            impl crate::v1::routes::ExtractableRoute for Request {
+                type Body = #body_type;
+
+                fn extract(
+                    parts: ::http::request::Parts,
+                    body: Self::Body,
+                ) -> Result<Self, ::http::Response<::bytes::Bytes>> {
+                    let path = parts.uri.path();
+                    let query_str = parts.uri.query().unwrap_or("");
+
+                    #path_extraction
+                    #query_extraction
+                    #header_extraction
+
+                    Ok(Request {
+                        #(#metadata_idents,)*
+                        #body_ident: body,
+                    })
+                }
+            }
+        })
+    } else {
+        Ok(quote! {
+            impl crate::v1::routes::ExtractableRoute for Request {
+                type Body = ();
+
+                fn extract(
+                    parts: ::http::request::Parts,
+                    _body: Self::Body,
+                ) -> Result<Self, ::http::Response<::bytes::Bytes>> {
+                    let path = parts.uri.path();
+                    let query_str = parts.uri.query().unwrap_or("");
+
+                    #path_extraction
+                    #query_extraction
+                    #header_extraction
+
+                    Ok(Request {
+                        #(#metadata_idents,)*
+                    })
+                }
+            }
+        })
+    }
 }
 
 // ---------------------------------------------------------------------------

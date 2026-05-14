@@ -2,6 +2,7 @@ use std::num::{ParseFloatError, ParseIntError};
 
 use axum::extract::multipart::{MultipartError, MultipartRejection};
 use axum::{http::StatusCode, response::IntoResponse, Json};
+use bytes::Bytes;
 use common::v1::types::application::Scopes;
 use common::v1::types::error::{ApiError, SyncError};
 use common::v1::types::MessageSync;
@@ -134,6 +135,9 @@ pub enum Error {
     #[error("{0}")]
     MultipartRejection(#[from] MultipartRejection),
 
+    #[error("multer error: {0}")]
+    Multer(#[from] multer::Error),
+
     #[error("missing scopes {0:?}")]
     MissingScopes(Scopes),
 
@@ -175,6 +179,9 @@ pub enum Error {
 
     #[error("script error: {0}")]
     Script(#[from] lamprey_script::Error),
+
+    #[error("(http response)")]
+    Response(http::Response<Bytes>),
 }
 
 impl From<sqlx::Error> for Error {
@@ -224,6 +231,8 @@ impl Error {
                 SyncError::InvalidData => StatusCode::BAD_REQUEST,
             },
             Error::MultipartError(_) => StatusCode::BAD_REQUEST,
+            Error::MultipartRejection(_) => StatusCode::BAD_REQUEST,
+            Error::Multer(_) => StatusCode::BAD_REQUEST,
             Error::MissingScopes(_) => StatusCode::FORBIDDEN,
             Error::TantivyQuery(_) => StatusCode::BAD_REQUEST,
             Error::FrontendAssetNotFound(_) => StatusCode::NOT_FOUND,
@@ -280,6 +289,11 @@ impl Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> axum::response::Response {
+        if let Error::Response(res) = self {
+            let (parts, body) = res.into_parts();
+            return axum::response::Response::from_parts(parts, axum::body::Body::from(body));
+        }
+
         if let Error::NotModified = self {
             return self.get_status().into_response();
         };

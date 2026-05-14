@@ -29,12 +29,10 @@ pub enum MediaReference {
     Media { media_id: MediaId },
 
     /// Shortcut to download media from a url. Saves a few requests for uploading.
-    // TODO: support this
     Url { source_url: Url },
 
     /// Shortcut to create media from form data. Only usable if the request body is multipart/form-data.
-    // TODO: support this
-    Attachment { field_name: String },
+    Attachment { media_index: String },
 }
 
 /// request body for `media_done`
