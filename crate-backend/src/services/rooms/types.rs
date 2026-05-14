@@ -7,8 +7,8 @@ use tokio::sync::watch;
 use uuid::Uuid;
 
 use common::v1::types::{
-    Channel, ChannelId, MessageSync, PermissionOverwriteType, Role, RoleId, Room, RoomId,
-    RoomMember, ThreadMember, User, UserId,
+    Channel, ChannelId, MessageSync, PermissionOverwriteType, Role, RoleId, Room, RoomFeature,
+    RoomId, RoomMember, ThreadMember, User, UserId,
 };
 
 use crate::routes::util::Auth;
@@ -192,9 +192,11 @@ impl RoomSnapshot {
             if data.room.security.require_sudo {
                 auth.ensure_sudo()?;
             }
-        }
 
-        Ok(())
+            Ok(())
+        } else {
+            Err(Error::BadStatic("room not loaded yet"))
+        }
     }
 
     pub fn ensure_mfa_if_needed(&self, auth: &Auth) -> Result<()> {
@@ -204,8 +206,21 @@ impl RoomSnapshot {
                     return Err(Error::BadStatic("mfa required for this action"));
                 }
             }
+            Ok(())
+        } else {
+            Err(Error::BadStatic("room not loaded yet"))
         }
+    }
 
-        Ok(())
+    pub fn ensure_feature(&self, feature: &RoomFeature) -> Result<()> {
+        if let Some(data) = self.get_data() {
+            if !data.room.features.0.contains(feature) {
+                return Err(Error::BadStatic("feature not enabled"));
+            }
+
+            Ok(())
+        } else {
+            Err(Error::BadStatic("room not loaded yet"))
+        }
     }
 }

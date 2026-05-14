@@ -193,21 +193,61 @@ async fn room_edit(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     req.patch.validate()?;
-    let srv = s.services();
-    srv.perms
-        .for_room3(Some(auth.user.id), req.room_id)
-        .await?
-        .ensure_view()?
-        .needs(Permission::RoomEdit)
-        .check()?;
 
-    // FIXME: require InviteManage (but not RoomEdit) to edit invites_paused_until
+    let srv = s.services();
 
     let room = s
         .services()
         .rooms
         .get(req.room_id, Some(auth.user.id))
         .await?;
+
+    let changes_room_metadata = req.patch.name.as_ref().is_some_and(|p| p != &room.name)
+        || req
+            .patch
+            .description
+            .as_ref()
+            .is_some_and(|p| p != &room.description)
+        || req.patch.icon.as_ref().is_some_and(|p| p != &room.icon)
+        || req.patch.banner.as_ref().is_some_and(|p| p != &room.banner)
+        || req.patch.public.as_ref().is_some_and(|p| p != &room.public)
+        || req
+            .patch
+            .welcome_channel_id
+            .as_ref()
+            .is_some_and(|p| p != &room.welcome_channel_id)
+        || req
+            .patch
+            .afk_channel_id
+            .as_ref()
+            .is_some_and(|p| p != &room.afk_channel_id)
+        || req
+            .patch
+            .afk_channel_timeout
+            .as_ref()
+            .is_some_and(|p| p != &room.afk_channel_timeout);
+    let changes_invite_paused = req
+        .patch
+        .invites_paused_until
+        .as_ref()
+        .is_some_and(|p| p != &room.invites_paused_until);
+
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+
+    if changes_room_metadata {
+        perms.needs(Permission::RoomEdit);
+    }
+
+    if changes_invite_paused {
+        perms.needs(Permission::InviteManage);
+    }
+
+    perms.check()?;
+
     if room.security.require_mfa {
         let mut data = s.data();
         let totp = data.auth_totp_get(auth.user.id).await?;
@@ -646,6 +686,159 @@ async fn room_security_set(
     Ok(Json(room))
 }
 
+/// Room feature enable
+#[handler(routes::room_feature_enable)]
+async fn room_feature_enable(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::room_feature_enable::Request,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
+
+    let srv = s.services();
+
+    let perms_server = srv.perms.for_server(auth.user.id).await?;
+    let room_old = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
+
+    if perms_server.has(Permission::RoomManage) && req.feature.can_server_operators_enable() {
+        // allowed
+    } else {
+        let mut perms_room = srv
+            .perms
+            .for_room3(Some(auth.user.id), req.room_id)
+            .await?
+            .ensure_view()?;
+
+        if req.feature.can_room_editors_enable() {
+            perms_room.needs(Permission::RoomEdit).check()?;
+        } else if req.feature.can_room_admins_enable() {
+            perms_room.needs(Permission::Admin).check()?;
+        } else {
+            return Err(Error::BadStatic(
+                "feature cannot be manually enabled/disabled",
+            ));
+        }
+
+        if room_old.security.require_mfa {
+            let mut data = s.data();
+            let totp = data.auth_totp_get(auth.user.id).await?;
+            if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+                return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
+            }
+        }
+    }
+
+    let mut features = room_old.features.0.clone();
+    if features.contains(&req.feature) {
+        return Ok(Json(room_old));
+    }
+    features.push(req.feature);
+
+    let mut data = s.data();
+    data.room_set_features(req.room_id, &features).await?;
+    srv.rooms.reload(req.room_id).await?;
+
+    let room_new = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
+    let changes = Changes::new()
+        .change("features", &room_old.features, &room_new.features)
+        .build();
+
+    let al = auth.audit_log(req.room_id);
+    al.commit_success(AuditLogEntryType::RoomUpdate {
+        changes: changes.clone(),
+    })
+    .await?;
+
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    al.commit_success(AuditLogEntryType::RoomUpdate { changes })
+        .await?;
+
+    let msg = MessageSync::RoomUpdate {
+        room: room_new.clone(),
+    };
+    s.broadcast_room(req.room_id, auth.user.id, msg).await?;
+
+    Ok(Json(room_new))
+}
+
+/// Room feature disable
+#[handler(routes::room_feature_disable)]
+async fn room_feature_disable(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::room_feature_disable::Request,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
+
+    let srv = s.services();
+
+    let perms_server = srv.perms.for_server(auth.user.id).await?;
+    let room_old = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
+
+    if perms_server.has(Permission::RoomManage) && req.feature.can_server_operators_enable() {
+        // allowed
+    } else {
+        let mut perms_room = srv
+            .perms
+            .for_room3(Some(auth.user.id), req.room_id)
+            .await?
+            .ensure_view()?;
+
+        if req.feature.can_room_editors_enable() {
+            perms_room.needs(Permission::RoomEdit).check()?;
+        } else if req.feature.can_room_admins_enable() {
+            perms_room.needs(Permission::Admin).check()?;
+        } else {
+            return Err(Error::BadStatic(
+                "feature cannot be manually enabled/disabled",
+            ));
+        }
+
+        if room_old.security.require_mfa {
+            let mut data = s.data();
+            let totp = data.auth_totp_get(auth.user.id).await?;
+            if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+                return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
+            }
+        }
+    }
+
+    let mut features = room_old.features.0.clone();
+    if let Some(pos) = features.iter().position(|f| f == &req.feature) {
+        features.remove(pos);
+    } else {
+        return Ok(Json(room_old));
+    }
+
+    let mut data = s.data();
+    data.room_set_features(req.room_id, &features).await?;
+    srv.rooms.reload(req.room_id).await?;
+
+    let room_new = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
+    let changes = Changes::new()
+        .change("features", &room_old.features, &room_new.features)
+        .build();
+
+    let al = auth.audit_log(req.room_id);
+    al.commit_success(AuditLogEntryType::RoomUpdate {
+        changes: changes.clone(),
+    })
+    .await?;
+
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    al.commit_success(AuditLogEntryType::RoomUpdate { changes })
+        .await?;
+
+    let msg = MessageSync::RoomUpdate {
+        room: room_new.clone(),
+    };
+    s.broadcast_room(req.room_id, auth.user.id, msg).await?;
+
+    Ok(Json(room_new))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes2!(room_create))
@@ -662,4 +855,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(room_quarantine))
         .routes(routes2!(room_unquarantine))
         .routes(routes2!(room_security_set))
+        .routes(routes2!(room_feature_enable))
+        .routes(routes2!(room_feature_disable))
 }

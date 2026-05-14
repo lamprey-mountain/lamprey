@@ -16,7 +16,6 @@ use common::v1::types::oauth::Scopes;
 use common::v1::types::room_template::{RoomTemplateCode, RoomTemplateCreate, RoomTemplatePatch};
 use common::v1::types::sync::ChannelSync;
 use common::v1::types::util::Time;
-use common::v1::types::ChannelSeq;
 use common::v1::types::{
     ApplicationId, Channel, ChannelId, ChannelPatch, ChannelReorder, ChannelVerId,
     DocumentBranchId, DocumentTagId, MediaId, MediaVerId, PaginationQuery, PaginationResponse,
@@ -24,6 +23,7 @@ use common::v1::types::{
     RoomPatch, RoomVerId, Session, SessionId, SessionPatch, SessionStatus, SessionToken, Suspended,
     User, UserId, UserListFilter,
 };
+use common::v1::types::{ChannelSeq, RoomFeature};
 use common::v2::types::embed::Embed;
 use common::v2::types::media::{Media, MediaPatch};
 use lamprey_backend_core::data::DataScript;
@@ -139,6 +139,11 @@ pub trait DataRoom {
         require_sudo: Option<bool>,
     ) -> Result<RoomVerId>;
     async fn user_owns_room_requiring_mfa(&mut self, user_id: UserId) -> Result<bool>;
+    async fn room_set_features(
+        &mut self,
+        room_id: RoomId,
+        features: &[RoomFeature],
+    ) -> Result<RoomVerId>;
 }
 
 #[async_trait]

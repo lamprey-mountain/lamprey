@@ -201,7 +201,12 @@ pub enum Permission {
     /// can create new rooms.
     RoomCreate,
 
-    /// can delete and quarantine rooms, and view all rooms, room templates, dms, and gdms.
+    /// can manage rooms on this server
+    ///
+    /// - delete and quarantine rooms
+    /// - enable and disable room features
+    /// - view all rooms and room templates
+    /// - view all dms and gdms (temp?)
     RoomManage,
 
     /// can create, edit, and delete users. can view all users.

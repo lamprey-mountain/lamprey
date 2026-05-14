@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::RoomFeature;
 use sqlx::{query, query_as, query_scalar};
 use time::PrimitiveDateTime;
 use tracing::info;
@@ -7,8 +8,8 @@ use uuid::Uuid;
 
 use crate::error::Result;
 use crate::types::{
-    DbRoom, DbRoomCreate, DbRoomType, PaginationDirection, PaginationQuery, PaginationResponse,
-    Room, RoomCreate, RoomId, RoomPatch, RoomVerId, UserId,
+    DbRoom, DbRoomCreate, DbRoomFeature, DbRoomType, PaginationDirection, PaginationQuery,
+    PaginationResponse, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, UserId,
 };
 use crate::{gen_paginate, Error};
 
@@ -24,8 +25,8 @@ impl DataRoom for Postgres {
         let mut conn = self.acquire().await?;
         query!(
             "
-    	    INSERT INTO room (id, version_id, name, description, icon, banner, public, type, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout, invites_paused_until)
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NULL)
+    	    INSERT INTO room (id, version_id, name, description, icon, banner, public, type, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout, invites_paused_until, features)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NULL, '{}')
         ",
             room_id,
             room_id,
@@ -74,7 +75,8 @@ impl DataRoom for Postgres {
                 room.afk_channel_id,
                 room.afk_channel_timeout,
                 room.invites_paused_until,
-                room.deleted_at
+                room.deleted_at,
+                room.features as "features: _"
             FROM room
             WHERE id = $1
             "#,
@@ -125,7 +127,8 @@ impl DataRoom for Postgres {
                     room.afk_channel_id,
                     room.afk_channel_timeout,
                     room.invites_paused_until,
-                    room.deleted_at
+                    room.deleted_at,
+                    room.features as "features: _"
                 FROM room_member
             	JOIN room ON room_member.room_id = room.id
             	WHERE room_member.user_id = $1 AND room.id > $2 AND room.id < $3
@@ -186,7 +189,8 @@ impl DataRoom for Postgres {
                     room.afk_channel_id,
                     room.afk_channel_timeout,
                     room.invites_paused_until,
-                    room.deleted_at
+                    room.deleted_at,
+                    room.features as "features: _"
                 FROM room
                 WHERE room.id > $1 AND room.id < $2
                 ORDER BY (CASE WHEN $3 = 'f' THEN room.id END), room.id DESC LIMIT $4
@@ -291,6 +295,7 @@ impl DataRoom for Postgres {
                     r.afk_channel_timeout,
                     r.invites_paused_until,
                     r.deleted_at,
+                    r.features as "features: _",
                     (SELECT COUNT(*) FROM room_member WHERE room_id = r.id AND membership = 'Join') AS "member_count!",
                     (SELECT COUNT(*) FROM channel WHERE room_id = r.id AND deleted_at IS NULL AND archived_at IS NULL) AS "channel_count!",
                     (SELECT COUNT(*) FROM custom_emoji WHERE room_id = r.id AND deleted_at IS NULL) AS "emoji_count!"
@@ -489,5 +494,34 @@ impl DataRoom for Postgres {
         .fetch_one(conn.ext())
         .await?;
         Ok(result)
+    }
+
+    async fn room_set_features(
+        &mut self,
+        room_id: RoomId,
+        features: &[RoomFeature],
+    ) -> Result<RoomVerId> {
+        let mut tx = self.begin_tx().await?;
+        let version_id = RoomVerId::new();
+        let db_features: Vec<DbRoomFeature> = features
+            .iter()
+            .map(|f| match f {
+                RoomFeature::Scripts => DbRoomFeature::Scripts,
+                RoomFeature::Automod => DbRoomFeature::Automod,
+                RoomFeature::Documents => DbRoomFeature::Documents,
+                RoomFeature::Vanity => DbRoomFeature::Vanity,
+                RoomFeature::Llm => DbRoomFeature::Llm,
+            })
+            .collect();
+        query!(
+            "UPDATE room SET version_id = $2, features = $3 WHERE id = $1",
+            *room_id,
+            *version_id,
+            db_features as _,
+        )
+        .execute(tx.ext())
+        .await?;
+        tx.commit().await?;
+        Ok(version_id)
     }
 }

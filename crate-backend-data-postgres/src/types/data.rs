@@ -8,8 +8,8 @@ use common::v1::types::federation::Remote;
 use common::v1::types::message::MessageType;
 use common::v1::types::User;
 use common::v1::types::{
-    util::Time, Channel, ChannelSeq, ChannelType, Embed, Permission, Puppet, Room, RoomType,
-    Session, SessionStatus, SessionToken, SessionType,
+    util::Time, Channel, ChannelSeq, ChannelType, Embed, Permission, Puppet, Room, RoomFeature,
+    RoomFeatures, RoomType, Session, SessionStatus, SessionToken, SessionType,
 };
 use common::v1::types::{AuditLogEntryStatus, Mentions, RoomSecurity};
 use serde::{Deserialize, Serialize};
@@ -113,6 +113,7 @@ pub struct DbRoom {
     pub afk_channel_timeout: i64,
     pub invites_paused_until: Option<PrimitiveDateTime>,
     pub deleted_at: Option<PrimitiveDateTime>,
+    pub features: Vec<DbRoomFeature>,
 }
 
 pub struct DbRoomCreate {
@@ -169,6 +170,7 @@ impl From<DbRoom> for Room {
             afk_channel_id: row.afk_channel_id.map(|i| i.into()),
             afk_channel_timeout: row.afk_channel_timeout as u64,
             invites_paused_until: row.invites_paused_until.map(|t| Time::from(t.assume_utc())),
+            features: RoomFeatures(row.features.into_iter().map(|f| f.into()).collect()),
         }
     }
 }
@@ -753,6 +755,28 @@ pub enum EmailPurpose {
 pub enum DbRoomType {
     Default,
     Server,
+}
+
+#[derive(sqlx::Type, Debug, Clone, Copy, PartialEq, Eq)]
+#[sqlx(type_name = "room_feature")]
+pub enum DbRoomFeature {
+    Scripts,
+    Automod,
+    Documents,
+    Vanity,
+    Llm,
+}
+
+impl From<DbRoomFeature> for RoomFeature {
+    fn from(value: DbRoomFeature) -> Self {
+        match value {
+            DbRoomFeature::Scripts => RoomFeature::Scripts,
+            DbRoomFeature::Automod => RoomFeature::Automod,
+            DbRoomFeature::Documents => RoomFeature::Documents,
+            DbRoomFeature::Vanity => RoomFeature::Vanity,
+            DbRoomFeature::Llm => RoomFeature::Llm,
+        }
+    }
 }
 
 impl Into<DbRoomType> for RoomType {

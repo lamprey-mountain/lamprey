@@ -11,7 +11,7 @@ use common::v1::types::script::{
 };
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
-    AuditLogEntryType, ChannelType, MessageSync, Permission, ScriptId, ScriptVerId,
+    AuditLogEntryType, ChannelType, MessageSync, Permission, RoomFeature, ScriptId, ScriptVerId,
 };
 use common::v2::types::media::MediaReference;
 use http::StatusCode;
@@ -45,6 +45,10 @@ async fn script_create(
     let room_id = chan
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    let room = srv.rooms.load_room(room_id, false).await?;
+    room.ensure_feature(&RoomFeature::Scripts)?;
+
     let al = auth.audit_log(room_id);
 
     match &req.script.format {
@@ -143,6 +147,14 @@ async fn script_list(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
+    let chan = srv.channels.get(req.channel_id, None).await?;
+    let room_id = chan
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    let room = srv.rooms.load_room(room_id, false).await?;
+    room.ensure_feature(&RoomFeature::Scripts)?;
+
     srv.perms
         .for_channel3(auth.user_id(), req.channel_id)
         .await?
@@ -171,6 +183,14 @@ async fn script_get(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
+    let chan = srv.channels.get(req.channel_id, None).await?;
+    let room_id = chan
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    let room = srv.rooms.load_room(room_id, false).await?;
+    room.ensure_feature(&RoomFeature::Scripts)?;
+
     srv.perms
         .for_channel3(auth.user_id(), req.channel_id)
         .await?
@@ -209,6 +229,10 @@ async fn script_delete(
     let room_id = chan
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    let room = srv.rooms.load_room(room_id, false).await?;
+    room.ensure_feature(&RoomFeature::Scripts)?;
+
     let al = auth.audit_log(room_id);
 
     s.data().script_delete(req.script_id).await?;
@@ -254,6 +278,10 @@ async fn script_content_update(
     let room_id = chan
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    let room = srv.rooms.load_room(room_id, false).await?;
+    room.ensure_feature(&RoomFeature::Scripts)?;
+
     let _al = auth.audit_log(room_id);
 
     // TODO: validate that the script exists and belongs to this channel
@@ -286,6 +314,9 @@ async fn script_trigger(
     let room_id = chan
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    let room = srv.rooms.load_room(room_id, false).await?;
+    room.ensure_feature(&RoomFeature::Scripts)?;
 
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
@@ -332,6 +363,14 @@ async fn script_version_list(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
+    let chan = srv.channels.get(req.channel_id, None).await?;
+    let room_id = chan
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    let room = srv.rooms.load_room(room_id, false).await?;
+    room.ensure_feature(&RoomFeature::Scripts)?;
+
     srv.perms
         .for_channel3(auth.user_id(), req.channel_id)
         .await?
@@ -360,6 +399,14 @@ async fn script_version_get(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
+    let chan = srv.channels.get(req.channel_id, None).await?;
+    let room_id = chan
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    let room = srv.rooms.load_room(room_id, false).await?;
+    room.ensure_feature(&RoomFeature::Scripts)?;
+
     srv.perms
         .for_channel3(auth.user_id(), req.channel_id)
         .await?
@@ -394,6 +441,10 @@ async fn script_version_delete(
     let room_id = chan
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    let room = srv.rooms.load_room(room_id, false).await?;
+    room.ensure_feature(&RoomFeature::Scripts)?;
+
     let al = auth.audit_log(room_id);
 
     // TODO: verify the version exists and belongs to this script
@@ -442,6 +493,10 @@ async fn script_version_restore(
     let room_id = chan
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    let room = srv.rooms.load_room(room_id, false).await?;
+    room.ensure_feature(&RoomFeature::Scripts)?;
+
     let _al = auth.audit_log(room_id);
 
     // TODO: do i soft-undelete the version (set deleted_at to None)? or do i create a new version with the same content as the old version?
@@ -465,6 +520,14 @@ async fn script_depends(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
+    let chan = srv.channels.get(req.channel_id, None).await?;
+    let room_id = chan
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    let room = srv.rooms.load_room(room_id, false).await?;
+    room.ensure_feature(&RoomFeature::Scripts)?;
+
     srv.perms
         .for_channel3(auth.user_id(), req.channel_id)
         .await?
@@ -493,6 +556,10 @@ async fn script_depends_update(
     let room_id = chan
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    let room = srv.rooms.load_room(room_id, false).await?;
+    room.ensure_feature(&RoomFeature::Scripts)?;
+
     let _al = auth.audit_log(room_id);
 
     Ok(Error::Unimplemented)
@@ -510,6 +577,15 @@ async fn script_run_list(
     }
 
     auth.ensure_scopes(&[Scope::Full])?;
+
+    let srv = s.services();
+    let chan = srv.channels.get(req.channel_id, None).await?;
+    let room_id = chan
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    let room = srv.rooms.load_room(room_id, false).await?;
+    room.ensure_feature(&RoomFeature::Scripts)?;
 
     let runs = s
         .data()
@@ -531,6 +607,15 @@ async fn script_run_get(
     }
 
     auth.ensure_scopes(&[Scope::Full])?;
+
+    let srv = s.services();
+    let chan = srv.channels.get(req.channel_id, None).await?;
+    let room_id = chan
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    let room = srv.rooms.load_room(room_id, false).await?;
+    room.ensure_feature(&RoomFeature::Scripts)?;
 
     let run = s
         .data()
@@ -556,6 +641,14 @@ async fn script_run_stop(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
+    let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
+    let room_id = chan
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    let room = srv.rooms.load_room(room_id, false).await?;
+    room.ensure_feature(&RoomFeature::Scripts)?;
+
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
@@ -584,6 +677,14 @@ async fn script_run_log(
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
+    let chan = srv.channels.get(req.channel_id, None).await?;
+    let room_id = chan
+        .room_id
+        .ok_or(Error::BadStatic("channel is not in a room"))?;
+
+    let room = srv.rooms.load_room(room_id, false).await?;
+    room.ensure_feature(&RoomFeature::Scripts)?;
+
     srv.perms
         .for_channel3(auth.user_id(), req.channel_id)
         .await?

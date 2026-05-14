@@ -344,3 +344,53 @@ pub mod room_security_set {
         pub room: Room,
     }
 }
+
+/// Room feature enable
+#[endpoint(
+    put,
+    path = "/room/{room_id}/feature/{feature}",
+    tags = ["room"],
+    scopes = [Full],
+    response(OK, body = Room, description = "success"),
+)]
+pub mod room_feature_enable {
+    use crate::v1::types::{Room, RoomFeature, RoomId};
+
+    pub struct Request {
+        #[path]
+        pub room_id: RoomId,
+
+        #[path]
+        pub feature: RoomFeature,
+    }
+
+    pub struct Response {
+        #[json]
+        pub room: Room,
+    }
+}
+
+/// Room feature disable
+#[endpoint(
+    delete,
+    path = "/room/{room_id}/feature/{feature}",
+    tags = ["room"],
+    scopes = [Full],
+    response(OK, body = Room, description = "success"),
+)]
+pub mod room_feature_disable {
+    use crate::v1::types::{Room, RoomFeature, RoomId};
+
+    pub struct Request {
+        #[path]
+        pub room_id: RoomId,
+
+        #[path]
+        pub feature: RoomFeature,
+    }
+
+    pub struct Response {
+        #[json]
+        pub room: Room,
+    }
+}

@@ -100,6 +100,9 @@ pub struct Room {
     /// if set, invites to this room cannot be used until this time has passed
     pub invites_paused_until: Option<Time>,
 
+    /// features enabled for this room
+    pub features: RoomFeatures,
+
     #[cfg(any())]
     pub remote: Option<Remote>,
 }
@@ -234,7 +237,7 @@ pub struct RoomSecurityUpdate {
     pub require_sudo: Option<bool>,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum RoomType {
@@ -246,11 +249,71 @@ pub enum RoomType {
     Server,
 }
 
+/// features enabled for this room
+#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::EnumString, strum::Display)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum RoomFeature {
+    /// can create and use script channels
+    Scripts,
+
+    /// can use experimental automod system
+    Automod,
+
+    /// can use experimental documents/wikis
+    Documents,
+
+    /// can create vanity invite codes
+    Vanity,
+
+    /// llm-based features
+    ///
+    /// - automatic title generation for threads
+    /// - automatic summary generation for threads
+    Llm,
+    // /// can set discoverable
+    // Discoverable,
+}
+
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RoomFeatures(pub Vec<RoomFeature>);
+
+impl RoomFeatures {
+    pub fn new(features: Vec<RoomFeature>) -> Self {
+        Self(features)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct TransferOwnership {
     pub owner_id: UserId,
+}
+
+impl RoomFeature {
+    /// whether server operators can enable/disable this feature
+    pub fn can_server_operators_enable(&self) -> bool {
+        true
+    }
+
+    /// whether room admins can enable/disable this feature
+    pub fn can_room_admins_enable(&self) -> bool {
+        matches!(self, RoomFeature::Automod | RoomFeature::Documents)
+    }
+
+    /// whether room editors can enable/disable this feature
+    ///
+    /// corresponds to Permission::RoomEdit
+    pub fn can_room_editors_enable(&self) -> bool {
+        false
+    }
 }
 
 // TODO: move
