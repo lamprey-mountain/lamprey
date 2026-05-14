@@ -7,7 +7,7 @@ members = [
   # "crate-backend-rest",
   # "crate-backend-sync",
   "crate-bot",
-  "crate-bridge",
+  "crate-bridge", "crate-cli",
   "crate-common",
   "crate-hakari", "crate-markdown",
   # "crate-macros",

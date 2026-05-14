@@ -1,0 +1,14 @@
+[package]
+name = "lamprey-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+
+[dependencies]
+clap = { version = "4.6.1", features = ["derive"] }
+common = { package = "lamprey-common", version = "0.1.1", path = "../crate-common" }
+serde = { version = "1.0.228", features = ["derive"] }
