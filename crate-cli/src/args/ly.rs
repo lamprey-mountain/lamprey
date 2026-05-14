@@ -1,16 +1,15 @@
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
-use common::v1::types::{ChannelId, MediaId, MessageId, ScriptId};
+use common::v1::types::{ChannelId, MediaId, MessageId, RedexId};
 
 /// tool to interact with the lamprey api
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
 pub struct Args {
     /// Path to the config file
-    // TODO: $XDG_CONFIG/ly/config.toml
-    #[arg(short, long, default_value = "config.toml")]
-    pub config: PathBuf,
+    #[arg(short, long)]
+    pub config: Option<PathBuf>,
 
     /// Login to use for authenticating to the api
     #[arg(short, long)]
@@ -46,10 +45,15 @@ pub enum Command {
         command: MediaCommand,
     },
 
-    /// tools for managing scripts
-    Script {
+    /// tools for managing redexes
+    Redex {
         #[command(subcommand)]
-        command: ScriptCommand,
+        command: RedexCommand,
+    },
+
+    /// tail the event stream
+    Events {
+        // TODO: resuming
     },
 }
 
@@ -156,28 +160,28 @@ pub enum MediaCommand {
 }
 
 #[derive(Debug, Subcommand)]
-pub enum ScriptCommand {
-    /// create a new script
+pub enum RedexCommand {
+    /// create a new redex
     Create {
-        /// channel id to create script in
+        /// channel id to create redex in
         #[arg(short, long)]
         channel_id: ChannelId,
 
-        /// media id of script source
+        /// media id of redex source
         #[arg(short, long)]
         media_id: MediaId,
     },
 
-    /// get script metadata
+    /// get redex metadata
     Get {
-        /// id of the script to get
-        script_id: ScriptId,
+        /// id of the redex to get
+        redex_id: RedexId,
     },
 
-    /// manually trigger a script
+    /// manually trigger a redex
     Trigger {
-        /// id of the script to run
-        script_id: String,
+        /// id of the redex to run
+        redex_id: RedexId,
 
         /// id of the trigger
         trigger_id: String,

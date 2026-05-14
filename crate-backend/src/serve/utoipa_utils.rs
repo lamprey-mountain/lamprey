@@ -5,6 +5,10 @@ use utoipa::{openapi::extensions::Extensions, Modify};
 
 pub struct BadgeModifier;
 
+pub struct NestedTags;
+
+pub struct ComponentModifier;
+
 impl Modify for BadgeModifier {
     fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
         for (_path, path_item) in openapi.paths.paths.iter_mut() {
@@ -162,8 +166,6 @@ impl Modify for BadgeModifier {
     }
 }
 
-pub struct NestedTags;
-
 impl Modify for NestedTags {
     fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
         let tag_groups = json!([
@@ -218,28 +220,6 @@ impl Modify for NestedTags {
             .merge(Extensions::builder().add("x-tagGroups", tag_groups).build());
     }
 }
-
-pub fn cors() -> CorsLayer {
-    use header::{HeaderName, AUTHORIZATION, CONTENT_TYPE};
-    const UPLOAD_OFFSET: HeaderName = HeaderName::from_static("upload-offset");
-    const UPLOAD_LENGTH: HeaderName = HeaderName::from_static("upload-length");
-    const IDEMPOTENCY_KEY: HeaderName = HeaderName::from_static("idempotency-key");
-    const REASON: HeaderName = HeaderName::from_static("x-reason");
-    const PUPPET_ID: HeaderName = HeaderName::from_static("x-puppet-id");
-    CorsLayer::very_permissive()
-        .expose_headers([CONTENT_TYPE, UPLOAD_OFFSET, UPLOAD_LENGTH])
-        .allow_headers([
-            AUTHORIZATION,
-            CONTENT_TYPE,
-            UPLOAD_OFFSET,
-            UPLOAD_LENGTH,
-            IDEMPOTENCY_KEY,
-            REASON,
-            PUPPET_ID,
-        ])
-}
-
-pub struct ComponentModifier;
 
 impl Modify for ComponentModifier {
     fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {

@@ -3,6 +3,7 @@ use common::v1::types::message::Message;
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::presence::Presence;
 use common::v1::types::util::Time;
+use common::v1::types::SearchDlqId;
 use common::v1::types::{
     emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiSearchQuery},
     misc::UserIdReq,
@@ -20,6 +21,11 @@ use common::v1::types::{
 };
 use common::v2::types::media::{Media, MediaCreate, MediaCreated, MediaDoneParams};
 use headers::HeaderMapExt;
+use lamprey_backend_core::types::admin::{
+    AdminBroadcast, AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache,
+    AdminPurgeCacheResponse, AdminRegisterUser, AdminWhisper, DlqEntry, SearchIndexStats,
+    SearchStats,
+};
 use reqwest::{header::HeaderMap, StatusCode, Url};
 use serde_json::json;
 use tracing::error;
@@ -471,6 +477,20 @@ route!(post   "/api/v1/invite/server"                             => invite_serv
 route!(get    "/api/v1/invite/server"                             => invite_server_list(_q: PaginationQuery<InviteCode>) -> PaginationResponse<Invite>);
 route!(post   "/api/v1/invite/user/{user_id}"                     => invite_user_create(user_id: UserId) -> Invite, InviteCreate);
 route!(get    "/api/v1/invite/user/{user_id}"                     => invite_user_list(user_id: UserId, _q: PaginationQuery<InviteCode>) -> PaginationResponse<Invite>);
+
+// Admin Routes
+route!(post   "/api/v1/admin/whisper"                           => admin_whisper() -> (), AdminWhisper);
+route!(post   "/api/v1/admin/broadcast"                         => admin_broadcast() -> (), AdminBroadcast);
+route!(post   "/api/v1/admin/register-user"                     => admin_register_user() -> (), AdminRegisterUser);
+route!(post   "/api/v1/admin/purge-cache"                       => admin_purge_cache() -> AdminPurgeCacheResponse, AdminPurgeCache);
+route!(post   "/api/v1/admin/collect-garbage"                   => admin_collect_garbage() -> AdminCollectGarbageResponse, AdminCollectGarbage);
+route!(post   "/api/v1/admin/reindex-channel/{channel_id}"      => admin_reindex_channel(channel_id: ChannelId));
+route!(post   "/api/v1/admin/reindex-room/{room_id}"            => admin_reindex_room(room_id: RoomId));
+route!(post   "/api/v1/admin/reindex-everything"                => admin_reindex_everything() -> ());
+route!(get    "/api/v1/admin/channel-search-index-stats/{channel_id}" => admin_channel_search_index_stats(channel_id: ChannelId) -> SearchIndexStats);
+route!(get    "/api/v1/admin/search/stats"                      => admin_search_stats() -> SearchStats);
+route!(get    "/api/v1/admin/search/dlq"                        => admin_search_dlq_list(_q: PaginationQuery<SearchDlqId>) -> PaginationResponse<DlqEntry>);
+route!(delete "/api/v1/admin/search/dlq/{id}"                   => admin_search_dlq_delete(id: SearchDlqId));
 
 impl Http {
     /// Create a message with a custom timestamp (for bridge sync)

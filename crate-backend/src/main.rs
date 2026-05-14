@@ -1,42 +1,25 @@
 use std::{str::FromStr, sync::Arc, time::Duration};
 
-use axum::{
-    extract::DefaultBodyLimit,
-    middleware::{self},
-    response::{Html, IntoResponse},
-    routing::get,
-    Json,
-};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use clap::Parser;
-use common::v1::types::{
-    error::{ApiError, ErrorCode},
-    util::Time,
-    AuditLogEntry, AuditLogEntryType,
-};
+use common::v1::types::{util::Time, AuditLogEntry, AuditLogEntryType};
 use figment::providers::{Env, Format, Toml};
-use http::{header, HeaderName};
-use lamprey_backend_core::types::admin::AdminCollectGarbageMode;
+use lamprey_backend_core::types::admin::{
+    AdminCollectGarbage, AdminCollectGarbageMode, AdminCollectGarbageTarget,
+};
 use lamprey_backend_data_postgres::data::Data2;
 use opendal::layers::LoggingLayer;
 use opentelemetry_otlp::WithExportConfig;
 use sqlx::postgres::PgPoolOptions;
 use tokio::task::JoinSet;
-use tower_http::{
-    catch_panic::CatchPanicLayer, propagate_header::PropagateHeaderLayer,
-    sensitive_headers::SetSensitiveHeadersLayer, trace::TraceLayer,
-};
 use tracing::{error, info, warn};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
-use utoipa::{Modify, OpenApi};
-use utoipa_axum::router::OpenApiRouter;
 
 use crate::config::{ListenComponent, ListenTransport};
 
-use common::v1::types::misc::ApplicationIdReq;
 use lamprey_backend::{
     cli, config, error,
-    routes::{self, util::script_http::script_http},
+    serve::{self, serve_transport, server::{gc, setup_otel, Server}},
     types::{
         self, AuditLogEntryId, DbRoomCreate, DbUserCreate, MessageId, MessageSync, PaginationQuery,
         RoomCreate, RoomMemberPut, RoomType, SERVER_ROOM_ID, SERVER_USER_ID,
@@ -46,199 +29,6 @@ use lamprey_backend::{
 
 use config::Config;
 use error::Result;
-
-use crate::utoipa_utils::{cors, BadgeModifier, ComponentModifier, NestedTags};
-
-mod utoipa_utils;
-
-#[cfg(feature = "embed-frontend")]
-mod frontend;
-
-// NOTE: the `sync` tag doesn't seem to show up, so i moved its docs to index.md
-#[derive(OpenApi)]
-#[openapi(
-    components(schemas(
-        types::Room,
-        types::RoomPatch,
-        types::User,
-        types::Channel,
-        types::ChannelPatch,
-        types::Message,
-        types::RoomMember,
-        types::Role,
-        types::RolePatch,
-        // utoipa seems to forget to add these types specifically
-        types::UserIdReq,
-        ApplicationIdReq,
-        types::UserListParams,
-        types::UserListFilter,
-        MessageSync,
-        PaginationQuery<MessageId>,
-        common::v1::types::pagination::PaginationResponse<types::Message>,
-        types::emoji::EmojiCustom,
-        types::emoji::EmojiOwner,
-        types::reaction::ReactionKey,
-        common::v1::types::document::DocumentStateVector,
-        common::v1::types::document::DocumentUpdate,
-        common::v1::types::document::DocumentBranch,
-        common::v1::types::document::DocumentBranchState,
-        common::v1::types::document::DocumentBranchListParams,
-        common::v1::types::document::DocumentBranchCreate,
-        common::v1::types::document::DocumentBranchPatch,
-        common::v1::types::document::DocumentBranchMerge,
-        common::v1::types::document::DocumentRevisionId,
-        common::v1::types::document::DocumentTag,
-        common::v1::types::document::DocumentTagCreate,
-        common::v1::types::document::DocumentTagPatch,
-        common::v1::types::document::HistoryParams,
-        common::v1::types::document::Changeset,
-        common::v1::types::document::HistoryPagination,
-        common::v1::types::document::SerdocPut,
-        common::v1::types::document::DocumentPatch,
-        common::v1::types::document::Wiki,
-        common::v1::types::document::WikiPatch,
-        common::v1::types::document::serialized::Serdoc,
-        // ack types
-        common::v1::types::ack::AckBulk,
-        common::v1::types::ack::AckBulkItem,
-        // session types
-        types::SessionToken,
-        // auth types
-        common::v1::types::auth::WebauthnAuthenticator,
-        common::v1::types::auth::TotpRecoveryCode,
-        // reaction types
-        common::v1::types::reaction::ReactionListItem,
-        // message types
-        common::v1::types::message::PinsReorderItem,
-        // push types
-        common::v1::types::push::PushCreate,
-        common::v1::types::push::PushInfo,
-        common::v1::types::push::PushCreateKeys,
-        // room template types
-        common::v1::types::room_template::RoomTemplate,
-        common::v1::types::room_template::RoomTemplateCode,
-        common::v1::types::room_template::RoomTemplateSnapshot,
-        common::v1::types::room_template::RoomTemplateChannel,
-        common::v1::types::room_template::RoomTemplateRole,
-        // search types
-        common::v1::types::search::FilterRange<Time>,
-        common::v1::types::search::FilterRange<MessageId>,
-        common::v1::types::search::RoomSearchOrderField,
-        common::v1::types::search::MessageSearchOrderField,
-        common::v1::types::search::ChannelSearchOrderField,
-        common::v1::types::search::Order,
-        // room analytics types
-        common::v1::types::room_analytics::Aggregation,
-        common::v1::types::room_analytics::RoomAnalyticsInvitesOrigin,
-        common::v1::types::room_analytics::RoomAnalyticsChannel,
-        common::v1::types::room_analytics::RoomAnalyticsInvites,
-        common::v1::types::room_analytics::RoomAnalyticsMembersCount,
-        common::v1::types::room_analytics::RoomAnalyticsMembersJoin,
-        common::v1::types::room_analytics::RoomAnalyticsMembersLeave,
-        common::v1::types::room_analytics::RoomAnalyticsOverview,
-        // application/integration types
-        common::v1::types::application::Integration,
-        // moderation types
-        common::v1::types::moderation::ReportReason,
-        common::v1::types::moderation::ReportDestination,
-        // automod types
-        common::v1::types::automod::AutomodRule,
-        common::v1::types::automod::AutomodRuleCreate,
-        common::v1::types::automod::AutomodTrigger,
-        common::v1::types::automod::AutomodAction,
-        common::v1::types::automod::AutomodTarget,
-        // tag types
-        common::v1::types::tag::Tag,
-        common::v1::types::tag::TagCreate,
-        common::v1::types::tag::TagPatch,
-        // server types
-        common::v1::types::server::ServerAutomodList,
-        common::v1::types::server::ServerMediaScanner,
-        // federation types
-        common::v1::types::federation::ServerKey,
-        // user connection types
-        common::v1::types::user_connection::ConnectionMetadata,
-        common::v1::types::user_connection::ConnectionValue,
-        common::v1::types::user_connection::ConnectionVisibility,
-        // user relationship types
-        types::Relationship,
-        common::v1::types::user::Ignore,
-        common::v1::types::user::RelationshipType,
-        // room member types
-        types::RoomMemberOrigin,
-        common::v1::types::room_member::RoomMemberSearchResponse,
-        // harvest types
-        common::v1::types::harvest::Harvest,
-        common::v1::types::harvest::HarvestCreate,
-        common::v1::types::harvest::HarvestStatus,
-        // auth password types
-        common::v1::types::auth::PasswordExec,
-        common::v1::types::auth::PasswordExecIdent,
-        // user search types
-        common::v1::types::user::UserSearch,
-        common::v1::types::user::UserSearchSortField,
-        // relationship types
-        common::v1::types::user::RelationshipWithUserId,
-        common::v1::types::user::UserWithRelationship,
-        // component types
-        common::v1::types::components::ComponentId,
-        common::v1::types::components::ComponentCustomId,
-        common::v1::types::components::ButtonStyle,
-        // flume types
-        common::v1::types::message::flume::FlumeCreate,
-        common::v1::types::message::flume::FlumeDelta,
-        common::v1::types::message::flume::FlumeAppend,
-        common::v1::types::message::flume::FlumeReplace,
-        common::v1::types::message::flume::FlumeState,
-        common::v1::types::message::flume::MessageFlume,
-        // script types
-        common::v1::types::redex::Redex,
-        common::v1::types::redex::RedexCreate,
-        common::v1::types::redex::RedexContentUpdate,
-        common::v1::types::redex::RedexVersion,
-        common::v1::types::redex::RedexStatus,
-        common::v1::types::redex::RedexFormat,
-        common::v1::types::redex::RedexLocation,
-        common::v1::types::redex::RedexLocationUpdate,
-        common::v1::types::redex::RedexMetadata,
-        common::v1::types::redex::RedexHandler,
-        common::v1::types::redex::RedexHandlerType,
-        common::v1::types::redex::RedexCapability,
-        common::v1::types::redex::RedexPermission,
-        common::v1::types::redex::RedexPermissionGrant,
-        common::v1::types::redex::RedexVersionStatus,
-        common::v1::types::redex::Eval,
-        common::v1::types::redex::EvalStatus,
-        common::v1::types::redex::EvalLogEntry,
-        common::v1::types::redex::EvalCreateManual,
-        common::v1::types::redex::RedexDependency,
-        common::v1::types::redex::RedexDependencyLink,
-        common::v1::types::redex::RedexDependencyGraph,
-        common::v1::types::redex::RedexDependenciesUpdate,
-        common::v1::types::redex::EvalLogLevel,
-        common::v1::types::redex::EvalLogSource,
-        // common::v1::types::redex::RunTrace,
-        // common::v1::types::redex::RunMetrics,
-        // common::v1::types::redex::RunMetricsQuery,
-        // media types
-        common::v2::types::media::Media,
-        common::v2::types::media::MediaReference,
-        common::v2::types::media::MediaStatus,
-        common::v2::types::media::MediaMetadata,
-        common::v2::types::media::MediaScan,
-        common::v2::types::media::MediaQuarantine,
-    )),
-    modifiers(&BadgeModifier, &NestedTags, &ComponentModifier),
-    info(
-        title = "api doccery",
-        description = include_str!("../docs/index.md"),
-    ),
-    tags(
-        (name = "sync", description = include_str!("../docs/sync.md")),
-        (name = "auth", description = include_str!("../docs/auth.md")),
-    ),
-)]
-struct ApiDoc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -256,160 +46,33 @@ async fn main() -> Result<()> {
         .merge(Env::raw().only(&["RUST_LOG"]))
         .extract()?;
 
-    if let Some(endpoint) = &config.otel_trace_endpoint {
-        let exporter = opentelemetry_otlp::SpanExporter::builder()
-            .with_tonic()
-            .with_endpoint(endpoint)
-            .build()?;
-        let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
-            .with_batch_exporter(exporter)
-            .build();
-        use opentelemetry::trace::TracerProvider;
-        let tracer = provider.tracer("bridge-discord");
-        opentelemetry::global::set_tracer_provider(provider);
-        let telemetry_layer = tracing_opentelemetry::layer().with_tracer(tracer);
-        let subscriber = Registry::default()
-            .with(EnvFilter::from_str(&config.rust_log)?)
-            .with(tracing_subscriber::fmt::layer())
-            .with(telemetry_layer);
-        tracing::subscriber::set_global_default(subscriber)?;
-    } else {
-        let subscriber = Registry::default()
-            .with(EnvFilter::from_str(&config.rust_log)?)
-            .with(tracing_subscriber::fmt::layer());
-        tracing::subscriber::set_global_default(subscriber)?;
-    }
+    setup_otel(&config)?;
 
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .acquire_timeout(Duration::from_secs(5))
-        .connect(&config.database_url)
-        .await?;
-
-    let blobs = match &config.blobs {
-        config::ConfigBlobs::S3(s3) => {
-            let builder = opendal::services::S3::default()
-                .bucket(&s3.bucket)
-                .endpoint(s3.endpoint.as_str())
-                .region(&s3.region)
-                .access_key_id(&s3.access_key_id)
-                .secret_access_key(&s3.secret_access_key);
-            opendal::Operator::new(builder)?
-                .layer(LoggingLayer::default())
-                .finish()
-        }
-        config::ConfigBlobs::Fs(fs) => {
-            let builder = opendal::services::Fs::default().root(fs.data_dir.to_str().unwrap());
-            opendal::Operator::new(builder)?
-                .layer(LoggingLayer::default())
-                .finish()
-        }
-    };
-    blobs.check().await?;
-
-    let nats = if let Some(nats_config) = &config.nats {
-        let mut nats_options = async_nats::ConnectOptions::new();
-        if let Some(credentials_path) = &nats_config.credentials {
-            nats_options = nats_options
-                .credentials_file(credentials_path)
-                .await
-                .map_err(|e| Error::Internal(format!("NATS credentials file failed: {}", e)))?;
-        }
-        Some(
-            async_nats::connect_with_options(&nats_config.addr, nats_options)
-                .await
-                .map_err(|e| Error::Internal(format!("NATS connect failed: {}", e)))?,
-        )
-    } else {
-        None
-    };
-
-    let state = Arc::new(ServerState::init(config, pool, blobs, nats).await);
-
-    state.database.migrate().await?;
-
-    let srv = state.services();
-
-    // setup internal vapid config
-    let mut txn = state.acquire_data().await?;
-    if txn.config_get().await?.is_none() {
-        info!("initializing internal config");
-        let (keypair, _) = ece::generate_keypair_and_auth_secret()
-            .map_err(|e| Error::Internal(format!("VAPID key generation failed: {}", e)))?;
-        let vapid_public_key = URL_SAFE_NO_PAD.encode(
-            keypair
-                .pub_as_raw()
-                .map_err(|e| Error::Internal(format!("VAPID key encoding failed: {}", e)))?,
-        );
-        let vapid_private_key = URL_SAFE_NO_PAD.encode(
-            keypair
-                .raw_components()
-                .map_err(|e| Error::Internal(format!("VAPID key encoding failed: {}", e)))?
-                .private_key(),
-        );
-
-        let mut jwk = jsonwebkey::JsonWebKey::new(jsonwebkey::Key::generate_p256());
-        jwk.set_algorithm(jsonwebkey::Algorithm::ES256).unwrap();
-        jwk.key_id = Some(nanoid::nanoid!());
-        jwk.key_use = Some(jsonwebkey::KeyUse::Signing);
-
-        txn.config_put(config::ConfigInternal {
-            vapid_private_key,
-            vapid_public_key,
-            oidc_jwk_key: serde_json::to_string(&jwk)?,
-            admin_token: None,
-            federation_keys: vec![],
-        })
-        .await?;
-    }
-    txn.commit().await?;
-
-    // setup server room
-    let mut txn = state.acquire_data().await?;
-    if txn.user_get(SERVER_USER_ID).await.is_err() {
-        txn.user_create(DbUserCreate {
-            id: Some(SERVER_USER_ID),
-            parent_id: None,
-            name: "root".to_string(),
-            description: None,
-            puppet: None,
-            registered_at: Some(Time::now_utc()),
-            system: true,
-            remote: None,
-        })
-        .await?;
-    }
-    if txn.room_get(SERVER_ROOM_ID).await.is_err() {
-        srv.rooms
-            .create_system(
-                RoomCreate {
-                    name: "server".to_string(),
-                    description: None,
-                    icon: None,
-                    banner: None,
-                    public: Some(false),
-                },
-                SERVER_USER_ID,
-                DbRoomCreate {
-                    id: Some(SERVER_ROOM_ID),
-                    ty: RoomType::Server,
-                    welcome_channel_id: None,
-                },
-            )
-            .await?;
-    }
-    txn.commit().await?;
+    let server = Server::init_from_config(config).await?;
+    let state = server.state();
 
     match &args.command {
-        cli::Command::Serve {} => serve(state).await?,
-        cli::Command::Check {} => check(state).await?,
-        cli::Command::MigrateMedia {} => migrate_media(state).await?,
-        cli::Command::GcMedia {} => gc_media(state).await?,
-        cli::Command::GcMessages {} => gc_messages(state).await?,
-        cli::Command::GcSession {} => gc_sessions(state).await?,
-        cli::Command::GcAuditLog {} => gc_audit_log(state).await?,
-        cli::Command::GcRoomAnalytics {} => gc_room_analytics(state).await?,
-        cli::Command::GcAll {} => gc_all(state).await?,
+        cli::Command::Serve {} => server.serve().await?,
+        cli::Command::GcMedia {} => gc(state, &[AdminCollectGarbageTarget::Media]).await?,
+        cli::Command::GcMessages {} => gc(state, &[AdminCollectGarbageTarget::Messages]).await?,
+        cli::Command::GcSession {} => gc(state, &[AdminCollectGarbageTarget::Session]).await?,
+        cli::Command::GcAuditLog {} => gc(state, &[AdminCollectGarbageTarget::AuditLog]).await?,
+        cli::Command::GcRoomAnalytics {} => {
+            gc(state, &[AdminCollectGarbageTarget::RoomAnalytics]).await?
+        }
+        cli::Command::GcAll {} => {
+            gc(
+                state,
+                &[
+                    AdminCollectGarbageTarget::Media,
+                    AdminCollectGarbageTarget::Messages,
+                    AdminCollectGarbageTarget::Session,
+                    AdminCollectGarbageTarget::AuditLog,
+                    AdminCollectGarbageTarget::RoomAnalytics,
+                ],
+            )
+            .await?
+        }
         cli::Command::Register { user_id, reason } => {
             let mut txn = state.acquire_data().await?;
             txn.user_set_registered(*user_id, Some(Time::now_utc()), None)
@@ -455,217 +118,5 @@ async fn main() -> Result<()> {
         }
     }
 
-    Ok(())
-}
-
-async fn serve_transport(transport: ListenTransport, router: axum::Router) -> Result<()> {
-    match transport {
-        ListenTransport::Tcp { address, port } => {
-            let listener = tokio::net::TcpListener::bind((address, port)).await?;
-            axum::serve(listener, router).await?;
-        }
-        ListenTransport::Unix { path } => {
-            if let Some(p) = path.parent() {
-                tokio::fs::create_dir_all(p).await?;
-            }
-            if path.exists() {
-                warn!("deleting existing socket {}", path.display());
-                tokio::fs::remove_file(&path).await?;
-            }
-            let listener = tokio::net::UnixListener::bind(&path)?;
-            let res = axum::serve(listener, router).await;
-            let _ = tokio::fs::remove_file(path).await;
-            res?;
-        }
-    }
-    Ok(())
-}
-
-async fn api_fallback() -> impl IntoResponse {
-    Error::from(ApiError::from_code(ErrorCode::NotFound))
-}
-
-/// start the main server
-async fn serve(state: Arc<ServerState>) -> Result<()> {
-    info!("Starting server");
-
-    state.services.start_background_tasks().await;
-
-    let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
-        .nest(
-            "/api",
-            routes::routes(Arc::clone(&state)).fallback(api_fallback),
-        )
-        .route("/metrics", get(routes::metrics::get_metrics))
-        .route("/.well-known/lamprey-mountain", get(routes::well_known))
-        .with_state(state.clone())
-        .split_for_parts();
-    NestedTags.modify(&mut api);
-    BadgeModifier.modify(&mut api);
-    let router = router
-        .route("/api/docs.json", get(|| async { Json(api) }))
-        .route(
-            "/api/docs",
-            get(|| async { Html(include_str!("scalar.html")) }),
-        );
-    #[cfg(not(feature = "embed-frontend"))]
-    let router = router.route("/", get(|| async { "it works!" }));
-    #[cfg(feature = "embed-frontend")]
-    let router = router
-        .route(
-            "/invite/{code}",
-            get(frontend::invite_meta_handler).with_state(state.clone()),
-        )
-        .fallback_service(axum::routing::get(frontend::frontend_handler).with_state(state.clone()));
-    let router = router
-        .layer(axum::middleware::from_fn_with_state(
-            state.clone(),
-            script_http,
-        ))
-        .layer(DefaultBodyLimit::max(1024 * 1024 * 16))
-        .layer(cors())
-        .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
-        .layer(TraceLayer::new_for_http())
-        .layer(middleware::from_fn(routes::util::audit_log_middleware))
-        .layer(CatchPanicLayer::new())
-        .layer(PropagateHeaderLayer::new(HeaderName::from_static(
-            "x-trace-id",
-        )));
-
-    let mut set = JoinSet::new();
-
-    for config in &state.config.listen {
-        if config.components.contains(&ListenComponent::Api) {
-            let router = router.clone();
-            let transport = config.transport.clone();
-            info!("api listening on {}", transport);
-            set.spawn(async move { serve_transport(transport, router).await });
-        }
-    }
-
-    if set.is_empty() {
-        error!("no components enabled for any listeners");
-        return Err(Error::BadStatic("no components enabled for any listeners"));
-    }
-
-    while let Some(res) = set.join_next().await {
-        res.unwrap()?;
-    }
-
-    Ok(())
-}
-
-/// check config
-async fn check(_state: Arc<ServerState>) -> Result<()> {
-    info!("done checking");
-    Ok(())
-}
-
-async fn migrate_media(state: Arc<ServerState>) -> Result<()> {
-    info!(
-        "Starting media migration with config: {:#?}",
-        state.config()
-    );
-
-    loop {
-        let count = state.data().media_migrate_batch(50).await?;
-        if count == 0 {
-            break;
-        }
-    }
-
-    Ok(())
-}
-
-async fn gc_media(state: Arc<ServerState>) -> Result<()> {
-    info!("starting media garbage collection");
-
-    info!("finding items...");
-    let rows_affected = state.data().gc_media_mark().await?;
-    info!("found {} items to delete", rows_affected);
-
-    loop {
-        let rows = state.data().gc_media_get_sweep_candidates(50).await?;
-        if rows.is_empty() {
-            break;
-        }
-        for media_id in &rows {
-            let items = state
-                .blobs
-                .list_with(&format!("media/{}/", media_id))
-                .recursive(true)
-                .await?;
-            for item in items {
-                if item.metadata().is_file() {
-                    state.blobs.delete(item.path()).await?;
-                }
-            }
-            info!("delete {}", media_id);
-        }
-        state.data().gc_media_delete_swept(&rows).await?;
-    }
-
-    Ok(())
-}
-
-async fn gc_messages(state: Arc<ServerState>) -> Result<()> {
-    info!("starting message garbage collection job");
-
-    let rows_affected = state
-        .data()
-        .gc_messages(AdminCollectGarbageMode::Sweep)
-        .await?;
-    info!("done; {} rows affected", rows_affected);
-
-    Ok(())
-}
-
-async fn gc_sessions(state: Arc<ServerState>) -> Result<()> {
-    info!("starting session garbage collection job");
-
-    let rows_affected = state
-        .data()
-        .gc_sessions(AdminCollectGarbageMode::Sweep)
-        .await?;
-    info!("done; {} rows affected", rows_affected);
-
-    Ok(())
-}
-
-async fn gc_audit_log(state: Arc<ServerState>) -> Result<()> {
-    info!("starting audit log garbage collection job");
-    state
-        .data()
-        .gc_audit_logs(AdminCollectGarbageMode::Mark)
-        .await?;
-    let rows_affected = state
-        .data()
-        .gc_audit_logs(AdminCollectGarbageMode::Sweep)
-        .await?;
-    info!("done; {} rows affected", rows_affected);
-    Ok(())
-}
-
-async fn gc_room_analytics(state: Arc<ServerState>) -> Result<()> {
-    info!("starting room analytics garbage collection job");
-    state
-        .data()
-        .gc_room_analytics(AdminCollectGarbageMode::Mark)
-        .await?;
-    let rows_affected = state
-        .data()
-        .gc_room_analytics(AdminCollectGarbageMode::Sweep)
-        .await?;
-    info!("done; {} rows affected", rows_affected);
-    Ok(())
-}
-
-async fn gc_all(state: Arc<ServerState>) -> Result<()> {
-    info!("garbage collecting everything");
-    gc_media(state.clone()).await?;
-    gc_messages(state.clone()).await?;
-    gc_sessions(state.clone()).await?;
-    gc_audit_log(state.clone()).await?;
-    gc_room_analytics(state).await?;
     Ok(())
 }

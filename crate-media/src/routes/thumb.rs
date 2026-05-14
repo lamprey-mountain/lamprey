@@ -178,8 +178,8 @@ async fn thumb_response(
 
         Ok((status, final_headers.headers, body))
     } else {
-        let is_animated = media.source.mime.as_str() == "image/gif"
-            || media.source.mime.as_str().starts_with("video/");
+        let is_animated = &*media.content_type == "image/gif"
+            || (*media.content_type).starts_with("video/");
 
         if !animate && is_animated {
             // Force static thumbnail if animate=false is requested for an animated source
@@ -232,7 +232,7 @@ async fn thumb_response(
             return Ok((status, final_headers.headers, body));
         }
 
-        if media.source.mime.as_str().starts_with("image/") {
+        if (*media.content_type).starts_with("image/") {
             if with_body {
                 return get_media(
                     State(s.clone()),

@@ -24,12 +24,6 @@ pub enum Command {
     /// start the main server
     Serve {},
 
-    /// check config
-    Check {},
-
-    /// migrate all media json from to latest version (v2)
-    MigrateMedia {},
-
     // TODO: deprecate gc commands, tell people to use http api or admin ui instead
     /// garbage collect media deleted over a week ago
     GcMedia {},

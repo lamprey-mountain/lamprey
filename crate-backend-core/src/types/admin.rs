@@ -85,13 +85,13 @@ pub enum AdminCollectGarbageMode {
     Sweep,
 }
 
-#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AdminWhisper {
     pub user_id: UserId,
     pub message: MessageCreate,
 }
 
-#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AdminBroadcast {
     pub message: MessageCreate,
     // TODO: add these
@@ -105,7 +105,7 @@ pub struct AdminBroadcast {
     // server_roles: Vec<RoleId>,
 }
 
-#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AdminRegisterUser {
     pub user_id: UserId,
 }

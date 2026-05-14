@@ -1,5 +1,5 @@
 use common::v1::types::{EmojiId, MediaId, MediaTrack, MediaV0};
-use common::v2::types::media::{Media as MediaV2, MediaStatus};
+use common::v2::types::media::{Media, MediaStatus};
 use serde::Deserialize;
 use sqlx::{query_scalar, types::JsonValue, Executor, Postgres};
 
@@ -9,7 +9,7 @@ use crate::error::Result;
 #[serde(tag = "v")]
 pub enum DbMediaData {
     V1(MediaV0),
-    V2(MediaV2),
+    V2(Media),
     #[serde(untagged)]
     Raw(DbMediaRaw),
 }
@@ -22,19 +22,20 @@ pub struct DbMediaRaw {
     tracks: Vec<MediaTrack>,
 }
 
-impl From<DbMediaData> for MediaV0 {
+impl From<DbMediaData> for Media {
     fn from(value: DbMediaData) -> Self {
         match value {
-            DbMediaData::V1(media) => media,
-            DbMediaData::V2(media) => media.into(),
-            DbMediaData::Raw(db_media_raw) => db_media_raw.into(),
+            DbMediaData::V1(media) => media.into(),
+            DbMediaData::V2(media) => media,
+            DbMediaData::Raw(db_media_raw) => db_media_raw.into()
         }
     }
 }
 
-impl From<DbMediaRaw> for MediaV0 {
+impl From<DbMediaRaw> for Media {
     fn from(value: DbMediaRaw) -> Self {
         let tracks = value.tracks;
+
         let source = tracks
             .iter()
             .find(|i| {
@@ -44,16 +45,17 @@ impl From<DbMediaRaw> for MediaV0 {
                         | common::v1::types::TrackSource::Downloaded { .. }
                 )
             })
-            .or_else(|| tracks.get(0))
+            .or_else(|| tracks.first())
             .expect("media should always have at least one track")
             .clone();
 
-        MediaV0 {
+        let v1: common::v1::types::MediaV0 = common::v1::types::MediaV0 {
             id: value.id,
             filename: value.filename,
             alt: value.alt,
             source,
-        }
+        };
+        v1.into()
     }
 }
 
@@ -72,7 +74,7 @@ where
 pub async fn lookup_media_with_status<'e, E>(
     exec: E,
     media_id: MediaId,
-) -> Result<(MediaV0, Option<MediaStatus>)>
+) -> Result<(Media, Option<MediaStatus>)>
 where
     E: Executor<'e, Database = Postgres>,
 {

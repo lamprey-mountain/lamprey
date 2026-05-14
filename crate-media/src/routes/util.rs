@@ -1,4 +1,4 @@
-use common::v1::types::{MediaTrackInfo, MediaV0};
+use common::v2::types::media::{Media, MediaMetadata};
 use headers::HeaderMapExt;
 use http::HeaderMap;
 use std::{
@@ -46,14 +46,14 @@ pub struct BuiltHeaders {
 }
 
 pub enum ContentInfo<'a> {
-    Media(&'a MediaV0),
+    Media(&'a Media),
     Thumb {
-        media: &'a MediaV0,
+        media: &'a Media,
         content_length: Option<u64>,
         animated: bool,
     },
     Gifv {
-        media: &'a MediaV0,
+        media: &'a Media,
         content_length: Option<u64>,
     },
 }
@@ -61,7 +61,7 @@ pub enum ContentInfo<'a> {
 impl<'a> ContentInfo<'a> {
     fn content_type(&self) -> headers::ContentType {
         match self {
-            ContentInfo::Media(media) => media.source.mime.to_string().parse().unwrap(),
+            ContentInfo::Media(media) => media.content_type.to_string().parse().unwrap(),
             ContentInfo::Thumb { animated, .. } => {
                 if *animated {
                     "image/webp".parse().unwrap()
@@ -96,13 +96,13 @@ impl<'a> ContentInfo<'a> {
 
     fn content_length(&self) -> Option<u64> {
         match self {
-            ContentInfo::Media(media) => Some(media.source.size),
+            ContentInfo::Media(media) => Some(media.size),
             ContentInfo::Thumb { content_length, .. } => *content_length,
             ContentInfo::Gifv { content_length, .. } => *content_length,
         }
     }
 
-    fn media(&self) -> &'a MediaV0 {
+    fn media(&self) -> &'a Media {
         match self {
             ContentInfo::Media(media) => media,
             ContentInfo::Thumb { media, .. } => media,
@@ -211,16 +211,16 @@ pub fn build_headers<'a>(
     }
 }
 
-pub fn probably_can_thumbnail(media: &MediaV0) -> bool {
-    match &media.source.info {
-        MediaTrackInfo::Image(_) | MediaTrackInfo::Thumbnail(_) | MediaTrackInfo::Video(_) => true,
-        MediaTrackInfo::Mixed(m)
-            if media.source.mime.starts_with("image/")
-                || media.source.mime.starts_with("video/") =>
-        {
-            match (m.width, m.height) {
-                (Some(_), Some(_)) => true,
-                _ => false,
+pub fn probably_can_thumbnail(media: &Media) -> bool {
+    match &media.metadata {
+        MediaMetadata::Image { .. } | MediaMetadata::Video { .. } => true,
+        MediaMetadata::File | MediaMetadata::Text => {
+            if media.content_type.starts_with("image/")
+                || media.content_type.starts_with("video/")
+            {
+                true
+            } else {
+                false
             }
         }
         // if we don't have a poster, we probably could generate one...

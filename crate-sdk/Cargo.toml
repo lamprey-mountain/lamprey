@@ -18,5 +18,6 @@ common = { package = "lamprey-common", version = "0.1.0", path = "../crate-commo
 anyhow = "1.0.102"
 futures-util = "0.3.32"
 headers = "0.4.1"
+lamprey-backend-core = { version = "0.1", path = "../crate-backend-core" }
 lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 uuid = "1.22"

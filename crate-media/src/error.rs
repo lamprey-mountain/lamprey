@@ -42,6 +42,15 @@ pub enum Error {
 
     #[error("internal error: {0}")]
     Internal(String),
+
+    #[error("otel build error: {0}")]
+    OtelBuild(Arc<opentelemetry_otlp::ExporterBuildError>),
+
+    #[error("log filter parse error: {0}")]
+    LogFilterParse(Arc<tracing_subscriber::filter::ParseError>),
+
+    #[error("subscriber set global default error: {0}")]
+    SubscriberSetGlobalDefault(Arc<tracing::subscriber::SetGlobalDefaultError>),
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
@@ -57,6 +66,9 @@ pub enum ErrorCode {
     AsyncTempfile,
     StillProcessing,
     Internal,
+    OtelBuild,
+    LogFilterParse,
+    SubscriberSetGlobalDefault,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -81,6 +93,9 @@ impl Error {
             Error::AsyncTempfile(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::StillProcessing => StatusCode::CONFLICT,
             Error::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::OtelBuild(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::LogFilterParse(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::SubscriberSetGlobalDefault(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
@@ -97,6 +112,9 @@ impl Error {
             Error::AsyncTempfile(_) => ErrorCode::AsyncTempfile,
             Error::StillProcessing => ErrorCode::StillProcessing,
             Error::Internal(_) => ErrorCode::Internal,
+            Error::OtelBuild(_) => ErrorCode::OtelBuild,
+            Error::LogFilterParse(_) => ErrorCode::LogFilterParse,
+            Error::SubscriberSetGlobalDefault(_) => ErrorCode::SubscriberSetGlobalDefault,
         }
     }
 
@@ -155,5 +173,23 @@ impl From<sqlx::Error> for Error {
 impl From<Arc<Error>> for Error {
     fn from(value: Arc<Error>) -> Self {
         value.as_ref().clone()
+    }
+}
+
+impl From<opentelemetry_otlp::ExporterBuildError> for Error {
+    fn from(value: opentelemetry_otlp::ExporterBuildError) -> Self {
+        Error::OtelBuild(Arc::new(value))
+    }
+}
+
+impl From<tracing_subscriber::filter::ParseError> for Error {
+    fn from(value: tracing_subscriber::filter::ParseError) -> Self {
+        Error::LogFilterParse(Arc::new(value))
+    }
+}
+
+impl From<tracing::subscriber::SetGlobalDefaultError> for Error {
+    fn from(value: tracing::subscriber::SetGlobalDefaultError) -> Self {
+        Error::SubscriberSetGlobalDefault(Arc::new(value))
     }
 }

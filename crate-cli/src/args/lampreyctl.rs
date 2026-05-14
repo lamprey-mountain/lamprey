@@ -52,10 +52,16 @@ pub enum ServeCommand {
     Api,
 
     /// start the media proxy server
-    Media,
+    Media {
+        #[arg(short, long, default_value = "media.toml")]
+        media_config: PathBuf,
+    },
 
     /// start the voice server
-    Voice,
+    Voice {
+        #[arg(short, long, default_value = "sfu.toml")]
+        sfu_config: PathBuf,
+    },
     // media scanner server?
 }
 
