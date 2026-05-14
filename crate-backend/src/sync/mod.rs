@@ -12,7 +12,7 @@ use common::v1::types::util::Time;
 use common::v1::types::voice::{SfuCommand, SfuPermissions, SignallingMessage, VoiceState};
 use common::v1::types::{self, SERVER_ROOM_ID};
 use common::v1::types::{
-    DocumentBranchId, MessageClient, MessageEnvelope, MessageSync, Permission, ScriptId,
+    DocumentBranchId, MessageClient, MessageEnvelope, MessageSync, Permission, RedexId,
 };
 use tokio::time::Instant;
 use tracing::{debug, error, trace, warn};
@@ -244,7 +244,7 @@ impl Connection {
     async fn handle_script_subscribe(
         &mut self,
         channel_id: ChannelId,
-        script_id: ScriptId,
+        script_id: RedexId,
     ) -> Result<()> {
         let session = self
             .state

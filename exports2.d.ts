@@ -103,6 +103,22 @@ declare global {
 		onEvent(eventTypes?: string[]): Input<["api_event"]>;
 
 		// TODO: maybe have onChildStopped
+
+		// /** when this script is installed for the first time */
+		// onInstall(): Input<[]>;
+
+		// /** when this script version becomes the active version
+		// *
+		// * will fire again on downgrade
+		// */
+		// onActivate(): Input<[]>;
+
+		// // serviceworker lifecycle events...? maybe not relevant here
+		// onBlocking(): Promise<void>;
+		// onShutdown(): Promise<void>;
+
+		// /** when this script hits some quota (cpu, mem, storage) */
+		// onQuota(): Input<[]>;
 	};
 
 	// TODO: rename this?

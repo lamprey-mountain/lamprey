@@ -7,7 +7,7 @@ use thiserror::Error;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{application::Scope, Permission, RunId, ScriptId};
+use crate::v1::types::{application::Scope, redex::error::RedexError, Permission};
 
 mod http_conversions;
 
@@ -68,9 +68,8 @@ pub struct ApiError {
     pub ratelimit: Option<Ratelimit>,
 
     /// errors with your script
-    // TODO: use this
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
-    pub script: Vec<ScriptError>,
+    pub script: Vec<RedexError>,
 }
 
 /// warnings that require forcing
@@ -193,37 +192,6 @@ pub struct Ratelimit {
     ///
     /// if false, this only affects this bucket
     pub global: bool,
-}
-
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ScriptError {
-    pub message: String,
-    pub stack: String,
-
-    #[cfg_attr(feature = "serde", serde(rename = "type"))]
-    pub ty: ScriptErrorType,
-
-    pub line: u64,
-    pub column: u64,
-
-    pub script_id: ScriptId,
-    pub run_id: RunId,
-}
-
-#[derive(Debug, Clone)]
-// #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum ScriptErrorType {
-    Type,
-    Syntax,
-    Internal,
-    Generic,
-    Reference,
-    Range,
-    // capability/permission error?
 }
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]

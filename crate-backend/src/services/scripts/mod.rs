@@ -1,8 +1,10 @@
-use common::v1::types::script::{
-    Run, RunInput, RunStatus, Script, ScriptVersion, ScriptVersionStatus,
+use common::v1::types::redex::{
+    Eval, EvalInput, EvalStatus, Redex, RedexVersion, RedexVersionStatus,
 };
 use common::v1::types::util::Time;
-use common::v1::types::{ChannelId, ConnectionId, MediaId, MessageSync, RunId, ScriptId, UserId};
+use common::v1::types::{
+    ChannelId, ConnectionId, EvalId, MediaId, MessageSync, RedexId, RedexVerId, UserId,
+};
 use dashmap::DashMap;
 use lamprey_script::engine::{AnyExecutionHandle, ExecutionEvent, ScriptExtracted};
 use lamprey_script::{Engine, Executor, Limits};
@@ -18,7 +20,7 @@ pub struct ServiceScripts {
     state: Arc<ServerStateInner>,
 
     engine: Engine,
-    handles: DashMap<RunId, AnyExecutionHandle>,
+    handles: DashMap<EvalId, AnyExecutionHandle>,
 
     /// broadcast channels for script events per channel_id
     script_event_txs: DashMap<ChannelId, broadcast::Sender<MessageSync>>,
@@ -28,7 +30,7 @@ impl ServiceScripts {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
             state,
-            engine: Engine::new(Limits::strict()),
+            engine: Engine::new(Limits::strict()).unwrap(),
             handles: DashMap::new(),
             script_event_txs: DashMap::new(),
         }
@@ -53,6 +55,17 @@ impl ServiceScripts {
         }
     }
 
+    /// get the redex version id for a redex
+    pub async fn get_redex_version_id(&self, redex_id: RedexId) -> Result<RedexVerId> {
+        let script = self
+            .state
+            .data()
+            .script_get(redex_id)
+            .await?
+            .ok_or(Error::BadStatic("script not found"))?;
+        Ok(script.latest_version.version_id)
+    }
+
     /// get or create a broadcast receiver for script events on a channel
     pub async fn subscribe_channel(
         &self,
@@ -69,14 +82,15 @@ impl ServiceScripts {
 
     async fn load_from_source(
         &self,
-        script_id: ScriptId,
+        redex_id: RedexId,
+        redex_version_id: RedexVerId,
         media_id: MediaId,
     ) -> Result<Box<dyn Executor>> {
         let bytes = self.state.services().media.download(media_id).await?;
         let source = str::from_utf8(&bytes).unwrap();
         let loaded = self
             .engine
-            .load_js(script_id, "strobbery", source)
+            .load_js(redex_id, redex_version_id, "strobbery", source)
             .await
             .unwrap();
         Ok(loaded)
@@ -84,7 +98,7 @@ impl ServiceScripts {
 
     /// create a script
     // TODO: process script (and script version) in background
-    pub async fn create_script(&self, script: Script) -> Result<()> {
+    pub async fn create_script(&self, script: Redex) -> Result<()> {
         let inputs = self.process(script.clone(), None).await?;
         dbg!(&inputs);
         let extracted_metadata = inputs.metadata;
@@ -109,7 +123,7 @@ impl ServiceScripts {
             .await?;
 
         // update status to Valid
-        data.script_version_update_status(script.id, version_id, ScriptVersionStatus::Valid)
+        data.script_version_update_status(script.id, version_id, RedexVersionStatus::Valid)
             .await?;
 
         // update the script's latest_version metadata with extracted data
@@ -133,7 +147,7 @@ impl ServiceScripts {
     }
 
     /// create a script version
-    pub async fn create_script_version(&self, script: Script, ver: ScriptVersion) -> Result<()> {
+    pub async fn create_script_version(&self, script: Redex, ver: RedexVersion) -> Result<()> {
         let ver_format = ver.format.clone();
         let ver_location = ver.location.clone();
         let ver_metadata = ver.metadata.clone();
@@ -156,7 +170,7 @@ impl ServiceScripts {
             .await?;
 
         // update status to Valid
-        data.script_version_update_status(script.id, version_id, ScriptVersionStatus::Valid)
+        data.script_version_update_status(script.id, version_id, RedexVersionStatus::Valid)
             .await?;
 
         // broadcast the new version
@@ -168,7 +182,7 @@ impl ServiceScripts {
                 script.channel_id,
                 MessageSync::ScriptVersionCreate {
                     channel_id: script.channel_id,
-                    script_id: script.id,
+                    redex_id: script.id,
                     version: full_ver,
                 },
             )
@@ -183,8 +197,8 @@ impl ServiceScripts {
         ScriptSyncer::new(Arc::clone(&self.state), conn_id)
     }
 
-    /// load a script
-    async fn load(&self, script_id: ScriptId) -> Result<Box<dyn Executor>> {
+    /// load a redex
+    async fn load(&self, redex_id: RedexId) -> Result<Box<dyn Executor>> {
         // TODO: check if script is already loaded first
         // self.engine.get_js(&script_id);
 
@@ -192,7 +206,7 @@ impl ServiceScripts {
         let mut data = self.state.data();
 
         let script = data
-            .script_get(script_id)
+            .script_get(redex_id)
             .await?
             .ok_or(Error::BadStatic("script not found"))?;
         dbg!(&script.status);
@@ -207,7 +221,12 @@ impl ServiceScripts {
         // TODO: module name
         let loaded = self
             .engine
-            .load_js(script_id, "strobbery", source)
+            .load_js(
+                redex_id,
+                script.latest_version.version_id,
+                "strobbery",
+                source,
+            )
             .await
             .unwrap();
 
@@ -219,18 +238,24 @@ impl ServiceScripts {
     /// - does basic validation
     /// - extracts script inputs and metadata
     /// - optionally process a specific version of a script
-    async fn process(&self, script: Script, ver: Option<ScriptVersion>) -> Result<ScriptExtracted> {
+    async fn process(&self, script: Redex, ver: Option<RedexVersion>) -> Result<ScriptExtracted> {
         // NOTE: should i insert the extraction run in the db too?
 
+        let version_id = ver
+            .as_ref()
+            .map(|v| &v.version_id)
+            .unwrap_or(&script.latest_version.version_id);
         let location = ver
             .as_ref()
             .map(|v| &v.location)
             .unwrap_or(&script.latest_version.location);
         let media_id = location.media_id().unwrap();
-        let loaded = self.load_from_source(script.id, media_id).await?;
+        let loaded = self
+            .load_from_source(script.id, *version_id, media_id)
+            .await?;
 
         let mut handle = loaded
-            .spawn(RunInput::Extraction, RunId::new())
+            .spawn(EvalInput::Extraction, EvalId::new())
             .await
             .unwrap();
         let extracted = handle.done().await.unwrap();
@@ -242,20 +267,22 @@ impl ServiceScripts {
     pub async fn spawn(
         &self,
         channel_id: ChannelId,
-        script_id: ScriptId,
-        input: RunInput,
+        redex_id: RedexId,
+        redex_version_id: RedexVerId,
+        input: EvalInput,
     ) -> Result<AnyExecutionHandle> {
-        // load script
-        let loaded = self.load(script_id).await?;
-        let run_id = RunId::new();
+        // load redex
+        let loaded = self.load(redex_id).await?;
+        let eval_id = EvalId::new();
 
         // insert run into database
-        let run = Run {
-            id: run_id,
-            script_id,
+        let run = Eval {
+            id: eval_id,
+            redex_id,
+            redex_version_id,
             created_at: Time::now_utc(),
             stopped_at: None,
-            status: RunStatus::Creating,
+            status: EvalStatus::Creating,
             input: input.clone().into(),
         };
         let mut data = self.state.data();
@@ -269,8 +296,8 @@ impl ServiceScripts {
         )
         .await;
 
-        let handle = loaded.spawn(input, run_id).await.unwrap();
-        self.handles.insert(run_id, handle.clone());
+        let handle = loaded.spawn(input, eval_id).await.unwrap();
+        self.handles.insert(eval_id, handle.clone());
         let caller_handle = handle.clone();
         let mut event_handle = handle; // move the original receiver so we don't miss any messages
         let state = self.state.clone();
@@ -281,7 +308,7 @@ impl ServiceScripts {
                 match &*event {
                     ExecutionEvent::Log(entry) => {
                         let mut data = state.data();
-                        let _ = data.script_log_insert(run_id, entry).await;
+                        let _ = data.script_log_insert(eval_id, entry).await;
                         state
                             .services()
                             .scripts
@@ -289,7 +316,7 @@ impl ServiceScripts {
                                 channel_id,
                                 MessageSync::ScriptLogCreate {
                                     channel_id,
-                                    run_id,
+                                    run_id: eval_id,
                                     entry: entry.clone(),
                                 },
                             )
@@ -297,12 +324,12 @@ impl ServiceScripts {
                     }
                     ExecutionEvent::Status(status) => {
                         let mut data = state.data();
-                        let _ = data.script_run_update_status(run_id, status.clone()).await;
+                        let _ = data.script_run_update_status(eval_id, status.clone()).await;
 
-                        let run_info = event_handle.run();
+                        let run_info = event_handle.eval();
                         let stopped_at = if matches!(
                             *status,
-                            RunStatus::Exited | RunStatus::Crashed | RunStatus::Stopped
+                            EvalStatus::Exited | EvalStatus::Crashed | EvalStatus::Stopped
                         ) {
                             Some(Time::now_utc())
                         } else {
@@ -316,9 +343,10 @@ impl ServiceScripts {
                                 channel_id,
                                 MessageSync::ScriptRunUpdate {
                                     channel_id,
-                                    run: Run {
-                                        id: run_id,
-                                        script_id,
+                                    run: Eval {
+                                        id: eval_id,
+                                        redex_id,
+                                        redex_version_id,
                                         created_at: run_info.created_at,
                                         stopped_at,
                                         status: status.clone(),
@@ -338,7 +366,7 @@ impl ServiceScripts {
             }
 
             // cleanup
-            state.services().scripts.handles.remove(&run_id);
+            state.services().scripts.handles.remove(&eval_id);
         });
 
         Ok(caller_handle)
@@ -348,22 +376,22 @@ impl ServiceScripts {
     pub async fn stop_run(
         &self,
         channel_id: ChannelId,
-        _script_id: ScriptId,
-        run_id: RunId,
+        _script_id: RedexId,
+        run_id: EvalId,
     ) -> Result<()> {
         let handle = self.handles.get(&run_id).ok_or(Error::NotFound)?;
         handle.stop();
 
         let mut data = self.state.data();
         let _ = data
-            .script_run_update_status(run_id, RunStatus::Stopped)
+            .script_run_update_status(run_id, EvalStatus::Stopped)
             .await;
 
         self.broadcast(
             channel_id,
             MessageSync::ScriptRunUpdate {
                 channel_id,
-                run: handle.run().to_owned(),
+                run: handle.eval().to_owned(),
             },
         )
         .await;
@@ -385,16 +413,16 @@ pub struct ScriptSyncer {
     /// Sends subscription requests to switch to a different script.
     /// When a client subscribes to a new script, the (channel_id, script_id) tuple is
     /// sent through this channel.
-    query_tx: tokio::sync::watch::Sender<Option<(ChannelId, ScriptId)>>,
+    query_tx: tokio::sync::watch::Sender<Option<(ChannelId, RedexId)>>,
 
     /// Receives subscription requests from `query_tx`. The poll() loop monitors
     /// this receiver for changes. When a new query arrives, it sets up a
     /// subscription to the requested script and moves the subscription to `current_rx`.
-    query_rx: tokio::sync::watch::Receiver<Option<(ChannelId, ScriptId)>>,
+    query_rx: tokio::sync::watch::Receiver<Option<(ChannelId, RedexId)>>,
 
     /// The active script subscription. Contains the current (channel_id, script_id) tuple
     /// and a broadcast receiver for receiving script events (logs, metrics, runs).
-    current_rx: Option<((ChannelId, ScriptId), broadcast::Receiver<MessageSync>)>,
+    current_rx: Option<((ChannelId, RedexId), broadcast::Receiver<MessageSync>)>,
 
     /// The connection ID associated with this syncer, used to filter out
     /// self-originated events.
@@ -427,7 +455,7 @@ impl ScriptSyncer {
     }
 
     /// Set the script to subscribe to.
-    pub async fn set_context_id(&self, channel_id: ChannelId, script_id: ScriptId) -> Result<()> {
+    pub async fn set_context_id(&self, channel_id: ChannelId, script_id: RedexId) -> Result<()> {
         self.query_tx
             .send(Some((channel_id, script_id)))
             .map_err(|_| Error::Internal("query channel closed".to_string()))?;
@@ -435,7 +463,7 @@ impl ScriptSyncer {
     }
 
     /// Check if client is actively subscribed to a script.
-    pub fn is_subscribed(&self, channel_id: &ChannelId, script_id: &ScriptId) -> bool {
+    pub fn is_subscribed(&self, channel_id: &ChannelId, script_id: &RedexId) -> bool {
         self.current_rx
             .as_ref()
             .map(|((current_channel, current_script), _)| {
@@ -466,7 +494,7 @@ impl ScriptSyncer {
 
                         return Ok(MessageSync::ScriptSubscribed {
                             channel_id,
-                            script_id,
+                            redex_id: script_id,
                             connection_id: self.conn_id,
                         });
                     }

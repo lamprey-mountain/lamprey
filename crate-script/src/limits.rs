@@ -1,7 +1,8 @@
 // TODO: allow configuring max cpu time per time period
 // TODO: allow bursts of mem/cpu/etc usage
 
-// pub use common::v1::types::script::ChannelLimits;
+// TODO: use this
+// pub use common::v1::types::redex::EvalLimits;
 
 use std::time::Duration;
 

@@ -8,7 +8,7 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::components::{self, ComponentCreate, ComponentId, Components};
-use crate::v1::types::metadata::MessageMetadata;
+use crate::v1::types::metadata::Metadata;
 use crate::v1::types::{MessageId, ParseMentions};
 
 /// request to create a new flume
@@ -29,7 +29,7 @@ pub struct FlumeCreate {
 
     /// optional metadata
     #[cfg_attr(feature = "serde", serde(default))]
-    pub metadata: Option<MessageMetadata>,
+    pub metadata: Option<Metadata>,
 
     /// initial components
     pub components: Components<components::Create>,

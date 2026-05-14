@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+#[cfg(feature = "javascript")]
+use common::v1::types::RedexVerId;
 use common::v1::types::{
-    script::{Run, RunInput, RunLogEntry, RunStatus, ScriptInput, ScriptMetadata},
-    RunId, ScriptId,
+    redex::{metadata::RedexMetadata, Eval, EvalInput, EvalLogEntry, EvalStatus, RedexHandler},
+    EvalId, RedexId,
 };
 
 #[cfg(feature = "wasm")]
@@ -29,25 +31,45 @@ pub struct Engine {
 }
 
 impl Engine {
-    pub fn new(limits: Limits) -> Self {
-        Self {
+    pub fn new(limits: Limits) -> Result<Self> {
+        Ok(Self {
             limits: limits.clone(),
 
             #[cfg(feature = "javascript")]
             js: JsManager::new(limits.clone()),
 
             #[cfg(feature = "wasm")]
-            wasm: WasmManager::new(limits.clone()),
-        }
+            wasm: WasmManager::new(limits.clone())?,
+        })
     }
 
+    #[cfg(feature = "javascript")]
     pub async fn load_js(
         &self,
-        script_id: ScriptId,
+        script_id: RedexId,
+        script_version_id: RedexVerId,
         module_name: &str,
         module_source: &str,
     ) -> Result<Box<dyn Executor>> {
-        let exec = self.js.load(script_id, module_name, module_source).await?;
+        let exec = self
+            .js
+            .load(script_id, script_version_id, module_name, module_source)
+            .await?;
+        Ok(Box::new(exec))
+    }
+
+    #[cfg(feature = "wasm")]
+    pub async fn load_wasm(
+        &self,
+        script_id: RedexId,
+        script_version_id: RedexVerId,
+        module_name: &str,
+        module_source: &str,
+    ) -> Result<Box<dyn Executor>> {
+        let exec = self
+            .wasm
+            .load(script_id, script_version_id, module_name, module_source)
+            .await?;
         Ok(Box::new(exec))
     }
 
@@ -61,17 +83,17 @@ impl Engine {
 #[async_trait]
 pub trait Executor: Send + Sync {
     /// spawn this script
-    async fn spawn(&self, input: RunInput, run_id: RunId) -> Result<Box<dyn ExecutionHandle>>;
+    async fn spawn(&self, input: EvalInput, run_id: EvalId) -> Result<Box<dyn ExecutionHandle>>;
 }
 
 /// a handle to a script running in an isolated context
 #[async_trait]
 pub trait ExecutionHandle: Send + Sync {
-    /// get associated run for this execution
-    fn run(&self) -> &Run;
+    /// get associated eval for this execution
+    fn eval(&self) -> &Eval;
 
-    /// get associated run id for this execution
-    fn run_id(&self) -> RunId;
+    /// get associated eval id for this execution
+    fn eval_id(&self) -> EvalId;
 
     /// stop script execution
     fn stop(&self);
@@ -101,19 +123,28 @@ impl Clone for Box<dyn ExecutionHandle> {
     }
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct ScriptExtracted {
-    pub metadata: ScriptMetadata,
-    pub inputs: Vec<ScriptInput>,
+    pub metadata: RedexMetadata,
+    pub inputs: Vec<RedexHandler>,
+}
+
+impl ScriptExtracted {
+    pub fn new(name: String) -> Self {
+        Self {
+            metadata: RedexMetadata::new(name),
+            inputs: vec![],
+        }
+    }
 }
 
 #[derive(Debug)]
 pub enum ExecutionEvent {
     /// a log event was received
-    Log(RunLogEntry),
+    Log(EvalLogEntry),
 
     /// run status changed
-    Status(RunStatus),
+    Status(EvalStatus),
 
     /// script info has been extracted
     Extracted(ScriptExtracted),

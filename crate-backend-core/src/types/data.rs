@@ -1,8 +1,8 @@
-use common::v1::types::script::{ScriptFormat, ScriptLocation, ScriptMetadata};
+use common::v1::types::redex::{RedexFormat, RedexLocation, RedexMetadata};
 
 #[derive(Debug, Clone)]
 pub struct DataScriptVersion {
-    pub format: ScriptFormat,
-    pub location: ScriptLocation,
-    pub metadata: ScriptMetadata,
+    pub format: RedexFormat,
+    pub location: RedexLocation,
+    pub metadata: RedexMetadata,
 }

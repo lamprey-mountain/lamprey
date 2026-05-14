@@ -15,7 +15,7 @@ use url::Url;
 use crate::{Error, Result};
 
 use common::v1::types::federation::ServerKeyAlgorithm;
-use common::v1::types::script::ChannelLimits;
+use common::v1::types::redex::EvalLimits;
 use common::v1::types::util::Time;
 
 /// a server's signing key for internal use (includes private key)
@@ -173,7 +173,7 @@ pub struct ConfigSmtp {
     pub from: String,
 }
 
-#[derive(Debug, Default, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct ConfigScripts {
     /// whether to enable the script system
     pub enabled: bool,
@@ -184,8 +184,18 @@ pub struct ConfigScripts {
     pub suffix: Option<String>,
 
     /// default limits for scripts
-    #[serde(default)]
-    pub limits: ChannelLimits,
+    #[serde(default = "EvalLimits::strict")]
+    pub limits: EvalLimits,
+}
+
+impl Default for ConfigScripts {
+    fn default() -> Self {
+        Self {
+            enabled: Default::default(),
+            suffix: Default::default(),
+            limits: EvalLimits::strict(),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]

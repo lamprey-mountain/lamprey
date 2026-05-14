@@ -9,6 +9,7 @@ use serde::Deserialize;
 use utoipa::ToSchema;
 
 pub mod color;
+pub mod metadata;
 pub mod time;
 
 pub use color::Color;

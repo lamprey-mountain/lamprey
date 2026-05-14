@@ -1,0 +1,134 @@
+package lamprey:scripting@0.1.0;
+
+interface types {
+    type script-id = string;
+    type run-id = string;
+    type kv-version = u64;
+
+    variant value {
+        text(string),
+        integer(s64),
+        float(f64),
+        boolean(bool),
+        bytes(list<u8>),
+        timestamp(u64), // unix millis
+        // error: type `value` depends on itself
+        // array(list<value>),
+        // object(list<tuple<string, value>>),
+        none,
+    }
+
+    record script-metadata {
+        name:        string,
+        description: option<string>,
+        version:     option<string>,
+        license:     option<string>,
+        authors:     list<string>,
+        inputs:      list<script-input>,
+    }
+
+    variant script-input-kind {
+        trigger,
+        http,
+    }
+
+    record script-input {
+        id:    string,
+        label: string,
+        kind:  script-input-kind,
+        // TODO: capabilities
+    }
+}
+
+interface log {
+    enum level {
+        debug,
+        info,
+        warning,
+        error
+    }
+
+    record log-entry {
+        content: string,
+        level: level,
+        attributes: list<tuple<string, string>>,
+    }
+
+    log: func(level: level, content: string, attributes: list<tuple<string, string>>);
+}
+
+// interface env {
+//     resource env-secret {
+//         read: func() -> string;
+//     }
+
+//     resource env-manager {
+//         get: func(name: string) -> option<string>;
+//         get-secret: func(name: string) -> option<env-secret>;
+//     }
+// }
+
+// interface storage {
+//     record entry {
+//         data: value,
+//         version: kv-version,
+//         timestamp: u64,
+//     }
+
+//     resource scanner {
+//         prefix: func(key: list<value>);
+//         next: func() -> option<entry>;
+//     }
+
+//     resource write-transaction {
+//         insert: func(key: list<value>, val: value);
+//         delete: func(key: list<value>);
+//         check-version: func(key: list<value>, version: kv-version);
+//         commit: func() -> result<kv-version, string>;
+//     }
+
+//     resource store {
+//         get: func(key: list<value>) -> option<value>;
+//         write: func() -> write-transaction;
+//         scan: func() -> scanner;
+//     }
+
+//     resource storage-manager {
+//         open: func(name: string) -> store;
+//     }
+// }
+
+interface network {
+    record http-request {
+        method: string,
+        url: string,
+        headers: list<tuple<string, string>>,
+        body: option<list<u8>>,
+    }
+
+    record http-response {
+        status: u16,
+        headers: list<tuple<string, string>>,
+        body: option<list<u8>>,
+    }
+
+    // resource network-manager {
+    //     fetch: func(req: request) -> result<response, string>;
+    // }
+}
+
+world script-world {
+    import log;
+    // import env;
+    // import storage;
+    import network;
+    // import lamprey:base/env/logging;
+
+    use types.{script-metadata};
+    use network.{http-request, http-response};
+
+    export get-metadata:     func() -> script-metadata;
+
+    export handle-http: func(id: string, req: http-request) -> http-response;
+    export handle-trigger: func(id: string);
+}

@@ -33,13 +33,13 @@ mod preferences;
 mod public;
 mod push;
 mod reaction;
+mod redex;
 mod relationship;
 mod role;
 mod room;
 mod room_analytics;
 mod room_member;
 mod room_template;
-mod script;
 mod search;
 mod server;
 mod session;
@@ -87,7 +87,7 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(room_analytics::routes())
         .merge(room_member::routes())
         .merge(room_template::routes())
-        .merge(script::routes())
+        .merge(redex::routes())
         .merge(search::routes())
         .merge(server::routes())
         .merge(session::routes())

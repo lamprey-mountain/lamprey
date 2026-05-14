@@ -9,8 +9,8 @@ use axum::{
 use axum_extra::TypedHeader;
 use common::v1::types::{
     error::{ApiError, ErrorCode},
-    ids::ScriptId,
-    script::{RunInput, RunStatus},
+    ids::RedexId,
+    redex::{EvalInput, EvalStatus},
 };
 use headers::Host;
 use lamprey_script::engine::ExecutionEvent;
@@ -31,7 +31,7 @@ pub async fn script_http(
         return Ok(next.run(req).await);
     };
 
-    let Ok(script_id) = dbg!(ScriptId::from_str(prefix)) else {
+    let Ok(script_id) = dbg!(RedexId::from_str(prefix)) else {
         return Ok(next.run(req).await);
     };
 
@@ -46,12 +46,14 @@ pub async fn script_http(
     let req_for_script = Request::from_parts(parts, body_bytes);
 
     let srv = state.services();
+    let redex_version_id = script.latest_version.version_id;
     let mut handle = srv
         .scripts
         .spawn(
             script.channel_id,
             script_id,
-            RunInput::Http {
+            redex_version_id,
+            EvalInput::Http {
                 request: req_for_script,
             },
         )
@@ -64,13 +66,13 @@ pub async fn script_http(
                 let res = http::Response::from_parts(parts, axum::body::Body::from(bytes));
                 return Ok(res);
             }
-            ExecutionEvent::Status(RunStatus::Crashed) => {
+            ExecutionEvent::Status(EvalStatus::Crashed) => {
                 return Err(Error::ApiError(ApiError::with_message(
                     ErrorCode::ScriptError,
                     "script crashed while generating a response".to_string(),
                 )))
             }
-            ExecutionEvent::Status(RunStatus::Exited) => break,
+            ExecutionEvent::Status(EvalStatus::Exited) => break,
             _ => {}
         }
     }

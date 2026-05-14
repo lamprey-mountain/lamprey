@@ -1,10 +1,10 @@
 use std::{collections::HashMap, sync::Arc};
 
 use common::v1::types::{
-    metadata::MessageMetadata,
-    script::{RunLogEntry, RunLogLevel, RunLogSource},
+    metadata::Metadata,
+    redex::{EvalLogEntry, EvalLogLevel, EvalLogSource},
     util::Time,
-    ScriptId,
+    RedexId,
 };
 use rquickjs::{
     class::{Trace, Tracer},
@@ -21,7 +21,7 @@ use crate::engine::ExecutionEvent;
 #[derive(Clone, JsLifetime)]
 pub struct Logger {
     sender: Sender<Arc<ExecutionEvent>>,
-    script_id: ScriptId,
+    script_id: RedexId,
 }
 
 // none of these fields need to be traced
@@ -30,14 +30,14 @@ impl<'js> Trace<'js> for Logger {
 }
 
 impl Logger {
-    pub(crate) fn new(sender: Sender<Arc<ExecutionEvent>>, script_id: ScriptId) -> Self {
+    pub(crate) fn new(sender: Sender<Arc<ExecutionEvent>>, script_id: RedexId) -> Self {
         Self { sender, script_id }
     }
 }
 
 struct LoggerParams {
     content: String,
-    attrs: MessageMetadata,
+    attrs: Metadata,
 }
 
 impl<'js> FromParam<'js> for LoggerParams {
@@ -63,7 +63,7 @@ impl<'js> FromParam<'js> for LoggerParams {
             }
         };
 
-        let attrs = MessageMetadata(attrs);
+        let attrs = Metadata(attrs);
         attrs.validate().map_err(|err| {
             rquickjs::Error::new_from_js_message("object", "MessageMetadata", err.to_string())
         })?;
@@ -76,23 +76,23 @@ impl Logger {
     fn log_impl<'js>(
         &self,
         _ctx: Ctx<'js>, // TODO: remove
-        level: RunLogLevel,
+        level: EvalLogLevel,
         params: LoggerParams,
     ) -> rquickjs::Result<()> {
         // TODO: get source span/line/column for logging
         // this kinda works: dbg!(Exception::from_message(ctx.clone(), "testing"));
         // but i'd have to manually parse the stack trace
 
-        let entry = RunLogEntry {
+        let entry = EvalLogEntry {
             id: 0,
             created_at: Time::now_utc(),
             level,
-            source: RunLogSource::Script {
-                script_id: self.script_id,
+            source: EvalLogSource::Redex {
+                redex_id: self.script_id,
                 trace_id: None,
-                target: "script".to_string(),
-                span_start: 0,
-                span_end: 0,
+                target: None,
+                line: None,
+                column: None,
             },
             content: params.content,
             attributes: params.attrs,
@@ -114,21 +114,21 @@ impl Logger {
 
     /// debug level log
     fn debug<'js>(&self, ctx: Ctx<'js>, params: LoggerParams) -> rquickjs::Result<()> {
-        self.log_impl(ctx, RunLogLevel::Debug, params)
+        self.log_impl(ctx, EvalLogLevel::Debug, params)
     }
 
     /// info level log
     fn info<'js>(&self, ctx: Ctx<'js>, params: LoggerParams) -> rquickjs::Result<()> {
-        self.log_impl(ctx, RunLogLevel::Info, params)
+        self.log_impl(ctx, EvalLogLevel::Info, params)
     }
 
     /// warn level log
     fn warn<'js>(&self, ctx: Ctx<'js>, params: LoggerParams) -> rquickjs::Result<()> {
-        self.log_impl(ctx, RunLogLevel::Warning, params)
+        self.log_impl(ctx, EvalLogLevel::Warning, params)
     }
 
     /// error level log
     fn error<'js>(&self, ctx: Ctx<'js>, params: LoggerParams) -> rquickjs::Result<()> {
-        self.log_impl(ctx, RunLogLevel::Error, params)
+        self.log_impl(ctx, EvalLogLevel::Error, params)
     }
 }

@@ -1,4 +1,4 @@
-SELECT * FROM script_log
+SELECT * FROM redex_log
 WHERE run_id = $1
   AND line_id > (CASE WHEN $2 = 0 AND $4 = 'f' THEN -1 ELSE $2 END)
   AND line_id < $3

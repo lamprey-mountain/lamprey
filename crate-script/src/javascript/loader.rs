@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use common::v1::types::ids::ScriptId;
+use common::v1::types::ids::RedexId;
 use rquickjs::Module;
 
 pub struct ModuleResolver;
@@ -14,7 +14,7 @@ pub enum ModuleRef {
     Builtin(BuiltinModule),
 
     /// load another script as a module: `script:uuid-here`
-    Script(ScriptId),
+    Script(RedexId),
     // NOTE: maybe in the future i'll allow importing `https://path/to/somewhere`, `npm:foo`, `jsr:foo`?
 }
 
@@ -134,7 +134,7 @@ impl FromStr for ModuleRef {
         }
 
         if let Some(s) = s.strip_prefix("script:") {
-            return ScriptId::from_str(s).map(ModuleRef::Script).map_err(|_| ());
+            return RedexId::from_str(s).map(ModuleRef::Script).map_err(|_| ());
         }
 
         Err(())

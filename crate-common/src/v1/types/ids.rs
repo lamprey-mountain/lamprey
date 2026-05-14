@@ -279,7 +279,6 @@ genid!(AuditLogEntry, "00000000-0000-0000-0000-0auditlogent");
 genid!(Embed, "00000000-0000-0000-0new-0000000embed");
 genid!(Tag, "00000000-0000-0000-0000-000000000tag");
 genid!(Report, "00000000-0000-0000-0000-000modreport");
-genid!(Redex, "00000000-0000-0000-0000-0000000redex");
 genid!(Call, "00000000-0000-0000-0000-00000000call");
 genid!(Emoji, "00000000-0000-0000-0000-0000000emoji");
 genid!(Application, "00000000-0000-0000-0000-0application");
@@ -294,9 +293,9 @@ genid!(DocumentBranch);
 genid!(DocumentTag);
 genid!(Connection);
 genid!(PermissionOverwrite);
-genid!(Script, "00000000-0000-0000-0000-000000000script");
-genid!(ScriptVer, "00000000-0000-0000-0ver-00000script");
-genid!(Run, "00000000-0000-0000-0000-000000000000run");
+genid!(Redex, "00000000-0000-0000-0000-0000000redex");
+genid!(RedexVer, "00000000-0000-0000-0ver-0000000redex");
+genid!(Eval, "00000000-0000-0000-0000-00000000eval");
 
 #[cfg(feature = "feat_interaction")]
 genid!(Interaction, "00000000-0000-0000-0000-00interaction");

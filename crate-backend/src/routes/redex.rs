@@ -5,13 +5,14 @@ use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
-use common::v1::types::script::{
-    RunInput, Script, ScriptFormat, ScriptLocation, ScriptLocationSet, ScriptMetadata,
-    ScriptStatus, ScriptVersion, ScriptVersionStatus,
+use common::v1::types::redex::{
+    EvalInput, Redex, RedexFormat, RedexLocation, RedexLocationUpdate, RedexMetadata, RedexStatus,
+    RedexVersion, RedexVersionStatus,
 };
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
-    AuditLogEntryType, ChannelType, MessageSync, Permission, RoomFeature, ScriptId, ScriptVerId,
+    AuditLogEntryType, ChannelType, MediaId, MessageSync, Permission, RedexId, RedexVerId,
+    RoomFeature,
 };
 use common::v2::types::media::MediaReference;
 use http::StatusCode;
@@ -24,12 +25,12 @@ use crate::{routes2, Error, ServerState};
 
 use super::util::{Auth, Auth3};
 
-/// Script create
-#[handler(routes::script_create)]
-async fn script_create(
+/// Redex create
+#[handler(routes::redex_create)]
+async fn redex_create(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_create::Request,
+    req: routes::redex_create::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -51,15 +52,15 @@ async fn script_create(
 
     let al = auth.audit_log(room_id);
 
-    match &req.script.format {
-        ScriptFormat::Javascript => {}
-        ScriptFormat::Webassembly => return Err(Error::Unimplemented),
+    match &req.redex.format {
+        RedexFormat::Javascript => {}
+        RedexFormat::Webassembly => return Err(Error::Unimplemented),
     };
 
-    let media = match &req.script.location {
-        ScriptLocationSet::Local { .. } => return Err(Error::Unimplemented),
-        ScriptLocationSet::Remote { .. } => return Err(Error::Unimplemented),
-        ScriptLocationSet::Hosted { media_reference } => match media_reference {
+    let media = match &req.redex.location {
+        RedexLocationUpdate::Local { .. } => return Err(Error::Unimplemented),
+        RedexLocationUpdate::Remote { .. } => return Err(Error::Unimplemented),
+        RedexLocationUpdate::Hosted { media_reference } => match media_reference {
             MediaReference::Attachment { .. } => return Err(Error::Unimplemented),
             MediaReference::Url { .. } => return Err(Error::Unimplemented),
             MediaReference::Media { media_id } => {
@@ -74,45 +75,45 @@ async fn script_create(
         return Err(Error::BadStatic("file too large"));
     }
 
-    let script_id = ScriptId::new();
-    let version_id = ScriptVerId::new();
+    let redex_id = RedexId::new();
+    let version_id = RedexVerId::new();
     let created_at = Time::now_utc();
 
-    let format = req.script.format.clone();
+    let format = req.redex.format.clone();
     let media_id = media.id;
-    let location = ScriptLocation::Hosted { media };
+    let location = RedexLocation::Hosted { media };
 
-    let script = Script {
-        id: script_id,
+    let script = Redex {
+        id: redex_id,
         channel_id: req.channel_id,
         creator_id: auth.user.id,
         created_at,
         deleted_at: None,
-        latest_version: ScriptVersion {
+        latest_version: RedexVersion {
             version_id,
             created_at,
             deleted_at: None,
             format: format.clone(),
             location,
-            metadata: ScriptMetadata::default(), // will be replaced
-            status: ScriptVersionStatus::Processing,
+            metadata: RedexMetadata::new("unnamed".to_owned()), // will be replaced
+            status: RedexVersionStatus::Processing,
         },
-        status: ScriptStatus::Creating,
+        status: RedexStatus::Creating,
         permissions: vec![],
-        inputs: vec![],
+        handlers: vec![],
     };
 
     srv.scripts.create_script(script.clone()).await?;
 
-    al.commit_success(AuditLogEntryType::ScriptCreate {
+    al.commit_success(AuditLogEntryType::RedexCreate {
         channel_id: req.channel_id,
-        script_id,
+        redex_id,
         changes: Changes::new()
             .add(
                 "format",
                 &match &format {
-                    ScriptFormat::Javascript => "Javascript",
-                    ScriptFormat::Webassembly => "Webassembly",
+                    RedexFormat::Javascript => "Javascript",
+                    RedexFormat::Webassembly => "Webassembly",
                 },
             )
             .add("location", &"hosted")
@@ -133,12 +134,12 @@ async fn script_create(
     Ok((StatusCode::CREATED, Json(script)))
 }
 
-/// Script list
-#[handler(routes::script_list)]
-async fn script_list(
+/// Redex list
+#[handler(routes::redex_list)]
+async fn redex_list(
     auth: Auth3,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_list::Request,
+    req: routes::redex_list::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -169,12 +170,12 @@ async fn script_list(
     Ok(Json(scripts))
 }
 
-/// Script get
-#[handler(routes::script_get)]
-async fn script_get(
+/// Redex get
+#[handler(routes::redex_get)]
+async fn redex_get(
     auth: Auth3,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_get::Request,
+    req: routes::redex_get::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -199,7 +200,7 @@ async fn script_get(
 
     let script = s
         .data()
-        .script_get(req.script_id)
+        .script_get(req.redex_id)
         .await?
         .ok_or(Error::NotFound)?;
 
@@ -210,12 +211,12 @@ async fn script_get(
     Ok((StatusCode::OK, Json(script)))
 }
 
-/// Script delete
-#[handler(routes::script_delete)]
-async fn script_delete(
+/// Redex delete
+#[handler(routes::redex_delete)]
+async fn redex_delete(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_delete::Request,
+    req: routes::redex_delete::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -235,13 +236,13 @@ async fn script_delete(
 
     let al = auth.audit_log(room_id);
 
-    s.data().script_delete(req.script_id).await?;
+    s.data().script_delete(req.redex_id).await?;
 
     // TODO: remove script from service
 
-    al.commit_success(AuditLogEntryType::ScriptDelete {
+    al.commit_success(AuditLogEntryType::RedexDelete {
         channel_id: req.channel_id,
-        script_id: req.script_id,
+        redex_id: req.redex_id,
         changes: vec![], // TODO: populate changes
     })
     .await?;
@@ -251,7 +252,7 @@ async fn script_delete(
         auth.user.id,
         MessageSync::ScriptDelete {
             channel_id: req.channel_id,
-            script_id: req.script_id,
+            redex_id: req.redex_id,
         },
     )
     .await?;
@@ -259,12 +260,12 @@ async fn script_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Script content update
-#[handler(routes::script_content_update)]
-async fn script_content_update(
+/// Redex content update
+#[handler(routes::redex_content_update)]
+async fn redex_content_update(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_content_update::Request,
+    req: routes::redex_content_update::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -285,18 +286,18 @@ async fn script_content_update(
     let _al = auth.audit_log(room_id);
 
     // TODO: validate that the script exists and belongs to this channel
-    // TODO: copy some logic from script_create
+    // TODO: copy some logic from redex_create
     // TODO: make the script service reload the script
 
     Ok(Error::Unimplemented)
 }
 
-/// Script trigger
-#[handler(routes::script_trigger)]
-async fn script_trigger(
+/// Redex trigger
+#[handler(routes::redex_trigger)]
+async fn redex_trigger(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_trigger::Request,
+    req: routes::redex_trigger::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -324,17 +325,21 @@ async fn script_trigger(
         .ensure_view()?
         .check()?;
 
+    let redex_version_id = srv.scripts.get_redex_version_id(req.redex_id).await?;
+
     let run_ctl = srv
         .scripts
         .spawn(
             req.channel_id,
-            req.script_id,
-            RunInput::Trigger {
+            req.redex_id,
+            redex_version_id,
+            EvalInput::Manual {
                 id: req.run.trigger_id,
+                user_id: auth.user.id,
             },
         )
         .await?;
-    let run = run_ctl.run().to_owned();
+    let run = run_ctl.eval().to_owned();
 
     s.broadcast_room(
         room_id,
@@ -349,12 +354,12 @@ async fn script_trigger(
     Ok((StatusCode::CREATED, Json(run)))
 }
 
-/// Script version list
-#[handler(routes::script_version_list)]
-async fn script_version_list(
+/// Redex version list
+#[handler(routes::redex_version_list)]
+async fn redex_version_list(
     auth: Auth3,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_version_list::Request,
+    req: routes::redex_version_list::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -379,18 +384,18 @@ async fn script_version_list(
 
     let versions = s
         .data()
-        .script_version_list_by_script(req.channel_id, req.script_id, req.pagination)
+        .script_version_list_by_script(req.channel_id, req.redex_id, req.pagination)
         .await?;
 
     Ok(Json(versions))
 }
 
-/// Script version get
-#[handler(routes::script_version_get)]
-async fn script_version_get(
+/// Redex version get
+#[handler(routes::redex_version_get)]
+async fn redex_version_get(
     auth: Auth3,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_version_get::Request,
+    req: routes::redex_version_get::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -415,19 +420,19 @@ async fn script_version_get(
 
     let version = s
         .data()
-        .script_version_get(req.script_id, req.channel_id, req.version_id)
+        .script_version_get(req.redex_id, req.channel_id, req.version_id)
         .await?
         .ok_or(Error::NotFound)?;
 
     Ok((StatusCode::OK, Json(version)))
 }
 
-/// Script version delete
-#[handler(routes::script_version_delete)]
-async fn script_version_delete(
+/// Redex version delete
+#[handler(routes::redex_version_delete)]
+async fn redex_version_delete(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_version_delete::Request,
+    req: routes::redex_version_delete::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -450,12 +455,13 @@ async fn script_version_delete(
     // TODO: verify the version exists and belongs to this script
 
     s.data()
-        .script_version_delete(req.script_id, req.version_id)
+        .script_version_delete(req.redex_id, req.version_id)
         .await?;
 
-    al.commit_success(AuditLogEntryType::ScriptDelete {
+    al.commit_success(AuditLogEntryType::RedexVersionDelete {
         channel_id: req.channel_id,
-        script_id: req.script_id,
+        redex_id: req.redex_id,
+        redex_version_id: req.version_id,
         changes: Changes::new().build(), // TODO: add metadata to changes
     })
     .await?;
@@ -465,7 +471,7 @@ async fn script_version_delete(
         auth.user.id,
         MessageSync::ScriptVersionDelete {
             channel_id: req.channel_id,
-            script_id: req.script_id,
+            redex_id: req.redex_id,
             version_id: req.version_id,
         },
     )
@@ -474,12 +480,12 @@ async fn script_version_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Script version restore
-#[handler(routes::script_version_restore)]
-async fn script_version_restore(
+/// Redex version restore
+#[handler(routes::redex_version_restore)]
+async fn redex_version_restore(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_version_restore::Request,
+    req: routes::redex_version_restore::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -506,12 +512,12 @@ async fn script_version_restore(
     Ok(Error::Unimplemented)
 }
 
-/// Script dependency graph
-#[handler(routes::script_depends)]
-async fn script_depends(
+/// Redex dependency graph
+#[handler(routes::redex_depends)]
+async fn redex_depends(
     auth: Auth3,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_depends::Request,
+    req: routes::redex_depends::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -537,12 +543,12 @@ async fn script_depends(
     Ok(Error::Unimplemented)
 }
 
-/// Script dependency update
-#[handler(routes::script_depends_update)]
-async fn script_depends_update(
+/// Redex dependency update
+#[handler(routes::redex_depends_update)]
+async fn redex_depends_update(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_depends_update::Request,
+    req: routes::redex_depends_update::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -565,12 +571,12 @@ async fn script_depends_update(
     Ok(Error::Unimplemented)
 }
 
-/// Script run list
-#[handler(routes::script_run_list)]
-async fn script_run_list(
+/// Redex run list
+#[handler(routes::redex_eval_list)]
+async fn redex_eval_list(
     auth: Auth3,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_run_list::Request,
+    req: routes::redex_eval_list::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -589,18 +595,18 @@ async fn script_run_list(
 
     let runs = s
         .data()
-        .script_run_list(req.script_id, req.pagination)
+        .script_run_list(req.redex_id, req.pagination)
         .await?;
 
     Ok(Json(runs))
 }
 
-/// Script run get
-#[handler(routes::script_run_get)]
-async fn script_run_get(
+/// Redex run get
+#[handler(routes::redex_eval_get)]
+async fn redex_eval_get(
     auth: Auth3,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_run_get::Request,
+    req: routes::redex_eval_get::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -619,19 +625,19 @@ async fn script_run_get(
 
     let run = s
         .data()
-        .script_run_get(req.run_id)
+        .script_run_get(req.eval_id)
         .await?
         .ok_or(Error::NotFound)?;
 
     Ok(Json(run))
 }
 
-/// Script run stop
-#[handler(routes::script_run_stop)]
-async fn script_run_stop(
+/// Redex run stop
+#[handler(routes::redex_eval_stop)]
+async fn redex_eval_stop(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_run_stop::Request,
+    req: routes::redex_eval_stop::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -657,18 +663,18 @@ async fn script_run_stop(
         .check()?;
 
     srv.scripts
-        .stop_run(req.channel_id, req.script_id, req.run_id)
+        .stop_run(req.channel_id, req.redex_id, req.eval_id)
         .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Script run log
-#[handler(routes::script_run_log)]
-async fn script_run_log(
+/// Redex run log
+#[handler(routes::redex_eval_log)]
+async fn redex_eval_log(
     auth: Auth3,
     State(s): State<Arc<ServerState>>,
-    req: routes::script_run_log::Request,
+    req: routes::redex_eval_log::Request,
 ) -> Result<impl IntoResponse> {
     if !s.config.scripts.enabled {
         return Err(Error::Unimplemented);
@@ -691,27 +697,30 @@ async fn script_run_log(
         .ensure_view()?
         .check()?;
 
-    let logs = s.data().script_log_list(req.run_id, req.pagination).await?;
+    let logs = s
+        .data()
+        .script_log_list(req.eval_id, req.pagination)
+        .await?;
 
     Ok(Json(logs))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes2!(script_create))
-        .routes(routes2!(script_list))
-        .routes(routes2!(script_get))
-        .routes(routes2!(script_delete))
-        .routes(routes2!(script_content_update))
-        .routes(routes2!(script_trigger))
-        .routes(routes2!(script_version_list))
-        .routes(routes2!(script_version_get))
-        .routes(routes2!(script_version_delete))
-        .routes(routes2!(script_version_restore))
-        .routes(routes2!(script_depends))
-        .routes(routes2!(script_depends_update))
-        .routes(routes2!(script_run_list))
-        .routes(routes2!(script_run_get))
-        .routes(routes2!(script_run_stop))
-        .routes(routes2!(script_run_log))
+        .routes(routes2!(redex_create))
+        .routes(routes2!(redex_list))
+        .routes(routes2!(redex_get))
+        .routes(routes2!(redex_delete))
+        .routes(routes2!(redex_content_update))
+        .routes(routes2!(redex_trigger))
+        .routes(routes2!(redex_version_list))
+        .routes(routes2!(redex_version_get))
+        .routes(routes2!(redex_version_delete))
+        .routes(routes2!(redex_version_restore))
+        .routes(routes2!(redex_depends))
+        .routes(routes2!(redex_depends_update))
+        .routes(routes2!(redex_eval_list))
+        .routes(routes2!(redex_eval_get))
+        .routes(routes2!(redex_eval_stop))
+        .routes(routes2!(redex_eval_log))
 }

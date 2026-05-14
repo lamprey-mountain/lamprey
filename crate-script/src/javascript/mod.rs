@@ -8,9 +8,12 @@ use std::{
 
 use async_trait::async_trait;
 use common::v1::types::{
-    script::{Run, RunInput, RunStatus, ScriptInputType},
+    redex::{
+        metadata::{License, Semver},
+        Eval, EvalInput, EvalStatus, RedexHandlerType,
+    },
     util::Time,
-    RunId, ScriptId,
+    EvalId, RedexId, RedexVerId,
 };
 use cpu_time::ProcessTime;
 use dashmap::DashMap;
@@ -38,12 +41,13 @@ pub struct JsManager {
     limits: Limits,
 
     // TODO: precompiled script cache
-    scripts: DashMap<ScriptId, Arc<JsCompiledScript>>,
+    scripts: DashMap<RedexId, Arc<JsCompiledScript>>,
 }
 
 /// a single script loaded in memory
 pub struct JsCompiledScript {
-    script_id: ScriptId,
+    redex_id: RedexId,
+    redex_version_id: RedexVerId,
     bytecode: Vec<u8>,
 }
 
@@ -56,7 +60,7 @@ pub struct JsExecutor {
 
 /// a handle to a live javascript execution
 pub struct JsExecutionHandle {
-    run: Arc<Run>,
+    run: Arc<Eval>,
     stop_signal: Arc<AtomicBool>,
     events: broadcast::Receiver<Arc<ExecutionEvent>>,
     ext_recv: tokio::sync::watch::Receiver<Option<ScriptExtracted>>,
@@ -84,7 +88,8 @@ impl JsManager {
     /// load a js script
     pub async fn load(
         &self,
-        script_id: ScriptId,
+        script_id: RedexId,
+        script_version_id: RedexVerId,
         module_name: &str,
         module_source: &str,
     ) -> Result<JsExecutor> {
@@ -126,7 +131,8 @@ impl JsManager {
         .await?;
 
         let script = Arc::new(JsCompiledScript {
-            script_id,
+            redex_id: script_id,
+            redex_version_id: script_version_id,
             bytecode,
         });
         self.scripts.insert(script_id, Arc::clone(&script));
@@ -141,7 +147,7 @@ impl JsManager {
 
 #[async_trait]
 impl Executor for JsExecutor {
-    async fn spawn(&self, input: RunInput, run_id: RunId) -> Result<Box<dyn ExecutionHandle>> {
+    async fn spawn(&self, input: EvalInput, eval_id: EvalId) -> Result<Box<dyn ExecutionHandle>> {
         // create new runtime + context for each run
         let rt = rquickjs::AsyncRuntime::new()?;
         rt.set_memory_limit(self.limits.max_memory).await;
@@ -180,14 +186,16 @@ impl Executor for JsExecutor {
         let (events_sender, events_receiver) = broadcast::channel::<Arc<ExecutionEvent>>(100);
         let (ext_send, ext_recv) = tokio::sync::watch::channel(None);
 
-        let script_id = self.script.script_id;
+        let redex_id = self.script.redex_id;
+        let redex_version_id = self.script.redex_version_id;
         let created_at = Time::now_utc();
-        let run = Arc::new(Run {
-            id: run_id,
-            script_id,
+        let run = Arc::new(Eval {
+            id: eval_id,
+            redex_id,
+            redex_version_id,
             created_at,
             stopped_at: None,
-            status: RunStatus::Creating,
+            status: EvalStatus::Creating,
             input: input.clone().into(),
         });
 
@@ -199,20 +207,20 @@ impl Executor for JsExecutor {
             let events_sender_clone = events_sender.clone();
 
             let res = async_with!(context => |ctx| {
-                match exec_inner(ctx.clone(), script_id, input, events_sender_clone, script, ext_send).await {
+                match exec_inner(ctx.clone(), redex_id, input, events_sender_clone, script, ext_send).await {
                     Ok(_) => Ok(()),
                     Err(err) => {
                         if let Some(exception) = ctx.catch().into_object().and_then(rquickjs::Exception::from_object) {
                             error!(
-                                %script_id,
-                                %run_id,
+                                %redex_id,
+                                %eval_id,
                                 message = %exception.message().unwrap_or_else(|| "Unknown JS error".to_string()),
                                 stack = %exception.stack().unwrap_or_else(|| "No stack trace".to_string()),
-                                "script javascript exception"
+                                "eval javascript exception"
                             );
                             Err(Error::from_exception(exception))
                         } else {
-                            error!(%script_id, %run_id, "script runtime error: {:?}", err);
+                            error!(%redex_id, %eval_id, "eval error: {:?}", err);
                             Err(err)
                         }
                     }
@@ -221,8 +229,8 @@ impl Executor for JsExecutor {
             .await;
 
             if let Err(err) = res {
-                error!("script runtime error: {:?}", err);
-                let _ = events_sender.send(Arc::new(ExecutionEvent::Status(RunStatus::Crashed)));
+                error!("eval runtime error: {:?}", err);
+                let _ = events_sender.send(Arc::new(ExecutionEvent::Status(EvalStatus::Crashed)));
             }
         });
 
@@ -240,7 +248,7 @@ impl Executor for JsExecutor {
 fn setup_environment(
     ctx: &Ctx<'_>,
     sender: broadcast::Sender<Arc<ExecutionEvent>>,
-    script_id: ScriptId,
+    script_id: RedexId,
 ) -> Result<()> {
     let globals = ctx.globals();
 
@@ -254,8 +262,8 @@ fn setup_environment(
 
 async fn exec_inner<'js>(
     ctx: Ctx<'js>,
-    script_id: ScriptId,
-    input: RunInput,
+    script_id: RedexId,
+    input: EvalInput,
     events_sender: broadcast::Sender<Arc<ExecutionEvent>>,
     script: Arc<JsCompiledScript>,
     ext_send: tokio::sync::watch::Sender<Option<ScriptExtracted>>,
@@ -263,7 +271,7 @@ async fn exec_inner<'js>(
     setup_environment(&ctx, events_sender.clone(), script_id)?;
 
     events_sender
-        .send(Arc::new(ExecutionEvent::Status(RunStatus::Active)))
+        .send(Arc::new(ExecutionEvent::Status(EvalStatus::Active)))
         .map_err(|e| Error::BroadcastSend(e.to_string()))?;
 
     // SAFETY: the bytecode was compiled ourselves in `load_script`
@@ -272,7 +280,7 @@ async fn exec_inner<'js>(
     promise.finish::<()>()?; // ensure top-level async code finishes
 
     let registry = Arc::new(Mutex::new(ScriptRegistry::new()));
-    let mut extracted = ScriptExtracted::default();
+    let mut extracted = ScriptExtracted::new("unnamed".to_owned());
 
     // helper to get exports (named or from default object)
     let get_export = |key: &str| -> Option<rquickjs::Value> {
@@ -335,30 +343,30 @@ async fn exec_inner<'js>(
 
     if let Some(version_val) = get_export("version") {
         if let Ok(version_str) = version_val.get::<String>() {
-            extracted.metadata.version = version_str;
+            extracted.metadata.version = Some(Semver(version_str));
         }
     }
 
     if let Some(license_val) = get_export("license") {
         if let Ok(license_str) = license_val.get::<String>() {
-            extracted.metadata.license = common::v1::types::script::ScriptLicense(license_str);
+            extracted.metadata.license = Some(License(license_str));
         }
     }
 
     match dbg!(input) {
-        RunInput::Extraction => {
+        EvalInput::Extraction => {
             // don't do anything just extract
         }
-        RunInput::Trigger { id } => {
+        EvalInput::Manual { id, .. } => {
             if let Some(input) = r.find(&id) {
                 let _ = input.callback.clone().restore(&ctx)?.call::<_, ()>(());
             }
         }
-        RunInput::Http { request } => {
+        EvalInput::Http { request } => {
             if let Some(input) = r
                 .inputs
                 .iter()
-                .find(|i| i.definition.ty == ScriptInputType::Http {})
+                .find(|i| i.definition.ty == RedexHandlerType::Http {})
             {
                 let handler = input.callback.clone().restore(&ctx)?;
 
@@ -387,11 +395,11 @@ async fn exec_inner<'js>(
                     .map_err(|e| Error::BroadcastSend(e.to_string()))?;
             }
         }
-        RunInput::Event { event } => {
+        EvalInput::Event { event } => {
             for input in r
                 .inputs
                 .iter()
-                .filter(|i| i.definition.ty == ScriptInputType::Event)
+                .filter(|i| i.definition.ty == RedexHandlerType::Event)
             {
                 let handler = input.callback.clone().restore(&ctx)?;
 
@@ -409,7 +417,7 @@ async fn exec_inner<'js>(
     let _ = ext_send.send(Some(extracted));
 
     events_sender
-        .send(Arc::new(ExecutionEvent::Status(RunStatus::Exited)))
+        .send(Arc::new(ExecutionEvent::Status(EvalStatus::Exited)))
         .map_err(|e| Error::BroadcastSend(e.to_string()))?;
 
     Ok(())
@@ -417,11 +425,11 @@ async fn exec_inner<'js>(
 
 #[async_trait]
 impl ExecutionHandle for JsExecutionHandle {
-    fn run(&self) -> &Run {
+    fn eval(&self) -> &Eval {
         &*self.run
     }
 
-    fn run_id(&self) -> RunId {
+    fn eval_id(&self) -> EvalId {
         self.run.id
     }
 

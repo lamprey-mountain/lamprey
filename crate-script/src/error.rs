@@ -1,3 +1,4 @@
+use common::v1::types::redex::error::RedexError;
 use rquickjs::Exception;
 
 pub type Result<T> = ::core::result::Result<T, Error>;
@@ -29,6 +30,12 @@ pub enum Error {
 
     #[error("runtime error: {message}")]
     RuntimeError { message: String, stack: String },
+
+    #[error("{0}")]
+    Api(RedexError),
+
+    #[error("not yet implemented")]
+    Unimplemented,
 }
 
 impl Error {

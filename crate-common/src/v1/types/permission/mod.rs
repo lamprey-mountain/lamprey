@@ -241,10 +241,12 @@ pub enum Permission {
     /// can forcibly make other users join and leave rooms and gdms. can join any room and gdm.
     RoomJoinForce,
 
-    /// can create, edit, and delete scripts. can also stop runs.
+    /// can create, edit, and delete redexes. can also stop evals.
+    // TODO: rename to RedexManage
     ScriptManage,
 
-    /// can view script logs, traces, metrics, and other debugging info
+    /// can view redex logs, traces, metrics, and other debugging info
+    // TODO: rename to RedexInspect
     ScriptInspect,
 }
 

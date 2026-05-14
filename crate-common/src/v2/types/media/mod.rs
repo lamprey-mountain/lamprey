@@ -13,7 +13,7 @@ use validator::Validate;
 
 use crate::v1::types::{
     federation::Remote, search::Order, util::Time, ChannelId, EmbedId, MediaId, MediaVerId,
-    MessageId, MessageVerId, Mime, RoomId, ScriptId, ScriptVerId, UserId,
+    MessageId, MessageVerId, Mime, RedexId, RedexVerId, RoomId, UserId,
 };
 
 pub mod proxy;
@@ -526,14 +526,14 @@ pub enum MediaLinkType {
     /// this piece of media is a script
     Script {
         channel_id: ChannelId,
-        script_id: ScriptId,
+        script_id: RedexId,
     },
 
     /// this piece of media is a script version
     ScriptVersion {
         channel_id: ChannelId,
-        script_id: ScriptId,
-        version_id: ScriptVerId,
+        script_id: RedexId,
+        version_id: RedexVerId,
     },
 }
 

@@ -13,8 +13,8 @@ use crate::v1::types::{
     application::Scopes, email::EmailAddr, reaction::ReactionKeyParam, role::RoleReorderItem,
     tag::Tag, util::Time, webhook::Webhook, ApplicationId, AuditLogEntryId, AutomodRuleId,
     CalendarEventId, Channel, ChannelId, ChannelReorderItem, ChannelType, EmojiId, HarvestId,
-    InviteCode, MessageId, MessageVerId, PermissionOverwriteType, RoleId, RoomId, RoomMember,
-    ScriptId, SessionId, TagId, User, UserId, WebhookId,
+    InviteCode, MessageId, MessageVerId, PermissionOverwriteType, RedexId, RedexVerId, RoleId,
+    RoomId, RoomMember, SessionId, TagId, User, UserId, WebhookId,
 };
 
 pub mod resolve;
@@ -609,19 +609,33 @@ pub enum AuditLogEntryType {
         changes: Vec<AuditLogChange>,
     },
 
-    ScriptCreate {
+    #[cfg_attr(feature = "serde", serde(alias = "ScriptCreate"))]
+    RedexCreate {
         channel_id: ChannelId,
-        script_id: ScriptId,
+        redex_id: RedexId,
         changes: Vec<AuditLogChange>,
     },
 
-    ScriptDelete {
+    #[cfg_attr(feature = "serde", serde(alias = "ScriptDelete"))]
+    RedexDelete {
         channel_id: ChannelId,
-        script_id: ScriptId,
+        redex_id: RedexId,
         changes: Vec<AuditLogChange>,
     },
-    // TODO: add ScriptVersionCreate
-    // TODO: add ScriptVersionDelete
+
+    RedexVersionCreate {
+        channel_id: ChannelId,
+        redex_id: RedexId,
+        redex_version_id: RedexVerId,
+        changes: Vec<AuditLogChange>,
+    },
+
+    RedexVersionDelete {
+        channel_id: ChannelId,
+        redex_id: RedexId,
+        redex_version_id: RedexVerId,
+        changes: Vec<AuditLogChange>,
+    },
 }
 
 #[derive(Debug, Default, Clone)]

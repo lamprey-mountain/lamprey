@@ -12,7 +12,7 @@ use crate::v1::types::e2ee::{CrossSigningBundle, KeyshareRequest, KeyshareRespon
 use crate::v1::types::error::SyncError;
 
 use crate::v1::types::message::flume::FlumeDelta;
-use crate::v1::types::script::{Run, RunLogEntry, Script, ScriptVersion};
+use crate::v1::types::redex::{Eval, EvalLogEntry, Redex, RedexVersion};
 use crate::v1::types::{
     application::{Application, Connection},
     automod::{AutomodRule, AutomodRuleExecution},
@@ -25,7 +25,7 @@ use crate::v1::types::{
     DocumentTagId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember,
     WebhookId,
 };
-use crate::v1::types::{Message, RunId, ScriptId, ScriptVerId};
+use crate::v1::types::{EvalId, Message, RedexId, RedexVerId};
 use crate::v2::types::media::Media;
 
 use super::{
@@ -142,7 +142,7 @@ pub enum MessageClient {
     /// subscribe to a script
     ScriptSubscribe {
         channel_id: ChannelId,
-        script_id: ScriptId,
+        script_id: RedexId,
     },
 
     // TODO: centralize into one single Subscribe message
@@ -922,45 +922,45 @@ pub enum MessageSync {
     },
 
     ScriptCreate {
-        script: Script,
+        script: Redex,
     },
 
     ScriptUpdate {
-        script: Script,
+        script: Redex,
     },
 
     ScriptDelete {
         channel_id: ChannelId,
-        script_id: ScriptId,
+        redex_id: RedexId,
     },
 
     ScriptVersionCreate {
         channel_id: ChannelId,
-        script_id: ScriptId,
-        version: ScriptVersion,
+        redex_id: RedexId,
+        version: RedexVersion,
     },
 
     // eg. when a script's inputs are done being processed
     ScriptVersionUpdate {
         channel_id: ChannelId,
-        script_id: ScriptId,
-        version: ScriptVersion,
+        redex_id: RedexId,
+        version: RedexVersion,
     },
 
     ScriptVersionDelete {
         channel_id: ChannelId,
-        script_id: ScriptId,
-        version_id: ScriptVerId,
+        redex_id: RedexId,
+        version_id: RedexVerId,
     },
 
     ScriptRunCreate {
         channel_id: ChannelId,
-        run: Run,
+        run: Eval,
     },
 
     ScriptRunUpdate {
         channel_id: ChannelId,
-        run: Run,
+        run: Eval,
     },
 
     /// receive logs from a script
@@ -968,8 +968,8 @@ pub enum MessageSync {
     /// must be subscribed to the script
     ScriptLogCreate {
         channel_id: ChannelId,
-        run_id: RunId,
-        entry: RunLogEntry,
+        run_id: EvalId,
+        entry: EvalLogEntry,
     },
 
     /// metrics for the channel a script is in
@@ -984,7 +984,7 @@ pub enum MessageSync {
     /// client is now subscribed to a script
     ScriptSubscribed {
         channel_id: ChannelId,
-        script_id: ScriptId,
+        redex_id: RedexId,
         connection_id: ConnectionId,
     },
 }

@@ -1,4 +1,4 @@
-use common::v1::types::script::{ScriptInput, ScriptInputType};
+use common::v1::types::redex::{RedexHandler, RedexHandlerType};
 use nanoid::nanoid;
 use rquickjs::{
     class::{Trace, Tracer},
@@ -46,7 +46,7 @@ impl ScriptRegistry {
 }
 
 impl ScriptRegister {
-    fn input(&self, ty: ScriptInputType) -> InputBuilder {
+    fn input(&self, ty: RedexHandlerType) -> InputBuilder {
         let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
             .chars()
             .collect();
@@ -66,17 +66,17 @@ impl ScriptRegister {
 impl ScriptRegister {
     /// create a new input that runs when manually triggered
     fn on_trigger(&self) -> InputBuilder {
-        self.input(ScriptInputType::Manual)
+        self.input(RedexHandlerType::Manual)
     }
 
     /// create a new input that runs when a http request is received
     fn on_http(&self) -> InputBuilder {
-        self.input(ScriptInputType::Http {})
+        self.input(RedexHandlerType::Http {})
     }
 
     /// create a new input that runs when an api event is received
     fn on_event(&self) -> InputBuilder {
-        self.input(ScriptInputType::Event)
+        self.input(RedexHandlerType::Event)
     }
 
     // /// create a new input that runs every once in a while
@@ -99,7 +99,7 @@ pub struct InputBuilder {
     pub id: String,
     pub label: Option<String>,
     pub permissions: Vec<String>,
-    pub ty: ScriptInputType,
+    pub ty: RedexHandlerType,
     pub registry: Arc<Mutex<ScriptRegistry>>,
 }
 
@@ -138,11 +138,11 @@ impl InputBuilder {
 
         let mut reg = self.registry.lock().unwrap();
         reg.inputs.push(ScriptInputCallback {
-            definition: ScriptInput {
+            definition: RedexHandler {
                 id: self.id,
                 label: label.to_owned(),
                 ty: self.ty,
-                effects: vec![], // TODO
+                capibilities: vec![], // TODO
             },
             callback,
         });
@@ -154,7 +154,7 @@ impl InputBuilder {
 #[derive(Debug)]
 pub struct ScriptInputCallback {
     pub callback: Persistent<Function<'static>>,
-    pub definition: ScriptInput,
+    pub definition: RedexHandler,
 }
 
 pub struct ScriptRegistry {

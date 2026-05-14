@@ -20,6 +20,7 @@ use crate::v1::types::{
 /// A hostname, used to identify a server
 // NOTE: do i really want to use this as an id?
 // TODO: rename to ServerId? or ServerName?
+// TODO: impl Validate
 #[derive(Debug, Hash, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(examples("example.com")))]

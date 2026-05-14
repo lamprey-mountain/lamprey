@@ -11,7 +11,7 @@ use crate::v1::types::automod::{AutomodAction, AutomodMatches, AutomodRuleStripp
 use crate::v1::types::components::{self, Components};
 use crate::v1::types::e2ee::MlsEpoch;
 use crate::v1::types::flume::MessageFlume;
-use crate::v1::types::metadata::MessageMetadata;
+use crate::v1::types::metadata::Metadata;
 use crate::v1::types::moderation::Report;
 use crate::v1::types::reaction::ReactionCounts;
 #[cfg(feature = "feat_interaction_reaction")]
@@ -326,7 +326,7 @@ pub struct MessageCreate {
     pub mentions: ParseMentions,
 
     /// application defined metadata
-    pub metadata: Option<MessageMetadata>,
+    pub metadata: Option<Metadata>,
 
     /// the components for this message
     pub components: Option<Components<components::Create>>,
@@ -361,7 +361,7 @@ pub struct MessagePatch {
     ///
     /// passing this will replace metadata
     #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
-    pub metadata: Option<Option<MessageMetadata>>,
+    pub metadata: Option<Option<Metadata>>,
 
     /// the components for this message
     pub components: Option<Components<components::Create>>,
@@ -626,7 +626,7 @@ pub struct MessageDefaultMarkdown {
 
     /// application defined metadata
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    pub metadata: Option<MessageMetadata>,
+    pub metadata: Option<Metadata>,
 
     /// the message this message is replying to
     pub reply_id: Option<MessageId>,

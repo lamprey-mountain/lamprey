@@ -1,7 +1,7 @@
 use async_trait::async_trait;
-use common::v1::types::script::{
-    Run, RunLogEntry, RunStatus, Script, ScriptFormat, ScriptLocation, ScriptMetadata,
-    ScriptVersion, ScriptVersionStatus,
+use common::v1::types::redex::{
+    Eval, EvalLogEntry, EvalStatus, Redex, RedexFormat, RedexLocation, RedexMetadata, RedexVersion,
+    RedexVersionStatus,
 };
 use common::v1::types::{
     ack::AckBulkItem,
@@ -21,7 +21,6 @@ use common::v1::types::{
         RoomAnalyticsMembersCount, RoomAnalyticsMembersJoin, RoomAnalyticsMembersLeave,
         RoomAnalyticsOverview, RoomAnalyticsParams,
     },
-    search::{ChannelSearchRequest, MessageSearchRequest},
     tag::{Tag, TagCreate, TagPatch},
     util::Time,
     webhook::{Webhook, WebhookCreate, WebhookUpdate},
@@ -33,7 +32,7 @@ use common::v1::types::{
     RoomMemberSearchAdvanced, RoomMemberSearchResponse, SearchDlqId, TagId, ThreadMember,
     ThreadMemberPut, UserId, WebhookId,
 };
-use common::v1::types::{Message as MessageV2, RunId, ScriptId, ScriptVerId};
+use common::v1::types::{EvalId, RedexId, RedexVerId};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -991,69 +990,69 @@ pub trait DataConfigInternal {
 #[async_trait]
 pub trait DataScript {
     /// create a new script and script version
-    async fn script_create(&mut self, script: &Script) -> Result<()>;
+    async fn script_create(&mut self, script: &Redex) -> Result<()>;
     async fn script_update(
         &mut self,
-        script_id: ScriptId,
-        format: ScriptFormat,
-        location: ScriptLocation,
-        metadata: ScriptMetadata,
+        script_id: RedexId,
+        format: RedexFormat,
+        location: RedexLocation,
+        metadata: RedexMetadata,
     ) -> Result<()>;
-    async fn script_delete(&mut self, script_id: ScriptId) -> Result<()>;
+    async fn script_delete(&mut self, script_id: RedexId) -> Result<()>;
     async fn script_version_create(
         &mut self,
-        script_id: ScriptId,
+        script_id: RedexId,
         channel_id: ChannelId,
         creator_id: UserId,
-        format: ScriptFormat,
-        location: ScriptLocation,
-        metadata: ScriptMetadata,
+        format: RedexFormat,
+        location: RedexLocation,
+        metadata: RedexMetadata,
         cached_inputs: Option<serde_json::Value>,
-    ) -> Result<ScriptVerId>;
+    ) -> Result<RedexVerId>;
     async fn script_version_update_status(
         &mut self,
-        script_id: ScriptId,
-        version_id: ScriptVerId,
-        status: ScriptVersionStatus,
+        script_id: RedexId,
+        version_id: RedexVerId,
+        status: RedexVersionStatus,
     ) -> Result<()>;
     async fn script_version_delete(
         &mut self,
-        script_id: ScriptId,
-        version_id: ScriptVerId,
+        script_id: RedexId,
+        version_id: RedexVerId,
     ) -> Result<()>;
     async fn script_version_get(
         &mut self,
-        script_id: ScriptId,
+        script_id: RedexId,
         channel_id: ChannelId,
-        version_id: ScriptVerId,
-    ) -> Result<Option<ScriptVersion>>;
-    async fn script_get(&mut self, script_id: ScriptId) -> Result<Option<Script>>;
+        version_id: RedexVerId,
+    ) -> Result<Option<RedexVersion>>;
+    async fn script_get(&mut self, script_id: RedexId) -> Result<Option<Redex>>;
     async fn script_list_by_channel(
         &mut self,
         channel_id: ChannelId,
-        pagination: PaginationQuery<ScriptId>,
-    ) -> Result<PaginationResponse<Script>>;
+        pagination: PaginationQuery<RedexId>,
+    ) -> Result<PaginationResponse<Redex>>;
     async fn script_version_list_by_script(
         &mut self,
         channel_id: ChannelId,
-        script_id: ScriptId,
-        pagination: PaginationQuery<ScriptVerId>,
-    ) -> Result<PaginationResponse<ScriptVersion>>;
+        script_id: RedexId,
+        pagination: PaginationQuery<RedexVerId>,
+    ) -> Result<PaginationResponse<RedexVersion>>;
 
-    async fn script_log_insert(&mut self, run_id: RunId, entry: &RunLogEntry) -> Result<()>;
+    async fn script_log_insert(&mut self, run_id: EvalId, entry: &EvalLogEntry) -> Result<()>;
     async fn script_log_list(
         &mut self,
-        run_id: RunId,
+        run_id: EvalId,
         pagination: PaginationQuery<u64>,
-    ) -> Result<PaginationResponse<RunLogEntry>>;
+    ) -> Result<PaginationResponse<EvalLogEntry>>;
 
-    async fn script_run_create(&mut self, run: &Run) -> Result<()>;
-    async fn script_run_get(&mut self, run_id: RunId) -> Result<Option<Run>>;
+    async fn script_run_create(&mut self, run: &Eval) -> Result<()>;
+    async fn script_run_get(&mut self, run_id: EvalId) -> Result<Option<Eval>>;
     async fn script_run_list(
         &mut self,
-        script_id: ScriptId,
-        pagination: PaginationQuery<RunId>,
-    ) -> Result<PaginationResponse<Run>>;
-    async fn script_run_update_status(&mut self, run_id: RunId, status: RunStatus) -> Result<()>;
-    async fn script_run_stop(&mut self, run_id: RunId) -> Result<()>;
+        script_id: RedexId,
+        pagination: PaginationQuery<EvalId>,
+    ) -> Result<PaginationResponse<Eval>>;
+    async fn script_run_update_status(&mut self, run_id: EvalId, status: EvalStatus) -> Result<()>;
+    async fn script_run_stop(&mut self, run_id: EvalId) -> Result<()>;
 }
