@@ -13,7 +13,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # TODO: common refuses to compile without a random mishmash of features, i should clean up that code
-lamprey-common = { path = "../crate-common", optional = true, default-features = false, features = ["validator", "serde", "utoipa", "ptr_box", "feat_interaction_reaction" ] }
+lamprey-common = { path = "../crate-common", optional = true, default-features = false, features = ["validator", "serde", "utoipa", "ptr_box", "feat_interaction_reaction", "hacky_hakari" ] }
 logos = "0.16.1"
 rowan = "0.16.1"
 uuid = { version = "1.22.0", features = ["serde", "v7"] }

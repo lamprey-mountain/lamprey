@@ -44,6 +44,7 @@ feat_e2ee = []
 ptr_arc = []
 ptr_rc = []
 ptr_box = []
+hacky_hakari = ["dep:lamprey-hakari"]
 
 default = [
   "utoipa",
@@ -51,5 +52,5 @@ default = [
   "feat_interaction_reaction",
   "str0m",
   "ptr_box",
-  "dep:lamprey-hakari",
+  "hacky_hakari",
 ]
