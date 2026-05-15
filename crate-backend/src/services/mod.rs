@@ -23,11 +23,7 @@ use webhook::ServiceWebhooks;
 
 use crate::{
     services::{
-        admin::ServiceAdmin, audit_logs::ServiceAuditLogs, automod::ServiceAutomod,
-        calendar::ServiceCalendar, documents::ServiceDocuments, http::ServiceHttp,
-        member_lists::ServiceMemberLists, notifications::ServiceNotifications,
-        presence::ServicePresence, search::ServiceSearch, unread::ServiceUnread,
-        voice::ServiceVoice,
+        admin::ServiceAdmin, audit_logs::ServiceAuditLogs, automod::ServiceAutomod, calendar::ServiceCalendar, documents::ServiceDocuments, http::ServiceHttp, interactions::ServiceInteractions, member_lists::ServiceMemberLists, notifications::ServiceNotifications, presence::ServicePresence, search::ServiceSearch, unread::ServiceUnread, voice::ServiceVoice
     },
     ServerStateInner,
 };
@@ -45,6 +41,7 @@ pub mod embed;
 pub mod emoji;
 pub mod federation;
 pub mod http;
+pub mod interactions;
 pub mod media;
 pub mod member_lists;
 pub mod messages;
@@ -79,18 +76,19 @@ pub struct Services {
     pub emoji: ServiceEmoji,
     pub federation: ServiceFederation,
     pub http: ServiceHttp,
+    pub interactions: ServiceInteractions,
     pub media: ServiceMedia,
     pub member_lists: ServiceMemberLists,
     pub messages: ServiceMessages,
     pub notifications: ServiceNotifications,
-    pub scripts: ServiceScripts,
     pub oauth: ServiceOauth,
     pub perms: ServicePermissions,
     pub presence: ServicePresence,
     pub role: ServiceRoles,
     pub room_analytics: ServiceRoomAnalytics,
-    pub rooms: ServiceRooms,
     pub room_templates: ServiceRoomTemplates,
+    pub rooms: ServiceRooms,
+    pub scripts: ServiceScripts,
     pub search: ServiceSearch,
     pub sessions: ServiceSessions,
     pub tag: ServiceTags,
@@ -117,6 +115,7 @@ impl Services {
             emoji: ServiceEmoji::new(state.clone()),
             federation: ServiceFederation::new(state.clone()),
             http: ServiceHttp::new(state.clone()),
+            interactions: ServiceInteractions::new(state.clone()),
             media: ServiceMedia::new(state.clone()),
             member_lists: ServiceMemberLists::new(state.clone()),
             messages: ServiceMessages::new(state.clone()),

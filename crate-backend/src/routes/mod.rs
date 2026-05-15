@@ -14,6 +14,7 @@ mod application;
 mod auth;
 mod automod;
 mod calendar;
+mod interaction;
 mod channel;
 mod debug;
 mod dm;
@@ -70,6 +71,7 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(emoji::routes())
         .merge(federation::routes(Arc::clone(&s)))
         .merge(flume::routes())
+        .merge(interaction::routes())
         .merge(internal::routes())
         .merge(invite::routes())
         .merge(media::routes())

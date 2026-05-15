@@ -15,6 +15,7 @@ pub mod error;
 pub mod federation;
 pub mod harvest;
 pub mod ids;
+pub mod interactions;
 pub mod invite;
 pub mod media;
 pub mod message;
@@ -48,7 +49,6 @@ pub mod util;
 pub mod visibility;
 pub mod voice;
 pub mod webhook;
-pub mod interactions;
 
 pub use media::{
     Audio, Image, MediaTrack, MediaTrackInfo, MediaV0, Mime, Mixed, Text, TimedText, TrackSource,

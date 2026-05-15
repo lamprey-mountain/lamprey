@@ -1,71 +1,13 @@
-// for things ike buttons
-// somewhat copied from discord since they do things reasonably
-
 use crate::v1::types::{
-    ApplicationId, Channel, ChannelId, Embed, Message, MessageCreate, MessageId, MessagePatch,
-    Permission, Room, RoomMember, User,
+    ApplicationId, Channel, ChannelId, Embed, InteractionId, Message, MessageCreate, MessageId,
+    MessagePatch, Permission, Room, RoomMember, User,
 };
-
-use super::ids::InteractionId;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
-
-/*
-// POST /interaction
-// POST /interaction/{interaction_id}/{token}/callback
-
-struct Application {
-    interactions_url: Option<Url>,
-
-    unfurl_domains: Vec<String>,
-}
-
-struct Message {
-    components: Vec<MessageComponent>,
-    interaction: Option<MessageInteraction>,
-}
-
-/// the interaction that caused this message to be sent
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct MessageInteraction {
-    pub id: InteractionId,
-    pub application_id: ApplicationId,
-
-    /// the user who triggered this interaction
-    pub user_id: UserId,
-
-    /// the target message the button/component was on
-    pub target_message_id: Option<MessageId>,
-}
-
-enum MessageSync {
-    // sent to the user and application
-    InteractionCreate {
-        user_id: Option<UserId>,
-
-        // only sent to the user
-        // use Ideompotency-Key
-        nonce: Option<String>,
-
-        interaction: Interaction,
-        application_id: ApplicationId,
-    },
-
-    InteractionSuccess {
-        interaction_id: InteractionId,
-    },
-
-    InteractionFailure {
-        interaction_id: InteractionId,
-    },
-}
-*/
 
 /// create a new interaction
 #[derive(Debug, Clone)]
@@ -90,7 +32,7 @@ pub enum InteractionCreateType {
     },
 }
 
-/// an interaction was created
+/// an user interacted with your application
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -98,8 +40,10 @@ pub struct Interaction {
     pub id: InteractionId,
     pub application_id: ApplicationId,
 
-    /// unique token for responding to this interaction. this exists so you don't need to give your token to an http server for http based interactions
-    pub token: String,
+    /// unique token for responding to this interaction
+    ///
+    /// this exists so you don't need to give your token to an http server for http based interactions. only is set for bots.
+    pub token: Option<String>,
 
     /// always 1 currently
     pub version: u16,
@@ -168,18 +112,19 @@ pub enum InteractionType {
     },
 }
 
+/// respond to an interaction
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct InteractionResponse {
+pub struct InteractionResponseCreate {
     #[cfg_attr(feature = "serde", serde(flatten))]
-    pub ty: InteractionResponseType,
+    pub ty: InteractionResponseCreateType,
 }
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum InteractionResponseType {
+pub enum InteractionResponseCreateType {
     /// for webhooks
     Pong,
 
@@ -209,4 +154,12 @@ pub enum InteractionResponseType {
         /// generated these embeds
         embeds: Vec<Embed>,
     },
+}
+
+/// an interaction has been responded to
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct InteractionResponse {
+    // TODO: return extra data here
 }

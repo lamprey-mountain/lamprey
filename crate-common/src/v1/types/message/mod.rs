@@ -14,10 +14,8 @@ use crate::v1::types::flume::MessageFlume;
 use crate::v1::types::metadata::Metadata;
 use crate::v1::types::moderation::Report;
 use crate::v1::types::reaction::ReactionCounts;
-#[cfg(feature = "feat_interaction_reaction")]
-use crate::v1::types::reaction::ReactionKey;
 use crate::v1::types::util::{Diff, Time};
-use crate::v1::types::{AuditLogEntry, Embed, RoleId, UserId};
+use crate::v1::types::{ApplicationId, AuditLogEntry, Embed, InteractionId, RoleId, UserId};
 use crate::v1::types::{ChannelType, EmojiId, MediaId, RoomId};
 
 #[cfg(feature = "serde")]
@@ -77,6 +75,10 @@ pub struct Message {
     /// the associated flume for this message, if one exists.
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub flume: Option<MessageFlume>,
+
+    /// the associated interaction for this message, if one exists.
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub interaction: Option<MessageInteraction>,
 }
 
 /// a message's content at a point in time
@@ -809,23 +811,23 @@ pub struct MessageCall {
     pub participants: Vec<UserId>,
 }
 
-// TODO: remove
-/// ways to interact with a message
+/// the interaction that caused this message to be sent
+// who is the message author?
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct Interactions {
-    #[cfg(feature = "feat_interaction_reaction")]
-    /// show placeholder reactions (they appear with zero total reactions) for these emoji
-    pub reactions_default: Option<Vec<ReactionKey>>,
-    // for message create
-    // pub reactions_default: Option<Vec<ReactionKeyParam>>,
+pub struct MessageInteraction {
+    pub id: InteractionId,
+    pub application_id: ApplicationId,
 
-    // yet another rabbit hole. not worth it for now.
-    #[cfg(feature = "feat_interaction_status")]
-    #[cfg_attr(feature = "serde", serde(flatten))]
-    pub status: Option<InteractionStatus>,
+    /// the user who triggered this interaction
+    pub user_id: UserId,
+
+    /// the interaction's source message
+    ///
+    /// if this interaction was triggered by a message component (eg. a button), this is the id of the message the component was on
+    pub source_message_id: Option<MessageId>,
 }
 
 /// the current status

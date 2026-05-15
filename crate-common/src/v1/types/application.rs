@@ -64,6 +64,9 @@ pub struct Application {
     #[cfg(any())]
     /// use lamprey as an oauth provider for your application
     pub oauth_client: Option<ApplicationOauthClient>,
+    // TODO: add these
+    // interactions_url: Option<Url>,
+    // unfurl_domains: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

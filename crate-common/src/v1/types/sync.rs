@@ -11,6 +11,7 @@ use validator::Validate;
 use crate::v1::types::e2ee::{CrossSigningBundle, KeyshareRequest, KeyshareResponse};
 use crate::v1::types::error::SyncError;
 
+use crate::v1::types::interactions::{Interaction, InteractionErrorCode};
 use crate::v1::types::message::flume::FlumeDelta;
 use crate::v1::types::redex::{Eval, EvalLogEntry, Redex, RedexVersion};
 use crate::v1::types::{
@@ -25,7 +26,7 @@ use crate::v1::types::{
     DocumentTagId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember,
     WebhookId,
 };
-use crate::v1::types::{EvalId, Message, RedexId, RedexVerId};
+use crate::v1::types::{EvalId, InteractionId, Message, RedexId, RedexVerId};
 use crate::v2::types::media::Media;
 
 use super::{
@@ -987,6 +988,34 @@ pub enum MessageSync {
         redex_id: RedexId,
         connection_id: ConnectionId,
     },
+
+    /// an interaction was created
+    ///
+    /// sent to the the user who created this and the target application
+    InteractionCreate {
+        interaction: Option<Interaction>,
+
+        user_id: Option<UserId>,
+
+        /// the nonce
+        ///
+        /// taken from the `Ideompotency-Key` header. only sent to the user.
+        nonce: Option<String>,
+    },
+
+    InteractionSuccess {
+        interaction_id: InteractionId,
+        nonce: Option<String>,
+    },
+
+    InteractionFailure {
+        interaction_id: InteractionId,
+        nonce: Option<String>,
+        error_code: InteractionErrorCode,
+    },
+
+    // InteractionAutocompletionCreate
+    // InteractionModalCreate
 }
 
 // TODO: skip sending room_members/thread_members/users if the client already has them
