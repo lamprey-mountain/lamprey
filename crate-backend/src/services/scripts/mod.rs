@@ -1,5 +1,5 @@
 use common::v1::types::redex::{
-    Eval, EvalInput, EvalStatus, Redex, RedexVersion, RedexVersionStatus,
+    Eval, EvalInput, EvalStatus, Redex, RedexFormat, RedexVersion, RedexVersionStatus,
 };
 use common::v1::types::util::Time;
 use common::v1::types::{
@@ -85,14 +85,22 @@ impl ServiceScripts {
         redex_id: RedexId,
         redex_version_id: RedexVerId,
         media_id: MediaId,
+        format: RedexFormat,
     ) -> Result<Box<dyn Executor>> {
         let bytes = self.state.services().media.download(media_id).await?;
         let source = str::from_utf8(&bytes).unwrap();
-        let loaded = self
-            .engine
-            .load_js(redex_id, redex_version_id, "strobbery", source)
-            .await
-            .unwrap();
+        let loaded = match format {
+            RedexFormat::Javascript => self
+                .engine
+                .load_js(redex_id, redex_version_id, "strobbery", source)
+                .await
+                .unwrap(),
+            RedexFormat::Webassembly => self
+                .engine
+                .load_wasm(redex_id, redex_version_id, "strobbery", source)
+                .await
+                .unwrap(),
+        };
         Ok(loaded)
     }
 
@@ -100,7 +108,6 @@ impl ServiceScripts {
     // TODO: process script (and script version) in background
     pub async fn create_script(&self, script: Redex) -> Result<()> {
         let inputs = self.process(script.clone(), None).await?;
-        dbg!(&inputs);
         let extracted_metadata = inputs.metadata;
 
         let mut data = self.state.data();
@@ -241,17 +248,13 @@ impl ServiceScripts {
     async fn process(&self, script: Redex, ver: Option<RedexVersion>) -> Result<ScriptExtracted> {
         // NOTE: should i insert the extraction run in the db too?
 
-        let version_id = ver
-            .as_ref()
-            .map(|v| &v.version_id)
-            .unwrap_or(&script.latest_version.version_id);
-        let location = ver
-            .as_ref()
-            .map(|v| &v.location)
-            .unwrap_or(&script.latest_version.location);
+        let latest_version = ver.as_ref().unwrap_or(&script.latest_version);
+        let version_id = latest_version.version_id;
+        let location = &latest_version.location;
+        let format = &latest_version.format;
         let media_id = location.media_id().unwrap();
         let loaded = self
-            .load_from_source(script.id, *version_id, media_id)
+            .load_from_source(script.id, version_id, media_id, format.clone())
             .await?;
 
         let mut handle = loaded

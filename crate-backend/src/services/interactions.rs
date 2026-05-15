@@ -24,6 +24,9 @@ const INTERACTION_FOLLOWUP_LIMIT: usize = 10;
 
 pub struct ServiceInteractions {
     state: Arc<ServerStateInner>,
+
+    // TODO: support multiple server instances
+    // maybe use nats jetstream or redis or whatever for this
     interactions: DashMap<InteractionId, InteractionEntry>,
     interaction_nonce_to_id: DashMap<String, InteractionId>,
 }
@@ -124,13 +127,13 @@ impl ServiceInteractions {
             interaction: inter.clone(),
             user_id: user_id,
             nonce: nonce.clone(),
-        });
+        })?;
 
         let id_copy = id;
         let expire_handle = tokio::spawn(async move {
             tokio::time::sleep(INTERACTION_LIFETIME).await;
             srv.interactions
-                .fail(id_copy, InteractionErrorCode::Timeout);
+                .fail(id_copy, InteractionErrorCode::Timeout)?;
             Result::Ok(())
         });
 
@@ -272,7 +275,7 @@ impl ServiceInteractions {
             user_id: interaction_user_id,
             interaction_id: entry.interaction.id,
             nonce,
-        });
+        })?;
 
         let id_copy = id;
         let expire_handle = tokio::spawn(async move {
@@ -317,7 +320,7 @@ impl ServiceInteractions {
             interaction_id: i.interaction.id,
             nonce: i.nonce,
             error_code,
-        });
+        })?;
 
         Ok(())
     }

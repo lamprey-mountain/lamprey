@@ -1,18 +1,13 @@
-
-use base64::Engine;
 use clap::Parser;
 use common::v1::types::{util::Time, AuditLogEntry, AuditLogEntryType};
 use figment::providers::{Env, Format, Toml};
 use lamprey_backend_core::types::admin::AdminCollectGarbageTarget;
 use tracing::info;
 
-
 use lamprey_backend::{
     cli, config, error,
     serve::server::{gc, setup_otel, Server},
-    types::{
-        self, AuditLogEntryId, RoomMemberPut, SERVER_ROOM_ID, SERVER_USER_ID,
-    },
+    types::{self, AuditLogEntryId, RoomMemberPut, SERVER_ROOM_ID, SERVER_USER_ID},
 };
 
 use config::Config;

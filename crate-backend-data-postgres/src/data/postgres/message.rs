@@ -6,8 +6,8 @@ use async_trait::async_trait;
 use common::v1::types::components::{self, Components};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::message::{
-    Message, MessageAttachment, MessageAttachmentType, MessageDefaultMarkdown, MessageInteraction,
-    MessageType, MessageVersion,
+    Message, MessageAttachment, MessageAttachmentType, MessageDefaultMarkdown, MessageType,
+    MessageVersion,
 };
 use common::v1::types::reaction::{ReactionCounts, ReactionKey};
 use common::v1::types::sync::ChannelSync;
@@ -58,7 +58,7 @@ pub struct DbMessage {
     pub lifecycle_seq: i64,
     pub flume: Option<serde_json::Value>,
     pub interaction: Option<serde_json::Value>,
-    pub ephemeral: bool,
+    pub ephemeral: bool, // WARN: ephemeral messages shouldn't be stored in the database at all? i should probably remove this column actually...
 }
 
 #[derive(Debug, sqlx::FromRow)]

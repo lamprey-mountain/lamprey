@@ -52,11 +52,6 @@ async fn redex_create(
 
     let al = auth.audit_log(room_id);
 
-    match &req.redex.format {
-        RedexFormat::Javascript => {}
-        RedexFormat::Webassembly => return Err(Error::Unimplemented),
-    };
-
     let media = match &req.redex.location {
         RedexLocationUpdate::Local { .. } => return Err(Error::Unimplemented),
         RedexLocationUpdate::Remote { .. } => return Err(Error::Unimplemented),
