@@ -624,6 +624,8 @@ async fn message_pin(
             removed_at: None,
             flume: None,
             mentions: Default::default(),
+            interaction: None,
+            ephemeral: false,
         })
         .await?;
     let mut notice_message = data.message_get(req.channel_id, notice_message_id).await?;

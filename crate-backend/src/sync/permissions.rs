@@ -64,8 +64,30 @@ impl AuthCheck {
             MessageSync::RoomDelete { room_id } => AuthCheck::Room(*room_id),
             MessageSync::ChannelCreate { channel } => AuthCheck::Channel(channel.id),
             MessageSync::ChannelUpdate { channel } => AuthCheck::Channel(channel.id),
-            MessageSync::MessageCreate { message } => AuthCheck::Channel(message.channel_id),
-            MessageSync::MessageUpdate { message } => AuthCheck::Channel(message.channel_id),
+            MessageSync::MessageCreate { message } => {
+                if message.ephemeral {
+                    let mut checks = vec![];
+                    checks.push(AuthCheck::User(message.author_id));
+                    if let Some(it) = &message.interaction {
+                        checks.push(AuthCheck::User(it.user_id));
+                    }
+                    AuthCheck::Any(checks)
+                } else {
+                    AuthCheck::Channel(message.channel_id)
+                }
+            }
+            MessageSync::MessageUpdate { message } => {
+                if message.ephemeral {
+                    let mut checks = vec![];
+                    checks.push(AuthCheck::User(message.author_id));
+                    if let Some(it) = &message.interaction {
+                        checks.push(AuthCheck::User(it.user_id));
+                    }
+                    AuthCheck::Any(checks)
+                } else {
+                    AuthCheck::Channel(message.channel_id)
+                }
+            }
             MessageSync::UserCreate { user } => AuthCheck::UserVisible(user.id),
             MessageSync::UserUpdate { user } => AuthCheck::UserVisible(user.id),
             MessageSync::PresenceUpdate { user_id, .. } => AuthCheck::UserVisible(*user_id),
@@ -76,7 +98,6 @@ impl AuthCheck {
             MessageSync::RoomMemberCreate { member, .. } => {
                 AuthCheck::room_or_user(member.room_id, member.user_id)
             }
-
             MessageSync::RoomMemberUpdate { member, .. } => {
                 AuthCheck::room_or_user(member.room_id, member.user_id)
             }
@@ -355,6 +376,22 @@ impl AuthCheck {
             MessageSync::ScriptLogCreate { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::ScriptChannelMetrics { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::ScriptSubscribed { channel_id, .. } => AuthCheck::Channel(*channel_id),
+            MessageSync::InteractionCreate {
+                interaction,
+                user_id,
+                ..
+            } => {
+                let mut checks = vec![];
+                if let Some(uid) = user_id {
+                    checks.push(AuthCheck::User(*uid));
+                }
+                if let Some(aid) = interaction.as_ref().map(|i| i.application_id) {
+                    checks.push(AuthCheck::User((*aid).into()));
+                }
+                AuthCheck::Any(checks)
+            }
+            MessageSync::InteractionSuccess { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::InteractionFailure { user_id, .. } => AuthCheck::User(*user_id),
         }
     }
 }

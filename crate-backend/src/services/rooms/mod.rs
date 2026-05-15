@@ -562,6 +562,8 @@ impl ServiceRooms {
                     removed_at: None,
                     flume: None,
                     mentions: Default::default(),
+                    interaction: None,
+                    ephemeral: false,
                 })
                 .await?;
             let welcome_message = data.message_get(wti, welcome_message_id).await?;

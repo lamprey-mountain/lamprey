@@ -6,8 +6,8 @@ use async_trait::async_trait;
 use common::v1::types::components::{self, Components};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::message::{
-    Message, MessageAttachment, MessageAttachmentType, MessageDefaultMarkdown, MessageType,
-    MessageVersion,
+    Message, MessageAttachment, MessageAttachmentType, MessageDefaultMarkdown, MessageInteraction,
+    MessageType, MessageVersion,
 };
 use common::v1::types::reaction::{ReactionCounts, ReactionKey};
 use common::v1::types::sync::ChannelSync;
@@ -57,6 +57,8 @@ pub struct DbMessage {
     pub version_created_seq: i64,
     pub lifecycle_seq: i64,
     pub flume: Option<serde_json::Value>,
+    pub interaction: Option<serde_json::Value>,
+    pub ephemeral: bool,
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -106,6 +108,8 @@ impl From<DbMessage> for Message {
             .into(),
             thread: None,
             flume: row.flume.and_then(|v| serde_json::from_value(v).ok()),
+            interaction: row.interaction.and_then(|v| serde_json::from_value(v).ok()),
+            ephemeral: row.ephemeral,
         }
     }
 }
@@ -260,9 +264,11 @@ impl DataMessage for Postgres {
         .await?;
 
         let flume_json = create.flume.clone();
+        let interaction_json = create.interaction.clone();
+        let ephemeral = create.ephemeral;
         query!(
-            r#"INSERT INTO message (id, channel_id, author_id, created_at, removed_at, latest_version_id, created_seq, lifecycle_seq, flume)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8)"#,
+            r#"INSERT INTO message (id, channel_id, author_id, created_at, removed_at, latest_version_id, created_seq, lifecycle_seq, flume, interaction, ephemeral)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8, $9, $10)"#,
             message_id,
             *create.channel_id,
             create.author_id.into_inner(),
@@ -271,6 +277,8 @@ impl DataMessage for Postgres {
             version_id,
             new_seq,
             flume_json,
+            interaction_json,
+            ephemeral,
         )
         .execute(tx.ext())
         .await?;
@@ -1215,7 +1223,9 @@ impl DataMessage for Postgres {
                 m.created_seq,
                 mv.created_seq as "version_created_seq",
                 m.lifecycle_seq,
-                m.flume
+                m.flume,
+                m.interaction,
+                m.ephemeral
             FROM message AS m
             JOIN message_version AS mv ON m.latest_version_id = mv.version_id
             LEFT JOIN att_json ON att_json.version_id = mv.version_id

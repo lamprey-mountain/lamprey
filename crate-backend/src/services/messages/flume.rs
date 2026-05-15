@@ -135,6 +135,8 @@ impl ServiceMessages {
             removed_at: None,
             mentions: Mentions::default(),
             flume: Some(flume_json),
+            interaction: None,
+            ephemeral: false,
         })
         .await?;
 

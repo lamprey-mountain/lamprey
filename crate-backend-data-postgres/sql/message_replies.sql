@@ -47,6 +47,8 @@ SELECT
     m.created_seq,
     m.lifecycle_seq,
     m.flume,
+    m.interaction,
+    m.ephemeral,
     mv.version_id,
     mv.author_id as version_author_id,
     mv.content,

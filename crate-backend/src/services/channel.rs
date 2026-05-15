@@ -635,6 +635,8 @@ impl ServiceChannels {
                         removed_at: None,
                         flume: None,
                         mentions: Default::default(),
+                        interaction: None,
+                        ephemeral: false,
                     })
                     .await?;
 
@@ -785,6 +787,8 @@ impl ServiceChannels {
                     removed_at: None,
                     flume: None,
                     mentions: Default::default(),
+                    interaction: None,
+                    ephemeral: false,
                 })
                 .await?;
 
@@ -1251,6 +1255,8 @@ impl ServiceChannels {
                     removed_at: None,
                     flume: None,
                     mentions: Default::default(),
+                    interaction: None,
+                    ephemeral: false,
                 })
                 .await?;
             let rename_message = data.message_get(thread_id, rename_message_id).await?;
@@ -1283,6 +1289,8 @@ impl ServiceChannels {
                     removed_at: None,
                     flume: None,
                     mentions: Default::default(),
+                    interaction: None,
+                    ephemeral: false,
                 })
                 .await?;
             let icon_message = data.message_get(thread_id, icon_message_id).await?;
@@ -1316,6 +1324,8 @@ impl ServiceChannels {
                     removed_at: None,
                     flume: None,
                     mentions: Default::default(),
+                    interaction: None,
+                    ephemeral: false,
                 })
                 .await?;
             let move_message = data.message_get(thread_id, move_message_id).await?;

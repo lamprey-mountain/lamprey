@@ -993,9 +993,9 @@ pub enum MessageSync {
     ///
     /// sent to the the user who created this and the target application
     InteractionCreate {
-        interaction: Option<Interaction>,
+        interaction: Interaction,
 
-        user_id: Option<UserId>,
+        user_id: UserId,
 
         /// the nonce
         ///
@@ -1004,16 +1004,17 @@ pub enum MessageSync {
     },
 
     InteractionSuccess {
+        user_id: UserId,
         interaction_id: InteractionId,
         nonce: Option<String>,
     },
 
     InteractionFailure {
+        user_id: UserId,
         interaction_id: InteractionId,
         nonce: Option<String>,
         error_code: InteractionErrorCode,
     },
-
     // InteractionAutocompletionCreate
     // InteractionModalCreate
 }

@@ -21,7 +21,7 @@ use crate::util::is_valid_hostname;
 use crate::v1::routes::{PathParam, PathParamError};
 use crate::v1::types::error::{ApiResult, ErrorCode};
 use crate::v1::types::federation::Hostname;
-use crate::v1::types::MediaId;
+use crate::v1::types::{MediaId, MessageId};
 
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Deserialize), serde(untagged))]
@@ -92,6 +92,16 @@ pub enum ServerReq {
     ServerName(String),
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(Deserialize), serde(untagged))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum InteractionMessageReq {
+    #[cfg_attr(feature = "serde", serde(deserialize_with = "const_original"))]
+    MessageOriginal,
+
+    MessageId(MessageId),
+}
+
 #[cfg(feature = "serde")]
 fn deserialize_server_name<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
@@ -112,6 +122,19 @@ where
     #[derive(Deserialize)]
     enum Helper {
         #[cfg_attr(feature = "serde", serde(rename = "@self"))]
+        Variant,
+    }
+
+    Helper::deserialize(deserializer).map(|_| ())
+}
+
+fn const_original<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    enum Helper {
+        #[cfg_attr(feature = "serde", serde(rename = "@original"))]
         Variant,
     }
 
@@ -251,6 +274,27 @@ impl PathParam for ServerReq {
             Ok(ServerReq::ServerName(s.to_owned()))
         } else {
             Err(PathParamError(format!("invalid hostname: {}", s)))
+        }
+    }
+}
+
+impl Display for InteractionMessageReq {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InteractionMessageReq::MessageOriginal => write!(f, "@original"),
+            InteractionMessageReq::MessageId(id) => write!(f, "{id}"),
+        }
+    }
+}
+
+impl PathParam for InteractionMessageReq {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
+        if s == "@original" {
+            Ok(InteractionMessageReq::MessageOriginal)
+        } else {
+            MessageId::from_str(s)
+                .map(InteractionMessageReq::MessageId)
+                .map_err(|_| PathParamError(format!("invalid message id: {}", s)))
         }
     }
 }

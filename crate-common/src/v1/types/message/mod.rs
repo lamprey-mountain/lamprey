@@ -79,6 +79,11 @@ pub struct Message {
     /// the associated interaction for this message, if one exists.
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub interaction: Option<MessageInteraction>,
+
+    /// whether this message is ephemeral
+    ///
+    /// ephemeral messages are only visible to the user who created an interaction and aren't stored
+    pub ephemeral: bool,
 }
 
 /// a message's content at a point in time
@@ -332,6 +337,9 @@ pub struct MessageCreate {
 
     /// the components for this message
     pub components: Option<Components<components::Create>>,
+
+    /// whether to make this message ephemeral
+    pub ephemeral: bool,
 }
 
 #[derive(Debug, Clone)]

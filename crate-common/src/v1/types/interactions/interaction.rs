@@ -110,6 +110,16 @@ pub enum InteractionType {
         /// the permissions the application has in the target channel
         application_permissions: Vec<Permission>,
     },
+    // TODO: add locale?
+    // TODO: add authorizers?
+}
+
+impl InteractionType {
+    /// whether messages can be sent in reply to this interaction
+    // TODO: use this
+    pub fn can_reply(&self) -> bool {
+        matches!(self, InteractionType::Button { .. })
+    }
 }
 
 /// respond to an interaction

@@ -139,6 +139,8 @@ async fn thread_member_add(
                     }],
                     ..Default::default()
                 },
+                interaction: None,
+                ephemeral: false,
             })
             .await?;
         let message = srv
@@ -229,6 +231,8 @@ async fn thread_member_delete(
                 removed_at: None,
                 flume: None,
                 mentions: Default::default(),
+                interaction: None,
+                ephemeral: false,
             })
             .await?;
         let message = srv

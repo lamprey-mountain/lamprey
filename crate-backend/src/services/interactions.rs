@@ -13,7 +13,14 @@ use tokio::task::JoinHandle;
 
 use crate::{Result, ServerStateInner};
 
+/// how long applications have to respond to an interaction
 const INTERACTION_LIFETIME: Duration = Duration::from_secs(30);
+
+/// how long applications have to send follow messages after responding to an interaction
+const INTERACTION_FOLLOWUP_LIFETIME: Duration = Duration::from_secs(60 * 15);
+
+/// how many followup messages applications can send
+const INTERACTION_FOLLOWUP_LIMIT: usize = 10;
 
 pub struct ServiceInteractions {
     state: Arc<ServerStateInner>,
@@ -22,13 +29,26 @@ pub struct ServiceInteractions {
 }
 
 struct InteractionEntry {
-    expire_handle: JoinHandle<Result<()>>,
     nonce: Option<String>,
     interaction: Interaction,
+    state: InteractionEntryState,
+}
+
+enum InteractionEntryState {
+    /// interaction created, waiting for response
+    Created {
+        expire_handle: JoinHandle<Result<()>>,
+    },
+
+    /// interaction responded to, can have followups sent
+    Responded {
+        expire_handle: JoinHandle<Result<()>>,
+        deferred: bool,
+    },
 }
 
 impl ServiceInteractions {
-    pub fn create(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
             state,
             interactions: DashMap::new(),
@@ -59,23 +79,21 @@ impl ServiceInteractions {
                     custom_id,
                 } => {
                     let channel = srv.channels.get(channel_id, Some(user_id)).await?;
-                    let room = channel
-                        .room_id
-                        .map(|room_id| srv.rooms.get(room_id, Some(user_id)))
-                        .transpose()
-                        .await?;
+                    let room = if let Some(room_id) = channel.room_id {
+                        Some(srv.rooms.get(room_id, Some(user_id)).await?)
+                    } else {
+                        None
+                    };
                     let message = srv
                         .messages
                         .get(channel_id, message_id, Some(user_id))
                         .await?;
                     let user = srv.users.get(user_id, Some(user_id)).await?;
-                    let room_member = room
-                        .as_ref()
-                        .map(|room| room.id)
-                        .map(|room_id| srv.state.data().room_member_get(room_id, user_id))
-                        .transpose()
-                        .await?
-                        .flatten();
+                    let room_member = if let Some(room_id) = room.as_ref().map(|r| r.id) {
+                        Some(srv.state.data().room_member_get(room_id, user_id).await?)
+                    } else {
+                        None
+                    };
                     let user_permissions: Vec<Permission> = srv
                         .perms
                         .for_channel(user_id, channel_id)
@@ -99,7 +117,7 @@ impl ServiceInteractions {
 
         self.state.broadcast(MessageSync::InteractionCreate {
             interaction: inter.clone(),
-            user_id,
+            user_id: user_id,
             nonce: nonce.clone(),
         });
 
@@ -112,8 +130,8 @@ impl ServiceInteractions {
 
         let entry = InteractionEntry {
             interaction: inter.clone(),
-            expire_handle,
             nonce: nonce.clone(),
+            state: InteractionEntryState::Created { expire_handle },
         };
         self.interactions.insert(id, entry);
         if let Some(nonce) = nonce.clone() {
@@ -137,23 +155,64 @@ impl ServiceInteractions {
         todo!()
     }
 
-    pub fn respond(
+    pub async fn respond(
         &self,
         id: InteractionId,
         token: String,
         respond: InteractionResponseCreate,
     ) -> Result<InteractionResponse> {
-        self.interactions.get(&id);
+        let Some((_, mut entry)) = self.interactions.remove(&id) else {
+            // interaction already responded to or expired
+            return Err(Error::BadStatic("interaction not found"));
+        };
 
-        // TODO: verify token
-        // return Err(Error::BadStatic("invalid token"));
+        if entry
+            .interaction
+            .token
+            .as_deref()
+            .map(|t| t != &token)
+            .unwrap_or(true)
+        {
+            // token didn't match, put it back
+            self.interactions.insert(id, entry);
+            return Err(Error::BadStatic("invalid token"));
+        }
 
-        // TODO: remove interaction if it exists
-
+        let srv = self.state.services();
         match respond.ty {
             InteractionResponseCreateType::Pong => todo!(),
             InteractionResponseCreateType::Reply { message } => {
-                todo!()
+                let channel_id = match &entry.interaction.ty {
+                    InteractionType::Button { channel, .. } => channel.id,
+                    InteractionType::Ping => {
+                        return Err(Error::BadStatic("cannot reply to ping interaction"))
+                    }
+                    InteractionType::Unfurl { channel, .. } => channel.id,
+                };
+
+                let original_message_id = match &entry.interaction.ty {
+                    InteractionType::Button { message, .. } => Some(message.id),
+                    InteractionType::Ping => unreachable!(),
+                    InteractionType::Unfurl { message, .. } => Some(message.id),
+                };
+
+                let mut reply_message = message;
+                if reply_message.reply_id.is_none() {
+                    reply_message.reply_id = original_message_id;
+                }
+
+                let user = match &entry.interaction.ty {
+                    InteractionType::Button { user, .. } => user.clone(),
+                    InteractionType::Ping => unreachable!(),
+                    InteractionType::Unfurl { user, .. } => user.clone(),
+                };
+
+                let _message = srv
+                    .messages
+                    .create_as_webhook(channel_id, user.id, reply_message)
+                    .await?;
+
+                // TODO: return message
             }
             InteractionResponseCreateType::ReplyDefer => todo!(),
             InteractionResponseCreateType::MessageUpdate { patch } => todo!(),
@@ -165,8 +224,9 @@ impl ServiceInteractions {
         }
 
         self.state.broadcast(MessageSync::InteractionSuccess {
-            interaction_id: i.id,
-            nonce: i.nonce,
+            user_id: todo!(),
+            interaction_id: entry.interaction.id,
+            nonce: entry.nonce,
         });
 
         let resp = InteractionResponse {
@@ -183,7 +243,8 @@ impl ServiceInteractions {
         };
 
         self.state.broadcast(MessageSync::InteractionFailure {
-            interaction_id: i.id,
+            user_id: todo!(),
+            interaction_id: i.interaction.id,
             nonce: i.nonce,
             error_code,
         });
@@ -192,9 +253,9 @@ impl ServiceInteractions {
     }
 
     fn remove(&self, id: InteractionId) -> Option<InteractionEntry> {
-        let it = self.interactions.remove(id);
-        if let Some(nonce) = it.as_ref().map(|(_, i)| i.nonce) {
-            self.interaction_nonce_to_id.remove(nonce);
+        let it = self.interactions.remove(&id);
+        if let Some(nonce) = it.as_ref().map(|(_, i)| i.nonce.clone()) {
+            self.interaction_nonce_to_id.remove(&nonce);
         }
 
         it.map(|i| i.1)

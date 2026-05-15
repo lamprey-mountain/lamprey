@@ -68,3 +68,130 @@ pub mod interaction_respond {
         pub wait: bool,
     }
 }
+
+/// Interaction message create
+///
+/// Send another message (aka followup message)
+#[endpoint(
+    post,
+    path = "/interaction/{interaction_id}/{token}/message",
+    tags = ["interaction"],
+    scopes = [Full],
+    response(CREATED, body = Message, description = "Interaction message created successfully"),
+)]
+pub mod interaction_message_create {
+    use crate::v1::types::{InteractionId, Message, MessageCreate};
+
+    pub struct Request {
+        #[path]
+        pub interaction_id: InteractionId,
+
+        #[path]
+        pub token: String,
+
+        #[json]
+        pub message: MessageCreate,
+
+        #[header]
+        pub idempotency_key: Option<String>,
+    }
+
+    pub struct Response {
+        #[json]
+        pub message: Message,
+    }
+}
+
+/// Interaction message get
+///
+/// Get a message from an interaction
+#[endpoint(
+    get,
+    path = "/interaction/{interaction_id}/{token}/message/{message_id}",
+    tags = ["interaction", "badge.public"],
+    scopes = [Full],
+    response(OK, body = Message, description = "Get interaction message success"),
+)]
+pub mod interaction_message_get {
+    use crate::v1::types::{misc::InteractionMessageReq, InteractionId, Message};
+
+    pub struct Request {
+        #[path]
+        pub interaction_id: InteractionId,
+
+        #[path]
+        pub token: String,
+
+        #[path]
+        pub message_id: InteractionMessageReq,
+    }
+
+    pub struct Response {
+        #[json]
+        pub message: Message,
+    }
+}
+
+/// Interaction message edit
+///
+/// Edit a message from an interaction
+#[endpoint(
+    patch,
+    path = "/interaction/{interaction_id}/{token}/message/{message_id}",
+    tags = ["interaction"],
+    scopes = [Full],
+    response(OK, body = Message, description = "Edit interaction message success"),
+    response(NO_CONTENT, description = "no change"),
+)]
+pub mod interaction_message_edit {
+    use crate::v1::types::{misc::InteractionMessageReq, InteractionId, Message, MessagePatch};
+
+    pub struct Request {
+        #[path]
+        pub interaction_id: InteractionId,
+
+        #[path]
+        pub token: String,
+
+        #[path]
+        pub message_id: InteractionMessageReq,
+
+        #[json]
+        pub patch: MessagePatch,
+
+        #[header(rename = "X-Timestamp")]
+        pub timestamp: Option<i64>,
+    }
+
+    pub struct Response {
+        #[json]
+        pub message: Message,
+    }
+}
+
+/// Interaction message delete
+///
+/// Delete a message from an interaction
+#[endpoint(
+    delete,
+    path = "/interaction/{interaction_id}/{token}/message/{message_id}",
+    tags = ["interaction"],
+    scopes = [Full],
+    response(NO_CONTENT, description = "Delete interaction message success"),
+)]
+pub mod interaction_message_delete {
+    use crate::v1::types::{misc::InteractionMessageReq, InteractionId};
+
+    pub struct Request {
+        #[path]
+        pub interaction_id: InteractionId,
+
+        #[path]
+        pub token: String,
+
+        #[path]
+        pub message_id: InteractionMessageReq,
+    }
+
+    pub struct Response {}
+}

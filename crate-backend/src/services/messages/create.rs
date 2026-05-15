@@ -531,6 +531,7 @@ impl ServiceMessages {
         self.validate_media(&op.stage.all_media_ids, message_id, author_id)
             .await?;
 
+        // TODO: skip all of these for ephemeral messages
         let message = self.persist_to_database(&mut op).await?;
         let version_id = *message.latest_version.version_id;
         self.claim_media(&mut op.stage.all_media_ids, message_id, version_id)
@@ -666,6 +667,8 @@ impl ServiceMessages {
         &self,
         op: &mut MessageOperation<'_, New>,
     ) -> Result<(MessagePermissions, Option<Time>)> {
+        // TODO: always allow ephemeral messages
+
         let _srv = self.state.services();
 
         // 0. you can only edit your own messages
@@ -728,6 +731,8 @@ impl ServiceMessages {
     }
 
     async fn enforce_automod(&self, op: &mut MessageOperation<'_, New>) -> Result<Option<Time>> {
+        // TODO: skip for ephemeral messages
+
         let Some(room_id) = op.channel.room_id else {
             return Ok(None);
         };
@@ -787,6 +792,7 @@ impl ServiceMessages {
             });
         };
 
+        // TODO: ignore all mentions for ephemeral messages
         let parse_mentions = match &op.kind {
             MessageOperationKind::MessageCreate(m) => &m.json.mentions,
             MessageOperationKind::MessageEdit(_) => &ParseMentions::default(),
@@ -937,6 +943,7 @@ impl ServiceMessages {
 
         match &op.kind {
             MessageOperationKind::MessageCreate(_) => {
+                // TODO: handle interactions
                 data.message_create(crate::types::DbMessageCreate {
                     id: Some(op.message_id),
                     channel_id: op.channel.id,
@@ -949,6 +956,8 @@ impl ServiceMessages {
                     removed_at: op.stage.removed_at.map(|t| t.into()),
                     flume: None,
                     mentions: op.stage.sanitized.mentions.clone(),
+                    interaction: None,
+                    ephemeral: false,
                 })
                 .await?;
             }
@@ -1050,6 +1059,8 @@ impl ServiceMessages {
         &self,
         op: &mut MessageOperation<'_, Committed>,
     ) -> Result<()> {
+        // TODO: skip if message is ephemeral
+
         let srv = self.state.services();
 
         // TODO: unarchive thread for system, webhooks
@@ -1078,6 +1089,8 @@ impl ServiceMessages {
         &self,
         op: &mut MessageOperation<'_, Committed>,
     ) -> Result<()> {
+        // TODO: skip if message is ephemeral
+
         let mut data = self.state.data();
         let srv = self.state.services();
 
@@ -1151,6 +1164,8 @@ impl ServiceMessages {
         &self,
         op: &mut MessageOperation<'_, Committed>,
     ) -> Result<()> {
+        // TODO: skip if message is ephemeral
+
         let p = NotificationProcessor {
             state: self.state.clone(),
             channel: Arc::new(op.channel.clone()),

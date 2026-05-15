@@ -634,6 +634,7 @@ impl Connection {
                 MessageSync::ChannelUpdate { channel } => MessageSync::ChannelUpdate {
                     channel: Box::new(srv.channels.get(channel.id, session.user_id()).await?),
                 },
+                // FIXME: dont fetch from db for ephemeral messages
                 MessageSync::MessageCreate { message } => MessageSync::MessageCreate {
                     message: srv
                         .messages

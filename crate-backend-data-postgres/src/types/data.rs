@@ -496,6 +496,8 @@ pub struct DbMessageCreate {
     pub removed_at: Option<time::PrimitiveDateTime>,
     pub mentions: Mentions,
     pub flume: Option<serde_json::Value>,
+    pub interaction: Option<serde_json::Value>,
+    pub ephemeral: bool,
 }
 
 /// for message_update, message_update_in_place
