@@ -11,7 +11,7 @@ use common::v1::types::redex::{
 };
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
-    AuditLogEntryType, ChannelType, MediaId, MessageSync, Permission, RedexId, RedexVerId,
+    AuditLogEntryType, ChannelType, MessageSync, Permission, RedexId, RedexVerId,
     RoomFeature,
 };
 use common::v2::types::media::MediaReference;

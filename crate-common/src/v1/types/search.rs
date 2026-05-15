@@ -7,7 +7,6 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-#[cfg(feature = "feat_search_ordering")]
 use crate::v1::types::MessageId;
 use crate::v1::types::{
     misc::Time, Channel, ChannelId, ChannelType, Message, RoleId, RoomId, RoomMember, TagId,

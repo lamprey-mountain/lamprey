@@ -48,8 +48,6 @@ pub mod util;
 pub mod visibility;
 pub mod voice;
 pub mod webhook;
-
-#[cfg(feature = "feat_interaction")]
 pub mod interactions;
 
 pub use media::{

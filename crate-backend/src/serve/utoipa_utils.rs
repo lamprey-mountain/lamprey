@@ -1,6 +1,4 @@
-use http::header;
 use serde_json::json;
-use tower_http::cors::CorsLayer;
 use utoipa::{openapi::extensions::Extensions, Modify};
 
 pub struct BadgeModifier;

@@ -503,9 +503,7 @@ pub enum ChannelType {
     /// instant messaging group direct message
     Gdm,
 
-    #[cfg(feature = "feat_thread_type_forums")]
-    /// long form chat history
-    // NOTE: this will be redone later. Forum will be the type of the parent channel, internal threads will use ThreadFoo channels.
+    /// thread only channel
     Forum,
 
     /// a call

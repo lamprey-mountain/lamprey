@@ -1,30 +1,18 @@
-use std::{str::FromStr, sync::Arc, time::Duration};
 
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use base64::Engine;
 use clap::Parser;
 use common::v1::types::{util::Time, AuditLogEntry, AuditLogEntryType};
 use figment::providers::{Env, Format, Toml};
-use lamprey_backend_core::types::admin::{
-    AdminCollectGarbage, AdminCollectGarbageMode, AdminCollectGarbageTarget,
-};
-use lamprey_backend_data_postgres::data::Data2;
-use opendal::layers::LoggingLayer;
-use opentelemetry_otlp::WithExportConfig;
-use sqlx::postgres::PgPoolOptions;
-use tokio::task::JoinSet;
-use tracing::{error, info, warn};
-use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+use lamprey_backend_core::types::admin::AdminCollectGarbageTarget;
+use tracing::info;
 
-use crate::config::{ListenComponent, ListenTransport};
 
 use lamprey_backend::{
     cli, config, error,
-    serve::{self, serve_transport, server::{gc, setup_otel, Server}},
+    serve::server::{gc, setup_otel, Server},
     types::{
-        self, AuditLogEntryId, DbRoomCreate, DbUserCreate, MessageId, MessageSync, PaginationQuery,
-        RoomCreate, RoomMemberPut, RoomType, SERVER_ROOM_ID, SERVER_USER_ID,
+        self, AuditLogEntryId, RoomMemberPut, SERVER_ROOM_ID, SERVER_USER_ID,
     },
-    Error, ServerState,
 };
 
 use config::Config;

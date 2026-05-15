@@ -296,8 +296,6 @@ genid!(PermissionOverwrite);
 genid!(Redex, "00000000-0000-0000-0000-0000000redex");
 genid!(RedexVer, "00000000-0000-0000-0ver-0000000redex");
 genid!(Eval, "00000000-0000-0000-0000-00000000eval");
-
-#[cfg(feature = "feat_interaction")]
 genid!(Interaction, "00000000-0000-0000-0000-00interaction");
 
 /// the user id of the server system user (aka root)
