@@ -25,3 +25,4 @@ serde = { version = "1.0.228", features = ["derive"] }
 strum = { version = "0.28.0", features = ["derive"] }
 tokio = { version = "1.52.3", features = ["macros"] }
 toml = "1.1.2"
+lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
