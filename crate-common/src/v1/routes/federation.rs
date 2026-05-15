@@ -92,7 +92,7 @@ pub mod server_sync_handle {
     path = "/server/{hostname}/ping",
     tags = ["federation"],
     scopes = [Full],
-    response(OK, body = ServerPingResponse, description = "ok"),
+    response(OK, body = PingResponse, description = "ok"),
 )]
 pub mod server_ping {
     use serde::{Deserialize, Serialize};

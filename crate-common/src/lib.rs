@@ -25,3 +25,7 @@ pub type Ptr<T> = Box<T>;
     not(feature = "ptr_box")
 ))]
 compile_error!("Enable one of: ptr_arc, ptr_rc, ptr_box");
+
+// also allow configuring between String, Box<str>, SmolStr?
+
+// NOTE: probably should remove the above, conflicting features can cause issues!

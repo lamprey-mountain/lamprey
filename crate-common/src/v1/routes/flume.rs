@@ -74,7 +74,7 @@ pub mod flume_ping {
     tags = ["flume"],
     scopes = [Full],
     permissions = [MessageCreate],
-    response(OK, body = FlumeCommitResponse, description = "Flume committed successfully"),
+    response(OK, body = Message, description = "Flume committed successfully"),
 )]
 pub mod flume_commit {
     use crate::v1::types::{ChannelId, Message, MessageId};

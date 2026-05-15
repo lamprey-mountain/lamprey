@@ -155,7 +155,7 @@ pub mod redex_content_update {
     path = "/channel/{channel_id}/redex/{redex_id}/trigger",
     tags = ["redex"],
     scopes = [Full],
-    response(CREATED, body = Run, description = "Start redex run success"),
+    response(CREATED, body = Eval, description = "Start redex run success"),
 )]
 pub mod redex_trigger {
     use crate::v1::types::{

@@ -80,11 +80,11 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     let response_clean = build_clean_struct(response_struct.clone())?;
     let extract_request_fn = build_extract_request_fn(&req_fields, &args.path)?;
     let extract_impl = build_extract_impl(&req_fields, &args.path)?;
-    let encode_response_fn = build_encode_response_fn(response_struct)?;
+    let encode_response_fn = build_encode_response_fn(&args, response_struct)?;
     let encode_request_fn = build_encode_request_fn(&req_fields, &args.path)?;
-    let extract_response_fn = build_extract_response_fn(response_struct)?;
+    let extract_response_fn = build_extract_response_fn(&args, response_struct)?;
     let meta_fn = build_meta_fn(&args, &mod_attrs)?;
-    let openapi_ext_fn = build_openapi_ext_fn(&req_fields, &resp_fields)?;
+    let openapi_ext_fn = build_openapi_ext_fn(&args, &req_fields, &resp_fields)?;
 
     // Preserve all original items except Request/Response structs
     let preserved_items: Vec<_> = items
@@ -574,7 +574,14 @@ fn build_extract_impl(fields: &[EndpointField], path: &LitStr) -> syn::Result<To
 // encode_response
 // ---------------------------------------------------------------------------
 
-fn build_encode_response_fn(response_struct: &ItemStruct) -> syn::Result<TokenStream> {
+fn build_encode_response_fn(args: &EndpointArgs, response_struct: &ItemStruct) -> syn::Result<TokenStream> {
+    let status_code = if let Some(spec) = args.responses.first() {
+        let s = &spec.status;
+        quote! { ::http::StatusCode::from_u16(#s).unwrap_or(::http::StatusCode::OK) }
+    } else {
+        quote! { ::http::StatusCode::OK }
+    };
+
     let has_json = extract_fields(response_struct)?
         .iter()
         .any(|f| matches!(f.kind, FieldKind::Json));
@@ -591,7 +598,7 @@ fn build_encode_response_fn(response_struct: &ItemStruct) -> syn::Result<TokenSt
                 let json = ::serde_json::to_string(&resp.#ident)
                     .unwrap_or_else(|e| format!("{{\"error\": \"serialization failed\"}}"));
                 ::http::Response::builder()
-                    .status(::http::StatusCode::OK)
+                    .status(#status_code)
                     .header(::http::header::CONTENT_TYPE, "application/json")
                     .body(::bytes::Bytes::from(json))
                     .unwrap()
@@ -601,7 +608,7 @@ fn build_encode_response_fn(response_struct: &ItemStruct) -> syn::Result<TokenSt
         Ok(quote! {
             pub fn encode_response(resp: Response) -> ::http::Response<::bytes::Bytes> {
                 ::http::Response::builder()
-                    .status(::http::StatusCode::OK)
+                    .status(#status_code)
                     .body(::bytes::Bytes::new())
                     .unwrap()
             }
@@ -613,7 +620,23 @@ fn build_encode_response_fn(response_struct: &ItemStruct) -> syn::Result<TokenSt
 // extract_response (client-side)
 // ---------------------------------------------------------------------------
 
-fn build_extract_response_fn(response_struct: &ItemStruct) -> syn::Result<TokenStream> {
+fn build_extract_response_fn(args: &EndpointArgs, response_struct: &ItemStruct) -> syn::Result<TokenStream> {
+    let status_check = if !args.responses.is_empty() {
+        let codes: Vec<_> = args.responses.iter().map(|r| &r.status).collect();
+        quote! {
+            let allowed = [#(#codes),*];
+            if !allowed.contains(&status.as_u16()) {
+                return Err(resp);
+            }
+        }
+    } else {
+        quote! {
+            if !status.is_success() {
+                return Err(resp);
+            }
+        }
+    };
+
     let has_json = extract_fields(response_struct)?
         .iter()
         .any(|f| matches!(f.kind, FieldKind::Json));
@@ -631,9 +654,7 @@ fn build_extract_response_fn(response_struct: &ItemStruct) -> syn::Result<TokenS
                 resp: ::http::Response<::bytes::Bytes>,
             ) -> Result<Response, ::http::Response<::bytes::Bytes>> {
                 let status = resp.status();
-                if !status.is_success() {
-                    return Err(resp);
-                }
+                #status_check
                 let (_parts, body) = resp.into_parts();
                 let #ident: #ty = ::serde_json::from_slice(&body)
                     .map_err(|e| {
@@ -654,9 +675,7 @@ fn build_extract_response_fn(response_struct: &ItemStruct) -> syn::Result<TokenS
                     resp: ::http::Response<::bytes::Bytes>,
                 ) -> Result<Response, ::http::Response<::bytes::Bytes>> {
                     let status = resp.status();
-                    if !status.is_success() {
-                        return Err(resp);
-                    }
+                    #status_check
                     Ok(Response {})
                 }
             })
@@ -668,9 +687,7 @@ fn build_extract_response_fn(response_struct: &ItemStruct) -> syn::Result<TokenS
                     resp: ::http::Response<::bytes::Bytes>,
                 ) -> Result<Response, ::http::Response<::bytes::Bytes>> {
                     let status = resp.status();
-                    if !status.is_success() {
-                        return Err(resp);
-                    }
+                    #status_check
                     let (parts, _body) = resp.into_parts();
                     // TODO: extract headers if needed
                     Ok(Response {})
@@ -1168,6 +1185,7 @@ fn extract_inner_option_type(ty: &syn::Type) -> Option<&syn::Type> {
 }
 
 fn build_openapi_ext_fn(
+    args: &EndpointArgs,
     req_fields: &[EndpointField],
     resp_fields: &[EndpointField],
 ) -> syn::Result<TokenStream> {
@@ -1242,37 +1260,69 @@ fn build_openapi_ext_fn(
         };
     }
 
-    // 2. Generate Basic 200 Response
+    // 2. Generate Responses
     let mut resp_stream = quote! {};
-    if let Some(f) = resp_fields
-        .iter()
-        .find(|f| matches!(f.kind, FieldKind::Json))
-    {
-        let ty = &f.ty;
-        let schema_ty = extract_inner_option_type(ty).unwrap_or(ty);
-        resp_stream = quote! {
-            op = op.response(
-                "200",
-                ::utoipa::openapi::ResponseBuilder::new()
-                    .description("Success")
+    if !args.responses.is_empty() {
+        for spec in &args.responses {
+            let status_str = spec.status.base10_digits();
+            let description = spec.description.as_ref()
+                .map(|d| d.value())
+                .unwrap_or_else(|| "Success".to_string());
+
+            let mut content_stream = quote! {};
+            if let Some(body_ty) = &spec.body {
+                content_stream = quote! {
                     .content(
                         "application/json",
                         ::utoipa::openapi::ContentBuilder::new()
-                            .schema(Some(<#schema_ty as ::utoipa::PartialSchema>::schema()))
+                            .schema(Some(<#body_ty as ::utoipa::PartialSchema>::schema()))
                             .build()
                     )
-                    .build()
-            );
-        };
+                };
+            }
+
+            resp_stream.extend(quote! {
+                op = op.response(
+                    #status_str,
+                    ::utoipa::openapi::ResponseBuilder::new()
+                        .description(#description)
+                        #content_stream
+                        .build()
+                );
+            });
+        }
     } else {
-        resp_stream = quote! {
-            op = op.response(
-                "200",
-                ::utoipa::openapi::ResponseBuilder::new()
-                    .description("Success")
-                    .build()
-            );
-        };
+        // Fallback to original logic
+        if let Some(f) = resp_fields
+            .iter()
+            .find(|f| matches!(f.kind, FieldKind::Json))
+        {
+            let ty = &f.ty;
+            let schema_ty = extract_inner_option_type(ty).unwrap_or(ty);
+            resp_stream = quote! {
+                op = op.response(
+                    "200",
+                    ::utoipa::openapi::ResponseBuilder::new()
+                        .description("Success")
+                        .content(
+                            "application/json",
+                            ::utoipa::openapi::ContentBuilder::new()
+                                .schema(Some(<#schema_ty as ::utoipa::PartialSchema>::schema()))
+                                .build()
+                        )
+                        .build()
+                );
+            };
+        } else {
+            resp_stream = quote! {
+                op = op.response(
+                    "200",
+                    ::utoipa::openapi::ResponseBuilder::new()
+                        .description("Success")
+                        .build()
+                );
+            };
+        }
     }
 
     // 3. Add Path, Query, and Header Parameters automatically
