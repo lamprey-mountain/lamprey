@@ -23,12 +23,12 @@ regex = "1.12.3"
 pastey = "0.1.1"
 thiserror = "2.0.18"
 str0m = { version = "0.10.0", optional = true }
-lamprey-hakari = { version = "0.1", path = "../crate-hakari", optional = true }
 lamprey-macros = { version = "0.1", path = "../crate-macros" }
 base64 = "0.22.1"
 http = "1.4.0"
-bytes = "1.11.1"
+bytes = { version = "1.11.1", features = ["serde"] }
 percent-encoding = "2.3.2"
+lamprey-hakari = { version = "0.1", path = "../crate-hakari", optional = true }
 
 [features]
 serde = ["dep:serde", "dep:serde_json"]
@@ -44,7 +44,6 @@ feat_e2ee = []
 ptr_arc = []
 ptr_rc = []
 ptr_box = []
-hacky_hakari = ["dep:lamprey-hakari"]
 
 default = [
   "utoipa",
@@ -52,5 +51,5 @@ default = [
   "feat_interaction_reaction",
   "str0m",
   "ptr_box",
-  "hacky_hakari",
+  "dep:lamprey-hakari",
 ]
