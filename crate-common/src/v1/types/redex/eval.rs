@@ -133,6 +133,7 @@ pub enum EvalInputSummary {
 
     /// api event
     Event {
+        #[cfg_attr(feature = "utoipa", schema(no_recursion))]
         event: Box<MessageSync>,
     },
 }

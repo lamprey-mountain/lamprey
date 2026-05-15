@@ -25,7 +25,7 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
     routes::{self, util::script_http::script_http},
-    serve::utoipa_utils::{BadgeModifier, ComponentModifier, NestedTags},
+    serve::utoipa_utils::{BadgeModifier, NestedTags},
     types, ServerState,
 };
 
@@ -165,6 +165,12 @@ mod utoipa_utils;
         common::v1::types::components::ComponentId,
         common::v1::types::components::ComponentCustomId,
         common::v1::types::components::ButtonStyle,
+        common::v1::types::components::Component<common::v1::types::components::Create>,
+        common::v1::types::components::Component<common::v1::types::components::Canonical>,
+        common::v1::types::components::ComponentType<common::v1::types::components::Create>,
+        common::v1::types::components::ComponentType<common::v1::types::components::Canonical>,
+        common::v1::types::components::Components<common::v1::types::components::Create>,
+        common::v1::types::components::Components<common::v1::types::components::Canonical>,
         // flume types
         common::v1::types::message::flume::FlumeCreate,
         common::v1::types::message::flume::FlumeDelta,
@@ -205,8 +211,16 @@ mod utoipa_utils;
         common::v2::types::media::MediaMetadata,
         common::v2::types::media::MediaScan,
         common::v2::types::media::MediaQuarantine,
+        // interactions
+        common::v1::types::interactions::InteractionCreate,
+        common::v1::types::interactions::InteractionCreateType,
+        common::v1::types::interactions::Interaction,
+        common::v1::types::interactions::InteractionType,
+        common::v1::types::interactions::InteractionResponseCreate,
+        common::v1::types::interactions::InteractionResponseCreateType,
+        common::v1::types::interactions::InteractionResponse,
     )),
-    modifiers(&BadgeModifier, &NestedTags, &ComponentModifier),
+    modifiers(&BadgeModifier, &NestedTags),
     info(
         title = "api doccery",
         description = include_str!("../../docs/index.md"),

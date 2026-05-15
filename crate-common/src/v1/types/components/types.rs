@@ -46,6 +46,7 @@ pub struct ComponentCustomId(pub String);
 /// a single component in a tree
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Component<C: ComponentState> {
     pub id: C::Id,
 
@@ -179,52 +180,25 @@ mod _s {
 mod _u {
     use utoipa::{
         openapi::{schema::Schema, RefOr},
-        schema, PartialSchema, ToSchema,
+        schema, ToSchema,
+        __dev::ComposeSchema,
     };
 
-    use crate::v1::types::components::{Canonical, ComponentType, Create};
+    use crate::v1::types::components::{Canonical, Create};
 
     use super::{Component, Components};
 
-    impl PartialSchema for Component<Create> {
-        fn schema() -> RefOr<Schema> {
-            schema!(Component<Create>).into()
-        }
-    }
-
-    impl PartialSchema for Component<Canonical> {
-        fn schema() -> RefOr<Schema> {
-            schema!(Component<Canonical>).into()
-        }
-    }
-
-    impl PartialSchema for ComponentType<Create> {
-        fn schema() -> RefOr<Schema> {
-            schema!(ComponentType<Create>).into()
-        }
-    }
-
-    impl PartialSchema for ComponentType<Canonical> {
-        fn schema() -> RefOr<Schema> {
-            schema!(ComponentType<Canonical>).into()
-        }
-    }
-
-    impl ToSchema for Component<Create> {}
-    impl ToSchema for Component<Canonical> {}
     impl ToSchema for Components<Create> {}
     impl ToSchema for Components<Canonical> {}
-    impl ToSchema for ComponentType<Create> {}
-    impl ToSchema for ComponentType<Canonical> {}
 
-    // HACK: get utoipa to stop complaining
-    impl utoipa::__dev::ComposeSchema for Components<Create> {
+    // HACK: this seems to be private, but i need to impl it anyways?
+    impl ComposeSchema for Components<Create> {
         fn compose(_: Vec<RefOr<Schema>>) -> RefOr<Schema> {
             schema!(Vec<Component<Create>>).into()
         }
     }
 
-    impl utoipa::__dev::ComposeSchema for Components<Canonical> {
+    impl ComposeSchema for Components<Canonical> {
         fn compose(_: Vec<RefOr<Schema>>) -> RefOr<Schema> {
             schema!(Vec<Component<Canonical>>).into()
         }
@@ -257,11 +231,24 @@ pub trait ComponentStateMedia: flex::Seal {
     fn media_id(&self) -> Option<MediaId>;
 }
 
+#[cfg(not(feature = "utoipa"))]
 pub trait ComponentState: flex::Seal {
-    #[cfg(not(feature = "utoipa"))]
     type Id: Debug + Clone + Copy + PartialEq + Eq + Serialize + for<'de> Deserialize<'de>;
 
-    #[cfg(feature = "utoipa")]
+    type Media: Debug
+        + Clone
+        + PartialEq
+        + ComponentStateMedia
+        + Serialize
+        + for<'de> Deserialize<'de>
+        + Sync
+        + Send; // Added for safety in async contexts
+}
+
+#[cfg(feature = "utoipa")]
+pub trait ComponentState:
+    flex::Seal + ToSchema + utoipa::PartialSchema + utoipa::__dev::ComposeSchema
+{
     type Id: Debug
         + Clone
         + Copy
@@ -274,6 +261,7 @@ pub trait ComponentState: flex::Seal {
     type Media: Debug
         + Clone
         + PartialEq
+        + ToSchema
         + ComponentStateMedia
         + Serialize
         + for<'de> Deserialize<'de>
@@ -371,6 +359,7 @@ impl ComponentStateMedia for MediaId {
         )
     )
 )]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum ComponentType<C: ComponentState> {
     /// a clickable button
     Button {
@@ -393,6 +382,7 @@ pub enum ComponentType<C: ComponentState> {
 
     /// a group of other components
     Container {
+        #[cfg_attr(feature = "utoipa", schema(no_recursion))]
         components: Vec<Component<C>>,
         color: Option<Color>,
     },
@@ -419,13 +409,19 @@ pub enum ComponentType<C: ComponentState> {
         #[cfg_attr(feature = "serde", serde(default))]
         open: bool,
         color: Option<Color>,
+
+        #[cfg_attr(feature = "utoipa", schema(no_recursion))]
         summary: Vec<Component<C>>,
+
+        #[cfg_attr(feature = "utoipa", schema(no_recursion))]
         details: Vec<Component<C>>,
     },
 
     /// a section without any margin/padding
     Section {
         color: Option<Color>,
+
+        #[cfg_attr(feature = "utoipa", schema(no_recursion))]
         components: Vec<Component<C>>,
     },
 

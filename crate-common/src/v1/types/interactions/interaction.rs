@@ -139,19 +139,13 @@ pub enum InteractionResponseCreateType {
     Pong,
 
     /// reply with a message
-    Reply {
-        #[cfg_attr(feature = "serde", serde(flatten))]
-        message: MessageCreate,
-    },
+    Reply { message: MessageCreate },
 
     /// show a loading indicator, will reply later
     ReplyDefer,
 
     /// edit the message this button is attached to
-    MessageUpdate {
-        #[cfg_attr(feature = "serde", serde(flatten))]
-        patch: MessagePatch,
-    },
+    MessageUpdate { patch: MessagePatch },
 
     /// acknowledge an interaction, does not show a loading indicator
     Defer,
