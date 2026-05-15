@@ -382,12 +382,8 @@ impl AuthCheck {
                 ..
             } => {
                 let mut checks = vec![];
-                if let Some(uid) = user_id {
-                    checks.push(AuthCheck::User(*uid));
-                }
-                if let Some(aid) = interaction.as_ref().map(|i| i.application_id) {
-                    checks.push(AuthCheck::User((*aid).into()));
-                }
+                checks.push(AuthCheck::User(*user_id));
+                checks.push(AuthCheck::User((*interaction.application_id).into()));
                 AuthCheck::Any(checks)
             }
             MessageSync::InteractionSuccess { user_id, .. } => AuthCheck::User(*user_id),

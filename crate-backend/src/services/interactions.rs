@@ -64,7 +64,6 @@ impl ServiceInteractions {
     ) -> Result<Interaction> {
         let id = InteractionId::new();
 
-        let id_copy = id;
         let srv = self.state.services();
 
         let inter = Interaction {
@@ -100,6 +99,12 @@ impl ServiceInteractions {
                         .await?
                         .perms()
                         .into();
+                    let application_permissions: Vec<Permission> = srv
+                        .perms
+                        .for_channel((*create.application_id).into(), channel_id)
+                        .await?
+                        .perms()
+                        .into();
 
                     InteractionType::Button {
                         room,
@@ -108,7 +113,7 @@ impl ServiceInteractions {
                         user,
                         room_member,
                         user_permissions,
-                        application_permissions: todo!(),
+                        application_permissions,
                         custom_id,
                     }
                 }
@@ -121,6 +126,7 @@ impl ServiceInteractions {
             nonce: nonce.clone(),
         });
 
+        let id_copy = id;
         let expire_handle = tokio::spawn(async move {
             tokio::time::sleep(INTERACTION_LIFETIME).await;
             srv.interactions
@@ -161,7 +167,7 @@ impl ServiceInteractions {
         token: String,
         respond: InteractionResponseCreate,
     ) -> Result<InteractionResponse> {
-        let Some((_, mut entry)) = self.interactions.remove(&id) else {
+        let Some((_, entry)) = self.interactions.remove(&id) else {
             // interaction already responded to or expired
             return Err(Error::BadStatic("interaction not found"));
         };
@@ -179,8 +185,8 @@ impl ServiceInteractions {
         }
 
         let srv = self.state.services();
-        match respond.ty {
-            InteractionResponseCreateType::Pong => todo!(),
+        let deferred = match respond.ty {
+            InteractionResponseCreateType::Pong => return Err(Error::Unimplemented),
             InteractionResponseCreateType::Reply { message } => {
                 let channel_id = match &entry.interaction.ty {
                     InteractionType::Button { channel, .. } => channel.id,
@@ -213,21 +219,79 @@ impl ServiceInteractions {
                     .await?;
 
                 // TODO: return message
-            }
-            InteractionResponseCreateType::ReplyDefer => todo!(),
-            InteractionResponseCreateType::MessageUpdate { patch } => todo!(),
-            InteractionResponseCreateType::Defer => todo!(),
-            InteractionResponseCreateType::Unfurl {
-                include_default,
-                embeds,
-            } => todo!(),
-        }
 
+                false
+            }
+            InteractionResponseCreateType::MessageUpdate { patch } => {
+                let channel_id = match &entry.interaction.ty {
+                    InteractionType::Button { channel, .. } => channel.id,
+                    InteractionType::Ping => {
+                        return Err(Error::BadStatic("cannot edit message in ping interaction"))
+                    }
+                    InteractionType::Unfurl { channel, .. } => channel.id,
+                };
+
+                let message_id = match &entry.interaction.ty {
+                    InteractionType::Button { message, .. } => message.id,
+                    InteractionType::Ping => unreachable!(),
+                    InteractionType::Unfurl { message, .. } => message.id,
+                };
+
+                let webhook_user_id = match &entry.interaction.ty {
+                    InteractionType::Button { user, .. } => user.id,
+                    InteractionType::Ping => unreachable!(),
+                    InteractionType::Unfurl { user, .. } => user.id,
+                };
+
+                let (_, _message) = srv
+                    .messages
+                    .edit_as_webhook(channel_id, message_id, webhook_user_id, patch)
+                    .await?;
+
+                false
+            }
+            // InteractionResponseCreateType::ReplyDefer => true,
+            // InteractionResponseCreateType::Defer => true,
+            InteractionResponseCreateType::ReplyDefer => return Err(Error::Unimplemented),
+            InteractionResponseCreateType::Defer => return Err(Error::Unimplemented),
+            InteractionResponseCreateType::Unfurl { .. } => return Err(Error::Unimplemented),
+        };
+
+        let interaction_user_id = match &entry.interaction.ty {
+            InteractionType::Button { user, .. } => user.id,
+            InteractionType::Ping => {
+                return Err(Error::BadStatic(
+                    "probably should design types to avoid this",
+                ))
+            }
+            InteractionType::Unfurl { user, .. } => user.id,
+        };
+
+        let nonce = entry.nonce.clone();
         self.state.broadcast(MessageSync::InteractionSuccess {
-            user_id: todo!(),
+            user_id: interaction_user_id,
             interaction_id: entry.interaction.id,
-            nonce: entry.nonce,
+            nonce,
         });
+
+        let id_copy = id;
+        let expire_handle = tokio::spawn(async move {
+            tokio::time::sleep(INTERACTION_FOLLOWUP_LIFETIME).await;
+            srv.interactions.remove(id_copy);
+            Result::Ok(())
+        });
+
+        self.interactions.insert(
+            id,
+            InteractionEntry {
+                nonce: entry.nonce,
+                interaction: entry.interaction,
+                state: InteractionEntryState::Responded {
+                    expire_handle,
+                    deferred,
+                },
+            },
+        );
 
         let resp = InteractionResponse {
             // nothing yet...
@@ -242,8 +306,14 @@ impl ServiceInteractions {
             return Ok(());
         };
 
+        let interaction_user_id = match &i.interaction.ty {
+            InteractionType::Button { user, .. } => user.id,
+            InteractionType::Ping => return Err(Error::BadStatic("what do i do here?")),
+            InteractionType::Unfurl { user, .. } => user.id,
+        };
+
         self.state.broadcast(MessageSync::InteractionFailure {
-            user_id: todo!(),
+            user_id: interaction_user_id,
             interaction_id: i.interaction.id,
             nonce: i.nonce,
             error_code,
@@ -254,8 +324,8 @@ impl ServiceInteractions {
 
     fn remove(&self, id: InteractionId) -> Option<InteractionEntry> {
         let it = self.interactions.remove(&id);
-        if let Some(nonce) = it.as_ref().map(|(_, i)| i.nonce.clone()) {
-            self.interaction_nonce_to_id.remove(&nonce);
+        if let Some(nonce) = it.as_ref().and_then(|(_, i)| i.nonce.as_ref()) {
+            self.interaction_nonce_to_id.remove(nonce);
         }
 
         it.map(|i| i.1)

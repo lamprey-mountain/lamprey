@@ -6,7 +6,6 @@ use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
-use common::v1::types::MessageSync;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
@@ -36,7 +35,6 @@ async fn interaction_create(
 /// Interaction respond
 #[handler(routes::interaction_respond)]
 async fn interaction_respond(
-    auth: Auth,
     State(s): State<Arc<ServerState>>,
     req: routes::interaction_respond::Request,
 ) -> Result<impl IntoResponse> {
@@ -53,9 +51,9 @@ async fn interaction_respond(
 /// Interaction message create
 #[handler(routes::interaction_message_create)]
 async fn interaction_message_create(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-    req: routes::interaction_message_create::Request,
+    _auth: Auth,
+    State(_s): State<Arc<ServerState>>,
+    _req: routes::interaction_message_create::Request,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
 }
@@ -63,9 +61,9 @@ async fn interaction_message_create(
 /// Interaction message get
 #[handler(routes::interaction_message_get)]
 async fn interaction_message_get(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-    req: routes::interaction_message_get::Request,
+    _auth: Auth,
+    State(_s): State<Arc<ServerState>>,
+    _req: routes::interaction_message_get::Request,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
 }
@@ -73,9 +71,9 @@ async fn interaction_message_get(
 /// Interaction message edit
 #[handler(routes::interaction_message_edit)]
 async fn interaction_message_edit(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-    req: routes::interaction_message_edit::Request,
+    _auth: Auth,
+    State(_s): State<Arc<ServerState>>,
+    _req: routes::interaction_message_edit::Request,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
 }
@@ -83,9 +81,9 @@ async fn interaction_message_edit(
 /// Interaction message delete
 #[handler(routes::interaction_message_delete)]
 async fn interaction_message_delete(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-    req: routes::interaction_message_delete::Request,
+    _auth: Auth,
+    State(_s): State<Arc<ServerState>>,
+    _req: routes::interaction_message_delete::Request,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
 }
