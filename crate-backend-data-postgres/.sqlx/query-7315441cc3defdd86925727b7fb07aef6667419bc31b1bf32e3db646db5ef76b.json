@@ -1,0 +1,196 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                mv.type as \"message_type: DbMessageType\",\n                m.id,\n                m.channel_id,\n                c.room_id,\n                m.author_id,\n                m.created_at,\n                m.deleted_at,\n                m.removed_at,\n                m.pinned,\n                mv.version_id,\n                mv.author_id as version_author_id,\n                mv.content,\n                mv.metadata,\n                mv.reply_id,\n                mv.override_name,\n                mv.embeds as \"embeds\",\n                mv.components as \"components\",\n                mv.created_at as \"version_created_at\",\n                mv.deleted_at as \"version_deleted_at\",\n                coalesce(att_json.attachments, '[]'::json) as \"attachments!\",\n                m.created_seq,\n                mv.created_seq as \"version_created_seq\",\n                m.lifecycle_seq,\n                m.flume,\n                m.interaction,\n                m.ephemeral\n            FROM message AS m\n            JOIN message_version AS mv ON m.latest_version_id = mv.version_id\n            LEFT JOIN att_json ON att_json.version_id = mv.version_id\n            JOIN channel AS c ON m.channel_id = c.id\n            WHERE m.channel_id = $1\n              AND m.created_seq > $2\n              AND m.created_seq <= $3\n            ORDER BY m.created_seq ASC, m.id ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "message_type: DbMessageType",
+        "type_info": {
+          "Custom": {
+            "name": "message_type",
+            "kind": {
+              "Enum": [
+                "DefaultMarkdown",
+                "ThreadUpdate",
+                "DefaultTagged",
+                "ChannelRename",
+                "MemberAdd",
+                "MemberRemove",
+                "MemberJoin",
+                "MessagePinned",
+                "ChannelIcon",
+                "AutomodExecution",
+                "ChannelMoved",
+                "ChannelPingback",
+                "Call",
+                "ThreadCreated"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "channel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "author_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 6,
+        "name": "deleted_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 7,
+        "name": "removed_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 8,
+        "name": "pinned",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 9,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 10,
+        "name": "version_author_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 11,
+        "name": "content",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "metadata",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 13,
+        "name": "reply_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 14,
+        "name": "override_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 15,
+        "name": "embeds",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 16,
+        "name": "components",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 17,
+        "name": "version_created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 18,
+        "name": "version_deleted_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 19,
+        "name": "attachments!",
+        "type_info": "Json"
+      },
+      {
+        "ordinal": 20,
+        "name": "created_seq",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 21,
+        "name": "version_created_seq",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 22,
+        "name": "lifecycle_seq",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 23,
+        "name": "flume",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 24,
+        "name": "interaction",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 25,
+        "name": "ephemeral",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      null,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "7315441cc3defdd86925727b7fb07aef6667419bc31b1bf32e3db646db5ef76b"
+}
