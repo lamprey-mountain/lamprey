@@ -552,7 +552,7 @@ impl ServiceMedia {
         Ok(media)
     }
 
-    // TODO: impl this
+    /// import media from a MediaReference
     // TODO: use this for all media hadling
     pub async fn import_from_reference(
         &self,
@@ -561,9 +561,17 @@ impl ServiceMedia {
         files: &MultipartFiles,
     ) -> Result<MediaV2> {
         match media_ref {
-            MediaReference::Media { media_id } => {
-                todo!()
-            }
+            MediaReference::Media { media_id } => self
+                .state
+                .data()
+                .media_select(media_id)
+                .await
+                .map_err(|e| match e {
+                    Error::NotFound => {
+                        Error::ApiError(ApiError::from_code(ErrorCode::UnknownMedia))
+                    }
+                    err => err,
+                }),
             MediaReference::Url { source_url } => {
                 self.import_from_url(
                     user_id,
@@ -580,8 +588,29 @@ impl ServiceMedia {
                 .await
             }
             MediaReference::Attachment { media_index } => {
-                files.inner.get(media_index);
-                todo!()
+                let file = files
+                    .inner
+                    .get(&media_index)
+                    .ok_or(Error::BadRequest(format!(
+                        "no attachment found at index {media_index}"
+                    )))?;
+
+                let size = Some(file.data.len() as u64);
+
+                let json = MediaCreate {
+                    strip_exif: false,
+                    alt: None,
+                    source: MediaCreateSource::Upload {
+                        filename: file
+                            .filename
+                            .clone()
+                            .unwrap_or_else(|| String::from("unknown")),
+                        size,
+                    },
+                };
+
+                self.import_from_bytes(user_id, json, file.data.clone())
+                    .await
             }
         }
     }

@@ -32,7 +32,7 @@ pub enum MediaReference {
     Url { source_url: Url },
 
     /// Shortcut to create media from form data. Only usable if the request body is multipart/form-data.
-    Attachment { media_index: String },
+    Attachment { media_index: u64 },
 }
 
 /// request body for `media_done`
