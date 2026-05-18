@@ -14,6 +14,8 @@ export interface paths {
 		/**
 		 * Oauth autoconfig
 		 * @description
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -24,7 +26,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -69,6 +71,8 @@ export interface paths {
 		/**
 		 * Ack bulk
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -85,8 +89,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description ok */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -157,6 +161,8 @@ export interface paths {
 		/**
 		 * Admin collect garbage
 		 * @description <div class="markdown-alert-permission-required">Admin</div>
+		 *
+		 *
 		 */
 		post: operations["admin_collect_garbage"];
 		delete?: never;
@@ -177,6 +183,8 @@ export interface paths {
 		/**
 		 * Admin purge cache
 		 * @description <div class="markdown-alert-permission-required">Admin</div>
+		 *
+		 *
 		 */
 		post: operations["admin_purge_cache"];
 		delete?: never;
@@ -288,6 +296,8 @@ export interface paths {
 		/**
 		 * Admin search DLQ list
 		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
+		 *
+		 *
 		 */
 		get: operations["admin_search_dlq_list"];
 		put?: never;
@@ -311,6 +321,8 @@ export interface paths {
 		/**
 		 * Admin search DLQ delete
 		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
+		 *
+		 *
 		 */
 		delete: operations["admin_search_dlq_delete"];
 		options?: never;
@@ -330,6 +342,8 @@ export interface paths {
 		/**
 		 * Admin search DLQ retry
 		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
+		 *
+		 *
 		 */
 		post: operations["admin_search_dlq_retry"];
 		delete?: never;
@@ -348,6 +362,8 @@ export interface paths {
 		/**
 		 * Admin search stats
 		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
+		 *
+		 *
 		 */
 		get: operations["admin_search_stats"];
 		put?: never;
@@ -391,6 +407,8 @@ export interface paths {
 		/**
 		 * App list
 		 * @description
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -406,7 +424,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -428,6 +446,8 @@ export interface paths {
 		 * App create
 		 * @description <div class="markdown-alert-permission-required">ApplicationCreate</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ApplicationCreate</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -450,8 +470,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -490,6 +510,8 @@ export interface paths {
 		/**
 		 * App get
 		 * @description
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -502,7 +524,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -531,6 +553,8 @@ export interface paths {
 		/**
 		 * App delete
 		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: ApplicationDelete</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -543,8 +567,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -557,6 +581,8 @@ export interface paths {
 		/**
 		 * App patch
 		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: ApplicationUpdate</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -581,7 +607,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -638,8 +664,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -664,6 +690,8 @@ export interface paths {
 		/**
 		 * Puppet ensure
 		 * @description
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -690,8 +718,41 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							avatar?: null | components["schemas"]["Id"];
+							banner?: null | components["schemas"]["Id"];
+							/** @description whether this user is a bot */
+							bot: boolean;
+							deleted_at?: null | components["schemas"]["Time"];
+							description?: string | null;
+							emails?: components["schemas"]["EmailInfo"][] | null;
+							/** @description whether this user is considered to have mutifactor authentication enabled on their account
+							 *
+							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa` */
+							has_mfa?: boolean | null;
+							id: components["schemas"]["Id"];
+							name: string;
+							preferences?: null | components["schemas"]["PreferencesUser"];
+							presence: components["schemas"]["Presence"];
+							puppet?: null | components["schemas"]["Puppet"];
+							registered_at?: null | components["schemas"]["Time"];
+							remote?: null | components["schemas"]["Remote"];
+							suspended?: null | components["schemas"]["Suspended"];
+							/** @description whether this user is an official system user */
+							system: boolean;
+							version_id: components["schemas"]["Id"];
+							webhook?: null | components["schemas"]["UserWebhook"];
+						};
+					};
+				};
+				/** @description created */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -744,6 +805,8 @@ export interface paths {
 		/**
 		 * App rotate oauth secret
 		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: ApplicationUpdate</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -756,7 +819,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -798,6 +861,8 @@ export interface paths {
 		/**
 		 * App create session
 		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: SessionLogin</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -816,8 +881,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -845,6 +910,8 @@ export interface paths {
 		/**
 		 * Auth captcha challenge
 		 * @description
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -855,7 +922,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -888,6 +955,8 @@ export interface paths {
 		/**
 		 * Auth captcha init
 		 * @description
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -898,7 +967,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -925,6 +994,8 @@ export interface paths {
 		/**
 		 * Auth captcha submit
 		 * @description
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -935,8 +1006,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -976,8 +1047,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				202: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -1023,8 +1094,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -1064,8 +1135,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				202: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -1091,6 +1162,8 @@ export interface paths {
 		/**
 		 * Auth oauth init
 		 * @description
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -1103,7 +1176,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ready */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -1134,8 +1207,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -1158,6 +1231,8 @@ export interface paths {
 		/**
 		 * Auth oauth redirect
 		 * @description
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -1173,7 +1248,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success; responds with html + javascript */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -1202,6 +1277,8 @@ export interface paths {
 		 * Auth password set
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -1218,8 +1295,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -1231,6 +1308,8 @@ export interface paths {
 		 * Auth password exec
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -1247,8 +1326,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -1272,8 +1351,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -1308,7 +1387,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -1353,6 +1432,8 @@ export interface paths {
 		/**
 		 * Auth sudo delete
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -1363,8 +1444,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -1390,6 +1471,8 @@ export interface paths {
 		 * Auth sudo upgrade
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthSudo</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -1400,7 +1483,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -1446,7 +1529,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -1486,7 +1569,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -1528,6 +1611,8 @@ export interface paths {
 		 * Auth totp enable
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -1545,8 +1630,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -1572,6 +1657,8 @@ export interface paths {
 		/**
 		 * Auth totp init
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -1582,7 +1669,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -1632,7 +1719,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -1684,7 +1771,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -1714,7 +1801,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -1747,6 +1834,8 @@ export interface paths {
 		 * Auth webauthn delete
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -1757,8 +1846,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -1772,6 +1861,8 @@ export interface paths {
 		 * Auth webauthn patch
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -1782,8 +1873,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -1805,6 +1896,8 @@ export interface paths {
 		/**
 		 * Auth webauthn exec
 		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: SessionLogin</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -1815,7 +1908,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -1843,6 +1936,8 @@ export interface paths {
 		 * Auth webauthn init
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -1853,7 +1948,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -1897,7 +1992,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -1925,6 +2020,8 @@ export interface paths {
 		 * Calendar event list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -1944,7 +2041,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -1974,6 +2071,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">CalendarEventCreate</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarEventCreate</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -2000,8 +2099,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Create calendar event success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -2041,6 +2140,8 @@ export interface paths {
 		 * Calendar event get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -2054,7 +2155,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -2085,6 +2186,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarEventDelete</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -2098,8 +2201,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Delete calendar event success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -2114,6 +2217,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarEventUpdate</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -2139,7 +2244,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description Update calendar event success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -2176,6 +2281,8 @@ export interface paths {
 		 * Calendar overwrite list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -2189,7 +2296,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description List calendar overwrites success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -2236,6 +2343,8 @@ export interface paths {
 		 * Calendar overwrite get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -2250,7 +2359,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description Get calendar overwrite success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -2285,6 +2394,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">CalendarEventManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarOverwriteDelete</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -2299,8 +2410,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Delete calendar overwrite success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -2315,6 +2426,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">CalendarEventManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarOverwriteUpdate</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -2344,7 +2457,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description Update calendar overwrite success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -2385,6 +2498,8 @@ export interface paths {
 		 * Calendar overwrite RSVP list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -2402,7 +2517,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -2439,6 +2554,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarRsvpDelete</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -2460,7 +2577,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -2475,6 +2592,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarRsvpDelete</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -2490,8 +2609,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Delete calendar overwrite RSVP success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -2515,6 +2634,8 @@ export interface paths {
 		 * Calendar event RSVP list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -2531,7 +2652,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -2566,6 +2687,8 @@ export interface paths {
 		 * Calendar event RSVP get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -2580,7 +2703,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -2601,6 +2724,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarRsvpDelete</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -2621,7 +2746,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -2636,6 +2761,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarRsvpDelete</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -2650,8 +2777,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Delete calendar event RSVP success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -2729,8 +2856,132 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description already exists */
 				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							archived_at?: null | components["schemas"]["Time"];
+							/**
+							 * Format: int64
+							 * @description when to automatically archive this thread due to inactivity, in seconds
+							 */
+							auto_archive_duration?: number | null;
+							/**
+							 * Format: int64
+							 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+							 */
+							bitrate?: number | null;
+							calendar?: null | components["schemas"]["Calendar"];
+							creator_id: components["schemas"]["Id"];
+							/**
+							 * Format: int64
+							 * @description the default auto archive duration in seconds to copy to threads created in this channel
+							 */
+							default_auto_archive_duration?: number | null;
+							/**
+							 * Format: int64
+							 * @description default slowmode_message for new threads
+							 *
+							 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
+							 */
+							default_slowmode_message?: number | null;
+							deleted_at?: null | components["schemas"]["Time"];
+							description?: string | null;
+							document?: null | components["schemas"]["Document"];
+							icon?: null | components["schemas"]["Id"];
+							id: components["schemas"]["Id"];
+							/** @description whether users without ThreadManage can add other members to this thread */
+							invitable?: boolean;
+							is_unread?: boolean | null;
+							last_message_id?: null | components["schemas"]["Id"];
+							last_read_id?: null | components["schemas"]["Id"];
+							last_version_id?: null | components["schemas"]["Id"];
+							/** @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync. */
+							latest_seq?: components["schemas"]["ChannelSeq"];
+							locked?: null | components["schemas"]["Locked"];
+							/**
+							 * Format: int64
+							 * @description number of people in this room
+							 */
+							member_count: number;
+							/** Format: int64 */
+							mention_count?: number | null;
+							/** Format: int64 */
+							message_count?: number | null;
+							name: string;
+							/** @description not safe for work */
+							nsfw?: boolean;
+							/**
+							 * Format: int64
+							 * @description number of people who are online in this room
+							 */
+							online_count: number;
+							owner_id?: null | components["schemas"]["Id"];
+							parent_id?: null | components["schemas"]["Id"];
+							/** @description permission overwrites for this channel */
+							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+							/**
+							 * Format: int32
+							 * @description the position of this channel in the navbar
+							 *
+							 *     - lower numbers come first (0 is the first channel)
+							 *     - channels with the same position are tiebroken by id
+							 *     - channels without a position come last, ordered by newest first
+							 */
+							position?: number | null;
+							preferences?: null | components["schemas"]["PreferencesChannel"];
+							/** @description for dm and gdm channels, this is who the dm is with */
+							recipients?: components["schemas"]["User"][];
+							room_id?: null | components["schemas"]["Id"];
+							/** Format: int64 */
+							root_message_count?: number | null;
+							/**
+							 * Format: int64
+							 * @description minimum delay in seconds between creating new messages
+							 *
+							 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
+							 */
+							slowmode_message?: number | null;
+							slowmode_message_expire_at?: null | components["schemas"]["Time"];
+							/**
+							 * Format: int64
+							 * @description minimum delay in seconds between creating new threads
+							 *
+							 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
+							 */
+							slowmode_thread?: number | null;
+							slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+							/**
+							 * Format: int64
+							 * @description number of tags in this Forum, Forum2, or Ticket channel
+							 */
+							tag_count?: number;
+							/** @description tags that are applied to this thread */
+							tags?: components["schemas"]["Id"][] | null;
+							/** @description the tags that are available in this forum. exists on Forum channels only. */
+							tags_available?: components["schemas"]["Tag"][] | null;
+							thread_member?: null | components["schemas"]["ThreadMember"];
+							/** @description type specific data for this channel */
+							type: components["schemas"]["ChannelType"];
+							/** @description url that this info channel should link to */
+							url?: string | null;
+							/**
+							 * Format: int64
+							 * @description maximum number of users who can be in this voice channel
+							 */
+							user_limit?: number | null;
+							/** @description only updates when the channel itself is updated, not the stuff in the channel */
+							version_id: components["schemas"]["Id"];
+							wiki?: null | components["schemas"]["Wiki"];
+						};
+					};
+				};
+				/** @description Create thread success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -2872,6 +3123,8 @@ export interface paths {
 		 * Channel get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -2884,7 +3137,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description Get thread success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -3021,6 +3274,8 @@ export interface paths {
 		 *     <div class="markdown-alert-permission-optional">ThreadEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelUpdate</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -3070,8 +3325,132 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description edit message success */
 				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							archived_at?: null | components["schemas"]["Time"];
+							/**
+							 * Format: int64
+							 * @description when to automatically archive this thread due to inactivity, in seconds
+							 */
+							auto_archive_duration?: number | null;
+							/**
+							 * Format: int64
+							 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+							 */
+							bitrate?: number | null;
+							calendar?: null | components["schemas"]["Calendar"];
+							creator_id: components["schemas"]["Id"];
+							/**
+							 * Format: int64
+							 * @description the default auto archive duration in seconds to copy to threads created in this channel
+							 */
+							default_auto_archive_duration?: number | null;
+							/**
+							 * Format: int64
+							 * @description default slowmode_message for new threads
+							 *
+							 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
+							 */
+							default_slowmode_message?: number | null;
+							deleted_at?: null | components["schemas"]["Time"];
+							description?: string | null;
+							document?: null | components["schemas"]["Document"];
+							icon?: null | components["schemas"]["Id"];
+							id: components["schemas"]["Id"];
+							/** @description whether users without ThreadManage can add other members to this thread */
+							invitable?: boolean;
+							is_unread?: boolean | null;
+							last_message_id?: null | components["schemas"]["Id"];
+							last_read_id?: null | components["schemas"]["Id"];
+							last_version_id?: null | components["schemas"]["Id"];
+							/** @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync. */
+							latest_seq?: components["schemas"]["ChannelSeq"];
+							locked?: null | components["schemas"]["Locked"];
+							/**
+							 * Format: int64
+							 * @description number of people in this room
+							 */
+							member_count: number;
+							/** Format: int64 */
+							mention_count?: number | null;
+							/** Format: int64 */
+							message_count?: number | null;
+							name: string;
+							/** @description not safe for work */
+							nsfw?: boolean;
+							/**
+							 * Format: int64
+							 * @description number of people who are online in this room
+							 */
+							online_count: number;
+							owner_id?: null | components["schemas"]["Id"];
+							parent_id?: null | components["schemas"]["Id"];
+							/** @description permission overwrites for this channel */
+							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+							/**
+							 * Format: int32
+							 * @description the position of this channel in the navbar
+							 *
+							 *     - lower numbers come first (0 is the first channel)
+							 *     - channels with the same position are tiebroken by id
+							 *     - channels without a position come last, ordered by newest first
+							 */
+							position?: number | null;
+							preferences?: null | components["schemas"]["PreferencesChannel"];
+							/** @description for dm and gdm channels, this is who the dm is with */
+							recipients?: components["schemas"]["User"][];
+							room_id?: null | components["schemas"]["Id"];
+							/** Format: int64 */
+							root_message_count?: number | null;
+							/**
+							 * Format: int64
+							 * @description minimum delay in seconds between creating new messages
+							 *
+							 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
+							 */
+							slowmode_message?: number | null;
+							slowmode_message_expire_at?: null | components["schemas"]["Time"];
+							/**
+							 * Format: int64
+							 * @description minimum delay in seconds between creating new threads
+							 *
+							 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
+							 */
+							slowmode_thread?: number | null;
+							slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+							/**
+							 * Format: int64
+							 * @description number of tags in this Forum, Forum2, or Ticket channel
+							 */
+							tag_count?: number;
+							/** @description tags that are applied to this thread */
+							tags?: components["schemas"]["Id"][] | null;
+							/** @description the tags that are available in this forum. exists on Forum channels only. */
+							tags_available?: components["schemas"]["Tag"][] | null;
+							thread_member?: null | components["schemas"]["ThreadMember"];
+							/** @description type specific data for this channel */
+							type: components["schemas"]["ChannelType"];
+							/** @description url that this info channel should link to */
+							url?: string | null;
+							/**
+							 * Format: int64
+							 * @description maximum number of users who can be in this voice channel
+							 */
+							user_limit?: number | null;
+							/** @description only updates when the channel itself is updated, not the stuff in the channel */
+							version_id: components["schemas"]["Id"];
+							wiki?: null | components["schemas"]["Wiki"];
+						};
+					};
+				};
+				/** @description no change */
+				304: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -3237,7 +3616,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -3270,6 +3649,8 @@ export interface paths {
 		/**
 		 * Thread activity
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -3287,7 +3668,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description List activity success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -3341,7 +3722,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description List thread messages success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -3406,14 +3787,14 @@ export interface paths {
 						 *
 						 *     note that you can *only* mention on flume create; editing in a mention later will *not* create a notification */
 						mentions?: components["schemas"]["ParseMentions"];
-						metadata?: null | components["schemas"]["MessageMetadata"];
+						metadata?: null | components["schemas"]["Metadata"];
 						reply_id?: null | components["schemas"]["Id"];
 					};
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Flume created successfully */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -3425,8 +3806,13 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
+							/** @description whether this message is ephemeral
+							 *
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							ephemeral: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
+							interaction?: null | components["schemas"]["MessageInteraction"];
 							latest_version: components["schemas"]["MessageVersion"];
 							pinned?: null | components["schemas"]["Pinned"];
 							reactions?: components["schemas"]["ReactionCounts"];
@@ -3472,7 +3858,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description Flume committed successfully */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -3485,8 +3871,13 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
+							/** @description whether this message is ephemeral
+							 *
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							ephemeral: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
+							interaction?: null | components["schemas"]["MessageInteraction"];
 							latest_version: components["schemas"]["MessageVersion"];
 							pinned?: null | components["schemas"]["Pinned"];
 							reactions?: components["schemas"]["ReactionCounts"];
@@ -3554,8 +3945,15 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Delta applied successfully */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				/** @description Delta did not cause any change */
+				304: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -3594,8 +3992,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Flume pinged successfully */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -3620,6 +4018,8 @@ export interface paths {
 		 * Invite list channel
 		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -3637,7 +4037,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -3660,6 +4060,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: InviteCreate</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -3688,8 +4090,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -3748,7 +4150,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -3806,7 +4208,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description List thread messages success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -3855,15 +4257,17 @@ export interface paths {
 						/** @description the message's content in markdown */
 						content?: string | null;
 						embeds?: components["schemas"]["EmbedCreate"][];
+						/** @description whether to make this message ephemeral */
+						ephemeral: boolean;
 						mentions?: components["schemas"]["ParseMentions"];
-						metadata?: null | components["schemas"]["MessageMetadata"];
+						metadata?: null | components["schemas"]["Metadata"];
 						reply_id?: null | components["schemas"]["Id"];
 					};
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Create message success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -3875,8 +4279,13 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
+							/** @description whether this message is ephemeral
+							 *
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							ephemeral: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
+							interaction?: null | components["schemas"]["MessageInteraction"];
 							latest_version: components["schemas"]["MessageVersion"];
 							pinned?: null | components["schemas"]["Pinned"];
 							reactions?: components["schemas"]["ReactionCounts"];
@@ -3924,7 +4333,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -4006,7 +4415,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -4044,6 +4453,8 @@ export interface paths {
 		 * Message migrate
 		 * @description <div class="markdown-alert-permission-required">MessageDelete</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -4065,7 +4476,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -4110,7 +4521,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -4146,6 +4557,8 @@ export interface paths {
 		 * Message get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -4159,7 +4572,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description Get message success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -4172,8 +4585,13 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
+							/** @description whether this message is ephemeral
+							 *
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							ephemeral: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
+							interaction?: null | components["schemas"]["MessageInteraction"];
 							latest_version: components["schemas"]["MessageVersion"];
 							pinned?: null | components["schemas"]["Pinned"];
 							reactions?: components["schemas"]["ReactionCounts"];
@@ -4207,8 +4625,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description delete message success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -4221,6 +4639,8 @@ export interface paths {
 		/**
 		 * Message edit
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -4245,13 +4665,13 @@ export interface paths {
 						/** @description the new message content in markdown */
 						content?: string | null;
 						embeds?: components["schemas"]["EmbedCreate"][] | null;
-						metadata?: null | components["schemas"]["MessageMetadata"];
+						metadata?: null | components["schemas"]["Metadata"];
 						reply_id?: null | components["schemas"]["Id"];
 					};
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description edit message success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -4264,8 +4684,13 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
+							/** @description whether this message is ephemeral
+							 *
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							ephemeral: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
+							interaction?: null | components["schemas"]["MessageInteraction"];
 							latest_version: components["schemas"]["MessageVersion"];
 							pinned?: null | components["schemas"]["Pinned"];
 							reactions?: components["schemas"]["ReactionCounts"];
@@ -4274,6 +4699,13 @@ export interface paths {
 							thread?: null | components["schemas"]["Channel"];
 						};
 					};
+				};
+				/** @description no change */
+				304: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
 				};
 			};
 		};
@@ -4309,8 +4741,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -4355,7 +4787,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -4395,8 +4827,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -4438,8 +4870,15 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description already exists */
 				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				/** @description new reaction created */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -4470,8 +4909,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -4496,6 +4935,8 @@ export interface paths {
 		/**
 		 * Thread create from message
 		 * @description <div class="markdown-alert-permission-required">ThreadCreatePublic</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -4546,8 +4987,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Create thread success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -4670,6 +5111,13 @@ export interface paths {
 						};
 					};
 				};
+				/** @description A thread for this message already exists */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
 			};
 		};
 		delete?: never;
@@ -4689,6 +5137,8 @@ export interface paths {
 		 * Message version list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -4707,7 +5157,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -4743,6 +5193,8 @@ export interface paths {
 		 * Message version get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -4757,7 +5209,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -4770,8 +5222,13 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
+							/** @description whether this message is ephemeral
+							 *
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							ephemeral: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
+							interaction?: null | components["schemas"]["MessageInteraction"];
 							latest_version: components["schemas"]["MessageVersion"];
 							pinned?: null | components["schemas"]["Pinned"];
 							reactions?: components["schemas"]["ReactionCounts"];
@@ -4790,6 +5247,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-optional">MessageDelete</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessageVersionDelete</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -4804,8 +5263,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description delete message version success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -4873,6 +5332,8 @@ export interface paths {
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: PermissionOverwriteCreate</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: PermissionOverwriteUpdate</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -4897,8 +5358,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -4912,6 +5373,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: PermissionOverwriteDelete</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -4925,8 +5388,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -4950,6 +5413,8 @@ export interface paths {
 		 * Message pins list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -4967,7 +5432,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -4994,6 +5459,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessagePinReorder</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -5013,8 +5480,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -5037,6 +5504,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessagePin</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -5050,8 +5519,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -5065,6 +5534,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessageUnpin</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -5078,8 +5549,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -5124,8 +5595,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Rate limit expired */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -5176,7 +5647,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description Rate limit updated */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -5209,8 +5680,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Rate limit expired */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -5218,6 +5689,836 @@ export interface paths {
 				};
 			};
 		};
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/redex": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Redex list
+		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     List scripts in a channel
+		 */
+		get: {
+			parameters: {
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
+				};
+				header?: never;
+				path: {
+					channel_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description List scripts success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							cursor?: string | null;
+							has_more: boolean;
+							items: components["schemas"]["Redex"][];
+							/** Format: int64 */
+							total: number;
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		/**
+		 * Redex create
+		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Create a new redex in a channel
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						format: components["schemas"]["RedexFormat"];
+						location: components["schemas"]["RedexLocationUpdate"];
+					};
+				};
+			};
+			responses: {
+				/** @description Create redex success */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							channel_id: components["schemas"]["Id"];
+							created_at: components["schemas"]["Time"];
+							creator_id: components["schemas"]["Id"];
+							deleted_at?: null | components["schemas"]["Time"];
+							/** @description detected inputs for this script */
+							handlers: components["schemas"]["RedexHandler"][];
+							id: components["schemas"]["Id"];
+							latest_version: components["schemas"]["RedexVersion"];
+							/** @description the capabilities that were granted to this redex */
+							permissions: components["schemas"]["RedexPermission"][];
+							status: components["schemas"]["RedexStatus"];
+						};
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/redex/{redex_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Redex get
+		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Get a redex by ID
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					redex_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Get redex success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							channel_id: components["schemas"]["Id"];
+							created_at: components["schemas"]["Time"];
+							creator_id: components["schemas"]["Id"];
+							deleted_at?: null | components["schemas"]["Time"];
+							/** @description detected inputs for this script */
+							handlers: components["schemas"]["RedexHandler"][];
+							id: components["schemas"]["Id"];
+							latest_version: components["schemas"]["RedexVersion"];
+							/** @description the capabilities that were granted to this redex */
+							permissions: components["schemas"]["RedexPermission"][];
+							status: components["schemas"]["RedexStatus"];
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		/**
+		 * Redex delete
+		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ScriptDelete</div>
+		 *
+		 *     Delete a redex
+		 */
+		delete: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					redex_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Delete redex success */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/redex/{redex_id}/content": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Redex content update
+		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Update the content of a redex (creates a new version)
+		 */
+		put: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					redex_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						format: components["schemas"]["RedexFormat"];
+						location: components["schemas"]["RedexLocationUpdate"];
+					};
+				};
+			};
+			responses: {
+				/** @description Update redex content success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							created_at: components["schemas"]["Time"];
+							deleted_at?: null | components["schemas"]["Time"];
+							format: components["schemas"]["RedexFormat"];
+							location: components["schemas"]["RedexLocation"];
+							metadata: components["schemas"]["RedexMetadata"];
+							status: components["schemas"]["RedexVersionStatus"];
+							version_id: components["schemas"]["Id"];
+						};
+					};
+				};
+			};
+		};
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/redex/{redex_id}/depends": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Redex dependency graph
+		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Get the dependency graph for a redex
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					redex_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Get redex dependencies success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description all dependencies of this redex, including transitive ones */
+							dependencies: components["schemas"]["RedexDependency"][];
+							/** @description what depends on what */
+							links: components["schemas"]["RedexDependencyLink"][];
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/redex/{redex_id}/depends/update": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Redex dependency update
+		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Update redex dependencies, creates a new version
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					redex_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": Record<string, never>;
+				};
+			};
+			responses: {
+				/** @description Update redex dependencies success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							created_at: components["schemas"]["Time"];
+							deleted_at?: null | components["schemas"]["Time"];
+							format: components["schemas"]["RedexFormat"];
+							location: components["schemas"]["RedexLocation"];
+							metadata: components["schemas"]["RedexMetadata"];
+							status: components["schemas"]["RedexVersionStatus"];
+							version_id: components["schemas"]["Id"];
+						};
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/redex/{redex_id}/eval": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Redex eval list
+		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     List evals for a redex
+		 */
+		get: {
+			parameters: {
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
+				};
+				header?: never;
+				path: {
+					channel_id: string;
+					redex_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description List redex evals success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							cursor?: string | null;
+							has_more: boolean;
+							items: components["schemas"]["Eval"][];
+							/** Format: int64 */
+							total: number;
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/redex/{redex_id}/eval/{eval_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Redex eval get
+		 * @description <div class="markdown-alert-permission-required">ScriptInspect</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Get a specific eval
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					redex_id: string;
+					eval_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Get redex eval success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							created_at: components["schemas"]["Time"];
+							id: components["schemas"]["Id"];
+							input: components["schemas"]["EvalInputSummary"];
+							redex_id: components["schemas"]["Id"];
+							redex_version_id: components["schemas"]["Id"];
+							status: components["schemas"]["EvalStatus"];
+							stopped_at?: null | components["schemas"]["Time"];
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/redex/{redex_id}/eval/{eval_id}/log": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Redex eval log
+		 * @description <div class="markdown-alert-permission-required">ScriptInspect</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Get logs from a redex eval
+		 */
+		get: {
+			parameters: {
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
+				};
+				header?: never;
+				path: {
+					channel_id: string;
+					redex_id: string;
+					eval_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Get redex eval logs success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description arbitrary metadata associated with this log line */
+							attributes?: components["schemas"]["Metadata"];
+							/** @description arbitrary content for this log line */
+							content: string;
+							created_at: components["schemas"]["Time"];
+							/** Format: int64 */
+							id: number;
+							level: components["schemas"]["EvalLogLevel"];
+							/** @description where this log line came from */
+							source: components["schemas"]["EvalLogSource"];
+						}[];
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/redex/{redex_id}/eval/{eval_id}/stop": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Redex eval stop
+		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Stop a evalning redex
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					redex_id: string;
+					eval_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Stop redex eval success */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/redex/{redex_id}/trigger": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Redex trigger
+		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Run a redex with a trigger input
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					redex_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						/** @description start in the background
+						 *
+						 *     returns 202 accepted instead of blocking until it can return 200 ok */
+						async: boolean;
+						/** @description whether only one instance should be running at a time
+						 *
+						 *     will stop other runs of this script if true */
+						exclusive: boolean;
+						/** @description the id of the input that triggered this run */
+						trigger_id: string;
+					};
+				};
+			};
+			responses: {
+				/** @description Start redex run success */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							created_at: components["schemas"]["Time"];
+							id: components["schemas"]["Id"];
+							input: components["schemas"]["EvalInputSummary"];
+							redex_id: components["schemas"]["Id"];
+							redex_version_id: components["schemas"]["Id"];
+							status: components["schemas"]["EvalStatus"];
+							stopped_at?: null | components["schemas"]["Time"];
+						};
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/redex/{redex_id}/version": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Redex version list
+		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Get version history for a redex
+		 */
+		get: {
+			parameters: {
+				query?: {
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
+				};
+				header?: never;
+				path: {
+					channel_id: string;
+					redex_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description List redex versions success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							cursor?: string | null;
+							has_more: boolean;
+							items: components["schemas"]["RedexVersion"][];
+							/** Format: int64 */
+							total: number;
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/redex/{redex_id}/version/{version_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Redex version get
+		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Get a specific redex version
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					redex_id: string;
+					version_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Get redex version success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							created_at: components["schemas"]["Time"];
+							deleted_at?: null | components["schemas"]["Time"];
+							format: components["schemas"]["RedexFormat"];
+							location: components["schemas"]["RedexLocation"];
+							metadata: components["schemas"]["RedexMetadata"];
+							status: components["schemas"]["RedexVersionStatus"];
+							version_id: components["schemas"]["Id"];
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		/**
+		 * Redex version delete
+		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RedexVersionDelete</div>
+		 *
+		 *     Delete a specific redex version
+		 */
+		delete: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					redex_id: string;
+					version_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Delete redex version success */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/channel/{channel_id}/redex/{redex_id}/version/{version_id}/restore": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Redex version restore
+		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Restore a deleted redex version
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+					redex_id: string;
+					version_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Restore redex version success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							created_at: components["schemas"]["Time"];
+							deleted_at?: null | components["schemas"]["Time"];
+							format: components["schemas"]["RedexFormat"];
+							location: components["schemas"]["RedexLocation"];
+							metadata: components["schemas"]["RedexMetadata"];
+							status: components["schemas"]["RedexVersionStatus"];
+							version_id: components["schemas"]["Id"];
+						};
+					};
+				};
+			};
+		};
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -5237,6 +6538,8 @@ export interface paths {
 		 *     <div class="markdown-alert-permission-optional">ChannelManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelUpdate</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -5249,8 +6552,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -5265,6 +6568,8 @@ export interface paths {
 		 *     <div class="markdown-alert-permission-optional">ChannelManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelUpdate</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -5277,8 +6582,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -5302,6 +6607,8 @@ export interface paths {
 		 * Message reply list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -5325,7 +6632,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -5361,6 +6668,8 @@ export interface paths {
 		 * Message reply list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -5385,7 +6694,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -5404,825 +6713,6 @@ export interface paths {
 		};
 		put?: never;
 		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/script": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Script list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     List scripts in a channel
-		 */
-		get: {
-			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
-				header?: never;
-				path: {
-					channel_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Script"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
-		};
-		put?: never;
-		/**
-		 * Script create
-		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Create a new script in a channel
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody: {
-				content: {
-					"application/json": {
-						format: components["schemas"]["ScriptFormat"];
-						location: components["schemas"]["ScriptLocationSet"];
-					};
-				};
-			};
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							channel_id: components["schemas"]["Id"];
-							created_at: components["schemas"]["Time"];
-							creator_id: components["schemas"]["Id"];
-							deleted_at?: null | components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							/** @description detected inputs for this script */
-							inputs: components["schemas"]["ScriptInput"][];
-							latest_version: components["schemas"]["ScriptVersion"];
-							/** @description the effects that this script is allowed to run */
-							permissions: components["schemas"]["ScriptPermission"][];
-							status: components["schemas"]["ScriptStatus"];
-						};
-					};
-				};
-			};
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/script/{script_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Script get
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get a script by ID
-		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-					script_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							channel_id: components["schemas"]["Id"];
-							created_at: components["schemas"]["Time"];
-							creator_id: components["schemas"]["Id"];
-							deleted_at?: null | components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							/** @description detected inputs for this script */
-							inputs: components["schemas"]["ScriptInput"][];
-							latest_version: components["schemas"]["ScriptVersion"];
-							/** @description the effects that this script is allowed to run */
-							permissions: components["schemas"]["ScriptPermission"][];
-							status: components["schemas"]["ScriptStatus"];
-						};
-					};
-				};
-			};
-		};
-		put?: never;
-		post?: never;
-		/**
-		 * Script delete
-		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ScriptDelete</div>
-		 *
-		 *     Delete a script
-		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-					script_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
-		};
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/script/{script_id}/content": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/**
-		 * Script content update
-		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Update the content of a script (creates a new version)
-		 */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-					script_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody: {
-				content: {
-					"application/json": {
-						format: components["schemas"]["ScriptFormat"];
-						location: components["schemas"]["ScriptLocationSet"];
-					};
-				};
-			};
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							format: components["schemas"]["ScriptFormat"];
-							location: components["schemas"]["ScriptLocation"];
-							metadata: components["schemas"]["ScriptMetadata"];
-							status: components["schemas"]["ScriptVersionStatus"];
-							version_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
-		};
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/script/{script_id}/depends": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Script dependency graph
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get the dependency graph for a script
-		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-					script_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description all dependencies of this script, including transitive ones */
-							dependencies: components["schemas"]["ScriptDependency"][];
-							/** @description what depends on what */
-							links: components["schemas"]["ScriptDependencyLink"][];
-						};
-					};
-				};
-			};
-		};
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/script/{script_id}/depends/update": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Script dependency update
-		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Update script dependencies, creates a new version
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-					script_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody: {
-				content: {
-					"application/json": Record<string, never>;
-				};
-			};
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							format: components["schemas"]["ScriptFormat"];
-							location: components["schemas"]["ScriptLocation"];
-							metadata: components["schemas"]["ScriptMetadata"];
-							status: components["schemas"]["ScriptVersionStatus"];
-							version_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/script/{script_id}/run": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Script run list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     List runs for a script
-		 */
-		get: {
-			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
-				header?: never;
-				path: {
-					channel_id: string;
-					script_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Run"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
-		};
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/script/{script_id}/run/{run_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Script run get
-		 * @description <div class="markdown-alert-permission-required">ScriptInspect</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get a specific run
-		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-					script_id: string;
-					run_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							created_at: components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							script_id: components["schemas"]["Id"];
-							status: components["schemas"]["RunStatus"];
-							stopped_at?: null | components["schemas"]["Time"];
-						};
-					};
-				};
-			};
-		};
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/script/{script_id}/run/{run_id}/log": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Script run log
-		 * @description <div class="markdown-alert-permission-required">ScriptInspect</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get logs from a script run
-		 */
-		get: {
-			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
-				header?: never;
-				path: {
-					channel_id: string;
-					script_id: string;
-					run_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["RunLogEntry"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
-		};
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/script/{script_id}/run/{run_id}/stop": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Script run stop
-		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Stop a running script
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-					script_id: string;
-					run_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/script/{script_id}/trigger": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Script trigger
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Run a script with a trigger input
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-					script_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description start in the background
-						 *
-						 *     returns 202 accepted instead of blocking until it can return 200 ok */
-						async: boolean;
-						/** @description whether only one instance should be running at a time
-						 *
-						 *     will stop other runs of this script if true */
-						exclusive: boolean;
-					};
-				};
-			};
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							created_at: components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							script_id: components["schemas"]["Id"];
-							status: components["schemas"]["RunStatus"];
-							stopped_at?: null | components["schemas"]["Time"];
-						};
-					};
-				};
-			};
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/script/{script_id}/version": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Script version list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get version history for a script
-		 */
-		get: {
-			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
-				header?: never;
-				path: {
-					channel_id: string;
-					script_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["ScriptVersion"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
-		};
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/script/{script_id}/version/{version_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Script version get
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get a specific script version
-		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-					script_id: string;
-					version_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							format: components["schemas"]["ScriptFormat"];
-							location: components["schemas"]["ScriptLocation"];
-							metadata: components["schemas"]["ScriptMetadata"];
-							status: components["schemas"]["ScriptVersionStatus"];
-							version_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
-		};
-		put?: never;
-		post?: never;
-		/**
-		 * Script version delete
-		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ScriptVersionDelete</div>
-		 *
-		 *     Delete a specific script version
-		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-					script_id: string;
-					version_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
-		};
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/script/{script_id}/version/{version_id}/restore": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Script version restore
-		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Restore a deleted script version
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-					script_id: string;
-					version_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							format: components["schemas"]["ScriptFormat"];
-							location: components["schemas"]["ScriptLocation"];
-							metadata: components["schemas"]["ScriptMetadata"];
-							status: components["schemas"]["ScriptVersionStatus"];
-							version_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
-		};
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -6262,7 +6752,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description channel sync success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -6298,6 +6788,8 @@ export interface paths {
 		/**
 		 * Tag list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -6319,7 +6811,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description List tags success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -6342,6 +6834,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: TagCreate</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -6365,8 +6859,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Create tag success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -6412,6 +6906,8 @@ export interface paths {
 		/**
 		 * Tag search
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -6434,7 +6930,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description Search tags success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -6469,6 +6965,8 @@ export interface paths {
 		/**
 		 * Tag get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -6482,7 +6980,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description Get tag success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -6520,6 +7018,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: TagDelete</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -6535,8 +7035,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Delete tag success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -6551,6 +7051,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: TagUpdate</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -6574,7 +7076,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description Update tag success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -6617,6 +7119,8 @@ export interface paths {
 		/**
 		 * Thread list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -6634,7 +7138,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description List channel threads success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -6656,6 +7160,8 @@ export interface paths {
 		 * Thread create
 		 * @description <div class="markdown-alert-permission-optional">ThreadCreatePublic</div>
 		 *     <div class="markdown-alert-permission-optional">ThreadCreatePrivate</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -6705,8 +7211,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Create thread success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -6893,6 +7399,8 @@ export interface paths {
 		/**
 		 * Thread list archived
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -6910,7 +7418,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description List archived threads success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -6945,6 +7453,8 @@ export interface paths {
 		/**
 		 * Thread list removed
 		 * @description <div class="markdown-alert-permission-required">ThreadManage</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -6962,7 +7472,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description List removed threads success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -7000,6 +7510,8 @@ export interface paths {
 		 * Channel transfer ownership
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelUpdate</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -7016,7 +7528,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -7175,8 +7687,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -7217,7 +7729,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -7244,6 +7756,8 @@ export interface paths {
 							 * @description number of emojis in room
 							 */
 							emoji_count: number;
+							/** @description features enabled for this room */
+							features: components["schemas"]["RoomFeatures"];
 							icon?: null | components["schemas"]["Id"];
 							/** @description A unique identifier for this room */
 							id: components["schemas"]["Id"];
@@ -7295,6 +7809,8 @@ export interface paths {
 		/**
 		 * Webhook list thread
 		 * @description <div class="markdown-alert-scope-required">full</div>
+		 *
+		 *
 		 */
 		get: operations["webhook_list_channel"];
 		put?: never;
@@ -7302,6 +7818,8 @@ export interface paths {
 		 * Webhook create
 		 * @description <div class="markdown-alert-scope-required">full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: WebhookCreate</div>
+		 *
+		 *
 		 */
 		post: operations["webhook_create"];
 		delete?: never;
@@ -7342,6 +7860,8 @@ export interface paths {
 		/**
 		 * Trigger a panic
 		 * @description
+		 *
+		 *
 		 */
 		get: operations["debug_panic"];
 		put?: never;
@@ -7384,6 +7904,8 @@ export interface paths {
 		/**
 		 * Get server version
 		 * @description
+		 *
+		 *
 		 */
 		get: operations["debug_version"];
 		put?: never;
@@ -7427,6 +7949,8 @@ export interface paths {
 		 * Document branch list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -7448,7 +7972,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -7484,6 +8008,8 @@ export interface paths {
 		 * Document branch get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -7497,7 +8023,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -7537,6 +8063,8 @@ export interface paths {
 		 * Document branch update
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -7558,7 +8086,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -7604,6 +8132,8 @@ export interface paths {
 		 * Document branch close
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -7617,7 +8147,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -7666,6 +8196,8 @@ export interface paths {
 		 * Document content put
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -7685,8 +8217,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description ok */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -7712,6 +8244,8 @@ export interface paths {
 		 * Document CRDT diff
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -7727,7 +8261,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -7764,8 +8298,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description ok */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -7814,7 +8348,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -7857,6 +8391,8 @@ export interface paths {
 		 * Document branch merge
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -7874,7 +8410,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -7902,6 +8438,8 @@ export interface paths {
 		 * Document branch sync
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -7921,7 +8459,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -7949,6 +8487,8 @@ export interface paths {
 		 * Document branch fork
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -7969,7 +8509,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -8017,6 +8557,8 @@ export interface paths {
 		 * Document content get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -8030,7 +8572,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -8062,6 +8604,8 @@ export interface paths {
 		 * Document tag list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -8074,7 +8618,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -8105,6 +8649,8 @@ export interface paths {
 		 * Document tag create
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -8127,8 +8673,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description ok */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -8153,6 +8699,8 @@ export interface paths {
 		 * Document tag get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -8166,7 +8714,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -8198,6 +8746,8 @@ export interface paths {
 		 * Document tag delete
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -8211,8 +8761,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description ok */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -8226,6 +8776,8 @@ export interface paths {
 		 * Document tag update
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -8248,7 +8800,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -8304,7 +8856,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -8353,7 +8905,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -8414,8 +8966,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description guest account created */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -8510,7 +9062,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -8556,8 +9108,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -8619,7 +9171,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -8646,6 +9198,8 @@ export interface paths {
 		/**
 		 * Inbox mark read
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -8669,7 +9223,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -8696,6 +9250,8 @@ export interface paths {
 		/**
 		 * Inbox mark unread
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -8719,7 +9275,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -8734,6 +9290,372 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/interaction": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Interaction create
+		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					"idempotency-key"?: string;
+				};
+				path?: never;
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": components["schemas"]["InteractionCreateType"] & {
+						application_id: components["schemas"]["Id"];
+					};
+				};
+			};
+			responses: {
+				/** @description Interaction created successfully */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": components["schemas"]["InteractionType"] & {
+							application_id: components["schemas"]["Id"];
+							id: components["schemas"]["Id"];
+							/** @description unique token for responding to this interaction
+							 *
+							 *     this exists so you don't need to give your token to an http server for http based interactions. only is set for bots. */
+							token?: string | null;
+							/**
+							 * Format: int32
+							 * @description always 1 currently
+							 */
+							version: number;
+						};
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/interaction/{interaction_id}/{token}/callback": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Interaction respond
+		 * @description
+		 *
+		 *     Respond to an interaction
+		 */
+		post: {
+			parameters: {
+				query: {
+					/** @description whether to immediately return with 202 accepted or wait to return an `InteractionResponse` */
+					wait: boolean;
+				};
+				header?: never;
+				path: {
+					interaction_id: string;
+					token: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": components["schemas"]["InteractionResponseCreateType"];
+				};
+			};
+			responses: {
+				/** @description Interaction response accepted */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": Record<string, never>;
+					};
+				};
+				/** @description Interaction response accepted */
+				202: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/interaction/{interaction_id}/{token}/message": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Interaction message create
+		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Send another message (aka followup message)
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: {
+					"idempotency-key"?: string;
+				};
+				path: {
+					interaction_id: string;
+					token: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						/** @description message attachments */
+						attachments?: components["schemas"]["MessageAttachmentCreate"][];
+						components?: null | components["schemas"]["Components_Create"];
+						/** @description the message's content in markdown */
+						content?: string | null;
+						embeds?: components["schemas"]["EmbedCreate"][];
+						/** @description whether to make this message ephemeral */
+						ephemeral: boolean;
+						mentions?: components["schemas"]["ParseMentions"];
+						metadata?: null | components["schemas"]["Metadata"];
+						reply_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+			responses: {
+				/** @description Interaction message created successfully */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description the id of who sent this message */
+							author_id: components["schemas"]["Id"];
+							channel_id: components["schemas"]["Id"];
+							/** @description when this message was created */
+							created_at: components["schemas"]["Time"];
+							deleted_at?: null | components["schemas"]["Time"];
+							/** @description whether this message is ephemeral
+							 *
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							ephemeral: boolean;
+							flume?: null | components["schemas"]["MessageFlume"];
+							id: components["schemas"]["Id"];
+							interaction?: null | components["schemas"]["MessageInteraction"];
+							latest_version: components["schemas"]["MessageVersion"];
+							pinned?: null | components["schemas"]["Pinned"];
+							reactions?: components["schemas"]["ReactionCounts"];
+							removed_at?: null | components["schemas"]["Time"];
+							room_id?: null | components["schemas"]["Id"];
+							thread?: null | components["schemas"]["Channel"];
+						};
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/interaction/{interaction_id}/{token}/message/{message_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Interaction message get
+		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Get a message from an interaction
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					interaction_id: string;
+					token: string;
+					message_id: null | components["schemas"]["Id"];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Get interaction message success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description the id of who sent this message */
+							author_id: components["schemas"]["Id"];
+							channel_id: components["schemas"]["Id"];
+							/** @description when this message was created */
+							created_at: components["schemas"]["Time"];
+							deleted_at?: null | components["schemas"]["Time"];
+							/** @description whether this message is ephemeral
+							 *
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							ephemeral: boolean;
+							flume?: null | components["schemas"]["MessageFlume"];
+							id: components["schemas"]["Id"];
+							interaction?: null | components["schemas"]["MessageInteraction"];
+							latest_version: components["schemas"]["MessageVersion"];
+							pinned?: null | components["schemas"]["Pinned"];
+							reactions?: components["schemas"]["ReactionCounts"];
+							removed_at?: null | components["schemas"]["Time"];
+							room_id?: null | components["schemas"]["Id"];
+							thread?: null | components["schemas"]["Channel"];
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		/**
+		 * Interaction message delete
+		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Delete a message from an interaction
+		 */
+		delete: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					interaction_id: string;
+					token: string;
+					message_id: null | components["schemas"]["Id"];
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Delete interaction message success */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		options?: never;
+		head?: never;
+		/**
+		 * Interaction message edit
+		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Edit a message from an interaction
+		 */
+		patch: {
+			parameters: {
+				query?: never;
+				header?: {
+					"X-Timestamp"?: number;
+				};
+				path: {
+					interaction_id: string;
+					token: string;
+					message_id: null | components["schemas"]["Id"];
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						/** @description message attachments */
+						attachments?:
+							| components["schemas"]["MessageAttachmentCreate"][]
+							| null;
+						components?: null | components["schemas"]["Components_Create"];
+						/** @description the new message content in markdown */
+						content?: string | null;
+						embeds?: components["schemas"]["EmbedCreate"][] | null;
+						metadata?: null | components["schemas"]["Metadata"];
+						reply_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+			responses: {
+				/** @description Edit interaction message success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description the id of who sent this message */
+							author_id: components["schemas"]["Id"];
+							channel_id: components["schemas"]["Id"];
+							/** @description when this message was created */
+							created_at: components["schemas"]["Time"];
+							deleted_at?: null | components["schemas"]["Time"];
+							/** @description whether this message is ephemeral
+							 *
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							ephemeral: boolean;
+							flume?: null | components["schemas"]["MessageFlume"];
+							id: components["schemas"]["Id"];
+							interaction?: null | components["schemas"]["MessageInteraction"];
+							latest_version: components["schemas"]["MessageVersion"];
+							pinned?: null | components["schemas"]["Pinned"];
+							reactions?: components["schemas"]["ReactionCounts"];
+							removed_at?: null | components["schemas"]["Time"];
+							room_id?: null | components["schemas"]["Id"];
+							thread?: null | components["schemas"]["Channel"];
+						};
+					};
+				};
+				/** @description no change */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
+		trace?: never;
+	};
 	"/api/v1/internal/harvest/{harvest_id}/{token}/download": {
 		parameters: {
 			query?: never;
@@ -8744,6 +9666,8 @@ export interface paths {
 		/**
 		 * Harvest download
 		 * @description
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -8757,7 +9681,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -8784,6 +9708,8 @@ export interface paths {
 		/**
 		 * Internal rpc
 		 * @description
+		 *
+		 *
 		 */
 		get: operations["internal_rpc"];
 		put?: never;
@@ -8804,6 +9730,8 @@ export interface paths {
 		/**
 		 * Invite resolve
 		 * @description
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -8816,28 +9744,23 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success with metadata */
 				200: {
 					headers: {
 						[name: string]: unknown;
 					};
 					content: {
-						"application/json": {
-							/** @description the invite code for this invite */
-							code: components["schemas"]["InviteCode"];
-							/** @description the time when this invite was created */
-							created_at: components["schemas"]["Time"];
-							/** @description the user who created this invite */
-							creator: components["schemas"]["User"];
-							/** @description the id of the user who created this invite */
-							creator_id: components["schemas"]["Id"];
-							/** @description a description for this invite */
-							description?: string | null;
-							expires_at?: null | components["schemas"]["Time"];
-							/** @description if this invite's code is custom (instead of random) */
-							is_vanity: boolean;
-							/** @description where this invite leads */
-							target: components["schemas"]["InviteTarget"];
+						"application/json": components["schemas"]["Invite"] & {
+							/**
+							 * Format: int32
+							 * @description the maximum number of times this invite can be used
+							 */
+							max_uses?: number | null;
+							/**
+							 * Format: int64
+							 * @description the number of time this invite has been used
+							 */
+							uses: number;
 						};
 					};
 				};
@@ -8847,6 +9770,8 @@ export interface paths {
 		/**
 		 * Invite use
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -8859,7 +9784,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -8873,6 +9798,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: InviteDelete</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -8885,8 +9812,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -8901,6 +9828,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: InviteUpdate</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -8928,7 +9857,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -9115,6 +10044,8 @@ export interface paths {
 		/**
 		 * Oauth info
 		 * @description <div class="markdown-alert-scope-required">Identify</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -9134,7 +10065,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -9154,6 +10085,8 @@ export interface paths {
 		/**
 		 * Oauth authorize
 		 * @description <div class="markdown-alert-scope-required">Identify</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -9173,7 +10106,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -9205,6 +10138,8 @@ export interface paths {
 		/**
 		 * Oauth introspect
 		 * @description
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -9221,7 +10156,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -9259,6 +10194,8 @@ export interface paths {
 		/**
 		 * Oauth revoke
 		 * @description
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -9275,8 +10212,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -9327,7 +10264,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -9361,6 +10298,8 @@ export interface paths {
 		/**
 		 * Oauth userinfo
 		 * @description <div class="markdown-alert-scope-required">Identify</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -9371,7 +10310,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -9425,6 +10364,8 @@ export interface paths {
 		/**
 		 * Preferences global get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -9435,7 +10376,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -9456,6 +10397,8 @@ export interface paths {
 		/**
 		 * Preferences global put
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -9477,7 +10420,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -9512,6 +10455,8 @@ export interface paths {
 		/**
 		 * Preferences channel get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -9524,7 +10469,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -9545,6 +10490,8 @@ export interface paths {
 		/**
 		 * Preferences channel put
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -9568,7 +10515,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -9603,6 +10550,8 @@ export interface paths {
 		/**
 		 * Preferences room get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -9615,7 +10564,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -9638,6 +10587,8 @@ export interface paths {
 		/**
 		 * Preferences room put
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -9663,7 +10614,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -9700,6 +10651,8 @@ export interface paths {
 		/**
 		 * Preferences user get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -9712,7 +10665,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -9733,6 +10686,8 @@ export interface paths {
 		/**
 		 * Preferences user put
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -9756,7 +10711,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -9791,6 +10746,8 @@ export interface paths {
 		/**
 		 * Public channels list (TODO)
 		 * @description
+		 *
+		 *
 		 */
 		get: operations["public_channels"];
 		put?: never;
@@ -9811,6 +10768,8 @@ export interface paths {
 		/**
 		 * Public rooms list (TODO)
 		 * @description
+		 *
+		 *
 		 */
 		get: operations["public_rooms"];
 		put?: never;
@@ -9843,7 +10802,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -9882,7 +10841,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -9913,8 +10872,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description ok */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -9977,7 +10936,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description Paginate room success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -10000,6 +10959,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoomCreate</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomCreate</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -10022,8 +10983,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -10049,6 +11010,8 @@ export interface paths {
 							 * @description number of emojis in room
 							 */
 							emoji_count: number;
+							/** @description features enabled for this room */
+							features: components["schemas"]["RoomFeatures"];
 							icon?: null | components["schemas"]["Id"];
 							/** @description A unique identifier for this room */
 							id: components["schemas"]["Id"];
@@ -10100,6 +11063,8 @@ export interface paths {
 		/**
 		 * Room template list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -10115,7 +11080,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description Paginate templates */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -10136,6 +11101,8 @@ export interface paths {
 		/**
 		 * Room template create
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -10154,8 +11121,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Template created */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -10196,6 +11163,8 @@ export interface paths {
 		/**
 		 * Room template get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -10208,7 +11177,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description Get template success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -10239,6 +11208,8 @@ export interface paths {
 		/**
 		 * Room template delete
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -10251,8 +11222,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Delete template success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -10265,6 +11236,8 @@ export interface paths {
 		/**
 		 * Room template edit
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -10284,7 +11257,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description Edit template success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -10324,6 +11297,8 @@ export interface paths {
 		/**
 		 * Room template sync
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -10336,7 +11311,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description Sync template success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -10381,6 +11356,8 @@ export interface paths {
 		 * Room search
 		 * @description <div class="markdown-alert-permission-required">RoomManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -10438,7 +11415,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -10463,6 +11440,8 @@ export interface paths {
 		/**
 		 * Room get
 		 * @description <div class="markdown-alert-scope-required">Rooms</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -10477,7 +11456,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description Get room success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -10504,6 +11483,8 @@ export interface paths {
 							 * @description number of emojis in room
 							 */
 							emoji_count: number;
+							/** @description features enabled for this room */
+							features: components["schemas"]["RoomFeatures"];
 							icon?: null | components["schemas"]["Id"];
 							/** @description A unique identifier for this room */
 							id: components["schemas"]["Id"];
@@ -10537,6 +11518,13 @@ export interface paths {
 						};
 					};
 				};
+				/** @description Not modified */
+				304: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
 			};
 		};
 		put?: never;
@@ -10545,6 +11533,8 @@ export interface paths {
 		 * Room delete
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomDelete</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -10557,8 +11547,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -10573,6 +11563,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomUpdate</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -10603,7 +11595,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description edit success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -10630,6 +11622,8 @@ export interface paths {
 							 * @description number of emojis in room
 							 */
 							emoji_count: number;
+							/** @description features enabled for this room */
+							features: components["schemas"]["RoomFeatures"];
 							icon?: null | components["schemas"]["Id"];
 							/** @description A unique identifier for this room */
 							id: components["schemas"]["Id"];
@@ -10663,6 +11657,13 @@ export interface paths {
 						};
 					};
 				};
+				/** @description no change */
+				304: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
 			};
 		};
 		trace?: never;
@@ -10692,7 +11693,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -10719,6 +11720,8 @@ export interface paths {
 		 * Room analytics channels
 		 * @description <div class="markdown-alert-permission-required">AnalyticsView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -10739,7 +11742,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -10779,6 +11782,8 @@ export interface paths {
 		 * Room analytics invites
 		 * @description <div class="markdown-alert-permission-required">AnalyticsView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -10797,7 +11802,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -10837,6 +11842,8 @@ export interface paths {
 		 * Room analytics members count
 		 * @description <div class="markdown-alert-permission-required">AnalyticsView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -10855,7 +11862,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -10893,6 +11900,8 @@ export interface paths {
 		 * Room analytics members join
 		 * @description <div class="markdown-alert-permission-required">AnalyticsView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -10911,7 +11920,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -10949,6 +11958,8 @@ export interface paths {
 		 * Room analytics members leave
 		 * @description <div class="markdown-alert-permission-required">AnalyticsView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -10967,7 +11978,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -11025,7 +12036,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -11073,6 +12084,8 @@ export interface paths {
 		 * Room audit logs
 		 * @description <div class="markdown-alert-permission-required">AuditLogView</div>
 		 *     <div class="markdown-alert-scope-required">Rooms</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -11098,7 +12111,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description fetch audit logs success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -11149,6 +12162,8 @@ export interface paths {
 		 * Automod rule list
 		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -11161,7 +12176,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description List automod rules success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -11195,6 +12210,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AutomodRuleCreate</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -11220,8 +12237,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Create automod rule success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -11267,6 +12284,8 @@ export interface paths {
 		 * Automod rule test
 		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -11288,7 +12307,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description Test automod rule success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -11325,6 +12344,8 @@ export interface paths {
 		 * Automod rule get
 		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -11338,7 +12359,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description Get automod rule success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -11373,6 +12394,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AutomodRuleDelete</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -11386,8 +12409,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Delete automod rule success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -11402,6 +12425,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AutomodRuleUpdate</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -11429,7 +12454,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description Update automod rule success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -11470,6 +12495,8 @@ export interface paths {
 		 * Room ban list
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -11487,7 +12514,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -11525,6 +12552,8 @@ export interface paths {
 		 * Room ban bulk create
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -11545,7 +12574,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -11571,6 +12600,8 @@ export interface paths {
 		 * Room ban get
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -11584,7 +12615,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -11608,6 +12639,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberBan</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -11627,8 +12660,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -11642,6 +12675,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberUnban</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -11655,8 +12690,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -11679,6 +12714,8 @@ export interface paths {
 		/**
 		 * Room channel list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -11696,7 +12733,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description List room channels success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -11774,8 +12811,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Create thread success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -11929,8 +12966,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description Reorder channels success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -11971,7 +13008,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description List removed room threads success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -12025,7 +13062,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -12072,8 +13109,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description new emoji created */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -12121,7 +13158,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -12161,8 +13198,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -12198,7 +13235,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -12216,6 +13253,184 @@ export interface paths {
 				};
 			};
 		};
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/feature/{feature}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/**
+		 * Room feature enable
+		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
+		 */
+		put: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					room_id: string;
+					feature: "Scripts" | "Automod" | "Documents" | "Vanity" | "Llm";
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							afk_channel_id?: null | components["schemas"]["Id"];
+							/**
+							 * Format: int64
+							 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+							 */
+							afk_channel_timeout: number;
+							archived_at?: null | components["schemas"]["Time"];
+							banner?: null | components["schemas"]["Id"];
+							/**
+							 * Format: int64
+							 * @description number of active channels
+							 */
+							channel_count: number;
+							deleted_at?: null | components["schemas"]["Time"];
+							description?: string | null;
+							/**
+							 * Format: int64
+							 * @description number of emojis in room
+							 */
+							emoji_count: number;
+							/** @description features enabled for this room */
+							features: components["schemas"]["RoomFeatures"];
+							icon?: null | components["schemas"]["Id"];
+							/** @description A unique identifier for this room */
+							id: components["schemas"]["Id"];
+							invites_paused_until?: null | components["schemas"]["Time"];
+							/**
+							 * Format: int64
+							 * @description number of people in this room
+							 */
+							member_count: number;
+							name: string;
+							/**
+							 * Format: int64
+							 * @description number of people who are online in this room
+							 */
+							online_count: number;
+							owner_id?: null | components["schemas"]["Id"];
+							preferences?: null | components["schemas"]["PreferencesRoom"];
+							/** @description anyone can view and join */
+							public: boolean;
+							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
+							quarantined: boolean;
+							/** @description security configuration for this room */
+							security: components["schemas"]["RoomSecurity"];
+							type: components["schemas"]["RoomType"];
+							/**
+							 * Format: uuid
+							 * @description A monotonically increasing id that is updated every time this room is modified.
+							 */
+							version_id: string;
+							welcome_channel_id?: null | components["schemas"]["Id"];
+						};
+					};
+				};
+			};
+		};
+		post?: never;
+		/**
+		 * Room feature disable
+		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
+		 */
+		delete: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					room_id: string;
+					feature: "Scripts" | "Automod" | "Documents" | "Vanity" | "Llm";
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							afk_channel_id?: null | components["schemas"]["Id"];
+							/**
+							 * Format: int64
+							 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+							 */
+							afk_channel_timeout: number;
+							archived_at?: null | components["schemas"]["Time"];
+							banner?: null | components["schemas"]["Id"];
+							/**
+							 * Format: int64
+							 * @description number of active channels
+							 */
+							channel_count: number;
+							deleted_at?: null | components["schemas"]["Time"];
+							description?: string | null;
+							/**
+							 * Format: int64
+							 * @description number of emojis in room
+							 */
+							emoji_count: number;
+							/** @description features enabled for this room */
+							features: components["schemas"]["RoomFeatures"];
+							icon?: null | components["schemas"]["Id"];
+							/** @description A unique identifier for this room */
+							id: components["schemas"]["Id"];
+							invites_paused_until?: null | components["schemas"]["Time"];
+							/**
+							 * Format: int64
+							 * @description number of people in this room
+							 */
+							member_count: number;
+							name: string;
+							/**
+							 * Format: int64
+							 * @description number of people who are online in this room
+							 */
+							online_count: number;
+							owner_id?: null | components["schemas"]["Id"];
+							preferences?: null | components["schemas"]["PreferencesRoom"];
+							/** @description anyone can view and join */
+							public: boolean;
+							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
+							quarantined: boolean;
+							/** @description security configuration for this room */
+							security: components["schemas"]["RoomSecurity"];
+							type: components["schemas"]["RoomType"];
+							/**
+							 * Format: uuid
+							 * @description A monotonically increasing id that is updated every time this room is modified.
+							 */
+							version_id: string;
+							welcome_channel_id?: null | components["schemas"]["Id"];
+						};
+					};
+				};
+			};
+		};
+		options?: never;
+		head?: never;
+		patch?: never;
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/integration": {
@@ -12247,7 +13462,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -12283,6 +13498,8 @@ export interface paths {
 		 * Invite list room
 		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -12300,7 +13517,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -12323,6 +13540,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: InviteCreate</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -12351,8 +13570,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -12394,6 +13613,8 @@ export interface paths {
 		/**
 		 * Room member list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -12411,7 +13632,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -12446,6 +13667,8 @@ export interface paths {
 		/**
 		 * Room member search
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -12461,7 +13684,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -12495,6 +13718,8 @@ export interface paths {
 		/**
 		 * Room member search advanced
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -12536,7 +13761,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -12566,6 +13791,8 @@ export interface paths {
 		/**
 		 * Room member get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -12579,7 +13806,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -12617,6 +13844,8 @@ export interface paths {
 		 *     <div class="markdown-alert-permission-optional">MemberKick</div>
 		 *     <div class="markdown-alert-permission-optional">RoleApply</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -12644,7 +13873,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -12672,6 +13901,13 @@ export interface paths {
 						};
 					};
 				};
+				/** @description not modified */
+				304: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
 			};
 		};
 		post?: never;
@@ -12680,6 +13916,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-optional">MemberKick</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberKick</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -12695,8 +13933,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -12717,6 +13955,8 @@ export interface paths {
 		 *     <div class="markdown-alert-permission-optional">MemberNicknameManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberUpdate</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -12744,7 +13984,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -12772,6 +14012,13 @@ export interface paths {
 						};
 					};
 				};
+				/** @description not modified */
+				304: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
 			};
 		};
 		trace?: never;
@@ -12790,6 +14037,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">MemberKick</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberPrune</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -12818,7 +14067,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -12855,6 +14104,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoomManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomQuarantine</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -12867,7 +14118,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -12894,6 +14145,8 @@ export interface paths {
 							 * @description number of emojis in room
 							 */
 							emoji_count: number;
+							/** @description features enabled for this room */
+							features: components["schemas"]["RoomFeatures"];
 							icon?: null | components["schemas"]["Id"];
 							/** @description A unique identifier for this room */
 							id: components["schemas"]["Id"];
@@ -12934,6 +14187,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoomManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomUnquarantine</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -12946,7 +14201,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -12973,6 +14228,8 @@ export interface paths {
 							 * @description number of emojis in room
 							 */
 							emoji_count: number;
+							/** @description features enabled for this room */
+							features: components["schemas"]["RoomFeatures"];
 							icon?: null | components["schemas"]["Id"];
 							/** @description A unique identifier for this room */
 							id: components["schemas"]["Id"];
@@ -13048,7 +14305,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -13087,6 +14344,8 @@ export interface paths {
 		/**
 		 * Role list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -13104,7 +14363,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -13127,6 +14386,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleCreate</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -13155,8 +14416,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -13197,6 +14458,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleReorder</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -13216,8 +14479,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -13237,6 +14500,8 @@ export interface paths {
 		/**
 		 * Role get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -13250,7 +14515,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -13291,6 +14556,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleDelete</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -13306,8 +14573,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -13322,6 +14589,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleUpdate</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -13348,7 +14617,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -13380,6 +14649,13 @@ export interface paths {
 						};
 					};
 				};
+				/** @description success */
+				304: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
 			};
 		};
 		trace?: never;
@@ -13394,6 +14670,8 @@ export interface paths {
 		/**
 		 * Role member list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -13412,7 +14690,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -13438,6 +14716,8 @@ export interface paths {
 		 * Role member bulk patch
 		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -13460,8 +14740,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -13484,6 +14764,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoleApply</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleApply</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -13498,7 +14780,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -13534,6 +14816,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoleApply</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleUnapply</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -13548,8 +14832,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -13573,6 +14857,8 @@ export interface paths {
 		/**
 		 * Room security set
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -13592,7 +14878,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -13619,6 +14905,8 @@ export interface paths {
 							 * @description number of emojis in room
 							 */
 							emoji_count: number;
+							/** @description features enabled for this room */
+							features: components["schemas"]["RoomFeatures"];
 							icon?: null | components["schemas"]["Id"];
 							/** @description A unique identifier for this room */
 							id: components["schemas"]["Id"];
@@ -13685,7 +14973,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description List room threads success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -13719,6 +15007,8 @@ export interface paths {
 		/**
 		 * Room transfer ownership
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -13737,7 +15027,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -13764,6 +15054,8 @@ export interface paths {
 							 * @description number of emojis in room
 							 */
 							emoji_count: number;
+							/** @description features enabled for this room */
+							features: components["schemas"]["RoomFeatures"];
 							icon?: null | components["schemas"]["Id"];
 							/** @description A unique identifier for this room */
 							id: components["schemas"]["Id"];
@@ -13819,6 +15111,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoomManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomUndelete</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -13831,8 +15125,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -13856,6 +15150,8 @@ export interface paths {
 		/**
 		 * Webhook list room
 		 * @description <div class="markdown-alert-scope-required">full</div>
+		 *
+		 *
 		 */
 		get: operations["webhook_list_room"];
 		put?: never;
@@ -13878,6 +15174,8 @@ export interface paths {
 		/**
 		 * Search channels
 		 * @description
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -13932,7 +15230,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -13967,6 +15265,8 @@ export interface paths {
 		/**
 		 * Search messages
 		 * @description
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -14034,7 +15334,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -14088,6 +15388,8 @@ export interface paths {
 		/**
 		 * Search rooms
 		 * @description
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -14150,7 +15452,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -14183,6 +15485,8 @@ export interface paths {
 		/**
 		 * Server information
 		 * @description
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -14193,7 +15497,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description Get server info success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -14245,6 +15549,8 @@ export interface paths {
 		/**
 		 * Server moderation
 		 * @description
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -14255,7 +15561,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description Get server moderation capabilities success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -14288,6 +15594,8 @@ export interface paths {
 		 * Server voice
 		 * @description <div class="markdown-alert-permission-required">Admin</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -14298,7 +15606,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description Get server voice sfus success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -14359,6 +15667,8 @@ export interface paths {
 		 * Invite server list
 		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -14374,7 +15684,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -14396,6 +15706,8 @@ export interface paths {
 		 * Invite server create
 		 * @description <div class="markdown-alert-permission-optional">InviteCreate</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -14422,8 +15734,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -14488,7 +15800,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -14541,7 +15853,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -14591,7 +15903,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -14644,8 +15956,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description ok */
+				202: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -14712,7 +16024,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -14744,6 +16056,8 @@ export interface paths {
 		/**
 		 * Session list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -14759,7 +16073,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description List session success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -14780,6 +16094,8 @@ export interface paths {
 		/**
 		 * Session create
 		 * @description
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -14796,8 +16112,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -14829,6 +16145,8 @@ export interface paths {
 		 * Session delete all
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: SessionDeleteAll</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -14839,8 +16157,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -14863,6 +16181,8 @@ export interface paths {
 		/**
 		 * Session get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -14875,7 +16195,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -14905,6 +16225,8 @@ export interface paths {
 		 * Session delete
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: SessionDelete</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -14917,8 +16239,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -14932,6 +16254,8 @@ export interface paths {
 		 * Session update
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: SessionUpdate</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -14950,8 +16274,30 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": components["schemas"]["SessionStatus"] & {
+							app_id?: null | components["schemas"]["Id"];
+							authorized_at?: null | components["schemas"]["Time"];
+							deauthorized_at?: null | components["schemas"]["Time"];
+							expires_at?: null | components["schemas"]["Time"];
+							id: components["schemas"]["Id"];
+							ip_addr?: string | null;
+							/** @description the last time this session was used */
+							last_seen_at: components["schemas"]["Time"];
+							/** @description a human readable name for this session */
+							name?: string | null;
+							type: components["schemas"]["SessionType"];
+							user_agent?: string | null;
+						};
+					};
+				};
+				/** @description not modified */
+				304: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -14986,6 +16332,8 @@ export interface paths {
 		/**
 		 * Thread member list
 		 * @description
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -15003,7 +16351,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -15038,6 +16386,8 @@ export interface paths {
 		/**
 		 * Thread member get
 		 * @description
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -15051,7 +16401,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -15071,6 +16421,8 @@ export interface paths {
 		 * Thread member add
 		 * @description <div class="markdown-alert-permission-optional">MemberKick</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ThreadMemberAdd</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -15088,7 +16440,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -15102,6 +16454,13 @@ export interface paths {
 						};
 					};
 				};
+				/** @description not modified */
+				304: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
 			};
 		};
 		post?: never;
@@ -15109,6 +16468,8 @@ export interface paths {
 		 * Thread member delete
 		 * @description <div class="markdown-alert-permission-optional">MemberKick</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ThreadMemberRemove</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -15122,8 +16483,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -15148,6 +16509,8 @@ export interface paths {
 		/**
 		 * Unfurler debug
 		 * @description
+		 *
+		 *
 		 */
 		post: operations["unfurler_debug"];
 		delete?: never;
@@ -15168,6 +16531,8 @@ export interface paths {
 		/**
 		 * Unfurl multiple urls
 		 * @description
+		 *
+		 *
 		 */
 		post: operations["unfurler_unfurl"];
 		delete?: never;
@@ -15201,7 +16566,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -15236,6 +16601,8 @@ export interface paths {
 		/**
 		 * User connection metadata get
 		 * @description
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -15248,7 +16615,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -15264,6 +16631,8 @@ export interface paths {
 		/**
 		 * User connection metadata put
 		 * @description
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -15282,7 +16651,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -15329,7 +16698,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -15380,8 +16749,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -15408,8 +16777,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -15446,7 +16815,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -15591,8 +16960,132 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description already exists */
 				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							archived_at?: null | components["schemas"]["Time"];
+							/**
+							 * Format: int64
+							 * @description when to automatically archive this thread due to inactivity, in seconds
+							 */
+							auto_archive_duration?: number | null;
+							/**
+							 * Format: int64
+							 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+							 */
+							bitrate?: number | null;
+							calendar?: null | components["schemas"]["Calendar"];
+							creator_id: components["schemas"]["Id"];
+							/**
+							 * Format: int64
+							 * @description the default auto archive duration in seconds to copy to threads created in this channel
+							 */
+							default_auto_archive_duration?: number | null;
+							/**
+							 * Format: int64
+							 * @description default slowmode_message for new threads
+							 *
+							 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
+							 */
+							default_slowmode_message?: number | null;
+							deleted_at?: null | components["schemas"]["Time"];
+							description?: string | null;
+							document?: null | components["schemas"]["Document"];
+							icon?: null | components["schemas"]["Id"];
+							id: components["schemas"]["Id"];
+							/** @description whether users without ThreadManage can add other members to this thread */
+							invitable?: boolean;
+							is_unread?: boolean | null;
+							last_message_id?: null | components["schemas"]["Id"];
+							last_read_id?: null | components["schemas"]["Id"];
+							last_version_id?: null | components["schemas"]["Id"];
+							/** @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync. */
+							latest_seq?: components["schemas"]["ChannelSeq"];
+							locked?: null | components["schemas"]["Locked"];
+							/**
+							 * Format: int64
+							 * @description number of people in this room
+							 */
+							member_count: number;
+							/** Format: int64 */
+							mention_count?: number | null;
+							/** Format: int64 */
+							message_count?: number | null;
+							name: string;
+							/** @description not safe for work */
+							nsfw?: boolean;
+							/**
+							 * Format: int64
+							 * @description number of people who are online in this room
+							 */
+							online_count: number;
+							owner_id?: null | components["schemas"]["Id"];
+							parent_id?: null | components["schemas"]["Id"];
+							/** @description permission overwrites for this channel */
+							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+							/**
+							 * Format: int32
+							 * @description the position of this channel in the navbar
+							 *
+							 *     - lower numbers come first (0 is the first channel)
+							 *     - channels with the same position are tiebroken by id
+							 *     - channels without a position come last, ordered by newest first
+							 */
+							position?: number | null;
+							preferences?: null | components["schemas"]["PreferencesChannel"];
+							/** @description for dm and gdm channels, this is who the dm is with */
+							recipients?: components["schemas"]["User"][];
+							room_id?: null | components["schemas"]["Id"];
+							/** Format: int64 */
+							root_message_count?: number | null;
+							/**
+							 * Format: int64
+							 * @description minimum delay in seconds between creating new messages
+							 *
+							 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
+							 */
+							slowmode_message?: number | null;
+							slowmode_message_expire_at?: null | components["schemas"]["Time"];
+							/**
+							 * Format: int64
+							 * @description minimum delay in seconds between creating new threads
+							 *
+							 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
+							 */
+							slowmode_thread?: number | null;
+							slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+							/**
+							 * Format: int64
+							 * @description number of tags in this Forum, Forum2, or Ticket channel
+							 */
+							tag_count?: number;
+							/** @description tags that are applied to this thread */
+							tags?: components["schemas"]["Id"][] | null;
+							/** @description the tags that are available in this forum. exists on Forum channels only. */
+							tags_available?: components["schemas"]["Tag"][] | null;
+							thread_member?: null | components["schemas"]["ThreadMember"];
+							/** @description type specific data for this channel */
+							type: components["schemas"]["ChannelType"];
+							/** @description url that this info channel should link to */
+							url?: string | null;
+							/**
+							 * Format: int64
+							 * @description maximum number of users who can be in this voice channel
+							 */
+							user_limit?: number | null;
+							/** @description only updates when the channel itself is updated, not the stuff in the channel */
+							version_id: components["schemas"]["Id"];
+							wiki?: null | components["schemas"]["Wiki"];
+						};
+					};
+				};
+				/** @description new dm created */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -15750,7 +17243,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -15802,7 +17295,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -15854,8 +17347,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -15882,8 +17375,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -15906,6 +17399,8 @@ export interface paths {
 		/**
 		 * Harvest get
 		 * @description
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -15916,7 +17411,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -15929,12 +17424,21 @@ export interface paths {
 						};
 					};
 				};
+				/** @description no harvest found */
+				404: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
 			};
 		};
 		put?: never;
 		/**
 		 * Harvest create
 		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: HarvestCreate</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -15954,8 +17458,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description harvest has been queued */
+				202: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -15996,7 +17500,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -16053,8 +17557,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -16081,8 +17585,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -16107,6 +17611,8 @@ export interface paths {
 		/**
 		 * User search
 		 * @description <div class="markdown-alert-permission-required">Admin</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -16150,7 +17656,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -16189,7 +17695,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -16209,6 +17715,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">UserManage</div>
 		 *     <div class="markdown-alert-permission-optional">UserManageSelf</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: UserDelete</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -16221,8 +17729,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -16238,6 +17746,8 @@ export interface paths {
 		 *     <div class="markdown-alert-permission-optional">UserProfileSelf</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: UserUpdate</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -16259,7 +17769,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -16292,6 +17802,13 @@ export interface paths {
 						};
 					};
 				};
+				/** @description not modified */
+				304: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
 			};
 		};
 		trace?: never;
@@ -16306,6 +17823,8 @@ export interface paths {
 		/**
 		 * User audit logs
 		 * @description
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -16331,7 +17850,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -16381,6 +17900,8 @@ export interface paths {
 		/**
 		 * User connection list
 		 * @description
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -16398,7 +17919,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -16436,6 +17957,8 @@ export interface paths {
 		/**
 		 * User connection delete
 		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: ConnectionDelete</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -16449,8 +17972,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -16463,6 +17986,8 @@ export interface paths {
 		/**
 		 * User connection update
 		 * @description
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -16482,7 +18007,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -16528,7 +18053,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -16563,6 +18088,8 @@ export interface paths {
 		/**
 		 * Email list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -16575,7 +18102,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -16613,6 +18140,8 @@ export interface paths {
 		 * Email add
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: EmailCreate</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -16626,8 +18155,15 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description already exists */
 				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				/** @description success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -16640,6 +18176,8 @@ export interface paths {
 		 * Email delete
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: EmailDelete</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -16653,8 +18191,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -16668,6 +18206,8 @@ export interface paths {
 		 * Email update
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: EmailUpdate</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -16691,7 +18231,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -16723,6 +18263,8 @@ export interface paths {
 		/**
 		 * Email verification resend
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -16736,8 +18278,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -16763,6 +18305,8 @@ export interface paths {
 		/**
 		 * Email verify
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -16777,8 +18321,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -16802,6 +18346,8 @@ export interface paths {
 		/**
 		 * Invite user list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -16819,7 +18365,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -16841,6 +18387,8 @@ export interface paths {
 		 * Invite user create
 		 * @description <div class="markdown-alert-permission-optional">InviteCreate</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -16869,8 +18417,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -16935,8 +18483,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -16979,7 +18527,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -17017,6 +18565,8 @@ export interface paths {
 		 * User suspend
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: UserSuspend</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -17037,7 +18587,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -17076,6 +18626,8 @@ export interface paths {
 		 * User unsuspend
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: UserUnsuspend</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -17088,7 +18640,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -17155,8 +18707,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description success */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -17180,6 +18732,8 @@ export interface paths {
 		/**
 		 * Voice call get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -17192,7 +18746,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -17228,6 +18782,8 @@ export interface paths {
 		/**
 		 * Voice call create
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -17253,8 +18809,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description ok */
+				201: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -17292,6 +18848,8 @@ export interface paths {
 		/**
 		 * Voice call delete
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -17309,8 +18867,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description ok */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -17323,6 +18881,8 @@ export interface paths {
 		/**
 		 * Voice call patch
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -17344,7 +18904,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -17392,6 +18952,8 @@ export interface paths {
 		/**
 		 * Voice state list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -17404,7 +18966,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -17428,6 +18990,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-optional">VoiceMove</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberDisconnectAll</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -17440,8 +19004,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description ok */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -17464,6 +19028,8 @@ export interface paths {
 		/**
 		 * Voice state get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -17477,7 +19043,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -17520,6 +19086,8 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-optional">VoiceMove</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberDisconnect</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -17533,8 +19101,8 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description ok */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -17551,6 +19119,8 @@ export interface paths {
 		 *     <div class="markdown-alert-permission-optional">VoiceRequest</div>
 		 *     <div class="markdown-alert-permission-optional">VoiceMove</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		patch: {
 			parameters: {
@@ -17579,7 +19149,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -17630,6 +19200,8 @@ export interface paths {
 		 * Voice state move
 		 * @description <div class="markdown-alert-permission-required">VoiceMove</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -17649,7 +19221,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -17703,6 +19275,8 @@ export interface paths {
 		 * Voice state move bulk
 		 * @description <div class="markdown-alert-permission-required">VoiceMove</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		put: {
 			parameters: {
@@ -17724,8 +19298,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description ok */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -17752,6 +19326,8 @@ export interface paths {
 		/**
 		 * Voice ring start
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		post: {
 			parameters: {
@@ -17770,8 +19346,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description ok */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -17782,6 +19358,8 @@ export interface paths {
 		/**
 		 * Voice ring stop
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		delete: {
 			parameters: {
@@ -17800,8 +19378,8 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description Success */
-				200: {
+				/** @description ok */
+				204: {
 					headers: {
 						[name: string]: unknown;
 					};
@@ -17824,6 +19402,8 @@ export interface paths {
 		/**
 		 * Voice ring eligibility
 		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *
 		 */
 		get: {
 			parameters: {
@@ -17836,7 +19416,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -17870,6 +19450,8 @@ export interface paths {
 		/**
 		 * Webhook get
 		 * @description <div class="markdown-alert-scope-required">full</div>
+		 *
+		 *
 		 */
 		get: operations["webhook_get"];
 		put?: never;
@@ -17878,6 +19460,8 @@ export interface paths {
 		 * Webhook delete
 		 * @description <div class="markdown-alert-scope-required">full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: WebhookDelete</div>
+		 *
+		 *
 		 */
 		delete: operations["webhook_delete"];
 		options?: never;
@@ -17886,6 +19470,8 @@ export interface paths {
 		 * Webhook update
 		 * @description <div class="markdown-alert-scope-required">full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: WebhookUpdate</div>
+		 *
+		 *
 		 */
 		patch: operations["webhook_update"];
 		trace?: never;
@@ -17900,17 +19486,23 @@ export interface paths {
 		/**
 		 * Webhook get with token
 		 * @description
+		 *
+		 *
 		 */
 		get: operations["webhook_get_with_token"];
 		put?: never;
 		/**
 		 * Webhook execute (TODO)
 		 * @description
+		 *
+		 *
 		 */
 		post: operations["webhook_execute"];
 		/**
 		 * Webhook delete with token
 		 * @description
+		 *
+		 *
 		 */
 		delete: operations["webhook_delete_with_token"];
 		options?: never;
@@ -17918,6 +19510,8 @@ export interface paths {
 		/**
 		 * Webhook update with token
 		 * @description
+		 *
+		 *
 		 */
 		patch: operations["webhook_update_with_token"];
 		trace?: never;
@@ -17934,6 +19528,8 @@ export interface paths {
 		/**
 		 * Webhook execute discord (TODO)
 		 * @description
+		 *
+		 *
 		 */
 		post: operations["webhook_execute_discord"];
 		delete?: never;
@@ -17954,6 +19550,8 @@ export interface paths {
 		/**
 		 * Webhook execute github (TODO)
 		 * @description
+		 *
+		 *
 		 */
 		post: operations["webhook_execute_github"];
 		delete?: never;
@@ -17972,6 +19570,8 @@ export interface paths {
 		/**
 		 * Webhook get message
 		 * @description
+		 *
+		 *
 		 */
 		get: operations["webhook_message_get"];
 		put?: never;
@@ -17979,6 +19579,8 @@ export interface paths {
 		/**
 		 * Webhook delete message
 		 * @description
+		 *
+		 *
 		 */
 		delete: operations["webhook_message_delete"];
 		options?: never;
@@ -17986,6 +19588,8 @@ export interface paths {
 		/**
 		 * Webhook edit message (TODO)
 		 * @description
+		 *
+		 *
 		 */
 		patch: operations["webhook_message_edit"];
 		trace?: never;
@@ -18002,6 +19606,8 @@ export interface paths {
 		/**
 		 * Webhook execute slack (TODO)
 		 * @description
+		 *
+		 *
 		 */
 		post: operations["webhook_execute_slack"];
 		delete?: never;
@@ -18048,7 +19654,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description Success */
+				/** @description ok */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -19017,19 +20623,39 @@ export interface components {
 					metadata: {
 						changes: components["schemas"]["AuditLogChange"][];
 						channel_id: components["schemas"]["Id"];
-						script_id: components["schemas"]["Id"];
+						redex_id: components["schemas"]["Id"];
 					};
 					/** @enum {string} */
-					type: "ScriptCreate";
+					type: "RedexCreate";
 			  }
 			| {
 					metadata: {
 						changes: components["schemas"]["AuditLogChange"][];
 						channel_id: components["schemas"]["Id"];
-						script_id: components["schemas"]["Id"];
+						redex_id: components["schemas"]["Id"];
 					};
 					/** @enum {string} */
-					type: "ScriptDelete";
+					type: "RedexDelete";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						channel_id: components["schemas"]["Id"];
+						redex_id: components["schemas"]["Id"];
+						redex_version_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "RedexVersionCreate";
+			  }
+			| {
+					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+						channel_id: components["schemas"]["Id"];
+						redex_id: components["schemas"]["Id"];
+						redex_version_id: components["schemas"]["Id"];
+					};
+					/** @enum {string} */
+					type: "RedexVersionDelete";
 			  };
 		AutomodAction:
 			| {
@@ -19227,7 +20853,6 @@ export interface components {
 			/** @description the url where this platform can be reached */
 			platform_url?: string | null;
 		};
-		BrokenGenericPlaceholder: Record<string, never>;
 		/** @enum {string} */
 		ButtonStyle: "Primary" | "Secondary" | "Danger";
 		/** @description channel metadata for a calendar */
@@ -19543,7 +21168,10 @@ export interface components {
 			| "Scripts";
 		/** @description A color string. Supports hex (#rgb, #rrggbb), rgb(), oklch(), or named colors (name-variant:alpha) */
 		Color: string;
-		Component: components["schemas"]["Component_Create"];
+		/** @description a single component in a tree */
+		Component: components["schemas"]["ComponentType_Create"] & {
+			id: components["schemas"]["Option"];
+		};
 		/** @description A developer-defined identifier for an interactive component.
 		 *
 		 *     Min 1 char, max 128 chars. */
@@ -19553,24 +21181,254 @@ export interface components {
 		 * @description An identifier for a component
 		 */
 		ComponentId: number;
-		ComponentType_Canonical: Record<string, never>;
-		ComponentType_Create: Record<string, never>;
-		ComponentType_Thin: Record<string, never>;
-		Component_Canonical: {
-			id: components["schemas"]["ComponentId"];
-			ty: components["schemas"]["ComponentType_Canonical"];
+		/** @description media to display in a component */
+		ComponentMedia_Media: {
+			/** @description description for this media
+			 *
+			 *     min 1 max 1024 chars */
+			description?: string | null;
+			/** @description A piece of media. */
+			media: {
+				/** @description Descriptive alt text. */
+				alt?: string | null;
+				channel_id?: null | components["schemas"]["Id"];
+				/** @description The mime type of this piece of media. */
+				content_type: components["schemas"]["Mime"];
+				deleted_at?: null | components["schemas"]["Time"];
+				filename: string;
+				/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
+				has_gifv: boolean;
+				/** @description Whether this media can be fetched through the `/thumb/{media_id}` cdn route. */
+				has_thumbnail: boolean;
+				/** @description the hashes of this file
+				 *
+				 *     maps hash type to unpadded url safe base64 */
+				hashes?: {
+					[key: string]: string;
+				};
+				id: components["schemas"]["Id"];
+				/** @description what this piece of media is linked to (admin only) */
+				links?: components["schemas"]["MediaLinkType"][];
+				/** @description Additional filetype-specific metadata for the file */
+				metadata: components["schemas"]["MediaMetadata"];
+				quarantine?: null | components["schemas"]["MediaQuarantine"];
+				remote?: null | components["schemas"]["Remote"];
+				room_id?: null | components["schemas"]["Id"];
+				/** @description The results of automated scans. */
+				scans: components["schemas"]["MediaScan"][];
+				/**
+				 * Format: int64
+				 * @description The underlying blob's length in bytes.
+				 */
+				size: number;
+				/**
+				 * Format: uri
+				 * @description Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
+				 */
+				source_url?: string | null;
+				status: components["schemas"]["MediaStatus"];
+				/** @description Whether sensitive exif info has been stripped from this media.
+				 *
+				 *     Once set to `true`, this cannot be unset. */
+				strip_exif?: boolean;
+				user_id?: null | components["schemas"]["Id"];
+				version_id: components["schemas"]["Id"];
+			};
+			spoiler?: boolean;
 		};
-		Component_Create: {
-			id?: components["schemas"]["ComponentId"];
-			ty: components["schemas"]["ComponentType_Create"];
+		/** @description media to display in a component */
+		ComponentMedia_MediaReference: {
+			/** @description description for this media
+			 *
+			 *     min 1 max 1024 chars */
+			description?: string | null;
+			/** @description A reference to a piece of media to be used. */
+			media:
+				| {
+						media_id: components["schemas"]["Id"];
+				  }
+				| {
+						/** Format: uri */
+						source_url: string;
+				  }
+				| {
+						/** Format: int64 */
+						media_index: number;
+				  };
+			spoiler?: boolean;
 		};
-		Component_Thin: {
+		/** @description components
+		 *
+		 *     ## layout
+		 *
+		 *     - `Container` creates a visually distinct section
+		 *     - `Section` creates a section without any margin/padding
+		 *     - `Details` creates a collapseable section
+		 *
+		 *     ## content
+		 *
+		 *     - `Text` displays markdown text
+		 *     - `Media` display a single piece of media
+		 *     - `Gallery` display multiple media
+		 *
+		 *     ## interactivity
+		 *
+		 *     - `Button` is clicky button
+		 *     - `LinkButton` is a link that looks like a button
+		 *
+		 *     ## logic
+		 *
+		 *     - `Reference` move or clone another component */
+		ComponentType_Canonical:
+			| {
+					/** @description developer-defined identifier for this component */
+					custom_id: components["schemas"]["ComponentCustomId"];
+					label: string;
+					style: components["schemas"]["ButtonStyle"];
+					/** @enum {string} */
+					type: "Button";
+			  }
+			| {
+					label: string;
+					/** @enum {string} */
+					type: "LinkButton";
+					/**
+					 * Format: uri
+					 * @description what to link to
+					 */
+					url?: string | null;
+			  }
+			| {
+					color?: null | components["schemas"]["Color"];
+					components: components["schemas"]["Component_Canonical"][];
+					/** @enum {string} */
+					type: "Container";
+			  }
+			| {
+					content: string;
+					/** @enum {string} */
+					type: "Text";
+			  }
+			| {
+					reference_id: components["schemas"]["ComponentId"];
+					/** @enum {string} */
+					type: "Reference";
+			  }
+			| {
+					color?: null | components["schemas"]["Color"];
+					details: components["schemas"]["Component_Canonical"][];
+					open?: boolean;
+					summary: components["schemas"]["Component_Canonical"][];
+					/** @enum {string} */
+					type: "Details";
+			  }
+			| {
+					color?: null | components["schemas"]["Color"];
+					components: components["schemas"]["Component_Canonical"][];
+					/** @enum {string} */
+					type: "Section";
+			  }
+			| {
+					items: components["schemas"]["ComponentMedia_Media"][];
+					/** @enum {string} */
+					type: "Media";
+			  }
+			| {
+					items: components["schemas"]["ComponentMedia_Media"][];
+					/** @enum {string} */
+					type: "Gallery";
+			  };
+		/** @description components
+		 *
+		 *     ## layout
+		 *
+		 *     - `Container` creates a visually distinct section
+		 *     - `Section` creates a section without any margin/padding
+		 *     - `Details` creates a collapseable section
+		 *
+		 *     ## content
+		 *
+		 *     - `Text` displays markdown text
+		 *     - `Media` display a single piece of media
+		 *     - `Gallery` display multiple media
+		 *
+		 *     ## interactivity
+		 *
+		 *     - `Button` is clicky button
+		 *     - `LinkButton` is a link that looks like a button
+		 *
+		 *     ## logic
+		 *
+		 *     - `Reference` move or clone another component */
+		ComponentType_Create:
+			| {
+					/** @description developer-defined identifier for this component */
+					custom_id: components["schemas"]["ComponentCustomId"];
+					label: string;
+					style: components["schemas"]["ButtonStyle"];
+					/** @enum {string} */
+					type: "Button";
+			  }
+			| {
+					label: string;
+					/** @enum {string} */
+					type: "LinkButton";
+					/**
+					 * Format: uri
+					 * @description what to link to
+					 */
+					url?: string | null;
+			  }
+			| {
+					color?: null | components["schemas"]["Color"];
+					components: components["schemas"]["Component_Create"][];
+					/** @enum {string} */
+					type: "Container";
+			  }
+			| {
+					content: string;
+					/** @enum {string} */
+					type: "Text";
+			  }
+			| {
+					reference_id: components["schemas"]["ComponentId"];
+					/** @enum {string} */
+					type: "Reference";
+			  }
+			| {
+					color?: null | components["schemas"]["Color"];
+					details: components["schemas"]["Component_Create"][];
+					open?: boolean;
+					summary: components["schemas"]["Component_Create"][];
+					/** @enum {string} */
+					type: "Details";
+			  }
+			| {
+					color?: null | components["schemas"]["Color"];
+					components: components["schemas"]["Component_Create"][];
+					/** @enum {string} */
+					type: "Section";
+			  }
+			| {
+					items: components["schemas"]["ComponentMedia_MediaReference"][];
+					/** @enum {string} */
+					type: "Media";
+			  }
+			| {
+					items: components["schemas"]["ComponentMedia_MediaReference"][];
+					/** @enum {string} */
+					type: "Gallery";
+			  };
+		/** @description a single component in a tree */
+		Component_Canonical: components["schemas"]["ComponentType_Canonical"] & {
 			id: components["schemas"]["ComponentId"];
-			ty: components["schemas"]["ComponentType_Thin"];
+		};
+		/** @description a single component in a tree */
+		Component_Create: components["schemas"]["ComponentType_Create"] & {
+			id: components["schemas"]["Option"];
 		};
 		Components_Canonical: components["schemas"]["Component_Canonical"][];
 		Components_Create: components["schemas"]["Component_Create"][];
-		Components_Thin: components["schemas"]["Component_Thin"][];
 		/** @description an application that is authorized to a user */
 		Connection: {
 			application: components["schemas"]["Application"];
@@ -19854,6 +21712,109 @@ export interface components {
 			/** @description Human-readable error message */
 			message: string;
 		};
+		/** @description a redex being run */
+		Eval: {
+			created_at: components["schemas"]["Time"];
+			id: components["schemas"]["Id"];
+			input: components["schemas"]["EvalInputSummary"];
+			redex_id: components["schemas"]["Id"];
+			redex_version_id: components["schemas"]["Id"];
+			status: components["schemas"]["EvalStatus"];
+			stopped_at?: null | components["schemas"]["Time"];
+		};
+		/** @description request to start a redex run via trigger */
+		EvalCreateManual: {
+			/** @description start in the background
+			 *
+			 *     returns 202 accepted instead of blocking until it can return 200 ok */
+			async: boolean;
+			/** @description whether only one instance should be running at a time
+			 *
+			 *     will stop other runs of this script if true */
+			exclusive: boolean;
+			/** @description the id of the input that triggered this run */
+			trigger_id: string;
+		};
+		EvalInputSummary:
+			| {
+					/** @enum {string} */
+					type: "Extraction";
+			  }
+			| {
+					id: string;
+					/** @enum {string} */
+					type: "Manual";
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					request: components["schemas"]["HttpRequestSummary"];
+					/** @enum {string} */
+					type: "Http";
+			  }
+			| {
+					event: components["schemas"]["MessageSync"];
+					/** @enum {string} */
+					type: "Event";
+			  };
+		/** @description a log entry from an eval */
+		EvalLogEntry: {
+			/** @description arbitrary metadata associated with this log line */
+			attributes?: components["schemas"]["Metadata"];
+			/** @description arbitrary content for this log line */
+			content: string;
+			created_at: components["schemas"]["Time"];
+			/** Format: int64 */
+			id: number;
+			level: components["schemas"]["EvalLogLevel"];
+			/** @description where this log line came from */
+			source: components["schemas"]["EvalLogSource"];
+		};
+		/**
+		 * @description log level for a run log entry
+		 * @enum {string}
+		 */
+		EvalLogLevel: "Trace" | "Debug" | "Info" | "Warning" | "Error";
+		EvalLogSource:
+			| {
+					/** Format: int64 */
+					column?: number | null;
+					/** Format: int64 */
+					line?: number | null;
+					/** @description the redex this came from */
+					redex_id: components["schemas"]["Id"];
+					/** @description target (like rust foo::bar::baz) (like otel InstrumentationScope) */
+					target?: string | null;
+					/**
+					 * Format: int64
+					 * @description the trace this belongs to
+					 */
+					trace_id?: number | null;
+					/** @enum {string} */
+					type: "Redex";
+			  }
+			| {
+					/** @description target (like rust foo::bar::baz) (like otel InstrumentationScope) */
+					target: string;
+					/** @enum {string} */
+					type: "Builtin";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Runtime";
+			  };
+		/**
+		 * @description status of an eval
+		 * @enum {string}
+		 */
+		EvalStatus:
+			| "Creating"
+			| "Active"
+			| "Sleeping"
+			| "Waking"
+			| "Exited"
+			| "Borked"
+			| "Crashed"
+			| "Stopped";
 		Experiments: Record<string, never>;
 		/**
 		 * @description Failure codes for fatal failures.
@@ -19940,7 +21901,7 @@ export interface components {
 			 *
 			 *     note that you can *only* mention on flume create; editing in a mention later will *not* create a notification */
 			mentions?: components["schemas"]["ParseMentions"];
-			metadata?: null | components["schemas"]["MessageMetadata"];
+			metadata?: null | components["schemas"]["Metadata"];
 			reply_id?: null | components["schemas"]["Id"];
 		};
 		/** @description a delta applied to a live flume */
@@ -20045,6 +22006,18 @@ export interface components {
 		};
 		/** @description A hostname, used to identify a server */
 		Hostname: string;
+		HttpRequestSummary: {
+			request_headers: {
+				[key: string]: string;
+			};
+			request_method: string;
+			request_url: string;
+			response_headers: {
+				[key: string]: string;
+			};
+			/** Format: int32 */
+			response_status: number;
+		};
 		/** @description webrtc ice candidate */
 		IceCandidate: string;
 		/**
@@ -20063,6 +22036,107 @@ export interface components {
 			bot: components["schemas"]["User"];
 			member: components["schemas"]["RoomMember"];
 		};
+		/** @description an user interacted with your application */
+		Interaction: components["schemas"]["InteractionType"] & {
+			application_id: components["schemas"]["Id"];
+			id: components["schemas"]["Id"];
+			/** @description unique token for responding to this interaction
+			 *
+			 *     this exists so you don't need to give your token to an http server for http based interactions. only is set for bots. */
+			token?: string | null;
+			/**
+			 * Format: int32
+			 * @description always 1 currently
+			 */
+			version: number;
+		};
+		/** @description create a new interaction */
+		InteractionCreate: components["schemas"]["InteractionCreateType"] & {
+			application_id: components["schemas"]["Id"];
+		};
+		InteractionCreateType: {
+			channel_id: components["schemas"]["Id"];
+			custom_id: string;
+			message_id: components["schemas"]["Id"];
+			/** @enum {string} */
+			type: "Button";
+		};
+		/** @enum {string} */
+		InteractionErrorCode: "Timeout";
+		/** @description an interaction has been responded to */
+		InteractionResponse: Record<string, never>;
+		/** @description respond to an interaction */
+		InteractionResponseCreate: components["schemas"]["InteractionResponseCreateType"];
+		InteractionResponseCreateType:
+			| {
+					/** @enum {string} */
+					type: "Pong";
+			  }
+			| {
+					message: components["schemas"]["MessageCreate"];
+					/** @enum {string} */
+					type: "Reply";
+			  }
+			| {
+					/** @enum {string} */
+					type: "ReplyDefer";
+			  }
+			| {
+					patch: components["schemas"]["MessagePatch"];
+					/** @enum {string} */
+					type: "MessageUpdate";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Defer";
+			  }
+			| {
+					/** @description generated these embeds */
+					embeds: components["schemas"]["Embed"][];
+					/** @description also generate the default url preview */
+					include_default: boolean;
+					/** @enum {string} */
+					type: "Unfurl";
+			  };
+		InteractionType:
+			| {
+					/** @enum {string} */
+					type: "Ping";
+			  }
+			| {
+					/** @description the permissions the application has in the target channel */
+					application_permissions: components["schemas"]["Permission"][];
+					/** @description the channel this interaction was created in */
+					channel: components["schemas"]["Channel"];
+					/** @description application defined id associated with this button */
+					custom_id: string;
+					/** @description the message this button was attached to */
+					message: components["schemas"]["Message"];
+					room?: null | components["schemas"]["Room"];
+					room_member?: null | components["schemas"]["RoomMember"];
+					/** @enum {string} */
+					type: "Button";
+					/** @description the user who initiated this interaction */
+					user: components["schemas"]["User"];
+					/** @description the permissions the user has in the target channel */
+					user_permissions: components["schemas"]["Permission"][];
+			  }
+			| {
+					/** @description the permissions the application has in the target channel */
+					application_permissions: components["schemas"]["Permission"][];
+					/** @description the channel this interaction was created in */
+					channel: components["schemas"]["Channel"];
+					/** @description the message this link is contained in */
+					message: components["schemas"]["Message"];
+					room?: null | components["schemas"]["Room"];
+					room_member?: null | components["schemas"]["RoomMember"];
+					/** @enum {string} */
+					type: "Unfurl";
+					/** @description the user who send the message */
+					user: components["schemas"]["User"];
+					/** @description the permissions the user has in the target channel */
+					user_permissions: components["schemas"]["Permission"][];
+			  };
 		Invite: {
 			/** @description the invite code for this invite */
 			code: components["schemas"]["InviteCode"];
@@ -20144,6 +22218,7 @@ export interface components {
 		};
 		/** @description a unique identifier for a track layer (corresponds to a rid in webrtc) */
 		LayerId: string;
+		License: string;
 		/** @description indicates that a channel is locked */
 		Locked: {
 			/** @description if present, users with these roles bypass the lock */
@@ -20431,7 +22506,8 @@ export interface components {
 					source_url: string;
 			  }
 			| {
-					field_name: string;
+					/** Format: int64 */
+					media_index: number;
 			  };
 		/** @description An automated scan result */
 		MediaScan: {
@@ -20572,8 +22648,13 @@ export interface components {
 			/** @description when this message was created */
 			created_at: components["schemas"]["Time"];
 			deleted_at?: null | components["schemas"]["Time"];
+			/** @description whether this message is ephemeral
+			 *
+			 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+			ephemeral: boolean;
 			flume?: null | components["schemas"]["MessageFlume"];
 			id: components["schemas"]["Id"];
+			interaction?: null | components["schemas"]["MessageInteraction"];
 			latest_version: components["schemas"]["MessageVersion"];
 			pinned?: null | components["schemas"]["Pinned"];
 			reactions?: components["schemas"]["ReactionCounts"];
@@ -20650,8 +22731,10 @@ export interface components {
 			/** @description the message's content in markdown */
 			content?: string | null;
 			embeds?: components["schemas"]["EmbedCreate"][];
+			/** @description whether to make this message ephemeral */
+			ephemeral: boolean;
 			mentions?: components["schemas"]["ParseMentions"];
-			metadata?: null | components["schemas"]["MessageMetadata"];
+			metadata?: null | components["schemas"]["Metadata"];
 			reply_id?: null | components["schemas"]["Id"];
 		};
 		/** @description a basic message, written using markdown */
@@ -20662,7 +22745,7 @@ export interface components {
 			/** @description the message's content in markdown */
 			content?: string | null;
 			embeds: components["schemas"]["Embed"][];
-			metadata?: null | components["schemas"]["MessageMetadata"];
+			metadata?: null | components["schemas"]["Metadata"];
 			reply_id?: null | components["schemas"]["Id"];
 		};
 		/** @description flume metadata for a message */
@@ -20670,20 +22753,17 @@ export interface components {
 			/** @description current state of the flume */
 			state: components["schemas"]["FlumeState"];
 		};
+		/** @description the interaction that caused this message to be sent */
+		MessageInteraction: {
+			application_id: components["schemas"]["Id"];
+			id: components["schemas"]["Id"];
+			source_message_id?: null | components["schemas"]["Id"];
+			/** @description the user who triggered this interaction */
+			user_id: components["schemas"]["Id"];
+		};
 		/** @description Information about a member being added or removed from a thread */
 		MessageMember: {
 			target_user_id: components["schemas"]["Id"];
-		};
-		/** @description arbitrary key-value metadata included for a message.
-		 *
-		 *     - max 8 keys
-		 *     - max 32 chars per key
-		 *     - max 1024 chars per value
-		 *     - max 2048 chars across all values
-		 *
-		 *     included in interaction. only visible to user who sent it (and the owner if its a bot). */
-		MessageMetadata: {
-			[key: string]: string;
 		};
 		MessagePatch: {
 			/** @description message attachments */
@@ -20692,7 +22772,7 @@ export interface components {
 			/** @description the new message content in markdown */
 			content?: string | null;
 			embeds?: components["schemas"]["EmbedCreate"][] | null;
-			metadata?: null | components["schemas"]["MessageMetadata"];
+			metadata?: null | components["schemas"]["Metadata"];
 			reply_id?: null | components["schemas"]["Id"];
 		};
 		/** @description Information about a message being pinned */
@@ -21303,57 +23383,57 @@ export interface components {
 					type: "FlumeDelta";
 			  }
 			| {
-					script: components["schemas"]["Script"];
+					script: components["schemas"]["Redex"];
 					/** @enum {string} */
 					type: "ScriptCreate";
 			  }
 			| {
-					script: components["schemas"]["Script"];
+					script: components["schemas"]["Redex"];
 					/** @enum {string} */
 					type: "ScriptUpdate";
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
-					script_id: components["schemas"]["Id"];
+					redex_id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "ScriptDelete";
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
-					script_id: components["schemas"]["Id"];
+					redex_id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "ScriptVersionCreate";
-					version: components["schemas"]["ScriptVersion"];
+					version: components["schemas"]["RedexVersion"];
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
-					script_id: components["schemas"]["Id"];
+					redex_id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "ScriptVersionUpdate";
-					version: components["schemas"]["ScriptVersion"];
+					version: components["schemas"]["RedexVersion"];
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
-					script_id: components["schemas"]["Id"];
+					redex_id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "ScriptVersionDelete";
 					version_id: components["schemas"]["Id"];
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
-					run: components["schemas"]["Run"];
+					run: components["schemas"]["Eval"];
 					/** @enum {string} */
 					type: "ScriptRunCreate";
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
-					run: components["schemas"]["Run"];
+					run: components["schemas"]["Eval"];
 					/** @enum {string} */
 					type: "ScriptRunUpdate";
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
-					entry: components["schemas"]["RunLogEntry"];
+					entry: components["schemas"]["EvalLogEntry"];
 					run_id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "ScriptLogCreate";
@@ -21367,9 +23447,34 @@ export interface components {
 			| {
 					channel_id: components["schemas"]["Id"];
 					connection_id: components["schemas"]["Id"];
-					script_id: components["schemas"]["Id"];
+					redex_id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "ScriptSubscribed";
+			  }
+			| {
+					interaction: components["schemas"]["Interaction"];
+					/** @description the nonce
+					 *
+					 *     taken from the `Ideompotency-Key` header. only sent to the user. */
+					nonce?: string | null;
+					/** @enum {string} */
+					type: "InteractionCreate";
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					interaction_id: components["schemas"]["Id"];
+					nonce?: string | null;
+					/** @enum {string} */
+					type: "InteractionSuccess";
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					error_code: components["schemas"]["InteractionErrorCode"];
+					interaction_id: components["schemas"]["Id"];
+					nonce?: string | null;
+					/** @enum {string} */
+					type: "InteractionFailure";
+					user_id: components["schemas"]["Id"];
 			  };
 		/** @description Information about a thread being created */
 		MessageThreadCreated: {
@@ -21434,6 +23539,23 @@ export interface components {
 			/** @description who this message mentioned */
 			mentions?: components["schemas"]["Mentions"];
 			version_id: components["schemas"]["Id"];
+		};
+		/** @description arbitrary key-value metadata used in various places
+		 *
+		 *     ## limits
+		 *
+		 *     - max 8 keys
+		 *     - max 32 chars per key
+		 *     - max 1024 chars per value
+		 *     - max 2048 chars across all values
+		 *
+		 *     ## where it's used
+		 *
+		 *     - included for messages
+		 *     - message metadata included in interactions. only visible to user who sent it (and the owner if its a bot).
+		 *     - included for redex eval log lines */
+		Metadata: {
+			[key: string]: string;
 		};
 		/**
 		 * Mime
@@ -21555,6 +23677,7 @@ export interface components {
 			/** @description friendly name */
 			name: string;
 		};
+		Option: null | number;
 		/**
 		 * @description what order to return items in
 		 * @enum {string}
@@ -21607,8 +23730,13 @@ export interface components {
 				/** @description when this message was created */
 				created_at: components["schemas"]["Time"];
 				deleted_at?: null | components["schemas"]["Time"];
+				/** @description whether this message is ephemeral
+				 *
+				 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+				ephemeral: boolean;
 				flume?: null | components["schemas"]["MessageFlume"];
 				id: components["schemas"]["Id"];
+				interaction?: null | components["schemas"]["MessageInteraction"];
 				latest_version: components["schemas"]["MessageVersion"];
 				pinned?: null | components["schemas"]["Pinned"];
 				reactions?: components["schemas"]["ReactionCounts"];
@@ -21941,6 +24069,196 @@ export interface components {
 					/** @enum {string} */
 					type: "Until";
 			  };
+		/** @description some code that can run */
+		Redex: {
+			channel_id: components["schemas"]["Id"];
+			created_at: components["schemas"]["Time"];
+			creator_id: components["schemas"]["Id"];
+			deleted_at?: null | components["schemas"]["Time"];
+			/** @description detected inputs for this script */
+			handlers: components["schemas"]["RedexHandler"][];
+			id: components["schemas"]["Id"];
+			latest_version: components["schemas"]["RedexVersion"];
+			/** @description the capabilities that were granted to this redex */
+			permissions: components["schemas"]["RedexPermission"][];
+			status: components["schemas"]["RedexStatus"];
+		};
+		/** @description a reference to a redex author */
+		RedexAuthor: {
+			/** @description human readable name */
+			name: string;
+			/** Format: uri */
+			url?: string | null;
+			user?: null | components["schemas"]["RedexAuthorOrigin"];
+		};
+		RedexAuthorOrigin: {
+			/** @description the host this user is on */
+			hostname: components["schemas"]["Hostname"];
+			/** @description the id of the user on the origin host */
+			user_id: components["schemas"]["Id"];
+		};
+		/** @description a capability this script requires
+		 *
+		 *     can also be viewed as an effect that running this script may cause
+		 *
+		 *     logging is considered pure */
+		RedexCapability:
+			| {
+					/** @enum {string} */
+					type: "RunSpawn";
+			  }
+			| {
+					/** @enum {string} */
+					type: "RunManage";
+			  }
+			| {
+					/** @description the hosts to allow http requests to
+					 *
+					 *     if None, allow requests to all hosts */
+					allow?: string[] | null;
+					/** @enum {string} */
+					type: "Http";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Storage";
+			  }
+			| {
+					/** @description the secrets to allow access to
+					 *
+					 *     if None, allow requests to all secrets */
+					allow?: string[] | null;
+					/** @enum {string} */
+					type: "Secrets";
+			  };
+		/** @description request body for updating redex content */
+		RedexContentUpdate: {
+			format: components["schemas"]["RedexFormat"];
+			location: components["schemas"]["RedexLocationUpdate"];
+		};
+		/** @description request body for creating a new redex */
+		RedexCreate: {
+			format: components["schemas"]["RedexFormat"];
+			location: components["schemas"]["RedexLocationUpdate"];
+		};
+		/** @description request body for updating redex dependencies */
+		RedexDependenciesUpdate: Record<string, never>;
+		/** @description a single redex dependency */
+		RedexDependency: {
+			/** @description the redex that is being depended on */
+			script: components["schemas"]["Redex"];
+		};
+		/** @description response body for the dependency graph */
+		RedexDependencyGraph: {
+			/** @description all dependencies of this redex, including transitive ones */
+			dependencies: components["schemas"]["RedexDependency"][];
+			/** @description what depends on what */
+			links: components["schemas"]["RedexDependencyLink"][];
+		};
+		RedexDependencyLink: {
+			dependency_id: components["schemas"]["Id"];
+			dependent_id: components["schemas"]["Id"];
+		};
+		/**
+		 * @description the format of a redex
+		 * @enum {string}
+		 */
+		RedexFormat: "Javascript" | "Webassembly";
+		/** @description the valid inputs to this script */
+		RedexHandler: components["schemas"]["RedexHandlerType"] & {
+			/** @description the capabilities this script wants */
+			capibilities: components["schemas"]["RedexCapability"][];
+			/** @description unique identifier for this input */
+			id: string;
+			/** @description human readable label */
+			label: string;
+		};
+		RedexHandlerType:
+			| {
+					/** @enum {string} */
+					type: "Manual";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Http";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Event";
+			  };
+		/** @description where a redex's source is stored */
+		RedexLocation:
+			| {
+					path: string;
+					/** @enum {string} */
+					type: "Local";
+			  }
+			| {
+					media: components["schemas"]["Media"];
+					/** @enum {string} */
+					type: "Remote";
+					/** Format: uri */
+					url: string;
+			  }
+			| {
+					media: components["schemas"]["Media"];
+					/** @enum {string} */
+					type: "Hosted";
+			  };
+		/** @description used to set a RedexLocation */
+		RedexLocationUpdate:
+			| {
+					path: string;
+					/** @enum {string} */
+					type: "Local";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Remote";
+					/** Format: uri */
+					url: string;
+			  }
+			| (components["schemas"]["MediaReference"] & {
+					/** @enum {string} */
+					type: "Hosted";
+			  });
+		/** @description metadata about a redex */
+		RedexMetadata: {
+			authors?: components["schemas"]["RedexAuthor"][];
+			description?: string | null;
+			/** Format: uri */
+			homepage_url?: string | null;
+			license?: null | components["schemas"]["License"];
+			name: string;
+			origin?: null | components["schemas"]["RedexOrigin"];
+			version?: null | components["schemas"]["Semver"];
+		};
+		RedexOrigin: {
+			channel_id: components["schemas"]["Id"];
+			hostname: components["schemas"]["Hostname"];
+			redex_id: components["schemas"]["Id"];
+		};
+		/** @description a permission granted to this redex */
+		RedexPermission: {
+			capability: components["schemas"]["RedexCapability"];
+			grant: components["schemas"]["RedexPermissionGrant"];
+		};
+		/** @enum {string} */
+		RedexPermissionGrant: "Allow" | "Deny" | "Prompt";
+		/** @enum {string} */
+		RedexStatus: "Empty" | "Creating" | "Processing" | "Valid" | "Invalid";
+		/** @description information about a redex version */
+		RedexVersion: {
+			created_at: components["schemas"]["Time"];
+			deleted_at?: null | components["schemas"]["Time"];
+			format: components["schemas"]["RedexFormat"];
+			location: components["schemas"]["RedexLocation"];
+			metadata: components["schemas"]["RedexMetadata"];
+			status: components["schemas"]["RedexVersionStatus"];
+			version_id: components["schemas"]["Id"];
+		};
+		/** @enum {string} */
+		RedexVersionStatus: "Processing" | "Valid" | "Invalid";
 		Registration: Record<string, never>;
 		Relationship: (null | components["schemas"]["Ignore"]) & {
 			relation?: null | components["schemas"]["RelationshipType"];
@@ -22064,6 +24382,8 @@ export interface components {
 			 * @description number of emojis in room
 			 */
 			emoji_count: number;
+			/** @description features enabled for this room */
+			features: components["schemas"]["RoomFeatures"];
 			icon?: null | components["schemas"]["Id"];
 			/** @description A unique identifier for this room */
 			id: components["schemas"]["Id"];
@@ -22197,6 +24517,12 @@ export interface components {
 			/** @description the user who is banned */
 			user_id: components["schemas"]["Id"];
 		};
+		/**
+		 * @description features enabled for this room
+		 * @enum {string}
+		 */
+		RoomFeature: "Scripts" | "Automod" | "Documents" | "Vanity" | "Llm";
+		RoomFeatures: components["schemas"]["RoomFeature"][];
 		RoomMember: {
 			/** @description whether this user is deafened by a moderator */
 			deaf: boolean;
@@ -22323,229 +24649,12 @@ export interface components {
 		};
 		/** @enum {string} */
 		RoomType: "Default" | "Server";
-		/** @description a script execution run */
-		Run: {
-			created_at: components["schemas"]["Time"];
-			id: components["schemas"]["Id"];
-			script_id: components["schemas"]["Id"];
-			status: components["schemas"]["RunStatus"];
-			stopped_at?: null | components["schemas"]["Time"];
-		};
-		/** @description request to start a script run via trigger */
-		RunCreateTrigger: {
-			/** @description start in the background
-			 *
-			 *     returns 202 accepted instead of blocking until it can return 200 ok */
-			async: boolean;
-			/** @description whether only one instance should be running at a time
-			 *
-			 *     will stop other runs of this script if true */
-			exclusive: boolean;
-		};
-		/** @description a log entry from a script run */
-		RunLogEntry: {
-			/** @description arbitrary metadata associated with this log line */
-			attributes: components["schemas"]["MessageMetadata"];
-			/** @description arbitrary content for this log line */
-			content: string;
-			created_at: components["schemas"]["Time"];
-			/** Format: int64 */
-			id: number;
-			level: components["schemas"]["RunLogLevel"];
-			/** @description where this log came from */
-			source: components["schemas"]["RunLogSource"];
-		};
-		/**
-		 * @description log level for a run log entry
-		 * @enum {string}
-		 */
-		RunLogLevel: "Trace" | "Debug" | "Info" | "Warning" | "Error";
-		/** @description source information for a log entry */
-		RunLogSource: {
-			run_id: components["schemas"]["Id"];
-			script_id: components["schemas"]["Id"];
-			/**
-			 * Format: int64
-			 * @description the end of the span in utf8 codepoints (rust `char`s)
-			 */
-			span_end: number;
-			/**
-			 * Format: int64
-			 * @description the start of the span in utf8 codepoints (rust `char`s)
-			 */
-			span_start: number;
-			/** @description target (like rust foo::bar::baz) (like otel InstrumentationScope) */
-			target: string;
-			/** Format: int64 */
-			trace_id?: number | null;
-		};
-		/** @description metrics collected from a single script run */
-		RunMetrics: Record<string, never>;
-		RunMetricsQuery: Record<string, never>;
-		/**
-		 * @description status of a script run
-		 * @enum {string}
-		 */
-		RunStatus:
-			| "Creating"
-			| "Active"
-			| "Sleeping"
-			| "Waking"
-			| "Exited"
-			| "Borked"
-			| "Crashed";
-		/** @description a trace span from a script run */
-		RunTrace: {
-			/** @description arbitrary metadata associated with this trace */
-			attributes: components["schemas"]["MessageMetadata"];
-			created_at: components["schemas"]["Time"];
-			ended_at?: null | components["schemas"]["Time"];
-			/** Format: int64 */
-			id: number;
-			label: string;
-			source: components["schemas"]["RunLogSource"];
-		};
 		/**
 		 * @description an oauth scope
 		 * @enum {string}
 		 */
 		Scope: "identify" | "email" | "rooms" | "relationships" | "full" | "auth";
 		Scopes: components["schemas"]["Scope"][];
-		/** @description a script that can run */
-		Script: {
-			channel_id: components["schemas"]["Id"];
-			created_at: components["schemas"]["Time"];
-			creator_id: components["schemas"]["Id"];
-			deleted_at?: null | components["schemas"]["Time"];
-			id: components["schemas"]["Id"];
-			/** @description detected inputs for this script */
-			inputs: components["schemas"]["ScriptInput"][];
-			latest_version: components["schemas"]["ScriptVersion"];
-			/** @description the effects that this script is allowed to run */
-			permissions: components["schemas"]["ScriptPermission"][];
-			status: components["schemas"]["ScriptStatus"];
-		};
-		/** @description request body for updating script content */
-		ScriptContentUpdate: {
-			format: components["schemas"]["ScriptFormat"];
-			location: components["schemas"]["ScriptLocationSet"];
-		};
-		/** @description request body for creating a new script */
-		ScriptCreate: {
-			format: components["schemas"]["ScriptFormat"];
-			location: components["schemas"]["ScriptLocationSet"];
-		};
-		/** @description request body for updating script dependencies */
-		ScriptDependenciesUpdate: Record<string, never>;
-		/** @description a single script dependency */
-		ScriptDependency: {
-			/** @description the script that is being depended on */
-			script: components["schemas"]["Script"];
-		};
-		/** @description response body for the dependency graph */
-		ScriptDependencyGraph: {
-			/** @description all dependencies of this script, including transitive ones */
-			dependencies: components["schemas"]["ScriptDependency"][];
-			/** @description what depends on what */
-			links: components["schemas"]["ScriptDependencyLink"][];
-		};
-		ScriptDependencyLink: {
-			dependency_id: components["schemas"]["Id"];
-			dependent_id: components["schemas"]["Id"];
-		};
-		/**
-		 * @description a capability this script requires
-		 *
-		 *     can also be viewed as an effect that running this script may cause
-		 * @enum {string}
-		 */
-		ScriptEffect: never;
-		/**
-		 * @description the format of a script
-		 * @enum {string}
-		 */
-		ScriptFormat: "Javascript" | "Webassembly";
-		/** @description the valid inputs to this script */
-		ScriptInput: {
-			/** @description the {side effects, capabilities, outputs} of this script */
-			effects: components["schemas"]["ScriptEffect"][];
-			/** @description unique identifier for this input */
-			id: string;
-			/** @description human readable label */
-			label: string;
-			type: components["schemas"]["ScriptInputType"];
-		};
-		ScriptInputType: {
-			/** @enum {string} */
-			type: "Manual";
-		};
-		/** @description where a script is stored */
-		ScriptLocation:
-			| {
-					path: string;
-					/** @enum {string} */
-					type: "Local";
-			  }
-			| {
-					media: components["schemas"]["Media"];
-					/** @enum {string} */
-					type: "Remote";
-					/** Format: uri */
-					url: string;
-			  }
-			| {
-					media: components["schemas"]["Media"];
-					/** @enum {string} */
-					type: "Hosted";
-			  };
-		/** @description used to set a ScriptLocation */
-		ScriptLocationSet:
-			| {
-					path: string;
-					/** @enum {string} */
-					type: "Local";
-			  }
-			| {
-					/** @enum {string} */
-					type: "Remote";
-					/** Format: uri */
-					url: string;
-			  }
-			| (components["schemas"]["MediaReference"] & {
-					/** @enum {string} */
-					type: "Hosted";
-			  });
-		/** @description metadata about a script */
-		ScriptMetadata: {
-			authors: string[];
-			description?: string | null;
-			homepage_url: string;
-			/** @description a spdx license identifier */
-			license: string;
-			name: string;
-			version: string;
-		};
-		ScriptPermission: {
-			effect: components["schemas"]["ScriptEffect"];
-			/** @description whether this should be allowed or denied */
-			grant: components["schemas"]["ScriptPermissionGrant"];
-		};
-		/** @enum {string} */
-		ScriptPermissionGrant: "Allow" | "Deny" | "Prompt";
-		/** @enum {string} */
-		ScriptStatus: "Empty" | "Creating" | "Processing" | "Valid" | "Invalid";
-		/** @description information about a script version */
-		ScriptVersion: {
-			created_at: components["schemas"]["Time"];
-			deleted_at?: null | components["schemas"]["Time"];
-			format: components["schemas"]["ScriptFormat"];
-			location: components["schemas"]["ScriptLocation"];
-			metadata: components["schemas"]["ScriptMetadata"];
-			status: components["schemas"]["ScriptVersionStatus"];
-			version_id: components["schemas"]["Id"];
-		};
-		/** @enum {string} */
-		ScriptVersionStatus: "Processing" | "Valid" | "Invalid";
 		/** @description Search index statistics for a channel */
 		SearchIndexStats: {
 			/**
@@ -22585,6 +24694,10 @@ export interface components {
 		 * @enum {string}
 		 */
 		SelectPluginReason: "Url" | "Response";
+		/** @description a semantic version string
+		 *
+		 *     matches the format `major.minor.version-extra`. major, minor, and version are numbers, and `-extra` is optional and arbitrary alphanumeric. */
+		Semver: string;
 		/** @description serialized document */
 		Serdoc: {
 			components: components["schemas"]["Component"][];
