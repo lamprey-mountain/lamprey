@@ -11,7 +11,6 @@ use tracing::{error, info};
 
 use crate::{Error, Result, ServerStateInner};
 
-#[derive(Clone)]
 pub struct ServiceEmail {
     state: Arc<ServerStateInner>,
     mailer: AsyncSmtpTransport<Tokio1Executor>,
@@ -35,7 +34,7 @@ impl ServiceEmail {
 
         for i in 0..num_workers {
             info!("Email worker {} started", i);
-            tokio::spawn(self.clone().worker());
+            tokio::spawn(Self::worker(Arc::clone(&self.state)));
         }
     }
 
@@ -60,9 +59,10 @@ impl ServiceEmail {
         Ok(())
     }
 
-    async fn worker(self) {
+    async fn worker(state: Arc<ServerStateInner>) {
         loop {
-            match self.process_email_queue_item().await {
+            let srv = state.services();
+            match srv.email.process_email_queue_item().await {
                 Ok(processed) => {
                     if !processed {
                         sleep(Duration::from_secs(5)).await; // No emails to process, wait

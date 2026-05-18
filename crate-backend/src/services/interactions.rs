@@ -124,7 +124,7 @@ impl ServiceInteractions {
         };
 
         self.state.broadcast(MessageSync::InteractionCreate {
-            interaction: inter.clone(),
+            interaction: Box::new(inter.clone()),
             user_id: user_id,
             nonce: nonce.clone(),
         })?;

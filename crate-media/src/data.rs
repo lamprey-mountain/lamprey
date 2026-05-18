@@ -27,7 +27,7 @@ impl From<DbMediaData> for Media {
         match value {
             DbMediaData::V1(media) => media.into(),
             DbMediaData::V2(media) => media,
-            DbMediaData::Raw(db_media_raw) => db_media_raw.into()
+            DbMediaData::Raw(db_media_raw) => db_media_raw.into(),
         }
     }
 }

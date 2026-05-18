@@ -227,9 +227,13 @@ impl MemberListSyncer {
                     let msg = match val {
                         Some(Ok(MemberListEvent::Broadcast(msg))) => msg,
                         Some(Ok(MemberListEvent::Unicast(conn_id, msg))) if conn_id == self.conn_id => msg,
-                        Some(Ok(_)) => continue, // skip other unicasts
+                        Some(Ok(_)) => {
+                            continue // skip other unicasts
+                            },
                         Some(Err(e)) => return Err(Error::Internal(format!("member list stream error: {e}"))),
-                        None => continue, // stream closed, try next
+                        None => {
+                            panic!("stream closed");
+                            continue}, // stream closed, try next
                     };
 
                     // PERF: maybe don't clone msg multiple times?
@@ -241,7 +245,9 @@ impl MemberListSyncer {
                         }
                     }
                 }
-                else => std::future::pending().await,
+                else => {
+                    std::future::pending().await
+                },
             }
         }
     }

@@ -183,6 +183,8 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, ws: WebSocket) {
         }
         if let Err(err) = conn.drain(&mut *transport).await {
             tracing::error!("failed to drain messages: {err}");
+        } else {
+            tracing::trace!("did a sync loop");
         }
     }
 

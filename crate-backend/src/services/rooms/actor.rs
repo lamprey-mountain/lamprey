@@ -84,11 +84,11 @@ impl Actor for RoomActor {
         _actor_ref: WeakActorRef<Self>,
         _reason: kameo::prelude::ActorStopReason,
     ) -> std::result::Result<(), Self::Error> {
-        // Cleanup: unregister all members from the cache
+        // cleanup: unregister all members from the cache
         if let RoomSnapshot::Ready(data) = self.snapshot.as_ref() {
-            let rooms = self.state.services().rooms.clone();
+            let srv = self.state.services();
             for user_id in data.members.keys() {
-                rooms.member_unregister(*user_id, self.room_id);
+                srv.rooms.member_unregister(*user_id, self.room_id);
             }
         }
         Ok(())
@@ -98,9 +98,7 @@ impl Actor for RoomActor {
 impl RoomActor {
     pub fn spawn_room(room_id: RoomId, state: Arc<ServerStateInner>) -> RoomHandle {
         let (snapshot_tx, snapshot_rx) = watch::channel(Arc::new(RoomSnapshot::Loading));
-
-        let actor_ref = Spawn::spawn((room_id, state.clone(), snapshot_tx));
-
+        let actor_ref = RoomActor::spawn((room_id, state.clone(), snapshot_tx));
         RoomHandle {
             room_id,
             actor_ref,
@@ -160,7 +158,6 @@ impl RoomActor {
             users.into_iter().map(|u| (u.id, Arc::new(u))).collect();
 
         let mut members = ImMap::new();
-        let rooms_srv = srv.rooms.clone();
         for member in room_members {
             let user_id = member.user_id;
             if let Some(user) = users_map.get(&user_id) {
@@ -171,7 +168,7 @@ impl RoomActor {
                         user: user.clone(),
                     },
                 );
-                rooms_srv.member_register(user_id, self.room_id);
+                srv.rooms.member_register(user_id, self.room_id);
             }
         }
 
@@ -259,7 +256,6 @@ impl RoomActor {
             users.into_iter().map(|u| (u.id, Arc::new(u))).collect();
 
         let mut members = ImMap::new();
-        let rooms_srv = srv.rooms.clone();
         for member in room_members {
             let user_id = member.user_id;
             if let Some(user) = users_map.get(&user_id) {
@@ -270,7 +266,7 @@ impl RoomActor {
                         user: user.clone(),
                     },
                 );
-                rooms_srv.member_register(user_id, self.room_id);
+                srv.rooms.member_register(user_id, self.room_id);
             }
         }
 
@@ -284,7 +280,7 @@ impl RoomActor {
         Ok(())
     }
 
-    async fn handle_sync(&mut self, event: MessageSync) -> Result<()> {
+    fn handle_sync(&mut self, event: MessageSync) -> Result<()> {
         let mut snapshot_data = match self.snapshot.as_ref() {
             RoomSnapshot::Ready(data) | RoomSnapshot::WithoutMembers(data) => data.as_ref().clone(),
             _ => return Ok(()),
@@ -611,7 +607,7 @@ impl Message<SyncMessage> for RoomActor {
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
         self.last_active = Instant::now();
-        self.handle_sync(msg.sync).await
+        self.handle_sync(msg.sync)
     }
 }
 

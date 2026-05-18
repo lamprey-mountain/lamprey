@@ -108,10 +108,10 @@ impl ServiceCache {
     /// clean up orphaned user_rooms entries
     async fn janitor_cleanup(&self) {
         let mut to_remove = Vec::new();
-        let rooms_srv = self.state.services().rooms.clone();
-        let actors = rooms_srv.actors.clone();
+        let srv = self.state.services();
+        let actors = srv.rooms.actors.clone();
 
-        for entry in rooms_srv.user_rooms.iter() {
+        for entry in srv.rooms.user_rooms.iter() {
             let (user_id, user_rooms) = entry.pair();
             let mut orphaned = Vec::new();
 
@@ -131,7 +131,7 @@ impl ServiceCache {
         }
 
         for user_id in to_remove {
-            rooms_srv.user_rooms.remove(&user_id);
+            srv.rooms.user_rooms.remove(&user_id);
         }
     }
 
@@ -140,8 +140,8 @@ impl ServiceCache {
         room_id: RoomId,
         ensure_members: bool,
     ) -> BoxFuture<'_, Result<Arc<RoomSnapshot>>> {
-        let rooms = self.state.services().rooms.clone();
-        Box::pin(async move { rooms.load_room(room_id, ensure_members).await })
+        let srv = self.state.services();
+        Box::pin(async move { srv.rooms.load_room(room_id, ensure_members).await })
     }
 
     /// mark a room as unavailable
@@ -188,6 +188,11 @@ impl ServiceCache {
 
     /// get a user from the cache, loading from the database if not present
     pub async fn user_get(&self, user_id: UserId) -> Result<User> {
+        // FIXME: this used to hang, and im not sure why try_get_with fixes it. investigate this further.
+        if let Some(user) = self.users.get(&user_id).await {
+            return Ok(user);
+        }
+
         self.users
             .try_get_with(user_id, self.state.data().user_get(user_id))
             .await
@@ -206,6 +211,10 @@ impl ServiceCache {
 
     /// get a user's global config from the cache, loading from the database if not present
     pub async fn preferences_get(&self, user_id: UserId) -> Result<PreferencesGlobal> {
+        if let Some(pref) = self.preferences_global.get(&user_id).await {
+            return Ok(pref);
+        }
+
         self.preferences_global
             .try_get_with(user_id, self.state.data().preferences_get(user_id))
             .await
@@ -223,6 +232,10 @@ impl ServiceCache {
         user_id: UserId,
         room_id: RoomId,
     ) -> Result<PreferencesRoom> {
+        if let Some(pref) = self.preferences_room.get(&(user_id, room_id)).await {
+            return Ok(pref);
+        }
+
         self.preferences_room
             .try_get_with(
                 (user_id, room_id),
@@ -243,6 +256,10 @@ impl ServiceCache {
         user_id: UserId,
         channel_id: ChannelId,
     ) -> Result<PreferencesChannel> {
+        if let Some(pref) = self.preferences_channel.get(&(user_id, channel_id)).await {
+            return Ok(pref);
+        }
+
         self.preferences_channel
             .try_get_with(
                 (user_id, channel_id),
@@ -283,6 +300,10 @@ impl ServiceCache {
 
     /// get an emoji from the cache, loading from the database if not present
     pub async fn emoji_get(&self, emoji_id: EmojiId) -> Result<EmojiCustom> {
+        if let Some(emoji) = self.emojis.get(&emoji_id).await {
+            return Ok(emoji);
+        }
+
         self.emojis
             .try_get_with(emoji_id, self.state.data().emoji_get(emoji_id))
             .await
@@ -472,8 +493,8 @@ impl ServiceCache {
         }
 
         if let Some(room_id) = cache_invalidate_room_id(event) {
-            let rooms = self.state.services().rooms.clone();
-            if let Some(handle) = rooms.actors.get(&room_id).await {
+            let srv = self.state.services();
+            if let Some(handle) = srv.rooms.actors.get(&room_id).await {
                 let _ = handle
                     .actor_ref
                     .tell(SyncMessage {
@@ -530,15 +551,15 @@ impl ServiceCache {
                 }
 
                 // Find all rooms this user is in and notify their actors
-                let rooms_srv = self.state.services().rooms.clone();
-                let rooms_to_notify = if let Some(rooms_set) = rooms_srv.user_rooms.get(user_id) {
+                let srv = self.state.services();
+                let rooms_to_notify = if let Some(rooms_set) = srv.rooms.user_rooms.get(user_id) {
                     rooms_set.iter().map(|r| *r).collect::<Vec<_>>()
                 } else {
                     Vec::new()
                 };
 
                 for room_id in rooms_to_notify {
-                    if let Some(handle) = rooms_srv.actors.get(&room_id).await {
+                    if let Some(handle) = srv.rooms.actors.get(&room_id).await {
                         let _ = handle
                             .actor_ref
                             .tell(SyncMessage {
@@ -552,15 +573,15 @@ impl ServiceCache {
                 self.users.insert(user.id, user.clone()).await;
 
                 // Find all rooms this user is in and notify their actors
-                let rooms_srv = self.state.services().rooms.clone();
-                let rooms_to_notify = if let Some(rooms_set) = rooms_srv.user_rooms.get(&user.id) {
+                let srv = self.state.services();
+                let rooms_to_notify = if let Some(rooms_set) = srv.rooms.user_rooms.get(&user.id) {
                     rooms_set.iter().map(|r| *r).collect::<Vec<_>>()
                 } else {
                     Vec::new()
                 };
 
                 for room_id in rooms_to_notify {
-                    if let Some(handle) = rooms_srv.actors.get(&room_id).await {
+                    if let Some(handle) = srv.rooms.actors.get(&room_id).await {
                         let _ = handle
                             .actor_ref
                             .tell(SyncMessage {

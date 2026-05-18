@@ -15,7 +15,8 @@ use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 use kameo::actor::{ActorRef, Spawn};
 use tokio::sync::broadcast;
-use tracing::{debug, error};
+use tokio::sync::broadcast::error::RecvError;
+use tracing::{debug, error, warn};
 use yrs::ReadTxn;
 use yrs::{updates::decoder::Decode, Doc, StateVector, Transact, Update};
 
@@ -208,11 +209,12 @@ impl ServiceDocuments {
 
     /// unload all documents, for shutting down
     pub async fn unload_all(&self) {
-        let mut futures = FuturesUnordered::new();
+        // collect edit contexts before unloading to prevent deadlock
+        let ids: Vec<EditContextId> = self.edit_contexts.iter().map(|e| *e.key()).collect();
 
-        for entry in &self.edit_contexts {
-            let context_id = *entry.key();
-            futures.push(self.unload(context_id));
+        let mut futures = FuturesUnordered::new();
+        for id in ids {
+            futures.push(self.unload(id));
         }
 
         while let Some(r) = futures.next().await {
@@ -720,7 +722,15 @@ impl DocumentSyncer {
                                     });
                                 }
                             },
-                            Err(_) => continue,
+                            Err(RecvError::Closed) => {
+                                error!("sender died, unsubscribind");
+                                self.current_rx = None;
+                                continue;
+                            }
+                            Err(RecvError::Lagged(n)) => {
+                                warn!("receiver lagged and skipped {n} messages");
+                                continue;
+                            }
                         }
                     }
                     _ = self.query_rx.changed() => continue,

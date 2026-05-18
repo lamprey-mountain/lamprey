@@ -5,11 +5,11 @@ pub use lamprey_backend_data_postgres as data;
 pub mod error;
 pub mod metrics;
 pub mod routes;
+pub mod serve;
 pub mod services;
 pub mod state;
 pub mod sync;
 pub mod types;
-pub mod serve;
 
 pub use error::{Error, Result};
 pub use state::{ServerState, ServerStateInner};

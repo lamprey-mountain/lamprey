@@ -303,6 +303,8 @@ pub enum MessagePayload {
     },
 }
 
+// WARNING: this enum is getting VERY big. it's caused a few stack overflow issues by now.
+// i might require it to be in a Box/Arc everywhere, or redo the enum
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -993,7 +995,7 @@ pub enum MessageSync {
     ///
     /// sent to the the user who created this and the target application
     InteractionCreate {
-        interaction: Interaction,
+        interaction: Box<Interaction>,
 
         user_id: UserId,
 

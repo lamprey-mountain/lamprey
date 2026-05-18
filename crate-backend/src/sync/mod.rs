@@ -322,10 +322,11 @@ impl Connection {
             None
         };
 
-        let mut d = self.s.data();
         let application = if let Some(application_id) = session.app_id {
+            let mut d = self.s.data();
             Some(Box::new(d.application_get(application_id).await?))
         } else if let Some(uid) = session.user_id() {
+            let mut d = self.s.data();
             d.application_get((*uid).into()).await.ok().map(Box::new)
         } else {
             None

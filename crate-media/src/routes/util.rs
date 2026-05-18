@@ -215,8 +215,7 @@ pub fn probably_can_thumbnail(media: &Media) -> bool {
     match &media.metadata {
         MediaMetadata::Image { .. } | MediaMetadata::Video { .. } => true,
         MediaMetadata::File | MediaMetadata::Text => {
-            if media.content_type.starts_with("image/")
-                || media.content_type.starts_with("video/")
+            if media.content_type.starts_with("image/") || media.content_type.starts_with("video/")
             {
                 true
             } else {

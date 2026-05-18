@@ -574,7 +574,10 @@ fn build_extract_impl(fields: &[EndpointField], path: &LitStr) -> syn::Result<To
 // encode_response
 // ---------------------------------------------------------------------------
 
-fn build_encode_response_fn(args: &EndpointArgs, response_struct: &ItemStruct) -> syn::Result<TokenStream> {
+fn build_encode_response_fn(
+    args: &EndpointArgs,
+    response_struct: &ItemStruct,
+) -> syn::Result<TokenStream> {
     let status_code = if let Some(spec) = args.responses.first() {
         let s = &spec.status;
         quote! { ::http::StatusCode::from_u16(#s).unwrap_or(::http::StatusCode::OK) }
@@ -620,7 +623,10 @@ fn build_encode_response_fn(args: &EndpointArgs, response_struct: &ItemStruct) -
 // extract_response (client-side)
 // ---------------------------------------------------------------------------
 
-fn build_extract_response_fn(args: &EndpointArgs, response_struct: &ItemStruct) -> syn::Result<TokenStream> {
+fn build_extract_response_fn(
+    args: &EndpointArgs,
+    response_struct: &ItemStruct,
+) -> syn::Result<TokenStream> {
     let status_check = if !args.responses.is_empty() {
         let codes: Vec<_> = args.responses.iter().map(|r| &r.status).collect();
         quote! {
@@ -1265,7 +1271,9 @@ fn build_openapi_ext_fn(
     if !args.responses.is_empty() {
         for spec in &args.responses {
             let status_str = spec.status.base10_digits();
-            let description = spec.description.as_ref()
+            let description = spec
+                .description
+                .as_ref()
                 .map(|d| d.value())
                 .unwrap_or_else(|| "Success".to_string());
 

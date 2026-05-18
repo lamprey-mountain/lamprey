@@ -28,6 +28,11 @@ impl ServiceSessions {
     }
 
     pub async fn get(&self, session_id: SessionId) -> Result<Session> {
+        // FIXME: investigate why getting the cache manually prevents a hang???
+        if let Some(session) = self.cache_sessions.get(&session_id).await {
+            return Ok(session);
+        }
+
         self.cache_sessions
             .try_get_with(session_id, self.state.data().session_get(session_id))
             .await
@@ -35,6 +40,10 @@ impl ServiceSessions {
     }
 
     pub async fn get_by_token(&self, token: SessionToken) -> Result<Session> {
+        // if let Some(session) = self.cache_tokens.get(&token).await {
+        //     return Ok(session);
+        // }
+
         let s = self
             .cache_tokens
             .try_get_with(token.clone(), self.state.data().session_get_by_token(token))

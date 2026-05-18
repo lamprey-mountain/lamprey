@@ -15,6 +15,11 @@ use error::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    #[cfg(feature = "debug")]
+    unsafe {
+        backtrace_on_stack_overflow::enable()
+    }
+
     let _ = dotenvy::dotenv();
 
     rustls::crypto::ring::default_provider()

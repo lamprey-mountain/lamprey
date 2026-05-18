@@ -11,6 +11,8 @@ use lamprey_script::{Engine, Executor, Limits};
 use std::collections::VecDeque;
 use std::sync::Arc;
 use tokio::sync::broadcast;
+use tokio::sync::broadcast::error::RecvError;
+use tracing::{error, warn};
 
 use crate::error::Result;
 use crate::{Error, ServerStateInner};
@@ -515,7 +517,15 @@ impl ScriptSyncer {
                             Ok(msg) => {
                                 return Ok(msg);
                             }
-                            Err(_) => continue,
+                            Err(RecvError::Closed) => {
+                                error!("sender died, unsubscribind");
+                                self.current_rx = None;
+                                continue;
+                            }
+                            Err(RecvError::Lagged(n)) => {
+                                warn!("receiver lagged and skipped {n} messages");
+                                continue;
+                            }
                         }
                     }
                     _ = self.query_rx.changed() => continue,

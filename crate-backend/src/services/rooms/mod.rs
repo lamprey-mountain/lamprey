@@ -33,7 +33,6 @@ use crate::{Error, ServerStateInner};
 
 use futures::future::BoxFuture;
 
-#[derive(Clone)]
 pub struct ServiceRooms {
     state: Arc<ServerStateInner>,
     idempotency_keys: Cache<String, Room>,
