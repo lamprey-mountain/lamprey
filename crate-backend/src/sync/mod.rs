@@ -2,7 +2,8 @@ use common::v1::types::{
     document::{DocumentStateVector, DocumentUpdate},
     sync::{SyncParams, SyncResume},
     voice::VoiceStateScreenshare,
-    ChannelId, ConnectionId, SessionToken, UserId,
+    ChannelId, ConnectionId, SessionToken, SyncSubscribeDocument, SyncSubscribeMemberList,
+    SyncSubscribeScript, SyncSubscription, UserId,
 };
 use std::sync::Arc;
 
@@ -19,22 +20,17 @@ use tracing::{debug, error, trace, warn};
 
 pub mod connection_queue;
 pub mod permissions;
+pub mod subscriptions;
 pub mod transport;
 pub mod util;
 
+use crate::error::{Error, Result};
+use crate::sync::util::{ConnectionState, Timeout, HEARTBEAT_TIME, MAX_QUEUE_LEN};
 use crate::sync::{
-    connection_queue::ConnectionQueue, permissions::AuthCheck, transport::TransportSink,
+    connection_queue::ConnectionQueue, permissions::AuthCheck,
+    subscriptions::ConnectionSubscriptions, transport::TransportSink,
 };
 use crate::ServerState;
-use crate::{
-    error::{Error, Result},
-    services::documents::DocumentSyncer,
-    services::scripts::ScriptSyncer,
-};
-use crate::{
-    services::member_lists::{syncer::MemberListSyncer, util::MemberListTarget},
-    sync::util::{ConnectionState, Timeout, HEARTBEAT_TIME, MAX_QUEUE_LEN},
-};
 
 type WsMessage = axum::extract::ws::Message;
 
@@ -43,25 +39,18 @@ pub struct Connection {
     s: Arc<ServerState>,
     queue: ConnectionQueue,
     id: ConnectionId,
-    pub member_list: MemberListSyncer,
-    pub document: Box<DocumentSyncer>,
-    pub scripts: Box<ScriptSyncer>,
+    pub subscriptions: Box<ConnectionSubscriptions>,
 }
 
 impl Connection {
     pub fn new(s: Arc<ServerState>, _params: SyncParams) -> Self {
         let id = ConnectionId::new();
 
-        let member_list = s.services().member_lists.create_syncer(id.into());
-        let scripts = s.services().scripts.create_syncer(id);
-
         Self {
             state: ConnectionState::Unauthed,
             queue: ConnectionQueue::new(MAX_QUEUE_LEN),
             id,
-            member_list,
-            document: Box::new(s.services().documents.create_syncer(id)),
-            scripts: Box::new(scripts),
+            subscriptions: Box::new(ConnectionSubscriptions::new(s.clone(), id)),
             s,
         }
     }
@@ -69,9 +58,7 @@ impl Connection {
     pub async fn disconnect(&mut self) {
         if let Some(session) = self.state.session() {
             if let Some(user_id) = session.user_id() {
-                if let Err(err) = self.document.handle_disconnect(user_id).await {
-                    error!("failed to clear document presence: {}", err);
-                }
+                self.subscriptions.disconnect(user_id).await;
             }
         }
 
@@ -139,34 +126,28 @@ impl Connection {
                     .state
                     .session()
                     .ok_or::<Error>(SyncError::Unauthenticated.into())?;
-                let srv = self.s.services();
+                let user_id = session.user_id().ok_or(Error::UnauthSession)?;
 
-                // Support optional user_id for public room access
-                let user_id = session.user_id();
-
-                // FIXME: validate that *exactly* one of room_id or thread_id is provided
-
-                let target = if let Some(room_id) = room_id {
-                    let perms = srv.perms.for_room2(user_id, room_id).await?;
-                    // For SERVER_ROOM_ID, require authentication
-                    if room_id == SERVER_ROOM_ID {
-                        let _uid = user_id.ok_or(Error::UnauthSession)?;
-                        perms.ensure(Permission::ServerOversee)?;
-                    }
-                    Some(MemberListTarget::Room(room_id))
-                } else if let Some(thread_id) = thread_id {
-                    let perms = srv.perms.for_channel2(user_id, thread_id).await?;
-                    perms.ensure(Permission::ChannelView)?;
-                    Some(MemberListTarget::Channel(thread_id))
+                let member_lists = if room_id.is_some() || thread_id.is_some() {
+                    vec![SyncSubscribeMemberList {
+                        room_id,
+                        channel_id: thread_id,
+                        ranges,
+                    }]
                 } else {
-                    None
+                    vec![]
                 };
 
-                if let Some(target) = target {
-                    self.member_list.set_query(target, &ranges).await?;
-                } else {
-                    self.member_list.clear_query().await;
-                }
+                self.subscriptions
+                    .set_subscription(
+                        SyncSubscription {
+                            member_lists: Some(member_lists),
+                            documents: None,
+                            scripts: None,
+                        },
+                        user_id,
+                    )
+                    .await?;
             }
             MessageClient::VoiceDispatch { user_id, payload } => {
                 Box::pin(self.handle_voice_dispatch(user_id, payload)).await?
@@ -176,8 +157,26 @@ impl Connection {
                 branch_id,
                 state_vector,
             } => {
-                Box::pin(self.handle_document_subscribe(channel_id, branch_id, state_vector))
-                    .await?
+                let session = self
+                    .state
+                    .session()
+                    .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+                let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+
+                self.subscriptions
+                    .set_subscription(
+                        SyncSubscription {
+                            documents: Some(vec![SyncSubscribeDocument {
+                                channel_id,
+                                branch_id,
+                                state_vector,
+                            }]),
+                            member_lists: None,
+                            scripts: None,
+                        },
+                        user_id,
+                    )
+                    .await?;
             }
             MessageClient::DocumentEdit {
                 channel_id,
@@ -201,7 +200,30 @@ impl Connection {
             MessageClient::ScriptSubscribe {
                 channel_id,
                 script_id,
-            } => Box::pin(self.handle_script_subscribe(channel_id, script_id)).await?,
+            } => {
+                let session = self
+                    .state
+                    .session()
+                    .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+                let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+
+                self.subscriptions
+                    .set_subscription(
+                        SyncSubscription {
+                            scripts: Some(vec![SyncSubscribeScript {
+                                channel_id,
+                                script_id,
+                            }]),
+                            documents: None,
+                            member_lists: None,
+                        },
+                        user_id,
+                    )
+                    .await?;
+            }
+            MessageClient::Subscribe(subscribe) => {
+                Box::pin(self.handle_subscription(subscribe)).await?
+            }
         }
         Ok(())
     }
@@ -217,15 +239,16 @@ impl Connection {
             .state
             .session()
             .ok_or::<Error>(SyncError::Unauthenticated.into())?;
-
-        // Document presence requires authentication
         let user_id = session.user_id().ok_or(Error::UnauthSession)?;
 
         let srv = self.s.services();
         let perms = srv.perms.for_channel(user_id, channel_id).await?;
         perms.ensure(Permission::ChannelView)?;
 
-        if !self.document.is_subscribed(&(channel_id, branch_id)) {
+        if !self
+            .subscriptions
+            .is_document_subscribed(channel_id, branch_id)
+        {
             return Err(Error::BadStatic("not subscribed to this document"));
         }
 
@@ -241,23 +264,16 @@ impl Connection {
         Ok(())
     }
 
-    async fn handle_script_subscribe(
-        &mut self,
-        channel_id: ChannelId,
-        script_id: RedexId,
-    ) -> Result<()> {
+    async fn handle_subscription(&mut self, subscribe: SyncSubscription) -> Result<()> {
         let session = self
             .state
             .session()
             .ok_or::<Error>(SyncError::Unauthenticated.into())?;
         let user_id = session.user_id().ok_or(Error::UnauthSession)?;
 
-        let srv = self.s.services();
-        let perms = srv.perms.for_channel2(Some(user_id), channel_id).await?;
-        perms.ensure(Permission::ChannelView)?;
-
-        // Set the script syncer to subscribe to this script
-        self.scripts.set_context_id(channel_id, script_id).await?;
+        self.subscriptions
+            .set_subscription(subscribe, user_id)
+            .await?;
 
         Ok(())
     }
@@ -415,9 +431,6 @@ impl Connection {
             // TODO: send document presence
         }
 
-        self.member_list.set_user_id(session.user_id()).await;
-        self.document.set_user_id(session.user_id()).await;
-        self.scripts.set_user_id(session.user_id()).await;
         self.state = ConnectionState::Authenticated { session };
         Ok(())
     }
@@ -531,51 +544,6 @@ impl Connection {
         Ok(())
     }
 
-    async fn handle_document_subscribe(
-        &mut self,
-        channel_id: ChannelId,
-        branch_id: DocumentBranchId,
-        state_vector: Option<DocumentStateVector>,
-    ) -> Result<()> {
-        let session = self
-            .state
-            .session()
-            .ok_or::<Error>(SyncError::Unauthenticated.into())?;
-        let user_id = session.user_id().ok_or(Error::UnauthSession)?;
-        let srv = self.s.services();
-        let perms = srv.perms.for_channel(user_id, channel_id).await?;
-        perms.ensure(Permission::ChannelView)?;
-
-        let branch = self
-            .s
-            .data()
-            .document_branch_get(channel_id, branch_id)
-            .await;
-        match branch {
-            Ok(branch) => {
-                if branch.private && branch.creator_id != user_id {
-                    return Err(Error::ApiError(ApiError::from_code(
-                        ErrorCode::UnknownDocumentBranch,
-                    )));
-                }
-            }
-            Err(_) if *branch_id == *channel_id => {
-                // this is the default branch
-            }
-            Err(_) => {
-                return Err(Error::ApiError(ApiError::from_code(
-                    ErrorCode::UnknownDocumentBranch,
-                )));
-            }
-        }
-
-        self.document
-            .set_context_id((channel_id, branch_id), state_vector)
-            .await?;
-
-        Ok(())
-    }
-
     async fn handle_document_edit(
         &mut self,
         channel_id: ChannelId,
@@ -592,13 +560,17 @@ impl Connection {
         perms.ensure(Permission::ChannelView)?;
         perms.ensure(Permission::DocumentEdit)?;
 
-        if !self.document.is_subscribed(&(channel_id, branch_id)) {
+        if !self
+            .subscriptions
+            .is_document_subscribed(channel_id, branch_id)
+        {
             return Err(Error::BadStatic("not subscribed to this document"));
         }
 
         srv.documents
             .apply_update((channel_id, branch_id), user_id, Some(self.id), &update.0)
             .await?;
+
         Ok(())
     }
 

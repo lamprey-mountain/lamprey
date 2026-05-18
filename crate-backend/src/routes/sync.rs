@@ -46,65 +46,15 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, ws: WebSocket) {
 
     loop {
         tokio::select! {
-            member_list_res = conn.member_list.poll() => {
-                match member_list_res {
+            sub_res = conn.subscriptions.poll() => {
+                match sub_res {
                     Ok(msg) => {
                         if let Err(err) = conn.queue_message(Box::new(msg), None).await {
-                            tracing::error!("failed to queue member list message: {err}");
+                            tracing::error!("failed to queue subscription message: {err}");
                         }
                     }
                     Err(err) => {
-                        tracing::error!("member list poll error: {err}");
-                        let err_str: String = err.to_string();
-                        if let Err(send_err) = transport.send(MessageEnvelope {
-                            payload: MessagePayload::Error { error: err_str, code: None },
-                        }).await {
-                            tracing::error!("failed to send error message: {send_err}");
-                        }
-                        if let Err(err) = conn.drain(&mut *transport).await {
-                            tracing::error!("failed to drain messages on error: {err}");
-                        }
-                        if let Err(err) = transport.close().await {
-                            tracing::error!("failed to close websocket: {err}");
-                        }
-                        break;
-                    }
-                }
-            }
-            doc_res = conn.document.poll() => {
-                match doc_res {
-                    Ok(msg) => {
-                        if let Err(err) = conn.queue_message(Box::new(msg), None).await {
-                            tracing::error!("failed to queue document message: {err}");
-                        }
-                    }
-                    Err(err) => {
-                        tracing::error!("document poll error: {err}");
-                        let err_str: String = err.to_string();
-                        if let Err(send_err) = transport.send(MessageEnvelope {
-                            payload: MessagePayload::Error { error: err_str, code: None },
-                        }).await {
-                            tracing::error!("failed to send error message: {send_err}");
-                        }
-                        if let Err(err) = conn.drain(&mut *transport).await {
-                            tracing::error!("failed to drain messages on error: {err}");
-                        }
-                        if let Err(err) = transport.close().await {
-                            tracing::error!("failed to close websocket: {err}");
-                        }
-                        break;
-                    }
-                }
-            }
-            script_res = conn.scripts.poll() => {
-                match script_res {
-                    Ok(msg) => {
-                        if let Err(err) = conn.queue_message(Box::new(msg), None).await {
-                            tracing::error!("failed to queue script message: {err}");
-                        }
-                    }
-                    Err(err) => {
-                        tracing::error!("script poll error: {err}");
+                        tracing::error!("subscription poll error: {err}");
                         let err_str: String = err.to_string();
                         if let Err(send_err) = transport.send(MessageEnvelope {
                             payload: MessagePayload::Error { error: err_str, code: None },

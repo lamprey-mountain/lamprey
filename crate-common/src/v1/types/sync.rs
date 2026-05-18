@@ -99,6 +99,7 @@ pub enum MessageClient {
     },
 
     /// subscribe to a range of room or thread members. you can subscribe to one list at a time.
+    // TODO: remove
     MemberListSubscribe {
         // TODO: rename thread_id -> channel_id
         // EXACTLY one of room_id or thread_id must be provided
@@ -109,6 +110,7 @@ pub enum MessageClient {
         ranges: Vec<(u64, u64)>,
     },
 
+    // TODO: remove? (unsure how to handle state vectors)
     DocumentSubscribe {
         channel_id: ChannelId,
         branch_id: DocumentBranchId,
@@ -141,15 +143,14 @@ pub enum MessageClient {
     },
 
     /// subscribe to a script
+    // TODO: remove
     ScriptSubscribe {
         channel_id: ChannelId,
         script_id: RedexId,
     },
 
-    // TODO: centralize into one single Subscribe message
-    #[cfg(any())]
     /// subscribe to some resources
-    Subscribe(SyncSubscribe),
+    Subscribe(SyncSubscription),
 }
 
 /// metadata for this connection
@@ -172,34 +173,47 @@ pub struct ConnectionProperties {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct SyncSubscribe {
+pub struct SyncSubscription {
     /// the member lists to subscribe to
     #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
     #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub member_lists: Option<Vec<SyncSubscribeMemberList>>,
 
     /// the documents to subscribe to
     #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
     #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub documents: Option<Vec<SyncSubscribeDocument>>,
 
-    #[cfg(any())]
-    /// the user profiles to subscribe to
+    /// the scripts to subscribe to
     #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
     #[cfg_attr(feature = "validator", validate(length(max = 8)))]
-    pub users: Option<Vec<UserId>>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub scripts: Option<Vec<SyncSubscribeScript>>,
+    // TODO: more subscriptions
+    // /// the user profiles to subscribe to
+    // #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
+    // #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    // pub users: Option<Vec<UserId>>,
 
-    #[cfg(any())]
-    /// the invite to subscribe to
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
-    pub invites: Option<Vec<InviteCode>>,
+    // /// the invite to subscribe to
+    // #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
+    // #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    // pub invites: Option<Vec<InviteCode>>,
 
-    #[cfg(any())]
-    /// the rooms to subscribe to (lurking)
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
-    pub rooms: Option<Vec<RoomId>>,
+    // /// the rooms to subscribe to (lurking)
+    // #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
+    // #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    // pub rooms: Option<Vec<RoomId>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct SyncSubscribeScript {
+    pub channel_id: ChannelId,
+    pub script_id: RedexId,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
