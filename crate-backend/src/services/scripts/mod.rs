@@ -90,16 +90,17 @@ impl ServiceScripts {
         format: RedexFormat,
     ) -> Result<Box<dyn Executor>> {
         let bytes = self.state.services().media.download(media_id).await?;
-        let source = str::from_utf8(&bytes).unwrap();
         let loaded = match format {
-            RedexFormat::Javascript => self
-                .engine
-                .load_js(redex_id, redex_version_id, "strobbery", source)
-                .await
-                .unwrap(),
+            RedexFormat::Javascript => {
+                let source = std::str::from_utf8(&bytes)?;
+                self.engine
+                    .load_js(redex_id, redex_version_id, "strobbery", source)
+                    .await
+                    .unwrap()
+            }
             RedexFormat::Webassembly => self
                 .engine
-                .load_wasm(redex_id, redex_version_id, "strobbery", source)
+                .load_wasm(redex_id, redex_version_id, "strobbery", &bytes)
                 .await
                 .unwrap(),
         };
@@ -225,19 +226,31 @@ impl ServiceScripts {
             .media
             .download(script.latest_version.location.media_id().unwrap())
             .await?;
-        let source = str::from_utf8(&bytes).unwrap();
 
-        // TODO: module name
-        let loaded = self
-            .engine
-            .load_js(
-                redex_id,
-                script.latest_version.version_id,
-                "strobbery",
-                source,
-            )
-            .await
-            .unwrap();
+        let loaded = match script.latest_version.format {
+            RedexFormat::Javascript => {
+                let source = std::str::from_utf8(&bytes)?;
+                self.engine
+                    .load_js(
+                        redex_id,
+                        script.latest_version.version_id,
+                        "strobbery",
+                        source,
+                    )
+                    .await
+                    .unwrap()
+            }
+            RedexFormat::Webassembly => self
+                .engine
+                .load_wasm(
+                    redex_id,
+                    script.latest_version.version_id,
+                    "strobbery",
+                    &bytes,
+                )
+                .await
+                .unwrap(),
+        };
 
         Ok(loaded)
     }

@@ -79,9 +79,9 @@ impl WasmManager {
         redex_id: RedexId,
         redex_version_id: RedexVerId,
         _module_name: &str,
-        module_source: &str,
+        module_bytes: &[u8],
     ) -> Result<WasmExecutor> {
-        let component = Component::new(&self.engine, module_source)?;
+        let component = Component::new(&self.engine, module_bytes)?;
         let mut linker = Linker::new(&self.engine);
 
         wit::ScriptWorld::add_to_linker::<_, HasSelf<_>>(&mut linker, |state: &mut WasmState| {

@@ -64,11 +64,11 @@ impl Engine {
         script_id: RedexId,
         script_version_id: RedexVerId,
         module_name: &str,
-        module_source: &str,
+        module_bytes: &[u8],
     ) -> Result<Box<dyn Executor>> {
         let exec = self
             .wasm
-            .load(script_id, script_version_id, module_name, module_source)
+            .load(script_id, script_version_id, module_name, module_bytes)
             .await?;
         Ok(Box::new(exec))
     }
