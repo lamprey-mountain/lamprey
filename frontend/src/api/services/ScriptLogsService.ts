@@ -24,11 +24,11 @@ export class ScriptLogsService extends BaseService<RunLogEntry> {
 		this.upsertBulk(items);
 	}
 
-	subscribe(channel_id: string, script_id: ScriptId) {
+	subscribe(channel_id: string, redex_id: ScriptId) {
 		this.client.send({
 			type: "ScriptSubscribe",
 			channel_id,
-			script_id,
+			script_id: redex_id,
 		});
 	}
 
@@ -38,23 +38,23 @@ export class ScriptLogsService extends BaseService<RunLogEntry> {
 
 	async list(
 		channel_id: string,
-		script_id: ScriptId,
-		run_id: RunId,
+		redex_id: ScriptId,
+		eval_id: RunId,
 	): Promise<PaginationResponse<RunLogEntry>> {
 		const data = await this.retryWithBackoff(() =>
 			this.client.http.GET(
-				"/api/v1/channel/{channel_id}/script/{script_id}/run/{run_id}/log",
+				"/api/v1/channel/{channel_id}/redex/{redex_id}/eval/{eval_id}/log",
 				{
-					params: { path: { channel_id, script_id, run_id } },
+					params: { path: { channel_id, redex_id, eval_id } },
 				},
 			),
 		);
-		this.processLogs(run_id, data.items);
+		this.processLogs(eval_id, data.items);
 		return data;
 	}
 
-	getLogsForRun(run_id: string): RunLogEntry[] {
-		const ids = this.logsByRun.get(run_id);
+	getLogsForRun(eval_id: string): RunLogEntry[] {
+		const ids = this.logsByRun.get(eval_id);
 		if (!ids) return [];
 		return ids
 			.map((id) => this.cache.get(id))

@@ -119,24 +119,16 @@ export type ScriptId = string;
 export type RunId = string;
 export type ScriptVerId = string;
 
-export type Script = components["schemas"]["Script"];
-export type RunCreateTrigger = components["schemas"]["RunCreateTrigger"];
-export type RunLogEntry = components["schemas"]["RunLogEntry"];
+// TODO: rename types
+export type Script = components["schemas"]["Redex"];
+export type RunCreateTrigger = components["schemas"]["EvalCreateManual"];
+export type RunLogEntry = components["schemas"]["EvalLogEntry"];
 
 export type ScriptStatus = "Creating" | "Active" | "Borked" | "Deleted";
 
-export type ScriptVersion = {
-	version_id: ScriptVerId;
-	created_at: string;
-	deleted_at?: string | null;
-	format: ScriptFormat;
-	location: ScriptLocation;
-	metadata: any;
-	status: ScriptVersionStatus;
-};
-
+export type ScriptVersion = components["schemas"]["RedexVersion"];
+export type ScriptLocation = components["schemas"]["RedexLocation"];
 export type ScriptFormat = "Javascript" | "Webassembly";
-export type ScriptLocation = { Hosted: { media: Media } };
 export type ScriptVersionStatus = "Processing" | "Ready" | "Error";
 
 export type ScriptCreate = {
@@ -144,22 +136,8 @@ export type ScriptCreate = {
 	location: any;
 };
 
-export type Run = {
-	id: RunId;
-	script_id: ScriptId;
-	created_at: string;
-	stopped_at?: string | null;
-	status: RunStatus;
-};
-
-export type RunStatus =
-	| "Creating"
-	| "Active"
-	| "Sleeping"
-	| "Waking"
-	| "Exited"
-	| "Borked"
-	| "Crashed";
+export type Run = components["schemas"]["Eval"];
+export type RunStatus = components["schemas"]["EvalStatus"];
 
 export type ScriptSubscribe = {
 	type: "ScriptSubscribe";
