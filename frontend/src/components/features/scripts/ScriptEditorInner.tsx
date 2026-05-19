@@ -18,6 +18,7 @@ import {
 	DecorationSet,
 	drawSelection,
 	EditorView,
+	highlightActiveLine,
 	keymap,
 	lineNumbers,
 	MatchDecorator,
@@ -28,11 +29,10 @@ import {
 } from "@codemirror/view";
 import { tags as t } from "@lezer/highlight";
 import { createEffect, onMount } from "solid-js";
-import { syntaxHighlightingPlugin } from "../search";
 
 // import {
 //   searchKeymap, highlightSelectionMatches
-// } from "@codemirror/search"
+// } from "@codemirror/search";
 // import {lintKeymap} from "@codemirror/lint"
 
 const theme = EditorView.theme(
@@ -40,8 +40,10 @@ const theme = EditorView.theme(
 		"&": {
 			color: "oklch(var(--color-fg2))",
 		},
+		".cm-scroller": {
+			fontFamily: "var(--font-mono)",
+		},
 		".cm-content": {
-			fontFamily: "inherit",
 			caretColor: "#ff0000",
 		},
 		"&.cm-focused .cm-selectionBackground, ::selection": {
@@ -50,8 +52,11 @@ const theme = EditorView.theme(
 		},
 		".cm-gutters": {
 			backgroundColor: "oklch(var(--color-bg1))",
-			color: "oklch(var(--color-fg2))",
-			// border: "none"
+			color: "oklch(var(--color-fg4))",
+			padding: "0 2px",
+		},
+		".cm-activeLine": {
+			backgroundColor: "oklch(var(--color-bg1))",
 		},
 	},
 	{ dark: true },
@@ -121,8 +126,7 @@ export const CodeEditor = (props: {
 				// rectangularSelection(),
 				// // Change the cursor to a crosshair when holding alt
 				// crosshairCursor(),
-				// // Style the current line specially
-				// highlightActiveLine(),
+				highlightActiveLine(),
 				// // Style the gutter for current line specially
 				// highlightActiveLineGutter(),
 				// // Highlight text that matches the selected text
