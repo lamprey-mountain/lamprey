@@ -488,7 +488,15 @@
 
 	.editor-wrapper {
 		flex: 1;
-		overflow: auto;
+		overflow: hidden;
 		min-height: 0;
+
+		& > div {
+			height: 100%;
+
+			.cm-editor {
+				height: 100%;
+			}
+		}
 	}
 }

@@ -202,7 +202,7 @@ export const createScriptContext = (channel_id: string) => {
 				if (!prev) return undefined;
 				const resize = (node: ScriptPane): ScriptPane => {
 					if (node.id === tabId) {
-						return { ...node, size } as ScriptPane;
+						return { ...node, size } as unknown as ScriptPane;
 					}
 					if (
 						node.type === "split_horizontal" ||
