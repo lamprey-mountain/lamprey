@@ -5,12 +5,15 @@ import {
 	createResource,
 	createSignal,
 	For,
+	type JSX,
 	Match,
+	onCleanup,
 	Show,
 	Switch,
 } from "solid-js";
 import type { Channel, Script } from "ts-sdk";
 import { useScriptLogs, useScriptRuns, useScripts } from "@/api";
+import { PaneResizeHandle } from "@/atoms/Resizable";
 import { Time } from "@/atoms/Time";
 import { useChannel } from "@/contexts/channel";
 import { getUrl } from "@/media/util";
@@ -129,16 +132,16 @@ const ScriptPaneRenderer = (props: {
 	pane: ScriptPaneChild;
 	isHorizontal?: boolean;
 }) => {
+	const s = useScript();
 	const size = () => props.pane.size;
 
 	return (
 		<div
 			class="pane-container"
 			style={{
-				flex: size() ? "none" : "1",
-				width: size() && props.isHorizontal ? `${size}px` : undefined,
-				height:
-					size() && props.isHorizontal === false ? `${size}px` : undefined,
+				flex: size() ? `0 0 ${size()}px` : "1",
+				"min-width": "0",
+				"min-height": "0",
 			}}
 		>
 			<Show
@@ -165,11 +168,29 @@ const ScriptPaneRenderer = (props: {
 							).children
 						}
 					>
-						{(child) => (
-							<ScriptPaneRenderer
-								pane={child}
-								isHorizontal={props.pane.type === "split_horizontal"}
-							/>
+						{(child, index) => (
+							<>
+								<Show when={index() > 0}>
+									<PaneResizeHandle
+										isHorizontal={props.pane.type === "split_horizontal"}
+										onResize={(sz) => {
+											s.updatePaneSize(
+												(
+													props.pane as Extract<
+														ScriptPaneT,
+														{ children: ScriptPaneChild[] }
+													>
+												).children[index() - 1].id,
+												sz,
+											);
+										}}
+									/>
+								</Show>
+								<ScriptPaneRenderer
+									pane={child}
+									isHorizontal={props.pane.type === "split_horizontal"}
+								/>
+							</>
 						)}
 					</For>
 				</div>
@@ -181,6 +202,7 @@ const ScriptPaneRenderer = (props: {
 export const ScriptPane = (props: { pane: ScriptPaneT }) => {
 	const s = useScript();
 	const pane = props.pane;
+	const [headerExtra, setHeaderExtra] = createSignal<JSX.Element>(null);
 
 	// TODO: use x icons for pane close button
 
@@ -189,6 +211,7 @@ export const ScriptPane = (props: { pane: ScriptPaneT }) => {
 			<header>
 				<nav>{pane.type.replace("script_", "").replace("_", " ")}</nav>
 				<div class="title">Pane {pane.id}</div>
+				{headerExtra()}
 				<button
 					type="button"
 					class="close"
@@ -202,6 +225,7 @@ export const ScriptPane = (props: { pane: ScriptPaneT }) => {
 					<Match when={pane.type === "script_code"}>
 						<ScriptCode
 							pane={pane as Extract<ScriptPaneT, { type: "script_code" }>}
+							setHeaderExtra={setHeaderExtra}
 						/>
 					</Match>
 					<Match when={pane.type === "script_inputs"}>
@@ -225,26 +249,82 @@ export const ScriptPane = (props: { pane: ScriptPaneT }) => {
 
 export const ScriptCode = (props: {
 	pane: Extract<ScriptPaneT, { type: "script_code" }>;
+	setHeaderExtra: (el: JSX.Element) => void;
 }) => {
 	const scriptsService = useScripts();
 	const script = () => scriptsService.get(props.pane.script_id);
-	const [source] = createResource(
+	const [source, { mutate }] = createResource(
 		() => {
 			const loc = script()?.latest_version.location;
 			if (loc?.type === "Hosted") return loc.media;
 			return undefined;
 		},
 		(media) => {
-			return fetch(getUrl(media)).then((r) => r.text())
+			return fetch(getUrl(media)).then((r) => r.text());
 		},
 	);
 
+	const [editedSource, setEditedSource] = createSignal<string>("");
+	const [saving, setSaving] = createSignal(false);
 
-	// anything else here? like save button etc?
+	createEffect(() => {
+		const s = source();
+		if (s !== undefined) {
+			setEditedSource(s);
+		}
+	});
+
+	const hasEdits = () => {
+		const orig = source() ?? "";
+		const curr = editedSource();
+		return curr !== "" && curr !== orig;
+	};
+
+	const handleSave = async () => {
+		const scr = script();
+		if (!scr) return;
+		setSaving(true);
+		try {
+			await scriptsService.uploadAndSaveContent(
+				scr.channel_id,
+				scr.id,
+				editedSource(),
+			);
+			mutate(editedSource());
+		} catch (err) {
+			console.error("Failed to save script:", err);
+		} finally {
+			setSaving(false);
+		}
+	};
+	createEffect(() => {
+		props.setHeaderExtra(
+			<Show when={hasEdits()}>
+				<button
+					type="button"
+					class="pane-header-save button primary"
+					onClick={handleSave}
+					disabled={saving()}
+				>
+					{saving() ? "Saving..." : "Save Edits"}
+				</button>
+			</Show>,
+		);
+	});
+
+	onCleanup(() => {
+		props.setHeaderExtra(null);
+	});
 
 	return (
-		<div>
-			<LazyCodeEditor source={source()} loading={source.loading} />
+		<div class="script-code-container">
+			<div class="editor-wrapper">
+				<LazyCodeEditor
+					source={source()}
+					loading={source.loading}
+					onChange={setEditedSource}
+				/>
+			</div>
 		</div>
 	);
 };

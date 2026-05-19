@@ -5,14 +5,14 @@ import {
 	closeBracketsKeymap,
 } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { javascript } from "@codemirror/lang-javascript";
 import {
 	HighlightStyle,
 	syntaxHighlighting,
 	// indentOnInput,
 	// bracketMatching, foldGutter, foldKeymap
 } from "@codemirror/language";
-import { tags as t } from "@lezer/highlight";
-import { EditorState, Extension, Compartment } from "@codemirror/state";
+import { Compartment, EditorState, Extension } from "@codemirror/state";
 import {
 	Decoration,
 	DecorationSet,
@@ -26,9 +26,9 @@ import {
 	ViewUpdate,
 	WidgetType,
 } from "@codemirror/view";
-import { onMount, createEffect } from "solid-js";
+import { tags as t } from "@lezer/highlight";
+import { createEffect, onMount } from "solid-js";
 import { syntaxHighlightingPlugin } from "../search";
-import { javascript } from "@codemirror/lang-javascript";
 
 // import {
 //   searchKeymap, highlightSelectionMatches
@@ -58,18 +58,38 @@ const theme = EditorView.theme(
 );
 
 const highlight = HighlightStyle.define([
-	{ tag: [t.comment, t.quote], color: "oklch(var(--color-fg6))", fontStyle: "italic" },
-	{ tag: [t.keyword, t.modifier, t.inserted], color: "oklch(var(--color-magenta))" },
-	{ tag: [t.number, t.string, t.bool, t.regexp, t.literal], color: "oklch(var(--color-green))" },
-	{ tag: [t.heading, t.name, t.className, t.tagName], color: "oklch(var(--color-blue))" },
-	{ tag: [t.attributeName, t.propertyName, t.variableName, t.typeName], color: "oklch(var(--color-yellow))" },
+	{
+		tag: [t.comment, t.quote],
+		color: "oklch(var(--color-fg6))",
+		fontStyle: "italic",
+	},
+	{
+		tag: [t.keyword, t.modifier, t.inserted],
+		color: "oklch(var(--color-magenta))",
+	},
+	{
+		tag: [t.number, t.string, t.bool, t.regexp, t.literal],
+		color: "oklch(var(--color-green))",
+	},
+	{
+		tag: [t.heading, t.name, t.className, t.tagName],
+		color: "oklch(var(--color-blue))",
+	},
+	{
+		tag: [t.attributeName, t.propertyName, t.variableName, t.typeName],
+		color: "oklch(var(--color-yellow))",
+	},
 	{ tag: [t.atom, t.meta, t.link], color: "oklch(var(--color-orange))" },
 	{ tag: [t.deleted, t.standard(t.name)], color: "oklch(var(--color-red))" },
 	{ tag: t.emphasis, fontStyle: "italic" },
 	{ tag: t.strong, fontWeight: "bold" },
 ]);
 
-export const CodeEditor = (props: { source?: string; loading?: boolean }) => {
+export const CodeEditor = (props: {
+	source?: string;
+	loading?: boolean;
+	onChange?: (val: string) => void;
+}) => {
 	let editorRef!: HTMLDivElement;
 	let view: EditorView;
 	const stateConfigCompartment = new Compartment();
@@ -121,8 +141,13 @@ export const CodeEditor = (props: { source?: string; loading?: boolean }) => {
 				syntaxHighlighting(highlight),
 				stateConfigCompartment.of([
 					EditorView.editable.of(!props.loading),
-					EditorState.readOnly.of(props.loading ?? false)
+					EditorState.readOnly.of(props.loading ?? false),
 				]),
+				EditorView.updateListener.of((update) => {
+					if (update.docChanged && props.onChange) {
+						props.onChange(update.state.doc.toString());
+					}
+				}),
 			],
 		});
 	});
@@ -132,18 +157,18 @@ export const CodeEditor = (props: { source?: string; loading?: boolean }) => {
 		const loading = props.loading ?? false;
 		const nextDoc = loading ? "Loading..." : (props.source ?? "");
 		const currentDoc = view.state.doc.toString();
-		
+
 		if (currentDoc !== nextDoc) {
 			view.dispatch({
-				changes: { from: 0, to: currentDoc.length, insert: nextDoc }
+				changes: { from: 0, to: currentDoc.length, insert: nextDoc },
 			});
 		}
-		
+
 		view.dispatch({
 			effects: stateConfigCompartment.reconfigure([
 				EditorView.editable.of(!loading),
-				EditorState.readOnly.of(loading)
-			])
+				EditorState.readOnly.of(loading),
+			]),
 		});
 	});
 

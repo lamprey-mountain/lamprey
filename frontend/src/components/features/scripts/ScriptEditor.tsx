@@ -1,7 +1,11 @@
 import { createResource, Show } from "solid-js";
 
 // wrapper to lazy load the actual code editor
-export const LazyCodeEditor = (props: { source?: string; loading?: boolean }) => {
+export const LazyCodeEditor = (props: {
+	source?: string;
+	loading?: boolean;
+	onChange?: (val: string) => void;
+}) => {
 	const [real] = createResource(async () => {
 		const { CodeEditor } = await import("./ScriptEditorInner");
 		return CodeEditor;

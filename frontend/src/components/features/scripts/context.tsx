@@ -13,6 +13,7 @@ type ScriptContextT = {
 
 	createPane(create: ScriptPaneCreate): void;
 	closePane(tab_id: number): void;
+	updatePaneSize(tab_id: number, size: number): void;
 
 	/** close all tabs */
 	reset(): void;
@@ -193,6 +194,28 @@ export const createScriptContext = (channel_id: string) => {
 				if (!prev) return undefined;
 				const result = removeTab(prev, tabId);
 				return result ?? undefined;
+			});
+		},
+
+		updatePaneSize(tabId, size) {
+			setRoot((prev) => {
+				if (!prev) return undefined;
+				const resize = (node: ScriptPane): ScriptPane => {
+					if (node.id === tabId) {
+						return { ...node, size } as ScriptPane;
+					}
+					if (
+						node.type === "split_horizontal" ||
+						node.type === "split_vertical"
+					) {
+						return {
+							...node,
+							children: node.children.map((c) => resize(c as ScriptPane)),
+						};
+					}
+					return node;
+				};
+				return resize(prev);
 			});
 		},
 

@@ -68,3 +68,45 @@ export const Resizable = (props: ResizableProps) => {
 		</div>
 	);
 };
+
+export const PaneResizeHandle = (props: {
+	isHorizontal: boolean;
+	onResize: (size: number) => void;
+}) => {
+	const handleMouseDown = (e: MouseEvent) => {
+		e.preventDefault();
+		document.body.classList.add("resizing");
+
+		const startX = e.clientX;
+		const startY = e.clientY;
+		const prevSibling = (e.currentTarget as HTMLElement)
+			.previousElementSibling as HTMLElement;
+		const startSize = props.isHorizontal
+			? prevSibling.offsetWidth
+			: prevSibling.offsetHeight;
+
+		const handleMouseMove = (ev: MouseEvent) => {
+			const dx = ev.clientX - startX;
+			const dy = ev.clientY - startY;
+			let newSize = startSize + (props.isHorizontal ? dx : dy);
+			if (newSize < 100) newSize = 100;
+			props.onResize(newSize);
+		};
+
+		const handleMouseUp = () => {
+			window.removeEventListener("mousemove", handleMouseMove);
+			window.removeEventListener("mouseup", handleMouseUp);
+			document.body.classList.remove("resizing");
+		};
+
+		window.addEventListener("mousemove", handleMouseMove);
+		window.addEventListener("mouseup", handleMouseUp);
+	};
+
+	return (
+		<div
+			class={`pane-resize-handle ${props.isHorizontal ? "horizontal" : "vertical"}`}
+			onMouseDown={handleMouseDown}
+		/>
+	);
+};
