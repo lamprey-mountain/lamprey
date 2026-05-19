@@ -14,6 +14,13 @@ type ScriptContextT = {
 	createPane(create: ScriptPaneCreate): void;
 	closePane(tab_id: number): void;
 	updatePaneSize(tab_id: number, size: number): void;
+	findPane(predicate: (pane: ScriptPane) => boolean): ScriptPane | undefined;
+	updatePane(tab_id: number, update: Partial<ScriptPane>): void;
+	splitPane(
+		targetId: number,
+		newPane: ScriptPaneCreate,
+		direction: "horizontal" | "vertical",
+	): void;
 
 	/** close all tabs */
 	reset(): void;
@@ -216,6 +223,80 @@ export const createScriptContext = (channel_id: string) => {
 					return node;
 				};
 				return resize(prev);
+			});
+		},
+
+		findPane(predicate) {
+			const find = (node: ScriptPane): ScriptPane | undefined => {
+				if (predicate(node)) return node;
+				if (
+					node.type === "split_horizontal" ||
+					node.type === "split_vertical"
+				) {
+					for (const child of node.children) {
+						const found = find(child as ScriptPane);
+						if (found) return found;
+					}
+				}
+				return undefined;
+			};
+			const r = root();
+			return r ? find(r) : undefined;
+		},
+
+		updatePane(tabId, update) {
+			setRoot((prev) => {
+				if (!prev) return prev;
+				const updateNode = (node: ScriptPane): ScriptPane => {
+					if (node.id === tabId) {
+						return { ...node, ...update } as ScriptPane;
+					}
+					if (
+						node.type === "split_horizontal" ||
+						node.type === "split_vertical"
+					) {
+						return { ...node, children: node.children.map(updateNode) };
+					}
+					return node;
+				};
+				return updateNode(prev);
+			});
+		},
+
+		splitPane(targetId, newPane, direction) {
+			const tabId = newPane.id ?? assignTabId();
+			const tab: ScriptPane = {
+				id: tabId,
+				...newPane,
+				...(newPane.type === "split_horizontal" ||
+				newPane.type === "split_vertical"
+					? { children: [] }
+					: {}),
+			} as ScriptPane;
+			const splitId = assignTabId();
+
+			setRoot((prev) => {
+				if (!prev) return prev;
+				const split = (node: ScriptPane): ScriptPane => {
+					if (node.id === targetId) {
+						return {
+							id: splitId,
+							type:
+								direction === "horizontal"
+									? "split_horizontal"
+									: "split_vertical",
+							children: [node, tab],
+						} as ScriptPane;
+					}
+					if (
+						node.type === "split_horizontal" ||
+						node.type === "split_vertical"
+					) {
+						return { ...node, children: node.children.map(split) };
+					}
+					return node;
+				};
+				return split(prev);
 			});
 		},
 

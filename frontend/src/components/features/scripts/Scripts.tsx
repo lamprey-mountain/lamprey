@@ -361,6 +361,26 @@ export const ScriptInputs = (props: {
 		refetchRuns();
 	};
 
+	const openLogs = (runId: string) => {
+		const existingLogPane = s.findPane((p) => p.type === "run_logs");
+		if (existingLogPane) {
+			s.updatePane(existingLogPane.id, {
+				script_id: props.pane.script_id,
+				run_id: runId,
+			} as Partial<ScriptPane>);
+		} else {
+			s.splitPane(
+				props.pane.id,
+				{
+					type: "run_logs",
+					script_id: props.pane.script_id,
+					run_id: runId,
+				},
+				"vertical",
+			);
+		}
+	};
+
 	// FIXME: input.type.type -> input.type
 
 	return (
@@ -406,16 +426,7 @@ export const ScriptInputs = (props: {
 										<Time date={new Date(run.created_at)} />
 									</div>
 									<menu>
-										<button
-											type="button"
-											onClick={() =>
-												s.createPane({
-													type: "run_logs",
-													script_id: props.pane.script_id,
-													run_id: run.id,
-												})
-											}
-										>
+										<button type="button" onClick={() => openLogs(run.id)}>
 											Logs
 										</button>
 									</menu>
