@@ -19,6 +19,27 @@ export type Upload = {
 };
 
 export async function createUpload(opts: UploadOptions): Promise<Upload> {
+	let unsubscribeSync: (() => void) | undefined;
+
+	function cleanupSync() {
+		if (unsubscribeSync) {
+			unsubscribeSync();
+			unsubscribeSync = undefined;
+		}
+	}
+
+	const originalOnComplete = opts.onComplete;
+	opts.onComplete = (media) => {
+		cleanupSync();
+		originalOnComplete(media);
+	};
+
+	const originalOnFail = opts.onFail;
+	opts.onFail = (err) => {
+		cleanupSync();
+		originalOnFail(err);
+	};
+
 	const { data, error } = await opts.client.http.POST("/api/v1/media", {
 		body: {
 			filename: opts.file.name,
@@ -90,22 +111,11 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 		xhr.onload = async () => {
 			if (xhr.status === 204) {
 				_uploadComplete = true;
-				// try {
-				// 	const { error } = await opts.client.http.PUT(
-				// 		"/api/v1/media/{media_id}/done",
-				// 		{
-				// 			params: { path: { media_id } },
-				// 			body: { async: true },
-				// 		},
-				// 	);
-				// 	if (error) {
-				// 		opts.onFail(new Error(`media_done failed: ${error}`));
-				// 	} else {
-				// 		console.log("[media] upload complete, processing asynchronously");
-				// 	}
-				// } catch (e) {
-				// 	opts.onFail(e as Error);
-				// }
+				unsubscribeSync = opts.client.onSync((msg) => {
+					if (msg.type === "MediaProcessed" && msg.media.id === media_id) {
+						opts.onComplete(msg.media);
+					}
+				});
 			} else if (xhr.status === 200) {
 				const media = JSON.parse(xhr.responseText);
 				opts.onComplete(media);
@@ -158,6 +168,7 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 	}
 
 	async function abort() {
+		cleanupSync();
 		xhr?.abort();
 		await opts.client.http.DELETE("/api/v1/media/{media_id}", {
 			params: {

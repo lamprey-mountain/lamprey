@@ -15,42 +15,8 @@ const UploadsContext = createContext<UploadController>();
 export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 	const [, modalCtl] = useModals();
 
-	// Track pending uploads by media_id for async processing
-	const pendingUploads = new Map<
-		string,
-		{ local_id: string; thread_id: string }
-	>();
-
-	// Listen for MediaProcessed and MediaUpdate events
+	// Listen for MediaUpdate events
 	onMount(() => {
-		const handleMediaProcessed = (media: Media) => {
-			console.debug("[uploads] handleMediaProcessed", media.id);
-			// Find the attachment that was waiting for this media to be processed
-			const pending = pendingUploads.get(media.id);
-			if (pending) {
-				const [ch, chUpdate] = props.ctx.channel_contexts.get(
-					pending.thread_id,
-				)!;
-				const atts = ch.attachments;
-				const idx = atts.findIndex((a) => a.local_id === pending.local_id);
-				if (idx !== -1) {
-					const oldAtt = atts[idx];
-					const att: Attachment = {
-						status: "uploaded",
-						media,
-						local_id: oldAtt.local_id,
-						spoiler: oldAtt.spoiler,
-					};
-					chUpdate("attachments", [
-						...atts.slice(0, idx),
-						att,
-						...atts.slice(idx + 1),
-					]);
-				}
-				pendingUploads.delete(media.id);
-			}
-		};
-
 		const handleMediaUpdate = (media: Media) => {
 			// Update all attachments that reference this media
 			for (const [_thread_id, ctx] of props.ctx.channel_contexts.entries()) {
@@ -74,10 +40,7 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 		};
 
 		props.ctx.events.on("sync", ([msg]) => {
-			if (msg.type === "MediaProcessed") {
-				console.debug("[uploads] recv MediaProcessed", msg.media.id);
-				handleMediaProcessed(msg.media);
-			} else if (msg.type === "MediaUpdate") {
+			if (msg.type === "MediaUpdate") {
 				handleMediaUpdate(msg.media);
 			}
 		});
@@ -176,8 +139,6 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 			},
 		}).then((upload) => {
 			props.ctx.uploads.set(local_id, upload);
-			// Track this upload for async processing
-			pendingUploads.set(upload.media_id, { local_id, thread_id });
 		});
 	};
 
@@ -200,8 +161,6 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 		if (idx !== -1) {
 			chUpdate("attachments", [...atts.slice(0, idx), ...atts.slice(idx + 1)]);
 		}
-		// Remove from pending uploads
-		pendingUploads.delete(upload.media_id);
 	};
 
 	const controller: UploadController = {

@@ -44,6 +44,11 @@ export type Client = {
 
 	/** Send a message to the sync server, queueing if not connected */
 	send: (data: unknown) => void;
+
+	/** Subscribe to sync events */
+	onSync: (
+		listener: (msg: MessageSync, raw: MessageEnvelope) => void,
+	) => () => void;
 };
 
 type Resume = {
@@ -58,6 +63,10 @@ export function createClient(opts: ClientOptions): Client {
 	const queue: Array<unknown> = [];
 	const format = opts.format ?? "json";
 
+	const syncListeners = new Set<
+		(msg: MessageSync, raw: MessageEnvelope) => void
+	>();
+
 	function handleMessage(msg: MessageEnvelope) {
 		opts.onMessage?.(msg);
 		switch (msg.op) {
@@ -68,6 +77,9 @@ export function createClient(opts: ClientOptions): Client {
 			case "Sync": {
 				if (resume) resume.seq = msg.seq;
 				opts.onSync(msg.data, msg);
+				for (const listener of syncListeners) {
+					listener(msg.data, msg);
+				}
 				break;
 			}
 			case "Ready": {
@@ -225,6 +237,12 @@ export function createClient(opts: ClientOptions): Client {
 		getWebsocket: () => ws,
 		send,
 		stopAggressive,
+		onSync: (listener) => {
+			syncListeners.add(listener);
+			return () => {
+				syncListeners.delete(listener);
+			};
+		},
 	};
 }
 
