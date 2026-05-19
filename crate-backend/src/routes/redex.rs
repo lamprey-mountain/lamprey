@@ -289,7 +289,7 @@ async fn redex_content_update(
         return Err(Error::NotFound);
     }
 
-    let media = match &req.redex.location {
+    let media = match &req.content.location {
         RedexLocationUpdate::Local { .. } => return Err(Error::Unimplemented),
         RedexLocationUpdate::Remote { .. } => return Err(Error::Unimplemented),
         RedexLocationUpdate::Hosted { media_reference } => match media_reference {
@@ -309,7 +309,7 @@ async fn redex_content_update(
 
     let version_id = RedexVerId::new();
     let created_at = Time::now_utc();
-    let format = req.redex.format.clone();
+    let format = req.content.format.clone();
     let media_id = media.id;
     let location = RedexLocation::Hosted { media };
 
