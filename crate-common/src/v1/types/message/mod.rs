@@ -83,6 +83,7 @@ pub struct Message {
     /// whether this message is ephemeral
     ///
     /// ephemeral messages are only visible to the user who created an interaction and aren't stored
+    #[cfg_attr(feature = "serde", serde(default))]
     pub ephemeral: bool,
 }
 
