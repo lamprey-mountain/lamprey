@@ -17,6 +17,7 @@
 		"@codemirror/language": "^6.12.3",
 		"@codemirror/state": "^6.6.0",
 		"@codemirror/view": "^6.42.1",
+		"@lezer/highlight": "^1.2.3",
 		"@floating-ui/dom": "^1.7.6",
 		"@solid-primitives/autofocus": "^0.1.4",
 		"@solid-primitives/event-bus": "^1.1.3",

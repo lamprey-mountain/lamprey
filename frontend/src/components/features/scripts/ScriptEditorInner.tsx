@@ -5,18 +5,14 @@ import {
 	closeBracketsKeymap,
 } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { HighlightStyle } from "@codemirror/highlight";
-// import {
-//   EditorView, keymap, highlightSpecialChars, drawSelection,
-//   highlightActiveLine, dropCursor, rectangularSelection,
-//   crosshairCursor, lineNumbers, highlightActiveLineGutter
-// } from "@codemirror/view"
 import {
+	HighlightStyle,
 	syntaxHighlighting,
-	// defaultHighlightStyle, syntaxHighlighting, indentOnInput,
+	// indentOnInput,
 	// bracketMatching, foldGutter, foldKeymap
 } from "@codemirror/language";
-import { EditorState, Extension } from "@codemirror/state";
+import { tags as t } from "@lezer/highlight";
+import { EditorState, Extension, Compartment } from "@codemirror/state";
 import {
 	Decoration,
 	DecorationSet,
@@ -30,8 +26,9 @@ import {
 	ViewUpdate,
 	WidgetType,
 } from "@codemirror/view";
-import { onMount } from "solid-js";
+import { onMount, createEffect } from "solid-js";
 import { syntaxHighlightingPlugin } from "../search";
+import { javascript } from "@codemirror/lang-javascript";
 
 // import {
 //   searchKeymap, highlightSelectionMatches
@@ -61,17 +58,25 @@ const theme = EditorView.theme(
 );
 
 const highlight = HighlightStyle.define([
-	// TODO: copy frontend/src/styles/code.scss
-	// {tag: tags.keyword, color: "#fc6"},
-	// {tag: tags.comment, color: "#f5d", fontStyle: "italic"}
+	{ tag: [t.comment, t.quote], color: "oklch(var(--color-fg6))", fontStyle: "italic" },
+	{ tag: [t.keyword, t.modifier, t.inserted], color: "oklch(var(--color-magenta))" },
+	{ tag: [t.number, t.string, t.bool, t.regexp, t.literal], color: "oklch(var(--color-green))" },
+	{ tag: [t.heading, t.name, t.className, t.tagName], color: "oklch(var(--color-blue))" },
+	{ tag: [t.attributeName, t.propertyName, t.variableName, t.typeName], color: "oklch(var(--color-yellow))" },
+	{ tag: [t.atom, t.meta, t.link], color: "oklch(var(--color-orange))" },
+	{ tag: [t.deleted, t.standard(t.name)], color: "oklch(var(--color-red))" },
+	{ tag: t.emphasis, fontStyle: "italic" },
+	{ tag: t.strong, fontWeight: "bold" },
 ]);
 
-export const CodeEditor = () => {
+export const CodeEditor = (props: { source?: string; loading?: boolean }) => {
 	let editorRef!: HTMLDivElement;
+	let view: EditorView;
+	const stateConfigCompartment = new Compartment();
 
 	onMount(() => {
-		const view = new EditorView({
-			doc: "Start document",
+		view = new EditorView({
+			doc: props.loading ? "Loading..." : (props.source ?? ""),
 			parent: editorRef,
 			extensions: [
 				lineNumbers(),
@@ -86,7 +91,6 @@ export const CodeEditor = () => {
 				// // Re-indent lines when typing specific input
 				// indentOnInput(),
 				// // Highlight syntax with a default style
-				// syntaxHighlighting(defaultHighlightStyle),
 				// // Highlight matching brackets near cursor
 				// bracketMatching(),
 				// // Automatically close brackets
@@ -113,11 +117,34 @@ export const CodeEditor = () => {
 					// ...lintKeymap
 				]),
 				theme,
-				// syntaxHighlighting(highlight),
+				javascript(),
+				syntaxHighlighting(highlight),
+				stateConfigCompartment.of([
+					EditorView.editable.of(!props.loading),
+					EditorState.readOnly.of(props.loading ?? false)
+				]),
 			],
 		});
+	});
 
-		console.log(view);
+	createEffect(() => {
+		if (!view) return;
+		const loading = props.loading ?? false;
+		const nextDoc = loading ? "Loading..." : (props.source ?? "");
+		const currentDoc = view.state.doc.toString();
+		
+		if (currentDoc !== nextDoc) {
+			view.dispatch({
+				changes: { from: 0, to: currentDoc.length, insert: nextDoc }
+			});
+		}
+		
+		view.dispatch({
+			effects: stateConfigCompartment.reconfigure([
+				EditorView.editable.of(!loading),
+				EditorState.readOnly.of(loading)
+			])
+		});
 	});
 
 	return <div ref={editorRef!}></div>;

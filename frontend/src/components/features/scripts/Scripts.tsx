@@ -13,6 +13,7 @@ import type { Channel, Script } from "ts-sdk";
 import { useScriptLogs, useScriptRuns, useScripts } from "@/api";
 import { Time } from "@/atoms/Time";
 import { useChannel } from "@/contexts/channel";
+import { getUrl } from "@/media/util";
 import {
 	createScriptContext,
 	ScriptContext,
@@ -199,7 +200,9 @@ export const ScriptPane = (props: { pane: ScriptPaneT }) => {
 			<div class="pane-content">
 				<Switch>
 					<Match when={pane.type === "script_code"}>
-						<ScriptCode />
+						<ScriptCode
+							pane={pane as Extract<ScriptPaneT, { type: "script_code" }>}
+						/>
 					</Match>
 					<Match when={pane.type === "script_inputs"}>
 						<ScriptInputs
@@ -220,12 +223,28 @@ export const ScriptPane = (props: { pane: ScriptPaneT }) => {
 	);
 };
 
-export const ScriptCode = () => {
+export const ScriptCode = (props: {
+	pane: Extract<ScriptPaneT, { type: "script_code" }>;
+}) => {
+	const scriptsService = useScripts();
+	const script = () => scriptsService.get(props.pane.script_id);
+	const [source] = createResource(
+		() => {
+			const loc = script()?.latest_version.location;
+			if (loc?.type === "Hosted") return loc.media;
+			return undefined;
+		},
+		(media) => {
+			return fetch(getUrl(media)).then((r) => r.text())
+		},
+	);
+
+
 	// anything else here? like save button etc?
 
 	return (
 		<div>
-			<LazyCodeEditor />
+			<LazyCodeEditor source={source()} loading={source.loading} />
 		</div>
 	);
 };
@@ -263,10 +282,10 @@ export const ScriptInputs = (props: {
 			<section>
 				<h3>Inputs</h3>
 				<div class="input-list">
-					<For each={script()?.inputs}>
+					<For each={script()?.handlers}>
 						{(input) => (
-							<div class="script-input" data-input-type={input.type.type}>
-								<Show when={input.type?.type === "Manual"}>
+							<div class="script-input" data-input-type={input.type}>
+								<Show when={input.type === "Manual"}>
 									<button
 										class="inner"
 										type="button"
@@ -276,7 +295,7 @@ export const ScriptInputs = (props: {
 										<div class="dim">{input.id}</div>
 									</button>
 								</Show>
-								<Show when={input.type?.type !== "Manual"}>
+								<Show when={input.type !== "Manual"}>
 									<div class="inner">
 										<div>{input.label}</div>
 										<div class="dim">{input.id}</div>
