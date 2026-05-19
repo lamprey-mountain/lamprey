@@ -202,6 +202,7 @@ const ScriptPaneRenderer = (props: {
 export const ScriptPane = (props: { pane: ScriptPaneT }) => {
 	const s = useScript();
 	const pane = props.pane;
+	const navigate = useNavigate();
 	const [headerExtra, setHeaderExtra] = createSignal<JSX.Element>(null);
 
 	// TODO: use x icons for pane close button
@@ -215,7 +216,12 @@ export const ScriptPane = (props: { pane: ScriptPaneT }) => {
 				<button
 					type="button"
 					class="close"
-					onClick={() => s.closePane(pane.id)}
+					onClick={() => {
+						s.closePane(pane.id);
+						if (!s.root) {
+							navigate(`/channel/${s.channel_id}`);
+						}
+					}}
 				>
 					&times;
 				</button>
