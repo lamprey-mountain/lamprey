@@ -277,13 +277,75 @@ async fn redex_content_update(
     let room = srv.rooms.load_room(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
-    let _al = auth.audit_log(room_id);
+    let al = auth.audit_log(room_id);
 
-    // TODO: validate that the script exists and belongs to this channel
-    // TODO: copy some logic from redex_create
-    // TODO: make the script service reload the script
+    let script = s
+        .data()
+        .script_get(req.redex_id)
+        .await?
+        .ok_or(Error::NotFound)?;
 
-    Ok(Error::Unimplemented)
+    if script.channel_id != req.channel_id {
+        return Err(Error::NotFound);
+    }
+
+    let media = match &req.redex.location {
+        RedexLocationUpdate::Local { .. } => return Err(Error::Unimplemented),
+        RedexLocationUpdate::Remote { .. } => return Err(Error::Unimplemented),
+        RedexLocationUpdate::Hosted { media_reference } => match media_reference {
+            MediaReference::Attachment { .. } => return Err(Error::Unimplemented),
+            MediaReference::Url { .. } => return Err(Error::Unimplemented),
+            MediaReference::Media { media_id } => {
+                let mut d = s.data();
+                let media = d.media_select(*media_id).await?;
+                media
+            }
+        },
+    };
+
+    if media.size > MAX_SCRIPT_FILE_SIZE {
+        return Err(Error::BadStatic("file too large"));
+    }
+
+    let version_id = RedexVerId::new();
+    let created_at = Time::now_utc();
+    let format = req.redex.format.clone();
+    let media_id = media.id;
+    let location = RedexLocation::Hosted { media };
+
+    let new_version = RedexVersion {
+        version_id,
+        created_at,
+        deleted_at: None,
+        format: format.clone(),
+        location,
+        metadata: RedexMetadata::new("unnamed".to_owned()), // will be replaced during process
+        status: RedexVersionStatus::Processing,
+    };
+
+    srv.scripts
+        .create_script_version(script.clone(), new_version.clone())
+        .await?;
+
+    al.commit_success(AuditLogEntryType::RedexVersionCreate {
+        channel_id: req.channel_id,
+        redex_id: req.redex_id,
+        redex_version_id: version_id,
+        changes: Changes::new()
+            .add(
+                "format",
+                &match &format {
+                    RedexFormat::Javascript => "Javascript",
+                    RedexFormat::Webassembly => "Webassembly",
+                },
+            )
+            .add("location", &"hosted")
+            .add("media_id", &media_id)
+            .build(),
+    })
+    .await?;
+
+    Ok((StatusCode::OK, Json(new_version)))
 }
 
 /// Redex trigger
