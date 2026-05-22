@@ -185,6 +185,9 @@ pub enum Error {
 
     #[error("invalid header value")]
     InvalidHeaderValue(#[from] http::header::InvalidHeaderValue),
+
+    #[error("max mind db: {0}")]
+    MaxMindDb(#[from] maxminddb::MaxMindDbError),
 }
 
 impl From<sqlx::Error> for Error {

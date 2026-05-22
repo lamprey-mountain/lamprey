@@ -110,6 +110,11 @@ pub struct Config {
     /// experimental features to enable
     #[serde(default)]
     pub experiments: ConfigExperiments,
+
+    /// path to maxmind geolocation database
+    ///
+    /// eg. `GeoLite2-Country.mmdb`
+    pub mmdb_path: Option<PathBuf>,
 }
 
 fn default_require_server_invite() -> bool {

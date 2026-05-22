@@ -7,6 +7,7 @@ use email::ServiceEmail;
 use embed::ServiceEmbed;
 use emoji::ServiceEmoji;
 use federation::ServiceFederation;
+use ips::ServiceIps;
 use media::ServiceMedia;
 use messages::ServiceMessages;
 use oauth2::ServiceOauth;
@@ -46,6 +47,7 @@ pub mod emoji;
 pub mod federation;
 pub mod http;
 pub mod interactions;
+pub mod ips;
 pub mod media;
 pub mod member_lists;
 pub mod messages;
@@ -81,6 +83,7 @@ pub struct Services {
     pub federation: ServiceFederation,
     pub http: ServiceHttp,
     pub interactions: ServiceInteractions,
+    pub ips: ServiceIps,
     pub media: ServiceMedia,
     pub member_lists: ServiceMemberLists,
     pub messages: ServiceMessages,
@@ -120,6 +123,7 @@ impl Services {
             federation: ServiceFederation::new(state.clone()),
             http: ServiceHttp::new(state.clone()),
             interactions: ServiceInteractions::new(state.clone()),
+            ips: ServiceIps::new(state.clone()),
             media: ServiceMedia::new(state.clone()),
             member_lists: ServiceMemberLists::new(state.clone()),
             messages: ServiceMessages::new(state.clone()),
