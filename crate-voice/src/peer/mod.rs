@@ -1,7 +1,5 @@
 //! sending and receiving media to peers
 
-use std::future::Future;
-
 use async_trait::async_trait;
 use common::v1::types::{
     voice::{
@@ -12,11 +10,9 @@ use common::v1::types::{
     PeerId,
 };
 
-pub mod cascade;
+// TODO: impl cascading sfu
+// pub mod cascade;
 pub mod webrtc;
-pub mod webrtc_old;
-
-pub use webrtc_old::PeerWebrtc;
 
 #[async_trait]
 pub trait Peer {

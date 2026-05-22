@@ -128,6 +128,20 @@ impl SfuPermissions {
     pub fn priority(&self) -> bool {
         self.0 & 4 == 4
     }
+
+    pub fn from_bools(speak: bool, video: bool, priority: bool) -> Self {
+        let mut flags = 0;
+        if speak {
+            flags |= 1;
+        }
+        if video {
+            flags |= 2;
+        }
+        if priority {
+            flags |= 4;
+        }
+        Self(flags)
+    }
 }
 
 /// channel config that the sfu needs to know about

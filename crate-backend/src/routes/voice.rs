@@ -7,7 +7,9 @@ use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Time};
-use common::v1::types::voice::{RingEligibility, SfuCommand, SfuPermissions, VoiceState};
+use common::v1::types::voice::internal::SfuPermissions;
+use common::v1::types::voice::messages::SfuCommand;
+use common::v1::types::voice::{RingEligibility, VoiceState};
 use common::v1::types::{
     AuditLogEntryType, ChannelType, MessageSync, PaginationResponse, Permission,
 };
@@ -128,11 +130,11 @@ async fn voice_state_patch(
         let _ = s.broadcast_sfu(SfuCommand::VoiceState {
             user_id: target_user_id,
             state: Some(state.clone()),
-            permissions: SfuPermissions {
-                speak: perms_user.has(Permission::VoiceSpeak),
-                video: perms_user.has(Permission::VoiceVideo),
-                priority: perms_user.has(Permission::VoicePriority),
-            },
+            permissions: SfuPermissions::from_bools(
+                perms_user.has(Permission::VoiceSpeak),
+                perms_user.has(Permission::VoiceVideo),
+                perms_user.has(Permission::VoicePriority),
+            ),
         });
 
         srv.voice.state_put(state.clone()).await;
@@ -184,11 +186,11 @@ async fn voice_state_patch(
         let _ = s.broadcast_sfu(SfuCommand::VoiceState {
             user_id: target_user_id,
             state: Some(state.clone()),
-            permissions: SfuPermissions {
-                speak: perms_user.has(Permission::VoiceSpeak),
-                video: perms_user.has(Permission::VoiceVideo),
-                priority: perms_user.has(Permission::VoicePriority),
-            },
+            permissions: SfuPermissions::from_bools(
+                perms_user.has(Permission::VoiceSpeak),
+                perms_user.has(Permission::VoiceVideo),
+                perms_user.has(Permission::VoicePriority),
+            ),
         });
 
         srv.voice.state_put(state.clone()).await;
@@ -245,11 +247,11 @@ async fn voice_state_disconnect(
     let _ = s.broadcast_sfu(SfuCommand::VoiceState {
         user_id: target_user_id,
         state: None,
-        permissions: SfuPermissions {
-            speak: target_perms.has(Permission::VoiceSpeak),
-            video: target_perms.has(Permission::VoiceVideo),
-            priority: target_perms.has(Permission::VoicePriority),
-        },
+        permissions: SfuPermissions::from_bools(
+            target_perms.has(Permission::VoiceSpeak),
+            target_perms.has(Permission::VoiceVideo),
+            target_perms.has(Permission::VoicePriority),
+        ),
     });
     if let Some(room_id) = chan.room_id {
         let al = auth.audit_log(room_id);
@@ -333,11 +335,11 @@ async fn voice_state_move(
     let _ = s.broadcast_sfu(SfuCommand::VoiceState {
         user_id: target_user_id,
         state: None,
-        permissions: SfuPermissions {
-            speak: target_perms.has(Permission::VoiceSpeak),
-            video: target_perms.has(Permission::VoiceVideo),
-            priority: target_perms.has(Permission::VoicePriority),
-        },
+        permissions: SfuPermissions::from_bools(
+            target_perms.has(Permission::VoiceSpeak),
+            target_perms.has(Permission::VoiceVideo),
+            target_perms.has(Permission::VoicePriority),
+        ),
     });
 
     let chan = srv.channels.get(req.channel_id, None).await?;

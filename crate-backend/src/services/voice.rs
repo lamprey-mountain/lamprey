@@ -5,11 +5,10 @@ use std::time::Duration;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::sync::MessageSync;
 use common::v1::types::util::Time;
+use common::v1::types::voice::internal::SfuPermissions;
 use common::v1::types::voice::messages::{PeerCommand, SfuCommand};
 use common::v1::types::voice::router::VoiceRouter;
-use common::v1::types::voice::{
-    Call, CallCreate, CallPatch, SfuCommand, SfuPermissions, VoiceState,
-};
+use common::v1::types::voice::{Call, CallCreate, CallPatch, VoiceState};
 use common::v1::types::{ChannelId, ChannelType, SfuId, UserId};
 use dashmap::DashMap;
 use tokio::time::sleep;
@@ -25,7 +24,7 @@ pub struct ServiceVoice {
     cleanup_tasks: DashMap<ChannelId, tokio::task::AbortHandle>,
 
     // TODO: make this not public
-    pub sfus: HashMap<SfuId, SfuHandle>,
+    pub sfus: DashMap<SfuId, SfuHandle>,
     pub channel_to_sfu: DashMap<ChannelId, SfuId>,
 
     /// voice router
@@ -51,22 +50,19 @@ impl CallHandle {
 }
 
 struct SfuHandle {
-    pub id: SfuId,
-    // pub region: String, // e.g., "us-east-1"
-    // pub current_load: f32, // 0.0 to 1.0
-    // pub public_ip: String,
-    // pub is_online: bool,
+    id: SfuId,
+    // stats: SfuStats, // load/etc
 }
 
 impl SfuHandle {
     pub fn id(&self) -> SfuId {
-        todo!()
+        self.id
     }
 
-    /// send a message to this sfu
-    pub fn send(&self, message: SfuCommand) {
-        todo!()
-    }
+    // /// send a message to this sfu
+    // pub fn send(&self, message: SfuCommand) {
+    //     todo!()
+    // }
 }
 
 impl ServiceVoice {
@@ -78,6 +74,7 @@ impl ServiceVoice {
             cleanup_tasks: DashMap::new(),
             sfus: DashMap::new(),
             channel_to_sfu: DashMap::new(),
+            router: todo!(),
         }
     }
 

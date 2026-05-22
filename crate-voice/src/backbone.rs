@@ -8,7 +8,6 @@ use common::v1::types::{
     SfuId,
 };
 use dashmap::DashMap;
-use futures_util::StreamExt;
 use quinn::{default_runtime, Connection, RecvStream, SendStream};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tracing::{debug, error, info, trace, warn};
@@ -58,8 +57,8 @@ impl BackboneComms {
     pub fn create(state: State) -> Result<Self> {
         let subject_alt_names = vec!["lamprey-sfu".to_string()];
         let cert = rcgen::generate_simple_self_signed(subject_alt_names).unwrap();
-        let key = rustls::pki_types::PrivateKeyDer::Pkcs8(cert.serialize_private_key_der().into());
-        let cert_der = rustls::pki_types::CertificateDer::from(cert.serialize_der().unwrap());
+        let key = rustls::pki_types::PrivateKeyDer::Pkcs8(cert.signing_key.serialize_der().into());
+        let cert_der = cert.cert.der().clone();
 
         let certs = vec![cert_der];
 
@@ -72,8 +71,8 @@ impl BackboneComms {
             quinn::crypto::rustls::QuicServerConfig::try_from(server_crypto)?,
         ));
         let transport_config = Arc::get_mut(&mut config.transport).unwrap();
-        transport_config.max_concurrent_uni_streams(0.into());
-        transport_config.max_concurrent_bidi_streams(1.into());
+        transport_config.max_concurrent_uni_streams(0_u8.into());
+        transport_config.max_concurrent_bidi_streams(1_u8.into());
 
         let host = state
             .voice_config
@@ -89,8 +88,12 @@ impl BackboneComms {
         socket.set_nonblocking(true)?;
 
         let endpoint_config = quinn::EndpointConfig::default();
-        let endpoint =
-            quinn::Endpoint::new(endpoint_config, Some(config), socket, default_runtime())?;
+        let endpoint = quinn::Endpoint::new(
+            endpoint_config,
+            Some(config),
+            socket,
+            default_runtime().unwrap(),
+        )?;
         info!("listening on {}", endpoint.local_addr()?);
 
         let pending_tokens = Arc::new(DashMap::new());
@@ -98,9 +101,10 @@ impl BackboneComms {
 
         let endpoint2 = endpoint.clone();
         let pending_tokens2 = Arc::clone(&pending_tokens);
+        let internal_tx2 = internal_tx.clone();
         tokio::spawn(async move {
             while let Some(incoming) = endpoint2.accept().await {
-                let tx = internal_tx.clone();
+                let tx = internal_tx2.clone();
                 let pending_tokens = pending_tokens2.clone();
 
                 tokio::spawn(async move {
@@ -129,7 +133,7 @@ impl BackboneComms {
 
     /// poll all active connections
     pub async fn poll(&mut self) -> BackboneEvent {
-        self.internal_rx.recv().await?
+        self.internal_rx.recv().await.unwrap()
     }
 
     pub async fn connect(&mut self, addr: SocketAddr, token: String) -> Result<()> {
@@ -154,15 +158,7 @@ impl BackboneComms {
             return Err(anyhow!("Did not receive Ack from remote SFU"));
         }
 
-        // conn.read_datagram().await.unwrap();
-        // conn.max_datagram_size();
-        // conn.send_datagram(BackboneDatagram::Speaking(_).to_bytes())
-        //     .unwrap();
-
-        // conn.rtt();
-
-        // send.write_all(buf);
-        // recv.read(buf);
+        // TODO: expose rtt with conn.rtt();
 
         Ok(())
     }
@@ -236,8 +232,6 @@ async fn serve(
         sfu_id: remote_sfu_id,
     });
 
-    let mut datagrams = conn.datagrams();
-
     loop {
         tokio::select! {
             res = recv_dispatch(&mut recv) => {
@@ -253,7 +247,7 @@ async fn serve(
                     Err(_) => break,
                 }
             }
-            Some(res) = datagrams.next() => {
+            res = conn.read_datagram() => {
                 match res {
                     Ok(bytes) => {
                         if let Ok(dg) = BackboneDatagram::from_bytes(&bytes) {

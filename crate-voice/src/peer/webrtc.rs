@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
+use async_trait::async_trait;
 use common::v1::types::{
     voice::{
-        messages::{PeerCommand, SfuCommand},
-        Mid, VoiceState,
+        internal::MediaData,
+        messages::{PeerCommand, PeerEvent, SfuCommand},
+        Mid, SpeakingWithPeerId, VoiceState,
     },
     PeerId,
 };
@@ -85,8 +87,25 @@ impl PeerWebrtcInner {
     }
 }
 
+#[async_trait]
 impl Peer for PeerWebrtc {
     fn id(&self) -> PeerId {
+        todo!()
+    }
+
+    fn handle_command(&self, cmd: Command) {
+        todo!()
+    }
+
+    fn handle_media_data(&self, media: MediaData) {
+        todo!()
+    }
+
+    fn handle_speaking(&self, speaking: SpeakingWithPeerId) {
+        todo!()
+    }
+
+    async fn poll(&self) -> Option<PeerEvent> {
         todo!()
     }
 }

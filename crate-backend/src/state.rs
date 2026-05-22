@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Weak},
 };
 
-use common::v1::types::{voice::SfuCommand, AuditLogEntry, ChannelId, RoomId, UserId};
+use common::v1::types::{voice::messages::SfuCommand, AuditLogEntry, ChannelId, RoomId, UserId};
 use common::v1::types::{Message, MessageAttachmentType, MessageSync, MessageType, MessageVersion};
 use futures::{Stream, StreamExt};
 use lamprey_backend_data_postgres::data::{postgres::PostgresPool, Data2};

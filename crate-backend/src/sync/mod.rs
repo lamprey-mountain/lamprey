@@ -10,7 +10,8 @@ use std::sync::Arc;
 use common::v1::types::error::{ApiError, ErrorCode, SyncError};
 use common::v1::types::presence::Presence;
 use common::v1::types::util::Time;
-use common::v1::types::voice::{SfuCommand, SfuPermissions, SignallingMessage, VoiceState};
+use common::v1::types::voice::internal::SfuPermissions;
+use common::v1::types::voice::messages::{SignallingCommand, SignallingEvent};
 use common::v1::types::{self, SERVER_ROOM_ID};
 use common::v1::types::{
     DocumentBranchId, MessageClient, MessageEnvelope, MessageSync, Permission, RedexId,

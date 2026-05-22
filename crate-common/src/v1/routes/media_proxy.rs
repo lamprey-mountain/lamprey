@@ -108,7 +108,10 @@ pub mod media_get_filename {
     response(OK, description = "success"),
 )]
 pub mod thumb_get {
-    use crate::{v1::types::MediaId, v2::types::media::proxy::{MediaQuery, ThumbQuery}};
+    use crate::{
+        v1::types::MediaId,
+        v2::types::media::proxy::{MediaQuery, ThumbQuery},
+    };
 
     pub struct Request {
         #[path]
@@ -134,7 +137,10 @@ pub mod thumb_get {
     response(OK, description = "success"),
 )]
 pub mod thumb_head {
-    use crate::{v1::types::MediaId, v2::types::media::proxy::{MediaQuery, ThumbQuery}};
+    use crate::{
+        v1::types::MediaId,
+        v2::types::media::proxy::{MediaQuery, ThumbQuery},
+    };
 
     pub struct Request {
         #[path]
@@ -206,7 +212,10 @@ pub mod gifv_head {
     response(OK, description = "success"),
 )]
 pub mod emoji_get {
-    use crate::{v1::types::EmojiId, v2::types::media::proxy::{MediaQuery, ThumbQuery}};
+    use crate::{
+        v1::types::EmojiId,
+        v2::types::media::proxy::{MediaQuery, ThumbQuery},
+    };
 
     pub struct Request {
         #[path]
@@ -232,7 +241,10 @@ pub mod emoji_get {
     response(OK, description = "success"),
 )]
 pub mod emoji_head {
-    use crate::{v1::types::EmojiId, v2::types::media::proxy::{MediaQuery, ThumbQuery}};
+    use crate::{
+        v1::types::EmojiId,
+        v2::types::media::proxy::{MediaQuery, ThumbQuery},
+    };
 
     pub struct Request {
         #[path]
@@ -256,7 +268,10 @@ pub mod emoji_head {
     response(OK, description = "success"),
 )]
 pub mod trickplay_get {
-    use crate::{v1::types::MediaId, v2::types::media::proxy::{MediaQuery, TrickplayQuery}};
+    use crate::{
+        v1::types::MediaId,
+        v2::types::media::proxy::{MediaQuery, TrickplayQuery},
+    };
 
     pub struct Request {
         #[path]
@@ -280,7 +295,10 @@ pub mod trickplay_get {
     response(OK, description = "success"),
 )]
 pub mod trickplay_head {
-    use crate::{v1::types::MediaId, v2::types::media::proxy::{MediaQuery, TrickplayQuery}};
+    use crate::{
+        v1::types::MediaId,
+        v2::types::media::proxy::{MediaQuery, TrickplayQuery},
+    };
 
     pub struct Request {
         #[path]
@@ -304,7 +322,10 @@ pub mod trickplay_head {
     response(OK, description = "success"),
 )]
 pub mod stream_get {
-    use crate::{v1::types::MediaId, v2::types::media::proxy::{MediaQuery, StreamQuery}};
+    use crate::{
+        v1::types::MediaId,
+        v2::types::media::proxy::{MediaQuery, StreamQuery},
+    };
 
     pub struct Request {
         #[path]
@@ -328,7 +349,10 @@ pub mod stream_get {
     response(OK, description = "success"),
 )]
 pub mod stream_head {
-    use crate::{v1::types::MediaId, v2::types::media::proxy::{MediaQuery, StreamQuery}};
+    use crate::{
+        v1::types::MediaId,
+        v2::types::media::proxy::{MediaQuery, StreamQuery},
+    };
 
     pub struct Request {
         #[path]

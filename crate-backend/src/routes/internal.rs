@@ -8,7 +8,7 @@ use axum::{
     response::IntoResponse,
 };
 use common::v1::types::{
-    voice::{SfuCommand, SfuEvent, SignallingMessage},
+    voice::messages::{SfuCommand, SfuEvent, SignallingCommand},
     ChannelId,
 };
 use common::v1::types::{MessageSync, SfuId};
@@ -132,7 +132,7 @@ impl SfuConnection {
             if needs_reconnect.contains(&state.channel_id) {
                 if let Err(err) = self.s.broadcast(MessageSync::VoiceDispatch {
                     user_id: state.user_id,
-                    payload: SignallingMessage::Reconnect,
+                    payload: SignallingCommand::Reconnect,
                 }) {
                     error!("failed to broadcast reconnect {err}");
                 };

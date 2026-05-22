@@ -62,3 +62,31 @@ pub fn select_host_address_ipv6(host_ip: Option<&str>) -> Result<IpAddr> {
 
     Err(anyhow!("Found no usable ipv6 network interface"))
 }
+
+pub fn extract_stun_ufrag(data: &[u8]) -> Option<String> {
+    if data.len() < 24 {
+        return None;
+    }
+
+    // Skip header
+    let mut pos = 20;
+
+    while pos + 4 <= data.len() {
+        let attr_type = u16::from_be_bytes([data[pos], data[pos + 1]]);
+        let attr_len = u16::from_be_bytes([data[pos + 2], data[pos + 3]]) as usize;
+        pos += 4;
+
+        if attr_type == 0x0006 {
+            // USERNAME attribute
+            if pos + attr_len <= data.len() {
+                let username = String::from_utf8_lossy(&data[pos..pos + attr_len]);
+                // ICE username is usually "local_ufrag:remote_ufrag" or just "local_ufrag"
+                return Some(username.split(':').next().unwrap_or(&username).to_string());
+            }
+        }
+
+        // Attributes are padded to 4 bytes
+        pos += (attr_len + 3) & !3;
+    }
+    None
+}

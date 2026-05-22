@@ -1,9 +1,11 @@
+use std::process;
 use std::str::FromStr;
-use std::{process, sync::Arc};
 
 use anyhow::Result;
 use figment::providers::{Env, Format, Toml};
-use lamprey_voice::{config::Config, sfu::SfuOld, util};
+use lamprey_backend_core::config::Config;
+use lamprey_voice::sfu::Sfu;
+use lamprey_voice::util;
 use tracing::{error, subscriber};
 use tracing_subscriber::EnvFilter;
 
@@ -41,7 +43,7 @@ async fn main() -> Result<()> {
         process::exit(1);
     }
 
-    let _ = SfuOld::run(Arc::new(config)).await;
+    let _ = Sfu::new(config).serve().await;
 
     Ok(())
 }
