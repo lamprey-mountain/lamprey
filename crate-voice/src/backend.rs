@@ -1,10 +1,10 @@
 //! connection to the backend/master
 
+use crate::sfu::State;
 use anyhow::Result;
 use common::v1::types::voice::messages::{SfuCommand, SfuEvent};
 use futures_util::{SinkExt, StreamExt};
-use lamprey_backend_core::config::Config;
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tokio_tungstenite::{
     connect_async,
@@ -19,20 +19,15 @@ pub struct BackendConnection {
 
 impl BackendConnection {
     /// connect to the server and start receiving events
-    pub async fn connect(config: Arc<Config>) -> Result<Self> {
+    pub async fn connect(state: State) -> Result<Self> {
         let (event_tx, mut event_rx) = mpsc::unbounded_channel::<SfuEvent>();
         let (command_tx, command_rx) = mpsc::unbounded_channel::<SfuCommand>();
 
-        let url_str = format!("{}/api/v1/internal/rpc", config.api_url)
+        let url_str = format!("{}/api/v1/internal/rpc", state.config.api_url)
             .replace("http", "ws")
             .replace("https", "wss");
 
-        let token = config
-            .voice
-            .as_ref()
-            .expect("can't use voice server with no token")
-            .token
-            .clone();
+        let token = state.voice_config.token.clone();
 
         tokio::spawn(async move {
             let mut backoff = 1u64;

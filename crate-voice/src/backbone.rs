@@ -12,7 +12,10 @@ use quinn::{default_runtime, Connection, RecvStream, SendStream};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tracing::{debug, error, info, trace, warn};
 
-use crate::sfu::State;
+use crate::{
+    peer::{Command::GenerateKeyframe, CommandFull},
+    sfu::State,
+};
 
 /// manages communication with other sfus
 pub struct BackboneComms {
@@ -51,6 +54,25 @@ pub enum BackboneEvent {
 
     /// a connection was closed
     Closed { sfu_id: SfuId },
+}
+
+impl From<BackboneEvent> for Option<CommandFull> {
+    fn from(value: BackboneEvent) -> Self {
+        match value {
+            BackboneEvent::Dispatch { dispatch, .. } => match dispatch {
+                BackboneDispatch::Keyframe { mid, rid, kind } => {
+                    Some(CommandFull::Inner(GenerateKeyframe { mid, rid, kind }))
+                }
+                _ => None,
+            },
+            BackboneEvent::Datagram(dg) => match dg {
+                BackboneDatagram::Media(media_data) => Some(CommandFull::MediaData(media_data)),
+                BackboneDatagram::Speaking(speaking) => Some(CommandFull::Speaking(speaking)),
+            },
+            BackboneEvent::Connected { .. } => None,
+            BackboneEvent::Closed { .. } => None,
+        }
+    }
 }
 
 impl BackboneComms {

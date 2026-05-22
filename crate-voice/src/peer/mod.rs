@@ -10,8 +10,7 @@ use common::v1::types::{
     PeerId,
 };
 
-// TODO: impl cascading sfu
-// pub mod cascade;
+pub mod cascade;
 pub mod webrtc;
 
 #[async_trait]
@@ -29,7 +28,50 @@ pub trait Peer {
     fn handle_speaking(&self, speaking: SpeakingWithPeerId);
 
     /// poll for events
-    async fn poll(&self) -> Option<PeerEvent>;
+    async fn poll(&mut self) -> Option<PeerEvent>;
+}
+
+pub enum PeerEndpoint {
+    Webrtc(webrtc::PeerWebrtc),
+    Cascade(cascade::PeerCascading),
+}
+
+#[async_trait]
+impl Peer for PeerEndpoint {
+    fn id(&self) -> PeerId {
+        match self {
+            PeerEndpoint::Webrtc(p) => p.id(),
+            PeerEndpoint::Cascade(p) => p.id(),
+        }
+    }
+
+    fn handle_command(&self, cmd: Command) {
+        match self {
+            PeerEndpoint::Webrtc(p) => p.handle_command(cmd),
+            PeerEndpoint::Cascade(p) => p.handle_command(cmd),
+        }
+    }
+
+    fn handle_media_data(&self, media: MediaData) {
+        match self {
+            PeerEndpoint::Webrtc(p) => p.handle_media_data(media),
+            PeerEndpoint::Cascade(p) => p.handle_media_data(media),
+        }
+    }
+
+    fn handle_speaking(&self, speaking: SpeakingWithPeerId) {
+        match self {
+            PeerEndpoint::Webrtc(p) => p.handle_speaking(speaking),
+            PeerEndpoint::Cascade(p) => p.handle_speaking(speaking),
+        }
+    }
+
+    async fn poll(&mut self) -> Option<PeerEvent> {
+        match self {
+            PeerEndpoint::Webrtc(p) => p.poll().await,
+            PeerEndpoint::Cascade(p) => p.poll().await,
+        }
+    }
 }
 
 pub enum Command {
@@ -50,4 +92,13 @@ pub enum Command {
 
     /// another peer created a media track
     MediaAdded(TrackMetadataWithPeerId),
+    // /// peer limits updated
+    // // TODO: handle channel bitrate
+    // Limits { .. },
+}
+
+pub enum CommandFull {
+    Inner(Command),
+    MediaData(MediaData),
+    Speaking(SpeakingWithPeerId),
 }

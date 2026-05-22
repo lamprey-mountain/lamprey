@@ -1,49 +1,104 @@
-// TODO
+use std::sync::Arc;
 
-use common::v1::types::{PeerId, SfuId};
+use async_trait::async_trait;
+use common::v1::types::{
+    voice::{
+        internal::MediaData,
+        messages::{PeerEvent, SignallingCommand},
+        SpeakingWithPeerId,
+    },
+    PeerId, SfuId,
+};
+use tokio::sync::mpsc;
+use tracing::debug;
 
-use crate::peer::{Command, Peer};
+use crate::{
+    backbone::BackboneComms,
+    peer::{Command, Peer},
+};
 
-struct PeerCascading {
+/// a handle to a cascaded peer connection
+#[derive(Debug)]
+pub struct PeerCascading {
     id: PeerId,
-    // sfu_id: SfuId,
+    command_tx: mpsc::UnboundedSender<Command>,
+    event_rx: mpsc::UnboundedReceiver<PeerEvent>,
 }
 
-struct PeerCascadingInner {
+/// the actor responsible for the cascade lifecycle
+pub struct PeerCascadingInner {
     id: PeerId,
-    // sfu_id: SfuId,
-    // quic_conn: quin::Connection,
-    // // This peer might be subscribed to MANY users' tracks
-    // subscribed_tracks: HashSet<TrackKey>,
+    remote_sfu: SfuId,
+    backbone: Arc<BackboneComms>,
+    command_rx: mpsc::UnboundedReceiver<Command>,
+    event_tx: mpsc::UnboundedSender<PeerEvent>,
 }
 
 impl PeerCascading {
-    pub fn spawn() -> Self {
-        todo!()
+    pub fn spawn(id: PeerId, remote_sfu: SfuId, backbone: Arc<BackboneComms>) -> Self {
+        let (command_tx, command_rx) = mpsc::unbounded_channel();
+        let (event_tx, event_rx) = mpsc::unbounded_channel();
+
+        let inner = PeerCascadingInner {
+            id,
+            remote_sfu,
+            backbone,
+            command_rx,
+            event_tx,
+        };
+
+        tokio::spawn(async move {
+            inner.run().await;
+        });
+
+        Self {
+            id,
+            command_tx,
+            event_rx,
+        }
     }
 }
 
 impl PeerCascadingInner {
-    pub fn spawn() -> Self {
-        todo!()
+    async fn run(mut self) {
+        while let Some(cmd) = self.command_rx.recv().await {
+            self.handle_command(cmd);
+        }
+    }
+
+    fn handle_command(&mut self, command: Command) {
+        match command {
+            Command::Signalling(cmd) => match cmd {
+                SignallingCommand::Answer { .. } => todo!("handle sdp negotiation"),
+                SignallingCommand::Offer { .. } => todo!("handle sdp negotiation"),
+                SignallingCommand::Candidate { .. } => todo!("handle ice candidates"),
+                _ => {}
+            },
+            Command::GenerateKeyframe { .. } => todo!("forward keyframe request"),
+            Command::MediaAdded(_) => todo!("forward media addition"),
+        }
     }
 }
 
+#[async_trait]
 impl Peer for PeerCascading {
-    // /// the unique id of this peer
-    // fn id(&self) -> PeerId;
-
-    /// handle a command
-    fn handle_command(&self, cmd: Command) {
-        todo!()
+    fn id(&self) -> PeerId {
+        self.id
     }
 
-    // /// another peer sent media data
-    // fn handle_media_data(&self, media: MediaData);
+    fn handle_command(&self, cmd: Command) {
+        _ = self.command_tx.send(cmd);
+    }
 
-    // /// another peer sent speaking metadata
-    // fn handle_speaking(&self, speaking: SpeakingWithPeerId);
+    fn handle_media_data(&self, _media: MediaData) {
+        // TODO: Backbone datagram transmission
+    }
 
-    // /// poll for events
-    // async fn poll(&self) -> Option<PeerEvent>;
+    fn handle_speaking(&self, _speaking: SpeakingWithPeerId) {
+        // TODO: Backbone datagram transmission
+    }
+
+    async fn poll(&mut self) -> Option<PeerEvent> {
+        self.event_rx.recv().await
+    }
 }
