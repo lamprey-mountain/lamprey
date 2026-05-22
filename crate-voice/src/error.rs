@@ -8,6 +8,9 @@ pub enum Error {
     /// the `Have` message is only sent by the server
     #[error("the `Have` message is only sent by the server")]
     HaveServerOnly,
+
+    #[error("{0}")]
+    Rustls(#[from] rustls::Error),
 }
 
 pub type Result<T> = ::core::result::Result<T, Error>;

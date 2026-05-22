@@ -12,6 +12,7 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.102"
+async-trait = "0.1.89"
 bytes = "1.11.1"
 common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common" }
 dashmap = "6.1.0"
@@ -22,7 +23,8 @@ lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 num_cpus = "1.17.0"
 quinn = "0.11.9"
 rand = "0.10.0"
-rustls = "0.23.40"
+rcgen = "0.14.8"
+rustls = { version = "0.23.40", features = ["ring"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 socket2 = { version = "0.6.3", features = ["all"] }

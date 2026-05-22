@@ -1,7 +1,7 @@
-use str0m::media::MediaKind as MediaKindStr0m;
 use str0m::media::KeyframeRequestKind as KeyframeRequestKindStr0m;
+use str0m::media::MediaKind as MediaKindStr0m;
 
-use crate::v1::types::voice::{MediaKind, KeyframeRequestKind};
+use crate::v1::types::voice::{KeyframeRequestKind, MediaKind};
 
 impl From<MediaKind> for MediaKindStr0m {
     fn from(value: MediaKind) -> Self {

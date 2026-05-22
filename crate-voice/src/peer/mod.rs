@@ -2,6 +2,7 @@
 
 use std::future::Future;
 
+use async_trait::async_trait;
 use common::v1::types::{
     voice::{
         internal::MediaData,
@@ -17,6 +18,7 @@ pub mod webrtc_old;
 
 pub use webrtc_old::PeerWebrtc;
 
+#[async_trait]
 pub trait Peer {
     /// the unique id of this peer
     fn id(&self) -> PeerId;
@@ -31,7 +33,7 @@ pub trait Peer {
     fn handle_speaking(&self, speaking: SpeakingWithPeerId);
 
     /// poll for events
-    fn poll(&self) -> impl Future<Output = Option<PeerEvent>>;
+    async fn poll(&self) -> Option<PeerEvent>;
 }
 
 pub enum Command {

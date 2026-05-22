@@ -1,14 +1,16 @@
 //! main code for acting as a selective forwarding unit
 
 use crate::{
-    backend::BackendConnection, config::Config, peer::PeerWebrtc, PeerCommand, PeerEvent,
-    PeerEventEnvelope, SignallingMessage, TrackMetadataServer, TrackMetadataSfu,
+    backbone::BackboneComms,
+    backend::BackendConnection,
+    peer::{Peer, PeerWebrtc},
+    SignallingMessage,
 };
 use anyhow::Result;
 use bytes::{Bytes, BytesMut};
 use common::v1::types::{
-    voice::{SfuChannel, SfuCommand, SfuEvent, SfuPermissions, VoiceState},
-    ChannelId, SfuId, UserId,
+    voice::{messages::SfuCommand, VoiceState},
+    ChannelId, PeerId, SfuId, UserId,
 };
 use dashmap::DashMap;
 use lamprey_backend_core::config::{Config, ConfigVoice};
@@ -25,7 +27,145 @@ use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tokio::task::LocalSet;
 use tracing::{debug, error, info, trace, warn};
 
-use crate::PeerMedia;
+/// the main entrypoint. creates one sfu
+pub struct Sfu {
+    state: State,
+}
+
+/// pinned to a single core
+pub struct SfuShard {
+    id: ShardId,
+    // peers: HashMap<PeerId, Box<dyn Peer>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ShardId(pub usize);
+
+/// shared state
+pub struct StateInner {
+    pub id: SfuId,
+    pub config: Config,
+    pub voice_config: ConfigVoice,
+}
+
+pub type State = Arc<StateInner>;
+
+impl Sfu {
+    pub fn new(config: Config) -> Self {
+        Self {
+            state: Arc::new(StateInner {
+                id: SfuId::new(),
+                voice_config: config
+                    .voice
+                    .as_ref()
+                    .expect("cannot start sfu with no voice config")
+                    .clone(),
+                config,
+            }),
+        }
+    }
+
+    pub async fn serve(mut self) {
+        // setup sockets
+        let mut sock_v4: tokio::net::UdpSocket = todo!();
+        let mut sock_v6: tokio::net::UdpSocket = todo!();
+        let mut buf_v4 = BytesMut::with_capacity(2048);
+        let mut buf_v6 = BytesMut::with_capacity(2048);
+
+        // setup backbone comms
+        let backbone: BackboneComms = todo!();
+
+        // setup backend connection
+        let backend: BackendConnection = todo!();
+
+        // start workers
+        let num_workers = todo!();
+        let local = LocalSet::new();
+        for n in 0..num_workers {
+            local.spawn_local(async move {
+                loop {
+                    let shard: SfuShard = todo!();
+                    if let Err(e) = shard.serve().await {
+                        error!("shard {} died: {}", n, e);
+                    }
+                    // TODO: wait a little bit, then debug!("restarting shard {}")
+                }
+            });
+        }
+
+        //         Some(envelope) = self.peer_event_rx.recv() => {
+        //             if let Err(err) = self.handle_peer_event(envelope.user_id, envelope.payload).await {
+        //                 error!("Worker {} error handling peer event: {err}", self.id);
+        //             }
+        //         }
+
+        loop {
+            buf_v4.resize(2000, 0);
+            buf_v6.resize(2000, 0);
+
+            tokio::select! {
+                event = backbone.poll() => {
+                    let event = Arc::new(event);
+                    todo!("send to all shards")
+                }
+                event = backend.poll() => {
+                    let event = Arc::new(event);
+                    todo!("send to all shards")
+                }
+                Ok((n, source)) = sock_v6.recv_from(&mut buf_v6) => {
+                    let packet = buf_v6.split_to(n).freeze();
+                    todo!("send to all shards")
+                }
+                Ok((n, source)) = sock_v4.recv_from(&mut buf_v4) => {
+                    let packet = buf_v4.split_to(n).freeze();
+                    todo!("send to all shards")
+                }
+            }
+        }
+    }
+}
+
+impl SfuShard {
+    async fn serve(&mut self) -> Result<()> {
+        info!("shard {} starting", self.id);
+        todo!("something here?")
+    }
+
+    fn handle_command(&mut self, command: SfuCommand) {
+        match command {
+            SfuCommand::RecalculateLatency { target_sfu } => todo!(),
+            SfuCommand::MigrateAll { target_sfu } => todo!(),
+            SfuCommand::MigratePeers { peers, target_sfu } => todo!(),
+            SfuCommand::CreatePeer { state, permissions } => todo!(),
+            SfuCommand::PrepareCascade { sfu_id } => todo!(),
+            SfuCommand::CreateCascade {
+                sfu_id,
+                token,
+                addr,
+            } => todo!(),
+            SfuCommand::RouteUpdate {
+                channel_id,
+                destinations,
+            } => todo!(),
+            SfuCommand::Channel { channel } => todo!(),
+
+            // forward based on peer_id
+            SfuCommand::Signalling { peer_id, inner } => !("forward to peer_id"),
+            SfuCommand::GenerateKeyframe {
+                mid,
+                rid,
+                kind,
+                peer_id,
+            } => todo!("forward to peer_id"),
+        }
+    }
+
+    // fn create_peer(&self) {
+    //     todo!()
+    // }
+}
+
+// === OLD CODE BELOW ===
 
 #[derive(Debug)]
 struct SfuVoiceState {
@@ -705,79 +845,5 @@ impl Worker {
     async fn emit(&self, event: SfuEvent) -> Result<()> {
         _ = self.event_tx.send(event);
         Ok(())
-    }
-}
-
-/// the main entrypoint. creates one sfu
-pub struct Sfu {
-    id: SfuId,
-    state: State,
-}
-
-/// pinned to a single core
-pub struct SfuShard {
-    // TODO
-}
-
-/// shared state
-pub struct StateInner {
-    config: Arc<Config>,
-    voice_config: Arc<ConfigVoice>,
-}
-
-pub type State = Arc<StateInner>;
-
-impl Sfu {
-    pub fn new(config: Config) -> Self {
-        Self {
-            id: SfuId::new(),
-            state: Arc::new(StateInner {
-                voice_config: Arc::new(
-                    config
-                        .voice
-                        .as_ref()
-                        .expect("cannot start sfu with no voice config")
-                        .clone(),
-                ),
-                config: Arc::new(config),
-            }),
-        }
-    }
-
-    pub async fn serve(self) {
-        todo!()
-    }
-
-    fn handle_command(&self, command: SfuCommand) {
-        match command {
-            SfuCommand::RecalculateLatency { target_sfu } => todo!(),
-            SfuCommand::MigrateAll { target_sfu } => todo!(),
-            SfuCommand::MigratePeers { peers, target_sfu } => todo!(),
-            SfuCommand::CreatePeer { state, permissions } => todo!(),
-            SfuCommand::PrepareCascade { sfu_id } => todo!(),
-            SfuCommand::CreateCascade {
-                sfu_id,
-                token,
-                addr,
-            } => todo!(),
-            SfuCommand::RouteUpdate {
-                channel_id,
-                destinations,
-            } => todo!(),
-            SfuCommand::Channel { channel } => todo!(),
-
-            // forward based on peer_id
-            SfuCommand::Signalling { peer_id, inner } => !("forward to peer_id"),
-            SfuCommand::GenerateKeyframe {
-                mid,
-                rid,
-                kind,
-                peer_id,
-            } => todo!("forward to peer_id"),
-        }
-    }
-
-    fn create_peer(&self) {
-        todo!()
     }
 }

@@ -1,5 +1,5 @@
 use common::v1::types::voice::{
-    MediaKind, SessionDescription, SignallingMessage, Mid, TrackKey, TrackMetadata,
+    MediaKind, Mid, SessionDescription, SignallingMessage, TrackKey, TrackMetadata,
 };
 use std::{
     net::{SocketAddr, ToSocketAddrs},

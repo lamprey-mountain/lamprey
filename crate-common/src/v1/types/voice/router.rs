@@ -8,21 +8,31 @@ use crate::v1::types::SfuId;
 pub struct VoiceRouter {
     /// latency in nanoseconds between `(src, dest)`
     pub latencies: HashMap<(SfuId, SfuId), u32>,
+    pub config: VoiceRouterConfig,
 }
 
 #[derive(Debug, Clone)]
 pub struct VoiceRouterConfig {
     /// the default latency to assume for unknown links
-    // default 300ms
     pub default_latency: u32,
 
-    /// the if latency is this high, attempt to rebalance
-    // default 80ms
+    /// if latency is this high, attempt to rebalance
     pub maximum_latency: u32,
 
-    /// if a node has <= merge_threshold connection, attempt to merge
-    // default 3
+    /// if a node has <= merge_threshold connections, attempt to merge
     pub merge_threshold: u32,
+}
+
+impl Default for VoiceRouterConfig {
+    fn default() -> Self {
+        Self {
+            // 300ms in nanoseconds
+            default_latency: 300_000_000,
+            // 80ms in nanoseconds
+            maximum_latency: 80_000_000,
+            merge_threshold: 3,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -30,91 +40,119 @@ pub struct VoiceTopology {
     pub links: Vec<VoiceLink>,
 }
 
-/// voice links are more or less bidirectional
+/// voice links are bidirectional
 #[derive(Debug, Clone)]
 pub struct VoiceLink {
     pub src: SfuId,
     pub dest: SfuId,
 }
 
-// // A simple Union-Find for Kruskal's Algorithm
-// struct DisjointSet {
-//     parent: HashMap<NodeId, NodeId>,
-// }
-// impl DisjointSet {
-//     fn new(nodes: &HashSet<NodeId>) -> Self {
-//         Self { parent: nodes.iter().map(|&n| (n, n)).collect() }
-//     }
-//     fn find(&mut self, i: NodeId) -> NodeId {
-//         if self.parent[&i] == i { i } else {
-//             let p = self.parent[&i];
-//             let root = self.find(p);
-//             self.parent.insert(i, root);
-//             root
-//         }
-//     }
-//     fn union(&mut self, i: NodeId, j: NodeId) -> bool {
-//         let root_i = self.find(i);
-//         let root_j = self.find(j);
-//         if root_i != root_j {
-//             self.parent.insert(root_i, root_j);
-//             true
-//         } else { false }
-//     }
-// }
+// A simple Union-Find for Kruskal's Algorithm
+struct DisjointSet {
+    parent: HashMap<SfuId, SfuId>,
+}
 
-// TODO: impl Default for RouterConfig
+impl DisjointSet {
+    fn new(nodes: &HashSet<SfuId>) -> Self {
+        Self {
+            parent: nodes.iter().map(|&n| (n, n)).collect(),
+        }
+    }
+
+    /// Finds the representative of the set containing `i` with path compression.
+    ///
+    /// This iterative implementation avoids borrow checker conflicts.
+    fn find(&mut self, i: SfuId) -> SfuId {
+        let mut root = i;
+        while self.parent[&root] != root {
+            root = self.parent[&root];
+        }
+
+        // Path compression
+        let mut curr = i;
+        while curr != root {
+            let next = self.parent[&curr];
+            self.parent.insert(curr, root);
+            curr = next;
+        }
+
+        root
+    }
+
+    fn union(&mut self, i: SfuId, j: SfuId) -> bool {
+        let root_i = self.find(i);
+        let root_j = self.find(j);
+        if root_i != root_j {
+            self.parent.insert(root_i, root_j);
+            true
+        } else {
+            false
+        }
+    }
+}
 
 impl VoiceRouter {
     pub fn new(config: VoiceRouterConfig) -> Self {
-        todo!()
+        Self {
+            latencies: HashMap::new(),
+            config,
+        }
     }
 
     /// update the rtt in nanos between two sfus
     pub fn update_latency(&mut self, src: SfuId, dest: SfuId, latency: u32) {
-        todo!()
+        self.latencies.insert((src, dest), latency);
     }
 
     /// get the rtt in nanos between two sfus
     pub fn get_latency(&self, a: SfuId, b: SfuId) -> u32 {
-        // return 0 if same
-        // check both directions
-        todo!()
+        if a == b {
+            return 0;
+        }
+
+        match (self.latencies.get(&(a, b)), self.latencies.get(&(b, a))) {
+            (Some(&lat_ab), Some(&lat_ba)) => std::cmp::min(lat_ab, lat_ba),
+            (Some(&lat), None) | (None, Some(&lat)) => lat,
+            (None, None) => self.config.default_latency,
+        }
     }
 
     /// calculate minimum spanning tree for a channel's active nodes
     pub fn calculate_topology(&self, active_nodes: &HashSet<SfuId>) -> VoiceTopology {
-        // if active_nodes.len() < 2 { return vec![]; }
+        if active_nodes.len() < 2 {
+            return VoiceTopology { links: vec![] };
+        }
 
-        // // 1. Generate all possible edges between active nodes
-        // let nodes: Vec<NodeId> = active_nodes.iter().copied().collect();
-        // let mut edges = Vec::new();
+        // 1. Generate all unique edges between active nodes
+        let nodes: Vec<SfuId> = active_nodes.iter().copied().collect();
+        let mut edges = Vec::new();
 
-        // for i in 0..nodes.len() {
-        //     for j in (i + 1)..nodes.len() {
-        //         let r1 = self.nodes[&nodes[i]].region;
-        //         let r2 = self.nodes[&nodes[j]].region;
-        //         let cost = self.get_latency(r1, r2);
-        //         edges.push((cost, nodes[i], nodes[j]));
-        //     }
-        // }
+        for i in 0..nodes.len() {
+            for j in (i + 1)..nodes.len() {
+                let u = nodes[i];
+                let v = nodes[j];
+                let cost = self.get_latency(u, v);
+                edges.push((cost, u, v));
+            }
+        }
 
-        // // 2. Sort by lowest latency
-        // edges.sort_by_key(|(cost, _, _)| *cost);
+        // 2. Sort by lowest latency (cost)
+        edges.sort_by_key(|(cost, _, _)| *cost);
 
-        // // 3. Kruskal's algorithm to build the tree
-        // let mut mst = Vec::new();
-        // let mut ds = DisjointSet::new(active_nodes);
+        // 3. Kruskal's algorithm to build the tree
+        let mut mst = Vec::new();
+        let mut ds = DisjointSet::new(active_nodes);
 
-        // for (_, u, v) in edges {
-        //     if ds.union(u, v) {
-        //         mst.push(BackboneLink { from: u, to: v });
-        //         // Stop early if we have N-1 edges
-        //         if mst.len() == active_nodes.len() - 1 { break; }
-        //     }
-        // }
-        // mst
+        for (_, u, v) in edges {
+            if ds.union(u, v) {
+                mst.push(VoiceLink { src: u, dest: v });
+                // Stop early once we've joined all nodes (requires N-1 links)
+                if mst.len() == active_nodes.len() - 1 {
+                    break;
+                }
+            }
+        }
 
-        todo!()
+        VoiceTopology { links: mst }
     }
 }

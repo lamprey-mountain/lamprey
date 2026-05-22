@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use common::v1::types::{
     voice::{
-        messages::{PeerCommand, SfuCommand}, Mid, VoiceState
+        messages::{PeerCommand, SfuCommand},
+        Mid, VoiceState,
     },
     PeerId,
 };
@@ -29,7 +30,6 @@ pub struct PeerWebrtcInner {
     voice_state: VoiceState,
 
     remote_mid_to_local_mid: HashMap<(PeerId, Mid), Mid>,
-
     // state: Arc<State>,
 }
 

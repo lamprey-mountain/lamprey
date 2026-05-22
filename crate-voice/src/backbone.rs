@@ -1,25 +1,32 @@
 //! connection to other sfus
 
-use std::{net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 use common::v1::types::{
     voice::messages::{BackboneDatagram, BackboneDispatch, BackboneDispatchEnvelope},
     SfuId,
 };
 use dashmap::DashMap;
-use quinn::{default_runtime, RecvStream, SendStream};
+use futures_util::StreamExt;
+use quinn::{default_runtime, Connection, RecvStream, SendStream};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tracing::{debug, error, info, trace, warn};
 
-use crate::{error::Result, sfu::State};
+use crate::sfu::State;
 
 /// manages communication with other sfus
 pub struct BackboneComms {
     endpoint: quinn::Endpoint,
 
     /// tokens authorized by the Master for incoming connections
-    pending_tokens: DashMap<String, SfuId>,
+    pending_tokens: Arc<DashMap<String, SfuId>>,
+
+    /// active QUIC connections to other SFUs
+    connections: HashMap<SfuId, Connection>,
+
+    /// bidirectional control streams per SFU
+    control_channels: HashMap<SfuId, SendStream>,
 
     internal_rx: UnboundedReceiver<BackboneEvent>,
     internal_tx: UnboundedSender<BackboneEvent>,
@@ -49,34 +56,41 @@ pub enum BackboneEvent {
 
 impl BackboneComms {
     pub fn create(state: State) -> Result<Self> {
-        //     let certs = todo!("generate on startup");
-        //     let key = todo!("generate on startup");
-        let addr = todo!("use voice_config host_ipv4/host_ipv6 + quic_port");
-        let socket = todo!("open socket");
+        let subject_alt_names = vec!["lamprey-sfu".to_string()];
+        let cert = rcgen::generate_simple_self_signed(subject_alt_names).unwrap();
+        let key = rustls::pki_types::PrivateKeyDer::Pkcs8(cert.serialize_private_key_der().into());
+        let cert_der = rustls::pki_types::CertificateDer::from(cert.serialize_der().unwrap());
 
-        //     let mut server_crypto = rustls::ServerConfig::builder()
-        //         .with_no_client_auth()
-        //         .with_single_cert(certs, key)?;
-        //     server_crypto.alpn_protocols = vec![b"lamprey-rtc".to_vec()];
+        let certs = vec![cert_der];
 
-        //     let mut config = quinn::ServerConfig::with_crypto(Arc::new(
-        //         quinn::crypto::rustls::QuicServerConfig::try_from(server_crypto)?,
-        //     ));
-        //     let transport_config = Arc::get_mut(&mut config.transport).unwrap();
-        //     transport_config.max_concurrent_uni_streams(0.into());
-        //     transport_config.max_concurrent_bidi_streams(1.into());
+        let mut server_crypto = rustls::ServerConfig::builder()
+            .with_no_client_auth()
+            .with_single_cert(certs, key)?;
+        server_crypto.alpn_protocols = vec![b"lamprey-rtc".to_vec()];
 
-        // let config = quinn::EndpointConfig::new(todo!());
-        //     let quic = quinn::Endpoint::new(config, server_config, socket, runtime)
-        //         // let rng = &mut rand::rng();
-        //         // let mut master_key = [0u8; 64];
-        //         // rng.fill_bytes(&mut master_key);
-        //         // let master_key = hkdf::Salt::new(hkdf::HKDF_SHA256, &[]).extract(&master_key);
-        //         // Self::new(crypto, Arc::new(master_key))
+        let mut config = quinn::ServerConfig::with_crypto(Arc::new(
+            quinn::crypto::rustls::QuicServerConfig::try_from(server_crypto)?,
+        ));
+        let transport_config = Arc::get_mut(&mut config.transport).unwrap();
+        transport_config.max_concurrent_uni_streams(0.into());
+        transport_config.max_concurrent_bidi_streams(1.into());
 
-        let config = todo!();
-        let server_config = todo!();
-        let endpoint = quinn::Endpoint::new(config, server_config, socket, default_runtime())?;
+        let host = state
+            .voice_config
+            .host_ipv4
+            .clone()
+            .or_else(|| state.voice_config.host_ipv6.clone())
+            .unwrap_or_else(|| "0.0.0.0".to_string());
+
+        let quic_port = state.voice_config.quic_port;
+        let addr: SocketAddr = format!("{}:{}", host, quic_port).parse()?;
+
+        let socket = std::net::UdpSocket::bind(addr)?;
+        socket.set_nonblocking(true)?;
+
+        let endpoint_config = quinn::EndpointConfig::default();
+        let endpoint =
+            quinn::Endpoint::new(endpoint_config, Some(config), socket, default_runtime())?;
         info!("listening on {}", endpoint.local_addr()?);
 
         let pending_tokens = Arc::new(DashMap::new());
@@ -87,20 +101,23 @@ impl BackboneComms {
         tokio::spawn(async move {
             while let Some(incoming) = endpoint2.accept().await {
                 let tx = internal_tx.clone();
+                let pending_tokens = pending_tokens2.clone();
 
                 tokio::spawn(async move {
-                    if let Err(e) = serve(incoming, tx, &mut pending_tokens2).await {
+                    if let Err(e) = serve(incoming, tx, pending_tokens).await {
                         error!("Backbone inbound connection error: {}", e);
                     }
                 });
             }
 
-            Ok(())
+            Ok::<(), anyhow::Error>(())
         });
 
         Ok(Self {
             endpoint,
             pending_tokens,
+            connections: HashMap::new(),
+            control_channels: HashMap::new(),
             internal_rx,
             internal_tx,
         })
@@ -111,11 +128,11 @@ impl BackboneComms {
     }
 
     /// poll all active connections
-    pub async fn poll(&self) -> BackboneEvent {
+    pub async fn poll(&mut self) -> BackboneEvent {
         self.internal_rx.recv().await?
     }
 
-    pub async fn connect(&self, addr: SocketAddr, token: String) -> Result<()> {
+    pub async fn connect(&mut self, addr: SocketAddr, token: String) -> Result<()> {
         let conn = self.endpoint.connect(addr, "lamprey-rtc")?.await?;
         let (mut send, mut recv) = conn.open_bi().await?;
 
@@ -157,7 +174,8 @@ impl BackboneComms {
         dispatch: &BackboneDispatchEnvelope,
     ) -> Result<()> {
         if let Some(stream) = self.control_channels.get_mut(&target) {
-            send_dispatch(stream, dispatch).await
+            send_dispatch(stream, dispatch).await?;
+            Ok(())
         } else {
             Err(anyhow!("no active backbone connection to sfu {}", target))
         }
@@ -179,7 +197,7 @@ impl BackboneComms {
 async fn serve(
     incoming: quinn::Incoming,
     event_tx: UnboundedSender<BackboneEvent>,
-    pending_tokens: (),
+    pending_tokens: Arc<DashMap<String, SfuId>>,
 ) -> Result<()> {
     let conn = incoming.await?;
     debug!("New backbone connection from {}", conn.remote_address());
@@ -189,7 +207,7 @@ async fn serve(
     let msg = recv_dispatch(&mut recv).await?;
     let remote_sfu_id = match msg.dispatch {
         BackboneDispatch::Hello { token } => {
-            if let Some(sfu_id) = pending_tokens.remove(&token) {
+            if let Some((_, sfu_id)) = pending_tokens.remove(&token) {
                 send_dispatch(
                     &mut send,
                     &BackboneDispatchEnvelope {
@@ -224,8 +242,12 @@ async fn serve(
         tokio::select! {
             res = recv_dispatch(&mut recv) => {
                 match res {
-                    Ok(dispatch) => {
-                        _ = event_tx.send(BackboneEvent::Dispatch{ sfu_id: todo!(), nonce: todo!(), dispatch: todo!() });
+                    Ok(envelope) => {
+                        _ = event_tx.send(BackboneEvent::Dispatch {
+                            sfu_id: remote_sfu_id,
+                            nonce: envelope.nonce,
+                            dispatch: envelope.dispatch,
+                        });
                     }
                     // TODO: log error
                     Err(_) => break,
