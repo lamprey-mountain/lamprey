@@ -9,6 +9,7 @@ use common::v1::types::{
     ChannelId, SfuId, UserId,
 };
 use dashmap::DashMap;
+use lamprey_backend_core::config::ConfigVoice;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
@@ -69,14 +70,19 @@ impl Sfu {
         }
     }
 
-    pub async fn run(config: Config) {
+    pub async fn run(config: Arc<Config>) {
         let (event_tx, event_rx) = mpsc::unbounded_channel();
         let (command_tx, mut command_rx) = mpsc::unbounded_channel();
 
-        let backend = BackendConnection::new(config.clone(), event_rx, command_tx);
+        let backend = BackendConnection::new(Arc::clone(&config), event_rx, command_tx);
         tokio::spawn(backend.spawn());
 
-        let num_workers = config
+        let config_voice = config
+            .voice
+            .clone()
+            .expect("can't use voice server with no voice config");
+        let config_voice = Arc::new(config_voice);
+        let num_workers = config_voice
             .workers
             .map(|w| w as usize)
             .unwrap_or_else(num_cpus::get)
@@ -87,7 +93,7 @@ impl Sfu {
         for i in 0..num_workers {
             let (w_tx, w_rx) = mpsc::unbounded_channel();
             worker_txs.push(w_tx);
-            let config_clone = config.clone();
+            let config_voice_clone = Arc::clone(&config_voice);
             let event_tx_clone = event_tx.clone();
 
             thread::spawn(move || {
@@ -99,14 +105,14 @@ impl Sfu {
                 let local = LocalSet::new();
 
                 local.block_on(&rt, async move {
-                    let mut worker = match Worker::new(i, config_clone, w_rx, event_tx_clone).await
-                    {
-                        Ok(w) => w,
-                        Err(e) => {
-                            error!("Failed to create worker {}: {}", i, e);
-                            return;
-                        }
-                    };
+                    let mut worker =
+                        match Worker::new(i, config_voice_clone, w_rx, event_tx_clone).await {
+                            Ok(w) => w,
+                            Err(e) => {
+                                error!("Failed to create worker {}: {}", i, e);
+                                return;
+                            }
+                        };
                     if let Err(e) = worker.run().await {
                         error!("Worker {} died: {}", i, e);
                     }
@@ -191,7 +197,7 @@ impl Sfu {
 
 struct Worker {
     id: usize,
-    config: Config,
+    config: Arc<ConfigVoice>,
     command_rx: UnboundedReceiver<WorkerCommand>,
     event_tx: UnboundedSender<SfuEvent>,
     peer_event_rx: UnboundedReceiver<PeerEventEnvelope>,
@@ -213,7 +219,7 @@ struct Worker {
 impl Worker {
     async fn new(
         id: usize,
-        config: Config,
+        config: Arc<ConfigVoice>,
         command_rx: UnboundedReceiver<WorkerCommand>,
         event_tx: UnboundedSender<SfuEvent>,
     ) -> Result<Self> {

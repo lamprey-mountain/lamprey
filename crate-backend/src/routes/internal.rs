@@ -36,11 +36,16 @@ async fn internal_rpc(
     headers: HeaderMap,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
+    let Some(v) = &s.config.voice else {
+        return Err(Error::Unimplemented);
+    };
+
     let auth = headers
         .get("authorization")
         .ok_or(Error::MissingAuth)?
         .to_str()?;
-    if auth != format!("Server {}", s.config.sfu_token) {
+
+    if auth != format!("Server {}", v.token) {
         return Err(Error::MissingAuth);
     }
 

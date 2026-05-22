@@ -35,7 +35,12 @@ impl ServiceEmbed {
                     builder
                         .timeout(std::time::Duration::from_secs(15))
                         .connect_timeout(std::time::Duration::from_secs(5))
-                        .user_agent(&state.config.http.user_agent)
+                        .user_agent(
+                            state
+                                .config
+                                .user_agent_header_value()
+                                .expect("should always be valid user agent"),
+                        )
                 })
                 .add_plugin(DirectMediaPlugin)
                 .add_plugin(HtmlStreamPlugin {

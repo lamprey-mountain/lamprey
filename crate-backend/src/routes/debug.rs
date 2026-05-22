@@ -194,6 +194,18 @@ async fn debug_info(State(s): State<Arc<ServerState>>) -> Result<impl IntoRespon
             rustc_llvm: env!("VERGEN_RUSTC_LLVM_VERSION"),
             rustc_rev: env!("VERGEN_RUSTC_COMMIT_HASH"),
             rustc_channel: env!("VERGEN_RUSTC_CHANNEL"),
+            // TODO: use CARGO_PKG_VERSION
+            // CARGO_MANIFEST_DIR
+            // CARGO_PKG_AUTHORS
+            // CARGO_PKG_DESCRIPTION
+            // CARGO_PKG_HOMEPAGE
+            // CARGO_PKG_NAME
+            // CARGO_PKG_REPOSITORY
+            // CARGO_PKG_VERSION
+            // CARGO_PKG_VERSION_MAJOR
+            // CARGO_PKG_VERSION_MINOR
+            // CARGO_PKG_VERSION_PATCH
+            // CARGO_PKG_VERSION_PRE
         },
         features: ServerFeatures {
             registration: Some(features::Registration {}),
@@ -201,7 +213,7 @@ async fn debug_info(State(s): State<Arc<ServerState>>) -> Result<impl IntoRespon
             email: Some(features::Email {}),
             voice: None, // not advertised for now, too buggy unfortunately
             media: Some(features::Media {
-                max_size: s.config.media_max_size,
+                max_size: s.config.media.max_size,
             }),
             oauth: Some(features::Oauth {
                 providers: s

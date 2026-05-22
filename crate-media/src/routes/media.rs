@@ -89,7 +89,7 @@ pub async fn get_media(
         return Ok((StatusCode::NOT_MODIFIED, header_info.headers, Body::empty()));
     }
 
-    let reader = s.s3.reader(&path).await?;
+    let reader = s.blobs.reader(&path).await?;
     if let Some(r) = header_info.range {
         let body = Body::from_stream(reader.into_bytes_stream(r).await?);
         Ok((StatusCode::PARTIAL_CONTENT, header_info.headers, body))
@@ -122,7 +122,7 @@ pub async fn get_media_filename(
         return Ok((StatusCode::NOT_MODIFIED, header_info.headers, Body::empty()));
     }
 
-    let reader = s.s3.reader(&path).await?;
+    let reader = s.blobs.reader(&path).await?;
     if let Some(r) = header_info.range {
         let body = Body::from_stream(reader.into_bytes_stream(r).await?);
         Ok((StatusCode::PARTIAL_CONTENT, header_info.headers, body))

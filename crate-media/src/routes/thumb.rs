@@ -35,7 +35,7 @@ async fn thumb_response(
     let media = s.ensure_media_ready(media_id, media_query.wait).await?;
     let animate = query.animate;
     if let Some(size) = query.size {
-        if !s.config.thumb_sizes.contains(&size) {
+        if !s.config_media().thumb_sizes.contains(&size) {
             return Err(Error::BadRequest);
         }
 
@@ -60,8 +60,8 @@ async fn thumb_response(
         let suffix = if animate { "" } else { "_static" };
         let thumb_path = format!("/media/{media_id}/thumb/{size}x{size}{suffix}.{ext}");
 
-        if s.s3.exists(&thumb_path).await? {
-            let meta = s.s3.stat(&thumb_path).await?;
+        if s.blobs.exists(&thumb_path).await? {
+            let meta = s.blobs.stat(&thumb_path).await?;
             let content_length = meta.content_length();
             let final_headers = build_headers(
                 &headers,
@@ -79,7 +79,7 @@ async fn thumb_response(
             };
 
             let body = if with_body {
-                let reader = s.s3.reader(&thumb_path).await?;
+                let reader = s.blobs.reader(&thumb_path).await?;
                 if let Some(r) = final_headers.range {
                     Body::from_stream(reader.into_bytes_stream(r).await?)
                 } else {
@@ -97,7 +97,7 @@ async fn thumb_response(
             .pending_thumbnails
             .try_get_with((media_id, size, size, animate), async move {
                 let poster_path = format!("/media/{media_id}/poster");
-                let source_path = if s.s3.exists(&poster_path).await? {
+                let source_path = if s.blobs.exists(&poster_path).await? {
                     poster_path
                 } else if probably_can_thumbnail(&m) {
                     format!("/media/{media_id}/file")
@@ -108,7 +108,7 @@ async fn thumb_response(
                 let temp_in = async_tempfile::TempFile::new().await?;
                 let temp_out = async_tempfile::TempFile::new().await?;
 
-                let reader = s.s3.reader(&source_path).await?;
+                let reader = s.blobs.reader(&source_path).await?;
                 let mut writer = temp_in.open_rw().await?;
                 let mut bytes_reader = reader.into_bytes_stream(..).await?;
                 while let Some(chunk) = bytes_reader.next().await {
@@ -128,7 +128,7 @@ async fn thumb_response(
                 let mut thumb_data = Vec::new();
                 out_reader.read_to_end(&mut thumb_data).await?;
 
-                let s_clone = s.s3.clone();
+                let s_clone = s.blobs.clone();
                 let data_clone = thumb_data.clone();
                 tokio::spawn(async move {
                     if let Err(err) = s_clone.write(&thumb_path, data_clone).await {
@@ -183,7 +183,7 @@ async fn thumb_response(
 
         if !animate && is_animated {
             // Force static thumbnail if animate=false is requested for an animated source
-            let size = s.config.thumb_sizes.first().copied().unwrap_or(128);
+            let size = s.config_media().thumb_sizes.first().copied().unwrap_or(128);
             return thumb_response(
                 s,
                 media_id,
@@ -200,8 +200,8 @@ async fn thumb_response(
 
         let poster_path = format!("/media/{media_id}/poster");
 
-        if s.s3.exists(&poster_path).await? {
-            let meta = s.s3.stat(&poster_path).await?;
+        if s.blobs.exists(&poster_path).await? {
+            let meta = s.blobs.stat(&poster_path).await?;
             let content_length = meta.content_length();
             let final_headers = build_headers(
                 &headers,
@@ -219,7 +219,7 @@ async fn thumb_response(
             };
 
             let body = if with_body {
-                let reader = s.s3.reader(&poster_path).await?;
+                let reader = s.blobs.reader(&poster_path).await?;
                 if let Some(r) = final_headers.range {
                     Body::from_stream(reader.into_bytes_stream(r).await?)
                 } else {

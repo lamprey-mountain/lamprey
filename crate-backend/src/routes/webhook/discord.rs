@@ -399,7 +399,7 @@ pub async fn webhook_execute_discord(
     let mut attachments = Vec::new();
     for attachment in file_fields {
         let size = attachment.data.len() as u64;
-        if size > s.config.media_max_size {
+        if size > s.config.media.max_size {
             return Err(Error::TooBig);
         }
         let media_create = MediaCreate {

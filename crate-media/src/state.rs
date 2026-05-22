@@ -4,6 +4,7 @@ use common::{
     v1::types::{EmojiId, MediaId, MessageSync},
     v2::types::media::{Media, MediaStatus},
 };
+use lamprey_backend_core::config::{ConfigBlobs, ConfigMedia};
 use moka::future::Cache;
 use opendal::{layers::LoggingLayer, Operator};
 use sqlx::{postgres::PgPoolOptions, PgPool};
@@ -13,7 +14,7 @@ use crate::{config::Config, data, Error, Result};
 #[derive(Clone)]
 pub struct AppState {
     pub(crate) db: PgPool,
-    pub(crate) s3: Operator,
+    pub(crate) blobs: Operator,
     pub(crate) nats: Option<async_nats::Client>,
     pub(crate) config: Arc<Config>,
 
@@ -34,15 +35,25 @@ impl AppState {
             .connect(&config.database_url)
             .await?;
 
-        let builder = opendal::services::S3::default()
-            .bucket(&config.s3.bucket)
-            .endpoint(config.s3.endpoint.as_str())
-            .region(&config.s3.region)
-            .access_key_id(&config.s3.access_key_id)
-            .secret_access_key(&config.s3.secret_access_key);
-        let s3 = Operator::new(builder)?
-            .layer(LoggingLayer::default())
-            .finish();
+        let blobs = match &config.blobs {
+            ConfigBlobs::S3(s3) => {
+                let builder = opendal::services::S3::default()
+                    .bucket(&s3.bucket)
+                    .endpoint(s3.endpoint.as_str())
+                    .region(&s3.region)
+                    .access_key_id(&s3.access_key_id)
+                    .secret_access_key(&s3.secret_access_key);
+                opendal::Operator::new(builder)?
+                    .layer(LoggingLayer::default())
+                    .finish()
+            }
+            ConfigBlobs::Fs(fs) => {
+                let builder = opendal::services::Fs::default().root(fs.data_dir.to_str().unwrap());
+                opendal::Operator::new(builder)?
+                    .layer(LoggingLayer::default())
+                    .finish()
+            }
+        };
 
         let (sushi_tx, _) = tokio::sync::broadcast::channel(100);
         let nats = if let Some(nats_config) = &config.nats {
@@ -62,12 +73,12 @@ impl AppState {
             None
         };
 
-        let cache_media = Cache::new(config.cache_media);
-        let cache_emoji = Cache::new(config.cache_emoji);
+        let cache_media = Cache::new(config.media.cache_media);
+        let cache_emoji = Cache::new(config.media.cache_emoji);
 
         Ok(Self {
             db,
-            s3,
+            blobs,
             nats,
             config: Arc::new(config),
             cache_emoji,
@@ -132,45 +143,8 @@ impl AppState {
             }
         }
     }
+
+    pub fn config_media(&self) -> &ConfigMedia {
+        &self.config.media
+    }
 }
-
-// async fn main() -> anyhow::Result<()> {
-//     let config: Config = Figment::new()
-//         .merge(Toml::file("cdn.toml"))
-//         .merge(Env::raw())
-//         .extract()?;
-
-//     info!("starting cdn with config: {:#?}", config);
-
-//     let state = AppState {
-//         db,
-//         s3,
-//         nats,
-//         config: Arc::new(config),
-//         cache_media,
-//         cache_emoji,
-//         sushi_tx,
-//     };
-
-//     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
-//         .merge(routes::routes())
-//         .with_state(state)
-//         .split_for_parts();
-//     let router = router
-//         .route("/api/docs.json", get(|| async { Json(api) }))
-//         .route(
-//             "/api/docs",
-//             get(|| async { Html(include_str!("scalar.html")) }),
-//         )
-//         .route("/", get(|| async { "it works!" }))
-//         .layer(cors())
-//         .layer(TraceLayer::new_for_http())
-//         .layer(CatchPanicLayer::new())
-//         .layer(PropagateHeaderLayer::new(HeaderName::from_static(
-//             "x-trace-id",
-//         )));
-//     let listener = tokio::net::TcpListener::bind("0.0.0.0:4001").await?;
-//     axum::serve(listener, router).await?;
-
-//     Ok(())
-// }

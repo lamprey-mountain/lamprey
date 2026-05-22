@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use clap::Parser;
 use figment::providers::{Env, Format, Toml};
 use lamprey_backend::config::Config;
@@ -34,19 +36,11 @@ async fn main_inner() -> Result<(), anyhow::Error> {
                 server.serve().await?;
             }
             ServeCommand::Media { media_config } => {
-                let config: lamprey_media::config::Config = figment::Figment::new()
-                    .merge(Toml::file(media_config))
-                    .merge(Env::raw().only(&["RUST_LOG"]))
-                    .extract()?;
                 let server = lamprey_media::server::MediaServer::init_from_config(config).await?;
                 server.serve().await?;
             }
             ServeCommand::Voice { sfu_config } => {
-                let config: lamprey_voice::config::Config = figment::Figment::new()
-                    .merge(Toml::file(sfu_config))
-                    .merge(Env::raw().only(&["RUST_LOG"]))
-                    .extract()?;
-                lamprey_voice::sfu::Sfu::run(config).await;
+                lamprey_voice::sfu::Sfu::run(Arc::new(config)).await;
             }
         },
         Command::Maintenence { target } => match target {

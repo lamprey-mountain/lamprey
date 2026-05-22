@@ -1,12 +1,10 @@
-# example config for backend
+# example config
 
 rust_log = "debug,sqlx=debug"
 database_url = "postgres://user:pass@localhost:5432/chat"
 api_url = "https://example.com"
 html_url = "https://example.com"
 cdn_url = "https://example-cdn.com"
-sfu_token = "a1b2c3"
-media_max_size = 16777216 # 16 MiB
 
 [[listen]]
 type = "tcp"
@@ -34,10 +32,8 @@ authorization_url = "https://github.com/login/oauth/authorize"
 token_url = "https://github.com/login/oauth/access_token"
 revocation_url = "https://github.com/login/oauth/access_token"
 
-[url_preview]
-
 [http]
-user_agent = "Lamprey/v0.1.0 (admin@example.com)"
+contact = "admin@example.com"
 deny = [
   "127.0.0.1/8",
   "10.0.0.0/8",
@@ -56,3 +52,14 @@ username = "system@example.com"
 password = "a1b2c3"
 host = "mail.example.com"
 from = '"system" <system@example.com>'
+
+[media]
+max_size = 16777216 # 16 MiB
+thumb_sizes = [64, 320, 640]
+
+[voice]
+token = "a1b2c3"
+host = "0.0.0.0:4001"
+api_url = "https://example.com"
+host_ipv4 = "192.168.12.34" # must be public
+host_ipv6 = "2001:db8:0a0b:12f0:0000:0000" # must be public

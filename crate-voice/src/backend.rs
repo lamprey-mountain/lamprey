@@ -1,7 +1,7 @@
 use anyhow::Result;
 use common::v1::types::voice::{SfuCommand, SfuEvent};
 use futures_util::{SinkExt, StreamExt};
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio_tungstenite::{
     connect_async,
@@ -12,14 +12,14 @@ use tracing::{error, info, warn};
 use crate::config::Config;
 
 pub struct BackendConnection {
-    config: Config,
+    config: Arc<Config>,
     event_rx: UnboundedReceiver<SfuEvent>,
     command_tx: UnboundedSender<SfuCommand>,
 }
 
 impl BackendConnection {
     pub fn new(
-        config: Config,
+        config: Arc<Config>,
         event_rx: UnboundedReceiver<SfuEvent>,
         command_tx: UnboundedSender<SfuCommand>,
     ) -> Self {
@@ -52,7 +52,13 @@ impl BackendConnection {
             .replace("https", "wss");
 
         let mut request = url_str.into_client_request()?;
-        let auth_header = format!("Server {}", self.config.token)
+        let token = &self
+            .config
+            .voice
+            .as_ref()
+            .expect("can't use voice server with no token")
+            .token;
+        let auth_header = format!("Server {}", token)
             .try_into()
             .map_err(|e| anyhow::anyhow!("Invalid auth token: {e}"))?;
 

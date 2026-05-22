@@ -50,7 +50,7 @@ async fn server_info(
                     .collect(),
             }),
             media: Some(ServerMedia {
-                max_file_size: s.config.media_max_size,
+                max_file_size: s.config.media.max_size,
             }),
             voice: Some(ServerVoice {}),
             web_push: config_internal.map(|c| ServerWebPush {

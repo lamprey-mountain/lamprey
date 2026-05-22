@@ -53,7 +53,7 @@ async fn media_create(
     json.validate()?;
     match &json.source {
         MediaCreateSource::Upload { size, .. } => {
-            if *size > Some(s.config.media_max_size) {
+            if *size > Some(s.config.media.max_size) {
                 return Err(Error::TooBig);
             }
 
@@ -79,7 +79,7 @@ async fn media_create(
             Ok((StatusCode::CREATED, res_headers, Json(res)))
         }
         MediaCreateSource::Download { size, .. } => {
-            if size.is_some_and(|sz| sz > s.config.media_max_size) {
+            if size.is_some_and(|sz| sz > s.config.media.max_size) {
                 return Err(Error::TooBig);
             }
 

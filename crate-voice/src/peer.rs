@@ -6,8 +6,8 @@ use std::{
 };
 
 use crate::{
-    config::Config, signalling::Signalling, Error, MediaData, PeerEvent, PeerPermissions,
-    SignallingMessage, TrackMetadataServer, TrackMetadataSfu,
+    signalling::Signalling, Error, MediaData, PeerEvent, PeerPermissions, SignallingMessage,
+    TrackMetadataServer, TrackMetadataSfu,
 };
 use anyhow::Result;
 use bytes::Bytes;
@@ -18,6 +18,7 @@ use common::v1::types::{
     },
     UserId,
 };
+use lamprey_backend_core::config::ConfigVoice;
 use str0m::{
     channel::ChannelId,
     media::{Direction, MediaKind, Mid},
@@ -73,7 +74,7 @@ pub struct Peer {
 
 impl Peer {
     pub async fn create(
-        config: &Config,
+        config: &ConfigVoice,
         sfu_send: UnboundedSender<PeerEventEnvelope>,
         user_id: UserId,
         voice_state: VoiceState,

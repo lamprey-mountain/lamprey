@@ -10,7 +10,7 @@ use lamprey_backend_data_postgres::data::{postgres::PostgresPool, Data2};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use tokio::{runtime::Handle as TokioHandle, sync::broadcast::Sender};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use url::Url;
 
 use crate::{
@@ -328,6 +328,10 @@ impl ServerState {
         blobs: opendal::Operator,
         nats: Option<async_nats::Client>,
     ) -> Self {
+        if config.http.contact.is_none() {
+            warn!("http.contact is not set in your config! set it so an email or something so webmasters can contact you.");
+        }
+
         // a bit hacky for now since i need to work around the existing ServerState
         // though i probably need some way to access global state/services from within them anyways
         let services = Arc::new_cyclic(|weak| {

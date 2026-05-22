@@ -20,7 +20,12 @@ impl ServiceHttp {
             .timeout(Duration::from_secs(15))
             .connect_timeout(Duration::from_secs(5))
             .redirect(reqwest::redirect::Policy::limited(10))
-            .user_agent(&state.config.http.user_agent)
+            .user_agent(
+                state
+                    .config
+                    .user_agent_header_value()
+                    .expect("should always be valid user agent"),
+            )
             .https_only(true)
             .build()
             .expect("failed to build http client");

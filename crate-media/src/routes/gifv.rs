@@ -52,8 +52,8 @@ async fn gifv_response(
 
     let gifv_path = format!("/media/{media_id}/gifv");
 
-    if s.s3.exists(&gifv_path).await? {
-        let meta = s.s3.stat(&gifv_path).await?;
+    if s.blobs.exists(&gifv_path).await? {
+        let meta = s.blobs.stat(&gifv_path).await?;
         let content_length = meta.content_length();
         let final_headers = build_headers(
             &headers,
@@ -70,7 +70,7 @@ async fn gifv_response(
         };
 
         let body = if with_body {
-            let reader = s.s3.reader(&gifv_path).await?;
+            let reader = s.blobs.reader(&gifv_path).await?;
             if let Some(r) = final_headers.range {
                 Body::from_stream(reader.into_bytes_stream(r).await?)
             } else {
@@ -89,14 +89,14 @@ async fn gifv_response(
             let source_path = format!("/media/{media_id}/file");
             let temp_in = TempFile::new().await?;
             let temp_out = TempFile::new().await?;
-            let reader = s.s3.reader(&source_path).await?;
+            let reader = s.blobs.reader(&source_path).await?;
             let mut writer = temp_in.open_rw().await?;
             let chunk = reader.read(..).await?;
             writer.write_all(&chunk.to_vec()).await?;
 
             ffmpeg::transcode_to_webm(temp_in.file_path(), temp_out.file_path()).await?;
 
-            let s_clone = s.s3.clone();
+            let s_clone = s.blobs.clone();
             let out_clone = temp_out.file_path().to_owned();
             tokio::spawn(async move {
                 let mut f = File::open(out_clone).await.unwrap();

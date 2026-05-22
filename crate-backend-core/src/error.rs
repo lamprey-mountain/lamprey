@@ -182,6 +182,9 @@ pub enum Error {
 
     #[error("(http response)")]
     Response(http::Response<Bytes>),
+
+    #[error("invalid header value")]
+    InvalidHeaderValue(#[from] http::header::InvalidHeaderValue),
 }
 
 impl From<sqlx::Error> for Error {

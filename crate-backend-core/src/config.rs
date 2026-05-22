@@ -6,6 +6,7 @@ use std::{
     path::PathBuf,
 };
 
+use http::HeaderValue;
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
@@ -34,6 +35,7 @@ pub struct ServerKeyInternal {
     pub expires_at: Time,
 }
 
+// TODO: derive(Clone, Serialize)
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub rust_log: String,
@@ -56,12 +58,18 @@ pub struct Config {
     pub blobs: ConfigBlobs,
 
     pub oauth_provider: HashMap<String, ConfigOauthProvider>,
-    pub url_preview: ConfigUrlPreview,
-    pub http: ConfigHttp,
-    pub media_max_size: u64,
-    pub smtp: ConfigSmtp,
+
     pub otel_trace_endpoint: Option<String>,
-    pub sfu_token: String,
+
+    // TODO: make optional
+    #[serde(default)]
+    pub http: ConfigHttp,
+
+    // TODO: make optional
+    pub smtp: ConfigSmtp,
+
+    #[serde(default)]
+    pub url_preview: ConfigUrlPreview,
 
     #[serde(default = "default_max_user_emails")]
     pub max_user_emails: usize,
@@ -74,9 +82,6 @@ pub struct Config {
 
     #[serde(default = "default_listen")]
     pub listen: Vec<ListenConfig>,
-
-    #[serde(default)]
-    pub media_scanners: Vec<ConfigMediaScanner>,
 
     /// whether to enable admin tokens
     ///
@@ -92,6 +97,12 @@ pub struct Config {
 
     /// static admin token override
     pub admin_token: Option<String>,
+
+    #[serde(default)]
+    pub media: ConfigMedia,
+
+    /// voice config, if None disables voice
+    pub voice: Option<ConfigVoice>,
 
     #[serde(default)]
     pub scripts: ConfigScripts,
@@ -153,16 +164,68 @@ pub struct ConfigOauthProvider {
     pub autoregister: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 pub struct ConfigUrlPreview {
     // does this need anything?
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ConfigHttp {
-    pub user_agent: String,
+    /// contact information for webmasters; gner
+    pub contact: Option<String>,
+
+    /// override the user agent string
+    pub user_agent: Option<String>,
+
+    /// deny access to these ip addresses
+
+    #[serde(default = "default_deny_list")]
     pub deny: Vec<IpNet>,
+
+    /// the maximum number of parallel requests
+    #[serde(default = "default_max_parallel_jobs")]
     pub max_parallel_jobs: usize,
+}
+
+impl Default for ConfigHttp {
+    fn default() -> Self {
+        Self {
+            contact: None,
+            user_agent: None,
+            deny: default_deny_list(),
+            max_parallel_jobs: default_max_parallel_jobs(),
+        }
+    }
+}
+
+fn default_deny_list() -> Vec<IpNet> {
+    vec![
+        "127.0.0.1/8"
+            .parse()
+            .expect("Invalid default IPv4 loopback"),
+        "10.0.0.0/8".parse().expect("Invalid default RFC1918 range"),
+        "172.16.0.0/12"
+            .parse()
+            .expect("Invalid default RFC1918 range"),
+        "192.168.0.0/16"
+            .parse()
+            .expect("Invalid default RFC1918 range"),
+        "100.64.0.0/10"
+            .parse()
+            .expect("Invalid default CGNAT range"),
+        "169.254.0.0/16"
+            .parse()
+            .expect("Invalid default link-local range"),
+        "::1/128".parse().expect("Invalid default IPv6 loopback"),
+        "fe80::/64"
+            .parse()
+            .expect("Invalid default IPv6 link-local"),
+        "fc00::/7".parse().expect("Invalid default IPv6 ULA range"),
+    ]
+}
+
+fn default_max_parallel_jobs() -> usize {
+    8
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -186,6 +249,78 @@ pub struct ConfigScripts {
     /// default limits for scripts
     #[serde(default = "EvalLimits::strict")]
     pub limits: EvalLimits,
+}
+
+/// config for the media server
+#[derive(Debug, Clone, Deserialize)]
+pub struct ConfigMedia {
+    #[serde(default = "default_cache_media")]
+    pub cache_media: u64,
+
+    #[serde(default = "default_cache_emoji")]
+    pub cache_emoji: u64,
+
+    #[serde(default = "default_thumb_sizes")]
+    pub thumb_sizes: Vec<u32>,
+
+    /// the maximum size of media in bytes (default 8MiB)
+    #[serde(default = "default_max_media_size")]
+    pub max_size: u64,
+
+    /// media scanners
+    #[serde(default)]
+    pub scanners: Vec<ConfigMediaScanner>,
+}
+
+fn default_cache_media() -> u64 {
+    10_000
+}
+
+fn default_cache_emoji() -> u64 {
+    1_000_000
+}
+
+fn default_thumb_sizes() -> Vec<u32> {
+    vec![64, 320, 640]
+}
+
+fn default_max_media_size() -> u64 {
+    8 * 1024 * 1024 // 8 MiB
+}
+
+impl Default for ConfigMedia {
+    fn default() -> Self {
+        ConfigMedia {
+            cache_media: default_cache_media(),
+            cache_emoji: default_cache_emoji(),
+            thumb_sizes: default_thumb_sizes(),
+            max_size: default_max_media_size(),
+            scanners: Vec::new(),
+        }
+    }
+}
+
+/// config for the voice server
+#[derive(Debug, Clone, Deserialize)]
+pub struct ConfigVoice {
+    /// the token for the voice servers to connect via
+    pub token: String,
+
+    /// override the ipv4 address to listen on
+    pub host_ipv4: Option<String>,
+
+    /// override the ipv6 address to listen on
+    pub host_ipv6: Option<String>,
+
+    /// the number of worker threads to spawn
+    ///
+    /// defaults to the number of cpu cores
+    pub workers: Option<u8>,
+
+    /// the udp port to use for media traffic
+    ///
+    /// defaults to a random port
+    pub udp_port: u16,
 }
 
 impl Default for ConfigScripts {
@@ -229,7 +364,13 @@ pub struct ListenConfig {
 #[strum(serialize_all = "snake_case")]
 #[serde(deny_unknown_fields)]
 pub enum ListenComponent {
+    /// the main rest api server, websocket sync, and
     Api,
+
+    // TODO: merge media serving here
+    // /// the media proxy server
+    // Media,
+    /// metrics for this service
     Metrics,
 }
 
@@ -289,7 +430,7 @@ fn default_port() -> u16 {
 ///
 /// Media scanners are external services that analyze uploaded media files
 /// and return confidence scores for various categories (e.g., NSFW content, malware).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct ConfigMediaScanner {
     /// The URL to POST scan requests to.
     pub scan_url: Url,
@@ -364,10 +505,29 @@ impl Secret {
     }
 }
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 impl Config {
     pub fn hostname(&self) -> Result<&str> {
         self.hostname
             .as_deref()
             .ok_or_else(|| Error::Internal("federation hostname not configured".to_owned()))
+    }
+
+    /// get user agent string
+    pub fn user_agent(&self) -> String {
+        if let Some(ua) = &self.http.user_agent {
+            return ua.to_string();
+        }
+
+        let host = self.hostname.as_deref().unwrap_or("secluded");
+        let contact = self.http.contact.as_deref().unwrap_or("anonymous");
+
+        format!("Lamprey/v{VERSION} ({contact}; {host}")
+    }
+
+    /// get user agent string
+    pub fn user_agent_header_value(&self) -> Result<HeaderValue> {
+        Ok(HeaderValue::from_str(&self.user_agent())?)
     }
 }

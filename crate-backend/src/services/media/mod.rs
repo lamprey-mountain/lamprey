@@ -151,7 +151,7 @@ impl ServiceMedia {
                 temp_file,
                 temp_writer,
                 current_size: 0,
-                max_size: self.state.config.media_max_size,
+                max_size: self.state.config.media.max_size,
                 finished_at: Instant::now(),
                 processed_notify: Arc::clone(&processed_notify),
                 remote: remote.clone(),
@@ -221,7 +221,7 @@ impl ServiceMedia {
     /// Scan media with all configured scanners in parallel.
     #[tracing::instrument(skip(self, path))]
     async fn scan_media(&self, path: &std::path::Path) -> Vec<MediaScan> {
-        let scanners = &self.state.config.media_scanners;
+        let scanners = &self.state.config.media.scanners;
         if scanners.is_empty() {
             return vec![];
         }
@@ -616,7 +616,7 @@ impl ServiceMedia {
     }
 
     pub async fn import_from_url(&self, user_id: UserId, json: MediaCreate) -> Result<MediaV2> {
-        self.import_from_url_with_max_size(user_id, json, self.state.config.media_max_size)
+        self.import_from_url_with_max_size(user_id, json, self.state.config.media.max_size)
             .await
     }
 
@@ -761,7 +761,7 @@ impl ServiceMedia {
         json: MediaCreate,
         bytes: bytes::Bytes,
     ) -> Result<MediaV2> {
-        let max_size = self.state.config.media_max_size;
+        let max_size = self.state.config.media.max_size;
         let filename = match &json.source {
             MediaCreateSource::Upload { filename, .. } => filename,
             MediaCreateSource::Download { .. } => unreachable!(),
