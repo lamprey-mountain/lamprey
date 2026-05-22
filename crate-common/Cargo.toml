@@ -28,7 +28,10 @@ base64 = "0.22.1"
 http = "1.4.0"
 bytes = { version = "1.11.1", features = ["serde"] }
 percent-encoding = "2.3.2"
-lamprey-hakari = { version = "0.1", path = "../crate-hakari", optional = true }
+lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
+
+[target.'cfg(not(all(target_arch = "wasm32", target_os = "unknown")))'.dependencies]
+lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 
 [features]
 serde = ["dep:serde", "dep:serde_json"]
@@ -51,5 +54,4 @@ default = [
   "feat_interaction_reaction",
   "str0m",
   "ptr_box",
-  "dep:lamprey-hakari",
 ]
