@@ -415,7 +415,7 @@ async fn voice_call_create(
         return Err(ApiError::from_code(ErrorCode::InvalidData).into());
     }
 
-    let call_handle = s.services().voice.call_create(req.call)?;
+    let call_handle = s.services().voice.call_create(req.call).await?;
     Ok((StatusCode::CREATED, Json(call_handle.call().clone())))
 }
 

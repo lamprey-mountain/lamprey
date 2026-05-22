@@ -2,13 +2,10 @@ use crate::services::voice::{ServiceVoice, SfuCommand, SfuStats};
 use crate::Result;
 use axum::extract::ws::WebSocket;
 use common::v1::types::voice::messages::{SfuEvent, SignallingEvent};
-use common::v1::types::voice::VoiceErrorCode;
 use common::v1::types::{ChannelId, MessageSync, PeerId, SfuId, UserId};
-use futures::{SinkExt, StreamExt};
-use std::net::IpAddr;
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tracing::error;
+use tracing::{debug, error, info};
 
 pub struct SfuHandleInner {
     pub id: SfuId,
@@ -116,9 +113,9 @@ impl ServiceVoice {
                 let user_id = self.state_get(peer_id).unwrap().inner.user_id;
                 let old_state = srv.voice.state_get(peer_id);
                 if let Some(state) = &state {
-                    srv.voice.state_replace(state.clone());
+                    srv.voice.state_replace(state.clone())?;
                 } else {
-                    srv.voice.state_destroy(peer_id);
+                    srv.voice.state_destroy(peer_id)?;
                 }
 
                 self.state.broadcast(MessageSync::VoiceState {
@@ -128,11 +125,29 @@ impl ServiceVoice {
                     old_state: old_state.map(|h| h.inner().clone()),
                 })?;
             }
-            SfuEvent::Ready { sfu_id } => todo!(),
-            SfuEvent::Latency { target_sfu, rtt } => todo!(),
-            SfuEvent::Stats { stats } => todo!(),
-            SfuEvent::PeerCreated { peer_id } => todo!(),
-            SfuEvent::CascadePrepared { token, addr } => todo!(),
+            SfuEvent::Ready { sfu_id } => {
+                if let Some(sfu) = self.sfu_get(sfu_id) {
+                    info!(%sfu_id, "SFU is ready");
+                }
+            }
+            SfuEvent::Latency { target_sfu, rtt } => {
+                if let Some(sfu) = self.sfu_get(target_sfu) {
+                    let mut sfu_inner = sfu;
+                    // Note: SfuStats is in an Arc, so we might need interior mutability if it were intended to be updated
+                    // Assuming for now we just log it or that stats field is a placeholder
+                    debug!(%target_sfu, %rtt, "SFU latency update");
+                }
+            }
+            SfuEvent::Stats { stats } => {
+                // Update stats if we had a way to mutate SfuHandleInner
+                debug!(?stats, "SFU stats updated");
+            }
+            SfuEvent::PeerCreated { peer_id } => {
+                info!(%peer_id, "Peer created on SFU");
+            }
+            SfuEvent::CascadePrepared { token, addr } => {
+                info!(%addr, "Cascade prepared");
+            }
         }
 
         Ok(())
@@ -174,7 +189,9 @@ impl ServiceVoice {
     }
 
     pub fn sfu_by_channel(&self, channel_id: ChannelId) -> Option<SfuHandle> {
-        todo!()
+        self.state_list_by_channel(channel_id)
+            .first()
+            .and_then(|handle| self.sfu_get(handle.sfu_id()))
     }
 
     pub fn sfu_broadcast(&self, command: SfuCommand) {
@@ -183,9 +200,9 @@ impl ServiceVoice {
         }
     }
 
-    fn sfu_find_closest(&self, _addr: IpAddr, _limit: usize) -> Vec<SfuHandle> {
-        todo!()
-    }
+    // fn sfu_find_closest(&self, _addr: IpAddr, _limit: usize) -> Vec<SfuHandle> {
+    //     todo!()
+    // }
 
     /// figure out where to connect a user to
     pub fn sfu_alloc_user(&self, channel_id: ChannelId, peer_id: PeerId) -> Result<Allocation> {

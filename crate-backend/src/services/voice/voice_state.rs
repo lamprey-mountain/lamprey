@@ -60,6 +60,8 @@ impl ServiceVoice {
         // TODO: handle existing state
         // let old_state = srv.voice.state_get(user_id);
 
+        // TODO: create call if it doesn't exist
+
         // find sfu
         let peer_id = PeerId::new();
         let sfu = self.sfu_alloc(update.channel_id, peer_id)?;
@@ -89,8 +91,6 @@ impl ServiceVoice {
         });
         self.voice_states.insert(peer_id, Arc::clone(&handle));
 
-        // TODO: return `sfu` when allocating
-        let sfu = self.sfu_get(sfu_id).unwrap();
         sfu.send(SfuCommand::Signalling {
             peer_id: Some(peer_id),
             inner: SignallingCommand::VoiceState { state: update },
@@ -122,6 +122,7 @@ impl ServiceVoice {
         new_inner.self_deaf = update.self_deaf;
         new_inner.self_video = update.self_video;
         // TODO: handle channel_id updates
+        // TODO: create call if it doesn't exist
 
         let new_handle = Arc::new(VoiceStateHandleInner {
             inner: new_inner,
@@ -152,6 +153,7 @@ impl ServiceVoice {
     }
 
     /// replace a voice state
+    // TODO: remove this? and force all updates to go through state_update? having two update functions duplicates logic.
     pub fn state_replace(&self, state: VoiceState) -> Result<()> {
         let mut entry = self
             .voice_states
@@ -167,6 +169,9 @@ impl ServiceVoice {
             state: VoiceStateState::Connected,
             sfu_id: handle.sfu_id,
         });
+
+        // TODO: handle channel_id updates
+        // TODO: create call if it doesn't exist
 
         *entry.value_mut() = Arc::clone(&new_handle);
 

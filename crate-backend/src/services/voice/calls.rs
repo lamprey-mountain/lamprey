@@ -1,6 +1,9 @@
 use crate::services::voice::ServiceVoice;
 use crate::Result;
+use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::MessageSync;
 use common::v1::types::{
+    util::Time,
     voice::{Call, CallCreate, CallPatch},
     ChannelId, SfuId, UserId,
 };
@@ -32,12 +35,34 @@ impl ServiceVoice {
     }
 
     /// create a call
-    pub fn call_create(&self, params: CallCreate) -> Result<CallHandle> {
+    // FIXME: automatically create call when voice state is created/updated for a channel for the first time
+    pub async fn call_create(&self, params: CallCreate) -> Result<CallHandle> {
         // 1. return (and bump) existing call if it exists
-        // 2. create a call
+        if self.calls.contains_key(&params.channel_id) {
+            self.call_bump(params.channel_id);
+            return Ok(self.call_get(params.channel_id).unwrap());
+        }
+
+        // 2. fetch room_id for new call
+        let srv = self.state.services();
+        let channel = srv.channels.get(params.channel_id, None).await?;
+        let call = Call {
+            room_id: channel.room_id,
+            channel_id: params.channel_id,
+            topic: params.topic,
+            created_at: Time::now_utc(),
+        };
+
         // 3. insert handle
-        // 4. start cleanup task
-        todo!()
+        let handle = Arc::new(CallHandleInner {
+            call,
+            sfus: DashSet::new(),
+            cleanup_task: self.spawn_cleanup_task(params.channel_id),
+        });
+
+        self.calls.insert(params.channel_id, Arc::clone(&handle));
+
+        Ok(handle)
     }
 
     /// delete a call
@@ -58,17 +83,45 @@ impl ServiceVoice {
 
     /// update a call
     pub fn call_update(&self, channel_id: ChannelId, patch: CallPatch) -> Result<CallHandle> {
-        // 1. update call topic
-        // 2. update callhandle
-        // 3. send sync event
-        todo!()
+        let mut entry = self
+            .calls
+            .get_mut(&channel_id)
+            .ok_or_else(|| ApiError::from_code(ErrorCode::UnknownVoiceChannel))?;
+
+        let handle = entry.value();
+        let new_call = Call {
+            topic: patch.topic.unwrap_or_else(|| handle.call.topic.clone()),
+            ..handle.call.clone()
+        };
+
+        let updated_handle = Arc::new(CallHandleInner {
+            call: new_call.clone(),
+            sfus: handle.sfus.clone(),
+            cleanup_task: handle.cleanup_task.clone(),
+        });
+
+        *entry.value_mut() = Arc::clone(&updated_handle);
+
+        let _ = self
+            .state
+            .broadcast(MessageSync::CallUpdate { call: new_call });
+
+        Ok(updated_handle)
     }
 
     /// disconnect everyone in a call
     ///
     /// returns number of voice states disconnected
     pub async fn call_disconnect_all(&self, channel_id: ChannelId) -> Result<u64> {
-        todo!()
+        let srv = self.state.services();
+        let states = srv.voice.state_list_by_channel(channel_id);
+        let count = states.len() as u64;
+
+        for handle in states {
+            srv.voice.state_destroy(handle.inner().peer_id)?;
+        }
+
+        Ok(count)
     }
 
     /// disconnect all voice states belonging to a user
@@ -79,7 +132,18 @@ impl ServiceVoice {
         channel_id: ChannelId,
         user_id: UserId,
     ) -> Result<u64> {
-        todo!()
+        let srv = self.state.services();
+        let states = srv.voice.state_list_by_user(user_id);
+        let mut count = 0;
+
+        for handle in states {
+            if handle.inner().channel_id == channel_id {
+                srv.voice.state_destroy(handle.inner().peer_id)?;
+                count += 1;
+            }
+        }
+
+        Ok(count)
     }
 
     /// restart a call's cleanup task timer

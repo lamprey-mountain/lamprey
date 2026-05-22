@@ -1,5 +1,3 @@
-#![allow(unused)] // TEMP
-
 use crate::services::voice::calls::CallHandle;
 use crate::services::voice::sfus::SfuHandle;
 use crate::services::voice::voice_state::VoiceStateHandle;
@@ -12,7 +10,7 @@ use dashmap::DashMap;
 use std::sync::Arc;
 
 pub mod calls;
-pub mod ring;
+// pub mod ring;
 pub mod sfus;
 pub mod voice_state;
 
@@ -87,35 +85,6 @@ impl ServiceVoice {
     //             }
     //         }
     //     }
-    // }
-
-    // pub fn state_get(&self, user_id: UserId) -> Option<VoiceState> {
-    //     self.voice_states.get(&user_id).map(|s| s.to_owned())
-    // }
-
-    // pub fn state_list(&self) -> Vec<VoiceState> {
-    //     self.voice_states
-    //         .iter()
-    //         .map(|r| r.value().clone())
-    //         .collect()
-    // }
-
-    // pub async fn disconnect_everyone(&self, channel_id: ChannelId) -> Result<()> {
-    //     for s in &self.voice_states {
-    //         if s.channel_id == channel_id {
-    //             let r = self.state.broadcast_sfu(SfuCommand::VoiceState {
-    //                 user_id: s.user_id,
-    //                 state: None,
-    //                 // FIXME: permissions
-    //                 permissions: SfuPermissions(0),
-    //             });
-    //             if let Err(err) = r {
-    //                 error!("failed to disconnect user from thread: {err}");
-    //             }
-    //         }
-    //     }
-    //     self.voice_states.retain(|_, s| s.channel_id != channel_id);
-    //     Ok(())
     // }
 
     // /// select the "best" sfu and pair it with this thread id. return the existing sfu id if it exists.
@@ -201,43 +170,5 @@ impl ServiceVoice {
     //     }
 
     //     let _ = self.state.broadcast(MessageSync::CallDelete { channel_id });
-    // }
-
-    // pub fn call_update(&self, channel_id: ChannelId, patch: CallPatch) -> Result<()> {
-    //     let call_opt = self.calls.get(&channel_id).map(|c| c.clone());
-    //     if let Some(call) = call_opt {
-    //         let updated_call = Call {
-    //             topic: patch.topic.and_then(|t| t),
-    //             ..call.clone()
-    //         };
-    //         self.calls.insert(channel_id, updated_call.clone());
-    //         let _ = self
-    //             .state
-    //             .broadcast(MessageSync::CallUpdate { call: updated_call });
-    //     }
-
-    //     Ok(())
-    // }
-
-    // pub fn spawn_call_cleanup(&self, channel_id: ChannelId) {
-    //     if self.cleanup_tasks.contains_key(&channel_id) {
-    //         return;
-    //     }
-
-    //     let state = self.state.clone();
-    //     let channel_id_copy = channel_id;
-
-    //     let handle = tokio::spawn(async move {
-    //         sleep(Duration::from_secs(EMPTY_CALL_TIMEOUT)).await;
-
-    //         state
-    //             .services()
-    //             .voice
-    //             .call_delete(channel_id_copy, false)
-    //             .await;
-    //     })
-    //     .abort_handle();
-
-    //     self.cleanup_tasks.insert(channel_id, handle);
     // }
 }
