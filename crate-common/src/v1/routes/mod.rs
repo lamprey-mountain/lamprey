@@ -44,6 +44,9 @@ pub mod user_email;
 pub mod voice;
 pub mod webhook;
 
+/// route definitions for the cdn/media proxy
+pub mod media_proxy;
+
 pub use ack::*;
 pub use application::*;
 pub use auth::*;
