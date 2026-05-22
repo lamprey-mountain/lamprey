@@ -260,6 +260,7 @@
               "crate-backend-data-postgres"
               "crate-markdown"
               "crate-unfurl"
+              "crate-script"
             ] ++ baseInternalDeps);
             env = {
               VERGEN_GIT_SHA = self.rev or self.dirtyRev;
