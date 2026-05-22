@@ -171,6 +171,7 @@
           (builtins.match ".*\\.sql" path != null) ||
           (builtins.match ".*/\\.sqlx(/.*)?" path != null) ||
           (builtins.match ".*\\.html" path != null) ||
+          (builtins.match ".*\\.wit" path != null) ||
           (builtins.match ".*/docs(/.*)?" path != null);
 
         filterSrcFor = dirs: pkgs.lib.cleanSourceWith {
