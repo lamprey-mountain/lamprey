@@ -602,6 +602,7 @@ pub enum MessageSync {
     VoiceDispatch {
         /// who to send this dispatch to
         user_id: UserId,
+        peer_id: PeerId,
         payload: SignallingEvent,
     },
 
@@ -609,6 +610,7 @@ pub enum MessageSync {
     VoiceState {
         /// the id of the user who's voice state was updated
         user_id: UserId,
+        peer_id: PeerId,
         state: Option<VoiceState>,
 
         // HACK: make it possible to use this for auth checks

@@ -170,6 +170,21 @@ impl From<Channel> for SfuChannel {
     }
 }
 
+/// statistics for a sfu
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+pub struct SfuStats {
+    /// the number of peers connected to this sfu
+    pub peer_count: u64,
+
+    /// currently used bandwidth in bits per second
+    pub bandwidth_usage: u64,
+
+    /// maximum available bandwidth in bits per second
+    pub bandwidth_max: u64,
+}
+
 // #[derive(Debug, Clone)]
 // #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 // #[cfg_attr(feature = "utoipa", derive(ToSchema))]

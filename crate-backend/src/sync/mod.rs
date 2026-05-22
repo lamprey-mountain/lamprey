@@ -1,8 +1,8 @@
 use common::v1::types::{
     document::{DocumentStateVector, DocumentUpdate},
     sync::{SyncParams, SyncResume},
-    voice::VoiceStateScreenshare,
-    ChannelId, ConnectionId, SessionToken, SyncSubscribeDocument, SyncSubscribeMemberList,
+    voice::{messages::SfuCommand, VoiceStateScreenshare, VoiceStateUpdate},
+    ChannelId, ConnectionId, PeerId, SessionToken, SyncSubscribeDocument, SyncSubscribeMemberList,
     SyncSubscribeScript, SyncSubscription, UserId,
 };
 use std::sync::Arc;
@@ -150,9 +150,14 @@ impl Connection {
                     )
                     .await?;
             }
-            MessageClient::VoiceDispatch { user_id, payload } => {
-                Box::pin(self.handle_voice_dispatch(user_id, payload)).await?
+            MessageClient::VoiceConnect { voice_state, nonce } => {
+                Box::pin(self.handle_voice_connect(voice_state, nonce)).await?
             }
+            MessageClient::VoiceDispatch {
+                peer_id,
+                nonce,
+                command,
+            } => Box::pin(self.handle_voice_dispatch(peer_id, nonce, command)).await?,
             MessageClient::DocumentSubscribe {
                 channel_id,
                 branch_id,
@@ -436,110 +441,150 @@ impl Connection {
         Ok(())
     }
 
-    async fn handle_voice_dispatch(
+    async fn handle_voice_connect(
         &mut self,
-        _user_id: UserId,
-        payload: SignallingMessage,
+        voice_state: VoiceStateUpdate,
+        nonce: Option<String>,
     ) -> Result<()> {
-        let Some(session) = self.state.session() else {
-            return Err(Error::BadStatic("no session"));
-        };
-        let Some(user_id) = session.user_id() else {
-            return Err(Error::BadStatic("no user"));
-        };
+        let session = self
+            .state
+            .session()
+            .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+        let user_id = session.user_id().ok_or(Error::UnauthSession)?;
 
         let srv = self.s.services();
-        let user = srv.users.get(user_id, Some(user_id)).await?;
-        user.ensure_unsuspended()?;
+        let sfu = srv.voice.sfu_alloc(voice_state.channel_id)?;
 
-        match &payload {
-            SignallingMessage::VoiceState { state: Some(state) } => {
-                let perms = srv.perms.for_channel(user_id, state.channel_id).await?;
-                perms.ensure(Permission::ChannelView)?;
-                let thread = srv.channels.get(state.channel_id, Some(user_id)).await?;
-                thread.ensure_unarchived()?;
-                thread.ensure_unremoved()?;
-                perms.ensure_unlocked()?;
-                let old_state = srv.voice.state_get(user_id);
-                let mut state = VoiceState {
-                    user_id,
-                    channel_id: state.channel_id,
-                    session_id: Some(session.id),
-                    connection_id: Some(self.id),
-                    joined_at: Time::now_utc(),
-                    mute: false,
-                    deaf: false,
-                    self_deaf: state.self_deaf,
-                    self_mute: state.self_mute,
-                    self_video: state.self_video,
-                    screenshare: match (old_state, state.screenshare.as_ref()) {
-                        (Some(old), Some(new)) => Some(VoiceStateScreenshare {
-                            started_at: old
-                                .screenshare
-                                .map(|s| s.started_at)
-                                .unwrap_or_else(|| Time::now_utc()),
-                            thumbnail: new.thumbnail,
-                        }),
-                        (None, Some(new)) => Some(VoiceStateScreenshare {
-                            started_at: Time::now_utc(),
-                            thumbnail: new.thumbnail,
-                        }),
-                        (_, None) => None,
-                    },
-                    // TODO: suppress by default in broadcast room
-                    suppress: false,
-                    requested_to_speak_at: None,
-                };
-                if let Some(room_id) = thread.room_id {
-                    let rm = self.s.data().room_member_get(room_id, user_id).await?;
-                    state.mute = rm.mute;
-                    state.deaf = rm.deaf;
-                }
-                srv.voice.alloc_sfu(state.channel_id).await?;
-                if let Err(err) = self.s.broadcast_sfu(SfuCommand::VoiceState {
-                    user_id,
-                    state: Some(state),
-                    permissions: SfuPermissions(
-                        (perms.has(Permission::VoiceSpeak) as u8) << 0
-                            | (perms.has(Permission::VoiceVideo) as u8) << 1
-                            | (perms.has(Permission::VoicePriority) as u8) << 2,
-                    ),
-                }) {
-                    error!("failed to send to sushi_sfu: {err}");
-                }
-                return Ok(());
-            }
-            SignallingMessage::VoiceState { state: None } => {
-                if let Err(err) = self.s.broadcast_sfu(SfuCommand::VoiceState {
-                    user_id,
-                    state: None,
-                    permissions: SfuPermissions(0),
-                }) {
-                    error!("failed to send to sushi_sfu: {err}");
-                }
-                return Ok(());
-            }
-            SignallingMessage::Offer { .. } => {
-                // TODO: also verify sdp and/or send permissions to sfu instead of only parsing tracks
-                // let perms = srv.perms.for_thread(user_id, voice_state.thread_id).await?;
-                // if tracks.iter().any(|t| t.kind == MediaKindSerde::Audio) {
-                //     perms.ensure(Permission::VoiceSpeak)?;
-                // }
-                // if tracks.iter().any(|t| t.kind == MediaKindSerde::Video) {
-                //     perms.ensure(Permission::VoiceVideo)?;
-                // }
-            }
-            _ => {}
-        }
+        srv.voice.state_create(user_id, voice_state).await?;
 
-        if let Err(err) = self.s.broadcast_sfu(SfuCommand::Signalling {
-            user_id,
-            inner: payload,
-        }) {
-            error!("failed to send to sushi_sfu: {err}");
+        Ok(())
+    }
+
+    async fn handle_voice_dispatch(
+        &mut self,
+        peer_id: PeerId,
+        nonce: Option<String>,
+        command: SignallingCommand,
+    ) -> Result<()> {
+        let srv = self.s.services();
+        if let Some(sfu) = srv.voice.sfu_by_channel(
+            srv.voice
+                .state_get(peer_id)
+                .map(|s| s.inner().channel_id)
+                .ok_or(Error::BadStatic("state not found"))?,
+        ) {
+            sfu.send(SfuCommand::Signalling {
+                peer_id,
+                inner: command,
+            });
         }
         Ok(())
     }
+
+    // async fn handle_voice_dispatch_old(
+    //     &mut self,
+    //     _user_id: UserId,
+    //     payload: SignallingMessage,
+    // ) -> Result<()> {
+    //     let Some(session) = self.state.session() else {
+    //         return Err(Error::BadStatic("no session"));
+    //     };
+    //     let Some(user_id) = session.user_id() else {
+    //         return Err(Error::BadStatic("no user"));
+    //     };
+
+    //     let srv = self.s.services();
+    //     let user = srv.users.get(user_id, Some(user_id)).await?;
+    //     user.ensure_unsuspended()?;
+
+    //     match &payload {
+    //         SignallingMessage::VoiceState { state: Some(state) } => {
+    //             let perms = srv.perms.for_channel(user_id, state.channel_id).await?;
+    //             perms.ensure(Permission::ChannelView)?;
+    //             let thread = srv.channels.get(state.channel_id, Some(user_id)).await?;
+    //             thread.ensure_unarchived()?;
+    //             thread.ensure_unremoved()?;
+    //             perms.ensure_unlocked()?;
+    //             let old_state = srv.voice.state_get(user_id);
+    //             let mut state = VoiceState {
+    //                 user_id,
+    //                 channel_id: state.channel_id,
+    //                 session_id: Some(session.id),
+    //                 connection_id: Some(self.id),
+    //                 joined_at: Time::now_utc(),
+    //                 mute: false,
+    //                 deaf: false,
+    //                 self_deaf: state.self_deaf,
+    //                 self_mute: state.self_mute,
+    //                 self_video: state.self_video,
+    //                 screenshare: match (old_state, state.screenshare.as_ref()) {
+    //                     (Some(old), Some(new)) => Some(VoiceStateScreenshare {
+    //                         started_at: old
+    //                             .screenshare
+    //                             .map(|s| s.started_at)
+    //                             .unwrap_or_else(|| Time::now_utc()),
+    //                         thumbnail: new.thumbnail,
+    //                     }),
+    //                     (None, Some(new)) => Some(VoiceStateScreenshare {
+    //                         started_at: Time::now_utc(),
+    //                         thumbnail: new.thumbnail,
+    //                     }),
+    //                     (_, None) => None,
+    //                 },
+    //                 // TODO: suppress by default in broadcast room
+    //                 suppress: false,
+    //                 requested_to_speak_at: None,
+    //             };
+    //             if let Some(room_id) = thread.room_id {
+    //                 let rm = self.s.data().room_member_get(room_id, user_id).await?;
+    //                 state.mute = rm.mute;
+    //                 state.deaf = rm.deaf;
+    //             }
+    //             srv.voice.alloc_sfu(state.channel_id).await?;
+    //             if let Err(err) = self.s.broadcast_sfu(SfuCommand::VoiceState {
+    //                 user_id,
+    //                 state: Some(state),
+    //                 permissions: SfuPermissions(
+    //                     (perms.has(Permission::VoiceSpeak) as u8) << 0
+    //                         | (perms.has(Permission::VoiceVideo) as u8) << 1
+    //                         | (perms.has(Permission::VoicePriority) as u8) << 2,
+    //                 ),
+    //             }) {
+    //                 error!("failed to send to sushi_sfu: {err}");
+    //             }
+    //             return Ok(());
+    //         }
+    //         SignallingMessage::VoiceState { state: None } => {
+    //             if let Err(err) = self.s.broadcast_sfu(SfuCommand::VoiceState {
+    //                 user_id,
+    //                 state: None,
+    //                 permissions: SfuPermissions(0),
+    //             }) {
+    //                 error!("failed to send to sushi_sfu: {err}");
+    //             }
+    //             return Ok(());
+    //         }
+    //         SignallingMessage::Offer { .. } => {
+    //             // TODO: also verify sdp and/or send permissions to sfu instead of only parsing tracks
+    //             // let perms = srv.perms.for_thread(user_id, voice_state.thread_id).await?;
+    //             // if tracks.iter().any(|t| t.kind == MediaKindSerde::Audio) {
+    //             //     perms.ensure(Permission::VoiceSpeak)?;
+    //             // }
+    //             // if tracks.iter().any(|t| t.kind == MediaKindSerde::Video) {
+    //             //     perms.ensure(Permission::VoiceVideo)?;
+    //             // }
+    //         }
+    //         _ => {}
+    //     }
+
+    //     if let Err(err) = self.s.broadcast_sfu(SfuCommand::Signalling {
+    //         user_id,
+    //         inner: payload,
+    //     }) {
+    //         error!("failed to send to sushi_sfu: {err}");
+    //     }
+    //     Ok(())
+    // }
 
     async fn handle_document_edit(
         &mut self,

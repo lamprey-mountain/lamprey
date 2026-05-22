@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::v1::types::{
     voice::{
-        internal::{MediaData, SfuChannel, SfuPermissions},
+        internal::{MediaData, SfuChannel, SfuPermissions, SfuStats},
         IceCandidate, KeyframeRequestKind, Mid, Rid, SessionDescription, Speaking, SpeakingFlags,
         SpeakingWithPeerId, Subscription, TrackMetadata, TrackMetadataWithPeerId, VoiceErrorCode,
         VoiceState, VoiceStateUpdate,
@@ -167,16 +167,7 @@ pub enum SfuEvent {
     },
 
     /// stats for this sfu
-    Stats {
-        /// the number of peers connected to this sfu
-        peer_count: u64,
-
-        /// currently used bandwidth in bits per second
-        bandwidth_usage: u64,
-
-        /// maximum available bandwidth in bits per second
-        bandwidth_max: u64,
-    },
+    Stats { stats: SfuStats },
     // NOTE: is this used?
     // /// "I am now the Origin for Channel X"
     // ChannelHealed { channel_id: ChannelId },

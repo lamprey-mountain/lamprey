@@ -40,7 +40,7 @@ async fn main_inner() -> Result<(), anyhow::Error> {
                 server.serve().await?;
             }
             ServeCommand::Voice { sfu_config } => {
-                lamprey_voice::sfu::SfuOld::run(Arc::new(config)).await;
+                lamprey_voice::sfu::Sfu::new(config).serve().await;
             }
         },
         Command::Maintenence { target } => match target {

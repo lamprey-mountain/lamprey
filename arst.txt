@@ -2,7 +2,10 @@ crate-common/src/v1/types/voice/internal.rs
 crate-common/src/v1/types/voice/messages.rs
 crate-common/src/v1/types/voice/mod.rs
 crate-common/src/v1/types/voice/router.rs
-crate-backend/src/services/voice.rs
+crate-backend/src/services/voice/mod.rs
+crate-backend/src/services/voice/voice_state.rs
+crate-backend/src/services/voice/sfus.rs
+crate-backend/src/services/voice/calls.rs
 crate-voice/Cargo.toml
 crate-voice/src/backbone.rs
 crate-voice/src/backend.rs
