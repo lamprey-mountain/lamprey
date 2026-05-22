@@ -14,6 +14,7 @@ pub mod emoji;
 pub mod error;
 pub mod federation;
 pub mod harvest;
+pub mod headers;
 pub mod ids;
 pub mod interactions;
 pub mod invite;

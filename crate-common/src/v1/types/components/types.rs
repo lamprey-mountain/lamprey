@@ -8,6 +8,7 @@ use url::Url;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::v1::types::e2ee::media::EncryptedMedia;
 use crate::v1::types::misc::Color;
 use crate::v1::types::MediaId;
 use crate::v2::types::media::{Media, MediaReference};
@@ -57,6 +58,7 @@ pub struct Component<C: ComponentState> {
 pub type ComponentCreate = Component<Create>;
 pub type ComponentCanonical = Component<Canonical>;
 pub type ComponentThin = Component<Thin>;
+pub type ComponentEncrypted = Component<Encrypted>;
 
 /// top-level container for components
 #[derive(Debug, Clone, PartialEq)]
@@ -68,7 +70,7 @@ pub struct Components<C: ComponentState> {
 mod _s {
     use serde::{Deserialize, Serialize};
 
-    use crate::v1::types::components::{Canonical, ComponentState, Create, Thin};
+    use crate::v1::types::components::{Canonical, ComponentState, Create, Encrypted, Thin};
 
     use super::{Component, ComponentCreate, ComponentId, ComponentType, Components};
 
@@ -148,6 +150,29 @@ mod _s {
         }
     }
 
+    impl<'de> Deserialize<'de> for Component<Encrypted> {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            #[derive(Deserialize)]
+            #[serde(untagged)]
+            enum Helper {
+                Struct {
+                    id: ComponentId,
+
+                    #[serde(flatten)]
+                    ty: ComponentType<Encrypted>,
+                },
+            }
+
+            let helper = Helper::deserialize(deserializer)?;
+            match helper {
+                Helper::Struct { id, ty } => Ok(Component { id, ty }),
+            }
+        }
+    }
+
     impl<'de, C: ComponentState> Deserialize<'de> for Components<C>
     where
         Component<C>: Deserialize<'de>,
@@ -184,12 +209,13 @@ mod _u {
         __dev::ComposeSchema,
     };
 
-    use crate::v1::types::components::{Canonical, Create};
+    use crate::v1::types::components::{Canonical, Create, Encrypted};
 
     use super::{Component, Components};
 
     impl ToSchema for Components<Create> {}
     impl ToSchema for Components<Canonical> {}
+    impl ToSchema for Components<Encrypted> {}
 
     // HACK: this seems to be private, but i need to impl it anyways?
     impl ComposeSchema for Components<Create> {
@@ -201,6 +227,12 @@ mod _u {
     impl ComposeSchema for Components<Canonical> {
         fn compose(_: Vec<RefOr<Schema>>) -> RefOr<Schema> {
             schema!(Vec<Component<Canonical>>).into()
+        }
+    }
+
+    impl ComposeSchema for Components<Encrypted> {
+        fn compose(_: Vec<RefOr<Schema>>) -> RefOr<Schema> {
+            schema!(Vec<Component<Encrypted>>).into()
         }
     }
 }
@@ -226,6 +258,12 @@ pub enum Canonical {}
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum Thin {}
+
+/// used for encrypted messages
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum Encrypted {}
 
 pub trait ComponentStateMedia: flex::Seal {
     fn media_id(&self) -> Option<MediaId>;
@@ -284,6 +322,7 @@ pub enum ComponentChildren<'a, C: ComponentState> {
 impl flex::Seal for Create {}
 impl flex::Seal for Canonical {}
 impl flex::Seal for Thin {}
+impl flex::Seal for Encrypted {}
 
 impl ComponentState for Create {
     type Id = Option<ComponentId>;
@@ -300,9 +339,15 @@ impl ComponentState for Thin {
     type Media = MediaId;
 }
 
+impl ComponentState for Encrypted {
+    type Id = ComponentId;
+    type Media = EncryptedMedia;
+}
+
 impl flex::Seal for MediaReference {}
 impl flex::Seal for Media {}
 impl flex::Seal for MediaId {}
+impl flex::Seal for EncryptedMedia {}
 
 impl ComponentStateMedia for Media {
     fn media_id(&self) -> Option<MediaId> {
@@ -322,6 +367,12 @@ impl ComponentStateMedia for MediaReference {
 impl ComponentStateMedia for MediaId {
     fn media_id(&self) -> Option<MediaId> {
         Some(*self)
+    }
+}
+
+impl ComponentStateMedia for EncryptedMedia {
+    fn media_id(&self) -> Option<MediaId> {
+        Some(self.id)
     }
 }
 

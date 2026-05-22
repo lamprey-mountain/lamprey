@@ -9,13 +9,22 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{ChannelId, SessionId, UserId};
+use crate::v1::types::{misc::binary::Binary, ChannelId, SessionId, UserId};
+
+pub mod media;
 
 /// a mls epoch number, incremented each time the group membership changes
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MlsEpoch(pub u64);
+
+/// A signature created by a device key
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// TODO: verify length is correct
+pub struct DeviceSignature(pub Binary<256>);
 
 /// a mls key package, uploaded by sessions for use in welcomes
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -90,17 +99,7 @@ pub struct MlsCommitCreate {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct KeyshareRequest {
-    /// send up to this many epochs of data
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
-    pub requests: Vec<KeyshareRequestItem>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
-pub struct KeyshareRequestItem {
-    /// the channel ids of the messages you want
+    /// the channel id of the messages you want
     pub channel_id: ChannelId,
 
     /// start sending keys from this epoch
@@ -109,6 +108,10 @@ pub struct KeyshareRequestItem {
     /// send up to this many epochs of data
     #[cfg_attr(feature = "validator", validate(range(min = 1, max = 128)))]
     pub limit: u8,
+
+    /// HPKE public key used to encrypt the response keyring data
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
+    pub hpke_pub_key: Vec<u8>,
 }
 
 /// historical encryption keys for old messages
@@ -126,18 +129,22 @@ pub struct KeyshareResponse {
     pub channel_id: ChannelId,
 }
 
+pub struct KeyringData {
+    // TODO: think of what goes here
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct EncryptionConfig {
-    /// keyring data encrypted with the current
-    // TODO: what does it look like decrypted? json probably?
-    #[cfg_attr(feature = "validator", validate(length(min = 1)))]
-    pub encrypted_keyring_data: Vec<u8>,
+    // /// keyring data encrypted with the current
+    // // TODO: what does it look like decrypted? json probably?
+    // #[cfg_attr(feature = "validator", validate(length(min = 1)))]
+    // pub encrypted_keyring_data: Vec<u8>,
 
-    /// the channel (mls group) these keys are for
-    pub channel_id: ChannelId,
+    // /// the channel (mls group) these keys are for
+    // pub channel_id: ChannelId,
 }
 
 pub enum EncryptionSystem {
@@ -181,8 +188,13 @@ pub struct KeysClaim {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct CrossSigningBundle {
+    /// root of trust, signs the ssk and usk
     pub master_key: Option<CrossSigningKey>,
+
+    /// signs the user's own devices
     pub self_signing_key: Option<CrossSigningKey>,
+
+    /// signs other user's master keys upon verification
     pub user_signing_key: Option<CrossSigningKey>,
 }
 
@@ -224,22 +236,25 @@ pub struct CrossSigningSignature {
     pub user_id: Option<UserId>,
     pub session_id: Option<SessionId>,
     pub key_id: String, // what format is this?
-    pub signature: Vec<u8>,
+    // TODO: verify length is correct
+    pub signature: Binary<32>,
 }
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum E2EEMessage {
-    /// someone wants to join one or more channels
+    /// someone wants to join a channel
     ///
-    /// - a commit(s) should be generated to allow this person to join
+    /// - a commit should be generated to allow this person to join
     /// - sent to one person in the group
     /// - prioritizes sending to a session from the same user
     MlsKnock {
-        recipient_id: SessionId,
-        user_id: UserId,
-        channel_ids: Vec<ChannelId>,
+        channel_id: ChannelId,
+
+        /// the key package of the person who wants to join
+        // the server grabs a random mls key package and sends it here
+        key_package: MlsKeyPackage,
     },
 
     /// a new device has been added to one or more channels
@@ -247,14 +262,30 @@ pub enum E2EEMessage {
     /// sent to the one session that is joining
     MlsWelcome {
         recipient_id: SessionId,
-        welcomes: Vec<MlsWelcome>,
+
+        #[cfg_attr(feature = "serde", serde(flatten))]
+        welcome: MlsWelcome,
     },
 
-    /// mls group membership(s) changed, update your local state
-    ///
-    /// sent to everyone in the group(s)
-    #[cfg(feature = "feat_e2ee")]
-    MlsCommit { commits: Vec<MlsCommit> },
+    // /// mls group membership(s) changed, update your local state
+    // ///
+    // /// sent to everyone in the group(s)
+    // MlsCommit {
+    //     #[cfg_attr(feature = "serde", serde(flatten))]
+    //     commit: MlsCommit,
+    // },
+    /// a mls protocol message (commit, proposal, or application data)
+    MlsMessage {
+        /// the session that authored this message
+        sender_id: SessionId,
+
+        /// the channel (mls group) this takes place in
+        channel_id: ChannelId,
+
+        /// the opaque mls ProtocolMessage bytes
+        // TODO: find an appropriate size limit for this
+        data: Binary<4194304>,
+    },
 
     /// how many keys a session has uploaded
     ///
@@ -274,7 +305,7 @@ pub enum E2EEMessage {
         nonce: String,
 
         #[cfg_attr(feature = "serde", serde(flatten))]
-        keyshare: KeyshareRequest,
+        request: KeyshareRequest,
     },
 
     /// here are your encryption keys
@@ -290,8 +321,7 @@ pub enum E2EEMessage {
         /// - server should set to requester's nonce
         nonce: String,
 
-        #[cfg_attr(feature = "serde", serde(flatten))]
-        keyshare: KeyshareResponse,
+        response: KeyshareResponse,
     },
 
     /// cross signing identity updated
@@ -300,10 +330,12 @@ pub enum E2EEMessage {
         bundle: CrossSigningBundle,
     },
 
-    /// cross signing identity updated
+    /// cross signing signature added
     SignatureAdded {
         user_id: UserId,
-        // ...
+
+        #[cfg_attr(feature = "serde", serde(flatten))]
+        signature: CrossSigningSignature,
     },
 }
 

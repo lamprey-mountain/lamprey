@@ -167,10 +167,13 @@ mod utoipa_utils;
         common::v1::types::components::ButtonStyle,
         common::v1::types::components::Component<common::v1::types::components::Create>,
         common::v1::types::components::Component<common::v1::types::components::Canonical>,
+        common::v1::types::components::Component<common::v1::types::components::Encrypted>,
         common::v1::types::components::ComponentType<common::v1::types::components::Create>,
         common::v1::types::components::ComponentType<common::v1::types::components::Canonical>,
+        common::v1::types::components::ComponentType<common::v1::types::components::Encrypted>,
         common::v1::types::components::Components<common::v1::types::components::Create>,
         common::v1::types::components::Components<common::v1::types::components::Canonical>,
+        common::v1::types::components::Components<common::v1::types::components::Encrypted>,
         // flume types
         common::v1::types::message::flume::FlumeCreate,
         common::v1::types::message::flume::FlumeDelta,

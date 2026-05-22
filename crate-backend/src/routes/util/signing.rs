@@ -11,6 +11,8 @@ use crate::{error::Result, services::federation::LocalSigningKey, Error};
 /// how long a signed request is valid for
 pub const SIGNATURE_MAX_AGE: std::time::Duration = std::time::Duration::from_secs(30);
 
+// TODO: use common::v1::types::headers
+
 /// federation signing header: the hostname of the server thats sending this request
 pub const HEADER_ORIGIN: &str = "x-origin";
 

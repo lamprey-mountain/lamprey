@@ -143,7 +143,7 @@ pub struct Media {
 
     /// The results of automated scans.
     pub scans: Vec<MediaScan>,
-
+    // pub ratings: ContentRatings,
     /// Whether this media can be fetched through the `/thumb/{media_id}` cdn route.
     pub has_thumbnail: bool,
 

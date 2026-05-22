@@ -8,6 +8,7 @@ use serde::Deserialize;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+pub mod binary;
 pub mod color;
 pub mod metadata;
 pub mod time;

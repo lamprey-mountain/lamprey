@@ -9,9 +9,11 @@ use validator::{Validate, ValidateLength, ValidationError, ValidationErrors};
 
 use crate::v1::types::automod::{AutomodAction, AutomodMatches, AutomodRuleStripped};
 use crate::v1::types::components::{self, Components};
+use crate::v1::types::e2ee::media::EncryptedMedia;
 use crate::v1::types::e2ee::MlsEpoch;
 use crate::v1::types::flume::MessageFlume;
 use crate::v1::types::metadata::Metadata;
+use crate::v1::types::misc::binary::Binary;
 use crate::v1::types::moderation::Report;
 use crate::v1::types::reaction::ReactionCounts;
 use crate::v1::types::util::{Diff, Time};
@@ -660,21 +662,56 @@ pub struct MessageDefaultMarkdown {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct MessageEncrypted {
-    // TODO: use base64 for json, binary for msgpack
     // TODO: find an appropriate size limit for this (how much overhead does mls cause?)
     /// encrypted content of the message
     ///
-    /// - decrypts into a MessageDefaultMarkdown struct
+    /// - decrypts into a MessageDefaultMarkdownEncrypted struct
     /// - encrypted with aes-256-gcm
-    pub ciphertext: Vec<u8>,
+    pub ciphertext: Binary<65536>,
 
+    // TODO: pub alg: EncryptionAlgorithm,
+    // TODO: find an appropriate size limit for this (how much overhead does mls cause?)
     /// the nonce for the ciphertext
-    pub nonce: Vec<u8>,
+    pub nonce: Binary<256>,
 
-    /// what media this message is attached to, for garbage collection
-    pub attached_media_ids: Vec<MediaId>,
+    /// the media this message is attached to, for garbage collection
+    pub media: Vec<Media>,
 
     pub epoch: MlsEpoch,
+}
+
+/// a basic message, written using markdown. for use with e2ee.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MessageDefaultMarkdownEncrypted {
+    /// the message's content in markdown
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    pub content: Option<String>,
+
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
+    pub attachments: Vec<MessageAttachmentEncrypted>,
+
+    /// application defined metadata
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub metadata: Option<Metadata>,
+
+    /// the message this message is replying to
+    pub reply_id: Option<MessageId>,
+
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
+    pub embeds: Vec<Embed>,
+
+    /// the components for this message
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Components::is_empty")
+    )]
+    pub components: Components<components::Encrypted>,
 }
 
 /// used in `message_create` and `message_update`
@@ -701,6 +738,30 @@ pub struct MessageAttachment {
 
     /// if this is a spoiler and should be blurred
     pub spoiler: bool,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MessageAttachmentEncrypted {
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub ty: MessageAttachmentEncryptedType,
+
+    /// if this is a spoiler and should be blurred
+    pub spoiler: bool,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum MessageAttachmentEncryptedType {
+    /// a piece of media
+    Media { media: EncryptedMedia },
+
+    #[cfg(feature = "feat_message_forwarding")]
+    /// a forwarded message
+    Forward { snapshot: MessageSnapshot },
 }
 
 /// a snapshot of a message at a point in time, for forwards
