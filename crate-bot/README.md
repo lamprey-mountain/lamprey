@@ -1,4 +1,4 @@
-# crate-bot
+# lamprey-bot
 
 general purpose bot for general botting purposes in general
 

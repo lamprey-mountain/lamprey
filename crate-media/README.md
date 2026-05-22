@@ -1,6 +1,13 @@
-# media
+# lamprey-media
 
-this is media cdn proxy that can generate thumbnails
+media proxy server
+
+## features
+
+- handles caching including etag/last-modified
+- handles range requests
+- generates thumbnails for various files
+- optimizes gifs to videos
 
 ## notes
 
@@ -10,6 +17,7 @@ http routes
 - `GET /media/{media_id}/{original_filename}`
 - `GET /thumb/{media_id}?size=[64|320|640]`
 - `GET /emoji/{emoji_id}?size=[64|320|640]`
+- `GET /gifv/{media_id}`
 
 s3 paths
 
