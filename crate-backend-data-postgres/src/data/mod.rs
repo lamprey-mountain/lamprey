@@ -20,8 +20,8 @@ use common::v1::types::{
     ApplicationId, Channel, ChannelId, ChannelPatch, ChannelReorder, ChannelVerId,
     DocumentBranchId, DocumentTagId, MediaId, MediaVerId, PaginationQuery, PaginationResponse,
     PinsReorder, Role, RoleId, RolePatch, RoleReorder, RoleVerId, Room, RoomCreate, RoomId,
-    RoomPatch, RoomVerId, Session, SessionId, SessionPatch, SessionStatus, SessionToken, Suspended,
-    User, UserId, UserListFilter,
+    RoomPatch, RoomVerId, Session, SessionId, SessionImprint, SessionPatch, SessionStatus,
+    SessionToken, Suspended, User, UserId, UserListFilter,
 };
 use common::v1::types::{ChannelSeq, RoomFeature};
 use common::v2::types::embed::Embed;
@@ -365,7 +365,12 @@ pub trait DataSession {
     async fn session_update(&mut self, session_id: SessionId, patch: SessionPatch) -> Result<()>;
     async fn session_delete(&mut self, session_id: SessionId) -> Result<()>;
     async fn session_delete_all(&mut self, user_id: UserId) -> Result<()>;
-    async fn session_set_last_seen_at(&mut self, session_id: SessionId) -> Result<()>;
+    async fn session_set_last_seen_at(&mut self, session_id: SessionId) -> Result<()>; // TODO: remove
+    async fn session_update_imprint(
+        &mut self,
+        session_id: SessionId,
+        imprint: SessionImprint,
+    ) -> Result<()>;
 }
 
 #[async_trait]

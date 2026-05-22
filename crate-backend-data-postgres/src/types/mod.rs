@@ -8,6 +8,7 @@ pub use permission::*;
 pub use common::v1::types::{PaginationDirection, PaginationQuery, PaginationResponse};
 
 // ID types - re-export from common
+// TODO: remove these
 pub use common::v1::types::{
     ChannelId, MessageId, MessageVerId, RoleId, RoomId, SessionId, SessionToken, UserId,
 };

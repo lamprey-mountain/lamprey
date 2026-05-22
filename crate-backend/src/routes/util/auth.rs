@@ -1,3 +1,4 @@
+use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -7,7 +8,7 @@ use common::v1::types::ids::SERVER_TOKEN_SESSION_ID;
 use common::v1::types::oauth::Scope;
 use common::v1::types::util::Time;
 use common::v1::types::{oauth::Scopes, Session, User};
-use common::v1::types::{RoomId, SessionType, UserId, SERVER_USER_ID};
+use common::v1::types::{RoomId, SessionImprint, SessionType, UserId, SERVER_USER_ID};
 use common::v1::types::{SessionStatus, SessionToken};
 use headers::authorization::Bearer;
 use headers::{Authorization, HeaderMapExt};
@@ -560,6 +561,14 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
                 last_seen_at: Time::now_utc(),
                 ip_addr: None,
                 user_agent: None,
+                imprint: SessionImprint {
+                    last_seen_at: Time::now_utc(),
+                    ip_addr: None,
+                    country_code: None,
+                    country_name: None,
+                    city_name: None,
+                    user_agent: None,
+                },
                 authorized_at: Some(Time::now_utc()),
                 deauthorized_at: None,
             };
@@ -586,9 +595,33 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
         if session.expires_at.is_some_and(|t| t < Time::now_utc()) {
             return Err(Error::MissingAuth);
         }
-        if session.last_seen_at < Time::now_utc() - Duration::from_secs(60) {
-            s.data().session_set_last_seen_at(session.id).await?;
-            srv.sessions.invalidate(session.id).await;
+        if session.imprint.last_seen_at < Time::now_utc() - Duration::from_secs(60) {
+            let user_agent = parts
+                .headers
+                .get("user-agent")
+                .and_then(|h| h.to_str().ok())
+                .map(|s| s.to_string());
+            let ip_addr: Option<IpAddr> = parts
+                .headers
+                .get("x-forwarded-for")
+                .and_then(|h| h.to_str().ok())
+                .and_then(|s| s.parse().ok());
+
+            let geo = ip_addr.and_then(|ip| srv.ips.lookup(ip).ok().flatten());
+
+            s.data()
+                .session_update_imprint(
+                    session.id,
+                    SessionImprint {
+                        last_seen_at: Time::now_utc(),
+                        ip_addr: ip_addr.map(|i| i.to_string()),
+                        country_code: geo.as_ref().and_then(|g| g.country_code.clone()),
+                        country_name: geo.as_ref().and_then(|g| g.country_name.clone()),
+                        city_name: geo.as_ref().and_then(|g| g.city_name.clone()),
+                        user_agent,
+                    },
+                )
+                .await?;
         }
         if matches!(session.status, SessionStatus::Bound { .. }) {
             return Err(Error::MissingAuth);

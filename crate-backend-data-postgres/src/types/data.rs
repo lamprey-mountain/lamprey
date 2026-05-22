@@ -9,7 +9,7 @@ use common::v1::types::message::MessageType;
 use common::v1::types::User;
 use common::v1::types::{
     util::Time, Channel, ChannelSeq, ChannelType, Embed, Permission, Puppet, Room, RoomFeature,
-    RoomFeatures, RoomType, Session, SessionStatus, SessionToken, SessionType,
+    RoomFeatures, RoomType, Session, SessionImprint, SessionStatus, SessionToken, SessionType,
 };
 use common::v1::types::{AuditLogEntryStatus, Mentions, RoomSecurity};
 use serde::{Deserialize, Serialize};
@@ -406,6 +406,9 @@ pub struct DbSession {
     pub last_seen_at: PrimitiveDateTime,
     pub ip_addr: Option<String>,
     pub user_agent: Option<String>,
+    pub country_code: Option<String>,
+    pub country_name: Option<String>,
+    pub city_name: Option<String>,
     pub authorized_at: Option<PrimitiveDateTime>,
     pub deauthorized_at: Option<PrimitiveDateTime>,
 }
@@ -451,8 +454,16 @@ impl From<DbSession> for Session {
             ty: SessionType::from_str(&row.ty).unwrap_or(SessionType::User),
             app_id: row.application_id.map(Into::into),
             last_seen_at: row.last_seen_at.into(),
-            ip_addr: row.ip_addr,
-            user_agent: row.user_agent,
+            ip_addr: row.ip_addr.clone(),
+            user_agent: row.user_agent.clone(),
+            imprint: SessionImprint {
+                last_seen_at: row.last_seen_at.into(),
+                ip_addr: row.ip_addr,
+                country_code: row.country_code,
+                country_name: row.country_name,
+                city_name: row.city_name,
+                user_agent: row.user_agent,
+            },
             authorized_at: row.authorized_at.map(|t| t.into()),
             deauthorized_at: row.deauthorized_at.map(|t| t.into()),
         }

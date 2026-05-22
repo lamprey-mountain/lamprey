@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::{SessionPatch, SessionStatus, SessionToken};
+use common::v1::types::{SessionImprint, SessionPatch, SessionStatus, SessionToken};
 use lamprey_backend_core::Error;
 use sqlx::{query, query_as, query_scalar};
 use time::PrimitiveDateTime;
@@ -25,9 +25,9 @@ impl DataSession for Postgres {
         let session = query_as!(
             DbSession,
             r#"
-            INSERT INTO session (id, user_id, token, status, name, expires_at, type, application_id, last_seen_at, ip_addr, user_agent)
-            VALUES ($1, NULL, $2, 'Unauthorized', $3, $4, $5, $6, now(), $7::text::inet, $8)
-            RETURNING id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, authorized_at, deauthorized_at"#,
+            INSERT INTO session (id, user_id, token, status, name, expires_at, type, application_id, last_seen_at, ip_addr, user_agent, country_code, country_name, city_name)
+            VALUES ($1, NULL, $2, 'Unauthorized', $3, $4, $5, $6, now(), $7::text::inet, $8, NULL, NULL, NULL)
+            RETURNING id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at"#,
             session_id,
             create.token.0,
             create.name,
@@ -47,7 +47,7 @@ impl DataSession for Postgres {
         tracing::debug!("session_get: {:?}", id);
         let session = query_as!(
             DbSession,
-            r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, authorized_at, deauthorized_at FROM session WHERE id = $1"#,
+            r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at FROM session WHERE id = $1"#,
             *id,
         )
         .fetch_one(conn.ext())
@@ -69,7 +69,7 @@ impl DataSession for Postgres {
         tracing::debug!("session_get_by_token: {:?}", token);
         let session = query_as!(
             DbSession,
-            r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, authorized_at, deauthorized_at FROM session WHERE token = $1"#,
+            r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at FROM session WHERE token = $1"#,
             token.0
         )
             .fetch_one(conn.ext())
@@ -127,7 +127,7 @@ impl DataSession for Postgres {
             query_as!(
                 DbSession,
                 r#"
-        	SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, authorized_at, deauthorized_at FROM session
+        	SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at FROM session
         	WHERE user_id = $1 AND id > $2 AND id < $3 AND status != 'Unauthorized'
         	ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5
         	"#,
@@ -169,7 +169,7 @@ impl DataSession for Postgres {
         let session = query_as!(
             DbSession,
             r#"
-            SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, authorized_at, deauthorized_at
+            SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at
             FROM session
             WHERE id = $1
             FOR UPDATE
@@ -194,6 +194,31 @@ impl DataSession for Postgres {
         query!(
             "UPDATE session SET last_seen_at = now() WHERE id = $1",
             *session_id
+        )
+        .execute(conn.ext())
+        .await?;
+        Ok(())
+    }
+
+    async fn session_update_imprint(
+        &mut self,
+        session_id: SessionId,
+        imprint: SessionImprint,
+    ) -> Result<()> {
+        let mut conn = self.acquire().await?;
+        query!(
+            r#"
+            UPDATE session 
+            SET last_seen_at = $2, ip_addr = $3::text::inet, user_agent = $4, country_code = $5, country_name = $6, city_name = $7
+            WHERE id = $1
+            "#,
+            *session_id,
+            PrimitiveDateTime::from(imprint.last_seen_at),
+            imprint.ip_addr,
+            imprint.user_agent,
+            imprint.country_code,
+            imprint.country_name,
+            imprint.city_name,
         )
         .execute(conn.ext())
         .await?;

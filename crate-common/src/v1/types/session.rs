@@ -51,9 +51,19 @@ pub struct Session {
     pub app_id: Option<ApplicationId>,
 
     /// the last time this session was used
+    #[deprecated = "use imprint"]
     pub last_seen_at: Time,
+
+    /// the last seen ip address using this session
+    #[deprecated = "use imprint"]
     pub ip_addr: Option<String>,
+
+    /// the last seen user agent using this session
+    #[deprecated = "use imprint"]
     pub user_agent: Option<String>,
+
+    /// session imprint metadata
+    pub imprint: SessionImprint,
 
     /// when this session was logged in
     pub authorized_at: Option<Time>,
@@ -64,6 +74,26 @@ pub struct Session {
     /// if web push is enabled for this session
     #[cfg(any())]
     pub push_enabled: bool,
+}
+
+/// metadata that gets updated whenever the session is used
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct SessionImprint {
+    /// the last time this session was used
+    pub last_seen_at: Time,
+
+    /// the ip address that accessed this session
+    pub ip_addr: Option<String>,
+
+    pub country_code: Option<String>,
+    pub country_name: Option<String>,
+    pub city_name: Option<String>,
+
+    /// the user agent that was used while accessing this session
+    pub user_agent: Option<String>,
 }
 
 /// minimal session persisted for audit log

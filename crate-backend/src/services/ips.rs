@@ -47,6 +47,7 @@ impl ServiceIps {
             time_zone: info.location.time_zone.map(String::from),
             country_code: info.country.iso_code.map(String::from),
             country_name: info.country.names.english.map(String::from),
+            city_name: info.city.names.english.map(String::from),
             is_in_european_union: info.country.is_in_european_union.unwrap_or_default(),
         }))
     }
@@ -65,6 +66,9 @@ pub struct IpInfo {
 
     /// country name in english
     pub country_name: Option<String>,
+
+    /// city name in english
+    pub city_name: Option<String>,
 
     /// whether this ip is in the european union
     pub is_in_european_union: bool,
