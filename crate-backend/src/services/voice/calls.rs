@@ -2,10 +2,10 @@ use crate::services::voice::ServiceVoice;
 use crate::Result;
 use common::v1::types::{
     voice::{Call, CallCreate, CallPatch},
-    ChannelId, SfuId,
+    ChannelId, SfuId, UserId,
 };
 use dashmap::DashSet;
-use std::{collections::HashSet, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 pub struct CallHandleInner {
     pub call: Call,
@@ -57,7 +57,7 @@ impl ServiceVoice {
     }
 
     /// update a call
-    pub fn call_update(&self, channel_id: ChannelId, patch: CallPatch) -> Result<()> {
+    pub fn call_update(&self, channel_id: ChannelId, patch: CallPatch) -> Result<CallHandle> {
         // 1. update call topic
         // 2. update callhandle
         // 3. send sync event
@@ -65,7 +65,20 @@ impl ServiceVoice {
     }
 
     /// disconnect everyone in a call
-    pub fn call_disconnect_all(&self, channel_id: ChannelId) -> Result<()> {
+    ///
+    /// returns number of voice states disconnected
+    pub async fn call_disconnect_all(&self, channel_id: ChannelId) -> Result<u64> {
+        todo!()
+    }
+
+    /// disconnect all voice states belonging to a user
+    ///
+    /// returns number of voice states disconnected
+    pub async fn call_disconnect_all_user(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+    ) -> Result<u64> {
         todo!()
     }
 

@@ -2,11 +2,10 @@ use common::v1::types::voice::messages::{SfuCommand, SignallingCommand};
 use lamprey_backend_core::Error;
 use std::sync::Arc;
 
-use crate::services::voice::sfus::Allocation;
 use crate::services::voice::ServiceVoice;
 use crate::Result;
 use common::v1::types::util::Time;
-use common::v1::types::voice::{VoiceState, VoiceStateUpdate};
+use common::v1::types::voice::{VoiceState, VoiceStateStreamUpdate, VoiceStateUpdate};
 use common::v1::types::{ChannelId, MessageSync, PeerId, SfuId, UserId};
 
 pub struct VoiceStateHandleInner {
@@ -115,6 +114,8 @@ impl ServiceVoice {
             .ok_or_else(|| Error::BadStatic("voice state not found"))?;
 
         let handle = entry.value();
+        let old_state = handle.inner.clone();
+        let sfu_id = handle.sfu_id;
 
         let mut new_inner = handle.inner.clone();
         new_inner.self_mute = update.self_mute;
@@ -132,7 +133,7 @@ impl ServiceVoice {
         *entry.value_mut() = Arc::clone(&new_handle);
 
         // 4. notify sfu
-        if let Some(sfu) = self.sfu_get(handle.sfu_id) {
+        if let Some(sfu) = self.sfu_get(sfu_id) {
             sfu.send(SfuCommand::Signalling {
                 peer_id: Some(peer_id),
                 inner: SignallingCommand::VoiceState { state: update },
@@ -144,7 +145,7 @@ impl ServiceVoice {
             user_id: new_handle.inner.user_id,
             peer_id,
             state: Some(new_handle.inner.clone()),
-            old_state: Some(handle.inner.clone()),
+            old_state: Some(old_state),
         })?;
 
         Ok(())
@@ -158,6 +159,8 @@ impl ServiceVoice {
             .ok_or_else(|| Error::BadStatic("voice state not found"))?;
 
         let handle = entry.value();
+        let old_state = handle.inner.clone();
+        let sfu_id = handle.sfu_id;
 
         let new_handle = Arc::new(VoiceStateHandleInner {
             inner: state.clone(),
@@ -167,19 +170,56 @@ impl ServiceVoice {
 
         *entry.value_mut() = Arc::clone(&new_handle);
 
+        if let Some(sfu) = self.sfu_get(sfu_id) {
+            sfu.send(SfuCommand::Signalling {
+                peer_id: Some(state.peer_id),
+                inner: SignallingCommand::VoiceState {
+                    state: VoiceStateUpdate {
+                        channel_id: state.channel_id,
+                        self_deaf: state.self_deaf,
+                        self_mute: state.self_mute,
+                        self_video: state.self_video,
+                        screenshare: state.screenshare.as_ref().map(|s| VoiceStateStreamUpdate {
+                            thumbnail: s.thumbnail,
+                        }),
+                    },
+                },
+            });
+        }
+
         self.state.broadcast(MessageSync::VoiceState {
             user_id: state.user_id,
             peer_id: state.peer_id,
             state: Some(state.clone()),
-            old_state: Some(handle.inner.clone()),
+            old_state: Some(old_state),
         })?;
 
         Ok(())
     }
 
     /// destroy (disconnect) a voice state
-    pub fn state_destroy(&self, _peer_id: PeerId) {
-        todo!()
+    pub fn state_destroy(&self, peer_id: PeerId) -> Result<()> {
+        let Some((_, handle)) = self.voice_states.remove(&peer_id) else {
+            return Ok(());
+        };
+
+        // notify sfu
+        if let Some(sfu) = self.sfu_get(handle.sfu_id) {
+            sfu.send(SfuCommand::Signalling {
+                peer_id: Some(peer_id),
+                inner: SignallingCommand::Disconnect,
+            });
+        }
+
+        // broadcast removal
+        self.state.broadcast(MessageSync::VoiceState {
+            user_id: handle.inner.user_id,
+            peer_id,
+            state: None,
+            old_state: Some(handle.inner.clone()),
+        })?;
+
+        Ok(())
     }
 
     /// get a voice state

@@ -1,23 +1,21 @@
 use common::v1::types::{
-    document::{DocumentStateVector, DocumentUpdate},
+    document::DocumentUpdate,
     sync::{SyncParams, SyncResume},
-    voice::{messages::SfuCommand, VoiceStateScreenshare, VoiceStateUpdate},
+    voice::{messages::SfuCommand, VoiceStateUpdate},
     ChannelId, ConnectionId, PeerId, SessionToken, SyncSubscribeDocument, SyncSubscribeMemberList,
-    SyncSubscribeScript, SyncSubscription, UserId,
+    SyncSubscribeScript, SyncSubscription,
 };
 use std::sync::Arc;
 
-use common::v1::types::error::{ApiError, ErrorCode, SyncError};
+use common::v1::types::error::SyncError;
 use common::v1::types::presence::Presence;
-use common::v1::types::util::Time;
-use common::v1::types::voice::internal::SfuPermissions;
-use common::v1::types::voice::messages::{SignallingCommand, SignallingEvent};
-use common::v1::types::{self, SERVER_ROOM_ID};
+use common::v1::types::voice::messages::SignallingCommand;
+use common::v1::types::{self};
 use common::v1::types::{
-    DocumentBranchId, MessageClient, MessageEnvelope, MessageSync, Permission, RedexId,
+    DocumentBranchId, MessageClient, MessageEnvelope, MessageSync, Permission,
 };
 use tokio::time::Instant;
-use tracing::{debug, error, trace, warn};
+use tracing::{debug, trace, warn};
 
 pub mod connection_queue;
 pub mod permissions;
@@ -392,18 +390,20 @@ impl Connection {
             // send voice states
             let voice_states = srv.voice.state_list();
             for voice_state in voice_states {
-                if let Ok(perms) = srv.perms.for_channel(user_id, voice_state.channel_id).await {
+                let vs = voice_state.inner();
+                if let Ok(perms) = srv.perms.for_channel(user_id, vs.channel_id).await {
                     let is_ours =
-                        self.state.session().and_then(|s| s.user_id()) == Some(voice_state.user_id);
+                        self.state.session().and_then(|s| s.user_id()) == Some(vs.user_id);
                     if perms.has(Permission::ChannelView) || is_ours {
-                        let mut voice_state = voice_state.clone();
+                        let mut vs = vs.to_owned();
                         if !is_ours {
-                            voice_state.session_id = None;
+                            vs.session_id = None;
                         }
                         self.queue.push_sync(
                             MessageSync::VoiceState {
-                                user_id: voice_state.user_id,
-                                state: Some(voice_state),
+                                peer_id: vs.peer_id,
+                                user_id: vs.user_id,
+                                state: Some(vs),
                                 old_state: None,
                             },
                             None,
@@ -443,7 +443,7 @@ impl Connection {
 
     async fn handle_voice_connect(
         &mut self,
-        voice_state: VoiceStateUpdate,
+        vs: VoiceStateUpdate,
         nonce: Option<String>,
     ) -> Result<()> {
         let session = self
@@ -453,9 +453,7 @@ impl Connection {
         let user_id = session.user_id().ok_or(Error::UnauthSession)?;
 
         let srv = self.s.services();
-        let sfu = srv.voice.sfu_alloc(voice_state.channel_id)?;
-
-        srv.voice.state_create(user_id, voice_state).await?;
+        srv.voice.state_create(user_id, vs).await?;
 
         Ok(())
     }
@@ -474,7 +472,7 @@ impl Connection {
                 .ok_or(Error::BadStatic("state not found"))?,
         ) {
             sfu.send(SfuCommand::Signalling {
-                peer_id,
+                peer_id: Some(peer_id),
                 inner: command,
             });
         }
@@ -663,6 +661,7 @@ impl Connection {
                         .await?,
                 },
                 MessageSync::VoiceState {
+                    peer_id,
                     user_id,
                     mut state,
                     mut old_state,
@@ -693,6 +692,7 @@ impl Connection {
                     }
 
                     MessageSync::VoiceState {
+                        peer_id,
                         user_id,
                         state,
                         old_state,

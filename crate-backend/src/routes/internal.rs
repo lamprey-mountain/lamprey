@@ -37,7 +37,7 @@ async fn internal_rpc(
         return Err(Error::MissingAuth);
     }
 
-    Ok(ws.on_upgrade(move |socket| async {
+    Ok(ws.on_upgrade(move |socket| async move {
         let srv = s.services();
         if let Err(e) = srv.voice.sfu_handle_connect(SfuId::new(), socket).await {
             error!("Failed to connect to SFU: {:?}", e);

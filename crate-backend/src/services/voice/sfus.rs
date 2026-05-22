@@ -34,6 +34,8 @@ impl SfuHandleInner {
     pub fn send(&self, message: SfuCommand) {
         let _ = self.tx.send(message);
     }
+
+    // TODO: send() -> tell(), add request()
 }
 
 pub enum Allocation {
@@ -186,11 +188,7 @@ impl ServiceVoice {
     }
 
     /// figure out where to connect a user to
-    pub fn sfu_alloc_user(
-        &self,
-        channel_id: ChannelId,
-        peer_id: PeerId,
-    ) -> Result<Allocation> {
+    pub fn sfu_alloc_user(&self, channel_id: ChannelId, peer_id: PeerId) -> Result<Allocation> {
         todo!()
         // let acceptable_latency_ms = 80;
 

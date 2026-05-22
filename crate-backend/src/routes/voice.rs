@@ -7,9 +7,7 @@ use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Time};
-use common::v1::types::voice::internal::SfuPermissions;
-use common::v1::types::voice::messages::SfuCommand;
-use common::v1::types::voice::{RingEligibility, VoiceState};
+use common::v1::types::voice::RingEligibility;
 use common::v1::types::{
     AuditLogEntryType, ChannelType, MessageSync, PaginationResponse, Permission,
 };
@@ -19,8 +17,8 @@ use utoipa_axum::router::OpenApiRouter;
 
 use super::util::Auth;
 
-use crate::error::Result;
-use crate::{routes2, Error, ServerState};
+use crate::error::{Error, Result};
+use crate::{routes2, ServerState};
 
 /// Voice state get
 #[handler(routes::voice_state_get)]
@@ -30,19 +28,24 @@ async fn voice_state_get(
     req: routes::voice_state_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     let srv = s.services();
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?
         .check()?;
-    let state = srv.voice.state_get(target_user_id);
-    if let Some(state) = state {
-        Ok(Json(state))
-    } else {
-        Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)))
+
+    let handle = srv
+        .voice
+        .state_get(req.peer_id)
+        .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)))?;
+    let state = handle.inner().clone();
+
+    if state.channel_id != req.channel_id {
+        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
     }
+
+    Ok(Json(state))
 }
 
 /// Voice state patch
@@ -54,18 +57,30 @@ async fn voice_state_patch(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    let target_user_id = req.user_id.unwrap_or(auth.user.id);
+
     let srv = s.services();
     let mut perms = srv
         .perms
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?;
-    let Some(mut old_state) = srv.voice.state_get(target_user_id) else {
+
+    let handle = srv
+        .voice
+        .state_get(req.peer_id)
+        .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)))?;
+    let old_state = handle.inner().clone();
+    let target_user_id = old_state.user_id;
+
+    if old_state.channel_id != req.channel_id {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
-    };
+    }
+
     let chan = srv.channels.get(req.channel_id, None).await?;
     chan.ensure_has_voice()?;
+
+    let mut state_changed = false;
+    let mut current_state = old_state.clone();
 
     // handle move
     if let Some(new_channel_id) = req.state.channel_id {
@@ -74,81 +89,48 @@ async fn voice_state_patch(
         if target_chan.room_id != chan.room_id {
             return Err(ApiError::from_code(ErrorCode::CannotMoveToDifferentRoom).into());
         }
-        let target_perms = srv
+
+        let _target_perms = srv
             .perms
             .for_channel3(Some(target_user_id), new_channel_id)
             .await?
             .ensure_view()?;
 
-        let old_channel_id = old_state.channel_id;
-
-        let _ = s.broadcast_sfu(SfuCommand::VoiceState {
-            user_id: target_user_id,
-            state: None,
-            permissions: SfuPermissions {
-                speak: target_perms.has(Permission::VoiceSpeak),
-                video: target_perms.has(Permission::VoiceVideo),
-                priority: target_perms.has(Permission::VoicePriority),
-            },
-        });
-
-        old_state.channel_id = new_channel_id;
-        srv.voice.state_put(old_state.clone()).await;
+        let old_channel_id = current_state.channel_id;
+        current_state.channel_id = new_channel_id;
+        state_changed = true;
 
         if let Some(room_id) = chan.room_id {
             let al = auth.audit_log(room_id);
             al.commit_success(AuditLogEntryType::MemberMove {
                 user_id: target_user_id,
                 changes: Changes::new()
-                    .change("thread_id", &old_channel_id, &req.channel_id)
+                    .change("thread_id", &old_channel_id, &new_channel_id)
                     .build(),
             })
             .await?;
         }
     }
 
-    // handle mute/deaf/suppress
+    // handle moderator mute/deaf/suppress
     if req.state.mute.is_some() || req.state.deaf.is_some() || req.state.suppress.is_some() {
         perms.needs(Permission::VoiceMute);
         perms.needs(Permission::VoiceDeafen);
 
-        let mute = req.state.mute.unwrap_or(old_state.mute);
-        let deaf = req.state.deaf.unwrap_or(old_state.deaf);
-        let suppress = req.state.suppress.unwrap_or(old_state.suppress);
+        let mute = req.state.mute.unwrap_or(current_state.mute);
+        let deaf = req.state.deaf.unwrap_or(current_state.deaf);
+        let suppress = req.state.suppress.unwrap_or(current_state.suppress);
 
-        let state = VoiceState {
-            mute,
-            deaf,
-            suppress,
-            ..old_state
-        };
-
-        let perms_user = srv
-            .perms
-            .for_channel3(Some(target_user_id), req.channel_id)
-            .await?;
-        let _ = s.broadcast_sfu(SfuCommand::VoiceState {
-            user_id: target_user_id,
-            state: Some(state.clone()),
-            permissions: SfuPermissions::from_bools(
-                perms_user.has(Permission::VoiceSpeak),
-                perms_user.has(Permission::VoiceVideo),
-                perms_user.has(Permission::VoicePriority),
-            ),
-        });
-
-        srv.voice.state_put(state.clone()).await;
-        old_state = state;
+        current_state.mute = mute;
+        current_state.deaf = deaf;
+        current_state.suppress = suppress;
+        state_changed = true;
 
         if let Some(room_id) = chan.room_id {
             let changes = Changes::new()
-                .change("mute", &req.state.mute.unwrap_or(old_state.mute), &mute)
-                .change("deaf", &req.state.deaf.unwrap_or(old_state.deaf), &deaf)
-                .change(
-                    "suppress",
-                    &req.state.suppress.unwrap_or(old_state.suppress),
-                    &suppress,
-                )
+                .change("mute", &old_state.mute, &mute)
+                .change("deaf", &old_state.deaf, &deaf)
+                .change("suppress", &old_state.suppress, &suppress)
                 .build();
             if !changes.is_empty() {
                 let al = auth.audit_log(room_id);
@@ -174,30 +156,15 @@ async fn voice_state_patch(
             None
         };
 
-        let state = VoiceState {
-            requested_to_speak_at: new_requested_to_speak_at,
-            ..old_state
-        };
-
-        let perms_user = srv
-            .perms
-            .for_channel3(Some(target_user_id), req.channel_id)
-            .await?;
-        let _ = s.broadcast_sfu(SfuCommand::VoiceState {
-            user_id: target_user_id,
-            state: Some(state.clone()),
-            permissions: SfuPermissions::from_bools(
-                perms_user.has(Permission::VoiceSpeak),
-                perms_user.has(Permission::VoiceVideo),
-                perms_user.has(Permission::VoicePriority),
-            ),
-        });
-
-        srv.voice.state_put(state.clone()).await;
-        old_state = state;
+        current_state.requested_to_speak_at = new_requested_to_speak_at;
+        state_changed = true;
     }
 
     perms.check()?;
+
+    if state_changed {
+        srv.voice.state_replace(current_state.clone())?;
+    }
 
     if let Some(room_id) = chan.room_id {
         let mut d = s.data();
@@ -214,7 +181,7 @@ async fn voice_state_patch(
         .await?;
     }
 
-    Ok(Json(old_state))
+    Ok(Json(current_state))
 }
 
 /// Voice state disconnect
@@ -227,32 +194,35 @@ async fn voice_state_disconnect(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
-    let target_user_id = req.user_id.unwrap_or(auth.user.id);
     let srv = s.services();
-    srv.perms
+    let handle = srv
+        .voice
+        .state_get(req.peer_id)
+        .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)))?;
+    let state = handle.inner();
+
+    if state.channel_id != req.channel_id {
+        return Ok(StatusCode::NO_CONTENT);
+    }
+
+    let mut perms = srv
+        .perms
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
-        .ensure_view()?
-        .needs(Permission::VoiceMove)
-        .check()?;
-    let target_perms = srv
-        .perms
-        .for_channel3(Some(target_user_id), req.channel_id)
-        .await?;
-    let Some(_state) = srv.voice.state_get(target_user_id) else {
-        return Ok(StatusCode::NO_CONTENT);
-    };
+        .ensure_view()?;
+
+    // self-disconnect is allowed, but disconnecting others requires the VoiceMove permission
+    if state.user_id != auth.user.id {
+        perms.needs(Permission::VoiceMove);
+    }
+    perms.check()?;
+
     let chan = srv.channels.get(req.channel_id, None).await?;
     chan.ensure_has_voice()?;
-    let _ = s.broadcast_sfu(SfuCommand::VoiceState {
-        user_id: target_user_id,
-        state: None,
-        permissions: SfuPermissions::from_bools(
-            target_perms.has(Permission::VoiceSpeak),
-            target_perms.has(Permission::VoiceVideo),
-            target_perms.has(Permission::VoicePriority),
-        ),
-    });
+
+    let target_user_id = state.user_id;
+    srv.voice.state_destroy(req.peer_id)?;
+
     if let Some(room_id) = chan.room_id {
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::MemberDisconnect {
@@ -281,9 +251,12 @@ async fn voice_state_disconnect_all(
         .ensure_view()?
         .needs(Permission::VoiceMove)
         .check()?;
+
     let thread = srv.channels.get(req.channel_id, None).await?;
     thread.ensure_has_voice()?;
-    srv.voice.disconnect_everyone(req.channel_id).await?;
+
+    srv.voice.call_disconnect_all(req.channel_id).await?;
+
     if let Some(room_id) = thread.room_id {
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::MemberDisconnectAll {
@@ -304,7 +277,7 @@ async fn voice_state_move(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
-    let target_user_id = req.user_id.unwrap_or(auth.user.id);
+    // let target_user_id = req.user_id.unwrap_or(auth.user.id);
     let srv = s.services();
     srv.perms
         .for_channel3(Some(auth.user.id), req.channel_id)
@@ -319,47 +292,50 @@ async fn voice_state_move(
         .needs(Permission::VoiceMove)
         .check()?;
 
-    let Some(old) = srv.voice.state_get(target_user_id) else {
-        return Err(ApiError::from_code(ErrorCode::NotConnectedToAnyThread).into());
-    };
-
-    let state = VoiceState {
-        channel_id: req.move_req.target_id,
-        ..old
-    };
-
-    let target_perms = srv
-        .perms
-        .for_channel3(Some(target_user_id), req.channel_id)
-        .await?;
-    let _ = s.broadcast_sfu(SfuCommand::VoiceState {
-        user_id: target_user_id,
-        state: None,
-        permissions: SfuPermissions::from_bools(
-            target_perms.has(Permission::VoiceSpeak),
-            target_perms.has(Permission::VoiceVideo),
-            target_perms.has(Permission::VoicePriority),
-        ),
-    });
-
     let chan = srv.channels.get(req.channel_id, None).await?;
     chan.ensure_has_voice()?;
-    if let Some(room_id) = chan.room_id {
-        let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::MemberMove {
-            user_id: target_user_id,
-            changes: Changes::new()
-                .change("thread_id", &old.channel_id, &state.channel_id)
-                .build(),
-        })
-        .await?;
-    }
 
-    Ok(StatusCode::NO_CONTENT)
+    // let Some(old) = srv.voice.state_get(target_user_id) else {
+    //     return Err(ApiError::from_code(ErrorCode::NotConnectedToAnyThread).into());
+    // };
+
+    // let state = VoiceState {
+    //     channel_id: req.move_req.target_id,
+    //     ..old
+    // };
+
+    // let target_perms = srv
+    //     .perms
+    //     .for_channel3(Some(target_user_id), req.channel_id)
+    //     .await?;
+    // let _ = s.broadcast_sfu(SfuCommand::VoiceState {
+    //     user_id: target_user_id,
+    //     state: None,
+    //     permissions: SfuPermissions::from_bools(
+    //         target_perms.has(Permission::VoiceSpeak),
+    //         target_perms.has(Permission::VoiceVideo),
+    //         target_perms.has(Permission::VoicePriority),
+    //     ),
+    // });
+
+    // let chan = srv.channels.get(req.channel_id, None).await?;
+    // chan.ensure_has_voice()?;
+    // if let Some(room_id) = chan.room_id {
+    //     let al = auth.audit_log(room_id);
+    //     al.commit_success(AuditLogEntryType::MemberMove {
+    //         user_id: target_user_id,
+    //         changes: Changes::new()
+    //             .change("thread_id", &old.channel_id, &state.channel_id)
+    //             .build(),
+    //     })
+    //     .await?;
+    // }
+
+    // Ok(StatusCode::NO_CONTENT)
+    Ok(Error::Unimplemented)
 }
 
-/// Voice state move bulk (TODO)
-// TODO: rename this to "voice state move" and deprecate current voice state move route?
+/// Voice state move bulk
 #[handler(routes::voice_state_move_bulk)]
 async fn voice_state_move_bulk(
     auth: Auth,
@@ -396,17 +372,18 @@ async fn voice_state_list(
         .await?
         .ensure_view()?
         .check()?;
-    let chan = srv.channels.get(req.channel_id, None).await?;
-    chan.ensure_has_voice()?;
+
     let states: Vec<_> = srv
         .voice
-        .state_list()
+        .state_list_by_channel(req.channel_id)
         .into_iter()
-        .filter(|s| s.channel_id == req.channel_id)
+        .map(|h| h.inner().clone())
         .collect();
+
     // this endpoint doesn't support pagination, but the results are returned in
     // a PaginationResponse anyways for consistency
     let total = states.len() as u64;
+
     Ok(Json(PaginationResponse {
         items: states,
         total,
@@ -424,6 +401,7 @@ async fn voice_call_create(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
+
     s.services()
         .perms
         .for_channel3(Some(auth.user.id), req.channel_id)
@@ -431,12 +409,14 @@ async fn voice_call_create(
         .ensure_view()?
         .needs(Permission::CallUpdate)
         .check()?;
+
     let channel = s.services().channels.get(req.channel_id, None).await?;
     if channel.ty != ChannelType::Broadcast {
         return Err(ApiError::from_code(ErrorCode::InvalidData).into());
     }
-    s.services().voice.call_create(req.call).await?;
-    Ok(StatusCode::NO_CONTENT)
+
+    let call_handle = s.services().voice.call_create(req.call)?;
+    Ok((StatusCode::CREATED, Json(call_handle.call().clone())))
 }
 
 /// Voice call delete
@@ -448,6 +428,7 @@ async fn voice_call_delete(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
+
     let mut perms = s
         .services()
         .perms
@@ -455,6 +436,7 @@ async fn voice_call_delete(
         .await?
         .ensure_view()?;
     perms.needs(Permission::CallUpdate);
+
     let channel = s.services().channels.get(req.channel_id, None).await?;
     if channel.ty != ChannelType::Broadcast {
         return Err(ApiError::from_code(ErrorCode::InvalidData).into());
@@ -463,11 +445,33 @@ async fn voice_call_delete(
         perms.needs(Permission::VoiceMove);
     }
     perms.check()?;
+
     s.services()
         .voice
-        .call_delete(req.channel_id, req.params.force)
-        .await;
+        .call_delete(req.channel_id, req.params.force);
     Ok(StatusCode::NO_CONTENT)
+}
+
+/// Voice call patch
+#[handler(routes::voice_call_patch)]
+async fn voice_call_patch(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::voice_call_patch::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
+    auth.user.ensure_unsuspended()?;
+
+    s.services()
+        .perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::CallUpdate)
+        .check()?;
+
+    let call_handle = s.services().voice.call_update(req.channel_id, req.call)?;
+    Ok((StatusCode::OK, Json(call_handle.call().clone())))
 }
 
 /// Voice call get
@@ -478,39 +482,24 @@ async fn voice_call_get(
     req: routes::voice_call_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    auth.user.ensure_unsuspended()?;
     s.services()
         .perms
         .for_channel3(Some(auth.user.id), req.channel_id)
         .await?
         .ensure_view()?
         .check()?;
-    let call = s.services().voice.call_get(req.channel_id)?;
-    Ok(Json(call))
+
+    let call = s
+        .services()
+        .voice
+        .call_get(req.channel_id)
+        .ok_or(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownVoiceChannel,
+        )))?;
+    Ok(Json(call.call().clone()))
 }
 
-/// Voice call update
-// TODO: return the updated call object
-#[handler(routes::voice_call_patch)]
-async fn voice_call_patch(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-    req: routes::voice_call_patch::Request,
-) -> Result<impl IntoResponse> {
-    auth.ensure_scopes(&[Scope::Full])?;
-    auth.user.ensure_unsuspended()?;
-    s.services()
-        .perms
-        .for_channel3(Some(auth.user.id), req.channel_id)
-        .await?
-        .ensure_view()?
-        .needs(Permission::CallUpdate)
-        .check()?;
-    s.services().voice.call_update(req.channel_id, req.call)?;
-    Ok(StatusCode::NO_CONTENT)
-}
-
-/// Voice ring check
+/// Voice ring eligibility
 #[handler(routes::voice_ring_eligibility)]
 async fn voice_ring_eligibility(
     auth: Auth,
@@ -518,20 +507,14 @@ async fn voice_ring_eligibility(
     req: routes::voice_ring_eligibility::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    auth.user.ensure_unsuspended()?;
-    s.services()
-        .perms
-        .for_channel3(Some(auth.user.id), req.channel_id)
-        .await?
-        .ensure_view()?
-        .check()?;
-    let channel = s
+    let chan = s
         .services()
         .channels
         .get(req.channel_id, Some(auth.user.id))
         .await?;
-    let ringable = matches!(channel.ty, ChannelType::Dm | ChannelType::Gdm);
-    Ok(Json(RingEligibility { ringable }))
+    Ok(Json(RingEligibility {
+        ringable: matches!(chan.ty, ChannelType::Dm | ChannelType::Gdm),
+    }))
 }
 
 /// Voice ring start (TODO)
@@ -558,20 +541,90 @@ async fn voice_ring_stop(
     Ok(Error::Unimplemented)
 }
 
+/// Voice user disconnect
+#[handler(routes::voice_user_disconnect)]
+async fn voice_user_disconnect(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::voice_user_disconnect::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
+    auth.user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    // FIXME: allow disconnecting yourself
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::VoiceMove)
+        .check()?;
+
+    let chan = srv.channels.get(req.channel_id, None).await?;
+    chan.ensure_has_voice()?;
+
+    let body_count = srv
+        .voice
+        .call_disconnect_all_user(req.channel_id, req.user_id)
+        .await?;
+
+    // FIXME: skip audit log if disconnecting yourself
+    if body_count > 0 {
+        if let Some(room_id) = chan.room_id {
+            let al = auth.audit_log(room_id);
+            al.commit_success(AuditLogEntryType::MemberDisconnect {
+                channel_id: req.channel_id,
+                user_id: req.user_id,
+            })
+            .await?;
+        }
+    }
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Voice user list
+#[handler(routes::voice_user_list)]
+async fn voice_user_list(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::voice_user_list::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
+    let srv = s.services();
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
+
+    let states: Vec<_> = srv
+        .voice
+        .state_list_by_user(req.user_id)
+        .into_iter()
+        .filter(|h| h.inner().channel_id == req.channel_id)
+        .map(|h| h.inner().clone())
+        .collect();
+
+    Ok(Json(states))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes2!(voice_state_get))
         .routes(routes2!(voice_state_patch))
-        .routes(routes2!(voice_state_disconnect))
-        .routes(routes2!(voice_state_disconnect_all))
         .routes(routes2!(voice_state_move))
         .routes(routes2!(voice_state_move_bulk))
+        .routes(routes2!(voice_state_disconnect))
+        .routes(routes2!(voice_state_disconnect_all))
         .routes(routes2!(voice_state_list))
+        .routes(routes2!(voice_user_disconnect))
+        .routes(routes2!(voice_user_list))
         .routes(routes2!(voice_call_create))
         .routes(routes2!(voice_call_delete))
-        .routes(routes2!(voice_call_get))
         .routes(routes2!(voice_call_patch))
-        .routes(routes2!(voice_ring_eligibility))
+        .routes(routes2!(voice_call_get))
         .routes(routes2!(voice_ring_start))
         .routes(routes2!(voice_ring_stop))
+        .routes(routes2!(voice_ring_eligibility))
 }

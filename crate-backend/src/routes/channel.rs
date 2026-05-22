@@ -526,7 +526,7 @@ async fn channel_remove(
         data.channel_delete(req.channel_id).await?;
         data.room_template_mark_dirty(room_id).await?;
         srv.channels.invalidate(req.channel_id).await;
-        srv.voice.disconnect_everyone(req.channel_id).await?;
+        srv.voice.call_disconnect_all(req.channel_id).await?;
         let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
 
         al.commit_success(AuditLogEntryType::ChannelUpdate {
@@ -553,7 +553,7 @@ async fn channel_remove(
         }
         data.channel_delete(req.channel_id).await?;
         srv.channels.invalidate(req.channel_id).await;
-        srv.voice.disconnect_everyone(req.channel_id).await?;
+        srv.voice.call_disconnect_all(req.channel_id).await?;
     }
     Ok(StatusCode::NO_CONTENT)
 }

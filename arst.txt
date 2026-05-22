@@ -6,6 +6,8 @@ crate-backend/src/services/voice/mod.rs
 crate-backend/src/services/voice/voice_state.rs
 crate-backend/src/services/voice/sfus.rs
 crate-backend/src/services/voice/calls.rs
+crate-backend/src/routes/voice.rs
+crate-common/src/v1/routes/voice.rs
 crate-voice/Cargo.toml
 crate-voice/src/backbone.rs
 crate-voice/src/backend.rs

@@ -3,22 +3,21 @@ use lamprey_macros::endpoint;
 /// Voice state get
 #[endpoint(
     get,
-    path = "/voice/{channel_id}/member/{user_id}",
+    path = "/voice/{channel_id}/peer/{peer_id}",
     tags = ["voice"],
     scopes = [Full],
     response(OK, body = VoiceState, description = "ok"),
 )]
 pub mod voice_state_get {
-    use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::voice::VoiceState;
-    use crate::v1::types::ChannelId;
+    use crate::v1::types::{ChannelId, PeerId};
 
     pub struct Request {
         #[path]
         pub channel_id: ChannelId,
 
         #[path]
-        pub user_id: UserIdReq,
+        pub peer_id: PeerId,
     }
 
     pub struct Response {
@@ -30,24 +29,22 @@ pub mod voice_state_get {
 /// Voice state patch
 #[endpoint(
     patch,
-    path = "/voice/{channel_id}/member/{user_id}",
+    path = "/voice/{channel_id}/peer/{peer_id}",
     tags = ["voice"],
     scopes = [Full],
     permissions_optional = [VoiceMute, VoiceDeafen, VoiceRequest, VoiceMove],
     response(OK, body = VoiceState, description = "ok"),
 )]
 pub mod voice_state_patch {
-    use crate::v1::types::misc::UserIdReq;
-    use crate::v1::types::voice::VoiceState;
-    use crate::v1::types::voice::VoiceStatePatch;
-    use crate::v1::types::ChannelId;
+    use crate::v1::types::voice::{VoiceState, VoiceStatePatch};
+    use crate::v1::types::{ChannelId, PeerId};
 
     pub struct Request {
         #[path]
         pub channel_id: ChannelId,
 
         #[path]
-        pub user_id: UserIdReq,
+        pub peer_id: PeerId,
 
         #[json]
         pub state: VoiceStatePatch,
@@ -62,24 +59,22 @@ pub mod voice_state_patch {
 /// Voice state move
 #[endpoint(
     post,
-    path = "/voice/{channel_id}/member/{user_id}/move",
+    path = "/voice/{channel_id}/peer/{peer_id}/move",
     tags = ["voice"],
     scopes = [Full],
     permissions = [VoiceMove],
     response(OK, body = VoiceState, description = "ok"),
 )]
 pub mod voice_state_move {
-    use crate::v1::types::misc::UserIdReq;
-    use crate::v1::types::voice::VoiceState;
-    use crate::v1::types::voice::VoiceStateMove;
-    use crate::v1::types::ChannelId;
+    use crate::v1::types::voice::{VoiceState, VoiceStateMove};
+    use crate::v1::types::{ChannelId, PeerId};
 
     pub struct Request {
         #[path]
         pub channel_id: ChannelId,
 
         #[path]
-        pub user_id: UserIdReq,
+        pub peer_id: PeerId,
 
         #[json]
         pub move_req: VoiceStateMove,
@@ -93,8 +88,8 @@ pub mod voice_state_move {
 
 /// Voice state move bulk
 #[endpoint(
-    put,
-    path = "/voice/{channel_id}/move-bulk",
+    post,
+    path = "/voice/{channel_id}/move",
     tags = ["voice"],
     scopes = [Full],
     permissions = [VoiceMove],
@@ -115,17 +110,142 @@ pub mod voice_state_move_bulk {
     pub struct Response {}
 }
 
+/// Voice state disconnect
+#[endpoint(
+    delete,
+    path = "/voice/{channel_id}/peer/{peer_id}",
+    tags = ["voice"],
+    scopes = [Full],
+    permissions_optional = [VoiceMove],
+    audit_log_events = ["MemberDisconnect"],
+    response(NO_CONTENT, description = "ok"),
+)]
+pub mod voice_state_disconnect {
+    use crate::v1::types::{ChannelId, PeerId};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub peer_id: PeerId,
+    }
+
+    pub struct Response {}
+}
+
+/// Voice state disconnect all
+#[endpoint(
+    delete,
+    path = "/voice/{channel_id}/peer",
+    tags = ["voice"],
+    scopes = [Full],
+    permissions_optional = [VoiceMove],
+    audit_log_events = ["MemberDisconnectAll"],
+    response(NO_CONTENT, description = "ok"),
+)]
+pub mod voice_state_disconnect_all {
+    use crate::v1::types::ChannelId;
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+    }
+
+    pub struct Response {}
+}
+
+/// Voice state list
+///
+/// list all voice states in this channel
+#[endpoint(
+    get,
+    path = "/voice/{channel_id}/peer",
+    tags = ["voice"],
+    scopes = [Full],
+    response(OK, body = PaginationResponse<VoiceState>, description = "ok"),
+)]
+pub mod voice_state_list {
+    use crate::v1::types::voice::VoiceState;
+    use crate::v1::types::{ChannelId, PaginationResponse};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+    }
+
+    pub struct Response {
+        #[json]
+        pub states: PaginationResponse<VoiceState>,
+    }
+}
+
+/// Voice user disconnect
+///
+/// disconnect all voice states belonging to a user
+#[endpoint(
+    delete,
+    path = "/voice/{channel_id}/user/{user_id}",
+    tags = ["voice"],
+    scopes = [Full],
+    permissions_optional = [VoiceMove],
+    audit_log_events = ["MemberDisconnect"],
+    response(NO_CONTENT, description = "ok"),
+)]
+pub mod voice_user_disconnect {
+    use crate::v1::types::{ChannelId, UserId};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub user_id: UserId,
+    }
+
+    pub struct Response {}
+}
+
+/// Voice user list
+///
+/// list all voice states belonging to a user
+#[endpoint(
+    get,
+    path = "/voice/{channel_id}/user/{user_id}",
+    tags = ["voice"],
+    scopes = [Full],
+    response(OK, body = Vec<VoiceState>, description = "ok"),
+)]
+pub mod voice_user_list {
+    use crate::v1::types::voice::VoiceState;
+    use crate::v1::types::{ChannelId, UserId};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub user_id: UserId,
+    }
+
+    pub struct Response {
+        #[json]
+        pub states: Vec<VoiceState>,
+    }
+}
+
+// ========== calls ==========
+
 /// Voice call create
 #[endpoint(
     post,
     path = "/voice/{channel_id}/call",
     tags = ["voice"],
     scopes = [Full],
-    response(CREATED, body = VoiceState, description = "ok"),
+    response(CREATED, body = Call, description = "ok"),
 )]
 pub mod voice_call_create {
-    use crate::v1::types::voice::CallCreate;
-    use crate::v1::types::voice::VoiceState;
+    use crate::v1::types::voice::{Call, CallCreate};
     use crate::v1::types::ChannelId;
 
     pub struct Request {
@@ -138,7 +258,7 @@ pub mod voice_call_create {
 
     pub struct Response {
         #[json]
-        pub state: VoiceState,
+        pub call: Call,
     }
 }
 
@@ -171,11 +291,10 @@ pub mod voice_call_delete {
     path = "/voice/{channel_id}/call",
     tags = ["voice"],
     scopes = [Full],
-    response(OK, body = VoiceState, description = "ok"),
+    response(OK, body = Call, description = "ok"),
 )]
 pub mod voice_call_patch {
-    use crate::v1::types::voice::CallPatch;
-    use crate::v1::types::voice::VoiceState;
+    use crate::v1::types::voice::{Call, CallPatch};
     use crate::v1::types::ChannelId;
 
     pub struct Request {
@@ -188,11 +307,38 @@ pub mod voice_call_patch {
 
     pub struct Response {
         #[json]
-        pub state: VoiceState,
+        pub call: Call,
     }
 }
 
+/// Voice call get
+#[endpoint(
+    get,
+    path = "/voice/{channel_id}/call",
+    tags = ["voice"],
+    scopes = [Full],
+    response(OK, body = Call, description = "ok"),
+)]
+pub mod voice_call_get {
+    use crate::v1::types::voice::Call;
+    use crate::v1::types::ChannelId;
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+    }
+
+    pub struct Response {
+        #[json]
+        pub call: Call,
+    }
+}
+
+// ========== ringing ==========
+
 /// Voice ring start
+///
+/// Notifies people in a dm/gdm that there's a call. There must be an active call.
 #[endpoint(
     post,
     path = "/voice/{channel_id}/ring",
@@ -216,9 +362,11 @@ pub mod voice_ring_start {
 }
 
 /// Voice ring stop
+///
+/// stop ringing channel participants
 #[endpoint(
-    delete,
-    path = "/voice/{channel_id}/ring",
+    post,
+    path = "/voice/{channel_id}/ring/stop",
     tags = ["voice"],
     scopes = [Full],
     response(NO_CONTENT, description = "ok"),
@@ -239,6 +387,8 @@ pub mod voice_ring_stop {
 }
 
 /// Voice ring eligibility
+///
+/// check if this channel can be rung
 #[endpoint(
     get,
     path = "/voice/{channel_id}/ring/eligibility",
@@ -258,97 +408,5 @@ pub mod voice_ring_eligibility {
     pub struct Response {
         #[json]
         pub eligibility: RingEligibility,
-    }
-}
-
-/// Voice state disconnect
-#[endpoint(
-    delete,
-    path = "/voice/{channel_id}/member/{user_id}",
-    tags = ["voice"],
-    scopes = [Full],
-    permissions_optional = [VoiceMove],
-    audit_log_events = ["MemberDisconnect"],
-    response(NO_CONTENT, description = "ok"),
-)]
-pub mod voice_state_disconnect {
-    use crate::v1::types::misc::UserIdReq;
-    use crate::v1::types::ChannelId;
-
-    pub struct Request {
-        #[path]
-        pub channel_id: ChannelId,
-
-        #[path]
-        pub user_id: UserIdReq,
-    }
-
-    pub struct Response {}
-}
-
-/// Voice state disconnect all
-#[endpoint(
-    delete,
-    path = "/voice/{channel_id}/member",
-    tags = ["voice"],
-    scopes = [Full],
-    permissions_optional = [VoiceMove],
-    audit_log_events = ["MemberDisconnectAll"],
-    response(NO_CONTENT, description = "ok"),
-)]
-pub mod voice_state_disconnect_all {
-    use crate::v1::types::ChannelId;
-
-    pub struct Request {
-        #[path]
-        pub channel_id: ChannelId,
-    }
-
-    pub struct Response {}
-}
-
-/// Voice state list
-#[endpoint(
-    get,
-    path = "/voice/{channel_id}/member",
-    tags = ["voice"],
-    scopes = [Full],
-    response(OK, body = PaginationResponse<VoiceState>, description = "ok"),
-)]
-pub mod voice_state_list {
-    use crate::v1::types::voice::VoiceState;
-    use crate::v1::types::{ChannelId, PaginationResponse};
-
-    pub struct Request {
-        #[path]
-        pub channel_id: ChannelId,
-    }
-
-    pub struct Response {
-        #[json]
-        pub states: PaginationResponse<VoiceState>,
-    }
-}
-
-/// Voice call get
-#[endpoint(
-    get,
-    path = "/voice/{channel_id}",
-    tags = ["voice"],
-    scopes = [Full],
-    response(OK, body = Call, description = "ok"),
-)]
-pub mod voice_call_get {
-    use crate::v1::types::voice::Call;
-    use crate::v1::types::ChannelId;
-
-    pub struct Request {
-        #[path]
-        pub channel_id: ChannelId,
-    }
-
-    pub struct Response {
-        #[json]
-        pub call: Call,
     }
 }
