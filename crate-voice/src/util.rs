@@ -1,3 +1,5 @@
+//! random utilities
+
 use std::net::IpAddr;
 
 use anyhow::{anyhow, Result};

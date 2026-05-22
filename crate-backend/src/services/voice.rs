@@ -1,9 +1,12 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::sync::MessageSync;
 use common::v1::types::util::Time;
+use common::v1::types::voice::messages::{PeerCommand, SfuCommand};
+use common::v1::types::voice::router::VoiceRouter;
 use common::v1::types::voice::{
     Call, CallCreate, CallPatch, SfuCommand, SfuPermissions, VoiceState,
 };
@@ -18,12 +21,52 @@ use crate::{Error, Result, ServerStateInner};
 pub struct ServiceVoice {
     state: Arc<ServerStateInner>,
     voice_states: DashMap<UserId, VoiceState>,
-    calls: DashMap<ChannelId, Call>,
+    calls: DashMap<ChannelId, CallHandle>,
     cleanup_tasks: DashMap<ChannelId, tokio::task::AbortHandle>,
 
     // TODO: make this not public
-    pub sfus: DashMap<SfuId, ()>,
+    pub sfus: HashMap<SfuId, SfuHandle>,
     pub channel_to_sfu: DashMap<ChannelId, SfuId>,
+
+    /// voice router
+    router: VoiceRouter,
+}
+
+struct VoiceStateHandle {
+    inner: VoiceState,
+    // connection state, migration status, etc
+}
+
+pub struct CallHandle {
+    pub call: Call,
+    pub sfus: HashSet<SfuId>,
+    // pub users: HashMap<UserId, UserSession>,
+    // pub active_nodes: HashSet<NodeId>,
+}
+
+impl CallHandle {
+    pub fn id(&self) -> ChannelId {
+        self.call.channel_id
+    }
+}
+
+struct SfuHandle {
+    pub id: SfuId,
+    // pub region: String, // e.g., "us-east-1"
+    // pub current_load: f32, // 0.0 to 1.0
+    // pub public_ip: String,
+    // pub is_online: bool,
+}
+
+impl SfuHandle {
+    pub fn id(&self) -> SfuId {
+        todo!()
+    }
+
+    /// send a message to this sfu
+    pub fn send(&self, message: SfuCommand) {
+        todo!()
+    }
 }
 
 impl ServiceVoice {
@@ -38,6 +81,7 @@ impl ServiceVoice {
         }
     }
 
+    // TODO: fix below code
     pub async fn state_put(&self, state: VoiceState) {
         self.voice_states.insert(state.user_id, state.clone());
 
@@ -108,11 +152,7 @@ impl ServiceVoice {
                     user_id: s.user_id,
                     state: None,
                     // FIXME: permissions
-                    permissions: SfuPermissions {
-                        speak: false,
-                        video: false,
-                        priority: false,
-                    },
+                    permissions: SfuPermissions(0),
                 });
                 if let Err(err) = r {
                     error!("failed to disconnect user from thread: {err}");
@@ -246,3 +286,15 @@ impl ServiceVoice {
         self.cleanup_tasks.insert(channel_id, handle);
     }
 }
+
+// === NEW CODE ===
+
+// impl VoiceService {
+//     /// find the closest node to a user that has capacity
+//     pub fn find_closest_node(&self);
+//     pub fn handle_user_command(&self);
+//     pub fn handle_node_command(&self);
+
+//     fn allocate_user_to_sfu(&self);
+//     fn evaluate_channel_rebalance(&self);
+// }

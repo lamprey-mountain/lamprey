@@ -13,8 +13,8 @@ use anyhow::Result;
 use bytes::Bytes;
 use common::v1::types::{
     voice::{
-        SessionDescription, SfuPermissions, Speaking, SpeakingWithoutUserId, TrackId, TrackKey,
-        TrackMetadata, VoiceState,
+        internal::SfuPermissions, Mid as LMid, SessionDescription, Speaking, SpeakingWithoutPeerId,
+        TrackKey, TrackMetadata, VoiceState,
     },
     UserId,
 };
@@ -35,7 +35,7 @@ use tracing::{debug, error, info, trace, warn};
 use crate::{PeerCommand, PeerEventEnvelope, PeerMedia, TrackIn, TrackOut, TrackState};
 
 #[derive(Debug)]
-pub struct Peer {
+pub struct PeerWebrtc {
     rtc: Rtc,
     socket_v4: Arc<UdpSocket>,
     socket_v6: Arc<UdpSocket>,
@@ -72,7 +72,7 @@ pub struct Peer {
     last_ufrag: Option<String>,
 }
 
-impl Peer {
+impl PeerWebrtc {
     pub async fn create(
         config: &ConfigVoice,
         sfu_send: UnboundedSender<PeerEventEnvelope>,
@@ -294,7 +294,7 @@ impl Peer {
             }
             Event::ChannelData(data) => {
                 if self.speaking_chan == Some(data.id) {
-                    if let Ok(data) = serde_json::from_slice::<SpeakingWithoutUserId>(&data.data) {
+                    if let Ok(data) = serde_json::from_slice::<SpeakingWithoutPeerId>(&data.data) {
                         debug!("recv speaking {data:?}");
                         let speaking = Speaking {
                             user_id: self.user_id,
@@ -409,7 +409,7 @@ impl Peer {
             if let Some(a) = our_track {
                 if let TrackState::Open(mid) = a.state {
                     out.push(TrackMetadata {
-                        mid: TrackId(mid.to_string()),
+                        mid: Mid(mid.to_string()),
                         kind: t.kind,
                         key: t.key,
                         layers: vec![],
@@ -678,7 +678,7 @@ impl Peer {
                     .tracks_metadata
                     .iter()
                     .map(|t| TrackMetadata {
-                        mid: TrackId(t.source_mid.to_string()),
+                        mid: Mid(t.source_mid.to_string()),
                         kind: t.kind,
                         key: t.key.clone(),
                         layers: vec![],

@@ -498,11 +498,11 @@ impl Connection {
                 if let Err(err) = self.s.broadcast_sfu(SfuCommand::VoiceState {
                     user_id,
                     state: Some(state),
-                    permissions: SfuPermissions {
-                        speak: perms.has(Permission::VoiceSpeak),
-                        video: perms.has(Permission::VoiceVideo),
-                        priority: perms.has(Permission::VoicePriority),
-                    },
+                    permissions: SfuPermissions(
+                        (perms.has(Permission::VoiceSpeak) as u8) << 0
+                            | (perms.has(Permission::VoiceVideo) as u8) << 1
+                            | (perms.has(Permission::VoicePriority) as u8) << 2,
+                    ),
                 }) {
                     error!("failed to send to sushi_sfu: {err}");
                 }
@@ -512,11 +512,7 @@ impl Connection {
                 if let Err(err) = self.s.broadcast_sfu(SfuCommand::VoiceState {
                     user_id,
                     state: None,
-                    permissions: SfuPermissions {
-                        speak: false,
-                        video: false,
-                        priority: false,
-                    },
+                    permissions: SfuPermissions(0),
                 }) {
                     error!("failed to send to sushi_sfu: {err}");
                 }

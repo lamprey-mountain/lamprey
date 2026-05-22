@@ -261,25 +261,6 @@ pub mod voice_ring_eligibility {
     }
 }
 
-/// Voice sfu command
-#[endpoint(
-    post,
-    path = "/voice/sfu",
-    tags = ["voice"],
-    scopes = [Full],
-    response(OK, description = "ok"),
-)]
-pub mod voice_sfu_command {
-    use crate::v1::types::voice::SfuCommand;
-
-    pub struct Request {
-        #[json]
-        pub command: SfuCommand,
-    }
-
-    pub struct Response {}
-}
-
 /// Voice state disconnect
 #[endpoint(
     delete,

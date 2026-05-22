@@ -12,6 +12,9 @@ mod member_list;
 mod messages;
 mod syncer;
 
+#[cfg(feature = "voice")]
+mod voice;
+
 pub use handler::EventHandler;
 pub use http::Http;
 

@@ -321,6 +321,11 @@ pub struct ConfigVoice {
     ///
     /// defaults to a random port
     pub udp_port: u16,
+
+    /// the quic port to use for cascading traffic
+    ///
+    /// defaults to a random port
+    pub quic_port: u16,
 }
 
 impl Default for ConfigScripts {

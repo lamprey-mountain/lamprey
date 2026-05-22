@@ -1,3 +1,5 @@
+//! connection to the backend/master
+
 use anyhow::Result;
 use common::v1::types::voice::{SfuCommand, SfuEvent};
 use futures_util::{SinkExt, StreamExt};

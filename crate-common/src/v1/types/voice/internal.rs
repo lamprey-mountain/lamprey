@@ -1,72 +1,133 @@
+use std::time::Instant;
+
+use bytes::Bytes;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::v1::types::{
-    voice::{SignallingMessage, VoiceState},
-    Channel, ChannelId, SfuId, UserId,
-};
+use str0m::media::{MediaTime, Pt};
+use uuid::Uuid;
 
-/// emitted by backend, handled by the sfu
+use crate::v1::types::{voice::Mid, Channel, ChannelId, PeerId};
+
+/// a packet of media data
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-pub enum SfuCommand {
-    Ready {
-        sfu_id: SfuId,
-    },
+pub struct MediaData {
+    /// the track this this piece of media came from
+    pub mid: Mid,
 
-    /// proxied signalling message from a user
-    Signalling {
-        /// the user who sent this
-        user_id: UserId,
-        inner: SignallingMessage,
-    },
+    /// the peer this this piece of media came from
+    pub peer_id: PeerId,
 
-    /// upsert voice state
-    VoiceState {
-        user_id: UserId,
-        state: Option<VoiceState>,
-        permissions: SfuPermissions,
-    },
+    /// the raw media data
+    pub data: Bytes,
 
-    /// upsert channel
-    Channel {
-        channel: SfuChannel,
-    },
+    /// the time this packet was received from the source peer
+    pub network_time: Instant,
+
+    /// the timestamp of this packet in the media stream
+    pub time: MediaTime,
+
+    /// the payload type
+    pub pt: Pt,
 }
 
-/// emitted by the sfu, handled by backend
-#[derive(Debug)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(tag = "type"))]
-pub enum SfuEvent {
-    /// send this message to this user
-    VoiceDispatch {
-        user_id: UserId,
-        payload: SignallingMessage,
-    },
+impl MediaData {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+        use bytes::BufMut;
 
-    /// upsert voice state
-    VoiceState {
-        user_id: UserId,
-        old: Option<VoiceState>,
-        state: Option<VoiceState>,
-    },
+        // mid (16 bytes)
+        buf.put_slice(self.mid.0.as_bytes());
+
+        // peer_id (16 bytes)
+        buf.put_slice(self.peer_id.as_bytes());
+
+        // pt (1 byte)
+        buf.put_u8(*self.pt);
+
+        // network_time (4 bytes)
+        let age = std::time::Instant::now().saturating_duration_since(self.network_time);
+        buf.put_u32_le(age.as_micros() as u32);
+
+        // time (8 bytes numer, 4 bytes freq)
+        buf.put_u64_le(self.time.numer());
+        buf.put_u32_le(self.time.denom());
+
+        // data (remaining)
+        buf.put_slice(&self.data);
+
+        buf
+    }
+
+    // TODO: better errors
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, ()> {
+        use bytes::Buf;
+        let mut buf = bytes;
+
+        if buf.remaining() < 16 + 16 + 1 + 4 + 8 + 4 {
+            return Err(());
+        }
+
+        let mut mid_bytes = [0u8; 16];
+        buf.copy_to_slice(&mut mid_bytes);
+        let mid = Mid(Uuid::from_bytes(mid_bytes));
+
+        let mut peer_bytes = [0u8; 16];
+        buf.copy_to_slice(&mut peer_bytes);
+        let peer_id = PeerId::from(Uuid::from_bytes(peer_bytes));
+
+        let pt = str0m::media::Pt::from(buf.get_u8());
+
+        let age_micros = buf.get_u32_le();
+        let network_time =
+            std::time::Instant::now() - std::time::Duration::from_micros(age_micros as u64);
+
+        let numer = buf.get_u64_le();
+        let denom = buf.get_u32_le();
+        let time =
+            str0m::media::MediaTime::new(numer, str0m::media::Frequency::new(denom).unwrap());
+
+        let data = Bytes::copy_from_slice(buf.chunk());
+
+        Ok(Self {
+            mid,
+            peer_id,
+            data,
+            network_time,
+            time,
+            pt,
+        })
+    }
 }
 
-/// permissions that the sfu needs to know about
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+/// Permissions for an SFU peer
+///
+/// speak = 1 << 0
+/// video = 1 << 1
+/// priority = 1 << 2
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(transparent))]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-pub struct SfuPermissions {
-    /// corresponds to VoiceSpeak
-    pub speak: bool,
+pub struct SfuPermissions(pub u8);
 
-    /// corresponds to VoiceVideo
-    pub video: bool,
+impl SfuPermissions {
+    /// whether this peer can send audio
+    #[inline]
+    pub fn speak(&self) -> bool {
+        self.0 & 1 == 1
+    }
 
-    /// corresponds to VoicePriority
-    pub priority: bool,
+    /// whether this peer can send video
+    #[inline]
+    pub fn video(&self) -> bool {
+        self.0 & 2 == 2
+    }
+
+    /// whether this peer can use priority speaker
+    #[inline]
+    pub fn priority(&self) -> bool {
+        self.0 & 4 == 4
+    }
 }
 
 /// channel config that the sfu needs to know about
@@ -76,7 +137,11 @@ pub struct SfuPermissions {
 pub struct SfuChannel {
     pub id: ChannelId,
     pub name: String,
+
+    // QUESTION: does this affect video?
     pub bitrate: Option<u64>,
+
+    // QUESTION: does this affect peers?
     pub user_limit: Option<u64>,
 }
 
@@ -91,27 +156,35 @@ impl From<Channel> for SfuChannel {
     }
 }
 
-#[cfg(feature = "str0m")]
-mod str0m {
-    use str0m::media::MediaKind as MediaKindStr0m;
+// #[derive(Debug, Clone)]
+// #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// pub enum SfuVoiceState {
+//     Cascading {
+//         sfu_id: SfuId,
+//     },
+//     Webrtc {
+//         state: VoiceState,
+//         permissions: SfuPermissions,
+//     },
+// }
 
-    use crate::v1::types::voice::MediaKind;
+// pub struct TransceiverManager {
+//     map: HashMap<Mid, TransceiverConfig>,
+// }
 
-    impl From<MediaKind> for MediaKindStr0m {
-        fn from(value: MediaKind) -> Self {
-            match value {
-                MediaKind::Video => MediaKindStr0m::Video,
-                MediaKind::Audio => MediaKindStr0m::Audio,
-            }
-        }
-    }
+// impl TransceiverManager {
+//     pub fn new() -> Self {
+//         todo!()
+//     }
 
-    impl From<MediaKindStr0m> for MediaKind {
-        fn from(value: MediaKindStr0m) -> Self {
-            match value {
-                MediaKindStr0m::Video => MediaKind::Video,
-                MediaKindStr0m::Audio => MediaKind::Audio,
-            }
-        }
-    }
-}
+//     /// create a new transceiver, trying to reuse one in the `inactive` or `recvonly` state first.
+//     pub fn create(&mut self) -> () {
+//         todo!()
+//     }
+
+//     /// upsert config for a transceiver
+//     pub fn update(&mut self) -> () {
+//         todo!()
+//     }
+// }

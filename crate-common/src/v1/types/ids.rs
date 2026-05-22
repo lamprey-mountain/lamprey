@@ -279,13 +279,11 @@ genid!(AuditLogEntry, "00000000-0000-0000-0000-0auditlogent");
 genid!(Embed, "00000000-0000-0000-0new-0000000embed");
 genid!(Tag, "00000000-0000-0000-0000-000000000tag");
 genid!(Report, "00000000-0000-0000-0000-000modreport");
-genid!(Call, "00000000-0000-0000-0000-00000000call");
 genid!(Emoji, "00000000-0000-0000-0000-0000000emoji");
 genid!(Application, "00000000-0000-0000-0000-0application");
 genid!(Notification, "00000000-0000-0000-0000-notification");
-genid!(Sfu, "00000000-0000-0000-0000-000000000sfu");
-genid!(AutomodRule, "00000000-0000-0000-0000-0automodrule");
 genid!(Webhook, "00000000-0000-0000-0000-00000webhook");
+genid!(AutomodRule, "00000000-0000-0000-0000-0automodrule");
 genid!(CalendarEvent, "00000000-0000-0000-0000-calendarevent");
 genid!(Harvest);
 genid!(SearchDlq); // NOTE: this should probably not be in common as it's a backend specific type
@@ -293,10 +291,17 @@ genid!(DocumentBranch);
 genid!(DocumentTag);
 genid!(Connection);
 genid!(PermissionOverwrite);
+genid!(Interaction, "00000000-0000-0000-0000-00interaction");
+
+// redexes
 genid!(Redex, "00000000-0000-0000-0000-0000000redex");
 genid!(RedexVer, "00000000-0000-0000-0ver-0000000redex");
 genid!(Eval, "00000000-0000-0000-0000-00000000eval");
-genid!(Interaction, "00000000-0000-0000-0000-00interaction");
+
+// voice
+genid!(Call, "00000000-0000-0000-0000-00000000call");
+genid!(Peer);
+genid!(Sfu, "00000000-0000-0000-0000-000000000sfu");
 
 /// the user id of the server system user (aka root)
 // hex translates to "root"

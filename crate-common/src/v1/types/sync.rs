@@ -14,6 +14,7 @@ use crate::v1::types::error::SyncError;
 use crate::v1::types::interactions::{Interaction, InteractionErrorCode};
 use crate::v1::types::message::flume::FlumeDelta;
 use crate::v1::types::redex::{Eval, EvalLogEntry, Redex, RedexVersion};
+use crate::v1::types::voice::messages::{SignallingCommand, SignallingEvent};
 use crate::v1::types::{
     application::{Application, Connection},
     automod::{AutomodRule, AutomodRuleExecution},
@@ -26,7 +27,7 @@ use crate::v1::types::{
     DocumentTagId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember,
     WebhookId,
 };
-use crate::v1::types::{EvalId, InteractionId, Message, RedexId, RedexVerId};
+use crate::v1::types::{EvalId, InteractionId, Message, PeerId, RedexId, RedexVerId};
 use crate::v2::types::media::Media;
 
 use super::{
@@ -39,7 +40,7 @@ use super::{
     reaction::ReactionKey,
     role::RoleReorderItem,
     tag::Tag,
-    voice::{SignallingMessage, VoiceState},
+    voice::{VoiceState, VoiceStateUpdate},
     Channel, ChannelId, EmojiId, InviteCode, MessageId, MessageVerId, Role, RoleId, Room, RoomId,
     RoomMember, Session, SessionId, SessionToken, TagId, User, UserId,
 };
@@ -90,12 +91,17 @@ pub enum MessageClient {
     /// heartbeat
     Pong,
 
-    /// send arbitrary data to a voice server
-    // NOTE: should i split this into multiple messages? i'll probably keep it how it is currently tbh
-    // TODO: handle multiple connections/servers (or find out how to split one connection amongst multiple hosts?)
+    /// initialize a new voice connection
+    VoiceConnect {
+        voice_state: VoiceStateUpdate,
+        nonce: Option<String>,
+    },
+
+    /// dispatch a command to a voice connection
     VoiceDispatch {
-        user_id: UserId,
-        payload: SignallingMessage,
+        peer_id: PeerId,
+        nonce: Option<String>,
+        command: SignallingCommand,
     },
 
     /// subscribe to a range of room or thread members. you can subscribe to one list at a time.
@@ -596,10 +602,12 @@ pub enum MessageSync {
     VoiceDispatch {
         /// who to send this dispatch to
         user_id: UserId,
-        payload: SignallingMessage,
+        payload: SignallingEvent,
     },
 
+    /// a voice state was updated
     VoiceState {
+        /// the id of the user who's voice state was updated
         user_id: UserId,
         state: Option<VoiceState>,
 

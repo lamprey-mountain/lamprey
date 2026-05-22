@@ -21,3 +21,8 @@ headers = "0.4.1"
 lamprey-backend-core = { version = "0.1", path = "../crate-backend-core" }
 lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 uuid = "1.22"
+str0m = { version = "0.10.0", optional = true }
+
+[features]
+default = ["voice"]
+voice = ["dep:str0m"]

@@ -1,5 +1,7 @@
+//! main code for acting as a selective forwarding unit
+
 use crate::{
-    backend::BackendConnection, config::Config, peer::Peer, PeerCommand, PeerEvent,
+    backend::BackendConnection, config::Config, peer::PeerWebrtc, PeerCommand, PeerEvent,
     PeerEventEnvelope, SignallingMessage, TrackMetadataServer, TrackMetadataSfu,
 };
 use anyhow::Result;
@@ -9,7 +11,8 @@ use common::v1::types::{
     ChannelId, SfuId, UserId,
 };
 use dashmap::DashMap;
-use lamprey_backend_core::config::ConfigVoice;
+use lamprey_backend_core::config::{Config, ConfigVoice};
+use quinn::ServerConfig;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
@@ -40,6 +43,7 @@ struct ChannelState {
 
 #[derive(Debug)]
 pub enum WorkerCommand {
+    // TODO: copy most of SfuCommand here
     Signalling {
         user_id: UserId,
         inner: SignallingMessage,
@@ -55,13 +59,18 @@ pub enum WorkerCommand {
     SetSfuId(SfuId),
 }
 
-pub struct Sfu {
+// #[derive(Debug)]
+// pub enum WorkerEvent {
+//     // TODO: ...?
+// }
+
+pub struct SfuOld {
     workers: Vec<UnboundedSender<WorkerCommand>>,
     user_to_channel: DashMap<UserId, ChannelId>,
     sfu_id: Option<SfuId>,
 }
 
-impl Sfu {
+impl SfuOld {
     pub fn new(workers: Vec<UnboundedSender<WorkerCommand>>) -> Self {
         Self {
             workers,
@@ -120,7 +129,7 @@ impl Sfu {
             });
         }
 
-        let mut sfu = Sfu::new(worker_txs);
+        let mut sfu = SfuOld::new(worker_txs);
 
         loop {
             if let Some(command) = command_rx.recv().await {
@@ -674,7 +683,7 @@ impl Worker {
         let (packet_tx, packet_rx) = mpsc::unbounded_channel();
         self.packet_txs.insert(user_id, packet_tx);
 
-        let (peer, peer_cmd_tx, peer_media_tx) = Peer::create(
+        let (peer, peer_cmd_tx, peer_media_tx) = PeerWebrtc::create(
             &self.config,
             self.peer_event_tx.clone(),
             user_id,
@@ -696,5 +705,79 @@ impl Worker {
     async fn emit(&self, event: SfuEvent) -> Result<()> {
         _ = self.event_tx.send(event);
         Ok(())
+    }
+}
+
+/// the main entrypoint. creates one sfu
+pub struct Sfu {
+    id: SfuId,
+    state: State,
+}
+
+/// pinned to a single core
+pub struct SfuShard {
+    // TODO
+}
+
+/// shared state
+pub struct StateInner {
+    config: Arc<Config>,
+    voice_config: Arc<ConfigVoice>,
+}
+
+pub type State = Arc<StateInner>;
+
+impl Sfu {
+    pub fn new(config: Config) -> Self {
+        Self {
+            id: SfuId::new(),
+            state: Arc::new(StateInner {
+                voice_config: Arc::new(
+                    config
+                        .voice
+                        .as_ref()
+                        .expect("cannot start sfu with no voice config")
+                        .clone(),
+                ),
+                config: Arc::new(config),
+            }),
+        }
+    }
+
+    pub async fn serve(self) {
+        todo!()
+    }
+
+    fn handle_command(&self, command: SfuCommand) {
+        match command {
+            SfuCommand::RecalculateLatency { target_sfu } => todo!(),
+            SfuCommand::MigrateAll { target_sfu } => todo!(),
+            SfuCommand::MigratePeers { peers, target_sfu } => todo!(),
+            SfuCommand::CreatePeer { state, permissions } => todo!(),
+            SfuCommand::PrepareCascade { sfu_id } => todo!(),
+            SfuCommand::CreateCascade {
+                sfu_id,
+                token,
+                addr,
+            } => todo!(),
+            SfuCommand::RouteUpdate {
+                channel_id,
+                destinations,
+            } => todo!(),
+            SfuCommand::Channel { channel } => todo!(),
+
+            // forward based on peer_id
+            SfuCommand::Signalling { peer_id, inner } => !("forward to peer_id"),
+            SfuCommand::GenerateKeyframe {
+                mid,
+                rid,
+                kind,
+                peer_id,
+            } => todo!("forward to peer_id"),
+        }
+    }
+
+    fn create_peer(&self) {
+        todo!()
     }
 }

@@ -1,5 +1,5 @@
 use common::v1::types::voice::{
-    MediaKind, SessionDescription, SignallingMessage, TrackId, TrackKey, TrackMetadata,
+    MediaKind, SessionDescription, SignallingMessage, Mid, TrackKey, TrackMetadata,
 };
 use std::{
     net::{SocketAddr, ToSocketAddrs},
@@ -119,7 +119,7 @@ impl Player {
                         .send(PlayerEvent::Signalling(SignallingMessage::Offer {
                             sdp: SessionDescription(offer.to_sdp_string()),
                             tracks: vec![TrackMetadata {
-                                mid: TrackId(mid.to_string()),
+                                mid: Mid(mid.to_string()),
                                 kind: MediaKind::Audio,
                                 key: TrackKey::User,
                                 layers: vec![],

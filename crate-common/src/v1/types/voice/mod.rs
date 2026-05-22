@@ -8,19 +8,25 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
+use uuid::Uuid;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{util::Time, ConnectionId, MediaId, RoomId, SessionId, SfuId, UserId};
+use crate::v1::types::{util::Time, MediaId, PeerId, RoomId, SessionId, UserId};
 
 #[cfg(feature = "serde")]
 use crate::v1::types::util::some_option;
 
 use super::ChannelId;
 
+pub mod messages;
+pub mod router;
+
+#[cfg(feature = "str0m")]
 pub mod internal;
 
-pub use internal::*;
+#[cfg(feature = "str0m")]
+mod str0m;
 
 /// webrtc session description
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,19 +40,19 @@ pub struct SessionDescription(pub String);
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct IceCandidate(pub String);
 
-/// a unique identifier for a media track (corresponds to a transceiver in webrtc, or a Mid in str0m)
+/// a unique identifier for a media track (corresponds to a transceiver in webrtc)
 ///
-/// media track ids are unique per peer connection
+/// media track ids are unique per peer connection (peer-peer pair)
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct TrackId(pub String);
+pub struct Mid(pub Uuid);
 
-/// a unique identifier for a track layer (corresponds to a rid in webrtc)
+/// a unique identifier for a track layer
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct LayerId(pub String);
+pub struct Rid(pub u64);
 
 impl Deref for SessionDescription {
     type Target = str;
@@ -57,14 +63,6 @@ impl Deref for SessionDescription {
 }
 
 impl Deref for IceCandidate {
-    type Target = str;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl Deref for TrackId {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {
@@ -83,6 +81,13 @@ impl Deref for TrackId {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct VoiceState {
+    /// unique identifier for this particular voice state
+    ///
+    /// bot users can have multiple voice states per connection; each individual "voice connection" is identified by a peer id.
+    ///
+    /// you can think of this as a sort of "voice state id"
+    pub peer_id: PeerId,
+
     /// the user this state belongs to
     pub user_id: UserId,
 
@@ -90,11 +95,10 @@ pub struct VoiceState {
     pub channel_id: ChannelId,
 
     /// the session that's being used to connect to this voice channel
+    ///
     /// this is only be returned for the user this state belongs to
+    // TODO: remove?
     pub session_id: Option<SessionId>,
-
-    /// the connection id for this voice connection
-    pub connection_id: Option<ConnectionId>,
 
     /// when this user joined the call
     pub joined_at: Time,
@@ -161,8 +165,10 @@ pub struct VoiceStateStreamUpdate {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct TrackMetadata {
-    /// unique identifier for this track. equivalent to transceiver.mid
-    pub mid: TrackId,
+    /// unique identifier for this track
+    ///
+    /// equivalent to transceiver.mid
+    pub mid: Mid,
 
     /// whether this track is for audio or video
     pub kind: MediaKind,
@@ -178,6 +184,17 @@ pub struct TrackMetadata {
         serde(default, skip_serializing_if = "Vec::is_empty")
     )]
     pub layers: Vec<TrackLayer>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct TrackMetadataWithPeerId {
+    /// the inner track metadata. the `mid` field is the *source* mid.
+    pub inner: TrackMetadata,
+
+    /// the source peer this track came from
+    pub peer_id: PeerId,
 }
 
 /// which stream this track is associated with. generally there will be one video track and one audio track per stream.
@@ -199,7 +216,7 @@ pub enum TrackKey {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct TrackLayer {
-    pub rid: LayerId,
+    pub rid: Rid,
     pub encoding: TrackEncoding,
 }
 
@@ -218,78 +235,16 @@ pub enum TrackEncoding {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Subscription {
-    pub mid: TrackId,
+    /// which track to subscribe to
+    pub mid: Mid,
 
     /// the layers of the track to subscribe to
     ///
     /// - clients should only subscribe to one layer at a time, but multiple can be subscribed if needed
     /// - the server may subscribe to multiple depending on if multiple resolutions are requested
     /// - leave empty for audio tracks
-    pub rid: Vec<LayerId>,
-}
-
-/// messages that either the sfu or client can send to each other
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(tag = "type"))]
-pub enum SignallingMessage {
-    /// the allocated sfu is ready to accept voice payloads
-    // NOTE: do i get rid of this and have VoiceState be the ready message? ie.
-    // send a VoiceState once the voice server has been successfully allocated.
-    // probably not tbh
-    Ready {
-        /// the id of the selected sfu. internal; for debugging.
-        sfu_id: SfuId,
-    },
-
-    /// a sdp offer
-    Offer {
-        sdp: SessionDescription,
-        tracks: Vec<TrackMetadata>,
-    },
-
-    /// a sdp answer
-    Answer { sdp: SessionDescription },
-
-    /// an ice candidate
-    // NOTE: currently unused by both client and server
-    Candidate { candidate: IceCandidate },
-
-    /// mapping of media ids to streams. sent by server only
-    Have {
-        channel_id: ChannelId,
-        user_id: UserId,
-        tracks: Vec<TrackMetadata>,
-    },
-
-    /// request additional tracks
-    ///
-    /// - all audio from track key `user` is sent by default
-    /// - all video and audio from other sources require a Want
-    /// - sent by server and client
-    /// - replaces the previous Want
-    // TODO: implement server sent `Want`s
-    // TODO: implement client sent `Want`s
-    Want { subscriptions: Vec<Subscription> },
-
-    /// sent by client to update their voice state (including disconnecting)
-    // TODO: merge this with MessageSync::VoiceState in sync.rs
-    VoiceState { state: Option<VoiceStateUpdate> },
-
-    /// trigger a full reset; client should dispose current RTCPeerConnection and create a new one
-    /// also useful to switch connection to another session
-    // NOTE: this is hacky and ideally could be replaced with better peer connection and transceiver management altogether
-    Reconnect,
-
-    /// an error emitted by the sfu
-    Error {
-        /// human readable error message
-        message: String,
-
-        /// what exactly went wrong
-        code: VoiceErrorCode,
-    },
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub rid: Vec<Rid>,
 }
 
 // this may be upgraded to a full error struct later, instead of only code
@@ -307,6 +262,7 @@ pub enum VoiceErrorCode {
 
     /// unknown/other error
     #[error("unknown/other error")]
+    // TODO: remove
     Other,
 }
 
@@ -319,14 +275,25 @@ pub enum MediaKind {
     Audio,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum KeyframeRequestKind {
+    /// just joined a stream, needs a keyframe for initial rendering
+    Fir,
+
+    /// lost some data, need a keyframe to recover
+    Pli,
+}
+
 /// Flags for speaking
 ///
 /// Audio = 1 << 0
 /// Indicator = 1 << 1
 /// Priority = 1 << 2
 #[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(transparent))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(transparent))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct SpeakingFlags(pub u8);
 
 impl SpeakingFlags {
@@ -346,21 +313,23 @@ impl SpeakingFlags {
     }
 }
 
-/// a message sent to the client to indicate that someone is speaking
+/// a message sent from the client to indicate that they're speaking (among other things)
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Speaking {
-    pub user_id: UserId,
-    // pub track_id: TrackId,
+    pub mid: Mid,
     pub flags: SpeakingFlags,
 }
 
-/// a message sent from the client to indicate that they're speaking
+/// a message sent to the client to indicate that someone is speaking
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct SpeakingWithoutUserId {
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct SpeakingWithPeerId {
+    pub peer_id: PeerId,
+    pub source_mid: Mid,
     pub flags: SpeakingFlags,
-    // pub track_id: TrackId,
 }
 
 impl VoiceState {
