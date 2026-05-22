@@ -8,7 +8,7 @@ use axum::{
 };
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common::v1::types::{InviteCode, InviteTarget};
-use lamprey_backend::ServerState;
+use crate::ServerState;
 use minijinja::{context, Environment};
 use rand::RngCore;
 use rust_embed::RustEmbed;
