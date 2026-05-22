@@ -166,6 +166,7 @@ impl ErrorCode {
             ErrorCode::MessageDoesntHaveFlume => StatusCode::NOT_FOUND,
             ErrorCode::CannotManageRemoteUser => StatusCode::FORBIDDEN,
             ErrorCode::ScriptError => StatusCode::BAD_REQUEST,
+            ErrorCode::RoomTypeNoChannels => StatusCode::BAD_REQUEST,
         }
     }
 }

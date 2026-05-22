@@ -9,8 +9,11 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::{
-    notifications::preferences::NotifsRoom, preferences::PreferencesRoom, util::Diff, ChannelId,
-    MediaId, Permission, UserId,
+    error::{ApiError, ApiResult, ErrorCode},
+    notifications::preferences::NotifsRoom,
+    preferences::PreferencesRoom,
+    util::Diff,
+    ChannelId, MediaId, Permission, UserId,
 };
 
 #[cfg(feature = "serde")]
@@ -247,6 +250,9 @@ pub enum RoomType {
 
     /// server pseudo room
     Server,
+
+    /// emoji pack room
+    Emoji,
 }
 
 /// features enabled for this room
@@ -280,21 +286,44 @@ pub enum RoomFeature {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomFeatures(pub Vec<RoomFeature>);
 
-impl RoomFeatures {
-    pub fn new(features: Vec<RoomFeature>) -> Self {
-        Self(features)
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct TransferOwnership {
     pub owner_id: UserId,
+}
+
+impl RoomType {
+    /// whether channels can be manually created or removed
+    pub fn are_channels_manageable(&self) -> bool {
+        matches!(self, RoomType::Default)
+    }
+
+    /// whether members can be manually managed (added, removed, etc)
+    pub fn are_members_manageable(&self) -> bool {
+        matches!(self, RoomType::Default | RoomType::Emoji)
+    }
+
+    /// whether custom emoji can be manually created or removed
+    pub fn has_emoji(&self) -> bool {
+        matches!(self, RoomType::Default | RoomType::Emoji)
+    }
+
+    pub fn ensure_channels_manageable(&self) -> ApiResult<()> {
+        if self.are_channels_manageable() {
+            Ok(())
+        } else {
+            Err(ApiError::from_code(ErrorCode::RoomTypeNoChannels))
+        }
+    }
+
+    pub fn ensure_members_manageable(&self) -> ApiResult<()> {
+        if self.are_members_manageable() {
+            Ok(())
+        } else {
+            Err(ApiError::from_code(ErrorCode::RoomTypeNoChannels))
+        }
+    }
 }
 
 impl RoomFeature {
@@ -313,6 +342,16 @@ impl RoomFeature {
     /// corresponds to Permission::RoomEdit
     pub fn can_room_editors_enable(&self) -> bool {
         false
+    }
+}
+
+impl RoomFeatures {
+    pub fn new(features: Vec<RoomFeature>) -> Self {
+        Self(features)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 }
 

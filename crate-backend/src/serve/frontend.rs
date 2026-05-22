@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::ServerState;
 use axum::{
     body::Body,
     extract::{Path, State},
@@ -8,7 +9,6 @@ use axum::{
 };
 use base64::{engine::general_purpose::STANDARD, Engine};
 use common::v1::types::{InviteCode, InviteTarget};
-use crate::ServerState;
 use minijinja::{context, Environment};
 use rand::RngCore;
 use rust_embed::RustEmbed;

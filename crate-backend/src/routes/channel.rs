@@ -38,6 +38,10 @@ async fn channel_create_room(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
+    let srv = s.services();
+    let room = srv.rooms.get(req.room_id, None).await?;
+    room.room_type.ensure_channels_manageable()?;
+
     let mut json = req.channel;
     if json.ty.is_thread() {
         if let Some(parent_id) = json.parent_id {

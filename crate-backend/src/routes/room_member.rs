@@ -104,6 +104,8 @@ async fn room_member_add(
     auth.user.ensure_unsuspended()?;
     let al = auth.audit_log(req.room_id);
     let srv = s.services();
+    let room = srv.rooms.get(req.room_id, None).await?;
+    room.room_type.ensure_members_manageable()?;
     let mut data = s.data();
     let target_user_id = req.user_id.unwrap_or(auth.user.id);
 
@@ -499,6 +501,9 @@ async fn room_member_update(
     let al = auth.audit_log(req.room_id);
     req.patch.validate()?;
     let target_user_id = req.user_id.unwrap_or(auth.user.id);
+    let srv = s.services();
+    let room = srv.rooms.get(req.room_id, None).await?;
+    room.room_type.ensure_members_manageable()?;
     let mut d = s.data();
     let perms = s
         .services()
@@ -506,7 +511,6 @@ async fn room_member_update(
         .for_room3(Some(auth.user.id), req.room_id)
         .await?;
     let mut perms: Permissions2<CheckPermissions> = perms.ensure_view()?;
-    let srv = s.services();
 
     let room = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
     if room.security.require_mfa {
@@ -690,8 +694,10 @@ async fn room_member_delete(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let target_user_id = req.user_id.unwrap_or(auth.user.id);
-    let mut d = s.data();
     let srv = s.services();
+    let room = srv.rooms.get(req.room_id, None).await?;
+    room.room_type.ensure_members_manageable()?;
+    let mut d = s.data();
 
     let room = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
     if room.security.require_mfa && target_user_id != auth.user.id {
@@ -763,6 +769,9 @@ async fn room_member_search(
     req: routes::room_member_search::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
+    let srv = s.services();
+    let room = srv.rooms.get(req.room_id, None).await?;
+    room.room_type.ensure_members_manageable()?;
     let mut d = s.data();
     let mut perms = s
         .services()
@@ -802,6 +811,9 @@ async fn room_member_search_advanced(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     req.search.validate()?;
+    let srv = s.services();
+    let room = srv.rooms.get(req.room_id, None).await?;
+    room.room_type.ensure_members_manageable()?;
     let mut d = s.data();
     let mut perms = s
         .services()
@@ -836,6 +848,8 @@ async fn room_prune_begin(
     auth.user.ensure_unsuspended()?;
     req.prune.validate()?;
     let srv = s.services();
+    let room = srv.rooms.get(req.room_id, None).await?;
+    room.room_type.ensure_members_manageable()?;
     let mut data = s.data();
 
     let room = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
@@ -871,6 +885,8 @@ async fn room_ban_create(
     auth.user.ensure_unsuspended()?;
     let target_user_id = req.user_id.unwrap_or(auth.user.id);
     let srv = s.services();
+    let room = srv.rooms.get(req.room_id, None).await?;
+    room.room_type.ensure_members_manageable()?;
     let mut d = s.data();
 
     let room = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
@@ -959,6 +975,8 @@ async fn room_ban_bulk_create(
     auth.user.ensure_unsuspended()?;
     req.ban.validate()?;
     let srv = s.services();
+    let room = srv.rooms.get(req.room_id, None).await?;
+    room.room_type.ensure_members_manageable()?;
     let mut d = s.data();
 
     let room = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
@@ -979,8 +997,6 @@ async fn room_ban_bulk_create(
     if req.room_id == SERVER_ROOM_ID {
         return Err(ApiError::from_code(ErrorCode::CannotKickFromServerRoom).into());
     }
-
-    let room = srv.rooms.get(req.room_id, None).await?;
     let auth_user_rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
 
     for &target_user_id in &req.ban.target_ids {
@@ -1038,8 +1054,10 @@ async fn room_ban_delete(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
     let target_user_id = req.user_id.unwrap_or(auth.user.id);
-    let mut d = s.data();
     let srv = s.services();
+    let room = srv.rooms.get(req.room_id, None).await?;
+    room.room_type.ensure_members_manageable()?;
+    let mut d = s.data();
 
     let room = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
     if room.security.require_mfa {
@@ -1090,9 +1108,11 @@ async fn room_ban_get(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let target_user_id = req.user_id.unwrap_or(auth.user.id);
+    let srv = s.services();
+    let room = srv.rooms.get(req.room_id, None).await?;
+    room.room_type.ensure_members_manageable()?;
     let mut d = s.data();
-    s.services()
-        .perms
+    srv.perms
         .for_room3(Some(auth.user.id), req.room_id)
         .await?
         .ensure_view()?
@@ -1110,9 +1130,11 @@ async fn room_ban_list(
     req: routes::room_ban_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
+    let srv = s.services();
+    let room = srv.rooms.get(req.room_id, None).await?;
+    room.room_type.ensure_members_manageable()?;
     let mut d = s.data();
-    s.services()
-        .perms
+    srv.perms
         .for_room3(Some(auth.user.id), req.room_id)
         .await?
         .ensure_view()?

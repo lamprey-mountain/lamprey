@@ -757,6 +757,7 @@ pub enum EmailPurpose {
 pub enum DbRoomType {
     Default,
     Server,
+    Emoji,
 }
 
 #[derive(sqlx::Type, Debug, Clone, Copy, PartialEq, Eq)]
@@ -786,6 +787,7 @@ impl Into<DbRoomType> for RoomType {
         match self {
             RoomType::Default => DbRoomType::Default,
             RoomType::Server => DbRoomType::Server,
+            RoomType::Emoji => DbRoomType::Emoji,
         }
     }
 }
@@ -795,6 +797,7 @@ impl Into<RoomType> for DbRoomType {
         match self {
             DbRoomType::Default => RoomType::Default,
             DbRoomType::Server => RoomType::Server,
+            DbRoomType::Emoji => RoomType::Emoji,
         }
     }
 }
