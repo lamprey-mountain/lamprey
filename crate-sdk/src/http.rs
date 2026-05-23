@@ -1,9 +1,13 @@
+// TODO: somehow use routes from the common crate? maybe with macros?
+
 use anyhow::{Context, Result};
-use common::v1::types::message::Message;
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::presence::Presence;
 use common::v1::types::util::Time;
-use common::v1::types::SearchDlqId;
+use common::v1::types::voice::{
+    Call, CallCreate, CallDeleteParams, CallPatch, RingEligibility, RingStart, RingStop,
+    VoiceState, VoiceStateMove, VoiceStateMoveBulk, VoiceStatePatch,
+};
 use common::v1::types::{
     emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiSearchQuery},
     misc::UserIdReq,
@@ -11,11 +15,12 @@ use common::v1::types::{
     role::RoleDeleteQuery,
     ApplicationId, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelReorder, EmojiId,
     Invite, InviteCode, InviteCreate, InvitePatch, MediaId, MessageId, MessageModerate,
-    MessagePatch, MessageVerId, PermissionOverwriteSet, PinsReorder, PuppetCreate, Role,
+    MessagePatch, MessageVerId, PeerId, PermissionOverwriteSet, PinsReorder, PuppetCreate, Role,
     RoleCreate, RoleId, RoleMemberBulkPatch, RolePatch, RoleReorder, Room, RoomBan,
     RoomBanBulkCreate, RoomCreate, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut, RoomPatch,
     SessionToken, ThreadMember, ThreadMemberPut, User, UserId, UserPatch, UserWithRelationship,
 };
+use common::v1::types::{Message, SearchDlqId};
 use common::v1::types::{
     MessageCreate, MessageMigrate, RoomBanCreate, SuspendRequest, TransferOwnership, UserCreate,
 };
@@ -352,8 +357,23 @@ macro_rules! route {
     };
 }
 
-// Media Routes
-route!(get    "/api/v1/media/{media_id}"                          => media_info_get(media_id: MediaId) -> Media);
+// Voice Routes
+route!(get    "/api/v1/voice/{channel_id}/peer/{peer_id}"                   => voice_state_get(channel_id: ChannelId, peer_id: PeerId) -> VoiceState);
+route!(patch  "/api/v1/voice/{channel_id}/peer/{peer_id}"                   => voice_state_patch(channel_id: ChannelId, peer_id: PeerId) -> VoiceState, VoiceStatePatch);
+route!(post   "/api/v1/voice/{channel_id}/peer/{peer_id}/move"              => voice_state_move(channel_id: ChannelId, peer_id: PeerId) -> VoiceState, VoiceStateMove);
+route!(post   "/api/v1/voice/{channel_id}/move"                             => voice_state_move_bulk(channel_id: ChannelId), VoiceStateMoveBulk);
+route!(delete "/api/v1/voice/{channel_id}/peer/{peer_id}"                   => voice_state_disconnect(channel_id: ChannelId, peer_id: PeerId));
+route!(delete "/api/v1/voice/{channel_id}/peer"                             => voice_state_disconnect_all(channel_id: ChannelId));
+route!(get    "/api/v1/voice/{channel_id}/peer"                             => voice_state_list(channel_id: ChannelId) -> PaginationResponse<VoiceState>);
+route!(delete "/api/v1/voice/{channel_id}/user/{user_id}"                   => voice_user_disconnect(channel_id: ChannelId, user_id: UserId));
+route!(get    "/api/v1/voice/{channel_id}/user/{user_id}"                   => voice_user_list(channel_id: ChannelId, user_id: UserId) -> Vec<VoiceState>);
+route!(post   "/api/v1/voice/{channel_id}/call"                             => voice_call_create(channel_id: ChannelId) -> Call, CallCreate);
+route!(delete "/api/v1/voice/{channel_id}/call"                             => voice_call_delete(channel_id: ChannelId, _q: CallDeleteParams));
+route!(patch  "/api/v1/voice/{channel_id}/call"                             => voice_call_patch(channel_id: ChannelId) -> Call, CallPatch);
+route!(get    "/api/v1/voice/{channel_id}/call"                             => voice_call_get(channel_id: ChannelId) -> Call);
+route!(post   "/api/v1/voice/{channel_id}/ring"                             => voice_ring_start(channel_id: ChannelId), RingStart);
+route!(post   "/api/v1/voice/{channel_id}/ring/stop"                        => voice_ring_stop(channel_id: ChannelId), RingStop);
+route!(get    "/api/v1/voice/{channel_id}/ring/eligibility"                 => voice_ring_eligibility(channel_id: ChannelId) -> RingEligibility);
 route!(post   "/api/v1/media"                                     => media_create() -> MediaCreated, MediaCreate);
 route!(put    "/api/v1/media/{media_id}/done"                     => media_done(media_id: MediaId) -> Option<Media>, MediaDoneParams);
 

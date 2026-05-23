@@ -87,7 +87,9 @@ impl Sfu {
         let mut backbone = BackboneComms::create(Arc::clone(&self.state))?;
         let mut backend = BackendConnection::connect(Arc::clone(&self.state)).await?;
 
-        let num_workers = voice_config.workers.unwrap_or_else(|| num_cpus::get() as u8) as usize;
+        let num_workers = voice_config
+            .workers
+            .unwrap_or_else(|| num_cpus::get() as u8) as usize;
         for n in 0..num_workers {
             self.shards.push(SfuShard {
                 id: ShardId(n),
