@@ -1,5 +1,4 @@
 import { logger } from "@/utils/logger";
-import { VoiceClient } from "./VoiceClient";
 
 const voiceLog = logger.for("voice");
 
@@ -11,9 +10,8 @@ type LocalTrack = {
 
 type LocalScreen = {
 	trackVideo: MediaStreamTrack;
-	trackAudio: MediaStreamTrack;
+	trackAudio: MediaStreamTrack | null;
 	stream: MediaStream;
-	// TODO: ???
 };
 
 /** handles VoiceClient */
@@ -21,10 +19,6 @@ export class DeviceManager {
 	private localMic: LocalTrack | null = null;
 	private localCam: LocalTrack | null = null;
 	private localScreenshare: LocalScreen | null = null;
-
-	constructor(
-		// private voiceClient: VoiceClient,
-	) {}
 
 	public async acquireMicrophone(deviceId?: string): Promise<LocalTrack> {
 		if (this.localMic) {
@@ -68,11 +62,23 @@ export class DeviceManager {
 		return l;
 	}
 
-	public async acquireScreensare(): Promise<MediaStream> {
-		return await navigator.mediaDevices.getDisplayMedia({
+	public async acquireScreenshare(): Promise<LocalScreen> {
+		if (this.localScreenshare) return this.localScreenshare;
+
+		const stream = await navigator.mediaDevices.getDisplayMedia({
 			video: true,
 			audio: true,
 		});
+		voiceLog.debug("got screenshare stream", stream);
+		const trackVideo = stream.getVideoTracks()[0];
+		if (!trackVideo) throw new Error("no video track in screenshare stream");
+		const trackAudio = stream.getAudioTracks()[0] ?? null;
+		const l = { trackVideo, trackAudio, stream };
+		this.localScreenshare = l;
+		trackVideo.addEventListener("ended", () => {
+			this.localScreenshare = null;
+		});
+		return l;
 	}
 
 	public async enumerate(): Promise<MediaDeviceInfo[]> {

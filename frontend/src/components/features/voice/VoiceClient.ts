@@ -1,19 +1,12 @@
-// TODO: use log.foo instead of console.foo
-
-import {
-	createEventHub,
-	EventBus,
-	EventHub,
-} from "@solid-primitives/event-bus";
 import { ReactiveMap } from "@solid-primitives/map";
-import { ReactiveSet } from "@solid-primitives/set";
 import { type Accessor, createSignal, type Setter } from "solid-js";
-import {
-	type MessageClient,
-	ScriptSubscribe,
-	type SignallingEvent,
-	type VoiceState,
-	type VoiceSubscription,
+import type {
+	MessageClient,
+	SignallingCommand,
+	SignallingEvent,
+	TrackMetadata,
+	VoiceState,
+	VoiceSubscription,
 } from "ts-sdk";
 import type { Api } from "@/api";
 import { logger } from "@/utils/logger";
@@ -58,7 +51,14 @@ export class VoiceClient {
 	public queue: Array<MessageClient> = [];
 	private localStreams: Array<LocalStream> = [];
 	public streams = new ReactiveMap<string, RemoteStream>();
-	// private transceivers = new Map<string, RTCRtpTransceiver>();
+	private transceivers = new Map<string, RTCRtpTransceiver>();
+
+	private makingOffer = false;
+	private settingRemoteAnswer = false;
+
+	public getRtc() {
+		return this.rtc;
+	}
 
 	constructor(public api: Api) {
 		[this.connectionState, this.setConnectionState] =
@@ -74,54 +74,85 @@ export class VoiceClient {
 		);
 
 		// setup event listeners for rtc
-		this.rtc.addEventListener("connectionstatechange", (e) => {
-			// TODO: this.setConnectionState
+		this.rtc.addEventListener("connectionstatechange", () => {
+			log.debug("signal", "connection state change", this.rtc?.connectionState);
+
+			const state = this.rtc?.connectionState;
+			if (state === "connected") {
+				this.setConnectionState("connected");
+			} else if (state === "failed" || state === "closed") {
+				// NOTE: maybe set this to "connecting" too? since VoiceClient should automatically reconnect
+				this.setConnectionState("disconnected");
+			} else if (state === "connecting" || state === "new") {
+				this.setConnectionState("connecting");
+			}
 		});
 
-		this.rtc.addEventListener("iceconnectionstatechange", (e) => {
-			// TODO: log.debug
-			// TODO: restartIce() on conn.iceConnectionState === "failed"
+		this.rtc.addEventListener("iceconnectionstatechange", () => {
+			log.debug(
+				"signal",
+				"ice connection state change",
+				this.rtc?.iceConnectionState,
+			);
+			if (this.rtc?.iceConnectionState === "failed") {
+				log.warn("signal", "ice failed, restarting ice", null);
+				this.rtc.restartIce();
+			}
 		});
 
-		this.rtc.addEventListener("signalingstatechange", (e) => {
-			// TODO: log.debug
+		this.rtc.addEventListener("signalingstatechange", () => {
+			log.debug("signal", "signaling state change", this.rtc?.signalingState);
 		});
 
-		this.rtc.addEventListener("icegatheringstatechange", (e) => {
-			// TODO: log.debug
+		this.rtc.addEventListener("icegatheringstatechange", () => {
+			log.debug(
+				"signal",
+				"ice gathering state change",
+				this.rtc?.iceGatheringState,
+			);
 		});
 
 		this.rtc.addEventListener("icecandidate", (e) => {
-			// TODO: log.debug
-			// TODO: this.send
+			if (!e.candidate?.candidate) return;
+			log.debug("signal", "local ice candidate", e.candidate);
+			this.sendSignalling({
+				type: "Candidate",
+				candidate: e.candidate.candidate,
+			});
 		});
 
-		this.rtc.addEventListener("negotiationneeded", (e) => {
-			// TODO: negotiate
-			// console.info("[rtc:sdp] negotiation needed");
-			// try {
-			// 	makingOffer = true;
-			// 	const offer = await conn.createOffer();
-			// 	await conn.setLocalDescription(offer);
-			// 	const tracks = getTrackMetadata();
-			// 	console.info("[rtc:sdp] create offer", tracks);
-			// 	send({
-			// 		type: "Offer",
-			// 		sdp: conn.localDescription?.sdp ?? "",
-			// 		tracks,
-			// 	});
-			// } finally {
-			// 	makingOffer = false;
-			// }
+		this.rtc.addEventListener("negotiationneeded", () => {
+			this.negotiate();
 		});
 
 		this.rtc.addEventListener("track", (e) => {
 			const t = e.transceiver;
-			// TODO: handle track
+			log.info("rtc", "track", e);
+			if (!t.mid) {
+				log.warn("rtc", "transceiver missing mid");
+				return;
+			}
+
+			this.transceivers.set(t.mid, t);
+
+			// attach track to a remote stream if we already know the mid
+			for (const [, stream] of this.streams) {
+				if (stream.mids.includes(t.mid)) {
+					stream.media.addTrack(t.receiver.track);
+					log.debug(
+						"rtc",
+						`added track ${t.mid} (${e.track.kind}) to stream ${stream.id}`,
+						stream,
+					);
+					// trigger reactivity
+					this.streams.set(stream.id, { ...stream });
+					break;
+				}
+			}
 		});
 
 		this.rtc.addEventListener("datachannel", (e) => {
-			// TODO: log.debug
+			log.debug("rtc", "datachannel", e.channel.label);
 		});
 
 		// setup speaking indicator data channel
@@ -132,18 +163,9 @@ export class VoiceClient {
 		});
 
 		this.speaking.swapDatachannel(sc);
-
-		// function reconnect() {
-		// 	conn.close();
-		// 	conn = new RTCPeerConnection(RTC_CONFIG);
-		// 	ready = false;
-		// 	chanSpeaking = undefined;
-		// 	events.emit("reconnect", { conn });
-		// 	setup();
-		// }
 	}
 
-	public async connect(channelId: string): Promise<void> {
+	public connect(channelId: string): void {
 		this.init();
 
 		const existing = this.api.voiceState;
@@ -156,28 +178,75 @@ export class VoiceClient {
 		}
 
 		this.send({
-			type: "VoiceState",
-			state: {
+			type: "VoiceConnect",
+			voice_state: {
 				channel_id: channelId,
 				self_mute: true,
 				self_deaf: false,
 				self_video: false,
-				self_screen: false,
+				screenshare: null,
 			},
 		});
+
+		// FIXME: update voice state when local state changes
+		// this.send({
+		// 	type: "VoiceDispatch",
+		// 	channel_id: channelId,
+		// 	command: {
+		// 		type: "VoiceState",
+		// 		state: {
+		// 			channel_id: channelId,
+		// 			self_mute: true,
+		// 			self_deaf: false,
+		// 			self_video: false,
+		// 			screenshare: null,
+		// 		},
+		// 	},
+		// });
 	}
 
 	public disconnect(): void {
+		const channelId = this.api.voiceState?.channel_id;
 		this.setConnectionState("disconnected");
+		this.rtc?.close();
+		this.rtc = null;
+		this.transceivers.clear();
+		this.localStreams = [];
+		this.streams.clear();
+		this.queue = [];
+
+		if (!channelId) return; // TODO: how do i handle this?
 		this.send({
-			type: "VoiceState",
-			state: null,
+			type: "VoiceDispatch",
+			channel_id: channelId,
+			command: {
+				type: "Disconnect",
+			},
 		});
 	}
 
 	public send(msg: MessageClient): void {
 		this.queue.push(msg);
 		this.drainSendQueue();
+	}
+
+	/** send a signalling command to the server */
+	private sendSignalling(command: SignallingCommand): void {
+		const currentUser = this.api.users.cache.get("@self");
+		const user_id = currentUser?.id;
+		if (!user_id) return;
+
+		const voiceState = this.api.voiceState;
+		if (!voiceState?.channel_id) {
+			log.warn("signal", "no voice state channel_id for signalling send", null);
+			return;
+		}
+
+		this.send({
+			type: "VoiceDispatch",
+			channel_id: voiceState.channel_id,
+			command,
+		});
 	}
 
 	// TEMP(?): public
@@ -189,26 +258,60 @@ export class VoiceClient {
 
 		for (const msg of this.queue) {
 			log.info("signal", "send " + msg.type, msg);
-			this.api.client.send({
-				type: "VoiceDispatch",
-				user_id,
-				payload: msg,
-			});
+			this.api.client.send(msg);
 		}
 
 		this.queue.splice(0, this.queue.length);
 	}
 
-	public async handleVoiceState(uid: string, vs: VoiceState): Promise<void> {
-		// TODO: handle disconnects
-		// 	if (!e.state) {
-		// 		console.log("[rtc:stream] clean up tracks from", e.user_id);
-		// 		const filtered = remoteStreams.filter((s) => s.user_id !== e.user_id);
-		// 		remoteStreams.splice(0, remoteStreams.length, ...filtered);
-		// 		for (const [key, s] of streams) {
-		// 			if (s.user_id === e.user_id) streams.delete(key);
-		// 		}
-		// 	}
+	private async negotiate(): Promise<void> {
+		if (!this.rtc) return;
+		log.info("signal", "negotiation needed");
+		try {
+			this.makingOffer = true;
+			const offer = await this.rtc.createOffer();
+			await this.rtc.setLocalDescription(offer);
+			const tracks = this.getTrackMetadata();
+			log.info("signal", "create offer", tracks);
+			this.sendSignalling({
+				type: "Offer",
+				sdp: this.rtc.localDescription?.sdp ?? "",
+				tracks,
+			});
+		} finally {
+			this.makingOffer = false;
+		}
+	}
+
+	private getTrackMetadata(): TrackMetadata[] {
+		const tracks: TrackMetadata[] = [];
+		for (const s of this.localStreams) {
+			for (const t of s.transceivers) {
+				if (t.direction === "inactive") continue;
+				const kind = t.sender.track?.kind;
+				if (kind) {
+					tracks.push({
+						key: s.key as "user" | "screen",
+						mid: t.mid!,
+						kind: kind === "video" ? "Video" : "Audio",
+					});
+				}
+			}
+		}
+		return tracks;
+	}
+
+	public async handleVoiceState(
+		uid: string,
+		vs: VoiceState | null,
+	): Promise<void> {
+		if (!vs) {
+			log.debug("signal", "clean up tracks from " + uid, null);
+			// remove all streams belonging to this user
+			for (const [key, s] of this.streams) {
+				if (s.user_id === uid) this.streams.delete(key);
+			}
+		}
 	}
 
 	public async handleSignalingEvent(msg: SignallingEvent): Promise<void> {
@@ -217,156 +320,93 @@ export class VoiceClient {
 		switch (msg.type) {
 			case "Connected": {
 				this.setConnectionState("connected");
-				this.drainSendQueue(); // NOTE: is this necessary? is it even possible to have a stuck queue when receiving Connected?
-				// TODO: send want subscriptions?
+				this.drainSendQueue();
+				// send initial Want subscriptions for all streams we know about
 				break;
 			}
 			case "Offer": {
-				// await this.pc.setRemoteDescription({ type: "offer", sdp: message.sdp });
-				// const answer = await this.pc.createAnswer();
-				// await this.pc.setLocalDescription(answer);
-				// this.sendSignaling({ type: "Answer", sdp: answer.sdp ?? "" });
-				// TODO
+				const readyForOffer =
+					!this.makingOffer &&
+					(this.rtc.signalingState === "stable" || this.settingRemoteAnswer);
+				if (!readyForOffer) {
+					log.debug(
+						"signal",
+						"ignore server offer; signalingState=",
+						this.rtc.signalingState,
+					);
+					return;
+				}
 
-				// const readyForOffer =
-				// 	!makingOffer &&
-				// 	(conn.signalingState === "stable" || settingRemoteAnswer);
-				// if (!readyForOffer) {
-				// 	console.log(
-				// 		"[rtc:sdp] ignore server offer; signallingState=",
-				// 		conn.signalingState,
-				// 	);
-				// 	return;
-				// }
+				log.debug("signal", "accept offer; create answer");
+				try {
+					await this.rtc.setRemoteDescription({
+						type: "offer",
+						sdp: msg.sdp,
+					});
+					await this.rtc.setLocalDescription(await this.rtc.createAnswer());
+					this.sendSignalling({
+						type: "Answer",
+						sdp: this.rtc.localDescription?.sdp ?? "",
+					});
+				} catch (err) {
+					log.error("signal", "error while accepting offer", err);
+				}
 
-				// console.log("[rtc:sdp] accept offer; create answer");
-				// try {
-				// 	await conn.setRemoteDescription({
-				// 		type: "offer",
-				// 		sdp: msg.sdp,
-				// 	});
-				// 	await conn.setLocalDescription(await conn.createAnswer());
-				// 	send({ type: "Answer", sdp: conn.localDescription?.sdp ?? "" });
-				// } catch (err) {
-				// 	console.error("[rtc:sdp] error while accepting offer", err);
-				// 	console.log("COPY PASTE THIS", {
-				// 		localDescription: conn.localDescription,
-				// 		answer: msg.sdp,
-				// 	});
-				// }
+				// process track metadata from the offer
+				for (const track of msg.tracks) {
+					this.processRemoteTrack(track, track.user_id);
+				}
 
 				break;
 			}
 			case "Answer": {
-				await this.rtc.setRemoteDescription({ type: "answer", sdp: msg.sdp });
+				if (this.rtc.signalingState !== "have-local-offer") {
+					log.debug(
+						"signal",
+						"ignoring unexpected answer, state:",
+						this.rtc.signalingState,
+					);
+					return;
+				}
 
-				// TODO
-				// if (conn.signalingState !== "have-local-offer") {
-				// 	console.log(
-				// 		"[rtc:sdp] ignoring unexpected answer, state:",
-				// 		conn.signalingState,
-				// 	);
-				// 	return;
-				// }
-
-				// console.log("[rtc:sdp] accept answer");
-				// try {
-				// 	settingRemoteAnswer = true;
-				// 	await conn.setRemoteDescription({
-				// 		type: "answer",
-				// 		sdp: msg.sdp,
-				// 	});
-				// } catch (err) {
-				// 	console.error("[rtc:sdp] error while accepting answer", err);
-				// 	console.log("COPY PASTE THIS", {
-				// 		answer: msg.sdp,
-				// 		localDescription: conn.localDescription,
-				// 	});
-				// } finally {
-				// 	settingRemoteAnswer = false;
-				// }
+				log.debug("signal", "accept answer");
+				try {
+					this.settingRemoteAnswer = true;
+					await this.rtc.setRemoteDescription({ type: "answer", sdp: msg.sdp });
+				} catch (err) {
+					log.error("signal", "error while accepting answer", err);
+				} finally {
+					this.settingRemoteAnswer = false;
+				}
 				break;
 			}
 			case "Candidate": {
-				console.log("[rtc:signal] remote ICE candidate", msg.candidate);
+				log.debug("signal", "remote ice candidate", msg.candidate);
+				// TODO: pass sdpMid/sdpMLineIndex/usernameFragment to addIceCandidate
 				await this.rtc.addIceCandidate({ candidate: msg.candidate });
 				break;
 			}
 			case "Have": {
-				// this.processHaveMessage(message.user_id, message.tracks);
+				const selfUser = this.api.users.cache.get("@self");
+				if (msg.user_id === selfUser?.id) {
+					log.debug("signal", "ignoring Have from self");
+					return;
+				}
 
-				// TODO
-				// const currentUser = api2.users.cache.get("@self");
-				// const user_id = currentUser?.id;
-				// const ruid = msg.user_id;
-				// if (ruid === user_id) {
-				// 	console.log("[rtc:signal] ignoring Have from self");
-				// 	return;
-				// }
-
-				// console.group("[rtc:stream] process Have");
-				// console.log("[rtc:signal] got Have from %s", ruid, msg.tracks);
-				// console.log(
-				// 	"[rtc:signal] current transceivers",
-				// 	conn.getTransceivers().map((t) => [t.mid, t.direction]),
-				// );
-				// for (const track of msg.tracks) {
-				// 	const streamId = `${ruid}:${track.key}`;
-				// 	let s = remoteStreams.find((s) => s.id === streamId);
-				// 	if (s) {
-				// 		console.debug("[rtc:stream] reuse stream %s", streamId, s);
-				// 		if (!s.mids.includes(track.mid)) s.mids.push(track.mid);
-				// 	} else {
-				// 		const media = new MediaStream();
-				// 		console.log("[rtc:stream] initialized new stream", streamId, media);
-				// 		s = {
-				// 			id: streamId,
-				// 			user_id: ruid,
-				// 			mids: [track.mid],
-				// 			key: track.key,
-				// 			media,
-				// 		};
-				// 		remoteStreams.push(s);
-				// 		streams.set(streamId, s);
-				// 	}
-
-				// 	// create a stream from mids
-				// 	for (const mid of s.mids) {
-				// 		const tn = transceivers.get(mid);
-				// 		if (tn) {
-				// 			const tr = tn.receiver.track;
-				// 			s.media.addTrack(tr);
-				// 			console.log(
-				// 				"[rtc:stream] (re)added track %s (kind %s) to stream %s",
-				// 				mid,
-				// 				tr.kind,
-				// 				streamId,
-				// 			);
-				// 		} else {
-				// 			console.log(
-				// 				"[rtc:stream] missing transceiver, will wait for track event",
-				// 			);
-				// 		}
-				// 	}
-
-				// 	// update streams for reactivity
-				// 	streams.set(streamId, { ...s });
-
-				// 	console.log(
-				// 		"[rtc:state] current remoteStreams, transceivers:",
-				// 		remoteStreams,
-				// 		transceivers,
-				// 	);
-				// }
-				// console.groupEnd();
+				log.debug("signal", "got Have from " + msg.user_id, msg.tracks);
+				for (const track of msg.tracks) {
+					this.processRemoteTrack(track, msg.user_id);
+				}
 				break;
 			}
 			case "Want": {
-				// TODO: update sinks
+				// server is telling us what it wants; currently no-op on client side
+				log.debug("signal", "want", msg.subscriptions);
+				// TODO: implement subscriptions
 				break;
 			}
 			case "Migrate": {
-				// TODO: reconnect
+				// TODO: this.migrate()
 				break;
 			}
 			case "Error": {
@@ -374,13 +414,46 @@ export class VoiceClient {
 				break;
 			}
 			default: {
-				console.warn("[rtc:signal] unknown voice dispatch ", msg);
+				log.warn("signal", "unknown voice dispatch", msg);
 			}
 		}
 	}
 
+	/** process a TrackMetadata entry from Have/Offer, building RemoteStream entries */
+	private processRemoteTrack(track: TrackMetadata, uid: string): void {
+		// user_id may come from the Have message; for Offer, tracks belong to the server-indicated peer
+		const streamId = `${uid}:${track.key}`;
+
+		let s = this.streams.get(streamId);
+		if (s) {
+			if (!s.mids.includes(track.mid)) s.mids.push(track.mid);
+		} else {
+			const media = new MediaStream();
+			s = {
+				id: streamId,
+				user_id: uid,
+				mids: [track.mid],
+				key: track.key,
+				media,
+			};
+			this.streams.set(streamId, s);
+		}
+
+		// attach already-arrived transceiver tracks
+		for (const mid of s.mids) {
+			const tn = this.transceivers.get(mid);
+			if (tn) {
+				s.media.addTrack(tn.receiver.track);
+				log.debug("rtc", `(re)added track ${mid} to stream ${streamId}`, null);
+			}
+		}
+
+		// trigger reactivity
+		this.streams.set(streamId, { ...s });
+	}
+
 	public setSubscriptions(subs: Array<VoiceSubscription>): void {
-		// TODO
+		this.sendSignalling({ type: "Want", subscriptions: subs });
 	}
 
 	public acquireTransceiver(
@@ -388,64 +461,57 @@ export class VoiceClient {
 		kind: "audio" | "video",
 		encodings?: RTCRtpEncodingParameters[],
 	): RTCRtpTransceiver {
-		if (!this.rtc) throw "better errors";
-		// TODO: deduplicate by key
-		// const s = localStreams.find((s) => s.key === stream);
-		// if (!s) throw new Error("could not find that local stream");
+		if (!this.rtc) throw new Error("RTCPeerConnection not initialized");
+
+		// reuse if we already have a transceiver for this key + kind
+		const stream = this.localStreams.find((s) => s.key === key);
+		if (stream) {
+			const existing = stream.transceivers.find(
+				(t) => t.sender.track?.kind === kind,
+			);
+			if (existing) return existing;
+		}
 
 		const tr = this.rtc.addTransceiver(kind, {
 			direction: "inactive",
 			sendEncodings: encodings,
 		});
 		log.info("rtc", "create transceiver", tr);
-		// this.transceivers.push(tr);
+
+		// attach to local stream
+		const ls = this.getLocalStream(key);
+		ls.transceivers.push(tr);
+
 		return tr;
 	}
 
-	// NOTE: unsure what this is for exactly
 	public getLocalStream(key: string) {
 		const currentUser = this.api.users.cache.get("@self");
 		const user_id = currentUser?.id;
-		if (!user_id) return;
+		if (!user_id) throw "a"; // TODO: better errors
 
 		const existing = this.localStreams.find(
 			(i) => i.key === key && i.user_id === user_id,
 		);
 		if (existing) {
-			console.log("[rtc:local] reuse local stream", key, existing);
+			log.debug("rtc", "reuse local stream " + key, existing);
 			return existing;
 		}
-		console.log("[rtc:local] create local stream", key);
+		log.debug("rtc", "create local stream", key);
 		const media = new MediaStream();
-		this.localStreams.push({
+		const s: LocalStream = {
 			id: `${user_id}:${key}`,
 			user_id,
 			transceivers: [],
 			key,
 			media,
-		});
+		};
+		this.localStreams.push(s);
+		return s;
 	}
 
-	// 	updateIndicators(indicators: Indicators) {
-	// 		const existing = untrack(() => api2.voiceState);
-	// 		if (!existing) return;
-	// 		const unchanged =
-	// 			existing.self_deaf === indicators.self_deaf &&
-	// 			existing.self_mute === indicators.self_mute &&
-	// 			existing.self_video === indicators.self_video &&
-	// 			existing.self_screen === indicators.self_screen;
-	// 		if (unchanged) return;
-	// 		send({
-	// 			type: "VoiceState",
-	// 			state: {
-	// 				thread_id: existing.thread_id ?? existing.channel_id,
-	// 				...indicators,
-	// 			},
-	// 		});
-	// 	},
-
 	private migrate() {
-		// TODO: how does this work?
+		// TODO: how will this work?
 		// 1. create new rtc instance
 		// 2. recreate existing transceivers on new rtc instance
 		// 3. close old rtc instance
@@ -454,46 +520,43 @@ export class VoiceClient {
 
 export class Speaking {
 	public users = new ReactiveMap<string, { flags: number }>();
-	private timeouts = new Map();
+	private timeouts = new Map<string, ReturnType<typeof setTimeout>>();
 	private sc: RTCDataChannel | null = null;
 
 	swapDatachannel(sc: RTCDataChannel) {
 		sc.addEventListener("close", () => {
-			// TODO: log.info
-			// log.info("speaking", "channel closed", null);
-			// TODO: reconnect?
+			log.info("speaking", "channel closed", null);
 		});
 
 		sc.addEventListener("error", (e) => {
-			// TODO: log.error
-			console.error("[rtc:speaking] speaking channel error", e.error);
+			log.error("speaking", "speaking channel error", e.error);
 		});
 
 		sc.addEventListener("open", () => {
-			// TODO: log.info
-			// console.log("[rtc:vad] speaking channel opened");
-			// if (this.chanSpeaking) {
-			// 	console.warn("[rtc:speaking] already have a speaking channel");
-			// }
-			// TODO
-			// this.sc = sc;
+			log.info("speaking", "channel opened", null);
+			if (this.sc) {
+				log.warn("speaking", "already have a speaking channel", null);
+			}
+			this.sc = sc;
 		});
 
 		sc.addEventListener("message", (e) => {
+			// FIXME: deserialize from binary
 			const { user_id, flags } = JSON.parse(e.data);
-			// TODO: log.debug
-			// console.debug("[rtc:speaking] recv speaking", { user_id, flags });
+			log.debug("speaking", "recv speaking", { user_id, flags });
 
-			// TODO: handle speaking
-			// clearTimeout(speaking.get(user_id)?.timeout);
-			// const timeout = setTimeout(() => speaking.delete(user_id), 10 * 1000);
-			// speaking.set(user_id, { flags, timeout });
+			clearTimeout(this.timeouts.get(user_id));
+			const timeout = setTimeout(() => {
+				this.users.delete(user_id);
+				this.timeouts.delete(user_id);
+			}, 10 * 1000); // TODO: move 10 * 1000 to const
+			this.timeouts.set(user_id, timeout);
+			this.users.set(user_id, { flags });
 		});
 	}
 
 	public send(flags: number) {
-		// log.debug("speaking", "send", flags);
-		// this.sc?.send(JSON.stringify({ flags }));
-		// TODO
+		log.debug("speaking", "send", flags);
+		this.sc?.send(JSON.stringify({ flags }));
 	}
 }

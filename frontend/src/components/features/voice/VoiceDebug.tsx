@@ -17,9 +17,168 @@ import { useVoice } from "../voice/context";
 import { getAttributeDescription, parseSessionDescription } from "./rtc-util";
 
 export const VoiceDebug = (props: { onClose: () => void }) => {
-	// FIXME: port VoiceDebug here
-	// from frontend/src/components/features/voice-old/VoiceDebug.tsx
+	const [voice] = useVoice();
+	const api = useApi();
+	const vc = voice.vc;
+
+	const [tab, setTab] = createSignal("streams");
+	const [localSdp, setLocalSdp] = createSignal<RTCSessionDescription | null>(
+		null,
+	);
+	const [remoteSdp, setRemoteSdp] = createSignal<RTCSessionDescription | null>(
+		null,
+	);
+
+	const updateSdps = () => {
+		setLocalSdp(vc.getRtc()?.localDescription ?? null);
+		setRemoteSdp(vc.getRtc()?.remoteDescription ?? null);
+	};
+	updateSdps();
+
+	// vc.getRtc() might be null initially
+	vc.getRtc()?.addEventListener("connectionstatechange", updateSdps);
+	onCleanup(() =>
+		vc.getRtc()?.removeEventListener("connectionstatechange", updateSdps),
+	);
+
+	const voiceStates = createMemo(() => {
+		return [...api.voiceStates.values()].filter(
+			(i) => (i as any).thread_id === voice.joinedChannelId,
+		);
+	});
+
+	return (
+		<div class="voice-debug">
+			<header>voice/webrtc debugger</header>
+			<nav>
+				<For
+					each={[
+						{ tab: "states", label: "voice states" },
+						{ tab: "streams", label: "streams" },
+						{ tab: "stats", label: "stats" },
+						{ tab: "sdp-local", label: "local sdp" },
+						{ tab: "sdp-remote", label: "remote sdp" },
+					]}
+				>
+					{(a) => (
+						<button
+							type="button"
+							class="button"
+							classList={{ active: tab() === a.tab }}
+							onClick={() => setTab(a.tab)}
+						>
+							{a.label}
+						</button>
+					)}
+				</For>
+				<button type="button" class="button" onClick={props.onClose}>
+					close
+				</button>
+			</nav>
+			<main>
+				<Switch>
+					<Match when={tab() === "states"}>
+						<div style="margin: 8px;">
+							<h3>{voiceStates().length} voice states(s)</h3>
+							<br />
+							<For each={voiceStates()}>
+								{(s) => {
+									return (
+										<div style="border: solid #444 1px;padding:4px">
+											<div>
+												<b>user_id</b>: <Copyable>{s.user_id}</Copyable>
+											</div>
+											<pre>{JSON.stringify(s, null, 2)}</pre>
+										</div>
+									);
+								}}
+							</For>
+						</div>
+					</Match>
+					<Match when={tab() === "streams"}>
+						<div style="margin: 8px;">
+							<h3>{vc.streams.size} stream(s)</h3>
+							<br />
+							<For each={[...(vc.streams.values() ?? [])]}>
+								{(s) => {
+									return (
+										<div style="border: solid #444 1px;padding:4px">
+											<div>
+												<b>user_id</b>: <Copyable>{s.user_id}</Copyable>
+											</div>
+											<div>
+												<b>key</b>: {s.key}
+											</div>
+											<div>
+												<b>mids:</b> {s.mids.join(", ")}
+											</div>
+										</div>
+									);
+								}}
+							</For>
+							<br />
+							<h3>{vc.getRtc()?.getTransceivers().length} transceivers</h3>
+							<ul style="list-style: inside">
+								<For each={vc.getRtc()?.getTransceivers()}>
+									{(t) => (
+										<li>
+											{t.mid} {t.direction}{" "}
+											{t?.sender.track?.kind ?? t?.receiver.track?.kind}
+										</li>
+									)}
+								</For>
+							</ul>
+						</div>
+					</Match>
+					<Match when={tab() === "stats"}>
+						<VoiceStats />
+					</Match>
+					<Match when={tab() === "sdp-local"}>
+						<Show when={localSdp()} fallback={"no local sdp?"}>
+							{(s) => (
+								<>
+									<div style="margin: 8px;">
+										<h3>local sdp ({s().type})</h3>
+										<button
+											type="button"
+											class="button"
+											style="margin-left: 8px"
+											onClick={() => navigator.clipboard.writeText(s().sdp)}
+										>
+											copy
+										</button>
+									</div>
+									<VoiceSdp sdp={s().sdp} />
+								</>
+							)}
+						</Show>
+					</Match>
+					<Match when={tab() === "sdp-remote"}>
+						<Show when={remoteSdp()} fallback={"no remote sdp?"}>
+							{(s) => (
+								<>
+									<div style="margin: 8px;">
+										<h3>remote sdp ({s().type})</h3>
+										<button
+											type="button"
+											class="button"
+											style="margin-left: 8px"
+											onClick={() => navigator.clipboard.writeText(s().sdp)}
+										>
+											copy
+										</button>
+									</div>
+									<VoiceSdp sdp={s().sdp} />
+								</>
+							)}
+						</Show>
+					</Match>
+				</Switch>
+			</main>
+		</div>
+	);
 };
+
 
 export const VoiceSdp = (props: { sdp: string }) => {
 	const sdp = createMemo(() => parseSessionDescription(props.sdp));
@@ -184,6 +343,8 @@ const VoiceStats = () => {
 	// - codec
 
 	const [voice] = useVoice();
+	const vc = voice.vc;
+
 	const [codec, setCodec] =
 		createSignal<
 			Record<
@@ -211,12 +372,14 @@ const VoiceStats = () => {
 		Array<{ ts: number; jitter: number }>
 	>();
 
+	const MAX_POINTS = 31;
+
 	const statsInterval = setInterval(async () => {
-		// const stats = await voice.vc.rtc.getStats();
-		const stats: RTCStatsReport = null as unknown as any; // FIXME: get stats
+		const rtc = vc.getRtc();
+		if (!rtc) return;
+		const stats = await rtc.getStats();
 		const candidates: Array<unknown> = [];
-		stats?.forEach((v) => {
-			v.timestamp;
+		stats.forEach((v) => {
 			if (
 				v.type === "candidate-pair" ||
 				v.type === "local-candidate" ||
@@ -231,36 +394,36 @@ const VoiceStats = () => {
 				v.packetsSent;
 				v.retransmittedBytesSent;
 				v.retransmittedPacketsSent;
-				const b = bandwidthOut.get(v.mid) ?? [];
-				b.push({ ts: v.timestamp, bytes: v.bytesSent });
-				if (b.length > 31) b.shift();
-				bandwidthOut.set(v.mid, [...b]);
+				const rtpV = v as RTCOutboundRtpStreamStats;
+				const b = bandwidthOut.get(rtpV.mid ?? "") ?? [];
+				b.push({ ts: v.timestamp, bytes: rtpV.bytesSent ?? 0 });
+				if (b.length > MAX_POINTS) b.shift();
+				bandwidthOut.set(rtpV.mid ?? "", [...b]);
 			} else if (v.type === "inbound-rtp") {
-				const b = bandwidthIn.get(v.mid) ?? [];
-				b.push({ ts: v.timestamp, bytes: v.bytesReceived });
-				if (b.length > 31) b.shift();
-				bandwidthIn.set(v.mid, [...b]);
+				const rtpV = v as RTCInboundRtpStreamStats;
+				const b = bandwidthIn.get(rtpV.mid ?? "") ?? [];
+				b.push({ ts: v.timestamp, bytes: rtpV.bytesReceived ?? 0 });
+				if (b.length > MAX_POINTS) b.shift();
+				bandwidthIn.set(rtpV.mid ?? "", [...b]);
 
-				const j = jitters.get(v.mid) ?? [];
-				j.push({ ts: v.timestamp, jitter: v.jitter * 1000 });
-				if (j.length > 31) j.shift();
-				jitters.set(v.mid, [...j]);
-			} else if (v.type === "remote-outbound-rtp") {
-				v.packetsSent;
+				const j = jitters.get(rtpV.mid ?? "") ?? [];
+				j.push({ ts: v.timestamp, jitter: (rtpV.jitter ?? 0) * 1000 });
+				if (j.length > MAX_POINTS) j.shift();
+				jitters.set(rtpV.mid ?? "", [...j]);
 			} else if (v.type === "codec") {
+				const codec = v as any; // FIXME: use correct type
 				setCodec((c) => ({
 					...c,
-					[v.payloadType]: {
-						type: v.codecType,
-						codec: v.codec,
-						channels: v.channels,
-						clockRate: v.clockRate,
-						mime: v.mimeType,
+					[codec.id]: {
+						type: codec.codecType ?? "unknown",
+						codec: codec.mimeType ?? "unknown",
+						channels: codec.channels ?? 0,
+						clockRate: codec.clockRate ?? 0,
+						mime: codec.mimeType ?? "unknown",
 					},
 				}));
 			}
 		});
-		// console.log(candidates)
 	}, 1000);
 	onCleanup(() => clearInterval(statsInterval));
 

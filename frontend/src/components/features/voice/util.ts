@@ -4,4 +4,8 @@ export const RTC_CONFIG: RTCConfiguration = {
 		{ urls: ["stun:relay.webwormhole.io"] },
 		{ urls: ["stun:stun.stunprotocol.org"] },
 	],
+
+	// FIXME: add iceTransportPolicy
+	// ice failures under symmetric nat should NOT be silent
+	// iceTransportPolicy: "...",
 };

@@ -17,11 +17,11 @@ type VoiceActions = {
 	stopScreenshare: () => Promise<void>;
 	toggleDeafened: (enabled?: boolean) => Promise<void>;
 	playMusic: () => Promise<void>;
-	subscribeToParticipant: (
-		userId: string,
-		trackKey: "user" | "screen",
-		subscribe: boolean,
-	) => void;
+	// subscribeToParticipant: (
+	// 	userId: string,
+	// 	trackKey: "user" | "screen",
+	// 	subscribe: boolean,
+	// ) => void;
 };
 
 type VoiceProviderState = {
@@ -46,7 +46,6 @@ type VoiceConfigUser = {
 const VoiceContext = createContext<[VoiceProviderState, VoiceActions]>();
 
 const voiceLog = logger.for("voice");
-const rtcLog = logger.for("rtc");
 
 export const VoiceProvider = (props: ParentProps<{}>) => {
 	const api = useApi();
@@ -75,7 +74,7 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 		if (sync.type === "VoiceDispatch") {
 			vc.handleSignalingEvent(sync.payload);
 		} else if (sync.type === "VoiceState") {
-			// TODO
+			vc.handleVoiceState(sync.user_id, sync.state ?? null);
 		}
 	});
 
@@ -85,12 +84,18 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 
 	const actions: VoiceActions = {
 		async selectChannel(channelId: string) {
-			// vc.connect(channelId);
-			// TODO
+			vc.connect(channelId);
+			update("joinedChannelId", channelId);
 		},
 
 		disconnect() {
 			vc.disconnect();
+			update("joinedChannelId", null);
+			update("muted", false);
+			update("deafened", false);
+			update("camera", false);
+			update("screensharing", false);
+			update("musicing", false);
 		},
 
 		async toggleMicrophone(enabled_?: boolean) {
@@ -117,37 +122,115 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 			update("muted", !enabled);
 		},
 
-		async toggleCamera(enabled?: boolean) {
-			// TODO
+		async toggleCamera(enabled_?: boolean) {
+			const cam = await devices.acquireCamera();
+			const enabled = enabled_ ?? !cam.track.enabled;
+			cam.track.enabled = enabled;
+
+			const tr = vc.acquireTransceiver("user", "video");
+			if (tr.currentDirection !== "stopped") {
+				await tr.sender.replaceTrack(cam.track);
+				tr.direction = "sendonly";
+			} else {
+				voiceLog.warn("camera transceiver is stopped", tr);
+			}
+
+			update("camera", enabled);
 		},
 
 		async toggleScreenshare() {
-			// TODO: if screensharing stop otherwise start
+			if (store.screensharing) {
+				actions.stopScreenshare();
+			} else {
+				await actions.startScreenshare();
+			}
 		},
 
 		async startScreenshare() {
-			// TODO
+			try {
+				const screen = await devices.acquireScreenshare();
+				const trVideo = vc.acquireTransceiver("screen", "video");
+				if (trVideo.currentDirection !== "stopped") {
+					await trVideo.sender.replaceTrack(screen.trackVideo);
+					trVideo.direction = "sendonly";
+				} else {
+					voiceLog.warn("screenshare video transceiver is stopped", trVideo);
+				}
+
+				if (screen.trackAudio) {
+					const trAudio = vc.acquireTransceiver("screen", "audio");
+					if (trAudio.currentDirection !== "stopped") {
+						await trAudio.sender.replaceTrack(screen.trackAudio);
+						trAudio.direction = "sendonly";
+					}
+				}
+
+				screen.trackVideo.addEventListener("ended", () => {
+					actions.stopScreenshare();
+				});
+
+				update("screensharing", true);
+			} catch (e) {
+				handleGetMediaError(e as Error);
+			}
 		},
 
 		async stopScreenshare() {
-			// TODO
+			const stream = vc.getLocalStream("screen");
+			if (stream) {
+				for (const tr of stream.transceivers) {
+					tr.sender.replaceTrack(null);
+					tr.direction = "inactive";
+				}
+			}
+			update("screensharing", false);
 		},
 
-		async toggleDeafened(enabled?: boolean) {
-			// TODO
+		async toggleDeafened(deafened_?: boolean) {
+			const deafened = deafened_ ?? !store.deafened;
+			update("deafened", deafened);
+
+			// mute all remote audio tracks
+			for (const [, s] of vc.streams) {
+				for (const track of s.media.getAudioTracks()) {
+					// TODO: check if this actually stops rtc from receiving media or if it burns bandwidth
+					track.enabled = !deafened;
+				}
+			}
 		},
 
 		async playMusic() {
-			// TODO
+			try {
+				const { track } = await loadMusic();
+				const tr = vc.acquireTransceiver("music", "audio");
+				if (tr.currentDirection !== "stopped") {
+					await tr.sender.replaceTrack(track);
+					tr.direction = "sendonly";
+					update("musicing", true);
+				}
+			} catch (e) {
+				voiceLog.warn("playMusic failed", e);
+			}
 		},
 
-		subscribeToParticipant(
-			userId: string,
-			trackKey: "user" | "screen",
-			subscribe: boolean,
-		) {
-			// TODO
-		},
+		// subscribeToParticipant(
+		// 	userId: string,
+		// 	trackKey: "user" | "screen",
+		// 	subscribe: boolean,
+		// ) {
+		// 	// find the mid for this user's track
+		// 	const streamId = `${userId}:${trackKey}`;
+		// 	const stream = vc.streams.get(streamId);
+		// 	if (!stream) return;
+
+		// 	const subs = stream.mids.map((mid) => ({ mid }));
+		// 	if (subscribe) {
+		// 		vc.setSubscriptions(subs);
+		// 	} else {
+		// 		// send empty subscriptions for these mids to unsubscribe
+		// 		vc.setSubscriptions([]);
+		// 	}
+		// },
 	};
 
 	return (

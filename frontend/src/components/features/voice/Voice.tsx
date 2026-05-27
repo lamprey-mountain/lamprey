@@ -312,7 +312,6 @@ export const VoiceTray = () => {
 		}
 	};
 
-	// FIXME: types
 	return (
 		<div class="voice-tray">
 			<Show
@@ -367,18 +366,18 @@ export const VoiceTray = () => {
 								type="button"
 								class="button"
 								data-tooltip="toggle camera"
-								onClick={actions.toggleCam}
+								onClick={() => actions.toggleCamera()}
 							>
-								<ToggleIcon checked={!voice.cameraHidden} src={iconCamera} />
+								<ToggleIcon checked={!voice.camera} src={iconCamera} />
 							</button>
 							<button
 								type="button"
 								class="button"
 								data-tooltip="toggle screenshare"
-								onClick={actions.toggleScreen}
+								onClick={() => actions.toggleScreenshare()}
 							>
 								<ToggleIcon
-									checked={voice.screenshareEnabled}
+									checked={voice.screensharing}
 									src={iconScreenshare}
 								/>
 							</button>
@@ -397,7 +396,7 @@ export const VoiceTray = () => {
 						</Show>
 					</Show>
 				</div>
-				<button type="button" class="button" onClick={actions.toggleMic}>
+				<button type="button" class="button" onClick={() => actions.toggleMicrophone()}>
 					<ToggleIcon checked={!voice.muted} src={iconMic} />
 				</button>
 				<button type="button" class="button" onClick={actions.toggleDeafened}>
