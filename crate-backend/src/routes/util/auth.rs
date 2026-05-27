@@ -601,10 +601,14 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
                 .get("user-agent")
                 .and_then(|h| h.to_str().ok())
                 .map(|s| s.to_string());
+
+            // get the first ip in the chain
             let ip_addr: Option<IpAddr> = parts
                 .headers
                 .get("x-forwarded-for")
                 .and_then(|h| h.to_str().ok())
+                .and_then(|s| s.split(',').next())
+                .map(|s| s.trim())
                 .and_then(|s| s.parse().ok());
 
             let geo = ip_addr.and_then(|ip| srv.ips.lookup(ip).ok().flatten());
