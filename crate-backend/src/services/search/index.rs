@@ -22,7 +22,7 @@ use crate::{
     },
     ServerStateInner,
 };
-use common::v1::types::{ChannelId, RoomId};
+use common::v1::types::{ChannelId, RoomId, UserId, MediaId};
 
 use super::util::{COMMIT_INTERVAL, INDEXING_BUFFER_SIZE, MAX_UNCOMMITTED};
 
@@ -105,6 +105,18 @@ pub fn delete_term_for_channel(channel_id: ChannelId) -> DeleteTerm {
 pub fn delete_term_for_room(room_id: RoomId) -> DeleteTerm {
     let schema = UnifiedSchema::default();
     DeleteTerm(Term::from_field_text(schema.room_id, &room_id.to_string()))
+}
+
+/// Helper to create a delete term for user_id
+pub fn delete_term_for_user(user_id: UserId) -> DeleteTerm {
+    let schema = UnifiedSchema::default();
+    DeleteTerm(Term::from_field_text(schema.id, &user_id.to_string()))
+}
+
+/// Helper to create a delete term for media_id
+pub fn delete_term_for_media(media_id: MediaId) -> DeleteTerm {
+    let schema = UnifiedSchema::default();
+    DeleteTerm(Term::from_field_text(schema.id, &media_id.to_string()))
 }
 
 /// actor representing an index that can be read from or written to

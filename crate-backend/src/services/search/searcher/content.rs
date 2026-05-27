@@ -1,9 +1,11 @@
 use common::v1::types::search::{
-    ChannelSearchOrderField, ChannelSearchRequest, MessageSearchOrderField, MessageSearchRequest,
-    Order,
+    AuditLogSearchRequest, ChannelSearchOrderField, ChannelSearchRequest, MediaSearchRequest,
+    MessageSearchOrderField, MessageSearchRequest, Order, UserSearchRequest,
 };
 use common::v1::types::util::Time;
-use common::v1::types::{ChannelId, MessageId, RoomId};
+use common::v1::types::{
+    search::RoomSearchRequest, AuditLogEntryId, ChannelId, MediaId, MessageId, RoomId, UserId,
+};
 use lamprey_backend_core::prelude::*;
 use tantivy::query::{QueryParser, TermSetQuery};
 use tantivy::{
@@ -193,8 +195,77 @@ impl ContentSearcher {
 
         Ok(SearchMessagesResponseRaw { items, total })
     }
+}
 
-    // pub fn search_channels(&self, q: SearchChannels) -> Result<_> {}
+pub struct SearchRoomsRaw {
+    pub items: Vec<RoomId>,
+    pub total: u64,
+}
+
+impl ContentSearcher {
+    pub fn search_rooms(&self, req: RoomSearchRequest) -> Result<SearchRoomsRaw> {
+        let searcher = self.reader.searcher();
+        let mut query_clauses: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
+
+        if let Some(q_str) = &req.inner.query {
+            if !q_str.is_empty() {
+                let query_parser = QueryParser::for_index(searcher.index(), vec![self.schema.name]);
+
+                let parsed_query = query_parser
+                    .parse_query(q_str)
+                    .map_err(|e| Error::Internal(format!("Search syntax error: {e}")))?;
+
+                query_clauses.push((tantivy::query::Occur::Must, parsed_query));
+            }
+        }
+
+        // filter by doctype = Room
+        let doctype_term = Term::from_field_text(self.schema.doctype, "Room");
+        query_clauses.push((
+            tantivy::query::Occur::Must,
+            Box::new(tantivy::query::TermQuery::new(
+                doctype_term,
+                tantivy::schema::IndexRecordOption::Basic,
+            )),
+        ));
+
+        let query = BooleanQuery::new(query_clauses);
+
+        let limit = req.inner.limit as usize;
+        let cursor = req.inner.offset as usize;
+
+        // TODO: implement sorting
+        // TEMP: use relevancy searching
+        let (top_docs, total) = searcher
+            .search(
+                &query,
+                &(TopDocs::with_limit(limit).and_offset(cursor), Count),
+            )
+            .map_err(|e| Error::Internal(format!("Search failed: {e}")))?;
+
+        let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
+
+        let mut items = vec![];
+        for doc_address in top_docs {
+            let retrieved_doc: TantivyDocument =
+                searcher.doc(doc_address).expect("doc fetch failed");
+
+            let Some(id) = retrieved_doc
+                .get_first(self.schema.id)
+                .and_then(|v| v.as_str())
+            else {
+                warn!("Document missing id field: {:?}", doc_address);
+                continue;
+            };
+
+            items.push(id.parse().unwrap());
+        }
+
+        Ok(SearchRoomsRaw {
+            items,
+            total: total as u64,
+        })
+    }
 
     pub fn count_documents_for_channel(&self, channel_id: ChannelId) -> Result<u64> {
         let searcher = self.reader.searcher();
@@ -363,27 +434,6 @@ impl ContentSearcher {
                 let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
                 (top_docs, count as u64)
             }
-            (ChannelSearchOrderField::Archived, ord) => {
-                let (top_docs, count): (Vec<(tantivy::DateTime, DocAddress)>, usize) = searcher
-                    .search(
-                        &query,
-                        &(
-                            TopDocs::with_limit(limit)
-                                .and_offset(cursor)
-                                .order_by_fast_field::<tantivy::DateTime>(
-                                    "archived_at",
-                                    match ord {
-                                        Order::Ascending => tantivy::Order::Asc,
-                                        Order::Descending => tantivy::Order::Desc,
-                                    },
-                                ),
-                            Count,
-                        ),
-                    )
-                    .map_err(|e| Error::Internal(format!("Search failed: {e}")))?;
-                let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
-                (top_docs, count as u64)
-            }
             (ChannelSearchOrderField::Activity, ord) => {
                 // the caller needs to reorder based on actual activity
                 let (top_docs, count): (Vec<(tantivy::DateTime, DocAddress)>, usize) = searcher
@@ -486,4 +536,210 @@ impl ContentSearcher {
 
         Ok(SearchChannelsResponseRaw { items, total })
     }
+
+    pub fn search_users(&self, req: UserSearchRequest) -> Result<SearchUsersRaw> {
+        let searcher = self.reader.searcher();
+        let mut query_clauses: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
+
+        // Text query on name
+        if let Some(q_str) = &req.inner.query {
+            if !q_str.is_empty() {
+                let query_parser = QueryParser::for_index(searcher.index(), vec![self.schema.name]);
+
+                let parsed_query = query_parser
+                    .parse_query(q_str)
+                    .map_err(|e| Error::Internal(format!("Search syntax error: {e}")))?;
+
+                query_clauses.push((tantivy::query::Occur::Must, parsed_query));
+            }
+        }
+
+        // Filter by doctype = User
+        let doctype_term = Term::from_field_text(self.schema.doctype, "User");
+        query_clauses.push((
+            tantivy::query::Occur::Must,
+            Box::new(tantivy::query::TermQuery::new(
+                doctype_term,
+                tantivy::schema::IndexRecordOption::Basic,
+            )),
+        ));
+
+        let query = BooleanQuery::new(query_clauses);
+
+        let limit = req.inner.limit as usize;
+        let cursor = req.inner.offset as usize;
+
+        let (top_docs, total) = searcher
+            .search(
+                &query,
+                &(TopDocs::with_limit(limit).and_offset(cursor), Count),
+            )
+            .map_err(|e| Error::Internal(format!("Search failed: {e}")))?;
+
+        let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
+
+        let mut items = vec![];
+        for doc_address in top_docs {
+            let retrieved_doc: TantivyDocument =
+                searcher.doc(doc_address).expect("doc fetch failed");
+
+            let Some(id) = retrieved_doc
+                .get_first(self.schema.id)
+                .and_then(|v| v.as_str())
+            else {
+                warn!("Document missing id field: {:?}", doc_address);
+                continue;
+            };
+
+            items.push(id.parse().unwrap());
+        }
+
+        Ok(SearchUsersRaw {
+            items,
+            total: total as u64,
+        })
+    }
+
+    pub fn search_media(&self, req: MediaSearchRequest) -> Result<SearchMediaRaw> {
+        let searcher = self.reader.searcher();
+        let mut query_clauses: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
+
+        // Text query on name
+        if let Some(q_str) = &req.inner.query {
+            if !q_str.is_empty() {
+                let query_parser = QueryParser::for_index(searcher.index(), vec![self.schema.name]);
+
+                let parsed_query = query_parser
+                    .parse_query(q_str)
+                    .map_err(|e| Error::Internal(format!("Search syntax error: {e}")))?;
+
+                query_clauses.push((tantivy::query::Occur::Must, parsed_query));
+            }
+        }
+
+        // Filter by doctype = Media
+        let doctype_term = Term::from_field_text(self.schema.doctype, "Media");
+        query_clauses.push((
+            tantivy::query::Occur::Must,
+            Box::new(tantivy::query::TermQuery::new(
+                doctype_term,
+                tantivy::schema::IndexRecordOption::Basic,
+            )),
+        ));
+
+        let query = BooleanQuery::new(query_clauses);
+
+        let limit = req.inner.limit as usize;
+        let cursor = req.inner.offset as usize;
+
+        let (top_docs, total) = searcher
+            .search(
+                &query,
+                &(TopDocs::with_limit(limit).and_offset(cursor), Count),
+            )
+            .map_err(|e| Error::Internal(format!("Search failed: {e}")))?;
+
+        let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
+
+        let mut items = vec![];
+        for doc_address in top_docs {
+            let retrieved_doc: TantivyDocument =
+                searcher.doc(doc_address).expect("doc fetch failed");
+
+            let Some(id) = retrieved_doc
+                .get_first(self.schema.id)
+                .and_then(|v| v.as_str())
+            else {
+                warn!("Document missing id field: {:?}", doc_address);
+                continue;
+            };
+
+            items.push(id.parse().unwrap());
+        }
+
+        Ok(SearchMediaRaw {
+            items,
+            total: total as u64,
+        })
+    }
+
+    pub fn search_audit_log(&self, req: AuditLogSearchRequest) -> Result<SearchAuditLogRaw> {
+        let searcher = self.reader.searcher();
+        let mut query_clauses: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
+
+        // Text query on name/message
+        if let Some(q_str) = &req.inner.query {
+            if !q_str.is_empty() {
+                let query_parser = QueryParser::for_index(searcher.index(), vec![self.schema.name]);
+
+                let parsed_query = query_parser
+                    .parse_query(q_str)
+                    .map_err(|e| Error::Internal(format!("Search syntax error: {e}")))?;
+
+                query_clauses.push((tantivy::query::Occur::Must, parsed_query));
+            }
+        }
+
+        // Filter by doctype = AuditLog
+        let doctype_term = Term::from_field_text(self.schema.doctype, "AuditLog");
+        query_clauses.push((
+            tantivy::query::Occur::Must,
+            Box::new(tantivy::query::TermQuery::new(
+                doctype_term,
+                tantivy::schema::IndexRecordOption::Basic,
+            )),
+        ));
+
+        let query = BooleanQuery::new(query_clauses);
+
+        let limit = req.inner.limit as usize;
+        let cursor = req.inner.offset as usize;
+
+        let (top_docs, total) = searcher
+            .search(
+                &query,
+                &(TopDocs::with_limit(limit).and_offset(cursor), Count),
+            )
+            .map_err(|e| Error::Internal(format!("Search failed: {e}")))?;
+
+        let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
+
+        let mut items = vec![];
+        for doc_address in top_docs {
+            let retrieved_doc: TantivyDocument =
+                searcher.doc(doc_address).expect("doc fetch failed");
+
+            let id = retrieved_doc
+                .get_first(self.schema.id)
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| Error::Internal("Document missing id field".into()))?;
+
+            let room_id = retrieved_doc
+                .get_first(self.schema.room_id)
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| Error::Internal("Document missing room_id field".into()))?;
+
+            items.push((room_id.parse().unwrap(), id.parse().unwrap()));
+        }
+
+        Ok(SearchAuditLogRaw {
+            items,
+            total: total as u64,
+        })
+    }
+}
+
+pub struct SearchUsersRaw {
+    pub items: Vec<UserId>,
+    pub total: u64,
+}
+
+pub struct SearchMediaRaw {
+    pub items: Vec<MediaId>,
+    pub total: u64,
+}
+
+pub struct SearchAuditLogRaw {
+    pub items: Vec<(RoomId, AuditLogEntryId)>,
+    pub total: u64,
 }

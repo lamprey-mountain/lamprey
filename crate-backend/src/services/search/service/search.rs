@@ -6,8 +6,9 @@ use tracing::trace;
 
 use common::v1::types::message::MessageType;
 use common::v1::types::search::{
-    ChannelSearch, ChannelSearchRequest, MessageSearch, MessageSearchRequest, RoomSearch,
-    RoomSearchRequest,
+    AuditLogSearch, AuditLogSearchRequest, ChannelSearch, ChannelSearchRequest, MediaSearch,
+    MediaSearchRequest, MessageSearch, MessageSearchRequest, RoomSearch, RoomSearchRequest,
+    UserSearch, UserSearchRequest,
 };
 use common::v1::types::{ChannelId, MessageId, RoomId, UserId};
 
@@ -171,7 +172,6 @@ impl ServiceSearch {
         req: ChannelSearchRequest,
     ) -> Result<ChannelSearch> {
         let srv = self.state.services();
-        let _data = self.state.data();
 
         let vis = srv.channels.list_user_room_channels(user_id).await?;
         trace!(count = vis.len(), "visible channels for search");
@@ -233,15 +233,140 @@ impl ServiceSearch {
         })
     }
 
-    pub async fn search_rooms(
-        &self,
-        user_id: UserId,
-        req: RoomSearchRequest,
-    ) -> Result<RoomSearch> {
-        todo!()
+    pub async fn search_rooms(&self, req: RoomSearchRequest) -> Result<RoomSearch> {
+        let srv = self.state.services();
+
+        let req_clone = req.clone();
+
+        trace!("starting room search task");
+        let searcher = self.get_content_searcher().await?;
+        let raw_result = tokio::task::spawn_blocking(move || searcher.search_rooms(req_clone))
+            .await
+            .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))??;
+        trace!("finished room search task");
+
+        let room_ids = raw_result.items;
+        let rooms = if room_ids.is_empty() {
+            vec![]
+        } else {
+            srv.rooms.get_many(&room_ids, None).await?
+        };
+
+        let has_more = (req.inner.offset as u64 + room_ids.len() as u64) < raw_result.total;
+
+        Ok(RoomSearch {
+            results: room_ids,
+            rooms,
+            has_more,
+            total: raw_result.total,
+            cursor: None,
+        })
     }
 
-    // TODO: search_users
-    // TODO: search_media
-    // TODO: search_audit_log
+    pub async fn search_users(
+        &self,
+        _auth_user_id: UserId,
+        req: UserSearchRequest,
+    ) -> Result<UserSearch> {
+        let srv = self.state.services();
+        let req_clone = req.clone();
+
+        trace!("starting user search task");
+        let searcher = self.get_content_searcher().await?;
+        let raw_result = tokio::task::spawn_blocking(move || searcher.search_users(req_clone))
+            .await
+            .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))??;
+        trace!("finished user search task");
+
+        let user_ids = raw_result.items;
+        let users = if user_ids.is_empty() {
+            vec![]
+        } else {
+            srv.users.get_many(&user_ids).await?
+        };
+
+        let has_more = (req.inner.offset as u64 + user_ids.len() as u64) < raw_result.total;
+
+        Ok(UserSearch {
+            results: user_ids,
+            users,
+            has_more,
+            total: raw_result.total,
+            cursor: None,
+        })
+    }
+
+    pub async fn search_media(
+        &self,
+        _auth_user_id: UserId,
+        req: MediaSearchRequest,
+    ) -> Result<MediaSearch> {
+        let srv = self.state.services();
+        let req_clone = req.clone();
+
+        trace!("starting media search task");
+        let searcher = self.get_content_searcher().await?;
+        let raw_result = tokio::task::spawn_blocking(move || searcher.search_media(req_clone))
+            .await
+            .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))??;
+        trace!("finished media search task");
+
+        let media_ids = raw_result.items;
+        let media = if media_ids.is_empty() {
+            vec![]
+        } else {
+            srv.media.get_many(&media_ids).await?
+        };
+
+        let user_ids: Vec<_> = media.iter().filter_map(|m| m.user_id).collect();
+        let users = if user_ids.is_empty() {
+            vec![]
+        } else {
+            srv.users.get_many(&user_ids).await?
+        };
+
+        let has_more = (req.inner.offset as u64 + media_ids.len() as u64) < raw_result.total;
+
+        Ok(MediaSearch {
+            results: media_ids,
+            media,
+            users,
+            has_more,
+            total: raw_result.total,
+            cursor: None,
+        })
+    }
+
+    pub async fn search_audit_log(
+        &self,
+        _auth_user_id: UserId,
+        req: AuditLogSearchRequest,
+    ) -> Result<AuditLogSearch> {
+        let _srv = self.state.services();
+        let req_clone = req.clone();
+
+        trace!("starting audit log search task");
+        let searcher = self.get_content_searcher().await?;
+        let raw_result = tokio::task::spawn_blocking(move || searcher.search_audit_log(req_clone))
+            .await
+            .map_err(|e| Error::Internal(format!("Search task failed: {}", e)))??;
+        trace!("finished audit log search task");
+
+        let entry_ids = raw_result.items;
+        let entries = if entry_ids.is_empty() {
+            vec![]
+        } else {
+            todo!("fetch audit log entries from database")
+        };
+
+        let has_more = (req.inner.offset as u64 + entry_ids.len() as u64) < raw_result.total;
+
+        Ok(AuditLogSearch {
+            results: entry_ids.iter().map(|e| e.1).collect(),
+            entries,
+            has_more,
+            total: raw_result.total,
+            cursor: None,
+        })
+    }
 }

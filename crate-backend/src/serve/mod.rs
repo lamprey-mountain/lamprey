@@ -10,7 +10,6 @@ use axum::{
 use common::v1::types::{
     error::{ApiError, ErrorCode},
     misc::ApplicationIdReq,
-    util::Time,
     MessageClient, MessageId, MessageSync, PaginationQuery,
 };
 use http::{header, HeaderName};

@@ -152,6 +152,26 @@ impl ServiceRooms {
         Ok(room)
     }
 
+    pub async fn get_many(
+        &self,
+        room_ids: &[RoomId],
+        user_id: Option<UserId>,
+    ) -> Result<Vec<Room>> {
+        let mut rooms = Vec::with_capacity(room_ids.len());
+
+        for room_id in room_ids {
+            let snapshot = self.load_room(*room_id, false).await?;
+            let room = snapshot.get_data().unwrap().room.clone();
+            rooms.push(room);
+        }
+
+        if let Some(user_id) = user_id {
+            self.populate_private(&mut rooms, user_id).await?;
+        }
+
+        Ok(rooms)
+    }
+
     pub async fn invalidate(&self, room_id: RoomId) {
         self.unload_cache(room_id).await;
     }

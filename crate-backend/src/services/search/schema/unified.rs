@@ -8,6 +8,7 @@ use tantivy::schema::{
 
 use crate::services::search::schema::IndexDefinition;
 
+/// the type of a tantivy document
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Doctype {
     Message,

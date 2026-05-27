@@ -118,7 +118,7 @@ pub struct MediaSearch {
     pub media: Vec<Media>,
 
     /// the media creators/uploaders
-    pub user: Vec<User>,
+    pub users: Vec<User>,
 
     /// whether there are more threads
     pub has_more: bool,

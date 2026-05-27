@@ -5,7 +5,7 @@ use common::v1::types::{ChannelId, RoomId};
 use lamprey_backend_core::types::admin::SearchIndexStats;
 
 impl ServiceSearch {
-    pub async fn get_room_stats(&self, room_id: RoomId) -> Result<SearchIndexStats> {
+    pub async fn get_room_stats(&self, _room_id: RoomId) -> Result<SearchIndexStats> {
         todo!()
     }
 

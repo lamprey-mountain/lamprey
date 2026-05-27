@@ -197,6 +197,18 @@ impl ServiceMedia {
         Ok(())
     }
 
+    pub async fn get(&self, media_id: MediaId) -> Result<MediaV2> {
+        self.state.data().media_select(media_id).await
+    }
+
+    pub async fn get_many(&self, media_ids: &[MediaId]) -> Result<Vec<MediaV2>> {
+        let mut results = Vec::with_capacity(media_ids.len());
+        for id in media_ids {
+            results.push(self.get(*id).await?);
+        }
+        Ok(results)
+    }
+
     #[tracing::instrument(skip(self))]
     pub async fn get_metadata_and_mime(
         &self,

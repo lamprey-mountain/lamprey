@@ -2,8 +2,8 @@ use std::{sync::Arc, time::Duration};
 
 use common::{
     v1::types::{
-        Channel, ChannelId, MediaVerId, MessageSync, PaginationDirection, PaginationQuery, Room,
-        User,
+        AuditLogEntry, Channel, ChannelId, MediaVerId, Message, MessageSync, PaginationDirection,
+        PaginationQuery, Room, User,
     },
     v2::types::media::Media,
 };
@@ -19,9 +19,9 @@ use crate::{
     services::search::{
         index::{CommitIndex, DeleteTerm, IndexActorRef, UpdateDocument, UpdateDocuments},
         schema::{
-            tantivy_document_from_channel, tantivy_document_from_media,
-            tantivy_document_from_message, tantivy_document_from_room, tantivy_document_from_user,
-            unified::UnifiedSchema,
+            tantivy_document_from_audit_log_entry, tantivy_document_from_channel,
+            tantivy_document_from_media, tantivy_document_from_message, tantivy_document_from_room,
+            tantivy_document_from_user, unified::UnifiedSchema,
         },
     },
     Result, ServerStateInner,
@@ -34,6 +34,7 @@ pub enum IngestKey {
     Room(Uuid),
     User(Uuid),
     Media(Uuid),
+    AuditLog(Uuid),
 }
 
 /// importer for the content index
@@ -121,6 +122,9 @@ impl ContentIngestionManager {
                                     let term =
                                         Term::from_field_text(self.schema.id, &id.to_string());
                                     let _ = self.index_writer.tell(DeleteTerm(term)).await;
+                                }
+                                MessageSync::AuditLogEntryCreate { entry } => {
+                                    self.index_audit_log(entry).await;
                                 }
                                 MessageSync::MediaProcessed { media, .. } => {
                                     self.index_media(media, false).await;
@@ -331,7 +335,7 @@ impl ContentIngestionManager {
         Ok(())
     }
 
-    async fn index_message(&self, message: common::v1::types::Message, is_update: bool) {
+    async fn index_message(&self, message: Message, is_update: bool) {
         if is_update {
             let key = IngestKey::Message(*message.id);
             if self.update_throttle.get(&key).await.is_some() {
@@ -412,5 +416,12 @@ impl ContentIngestionManager {
         let doc = tantivy_document_from_user(&self.schema, user.clone());
         let term = Term::from_field_text(self.schema.id, &user.id.to_string());
         let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
+    }
+
+    async fn index_audit_log(&self, entry: AuditLogEntry) {
+        if let Some(doc) = tantivy_document_from_audit_log_entry(&self.schema, entry.clone()) {
+            let term = Term::from_field_text(self.schema.id, &entry.id.to_string());
+            let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
+        }
     }
 }
