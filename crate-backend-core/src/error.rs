@@ -4,7 +4,7 @@ use axum::extract::multipart::{MultipartError, MultipartRejection};
 use axum::{http::StatusCode, response::IntoResponse, Json};
 use bytes::Bytes;
 use common::v1::types::application::Scopes;
-use common::v1::types::error::{ApiError, SyncError};
+use common::v1::types::error::{ApiError, SyncErrorCode};
 use common::v1::types::MessageSync;
 use opentelemetry_otlp::ExporterBuildError;
 use serde_json::json;
@@ -127,7 +127,7 @@ pub enum Error {
     ApiError(ApiError),
 
     #[error("{0}")]
-    SyncError(SyncError),
+    SyncError(SyncErrorCode),
 
     #[error("{0}")]
     MultipartError(#[from] MultipartError),
@@ -228,13 +228,13 @@ impl Error {
             Error::ServiceUnavailable => StatusCode::SERVICE_UNAVAILABLE,
             Error::ApiError(err) => err.code.status(),
             Error::SyncError(err) => match err {
-                SyncError::InvalidSeq => StatusCode::BAD_REQUEST,
-                SyncError::Timeout => StatusCode::BAD_REQUEST,
-                SyncError::Unauthorized => StatusCode::FORBIDDEN,
-                SyncError::Unauthenticated => StatusCode::UNAUTHORIZED,
-                SyncError::AlreadyAuthenticated => StatusCode::BAD_REQUEST,
-                SyncError::AuthFailure => StatusCode::UNAUTHORIZED,
-                SyncError::InvalidData => StatusCode::BAD_REQUEST,
+                SyncErrorCode::InvalidSeq => StatusCode::BAD_REQUEST,
+                SyncErrorCode::Timeout => StatusCode::BAD_REQUEST,
+                SyncErrorCode::Unauthorized => StatusCode::FORBIDDEN,
+                SyncErrorCode::Unauthenticated => StatusCode::UNAUTHORIZED,
+                SyncErrorCode::AlreadyAuthenticated => StatusCode::BAD_REQUEST,
+                SyncErrorCode::AuthFailure => StatusCode::UNAUTHORIZED,
+                SyncErrorCode::InvalidData => StatusCode::BAD_REQUEST,
             },
             Error::MultipartError(_) => StatusCode::BAD_REQUEST,
             Error::MultipartRejection(_) => StatusCode::BAD_REQUEST,
@@ -329,8 +329,8 @@ impl From<ApiError> for Error {
     }
 }
 
-impl From<SyncError> for Error {
-    fn from(value: SyncError) -> Self {
+impl From<SyncErrorCode> for Error {
+    fn from(value: SyncErrorCode) -> Self {
         Self::SyncError(value)
     }
 }

@@ -2,17 +2,17 @@ use common::v1::types::{
     document::DocumentUpdate,
     sync::{SyncParams, SyncResume},
     voice::{messages::SfuCommand, VoiceStateUpdate},
-    ChannelId, ConnectionId, PeerId, SessionToken, SyncSubscribeDocument, SyncSubscribeMemberList,
+    ChannelId, ConnectionId, SessionToken, SyncSubscribeDocument, SyncSubscribeMemberList,
     SyncSubscribeScript, SyncSubscription,
 };
 use std::sync::Arc;
 
-use common::v1::types::error::SyncError;
+use common::v1::types;
+use common::v1::types::error::SyncErrorCode;
 use common::v1::types::presence::Presence;
 use common::v1::types::voice::messages::SignallingCommand;
-use common::v1::types::{self};
 use common::v1::types::{
-    DocumentBranchId, MessageClient, MessageEnvelope, MessageSync, Permission,
+    DocumentBranchId, MessageClient, MessageEnvelope, MessageSync, Permission, UserId,
 };
 use tokio::time::Instant;
 use tracing::{debug, trace, warn};
@@ -90,7 +90,7 @@ impl Connection {
             } => Box::pin(self.handle_hello(token, reconnect, presence, transport)).await?,
             MessageClient::Presence { presence } => {
                 let session = match &self.state {
-                    ConnectionState::Unauthed => return Err(SyncError::Unauthenticated.into()),
+                    ConnectionState::Unauthed => return Err(SyncErrorCode::Unauthenticated.into()),
                     ConnectionState::Authenticated { session } => session,
                     ConnectionState::Disconnected { .. } => {
                         warn!("somehow recv msg while disconnected?");
@@ -105,7 +105,7 @@ impl Connection {
             }
             MessageClient::Pong => {
                 let session = match &self.state {
-                    ConnectionState::Unauthed => return Err(SyncError::Unauthenticated.into()),
+                    ConnectionState::Unauthed => return Err(SyncErrorCode::Unauthenticated.into()),
                     ConnectionState::Authenticated { session } => session,
                     ConnectionState::Disconnected { .. } => {
                         panic!("somehow recv msg while disconnected?")
@@ -124,7 +124,7 @@ impl Connection {
                 let session = self
                     .state
                     .session()
-                    .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+                    .ok_or::<Error>(SyncErrorCode::Unauthenticated.into())?;
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
 
                 let member_lists = if room_id.is_some() || thread_id.is_some() {
@@ -152,10 +152,10 @@ impl Connection {
                 Box::pin(self.handle_voice_connect(voice_state, nonce)).await?
             }
             MessageClient::VoiceDispatch {
-                peer_id,
+                channel_id,
                 nonce,
                 command,
-            } => Box::pin(self.handle_voice_dispatch(peer_id, nonce, command)).await?,
+            } => Box::pin(self.handle_voice_dispatch(channel_id, nonce, command)).await?,
             MessageClient::DocumentSubscribe {
                 channel_id,
                 branch_id,
@@ -164,7 +164,7 @@ impl Connection {
                 let session = self
                     .state
                     .session()
-                    .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+                    .ok_or::<Error>(SyncErrorCode::Unauthenticated.into())?;
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
 
                 self.subscriptions
@@ -208,7 +208,7 @@ impl Connection {
                 let session = self
                     .state
                     .session()
-                    .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+                    .ok_or::<Error>(SyncErrorCode::Unauthenticated.into())?;
                 let user_id = session.user_id().ok_or(Error::UnauthSession)?;
 
                 self.subscriptions
@@ -242,7 +242,7 @@ impl Connection {
         let session = self
             .state
             .session()
-            .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+            .ok_or::<Error>(SyncErrorCode::Unauthenticated.into())?;
         let user_id = session.user_id().ok_or(Error::UnauthSession)?;
 
         let srv = self.s.services();
@@ -272,7 +272,7 @@ impl Connection {
         let session = self
             .state
             .session()
-            .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+            .ok_or::<Error>(SyncErrorCode::Unauthenticated.into())?;
         let user_id = session.user_id().ok_or(Error::UnauthSession)?;
 
         self.subscriptions
@@ -295,7 +295,7 @@ impl Connection {
             .get_by_token(token)
             .await
             .map_err(|err| match err {
-                Error::NotFound => SyncError::AuthFailure.into(),
+                Error::NotFound => SyncErrorCode::AuthFailure.into(),
                 other => other,
             })?;
 
@@ -322,7 +322,7 @@ impl Connection {
         }
 
         if let ConnectionState::Authenticated { .. } = self.state {
-            return Err(SyncError::AlreadyAuthenticated.into());
+            return Err(SyncErrorCode::AlreadyAuthenticated.into());
         }
 
         let user = if let Some(user_id) = session.user_id() {
@@ -401,7 +401,6 @@ impl Connection {
                         }
                         self.queue.push_sync(
                             MessageSync::VoiceState {
-                                peer_id: vs.peer_id,
                                 user_id: vs.user_id,
                                 state: Some(vs),
                                 old_state: None,
@@ -449,7 +448,7 @@ impl Connection {
         let session = self
             .state
             .session()
-            .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+            .ok_or::<Error>(SyncErrorCode::Unauthenticated.into())?;
         let user_id = session.user_id().ok_or(Error::UnauthSession)?;
 
         let srv = self.s.services();
@@ -460,23 +459,29 @@ impl Connection {
 
     async fn handle_voice_dispatch(
         &mut self,
-        peer_id: PeerId,
+        channel_id: ChannelId,
         nonce: Option<String>,
         command: SignallingCommand,
     ) -> Result<()> {
         let srv = self.s.services();
+        let user_id = self.user_id().unwrap();
         if let Some(sfu) = srv.voice.sfu_by_channel(
             srv.voice
-                .state_get(peer_id)
+                .state_get(channel_id, user_id)
                 .map(|s| s.inner().channel_id)
                 .ok_or(Error::BadStatic("state not found"))?,
         ) {
             sfu.send(SfuCommand::Signalling {
-                peer_id: Some(peer_id),
+                user_id,
+                channel_id,
                 inner: command,
             });
         }
         Ok(())
+    }
+
+    fn user_id(&self) -> Option<UserId> {
+        todo!()
     }
 
     // async fn handle_voice_dispatch_old(
@@ -593,7 +598,7 @@ impl Connection {
         let session = self
             .state
             .session()
-            .ok_or::<Error>(SyncError::Unauthenticated.into())?;
+            .ok_or::<Error>(SyncErrorCode::Unauthenticated.into())?;
         let user_id = session.user_id().ok_or(Error::UnauthSession)?;
         let srv = self.s.services();
         let perms = srv.perms.for_channel(user_id, channel_id).await?;
@@ -661,7 +666,6 @@ impl Connection {
                         .await?,
                 },
                 MessageSync::VoiceState {
-                    peer_id,
                     user_id,
                     mut state,
                     mut old_state,
@@ -692,7 +696,6 @@ impl Connection {
                     }
 
                     MessageSync::VoiceState {
-                        peer_id,
                         user_id,
                         state,
                         old_state,

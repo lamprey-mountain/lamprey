@@ -21,6 +21,7 @@ use crate::v1::types::util::some_option;
 
 use super::ChannelId;
 
+// TODO: move to mirror (once its part of v1)
 /// A monotonic sync token, incremented on every action in a channel.
 /// Used for incremental sync to determine what events the client is missing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -102,6 +103,7 @@ pub struct Channel {
 
     /// the tags that are available in this forum. exists on Forum channels only.
     // NOTE: if i want to have unlimited tags, i'd have to remove this
+    // TODO: remove
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
     pub tags_available: Option<Vec<Tag>>,
 
@@ -174,6 +176,11 @@ pub struct Channel {
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub calendar: Option<Calendar>,
 
+    // #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    // pub voice: Option<ChannelVoice>,
+
+    // #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    // pub broadcast: Option<ChannelBroadcast>,
     /// for dm and gdm channels, this is who the dm is with
     #[cfg_attr(feature = "serde", serde(default))]
     pub recipients: Vec<User>,
@@ -216,6 +223,72 @@ pub struct Channel {
     /// when the current user can create a new message
     pub slowmode_message_expire_at: Option<Time>,
 }
+
+// struct ChannelText {
+//     /// minimum delay in seconds between creating new messages
+//     ///
+//     /// can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
+//     pub slowmode_message: Option<u64>,
+
+//     /// when the current user can create a new message
+//     pub slowmode_message_expire_at: Option<Time>,
+
+//     // pub is_unread: Option<bool>,
+//     pub last_read_id: Option<MessageVerId>,
+//     pub mention_count: Option<u64>,
+
+//     pub last_message_id: Option<MessageId>,
+//     pub message_count: Option<u64>,
+//     pub root_message_count: Option<u64>,
+// }
+
+// struct ChannelThreaded {
+//     /// minimum delay in seconds between creating new threads
+//     ///
+//     /// can only be set on channels with has_threads. must have ChannelManage permission to change.
+//     pub slowmode_thread: Option<u64>,
+
+//     /// the default auto archive duration in seconds to copy to threads created in this channel
+//     pub default_auto_archive_duration: Option<u64>,
+
+//     /// default slowmode_message for new threads
+//     ///
+//     /// this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
+//     pub default_slowmode_message: Option<u64>,
+
+//     /// when the current user can create a new thread
+//     pub slowmode_thread_expire_at: Option<Time>,
+// }
+
+// struct ChannelThread {
+//     /// when to automatically archive this thread due to inactivity, in seconds
+//     pub auto_archive_duration: Option<u64>,
+
+//     /// whether users without ThreadManage can add other members to this thread
+//     #[cfg_attr(feature = "serde", serde(default))]
+//     pub invitable: bool,
+
+//     /// The user's thread member object, if the channel is a thread and the user is a member.
+//     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+//     pub thread_member: Option<Box<ThreadMember>>,
+// }
+
+// /// data private to a user
+// struct ChannelPrivate {
+//     pub last_read_id: Option<MessageVerId>,
+//     pub mention_count: Option<u64>,
+//     pub preferences: Option<PreferencesChannel>,
+
+//     /// when the current user can create a new message
+//     pub slowmode_message_expire_at: Option<Time>,
+
+//     /// when the current user can create a new thread
+//     pub slowmode_thread_expire_at: Option<Time>,
+
+//     /// The user's thread member object, if the channel is a thread and the user is a member.
+//     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+//     pub thread_member: Option<Box<ThreadMember>>,
+// }
 
 #[cfg(feature = "serde")]
 impl Serialize for Channel {

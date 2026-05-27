@@ -1,3 +1,4 @@
+use crate::services::voice::voice_state::VoiceStateHandle;
 use crate::services::voice::ServiceVoice;
 use crate::Result;
 use common::v1::types::error::{ApiError, ErrorCode};
@@ -7,13 +8,14 @@ use common::v1::types::{
     voice::{Call, CallCreate, CallPatch},
     ChannelId, SfuId, UserId,
 };
-use dashmap::DashSet;
+use dashmap::{DashMap, DashSet};
 use std::{sync::Arc, time::Duration};
 
 pub struct CallHandleInner {
     pub call: Call,
     pub sfus: DashSet<SfuId>,
     pub cleanup_task: tokio::task::AbortHandle,
+    pub voice_states: DashMap<UserId, VoiceStateHandle>,
 }
 
 pub type CallHandle = Arc<CallHandleInner>;
@@ -27,6 +29,14 @@ impl CallHandleInner {
         &self.call
     }
 }
+
+// trait CallHandleExt {
+//     pub fn update_voice_state(&self);
+// }
+
+// impl CallHandleExt for Arc<CallHandle> {
+//     // TODO
+// }
 
 impl ServiceVoice {
     /// get a call
@@ -58,6 +68,7 @@ impl ServiceVoice {
             call,
             sfus: DashSet::new(),
             cleanup_task: self.spawn_cleanup_task(params.channel_id),
+            voice_states: DashMap::new(),
         });
 
         self.calls.insert(params.channel_id, Arc::clone(&handle));
@@ -98,6 +109,7 @@ impl ServiceVoice {
             call: new_call.clone(),
             sfus: handle.sfus.clone(),
             cleanup_task: handle.cleanup_task.clone(),
+            voice_states: handle.voice_states.clone(),
         });
 
         *entry.value_mut() = Arc::clone(&updated_handle);
@@ -118,7 +130,8 @@ impl ServiceVoice {
         let count = states.len() as u64;
 
         for handle in states {
-            srv.voice.state_destroy(handle.inner().peer_id)?;
+            let user_id = handle.inner().user_id;
+            srv.voice.state_destroy(channel_id, user_id)?;
         }
 
         Ok(count)
@@ -138,7 +151,8 @@ impl ServiceVoice {
 
         for handle in states {
             if handle.inner().channel_id == channel_id {
-                srv.voice.state_destroy(handle.inner().peer_id)?;
+                let user_id = handle.inner().user_id;
+                srv.voice.state_destroy(channel_id, user_id)?;
                 count += 1;
             }
         }
@@ -158,6 +172,7 @@ impl ServiceVoice {
                 call: handle.call.clone(),
                 sfus: handle.sfus.clone(),
                 cleanup_task: new_cleanup_task,
+                voice_states: todo!(),
             });
 
             *entry.value_mut() = updated_handle;

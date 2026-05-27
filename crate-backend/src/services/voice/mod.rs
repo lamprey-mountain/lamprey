@@ -1,11 +1,10 @@
 use crate::services::voice::calls::CallHandle;
 use crate::services::voice::sfus::SfuHandle;
-use crate::services::voice::voice_state::VoiceStateHandle;
 use crate::ServerStateInner;
 use common::v1::types::voice::internal::SfuStats;
 use common::v1::types::voice::messages::SfuCommand;
 use common::v1::types::voice::router::{VoiceRouter, VoiceRouterConfig};
-use common::v1::types::{ChannelId, PeerId, SfuId};
+use common::v1::types::{ChannelId, SfuId};
 use dashmap::DashMap;
 use std::sync::Arc;
 
@@ -16,7 +15,6 @@ pub mod voice_state;
 
 pub struct ServiceVoice {
     pub state: Arc<ServerStateInner>,
-    pub voice_states: DashMap<PeerId, VoiceStateHandle>,
     pub calls: DashMap<ChannelId, CallHandle>,
     pub sfus: DashMap<SfuId, SfuHandle>,
     pub router: VoiceRouter,
@@ -26,7 +24,6 @@ impl ServiceVoice {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {
             state,
-            voice_states: DashMap::new(),
             calls: DashMap::new(),
             sfus: DashMap::new(),
             router: VoiceRouter::new(VoiceRouterConfig::default()),

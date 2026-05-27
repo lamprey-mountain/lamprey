@@ -5,7 +5,7 @@ use std::{
 
 use bytes::Bytes;
 use common::v1::types::{
-    voice::{MediaKind, Mid, SpeakingFlags, SpeakingWithPeerId, VoiceState},
+    voice::{MediaKind, Mid, SpeakingFlags, SpeakingWithUserId, VoiceState},
     ChannelId,
 };
 use futures_util::stream::{BoxStream, StreamExt};
@@ -46,7 +46,7 @@ pub enum VoiceEvent {
     StateChanged(VoiceConnectionStatus),
 
     /// a user is speaking
-    UserSpeaking(SpeakingWithPeerId),
+    UserSpeaking(SpeakingWithUserId),
 
     /// a new track was received
     Track(VoiceTrackIncoming),

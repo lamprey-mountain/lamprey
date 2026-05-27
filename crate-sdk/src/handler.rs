@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::v1::types::error::SyncError;
+use common::v1::types::error::SyncErrorCode;
 use common::v1::types::{MessagePayload, MessageSync, Session, User};
 use std::future::{ready, Future};
 
@@ -18,7 +18,7 @@ pub trait EventHandler: Send {
     fn error(
         &mut self,
         err: String,
-        code: Option<SyncError>,
+        code: Option<SyncErrorCode>,
     ) -> impl Future<Output = Result<(), Self::Error>> + Send {
         ready(Ok(()))
     }

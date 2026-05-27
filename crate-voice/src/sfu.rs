@@ -7,13 +7,16 @@ use crate::{
     util::extract_stun_ufrag,
 };
 
+use crate::PeerId;
 use anyhow::Result;
 use bytes::{Bytes, BytesMut};
 use common::v1::types::{
     voice::{internal::SfuPermissions, messages::SfuCommand, VoiceState},
-    ChannelId, PeerId, SfuId,
+    ChannelId, SfuId, UserId,
 };
+use dashmap::DashMap;
 use lamprey_backend_core::config::{Config, ConfigVoice};
+use std::hash::Hash;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use tokio::task::LocalSet;
 use tracing::{debug, warn};
@@ -31,13 +34,17 @@ pub type State = Arc<StateInner>;
 pub struct Sfu {
     state: State,
     shards: Vec<SfuShard>,
-    peers: HashMap<PeerId, PeerEndpoint>,
+    calls: HashMap<ChannelId, CallHandle>,
 
     // mapping to help routing
     ufrag_to_peer: HashMap<String, PeerId>,
 }
 
-/// pinned to a single core
+pub struct CallHandle {
+    users: DashMap<UserId, PeerEndpoint>,
+}
+
+/// a set of tasks pinned to a single core
 pub struct SfuShard {
     id: ShardId,
 
@@ -61,7 +68,7 @@ impl Sfu {
                 config,
             }),
             shards: vec![],
-            peers: HashMap::new(),
+            calls: HashMap::new(),
             ufrag_to_peer: HashMap::new(),
         }
     }
@@ -123,17 +130,28 @@ impl Sfu {
         }
     }
 
+    /// use STUN demultiplexing to identify and forward packet to the peer
     pub async fn handle_packet(&mut self, source: SocketAddr, data: Bytes) {
-        // STUN demultiplexing to identify the peer
         if data.len() >= 20 && (data[0] == 0x00 || data[0] == 0x01) {
             if let Some(ufrag) = extract_stun_ufrag(&data) {
                 if let Some(peer_id) = self.ufrag_to_peer.get(&ufrag) {
-                    if let Some(PeerEndpoint::Webrtc(peer)) = self.peers.get(peer_id) {
-                        debug!("Routing packet to webrtc peer {} from {}", peer_id, source);
-                        todo!()
-                        // peer.deliver_packet(source, destination, data);
-                    } else {
-                        warn!("STUN packet routed to a Cascaded peer, dropping.");
+                    let (channel_id, user_id) = peer_id;
+                    let call = self
+                        .calls
+                        .get(channel_id)
+                        .expect("todo better error handling");
+                    let peer = call.users.get(user_id).expect("todo better error handling");
+                    match &*peer {
+                        PeerEndpoint::Webrtc(p) => {
+                            debug!(
+                                "Routing packet to webrtc peer {:?} from {}",
+                                peer_id, source
+                            );
+                            todo!()
+                        }
+                        PeerEndpoint::Cascade(_) => {
+                            warn!("STUN packet routed to a Cascaded peer, dropping.");
+                        }
                     }
                     return;
                 }
@@ -148,7 +166,10 @@ impl Sfu {
             SfuCommand::RecalculateLatency { target_sfu } => todo!("get backbone rtt"),
 
             SfuCommand::MigrateAll { target_sfu } => todo!("remove this command?"),
-            SfuCommand::MigratePeers { peers, target_sfu } => todo!("remove this command?"),
+            SfuCommand::MigrateUsers {
+                users: peers,
+                target_sfu,
+            } => todo!("remove this command?"),
 
             SfuCommand::CreatePeer { state, permissions } => todo!("create new peer"),
             SfuCommand::PrepareCascade { sfu_id } => todo!("create token/addr, add to backbone"),
@@ -165,53 +186,77 @@ impl Sfu {
             } => todo!(),
             SfuCommand::Channel { channel } => todo!(),
 
-            // forward based on peer_id
-            SfuCommand::Signalling { peer_id, inner } => {
-                if let Some(peer_id) = peer_id {
-                    self.peer_send(peer_id, Command::Signalling(inner))
-                } else {
-                    // NOTE: do i need to handle any signalling event without a peer id? should i require every SignallingCommand to come with a peer id?
-                    // match inner {
-                    //     common::v1::types::voice::messages::SignallingCommand::Disconnect => todo!(),
-                    //     common::v1::types::voice::messages::SignallingCommand::VoiceState { state } => todo!(),
-                    //     common::v1::types::voice::messages::SignallingCommand::Offer { sdp, tracks } => todo!(),
-                    //     common::v1::types::voice::messages::SignallingCommand::Answer { sdp } => todo!(),
-                    //     common::v1::types::voice::messages::SignallingCommand::Candidate { candidate } => todo!(),
-                    //     common::v1::types::voice::messages::SignallingCommand::Want { subscriptions } => todo!(),
-                    //     common::v1::types::voice::messages::SignallingCommand::Keyframe { mid, rid, kind } => todo!(),
-                    // }
-                    warn!("got signalling command without a peer id")
-                }
+            // forward based on user_id
+            SfuCommand::Signalling {
+                user_id,
+                channel_id,
+                inner,
+            } => {
+                self.peer_send((channel_id, user_id), Command::Signalling(inner));
             }
             SfuCommand::GenerateKeyframe {
                 mid,
                 rid,
                 kind,
-                peer_id,
-            } => self.peer_send(peer_id, Command::GenerateKeyframe { mid, rid, kind }),
+                user_id,
+            } => {
+                // Find the call this user belongs to by searching all calls
+                if let Some(channel_id) = self.find_channel_for_user(user_id) {
+                    self.peer_send(
+                        (channel_id, user_id),
+                        Command::GenerateKeyframe { mid, rid, kind },
+                    );
+                }
+            }
         }
     }
 
     /// send a command to a peer
-    fn peer_send(&self, peer_id: PeerId, command: Command) {
-        if let Some(peer) = self.peers.get(&peer_id) {
-            peer.handle_command(command);
+    fn peer_send(&self, (channel_id, user_id): PeerId, command: Command) {
+        if let Some(call) = self.calls.get(&channel_id) {
+            if let Some(peer) = call.users.get(&user_id) {
+                (*peer).handle_command(command);
+            }
         }
     }
 
-    fn peer_create(&mut self, state: VoiceState, permissions: SfuPermissions) {
-        todo!("initialize peer (e.g., Webrtc) and add to self.peers")
+    /// find which call a peer belongs to
+    fn find_channel_for_user(&self, user_id: UserId) -> Option<ChannelId> {
+        // NOTE: this could be optimized, but does it need to be?
+        for (channel_id, call) in self.calls.iter() {
+            for uid in call.users.iter().map(|p| *p.key()) {
+                if uid == user_id {
+                    return Some(*channel_id);
+                }
+            }
+        }
+        None
+    }
+
+    fn peer_create(
+        &mut self,
+        channel_id: ChannelId,
+        state: VoiceState,
+        permissions: SfuPermissions,
+    ) {
+        let call = self.calls.entry(channel_id).or_insert_with(|| CallHandle {
+            users: DashMap::new(),
+        });
+        // TODO: initialize peer and add to call.peers
+        let _ = (state, permissions);
     }
 
     fn cascade_prepare(&mut self, sfu_id: SfuId) {
         // let token = "some_random_token".to_string(); // TODO: generate secure token
         // self.state.backbone.add_pending_token(token.clone(), sfu_id);
         // TODO: share token and address with remote SFU via backend
+        let _ = sfu_id;
     }
 
     fn cascade_create(&mut self, sfu_id: SfuId, token: String, addr: SocketAddr) {
         // TODO: call self.state.backbone.connect(...)
-        // TODO: spawn PeerCascading and add to self.peers
+        // TODO: spawn PeerCascading and add to self.calls
+        let _ = (sfu_id, token, addr);
     }
 
     /// get the shard id this channel belongs to

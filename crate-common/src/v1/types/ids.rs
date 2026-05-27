@@ -277,6 +277,7 @@ genid!(Session, "00000000-0000-0000-0000-00000session");
 // genid!(SessionVer, "00000000-0000-0000-0ver-00000session");
 genid!(AuditLogEntry, "00000000-0000-0000-0000-0auditlogent");
 genid!(Embed, "00000000-0000-0000-0new-0000000embed");
+// TODO: rename to ThreadTagId
 genid!(Tag, "00000000-0000-0000-0000-000000000tag");
 genid!(Report, "00000000-0000-0000-0000-000modreport");
 genid!(Emoji, "00000000-0000-0000-0000-0000000emoji");
@@ -300,7 +301,6 @@ genid!(Eval, "00000000-0000-0000-0000-00000000eval");
 
 // voice
 genid!(Call, "00000000-0000-0000-0000-00000000call");
-genid!(Peer);
 genid!(Sfu, "00000000-0000-0000-0000-000000000sfu");
 
 /// the user id of the server system user (aka root)

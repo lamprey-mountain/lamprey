@@ -9,7 +9,7 @@ use validator::Validate;
 
 #[cfg(feature = "feat_e2ee")]
 use crate::v1::types::e2ee::{CrossSigningBundle, KeyshareRequest, KeyshareResponse};
-use crate::v1::types::error::SyncError;
+use crate::v1::types::error::SyncErrorCode;
 
 use crate::v1::types::interactions::{Interaction, InteractionErrorCode};
 use crate::v1::types::message::flume::FlumeDelta;
@@ -27,7 +27,7 @@ use crate::v1::types::{
     DocumentTagId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember,
     WebhookId,
 };
-use crate::v1::types::{EvalId, InteractionId, Message, PeerId, RedexId, RedexVerId};
+use crate::v1::types::{EvalId, InteractionId, Message, RedexId, RedexVerId};
 use crate::v2::types::media::Media;
 
 use super::{
@@ -99,7 +99,7 @@ pub enum MessageClient {
 
     /// dispatch a command to a voice connection
     VoiceDispatch {
-        peer_id: PeerId,
+        channel_id: ChannelId,
         nonce: Option<String>,
         command: SignallingCommand,
     },
@@ -289,7 +289,7 @@ pub enum MessagePayload {
     /// some kind of error
     Error {
         error: String,
-        code: Option<SyncError>,
+        code: Option<SyncErrorCode>,
     },
 
     /// successfully connected
@@ -602,7 +602,7 @@ pub enum MessageSync {
     VoiceDispatch {
         /// who to send this dispatch to
         user_id: UserId,
-        peer_id: PeerId,
+        channel_id: ChannelId,
         payload: SignallingEvent,
     },
 
@@ -610,7 +610,6 @@ pub enum MessageSync {
     VoiceState {
         /// the id of the user who's voice state was updated
         user_id: UserId,
-        peer_id: PeerId,
         state: Option<VoiceState>,
 
         // HACK: make it possible to use this for auth checks

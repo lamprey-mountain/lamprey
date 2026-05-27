@@ -8,6 +8,10 @@ pub mod util;
 
 pub use error::Error;
 
+use common::v1::types::{ChannelId, UserId};
+
+pub type PeerId = (ChannelId, UserId);
+
 // /// a peer event with user_id, so the sfu knows where the event came from
 // #[derive(Debug)]
 // pub struct PeerEventEnvelope {

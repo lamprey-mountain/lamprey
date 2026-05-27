@@ -358,15 +358,13 @@ macro_rules! route {
 }
 
 // Voice Routes
-route!(get    "/api/v1/voice/{channel_id}/peer/{peer_id}"                   => voice_state_get(channel_id: ChannelId, peer_id: PeerId) -> VoiceState);
-route!(patch  "/api/v1/voice/{channel_id}/peer/{peer_id}"                   => voice_state_patch(channel_id: ChannelId, peer_id: PeerId) -> VoiceState, VoiceStatePatch);
-route!(post   "/api/v1/voice/{channel_id}/peer/{peer_id}/move"              => voice_state_move(channel_id: ChannelId, peer_id: PeerId) -> VoiceState, VoiceStateMove);
+route!(get    "/api/v1/voice/{channel_id}/member/{user_id}"                 => voice_state_get(channel_id: ChannelId, user_id: UserIdReq) -> VoiceState);
+route!(patch  "/api/v1/voice/{channel_id}/member/{user_id}"                 => voice_state_patch(channel_id: ChannelId, user_id: UserIdReq) -> VoiceState, VoiceStatePatch);
+route!(post   "/api/v1/voice/{channel_id}/member/{user_id}/move"            => voice_state_move(channel_id: ChannelId, user_id: UserIdReq) -> VoiceState, VoiceStateMove);
 route!(post   "/api/v1/voice/{channel_id}/move"                             => voice_state_move_bulk(channel_id: ChannelId), VoiceStateMoveBulk);
-route!(delete "/api/v1/voice/{channel_id}/peer/{peer_id}"                   => voice_state_disconnect(channel_id: ChannelId, peer_id: PeerId));
-route!(delete "/api/v1/voice/{channel_id}/peer"                             => voice_state_disconnect_all(channel_id: ChannelId));
-route!(get    "/api/v1/voice/{channel_id}/peer"                             => voice_state_list(channel_id: ChannelId) -> PaginationResponse<VoiceState>);
-route!(delete "/api/v1/voice/{channel_id}/user/{user_id}"                   => voice_user_disconnect(channel_id: ChannelId, user_id: UserId));
-route!(get    "/api/v1/voice/{channel_id}/user/{user_id}"                   => voice_user_list(channel_id: ChannelId, user_id: UserId) -> Vec<VoiceState>);
+route!(delete "/api/v1/voice/{channel_id}/member/{user_id}"                 => voice_state_disconnect(channel_id: ChannelId, user_id: UserIdReq));
+route!(delete "/api/v1/voice/{channel_id}/member"                           => voice_state_disconnect_all(channel_id: ChannelId));
+route!(get    "/api/v1/voice/{channel_id}/member"                           => voice_state_list(channel_id: ChannelId) -> PaginationResponse<VoiceState>);
 route!(post   "/api/v1/voice/{channel_id}/call"                             => voice_call_create(channel_id: ChannelId) -> Call, CallCreate);
 route!(delete "/api/v1/voice/{channel_id}/call"                             => voice_call_delete(channel_id: ChannelId, _q: CallDeleteParams));
 route!(patch  "/api/v1/voice/{channel_id}/call"                             => voice_call_patch(channel_id: ChannelId) -> Call, CallPatch);

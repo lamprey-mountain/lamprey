@@ -98,7 +98,7 @@ pub enum Warning {
 #[derive(Debug, Error, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum SyncError {
+pub enum SyncErrorCode {
     /// invalid sequence number (connection may be too old)
     #[error("invalid sequence number (connection may be too old)")]
     InvalidSeq,
@@ -248,17 +248,17 @@ impl std::fmt::Display for ApiError {
 
 impl std::error::Error for ApiError {}
 
-impl SyncError {
+impl SyncErrorCode {
     /// get the websocket close code for this error
     pub fn code(&self) -> u16 {
         match self {
-            SyncError::InvalidData => 1007,
-            SyncError::Unauthorized => 3003,
-            SyncError::Unauthenticated => 3000,
-            SyncError::Timeout => 3008,
-            SyncError::AuthFailure => 4004,
-            SyncError::AlreadyAuthenticated => 4005,
-            SyncError::InvalidSeq => 4007,
+            SyncErrorCode::InvalidData => 1007,
+            SyncErrorCode::Unauthorized => 3003,
+            SyncErrorCode::Unauthenticated => 3000,
+            SyncErrorCode::Timeout => 3008,
+            SyncErrorCode::AuthFailure => 4004,
+            SyncErrorCode::AlreadyAuthenticated => 4005,
+            SyncErrorCode::InvalidSeq => 4007,
         }
     }
 }

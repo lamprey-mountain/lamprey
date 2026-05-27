@@ -5,9 +5,9 @@ use common::v1::types::{
     voice::{
         internal::MediaData,
         messages::{PeerEvent, SignallingCommand},
-        KeyframeRequestKind, Mid, Rid, SpeakingWithPeerId, TrackMetadataWithPeerId,
+        KeyframeRequestKind, Mid, Rid, SpeakingWithUserId, TrackMetadataWithUserId,
     },
-    PeerId,
+    UserId,
 };
 
 pub mod cascade;
@@ -16,7 +16,7 @@ pub mod webrtc;
 #[async_trait]
 pub trait Peer {
     /// the unique id of this peer
-    fn id(&self) -> PeerId;
+    fn id(&self) -> UserId;
 
     /// handle a command
     fn handle_command(&self, cmd: Command);
@@ -25,7 +25,7 @@ pub trait Peer {
     fn handle_media_data(&self, media: MediaData);
 
     /// another peer sent speaking metadata
-    fn handle_speaking(&self, speaking: SpeakingWithPeerId);
+    fn handle_speaking(&self, speaking: SpeakingWithUserId);
 
     /// poll for events
     async fn poll(&mut self) -> Option<PeerEvent>;
@@ -38,7 +38,7 @@ pub enum PeerEndpoint {
 
 #[async_trait]
 impl Peer for PeerEndpoint {
-    fn id(&self) -> PeerId {
+    fn id(&self) -> UserId {
         match self {
             PeerEndpoint::Webrtc(p) => p.id(),
             PeerEndpoint::Cascade(p) => p.id(),
@@ -59,7 +59,7 @@ impl Peer for PeerEndpoint {
         }
     }
 
-    fn handle_speaking(&self, speaking: SpeakingWithPeerId) {
+    fn handle_speaking(&self, speaking: SpeakingWithUserId) {
         match self {
             PeerEndpoint::Webrtc(p) => p.handle_speaking(speaking),
             PeerEndpoint::Cascade(p) => p.handle_speaking(speaking),
@@ -91,7 +91,7 @@ pub enum Command {
     },
 
     /// another peer created a media track
-    MediaAdded(TrackMetadataWithPeerId),
+    MediaAdded(TrackMetadataWithUserId),
     // /// peer limits updated
     // // TODO: handle channel bitrate
     // Limits { .. },
@@ -100,5 +100,5 @@ pub enum Command {
 pub enum CommandFull {
     Inner(Command),
     MediaData(MediaData),
-    Speaking(SpeakingWithPeerId),
+    Speaking(SpeakingWithUserId),
 }

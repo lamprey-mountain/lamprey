@@ -437,7 +437,7 @@ impl sdk::EventHandler for LampreyEventHandler {
     fn error(
         &mut self,
         err: String,
-        code: Option<common::v1::types::error::SyncError>,
+        code: Option<common::v1::types::error::SyncErrorCode>,
     ) -> impl std::future::Future<Output = Result<(), Self::Error>> + Send {
         async move {
             if let Some(code) = code {

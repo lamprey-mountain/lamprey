@@ -5,9 +5,9 @@ use common::v1::types::{
     voice::{
         internal::MediaData,
         messages::{PeerEvent, SignallingCommand},
-        SpeakingWithPeerId, VoiceState,
+        SpeakingWithUserId, VoiceState,
     },
-    PeerId,
+    UserId,
 };
 use str0m::{Event, Input, Output, Rtc};
 use tokio::sync::{mpsc, Mutex};
@@ -19,14 +19,14 @@ use crate::peer::{Command, CommandFull, Peer};
 /// a handle to a webrtc peer connection
 #[derive(Debug)]
 pub struct PeerWebrtc {
-    id: PeerId,
+    id: UserId,
     command_tx: mpsc::UnboundedSender<CommandFull>,
     event_rx: Arc<Mutex<mpsc::UnboundedReceiver<PeerEvent>>>,
 }
 
 /// the actor responsible for the webrtc connection lifecycle
 pub struct PeerWebrtcInner {
-    id: PeerId,
+    id: UserId,
 
     // NOTE: should i Box these?
     /// rtc instance for incoming media
@@ -41,7 +41,7 @@ pub struct PeerWebrtcInner {
 }
 
 impl PeerWebrtc {
-    pub fn spawn(id: PeerId, voice_state: VoiceState) -> Self {
+    pub fn spawn(id: UserId, voice_state: VoiceState) -> Self {
         let (command_tx, command_rx) = mpsc::unbounded_channel();
         let (event_tx, event_rx) = mpsc::unbounded_channel();
 
@@ -161,7 +161,7 @@ impl PeerWebrtcInner {
 
 #[async_trait]
 impl Peer for PeerWebrtc {
-    fn id(&self) -> PeerId {
+    fn id(&self) -> UserId {
         self.id
     }
 
@@ -173,7 +173,7 @@ impl Peer for PeerWebrtc {
         _ = self.command_tx.send(CommandFull::MediaData(media));
     }
 
-    fn handle_speaking(&self, speaking: SpeakingWithPeerId) {
+    fn handle_speaking(&self, speaking: SpeakingWithUserId) {
         _ = self.command_tx.send(CommandFull::Speaking(speaking));
     }
 

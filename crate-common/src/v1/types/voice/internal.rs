@@ -7,7 +7,11 @@ use serde::{Deserialize, Serialize};
 use str0m::media::{MediaTime, Pt};
 use uuid::Uuid;
 
-use crate::v1::types::{voice::Mid, Channel, ChannelId, PeerId};
+use crate::v1::types::{voice::Mid, Channel, ChannelId, UserId};
+
+/// a globally unique media id identifier
+// TODO: use this?
+pub type GlobalMid = (UserId, Mid);
 
 /// a packet of media data
 #[derive(Debug, Clone)]
@@ -15,8 +19,8 @@ pub struct MediaData {
     /// the track this this piece of media came from
     pub mid: Mid,
 
-    /// the peer this this piece of media came from
-    pub peer_id: PeerId,
+    /// the user this this piece of media came from
+    pub user_id: UserId,
 
     /// the raw media data
     pub data: Bytes,
@@ -40,7 +44,7 @@ impl MediaData {
         buf.put_slice(self.mid.0.as_bytes());
 
         // peer_id (16 bytes)
-        buf.put_slice(self.peer_id.as_bytes());
+        buf.put_slice(self.user_id.as_bytes());
 
         // pt (1 byte)
         buf.put_u8(*self.pt);
@@ -74,7 +78,7 @@ impl MediaData {
 
         let mut peer_bytes = [0u8; 16];
         buf.copy_to_slice(&mut peer_bytes);
-        let peer_id = PeerId::from(Uuid::from_bytes(peer_bytes));
+        let user_id = UserId::from(Uuid::from_bytes(peer_bytes));
 
         let pt = str0m::media::Pt::from(buf.get_u8());
 
@@ -91,7 +95,7 @@ impl MediaData {
 
         Ok(Self {
             mid,
-            peer_id,
+            user_id,
             data,
             network_time,
             time,

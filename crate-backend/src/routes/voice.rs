@@ -35,9 +35,10 @@ async fn voice_state_get(
         .ensure_view()?
         .check()?;
 
+    let target_user_id = req.user_id.local_unwrap_or(auth.user.id)?;
     let handle = srv
         .voice
-        .state_get(req.peer_id)
+        .state_get(req.channel_id, target_user_id)
         .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)))?;
     let state = handle.inner().clone();
 
@@ -67,7 +68,7 @@ async fn voice_state_patch(
 
     let handle = srv
         .voice
-        .state_get(req.peer_id)
+        .state_get(req.channel_id, req.user_id.unwrap_or(auth.user.id))
         .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)))?;
     let old_state = handle.inner().clone();
     let target_user_id = old_state.user_id;
@@ -195,42 +196,65 @@ async fn voice_state_disconnect(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let handle = srv
-        .voice
-        .state_get(req.peer_id)
-        .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)))?;
-    let state = handle.inner();
-
-    if state.channel_id != req.channel_id {
-        return Ok(StatusCode::NO_CONTENT);
-    }
-
-    let mut perms = srv
-        .perms
-        .for_channel3(Some(auth.user.id), req.channel_id)
-        .await?
-        .ensure_view()?;
-
-    // self-disconnect is allowed, but disconnecting others requires the VoiceMove permission
-    if state.user_id != auth.user.id {
-        perms.needs(Permission::VoiceMove);
-    }
-    perms.check()?;
-
     let chan = srv.channels.get(req.channel_id, None).await?;
     chan.ensure_has_voice()?;
 
-    let target_user_id = state.user_id;
-    srv.voice.state_destroy(req.peer_id)?;
+    let target_user_id = req.user_id.local_unwrap_or(auth.user.id)?;
 
-    if let Some(room_id) = chan.room_id {
-        let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::MemberDisconnect {
-            channel_id: req.channel_id,
-            user_id: target_user_id,
-        })
-        .await?;
+    // If there's a single voice state for this user in this channel, use it
+    // to check self-disconnect logic. Otherwise, VoiceMove is required.
+    if let Some(handle) = srv.voice.state_get(req.channel_id, target_user_id) {
+        let state = handle.inner();
+        if state.channel_id == req.channel_id {
+            let mut perms = srv
+                .perms
+                .for_channel3(Some(auth.user.id), req.channel_id)
+                .await?
+                .ensure_view()?;
+
+            if state.user_id != auth.user.id {
+                perms.needs(Permission::VoiceMove);
+            }
+            perms.check()?;
+
+            srv.voice.state_destroy(req.channel_id, state.user_id)?;
+
+            if let Some(room_id) = chan.room_id {
+                let al = auth.audit_log(room_id);
+                al.commit_success(AuditLogEntryType::MemberDisconnect {
+                    channel_id: req.channel_id,
+                    user_id: state.user_id,
+                })
+                .await?;
+            }
+            return Ok(StatusCode::NO_CONTENT);
+        }
     }
+
+    // user has multiple voice states or none in this channel; disconnect all
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::VoiceMove)
+        .check()?;
+
+    let body_count = srv
+        .voice
+        .call_disconnect_all_user(req.channel_id, target_user_id)
+        .await?;
+
+    if body_count > 0 {
+        if let Some(room_id) = chan.room_id {
+            let al = auth.audit_log(room_id);
+            al.commit_success(AuditLogEntryType::MemberDisconnect {
+                channel_id: req.channel_id,
+                user_id: target_user_id,
+            })
+            .await?;
+        }
+    }
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -541,74 +565,6 @@ async fn voice_ring_stop(
     Ok(Error::Unimplemented)
 }
 
-/// Voice user disconnect
-#[handler(routes::voice_user_disconnect)]
-async fn voice_user_disconnect(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-    req: routes::voice_user_disconnect::Request,
-) -> Result<impl IntoResponse> {
-    auth.ensure_scopes(&[Scope::Full])?;
-    auth.user.ensure_unsuspended()?;
-
-    let srv = s.services();
-    // FIXME: allow disconnecting yourself
-    srv.perms
-        .for_channel3(Some(auth.user.id), req.channel_id)
-        .await?
-        .ensure_view()?
-        .needs(Permission::VoiceMove)
-        .check()?;
-
-    let chan = srv.channels.get(req.channel_id, None).await?;
-    chan.ensure_has_voice()?;
-
-    let body_count = srv
-        .voice
-        .call_disconnect_all_user(req.channel_id, req.user_id)
-        .await?;
-
-    // FIXME: skip audit log if disconnecting yourself
-    if body_count > 0 {
-        if let Some(room_id) = chan.room_id {
-            let al = auth.audit_log(room_id);
-            al.commit_success(AuditLogEntryType::MemberDisconnect {
-                channel_id: req.channel_id,
-                user_id: req.user_id,
-            })
-            .await?;
-        }
-    }
-
-    Ok(StatusCode::NO_CONTENT)
-}
-
-/// Voice user list
-#[handler(routes::voice_user_list)]
-async fn voice_user_list(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-    req: routes::voice_user_list::Request,
-) -> Result<impl IntoResponse> {
-    auth.ensure_scopes(&[Scope::Full])?;
-    let srv = s.services();
-    srv.perms
-        .for_channel3(Some(auth.user.id), req.channel_id)
-        .await?
-        .ensure_view()?
-        .check()?;
-
-    let states: Vec<_> = srv
-        .voice
-        .state_list_by_user(req.user_id)
-        .into_iter()
-        .filter(|h| h.inner().channel_id == req.channel_id)
-        .map(|h| h.inner().clone())
-        .collect();
-
-    Ok(Json(states))
-}
-
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes2!(voice_state_get))
@@ -618,8 +574,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(voice_state_disconnect))
         .routes(routes2!(voice_state_disconnect_all))
         .routes(routes2!(voice_state_list))
-        .routes(routes2!(voice_user_disconnect))
-        .routes(routes2!(voice_user_list))
         .routes(routes2!(voice_call_create))
         .routes(routes2!(voice_call_delete))
         .routes(routes2!(voice_call_patch))

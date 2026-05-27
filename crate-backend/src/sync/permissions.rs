@@ -207,7 +207,6 @@ impl AuthCheck {
                 state,
                 user_id,
                 old_state,
-                peer_id: _,
             } => match (state, old_state) {
                 (None, None) => AuthCheck::User(*user_id),
                 (None, Some(o)) => AuthCheck::Channel(o.channel_id),

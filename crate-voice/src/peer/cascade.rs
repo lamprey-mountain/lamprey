@@ -5,9 +5,9 @@ use common::v1::types::{
     voice::{
         internal::MediaData,
         messages::{PeerEvent, SignallingCommand},
-        SpeakingWithPeerId,
+        SpeakingWithUserId,
     },
-    PeerId, SfuId,
+    SfuId, UserId,
 };
 use tokio::sync::mpsc;
 use tracing::debug;
@@ -20,14 +20,14 @@ use crate::{
 /// a handle to a cascaded peer connection
 #[derive(Debug)]
 pub struct PeerCascading {
-    id: PeerId,
+    id: UserId,
     command_tx: mpsc::UnboundedSender<Command>,
     event_rx: mpsc::UnboundedReceiver<PeerEvent>,
 }
 
 /// the actor responsible for the cascade lifecycle
 pub struct PeerCascadingInner {
-    id: PeerId,
+    id: UserId,
     remote_sfu: SfuId,
     backbone: Arc<BackboneComms>,
     command_rx: mpsc::UnboundedReceiver<Command>,
@@ -35,7 +35,7 @@ pub struct PeerCascadingInner {
 }
 
 impl PeerCascading {
-    pub fn spawn(id: PeerId, remote_sfu: SfuId, backbone: Arc<BackboneComms>) -> Self {
+    pub fn spawn(id: UserId, remote_sfu: SfuId, backbone: Arc<BackboneComms>) -> Self {
         let (command_tx, command_rx) = mpsc::unbounded_channel();
         let (event_tx, event_rx) = mpsc::unbounded_channel();
 
@@ -82,7 +82,7 @@ impl PeerCascadingInner {
 
 #[async_trait]
 impl Peer for PeerCascading {
-    fn id(&self) -> PeerId {
+    fn id(&self) -> UserId {
         self.id
     }
 
@@ -94,7 +94,7 @@ impl Peer for PeerCascading {
         // TODO: Backbone datagram transmission
     }
 
-    fn handle_speaking(&self, _speaking: SpeakingWithPeerId) {
+    fn handle_speaking(&self, _speaking: SpeakingWithUserId) {
         // TODO: Backbone datagram transmission
     }
 

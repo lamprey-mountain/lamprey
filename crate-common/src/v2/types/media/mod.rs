@@ -183,6 +183,15 @@ pub struct Media {
     pub remote: Option<Remote>,
 }
 
+// /// minimal struct to represent an image
+// pub struct MediaImageMinimal {
+//     pub id: MediaId,
+//     pub size: u64,
+//     pub content_type: Mime,
+//     pub width: u64,
+//     pub height: u64,
+// }
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

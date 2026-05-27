@@ -13,6 +13,7 @@ use crate::v1::types::{misc::Color, ChannelId, TagId};
 use crate::v1::types::util::{default_false_opt, some_option};
 
 /// a tag that can be applied to a thread
+// TODO: rename to ThreadTag
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

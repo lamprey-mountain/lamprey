@@ -2,7 +2,7 @@ use crate::services::voice::{ServiceVoice, SfuCommand, SfuStats};
 use crate::Result;
 use axum::extract::ws::WebSocket;
 use common::v1::types::voice::messages::{SfuEvent, SignallingEvent};
-use common::v1::types::{ChannelId, MessageSync, PeerId, SfuId, UserId};
+use common::v1::types::{ChannelId, MessageSync, SfuId, UserId};
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info};
@@ -101,26 +101,31 @@ impl ServiceVoice {
         let srv = self.state.services();
 
         match event {
-            SfuEvent::VoiceDispatch { peer_id, payload } => {
-                let user_id = self.state_get(peer_id).unwrap().inner.user_id;
+            SfuEvent::VoiceDispatch {
+                user_id,
+                channel_id,
+                payload,
+            } => {
                 self.state.broadcast(MessageSync::VoiceDispatch {
                     user_id,
-                    peer_id,
+                    channel_id,
                     payload: *payload,
                 })?;
             }
-            SfuEvent::VoiceState { peer_id, state } => {
-                let user_id = self.state_get(peer_id).unwrap().inner.user_id;
-                let old_state = srv.voice.state_get(peer_id);
+            SfuEvent::VoiceState {
+                user_id,
+                channel_id,
+                state,
+            } => {
+                let old_state = srv.voice.state_get(channel_id, user_id);
                 if let Some(state) = &state {
                     srv.voice.state_replace(state.clone())?;
                 } else {
-                    srv.voice.state_destroy(peer_id)?;
+                    srv.voice.state_destroy(channel_id, user_id)?;
                 }
 
                 self.state.broadcast(MessageSync::VoiceState {
                     user_id,
-                    peer_id,
                     state,
                     old_state: old_state.map(|h| h.inner().clone()),
                 })?;
@@ -142,7 +147,7 @@ impl ServiceVoice {
                 // Update stats if we had a way to mutate SfuHandleInner
                 debug!(?stats, "SFU stats updated");
             }
-            SfuEvent::PeerCreated { peer_id } => {
+            SfuEvent::PeerCreated { user_id: peer_id } => {
                 info!(%peer_id, "Peer created on SFU");
             }
             SfuEvent::CascadePrepared { token, addr } => {
@@ -153,8 +158,8 @@ impl ServiceVoice {
         Ok(())
     }
 
-    pub fn sfu_alloc(&self, channel_id: ChannelId, peer_id: PeerId) -> Result<SfuHandle> {
-        match self.sfu_alloc_user(channel_id, peer_id)? {
+    pub fn sfu_alloc(&self, channel_id: ChannelId, user_id: UserId) -> Result<SfuHandle> {
+        match self.sfu_alloc_user(channel_id, user_id)? {
             Allocation::JoinExisting(id) => todo!(),
             Allocation::CascadeToNew(id) => todo!(),
         }
@@ -174,7 +179,7 @@ impl ServiceVoice {
         for state in self.state_list_by_sfu(sfu_id) {
             let _ = self.state.broadcast(MessageSync::VoiceDispatch {
                 user_id: todo!(),
-                peer_id: todo!(),
+                channel_id: todo!(),
                 payload: SignallingEvent::Migrate {
                     new_sfu_id: todo!(),
                 },
@@ -205,7 +210,7 @@ impl ServiceVoice {
     // }
 
     /// figure out where to connect a user to
-    pub fn sfu_alloc_user(&self, channel_id: ChannelId, peer_id: PeerId) -> Result<Allocation> {
+    pub fn sfu_alloc_user(&self, channel_id: ChannelId, user_id: UserId) -> Result<Allocation> {
         todo!()
         // let acceptable_latency_ms = 80;
 
