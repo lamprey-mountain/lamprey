@@ -1,5 +1,5 @@
 {
-	"name": "@lamprey/sdk",
+	"name": "sdk",
 	"module": "index.ts",
 	"type": "module",
 	"version": "0.1.0",
