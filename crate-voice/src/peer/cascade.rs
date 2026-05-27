@@ -1,21 +1,16 @@
-use std::net::SocketAddr;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use bytes::Bytes;
 use common::v1::types::{
     voice::{
         internal::MediaData,
-        messages::{
-            BackboneDatagram, BackboneDispatch, BackboneDispatchEnvelope, PeerEvent,
-            SignallingCommand,
-        },
+        messages::{BackboneDatagram, BackboneDispatch, BackboneDispatchEnvelope, PeerEvent},
         SpeakingWithUserId,
     },
-    SfuId, UserId,
+    ChannelId, SfuId, UserId,
 };
 use tokio::sync::mpsc;
-use tracing::{debug, warn};
+use tracing::warn;
 
 use crate::{
     backbone::BackboneComms,
@@ -25,16 +20,17 @@ use crate::{
 /// a handle to a cascaded peer connection
 #[derive(Debug)]
 pub struct PeerCascading {
-    // id: UserId,
     command_tx: mpsc::UnboundedSender<CommandFull>,
     event_rx: mpsc::UnboundedReceiver<PeerEvent>,
 }
 
 /// the actor responsible for the cascade lifecycle
 pub struct PeerCascadingInner {
-    // id: UserId,
     /// the remote sfu this cascading peer represents
     remote_sfu: SfuId,
+
+    /// the channel this peer is for
+    channel_id: ChannelId,
 
     backbone: Arc<BackboneComms>,
     command_rx: mpsc::UnboundedReceiver<CommandFull>,
@@ -42,13 +38,13 @@ pub struct PeerCascadingInner {
 }
 
 impl PeerCascading {
-    pub fn spawn(remote_sfu: SfuId, backbone: Arc<BackboneComms>) -> Self {
+    pub fn spawn(remote_sfu: SfuId, channel_id: ChannelId, backbone: Arc<BackboneComms>) -> Self {
         let (command_tx, command_rx) = mpsc::unbounded_channel();
         let (event_tx, event_rx) = mpsc::unbounded_channel();
 
         let inner = PeerCascadingInner {
-            // id,
             remote_sfu,
+            channel_id,
             backbone,
             command_rx,
             event_tx,
@@ -121,7 +117,19 @@ impl PeerCascadingInner {
                     warn!("failed to queue keyframe dispatch to remote sfu: {:?}", e);
                 }
             }
-            Command::MediaAdded(_) => todo!("forward media addition to remote sfu"),
+            Command::MediaAdded(metadata) => {
+                let dispatch = BackboneDispatchEnvelope {
+                    nonce: None,
+                    dispatch: BackboneDispatch::TrackCreate {
+                        channel_id: self.channel_id,
+                        tracks: vec![metadata],
+                    },
+                };
+
+                if let Err(e) = self.backbone.send_dispatch(self.remote_sfu, dispatch) {
+                    warn!("failed to send track create dispatch: {:?}", e);
+                }
+            }
         }
     }
 }

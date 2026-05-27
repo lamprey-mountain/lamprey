@@ -341,7 +341,12 @@ impl PeerWebrtcInner {
                         key: m.inner.key.clone(),
                     });
                 }
-                Command::GenerateKeyframe { mid, rid, kind, user_id } => {
+                Command::GenerateKeyframe {
+                    mid,
+                    rid,
+                    kind,
+                    user_id,
+                } => {
                     if let Some(mut w) = self.rtc.writer((*mid).into()) {
                         let r = rid.map(|r| r.into());
                         let _ = w.request_keyframe(r, (*kind).into());
@@ -520,7 +525,12 @@ impl PeerWebrtcInner {
                     debug!("Want subscriptions: {:?}", subscriptions);
                 }
             },
-            Command::GenerateKeyframe { mid, rid, kind, user_id: _ } => {
+            Command::GenerateKeyframe {
+                mid,
+                rid,
+                kind,
+                user_id: _,
+            } => {
                 if let Some(mut w) = self.rtc.writer(mid.into()) {
                     let r = rid.map(|r| r.into());
                     let _ = w.request_keyframe(r, kind.into());

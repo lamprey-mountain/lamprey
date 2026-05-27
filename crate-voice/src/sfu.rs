@@ -242,8 +242,16 @@ impl Sfu {
                 let user_id = state.user_id;
                 self.peer_create(channel_id, user_id, state, permissions);
             }
-            SfuCommand::PrepareCascade { .. } => todo!("create token/addr, add to backbone"),
-            SfuCommand::CreateCascade { .. } => todo!("create new peer wrapping backbone"),
+            SfuCommand::PrepareCascade { sfu_id } => {
+                self.cascade_prepare(sfu_id);
+            }
+            SfuCommand::CreateCascade {
+                sfu_id,
+                token,
+                addr,
+            } => {
+                self.cascade_create(sfu_id, token, addr);
+            }
 
             SfuCommand::RouteUpdate { .. } => todo!("unsure how to impl this command?"),
             SfuCommand::Channel { .. } => todo!("unsure how to impl this command?"),
@@ -401,14 +409,40 @@ impl Sfu {
     }
 
     fn cascade_prepare(&mut self, sfu_id: SfuId) {
-        // let token = "some_random_token".to_string(); // TODO: generate secure token
-        // self.state.backbone.add_pending_token(token.clone(), sfu_id);
-        // TODO: share token and address with remote SFU via backend
+        let token: String = std::iter::repeat_with(fastrand::alphanumeric)
+            .take(32)
+            .collect();
+        self.backbone.add_pending_token(token.clone(), sfu_id);
+
+        let addr = format!(
+            "{}:{}",
+            self.state
+                .voice_config
+                .host_ipv4
+                .as_deref()
+                .or(self.state.voice_config.host_ipv6.as_deref())
+                .unwrap(),
+            self.state.voice_config.quic_port
+        )
+        .parse()
+        .unwrap();
+
+        if let Err(e) = self.backend.send(SfuEvent::CascadePrepared {
+            sfu_id,
+            token,
+            addr,
+        }) {
+            warn!("failed to send CascadePrepared event: {:?}", e);
+        }
     }
 
     fn cascade_create(&mut self, sfu_id: SfuId, token: String, addr: SocketAddr) {
-        // TODO: call self.state.backbone.connect(...)
-        // TODO: spawn PeerCascading and add to self.calls
+        let mut backbone = self.backbone.clone();
+        tokio::spawn(async move {
+            if let Err(e) = backbone.connect(addr, token, sfu_id).await {
+                warn!("failed to connect to remote sfu {}: {:?}", sfu_id, e);
+            }
+        });
     }
 
     /// get the shard id this channel belongs to

@@ -16,6 +16,7 @@ async-trait = "0.1.89"
 bytes = "1.11.1"
 common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common" }
 dashmap = "6.1.0"
+fastrand = "2.4.1"
 figment = { version = "0.10.19", features = ["env", "json", "toml"] }
 futures-util = "0.3.32"
 lamprey-backend-core = { version = "0.1.1", path = "../crate-backend-core" }

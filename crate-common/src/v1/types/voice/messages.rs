@@ -359,17 +359,30 @@ pub enum BackboneDispatch {
         /// the kind of the keyframe that should be generated
         kind: KeyframeRequestKind,
     },
-    // /// SFU-A tells SFU-B: "I have these tracks available locally"
-    // AnnounceTracks {
-    //     channel_id: ChannelId,
-    //     tracks: Vec<TrackManifest>,
-    // },
 
-    // /// SFU-B tells SFU-A: "I have users who want to see these specific tracks"
-    // Subscribe {
-    //     channel_id: ChannelId,
-    //     subscriptions: Vec<GlobalTrackId>,
-    // },
+    /// sender sfu has these tracks
+    TrackCreate {
+        channel_id: ChannelId,
+        tracks: Vec<TrackMetadataWithUserId>,
+    },
+
+    /// sender sfu no longer has these tracks
+    TrackRemove {
+        channel_id: ChannelId,
+        tracks: Vec<(Mid, UserId)>,
+    },
+
+    /// sender sfu wants these tracks
+    SubscriptionCreate {
+        channel_id: ChannelId,
+        subscriptions: Vec<(Subscription, UserId)>,
+    },
+
+    /// sender sfu no longer wants these tracks
+    SubscriptionRemove {
+        channel_id: ChannelId,
+        subscriptions: Vec<(Mid, UserId)>,
+    },
 }
 
 #[derive(Debug, Clone)]

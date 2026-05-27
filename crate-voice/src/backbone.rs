@@ -173,7 +173,12 @@ impl BackboneComms {
         self.shared.pending_tokens.insert(token, expected_sfu_id);
     }
 
-    pub async fn connect(&mut self, addr: SocketAddr, token: String) -> Result<()> {
+    pub async fn connect(
+        &mut self,
+        addr: SocketAddr,
+        token: String,
+        remote_sfu_id: SfuId,
+    ) -> Result<()> {
         let conn = self.endpoint.connect(addr, "lamprey-rtc")?.await?;
         let (mut send, mut recv) = conn.open_bi().await?;
 
@@ -193,8 +198,6 @@ impl BackboneComms {
             return Err(anyhow!("Did not receive Ack from remote SFU"));
         }
 
-        // TODO: get actual sfu id
-        let remote_sfu_id = SfuId::default();
         self.register_connection(remote_sfu_id, conn, send, recv);
 
         Ok(())
@@ -206,11 +209,7 @@ impl BackboneComms {
     }
 
     /// send a dispatch to a specific sfu
-    pub fn send_dispatch(
-        &self,
-        target: SfuId,
-        dispatch: BackboneDispatchEnvelope,
-    ) -> Result<()> {
+    pub fn send_dispatch(&self, target: SfuId, dispatch: BackboneDispatchEnvelope) -> Result<()> {
         if let Some(tx) = self.shared.control_txs.get(&target) {
             tx.send(dispatch)
                 .map_err(|_| anyhow!("Backbone connection task died"))?;
