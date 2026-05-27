@@ -212,12 +212,70 @@ pub fn tantivy_document_from_message(
     doc
 }
 
-pub fn _tantivy_document_from_user(_s: &UnifiedSchema, _user: User) -> TantivyDocument {
-    todo!()
+pub fn tantivy_document_from_user(s: &UnifiedSchema, user: User) -> TantivyDocument {
+    let mut doc = TantivyDocument::new();
+    doc.add_text(s.id, user.id.to_string());
+    doc.add_text(s.doctype, "User");
+    doc.add_text(s.name, user.name.clone());
+
+    if let Some(description) = user.description.clone() {
+        doc.add_text(s.content, description);
+    }
+
+    if let Some(registered_at) = user.registered_at {
+        doc.add_date(s.created_at, tantivy::DateTime::from_utc(*registered_at));
+    } else {
+        let created_at: Time = user.id.try_into().unwrap();
+        doc.add_date(s.created_at, tantivy::DateTime::from_utc(*created_at));
+    }
+
+    if let Some(deleted_at) = user.deleted_at {
+        doc.add_date(s.deleted_at, tantivy::DateTime::from_utc(*deleted_at));
+    }
+
+    let mut meta_fast: BTreeMap<String, OwnedValue> = BTreeMap::new();
+    meta_fast.insert("bot".to_string(), user.bot.into());
+    meta_fast.insert("system".to_string(), user.system.into());
+    meta_fast.insert("suspended".to_string(), user.is_suspended().into());
+
+    doc.add_object(s.metadata_fast, meta_fast);
+
+    doc
 }
 
-pub fn _tantivy_document_from_room(_s: &UnifiedSchema, _room: Room) -> TantivyDocument {
-    todo!()
+pub fn tantivy_document_from_room(s: &UnifiedSchema, room: Room) -> TantivyDocument {
+    let mut doc = TantivyDocument::new();
+    doc.add_text(s.id, room.id.to_string());
+    doc.add_text(s.doctype, "Room");
+    doc.add_text(s.name, room.name);
+
+    if let Some(description) = room.description {
+        doc.add_text(s.content, description);
+    }
+
+    let created_at: Time = room.id.try_into().unwrap();
+    doc.add_date(s.created_at, tantivy::DateTime::from_utc(*created_at));
+
+    if let Some(deleted_at) = room.deleted_at {
+        doc.add_date(s.deleted_at, tantivy::DateTime::from_utc(*deleted_at));
+    }
+
+    if let Some(archived_at) = room.archived_at {
+        doc.add_date(s.archived_at, tantivy::DateTime::from_utc(*archived_at));
+    }
+
+    if let Some(owner_id) = room.owner_id {
+        doc.add_text(s.author_id, owner_id.to_string());
+    }
+
+    let mut meta_fast: BTreeMap<String, OwnedValue> = BTreeMap::new();
+    meta_fast.insert("public".to_string(), room.public.into());
+    meta_fast.insert("member_count".to_string(), room.member_count.into());
+    meta_fast.insert("quarantined".to_string(), room.quarantined.into());
+
+    doc.add_object(s.metadata_fast, meta_fast);
+
+    doc
 }
 
 pub fn tantivy_document_from_channel(s: &UnifiedSchema, channel: Channel) -> TantivyDocument {

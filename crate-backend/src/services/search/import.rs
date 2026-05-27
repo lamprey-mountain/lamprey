@@ -1,7 +1,10 @@
 use std::{sync::Arc, time::Duration};
 
 use common::{
-    v1::types::{ChannelId, MediaVerId, MessageSync, PaginationDirection, PaginationQuery},
+    v1::types::{
+        Channel, ChannelId, MediaVerId, MessageSync, PaginationDirection, PaginationQuery, Room,
+        User,
+    },
     v2::types::media::Media,
 };
 use dashmap::DashSet;
@@ -17,7 +20,8 @@ use crate::{
         index::{CommitIndex, DeleteTerm, IndexActorRef, UpdateDocument, UpdateDocuments},
         schema::{
             tantivy_document_from_channel, tantivy_document_from_media,
-            tantivy_document_from_message, unified::UnifiedSchema,
+            tantivy_document_from_message, tantivy_document_from_room, tantivy_document_from_user,
+            unified::UnifiedSchema,
         },
     },
     Result, ServerStateInner,
@@ -27,6 +31,8 @@ use crate::{
 pub enum IngestKey {
     Message(Uuid),
     Channel(Uuid),
+    Room(Uuid),
+    User(Uuid),
     Media(Uuid),
 }
 
@@ -93,6 +99,18 @@ impl ContentIngestionManager {
                                 }
                                 MessageSync::ChannelUpdate { channel } => {
                                     self.index_channel(*channel, true).await;
+                                }
+                                MessageSync::RoomCreate { room } => {
+                                    self.index_room(room, false).await;
+                                }
+                                MessageSync::RoomUpdate { room } => {
+                                    self.index_room(room, true).await;
+                                }
+                                MessageSync::UserCreate { user } => {
+                                    self.index_user(user, false).await;
+                                }
+                                MessageSync::UserUpdate { user } => {
+                                    self.index_user(user, true).await;
                                 }
                                 MessageSync::MediaProcessed { media, .. } => {
                                     self.index_media(media, false).await;
@@ -327,7 +345,7 @@ impl ContentIngestionManager {
         }
     }
 
-    async fn index_channel(&self, channel: common::v1::types::Channel, is_update: bool) {
+    async fn index_channel(&self, channel: Channel, is_update: bool) {
         if is_update {
             let key = IngestKey::Channel(*channel.id);
             if self.update_throttle.get(&key).await.is_some() {
@@ -356,5 +374,33 @@ impl ContentIngestionManager {
         } else {
             warn!(media_id = ?media.id, "Skipping media without user_id");
         }
+    }
+
+    async fn index_room(&self, room: Room, is_update: bool) {
+        if is_update {
+            let key = IngestKey::Room(*room.id);
+            if self.update_throttle.get(&key).await.is_some() {
+                return;
+            }
+            self.update_throttle.insert(key, ()).await;
+        }
+
+        let doc = tantivy_document_from_room(&self.schema, room.clone());
+        let term = Term::from_field_text(self.schema.id, &room.id.to_string());
+        let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
+    }
+
+    async fn index_user(&self, user: User, is_update: bool) {
+        if is_update {
+            let key = IngestKey::User(*user.id);
+            if self.update_throttle.get(&key).await.is_some() {
+                return;
+            }
+            self.update_throttle.insert(key, ()).await;
+        }
+
+        let doc = tantivy_document_from_user(&self.schema, user.clone());
+        let term = Term::from_field_text(self.schema.id, &user.id.to_string());
+        let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
     }
 }
