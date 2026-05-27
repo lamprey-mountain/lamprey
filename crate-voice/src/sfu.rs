@@ -13,7 +13,7 @@ use bytes::{Bytes, BytesMut};
 use common::v1::types::{
     voice::{
         internal::SfuPermissions,
-        messages::{BackboneDatagram, BackboneDispatch, SfuCommand},
+        messages::{BackboneDatagram, BackboneDispatch, PeerEvent, SfuCommand, SfuEvent},
         VoiceState,
     },
     ChannelId, SfuId, UserId,
@@ -50,6 +50,7 @@ pub struct Sfu {
     sock_v6: Arc<UdpSocket>,
 
     backbone: BackboneComms,
+    backend: BackendConnection,
 }
 
 pub type CallHandle = Arc<CallHandleInner>;
@@ -97,6 +98,7 @@ impl Sfu {
         });
 
         let backbone = BackboneComms::create(Arc::clone(&state))?;
+        let backend = BackendConnection::connect(Arc::clone(&state)).await?;
 
         let me = Self {
             state,
@@ -106,6 +108,7 @@ impl Sfu {
             sock_v4,
             sock_v6,
             backbone,
+            backend,
         };
 
         me.serve_inner().await
@@ -116,8 +119,6 @@ impl Sfu {
 
         let mut buf_v4 = BytesMut::with_capacity(2048);
         let mut buf_v6 = BytesMut::with_capacity(2048);
-
-        let mut backend = BackendConnection::connect(Arc::clone(&self.state)).await?;
 
         let num_workers = voice_config
             .workers
@@ -137,7 +138,7 @@ impl Sfu {
                 event = self.backbone.poll() => {
                     self.handle_backbone_event(event)
                 }
-                command = backend.poll() => {
+                command = self.backend.poll() => {
                     if let Ok(cmd) = command {
                         self.handle_command(cmd).await;
                     }
@@ -320,12 +321,12 @@ impl Sfu {
         // self.shards[0].set.spawn_local(future);
 
         let peer2 = peer.clone();
+        let backend2 = self.backend.handle();
         let call2 = Arc::clone(&call);
         tokio::spawn(async move {
             let mut peer = peer2;
             let call = call2;
-
-            use common::v1::types::voice::messages::PeerEvent;
+            let backend = backend2;
 
             while let Some(event) = peer.poll().await {
                 match event {
@@ -335,22 +336,33 @@ impl Sfu {
                     PeerEvent::Connected => {
                         debug!("Peer {} connected in channel {}", user_id, channel_id);
                     }
+                    // TODO: log _e
                     PeerEvent::MediaAdded(m) => {
-                        // TODO: error handling
-                        let _ = call
+                        if let Err(_e) = call
                             .tx
-                            .send(Arc::new(CommandFull::Inner(Command::MediaAdded(m))));
+                            .send(Arc::new(CommandFull::Inner(Command::MediaAdded(m))))
+                        {
+                            warn!("failed to send MediaAdded command");
+                        }
                     }
                     PeerEvent::MediaData(m) => {
-                        // TODO: error handling
-                        let _ = call.tx.send(Arc::new(CommandFull::MediaData(m)));
+                        if let Err(_e) = call.tx.send(Arc::new(CommandFull::MediaData(m))) {
+                            warn!("failed to send MediaData command");
+                        }
                     }
                     PeerEvent::Speaking(s) => {
-                        // TODO: error handling
-                        let _ = call.tx.send(Arc::new(CommandFull::Speaking(s)));
+                        if let Err(_e) = call.tx.send(Arc::new(CommandFull::Speaking(s))) {
+                            warn!("failed to send Speaking command");
+                        }
                     }
-                    PeerEvent::Signalling(_s) => {
-                        // TODO: send signalling back to client
+                    PeerEvent::Signalling(s) => {
+                        if let Err(e) = backend.send(SfuEvent::VoiceDispatch {
+                            user_id,
+                            channel_id,
+                            payload: Box::new(s),
+                        }) {
+                            warn!("failed to send signalling event to backend: {:?}", e);
+                        }
                     }
                     PeerEvent::KeyframeRequest {
                         source_mid,
@@ -368,6 +380,7 @@ impl Sfu {
                     }
                 }
             }
+
             debug!("Event loop for peer {} ended", user_id);
         });
 

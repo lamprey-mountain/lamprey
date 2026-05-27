@@ -17,6 +17,10 @@ pub struct BackendConnection {
     command_rx: UnboundedReceiver<SfuCommand>,
 }
 
+pub struct BackendHandle {
+    event_tx: UnboundedSender<SfuEvent>,
+}
+
 impl BackendConnection {
     /// connect to the server and start receiving events
     pub async fn connect(state: State) -> Result<Self> {
@@ -99,7 +103,21 @@ impl BackendConnection {
             .ok_or_else(|| anyhow::anyhow!("Backend command channel closed"))
     }
 
-    pub async fn send(&self, event: SfuEvent) -> Result<()> {
+    pub fn send(&self, event: SfuEvent) -> Result<()> {
+        self.event_tx
+            .send(event)
+            .map_err(|e| anyhow::anyhow!("Failed to queue event: {e}"))
+    }
+
+    pub fn handle(&self) -> BackendHandle {
+        BackendHandle {
+            event_tx: self.event_tx.clone(),
+        }
+    }
+}
+
+impl BackendHandle {
+    pub fn send(&self, event: SfuEvent) -> Result<()> {
         self.event_tx
             .send(event)
             .map_err(|e| anyhow::anyhow!("Failed to queue event: {e}"))
