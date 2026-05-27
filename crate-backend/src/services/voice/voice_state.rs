@@ -45,6 +45,18 @@ impl ServiceVoice {
         session_id: Option<SessionId>,
         connection_id: Option<ConnectionId>,
     ) -> Result<VoiceStateHandle> {
+        self.state_create_inner(user_id, update, session_id, connection_id, Time::now_utc())
+            .await
+    }
+
+    async fn state_create_inner(
+        &self,
+        user_id: UserId,
+        update: VoiceStateUpdate,
+        session_id: Option<SessionId>,
+        connection_id: Option<ConnectionId>,
+        joined_at: Time,
+    ) -> Result<VoiceStateHandle> {
         let srv = self.state.services();
 
         // permission checks
@@ -64,10 +76,18 @@ impl ServiceVoice {
 
         let old_states = srv.voice.state_list_by_user(user_id);
         if user.bot {
-            // TODO: remove existing voice state for channel if it exists
+            // remove existing voice state for channel if it exists
+            if let Some(state) = old_states
+                .iter()
+                .find(|s| s.inner().channel_id == update.channel_id)
+            {
+                self.state_destroy(state.inner().channel_id, user_id)?;
+            }
         } else {
-            // TODO: remove all existing voice states
-            // self.state_destroy();
+            // remove all existing voice states
+            for state in old_states {
+                self.state_destroy(state.inner().channel_id, user_id)?;
+            }
         }
 
         // create call if it doesn't exist
@@ -110,7 +130,7 @@ impl ServiceVoice {
             channel_id: update.channel_id,
             session_id,
             connection_id,
-            joined_at: Time::now_utc(),
+            joined_at,
             mute,
             deaf,
             self_mute: update.self_mute,
@@ -144,7 +164,7 @@ impl ServiceVoice {
     }
 
     /// update a voice state by user_id
-    pub fn state_update(&self, user_id: UserId, update: VoiceStateUpdate) -> Result<()> {
+    pub async fn state_update(&self, user_id: UserId, update: VoiceStateUpdate) -> Result<()> {
         let call = self
             .call_get(update.channel_id)
             .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownCall)))?;
@@ -163,8 +183,23 @@ impl ServiceVoice {
         new_inner.self_deaf = update.self_deaf;
         new_inner.self_video = update.self_video;
 
+        // if channel changed, destroy and recreate voice state
         if new_inner.channel_id != update.channel_id {
-            // TODO: handle this
+            let old_channel_id = new_inner.channel_id;
+            let user_id = handle.inner.user_id;
+
+            self.state_destroy(old_channel_id, user_id)?;
+
+            let new_state = self
+                .state_create(
+                    user_id,
+                    update,
+                    old_state.session_id.clone(),
+                    old_state.connection_id.clone(),
+                )
+                .await?;
+
+            return Ok(());
         }
 
         let new_handle = Arc::new(VoiceStateHandleInner {

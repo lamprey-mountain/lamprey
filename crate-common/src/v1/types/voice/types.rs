@@ -70,7 +70,6 @@ impl Deref for IceCandidate {
 /// - Users can only have one voice state per channel
 /// - Non-bots can only have one state across all channels in all rooms
 /// - Bots can have any number of voice states
-// TODO: enforce the constraints listed above
 // TODO: add room_id?
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -243,6 +242,7 @@ pub struct TrackMetadata {
 //     pub user_ids: Vec<UserId>,
 // }
 
+/// track metadata. `mid` is the **mapped** media id, ie. the mid used between the final sfu/peer
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -255,6 +255,72 @@ pub struct TrackMetadataWithUserId {
 
     /// the source user this track came from
     pub user_id: UserId,
+}
+
+#[cfg(any())]
+mod next {
+    #[cfg(feature = "serde")]
+    use serde::{Deserialize, Serialize};
+
+    #[cfg(feature = "utoipa")]
+    use utoipa::ToSchema;
+
+    use crate::v1::types::{voice::Mid, UserId};
+
+    use super::{MediaKind, TrackKey, TrackLayer};
+
+    /// the base metadata for a track
+    #[derive(Debug, Clone)]
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub struct TrackMetadataInner {
+        /// whether this track is for audio or video
+        pub kind: MediaKind,
+
+        /// group tracks together into streams; identical to ssrc but easier to manage client side
+        ///
+        /// currently there are two streams `user` and `screen` used by frontend
+        pub key: TrackKey,
+
+        /// simulcasting layers, only applicable for video
+        #[cfg_attr(
+            feature = "serde",
+            serde(default, skip_serializing_if = "Vec::is_empty")
+        )]
+        pub layers: Vec<TrackLayer>,
+        // /// whisper config
+        // pub whisper: Option<TrackWhisper>,
+    }
+
+    /// metadata of the track at its origin point.
+    #[derive(Debug, Clone)]
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub struct TrackMetadataSource {
+        #[serde(flatten)]
+        pub inner: TrackMetadataInner,
+
+        /// the source mid
+        pub source_mid: Mid,
+
+        /// the source user this track came from
+        pub user_id: UserId,
+    }
+
+    /// metadata of a track projected to a subscriber with a remapped media id.
+    #[derive(Debug, Clone)]
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub struct TrackMetadataMapped {
+        #[serde(flatten)]
+        pub inner: TrackMetadataInner,
+
+        /// the mapped mid
+        pub mapped_mid: Mid,
+
+        /// the source user this track came from
+        pub user_id: UserId,
+    }
 }
 
 /// which stream this track is associated with. generally there will be one video track and one audio track per stream.
@@ -271,19 +337,11 @@ pub enum TrackKey {
 
     /// a screenshare
     Screen,
-    // TODO: allow track keys not defined here?
-    // /// an unknown track type
-    // #[serde(untagged)]
-    // Other(String),
-}
 
-// TODO: ???
-// impl TrackKey {
-//     /// whether this track should be displayed like a screenshare
-//     pub fn is_screenshare(&self) -> bool {
-//         todo!()
-//     }
-// }
+    /// an unknown track type
+    #[serde(untagged)]
+    Other(String),
+}
 
 // TODO: doc comment
 #[derive(Debug, Clone, PartialEq, Eq)]

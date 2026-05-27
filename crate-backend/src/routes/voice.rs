@@ -165,22 +165,24 @@ async fn voice_state_patch(
 
     if state_changed {
         // FIXME: handle updating `suppress` field
-        srv.voice.state_update(
-            target_user_id,
-            VoiceStateUpdate {
-                channel_id: current_state.channel_id,
-                self_deaf: current_state.self_deaf,
-                self_mute: current_state.self_mute,
-                self_video: current_state.self_video,
-                screenshare: Some(Some(VoiceStateScreenshareUpdate {
-                    thumbnail: current_state
-                        .screenshare
-                        .as_ref()
-                        .and_then(|s| s.thumbnail)
-                        .clone(),
-                })),
-            },
-        )?;
+        srv.voice
+            .state_update(
+                target_user_id,
+                VoiceStateUpdate {
+                    channel_id: current_state.channel_id,
+                    self_deaf: current_state.self_deaf,
+                    self_mute: current_state.self_mute,
+                    self_video: current_state.self_video,
+                    screenshare: Some(Some(VoiceStateScreenshareUpdate {
+                        thumbnail: current_state
+                            .screenshare
+                            .as_ref()
+                            .and_then(|s| s.thumbnail)
+                            .clone(),
+                    })),
+                },
+            )
+            .await?;
     }
 
     if let Some(room_id) = chan.room_id {

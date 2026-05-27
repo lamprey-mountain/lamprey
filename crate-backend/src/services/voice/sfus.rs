@@ -158,7 +158,7 @@ impl ServiceVoice {
             } => {
                 let old_state = srv.voice.state_get(channel_id, user_id);
                 let new_channel_id = update.channel_id;
-                srv.voice.state_update(user_id, update)?;
+                srv.voice.state_update(user_id, update).await?;
                 let state = srv.voice.state_get(new_channel_id, user_id).unwrap();
 
                 self.state.broadcast(MessageSync::VoiceState {
@@ -291,7 +291,8 @@ impl ServiceVoice {
     }
 
     /// find the closest sfu to this context
-    fn sfu_find_closest(&self, loc: &UserLocation) -> Result<SfuHandle> {
+    fn sfu_find_closest(&self, _loc: &UserLocation) -> Result<SfuHandle> {
+        // TEMP: get the first sfu with capacity
         self.sfus
             .iter()
             .next()
@@ -304,7 +305,7 @@ impl ServiceVoice {
     pub async fn sfu_alloc_user(
         &self,
         channel_id: ChannelId,
-        user_id: UserId,
+        _user_id: UserId,
     ) -> Result<Allocation> {
         let router = self.router.read().await;
         let acceptable_latency_ms = router.config.maximum_latency;
