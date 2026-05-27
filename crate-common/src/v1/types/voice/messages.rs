@@ -79,11 +79,14 @@ pub enum PeerEvent {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 pub enum SfuCommand {
+    /// initial config for this sfu
+    Init {
+        /// the id of this sfu
+        sfu_id: SfuId,
+    },
+
     /// should recalculate latency
     RecalculateLatency { target_sfu: SfuId },
-
-    /// move all peers to another sfu
-    MigrateAll { target_sfu: SfuId },
 
     /// move these peers to another sfu
     MigrateUsers {
@@ -161,12 +164,6 @@ pub enum SfuCommand {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 pub enum SfuEvent {
-    /// this sfu is ready to handle peers
-    Ready {
-        /// the id the sfu generated
-        sfu_id: SfuId,
-    },
-
     /// calculated rtt latency to another sfu
     Latency {
         target_sfu: SfuId,
@@ -181,9 +178,15 @@ pub enum SfuEvent {
     // /// "I am now the Origin for Channel X"
     // ChannelHealed { channel_id: ChannelId },
     /// a peer has been created (response to `CreatePeer` and `CreateCascade`)
-    PeerCreated { user_id: UserId },
+    PeerCreated {
+        user_id: UserId,
+        channel_id: ChannelId,
+    },
 
     CascadePrepared {
+        /// the id of the connecting sfu
+        sfu_id: SfuId,
+
         /// the secret token to authentication with
         token: String,
 
@@ -198,11 +201,17 @@ pub enum SfuEvent {
         payload: Box<SignallingEvent>,
     },
 
-    /// upsert the voice state of a peer, or disconnect them
+    /// update the voice state of a peer
     VoiceState {
         user_id: UserId,
         channel_id: ChannelId,
-        state: Option<VoiceState>,
+        update: VoiceStateUpdate,
+    },
+
+    /// disconnect a peer
+    PeerDisconnect {
+        user_id: UserId,
+        channel_id: ChannelId,
     },
 }
 
@@ -264,10 +273,13 @@ pub enum SignallingEvent {
         sfu_id: SfuId,
     },
 
+    /// disconnected
+    Disconnected,
+
     /// a sdp offer
     Offer {
         sdp: SessionDescription,
-        tracks: Vec<TrackMetadata>,
+        tracks: Vec<TrackMetadataWithUserId>,
     },
 
     /// a sdp answer
@@ -339,6 +351,9 @@ pub enum BackboneDispatch {
 
     /// a peer needs a keyframe to render
     Keyframe {
+        /// the id of the user the track is from
+        user_id: UserId,
+
         /// the track to generate a keyframe for
         mid: Mid,
 
@@ -376,16 +391,19 @@ pub enum BackboneDatagram {
     Speaking(SpeakingWithUserId),
 }
 
-// TODO: use this
+#[derive(Debug, thiserror::Error)]
 pub enum BackboneDatagramDeserializeError {
     /// payload is empty
+    #[error("payload is empty")]
     EmptyPayload,
 
     /// payload unexpectedly ended
+    #[error("payload unexpectedly ended")]
     UnexpectedEof,
 
     /// unknown payload type
-    UnknownPayloadType,
+    #[error("unknown payload type: {0}")]
+    UnknownPayloadType(u8),
 }
 
 impl BackboneDatagram {
@@ -409,23 +427,23 @@ impl BackboneDatagram {
     }
 
     /// deserialize this datagram from bytes
-    // TODO: better error message
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, ()> {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, BackboneDatagramDeserializeError> {
         if bytes.is_empty() {
-            return Err(());
+            return Err(BackboneDatagramDeserializeError::EmptyPayload);
         }
         let tag = bytes[0];
         let payload = &bytes[1..];
         match tag {
             0 => {
-                let m = MediaData::from_bytes(payload)?;
+                let m = MediaData::from_bytes(payload)
+                    .map_err(|_| BackboneDatagramDeserializeError::UnexpectedEof)?;
                 Ok(BackboneDatagram::Media(m))
             }
             1 => {
                 use bytes::Buf;
                 let mut buf = payload;
                 if buf.remaining() < 16 + 16 + 1 {
-                    return Err(());
+                    return Err(BackboneDatagramDeserializeError::UnexpectedEof);
                 }
                 let mut peer_bytes = [0u8; 16];
                 buf.copy_to_slice(&mut peer_bytes);
@@ -443,7 +461,7 @@ impl BackboneDatagram {
                     flags,
                 }))
             }
-            _ => Err(()),
+            _ => Err(BackboneDatagramDeserializeError::UnknownPayloadType(tag)),
         }
     }
 }

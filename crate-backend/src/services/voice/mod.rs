@@ -7,6 +7,7 @@ use common::v1::types::voice::router::{VoiceRouter, VoiceRouterConfig};
 use common::v1::types::{ChannelId, SfuId};
 use dashmap::DashMap;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 
 pub mod calls;
 // pub mod ring;
@@ -17,45 +18,21 @@ pub struct ServiceVoice {
     pub state: Arc<ServerStateInner>,
     pub calls: DashMap<ChannelId, CallHandle>,
     pub sfus: DashMap<SfuId, SfuHandle>,
-    pub router: VoiceRouter,
+    pub router: RwLock<VoiceRouter>,
 }
 
 impl ServiceVoice {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
+        let router = VoiceRouter::new(VoiceRouterConfig::default());
         Self {
             state,
             calls: DashMap::new(),
             sfus: DashMap::new(),
-            router: VoiceRouter::new(VoiceRouterConfig::default()),
+            router: RwLock::new(router),
         }
     }
 
     // TODO: ===== remove all code below =====
-
-    // pub async fn state_put(&self, state: VoiceState) {
-    //     self.voice_states.insert(state.user_id, state.clone());
-
-    //     if !self.calls.contains_key(&state.channel_id) {
-    //         let channel = self
-    //             .state
-    //             .services()
-    //             .channels
-    //             .get(state.channel_id, None)
-    //             .await;
-    //         if let Ok(channel) = channel {
-    //             let room_id = channel.room_id;
-    //             self.calls.insert(
-    //                 state.channel_id,
-    //                 Call {
-    //                     room_id,
-    //                     channel_id: state.channel_id,
-    //                     topic: None,
-    //                     created_at: Time::now_utc(),
-    //                 },
-    //             );
-    //         }
-    //     }
-    // }
 
     // pub async fn state_remove(&self, user_id: &UserId) {
     //     if let Some((_, state)) = self.voice_states.remove(user_id) {
@@ -82,47 +59,6 @@ impl ServiceVoice {
     //             }
     //         }
     //     }
-    // }
-
-    // /// select the "best" sfu and pair it with this thread id. return the existing sfu id if it exists.
-    // ///
-    // /// currently "best" means the sfu with least load in terms of # of threads using it
-    // pub async fn alloc_sfu(&self, channel_id: ChannelId) -> Result<SfuId> {
-    //     if let Some(existing) = self.channel_to_sfu.get(&channel_id) {
-    //         return Ok(*existing);
-    //     }
-
-    //     let sfu_channel_counts = DashMap::<SfuId, u64>::new();
-    //     for i in &self.sfus {
-    //         sfu_channel_counts.insert(*i.key(), 0);
-    //     }
-    //     for i in &self.channel_to_sfu {
-    //         *sfu_channel_counts.get_mut(i.value()).unwrap() += 1;
-    //     }
-    //     let mut sorted: Vec<_> = sfu_channel_counts.into_iter().collect();
-    //     sorted.sort_by_key(|(_, count)| *count);
-    //     if let Some((chosen, _)) = sorted.first() {
-    //         self.channel_to_sfu.insert(channel_id, *chosen);
-    //         let channel = self.state.services().channels.get(channel_id, None).await?;
-    //         self.state
-    //             .broadcast_sfu(SfuCommand::Channel {
-    //                 channel: channel.into(),
-    //             })
-    //             .unwrap();
-    //         Ok(*chosen)
-    //     } else {
-    //         error!("no available sfu");
-    //         Err(Error::BadStatic("no available sfu"))
-    //     }
-    // }
-
-    // pub fn call_get(&self, channel_id: ChannelId) -> Result<Call> {
-    //     self.calls
-    //         .get(&channel_id)
-    //         .map(|s| s.clone())
-    //         .ok_or(Error::ApiError(ApiError::from_code(
-    //             ErrorCode::UnknownVoiceChannel,
-    //         )))
     // }
 
     // pub async fn call_create(&self, params: CallCreate) -> Result<()> {

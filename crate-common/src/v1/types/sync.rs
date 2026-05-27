@@ -1127,6 +1127,7 @@ pub struct SyncParams {
 #[repr(u8)]
 pub enum SyncVersion {
     V1 = 1,
+    V2 = 2,
 }
 
 #[cfg(feature = "serde")]
@@ -1147,6 +1148,7 @@ impl<'de> Deserialize<'de> for SyncVersion {
     {
         match u8::deserialize(deserializer)? {
             1 => Ok(SyncVersion::V1),
+            2 => Ok(SyncVersion::V2),
             n => Err(serde::de::Error::unknown_variant(&n.to_string(), &["1"])),
         }
     }

@@ -325,11 +325,13 @@ pub struct ConfigVoice {
     /// the udp port to use for media traffic
     ///
     /// defaults to a random port
+    #[serde(default)]
     pub udp_port: u16,
 
     /// the quic port to use for cascading traffic
     ///
     /// defaults to a random port
+    #[serde(default)]
     pub quic_port: u16,
 }
 

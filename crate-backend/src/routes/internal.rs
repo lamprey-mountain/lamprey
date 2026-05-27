@@ -39,7 +39,7 @@ async fn internal_rpc(
 
     Ok(ws.on_upgrade(move |socket| async move {
         let srv = s.services();
-        if let Err(e) = srv.voice.sfu_handle_connect(SfuId::new(), socket).await {
+        if let Err(e) = srv.voice.sfu_handle_connect(socket).await {
             error!("Failed to connect to SFU: {:?}", e);
             // NOTE: do i need to destroy the sfu here?
             return;

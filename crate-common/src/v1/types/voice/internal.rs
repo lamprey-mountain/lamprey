@@ -154,6 +154,8 @@ impl SfuPermissions {
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct SfuChannel {
     pub id: ChannelId,
+
+    // only exists for debug
     pub name: String,
 
     // QUESTION: does this affect video?

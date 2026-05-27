@@ -7,7 +7,7 @@ use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Time};
-use common::v1::types::voice::RingEligibility;
+use common::v1::types::voice::{RingEligibility, VoiceStateUpdate};
 use common::v1::types::{
     AuditLogEntryType, ChannelType, MessageSync, PaginationResponse, Permission,
 };
@@ -164,7 +164,17 @@ async fn voice_state_patch(
     perms.check()?;
 
     if state_changed {
-        srv.voice.state_replace(current_state.clone())?;
+        // FIXME: handle updating `suppress` field
+        srv.voice.state_update(
+            target_user_id,
+            VoiceStateUpdate {
+                channel_id: current_state.channel_id,
+                self_deaf: current_state.self_deaf,
+                self_mute: current_state.self_mute,
+                self_video: current_state.self_video,
+                screenshare: Some(current_state.screenshare.clone()),
+            },
+        )?;
     }
 
     if let Some(room_id) = chan.room_id {
@@ -439,7 +449,11 @@ async fn voice_call_create(
         return Err(ApiError::from_code(ErrorCode::InvalidData).into());
     }
 
-    let call_handle = s.services().voice.call_create(req.call).await?;
+    let call_handle = s
+        .services()
+        .voice
+        .call_create(req.channel_id, req.call)
+        .await?;
     Ok((StatusCode::CREATED, Json(call_handle.call().clone())))
 }
 

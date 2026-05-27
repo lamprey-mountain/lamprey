@@ -45,20 +45,24 @@ impl ServiceVoice {
     }
 
     /// create a call
-    // FIXME: automatically create call when voice state is created/updated for a channel for the first time
-    pub async fn call_create(&self, params: CallCreate) -> Result<CallHandle> {
+    // TODO: make sure that calls are automatically created when a voice state is created/updated for a channel for the first time
+    pub async fn call_create(
+        &self,
+        channel_id: ChannelId,
+        params: CallCreate,
+    ) -> Result<CallHandle> {
         // 1. return (and bump) existing call if it exists
-        if self.calls.contains_key(&params.channel_id) {
-            self.call_bump(params.channel_id);
-            return Ok(self.call_get(params.channel_id).unwrap());
+        if self.calls.contains_key(&channel_id) {
+            self.call_bump(channel_id);
+            return Ok(self.call_get(channel_id).unwrap());
         }
 
         // 2. fetch room_id for new call
         let srv = self.state.services();
-        let channel = srv.channels.get(params.channel_id, None).await?;
+        let channel = srv.channels.get(channel_id, None).await?;
         let call = Call {
             room_id: channel.room_id,
-            channel_id: params.channel_id,
+            channel_id: channel_id,
             topic: params.topic,
             created_at: Time::now_utc(),
         };
@@ -67,11 +71,11 @@ impl ServiceVoice {
         let handle = Arc::new(CallHandleInner {
             call,
             sfus: DashSet::new(),
-            cleanup_task: self.spawn_cleanup_task(params.channel_id),
+            cleanup_task: self.spawn_cleanup_task(channel_id),
             voice_states: DashMap::new(),
         });
 
-        self.calls.insert(params.channel_id, Arc::clone(&handle));
+        self.calls.insert(channel_id, Arc::clone(&handle));
 
         Ok(handle)
     }

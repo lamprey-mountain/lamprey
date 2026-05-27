@@ -36,7 +36,7 @@ pub struct BackboneComms {
 
 #[derive(Debug)]
 pub enum BackboneEvent {
-    /// a command was received was closed
+    /// a command was received
     Dispatch {
         sfu_id: SfuId,
 
@@ -60,9 +60,12 @@ impl From<BackboneEvent> for Option<CommandFull> {
     fn from(value: BackboneEvent) -> Self {
         match value {
             BackboneEvent::Dispatch { dispatch, .. } => match dispatch {
-                BackboneDispatch::Keyframe { mid, rid, kind } => {
-                    Some(CommandFull::Inner(GenerateKeyframe { mid, rid, kind }))
-                }
+                BackboneDispatch::Keyframe {
+                    user_id,
+                    mid,
+                    rid,
+                    kind,
+                } => Some(CommandFull::Inner(GenerateKeyframe { mid, rid, kind })),
                 _ => None,
             },
             BackboneEvent::Datagram(dg) => match dg {
@@ -116,6 +119,17 @@ impl BackboneComms {
             socket,
             default_runtime().unwrap(),
         )?;
+
+        // TODO: use tokio socket
+        // let socket = tokio::net::UdpSocket::bind(addr).await?;
+        // let endpoint_config = quinn::EndpointConfig::default();
+        // let endpoint = quinn::Endpoint::new_with_abstract_socket(
+        //     endpoint_config,
+        //     Some(config),
+        //     Arc::new(socket), // TODO
+        //     default_runtime().unwrap(),
+        // )?;
+
         info!("listening on {}", endpoint.local_addr()?);
 
         let pending_tokens = Arc::new(DashMap::new());

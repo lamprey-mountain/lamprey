@@ -1,7 +1,7 @@
 //! main code for acting as a selective forwarding unit
 
 use crate::{
-    backbone::BackboneComms,
+    backbone::{BackboneComms, BackboneEvent},
     backend::BackendConnection,
     peer::{webrtc::PeerWebrtc, Command, Peer, PeerEndpoint},
     util::extract_stun_ufrag,
@@ -11,18 +11,22 @@ use crate::PeerId;
 use anyhow::Result;
 use bytes::{Bytes, BytesMut};
 use common::v1::types::{
-    voice::{internal::SfuPermissions, messages::SfuCommand, VoiceState},
+    voice::{
+        internal::SfuPermissions,
+        messages::{BackboneDatagram, BackboneDispatch, SfuCommand},
+        VoiceState,
+    },
     ChannelId, SfuId, UserId,
 };
 use dashmap::DashMap;
 use lamprey_backend_core::config::{Config, ConfigVoice};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
-use tokio::task::LocalSet;
+use tokio::{net::UdpSocket, sync::RwLock, task::LocalSet};
 use tracing::{debug, error, warn};
 
 /// shared state
 pub struct StateInner {
-    pub id: SfuId,
+    pub id: RwLock<Option<SfuId>>,
     pub config: Config,
     pub voice_config: ConfigVoice,
 }
@@ -38,8 +42,8 @@ pub struct Sfu {
     // mapping to help routing
     ufrag_to_peer: Arc<dashmap::DashMap<String, PeerId>>,
 
-    sock_v4: Option<Arc<tokio::net::UdpSocket>>,
-    sock_v6: Option<Arc<tokio::net::UdpSocket>>,
+    sock_v4: Arc<UdpSocket>,
+    sock_v6: Arc<UdpSocket>,
 }
 
 pub struct CallHandle {
@@ -58,42 +62,43 @@ pub struct SfuShard {
 pub struct ShardId(pub usize);
 
 impl Sfu {
-    pub fn new(config: Config) -> Self {
-        Self {
-            state: Arc::new(StateInner {
-                id: SfuId::new(),
-                voice_config: config
-                    .voice
-                    .as_ref()
-                    .expect("cannot start sfu with no voice config")
-                    .clone(),
-                config,
-            }),
-            shards: vec![],
-            calls: HashMap::new(),
-            ufrag_to_peer: Arc::new(DashMap::new()),
-            sock_v4: None,
-            sock_v6: None,
-        }
-    }
-
-    pub async fn serve(mut self) -> Result<()> {
-        let voice_config = &self.state.voice_config;
+    pub async fn serve(config: Config) -> Result<()> {
+        let voice_config = config
+            .voice
+            .as_ref()
+            .expect("cannot start sfu with no voice config")
+            .clone();
 
         let addr_v4 = SocketAddr::new(
             crate::util::select_host_address_ipv4(voice_config.host_ipv4.as_deref())?,
             voice_config.udp_port,
         );
-        let sock_v4 = Arc::new(tokio::net::UdpSocket::bind(addr_v4).await?);
+        let sock_v4 = Arc::new(UdpSocket::bind(addr_v4).await?);
 
         let addr_v6 = SocketAddr::new(
             crate::util::select_host_address_ipv6(voice_config.host_ipv6.as_deref())?,
             voice_config.udp_port,
         );
-        let sock_v6 = Arc::new(tokio::net::UdpSocket::bind(addr_v6).await?);
+        let sock_v6 = Arc::new(UdpSocket::bind(addr_v6).await?);
 
-        self.sock_v4 = Some(sock_v4.clone());
-        self.sock_v6 = Some(sock_v6.clone());
+        let me = Self {
+            state: Arc::new(StateInner {
+                id: RwLock::new(None),
+                voice_config,
+                config,
+            }),
+            shards: vec![],
+            calls: HashMap::new(),
+            ufrag_to_peer: Arc::new(DashMap::new()),
+            sock_v4,
+            sock_v6,
+        };
+
+        me.serve_inner().await
+    }
+
+    async fn serve_inner(mut self) -> Result<()> {
+        let voice_config = &self.state.voice_config;
 
         let mut buf_v4 = BytesMut::with_capacity(2048);
         let mut buf_v6 = BytesMut::with_capacity(2048);
@@ -117,19 +122,18 @@ impl Sfu {
 
             tokio::select! {
                 event = backbone.poll() => {
-                    let event = Arc::new(event);
-                    todo!("send to all shards")
+                    self.handle_backbone_event(event)
                 }
                 command = backend.poll() => {
                     if let Ok(cmd) = command {
-                        self.handle_command(cmd);
+                        self.handle_command(cmd).await;
                     }
                 }
-                Ok((n, source)) = sock_v6.recv_from(&mut buf_v6) => {
+                Ok((n, source)) = self.sock_v6.recv_from(&mut buf_v6) => {
                     let packet = buf_v6.split_to(n).freeze();
                     self.handle_packet(source, packet).await;
                 }
-                Ok((n, source)) = sock_v4.recv_from(&mut buf_v4) => {
+                Ok((n, source)) = self.sock_v4.recv_from(&mut buf_v4) => {
                     let packet = buf_v4.split_to(n).freeze();
                     self.handle_packet(source, packet).await;
                 }
@@ -156,34 +160,50 @@ impl Sfu {
         warn!("couldn't demultiplex udp packet from {}", source);
     }
 
-    fn handle_command(&mut self, command: SfuCommand) {
-        match command {
-            SfuCommand::RecalculateLatency { target_sfu } => todo!("get backbone rtt"),
+    fn handle_backbone_event(&mut self, event: BackboneEvent) {
+        match event {
+            BackboneEvent::Dispatch {
+                sfu_id,
+                nonce,
+                dispatch,
+            } => match dispatch {
+                BackboneDispatch::Keyframe {
+                    user_id,
+                    mid,
+                    rid,
+                    kind,
+                } => todo!("forward to user_id"),
+                _ => {}
+            },
+            BackboneEvent::Datagram(dgram) => match dgram {
+                BackboneDatagram::Media(m) => todo!("forward to peers"),
+                BackboneDatagram::Speaking(s) => todo!("forward to peers"),
+            },
+            _ => {}
+        }
+    }
 
-            SfuCommand::MigrateAll { target_sfu } => todo!("remove this command?"),
-            SfuCommand::MigrateUsers {
-                users: peers,
-                target_sfu,
-            } => todo!("remove this command?"),
+    async fn handle_command(&mut self, command: SfuCommand) {
+        match command {
+            SfuCommand::Init { sfu_id } => {
+                let mut id = self.state.id.write().await;
+                *id = Some(sfu_id);
+            }
+
+            SfuCommand::RecalculateLatency { .. } => todo!("get backbone rtt"),
+
+            SfuCommand::MigrateUsers { .. } => todo!("remove this command?"),
 
             SfuCommand::CreatePeer { state, permissions } => {
                 let channel_id = state.channel_id;
                 let user_id = state.user_id;
                 self.peer_create(channel_id, user_id, state, permissions);
             }
-            SfuCommand::PrepareCascade { sfu_id } => todo!("create token/addr, add to backbone"),
-            SfuCommand::CreateCascade {
-                sfu_id,
-                token,
-                addr,
-            } => todo!("create new peer wrapping backbone"),
+            SfuCommand::PrepareCascade { .. } => todo!("create token/addr, add to backbone"),
+            SfuCommand::CreateCascade { .. } => todo!("create new peer wrapping backbone"),
 
-            // unsure what to do with these
-            SfuCommand::RouteUpdate {
-                channel_id,
-                destinations,
-            } => todo!(),
-            SfuCommand::Channel { channel } => todo!(),
+            SfuCommand::RouteUpdate { .. } => todo!(),
+            SfuCommand::Channel { .. } => todo!(),
 
             // forward based on user_id
             SfuCommand::Signalling {
@@ -243,8 +263,8 @@ impl Sfu {
             users: DashMap::new(),
         });
 
-        let sock_v4 = self.sock_v4.as_ref().expect("ipv4 socket missing").clone();
-        let sock_v6 = self.sock_v6.as_ref().expect("ipv6 socket missing").clone();
+        let sock_v4 = Arc::clone(&self.sock_v4);
+        let sock_v6 = Arc::clone(&self.sock_v6);
 
         let peer = PeerWebrtc::spawn(user_id, state, permissions, sock_v4, sock_v6);
 

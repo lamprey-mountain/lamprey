@@ -6,7 +6,7 @@ use url::Url;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 
 #[cfg(feature = "validator")]
 use validator::Validate;
@@ -43,6 +43,21 @@ pub mod subscribe;
 pub mod user;
 pub mod visibility;
 pub mod webhook;
+
+pub use crate::v1::types::{SyncCompression, SyncFormat as SyncEncoding, SyncVersion};
+
+/// query parameters when establishing a websocket sync connection
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+pub struct SyncParams {
+    pub version: SyncVersion,
+
+    pub compression: Option<SyncCompression>,
+
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub encoding: SyncEncoding,
+}
 
 /// a command from the client to the sync worker
 #[derive(Debug, Clone)]

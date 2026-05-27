@@ -23,7 +23,7 @@ impl BackendConnection {
         let (event_tx, mut event_rx) = mpsc::unbounded_channel::<SfuEvent>();
         let (command_tx, command_rx) = mpsc::unbounded_channel::<SfuCommand>();
 
-        let url_str = format!("{}/api/v1/internal/rpc", state.config.api_url)
+        let url_str = format!("{}api/v1/internal/rpc", state.config.api_url)
             .replace("http", "ws")
             .replace("https", "wss");
 

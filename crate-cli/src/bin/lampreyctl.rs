@@ -20,6 +20,10 @@ async fn main() {
 async fn main_inner() -> Result<(), anyhow::Error> {
     let args = Args::parse();
 
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
+
     let config: Config = figment::Figment::new()
         .merge(Toml::file(args.config))
         .merge(Env::raw().only(&["RUST_LOG"]))
@@ -40,7 +44,7 @@ async fn main_inner() -> Result<(), anyhow::Error> {
                 server.serve().await?;
             }
             ServeCommand::Voice { sfu_config } => {
-                lamprey_voice::sfu::Sfu::new(config).serve().await;
+                lamprey_voice::sfu::Sfu::serve(config).await;
             }
         },
         Command::Maintenence { target } => match target {

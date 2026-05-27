@@ -198,6 +198,14 @@ impl Session {
     pub fn user_id(&self) -> Option<UserId> {
         self.status.user_id()
     }
+
+    pub fn ip_addr(&self) -> Option<&str> {
+        self.imprint.ip_addr.as_deref()
+    }
+
+    pub fn user_agent(&self) -> Option<&str> {
+        self.imprint.user_agent.as_deref()
+    }
 }
 
 // TODO: remove?

@@ -247,7 +247,10 @@ pub struct TrackMetadata {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct TrackMetadataWithUserId {
-    /// the inner track metadata. the `mid` field is the *source* mid.
+    /// the inner track metadata
+    // NOTE: sometimes the `mid` field is the *source* mid, sometimes its the mapped mid
+    // i should create types to represent this more strictly
+    #[serde(flatten)]
     pub inner: TrackMetadata,
 
     /// the source user this track came from
@@ -255,7 +258,6 @@ pub struct TrackMetadataWithUserId {
 }
 
 /// which stream this track is associated with. generally there will be one video track and one audio track per stream.
-// TODO: allow track keys not defined here?
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde",
@@ -264,9 +266,24 @@ pub struct TrackMetadataWithUserId {
 )]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum TrackKey {
+    /// media from the user (microphone, camera)
     User,
+
+    /// a screenshare
     Screen,
+    // TODO: allow track keys not defined here?
+    // /// an unknown track type
+    // #[serde(untagged)]
+    // Other(String),
 }
+
+// TODO: ???
+// impl TrackKey {
+//     /// whether this track should be displayed like a screenshare
+//     pub fn is_screenshare(&self) -> bool {
+//         todo!()
+//     }
+// }
 
 // TODO: doc comment
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -312,6 +329,7 @@ pub struct Subscription {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// TODO: rename_all lowercase
 pub enum MediaKind {
     Video,
     Audio,
@@ -436,14 +454,10 @@ pub struct VoiceStatePatch {
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct CallCreate {
-    /// channel to create a call in
-    ///
-    /// must be a Broadcast channel
-    pub channel_id: ChannelId,
-
     /// call topic
     ///
     /// must have VoiceMute permission in target channel to set
+    // NOTE: unsure about using this permission
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 512))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 512)))]
     pub topic: Option<String>,

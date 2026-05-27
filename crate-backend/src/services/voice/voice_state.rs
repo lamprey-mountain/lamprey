@@ -1,14 +1,14 @@
-use common::v1::types::voice::messages::{SfuCommand, SignallingCommand};
+use common::v1::types::voice::messages::{SfuCommand, SignallingCommand, SignallingEvent};
 use lamprey_backend_core::Error;
 use std::sync::Arc;
 
 use crate::services::voice::ServiceVoice;
 use crate::Result;
 use common::v1::types::util::Time;
-use common::v1::types::voice::{
-    CallCreate, VoiceState, VoiceStateScreenshareUpdate, VoiceStateUpdate,
+use common::v1::types::voice::{CallCreate, VoiceState, VoiceStateUpdate};
+use common::v1::types::{
+    ChannelId, ChannelType, ConnectionId, MessageSync, SessionId, SfuId, UserId,
 };
-use common::v1::types::{ChannelId, MessageSync, SfuId, UserId};
 
 pub struct VoiceStateHandleInner {
     pub inner: VoiceState,
@@ -41,6 +41,8 @@ impl ServiceVoice {
         &self,
         user_id: UserId,
         update: VoiceStateUpdate,
+        session_id: Option<SessionId>,
+        connection_id: Option<ConnectionId>,
     ) -> Result<VoiceStateHandle> {
         let srv = self.state.services();
 
@@ -59,38 +61,62 @@ impl ServiceVoice {
         chan.ensure_unarchived()?;
         chan.ensure_unremoved()?;
 
-        // TODO: handle existing state
-        // let old_state = srv.voice.state_get(user_id);
+        let old_states = srv.voice.state_list_by_user(user_id);
+        if user.bot {
+            // TODO: remove existing voice state for channel if it exists
+        } else {
+            // TODO: remove all existing voice states
+            // self.state_destroy();
+        }
 
         // create call if it doesn't exist
         let call = if let Some(call) = self.call_get(update.channel_id) {
             call
         } else {
-            self.call_create(CallCreate {
-                channel_id: update.channel_id,
-                topic: None,
-            })
-            .await?
+            self.call_create(update.channel_id, CallCreate { topic: None })
+                .await?
         };
 
         // find sfu
-        let sfu = self.sfu_alloc(update.channel_id, user_id)?;
+        let sfu = self.sfu_alloc(update.channel_id, user_id).await?;
         let sfu_id = sfu.id();
+
+        let mut mute = false;
+        let mut deaf = false;
+        let mut suppress = false;
+
+        if let Some(room_id) = chan.room_id {
+            let room = srv.rooms.load_room(room_id, true).await?;
+            if let Some(member) = room.get_member(&user_id) {
+                mute = member.member.mute;
+                deaf = member.member.deaf;
+            }
+
+            if let Some(afk_id) = room.get_data().unwrap().room.afk_channel_id {
+                if update.channel_id == afk_id {
+                    suppress = true;
+                }
+            }
+
+            if chan.ty == ChannelType::Broadcast {
+                suppress = true;
+            }
+        }
 
         // build voice state
         let state = VoiceState {
             user_id,
             channel_id: update.channel_id,
-            session_id: None,    // TODO: populate
-            connection_id: None, // TODO: populate
+            session_id,
+            connection_id,
             joined_at: Time::now_utc(),
-            mute: false, // TODO: populate from room member
-            deaf: false, // TODO: populate from room member
+            mute,
+            deaf,
             self_mute: update.self_mute,
             self_deaf: update.self_deaf,
             self_video: update.self_video,
             screenshare: None,
-            suppress: false, // TODO: suppress by default in broadcast channels or the afk channel
+            suppress,
             requested_to_speak_at: None,
         };
 
@@ -103,7 +129,7 @@ impl ServiceVoice {
 
         sfu.send(SfuCommand::Signalling {
             user_id,
-            channel_id: todo!(),
+            channel_id: update.channel_id,
             inner: SignallingCommand::VoiceState { state: update },
         });
 
@@ -136,6 +162,10 @@ impl ServiceVoice {
         new_inner.self_deaf = update.self_deaf;
         new_inner.self_video = update.self_video;
 
+        if new_inner.channel_id != update.channel_id {
+            // TODO: handle this
+        }
+
         let new_handle = Arc::new(VoiceStateHandleInner {
             inner: new_inner,
             state: VoiceStateState::Connected,
@@ -149,7 +179,7 @@ impl ServiceVoice {
         if let Some(sfu) = self.sfu_get(sfu_id) {
             sfu.send(SfuCommand::Signalling {
                 user_id,
-                channel_id: todo!(),
+                channel_id: update.channel_id,
                 inner: SignallingCommand::VoiceState { state: update },
             });
         }
@@ -161,59 +191,7 @@ impl ServiceVoice {
             old_state: Some(old_state),
         })?;
 
-        Ok(())
-    }
-
-    /// replace a voice state
-    // TODO: remove this? and force all updates to go through state_update? having two update functions duplicates logic.
-    pub fn state_replace(&self, state: VoiceState) -> Result<()> {
-        let call = self
-            .call_get(state.channel_id)
-            .ok_or_else(|| Error::BadStatic("call not found"))?;
-
-        let mut entry = call
-            .voice_states
-            .get_mut(&state.user_id)
-            .ok_or_else(|| Error::BadStatic("voice state not found"))?;
-
-        let handle = entry.value();
-        let old_state = handle.inner.clone();
-        let sfu_id = handle.sfu_id;
-        let user_id = handle.inner.user_id;
-
-        let new_handle = Arc::new(VoiceStateHandleInner {
-            inner: state.clone(),
-            state: VoiceStateState::Connected,
-            sfu_id: handle.sfu_id,
-        });
-
-        *entry.value_mut() = Arc::clone(&new_handle);
-
-        if let Some(sfu) = self.sfu_get(sfu_id) {
-            sfu.send(SfuCommand::Signalling {
-                user_id,
-                channel_id: todo!(),
-                inner: SignallingCommand::VoiceState {
-                    state: VoiceStateUpdate {
-                        channel_id: state.channel_id,
-                        self_deaf: state.self_deaf,
-                        self_mute: state.self_mute,
-                        self_video: state.self_video,
-                        screenshare: Some(state.screenshare.as_ref().map(|s| {
-                            VoiceStateScreenshareUpdate {
-                                thumbnail: s.thumbnail,
-                            }
-                        })),
-                    },
-                },
-            });
-        }
-
-        self.state.broadcast(MessageSync::VoiceState {
-            user_id: state.user_id,
-            state: Some(state.clone()),
-            old_state: Some(old_state),
-        })?;
+        // TODO: if nobody is connected to the old channel anymore, spawn timeout task to clean up the call?
 
         Ok(())
     }
@@ -238,11 +216,18 @@ impl ServiceVoice {
         }
 
         // broadcast removal
+        self.state.broadcast(MessageSync::VoiceDispatch {
+            user_id: handle.inner.user_id,
+            channel_id,
+            payload: SignallingEvent::Disconnected,
+        })?;
         self.state.broadcast(MessageSync::VoiceState {
             user_id: handle.inner.user_id,
             state: None,
             old_state: Some(handle.inner.clone()),
         })?;
+
+        // TODO: if nobody is connected anymore, spawn timeout task to clean up the call?
 
         Ok(())
     }

@@ -452,7 +452,14 @@ impl Connection {
         let user_id = session.user_id().ok_or(Error::UnauthSession)?;
 
         let srv = self.s.services();
-        srv.voice.state_create(user_id, vs).await?;
+        srv.voice
+            .state_create(
+                user_id,
+                vs,
+                Some(session.id),
+                Some(self.id),
+            )
+            .await?;
 
         Ok(())
     }

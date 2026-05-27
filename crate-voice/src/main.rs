@@ -11,7 +11,12 @@ use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
+
     let config: Config = figment::Figment::new()
+        .merge(Toml::file("config.toml"))
         .merge(Toml::file("sfu.toml"))
         .merge(Env::raw())
         .extract()?;
@@ -43,7 +48,7 @@ async fn main() -> Result<()> {
         process::exit(1);
     }
 
-    let _ = Sfu::new(config).serve().await;
+    let _ = Sfu::serve(config).await;
 
     Ok(())
 }
