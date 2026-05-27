@@ -7,7 +7,7 @@ use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Time};
-use common::v1::types::voice::{RingEligibility, VoiceStateUpdate};
+use common::v1::types::voice::{RingEligibility, VoiceStateScreenshareUpdate, VoiceStateUpdate};
 use common::v1::types::{
     AuditLogEntryType, ChannelType, MessageSync, PaginationResponse, Permission,
 };
@@ -172,7 +172,13 @@ async fn voice_state_patch(
                 self_deaf: current_state.self_deaf,
                 self_mute: current_state.self_mute,
                 self_video: current_state.self_video,
-                screenshare: Some(current_state.screenshare.clone()),
+                screenshare: Some(Some(VoiceStateScreenshareUpdate {
+                    thumbnail: current_state
+                        .screenshare
+                        .as_ref()
+                        .and_then(|s| s.thumbnail)
+                        .clone(),
+                })),
             },
         )?;
     }

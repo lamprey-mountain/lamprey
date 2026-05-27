@@ -1,3 +1,4 @@
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::voice::messages::{SfuCommand, SignallingCommand, SignallingEvent};
 use lamprey_backend_core::Error;
 use std::sync::Arc;
@@ -146,12 +147,12 @@ impl ServiceVoice {
     pub fn state_update(&self, user_id: UserId, update: VoiceStateUpdate) -> Result<()> {
         let call = self
             .call_get(update.channel_id)
-            .ok_or_else(|| Error::BadStatic("call not found"))?;
+            .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownCall)))?;
 
         let mut entry = call
             .voice_states
             .get_mut(&user_id)
-            .ok_or_else(|| Error::BadStatic("voice state not found"))?;
+            .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownVoiceState)))?;
 
         let handle = entry.value();
         let old_state = handle.inner.clone();
@@ -200,7 +201,7 @@ impl ServiceVoice {
     pub fn state_destroy(&self, channel_id: ChannelId, user_id: UserId) -> Result<()> {
         let call = self
             .call_get(channel_id)
-            .ok_or_else(|| Error::BadStatic("call state not found"))?;
+            .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownCall)))?;
 
         let Some((_, handle)) = call.voice_states.remove(&user_id) else {
             return Ok(());

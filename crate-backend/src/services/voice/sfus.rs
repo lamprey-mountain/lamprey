@@ -2,13 +2,14 @@ use crate::services::voice::voice_state::VoiceStateHandle;
 use crate::services::voice::{ServiceVoice, SfuCommand, SfuStats};
 use crate::Result;
 use axum::extract::ws::WebSocket;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::voice::messages::{SfuEvent, SignallingEvent};
 use common::v1::types::{ChannelId, MessageSync, SfuId, UserId};
 use lamprey_backend_core::Error;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 pub struct SfuHandleInner {
     pub id: SfuId,
@@ -88,6 +89,12 @@ pub struct UserLocation {
     // /// the ip address information of the user
     // pub ip_info: IpInfo,
 }
+
+// impl UserLocation {
+//     pub fn approx_latency_to(&self, other: ()) -> u64 {
+//         todo!()
+//     }
+// }
 
 impl ServiceVoice {
     pub async fn sfu_handle_connect(&self, mut socket: WebSocket) -> Result<SfuHandle> {
@@ -211,29 +218,28 @@ impl ServiceVoice {
     }
 
     pub async fn sfu_alloc(&self, channel_id: ChannelId, user_id: UserId) -> Result<SfuHandle> {
-        let sfu = match self.sfu_alloc_user(channel_id, user_id).await? {
-            Allocation::JoinExisting(sfu_id) => self
-                .sfus
-                .get(&sfu_id)
-                .map(|s| Arc::clone(s.value()))
-                .ok_or_else(|| Error::BadStatic("allocated SFU not found"))?,
-            Allocation::CascadeToNew {
-                existing_sfu_id,
-                new_sfu_id,
-            } => {
-                let existing_sfu = self
+        let sfu =
+            match self.sfu_alloc_user(channel_id, user_id).await? {
+                Allocation::JoinExisting(sfu_id) => self
                     .sfus
-                    .get(&existing_sfu_id)
-                    .ok_or_else(|| Error::BadStatic("existing SFU not found"))?;
-                let new_sfu = self
-                    .sfus
-                    .get(&new_sfu_id)
-                    .ok_or_else(|| Error::BadStatic("new SFU not found"))?;
+                    .get(&sfu_id)
+                    .map(|s| Arc::clone(s.value()))
+                    .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownSfu)))?,
+                Allocation::CascadeToNew {
+                    existing_sfu_id,
+                    new_sfu_id,
+                } => {
+                    let existing_sfu = self.sfus.get(&existing_sfu_id).ok_or_else(|| {
+                        Error::ApiError(ApiError::from_code(ErrorCode::UnknownSfu))
+                    })?;
+                    let new_sfu = self.sfus.get(&new_sfu_id).ok_or_else(|| {
+                        Error::ApiError(ApiError::from_code(ErrorCode::UnknownSfu))
+                    })?;
 
-                existing_sfu.send(SfuCommand::PrepareCascade { sfu_id: new_sfu_id });
-                Arc::clone(&new_sfu)
-            }
-        };
+                    existing_sfu.send(SfuCommand::PrepareCascade { sfu_id: new_sfu_id });
+                    Arc::clone(&new_sfu)
+                }
+            };
 
         // ensure this sfu is registered in the call's active sfus set
         if let Some(call) = self.calls.get(&channel_id) {
@@ -308,11 +314,12 @@ impl ServiceVoice {
         let mut min_latency = u32::MAX;
 
         let Some(call) = self.calls.get(&channel_id) else {
-            return Err(Error::BadStatic("channel does not have any call"));
+            return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownCall)));
         };
 
         for sfu_id in call.sfus.iter() {
-            if let Some(sfu) = self.sfus.get(&*sfu_id) {
+            let sfu_id = *sfu_id;
+            if let Some(sfu) = self.sfus.get(&sfu_id) {
                 if sfu.has_capacity() {
                     // let latency = graph.get_latency(user_region, node.region);
                     // let latency = self.router.latencies.get((a, b));
@@ -320,13 +327,13 @@ impl ServiceVoice {
                     let estimated_latency = 0;
                     if estimated_latency < min_latency {
                         min_latency = estimated_latency;
-                        best_existing = Some(*sfu_id);
+                        best_existing = Some(sfu_id);
                     }
                 } else {
-                    // TODO: handle full sfu case (maybe trigger a rebalance)
+                    // TODO: handle full sfu case (maybe trigger a rebalance/)
                 }
             } else {
-                // TODO: warn!("couldn't find sfu in use")
+                warn!(%sfu_id, "couldn't find sfu in use")
             }
         }
 

@@ -453,12 +453,7 @@ impl Connection {
 
         let srv = self.s.services();
         srv.voice
-            .state_create(
-                user_id,
-                vs,
-                Some(session.id),
-                Some(self.id),
-            )
+            .state_create(user_id, vs, Some(session.id), Some(self.id))
             .await?;
 
         Ok(())

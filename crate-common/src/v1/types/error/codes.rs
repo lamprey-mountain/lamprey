@@ -234,6 +234,18 @@ pub enum ErrorCode {
     #[error("unknown voice channel")]
     UnknownVoiceChannel,
 
+    /// unknown voice state
+    #[error("unknown voice state")]
+    UnknownVoiceState,
+
+    /// unknown call
+    #[error("unknown call")]
+    UnknownCall,
+
+    /// unknown sfu
+    #[error("unknown sfu")]
+    UnknownSfu,
+
     /// unknown dm
     #[error("unknown dm")]
     UnknownDm,
