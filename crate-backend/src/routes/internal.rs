@@ -4,7 +4,6 @@ use axum::{
     extract::{ws::WebSocketUpgrade, State},
     response::IntoResponse,
 };
-use common::v1::types::SfuId;
 use http::HeaderMap;
 use tracing::error;
 use utoipa_axum::{router::OpenApiRouter, routes};

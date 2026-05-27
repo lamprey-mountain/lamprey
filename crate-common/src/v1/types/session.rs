@@ -50,18 +50,6 @@ pub struct Session {
     /// the oauth application this belongs to
     pub app_id: Option<ApplicationId>,
 
-    /// the last time this session was used
-    #[deprecated = "use imprint"]
-    pub last_seen_at: Time,
-
-    /// the last seen ip address using this session
-    #[deprecated = "use imprint"]
-    pub ip_addr: Option<String>,
-
-    /// the last seen user agent using this session
-    #[deprecated = "use imprint"]
-    pub user_agent: Option<String>,
-
     /// session imprint metadata
     pub imprint: SessionImprint,
 

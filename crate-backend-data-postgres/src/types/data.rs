@@ -453,9 +453,6 @@ impl From<DbSession> for Session {
             expires_at: row.expires_at.map(|t| t.into()),
             ty: SessionType::from_str(&row.ty).unwrap_or(SessionType::User),
             app_id: row.application_id.map(Into::into),
-            last_seen_at: row.last_seen_at.into(),
-            ip_addr: row.ip_addr.clone(),
-            user_agent: row.user_agent.clone(),
             imprint: SessionImprint {
                 last_seen_at: row.last_seen_at.into(),
                 ip_addr: row.ip_addr,

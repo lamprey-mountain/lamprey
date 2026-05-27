@@ -247,8 +247,8 @@ async fn app_create_session(
                 expires_at: None,
                 ty: SessionType::User,
                 application_id: None,
-                ip_addr: auth.session.ip_addr.clone(),
-                user_agent: auth.session.user_agent.clone(),
+                ip_addr: auth.session.imprint.ip_addr.clone(),
+                user_agent: auth.session.imprint.user_agent.clone(),
             })
             .await?;
         data.session_set_status(

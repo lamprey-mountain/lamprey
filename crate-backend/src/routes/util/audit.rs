@@ -104,8 +104,8 @@ impl AuditLoggerTransaction {
             status,
             started_at: self.started_at,
             ended_at: Time::now_utc(),
-            ip_addr: self.auth.session.ip_addr.clone(),
-            user_agent: self.auth.session.user_agent.clone(),
+            ip_addr: self.auth.session.imprint.ip_addr.clone(),
+            user_agent: self.auth.session.imprint.user_agent.clone(),
             application_id: self.application_id,
         };
         self.auth

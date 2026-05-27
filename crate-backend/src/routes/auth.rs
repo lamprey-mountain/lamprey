@@ -94,8 +94,8 @@ async fn auth_oauth_redirect(
                             status: AuditLogEntryStatus::Success,
                             started_at: Time::now_utc(),
                             ended_at: Time::now_utc(),
-                            ip_addr: session.ip_addr,
-                            user_agent: session.user_agent,
+                            ip_addr: session.imprint.ip_addr,
+                            user_agent: session.imprint.user_agent,
                             application_id: session.app_id,
                         };
                         data.audit_logs_room_append(entry.clone()).await?;
@@ -143,8 +143,8 @@ async fn auth_oauth_redirect(
                             status: AuditLogEntryStatus::Success,
                             started_at: Time::now_utc(),
                             ended_at: Time::now_utc(),
-                            ip_addr: session.ip_addr,
-                            user_agent: session.user_agent,
+                            ip_addr: session.imprint.ip_addr,
+                            user_agent: session.imprint.user_agent,
                             application_id: session.app_id,
                         };
                         data.audit_logs_room_append(entry.clone()).await?;
@@ -180,8 +180,8 @@ async fn auth_oauth_redirect(
                 status: AuditLogEntryStatus::Success,
                 started_at: session.authorized_at.unwrap_or_else(Time::now_utc),
                 ended_at: Time::now_utc(),
-                ip_addr: session.ip_addr.clone(),
-                user_agent: session.user_agent.clone(),
+                ip_addr: session.imprint.ip_addr.clone(),
+                user_agent: session.imprint.user_agent.clone(),
                 application_id: session.app_id,
             };
             data.audit_logs_room_append(entry.clone()).await?;
@@ -226,8 +226,8 @@ async fn auth_oauth_redirect(
                             status: AuditLogEntryStatus::Success,
                             started_at: Time::now_utc(),
                             ended_at: Time::now_utc(),
-                            ip_addr: session.ip_addr,
-                            user_agent: session.user_agent,
+                            ip_addr: session.imprint.ip_addr,
+                            user_agent: session.imprint.user_agent,
                             application_id: session.app_id,
                         };
                         data.audit_logs_room_append(entry.clone()).await?;
@@ -275,8 +275,8 @@ async fn auth_oauth_redirect(
                             status: AuditLogEntryStatus::Success,
                             started_at: Time::now_utc(),
                             ended_at: Time::now_utc(),
-                            ip_addr: session.ip_addr,
-                            user_agent: session.user_agent,
+                            ip_addr: session.imprint.ip_addr,
+                            user_agent: session.imprint.user_agent,
                             application_id: session.app_id,
                         };
                         data.audit_logs_room_append(entry.clone()).await?;
@@ -312,8 +312,8 @@ async fn auth_oauth_redirect(
                 status: AuditLogEntryStatus::Success,
                 started_at: session.authorized_at.unwrap_or_else(Time::now_utc),
                 ended_at: Time::now_utc(),
-                ip_addr: session.ip_addr.clone(),
-                user_agent: session.user_agent.clone(),
+                ip_addr: session.imprint.ip_addr.clone(),
+                user_agent: session.imprint.user_agent.clone(),
                 application_id: session.app_id,
             };
             data.audit_logs_room_append(entry.clone()).await?;

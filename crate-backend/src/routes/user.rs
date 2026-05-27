@@ -375,8 +375,8 @@ async fn guest_create(
         status: AuditLogEntryStatus::Success,
         started_at: updated_session.authorized_at.unwrap_or_else(Time::now_utc),
         ended_at: Time::now_utc(),
-        ip_addr: updated_session.ip_addr.clone(),
-        user_agent: updated_session.user_agent.clone(),
+        ip_addr: updated_session.imprint.ip_addr.clone(),
+        user_agent: updated_session.imprint.user_agent.clone(),
         application_id: updated_session.app_id,
     };
     data.audit_logs_room_append(entry.clone()).await?;

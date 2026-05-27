@@ -558,9 +558,6 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
                 ty: SessionType::User,
                 expires_at: None,
                 app_id: None,
-                last_seen_at: Time::now_utc(),
-                ip_addr: None,
-                user_agent: None,
                 imprint: SessionImprint {
                     last_seen_at: Time::now_utc(),
                     ip_addr: None,
