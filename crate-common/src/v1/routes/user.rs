@@ -352,15 +352,19 @@ pub mod harvest_download {
     path = "/user/search",
     tags = ["user"],
     permissions = [Admin],
-    response(OK, description = "success"),
+    response(OK, body = UserSearch, description = "success"),
 )]
 pub mod user_search {
+    use crate::v1::types::search::UserSearchRequest;
     use crate::v1::types::UserSearch;
 
     pub struct Request {
         #[json]
-        pub search: UserSearch,
+        pub search: UserSearchRequest,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[json]
+        pub results: UserSearch,
+    }
 }

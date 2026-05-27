@@ -8,13 +8,16 @@ use axum::{
     response::IntoResponse,
     routing, Json,
 };
-use common::v2::types::media::{
-    Media, MediaClone, MediaCreate, MediaCreateSource, MediaCreated, MediaDirectParams,
-    MediaDoneParams, MediaPatch, MediaSearch,
-};
 use common::{
     v1::types::error::{ApiError, ErrorCode},
     v1::types::{application::Scope, sync::MessageSync, Permission, SERVER_ROOM_ID},
+};
+use common::{
+    v1::types::search::MediaSearchRequest,
+    v2::types::media::{
+        Media, MediaClone, MediaCreate, MediaCreateSource, MediaCreated, MediaDirectParams,
+        MediaDoneParams, MediaPatch, MediaSearch,
+    },
 };
 use futures_util::StreamExt;
 use tokio::io::AsyncWriteExt;
@@ -530,12 +533,12 @@ async fn media_clone(
     post,
     path = "/media/search",
     tags = ["media", "badge.scope.full", "badge.admin_only"],
-    responses((status = OK, description = "success")),
+    responses((status = OK, body = MediaSearch, description = "success")),
 )]
 async fn media_search(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(_json): Json<MediaSearch>,
+    Json(json): Json<MediaSearchRequest>,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
@@ -546,7 +549,10 @@ async fn media_search(
         .ensure_view()?;
     perms.needs(Permission::Admin);
     perms.check()?;
-    Ok(Error::Unimplemented)
+
+    let results = srv.search.search_media(auth.user.id, json).await?;
+
+    Ok(Json(results))
 }
 
 /// Media upload direct

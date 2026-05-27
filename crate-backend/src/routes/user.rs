@@ -554,12 +554,12 @@ async fn harvest_download(
     Ok(Error::Unimplemented)
 }
 
-/// User search (TODO)
+/// User search
 #[handler(routes::user_search)]
 async fn user_search(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    _req: routes::user_search::Request,
+    req: routes::user_search::Request,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     srv.perms
@@ -569,7 +569,9 @@ async fn user_search(
         .needs(Permission::UserManage)
         .check()?;
 
-    Ok(Error::Unimplemented)
+    let results = srv.search.search_users(auth.user.id, req.search).await?;
+
+    Ok(Json(results))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

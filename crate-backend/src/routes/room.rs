@@ -164,12 +164,12 @@ async fn room_list(
     }
 }
 
-/// Room search (TODO)
+/// Room search
 #[handler(routes::room_search)]
 async fn room_search(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    _req: routes::room_search::Request,
+    req: routes::room_search::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
@@ -180,7 +180,9 @@ async fn room_search(
         .needs(Permission::RoomManage)
         .check()?;
 
-    Ok(Error::Unimplemented)
+    let results = srv.search.search_rooms(req.search).await?;
+
+    Ok(Json(results))
 }
 
 /// Room edit
