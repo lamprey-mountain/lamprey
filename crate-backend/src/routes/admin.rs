@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use axum::extract::{Path, Query};
 use axum::{extract::State, response::IntoResponse, Json};
+use common::v1::types::search::AuditLogSearchRequest;
 use common::v1::types::{
     util::{Changes, Time},
     AuditLogEntryType, MessageSync, Permission, SearchDlqId, SERVER_ROOM_ID, SERVER_USER_ID,
@@ -13,6 +14,7 @@ use lamprey_backend_core::types::admin::{
     AdminPurgeCacheResponse, AdminRegisterUser, AdminWhisper, DlqEntry, SearchIndexStats,
     SearchStats,
 };
+use lamprey_backend_core::Error;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
@@ -536,6 +538,32 @@ async fn admin_search_dlq_retry(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Admin search audit logs
+#[utoipa::path(
+    post,
+    path = "/admin/search/audit-logs",
+    tags = ["admin", "badge.admin_only", "badge.server-perm.Admin"],
+)]
+async fn admin_search_audit_logs(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(_req): Json<AuditLogSearchRequest>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let _d = s.data();
+
+    srv.perms
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?
+        .needs(Permission::Admin)
+        .check()?;
+
+    Ok(Error::Unimplemented)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(admin_whisper))
@@ -551,4 +579,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(admin_search_dlq_list))
         .routes(routes!(admin_search_dlq_delete))
         .routes(routes!(admin_search_dlq_retry))
+        .routes(routes!(admin_search_audit_logs))
 }

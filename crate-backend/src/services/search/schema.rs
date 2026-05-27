@@ -3,7 +3,7 @@ use std::path::Path;
 
 use common::v1::types::message::{Message, MessageAttachmentType, MessageType};
 use common::v1::types::util::Time;
-use common::v1::types::{Channel, ChannelId, ChannelType, Room, RoomId, User};
+use common::v1::types::{AuditLogEntry, Channel, ChannelId, ChannelType, Room, RoomId, User};
 use common::v2::types::media::Media;
 use tantivy::schema::{OwnedValue, Schema};
 use tantivy::TantivyDocument;
@@ -411,6 +411,30 @@ pub fn tantivy_document_from_media(s: &UnifiedSchema, media: Media) -> Option<Ta
 
     doc.add_object(s.metadata_fast, meta_fast);
     doc.add_object(s.metadata_text, meta_text);
+
+    Some(doc)
+}
+
+pub fn tantivy_document_from_audit_log_entry(
+    s: &UnifiedSchema,
+    ent: AuditLogEntry,
+) -> Option<TantivyDocument> {
+    let mut doc = TantivyDocument::new();
+    doc.add_text(s.id, ent.id.to_string());
+    doc.add_text(s.doctype, "AnalyticsEvent");
+    doc.add_text(s.room_id, ent.room_id.to_string());
+    doc.add_text(s.author_id, ent.user_id.to_string());
+    doc.add_date(s.created_at, tantivy::DateTime::from_utc(*ent.started_at));
+
+    let mut meta_fast: BTreeMap<String, OwnedValue> = BTreeMap::new();
+    meta_fast.insert("status".to_string(), format!("{:?}", ent.status).into());
+    meta_fast.insert("audit_event".to_string(), format!("{:?}", ent.ty).into());
+
+    if let Some(app_id) = ent.application_id {
+        meta_fast.insert("application_id".to_string(), app_id.to_string().into());
+    }
+
+    doc.add_object(s.metadata_fast, meta_fast);
 
     Some(doc)
 }

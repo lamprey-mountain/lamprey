@@ -93,7 +93,7 @@ impl ContentSearcher {
         let searcher = self.reader.searcher();
         let mut query_clauses: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
 
-        if let Some(q_str) = &msg.req.query {
+        if let Some(q_str) = &msg.req.inner.query {
             if !q_str.is_empty() {
                 let mut query_parser = QueryParser::for_index(
                     searcher.index(),
@@ -127,10 +127,10 @@ impl ContentSearcher {
 
         let query = BooleanQuery::new(query_clauses);
 
-        let limit = msg.req.limit as usize;
-        let cursor = msg.req.offset as usize;
+        let limit = msg.req.inner.limit as usize;
+        let cursor = msg.req.inner.offset as usize;
 
-        let (top_docs, total) = match (msg.req.sort_field, msg.req.sort_order) {
+        let (top_docs, total) = match (msg.req.sort_field, msg.req.inner.sort_order) {
             (MessageSearchOrderField::Relevancy, _) => {
                 let (top_docs, count): (Vec<(f32, DocAddress)>, usize) = searcher
                     .search(
@@ -273,7 +273,7 @@ impl ContentSearcher {
         let mut query_clauses: Vec<(tantivy::query::Occur, Box<dyn Query>)> = vec![];
 
         // Text query on name and content (description)
-        if let Some(q_str) = &msg.req.query {
+        if let Some(q_str) = &msg.req.inner.query {
             if !q_str.is_empty() {
                 let mut query_parser = QueryParser::for_index(
                     searcher.index(),
@@ -307,10 +307,10 @@ impl ContentSearcher {
 
         let query = BooleanQuery::new(query_clauses);
 
-        let limit = msg.req.limit as usize;
-        let cursor = msg.req.offset as usize;
+        let limit = msg.req.inner.limit as usize;
+        let cursor = msg.req.inner.offset as usize;
 
-        let (top_docs, total) = match (msg.req.sort_field, msg.req.sort_order) {
+        let (top_docs, total) = match (msg.req.sort_field, msg.req.inner.sort_order) {
             (ChannelSearchOrderField::Relevancy, _) => {
                 let (top_docs, count): (Vec<(f32, DocAddress)>, usize) = searcher
                     .search(
@@ -330,6 +330,27 @@ impl ContentSearcher {
                                 .and_offset(cursor)
                                 .order_by_fast_field::<tantivy::DateTime>(
                                     "created_at",
+                                    match ord {
+                                        Order::Ascending => tantivy::Order::Asc,
+                                        Order::Descending => tantivy::Order::Desc,
+                                    },
+                                ),
+                            Count,
+                        ),
+                    )
+                    .map_err(|e| Error::Internal(format!("Search failed: {e}")))?;
+                let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
+                (top_docs, count as u64)
+            }
+            (ChannelSearchOrderField::Archived, ord) => {
+                let (top_docs, count): (Vec<(tantivy::DateTime, DocAddress)>, usize) = searcher
+                    .search(
+                        &query,
+                        &(
+                            TopDocs::with_limit(limit)
+                                .and_offset(cursor)
+                                .order_by_fast_field::<tantivy::DateTime>(
+                                    "archived_at",
                                     match ord {
                                         Order::Ascending => tantivy::Order::Asc,
                                         Order::Descending => tantivy::Order::Desc,
@@ -385,6 +406,51 @@ impl ContentSearcher {
                 let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
                 (top_docs, count as u64)
             }
+            (ChannelSearchOrderField::Name | ChannelSearchOrderField::Id, _) => {
+                return Err(Error::Unimplemented)
+            } // FIXME: the trait bound `std::string::String: FastValue` is not satisfied: the trait `FastValue` is not implemented for `std::string::String`
+              // (ChannelSearchOrderField::Name, ord) => {
+              //     let (top_docs, count): (Vec<(String, DocAddress)>, usize) = searcher
+              //         .search(
+              //             &query,
+              //             &(
+              //                 TopDocs::with_limit(limit)
+              //                     .and_offset(cursor)
+              //                     .order_by_fast_field::<String>(
+              //                         "name",
+              //                         match ord {
+              //                             Order::Ascending => tantivy::Order::Asc,
+              //                             Order::Descending => tantivy::Order::Desc,
+              //                         },
+              //                     ),
+              //                 Count,
+              //             ),
+              //         )
+              //         .map_err(|e| Error::Internal(format!("Search failed: {e}")))?;
+              //     let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
+              //     (top_docs, count as u64)
+              // }
+              // (ChannelSearchOrderField::Id, ord) => {
+              //     let (top_docs, count): (Vec<(String, DocAddress)>, usize) = searcher
+              //         .search(
+              //             &query,
+              //             &(
+              //                 TopDocs::with_limit(limit)
+              //                     .and_offset(cursor)
+              //                     .order_by_fast_field::<String>(
+              //                         "id",
+              //                         match ord {
+              //                             Order::Ascending => tantivy::Order::Asc,
+              //                             Order::Descending => tantivy::Order::Desc,
+              //                         },
+              //                     ),
+              //                 Count,
+              //             ),
+              //         )
+              //         .map_err(|e| Error::Internal(format!("Search failed: {e}")))?;
+              //     let top_docs: Vec<DocAddress> = top_docs.into_iter().map(|(_, doc)| doc).collect();
+              //     (top_docs, count as u64)
+              // }
         };
 
         let mut items = vec![];

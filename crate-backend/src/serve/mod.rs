@@ -103,8 +103,6 @@ mod utoipa_utils;
         common::v1::types::room_template::RoomTemplateChannel,
         common::v1::types::room_template::RoomTemplateRole,
         // search types
-        common::v1::types::search::FilterRange<Time>,
-        common::v1::types::search::FilterRange<MessageId>,
         common::v1::types::search::RoomSearchOrderField,
         common::v1::types::search::MessageSearchOrderField,
         common::v1::types::search::ChannelSearchOrderField,

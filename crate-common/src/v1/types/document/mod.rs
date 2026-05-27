@@ -464,6 +464,31 @@ pub struct Changeset {
     pub end_seq: u32,
 }
 
+/// a single atomic change to a document
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Change {
+    /// the time this change was created
+    pub time: Time,
+
+    /// the user who created this change
+    pub author: UserId,
+
+    /// number of graphemes added
+    pub stat_added: u64,
+
+    /// number of graphemes removed
+    pub stat_removed: u64,
+
+    /// the document this changeset applies to
+    // NOTE: do i need this?
+    pub document_id: ChannelId,
+
+    /// the sequence number of this change
+    pub seq: u32,
+}
+
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

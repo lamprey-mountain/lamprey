@@ -566,7 +566,7 @@ async fn user_search(
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
         .await?
         .ensure_view()?
-        .needs(Permission::Admin)
+        .needs(Permission::UserManage)
         .check()?;
 
     Ok(Error::Unimplemented)

@@ -26,23 +26,19 @@ pub mod search_messages {
     post,
     path = "/search/channels",
     tags = ["search"],
-    response(OK, body = PaginationResponse<Channel>, description = "success"),
+    response(OK, body = ChannelSearch, description = "success"),
 )]
 pub mod search_channels {
-    use crate::v1::types::search::ChannelSearchRequest;
-    use crate::v1::types::{Channel, ChannelId, PaginationQuery, PaginationResponse};
+    use crate::v1::types::search::{ChannelSearch, ChannelSearchRequest};
 
     pub struct Request {
-        #[query]
-        pub pagination: PaginationQuery<ChannelId>,
-
         #[json]
         pub search: ChannelSearchRequest,
     }
 
     pub struct Response {
         #[json]
-        pub channels: PaginationResponse<Channel>,
+        pub channels: ChannelSearch,
     }
 }
 

@@ -40,7 +40,7 @@ pub async fn search_channels(
     let res = s
         .services()
         .search
-        .search_channels(auth.user.id, req.search, req.pagination)
+        .search_channels(auth.user.id, req.search)
         .await?;
     Ok(Json(res))
 }
