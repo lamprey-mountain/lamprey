@@ -30,9 +30,6 @@ pub trait Peer {
     /// another peer sent speaking metadata
     fn handle_speaking(&self, speaking: SpeakingWithUserId);
 
-    /// handle a raw network packet (e.g. UDP from the SFU socket)
-    fn handle_network_packet(&self, source: SocketAddr, data: Bytes);
-
     /// poll for events
     async fn poll(&mut self) -> Option<PeerEvent>;
 }
@@ -69,13 +66,6 @@ impl Peer for PeerEndpoint {
         match self {
             PeerEndpoint::Webrtc(p) => p.handle_speaking(speaking),
             PeerEndpoint::Cascade(p) => p.handle_speaking(speaking),
-        }
-    }
-
-    fn handle_network_packet(&self, source: SocketAddr, data: Bytes) {
-        match self {
-            PeerEndpoint::Webrtc(p) => p.handle_network_packet(source, data),
-            PeerEndpoint::Cascade(p) => p.handle_network_packet(source, data),
         }
     }
 

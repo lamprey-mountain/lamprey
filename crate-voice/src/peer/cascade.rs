@@ -1,10 +1,12 @@
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use bytes::Bytes;
 use common::v1::types::{
     voice::{
         internal::MediaData,
-        messages::{PeerEvent, SignallingCommand},
+        messages::{BackboneDatagram, PeerEvent, SignallingCommand},
         SpeakingWithUserId,
     },
     SfuId, UserId,
@@ -14,33 +16,35 @@ use tracing::debug;
 
 use crate::{
     backbone::BackboneComms,
-    peer::{Command, Peer},
+    peer::{Command, CommandFull, Peer},
 };
 
 /// a handle to a cascaded peer connection
 #[derive(Debug)]
 pub struct PeerCascading {
-    id: UserId,
-    command_tx: mpsc::UnboundedSender<Command>,
+    // id: UserId,
+    command_tx: mpsc::UnboundedSender<CommandFull>,
     event_rx: mpsc::UnboundedReceiver<PeerEvent>,
 }
 
 /// the actor responsible for the cascade lifecycle
 pub struct PeerCascadingInner {
-    id: UserId,
+    // id: UserId,
+    /// the remote sfu this cascading peer represents
     remote_sfu: SfuId,
+
     backbone: Arc<BackboneComms>,
-    command_rx: mpsc::UnboundedReceiver<Command>,
+    command_rx: mpsc::UnboundedReceiver<CommandFull>,
     event_tx: mpsc::UnboundedSender<PeerEvent>,
 }
 
 impl PeerCascading {
-    pub fn spawn(id: UserId, remote_sfu: SfuId, backbone: Arc<BackboneComms>) -> Self {
+    pub fn spawn(remote_sfu: SfuId, backbone: Arc<BackboneComms>) -> Self {
         let (command_tx, command_rx) = mpsc::unbounded_channel();
         let (event_tx, event_rx) = mpsc::unbounded_channel();
 
         let inner = PeerCascadingInner {
-            id,
+            // id,
             remote_sfu,
             backbone,
             command_rx,
@@ -52,7 +56,6 @@ impl PeerCascading {
         });
 
         Self {
-            id,
             command_tx,
             event_rx,
         }
@@ -62,7 +65,24 @@ impl PeerCascading {
 impl PeerCascadingInner {
     async fn run(mut self) {
         while let Some(cmd) = self.command_rx.recv().await {
-            self.handle_command(cmd);
+            self.handle_command_full(cmd);
+        }
+    }
+
+    fn handle_command_full(&mut self, command: CommandFull) {
+        match command {
+            CommandFull::Inner(inner) => self.handle_command(inner),
+            CommandFull::MediaData(media) => {
+                self.backbone
+                    .broadcast_datagram(&[self.remote_sfu], BackboneDatagram::Media(media));
+            }
+            CommandFull::Speaking(speaking) => {
+                self.backbone
+                    .broadcast_datagram(&[self.remote_sfu], BackboneDatagram::Speaking(speaking));
+            }
+            CommandFull::NetworkPacket(_, _) => {
+                // cascade peers don't handle network packets directly
+            }
         }
     }
 
@@ -84,23 +104,19 @@ impl PeerCascadingInner {
 #[async_trait]
 impl Peer for PeerCascading {
     fn id(&self) -> UserId {
-        self.id
+        todo!()
     }
 
     fn handle_command(&self, cmd: Command) {
-        _ = self.command_tx.send(cmd);
+        _ = self.command_tx.send(CommandFull::Inner(cmd));
     }
 
-    fn handle_media_data(&self, _media: MediaData) {
-        // TODO: Backbone datagram transmission
+    fn handle_media_data(&self, media: MediaData) {
+        _ = self.command_tx.send(CommandFull::MediaData(media));
     }
 
-    fn handle_speaking(&self, _speaking: SpeakingWithUserId) {
-        // TODO: Backbone datagram transmission
-    }
-
-    fn handle_network_packet(&self, _source: std::net::SocketAddr, _data: bytes::Bytes) {
-        // Cascaded peers don't handle raw network packets directly
+    fn handle_speaking(&self, speaking: SpeakingWithUserId) {
+        _ = self.command_tx.send(CommandFull::Speaking(speaking));
     }
 
     async fn poll(&mut self) -> Option<PeerEvent> {

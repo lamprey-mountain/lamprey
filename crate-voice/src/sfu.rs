@@ -143,21 +143,25 @@ impl Sfu {
 
     /// use STUN demultiplexing to identify and forward packet to the peer
     pub async fn handle_packet(&mut self, source: SocketAddr, data: Bytes) {
-        if data.len() >= 20 && (data[0] == 0x00 || data[0] == 0x01) {
-            if let Some(ufrag) = extract_stun_ufrag(&data) {
-                if let Some(peer_id) = self.ufrag_to_peer.get(&ufrag) {
-                    let (channel_id, user_id) = *peer_id;
-                    if let Some(call) = self.calls.get(&channel_id) {
-                        if let Some(peer) = call.users.get(&user_id) {
-                            peer.handle_network_packet(source, data);
-                            return;
-                        }
-                    }
-                }
+        let peer = (|| {
+            if data.len() < 20 || (data[0] != 0x00 && data[0] != 0x01) {
+                return None;
             }
-        }
+            let ufrag = extract_stun_ufrag(&data)?;
+            let peer_id = self.ufrag_to_peer.get(&ufrag)?;
+            let (channel_id, user_id) = *peer_id;
+            let call = self.calls.get(&channel_id)?;
+            call.users.get(&user_id)
+        })();
 
-        warn!("couldn't demultiplex udp packet from {}", source);
+        if let Some(peer) = peer {
+            match peer.value() {
+                PeerEndpoint::Webrtc(p) => p.handle_network_packet(source, data),
+                PeerEndpoint::Cascade(_) => warn!("got packet for cascade peer"),
+            }
+        } else {
+            warn!("couldn't demultiplex udp packet from {}", source);
+        }
     }
 
     fn handle_backbone_event(&mut self, event: BackboneEvent) {

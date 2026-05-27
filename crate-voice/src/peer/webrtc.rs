@@ -140,6 +140,12 @@ impl PeerWebrtc {
             event_rx: Arc::new(Mutex::new(event_rx)),
         }
     }
+
+    pub fn handle_network_packet(&self, source: SocketAddr, data: Bytes) {
+        _ = self
+            .command_tx
+            .send(CommandFull::NetworkPacket(source, data));
+    }
 }
 
 impl PeerWebrtcInner {
@@ -324,7 +330,10 @@ impl PeerWebrtcInner {
 
                 let local_addr = match local_addr {
                     Ok(a) => a,
-                    Err(_) => todo!("error!()"),
+                    Err(e) => {
+                        error!("Failed to get local address: {:?}", e);
+                        return;
+                    }
                 };
 
                 let contents = match data.as_ref().try_into() {
@@ -423,7 +432,7 @@ impl PeerWebrtcInner {
                     user_id: self.user_id,
                     source_mid: t.inner.mid,
                     enabled: false,
-                    channel_id: todo!(),
+                    channel_id: self.voice_state.channel_id,
                     key: t.inner.key,
                 });
             }
@@ -451,12 +460,6 @@ impl Peer for PeerWebrtc {
 
     fn handle_speaking(&self, speaking: SpeakingWithUserId) {
         _ = self.command_tx.send(CommandFull::Speaking(speaking));
-    }
-
-    fn handle_network_packet(&self, source: SocketAddr, data: Bytes) {
-        _ = self
-            .command_tx
-            .send(CommandFull::NetworkPacket(source, data));
     }
 
     async fn poll(&mut self) -> Option<PeerEvent> {
