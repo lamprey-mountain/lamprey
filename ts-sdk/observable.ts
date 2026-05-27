@@ -8,6 +8,7 @@ export type Observable<T> = {
 
 export type Observer<T> = {
 	subscribe: (subscriber: (val: T) => void) => () => void;
+	get: () => T;
 };
 
 export function createObservable<T>(
@@ -35,6 +36,9 @@ export function createObservable<T>(
 					listeners.delete(fn);
 					onListenerChange?.(listeners.size);
 				};
+			},
+			get() {
+				return current;
 			},
 		},
 	};

@@ -95,6 +95,46 @@ export const logger = {
 	},
 };
 
+// export const logger2 = {
+// 	for(namespace: string) {
+// 		const createLogFn =
+// 			(level: LogLevel, tag?: string, customColor?: string) =>
+// 			(message: string, ...data: unknown[]) => {
+// 				// entries.push({ level, namespace, tag, message, data });
+// 				const cfg = namespaceConfig.get(namespace);
+// 				const resolvedColor = customColor ?? cfg?.color ?? "white";
+
+// 				const log: Array<unknown> = tag
+// 					? [
+// 							"%c%s%c %s%c %s",
+// 							badgeStyle(resolvedColor),
+// 							namespace,
+// 							color(resolvedColor),
+// 							tag,
+// 						]
+// 					: ["%c%s%c %s", badgeStyle(resolvedColor), namespace];
+// 				log.push("color:initial", message);
+// 				if (data) log.push(data);
+// 				console[level](...log);
+// 			};
+
+// 		const createLogObj = (tag?: string) => ({
+// 			error: createLogFn("error", tag),
+// 			info: createLogFn("info", tag),
+// 			warn: createLogFn("warn", tag),
+// 			debug: createLogFn("debug", tag),
+// 			trace: createLogFn("trace", tag),
+// 			create: createLogFn,
+// 			tag: (tag: string) => createLogObj(tag),
+// 		});
+
+// 		return createLogObj();
+// 	},
+// 	config(namespace: string, config: LoggerNamespaceConfig) {
+// 		namespaceConfig.set(namespace, config);
+// 	},
+// };
+
 logger.config("sw", { color: colors.gray });
 logger.config("config", { color: colors.gray });
 logger.config("voice", { color: colors.green });

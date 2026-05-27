@@ -70,6 +70,8 @@ export type Application = components["schemas"]["Application"] & {
 };
 export type RoomMemberOrigin = components["schemas"]["RoomMemberOrigin"];
 export type MessageSync = components["schemas"]["MessageSync"] | ScriptSync;
+export type MessageClient = components["schemas"]["MessageClient"];
+export type VoiceSubscription = components["schemas"]["Subscription"];
 export type RoomBan = components["schemas"]["RoomBan"] & {
 	/** @description room id (client-side context, not in canonical schema) */
 	room_id?: components["schemas"]["Id"];
@@ -234,70 +236,10 @@ export type MessageEnvelope =
 	| { op: "Resumed" }
 	| { op: "Reconnect"; can_resume: boolean };
 
-export type TrackMetadata = {
-	mid: string;
-	kind: "Audio" | "Video";
-	key: string;
-};
-
-export type SignallingMessage =
-	| {
-			type: "Ready";
-	  }
-	| {
-			type: "Offer";
-			sdp: string;
-			tracks: TrackMetadata[];
-	  }
-	| {
-			type: "Answer";
-			sdp: string;
-	  }
-	| {
-			type: "Candidate";
-			candidate: string;
-	  }
-	| {
-			// only sent by the server
-			type: "Have";
-			thread_id: string;
-			user_id: string;
-			tracks: TrackMetadata[];
-	  }
-	| {
-			type: "Want";
-			tracks: string[];
-	  }
-	| {
-			// only sent from client
-			// TODO: move this to a top level event
-			type: "VoiceState";
-			state: {
-				thread_id: string;
-				self_mute: boolean;
-				self_deaf: boolean;
-				self_video: boolean;
-				self_screen: boolean;
-			} | null;
-	  }
-	| {
-			type: "Reconnect";
-	  };
-
-export type VoiceState = {
-	user_id: string;
-	channel_id: string;
-	session_id?: string | null;
-	joined_at: string;
-	mute: boolean;
-	deaf: boolean;
-	self_mute: boolean;
-	self_deaf: boolean;
-	self_video: boolean;
-	self_screen?: boolean;
-	/** @description the thread this voice state is in */
-	thread_id?: string;
-};
+export type SignallingEvent = components["schemas"]["SignallingEvent"];
+export type SignallingCommand = components["schemas"]["SignallingCommand"];
+export type TrackMetadata = components["schemas"]["TrackMetadata"];
+export type VoiceState = components["schemas"]["VoiceState"];
 
 export type InboxListParams = {
 	from?: string;

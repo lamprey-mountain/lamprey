@@ -11,7 +11,6 @@ import {
 	Switch,
 } from "solid-js";
 import { useApi, useChannels, useRooms } from "@/api";
-import { useCtx } from "@/app/context";
 import { createPopup } from "@/app/popup";
 import iconCamera from "@/assets/camera.png";
 import iconExit from "@/assets/exit.png";
@@ -25,45 +24,41 @@ import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
 import { AvatarWithStatus } from "@/components/shared/User";
 import { useChannel } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
-import { useVoice } from "@/contexts/voice";
 import { getColor } from "@/lib/colors";
-import { useConfig } from "@/lib/config";
 import { flags } from "@/lib/flags";
 import { md } from "@/lib/markdown";
 import { VoiceDebug } from "./VoiceDebug.tsx";
+import { useVoice } from "../voice/context.tsx";
 
 export const Voice = (p: { channel: Channel }) => {
-	const _config = useConfig();
-	const api2 = useApi();
+	const api = useApi();
 	const [voice, actions] = useVoice();
-	const _ctx = useCtx();
 	const [ch, chUpdate] = useChannel()!;
-	const _currentUser = useCurrentUser();
 
+	// FIXME: this seems to be very janky
 	createEffect(
 		on(
 			() => p.channel.id,
 			(tid) => {
-				if (!voice.threadId || voice.threadId !== tid) actions.connect(tid);
+				if (!voice.joinedChannelId || voice.joinedChannelId !== tid) actions.selectChannel(tid);
 			},
 		),
 	);
 
 	const getName = (uid: string) => {
-		const _user = api2.users.use(() => uid);
 		const room_member = p.channel.room_id
-			? api2.room_members.use(() => `${p.channel.room_id}!:${uid}`)
+			? api.room_members.use(() => `${p.channel.room_id}!:${uid}`)
 			: null;
 		return room_member?.()?.override_name || uid;
 	};
 
 	const getUsersWithoutStreams = () => {
 		const hasStream = new Set();
-		for (const s of voice.rtc?.streams.values() ?? []) {
+		for (const s of voice.vc.streams.values() ?? []) {
 			hasStream.add(s.user_id);
 		}
 		const users = [];
-		for (const state of api2.voiceStates.values()) {
+		for (const state of api.voiceStates.values()) {
 			if (
 				(state as any).thread_id === p.channel.id &&
 				!hasStream.has(state.user_id)
@@ -111,23 +106,54 @@ export const Voice = (p: { channel: Channel }) => {
 		>
 			<div class="streams">
 				<div class="centered">
-					<Show when={voice.rtc}>
-						<Show when={focused()}>
-							{((stream) => {
-								if (!stream) return;
+					<Show when={focused()}>
+						{((stream) => {
+							if (!stream) return;
+							let videoRef!: HTMLVideoElement;
+							createEffect(() => {
+								if (videoRef) videoRef.srcObject = stream.media;
+							});
+							return (
+								<div
+									class="stream"
+									classList={{
+										fullscreen: focused() === stream.id,
+										speaking:
+											((voice.vc.speaking.users.get(stream.user_id)?.flags ?? 0) &
+												1) ===
+											1,
+									}}
+									onClick={() =>
+										setFocused((s) => (s === stream.id ? null : stream.id))
+									}
+								>
+									<div class="live">live</div>
+									<video autoplay playsinline ref={videoRef!} muted />
+									<div class="status">{getName(stream.user_id)}</div>
+								</div>
+							);
+						})(voice.vc.streams.get(focused()!))}
+					</Show>
+					<div class="list">
+						<For each={[...(voice.vc.streams.values() ?? [])]}>
+							{(stream) => {
 								let videoRef!: HTMLVideoElement;
 								createEffect(() => {
 									if (videoRef) videoRef.srcObject = stream.media;
 								});
+
 								return (
 									<div
 										class="stream"
 										classList={{
-											fullscreen: focused() === stream.id,
 											speaking:
-												((voice.rtc?.speaking.get(stream.user_id)?.flags ?? 0) &
+												((voice.vc.speaking.users.get(stream.user_id)?.flags ??
+													0) &
 													1) ===
 												1,
+										}}
+										style={{
+											display: focused() === stream.id ? "none" : undefined,
 										}}
 										onClick={() =>
 											setFocused((s) => (s === stream.id ? null : stream.id))
@@ -138,60 +164,27 @@ export const Voice = (p: { channel: Channel }) => {
 										<div class="status">{getName(stream.user_id)}</div>
 									</div>
 								);
-							})(voice.rtc?.streams.get(focused()!))}
-						</Show>
-						<div class="list">
-							<For each={[...(voice.rtc?.streams.values() ?? [])]}>
-								{(stream) => {
-									let videoRef!: HTMLVideoElement;
-									createEffect(() => {
-										if (videoRef) videoRef.srcObject = stream.media;
-									});
-
-									return (
-										<div
-											class="stream"
-											classList={{
-												speaking:
-													((voice.rtc?.speaking.get(stream.user_id)?.flags ??
-														0) &
-														1) ===
-													1,
-											}}
-											style={{
-												display: focused() === stream.id ? "none" : undefined,
-											}}
-											onClick={() =>
-												setFocused((s) => (s === stream.id ? null : stream.id))
-											}
-										>
-											<div class="live">live</div>
-											<video autoplay playsinline ref={videoRef!} muted />
-											<div class="status">{getName(stream.user_id)}</div>
-										</div>
-									);
-								}}
-							</For>
-							<For each={getUsersWithoutStreams()}>
-								{(uid) => {
-									const user = api2.users.use(() => uid);
-									return (
-										<div
-											class="stream"
-											style={{
-												"background-color": getColor(uid),
-											}}
-										>
-											<Show when={user}>
-												<AvatarWithStatus user={user()} />
-												<div class="status">{getName(uid)}</div>
-											</Show>
-										</div>
-									);
-								}}
-							</For>
-						</div>
-					</Show>
+							}}
+						</For>
+						<For each={getUsersWithoutStreams()}>
+							{(uid) => {
+								const user = api.users.use(() => uid);
+								return (
+									<div
+										class="stream"
+										style={{
+											"background-color": getColor(uid),
+										}}
+									>
+										<Show when={user}>
+											<AvatarWithStatus user={user()} />
+											<div class="status">{getName(uid)}</div>
+										</Show>
+									</div>
+								);
+							}}
+						</For>
+					</div>
 				</div>
 			</div>
 			<header class="top">
@@ -222,24 +215,24 @@ export const Voice = (p: { channel: Channel }) => {
 			</header>
 			<div class="bottom">
 				<div class="controls">
-					<button type="button" class="button" onClick={actions.toggleDeafened}>
+					<button type="button" class="button" onClick={() => actions.toggleDeafened()}>
 						<ToggleIcon checked={!voice.deafened} src={iconHeadphones} />
 					</button>
-					<button type="button" class="button" onClick={actions.toggleCam}>
-						<ToggleIcon checked={!voice.cameraHidden} src={iconCamera} />
+					<button type="button" class="button" onClick={() => actions.toggleCamera()}>
+						<ToggleIcon checked={voice.camera} src={iconCamera} />
 					</button>
-					<button type="button" class="button" onClick={actions.toggleMic}>
+					<button type="button" class="button" onClick={() => actions.toggleMicrophone()}>
 						<ToggleIcon checked={!voice.muted} src={iconMic} />
 					</button>
-					<button type="button" class="button" onClick={actions.toggleScreen}>
+					<button type="button" class="button" onClick={actions.toggleScreenshare}>
 						<ToggleIcon
-							checked={voice.screenshareEnabled}
+							checked={voice.screensharing}
 							src={iconScreenshare}
 						/>
 					</button>
 					<Show when={flags.has("voice_music")}>
 						<button type="button" class="button" onClick={actions.playMusic}>
-							<ToggleIcon checked={voice.musicPlaying} src={iconMusic} />
+							<ToggleIcon checked={voice.musicing} src={iconMusic} />
 						</button>
 					</Show>
 					<button type="button" class="disconnect" onClick={actions.disconnect}>
@@ -257,8 +250,8 @@ export const VoiceTray = () => {
 	const rooms2 = useRooms();
 	const currentUser = useCurrentUser();
 	const [voice, actions] = useVoice();
-	const threadData = voice.threadId
-		? channels2.use(() => voice.threadId!)
+	const threadData = voice.joinedChannelId
+		? channels2.use(() => voice.joinedChannelId!)
 		: null;
 	const thread = () => threadData?.();
 	const roomData = () => {
@@ -303,70 +296,72 @@ export const VoiceTray = () => {
 		}
 	};
 
+	// FIXME: types
 	return (
 		<div class="voice-tray">
-			<Show when={voice.rtc}>
-				<div class="row">
-					<div style="flex:1;display:flex;align-items:center">
-						<button type="button" class="status" onClick={openDebug}>
-							<Switch>
-								<Match when={!voice.rtc}>
-									<div class="status disconnected">disconnected</div>
-								</Match>
-								<Match when={voice.rtc?.state() === "connected"}>
-									<div class="status connected">connected</div>
-								</Match>
-								<Match when={voice.rtc?.state() === "failed"}>
-									<div class="status failed">failed</div>
-								</Match>
-								<Match when={true}>
-									<div class="status">{voice.rtc?.state()}</div>
-								</Match>
-							</Switch>
+			<Show when={voice.vc.connectionState() !== "disconnected" && voice.vc.connectionState()}>{cs => (
+				<>
+					<div class="row">
+						<div style="flex:1;display:flex;align-items:center">
+							<button type="button" class="status" onClick={openDebug}>
+								<Switch>
+									<Match when={cs() === "connecting" || cs() === "pending"}>
+										<div class="status disconnected">disconnected</div>
+									</Match>
+									<Match when={cs() === "connected"}>
+										<div class="status connected">connected</div>
+									</Match>
+									<Match when={false}>
+										<div class="status failed">failed</div>
+									</Match>
+									<Match when={true}>
+										<div class="status">{cs()}</div>
+									</Match>
+								</Switch>
+							</button>
+							<div style="width:8px"></div>
+							<Duration ms={connectedDuration()} />
+						</div>
+						<button
+							type="button"
+							class="button"
+							style="width: auto"
+							onClick={actions.disconnect}
+						>
+							disconnect
 						</button>
-						<div style="width:8px"></div>
-						<Duration ms={connectedDuration()} />
 					</div>
-					<button
-						type="button"
-						class="button"
-						style="width: auto"
-						onClick={actions.disconnect}
-					>
-						disconnect
-					</button>
-				</div>
-				<div class="row">
-					<div>
-						in{" "}
-						<a href={`/thread/${thread()?.id}`}>
-							<Show when={room()} fallback={thread()?.name}>
-								{room()?.name} / {thread()?.name}
-							</Show>
-						</a>
+					<div class="row">
+						<div>
+							in{" "}
+							<a href={`/thread/${thread()?.id}`}>
+								<Show when={room()} fallback={thread()?.name}>
+									{room()?.name} / {thread()?.name}
+								</Show>
+							</a>
+						</div>
+						<div style="flex:1"></div>
+						<button
+							type="button"
+							class="button"
+							data-tooltip="toggle camera"
+							onClick={actions.toggleCam}
+						>
+							<ToggleIcon checked={!voice.cameraHidden} src={iconCamera} />
+						</button>
+						<button
+							type="button"
+							class="button"
+							data-tooltip="toggle screenshare"
+							onClick={actions.toggleScreen}
+						>
+							<ToggleIcon
+								checked={voice.screenshareEnabled}
+								src={iconScreenshare}
+							/>
+						</button>
 					</div>
-					<div style="flex:1"></div>
-					<button
-						type="button"
-						class="button"
-						data-tooltip="toggle camera"
-						onClick={actions.toggleCam}
-					>
-						<ToggleIcon checked={!voice.cameraHidden} src={iconCamera} />
-					</button>
-					<button
-						type="button"
-						class="button"
-						data-tooltip="toggle screenshare"
-						onClick={actions.toggleScreen}
-					>
-						<ToggleIcon
-							checked={voice.screenshareEnabled}
-							src={iconScreenshare}
-						/>
-					</button>
-				</div>
-			</Show>
+				</>)}</Show>
 			<div class="row toolbar">
 				<AvatarWithStatus user={currentUser()!} />
 				<div style="flex:1">

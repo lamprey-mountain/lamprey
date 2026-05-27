@@ -5,9 +5,9 @@ import { Checkbox } from "@/atoms/icons";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useMenu } from "@/contexts/mod.tsx";
 import { useModals } from "@/contexts/modal";
-import { useVoice } from "@/contexts/voice";
 import { usePermissions } from "@/hooks/usePermissions.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
+import { useVoice } from "@/components/features/voice/context.tsx";
 
 type UserMenuProps = {
 	user_id: string;
@@ -391,6 +391,7 @@ export function UserMenu(props: UserMenuProps) {
 					</Show>
 					<Separator />
 					<Show when={props.user_id !== self_id() && connectedToVoice()}>
+						{/* FIXME: update types to use new voice system */}
 						<li>
 							<label style="display:block;padding:0 8px;padding-top:8px">
 								<div class="dim">volume</div>

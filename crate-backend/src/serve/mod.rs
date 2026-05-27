@@ -222,6 +222,9 @@ mod utoipa_utils;
         common::v1::types::interactions::InteractionResponseCreate,
         common::v1::types::interactions::InteractionResponseCreateType,
         common::v1::types::interactions::InteractionResponse,
+        // voice types
+        common::v1::types::voice::messages::SignallingEvent,
+        common::v1::types::voice::messages::SignallingCommand,
     )),
     modifiers(&BadgeModifier, &NestedTags),
     info(

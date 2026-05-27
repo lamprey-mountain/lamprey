@@ -32,7 +32,6 @@ import { OverlayProvider } from "@/contexts/overlay.tsx";
 import { ReadTrackingProvider } from "@/contexts/read-tracking.tsx";
 import { SlashCommandsProvider } from "@/contexts/slash-commands.tsx";
 import { UploadsProvider } from "@/contexts/uploads.tsx";
-import { useVoice, VoiceProvider } from "@/contexts/voice";
 import { useAppConfig } from "@/hooks/useAppConfig.ts";
 import { useChatClient } from "@/hooks/useChatClient.ts";
 import { useFavicon } from "@/hooks/useFavicon.ts";
@@ -53,6 +52,7 @@ import {
 	RouteRoomSettings,
 	RouteUser,
 } from "@/routes";
+import { useVoice, VoiceProvider } from "@/components/features/voice/context";
 
 const App: Component = () => {
 	return (
@@ -229,6 +229,7 @@ export const AppShell: Component<ParentProps> = (props) => {
 			{props.children}
 			<OverlayProvider />
 			<div style="visibility:hidden">
+				{/* FIXME: render rtc streams
 				<For each={[...(voice.rtc?.streams.values() ?? [])]}>
 					{(stream) => {
 						let audioRef: HTMLAudioElement | undefined;
@@ -256,6 +257,8 @@ export const AppShell: Component<ParentProps> = (props) => {
 						);
 					}}
 				</For>
+
+				*/}
 			</div>
 			<Show when={state() !== "ready"}>
 				<div style="position:fixed;top:8px;left:8px;background:#111;padding:8px;border:solid #222 1px;">

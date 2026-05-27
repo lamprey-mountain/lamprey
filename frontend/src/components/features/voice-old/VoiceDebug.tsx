@@ -17,8 +17,186 @@ import { getAttributeDescription, parseSessionDescription } from "./rtc-util";
 import { useVoice } from "../voice/context";
 
 export const VoiceDebug = (props: { onClose: () => void }) => {
-  // FIXME: port VoiceDebug here
-  // from frontend/src/components/features/voice-old/VoiceDebug.tsx
+	const [voice] = useVoice();
+	const api2 = useApi();
+
+	const [tab, setTab] = createSignal("streams");
+	const [localSdp, setLocalSdp] = createSignal<RTCSessionDescription | null>(
+		null,
+	);
+	const [remoteSdp, setRemoteSdp] = createSignal<RTCSessionDescription | null>(
+		null,
+	);
+
+	const updateSdps = () => {
+		setLocalSdp(voice.rtc?.conn.localDescription ?? null);
+		setRemoteSdp(voice.rtc?.conn.remoteDescription ?? null);
+	};
+	updateSdps();
+
+	let currentConn = voice.rtc?.conn;
+	voice.rtc?.events.on("reconnect", ({ conn }) => {
+		currentConn?.removeEventListener("connectionstatechange", updateSdps);
+		conn.addEventListener("connectionstatechange", updateSdps);
+		currentConn = conn;
+	});
+
+	currentConn?.addEventListener("connectionstatechange", updateSdps);
+	onCleanup(() =>
+		currentConn?.removeEventListener("connectionstatechange", updateSdps),
+	);
+
+	const voiceStates = createMemo(() => {
+		return [...api2.voiceStates.values()].filter(
+			(i) => (i as any).thread_id === voice.threadId,
+		);
+	});
+
+	return (
+		<div class="voice-debug">
+			<header>voice/webrtc debugger</header>
+			<nav>
+				<For
+					each={[
+						{ tab: "states", label: "voice states" },
+						{ tab: "streams", label: "streams" },
+						{ tab: "stats", label: "stats" },
+						{ tab: "sdp-local", label: "local sdp" },
+						{ tab: "sdp-remote", label: "remote sdp" },
+					]}
+				>
+					{(a) => (
+						<button
+							type="button"
+							class="button"
+							classList={{ active: tab() === a.tab }}
+							onClick={() => setTab(a.tab)}
+						>
+							{a.label}
+						</button>
+					)}
+				</For>
+				<button type="button" class="button" onClick={props.onClose}>
+					close
+				</button>
+			</nav>
+			<main>
+				<Switch>
+					<Match when={tab() === "states"}>
+						<div style="margin: 8px;">
+							<h3>{voiceStates().length} voice states(s)</h3>
+							<br />
+							<For each={voiceStates()}>
+								{(s) => {
+									return (
+										<div style="border: solid #444 1px;padding:4px">
+											<div>
+												<b>user_id</b>: <Copyable>{s.user_id}</Copyable>
+											</div>
+											<pre>{JSON.stringify(s, null, 2)}</pre>
+										</div>
+									);
+								}}
+							</For>
+						</div>
+					</Match>
+					<Match when={tab() === "streams"}>
+						<div style="margin: 8px;">
+							<h3>{voice.rtc?.streams.size} stream(s)</h3>
+							<br />
+							<For each={[...(voice.rtc?.streams.values() ?? [])]}>
+								{(s) => {
+									return (
+										<div style="border: solid #444 1px;padding:4px">
+											<div>
+												<b>user_id</b>: <Copyable>{s.user_id}</Copyable>
+											</div>
+											<div>
+												<b>key</b>: {s.key}
+											</div>
+											<div>
+												<b>transceivers:</b>
+												<ul style="list-style: inside">
+													<For each={s.mids}>
+														{(m) => {
+															const t = voice.rtc?.transceivers.get(m);
+															return (
+																<li>
+																	<b>{m}</b>{" "}
+																	{t?.sender.track?.kind ??
+																		t?.receiver.track.kind}
+																</li>
+															);
+														}}
+													</For>
+												</ul>
+											</div>
+										</div>
+									);
+								}}
+							</For>
+							<br />
+							<h3>{voice.rtc?.conn.getTransceivers().length} transceivers</h3>
+							<ul style="list-style: inside">
+								<For each={voice.rtc?.conn.getTransceivers()}>
+									{(t) => (
+										<li>
+											{t.mid} {t.direction}{" "}
+											{t?.sender.track?.kind ?? t?.receiver.track.kind}
+										</li>
+									)}
+								</For>
+							</ul>
+						</div>
+					</Match>
+					<Match when={tab() === "stats"}>
+						<VoiceStats />
+					</Match>
+					<Match when={tab() === "sdp-local"}>
+						<Show when={localSdp()} fallback={"no local sdp?"}>
+							{(s) => (
+								<>
+									<div style="margin: 8px;">
+										<h3>local sdp ({s().type})</h3>
+										<button
+											type="button"
+											class="button"
+											style="margin-left: 8px"
+											onClick={() => navigator.clipboard.writeText(s().sdp)}
+										>
+											copy
+										</button>
+									</div>
+									<VoiceSdp sdp={s().sdp} />
+								</>
+							)}
+						</Show>
+					</Match>
+					<Match when={tab() === "sdp-remote"}>
+						<Show when={remoteSdp()} fallback={"no remote sdp?"}>
+							{(s) => (
+								<>
+									<div style="margin: 8px;">
+										<h3>remote sdp ({s().type})</h3>
+										<button
+											type="button"
+											class="button"
+											style="margin-left: 8px"
+											onClick={() => navigator.clipboard.writeText(s().sdp)}
+										>
+											copy
+										</button>
+									</div>
+									<VoiceSdp sdp={s().sdp} />
+								</>
+							)}
+						</Show>
+					</Match>
+					<Match when={tab() === "foobar"}>foobar!</Match>
+				</Switch>
+			</main>
+		</div>
+	);
 };
 
 export const VoiceSdp = (props: { sdp: string }) => {
@@ -212,8 +390,7 @@ const VoiceStats = () => {
 	>();
 
 	const statsInterval = setInterval(async () => {
-		// const stats = await voice.vc.rtc.getStats();
-		const stats: RTCStatsReport = null as unknown as any; // FIXME: get stats
+		const stats = await voice.rtc?.conn.getStats();
 		const candidates: Array<unknown> = [];
 		stats?.forEach((v) => {
 			v.timestamp;
@@ -345,7 +522,6 @@ const VoiceStats = () => {
 	);
 };
 
-// TODO: split into separate component
 const Chart = (
 	props: VoidProps<{ points: Array<number>; height: number; unit?: string }>,
 ) => {

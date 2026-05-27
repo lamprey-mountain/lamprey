@@ -22,7 +22,6 @@ import { Icon } from "@/atoms/Icon";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useDisplay, useMenu } from "@/contexts/mod";
 import { useModals } from "@/contexts/modal";
-import { useVoice } from "@/contexts/voice";
 import { usePermissions } from "@/hooks/usePermissions";
 import { colors } from "@/lib/colors";
 import { flags } from "@/lib/flags";
@@ -31,6 +30,7 @@ import {
 	type PermissionContext,
 } from "@/lib/permissions/calculator";
 import { Avatar, ChannelIcon } from "./User";
+import { useVoice } from "../features/voice/context";
 
 // TODO: review llm code here because im lazy and dont like implementing drag and drop
 
@@ -823,7 +823,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 																class="voice-participant menu-user"
 																classList={{
 																	speaking:
-																		((voice.rtc?.speaking.get(s.user_id)
+																		((voice.vc.speaking?.users.get(s.user_id)
 																			?.flags ?? 0) &
 																			1) ===
 																		1,
