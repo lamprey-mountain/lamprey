@@ -22342,6 +22342,8 @@ export interface components {
 			 */
 			uses: number;
 		};
+		/** @enum {string} */
+		KeyframeRequestKind: "Fir" | "Pli";
 		License: string;
 		/** @description indicates that a channel is locked */
 		Locked: {
@@ -22853,6 +22855,78 @@ export interface components {
 			name_new: string;
 			name_old: string;
 		};
+		MessageClient:
+			| ((null | components["schemas"]["SyncResume"]) & {
+					presence?: null | components["schemas"]["Presence"];
+					token: components["schemas"]["SessionToken"];
+			  } & {
+					/** @enum {string} */
+					type: "Hello";
+			  })
+			| {
+					presence: components["schemas"]["Presence"];
+					/** @enum {string} */
+					type: "Presence";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Pong";
+			  }
+			| {
+					nonce?: string | null;
+					/** @enum {string} */
+					type: "VoiceConnect";
+					voice_state: components["schemas"]["VoiceStateUpdate"];
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					command: components["schemas"]["SignallingCommand"];
+					nonce?: string | null;
+					/** @enum {string} */
+					type: "VoiceDispatch";
+			  }
+			| {
+					/** @description the ranges to subscribe to */
+					ranges: [number, number][];
+					room_id?: null | components["schemas"]["Id"];
+					thread_id?: null | components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "MemberListSubscribe";
+			  }
+			| {
+					branch_id: components["schemas"]["Id"];
+					channel_id: components["schemas"]["Id"];
+					state_vector?: null | components["schemas"]["DocumentStateVector"];
+					/** @enum {string} */
+					type: "DocumentSubscribe";
+			  }
+			| {
+					branch_id: components["schemas"]["Id"];
+					/** @description the document thats being edited */
+					channel_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "DocumentEdit";
+					/** @description the encoded update to this document */
+					update: components["schemas"]["DocumentUpdate"];
+			  }
+			| {
+					branch_id: components["schemas"]["Id"];
+					channel_id: components["schemas"]["Id"];
+					cursor_head: string;
+					cursor_tail?: string | null;
+					/** @enum {string} */
+					type: "DocumentPresence";
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					script_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ScriptSubscribe";
+			  }
+			| (components["schemas"]["SyncSubscription"] & {
+					/** @enum {string} */
+					type: "Subscribe";
+			  });
 		MessageCreate: {
 			/** @description message attachments */
 			attachments?: components["schemas"]["MessageAttachmentCreate"][];
@@ -24977,6 +25051,47 @@ export interface components {
 		SessionToken: string;
 		/** @enum {string} */
 		SessionType: "User" | "Access";
+		/** @description an event sent from the peer's sync connection to the master */
+		SignallingCommand:
+			| {
+					/** @enum {string} */
+					type: "Disconnect";
+			  }
+			| {
+					state: components["schemas"]["VoiceStateUpdate"];
+					/** @enum {string} */
+					type: "VoiceState";
+			  }
+			| {
+					sdp: components["schemas"]["SessionDescription"];
+					tracks: components["schemas"]["TrackMetadata"][];
+					/** @enum {string} */
+					type: "Offer";
+			  }
+			| {
+					sdp: components["schemas"]["SessionDescription"];
+					/** @enum {string} */
+					type: "Answer";
+			  }
+			| {
+					candidate: components["schemas"]["IceCandidate"];
+					/** @enum {string} */
+					type: "Candidate";
+			  }
+			| {
+					subscriptions: components["schemas"]["Subscription"][];
+					/** @enum {string} */
+					type: "Want";
+			  }
+			| {
+					/** @description the kind of the keyframe that should be generated */
+					kind: components["schemas"]["KeyframeRequestKind"];
+					/** @description the track to generate a keyframe for */
+					mid: components["schemas"]["Mid"];
+					rid?: null | components["schemas"]["Rid"];
+					/** @enum {string} */
+					type: "Keyframe";
+			  };
 		/** @description an event sent from the backend to the peer's sync connection */
 		SignallingEvent:
 			| {
@@ -25043,6 +25158,37 @@ export interface components {
 			created_at: components["schemas"]["Time"];
 			expires_at?: null | components["schemas"]["Time"];
 			reason?: string | null;
+		};
+		SyncResume: {
+			conn: components["schemas"]["Id"];
+			/** Format: int64 */
+			seq: number;
+		};
+		SyncSubscribeDocument: {
+			branch_id: components["schemas"]["Id"];
+			channel_id: components["schemas"]["Id"];
+			state_vector?: null | components["schemas"]["DocumentStateVector"];
+		};
+		SyncSubscribeMemberList: {
+			channel_id?: null | components["schemas"]["Id"];
+			/** @description the ranges to subscribe to */
+			ranges: [number, number][];
+			room_id?: null | components["schemas"]["Id"];
+		};
+		SyncSubscribeScript: {
+			channel_id: components["schemas"]["Id"];
+			script_id: components["schemas"]["Id"];
+		};
+		/** @description update what the client is subscribed to
+		 *
+		 *     leaving a field as None will skip updating. set it to an empty vec to clear. */
+		SyncSubscription: {
+			/** @description the documents to subscribe to */
+			documents?: components["schemas"]["SyncSubscribeDocument"][] | null;
+			/** @description the member lists to subscribe to */
+			member_lists?: components["schemas"]["SyncSubscribeMemberList"][] | null;
+			/** @description the scripts to subscribe to */
+			scripts?: components["schemas"]["SyncSubscribeScript"][] | null;
 		};
 		/** @description a tag that can be applied to a thread */
 		Tag: {
@@ -25265,6 +25411,17 @@ export interface components {
 			/** @description when this user started sharing their screen */
 			started_at: components["schemas"]["Time"];
 			thumbnail?: null | components["schemas"]["Id"];
+		};
+		VoiceStateScreenshareUpdate: {
+			thumbnail?: null | components["schemas"]["Id"];
+		};
+		/** @description represents an update that a user would like to make to their voice state */
+		VoiceStateUpdate: {
+			channel_id: components["schemas"]["Id"];
+			screenshare?: null | components["schemas"]["VoiceStateScreenshareUpdate"];
+			self_deaf: boolean;
+			self_mute: boolean;
+			self_video: boolean;
 		};
 		WebauthnAuthenticator: {
 			created_at: components["schemas"]["Time"];
