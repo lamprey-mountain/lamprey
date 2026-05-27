@@ -501,8 +501,8 @@ impl PeerWebrtcInner {
                 SignallingCommand::Disconnect => {
                     self.rtc.disconnect();
                 }
-                SignallingCommand::VoiceState { .. } => {
-                    todo!("update self.voice_state")
+                SignallingCommand::VoiceState { state } => {
+                    self.voice_state.apply(state);
                 }
                 SignallingCommand::Want { subscriptions } => {
                     // TODO: handle subscriptions

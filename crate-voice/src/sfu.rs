@@ -183,12 +183,31 @@ impl Sfu {
                     mid,
                     rid,
                     kind,
-                } => todo!("forward to peer with user_id"),
+                } => {
+                    if let Some(channel_id) = self.find_channel_for_user(user_id) {
+                        self.peer_send(
+                            (channel_id, user_id),
+                            Command::GenerateKeyframe { mid, rid, kind },
+                        );
+                    }
+                }
                 _ => {}
             },
             BackboneEvent::Datagram(dgram) => match dgram {
-                BackboneDatagram::Media(m) => todo!("forward to peers"),
-                BackboneDatagram::Speaking(s) => todo!("forward to peers"),
+                BackboneDatagram::Media(m) => {
+                    for call in self.calls.values() {
+                        for peer in call.users.iter() {
+                            peer.handle_media_data(m.clone());
+                        }
+                    }
+                }
+                BackboneDatagram::Speaking(s) => {
+                    for call in self.calls.values() {
+                        for peer in call.users.iter() {
+                            peer.handle_speaking(s.clone());
+                        }
+                    }
+                }
             },
             _ => {}
         }
@@ -280,7 +299,14 @@ impl Sfu {
         let sock_v4 = Arc::clone(&self.sock_v4);
         let sock_v6 = Arc::clone(&self.sock_v6);
 
-        let peer = PeerWebrtc::spawn(user_id, state, permissions, sock_v4, sock_v6, call.tx.subscribe());
+        let peer = PeerWebrtc::spawn(
+            user_id,
+            state,
+            permissions,
+            sock_v4,
+            sock_v6,
+            call.tx.subscribe(),
+        );
 
         let ufrag_map = Arc::clone(&self.ufrag_to_peer);
 

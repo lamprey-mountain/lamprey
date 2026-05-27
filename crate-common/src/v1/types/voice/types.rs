@@ -683,3 +683,18 @@ impl SpeakingWithUserId {
         })
     }
 }
+
+impl VoiceState {
+    pub fn apply(&mut self, update: VoiceStateUpdate) {
+        self.channel_id = update.channel_id;
+        self.self_deaf = update.self_deaf;
+        self.self_mute = update.self_mute;
+        self.self_video = update.self_video;
+        if let Some(screenshare) = update.screenshare {
+            self.screenshare = screenshare.map(|s| VoiceStateScreenshare {
+                started_at: Time::now_utc(),
+                thumbnail: s.thumbnail,
+            });
+        }
+    }
+}
