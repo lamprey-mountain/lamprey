@@ -11,7 +11,7 @@ use common::v1::types::{
     error::{ApiError, ErrorCode},
     misc::ApplicationIdReq,
     util::Time,
-    MessageId, MessageSync, PaginationQuery,
+    MessageClient, MessageId, MessageSync, PaginationQuery,
 };
 use http::{header, HeaderName};
 use lamprey_backend_core::{config::ListenTransport, Error};
@@ -54,6 +54,7 @@ mod utoipa_utils;
         types::UserListParams,
         types::UserListFilter,
         MessageSync,
+        MessageClient,
         PaginationQuery<MessageId>,
         common::v1::types::pagination::PaginationResponse<types::Message>,
         types::emoji::EmojiCustom,
