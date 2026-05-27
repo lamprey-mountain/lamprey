@@ -3809,7 +3809,7 @@ export interface paths {
 							/** @description whether this message is ephemeral
 							 *
 							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
-							ephemeral: boolean;
+							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
 							interaction?: null | components["schemas"]["MessageInteraction"];
@@ -3874,7 +3874,7 @@ export interface paths {
 							/** @description whether this message is ephemeral
 							 *
 							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
-							ephemeral: boolean;
+							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
 							interaction?: null | components["schemas"]["MessageInteraction"];
@@ -4282,7 +4282,7 @@ export interface paths {
 							/** @description whether this message is ephemeral
 							 *
 							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
-							ephemeral: boolean;
+							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
 							interaction?: null | components["schemas"]["MessageInteraction"];
@@ -4588,7 +4588,7 @@ export interface paths {
 							/** @description whether this message is ephemeral
 							 *
 							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
-							ephemeral: boolean;
+							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
 							interaction?: null | components["schemas"]["MessageInteraction"];
@@ -4687,7 +4687,7 @@ export interface paths {
 							/** @description whether this message is ephemeral
 							 *
 							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
-							ephemeral: boolean;
+							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
 							interaction?: null | components["schemas"]["MessageInteraction"];
@@ -5225,7 +5225,7 @@ export interface paths {
 							/** @description whether this message is ephemeral
 							 *
 							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
-							ephemeral: boolean;
+							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
 							interaction?: null | components["schemas"]["MessageInteraction"];
@@ -9470,7 +9470,7 @@ export interface paths {
 							/** @description whether this message is ephemeral
 							 *
 							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
-							ephemeral: boolean;
+							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
 							interaction?: null | components["schemas"]["MessageInteraction"];
@@ -9533,7 +9533,7 @@ export interface paths {
 							/** @description whether this message is ephemeral
 							 *
 							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
-							ephemeral: boolean;
+							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
 							interaction?: null | components["schemas"]["MessageInteraction"];
@@ -9632,7 +9632,7 @@ export interface paths {
 							/** @description whether this message is ephemeral
 							 *
 							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
-							ephemeral: boolean;
+							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
 							interaction?: null | components["schemas"]["MessageInteraction"];
@@ -16207,12 +16207,22 @@ export interface paths {
 							deauthorized_at?: null | components["schemas"]["Time"];
 							expires_at?: null | components["schemas"]["Time"];
 							id: components["schemas"]["Id"];
+							/** @description session imprint metadata */
+							imprint: components["schemas"]["SessionImprint"];
+							/**
+							 * @deprecated
+							 * @description the last seen ip address using this session
+							 */
 							ip_addr?: string | null;
 							/** @description the last time this session was used */
 							last_seen_at: components["schemas"]["Time"];
 							/** @description a human readable name for this session */
 							name?: string | null;
 							type: components["schemas"]["SessionType"];
+							/**
+							 * @deprecated
+							 * @description the last seen user agent using this session
+							 */
 							user_agent?: string | null;
 						};
 					};
@@ -16286,12 +16296,22 @@ export interface paths {
 							deauthorized_at?: null | components["schemas"]["Time"];
 							expires_at?: null | components["schemas"]["Time"];
 							id: components["schemas"]["Id"];
+							/** @description session imprint metadata */
+							imprint: components["schemas"]["SessionImprint"];
+							/**
+							 * @deprecated
+							 * @description the last seen ip address using this session
+							 */
 							ip_addr?: string | null;
 							/** @description the last time this session was used */
 							last_seen_at: components["schemas"]["Time"];
 							/** @description a human readable name for this session */
 							name?: string | null;
 							type: components["schemas"]["SessionType"];
+							/**
+							 * @deprecated
+							 * @description the last seen user agent using this session
+							 */
 							user_agent?: string | null;
 						};
 					};
@@ -16308,12 +16328,22 @@ export interface paths {
 							deauthorized_at?: null | components["schemas"]["Time"];
 							expires_at?: null | components["schemas"]["Time"];
 							id: components["schemas"]["Id"];
+							/** @description session imprint metadata */
+							imprint: components["schemas"]["SessionImprint"];
+							/**
+							 * @deprecated
+							 * @description the last seen ip address using this session
+							 */
 							ip_addr?: string | null;
 							/** @description the last time this session was used */
 							last_seen_at: components["schemas"]["Time"];
 							/** @description a human readable name for this session */
 							name?: string | null;
 							type: components["schemas"]["SessionType"];
+							/**
+							 * @deprecated
+							 * @description the last seen user agent using this session
+							 */
 							user_agent?: string | null;
 						};
 					};
@@ -18722,7 +18752,7 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/voice/{channel_id}": {
+	"/api/v1/voice/{channel_id}/call": {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -18754,6 +18784,9 @@ export interface paths {
 					content: {
 						"application/json": {
 							channel_id: components["schemas"]["Id"];
+							/** @description when this call was created
+							 *
+							 *     roughly corresponds to the time that the first user joined */
 							created_at: components["schemas"]["Time"];
 							room_id?: null | components["schemas"]["Id"];
 							topic?: string | null;
@@ -18762,22 +18795,6 @@ export interface paths {
 				};
 			};
 		};
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/voice/{channel_id}/call": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
 		put?: never;
 		/**
 		 * Voice call create
@@ -18816,30 +18833,13 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
-							/** @description the channel this user is connected to */
 							channel_id: components["schemas"]["Id"];
-							connection_id?: null | components["schemas"]["Id"];
-							/** @description whether this user is deafened by a moderator */
-							deaf: boolean;
-							/** @description when this user joined the call */
-							joined_at: components["schemas"]["Time"];
-							/** @description whether this user is muted by a moderator */
-							mute: boolean;
-							requested_to_speak_at?: null | components["schemas"]["Time"];
-							screenshare?:
-								| null
-								| components["schemas"]["VoiceStateScreenshare"];
-							/** @description whether this user has deafened themselves */
-							self_deaf: boolean;
-							/** @description whether this user has muted themselves */
-							self_mute: boolean;
-							/** @description whether this user has enabled their camera */
-							self_video: boolean;
-							session_id?: null | components["schemas"]["Id"];
-							/** @description whether this user is suppressed, similar to a transient `mute: true` */
-							suppress: boolean;
-							/** @description the user this state belongs to */
-							user_id: components["schemas"]["Id"];
+							/** @description when this call was created
+							 *
+							 *     roughly corresponds to the time that the first user joined */
+							created_at: components["schemas"]["Time"];
+							room_id?: null | components["schemas"]["Id"];
+							topic?: string | null;
 						};
 					};
 				};
@@ -18911,30 +18911,13 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
-							/** @description the channel this user is connected to */
 							channel_id: components["schemas"]["Id"];
-							connection_id?: null | components["schemas"]["Id"];
-							/** @description whether this user is deafened by a moderator */
-							deaf: boolean;
-							/** @description when this user joined the call */
-							joined_at: components["schemas"]["Time"];
-							/** @description whether this user is muted by a moderator */
-							mute: boolean;
-							requested_to_speak_at?: null | components["schemas"]["Time"];
-							screenshare?:
-								| null
-								| components["schemas"]["VoiceStateScreenshare"];
-							/** @description whether this user has deafened themselves */
-							self_deaf: boolean;
-							/** @description whether this user has muted themselves */
-							self_mute: boolean;
-							/** @description whether this user has enabled their camera */
-							self_video: boolean;
-							session_id?: null | components["schemas"]["Id"];
-							/** @description whether this user is suppressed, similar to a transient `mute: true` */
-							suppress: boolean;
-							/** @description the user this state belongs to */
-							user_id: components["schemas"]["Id"];
+							/** @description when this call was created
+							 *
+							 *     roughly corresponds to the time that the first user joined */
+							created_at: components["schemas"]["Time"];
+							room_id?: null | components["schemas"]["Id"];
+							topic?: string | null;
 						};
 					};
 				};
@@ -18953,7 +18936,7 @@ export interface paths {
 		 * Voice state list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *
-		 *
+		 *     list all voice states in this channel
 		 */
 		get: {
 			parameters: {
@@ -19263,7 +19246,7 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/voice/{channel_id}/move-bulk": {
+	"/api/v1/voice/{channel_id}/move": {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -19271,6 +19254,7 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
+		put?: never;
 		/**
 		 * Voice state move bulk
 		 * @description <div class="markdown-alert-permission-required">VoiceMove</div>
@@ -19278,7 +19262,7 @@ export interface paths {
 		 *
 		 *
 		 */
-		put: {
+		post: {
 			parameters: {
 				query?: never;
 				header?: never;
@@ -19307,7 +19291,6 @@ export interface paths {
 				};
 			};
 		};
-		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -19327,7 +19310,7 @@ export interface paths {
 		 * Voice ring start
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *
-		 *
+		 *     Notifies people in a dm/gdm that there's a call. There must be an active call.
 		 */
 		post: {
 			parameters: {
@@ -19355,38 +19338,7 @@ export interface paths {
 				};
 			};
 		};
-		/**
-		 * Voice ring stop
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
-		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					channel_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody: {
-				content: {
-					"application/json": {
-						user_ids: components["schemas"]["Id"][];
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
-		};
+		delete?: never;
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -19403,7 +19355,7 @@ export interface paths {
 		 * Voice ring eligibility
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *
-		 *
+		 *     check if this channel can be rung
 		 */
 		get: {
 			parameters: {
@@ -19434,6 +19386,53 @@ export interface paths {
 		};
 		put?: never;
 		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/voice/{channel_id}/ring/stop": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Voice ring stop
+		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     stop ringing channel participants
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						user_ids: components["schemas"]["Id"][];
+					};
+				};
+			};
+			responses: {
+				/** @description ok */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -20844,6 +20843,8 @@ export interface components {
 					/** @enum {string} */
 					type: "MediaScan";
 			  };
+		/** @description binary data */
+		Binary: number[] | string;
 		/** @description where this application bridge content to */
 		Bridge: {
 			/** @description a description of this platform */
@@ -20906,8 +20907,12 @@ export interface components {
 		};
 		/** @enum {string} */
 		CalendarRsvpStatus: "interested" | "uninterested";
+		/** @description a currently active voice session */
 		Call: {
 			channel_id: components["schemas"]["Id"];
+			/** @description when this call was created
+			 *
+			 *     roughly corresponds to the time that the first user joined */
 			created_at: components["schemas"]["Time"];
 			room_id?: null | components["schemas"]["Id"];
 			topic?: string | null;
@@ -21182,6 +21187,27 @@ export interface components {
 		 */
 		ComponentId: number;
 		/** @description media to display in a component */
+		ComponentMedia_EncryptedMedia: {
+			/** @description description for this media
+			 *
+			 *     min 1 max 1024 chars */
+			description?: string | null;
+			/** @description encrypted data for media */
+			media: {
+				/** @description the algorithm used for encryption */
+				alg: components["schemas"]["MediaEncryptionAlg"];
+				/** @description the id of the media */
+				id: components["schemas"]["Id"];
+				/** @description initialization vector */
+				iv: components["schemas"]["Binary"];
+				/** @description the key used for encryption */
+				key: components["schemas"]["Binary"];
+				/** @description media struct for decrypted content */
+				media: components["schemas"]["EncryptedMediaInfo"];
+			};
+			spoiler?: boolean;
+		};
+		/** @description media to display in a component */
 		ComponentMedia_Media: {
 			/** @description description for this media
 			 *
@@ -21419,6 +21445,87 @@ export interface components {
 					/** @enum {string} */
 					type: "Gallery";
 			  };
+		/** @description components
+		 *
+		 *     ## layout
+		 *
+		 *     - `Container` creates a visually distinct section
+		 *     - `Section` creates a section without any margin/padding
+		 *     - `Details` creates a collapseable section
+		 *
+		 *     ## content
+		 *
+		 *     - `Text` displays markdown text
+		 *     - `Media` display a single piece of media
+		 *     - `Gallery` display multiple media
+		 *
+		 *     ## interactivity
+		 *
+		 *     - `Button` is clicky button
+		 *     - `LinkButton` is a link that looks like a button
+		 *
+		 *     ## logic
+		 *
+		 *     - `Reference` move or clone another component */
+		ComponentType_Encrypted:
+			| {
+					/** @description developer-defined identifier for this component */
+					custom_id: components["schemas"]["ComponentCustomId"];
+					label: string;
+					style: components["schemas"]["ButtonStyle"];
+					/** @enum {string} */
+					type: "Button";
+			  }
+			| {
+					label: string;
+					/** @enum {string} */
+					type: "LinkButton";
+					/**
+					 * Format: uri
+					 * @description what to link to
+					 */
+					url?: string | null;
+			  }
+			| {
+					color?: null | components["schemas"]["Color"];
+					components: components["schemas"]["Component_Encrypted"][];
+					/** @enum {string} */
+					type: "Container";
+			  }
+			| {
+					content: string;
+					/** @enum {string} */
+					type: "Text";
+			  }
+			| {
+					reference_id: components["schemas"]["ComponentId"];
+					/** @enum {string} */
+					type: "Reference";
+			  }
+			| {
+					color?: null | components["schemas"]["Color"];
+					details: components["schemas"]["Component_Encrypted"][];
+					open?: boolean;
+					summary: components["schemas"]["Component_Encrypted"][];
+					/** @enum {string} */
+					type: "Details";
+			  }
+			| {
+					color?: null | components["schemas"]["Color"];
+					components: components["schemas"]["Component_Encrypted"][];
+					/** @enum {string} */
+					type: "Section";
+			  }
+			| {
+					items: components["schemas"]["ComponentMedia_EncryptedMedia"][];
+					/** @enum {string} */
+					type: "Media";
+			  }
+			| {
+					items: components["schemas"]["ComponentMedia_EncryptedMedia"][];
+					/** @enum {string} */
+					type: "Gallery";
+			  };
 		/** @description a single component in a tree */
 		Component_Canonical: components["schemas"]["ComponentType_Canonical"] & {
 			id: components["schemas"]["ComponentId"];
@@ -21427,8 +21534,13 @@ export interface components {
 		Component_Create: components["schemas"]["ComponentType_Create"] & {
 			id: components["schemas"]["Option"];
 		};
+		/** @description a single component in a tree */
+		Component_Encrypted: components["schemas"]["ComponentType_Encrypted"] & {
+			id: components["schemas"]["ComponentId"];
+		};
 		Components_Canonical: components["schemas"]["Component_Canonical"][];
 		Components_Create: components["schemas"]["Component_Create"][];
+		Components_Encrypted: components["schemas"]["Component_Encrypted"][];
 		/** @description an application that is authorized to a user */
 		Connection: {
 			application: components["schemas"]["Application"];
@@ -21692,6 +21804,20 @@ export interface components {
 					/** @enum {string} */
 					owner: "User";
 			  };
+		EncryptedMediaInfo: {
+			alt?: string | null;
+			content_type: components["schemas"]["Mime"];
+			filename: string;
+			/** @description hashes of decrypted content */
+			hashes: {
+				[key: string]: string;
+			};
+			metadata: components["schemas"]["MediaMetadata"];
+			/** Format: int64 */
+			size: number;
+			/** Format: uri */
+			source_url?: string | null;
+		};
 		/**
 		 * @description Error codes for non-fatal errors.
 		 * @enum {string}
@@ -22216,8 +22342,6 @@ export interface components {
 			 */
 			uses: number;
 		};
-		/** @description a unique identifier for a track layer (corresponds to a rid in webrtc) */
-		LayerId: string;
 		License: string;
 		/** @description indicates that a channel is locked */
 		Locked: {
@@ -22347,6 +22471,11 @@ export interface components {
 			 *     If this is true, return 202 Accepted immediately and send a `MediaProcessed` event when your media is done processing. */
 			async?: boolean;
 		};
+		/**
+		 * @description the algorithm used to encrypt a piece of media
+		 * @enum {string}
+		 */
+		MediaEncryptionAlg: "A256GCM";
 		/** @enum {string} */
 		MediaErrorReason: "NotFound" | "Corrupted";
 		/**
@@ -22651,7 +22780,7 @@ export interface components {
 			/** @description whether this message is ephemeral
 			 *
 			 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
-			ephemeral: boolean;
+			ephemeral?: boolean;
 			flume?: null | components["schemas"]["MessageFlume"];
 			id: components["schemas"]["Id"];
 			interaction?: null | components["schemas"]["MessageInteraction"];
@@ -23018,7 +23147,8 @@ export interface components {
 					type: "TagDelete";
 			  }
 			| {
-					payload: components["schemas"]["SignallingMessage"];
+					channel_id: components["schemas"]["Id"];
+					payload: components["schemas"]["SignallingEvent"];
 					/** @enum {string} */
 					type: "VoiceDispatch";
 					/** @description who to send this dispatch to */
@@ -23028,6 +23158,7 @@ export interface components {
 					state?: null | components["schemas"]["VoiceState"];
 					/** @enum {string} */
 					type: "VoiceState";
+					/** @description the id of the user who's voice state was updated */
 					user_id: components["schemas"]["Id"];
 			  }
 			| {
@@ -23558,6 +23689,13 @@ export interface components {
 			[key: string]: string;
 		};
 		/**
+		 * Format: uuid
+		 * @description a unique identifier for a media track (corresponds to a transceiver in webrtc)
+		 *
+		 *     media track ids are unique per peer connection (peer-peer pair)
+		 */
+		Mid: string;
+		/**
 		 * Mime
 		 * @description a mime/media type
 		 */
@@ -23733,7 +23871,7 @@ export interface components {
 				/** @description whether this message is ephemeral
 				 *
 				 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
-				ephemeral: boolean;
+				ephemeral?: boolean;
 				flume?: null | components["schemas"]["MessageFlume"];
 				id: components["schemas"]["Id"];
 				interaction?: null | components["schemas"]["MessageInteraction"];
@@ -24306,6 +24444,11 @@ export interface components {
 			| "BanEvasion"
 			| "Underage"
 			| "Other";
+		/**
+		 * Format: int64
+		 * @description a unique identifier for a track layer
+		 */
+		Rid: number;
 		Role: {
 			/** @description the permissions to grant for this role */
 			allow: components["schemas"]["Permission"][];
@@ -24648,7 +24791,7 @@ export interface components {
 			welcome_channel_id?: null | components["schemas"]["Id"];
 		};
 		/** @enum {string} */
-		RoomType: "Default" | "Server";
+		RoomType: "Default" | "Server" | "Emoji";
 		/**
 		 * @description an oauth scope
 		 * @enum {string}
@@ -24778,16 +24921,38 @@ export interface components {
 			deauthorized_at?: null | components["schemas"]["Time"];
 			expires_at?: null | components["schemas"]["Time"];
 			id: components["schemas"]["Id"];
+			/** @description session imprint metadata */
+			imprint: components["schemas"]["SessionImprint"];
+			/**
+			 * @deprecated
+			 * @description the last seen ip address using this session
+			 */
 			ip_addr?: string | null;
 			/** @description the last time this session was used */
 			last_seen_at: components["schemas"]["Time"];
 			/** @description a human readable name for this session */
 			name?: string | null;
 			type: components["schemas"]["SessionType"];
+			/**
+			 * @deprecated
+			 * @description the last seen user agent using this session
+			 */
 			user_agent?: string | null;
 		};
 		/** @description webrtc session description */
 		SessionDescription: string;
+		/** @description metadata that gets updated whenever the session is used */
+		SessionImprint: {
+			city_name?: string | null;
+			country_code?: string | null;
+			country_name?: string | null;
+			/** @description the ip address that accessed this session */
+			ip_addr?: string | null;
+			/** @description the last time this session was used */
+			last_seen_at: components["schemas"]["Time"];
+			/** @description the user agent that was used while accessing this session */
+			user_agent?: string | null;
+		};
 		SessionStatus:
 			| {
 					/** @enum {string} */
@@ -24812,13 +24977,15 @@ export interface components {
 		SessionToken: string;
 		/** @enum {string} */
 		SessionType: "User" | "Access";
-		/** @description messages that either the sfu or client can send to each other */
-		SignallingMessage:
+		/** @description an event sent from the backend to the peer's sync connection */
+		SignallingEvent:
 			| {
-					/** @description the id of the selected sfu. internal; for debugging. */
+					/** @description the id of the selected sfu
+					 *
+					 *     internal; for debugging. */
 					sfu_id: components["schemas"]["Id"];
 					/** @enum {string} */
-					type: "Ready";
+					type: "Connected";
 			  }
 			| {
 					sdp: components["schemas"]["SessionDescription"];
@@ -24837,7 +25004,6 @@ export interface components {
 					type: "Candidate";
 			  }
 			| {
-					channel_id: components["schemas"]["Id"];
 					tracks: components["schemas"]["TrackMetadata"][];
 					/** @enum {string} */
 					type: "Have";
@@ -24849,13 +25015,9 @@ export interface components {
 					type: "Want";
 			  }
 			| {
-					state?: null | components["schemas"]["VoiceStateUpdate"];
+					new_sfu_id: components["schemas"]["Id"];
 					/** @enum {string} */
-					type: "VoiceState";
-			  }
-			| {
-					/** @enum {string} */
-					type: "Reconnect";
+					type: "Migrate";
 			  }
 			| {
 					/** @description what exactly went wrong */
@@ -24868,13 +25030,14 @@ export interface components {
 		/** @enum {string} */
 		Status: "Offline" | "Online" | "Away" | "Busy" | "Available";
 		Subscription: {
-			mid: components["schemas"]["TrackId"];
+			/** @description which track to subscribe to */
+			mid: components["schemas"]["Mid"];
 			/** @description the layers of the track to subscribe to
 			 *
 			 *     - clients should only subscribe to one layer at a time, but multiple can be subscribed if needed
 			 *     - the server may subscribe to multiple depending on if multiple resolutions are requested
 			 *     - leave empty for audio tracks */
-			rid: components["schemas"]["LayerId"][];
+			rid?: components["schemas"]["Rid"][];
 		};
 		Suspended: {
 			created_at: components["schemas"]["Time"];
@@ -24941,12 +25104,11 @@ export interface components {
 			code: string;
 			used_at?: null | components["schemas"]["Time"];
 		};
-		/** @enum {string} */
-		TrackEncoding: "Source" | "Reduced";
-		/** @description a unique identifier for a media track (corresponds to a transceiver in webrtc, or a Mid in str0m)
-		 *
-		 *     media track ids are unique per peer connection */
-		TrackId: string;
+		/**
+		 * @description the encoding of the track
+		 * @enum {string}
+		 */
+		TrackEncoding: "Source" | "Thumbnail";
 		/**
 		 * @description which stream this track is associated with. generally there will be one video track and one audio track per stream.
 		 * @enum {string}
@@ -24954,7 +25116,7 @@ export interface components {
 		TrackKey: "user" | "screen";
 		TrackLayer: {
 			encoding: components["schemas"]["TrackEncoding"];
-			rid: components["schemas"]["LayerId"];
+			rid: components["schemas"]["Rid"];
 		};
 		/** @description metadata about a track */
 		TrackMetadata: {
@@ -24966,8 +25128,10 @@ export interface components {
 			kind: components["schemas"]["MediaKind"];
 			/** @description simulcasting layers, only applicable for video */
 			layers?: components["schemas"]["TrackLayer"][];
-			/** @description unique identifier for this track. equivalent to transceiver.mid */
-			mid: components["schemas"]["TrackId"];
+			/** @description unique identifier for this track
+			 *
+			 *     equivalent to transceiver.mid */
+			mid: components["schemas"]["Mid"];
 		};
 		/** @description Batch unfurl request */
 		UnfurlRequest: {
@@ -25062,13 +25226,16 @@ export interface components {
 			volume: number;
 		};
 		/** @enum {string} */
-		VoiceErrorCode: "UnknownTrack" | "UnknownLayer" | "Other";
-		/** @description represents a user that is connected to a voice channel (older docs call this a "voice connection")
+		VoiceErrorCode: "UnknownMid" | "UnknownRid";
+		/** @description represents a user that is connected to a voice channel
 		 *
-		 *     connection limits:
-		 *     - users can only have one active connection across all channels
-		 *     - bots can connect to multiple channels with any connection strategy
-		 *     - both users and bots can only have one connection per channel */
+		 *     older docs call this a "voice connection"
+		 *
+		 *     ## connection limits
+		 *
+		 *     - Users can only have one voice state per channel
+		 *     - Non-bots can only have one state across all channels in all rooms
+		 *     - Bots can have any number of voice states */
 		VoiceState: {
 			/** @description the channel this user is connected to */
 			channel_id: components["schemas"]["Id"];
@@ -25098,17 +25265,6 @@ export interface components {
 			/** @description when this user started sharing their screen */
 			started_at: components["schemas"]["Time"];
 			thumbnail?: null | components["schemas"]["Id"];
-		};
-		VoiceStateStreamUpdate: {
-			thumbnail?: null | components["schemas"]["Id"];
-		};
-		/** @description represents an update that a user would like to make to their voice state */
-		VoiceStateUpdate: {
-			channel_id: components["schemas"]["Id"];
-			screenshare?: null | components["schemas"]["VoiceStateStreamUpdate"];
-			self_deaf: boolean;
-			self_mute: boolean;
-			self_video: boolean;
 		};
 		WebauthnAuthenticator: {
 			created_at: components["schemas"]["Time"];
