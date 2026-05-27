@@ -112,6 +112,20 @@ impl ContentIngestionManager {
                                 MessageSync::UserUpdate { user } => {
                                     self.index_user(user, true).await;
                                 }
+                                MessageSync::RoomDelete { room_id } => {
+                                    let term = Term::from_field_text(
+                                        self.schema.id,
+                                        &room_id.to_string(),
+                                    );
+                                    let _ = self.index_writer.tell(DeleteTerm(term)).await;
+                                }
+                                MessageSync::UserDelete { id } => {
+                                    let term = Term::from_field_text(
+                                        self.schema.id,
+                                        &id.to_string(),
+                                    );
+                                    let _ = self.index_writer.tell(DeleteTerm(term)).await;
+                                }
                                 MessageSync::MediaProcessed { media, .. } => {
                                     self.index_media(media, false).await;
                                 }
