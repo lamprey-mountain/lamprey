@@ -23,7 +23,7 @@ use lamprey_backend_core::config::{Config, ConfigVoice};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use tokio::{
     net::UdpSocket,
-    sync::{broadcast, RwLock},
+    sync::{broadcast, mpsc, RwLock},
     task::LocalSet,
 };
 use tracing::{debug, warn};
@@ -50,6 +50,7 @@ pub struct Sfu {
     sock_v6: Arc<UdpSocket>,
 
     backbone: BackboneComms,
+    backbone_rx: mpsc::UnboundedReceiver<BackboneEvent>,
     backend: BackendConnection,
 }
 
@@ -97,7 +98,7 @@ impl Sfu {
             config,
         });
 
-        let backbone = BackboneComms::create(Arc::clone(&state))?;
+        let (backbone, backbone_rx) = BackboneComms::create(Arc::clone(&state))?;
         let backend = BackendConnection::connect(Arc::clone(&state)).await?;
 
         let me = Self {
@@ -108,6 +109,7 @@ impl Sfu {
             sock_v4,
             sock_v6,
             backbone,
+            backbone_rx,
             backend,
         };
 
@@ -135,7 +137,7 @@ impl Sfu {
             buf_v6.resize(2000, 0);
 
             tokio::select! {
-                event = self.backbone.poll() => {
+                Some(event) = self.backbone_rx.recv() => {
                     self.handle_backbone_event(event)
                 }
                 command = self.backend.poll() => {
@@ -190,7 +192,12 @@ impl Sfu {
                     if let Some(channel_id) = self.find_channel_for_user(user_id) {
                         self.peer_send(
                             (channel_id, user_id),
-                            Command::GenerateKeyframe { mid, rid, kind },
+                            Command::GenerateKeyframe {
+                                mid,
+                                rid,
+                                kind,
+                                user_id,
+                            },
                         );
                     }
                 }
@@ -259,7 +266,12 @@ impl Sfu {
                 if let Some(channel_id) = self.find_channel_for_user(user_id) {
                     self.peer_send(
                         (channel_id, user_id),
-                        Command::GenerateKeyframe { mid, rid, kind },
+                        Command::GenerateKeyframe {
+                            mid,
+                            rid,
+                            kind,
+                            user_id,
+                        },
                     );
                 }
             }
@@ -375,6 +387,7 @@ impl Sfu {
                                 mid: source_mid.into(),
                                 rid: rid.map(|r| r.into()),
                                 kind: kind.into(),
+                                user_id: target_user_id,
                             });
                         }
                     }

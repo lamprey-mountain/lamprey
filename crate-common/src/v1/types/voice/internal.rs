@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+use bitflags::bitflags;
 use bytes::Bytes;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -104,47 +105,39 @@ impl MediaData {
     }
 }
 
-/// Permissions for an SFU peer
-///
-/// speak = 1 << 0
-/// video = 1 << 1
-/// priority = 1 << 2
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(transparent))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-pub struct SfuPermissions(pub u8);
+bitflags! {
+    /// permissions for an sfu peer
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+    pub struct SfuPermissions: u8 {
+        /// whether the user has the `VoiceSpeak` permission
+        const Speak = 1 << 0;
+
+        /// whether the user has the `VoiceVideo` permission
+        const Video = 1 << 1;
+
+        /// whether the user has the `VoicePriority` permission
+        const Priority = 1 << 2;
+    }
+}
 
 impl SfuPermissions {
     /// whether this peer can send audio
     #[inline]
     pub fn speak(&self) -> bool {
-        self.0 & 1 == 1
+        self.contains(Self::Speak)
     }
 
     /// whether this peer can send video
     #[inline]
     pub fn video(&self) -> bool {
-        self.0 & 2 == 2
+        self.contains(Self::Video)
     }
 
     /// whether this peer can use priority speaker
     #[inline]
     pub fn priority(&self) -> bool {
-        self.0 & 4 == 4
-    }
-
-    pub fn from_bools(speak: bool, video: bool, priority: bool) -> Self {
-        let mut flags = 0;
-        if speak {
-            flags |= 1;
-        }
-        if video {
-            flags |= 2;
-        }
-        if priority {
-            flags |= 4;
-        }
-        Self(flags)
+        self.contains(Self::Priority)
     }
 }
 

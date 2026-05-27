@@ -16,6 +16,7 @@ use common::v1::types::{
 pub mod cascade;
 pub mod webrtc;
 
+// TODO: remove this...?
 #[async_trait]
 pub trait Peer {
     /// the unique id of this peer
@@ -34,6 +35,7 @@ pub trait Peer {
     async fn poll(&mut self) -> Option<PeerEvent>;
 }
 
+// TODO: use this instead of trait Peer...?
 pub enum PeerEndpoint {
     Webrtc(webrtc::PeerWebrtc),
     Cascade(cascade::PeerCascading),
@@ -91,6 +93,9 @@ pub enum Command {
 
         /// the kind of the keyframe that should be generated
         kind: KeyframeRequestKind,
+
+        /// the id of the user that requested the keyframe
+        user_id: UserId,
     },
 
     /// another peer created a media track
@@ -101,6 +106,7 @@ pub enum Command {
 }
 
 // NOTE: is there really any reason for these variants of CommandFull to be split out from Command?
+// TODO: merge this into Command...? or create multiple `enum Command`s
 pub enum CommandFull {
     Inner(Command),
     MediaData(MediaData),

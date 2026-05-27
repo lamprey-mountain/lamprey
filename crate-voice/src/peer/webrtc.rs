@@ -151,6 +151,17 @@ impl PeerWebrtc {
     }
 }
 
+// TODO: don't send any audio if `self.voice_state.deafened()`
+// TODO: don't receive any audio if `self.voice_state.muted()`
+// TODO: disallow sending user audio if permissions.speak is denied
+// TODO: disallow sending user video if permissions.video is denied
+// TODO: disallow starting screenshare, camera, etc if permissions.video is denied
+
+// logic summary
+// if permissions.video is denied, ONLY allow a track of kind=audio, key=user
+// if permissions.speak is denied, DISALLOW a track of kind=audio, key=user (other keys are fine, including screenshare. screenshare can have audio.)
+// if both are denied, don't allow creating any tracks at all
+// if both are allowed, allow creating any tracks
 impl PeerWebrtcInner {
     async fn run(mut self) -> Result<(), anyhow::Error> {
         loop {
@@ -330,7 +341,7 @@ impl PeerWebrtcInner {
                         key: m.inner.key.clone(),
                     });
                 }
-                Command::GenerateKeyframe { mid, rid, kind } => {
+                Command::GenerateKeyframe { mid, rid, kind, user_id } => {
                     if let Some(mut w) = self.rtc.writer((*mid).into()) {
                         let r = rid.map(|r| r.into());
                         let _ = w.request_keyframe(r, (*kind).into());
@@ -509,7 +520,7 @@ impl PeerWebrtcInner {
                     debug!("Want subscriptions: {:?}", subscriptions);
                 }
             },
-            Command::GenerateKeyframe { mid, rid, kind } => {
+            Command::GenerateKeyframe { mid, rid, kind, user_id: _ } => {
                 if let Some(mut w) = self.rtc.writer(mid.into()) {
                     let r = rid.map(|r| r.into());
                     let _ = w.request_keyframe(r, kind.into());

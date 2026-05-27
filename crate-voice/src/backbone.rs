@@ -1,6 +1,6 @@
 //! connection to other sfus
 
-use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::{anyhow, Result};
 use common::v1::types::{
@@ -10,28 +10,31 @@ use common::v1::types::{
 use dashmap::DashMap;
 use quinn::{default_runtime, Connection, RecvStream, SendStream};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, error, info, trace};
 
 use crate::{
     peer::{Command::GenerateKeyframe, CommandFull},
     sfu::State,
 };
 
+/// internal state shared across all BackboneComms handles
+pub struct BackboneShared {
+    /// active quic connections
+    connections: DashMap<SfuId, Connection>,
+
+    /// channels to send stuff to sfus
+    control_txs: DashMap<SfuId, UnboundedSender<BackboneDispatchEnvelope>>,
+
+    /// tokens authorized by the master for incoming connections
+    pending_tokens: DashMap<String, SfuId>,
+}
+
 /// manages communication with other sfus
+#[derive(Clone)]
 pub struct BackboneComms {
+    shared: Arc<BackboneShared>,
     endpoint: quinn::Endpoint,
-
-    /// tokens authorized by the Master for incoming connections
-    pending_tokens: Arc<DashMap<String, SfuId>>,
-
-    /// active QUIC connections to other SFUs
-    connections: HashMap<SfuId, Connection>,
-
-    /// bidirectional control streams per SFU
-    control_channels: HashMap<SfuId, SendStream>,
-
-    internal_rx: UnboundedReceiver<BackboneEvent>,
-    internal_tx: UnboundedSender<BackboneEvent>,
+    event_tx: UnboundedSender<BackboneEvent>,
 }
 
 #[derive(Debug)]
@@ -65,7 +68,12 @@ impl From<BackboneEvent> for Option<CommandFull> {
                     mid,
                     rid,
                     kind,
-                } => Some(CommandFull::Inner(GenerateKeyframe { mid, rid, kind })),
+                } => Some(CommandFull::Inner(GenerateKeyframe {
+                    mid,
+                    rid,
+                    kind,
+                    user_id,
+                })),
                 _ => None,
             },
             BackboneEvent::Datagram(dg) => match dg {
@@ -79,7 +87,7 @@ impl From<BackboneEvent> for Option<CommandFull> {
 }
 
 impl BackboneComms {
-    pub fn create(state: State) -> Result<Self> {
+    pub fn create(state: State) -> Result<(Self, UnboundedReceiver<BackboneEvent>)> {
         let subject_alt_names = vec!["lamprey-sfu".to_string()];
         let cert = rcgen::generate_simple_self_signed(subject_alt_names).unwrap();
         let key = rustls::pki_types::PrivateKeyDer::Pkcs8(cert.signing_key.serialize_der().into());
@@ -132,45 +140,37 @@ impl BackboneComms {
 
         info!("listening on {}", endpoint.local_addr()?);
 
-        let pending_tokens = Arc::new(DashMap::new());
-        let (internal_tx, internal_rx) = mpsc::unbounded_channel();
+        let shared = Arc::new(BackboneShared {
+            connections: DashMap::new(),
+            control_txs: DashMap::new(),
+            pending_tokens: DashMap::new(),
+        });
 
-        let endpoint2 = endpoint.clone();
-        let pending_tokens2 = Arc::clone(&pending_tokens);
-        let internal_tx2 = internal_tx.clone();
+        let (event_tx, event_rx) = mpsc::unbounded_channel();
+
+        let me = Self {
+            shared: shared.clone(),
+            endpoint: endpoint.clone(),
+            event_tx,
+        };
+
+        let handle = me.clone();
         tokio::spawn(async move {
-            while let Some(incoming) = endpoint2.accept().await {
-                let tx = internal_tx2.clone();
-                let pending_tokens = pending_tokens2.clone();
-
+            while let Some(incoming) = endpoint.accept().await {
+                let h = handle.clone();
                 tokio::spawn(async move {
-                    if let Err(e) = serve(incoming, tx, pending_tokens).await {
+                    if let Err(e) = h.serve_incoming(incoming).await {
                         error!("Backbone inbound connection error: {}", e);
                     }
                 });
             }
-
-            Ok::<(), anyhow::Error>(())
         });
 
-        Ok(Self {
-            endpoint,
-            pending_tokens,
-            connections: HashMap::new(),
-            control_channels: HashMap::new(),
-            internal_rx,
-            internal_tx,
-        })
+        Ok((me, event_rx))
     }
 
     pub fn add_pending_token(&mut self, token: String, expected_sfu_id: SfuId) {
-        self.pending_tokens.insert(token, expected_sfu_id);
-    }
-
-    /// poll all active connections
-    pub async fn poll(&mut self) -> BackboneEvent {
-        // TODO: better error handling
-        self.internal_rx.recv().await.unwrap()
+        self.shared.pending_tokens.insert(token, expected_sfu_id);
     }
 
     pub async fn connect(&mut self, addr: SocketAddr, token: String) -> Result<()> {
@@ -178,11 +178,9 @@ impl BackboneComms {
         let (mut send, mut recv) = conn.open_bi().await?;
 
         // 1. send hello
-        // let nonce = todo!();
         send_dispatch(
             &mut send,
             &BackboneDispatchEnvelope {
-                // nonce: Some(nonce),
                 nonce: None,
                 dispatch: BackboneDispatch::Hello { token },
             },
@@ -195,22 +193,27 @@ impl BackboneComms {
             return Err(anyhow!("Did not receive Ack from remote SFU"));
         }
 
+        // TODO: get actual sfu id
+        let remote_sfu_id = SfuId::default();
+        self.register_connection(remote_sfu_id, conn, send, recv);
+
         Ok(())
     }
 
     /// get rtt for a specific sfu
     pub fn get_rtt(&self, sfu_id: &SfuId) -> Option<std::time::Duration> {
-        self.connections.get(sfu_id).map(|c| c.rtt())
+        self.shared.connections.get(sfu_id).map(|c| c.rtt())
     }
 
     /// send a dispatch to a specific sfu
-    pub async fn send_dispatch(
-        &mut self,
+    pub fn send_dispatch(
+        &self,
         target: SfuId,
-        dispatch: &BackboneDispatchEnvelope,
+        dispatch: BackboneDispatchEnvelope,
     ) -> Result<()> {
-        if let Some(stream) = self.control_channels.get_mut(&target) {
-            send_dispatch(stream, dispatch).await?;
+        if let Some(tx) = self.shared.control_txs.get(&target) {
+            tx.send(dispatch)
+                .map_err(|_| anyhow!("Backbone connection task died"))?;
             Ok(())
         } else {
             Err(anyhow!("no active backbone connection to sfu {}", target))
@@ -221,91 +224,123 @@ impl BackboneComms {
     pub fn broadcast_datagram(&self, destinations: &[SfuId], data: BackboneDatagram) {
         let bytes = data.to_bytes();
         for dest in destinations {
-            if let Some(conn) = self.connections.get(dest) {
+            if let Some(conn) = self.shared.connections.get(dest) {
                 if let Err(e) = conn.send_datagram(bytes.clone()) {
                     trace!("failed to send backbone datagram to {}: {}", dest, e);
                 }
             }
         }
     }
-}
 
-async fn serve(
-    incoming: quinn::Incoming,
-    event_tx: UnboundedSender<BackboneEvent>,
-    pending_tokens: Arc<DashMap<String, SfuId>>,
-) -> Result<()> {
-    let conn = incoming.await?;
-    debug!("New backbone connection from {}", conn.remote_address());
+    async fn serve_incoming(&self, incoming: quinn::Incoming) -> Result<()> {
+        let conn = incoming.await?;
+        debug!("new backbone connection from {}", conn.remote_address());
 
-    // 1. handshake
-    let (mut send, mut recv) = conn.accept_bi().await?;
-    let msg = recv_dispatch(&mut recv).await?;
-    let remote_sfu_id = match msg.dispatch {
-        BackboneDispatch::Hello { token } => {
-            if let Some((_, sfu_id)) = pending_tokens.remove(&token) {
-                send_dispatch(
-                    &mut send,
-                    &BackboneDispatchEnvelope {
-                        nonce: msg.nonce,
-                        dispatch: BackboneDispatch::Ack,
-                    },
-                )
-                .await?;
-                sfu_id
-            } else {
-                warn!("Backbone connection rejected: Invalid token");
-                conn.close(0u32.into(), b"invalid token");
-                return Err(anyhow!("Invalid token"));
-            }
-        }
-        _ => {
-            conn.close(0u32.into(), b"handshake expected");
-            return Err(anyhow!("Handshake failed"));
-        }
-    };
+        let (mut send, mut recv) = conn.accept_bi().await?;
+        let msg = recv_dispatch(&mut recv).await?;
 
-    info!("Backbone connection established with SFU {}", remote_sfu_id);
-
-    // TODO: notify manager of new connection
-    _ = event_tx.send(BackboneEvent::Connected {
-        sfu_id: remote_sfu_id,
-    });
-
-    loop {
-        tokio::select! {
-            res = recv_dispatch(&mut recv) => {
-                match res {
-                    Ok(envelope) => {
-                        _ = event_tx.send(BackboneEvent::Dispatch {
-                            sfu_id: remote_sfu_id,
-                            nonce: envelope.nonce,
-                            dispatch: envelope.dispatch,
-                        });
-                    }
-                    // TODO: log error
-                    Err(_) => break,
+        let remote_sfu_id = match msg.dispatch {
+            BackboneDispatch::Hello { token } => {
+                if let Some((_, sfu_id)) = self.shared.pending_tokens.remove(&token) {
+                    send_dispatch(
+                        &mut send,
+                        &BackboneDispatchEnvelope {
+                            nonce: msg.nonce,
+                            dispatch: BackboneDispatch::Ack,
+                        },
+                    )
+                    .await?;
+                    sfu_id
+                } else {
+                    conn.close(0u32.into(), b"invalid token");
+                    return Err(anyhow!("Invalid token"));
                 }
             }
-            res = conn.read_datagram() => {
-                match res {
-                    Ok(bytes) => {
-                        if let Ok(dg) = BackboneDatagram::from_bytes(&bytes) {
-                            _ = event_tx.send(BackboneEvent::Datagram(dg));
-                        }
-                    }
-                    // TODO: log error
-                    Err(_) => break,
-                }
+            _ => {
+                conn.close(0u32.into(), b"handshake expected");
+                return Err(anyhow!("Handshake failed"));
             }
-        }
+        };
+
+        self.register_connection(remote_sfu_id, conn, send, recv);
+        Ok(())
     }
 
-    _ = event_tx.send(BackboneEvent::Closed {
-        sfu_id: remote_sfu_id,
+    fn register_connection(
+        &self,
+        sfu_id: SfuId,
+        conn: Connection,
+        send: SendStream,
+        recv: RecvStream,
+    ) {
+        let (tx, rx) = mpsc::unbounded_channel();
+        self.shared.connections.insert(sfu_id, conn.clone());
+        self.shared.control_txs.insert(sfu_id, tx);
+
+        _ = self.event_tx.send(BackboneEvent::Connected { sfu_id });
+        info!("backbone connection established with SFU {}", sfu_id);
+
+        let shared = self.shared.clone();
+        let ev_tx = self.event_tx.clone();
+
+        tokio::spawn(async move {
+            run_connection_loops(sfu_id, conn, send, recv, rx, ev_tx, shared).await;
+        });
+    }
+}
+
+async fn run_connection_loops(
+    sfu_id: SfuId,
+    conn: Connection,
+    mut send: SendStream,
+    mut recv: RecvStream,
+    mut dispatch_rx: UnboundedReceiver<BackboneDispatchEnvelope>,
+    event_tx: UnboundedSender<BackboneEvent>,
+    shared: Arc<BackboneShared>,
+) {
+    // receive datagrams
+    let dgram_conn = conn.clone();
+    let dgram_tx = event_tx.clone();
+    let dgram_task = tokio::spawn(async move {
+        while let Ok(bytes) = dgram_conn.read_datagram().await {
+            if let Ok(dg) = BackboneDatagram::from_bytes(&bytes) {
+                _ = dgram_tx.send(BackboneEvent::Datagram(dg));
+            }
+        }
     });
 
-    Ok(())
+    // receive remote data
+    let recv_tx = event_tx.clone();
+    let recv_task = tokio::spawn(async move {
+        while let Ok(env) = recv_dispatch(&mut recv).await {
+            _ = recv_tx.send(BackboneEvent::Dispatch {
+                sfu_id,
+                nonce: env.nonce,
+                dispatch: env.dispatch,
+            });
+        }
+    });
+
+    // send dispatches
+    let send_task = tokio::spawn(async move {
+        while let Some(env) = dispatch_rx.recv().await {
+            if send_dispatch(&mut send, &env).await.is_err() {
+                break;
+            }
+        }
+    });
+
+    // if any stream fails/closes, tear down the whole connection
+    tokio::select! {
+        _ = dgram_task => {},
+        _ = recv_task => {},
+        _ = send_task => {},
+    }
+
+    // cleanup
+    shared.connections.remove(&sfu_id);
+    shared.control_txs.remove(&sfu_id);
+    _ = event_tx.send(BackboneEvent::Closed { sfu_id });
 }
 
 /// send length prefixed json
