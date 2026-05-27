@@ -3,7 +3,7 @@
 use crate::{
     backbone::{BackboneComms, BackboneEvent},
     backend::BackendConnection,
-    peer::{webrtc::PeerWebrtc, Command, Peer, PeerEndpoint},
+    peer::{webrtc::PeerWebrtc, Command, CommandFull, Peer, PeerEndpoint},
     util::extract_stun_ufrag,
 };
 
@@ -21,8 +21,12 @@ use common::v1::types::{
 use dashmap::DashMap;
 use lamprey_backend_core::config::{Config, ConfigVoice};
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
-use tokio::{net::UdpSocket, sync::RwLock, task::LocalSet};
-use tracing::{debug, error, warn};
+use tokio::{
+    net::UdpSocket,
+    sync::{broadcast, RwLock},
+    task::LocalSet,
+};
+use tracing::{debug, warn};
 
 /// shared state
 pub struct StateInner {
@@ -46,8 +50,11 @@ pub struct Sfu {
     sock_v6: Arc<UdpSocket>,
 }
 
-pub struct CallHandle {
+pub type CallHandle = Arc<CallHandleInner>;
+
+pub struct CallHandleInner {
     users: DashMap<UserId, PeerEndpoint>,
+    tx: broadcast::Sender<Arc<CommandFull>>,
 }
 
 /// a set of tasks pinned to a single core
@@ -176,7 +183,7 @@ impl Sfu {
                     mid,
                     rid,
                     kind,
-                } => todo!("forward to user_id"),
+                } => todo!("forward to peer with user_id"),
                 _ => {}
             },
             BackboneEvent::Datagram(dgram) => match dgram {
@@ -223,7 +230,7 @@ impl Sfu {
                 kind,
                 user_id,
             } => {
-                // Find the call this user belongs to by searching all calls
+                // find the call this user belongs to by searching all calls
                 if let Some(channel_id) = self.find_channel_for_user(user_id) {
                     self.peer_send(
                         (channel_id, user_id),
@@ -263,14 +270,17 @@ impl Sfu {
         state: VoiceState,
         permissions: SfuPermissions,
     ) {
-        let call = self.calls.entry(channel_id).or_insert_with(|| CallHandle {
-            users: DashMap::new(),
+        let call = self.calls.entry(channel_id).or_insert_with(|| {
+            Arc::new(CallHandleInner {
+                users: DashMap::new(),
+                tx: broadcast::channel(100).0,
+            })
         });
 
         let sock_v4 = Arc::clone(&self.sock_v4);
         let sock_v6 = Arc::clone(&self.sock_v6);
 
-        let peer = PeerWebrtc::spawn(user_id, state, permissions, sock_v4, sock_v6);
+        let peer = PeerWebrtc::spawn(user_id, state, permissions, sock_v4, sock_v6, call.tx.subscribe());
 
         let ufrag_map = Arc::clone(&self.ufrag_to_peer);
 
@@ -279,8 +289,10 @@ impl Sfu {
         // self.shards[0].set.spawn_local(future);
 
         let peer2 = peer.clone();
+        let call2 = Arc::clone(&call);
         tokio::spawn(async move {
             let mut peer = peer2;
+            let call = call2;
 
             use common::v1::types::voice::messages::PeerEvent;
 
@@ -292,18 +304,36 @@ impl Sfu {
                     PeerEvent::Connected => {
                         debug!("Peer {} connected in channel {}", user_id, channel_id);
                     }
-                    PeerEvent::MediaAdded(_) => {
-                        // broadcast to others?
-                        // in sfu-old, we notified other peers.
+                    PeerEvent::MediaAdded(m) => {
+                        // TODO: error handling
+                        let _ = call
+                            .tx
+                            .send(Arc::new(CommandFull::Inner(Command::MediaAdded(m))));
                     }
-                    PeerEvent::MediaData(_m) => {
-                        // broadcast MediaData to others in call
+                    PeerEvent::MediaData(m) => {
+                        // TODO: error handling
+                        let _ = call.tx.send(Arc::new(CommandFull::MediaData(m)));
                     }
-                    PeerEvent::Speaking(_s) => {
-                        // broadcast Speaking to others in call
+                    PeerEvent::Speaking(s) => {
+                        // TODO: error handling
+                        let _ = call.tx.send(Arc::new(CommandFull::Speaking(s)));
                     }
                     PeerEvent::Signalling(_s) => {
-                        // send signalling back to client
+                        // TODO: send signalling back to client
+                    }
+                    PeerEvent::KeyframeRequest {
+                        source_mid,
+                        user_id: target_user_id,
+                        kind,
+                        rid,
+                    } => {
+                        if let Some(target_peer) = call.users.get(&target_user_id) {
+                            target_peer.handle_command(Command::GenerateKeyframe {
+                                mid: source_mid.into(),
+                                rid: rid.map(|r| r.into()),
+                                kind: kind.into(),
+                            });
+                        }
                     }
                 }
             }
@@ -317,16 +347,15 @@ impl Sfu {
         // let token = "some_random_token".to_string(); // TODO: generate secure token
         // self.state.backbone.add_pending_token(token.clone(), sfu_id);
         // TODO: share token and address with remote SFU via backend
-        let _ = sfu_id;
     }
 
     fn cascade_create(&mut self, sfu_id: SfuId, token: String, addr: SocketAddr) {
         // TODO: call self.state.backbone.connect(...)
         // TODO: spawn PeerCascading and add to self.calls
-        let _ = (sfu_id, token, addr);
     }
 
     /// get the shard id this channel belongs to
+    // TODO: use this?
     fn get_channel_shard(&self, channel_id: ChannelId) -> ShardId {
         let idx = (channel_id.as_u128() % self.shards.len() as u128) as usize;
         ShardId(idx)

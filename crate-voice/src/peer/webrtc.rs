@@ -15,9 +15,9 @@ use str0m::{
     media::{Direction, MediaKind, Mid as SMid},
     Candidate, Event, Input, Output, Rtc,
 };
-use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, Mutex};
 use tokio::time::sleep_until;
+use tokio::{net::UdpSocket, sync::broadcast};
 use tracing::{debug, error, warn};
 
 use crate::{
@@ -79,6 +79,7 @@ pub struct PeerWebrtcInner {
     permissions: SfuPermissions,
     signalling: Signalling,
     command_rx: mpsc::UnboundedReceiver<CommandFull>,
+    broadcast_rx: broadcast::Receiver<Arc<CommandFull>>,
     event_tx: mpsc::UnboundedSender<PeerEvent>,
 
     inbound: HashMap<SMid, TrackIn>,
@@ -95,6 +96,7 @@ impl PeerWebrtc {
         permissions: SfuPermissions,
         socket_v4: Arc<UdpSocket>,
         socket_v6: Arc<UdpSocket>,
+        broadcast_rx: broadcast::Receiver<Arc<CommandFull>>,
     ) -> Self {
         let (command_tx, command_rx) = mpsc::unbounded_channel();
         let (event_tx, event_rx) = mpsc::unbounded_channel();
@@ -121,6 +123,7 @@ impl PeerWebrtc {
             permissions,
             signalling: Signalling::new(),
             command_rx,
+            broadcast_rx,
             event_tx,
             inbound: HashMap::new(),
             outbound: vec![],
@@ -188,6 +191,18 @@ impl PeerWebrtcInner {
             tokio::select! {
                 Some(cmd) = self.command_rx.recv() => {
                     self.handle_command_full(cmd);
+                }
+                res = self.broadcast_rx.recv() => {
+                    match res {
+                        Ok(cmd) => self.handle_broadcast(cmd),
+                        Err(broadcast::error::RecvError::Lagged(_)) => {
+                            // TODO: handle lag
+                        }
+                        Err(broadcast::error::RecvError::Closed) => {
+                            // channel closed, probably shut down
+                            break;
+                        }
+                    }
                 }
                 _ = sleep_until(timeout.into()) => {
                     if let Err(e) = self.rtc.handle_input(Input::Timeout(Instant::now())) {
@@ -267,8 +282,19 @@ impl PeerWebrtcInner {
                 };
                 self.emit(PeerEvent::MediaData(payload));
             }
-            Event::KeyframeRequest(_) => {
-                // TODO: handle keyframe requests
+            Event::KeyframeRequest(r) => {
+                debug!("keyframe request {:?}", r);
+                let track = self.outbound.iter().find(|t| t.state.mid() == Some(r.mid));
+                if let Some(track) = track {
+                    self.emit(PeerEvent::KeyframeRequest {
+                        source_mid: track.source_mid,
+                        user_id: track.user_id,
+                        kind: r.kind.into(),
+                        rid: r.rid.map(|r| r.into()),
+                    });
+                } else {
+                    warn!("track not found for keyframe request");
+                }
             }
             Event::ChannelOpen(chan_id, label) => {
                 if label == "speaking" {
@@ -277,12 +303,75 @@ impl PeerWebrtcInner {
             }
             Event::ChannelData(data) => {
                 if self.speaking_chan == Some(data.id) {
-                    if let Ok(speaking) = serde_json::from_slice::<Speaking>(&data.data) {
+                    if let Ok(speaking) = Speaking::from_bytes(&data.data) {
                         self.emit(PeerEvent::Speaking(SpeakingWithUserId {
                             user_id: self.user_id,
                             flags: speaking.flags,
                             source_mid: speaking.mid,
                         }));
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn handle_broadcast(&mut self, command: Arc<CommandFull>) {
+        match &*command {
+            CommandFull::Inner(command) => match command {
+                Command::MediaAdded(m) => {
+                    self.outbound.push(TrackOut {
+                        kind: m.inner.kind.into(),
+                        state: TrackState::Pending,
+                        user_id: m.user_id,
+                        source_mid: m.inner.mid,
+                        enabled: false,
+                        channel_id: self.voice_state.channel_id,
+                        key: m.inner.key.clone(),
+                    });
+                }
+                Command::GenerateKeyframe { mid, rid, kind } => {
+                    if let Some(mut w) = self.rtc.writer((*mid).into()) {
+                        let r = rid.map(|r| r.into());
+                        let _ = w.request_keyframe(r, (*kind).into());
+                    }
+                }
+                _ => {}
+            },
+            CommandFull::MediaData(m) => {
+                if m.user_id == self.user_id {
+                    return;
+                }
+
+                let Some(track) = self
+                    .outbound
+                    .iter()
+                    .find(|t| t.source_mid == m.mid && t.user_id == m.user_id)
+                else {
+                    return;
+                };
+                let Some(mid) = track.state.mid() else { return };
+                let Some(mut writer) = self.rtc.writer(mid) else {
+                    return;
+                };
+
+                // for now, just write the data
+                // FIXME: handle pt mapping properly (based on sdp)
+                let _ = writer.write(m.pt, m.network_time, m.time, m.data.as_ref());
+            }
+            CommandFull::Speaking(s) => {
+                if s.user_id == self.user_id {
+                    return;
+                }
+
+                if let Some(chan) = self.speaking_chan {
+                    if let Some(mut c) = self.rtc.channel(chan) {
+                        let speaking = Speaking {
+                            mid: s.source_mid,
+                            flags: s.flags,
+                        };
+                        let bytes = speaking.to_bytes();
+                        let _ = c.write(true, &bytes);
                     }
                 }
             }
@@ -315,9 +404,12 @@ impl PeerWebrtcInner {
             CommandFull::Speaking(s) => {
                 if let Some(chan) = self.speaking_chan {
                     if let Some(mut c) = self.rtc.channel(chan) {
-                        if let Ok(bytes) = serde_json::to_vec(&s) {
-                            let _ = c.write(true, &bytes);
-                        }
+                        let speaking = Speaking {
+                            mid: s.source_mid,
+                            flags: s.flags,
+                        };
+                        let bytes = speaking.to_bytes();
+                        let _ = c.write(true, &bytes);
                     }
                 }
             }
@@ -409,14 +501,12 @@ impl PeerWebrtcInner {
                 SignallingCommand::Disconnect => {
                     self.rtc.disconnect();
                 }
-                SignallingCommand::VoiceState { state } => {
-                    // Update state. If channel changed, SFU should handle it, not just the peer.
+                SignallingCommand::VoiceState { .. } => {
+                    todo!("update self.voice_state")
                 }
                 SignallingCommand::Want { subscriptions } => {
-                    // Update subscriptions
-                }
-                SignallingCommand::Keyframe { mid, rid, kind } => {
-                    // Handled at SFU level
+                    // TODO: handle subscriptions
+                    debug!("Want subscriptions: {:?}", subscriptions);
                 }
             },
             Command::GenerateKeyframe { mid, rid, kind } => {

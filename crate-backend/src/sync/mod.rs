@@ -482,10 +482,7 @@ impl Connection {
         Ok(())
     }
 
-    fn user_id(&self) -> Option<UserId> {
-        todo!()
-    }
-
+    // TODO: remove
     // async fn handle_voice_dispatch_old(
     //     &mut self,
     //     _user_id: UserId,
@@ -722,5 +719,9 @@ impl Connection {
 
     pub fn state(&self) -> &ConnectionState {
         &self.state
+    }
+
+    pub fn user_id(&self) -> Option<UserId> {
+        self.state.session().and_then(|s| s.user_id())
     }
 }

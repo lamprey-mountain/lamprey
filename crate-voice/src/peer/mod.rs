@@ -100,6 +100,7 @@ pub enum Command {
     // Limits { .. },
 }
 
+// NOTE: is there really any reason for these variants of CommandFull to be split out from Command?
 pub enum CommandFull {
     Inner(Command),
     MediaData(MediaData),

@@ -34,13 +34,13 @@ pub struct IceCandidate(pub String);
 /// a unique identifier for a media track (corresponds to a transceiver in webrtc)
 ///
 /// media track ids are unique per peer connection (peer-peer pair)
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Mid(pub Uuid);
 
 /// a unique identifier for a track layer
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Rid(pub u64);
@@ -447,9 +447,9 @@ pub struct Speaking {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct SpeakingWithUserId {
-    pub user_id: UserId,
     pub source_mid: Mid,
     pub flags: SpeakingFlags,
+    pub user_id: UserId,
 }
 
 impl VoiceState {
@@ -637,4 +637,49 @@ pub struct ChannelBroadcast {
     ///
     /// this should point to a calendar channel
     pub schedule_id: Option<ChannelId>,
+}
+
+impl Speaking {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(16 + 1);
+        bytes.extend_from_slice(self.mid.0.as_bytes());
+        bytes.push(self.flags.0);
+        bytes
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, ()> {
+        if bytes.len() != 17 {
+            return Err(());
+        }
+        let mid = Uuid::from_slice(&bytes[0..16]).map_err(|_| ())?;
+        let flags = SpeakingFlags(bytes[16]);
+        Ok(Speaking {
+            mid: Mid(mid),
+            flags,
+        })
+    }
+}
+
+impl SpeakingWithUserId {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(16 + 1 + 16);
+        bytes.extend_from_slice(self.source_mid.0.as_bytes());
+        bytes.push(self.flags.0);
+        bytes.extend_from_slice(self.user_id.as_bytes());
+        bytes
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, ()> {
+        if bytes.len() != 33 {
+            return Err(());
+        }
+        let source_mid = Uuid::from_slice(&bytes[0..16]).map_err(|_| ())?;
+        let flags = SpeakingFlags(bytes[16]);
+        let user_id = Uuid::from_slice(&bytes[17..33]).map_err(|_| ())?;
+        Ok(SpeakingWithUserId {
+            source_mid: Mid(source_mid),
+            flags,
+            user_id: user_id.into(),
+        })
+    }
 }

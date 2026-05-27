@@ -70,6 +70,14 @@ pub enum PeerEvent {
     /// sent via webrtc datachannel
     Speaking(SpeakingWithUserId),
 
+    /// another peer requested a keyframe
+    KeyframeRequest {
+        source_mid: Mid,
+        user_id: UserId,
+        kind: KeyframeRequestKind,
+        rid: Option<Rid>,
+    },
+
     /// the local ICE ufrag of this peer
     IceUfrag(String),
     // TODO: disconnected?
@@ -246,18 +254,6 @@ pub enum SignallingCommand {
     /// - replaces the previous Want
     // TODO: rename to Subscribe
     Want { subscriptions: Vec<Subscription> },
-
-    /// needs a keyframe to render
-    Keyframe {
-        /// the track to generate a keyframe for
-        mid: Mid,
-
-        /// the rid to generate a keyframe for
-        rid: Option<Rid>,
-
-        /// the kind of the keyframe that should be generated
-        kind: KeyframeRequestKind,
-    },
 }
 
 /// an event sent from the backend to the peer's sync connection
