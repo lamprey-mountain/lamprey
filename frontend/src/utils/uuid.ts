@@ -8,9 +8,7 @@ export function uuidToBytes(uuid: string): Uint8Array {
 }
 
 export function bytesToUuid(bytes: Uint8Array): string {
-	const hex = [...bytes]
-		.map((b) => b.toString(16).padStart(2, "0"))
-		.join("");
+	const hex = [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
 	return [
 		hex.substring(0, 8),
 		hex.substring(8, 12),

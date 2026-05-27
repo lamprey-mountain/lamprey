@@ -396,7 +396,11 @@ export const VoiceTray = () => {
 						</Show>
 					</Show>
 				</div>
-				<button type="button" class="button" onClick={() => actions.toggleMicrophone()}>
+				<button
+					type="button"
+					class="button"
+					onClick={() => actions.toggleMicrophone()}
+				>
 					<ToggleIcon checked={!voice.muted} src={iconMic} />
 				</button>
 				<button type="button" class="button" onClick={actions.toggleDeafened}>

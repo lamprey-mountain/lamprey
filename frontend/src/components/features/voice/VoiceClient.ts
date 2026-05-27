@@ -1,4 +1,3 @@
-import { bytesToUuid, uuidToBytes } from "@/utils/uuid";
 import { ReactiveMap } from "@solid-primitives/map";
 import { type Accessor, createSignal, type Setter } from "solid-js";
 import type {
@@ -11,6 +10,7 @@ import type {
 } from "ts-sdk";
 import type { Api } from "@/api";
 import { logger } from "@/utils/logger";
+import { bytesToUuid, uuidToBytes } from "@/utils/uuid";
 import { RTC_CONFIG } from "./util";
 
 const log = logger.for("rtc");
@@ -552,7 +552,11 @@ export class Speaking {
 			const data = new Uint8Array(e.data);
 			// expects 33 bytes (16 bytes source_mid + 1 byte flags + 16 bytes user_id)
 			if (data.length !== 33) {
-				log.warn("speaking", "invalid binary speaking data length", data.length);
+				log.warn(
+					"speaking",
+					"invalid binary speaking data length",
+					data.length,
+				);
 				return;
 			}
 			const flags = data[16];

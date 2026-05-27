@@ -179,7 +179,6 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 	);
 };
 
-
 export const VoiceSdp = (props: { sdp: string }) => {
 	const sdp = createMemo(() => parseSessionDescription(props.sdp));
 
