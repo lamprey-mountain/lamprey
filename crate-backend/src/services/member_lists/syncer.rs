@@ -231,9 +231,7 @@ impl MemberListSyncer {
                             continue // skip other unicasts
                             },
                         Some(Err(e)) => return Err(Error::Internal(format!("member list stream error: {e}"))),
-                        None => {
-                            panic!("stream closed");
-                            continue}, // stream closed, try next
+                        None => continue, // stream closed, try next
                     };
 
                     // PERF: maybe don't clone msg multiple times?
