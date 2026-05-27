@@ -48,6 +48,8 @@ pub struct Sfu {
 
     sock_v4: Arc<UdpSocket>,
     sock_v6: Arc<UdpSocket>,
+
+    backbone: BackboneComms,
 }
 
 pub type CallHandle = Arc<CallHandleInner>;
@@ -88,17 +90,22 @@ impl Sfu {
         );
         let sock_v6 = Arc::new(UdpSocket::bind(addr_v6).await?);
 
+        let state = Arc::new(StateInner {
+            id: RwLock::new(None),
+            voice_config,
+            config,
+        });
+
+        let backbone = BackboneComms::create(Arc::clone(&state))?;
+
         let me = Self {
-            state: Arc::new(StateInner {
-                id: RwLock::new(None),
-                voice_config,
-                config,
-            }),
+            state,
             shards: vec![],
             calls: HashMap::new(),
             ufrag_to_peer: Arc::new(DashMap::new()),
             sock_v4,
             sock_v6,
+            backbone,
         };
 
         me.serve_inner().await
@@ -110,7 +117,6 @@ impl Sfu {
         let mut buf_v4 = BytesMut::with_capacity(2048);
         let mut buf_v6 = BytesMut::with_capacity(2048);
 
-        let mut backbone = BackboneComms::create(Arc::clone(&self.state))?;
         let mut backend = BackendConnection::connect(Arc::clone(&self.state)).await?;
 
         let num_workers = voice_config
@@ -128,7 +134,7 @@ impl Sfu {
             buf_v6.resize(2000, 0);
 
             tokio::select! {
-                event = backbone.poll() => {
+                event = self.backbone.poll() => {
                     self.handle_backbone_event(event)
                 }
                 command = backend.poll() => {
@@ -173,11 +179,7 @@ impl Sfu {
 
     fn handle_backbone_event(&mut self, event: BackboneEvent) {
         match event {
-            BackboneEvent::Dispatch {
-                sfu_id,
-                nonce,
-                dispatch,
-            } => match dispatch {
+            BackboneEvent::Dispatch { dispatch, .. } => match dispatch {
                 BackboneDispatch::Keyframe {
                     user_id,
                     mid,
@@ -220,9 +222,12 @@ impl Sfu {
                 *id = Some(sfu_id);
             }
 
-            SfuCommand::RecalculateLatency { .. } => todo!("get backbone rtt"),
+            SfuCommand::RecalculateLatency { target_sfu } => {
+                let rtt = self.backbone.get_rtt(&target_sfu);
+                debug!("Latency for {}: {:?}", target_sfu, rtt);
+            }
 
-            SfuCommand::MigrateUsers { .. } => todo!("remove this command?"),
+            SfuCommand::MigrateUsers { .. } => todo!("unsure how to impl this command?"),
 
             SfuCommand::CreatePeer { state, permissions } => {
                 let channel_id = state.channel_id;
@@ -232,8 +237,8 @@ impl Sfu {
             SfuCommand::PrepareCascade { .. } => todo!("create token/addr, add to backbone"),
             SfuCommand::CreateCascade { .. } => todo!("create new peer wrapping backbone"),
 
-            SfuCommand::RouteUpdate { .. } => todo!(),
-            SfuCommand::Channel { .. } => todo!(),
+            SfuCommand::RouteUpdate { .. } => todo!("unsure how to impl this command?"),
+            SfuCommand::Channel { .. } => todo!("unsure how to impl this command?"),
 
             // forward based on user_id
             SfuCommand::Signalling {

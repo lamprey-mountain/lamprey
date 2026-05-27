@@ -169,6 +169,7 @@ impl BackboneComms {
 
     /// poll all active connections
     pub async fn poll(&mut self) -> BackboneEvent {
+        // TODO: better error handling
         self.internal_rx.recv().await.unwrap()
     }
 
@@ -194,9 +195,12 @@ impl BackboneComms {
             return Err(anyhow!("Did not receive Ack from remote SFU"));
         }
 
-        // TODO: expose rtt with conn.rtt();
-
         Ok(())
+    }
+
+    /// get rtt for a specific sfu
+    pub fn get_rtt(&self, sfu_id: &SfuId) -> Option<std::time::Duration> {
+        self.connections.get(sfu_id).map(|c| c.rtt())
     }
 
     /// send a dispatch to a specific sfu
