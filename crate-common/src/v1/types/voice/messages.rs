@@ -57,6 +57,9 @@ pub enum PeerEvent {
     /// sent via webrtc track
     MediaAdded(TrackMetadataWithUserId),
 
+    /// a signalling message to be sent to the user
+    Signalling(SignallingEvent),
+
     /// another peer is sending media data
     ///
     /// sent via webrtc track
@@ -65,7 +68,10 @@ pub enum PeerEvent {
     /// another peer is sending speaking data
     ///
     /// sent via webrtc datachannel
-    Speaking(Speaking),
+    Speaking(SpeakingWithUserId),
+
+    /// the local ICE ufrag of this peer
+    IceUfrag(String),
     // TODO: disconnected?
 }
 
@@ -229,6 +235,7 @@ pub enum SignallingCommand {
     /// - all video and audio from other sources require a Want
     /// - sent by server and client
     /// - replaces the previous Want
+    // TODO: rename to Subscribe
     Want { subscriptions: Vec<Subscription> },
 
     /// needs a keyframe to render

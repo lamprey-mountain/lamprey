@@ -3,7 +3,7 @@
 use crate::{
     backbone::BackboneComms,
     backend::BackendConnection,
-    peer::{Command, Peer, PeerEndpoint},
+    peer::{webrtc::PeerWebrtc, Command, Peer, PeerEndpoint},
     util::extract_stun_ufrag,
 };
 
@@ -16,10 +16,9 @@ use common::v1::types::{
 };
 use dashmap::DashMap;
 use lamprey_backend_core::config::{Config, ConfigVoice};
-use std::hash::Hash;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use tokio::task::LocalSet;
-use tracing::{debug, warn};
+use tracing::{debug, error, warn};
 
 /// shared state
 pub struct StateInner {
@@ -37,7 +36,10 @@ pub struct Sfu {
     calls: HashMap<ChannelId, CallHandle>,
 
     // mapping to help routing
-    ufrag_to_peer: HashMap<String, PeerId>,
+    ufrag_to_peer: Arc<dashmap::DashMap<String, PeerId>>,
+
+    sock_v4: Option<Arc<tokio::net::UdpSocket>>,
+    sock_v6: Option<Arc<tokio::net::UdpSocket>>,
 }
 
 pub struct CallHandle {
@@ -69,7 +71,9 @@ impl Sfu {
             }),
             shards: vec![],
             calls: HashMap::new(),
-            ufrag_to_peer: HashMap::new(),
+            ufrag_to_peer: Arc::new(DashMap::new()),
+            sock_v4: None,
+            sock_v6: None,
         }
     }
 
@@ -80,13 +84,16 @@ impl Sfu {
             crate::util::select_host_address_ipv4(voice_config.host_ipv4.as_deref())?,
             voice_config.udp_port,
         );
-        let sock_v4 = tokio::net::UdpSocket::bind(addr_v4).await?;
+        let sock_v4 = Arc::new(tokio::net::UdpSocket::bind(addr_v4).await?);
 
         let addr_v6 = SocketAddr::new(
             crate::util::select_host_address_ipv6(voice_config.host_ipv6.as_deref())?,
             voice_config.udp_port,
         );
-        let sock_v6 = tokio::net::UdpSocket::bind(addr_v6).await?;
+        let sock_v6 = Arc::new(tokio::net::UdpSocket::bind(addr_v6).await?);
+
+        self.sock_v4 = Some(sock_v4.clone());
+        self.sock_v6 = Some(sock_v6.clone());
 
         let mut buf_v4 = BytesMut::with_capacity(2048);
         let mut buf_v6 = BytesMut::with_capacity(2048);
@@ -135,30 +142,18 @@ impl Sfu {
         if data.len() >= 20 && (data[0] == 0x00 || data[0] == 0x01) {
             if let Some(ufrag) = extract_stun_ufrag(&data) {
                 if let Some(peer_id) = self.ufrag_to_peer.get(&ufrag) {
-                    let (channel_id, user_id) = peer_id;
-                    let call = self
-                        .calls
-                        .get(channel_id)
-                        .expect("todo better error handling");
-                    let peer = call.users.get(user_id).expect("todo better error handling");
-                    match &*peer {
-                        PeerEndpoint::Webrtc(p) => {
-                            debug!(
-                                "Routing packet to webrtc peer {:?} from {}",
-                                peer_id, source
-                            );
-                            todo!()
-                        }
-                        PeerEndpoint::Cascade(_) => {
-                            warn!("STUN packet routed to a Cascaded peer, dropping.");
+                    let (channel_id, user_id) = *peer_id;
+                    if let Some(call) = self.calls.get(&channel_id) {
+                        if let Some(peer) = call.users.get(&user_id) {
+                            peer.handle_network_packet(source, data);
+                            return;
                         }
                     }
-                    return;
                 }
             }
         }
 
-        warn!("couldn't demultiplex udp packet")
+        warn!("couldn't demultiplex udp packet from {}", source);
     }
 
     fn handle_command(&mut self, command: SfuCommand) {
@@ -171,7 +166,11 @@ impl Sfu {
                 target_sfu,
             } => todo!("remove this command?"),
 
-            SfuCommand::CreatePeer { state, permissions } => todo!("create new peer"),
+            SfuCommand::CreatePeer { state, permissions } => {
+                let channel_id = state.channel_id;
+                let user_id = state.user_id;
+                self.peer_create(channel_id, user_id, state, permissions);
+            }
             SfuCommand::PrepareCascade { sfu_id } => todo!("create token/addr, add to backbone"),
             SfuCommand::CreateCascade {
                 sfu_id,
@@ -236,14 +235,58 @@ impl Sfu {
     fn peer_create(
         &mut self,
         channel_id: ChannelId,
+        user_id: UserId,
         state: VoiceState,
         permissions: SfuPermissions,
     ) {
         let call = self.calls.entry(channel_id).or_insert_with(|| CallHandle {
             users: DashMap::new(),
         });
-        // TODO: initialize peer and add to call.peers
-        let _ = (state, permissions);
+
+        let sock_v4 = self.sock_v4.as_ref().expect("ipv4 socket missing").clone();
+        let sock_v6 = self.sock_v6.as_ref().expect("ipv6 socket missing").clone();
+
+        let peer = PeerWebrtc::spawn(user_id, state, permissions, sock_v4, sock_v6);
+
+        let ufrag_map = Arc::clone(&self.ufrag_to_peer);
+
+        // TODO: spawn below future on local set?
+        // self.get_channel_shard(channel_id);
+        // self.shards[0].set.spawn_local(future);
+
+        let peer2 = peer.clone();
+        tokio::spawn(async move {
+            let mut peer = peer2;
+
+            use common::v1::types::voice::messages::PeerEvent;
+
+            while let Some(event) = peer.poll().await {
+                match event {
+                    PeerEvent::IceUfrag(ufrag) => {
+                        ufrag_map.insert(ufrag, (channel_id, user_id));
+                    }
+                    PeerEvent::Connected => {
+                        debug!("Peer {} connected in channel {}", user_id, channel_id);
+                    }
+                    PeerEvent::MediaAdded(_) => {
+                        // broadcast to others?
+                        // in sfu-old, we notified other peers.
+                    }
+                    PeerEvent::MediaData(_m) => {
+                        // broadcast MediaData to others in call
+                    }
+                    PeerEvent::Speaking(_s) => {
+                        // broadcast Speaking to others in call
+                    }
+                    PeerEvent::Signalling(_s) => {
+                        // send signalling back to client
+                    }
+                }
+            }
+            debug!("Event loop for peer {} ended", user_id);
+        });
+
+        call.users.insert(user_id, PeerEndpoint::Webrtc(peer));
     }
 
     fn cascade_prepare(&mut self, sfu_id: SfuId) {

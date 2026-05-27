@@ -68,6 +68,7 @@ impl PeerCascadingInner {
 
     fn handle_command(&mut self, command: Command) {
         match command {
+            // Command::Signalling(cmd) => todo!("shouldn't be reachable?"),
             Command::Signalling(cmd) => match cmd {
                 SignallingCommand::Answer { .. } => todo!("handle sdp negotiation"),
                 SignallingCommand::Offer { .. } => todo!("handle sdp negotiation"),
@@ -96,6 +97,10 @@ impl Peer for PeerCascading {
 
     fn handle_speaking(&self, _speaking: SpeakingWithUserId) {
         // TODO: Backbone datagram transmission
+    }
+
+    fn handle_network_packet(&self, _source: std::net::SocketAddr, _data: bytes::Bytes) {
+        // Cascaded peers don't handle raw network packets directly
     }
 
     async fn poll(&mut self) -> Option<PeerEvent> {

@@ -1,6 +1,9 @@
 //! sending and receiving media to peers
 
+use std::net::SocketAddr;
+
 use async_trait::async_trait;
+use bytes::Bytes;
 use common::v1::types::{
     voice::{
         internal::MediaData,
@@ -26,6 +29,9 @@ pub trait Peer {
 
     /// another peer sent speaking metadata
     fn handle_speaking(&self, speaking: SpeakingWithUserId);
+
+    /// handle a raw network packet (e.g. UDP from the SFU socket)
+    fn handle_network_packet(&self, source: SocketAddr, data: Bytes);
 
     /// poll for events
     async fn poll(&mut self) -> Option<PeerEvent>;
@@ -66,6 +72,13 @@ impl Peer for PeerEndpoint {
         }
     }
 
+    fn handle_network_packet(&self, source: SocketAddr, data: Bytes) {
+        match self {
+            PeerEndpoint::Webrtc(p) => p.handle_network_packet(source, data),
+            PeerEndpoint::Cascade(p) => p.handle_network_packet(source, data),
+        }
+    }
+
     async fn poll(&mut self) -> Option<PeerEvent> {
         match self {
             PeerEndpoint::Webrtc(p) => p.poll().await,
@@ -101,4 +114,5 @@ pub enum CommandFull {
     Inner(Command),
     MediaData(MediaData),
     Speaking(SpeakingWithUserId),
+    NetworkPacket(SocketAddr, Bytes),
 }
