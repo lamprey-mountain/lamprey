@@ -44,25 +44,24 @@ impl From<KeyframeRequestKindStr0m> for KeyframeRequestKind {
 // TODO: skip string conversions
 impl From<Mid> for MidStr0m {
     fn from(value: Mid) -> Self {
-        MidStr0m::from(value.0.to_string().as_str())
+        MidStr0m::from_array(value.0)
     }
 }
 
 impl From<MidStr0m> for Mid {
     fn from(value: MidStr0m) -> Self {
-        Mid(uuid::Uuid::parse_str(&value.to_string()).unwrap_or_default())
+        Mid::new(&value.to_string())
     }
 }
 
 impl From<Rid> for RidStr0m {
     fn from(value: Rid) -> Self {
-        RidStr0m::from_array(value.0.to_le_bytes())
+        RidStr0m::from_array(value.0)
     }
 }
 
 impl From<RidStr0m> for Rid {
     fn from(value: RidStr0m) -> Self {
-        let s: &str = &value;
-        Rid(s.parse().unwrap_or_default())
+        Rid::new(&value.to_string())
     }
 }

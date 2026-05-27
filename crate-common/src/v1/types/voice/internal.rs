@@ -42,7 +42,7 @@ impl MediaData {
         use bytes::BufMut;
 
         // mid (16 bytes)
-        buf.put_slice(self.mid.0.as_bytes());
+        buf.put_slice(&self.mid.0);
 
         // peer_id (16 bytes)
         buf.put_slice(self.user_id.as_bytes());
@@ -75,7 +75,7 @@ impl MediaData {
 
         let mut mid_bytes = [0u8; 16];
         buf.copy_to_slice(&mut mid_bytes);
-        let mid = Mid(Uuid::from_bytes(mid_bytes));
+        let mid = Mid(mid_bytes);
 
         let mut peer_bytes = [0u8; 16];
         buf.copy_to_slice(&mut peer_bytes);
@@ -155,6 +155,7 @@ pub struct SfuChannel {
     pub bitrate: Option<u64>,
 
     // QUESTION: does this affect peers?
+    // TODO: remove? this should be enforced by the api server
     pub user_limit: Option<u64>,
 }
 

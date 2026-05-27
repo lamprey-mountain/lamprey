@@ -10,7 +10,7 @@ use tokio_tungstenite::{
     connect_async,
     tungstenite::{client::IntoClientRequest, protocol::Message},
 };
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 pub struct BackendConnection {
     event_tx: UnboundedSender<SfuEvent>,
@@ -104,6 +104,7 @@ impl BackendConnection {
     }
 
     pub fn send(&self, event: SfuEvent) -> Result<()> {
+        debug!("send sfu event {event:?}");
         self.event_tx
             .send(event)
             .map_err(|e| anyhow::anyhow!("Failed to queue event: {e}"))
@@ -118,6 +119,7 @@ impl BackendConnection {
 
 impl BackendHandle {
     pub fn send(&self, event: SfuEvent) -> Result<()> {
+        debug!("send sfu event {event:?}");
         self.event_tx
             .send(event)
             .map_err(|e| anyhow::anyhow!("Failed to queue event: {e}"))

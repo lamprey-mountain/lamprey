@@ -102,6 +102,12 @@ pub enum MessageClient {
         channel_id: ChannelId,
         nonce: Option<String>,
         command: SignallingCommand,
+
+        // /// send this command to one specific sfu
+        // ///
+        // /// intended to be used during migrations
+        // #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        // sfu_id: Option<SfuId>,
     },
 
     /// subscribe to a range of room or thread members. you can subscribe to one list at a time.
@@ -604,6 +610,12 @@ pub enum MessageSync {
         user_id: UserId,
         channel_id: ChannelId,
         payload: SignallingEvent,
+
+        // /// the sfu this came from
+        // ///
+        // /// this will only be populated during migrations, when there are two sfus
+        // #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        // sfu_id: Option<SfuId>,
     },
 
     /// a voice state was updated

@@ -449,11 +449,10 @@ impl Connection {
             .state
             .session()
             .ok_or::<Error>(SyncErrorCode::Unauthenticated.into())?;
-        let user_id = session.user_id().ok_or(Error::UnauthSession)?;
 
         let srv = self.s.services();
         srv.voice
-            .state_create(user_id, vs, Some(session.id), Some(self.id))
+            .handle_voice_connect(session.clone(), self.id, vs, nonce)
             .await?;
 
         Ok(())
@@ -465,20 +464,16 @@ impl Connection {
         nonce: Option<String>,
         command: SignallingCommand,
     ) -> Result<()> {
+        let session = self
+            .state
+            .session()
+            .ok_or::<Error>(SyncErrorCode::Unauthenticated.into())?;
+
         let srv = self.s.services();
-        let user_id = self.user_id().unwrap();
-        if let Some(sfu) = srv.voice.sfu_by_channel(
-            srv.voice
-                .state_get(channel_id, user_id)
-                .map(|s| s.inner().channel_id)
-                .ok_or(Error::BadStatic("state not found"))?,
-        ) {
-            sfu.send(SfuCommand::Signalling {
-                user_id,
-                channel_id,
-                inner: command,
-            });
-        }
+        srv.voice
+            .handle_voice_dispatch(session.clone(), channel_id, nonce, command)
+            .await?;
+
         Ok(())
     }
 

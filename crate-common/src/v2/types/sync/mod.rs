@@ -74,9 +74,8 @@ pub enum SyncCommand {
     /// connect to an existing connection
     Resume {
         token: SessionToken,
-
-        #[cfg_attr(feature = "serde", serde(flatten))]
-        resume: Option<SyncResume>,
+        connection_id: ConnectionId,
+        seq: u64,
     },
 
     /// heartbeat
@@ -148,14 +147,6 @@ pub struct SyncProperties {
     pub application_version: Option<String>,
     pub application_name: Option<String>,
     pub application_url: Option<Url>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct SyncResume {
-    pub conn: ConnectionId,
-    pub seq: u64,
 }
 
 /// an event from the sync worker to the client

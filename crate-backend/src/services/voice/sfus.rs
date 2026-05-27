@@ -172,12 +172,6 @@ impl ServiceVoice {
                 channel_id,
             } => {
                 srv.voice.state_destroy(channel_id, user_id)?;
-
-                self.state.broadcast(MessageSync::VoiceDispatch {
-                    user_id,
-                    channel_id,
-                    payload: SignallingEvent::Disconnected,
-                })?;
             }
             SfuEvent::Latency { target_sfu, rtt } => {
                 let mut router = self.router.write().await;

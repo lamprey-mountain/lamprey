@@ -12,6 +12,7 @@ use tokio::sync::RwLock;
 pub mod calls;
 // pub mod ring;
 pub mod sfus;
+pub mod sync;
 pub mod voice_state;
 
 pub struct ServiceVoice {

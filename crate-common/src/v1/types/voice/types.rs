@@ -3,12 +3,13 @@ use std::ops::Deref;
 // TODO: add doc comments
 
 #[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
 use uuid::Uuid;
+
 #[cfg(feature = "validator")]
 use validator::Validate;
 
@@ -32,18 +33,98 @@ pub struct SessionDescription(pub String);
 pub struct IceCandidate(pub String);
 
 /// a unique identifier for a media track (corresponds to a transceiver in webrtc)
-///
-/// media track ids are unique per peer connection (peer-peer pair)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Mid(pub Uuid);
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema), schema(value_type = String))]
+pub struct Mid(pub [u8; 16]);
 
 /// a unique identifier for a track layer
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Rid(pub u64);
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "utoipa", derive(ToSchema), schema(value_type = String))]
+pub struct Rid(pub [u8; 8]);
+
+impl Mid {
+    pub fn new(s: &str) -> Self {
+        let mut arr = [b' '; 16];
+        let bytes = s.as_bytes();
+        let len = bytes.len().min(16);
+        arr[..len].copy_from_slice(&bytes[..len]);
+        Self(arr)
+    }
+
+    pub fn as_str(&self) -> &str {
+        std::str::from_utf8(&self.0).unwrap_or("").trim_end()
+    }
+}
+
+impl Rid {
+    pub fn new(s: &str) -> Self {
+        let mut arr = [b' '; 8];
+        let bytes = s.as_bytes();
+        let len = bytes.len().min(8);
+        arr[..len].copy_from_slice(&bytes[..len]);
+        Self(arr)
+    }
+
+    pub fn as_str(&self) -> &str {
+        std::str::from_utf8(&self.0).unwrap_or("").trim_end()
+    }
+}
+
+impl Deref for Mid {
+    type Target = str;
+    fn deref(&self) -> &Self::Target {
+        self.as_str()
+    }
+}
+
+impl Deref for Rid {
+    type Target = str;
+    fn deref(&self) -> &Self::Target {
+        self.as_str()
+    }
+}
+
+impl std::fmt::Debug for Mid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Mid({})", self.as_str())
+    }
+}
+
+impl std::fmt::Debug for Rid {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Rid({})", self.as_str())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for Mid {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for Mid {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        Ok(Mid::new(&s))
+    }
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for Rid {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for Rid {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        Ok(Rid::new(&s))
+    }
+}
 
 impl Deref for SessionDescription {
     type Target = str;
@@ -642,7 +723,7 @@ pub struct ChannelBroadcast {
 impl Speaking {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(16 + 1);
-        bytes.extend_from_slice(self.mid.0.as_bytes());
+        bytes.extend_from_slice(&self.mid.0);
         bytes.push(self.flags.0);
         bytes
     }
@@ -651,7 +732,8 @@ impl Speaking {
         if bytes.len() != 17 {
             return Err(());
         }
-        let mid = Uuid::from_slice(&bytes[0..16]).map_err(|_| ())?;
+        let mut mid = [0u8; 16];
+        mid.copy_from_slice(&bytes[0..16]);
         let flags = SpeakingFlags(bytes[16]);
         Ok(Speaking {
             mid: Mid(mid),
@@ -663,7 +745,7 @@ impl Speaking {
 impl SpeakingWithUserId {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(16 + 1 + 16);
-        bytes.extend_from_slice(self.source_mid.0.as_bytes());
+        bytes.extend_from_slice(&self.source_mid.0);
         bytes.push(self.flags.0);
         bytes.extend_from_slice(self.user_id.as_bytes());
         bytes
@@ -673,13 +755,14 @@ impl SpeakingWithUserId {
         if bytes.len() != 33 {
             return Err(());
         }
-        let source_mid = Uuid::from_slice(&bytes[0..16]).map_err(|_| ())?;
-        let flags = SpeakingFlags(bytes[16]);
-        let user_id = Uuid::from_slice(&bytes[17..33]).map_err(|_| ())?;
+        let mut mid = [0u8; 16];
+        mid.copy_from_slice(&bytes[0..16]);
+        let mut peer_bytes = [0u8; 16];
+        peer_bytes.copy_from_slice(&bytes[17..33]);
         Ok(SpeakingWithUserId {
-            source_mid: Mid(source_mid),
-            flags,
-            user_id: user_id.into(),
+            source_mid: Mid(mid),
+            flags: SpeakingFlags(bytes[16]),
+            user_id: UserId::from(Uuid::from_bytes(peer_bytes)),
         })
     }
 }

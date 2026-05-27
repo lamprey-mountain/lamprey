@@ -22,6 +22,7 @@ use tracing::{debug, error, warn};
 
 use crate::{
     peer::{Command, CommandFull, Peer},
+    sfu::CallHandle,
     signalling::Signalling,
 };
 
@@ -84,6 +85,7 @@ pub struct PeerWebrtcInner {
 
     inbound: HashMap<SMid, TrackIn>,
     outbound: Vec<TrackOut>,
+    call: CallHandle,
 
     speaking_chan: Option<str0m::channel::ChannelId>,
     last_ufrag: Option<String>,
@@ -97,6 +99,7 @@ impl PeerWebrtc {
         socket_v4: Arc<UdpSocket>,
         socket_v6: Arc<UdpSocket>,
         broadcast_rx: broadcast::Receiver<Arc<CommandFull>>,
+        call: CallHandle,
     ) -> Self {
         let (command_tx, command_rx) = mpsc::unbounded_channel();
         let (event_tx, event_rx) = mpsc::unbounded_channel();
@@ -127,6 +130,7 @@ impl PeerWebrtc {
             event_tx,
             inbound: HashMap::new(),
             outbound: vec![],
+            call,
             speaking_chan: None,
             last_ufrag: None,
         };
@@ -243,7 +247,8 @@ impl PeerWebrtcInner {
         if let Some(offer) = self.signalling.negotiate_if_needed(change)? {
             self.emit(PeerEvent::Signalling(SignallingEvent::Offer {
                 sdp: SessionDescription(offer.to_sdp_string()),
-                tracks: vec![], // TODO: populate
+                // TODO: populate with self.outbound
+                tracks: vec![],
             }));
         }
 

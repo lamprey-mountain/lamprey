@@ -52,6 +52,9 @@ pub enum PeerEvent {
     /// sent via webrtc when ice is done
     Connected,
 
+    /// peer disconnected
+    Disconnected,
+
     /// another peer created a new track
     ///
     /// sent via webrtc track
@@ -80,7 +83,6 @@ pub enum PeerEvent {
 
     /// the local ICE ufrag of this peer
     IceUfrag(String),
-    // TODO: disconnected?
 }
 
 /// a command the master uses to control the sfu
@@ -428,7 +430,7 @@ impl BackboneDatagram {
             BackboneDatagram::Speaking(s) => {
                 buf.put_u8(1);
                 buf.put_slice(s.user_id.as_bytes());
-                buf.put_slice(s.source_mid.0.as_bytes());
+                buf.put_slice(&s.source_mid.0);
                 buf.put_u8(s.flags.0);
             }
         }
@@ -460,7 +462,7 @@ impl BackboneDatagram {
 
                 let mut mid_bytes = [0u8; 16];
                 buf.copy_to_slice(&mut mid_bytes);
-                let source_mid = Mid(Uuid::from_bytes(mid_bytes));
+                let source_mid = Mid(mid_bytes);
 
                 let flags = SpeakingFlags(buf.get_u8());
 

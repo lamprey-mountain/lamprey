@@ -14,7 +14,7 @@ use common::v1::types::{
     voice::{
         internal::SfuPermissions,
         messages::{BackboneDatagram, BackboneDispatch, PeerEvent, SfuCommand, SfuEvent},
-        VoiceState,
+        Mid, TrackMetadata, VoiceState,
     },
     ChannelId, SfuId, UserId,
 };
@@ -45,6 +45,7 @@ pub struct Sfu {
 
     // mapping to help routing
     ufrag_to_peer: Arc<dashmap::DashMap<String, PeerId>>,
+    addr_to_peer: Arc<dashmap::DashMap<SocketAddr, PeerId>>,
 
     sock_v4: Arc<UdpSocket>,
     sock_v6: Arc<UdpSocket>,
@@ -58,6 +59,7 @@ pub type CallHandle = Arc<CallHandleInner>;
 
 pub struct CallHandleInner {
     users: DashMap<UserId, PeerEndpoint>,
+    tracks: DashMap<(UserId, Mid), TrackMetadata>,
     tx: broadcast::Sender<Arc<CommandFull>>,
 }
 
@@ -106,6 +108,7 @@ impl Sfu {
             shards: vec![],
             calls: HashMap::new(),
             ufrag_to_peer: Arc::new(DashMap::new()),
+            addr_to_peer: Arc::new(DashMap::new()),
             sock_v4,
             sock_v6,
             backbone,
@@ -140,10 +143,8 @@ impl Sfu {
                 Some(event) = self.backbone_rx.recv() => {
                     self.handle_backbone_event(event)
                 }
-                command = self.backend.poll() => {
-                    if let Ok(cmd) = command {
-                        self.handle_command(cmd).await;
-                    }
+                Ok(command) = self.backend.poll() => {
+                    self.handle_command(command).await;
                 }
                 Ok((n, source)) = self.sock_v6.recv_from(&mut buf_v6) => {
                     let packet = buf_v6.split_to(n).freeze();
@@ -157,26 +158,50 @@ impl Sfu {
         }
     }
 
-    /// use STUN demultiplexing to identify and forward packet to the peer
+    /// handle and forward a packet to peer
+    // NOTE: uses STUN demultiplexing to identify and forward packet to the peer
     pub async fn handle_packet(&mut self, source: SocketAddr, data: Bytes) {
-        let peer = (|| {
-            if data.len() < 20 || (data[0] != 0x00 && data[0] != 0x01) {
-                return None;
-            }
-            let ufrag = extract_stun_ufrag(&data)?;
-            let peer_id = self.ufrag_to_peer.get(&ufrag)?;
-            let (channel_id, user_id) = *peer_id;
-            let call = self.calls.get(&channel_id)?;
-            call.users.get(&user_id)
-        })();
+        // TODO: make this less janky? maybe use `rtc.accepts(input)` instead?
 
-        if let Some(peer) = peer {
-            match peer.value() {
-                PeerEndpoint::Webrtc(p) => p.handle_network_packet(source, data),
-                PeerEndpoint::Cascade(_) => warn!("got packet for cascade peer"),
+        if data.len() < 2 {
+            return;
+        }
+
+        // stun packets always start with 0x00 or 0x01
+        let is_stun = data[0] == 0x00 || data[0] == 0x01;
+
+        let peer_id = if is_stun {
+            // stun: extract ufrag and learn the ip:Port mapping
+            if let Some(ufrag) = extract_stun_ufrag(&data) {
+                if let Some(pid_ref) = self.ufrag_to_peer.get(&ufrag) {
+                    let pid = *pid_ref;
+                    // register/update the source address for future srtp packets
+                    self.addr_to_peer.insert(source, pid);
+                    Some(pid)
+                } else {
+                    None
+                }
+            } else {
+                None
             }
         } else {
-            warn!("couldn't demultiplex udp packet from {}", source);
+            // srtp/srtcp: look up by previously learned ip:port
+            self.addr_to_peer
+                .get(&source)
+                .map(|ref_multi| *ref_multi.value())
+        };
+
+        if let Some((channel_id, user_id)) = peer_id {
+            if let Some(call) = self.calls.get(&channel_id) {
+                if let Some(peer) = call.users.get(&user_id) {
+                    match peer.value() {
+                        PeerEndpoint::Webrtc(p) => p.handle_network_packet(source, data),
+                        PeerEndpoint::Cascade(_) => warn!("got packet for cascade peer"),
+                    }
+                }
+            }
+        } else if is_stun {
+            warn!("couldn't demultiplex STUN packet from {}", source);
         }
     }
 
@@ -224,6 +249,7 @@ impl Sfu {
     }
 
     async fn handle_command(&mut self, command: SfuCommand) {
+        debug!("got command {command:?}");
         match command {
             SfuCommand::Init { sfu_id } => {
                 let mut id = self.state.id.write().await;
@@ -235,6 +261,7 @@ impl Sfu {
                 debug!("Latency for {}: {:?}", target_sfu, rtt);
             }
 
+            // TODO: remove SfuCommand::MigrateUsers? sfus don't need to do anything for migrations
             SfuCommand::MigrateUsers { .. } => todo!("unsure how to impl this command?"),
 
             SfuCommand::CreatePeer { state, permissions } => {
@@ -253,8 +280,8 @@ impl Sfu {
                 self.cascade_create(sfu_id, token, addr);
             }
 
-            SfuCommand::RouteUpdate { .. } => todo!("unsure how to impl this command?"),
-            SfuCommand::Channel { .. } => todo!("unsure how to impl this command?"),
+            SfuCommand::RouteUpdate { .. } => todo!("do stuff with cascading peers"),
+            SfuCommand::Channel { .. } => todo!("update call?"),
 
             // forward based on user_id
             SfuCommand::Signalling {
@@ -318,6 +345,7 @@ impl Sfu {
         let call = self.calls.entry(channel_id).or_insert_with(|| {
             Arc::new(CallHandleInner {
                 users: DashMap::new(),
+                tracks: DashMap::new(),
                 tx: broadcast::channel(100).0,
             })
         });
@@ -332,6 +360,7 @@ impl Sfu {
             sock_v4,
             sock_v6,
             call.tx.subscribe(),
+            Arc::clone(&call),
         );
 
         let ufrag_map = Arc::clone(&self.ufrag_to_peer);
@@ -356,8 +385,16 @@ impl Sfu {
                     PeerEvent::Connected => {
                         debug!("Peer {} connected in channel {}", user_id, channel_id);
                     }
+                    PeerEvent::Disconnected => {
+                        // TODO: remove ufrag/addr mappings
+                        // TODO: remove peer
+                        // TODO: remove call tracks from this user
+                    }
                     // TODO: log _e
                     PeerEvent::MediaAdded(m) => {
+                        call.tracks
+                            .insert((m.user_id, m.inner.mid.into()), m.inner.clone());
+
                         if let Err(_e) = call
                             .tx
                             .send(Arc::new(CommandFull::Inner(Command::MediaAdded(m))))

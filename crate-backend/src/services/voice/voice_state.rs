@@ -6,9 +6,10 @@ use std::sync::Arc;
 use crate::services::voice::ServiceVoice;
 use crate::Result;
 use common::v1::types::util::Time;
+use common::v1::types::voice::internal::SfuPermissions;
 use common::v1::types::voice::{CallCreate, VoiceState, VoiceStateUpdate};
 use common::v1::types::{
-    ChannelId, ChannelType, ConnectionId, MessageSync, SessionId, SfuId, UserId,
+    ChannelId, ChannelType, ConnectionId, MessageSync, Permission, SessionId, SfuId, UserId,
 };
 
 pub struct VoiceStateHandleInner {
@@ -63,12 +64,12 @@ impl ServiceVoice {
         let user = srv.users.get(user_id, Some(user_id)).await?;
         user.ensure_unsuspended()?;
 
-        srv.perms
+        let mut perms = srv
+            .perms
             .for_channel3(Some(user_id), update.channel_id)
             .await?
-            .ensure_view()?
-            .needs_unlocked()
-            .check()?;
+            .ensure_view()?;
+        perms.needs_unlocked().check()?;
 
         let chan = srv.channels.get(update.channel_id, Some(user_id)).await?;
         chan.ensure_unarchived()?;
@@ -147,6 +148,22 @@ impl ServiceVoice {
             sfu_id,
         });
         call.voice_states.insert(user_id, Arc::clone(&handle));
+
+        let mut sfu_perms = SfuPermissions::empty();
+        if perms.has(Permission::VoiceSpeak) {
+            sfu_perms |= SfuPermissions::Speak;
+        }
+        if perms.has(Permission::VoiceVideo) {
+            sfu_perms |= SfuPermissions::Video;
+        }
+        if perms.has(Permission::VoicePriority) {
+            sfu_perms |= SfuPermissions::Priority;
+        }
+
+        sfu.send(SfuCommand::CreatePeer {
+            state: handle.inner.clone(),
+            permissions: sfu_perms,
+        });
 
         sfu.send(SfuCommand::Signalling {
             user_id,
