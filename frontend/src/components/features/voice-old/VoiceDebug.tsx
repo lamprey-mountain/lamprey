@@ -13,8 +13,8 @@ import {
 } from "solid-js";
 import { useApi } from "@/api";
 import { Copyable } from "@/utils/general";
-import { getAttributeDescription, parseSessionDescription } from "./rtc-util";
 import { useVoice } from "../voice/context";
+import { getAttributeDescription, parseSessionDescription } from "./rtc-util";
 
 export const VoiceDebug = (props: { onClose: () => void }) => {
 	const [voice] = useVoice();

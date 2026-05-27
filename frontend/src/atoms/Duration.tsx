@@ -1,4 +1,4 @@
-import { Show, VoidProps } from "solid-js";
+import { Show, type VoidProps } from "solid-js";
 
 export const Duration = (props: VoidProps<{ ms: number }>) => {
 	const hours = () => Math.floor(props.ms / (1000 * 60 * 60));
@@ -19,4 +19,3 @@ export const Duration = (props: VoidProps<{ ms: number }>) => {
 		</span>
 	);
 };
-

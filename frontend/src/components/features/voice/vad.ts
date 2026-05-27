@@ -1,7 +1,8 @@
 // @ts-expect-error
+
+import { createSignal, onCleanup } from "solid-js";
 import vadProcessorUrl from "@/components/features/voice/VADProcessor?url";
 import { logger } from "@/utils/logger";
-import { createSignal, onCleanup } from "solid-js";
 
 // TODO: investigate more ways to debounce
 // deep neural network: https://www.microsoft.com/en-us/research/wp-content/uploads/2017/04/Tashev-Mirsamadi_DNN-based-Causal-VAD.pdf
@@ -56,4 +57,4 @@ export const createVAD = () => {
 			vadLog.debug("new stream connected");
 		},
 	};
-}
+};

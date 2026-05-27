@@ -5,7 +5,7 @@ import { Dynamic } from "solid-js/web";
 import { useApi } from "@/api";
 import * as Admin from "@/components/features/admin_settings/mod";
 import {
-	Metrics as Analytics,
+	RoomAnalytics as Analytics,
 	AuditLog,
 	Automod,
 	Bans,

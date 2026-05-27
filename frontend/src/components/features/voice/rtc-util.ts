@@ -206,4 +206,3 @@ export const getAttributeDescription = (
 	};
 	return descriptions[key] || "Custom attribute";
 };
-

@@ -14,7 +14,7 @@ import { Dropdown } from "@/atoms/Dropdown.tsx";
 import { formatBytes } from "@/media/util.tsx";
 import type { RoomT } from "@/types";
 
-export function Metrics(props: VoidProps<{ room: RoomT }>) {
+export function RoomAnalytics(props: VoidProps<{ room: RoomT }>) {
 	const api2 = useApi();
 
 	const [aggregation, setAggregation] = createSignal<Aggregation>("Daily");

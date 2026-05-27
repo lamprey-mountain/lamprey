@@ -29,8 +29,8 @@ import {
 	calculatePermissions,
 	type PermissionContext,
 } from "@/lib/permissions/calculator";
-import { Avatar, ChannelIcon } from "./User";
 import { useVoice } from "../features/voice/context";
+import { Avatar, ChannelIcon } from "./User";
 
 // TODO: review llm code here because im lazy and dont like implementing drag and drop
 

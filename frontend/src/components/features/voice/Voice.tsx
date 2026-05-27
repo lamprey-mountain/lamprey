@@ -19,6 +19,7 @@ import iconMic from "@/assets/mic.png";
 import iconMusic from "@/assets/music.png";
 import iconScreenshare from "@/assets/screenshare.png";
 import iconSettings from "@/assets/settings.png";
+import { Duration } from "@/atoms/Duration.tsx";
 import { Icon } from "@/atoms/Icon";
 import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
 import { AvatarWithStatus } from "@/components/shared/User";
@@ -27,7 +28,7 @@ import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { getColor } from "@/lib/colors";
 import { flags } from "@/lib/flags";
 import { md } from "@/lib/markdown";
-import { useVoice } from "../voice/context.tsx";
+import { useVoice } from "./context.tsx";
 import { VoiceDebug } from "./VoiceDebug.tsx";
 
 export const Voice = (p: { channel: Channel }) => {
