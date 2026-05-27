@@ -120,11 +120,16 @@ impl Actor for IndexActor {
     type Error = Error;
 
     async fn on_start(args: Self::Args, actor_ref: ActorRef<Self>) -> Result<Self> {
+        let weak_ref = actor_ref.downgrade();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(5));
             loop {
                 interval.tick().await;
-                let _ = actor_ref.tell(CommitIndex).await;
+                if let Some(actor) = weak_ref.upgrade() {
+                    let _ = actor.tell(CommitIndex).await;
+                } else {
+                    break;
+                }
             }
         });
 

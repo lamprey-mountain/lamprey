@@ -1,6 +1,9 @@
 use std::{sync::Arc, time::Duration};
 
-use common::v1::types::{ChannelId, MediaVerId, MessageSync, PaginationDirection, PaginationQuery};
+use common::{
+    v1::types::{ChannelId, MediaVerId, MessageSync, PaginationDirection, PaginationQuery},
+    v2::types::media::Media,
+};
 use dashmap::DashSet;
 use moka::future::Cache;
 use tantivy::Term;
@@ -338,7 +341,7 @@ impl ContentIngestionManager {
         let _ = self.index_writer.tell(UpdateDocument { term, doc }).await;
     }
 
-    async fn index_media(&self, media: common::v2::types::media::Media, is_update: bool) {
+    async fn index_media(&self, media: Media, is_update: bool) {
         if is_update {
             let key = IngestKey::Media(*media.id);
             if self.update_throttle.get(&key).await.is_some() {
