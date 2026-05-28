@@ -83,8 +83,12 @@ pub struct PeerWebrtcInner {
     broadcast_rx: broadcast::Receiver<Arc<CommandFull>>,
     event_tx: mpsc::UnboundedSender<PeerEvent>,
 
+    /// tracks coming from the peer
     inbound: HashMap<SMid, TrackIn>,
+
+    /// tracks going to the peer
     outbound: Vec<TrackOut>,
+
     call: CallHandle,
 
     speaking_chan: Option<str0m::channel::ChannelId>,
@@ -117,6 +121,23 @@ impl PeerWebrtc {
             }
         }
 
+        // TODO: don't attempt to open all call tracks when starting peer
+        // maybe add TrackState::Something to represent "dont create the track yet", then set it to Pending when subscribed
+        let mut outbound = Vec::new();
+        for entry in call.tracks.iter() {
+            let (user_id, source_mid) = *entry.key();
+            let metadata = entry.value();
+            outbound.push(TrackOut {
+                kind: metadata.kind.into(),
+                state: TrackState::Pending,
+                user_id,
+                source_mid,
+                enabled: false,
+                channel_id: voice_state.channel_id,
+                key: metadata.key.clone(),
+            });
+        }
+
         let inner = PeerWebrtcInner {
             user_id,
             rtc: rtc_config,
@@ -129,7 +150,7 @@ impl PeerWebrtc {
             broadcast_rx,
             event_tx,
             inbound: HashMap::new(),
-            outbound: vec![],
+            outbound,
             call,
             speaking_chan: None,
             last_ufrag: None,
@@ -245,10 +266,29 @@ impl PeerWebrtcInner {
         }
 
         if let Some(offer) = self.signalling.negotiate_if_needed(change)? {
+            let tracks = self
+                .outbound
+                .iter()
+                .filter_map(|t| {
+                    if let Some(mid) = t.state.mid() {
+                        Some(TrackMetadataWithUserId {
+                            inner: TrackMetadata {
+                                kind: t.kind.into(),
+                                key: t.key.clone(),
+                                mid: mid.into(),
+                                layers: vec![], // TODO: populate
+                            },
+                            user_id: t.user_id,
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
             self.emit(PeerEvent::Signalling(SignallingEvent::Offer {
                 sdp: SessionDescription(offer.to_sdp_string()),
-                // TODO: populate with self.outbound
-                tracks: vec![],
+                tracks,
             }));
         }
 

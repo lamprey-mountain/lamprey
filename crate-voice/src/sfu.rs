@@ -59,7 +59,7 @@ pub type CallHandle = Arc<CallHandleInner>;
 
 pub struct CallHandleInner {
     users: DashMap<UserId, PeerEndpoint>,
-    tracks: DashMap<(UserId, Mid), TrackMetadata>,
+    pub tracks: DashMap<(UserId, Mid), TrackMetadata>,
     tx: broadcast::Sender<Arc<CommandFull>>,
 }
 
