@@ -5,7 +5,7 @@ use bytes::Bytes;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use str0m::media::{MediaTime, Pt};
+use str0m::{format::Codec, media::MediaTime};
 use uuid::Uuid;
 
 use crate::v1::types::{voice::Mid, Channel, ChannelId, UserId};
@@ -32,8 +32,8 @@ pub struct MediaData {
     /// the timestamp of this packet in the media stream
     pub time: MediaTime,
 
-    /// the payload type
-    pub pt: Pt,
+    /// the payload codec
+    pub codec: Codec,
 }
 
 impl MediaData {
@@ -44,11 +44,20 @@ impl MediaData {
         // mid (16 bytes)
         buf.put_slice(&self.mid.0);
 
-        // peer_id (16 bytes)
+        // user_id (16 bytes)
         buf.put_slice(self.user_id.as_bytes());
 
-        // pt (1 byte)
-        buf.put_u8(*self.pt);
+        // codec (1 byte)
+        let codec_u8 = match self.codec {
+            Codec::Opus => 0,
+            Codec::Vp8 => 1,
+            Codec::Vp9 => 2,
+            Codec::H264 => 3,
+            Codec::Av1 => 4,
+            // Codec::Rtx => 5, // ???
+            _ => 255,
+        };
+        buf.put_u8(codec_u8);
 
         // network_time (4 bytes)
         let age = std::time::Instant::now().saturating_duration_since(self.network_time);
@@ -77,11 +86,20 @@ impl MediaData {
         buf.copy_to_slice(&mut mid_bytes);
         let mid = Mid(mid_bytes);
 
-        let mut peer_bytes = [0u8; 16];
-        buf.copy_to_slice(&mut peer_bytes);
-        let user_id = UserId::from(Uuid::from_bytes(peer_bytes));
+        let mut user_bytes = [0u8; 16];
+        buf.copy_to_slice(&mut user_bytes);
+        let user_id = UserId::from(Uuid::from_bytes(user_bytes));
 
-        let pt = str0m::media::Pt::from(buf.get_u8());
+        let codec_u8 = buf.get_u8();
+        let codec = match codec_u8 {
+            0 => Codec::Opus,
+            1 => Codec::Vp8,
+            2 => Codec::Vp9,
+            3 => Codec::H264,
+            4 => Codec::Av1,
+            // 5 => Codec::Rtx, // ????
+            _ => Codec::Unknown,
+        };
 
         let age_micros = buf.get_u32_le();
         let network_time =
@@ -100,7 +118,7 @@ impl MediaData {
             data,
             network_time,
             time,
-            pt,
+            codec,
         })
     }
 }

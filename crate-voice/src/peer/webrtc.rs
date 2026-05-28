@@ -210,10 +210,22 @@ impl PeerWebrtcInner {
                 Output::Transmit(v) => {
                     match v.destination {
                         SocketAddr::V4(_) => {
-                            _ = self.socket_v4.send_to(&v.contents, v.destination).await;
+                            if let Err(e) = self.socket_v4.send_to(&v.contents, v.destination).await
+                            {
+                                warn!(
+                                    "Failed to send UDP IPv4 packet to {}: {:?}",
+                                    v.destination, e
+                                );
+                            }
                         }
                         SocketAddr::V6(_) => {
-                            _ = self.socket_v6.send_to(&v.contents, v.destination).await;
+                            if let Err(e) = self.socket_v6.send_to(&v.contents, v.destination).await
+                            {
+                                warn!(
+                                    "Failed to send UDP IPv6 packet to {}: {:?}",
+                                    v.destination, e
+                                );
+                            }
                         }
                     }
                     continue;
@@ -332,9 +344,7 @@ impl PeerWebrtcInner {
                     network_time: m.network_time,
                     time: m.time,
                     data: m.data.into(),
-
-                    // FIXME: make sure pt matches `str0m::media::Pt` correctly
-                    pt: m.pt,
+                    codec: m.params.spec().codec,
                 };
                 self.emit(PeerEvent::MediaData(payload));
             }
@@ -372,6 +382,7 @@ impl PeerWebrtcInner {
         }
     }
 
+    // TODO: deduplicate logic with handle_command_full?
     fn handle_broadcast(&mut self, command: Arc<CommandFull>) {
         match &*command {
             CommandFull::Inner(command) => match command {
@@ -399,27 +410,7 @@ impl PeerWebrtcInner {
                 }
                 _ => {}
             },
-            CommandFull::MediaData(m) => {
-                if m.user_id == self.user_id {
-                    return;
-                }
-
-                let Some(track) = self
-                    .outbound
-                    .iter()
-                    .find(|t| t.source_mid == m.mid && t.user_id == m.user_id)
-                else {
-                    return;
-                };
-                let Some(mid) = track.state.mid() else { return };
-                let Some(mut writer) = self.rtc.writer(mid) else {
-                    return;
-                };
-
-                // for now, just write the data
-                // FIXME: handle pt mapping properly (based on sdp)
-                let _ = writer.write(m.pt, m.network_time, m.time, m.data.as_ref());
-            }
+            CommandFull::MediaData(m) => self.route_media(&m),
             CommandFull::Speaking(s) => {
                 if s.user_id == self.user_id {
                     return;
@@ -443,25 +434,7 @@ impl PeerWebrtcInner {
     fn handle_command_full(&mut self, command: CommandFull) {
         match command {
             CommandFull::Inner(command) => self.handle_command(command),
-            CommandFull::MediaData(m) => {
-                let Some(track) = self
-                    .outbound
-                    .iter()
-                    .find(|t| t.source_mid == m.mid && t.user_id == m.user_id)
-                else {
-                    return;
-                };
-                let Some(mid) = track.state.mid() else { return };
-                let Some(mut writer) = self.rtc.writer(mid) else {
-                    return;
-                };
-
-                // writer.match_params(params)
-
-                // for now, just write the data
-                // FIXME: handle pt mapping properly (based on sdp)
-                let _ = writer.write(m.pt, m.network_time, m.time, m.data.as_ref());
-            }
+            CommandFull::MediaData(m) => self.route_media(&m),
             CommandFull::Speaking(s) => {
                 if let Some(chan) = self.speaking_chan {
                     if let Some(mut c) = self.rtc.channel(chan) {
@@ -491,7 +464,13 @@ impl PeerWebrtcInner {
 
                 let contents = match data.as_ref().try_into() {
                     Ok(c) => c,
-                    Err(_) => return,
+                    Err(e) => {
+                        warn!(
+                            "Failed to parse incoming packet from {} as str0m::net::Packet: {:?}",
+                            source, e
+                        );
+                        return;
+                    }
                 };
 
                 let input = str0m::Input::Receive(
@@ -592,6 +571,58 @@ impl PeerWebrtcInner {
                     key: t.inner.key,
                 });
             }
+        }
+    }
+
+    fn route_media(&mut self, m: &MediaData) {
+        if m.user_id == self.user_id {
+            return;
+        }
+
+        let Some(track) = self
+            .outbound
+            .iter()
+            .find(|t| t.source_mid == m.mid && t.user_id == m.user_id)
+        else {
+            debug!(
+                "Drop media: track not found in outbound (source_mid: {:?}, user: {})",
+                m.mid, m.user_id
+            );
+            return;
+        };
+
+        let Some(mid) = track.state.mid() else {
+            debug!("Drop media: track state is still Pending (hasn't been negotiated yet)");
+            return;
+        };
+
+        let Some(writer) = self.rtc.writer(mid) else {
+            // NOTE: this will spam for a few milliseconds while the client's SDP Answer is flying over the network.
+            // Once the Answer is applied, this will stop logging and media will flow.
+            debug!(
+                "Drop media: str0m writer not available for mid {:?} (SDP answer not applied yet?)",
+                mid
+            );
+            return;
+        };
+
+        let pt = writer
+            .payload_params()
+            .find(|p| p.spec().codec == m.codec && p.resend().is_none())
+            .map(|p| p.pt());
+
+        let Some(pt) = pt else {
+            debug!("Drop media: Dest peer doesn't support codec {:?}", m.codec);
+            return;
+        };
+
+        if let Err(err) = writer.write(pt, m.network_time, m.time, m.data.as_ref()) {
+            warn!(
+                "failed to write media to client {}: {:?}",
+                self.user_id, err
+            );
+            // self.rtc.disconnect();
+            // this is probably too aggressive
         }
     }
 
