@@ -427,9 +427,11 @@ export class VoiceClient {
 
 		let s = this.streams.get(streamId);
 		if (s) {
+			log.debug("rtc", `reuse stream ${streamId}`, s);
 			if (!s.mids.includes(track.mid)) s.mids.push(track.mid);
 		} else {
 			const media = new MediaStream();
+			log.debug("rtc", `initialized new stream ${streamId}`, media);
 			s = {
 				id: streamId,
 				user_id: uid,

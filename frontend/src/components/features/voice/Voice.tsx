@@ -31,6 +31,18 @@ import { md } from "@/lib/markdown";
 import { useVoice } from "./context.tsx";
 import { VoiceDebug } from "./VoiceDebug.tsx";
 
+const MemberName = (props: { roomId?: string; userId: string }) => {
+	const api = useApi();
+
+	const user = api.users.use(() => props.userId);
+
+	const member = api.room_members.use(() =>
+		props.roomId ? `${props.roomId}:${props.userId}` : undefined,
+	);
+
+	return <>{member()?.override_name || user()?.name || props.userId}</>;
+};
+
 export const Voice = (p: { channel: Channel }) => {
 	const api = useApi();
 	const [voice, actions] = useVoice();
@@ -46,13 +58,6 @@ export const Voice = (p: { channel: Channel }) => {
 			},
 		),
 	);
-
-	const getName = (uid: string) => {
-		const room_member = p.channel.room_id
-			? api.room_members.use(() => `${p.channel.room_id}!:${uid}`)
-			: null;
-		return room_member?.()?.override_name || uid;
-	};
 
 	const getUsersWithoutStreams = () => {
 		const hasStream = new Set();
@@ -132,7 +137,14 @@ export const Voice = (p: { channel: Channel }) => {
 								>
 									<div class="live">live</div>
 									<video autoplay playsinline ref={videoRef!} muted />
-									<div class="status">{getName(stream.user_id)}</div>
+									<div class="status">
+										{
+											<MemberName
+												userId={stream.user_id}
+												roomId={p.channel.room_id}
+											/>
+										}
+									</div>
 								</div>
 							);
 						})(voice.vc.streams.get(focused()!))}
@@ -164,7 +176,14 @@ export const Voice = (p: { channel: Channel }) => {
 									>
 										<div class="live">live</div>
 										<video autoplay playsinline ref={videoRef!} muted />
-										<div class="status">{getName(stream.user_id)}</div>
+										<div class="status">
+											{
+												<MemberName
+													userId={stream.user_id}
+													roomId={p.channel.room_id}
+												/>
+											}
+										</div>
 									</div>
 								);
 							}}
@@ -181,7 +200,9 @@ export const Voice = (p: { channel: Channel }) => {
 									>
 										<Show when={user}>
 											<AvatarWithStatus user={user()} />
-											<div class="status">{getName(uid)}</div>
+											<div class="status">
+												{<MemberName userId={uid} roomId={p.channel.room_id} />}
+											</div>
 										</Show>
 									</div>
 								);

@@ -229,36 +229,42 @@ export const AppShell: Component<ParentProps> = (props) => {
 			{props.children}
 			<OverlayProvider />
 			<div style="visibility:hidden">
-				{/* FIXME: render rtc streams
-				<For each={[...(voice.rtc?.streams.values() ?? [])]}>
+				<For each={[...(voice.vc.streams.values() ?? [])]}>
 					{(stream) => {
-						let audioRef: HTMLAudioElement | undefined;
+						let ref: HTMLAudioElement | HTMLVideoElement | undefined;
 						createEffect(() => {
-							console.log("listening to stream", stream);
-							if (audioRef) audioRef.srcObject = stream.media;
+							if (ref) ref.srcObject = stream.media;
 						});
-						createEffect(() => {
-							const c = voice.preferences.get(stream.user_id) ?? {
-								mute: false,
-								mute_video: false,
-								volume: 100,
-							};
-							if (audioRef) audioRef.volume = c.volume / 100;
-						});
+
+						const hasVideo = () => stream.media.getVideoTracks().length > 0;
+
 						return (
-							<audio
-								autoplay
-								ref={audioRef}
-								muted={
-									voice.deafened ||
-									voice.preferences.get(stream.user_id)?.mute === true
+							<Show
+								when={hasVideo()}
+								fallback={
+									<audio
+										autoplay
+										ref={ref as HTMLAudioElement}
+										muted={
+											voice.deafened ||
+											voice.preferences.get(stream.user_id)?.mute === true
+										}
+									/>
 								}
-							/>
+							>
+								<video
+									autoplay
+									playsinline
+									ref={ref as HTMLVideoElement}
+									muted={
+										voice.deafened ||
+										voice.preferences.get(stream.user_id)?.mute === true
+									}
+								/>
+							</Show>
 						);
 					}}
 				</For>
-
-				*/}
 			</div>
 			<Show when={state() !== "ready"}>
 				<div style="position:fixed;top:8px;left:8px;background:#111;padding:8px;border:solid #222 1px;">

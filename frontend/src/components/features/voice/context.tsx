@@ -34,7 +34,7 @@ type VoiceProviderState = {
 	screensharing: boolean;
 	musicing: boolean;
 	hasVoiceActivity: boolean;
-	participants: ReactiveMap<string, VoiceConfigUser>;
+	preferences: ReactiveMap<string, VoiceConfigUser>;
 };
 
 type VoiceConfigUser = {
@@ -67,7 +67,7 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 		get connectionState() {
 			return vc.connectionState();
 		},
-		participants: new ReactiveMap(),
+		preferences: new ReactiveMap(),
 	});
 
 	api.events.on("sync", ([sync, _envelope]) => {
