@@ -187,6 +187,9 @@ impl PeerWebrtc {
 // if permissions.speak is denied, DISALLOW a track of kind=audio, key=user (other keys are fine, including screenshare. screenshare can have audio.)
 // if both are denied, don't allow creating any tracks at all
 // if both are allowed, allow creating any tracks
+
+// FIXME: map speaking mids from source mid to local peer's mid
+
 impl PeerWebrtcInner {
     async fn run(mut self) -> Result<(), anyhow::Error> {
         loop {
@@ -373,7 +376,7 @@ impl PeerWebrtcInner {
                         self.emit(PeerEvent::Speaking(SpeakingWithUserId {
                             user_id: self.user_id,
                             flags: speaking.flags,
-                            source_mid: speaking.mid,
+                            mid: speaking.mid,
                         }));
                     }
                 }
@@ -419,7 +422,7 @@ impl PeerWebrtcInner {
                 if let Some(chan) = self.speaking_chan {
                     if let Some(mut c) = self.rtc.channel(chan) {
                         let speaking = Speaking {
-                            mid: s.source_mid,
+                            mid: s.mid,
                             flags: s.flags,
                         };
                         let bytes = speaking.to_bytes();
@@ -439,7 +442,7 @@ impl PeerWebrtcInner {
                 if let Some(chan) = self.speaking_chan {
                     if let Some(mut c) = self.rtc.channel(chan) {
                         let speaking = Speaking {
-                            mid: s.source_mid,
+                            mid: s.mid,
                             flags: s.flags,
                         };
                         let bytes = speaking.to_bytes();

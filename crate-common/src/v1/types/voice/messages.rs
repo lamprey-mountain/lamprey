@@ -430,7 +430,7 @@ impl BackboneDatagram {
             BackboneDatagram::Speaking(s) => {
                 buf.put_u8(1);
                 buf.put_slice(s.user_id.as_bytes());
-                buf.put_slice(&s.source_mid.0);
+                buf.put_slice(&s.mid.0);
                 buf.put_u8(s.flags.0);
             }
         }
@@ -468,7 +468,7 @@ impl BackboneDatagram {
 
                 Ok(BackboneDatagram::Speaking(SpeakingWithUserId {
                     user_id,
-                    source_mid,
+                    mid: source_mid,
                     flags,
                 }))
             }

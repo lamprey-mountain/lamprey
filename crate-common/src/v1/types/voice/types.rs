@@ -528,7 +528,7 @@ pub struct Speaking {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct SpeakingWithUserId {
-    pub source_mid: Mid,
+    pub mid: Mid,
     pub flags: SpeakingFlags,
     pub user_id: UserId,
 }
@@ -745,7 +745,7 @@ impl Speaking {
 impl SpeakingWithUserId {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(16 + 1 + 16);
-        bytes.extend_from_slice(&self.source_mid.0);
+        bytes.extend_from_slice(&self.mid.0);
         bytes.push(self.flags.0);
         bytes.extend_from_slice(self.user_id.as_bytes());
         bytes
@@ -760,7 +760,7 @@ impl SpeakingWithUserId {
         let mut peer_bytes = [0u8; 16];
         peer_bytes.copy_from_slice(&bytes[17..33]);
         Ok(SpeakingWithUserId {
-            source_mid: Mid(mid),
+            mid: Mid(mid),
             flags: SpeakingFlags(bytes[16]),
             user_id: UserId::from(Uuid::from_bytes(peer_bytes)),
         })
