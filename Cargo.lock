@@ -4298,7 +4298,6 @@ dependencies = [
  "bitflags 2.11.1",
  "bytes",
  "http",
- "lamprey-hakari",
  "lamprey-macros",
  "mediatype",
  "pastey 0.1.1",
