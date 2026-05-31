@@ -293,6 +293,8 @@ genid!(DocumentTag);
 genid!(Connection);
 genid!(PermissionOverwrite);
 genid!(Interaction, "00000000-0000-0000-0000-00interaction");
+genid!(Sync);
+genid!(Shard);
 
 // redexes
 genid!(Redex, "00000000-0000-0000-0000-0000000redex");

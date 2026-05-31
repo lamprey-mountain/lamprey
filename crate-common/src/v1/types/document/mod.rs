@@ -163,8 +163,22 @@ pub struct DocumentBranchPatch {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct DocumentBranchMerge {
-    // /// overwrite where to merge to, defaults to the parent branch
-    // pub target_branch_id: Option<DocumentBranchId>,
+    /// overwrite where to merge to, defaults to the parent branch
+    pub target_branch_id: Option<DocumentBranchId>,
+    // TODO: merge requests
+    // /// create a merge request instead of merging immediately
+    // #[cfg_attr(feature = "serde", serde(default))]
+    // pub request: bool,
+    //
+    // flow:
+    // POST   /document/{channel_id}/branch/{branch_id}/merge -- create merge request or merge branch
+    // GET    /document/{channel_id}/merge                    -- list merge requests
+    // GET    /document/{channel_id}/merge/{branch_id}        -- get merge request
+    // POST   /document/{channel_id}/merge/{branch_id}/close  -- close (archive) merge request
+    // DELETE /document/{channel_id}/merge/{branch_id}        -- delete merge request
+    //
+    // unsure if needed:
+    // PATCH  /document/{channel_id}/merge/{branch_id}        -- edit merge request
 }
 
 #[derive(Debug, Clone)]
@@ -781,4 +795,12 @@ pub struct WikiPatch {
 
     #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub page_notfound: Option<Option<ChannelId>>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct DocumentRevert {
+    /// overwrite where to merge to, defaults to the parent branch
+    pub target_branch_id: Option<DocumentBranchId>,
 }

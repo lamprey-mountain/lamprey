@@ -29,16 +29,20 @@ use crate::{
             channel::DispatchChannel,
             invite::DispatchInvite,
             room::DispatchRoom,
+            shard::Syncer,
             subscribe::{DispatchSubscriptions, SyncSubscriptionsUpdate},
             user::DispatchUser,
             webhook::DispatchWebhook,
         },
+        ShardId, SyncId,
     },
 };
 
 pub mod channel;
+pub mod filter;
 pub mod invite;
 pub mod room;
+pub mod shard;
 pub mod subscribe;
 pub mod user;
 pub mod visibility;
@@ -50,7 +54,7 @@ pub use crate::v1::types::{SyncCompression, SyncFormat as SyncEncoding, SyncVers
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
-pub struct SyncParams {
+pub struct WebsocketSyncParams {
     pub version: SyncVersion,
 
     pub compression: Option<SyncCompression>,
@@ -64,7 +68,7 @@ pub struct SyncParams {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "op"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum SyncCommand {
-    /// start a new connection
+    /// start a new sync connection
     Identify {
         token: SessionToken,
         presence: Option<Presence>,
@@ -72,11 +76,21 @@ pub enum SyncCommand {
     },
 
     /// connect to an existing connection
+    ///
+    /// this includes connecting as a shard
     Resume {
         token: SessionToken,
         connection_id: ConnectionId,
         seq: u64,
+
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        shard_id: Option<ShardId>,
     },
+
+    /// cleanly close this stream or sync
+    ///
+    /// closes the entire sync connection if this is the main transport
+    Close,
 
     /// heartbeat
     // NOTE: do i want to reverse heartbeats to be able to detect backpressure?
@@ -185,9 +199,45 @@ pub enum SyncEventEnvelope {
     },
 
     /// an error occured
+    Error { error: String, code: SyncErrorCode },
+}
+
+/// an event from the sync worker to a webhook
+///
+/// the webhook must respond with a 2xx status code within 3 seconds
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "op"))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum SyncEventEnvelopeWebsocket {
+    /// heartbeat
+    ///
+    /// webhook should respond with 204 no content. make sure to validate that the signature is correct.
+    Ping,
+
+    // NOTE: is this needed for webhooks
+    Resumed,
+
+    /// a dispatch
+    Dispatch {
+        /// the connection sequence number of this event, for resuming
+        seq: u64,
+
+        /// the sync dispatch itself
+        dispatch: Box<Dispatch>,
+
+        /// the nonce for responses
+        ///
+        /// set if this is in response to a http request with the `Idempotency-Key` header set
+        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        nonce: Option<String>,
+    },
+
+    /// an error occured
+    ///
+    /// client may need to re-setup the connection
     Error {
         error: String,
-        code: Option<SyncErrorCode>,
+        code: SyncErrorCode,
     },
 }
 
@@ -210,14 +260,18 @@ pub enum Dispatch {
         /// current session
         session: Box<Session>,
 
-        /// connection id
-        connection_id: ConnectionId,
+        /// the syncer object
+        syncer: Box<Syncer>,
+
+        /// the id of this shard, if this is a sharded connection
+        shard_id: Option<ShardId>,
     },
 
     /// extra data for the client to function, sent after Ready
     Ambient {
-        /// the connection that this Ambient message is for
-        connection_id: ConnectionId,
+        /// the sync id that this Ambient message is for
+        sync_id: SyncId,
+        // TODO: what goes here? returning all rooms could be bad for large bots
         // /// all rooms the user can see
         // rooms: Vec<Room>,
 
@@ -302,6 +356,11 @@ pub enum Dispatch {
         payload: E2EEMessage,
     },
 
+    // TODO: add
+    // SyncCreate,
+    // SyncDelete,
+    // ShardCreate,
+    // ShardDelete,
     #[serde(untagged)]
     Room(DispatchRoom),
 

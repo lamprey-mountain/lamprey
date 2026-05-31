@@ -128,6 +128,8 @@ pub enum SyncErrorCode {
         "you sent data that i couldn't decode. make sure you're encoding payloads as utf-8 json as text."
     )]
     InvalidData,
+    // TODO: shard errors
+    // TODO: webhook transport errors
 }
 
 /// a field that has an error

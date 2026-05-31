@@ -496,3 +496,32 @@ pub mod document_content_put {
 
     pub struct Response {}
 }
+
+/// Document content revert
+///
+/// restore an older version of a document
+#[endpoint(
+    post,
+    path = "/document/{channel_id}/revision/{revision_id}/revert",
+    tags = ["document"],
+    scopes = [Full],
+    permissions = [DocumentEdit],
+    response(NO_CONTENT, description = "successfully reverted"),
+)]
+pub mod document_content_revert {
+    use crate::v1::types::document::{DocumentRevert, DocumentRevisionId};
+    use crate::v1::types::ChannelId;
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub revision_id: DocumentRevisionId,
+
+        #[json]
+        pub body: DocumentRevert,
+    }
+
+    pub struct Response {}
+}

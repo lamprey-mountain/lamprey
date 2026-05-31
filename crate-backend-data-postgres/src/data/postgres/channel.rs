@@ -152,9 +152,7 @@ impl DataChannel for Postgres {
                 p.dir.to_string(),
                 (p.limit + 1) as i32,
             ),
-            query_scalar!(
-                r#"SELECT count(*) FROM channel"#
-            ),
+            query_scalar!(r#"SELECT count(*) FROM channel"#),
             |i: &Channel| i.id.to_string()
         )
     }

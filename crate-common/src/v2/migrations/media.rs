@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use crate::v1::types::media::{MediaV0 as V1Media, MediaV0WithAdmin as V1MediaWithAdmin};
+use crate::v1::types::misc::hashes::Hashes;
 use crate::v2::types::media::{Media, MediaMetadata, MediaStatus};
 
 impl From<Media> for V1Media {
@@ -120,7 +119,7 @@ impl From<V1Media> for Media {
             links: vec![],
             room_id: None,
             channel_id: None,
-            hashes: HashMap::default(),
+            hashes: Hashes::default(),
             strip_exif: false,
             remote: None,
         }

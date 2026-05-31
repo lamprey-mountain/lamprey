@@ -357,7 +357,11 @@ impl Component<Create> {
             |media| resolve_media(media),
         )?;
 
-        Ok(Component { id, ty })
+        Ok(Component {
+            id,
+            ty,
+            allow: self.allow,
+        })
     }
 
     fn parse_thin_inner<R>(
@@ -387,10 +391,14 @@ impl Component<Create> {
 
             return if self.id == Some(referenced.id) {
                 // MOVE: Return the existing canonical component
-                Ok(referenced.clone())
+                let mut comp = referenced.clone();
+                comp.allow = self.allow;
+                Ok(comp)
             } else {
                 // CLONE: Deep clone existing canonical component with new IDs
-                referenced.clone_with_new_ids(id_allocator)
+                let mut comp = referenced.clone_with_new_ids(id_allocator)?;
+                comp.allow = self.allow;
+                Ok(comp)
             };
         }
 
@@ -400,7 +408,11 @@ impl Component<Create> {
             |media| resolve_media(media),
         )?;
 
-        Ok(Component { id, ty })
+        Ok(Component {
+            id,
+            ty,
+            allow: self.allow,
+        })
     }
 }
 
@@ -473,7 +485,11 @@ impl Component<Canonical> {
             }
         };
 
-        Ok(Component { id, ty })
+        Ok(Component {
+            id,
+            ty,
+            allow: self.allow.clone(),
+        })
     }
 }
 
@@ -546,7 +562,11 @@ impl Component<Thin> {
             }
         };
 
-        Ok(Component { id, ty })
+        Ok(Component {
+            id,
+            ty,
+            allow: self.allow.clone(),
+        })
     }
 }
 
@@ -767,6 +787,7 @@ impl Component<Thin> {
         Ok(Component {
             id: self.id,
             ty: new_ty,
+            allow: self.allow,
         })
     }
 }

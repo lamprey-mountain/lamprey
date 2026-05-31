@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -11,8 +9,11 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::{
-    v1::types::{misc::binary::Binary, MediaId, Mime},
-    v2::types::media::{HashType, MediaMetadata},
+    v1::types::{
+        misc::{binary::Binary, hashes::Hashes},
+        MediaId, Mime,
+    },
+    v2::types::media::MediaMetadata,
 };
 
 /// encrypted data for media
@@ -53,7 +54,7 @@ pub struct EncryptedMediaInfo {
     // pub scans: Vec<MediaScan>,
     // pub ratings: ContentRatings,
     /// hashes of decrypted content
-    pub hashes: HashMap<HashType, String>,
+    pub hashes: Hashes,
     // /// the thumbnail for this piece of media
     // TODO: add this
     // TODO: enforce that thumnails cannot have thumbnails

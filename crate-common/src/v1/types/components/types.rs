@@ -8,6 +8,7 @@ use url::Url;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::v1::types::components::acl::Allow;
 use crate::v1::types::e2ee::media::EncryptedMedia;
 use crate::v1::types::misc::Color;
 use crate::v1::types::MediaId;
@@ -53,6 +54,10 @@ pub struct Component<C: ComponentState> {
 
     #[cfg_attr(feature = "serde", serde(flatten))]
     pub ty: ComponentType<C>,
+
+    /// restrict who is allowed to interact with this component
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub allow: Option<Allow>,
 }
 
 pub type ComponentCreate = Component<Create>;
@@ -70,7 +75,9 @@ pub struct Components<C: ComponentState> {
 mod _s {
     use serde::{Deserialize, Serialize};
 
-    use crate::v1::types::components::{Canonical, ComponentState, Create, Encrypted, Thin};
+    use crate::v1::types::components::{
+        acl::Allow, Canonical, ComponentState, Create, Encrypted, Thin,
+    };
 
     use super::{Component, ComponentCreate, ComponentId, ComponentType, Components};
 
@@ -90,6 +97,9 @@ mod _s {
 
                     #[serde(flatten)]
                     ty: ComponentType<Create>,
+
+                    #[serde(default, skip_serializing_if = "Option::is_none")]
+                    allow: Option<Allow>,
                 },
             }
 
@@ -98,8 +108,9 @@ mod _s {
                 Helper::Text(content) => Ok(ComponentCreate {
                     id: None,
                     ty: ComponentType::Text { content },
+                    allow: None,
                 }),
-                Helper::Struct { id, ty } => Ok(Component { id, ty }),
+                Helper::Struct { id, ty, allow } => Ok(Component { id, ty, allow }),
             }
         }
     }
@@ -117,12 +128,15 @@ mod _s {
 
                     #[serde(flatten)]
                     ty: ComponentType<Canonical>,
+
+                    #[serde(default, skip_serializing_if = "Option::is_none")]
+                    allow: Option<Allow>,
                 },
             }
 
             let helper = Helper::deserialize(deserializer)?;
             match helper {
-                Helper::Struct { id, ty } => Ok(Component { id, ty }),
+                Helper::Struct { id, ty, allow } => Ok(Component { id, ty, allow }),
             }
         }
     }
@@ -140,12 +154,15 @@ mod _s {
 
                     #[serde(flatten)]
                     ty: ComponentType<Thin>,
+
+                    #[serde(default, skip_serializing_if = "Option::is_none")]
+                    allow: Option<Allow>,
                 },
             }
 
             let helper = Helper::deserialize(deserializer)?;
             match helper {
-                Helper::Struct { id, ty } => Ok(Component { id, ty }),
+                Helper::Struct { id, ty, allow } => Ok(Component { id, ty, allow }),
             }
         }
     }
@@ -163,12 +180,15 @@ mod _s {
 
                     #[serde(flatten)]
                     ty: ComponentType<Encrypted>,
+
+                    #[serde(default, skip_serializing_if = "Option::is_none")]
+                    allow: Option<Allow>,
                 },
             }
 
             let helper = Helper::deserialize(deserializer)?;
             match helper {
-                Helper::Struct { id, ty } => Ok(Component { id, ty }),
+                Helper::Struct { id, ty, allow } => Ok(Component { id, ty, allow }),
             }
         }
     }
@@ -665,6 +685,7 @@ impl Component<Canonical> {
         Component {
             id: self.id,
             ty: self.ty.into_thin(),
+            allow: self.allow,
         }
     }
 }
@@ -744,6 +765,7 @@ impl Component<Thin> {
         ComponentCreate {
             id: Some(self.id),
             ty: self.ty.into_create(),
+            allow: self.allow,
         }
     }
 }

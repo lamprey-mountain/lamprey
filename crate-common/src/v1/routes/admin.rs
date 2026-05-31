@@ -63,4 +63,3 @@ pub mod admin_register_user {
 
     pub struct Response {}
 }
-

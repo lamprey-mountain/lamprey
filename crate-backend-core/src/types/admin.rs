@@ -6,7 +6,7 @@ use common::v1::types::{ChannelId, MessageCreate, MessageId, UserId};
 use uuid::Uuid;
 
 // TEMP: reexport
-pub use common::v1::types::admin::{AdminWhisper, AdminBroadcast, AdminRegisterUser};
+pub use common::v1::types::admin::{AdminBroadcast, AdminRegisterUser, AdminWhisper};
 pub use common::v1::types::search::stats::*;
 
 // TODO: rename as an internal thing

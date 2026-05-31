@@ -4,8 +4,10 @@ use serde::de::DeserializeOwned;
 
 // export all routes
 
-pub mod admin;
+// TODO: extract response(body = ...) from struct Response?
+
 pub mod ack;
+pub mod admin;
 pub mod application;
 pub mod auth;
 pub mod automod;

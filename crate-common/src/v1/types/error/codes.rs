@@ -731,4 +731,8 @@ pub enum ErrorCode {
     /// this room type doesnt have channels
     #[error("room_type_no_channels")]
     RoomTypeNoChannels,
+
+    /// interaction not allowed
+    #[error("interaction not allowed")]
+    InteractionNotAllowed,
 }

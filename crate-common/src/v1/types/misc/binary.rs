@@ -1,10 +1,16 @@
+use std::ops::Deref;
+
 use bytes::Bytes;
 
 /// some binary data
 ///
-/// serialized as unpaddeded url safe base64 for human readable formats (json) and raw binary otherwise (msgpack)
+/// serialized as unpaddeded url safe base64 for human readable formats (json)
+/// and raw binary otherwise (msgpack)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Binary<const MAX_SIZE: usize>(pub Bytes);
+
+// TODO: struct BinaryUnlimited for unrestricted max size?
+// TODO: rename MAX_SIZE to MAX_LEN or MAX_LENGTH?
 
 #[cfg(feature = "utoipa")]
 mod _u {
@@ -118,6 +124,14 @@ mod _s {
 impl<const MAX_SIZE: usize> From<Binary<MAX_SIZE>> for Bytes {
     fn from(b: Binary<MAX_SIZE>) -> Self {
         b.0
+    }
+}
+
+impl<const MAX_SIZE: usize> Deref for Binary<MAX_SIZE> {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0
     }
 }
 

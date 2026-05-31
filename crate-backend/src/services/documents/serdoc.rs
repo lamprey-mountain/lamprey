@@ -18,6 +18,7 @@ pub fn doc_to_serdoc(doc: &Doc) -> Serdoc {
                 components.push(Component {
                     id: ComponentId(next_id),
                     ty: ComponentType::Text { content },
+                    allow: None,
                 });
                 next_id += 1;
             }

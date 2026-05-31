@@ -458,6 +458,7 @@ impl Message<SerdocPut> for DocumentActor {
                     ComponentType::Text { content } => Component {
                         id,
                         ty: ComponentType::Text { content },
+                        allow: None,
                     },
                     _ => unimplemented!("only text components are supported for now"),
                 }

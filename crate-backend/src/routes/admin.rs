@@ -25,11 +25,11 @@ use crate::{error::Result, ServerState};
 use common::v1::types::{ChannelId, RoomId};
 
 /// Admin whisper
-#[handler(routes::admin_whisper)]
+#[handler(routes::admin::admin_whisper)]
 async fn admin_whisper(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::admin_whisper::Request,
+    req: routes::admin::admin_whisper::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
@@ -72,11 +72,11 @@ async fn admin_whisper(
 }
 
 /// Admin broadcast
-#[handler(routes::admin_broadcast)]
+#[handler(routes::admin::admin_broadcast)]
 async fn admin_broadcast(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::admin_broadcast::Request,
+    req: routes::admin::admin_broadcast::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
@@ -143,20 +143,11 @@ async fn admin_broadcast(
 }
 
 /// Admin register user
-///
-/// Registers an existing guest user, promoting them to a regular user.
-/// Bypasses the normal invite/auth method flow.
-#[utoipa::path(
-    post,
-    path = "/admin/register-user",
-    tags = ["admin", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.UserRegistered"],
-    request_body = AdminRegisterUser,
-    responses((status = NO_CONTENT, description = "User registered"))
-)]
+#[handler(routes::admin::admin_register_user)]
 async fn admin_register_user(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<AdminRegisterUser>,
+    req: routes::admin::admin_register_user::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
@@ -170,7 +161,7 @@ async fn admin_register_user(
         .needs(Permission::Admin)
         .check()?;
 
-    let target_user_id = json.user_id;
+    let target_user_id = req.body.user_id;
 
     d.user_set_registered(target_user_id, Some(Time::now_utc()), None)
         .await?;

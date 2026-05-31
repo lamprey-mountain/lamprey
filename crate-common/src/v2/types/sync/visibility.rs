@@ -61,10 +61,12 @@ impl Dispatch {
     pub fn visibility(&self) -> DispatchVisibility {
         // TODO: copy logic from crate-backend/src/sync/permissions.rs
         match self {
-            Dispatch::Ready { connection_id, .. } => DispatchVisibility::Connection(*connection_id),
-            Dispatch::Ambient { connection_id, .. } => {
-                DispatchVisibility::Connection(*connection_id)
-            }
+            // FIXME: use sync_id
+            // Dispatch::Ready { connection_id, .. } => DispatchVisibility::Connection(*connection_id),
+            // Dispatch::Ambient { connection_id, .. } => {
+            //     DispatchVisibility::Connection(*connection_id)
+            // }
+            Dispatch::Ready { .. } | Dispatch::Ambient { .. } => todo!(),
             Dispatch::VoiceDispatch { user_id, .. } => DispatchVisibility::User(*user_id),
             Dispatch::VoiceState { .. } => todo!(),
             Dispatch::DocumentEdit { .. } => todo!(),

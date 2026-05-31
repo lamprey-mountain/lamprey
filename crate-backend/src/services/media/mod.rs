@@ -14,9 +14,10 @@ use common::{
     v1::types::{
         error::{ApiError, ErrorCode},
         federation::Remote,
+        misc::hashes::{HashData, HashType, Hashes},
         MediaId,
     },
-    v2::types::media::{HashType, MediaReference},
+    v2::types::media::MediaReference,
 };
 use common::{
     v1::types::{util::truncate::truncate_filename, MediaVerId, Mime, UserId},
@@ -188,7 +189,7 @@ impl ServiceMedia {
             links: vec![],
             room_id: None,
             channel_id: None,
-            hashes: HashMap::new(),
+            hashes: Hashes::new(),
             strip_exif: create.strip_exif,
             remote,
         };
@@ -394,7 +395,7 @@ impl ServiceMedia {
             links: vec![],
             room_id: None,
             channel_id: None,
-            hashes: HashMap::new(),
+            hashes: Hashes::new(),
             strip_exif: create.strip_exif,
             remote: None,
         };
@@ -440,7 +441,7 @@ impl ServiceMedia {
             Err(_) => MediaMetadata::File,
         };
 
-        let mut hashes = HashMap::new();
+        let mut hashes: HashMap<HashType, HashData> = HashMap::new();
 
         {
             trace!("generating blake3 hash");
@@ -459,8 +460,8 @@ impl ServiceMedia {
             }
 
             let result = hasher.finalize();
-            let hash_b64 = BASE64_URL_SAFE_NO_PAD.encode(result.as_bytes());
-            hashes.insert(HashType::Blake3, hash_b64);
+            let hash = result.as_bytes().to_vec().into();
+            hashes.insert(HashType::Blake3, hash);
         }
 
         {
@@ -480,8 +481,8 @@ impl ServiceMedia {
             }
 
             let result = hasher.finalize();
-            let hash_b64 = BASE64_URL_SAFE_NO_PAD.encode(result);
-            hashes.insert(HashType::Sha512_256, hash_b64);
+            let hash = result.to_vec().into();
+            hashes.insert(HashType::Sha512_256, hash);
         }
 
         // scan media with configured scanners in parallel
@@ -507,7 +508,7 @@ impl ServiceMedia {
             links: vec![],
             room_id: None,
             channel_id: None,
-            hashes,
+            hashes: hashes.into(),
             strip_exif: create.strip_exif,
             remote: up.remote,
         };

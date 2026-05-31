@@ -613,6 +613,10 @@ pub enum ChannelType {
 
     /// a channel that holds scripts
     Scripts,
+    // TODO: make redexes channels (for v2, at least)
+    // create table channel_redex (channel_id, ...)
+    // /// an executable script
+    // Redex,
 }
 
 #[derive(Debug, Default, Clone)]
