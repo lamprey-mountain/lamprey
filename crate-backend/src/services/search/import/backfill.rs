@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::{
-    ChannelId, MediaVerId, PaginationDirection, PaginationQuery, RoomId, UserId,
+    AuditLogFilter, ChannelId, MediaVerId, PaginationDirection, PaginationQuery, RoomId, UserId,
 };
 use dashmap::DashSet;
 use lamprey_backend_core::types::data::{SearchReindexQueue, SearchReindexQueueTarget};
@@ -11,10 +11,7 @@ use tracing::error;
 use uuid::Uuid;
 
 use crate::{
-    services::{
-        search::{index::AsyncIndexHandle, util::SCHEMA},
-        Services,
-    },
+    services::search::{index::AsyncIndexHandle, util::SCHEMA},
     ServerStateInner,
 };
 
@@ -104,7 +101,7 @@ impl BackfillEtlInner {
                         dir: Some(PaginationDirection::B),
                         limit: Some(100),
                     },
-                    common::v1::types::AuditLogFilter::default(),
+                    AuditLogFilter::default(),
                 )
                 .await
             {
@@ -134,6 +131,7 @@ impl BackfillEtlInner {
                 if let Err(e) = self.index.update_documents(batch).await {
                     error!("failed to update index: {e}");
                 }
+                let _ = self.index.lazy_commit().await;
             }
 
             if let Some(last) = entries.items.last() {
@@ -195,6 +193,7 @@ impl BackfillEtlInner {
                 if let Err(e) = self.index.update_documents(batch).await {
                     error!("failed to update index: {e}");
                 }
+                let _ = self.index.lazy_commit().await;
             }
 
             if let Some(last) = res.items.last() {
@@ -246,6 +245,7 @@ impl BackfillEtlInner {
                 if let Err(e) = self.index.update_documents(batch).await {
                     error!("failed to update index: {e}");
                 }
+                let _ = self.index.lazy_commit().await;
             }
 
             if let Some(last) = media_list.last() {
@@ -315,6 +315,7 @@ impl BackfillEtlInner {
             if let Err(e) = self.index.update_documents(batch).await {
                 error!("failed to update index: {e}");
             }
+            let _ = self.index.lazy_commit().await;
 
             if let Some(last) = messages.items.last() {
                 last_id = Some(*last.id);
@@ -374,6 +375,7 @@ impl BackfillEtlInner {
                 if let Err(e) = self.index.update_documents(batch).await {
                     error!("failed to update index: {e}");
                 }
+                let _ = self.index.lazy_commit().await;
             }
 
             if let Some(last) = res.items.last() {
@@ -429,6 +431,7 @@ impl BackfillEtlInner {
                 if let Err(e) = self.index.update_documents(batch).await {
                     error!("failed to update index: {e}");
                 }
+                let _ = self.index.lazy_commit().await;
             }
 
             if let Some(last) = res.items.last() {

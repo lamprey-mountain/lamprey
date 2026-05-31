@@ -1,4 +1,8 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::PathBuf,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use tantivy::{
     collector::Collector, query::Query, schema::document::DocumentDeserialize,
@@ -6,6 +10,7 @@ use tantivy::{
     TantivyDocument, Term,
 };
 use tokio::sync::{mpsc, oneshot};
+use tracing::error;
 
 use crate::{
     services::search::{
@@ -31,7 +36,9 @@ pub struct AsyncIndex {
     chan: mpsc::Receiver<Message>,
 
     uncommitted_count: u64,
-    // last_commit: Instant,
+    last_commit: Instant,
+    max_uncommitted: usize,
+    commit_interval: Duration,
 }
 
 /// a wrapper around tantivy to enable asynchronous searching
@@ -41,6 +48,8 @@ pub struct AsyncSearcher {
 
 enum Message {
     CommitIndex(oneshot::Sender<Result<()>>),
+    LazyCommit(oneshot::Sender<Result<()>>),
+    // NOTE: this is unused, maybe remove? only updates (upserts) are used currently.
     AddDocument(TantivyDocument, oneshot::Sender<Result<()>>),
     DeleteTerm(Term, oneshot::Sender<Result<()>>),
     DeleteAllDocuments(oneshot::Sender<Result<()>>),
@@ -53,6 +62,18 @@ enum Message {
     GetSearcher(oneshot::Sender<Result<AsyncSearcher>>),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ShouldCommit {
+    /// don't commit the index
+    No,
+
+    /// commit the index if not lazy
+    IfNeeded,
+
+    /// always commit the index
+    Yes,
+}
+
 impl AsyncIndexHandle {
     async fn send_op(&self, op: Message) -> Result<()> {
         self.chan
@@ -62,9 +83,21 @@ impl AsyncIndexHandle {
     }
 
     /// commit the index
+    ///
+    /// immedietely tries to commit and flush changes to disk
     pub async fn commit(&self) -> Result<()> {
         let (tx, rx) = oneshot::channel();
         self.send_op(Message::CommitIndex(tx)).await?;
+        rx.await
+            .map_err(|_| Error::Internal("failed to receive response".to_string()))?
+    }
+
+    /// lazily commit the index
+    ///
+    /// commits if the indexing buffer is sufficiently full
+    pub async fn lazy_commit(&self) -> Result<()> {
+        let (tx, rx) = oneshot::channel();
+        self.send_op(Message::LazyCommit(tx)).await?;
         rx.await
             .map_err(|_| Error::Internal("failed to receive response".to_string()))?
     }
@@ -167,19 +200,40 @@ impl AsyncIndex {
             reader,
             chan: rx,
             uncommitted_count: 0,
+            last_commit: Instant::now(),
+            max_uncommitted: config.max_uncommitted,
+            commit_interval: Duration::from_secs(config.commit_interval),
         };
 
         tokio::task::spawn_blocking(move || me.spawn());
 
-        Ok(AsyncIndexHandle { chan: tx })
+        let handle = AsyncIndexHandle { chan: tx };
+
+        let handle_clone = handle.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(5));
+            loop {
+                interval.tick().await;
+                if handle_clone.lazy_commit().await.is_err() {
+                    break;
+                }
+            }
+        });
+
+        Ok(handle)
     }
 
     fn spawn(mut self) {
-        // TODO: call self.commit() every 5 seconds
-        // TODO: call self.commit() on shutdown
         while let Some(op) = self.chan.blocking_recv() {
             match op {
                 Message::CommitIndex(resp) => _ = resp.send(self.commit()),
+                Message::LazyCommit(resp) => {
+                    if self.should_commit() == ShouldCommit::Yes {
+                        _ = resp.send(self.commit());
+                    } else {
+                        _ = resp.send(Ok(()));
+                    }
+                }
                 Message::AddDocument(doc, resp) => _ = resp.send(self.add_document(doc)),
                 Message::DeleteTerm(term, resp) => _ = resp.send(self.delete_term(term)),
                 Message::DeleteAllDocuments(resp) => _ = resp.send(self.delete_all_documents()),
@@ -196,31 +250,32 @@ impl AsyncIndex {
             }
         }
 
-        // TODO: warn on unclean exit
+        if self.uncommitted_count > 0 {
+            if let Err(e) = self.commit() {
+                error!("failed to commit index on shutdown: {e}");
+            }
+        }
     }
 
-    // TODO: add, use config for max_uncommitted/commit_interval
-    // fn should_commit(&self) -> bool {
-    //     let has_committable_data = self.uncommitted_count >= MAX_UNCOMMITTED
-    //         || self.last_commit.elapsed() >= COMMIT_INTERVAL;
-    //     self.uncommitted_count > 0 && has_committable_data
-    // }
-
-    fn commit(&mut self) -> Result<()> {
-        if self.uncommitted_count > 0 {
-            self.writer.commit()?;
-            self.reader.reload()?;
-            self.uncommitted_count = 0;
+    fn should_commit(&self) -> ShouldCommit {
+        if self.uncommitted_count == 0 {
+            return ShouldCommit::No;
         }
 
-        // TODO: do this
-        // if self.should_commit() {
-        //     self.writer.commit()?;
-        //     self.reader.reload()?;
-        //     self.uncommitted_count = 0;
-        //     self.last_commit = Instant::now();
-        // }
+        if self.uncommitted_count >= self.max_uncommitted as u64
+            || self.last_commit.elapsed() >= self.commit_interval
+        {
+            return ShouldCommit::Yes;
+        }
 
+        ShouldCommit::IfNeeded
+    }
+
+    fn commit(&mut self) -> Result<()> {
+        self.writer.commit()?;
+        self.reader.reload()?;
+        self.uncommitted_count = 0;
+        self.last_commit = Instant::now();
         Ok(())
     }
 

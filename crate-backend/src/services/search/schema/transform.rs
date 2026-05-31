@@ -419,58 +419,58 @@ impl UnifiedSchema {
         Ok(doc)
     }
 
-    /// transform an analytics event to a tantivy document
-    pub fn transform_analytics_event(&self, event: &AnalyticsEvent) -> Result<TantivyDocument> {
-        todo!()
-    }
+    // /// transform an analytics event to a tantivy document
+    // pub fn transform_analytics_event(&self, event: &AnalyticsEvent) -> Result<TantivyDocument> {
+    //     todo!()
+    // }
 
-    /// transform a serialized lamprey document to a tantivy document
-    pub fn transform_document(
-        &self,
-        document: &Channel,
-        serialized: &Serdoc,
-    ) -> Result<TantivyDocument> {
-        todo!()
-    }
+    // /// transform a serialized lamprey document to a tantivy document
+    // pub fn transform_document(
+    //     &self,
+    //     document: &Channel,
+    //     serialized: &Serdoc,
+    // ) -> Result<TantivyDocument> {
+    //     todo!()
+    // }
 
-    /// transform a single lamprey document change to a tantivy document
-    pub fn transform_document_change(
-        &self,
-        change: &DocumentChange,
-        document: &Channel,
-    ) -> Result<TantivyDocument> {
-        todo!()
-    }
+    // /// transform a single lamprey document change to a tantivy document
+    // pub fn transform_document_change(
+    //     &self,
+    //     change: &DocumentChange,
+    //     document: &Channel,
+    // ) -> Result<TantivyDocument> {
+    //     todo!()
+    // }
 
-    /// transform a call into a tantivy document
-    ///
-    /// for public broadcasts
-    pub fn transform_call(&self, call: &Call, channel: &Channel) -> Result<TantivyDocument> {
-        todo!()
-    }
+    // /// transform a call into a tantivy document
+    // ///
+    // /// for public broadcasts
+    // pub fn transform_call(&self, call: &Call, channel: &Channel) -> Result<TantivyDocument> {
+    //     todo!()
+    // }
 
-    // TODO: add these
-    pub fn transform_custom_emoji(&self, emoji: EmojiCustom) -> Result<TantivyDocument> {
-        todo!()
-    }
+    // // TODO: add these
+    // pub fn transform_custom_emoji(&self, emoji: EmojiCustom) -> Result<TantivyDocument> {
+    //     todo!()
+    // }
 
-    pub fn transform_forum_tag(&self, tag: &Tag, channel: &Channel) -> Result<TantivyDocument> {
-        todo!()
-    }
+    // pub fn transform_forum_tag(&self, tag: &Tag, channel: &Channel) -> Result<TantivyDocument> {
+    //     todo!()
+    // }
 
-    pub fn transform_application(&self, app: &Application) -> Result<TantivyDocument> {
-        todo!()
-    }
+    // pub fn transform_application(&self, app: &Application) -> Result<TantivyDocument> {
+    //     todo!()
+    // }
 
-    pub fn transform_room_template(&self, template: &RoomTemplate) -> Result<TantivyDocument> {
-        todo!()
-    }
+    // pub fn transform_room_template(&self, template: &RoomTemplate) -> Result<TantivyDocument> {
+    //     todo!()
+    // }
 
-    pub fn transform_calendar_event(
-        &self,
-        event: &CalendarEvent,
-        channel: &Channel,
-    ) -> Result<TantivyDocument> {
-        todo!()
-    }
+    // pub fn transform_calendar_event(
+    //     &self,
+    //     event: &CalendarEvent,
+    //     channel: &Channel,
+    // ) -> Result<TantivyDocument> {
+    //     todo!()
+    // }
 }
