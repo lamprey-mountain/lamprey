@@ -4,6 +4,7 @@ use serde::de::DeserializeOwned;
 
 // export all routes
 
+pub mod admin;
 pub mod ack;
 pub mod application;
 pub mod auth;

@@ -1,5 +1,10 @@
 use common::v1::types::{ChannelId, RoomId, UserId};
-use tantivy::query::Query;
+use tantivy::{
+    query::{AllQuery, BooleanQuery, Occur, Query, TermSetQuery},
+    Term,
+};
+
+use crate::services::search::util::SCHEMA;
 
 // TODO: impl TantivyVisibility for everything
 // TODO: add doc comments
@@ -77,7 +82,7 @@ pub trait TantivyVisibility {
 impl TantivyVisibility for SearchMessagesVisibility {
     fn into_query(self) -> Box<dyn Query> {
         match self {
-            SearchMessagesVisibility::Everything => tantivy::query::AllQuery,
+            SearchMessagesVisibility::Everything => Box::new(AllQuery),
             SearchMessagesVisibility::Filtered(items) => {
                 let mut channel_terms = vec![];
                 let mut parent_channel_terms = vec![];
@@ -87,7 +92,7 @@ impl TantivyVisibility for SearchMessagesVisibility {
                     let id_str = id.to_string();
                     channel_terms.push(Term::from_field_text(SCHEMA.channel_id, &id_str));
 
-                    if *can_view_private_threads {
+                    if can_view_private_threads {
                         parent_channel_terms
                             .push(Term::from_field_text(SCHEMA.parent_channel_id, &id_str));
                     }

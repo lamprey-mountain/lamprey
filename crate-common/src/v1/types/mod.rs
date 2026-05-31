@@ -1,3 +1,4 @@
+pub mod admin;
 pub mod ack;
 pub mod application;
 pub mod audit_logs;

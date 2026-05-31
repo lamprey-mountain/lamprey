@@ -4,8 +4,9 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-mod request;
-mod response;
+pub mod request;
+pub mod response;
+pub mod stats;
 
 pub use request::*;
 pub use response::*;

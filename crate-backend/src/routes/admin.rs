@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use axum::extract::{Path, Query};
 use axum::{extract::State, response::IntoResponse, Json};
+use common::v1::routes;
 use common::v1::types::search::AuditLogSearchRequest;
 use common::v1::types::{
     util::{Changes, Time},
@@ -14,27 +15,21 @@ use lamprey_backend_core::types::admin::{
     AdminPurgeCacheResponse, AdminRegisterUser, AdminWhisper, DlqEntry, SearchIndexStats,
 };
 use lamprey_backend_core::Error;
+use lamprey_macros::handler;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
+use crate::routes2;
 
 use crate::{error::Result, ServerState};
 use common::v1::types::{ChannelId, RoomId};
 
 /// Admin whisper
-///
-/// send a system dm to one person in particular
-#[utoipa::path(
-    post,
-    path = "/admin/whisper",
-    tags = ["admin", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.AdminWhisper"],
-    request_body = AdminWhisper,
-    responses((status = NO_CONTENT, description = "ok"))
-)]
+#[handler(routes::admin_whisper)]
 async fn admin_whisper(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<AdminWhisper>,
+    req: routes::admin_whisper::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
@@ -48,43 +43,40 @@ async fn admin_whisper(
         .check()?;
 
     let changes = Changes::new()
-        .add("content", &json.message.content)
-        .add("attachments", &json.message.attachments)
-        .add("embeds", &json.message.embeds)
+        .add("content", &req.body.message.content)
+        .add("attachments", &req.body.message.attachments)
+        .add("embeds", &req.body.message.embeds)
         .build();
 
     let al = auth.audit_log(SERVER_ROOM_ID);
     al.commit_success(AuditLogEntryType::AdminWhisper {
-        user_id: json.user_id,
+        user_id: req.body.user_id,
         changes,
     })
     .await?;
 
-    let (thread, _) = srv.users.init_dm(auth.user.id, json.user_id, true).await?;
+    let (thread, _) = srv
+        .users
+        .init_dm(auth.user.id, req.body.user_id, true)
+        .await?;
 
     s.broadcast(MessageSync::ChannelCreate {
         channel: Box::new(thread.clone()),
     })?;
 
-    srv.messages.create_system(thread.id, json.message).await?;
+    srv.messages
+        .create_system(thread.id, req.body.message)
+        .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
 /// Admin broadcast
-///
-/// send a system dm to everyone on the server
-#[utoipa::path(
-    post,
-    path = "/admin/broadcast",
-    tags = ["admin", "badge.admin_only", "badge.perm.Admin", "badge.audit-log.AdminBroadcast"],
-    request_body = AdminBroadcast,
-    responses((status = NO_CONTENT, description = "ok"))
-)]
+#[handler(routes::admin_broadcast)]
 async fn admin_broadcast(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<AdminBroadcast>,
+    req: routes::admin_broadcast::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
@@ -99,9 +91,9 @@ async fn admin_broadcast(
         .check()?;
 
     let changes = Changes::new()
-        .add("content", &json.message.content)
-        .add("attachments", &json.message.attachments)
-        .add("embeds", &json.message.embeds)
+        .add("content", &req.body.message.content)
+        .add("attachments", &req.body.message.attachments)
+        .add("embeds", &req.body.message.embeds)
         .build();
 
     let al = auth.audit_log(SERVER_ROOM_ID);
@@ -127,7 +119,7 @@ async fn admin_broadcast(
         from = Some(last.id);
         for user in users.items {
             // NOTE: do i really want to be cloning this potentially hundreds to thousands of times?
-            let msg = json.message.clone();
+            let msg = req.body.message.clone();
             let ss = s.clone();
             tokio::spawn(async move {
                 let srv = ss.services();
@@ -565,9 +557,9 @@ async fn admin_search_audit_logs(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(admin_whisper))
-        .routes(routes!(admin_broadcast))
-        .routes(routes!(admin_register_user))
+        .routes(routes2!(admin_whisper))
+        .routes(routes2!(admin_broadcast))
+        .routes(routes2!(admin_register_user))
         .routes(routes!(admin_purge_cache))
         .routes(routes!(admin_collect_garbage))
         .routes(routes!(admin_reindex_channel))

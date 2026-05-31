@@ -7,6 +7,8 @@ use tantivy::{
 
 use crate::services::search::schema::UnifiedSchema;
 
+mod visibility;
+
 pub static SCHEMA: Lazy<UnifiedSchema> = Lazy::new(|| UnifiedSchema::default());
 
 /// generate a tantivy query to restrict visibility

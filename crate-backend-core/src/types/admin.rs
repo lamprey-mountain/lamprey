@@ -5,6 +5,11 @@ use common::v1::types::util::Time;
 use common::v1::types::{ChannelId, MessageCreate, MessageId, UserId};
 use uuid::Uuid;
 
+// TEMP: reexport
+pub use common::v1::types::admin::{AdminWhisper, AdminBroadcast, AdminRegisterUser};
+pub use common::v1::types::search::stats::*;
+
+// TODO: rename as an internal thing
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct AdminPurgeCache {
     pub targets: Vec<AdminPurgeCacheTarget>,
@@ -83,65 +88,6 @@ pub enum AdminCollectGarbageMode {
 
     /// Delete all records with `deleted_at` set. Note that `Mark` will need to be run first to do anything.
     Sweep,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct AdminWhisper {
-    pub user_id: UserId,
-    pub message: MessageCreate,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct AdminBroadcast {
-    pub message: MessageCreate,
-    // TODO: add these
-    // /// only broadcast to users in these rooms
-    // room_id: Vec<RoomId>,
-
-    // /// only broadcast to these users
-    // user_id: Vec<UserId>,
-
-    // /// only broadcast to these users with these server roles
-    // server_roles: Vec<RoleId>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct AdminRegisterUser {
-    pub user_id: UserId,
-}
-
-/// Overall search index statistics
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct SearchIndexStats {
-    /// total number of documents in this index
-    pub count_documents: u64,
-    pub count_messages: u64,
-    pub count_channels: u64,
-    pub count_rooms: u64,
-    pub count_media: u64,
-    pub count_users: u64,
-    // etc...
-    /// Size of the index in bytes
-    pub index_size_bytes: u64,
-
-    /// number of active reindex queues
-    pub reindex_queues: u64,
-}
-
-/// Search index statistics for a channel
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct SearchIndexStatsChannel {
-    pub channel_id: ChannelId,
-
-    pub count_documents: u64,
-    pub count_messages: u64,
-    pub count_media: u64,
-
-    pub last_indexed_message_id: Option<MessageId>,
-}
-
-pub struct SearchIndexStatsRoom {
-    // TODO
 }
 
 /// A dead letter queue entry for search ingestion
