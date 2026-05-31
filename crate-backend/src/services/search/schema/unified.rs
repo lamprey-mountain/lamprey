@@ -1,8 +1,15 @@
-use tantivy::schema::{
-    self, IndexRecordOption, JsonObjectOptions, Schema, SchemaBuilder, TextFieldIndexing,
-    TextOptions, FAST, STORED, STRING, TEXT,
+use common::v1::types::{ChannelId, RoomId, UserId};
+use tantivy::{
+    query::{Query, TermQuery},
+    schema::{
+        self, IndexRecordOption, JsonObjectOptions, Schema, SchemaBuilder, TextFieldIndexing,
+        TextOptions, FAST, STORED, STRING, TEXT,
+    },
+    Term,
 };
+use uuid::Uuid;
 
+use crate::services::search::schema::doctype::Doctype;
 use crate::services::search::schema::IndexDefinition;
 
 /// an index containing any lamprey data type
@@ -173,5 +180,94 @@ impl Default for UnifiedSchema {
             metadata_fast,
             metadata_text,
         }
+    }
+}
+
+// utilities for making constructing queries a bit easier
+impl UnifiedSchema {
+    /// construct a term that requires `id` to match the given uuid
+    pub fn term_id(&self, id: Uuid) -> Term {
+        Term::from_field_text(self.id, &id.to_string())
+    }
+
+    /// construct a term query that requires `id` to match the given uuid
+    pub fn query_id(&self, id: Uuid) -> Box<dyn Query> {
+        Box::new(TermQuery::new(self.term_id(id), IndexRecordOption::Basic))
+    }
+
+    /// construct a term that requires `author_id` to match the given user id
+    pub fn term_author_id(&self, author_id: UserId) -> Term {
+        Term::from_field_text(self.author_id, &author_id.to_string())
+    }
+
+    /// construct a term query that requires `author_id` to match the given user id
+    pub fn query_author_id(&self, author_id: UserId) -> Box<dyn Query> {
+        Box::new(TermQuery::new(
+            self.term_author_id(author_id),
+            IndexRecordOption::Basic,
+        ))
+    }
+
+    /// construct a term that requires `room_id` to match the given room id
+    pub fn term_room_id(&self, room_id: RoomId) -> Term {
+        Term::from_field_text(self.room_id, &room_id.to_string())
+    }
+
+    /// construct a term query that requires `room_id` to match the given room id
+    pub fn query_room_id(&self, room_id: RoomId) -> Box<dyn Query> {
+        Box::new(TermQuery::new(
+            self.term_room_id(room_id),
+            IndexRecordOption::Basic,
+        ))
+    }
+
+    /// construct a term that requires `channel_id` to match the given channel id
+    pub fn term_channel_id(&self, channel_id: ChannelId) -> Term {
+        Term::from_field_text(self.channel_id, &channel_id.to_string())
+    }
+
+    /// construct a term query that requires `channel_id` to match the given channel id
+    pub fn query_channel_id(&self, channel_id: ChannelId) -> Box<dyn Query> {
+        Box::new(TermQuery::new(
+            self.term_channel_id(channel_id),
+            IndexRecordOption::Basic,
+        ))
+    }
+
+    /// construct a term that requires `parent_channel_id` to match the given channel id
+    pub fn term_parent_channel_id(&self, parent_channel_id: ChannelId) -> Term {
+        Term::from_field_text(self.parent_channel_id, &parent_channel_id.to_string())
+    }
+
+    /// construct a term query that requires `parent_channel_id` to match the given channel id
+    pub fn query_parent_channel_id(&self, parent_channel_id: ChannelId) -> Box<dyn Query> {
+        Box::new(TermQuery::new(
+            self.term_parent_channel_id(parent_channel_id),
+            IndexRecordOption::Basic,
+        ))
+    }
+
+    /// construct a term that requires `doctype` to match the given doctype
+    pub fn term_doctype(&self, doctype: Doctype) -> Term {
+        Term::from_field_text(self.doctype, doctype.as_str())
+    }
+
+    /// construct a term query that requires `doctype` to match the given doctype
+    pub fn query_doctype(&self, doctype: Doctype) -> Box<dyn Query> {
+        Box::new(TermQuery::new(
+            self.term_doctype(doctype),
+            IndexRecordOption::Basic,
+        ))
+    }
+
+    /// construct a term that requires `metadata_fast.public` to exist and be true
+    pub fn term_public(&self) -> Term {
+        // FIXME: actually check that it equals `true`
+        Term::from_field_json_path(self.metadata_fast, "public", false)
+    }
+
+    /// construct a term query that requires `metadata_fast.public` to exist and be true
+    pub fn query_public(&self) -> Box<dyn Query> {
+        Box::new(TermQuery::new(self.term_public(), IndexRecordOption::Basic))
     }
 }

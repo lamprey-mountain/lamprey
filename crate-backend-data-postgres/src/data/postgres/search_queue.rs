@@ -26,6 +26,7 @@ impl DataSearchQueue for Postgres {
             SearchReindexQueueTarget::Rooms => (Uuid::nil(), "rooms"),
             SearchReindexQueueTarget::Media => (Uuid::nil(), "media"),
             SearchReindexQueueTarget::Users => (Uuid::nil(), "users"),
+            SearchReindexQueueTarget::AuditLogEntries(id) => (*id, "audit_log_entries"),
         };
         let mut conn = self.acquire().await?;
         query!(
@@ -49,6 +50,7 @@ impl DataSearchQueue for Postgres {
             SearchReindexQueueTarget::Rooms => (Uuid::nil(), "rooms"),
             SearchReindexQueueTarget::Media => (Uuid::nil(), "media"),
             SearchReindexQueueTarget::Users => (Uuid::nil(), "users"),
+            SearchReindexQueueTarget::AuditLogEntries(id) => (*id, "audit_log_entries"),
         };
         let mut conn = self.acquire().await?;
         query!(
@@ -78,6 +80,7 @@ impl DataSearchQueue for Postgres {
                     "rooms" => SearchReindexQueueTarget::Rooms,
                     "media" => SearchReindexQueueTarget::Media,
                     "users" => SearchReindexQueueTarget::Users,
+                    "audit_log_entries" => SearchReindexQueueTarget::AuditLogEntries(r.target_id.into()),
                     _ => unreachable!("unknown target type"),
                 };
                 SearchReindexQueue {
@@ -96,7 +99,12 @@ impl DataSearchQueue for Postgres {
         )
         .execute(conn.ext())
         .await?;
-        // TODO: audit log entries
+        query!(
+            r#"INSERT INTO search_reindex_queue (target_id, target_type) VALUES ($1, 'audit_log_entries') ON CONFLICT (target_id, target_type) DO NOTHING"#,
+            *room_id,
+        )
+        .execute(conn.ext())
+        .await?;
         conn.commit().await?;
         Ok(())
     }

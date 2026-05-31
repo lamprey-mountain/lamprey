@@ -150,4 +150,43 @@ impl DataAuditLogs for Postgres {
             application_id: row.application_id.map(Into::into),
         })
     }
+
+    async fn audit_logs_list_indexed(
+        &mut self,
+        last_id: Option<AuditLogEntryId>,
+        limit: u32,
+    ) -> Result<Vec<AuditLogEntry>> {
+        let mut conn = self.acquire().await?;
+        let rows = query_as!(
+            DbAuditLogEntry,
+            r#"
+            SELECT id, room_id, user_id, session_id, reason, data, status as "status: _", started_at, ended_at, ip_addr::text, user_agent, application_id FROM audit_log
+            WHERE id > $1
+            ORDER BY id ASC
+            LIMIT $2
+            "#,
+            last_id.map(|id| *id).unwrap_or(Uuid::nil()),
+            limit as i64,
+        )
+        .fetch_all(conn.ext())
+        .await?;
+
+        Ok(rows
+            .into_iter()
+            .map(|row| AuditLogEntry {
+                id: row.id.into(),
+                room_id: row.room_id.into(),
+                user_id: row.user_id.into(),
+                session_id: row.session_id.map(Into::into),
+                reason: row.reason,
+                ty: serde_json::from_value(row.data).unwrap(),
+                status: row.status.into(),
+                started_at: row.started_at.into(),
+                ended_at: row.ended_at.into(),
+                ip_addr: row.ip_addr,
+                user_agent: row.user_agent,
+                application_id: row.application_id.map(Into::into),
+            })
+            .collect())
+    }
 }

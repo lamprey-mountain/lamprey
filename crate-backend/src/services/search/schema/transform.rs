@@ -13,8 +13,7 @@ use common::v1::types::tag::Tag;
 use common::v1::types::util::Time;
 use common::v1::types::voice::Call;
 use common::v1::types::{
-    AuditLogEntry, Channel, ChannelId, ChannelType, MessageAttachmentType, MessageType, Room,
-    RoomId, User,
+    AuditLogEntry, Channel, ChannelId, MessageAttachmentType, MessageType, Room, RoomId, User,
 };
 use common::v2::types::media::Media;
 use lamprey_backend_core::types::analytics::AnalyticsEvent;
@@ -318,30 +317,7 @@ impl UnifiedSchema {
             doc.add_date(self.archived_at, TantivyDT::from_utc(*archived_at));
         }
 
-        doc.add_text(
-            self.subtype,
-            match channel.ty {
-                ChannelType::Text => "Text",
-                ChannelType::Announcement => "Announcement",
-                ChannelType::ThreadPublic => "ThreadPublic",
-                ChannelType::ThreadPrivate => "ThreadPrivate",
-                ChannelType::ThreadForum2 => "ThreadForum2",
-                ChannelType::Dm => "Dm",
-                ChannelType::Gdm => "Gdm",
-                ChannelType::Forum => "Forum",
-                ChannelType::Voice => "Voice",
-                ChannelType::Broadcast => "Broadcast",
-                ChannelType::Category => "Category",
-                ChannelType::Calendar => "Calendar",
-                ChannelType::Forum2 => "Forum2",
-                ChannelType::Info => "Info",
-                ChannelType::Ticket => "Ticket",
-                ChannelType::Document => "Document",
-                ChannelType::DocumentComment => "DocumentComment",
-                ChannelType::Wiki => "Wiki",
-                ChannelType::Scripts => "Scripts",
-            },
-        );
+        doc.add_text(self.subtype, channel.ty.as_str());
 
         let mut meta_fast: BTreeMap<String, OwnedValue> = BTreeMap::new();
         meta_fast.insert("nsfw".to_string(), channel.nsfw.into());
@@ -353,6 +329,13 @@ impl UnifiedSchema {
         if let Some(user_limit) = channel.user_limit {
             meta_fast.insert("user_limit".to_string(), user_limit.into());
         }
+
+        let recipients: Vec<OwnedValue> = channel
+            .recipients
+            .iter()
+            .map(|u| u.id.to_string().into())
+            .collect();
+        meta_fast.insert("recipients".to_string(), OwnedValue::Array(recipients));
 
         doc.add_object(self.metadata_fast, meta_fast);
 

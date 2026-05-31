@@ -31,6 +31,7 @@ pub struct AsyncIndex {
     chan: mpsc::Receiver<Message>,
 
     uncommitted_count: u64,
+    // last_commit: Instant,
 }
 
 /// a wrapper around tantivy to enable asynchronous searching
@@ -174,7 +175,8 @@ impl AsyncIndex {
     }
 
     fn spawn(mut self) {
-        // TODO: try to commit every 5 seconds
+        // TODO: call self.commit() every 5 seconds
+        // TODO: call self.commit() on shutdown
         while let Some(op) = self.chan.blocking_recv() {
             match op {
                 Message::CommitIndex(resp) => _ = resp.send(self.commit()),
@@ -193,7 +195,16 @@ impl AsyncIndex {
                 }
             }
         }
+
+        // TODO: warn on unclean exit
     }
+
+    // TODO: add, use config for max_uncommitted/commit_interval
+    // fn should_commit(&self) -> bool {
+    //     let has_committable_data = self.uncommitted_count >= MAX_UNCOMMITTED
+    //         || self.last_commit.elapsed() >= COMMIT_INTERVAL;
+    //     self.uncommitted_count > 0 && has_committable_data
+    // }
 
     fn commit(&mut self) -> Result<()> {
         if self.uncommitted_count > 0 {
@@ -201,6 +212,14 @@ impl AsyncIndex {
             self.reader.reload()?;
             self.uncommitted_count = 0;
         }
+
+        // TODO: do this
+        // if self.should_commit() {
+        //     self.writer.commit()?;
+        //     self.reader.reload()?;
+        //     self.uncommitted_count = 0;
+        //     self.last_commit = Instant::now();
+        // }
 
         Ok(())
     }

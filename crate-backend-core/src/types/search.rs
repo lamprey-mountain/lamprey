@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use common::v1::types::ChannelId;
+use common::{v1::types::ChannelId, v2::types::RoomId};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -28,7 +28,9 @@ pub enum SearchReindexQueueTarget {
 
     /// media on the server
     Media,
-    // TODO: add stuff from Doctype here
+
+    /// audit log entries in a room
+    AuditLogEntries(RoomId),
 }
 
 /// the type of a tantivy document

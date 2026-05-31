@@ -86,7 +86,72 @@ impl BackfillEtlInner {
             SearchReindexQueueTarget::Rooms => self.spawn_rooms().await,
             SearchReindexQueueTarget::Users => self.spawn_users().await,
             SearchReindexQueueTarget::Media => self.spawn_media().await,
+            SearchReindexQueueTarget::AuditLogEntries(id) => self.spawn_audit_logs(id).await,
         }
+    }
+
+    async fn spawn_audit_logs(self: Arc<Self>, room_id: RoomId) {
+        let mut data = self.s.data();
+        let mut last_id: Option<Uuid> = None;
+
+        loop {
+            let entries = match data
+                .audit_logs_room_fetch(
+                    room_id,
+                    PaginationQuery {
+                        from: last_id.map(|id| id.into()),
+                        to: None,
+                        dir: Some(PaginationDirection::B),
+                        limit: Some(100),
+                    },
+                    common::v1::types::AuditLogFilter::default(),
+                )
+                .await
+            {
+                Ok(e) => e,
+                Err(err) => {
+                    error!("failed to fetch audit log entries: {err}");
+                    break;
+                }
+            };
+
+            if entries.items.is_empty() {
+                break;
+            }
+
+            let mut batch = Vec::with_capacity(entries.items.len());
+            for entry in &entries.items {
+                match SCHEMA.transform_audit_log_entry(entry) {
+                    Ok(doc) => {
+                        let term = Term::from_field_text(SCHEMA.id, &entry.id.to_string());
+                        batch.push((term, doc));
+                    }
+                    Err(e) => error!("failed to transform audit log entry {}: {e}", entry.id),
+                }
+            }
+
+            if !batch.is_empty() {
+                if let Err(e) = self.index.update_documents(batch).await {
+                    error!("failed to update index: {e}");
+                }
+            }
+
+            if let Some(last) = entries.items.last() {
+                last_id = Some(*last.id);
+            }
+
+            if !entries.has_more {
+                break;
+            }
+
+            // avoid blocking the executor for too long
+            tokio::task::yield_now().await;
+        }
+
+        let _ = self.index.commit().await;
+
+        self.active
+            .remove(&SearchReindexQueueTarget::AuditLogEntries(room_id));
     }
 
     async fn spawn_users(self: Arc<Self>) {
@@ -270,7 +335,61 @@ impl BackfillEtlInner {
     }
 
     async fn spawn_channels(self: Arc<Self>) {
-        todo!()
+        let mut data = self.s.data();
+        let mut last_id: Option<ChannelId> = None;
+
+        loop {
+            let res = match data
+                .channel_list_all(PaginationQuery {
+                    from: last_id,
+                    to: None,
+                    dir: None,
+                    limit: Some(100),
+                })
+                .await
+            {
+                Ok(r) => r,
+                Err(err) => {
+                    error!("failed to fetch channels: {err}");
+                    break;
+                }
+            };
+
+            if res.items.is_empty() {
+                break;
+            }
+
+            let mut batch = Vec::with_capacity(res.items.len());
+            for channel in &res.items {
+                match SCHEMA.transform_channel(channel) {
+                    Ok(doc) => {
+                        let term = Term::from_field_text(SCHEMA.id, &channel.id.to_string());
+                        batch.push((term, doc));
+                    }
+                    Err(e) => error!("failed to transform channel {}: {e}", channel.id),
+                }
+            }
+
+            if !batch.is_empty() {
+                if let Err(e) = self.index.update_documents(batch).await {
+                    error!("failed to update index: {e}");
+                }
+            }
+
+            if let Some(last) = res.items.last() {
+                last_id = Some(last.id);
+            }
+
+            if !res.has_more {
+                break;
+            }
+
+            tokio::task::yield_now().await;
+        }
+
+        let _ = self.index.commit().await;
+
+        self.active.remove(&SearchReindexQueueTarget::Channels);
     }
 
     async fn spawn_rooms(self: Arc<Self>) {

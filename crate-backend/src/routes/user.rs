@@ -569,7 +569,7 @@ async fn user_search(
         .needs(Permission::UserManage)
         .check()?;
 
-    let results = srv.search.search_users(auth.user.id, req.search).await?;
+    let results = srv.search.search_users(req.search).await?;
 
     Ok(Json(results))
 }

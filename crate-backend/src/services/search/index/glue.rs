@@ -1,4 +1,6 @@
-use common::v1::types::{util::Time, AuditLogEntryId, ChannelId, MessageId, RoomId};
+use common::v1::types::{
+    util::Time, AuditLogEntryId, ChannelId, MediaId, MessageId, RoomId, UserId,
+};
 use lamprey_backend_core::Error;
 use tantivy::schema::{
     document::{DeserializeError, DocumentDeserialize, DocumentDeserializer},
@@ -32,12 +34,18 @@ pub struct TantivyChannel {
     pub created_at: Time,
 }
 
-// TODO: impl DocumentDeserialize
+pub struct TantivyMedia {
+    pub id: MediaId,
+}
+
+pub struct TantivyUser {
+    pub id: UserId,
+}
+
 pub struct TantivyRoom {
     pub id: RoomId,
 }
 
-// TODO: impl DocumentDeserialize
 pub struct TantivyAuditLogEntry {
     pub id: AuditLogEntryId,
     pub room_id: RoomId,
@@ -46,6 +54,29 @@ pub struct TantivyAuditLogEntry {
 struct TantivyMessagePartial {
     id: Option<MessageId>,
     channel_id: Option<ChannelId>,
+}
+
+struct TantivyChannelPartial {
+    id: Option<ChannelId>,
+    archived_at: Option<Time>,
+    created_at: Option<Time>,
+}
+
+struct TantivyMediaPartial {
+    id: Option<MediaId>,
+}
+
+struct TantivyUserPartial {
+    id: Option<UserId>,
+}
+
+struct TantivyRoomPartial {
+    id: Option<RoomId>,
+}
+
+struct TantivyAuditLogEntryPartial {
+    id: Option<AuditLogEntryId>,
+    room_id: Option<RoomId>,
 }
 
 impl DocumentDeserialize for TantivyMessage {
@@ -88,6 +119,168 @@ impl DocumentDeserialize for TantivyMessage {
     }
 }
 
+impl DocumentDeserialize for TantivyChannel {
+    fn deserialize<'de, D>(mut deserializer: D) -> Result<Self, DeserializeError>
+    where
+        D: DocumentDeserializer<'de>,
+    {
+        let mut channel = TantivyChannelPartial {
+            id: None,
+            archived_at: None,
+            created_at: None,
+        };
+
+        while let Some((field, v)) = deserializer.next_field::<OwnedValue>()? {
+            match SCHEMA.schema.get_field_name(field) {
+                "id" => {
+                    let id = match v {
+                        OwnedValue::Str(s) => s,
+                        _ => return Err(DeserializeError::custom("missing id")),
+                    };
+                    let id = id
+                        .parse()
+                        .map_err(|_| DeserializeError::custom("invalid uuid"))?;
+                    channel.id = Some(id);
+                }
+                "archived_at" => {
+                    if let OwnedValue::Date(dt) = v {
+                        channel.archived_at = Some(dt.into_utc().into());
+                    }
+                }
+                "created_at" => {
+                    if let OwnedValue::Date(dt) = v {
+                        channel.created_at = Some(dt.into_utc().into());
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        channel.try_into().map_err(DeserializeError::custom)
+    }
+}
+
+impl DocumentDeserialize for TantivyMedia {
+    fn deserialize<'de, D>(mut deserializer: D) -> Result<Self, DeserializeError>
+    where
+        D: DocumentDeserializer<'de>,
+    {
+        let mut media = TantivyMediaPartial { id: None };
+
+        while let Some((field, v)) = deserializer.next_field::<OwnedValue>()? {
+            match SCHEMA.schema.get_field_name(field) {
+                "id" => {
+                    let id = match v {
+                        OwnedValue::Str(s) => s,
+                        _ => return Err(DeserializeError::custom("missing id")),
+                    };
+                    let id = id
+                        .parse()
+                        .map_err(|_| DeserializeError::custom("invalid uuid"))?;
+                    media.id = Some(id);
+                }
+                _ => {}
+            }
+        }
+
+        media.try_into().map_err(DeserializeError::custom)
+    }
+}
+
+impl DocumentDeserialize for TantivyUser {
+    fn deserialize<'de, D>(mut deserializer: D) -> Result<Self, DeserializeError>
+    where
+        D: DocumentDeserializer<'de>,
+    {
+        let mut user = TantivyUserPartial { id: None };
+
+        while let Some((field, v)) = deserializer.next_field::<OwnedValue>()? {
+            match SCHEMA.schema.get_field_name(field) {
+                "id" => {
+                    let id = match v {
+                        OwnedValue::Str(s) => s,
+                        _ => return Err(DeserializeError::custom("missing id")),
+                    };
+                    let id = id
+                        .parse()
+                        .map_err(|_| DeserializeError::custom("invalid user id"))?;
+                    user.id = Some(id);
+                }
+                _ => {}
+            }
+        }
+
+        user.try_into().map_err(DeserializeError::custom)
+    }
+}
+
+impl DocumentDeserialize for TantivyRoom {
+    fn deserialize<'de, D>(mut deserializer: D) -> Result<Self, DeserializeError>
+    where
+        D: DocumentDeserializer<'de>,
+    {
+        let mut room = TantivyRoomPartial { id: None };
+
+        while let Some((field, v)) = deserializer.next_field::<OwnedValue>()? {
+            match SCHEMA.schema.get_field_name(field) {
+                "id" => {
+                    let id = match v {
+                        OwnedValue::Str(s) => s,
+                        _ => return Err(DeserializeError::custom("missing id")),
+                    };
+                    let id = id
+                        .parse()
+                        .map_err(|_| DeserializeError::custom("invalid uuid"))?;
+                    room.id = Some(id);
+                }
+                _ => {}
+            }
+        }
+
+        room.try_into().map_err(DeserializeError::custom)
+    }
+}
+
+impl DocumentDeserialize for TantivyAuditLogEntry {
+    fn deserialize<'de, D>(mut deserializer: D) -> Result<Self, DeserializeError>
+    where
+        D: DocumentDeserializer<'de>,
+    {
+        let mut entry = TantivyAuditLogEntryPartial {
+            id: None,
+            room_id: None,
+        };
+
+        while let Some((field, v)) = deserializer.next_field::<OwnedValue>()? {
+            match SCHEMA.schema.get_field_name(field) {
+                "id" => {
+                    let id = match v {
+                        OwnedValue::Str(s) => s,
+                        _ => return Err(DeserializeError::custom("missing id")),
+                    };
+                    let id = id
+                        .parse()
+                        .map_err(|_| DeserializeError::custom("invalid uuid"))?;
+                    entry.id = Some(id);
+                }
+                "room_id" => {
+                    let id = match v {
+                        OwnedValue::Str(s) => s,
+                        _ => return Err(DeserializeError::custom("missing room_id")),
+                    };
+                    let id = id
+                        .parse()
+                        .map_err(|_| DeserializeError::custom("invalid uuid"))?;
+                    entry.room_id = Some(id);
+                }
+                _ => {}
+            }
+        }
+
+        entry.try_into().map_err(DeserializeError::custom)
+    }
+}
+
 impl TryFrom<TantivyMessagePartial> for TantivyMessage {
     type Error = Error;
 
@@ -99,6 +292,73 @@ impl TryFrom<TantivyMessagePartial> for TantivyMessage {
             channel_id: value
                 .channel_id
                 .ok_or_else(|| Error::Internal("missing channel_id".to_string()))?,
+        })
+    }
+}
+
+impl TryFrom<TantivyChannelPartial> for TantivyChannel {
+    type Error = Error;
+
+    fn try_from(value: TantivyChannelPartial) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: value
+                .id
+                .ok_or_else(|| Error::Internal("missing id".to_string()))?,
+            archived_at: value.archived_at,
+            created_at: value
+                .created_at
+                .ok_or_else(|| Error::Internal("missing created_at".to_string()))?,
+        })
+    }
+}
+
+impl TryFrom<TantivyMediaPartial> for TantivyMedia {
+    type Error = Error;
+
+    fn try_from(value: TantivyMediaPartial) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: value
+                .id
+                .ok_or_else(|| Error::Internal("missing id".to_string()))?,
+        })
+    }
+}
+
+impl TryFrom<TantivyUserPartial> for TantivyUser {
+    type Error = Error;
+
+    fn try_from(value: TantivyUserPartial) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: value
+                .id
+                .ok_or_else(|| Error::Internal("missing id".to_string()))?,
+        })
+    }
+}
+
+impl TryFrom<TantivyRoomPartial> for TantivyRoom {
+    type Error = Error;
+
+    fn try_from(value: TantivyRoomPartial) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: value
+                .id
+                .ok_or_else(|| Error::Internal("missing id".to_string()))?,
+        })
+    }
+}
+
+impl TryFrom<TantivyAuditLogEntryPartial> for TantivyAuditLogEntry {
+    type Error = Error;
+
+    fn try_from(value: TantivyAuditLogEntryPartial) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: value
+                .id
+                .ok_or_else(|| Error::Internal("missing id".to_string()))?,
+            room_id: value
+                .room_id
+                .ok_or_else(|| Error::Internal("missing room_id".to_string()))?,
         })
     }
 }

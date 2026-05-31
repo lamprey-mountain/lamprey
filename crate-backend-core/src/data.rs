@@ -489,6 +489,11 @@ pub trait DataAuditLogs {
     ) -> Result<PaginationResponse<AuditLogEntry>>;
     async fn audit_logs_room_append(&mut self, entry: AuditLogEntry) -> Result<()>;
     async fn audit_logs_get(&mut self, id: AuditLogEntryId) -> Result<AuditLogEntry>;
+    async fn audit_logs_list_indexed(
+        &mut self,
+        last_id: Option<AuditLogEntryId>,
+        limit: u32,
+    ) -> Result<Vec<AuditLogEntry>>;
 }
 
 #[async_trait]

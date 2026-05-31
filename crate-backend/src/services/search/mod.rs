@@ -16,6 +16,7 @@ mod tokenizer;
 mod util;
 
 pub use service::reindex::Reindex;
+pub use util::visibility::{SearchMediaVisibility, SearchRoomsVisibility};
 
 pub struct ServiceSearch {
     state: Arc<ServerStateInner>,

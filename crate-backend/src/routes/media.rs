@@ -25,9 +25,12 @@ use tracing::{debug, error};
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
-use crate::error::{Error, Result};
 use crate::types::MediaId;
 use crate::ServerState;
+use crate::{
+    error::{Error, Result},
+    services::search::SearchMediaVisibility,
+};
 
 use super::util::Auth;
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
@@ -550,7 +553,10 @@ async fn media_search(
     perms.needs(Permission::Admin);
     perms.check()?;
 
-    let results = srv.search.search_media(auth.user.id, json).await?;
+    let results = srv
+        .search
+        .search_media(SearchMediaVisibility::Everything, json)
+        .await?;
 
     Ok(Json(results))
 }

@@ -18,6 +18,7 @@ use validator::Validate;
 
 use crate::routes::util::{Auth, Auth3};
 use crate::routes2;
+use crate::services::search::SearchRoomsVisibility;
 use crate::types::{DbRoomCreate, MediaLinkType, MessageSync, PaginationResponse, Permission};
 use crate::{error::Result, Error, ServerState};
 use common::v1::types::error::{ApiError, ErrorCode};
@@ -180,7 +181,10 @@ async fn room_search(
         .needs(Permission::RoomManage)
         .check()?;
 
-    let results = srv.search.search_rooms(req.search).await?;
+    let results = srv
+        .search
+        .search_rooms(SearchRoomsVisibility::Everything, req.search)
+        .await?;
 
     Ok(Json(results))
 }
