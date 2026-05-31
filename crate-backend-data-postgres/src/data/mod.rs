@@ -728,3 +728,10 @@ pub trait DataRoomTemplate {
     async fn room_template_mark_dirty(&mut self, source_room_id: RoomId) -> Result<()>;
     async fn room_template_delete(&mut self, code: RoomTemplateCode) -> Result<()>;
 }
+
+// TODO: impl this trait
+// trait DataServer {
+//     async fn server_put(&mut self, hostname: Hostname, data: ServerData) -> Result<()>;
+//     async fn server_delete(&mut self, hostname: Hostname) -> Result<()>;
+//     async fn server_get(&mut self, hostname: Hostname) -> Result<ServerData>;
+// }

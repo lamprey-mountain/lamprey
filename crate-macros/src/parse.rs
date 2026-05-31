@@ -39,6 +39,9 @@ pub struct EndpointField {
     pub kind: FieldKind,
     pub ident: syn::Ident,
     pub ty: Type,
+
+    // TODO: unused; either remove or use this
+    #[allow(unused)] // TEMP
     pub doc: Vec<Attribute>,
 }
 

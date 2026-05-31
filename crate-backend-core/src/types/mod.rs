@@ -5,3 +5,4 @@ pub mod analytics;
 pub mod data;
 pub mod permission;
 pub mod search;
+pub mod federation;

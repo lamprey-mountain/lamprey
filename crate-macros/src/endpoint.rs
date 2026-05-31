@@ -81,7 +81,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     let extract_request_fn = build_extract_request_fn(&req_fields, &args.path)?;
     let extract_impl = build_extract_impl(&req_fields, &args.path)?;
     let encode_response_fn = build_encode_response_fn(&args, response_struct)?;
-    let encode_request_fn = build_encode_request_fn(&req_fields, &args.path)?;
+    let encode_request_fn = build_encode_request_fn(&req_fields, &args.path, &args)?;
     let extract_response_fn = build_extract_response_fn(&args, response_struct)?;
     let meta_fn = build_meta_fn(&args, &mod_attrs)?;
     let openapi_ext_fn = build_openapi_ext_fn(&args, &req_fields, &resp_fields)?;
@@ -707,7 +707,7 @@ fn build_extract_response_fn(
 // encode_request (client-side)
 // ---------------------------------------------------------------------------
 
-fn build_encode_request_fn(fields: &[EndpointField], path: &LitStr) -> syn::Result<TokenStream> {
+fn build_encode_request_fn(fields: &[EndpointField], path: &LitStr, args: &EndpointArgs) -> syn::Result<TokenStream> {
     let path_fields: Vec<_> = fields
         .iter()
         .filter(|f| matches!(f.kind, FieldKind::Path(_)))
@@ -726,6 +726,10 @@ fn build_encode_request_fn(fields: &[EndpointField], path: &LitStr) -> syn::Resu
         fields.iter().find(|f| matches!(f.kind, FieldKind::Form));
     let body_field: Option<&EndpointField> =
         fields.iter().find(|f| matches!(f.kind, FieldKind::Body));
+
+    let method_str = args.method.value();
+    let method_ident = Ident::new(&method_str, args.method.span());
+    let method = quote! { ::http::Method::#method_ident };
 
     // Build path URL with substitutions
     let path_template = path.value();
@@ -852,19 +856,13 @@ fn build_encode_request_fn(fields: &[EndpointField], path: &LitStr) -> syn::Resu
         }
     };
 
-    // Parse method from path attribute - we need access to it
-    // Since we don't have the method here, we'll use a placeholder
-    // The actual method will be set by the caller using metadata()
     Ok(quote! {
-        pub fn encode_request(
-            req: Request,
-            method: ::http::Method,
-        ) -> ::http::Request<::bytes::Bytes> {
+        pub fn encode_request(req: Request) -> ::http::Request<::bytes::Bytes> {
             #path_build
             #query_build
 
             let mut req_builder = ::http::Request::builder()
-                .method(method)
+                .method(#method)
                 .uri(&url);
 
             #header_build
@@ -995,6 +993,8 @@ fn parse_doc_attrs(attrs: &[&Attribute]) -> (LitStr, TokenStream) {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+// TODO: move these functions to a util mod?
 
 fn find_struct<'a>(items: &'a [Item], name: &str) -> syn::Result<&'a ItemStruct> {
     items

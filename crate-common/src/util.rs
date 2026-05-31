@@ -1,3 +1,5 @@
+pub mod routes;
+
 /// wrapper for body bytes
 #[derive(Clone)]
 pub struct FederationBody(pub ::bytes::Bytes);

@@ -1,4 +1,4 @@
-//! Diff derive macro implementation.
+//! `Diff` derive macro implementation.
 
 mod attr;
 mod expand;

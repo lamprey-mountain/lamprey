@@ -14,7 +14,7 @@ use serde::de::DeserializeOwned;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::{error::Error, services::federation::ValidatedKeyAlgo, ServerState};
+use crate::{error::Error, services::federation::signing::ValidatedKeyAlgo, ServerState};
 
 pub mod audit;
 pub mod auth;

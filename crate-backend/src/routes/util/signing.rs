@@ -6,7 +6,7 @@ use common::v1::types::{
 use ed25519_dalek::{Signature, Signer, Verifier, VerifyingKey};
 use http::{HeaderMap, HeaderName, HeaderValue};
 
-use crate::{error::Result, services::federation::LocalSigningKey, Error};
+use crate::{error::Result, services::federation::signing::LocalSigningKey, Error};
 
 /// how long a signed request is valid for
 pub const SIGNATURE_MAX_AGE: std::time::Duration = std::time::Duration::from_secs(30);

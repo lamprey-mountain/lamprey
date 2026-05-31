@@ -32,16 +32,17 @@ impl SfuHandleInner {
         self.id
     }
 
+    // TODO: rename to dispatch()
     pub fn send(&self, message: SfuCommand) {
         let _ = self.tx.send(message);
     }
+
+    // TODO: fn send() wait for response
 
     pub async fn update_stats(&self, stats: SfuStats) {
         let mut w = self.stats.write().await;
         *w = stats;
     }
-
-    // TODO: send() -> tell(), add request()
 
     pub fn has_capacity(&self) -> bool {
         // TODO: use stats to calculate capacity
@@ -125,6 +126,16 @@ impl ServiceVoice {
                                         error!("Error handling SFU event: {:?}", e);
                                     }
                                 }
+                            }
+                            Some(Ok(axum::extract::ws::Message::Close(_frame))) => {
+                                // let clean = frame
+                                //     .as_ref()
+                                //     .map(|cf| is_clean_close(cf.code.into()))
+                                //     .unwrap_or(true);
+                                // TODO: remove sfu
+                            }
+                            None => {
+                                // TODO: remove sfu
                             }
                             _ => break,
                         }
@@ -243,7 +254,15 @@ impl ServiceVoice {
         Ok(sfu)
     }
 
-    // TODO: explicitly/manually shut down a sfu
+    /// handle a sfu going away
+    pub fn sfu_handle_shutdown(&self, sfu_id: SfuId) -> Result<()> {
+        // TODO: remove sfu
+        // TODO: migrate users
+        todo!()
+    }
+
+    // TODO:
+    // /// explicitly/manually shut down a sfu
     // pub fn sfu_destroy(&self, sfu_id: SfuId) -> Result<()> {
     //     let Some((_, sfu)) = self.sfus.remove(&sfu_id) else {
     //         return Ok(());

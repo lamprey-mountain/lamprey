@@ -6,7 +6,7 @@ use crate::ServerStateInner;
 
 /// ip address service
 pub struct ServiceIps {
-    state: Arc<ServerStateInner>,
+    _state: Arc<ServerStateInner>,
     reader: Option<maxminddb::Reader<Vec<u8>>>,
 }
 
@@ -20,7 +20,7 @@ impl ServiceIps {
 
         let reader = get_reader();
 
-        Self { state, reader }
+        Self { _state: state, reader }
     }
 
     pub fn lookup(&self, addr: IpAddr) -> Result<Option<IpInfo>> {

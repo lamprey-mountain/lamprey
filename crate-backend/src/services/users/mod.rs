@@ -31,6 +31,7 @@ impl DmKey {
     }
 }
 
+// TODO: make services federation aware?
 impl ServiceUsers {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         Self {

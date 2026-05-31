@@ -1,3 +1,5 @@
+//! utility for generating `foo_id!(...)` macros
+
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::LitStr;

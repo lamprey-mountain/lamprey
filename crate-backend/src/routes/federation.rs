@@ -4,7 +4,9 @@ use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::routes;
-use common::v1::types::federation::{ServerKey, ServerKeys};
+use common::v1::types::federation::{
+    Hostname, ServerConnectResponse, ServerKey, ServerKeys, ServerPingResponse, ServerSyncResponse,
+};
 use common::v1::types::misc::ServerReq;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
@@ -51,29 +53,48 @@ async fn server_keys_get(
     }))
 }
 
-/// Server user ensure (TODO)
-///
-/// Create a user representing a user on the requesting server
-#[handler(routes::server_user_ensure)]
-async fn server_user_ensure(
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::server_user_ensure::Request,
-    _auth: Auth3,
+/// Server connect
+#[handler(routes::server_connect)]
+async fn server_connect(
+    State(s): State<Arc<ServerState>>,
+    req: routes::server_connect::Request,
+    auth: Auth3,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let origin = auth.origin()?;
+
+    let local_hostname = s.config().hostname()?;
+
+    let target = match &req.hostname {
+        ServerReq::ServerName(name) => name.as_str(),
+        ServerReq::ServerHost => local_hostname,
+        ServerReq::ServerClient => {
+            return Err(Error::BadRequest("invalid target hostname".to_string()));
+        }
+    };
+
+    if target != local_hostname {
+        return Err(Error::BadRequest("wrong target hostname".to_string()));
+    }
+
+    // register server by connecting back to establish mutual sync
+    s.services().federation.connect(origin.clone()).await?;
+
+    Ok(Json(ServerConnectResponse {}))
 }
 
-/// Server sync handle (TODO)
+/// Server sync handle
 ///
 /// Handle MessageSync events. used to proxy events to connected clients.
-// NOTE: in the future, i probably want to have a local cache of remote data too
 #[handler(routes::server_sync_handle)]
 async fn server_sync_handle(
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::server_sync_handle::Request,
-    _auth: Auth3,
+    State(s): State<Arc<ServerState>>,
+    req: routes::server_sync_handle::Request,
+    auth: Auth3,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let _origin = auth.origin()?;
+    // TODO: return a useful http response
+    s.services().federation.handle_sync(req.sync).await?;
+    Ok(Json(ServerSyncResponse {}))
 }
 
 /// Server ping
@@ -85,30 +106,44 @@ async fn server_ping(
     req: routes::server_ping::Request,
     auth: Auth3,
 ) -> Result<impl IntoResponse> {
-    // TODO: allow local users to try to ping other servers
-    let origin = auth.origin()?;
+    let origin = auth.origin().ok();
+    let is_federated = origin.is_some();
 
     let local_hostname = s.config().hostname()?;
 
-    let requested = match &req.hostname {
+    let target = match &req.hostname {
         ServerReq::ServerName(name) => name.as_str(),
         ServerReq::ServerHost => local_hostname,
-        ServerReq::ServerClient => origin.as_ref(),
+        ServerReq::ServerClient => {
+            if let Some(origin) = origin {
+                origin.as_ref()
+            } else {
+                return Err(Error::BadRequest(
+                    "ServerClient requires federation auth".to_string(),
+                ));
+            }
+        }
     };
 
-    if requested != local_hostname {
-        // TODO: allow local users to ping remote servers
-        // probably should return err if origin != local_hostname though
-        return Err(Error::Unimplemented);
+    if target != local_hostname {
+        // NOTE: federated should always be true since this is a server -> server ping (client -> server -> server)
+        let federated = s
+            .services()
+            .federation
+            .ping(Hostname(target.to_string()))
+            .await?;
+        return Ok(Json(ServerPingResponse { federated }));
     }
 
-    Ok(Json(routes::server_ping::PingResponse { federated: true }))
+    Ok(Json(ServerPingResponse {
+        federated: is_federated,
+    }))
 }
 
 pub fn routes(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes2!(server_keys_get))
-        .routes(routes2!(server_user_ensure))
+        .routes(routes2!(server_connect))
         .routes(routes2!(server_sync_handle))
         .routes(routes2!(server_ping))
         .layer(axum::middleware::from_fn_with_state(

@@ -24,36 +24,6 @@ pub mod server_keys_get {
     }
 }
 
-/// Server user ensure
-///
-/// Create a user representing a user on the requesting server
-#[endpoint(
-    post,
-    path = "/server/{hostname}/user",
-    tags = ["federation"],
-    scopes = [Full],
-    response(OK, body = ServerUserCreate, description = "ok"),
-)]
-pub mod server_user_ensure {
-    use crate::v1::types::{
-        federation::{ServerUserCreate, ServerUserCreateRequest},
-        misc::ServerReq,
-    };
-
-    pub struct Request {
-        #[path]
-        pub hostname: ServerReq,
-
-        #[json]
-        pub user: ServerUserCreateRequest,
-    }
-
-    pub struct Response {
-        #[json]
-        pub user: ServerUserCreate,
-    }
-}
-
 /// Server sync handle
 ///
 /// Handle MessageSync events. Used to proxy events to connected clients.
@@ -74,6 +44,9 @@ pub mod server_sync_handle {
         #[path]
         pub hostname: ServerReq,
 
+        #[header]
+        pub idempotency_key: Option<String>,
+
         #[json]
         pub sync: ServerSyncRequest,
     }
@@ -92,28 +65,42 @@ pub mod server_sync_handle {
     path = "/server/{hostname}/ping",
     tags = ["federation"],
     scopes = [Full],
-    response(OK, body = PingResponse, description = "ok"),
+    response(OK, body = ServerPingResponse, description = "ok"),
 )]
 pub mod server_ping {
-    use serde::{Deserialize, Serialize};
-    use utoipa::ToSchema;
-
-    use crate::v1::types::misc::ServerReq;
+    use crate::v1::types::{federation::ServerPingResponse, misc::ServerReq};
 
     pub struct Request {
         #[path]
         pub hostname: ServerReq,
     }
 
-    #[derive(Serialize)]
     pub struct Response {
         #[json]
-        pub body: PingResponse,
+        pub body: ServerPingResponse,
+    }
+}
+
+/// Server connect
+///
+/// start receiving sync events from a remote server
+#[endpoint(
+    post,
+    path = "/server/{hostname}/connect",
+    tags = ["federation"],
+    scopes = [Full],
+    response(OK, body = ServerConnectResponse, description = "connected"),
+)]
+pub mod server_connect {
+    use crate::v1::types::{federation::ServerConnectResponse, misc::ServerReq};
+
+    pub struct Request {
+        #[path]
+        pub hostname: ServerReq,
     }
 
-    #[derive(Debug, Serialize, Deserialize, ToSchema)]
-    pub struct PingResponse {
-        /// whether this is in response to a server authenticated request
-        pub federated: bool,
+    pub struct Response {
+        #[json]
+        pub body: ServerConnectResponse,
     }
 }

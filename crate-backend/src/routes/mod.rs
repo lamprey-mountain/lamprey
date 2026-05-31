@@ -104,16 +104,13 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(webhook::routes())
 }
 
-#[derive(Debug, Serialize, utoipa::ToSchema)]
-pub struct LampreyWellKnown {
-    pub api_url: Url,
-    pub cdn_url: Url,
-    // do i need anything besides the bare minimum? i can fetch the full info endpoint after knowing api_url...
-}
+use common::v1::types::federation::WellKnown;
+
+// ...
 
 /// Get well known
 pub async fn well_known(State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse, Error> {
-    Ok(Json(LampreyWellKnown {
+    Ok(Json(WellKnown {
         api_url: s.config().api_url.clone(),
         cdn_url: s.config().cdn_url.clone(),
     }))

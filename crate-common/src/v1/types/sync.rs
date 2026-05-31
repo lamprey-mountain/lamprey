@@ -331,9 +331,8 @@ pub enum MessagePayload {
 // WARNING: this enum is getting VERY big. it's caused a few stack overflow issues by now.
 // i might require it to be in a Box/Arc everywhere, or redo the enum
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum MessageSync {
     // TODO: move Ready here
     // /// successfully connected

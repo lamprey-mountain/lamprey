@@ -1,5 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
+use common::util::routes::{Endpoint, Request};
 use reqwest::{Client, Response};
 use url::Url;
 
@@ -54,4 +55,16 @@ impl ServiceHttp {
     // oauth: post revocation url with bearer token
     // oauth: post exchange code for coken token url
     // media: post scan request to url
+    // federation: send sync/ping
+    // federation: get resource
+
+    // TODO: fix and add this
+    // /// send an http request
+    // pub async fn send<E: Endpoint>(
+    //     &self,
+    //     req: E::Request,
+    // ) -> ::core::result::Result<E::Response, Error> {
+    //     let res = self.client.execute(req.encode()).await?;
+    //     Ok(E::Response::extract(res).unwrap())
+    // }
 }
