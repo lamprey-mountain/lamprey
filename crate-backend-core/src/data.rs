@@ -36,6 +36,7 @@ use common::v1::types::{EvalId, RedexId, RedexVerId};
 use std::collections::HashMap;
 use uuid::Uuid;
 
+use crate::types::data::{SearchReindexQueue, SearchReindexQueueTarget};
 use crate::{config::ConfigInternal, types::admin::AdminCollectGarbageMode, Result};
 
 #[async_trait]
@@ -446,30 +447,25 @@ pub trait DataInvite {
 
 #[async_trait]
 pub trait DataSearchQueue {
+    /// create a new reindex queue or update the checkpoint for an existing one
     async fn search_reindex_queue_upsert(
         &mut self,
-        target_type: &str,
-        target_id: Uuid,
+        target: SearchReindexQueueTarget,
         last_id: Option<Uuid>,
     ) -> Result<()>;
-    async fn search_reindex_queue_list(
-        &mut self,
-        target_type: &str,
-        limit: u32,
-    ) -> Result<Vec<(Uuid, Option<Uuid>)>>;
-    async fn search_reindex_queue_delete(
-        &mut self,
-        target_type: &str,
-        target_id: Uuid,
-    ) -> Result<()>;
-    async fn search_reindex_queue_get(
-        &mut self,
-        target_type: &str,
-        target_id: Uuid,
-    ) -> Result<Option<Uuid>>;
-    async fn search_reindex_queue_upsert_room(&mut self, room_id: RoomId) -> Result<()>;
-    async fn search_reindex_queue_upsert_all(&mut self) -> Result<()>;
 
+    /// delete a finished queue
+    async fn search_reindex_queue_delete(&mut self, target: SearchReindexQueueTarget)
+        -> Result<()>;
+
+    /// look for new queues that need to be to reindexed
+    async fn search_reindex_queue_poll(&mut self, limit: u32) -> Result<Vec<SearchReindexQueue>>;
+
+    // bulk queue updates
+    async fn search_reindex_queue_reset_all_messages(&mut self) -> Result<()>;
+    async fn search_reindex_queue_reset_room(&mut self, room_id: RoomId) -> Result<()>;
+
+    // dead letter queue stuff
     async fn search_ingestion_dlq_insert(
         &mut self,
         entity_id: Uuid,
@@ -492,6 +488,7 @@ pub trait DataAuditLogs {
         filter: AuditLogFilter,
     ) -> Result<PaginationResponse<AuditLogEntry>>;
     async fn audit_logs_room_append(&mut self, entry: AuditLogEntry) -> Result<()>;
+    async fn audit_logs_get(&mut self, id: AuditLogEntryId) -> Result<AuditLogEntry>;
 }
 
 #[async_trait]

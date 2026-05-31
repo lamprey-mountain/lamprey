@@ -1,3 +1,5 @@
+//! tantivy s3 directory implementation
+
 use std::io::{Error as IoError, Read, Result as IoResult, Seek, SeekFrom, Write};
 use std::ops::Range;
 use std::os::unix::fs::FileExt;

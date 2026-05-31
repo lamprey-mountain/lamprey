@@ -136,6 +136,29 @@ impl DataChannel for Postgres {
         Ok(channels.into_iter().map(Into::into).collect())
     }
 
+    async fn channel_list_all(
+        &mut self,
+        pagination: PaginationQuery<ChannelId>,
+    ) -> Result<PaginationResponse<Channel>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self,
+            query_file_as!(
+                DbChannel,
+                "sql/channel_paginate_all.sql",
+                p.after.into_inner(),
+                p.before.into_inner(),
+                p.dir.to_string(),
+                (p.limit + 1) as i32,
+            ),
+            query_scalar!(
+                r#"SELECT count(*) FROM channel"#
+            ),
+            |i: &Channel| i.id.to_string()
+        )
+    }
+
     async fn channel_list_removed(
         &mut self,
         room_id: RoomId,

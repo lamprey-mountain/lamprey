@@ -1,5 +1,5 @@
 use crate::services::voice::ServiceVoice;
-use crate::{Result, Error};
+use crate::{Error, Result};
 use common::v1::types::{
     voice::{
         messages::{SfuCommand, SignallingCommand},

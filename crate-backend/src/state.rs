@@ -45,6 +45,7 @@ pub struct ServerStateInner {
     pub messaging: MessagingService,
 }
 
+// NOTE: maybe make this an actual service...?
 pub enum MessagingService {
     /// use tokio channels to broadcast events
     Memory {
@@ -425,5 +426,137 @@ impl Deref for ServerState {
 
     fn deref(&self) -> &Self::Target {
         &self.inner
+    }
+}
+
+// ===== NEW TYPES =====
+// TODO: implement and use these
+
+// struct ServerStateInner2 {
+//     /// config for this server
+//     config: Config,
+
+//     // /// reference to the database for persistent data
+//     // database: Box<dyn Data2>,
+//     /// services
+//     services: Weak<Services>,
+
+//     /// storage for large blobs
+//     blobs: opendal::Operator,
+
+//     /// send and receive messages
+//     messaging: MessagingService,
+// }
+
+// pub struct ServerState2(Arc<ServerStateInner2>);
+
+// impl ServerState2 {
+//     pub async fn init_from_config(config: Config) -> Result<Self> {
+//         todo!()
+//     }
+
+//     pub fn new() -> Self {
+//         let services = Arc::new_cyclic(|weak_services| {
+//             let inner = Arc::new(ServerStateInner2 {
+//                 config: todo!(),
+//                 services: weak_services,
+//                 blobs: todo!(),
+//                 messaging: todo!(),
+//             });
+
+//             Services::new(inner)
+//         });
+
+//         let inner = Arc::clone(&services.state);
+
+//         Ok(Self(inner))
+//     }
+
+//     // TODO: maybe merge Server here...? maybe not...
+//     // /// start the http server
+//     // pub async fn serve(&self) -> Result<()> {
+//     //     todo!()
+//     // }
+
+//     /// access the database
+//     pub fn data(&self) -> Box<dyn Data2<DataTxn = Postgres>> {
+//         Box::new((*self.0.database).clone())
+//     }
+
+//     /// acquire a database transaction
+//     pub async fn acquire(&self) -> Result<Box<dyn Data>> {
+//         todo!()
+//     }
+
+//     pub fn services(&self) -> Arc<Services> {
+//         self.0
+//             .services
+//             .upgrade()
+//             .expect("services should always exist while ServerStateInner is alive")
+//     }
+
+//     pub fn messaging(&self) -> &MessagingService {
+//         &self.0.messaging
+//     }
+// }
+
+/// broadcast a message
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Broadcast2 {
+    /// a sync message
+    Sync(Broadcast2Sync),
+
+    /// a sfu command
+    Sfu(SfuCommand),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Broadcast2Sync {
+    pub message: MessageSync,
+    pub nonce: Option<String>,
+}
+
+impl Broadcast2 {
+    pub fn sync(message: MessageSync) -> Broadcast2Sync {
+        todo!()
+    }
+}
+
+impl Broadcast2Sync {
+    pub fn with_nonce(self, s: String) -> Self {
+        todo!()
+    }
+}
+
+impl From<MessageSync> for Broadcast2 {
+    fn from(value: MessageSync) -> Self {
+        todo!()
+    }
+}
+
+impl From<Broadcast2Sync> for Broadcast2 {
+    fn from(value: Broadcast2Sync) -> Self {
+        todo!()
+    }
+}
+
+impl MessagingService {
+    /// send a message to everyone in a room
+    pub async fn broadcast_room(
+        &self,
+        room_id: RoomId,
+        broadcast: impl Into<Broadcast2>,
+    ) -> Result<()> {
+        todo!()
+    }
+
+    // pub async fn broadcast_channel
+    // pub async fn broadcast_user
+    // pub async fn broadcast_global
+    // async fn broadcast_inner
+
+    /// subscribe to everything
+    pub async fn subscribe(&self) -> Result<BoxStream<Broadcast2>> {
+        todo!()
     }
 }

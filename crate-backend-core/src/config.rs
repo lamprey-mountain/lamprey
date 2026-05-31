@@ -111,6 +111,9 @@ pub struct Config {
     #[serde(default)]
     pub experiments: ConfigExperiments,
 
+    #[serde(default)]
+    pub search: ConfigSearch,
+
     /// path to maxmind geolocation database
     ///
     /// eg. `GeoLite2-Country.mmdb`
@@ -361,6 +364,60 @@ fn default_nats_addr() -> String {
 
 #[derive(Debug, Default, Deserialize)]
 pub struct ConfigExperiments {}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ConfigSearch {
+    /// buffer size split between indexing threads
+    ///
+    /// deaults to 100mb
+    #[serde(default = "default_indexing_buffer_size")]
+    pub indexing_buffer_size: usize,
+
+    /// how frequently to commit the index (in seconds)
+    ///
+    /// defaults to 5 seconds
+    #[serde(default = "default_commit_interval")]
+    pub commit_interval: u64,
+
+    /// the maximum of uncommitted changes to accumulate before forcing a commit
+    ///
+    /// defaults to 50,000
+    #[serde(default = "default_max_uncommitted")]
+    pub max_uncommitted: usize,
+
+    /// the maximum number of etl workers to spawn
+    ///
+    /// defaults to 4
+    #[serde(default = "default_import_concurrency")]
+    pub import_concurrency: usize,
+}
+
+impl Default for ConfigSearch {
+    fn default() -> Self {
+        Self {
+            indexing_buffer_size: default_indexing_buffer_size(),
+            commit_interval: default_commit_interval(),
+            max_uncommitted: default_max_uncommitted(),
+            import_concurrency: default_import_concurrency(),
+        }
+    }
+}
+
+fn default_indexing_buffer_size() -> usize {
+    100_000_000
+}
+
+fn default_commit_interval() -> u64 {
+    5
+}
+
+fn default_max_uncommitted() -> usize {
+    50_000
+}
+
+fn default_import_concurrency() -> usize {
+    4
+}
 
 #[derive(Clone, Debug, Deserialize)]
 // Incompatible with deny_unknown_fields due to serde(flatten).

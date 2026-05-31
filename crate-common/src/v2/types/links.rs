@@ -155,16 +155,26 @@ mod next {
         },
     };
 
-    // #[derive(Links)]
-    // #[links] // alternative? if i need to modify stuff
-    struct User {
-        avatar: Link<Media, Required>,
-        banner: Link<Media, Required>,
+    // // #[derive(Links)]
+    // // #[links] // alternative? if i need to modify stuff
+    // struct User {
+    //     avatar: Link<Media, Required>,
+    //     banner: Link<Media, Required>,
 
-        // expands to this...
-        avatar_id: MediaId,
-        banner_id: MediaId,
-    }
+    //     // expands to this...
+    //     avatar_id: MediaId,
+    //     banner_id: MediaId,
+    // }
+
+    // #[derive(Links)]
+    // struct User {
+    //     // can be Option<T> or T
+    //     #[link(Media)]
+    //     avatar_id: Option<MediaId>,
+
+    //     #[link(Media)]
+    //     banner_id: Option<MediaId>,
+    // }
 
     // ...and impls this
     impl Links for User {

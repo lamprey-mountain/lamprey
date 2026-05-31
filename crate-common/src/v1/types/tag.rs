@@ -13,7 +13,7 @@ use crate::v1::types::{misc::Color, ChannelId, TagId};
 use crate::v1::types::util::{default_false_opt, some_option};
 
 /// a tag that can be applied to a thread
-// TODO: rename to ThreadTag
+// TODO: rename to ThreadTag or ForumTag
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -46,6 +46,9 @@ pub struct Tag {
 
     /// total number of threads with this tag (including archived threads)
     pub total_thread_count: u64,
+    // TODO
+    // /// if this tag should be considered a spoiler
+    // pub spoiler: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

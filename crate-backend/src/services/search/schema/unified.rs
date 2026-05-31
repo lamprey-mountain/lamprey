@@ -1,77 +1,9 @@
-use std::str::FromStr;
-
-use serde::{Deserialize, Serialize};
 use tantivy::schema::{
     self, IndexRecordOption, JsonObjectOptions, Schema, SchemaBuilder, TextFieldIndexing,
     TextOptions, FAST, STORED, STRING, TEXT,
 };
 
 use crate::services::search::schema::IndexDefinition;
-
-/// the type of a tantivy document
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Doctype {
-    Message,
-    Channel,
-    Room,
-    User,
-    Media,
-
-    /// an event for audit logs, abuse monitoring, and/or analytics
-    AnalyticsEvent,
-
-    /// aggregated and anonymized statistics for room analytics
-    AnalyticsSummary,
-
-    DocumentHistory,
-    // TODO: more searching
-    // Document, // branch_id, template, draft, published, view_count(?)(sorting)
-    // Tag, // usage_count(sorting)
-    // Application, // public(admin only), usage_count(sorting)
-    // CalendarEvent, // location, starts_at, ends_at
-    // RoomTemplate, // usage_count(sorting)
-    // Emoji, // animated, usage_count(sorting)
-    // Broadcasts, // member_count(sorting)
-}
-
-impl Doctype {
-    pub fn as_str(&self) -> &str {
-        match self {
-            Doctype::Message => "Message",
-            Doctype::Channel => "Channel",
-            Doctype::Room => "Room",
-            Doctype::User => "User",
-            Doctype::Media => "Media",
-            Doctype::AnalyticsEvent => "AnalyticsEvent",
-            Doctype::AnalyticsSummary => "AnalyticsSummary",
-            Doctype::DocumentHistory => "DocumentHistory",
-        }
-    }
-}
-
-impl std::fmt::Display for Doctype {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl FromStr for Doctype {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "Message" => Ok(Doctype::Message),
-            "Channel" => Ok(Doctype::Channel),
-            "Room" => Ok(Doctype::Room),
-            "User" => Ok(Doctype::User),
-            "Media" => Ok(Doctype::Media),
-            "AnalyticsEvent" => Ok(Doctype::AnalyticsEvent),
-            "AnalyticsSummary" => Ok(Doctype::AnalyticsSummary),
-            "DocumentHistory" => Ok(Doctype::DocumentHistory),
-            _ => Err(()),
-        }
-    }
-}
 
 /// an index containing any lamprey data type
 #[derive(Default)]

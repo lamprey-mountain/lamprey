@@ -46,6 +46,7 @@ pub struct SearchMessagesResponseRaw {
 
 impl ContentSearcher {
     /// generate a tantivy query to restrict visibility
+    // TODO: move to util?
     pub fn generate_visibility_query(
         &self,
         visible_channel_ids: &[(ChannelId, bool)],
@@ -84,7 +85,6 @@ impl ContentSearcher {
     }
 
     pub fn search_messages(&self, msg: SearchMessages) -> Result<SearchMessagesResponseRaw> {
-        // very unlikely, but might as well
         if msg.visible_channel_ids.is_empty() {
             return Ok(SearchMessagesResponseRaw {
                 items: vec![],
@@ -101,8 +101,6 @@ impl ContentSearcher {
                     searcher.index(),
                     vec![self.schema.content, self.schema.name],
                 );
-
-                // i know this is useless for messages, this is for reference
                 query_parser.set_field_boost(self.schema.name, 2.0);
 
                 let parsed_query = query_parser
@@ -168,28 +166,10 @@ impl ContentSearcher {
 
         let mut items = vec![];
         for doc_address in top_docs {
-            let retrieved_doc: TantivyDocument =
-                searcher.doc(doc_address).expect("doc fetch failed");
-
-            let Some(id) = retrieved_doc
-                .get_first(self.schema.id)
-                .and_then(|v| v.as_str())
-            else {
-                warn!("Document missing id field: {:?}", doc_address);
-                continue;
-            };
-
-            let Some(channel_id) = retrieved_doc
-                .get_first(self.schema.channel_id)
-                .and_then(|v| v.as_str())
-            else {
-                warn!("Document missing channel id field: {:?}", doc_address);
-                continue;
-            };
-
+            let doc: crate::services::search::index::glue::TantivyMessage = searcher.doc(doc_address)?;
             items.push(SearchMessagesResponseRawItem {
-                id: id.parse().unwrap(),
-                channel_id: channel_id.parse().unwrap(),
+                id: doc.id,
+                channel_id: doc.channel_id,
             });
         }
 

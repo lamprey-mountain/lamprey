@@ -12,7 +12,6 @@ use http::StatusCode;
 use lamprey_backend_core::types::admin::{
     AdminBroadcast, AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache,
     AdminPurgeCacheResponse, AdminRegisterUser, AdminWhisper, DlqEntry, SearchIndexStats,
-    SearchStats,
 };
 use lamprey_backend_core::Error;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -409,7 +408,7 @@ async fn admin_channel_search_index_stats(
     path = "/admin/search/stats",
     tags = ["admin", "badge.admin_only", "badge.server-perm.Admin"],
     responses(
-        (status = OK, body = SearchStats, description = "Overall search index statistics"),
+        (status = OK, body = SearchIndexStats, description = "Overall search index statistics"),
     )
 )]
 async fn admin_search_stats(
@@ -427,7 +426,7 @@ async fn admin_search_stats(
         .needs(Permission::Admin)
         .check()?;
 
-    let stats = srv.search.get_overall_stats().await?;
+    let stats = srv.search.get_stats().await?;
     Ok(Json(stats))
 }
 

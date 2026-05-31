@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use common::v1::types::util::Time;
-use common::v1::types::{MessageCreate, MessageId, UserId};
+use common::v1::types::{ChannelId, MessageCreate, MessageId, UserId};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -110,25 +110,38 @@ pub struct AdminRegisterUser {
     pub user_id: UserId,
 }
 
-/// Search index statistics for a channel
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct SearchIndexStats {
-    /// Number of documents indexed for this channel
-    pub documents_indexed: u64,
-
-    /// The last message ID that was indexed, if any
-    pub last_message_id: Option<MessageId>,
-}
-
 /// Overall search index statistics
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct SearchStats {
-    /// Total number of documents in the index
-    pub document_count: u64,
+pub struct SearchIndexStats {
+    /// total number of documents in this index
+    pub count_documents: u64,
+    pub count_messages: u64,
+    pub count_channels: u64,
+    pub count_rooms: u64,
+    pub count_media: u64,
+    pub count_users: u64,
+    // etc...
     /// Size of the index in bytes
     pub index_size_bytes: u64,
-    /// Number of entries in the backfill queue
-    pub backfill_queue_size: u64,
+
+    /// number of active reindex queues
+    pub reindex_queues: u64,
+}
+
+/// Search index statistics for a channel
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct SearchIndexStatsChannel {
+    pub channel_id: ChannelId,
+
+    pub count_documents: u64,
+    pub count_messages: u64,
+    pub count_media: u64,
+
+    pub last_indexed_message_id: Option<MessageId>,
+}
+
+pub struct SearchIndexStatsRoom {
+    // TODO
 }
 
 /// A dead letter queue entry for search ingestion

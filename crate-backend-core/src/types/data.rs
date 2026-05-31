@@ -6,3 +6,6 @@ pub struct DataScriptVersion {
     pub location: RedexLocation,
     pub metadata: RedexMetadata,
 }
+
+// TEMP: compat
+pub use super::search::{SearchReindexQueue, SearchReindexQueueTarget};

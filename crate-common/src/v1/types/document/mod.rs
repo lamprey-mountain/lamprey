@@ -434,6 +434,7 @@ pub struct HistoryParams {
 }
 
 /// a set of changes made to a document
+// TODO: rename to DocumentChangeset
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -468,7 +469,7 @@ pub struct Changeset {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Change {
+pub struct DocumentChange {
     /// the time this change was created
     pub time: Time,
 
@@ -487,6 +488,12 @@ pub struct Change {
 
     /// the sequence number of this change
     pub seq: u32,
+}
+
+impl FromIterator<DocumentChange> for Changeset {
+    fn from_iter<T: IntoIterator<Item = DocumentChange>>(iter: T) -> Self {
+        todo!()
+    }
 }
 
 #[derive(Debug, Clone)]

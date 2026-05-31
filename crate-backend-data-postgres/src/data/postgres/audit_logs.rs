@@ -121,4 +121,33 @@ impl DataAuditLogs for Postgres {
         .await?;
         Ok(())
     }
+
+    async fn audit_logs_get(&mut self, id: AuditLogEntryId) -> Result<AuditLogEntry> {
+        let mut conn = self.acquire().await?;
+        let row = query_as!(
+            DbAuditLogEntry,
+            r#"
+            SELECT id, room_id, user_id, session_id, reason, data, status as "status: _", started_at, ended_at, ip_addr::text, user_agent, application_id FROM audit_log
+            WHERE id = $1
+            "#,
+            *id,
+        )
+        .fetch_one(conn.ext())
+        .await?;
+
+        Ok(AuditLogEntry {
+            id: row.id.into(),
+            room_id: row.room_id.into(),
+            user_id: row.user_id.into(),
+            session_id: row.session_id.map(Into::into),
+            reason: row.reason,
+            ty: serde_json::from_value(row.data).unwrap(),
+            status: row.status.into(),
+            started_at: row.started_at.into(),
+            ended_at: row.ended_at.into(),
+            ip_addr: row.ip_addr,
+            user_agent: row.user_agent,
+            application_id: row.application_id.map(Into::into),
+        })
+    }
 }

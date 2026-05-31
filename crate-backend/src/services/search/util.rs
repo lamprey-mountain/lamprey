@@ -1,15 +1,54 @@
-use std::time::Duration;
+use common::v1::types::{search::Order, ChannelId};
+use once_cell::sync::Lazy;
+use tantivy::{
+    query::{BooleanQuery, Occur, Query, TermSetQuery},
+    Term,
+};
 
-/// buffer size split between indexing threads
-///
-/// currently set to 100mb
-pub const INDEXING_BUFFER_SIZE: usize = 100_000_000;
+use crate::services::search::schema::UnifiedSchema;
 
-/// how frequently to commit the index
-pub const COMMIT_INTERVAL: Duration = Duration::from_secs(5);
+pub static SCHEMA: Lazy<UnifiedSchema> = Lazy::new(|| UnifiedSchema::default());
 
-/// the maximum of uncommitted documents before needing to commit
-pub const MAX_UNCOMMITTED: usize = 50_000;
+/// generate a tantivy query to restrict visibility
+pub fn generate_tantivy_query_for_channel_visibility(
+    visible_channel_ids: &[(ChannelId, bool)],
+) -> BooleanQuery {
+    let mut channel_terms = vec![];
+    let mut parent_channel_terms = vec![];
+    for (id, can_view_private_threads) in visible_channel_ids {
+        let id_str = id.to_string();
+        channel_terms.push(Term::from_field_text(SCHEMA.channel_id, &id_str));
 
-// TODO: finetune these numbers. maybe dynamically change them based on what's happening, eg. raise limits during bulk imports?
-// TODO: make these numbers adjustable via config
+        if *can_view_private_threads {
+            parent_channel_terms.push(Term::from_field_text(SCHEMA.parent_channel_id, &id_str));
+        }
+    }
+
+    let mut vis_queries: Vec<(Occur, Box<dyn Query>)> = vec![];
+
+    if !channel_terms.is_empty() {
+        vis_queries.push((Occur::Should, Box::new(TermSetQuery::new(channel_terms))));
+    }
+
+    if !parent_channel_terms.is_empty() {
+        vis_queries.push((
+            Occur::Should,
+            Box::new(TermSetQuery::new(parent_channel_terms)),
+        ));
+    }
+
+    BooleanQuery::new(vis_queries)
+}
+
+pub trait IntoTantivyOrder {
+    fn tantivy(self) -> tantivy::Order;
+}
+
+impl IntoTantivyOrder for Order {
+    fn tantivy(self) -> tantivy::Order {
+        match self {
+            Order::Ascending => tantivy::Order::Asc,
+            Order::Descending => tantivy::Order::Desc,
+        }
+    }
+}

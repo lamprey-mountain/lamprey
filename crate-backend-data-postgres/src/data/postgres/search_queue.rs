@@ -1,11 +1,15 @@
 use async_trait::async_trait;
-use lamprey_backend_core::types::admin::DlqEntry;
+use common::v1::types::RoomId;
+use lamprey_backend_core::types::{
+    admin::DlqEntry,
+    data::{SearchReindexQueue, SearchReindexQueueTarget},
+};
 use sqlx::query;
 use uuid::Uuid;
 
 use common::v1::types::{PaginationQuery, PaginationResponse, SearchDlqId};
 
-use crate::{data::DataSearchQueue, error::Result, types::RoomId};
+use crate::{data::DataSearchQueue, error::Result};
 
 use super::Postgres;
 
@@ -13,10 +17,16 @@ use super::Postgres;
 impl DataSearchQueue for Postgres {
     async fn search_reindex_queue_upsert(
         &mut self,
-        target_type: &str,
-        target_id: Uuid,
+        target: SearchReindexQueueTarget,
         last_id: Option<Uuid>,
     ) -> Result<()> {
+        let (target_id, target_type) = match target {
+            SearchReindexQueueTarget::Messages(id) => (*id, "messages"),
+            SearchReindexQueueTarget::Channels => (Uuid::nil(), "channels"),
+            SearchReindexQueueTarget::Rooms => (Uuid::nil(), "rooms"),
+            SearchReindexQueueTarget::Media => (Uuid::nil(), "media"),
+            SearchReindexQueueTarget::Users => (Uuid::nil(), "users"),
+        };
         let mut conn = self.acquire().await?;
         query!(
             "INSERT INTO search_reindex_queue (target_id, target_type, last_id) VALUES ($1, $2, $3) ON CONFLICT (target_id, target_type) DO UPDATE SET last_id = $3, updated_at = NOW()",
@@ -29,27 +39,17 @@ impl DataSearchQueue for Postgres {
         Ok(())
     }
 
-    async fn search_reindex_queue_list(
-        &mut self,
-        target_type: &str,
-        limit: u32,
-    ) -> Result<Vec<(Uuid, Option<Uuid>)>> {
-        let mut conn = self.acquire().await?;
-        let rows = query!(
-            r#"SELECT target_id, last_id FROM search_reindex_queue WHERE target_type = $1 ORDER BY updated_at ASC LIMIT $2"#,
-            target_type,
-            limit as i64
-        )
-        .fetch_all(conn.ext())
-        .await?;
-        Ok(rows.into_iter().map(|r| (r.target_id, r.last_id)).collect())
-    }
-
     async fn search_reindex_queue_delete(
         &mut self,
-        target_type: &str,
-        target_id: Uuid,
+        target: SearchReindexQueueTarget,
     ) -> Result<()> {
+        let (target_id, target_type) = match target {
+            SearchReindexQueueTarget::Messages(id) => (*id, "messages"),
+            SearchReindexQueueTarget::Channels => (Uuid::nil(), "channels"),
+            SearchReindexQueueTarget::Rooms => (Uuid::nil(), "rooms"),
+            SearchReindexQueueTarget::Media => (Uuid::nil(), "media"),
+            SearchReindexQueueTarget::Users => (Uuid::nil(), "users"),
+        };
         let mut conn = self.acquire().await?;
         query!(
             "DELETE FROM search_reindex_queue WHERE target_id = $1 AND target_type = $2",
@@ -61,34 +61,47 @@ impl DataSearchQueue for Postgres {
         Ok(())
     }
 
-    async fn search_reindex_queue_get(
-        &mut self,
-        target_type: &str,
-        target_id: Uuid,
-    ) -> Result<Option<Uuid>> {
+    async fn search_reindex_queue_poll(&mut self, limit: u32) -> Result<Vec<SearchReindexQueue>> {
         let mut conn = self.acquire().await?;
-        let row = query!(
-            r#"SELECT last_id FROM search_reindex_queue WHERE target_id = $1 AND target_type = $2"#,
-            target_id,
-            target_type
+        let rows = query!(
+            r#"SELECT target_id, target_type, last_id FROM search_reindex_queue ORDER BY updated_at ASC LIMIT $1"#,
+            limit as i64
         )
-        .fetch_optional(conn.ext())
+        .fetch_all(conn.ext())
         .await?;
-        Ok(row.and_then(|r| r.last_id))
+        Ok(rows
+            .into_iter()
+            .map(|r| {
+                let target = match r.target_type.as_str() {
+                    "messages" => SearchReindexQueueTarget::Messages(r.target_id.into()),
+                    "channels" => SearchReindexQueueTarget::Channels,
+                    "rooms" => SearchReindexQueueTarget::Rooms,
+                    "media" => SearchReindexQueueTarget::Media,
+                    "users" => SearchReindexQueueTarget::Users,
+                    _ => unreachable!("unknown target type"),
+                };
+                SearchReindexQueue {
+                    target,
+                    last_item_id: r.last_id,
+                }
+            })
+            .collect())
     }
 
-    async fn search_reindex_queue_upsert_room(&mut self, room_id: RoomId) -> Result<()> {
-        let mut conn = self.acquire().await?;
+    async fn search_reindex_queue_reset_room(&mut self, room_id: RoomId) -> Result<()> {
+        let mut conn = self.begin_tx().await?;
         query!(
             r#"INSERT INTO search_reindex_queue (target_id, target_type) SELECT id, 'channel' FROM channel WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NULL ON CONFLICT (target_id, target_type) DO NOTHING"#,
             *room_id,
         )
         .execute(conn.ext())
         .await?;
+        // TODO: audit log entries
+        conn.commit().await?;
         Ok(())
     }
 
-    async fn search_reindex_queue_upsert_all(&mut self) -> Result<()> {
+    async fn search_reindex_queue_reset_all_messages(&mut self) -> Result<()> {
         let mut conn = self.acquire().await?;
         query!(
             r#"INSERT INTO search_reindex_queue (target_id, target_type) SELECT id, 'channel' FROM channel WHERE deleted_at IS NULL AND archived_at IS NULL ON CONFLICT (target_id, target_type) DO NOTHING"#,

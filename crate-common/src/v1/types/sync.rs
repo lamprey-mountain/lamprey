@@ -102,7 +102,6 @@ pub enum MessageClient {
         channel_id: ChannelId,
         nonce: Option<String>,
         command: SignallingCommand,
-
         // /// send this command to one specific sfu
         // ///
         // /// intended to be used during migrations
@@ -610,7 +609,6 @@ pub enum MessageSync {
         user_id: UserId,
         channel_id: ChannelId,
         payload: SignallingEvent,
-
         // /// the sfu this came from
         // ///
         // /// this will only be populated during migrations, when there are two sfus

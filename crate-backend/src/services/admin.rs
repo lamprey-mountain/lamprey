@@ -9,7 +9,7 @@ use lamprey_backend_core::types::admin::{
 use subtle::ConstantTimeEq;
 use tokio::sync::RwLock;
 
-use crate::{config::ConfigInternal, error::Result, ServerStateInner};
+use crate::{config::ConfigInternal, error::Result, services::search::Reindex, ServerStateInner};
 
 pub struct ServiceAdmin {
     state: Arc<ServerStateInner>,
@@ -195,21 +195,24 @@ impl ServiceAdmin {
         Ok(AdminPurgeCacheResponse { stats })
     }
 
+    // TODO: rework
     pub async fn reindex_channel(&self, channel_id: ChannelId) -> Result<()> {
         let srv = self.state.services();
-        srv.search.reindex_channel(channel_id).await?;
+        srv.search
+            .reindex(Reindex::QueueMessages(channel_id))
+            .await?;
         Ok(())
     }
 
+    // TODO: rework
     pub async fn reindex_room(&self, room_id: RoomId) -> Result<()> {
-        let srv = self.state.services();
-        srv.search.reindex_room(room_id).await?;
-        Ok(())
+        todo!()
     }
 
+    // TODO: rework
     pub async fn reindex_everything(&self) -> Result<()> {
         let srv = self.state.services();
-        srv.search.reindex_everything().await?;
+        srv.search.reindex(Reindex::Everything).await?;
         Ok(())
     }
 }

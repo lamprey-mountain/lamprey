@@ -1246,6 +1246,30 @@ impl Channel {
 }
 
 impl ChannelType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ChannelType::Text => "Text",
+            ChannelType::Announcement => "Announcement",
+            ChannelType::ThreadPublic => "ThreadPublic",
+            ChannelType::ThreadPrivate => "ThreadPrivate",
+            ChannelType::ThreadForum2 => "ThreadForum2",
+            ChannelType::Dm => "Dm",
+            ChannelType::Gdm => "Gdm",
+            ChannelType::Forum => "Forum",
+            ChannelType::Voice => "Voice",
+            ChannelType::Broadcast => "Broadcast",
+            ChannelType::Category => "Category",
+            ChannelType::Calendar => "Calendar",
+            ChannelType::Forum2 => "Forum2",
+            ChannelType::Info => "Info",
+            ChannelType::Ticket => "Ticket",
+            ChannelType::Document => "Document",
+            ChannelType::DocumentComment => "DocumentComment",
+            ChannelType::Wiki => "Wiki",
+            ChannelType::Scripts => "Scripts",
+        }
+    }
+
     pub fn is_thread(&self) -> bool {
         matches!(
             self,

@@ -1,3 +1,23 @@
+// TODO: use a (proc)macro for this? read all files in service, create services
+//
+// ```rs
+// // services/foo/mod.rs
+// #[service]
+// pub struct ServiceFoo {
+//     state: Arc<ServerStateInner>,
+//     ...
+// }
+//
+// impl Service for ServiceFoo { ... }
+// ```
+//
+// then in services/mod.rs expand out
+// - pub mod foo;
+// - use foo::ServiceFoo;
+// - fn new() body
+// - fn start_background_tasks() body
+// - fn shutdown() body
+
 use std::sync::Arc;
 
 use cache::ServiceCache;
@@ -159,6 +179,7 @@ impl Services {
         self.cache.start_background_tasks();
         self.member_lists.start_background_tasks();
         self.media.start_background_tasks();
+        self.search.start_background_tasks();
     }
 
     // TODO: cleanly shutdown
@@ -167,3 +188,30 @@ impl Services {
         self.documents.unload_all().await;
     }
 }
+
+pub trait Service {
+    fn new(state: Arc<ServerStateInner>) -> Self;
+
+    /// start background tasks
+    fn start_background_tasks(&self) {}
+
+    // /// cleanly shutdown
+    // fn shutdown(&self) -> impl Future {}
+}
+
+// pub trait ResourceService {
+//     type Id;
+//     type Item;
+
+//     async fn get(&self, id: Self::Id) -> Result<Option<Self::Item>>;
+// }
+
+// pub trait CreatableResourceService: ResourceService {
+//     type Create;
+
+//     fn create(&self, create: Self::Create) -> Result<Self::Item>;
+// }
+
+// pub trait UpdateableResourceService: ResourceService {}
+// pub trait DeleteableResourceService: ResourceService {}
+// pub trait ListableResourceService: ResourceService {}

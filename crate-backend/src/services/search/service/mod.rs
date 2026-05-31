@@ -1,3 +1,3 @@
-mod reindex;
-mod search;
-mod stats;
+pub mod reindex;
+pub mod search;
+pub mod stats;
