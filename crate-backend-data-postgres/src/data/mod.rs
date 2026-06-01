@@ -734,4 +734,5 @@ pub trait DataRoomTemplate {
 //     async fn server_put(&mut self, hostname: Hostname, data: ServerData) -> Result<()>;
 //     async fn server_delete(&mut self, hostname: Hostname) -> Result<()>;
 //     async fn server_get(&mut self, hostname: Hostname) -> Result<ServerData>;
+//     // probably need some way to list servers
 // }

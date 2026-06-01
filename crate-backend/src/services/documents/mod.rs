@@ -436,6 +436,8 @@ impl ServiceDocuments {
         tags: Vec<DocumentTag>,
         query: HistoryParams,
     ) -> Result<HistoryPaginationSummary> {
+        // PERF: create some sort of streaming history processor
+
         let by_author = query.by_author.unwrap_or(true);
         let by_tag = query.by_tag.unwrap_or(true);
         let by_time = query.by_time.unwrap_or(3600) as i64;
@@ -548,6 +550,7 @@ impl ServiceDocuments {
     }
 }
 
+// TODO: move to `mod syncer`
 /// Handles document synchronization for a single client connection.
 ///
 /// This struct manages the lifecycle of document subscriptions for a connection,

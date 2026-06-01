@@ -17,7 +17,17 @@ impl ServiceFederation {
     }
 
     async fn update_database(&self, msg: MessageSync) -> Result<()> {
-        todo!()
+        match msg {
+            // TODO: handle user events
+            MessageSync::UserCreate { user } => todo!(),
+            MessageSync::UserUpdate { user } => todo!(),
+            MessageSync::UserDelete { id } => todo!(),
+
+            // TODO: handle more events
+            _ => {}
+        }
+
+        Ok(())
     }
 
     /// push a sync event to any known remote servers
