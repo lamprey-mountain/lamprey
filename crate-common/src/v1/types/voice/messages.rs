@@ -1,5 +1,7 @@
 //! messages between components of the voice system
 
+// TODO: i need some way to be able to update a user's permissions
+
 use std::net::SocketAddr;
 
 use bytes::Bytes;

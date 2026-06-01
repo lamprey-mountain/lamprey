@@ -13,15 +13,15 @@ use tracing::warn;
 
 use crate::{
     prelude::*,
-    util::{signalling::Signalling, SfuVoiceState, Subscriptions, TrackId},
+    util::{
+        permissions::Permissions, signalling::Signalling, SfuVoiceState, Subscriptions, TrackId,
+    },
 };
 
 /// a webrtc connection
 // NOTE: do i want to make these fields pub?
 pub struct Peer {
-    // TODO: better name for field?
-    ty: PeerType,
-    permissions: SfuPermissions,
+    pub kind: PeerKind,
     pub rtc: Rtc,
     pub signalling: Signalling,
     pub subscriptions: Subscriptions,
@@ -29,26 +29,28 @@ pub struct Peer {
     pub track_map: HashMap<SMid, TrackId>,
     pub mid_map: HashMap<TrackId, SMid>,
 
+    /// datachannel for speaking/voice activity messages
+    ///
+    /// users send `Speaking` to sfus. sfus send `SpeakingWithUserId` to each other and users.
     pub speaking_chan: Option<SChannelId>,
 }
 
 /// whos on the other end of this connection
-// TODO: better name for type?
-pub enum PeerType {
+pub enum PeerKind {
     /// an end user
-    User { voice_state: VoiceState },
+    User {
+        voice_state: VoiceState,
+        permissions: SfuPermissions,
+    },
 
     /// a cascading peer that bridges this shard to a remote SFU
     Cascade { remote_sfu: SfuId },
 }
 
 impl Peer {
-    pub fn new_user(vs: SfuVoiceState, rtc: Rtc) -> Self {
+    pub fn new(ty: PeerKind, rtc: Rtc) -> Self {
         Self {
-            ty: PeerType::User {
-                voice_state: vs.inner,
-            },
-            permissions: vs.permissions,
+            kind: ty,
             rtc,
             signalling: Signalling::new(),
             subscriptions: Subscriptions::default(),
@@ -56,25 +58,30 @@ impl Peer {
             mid_map: HashMap::new(),
             speaking_chan: None,
         }
+    }
+
+    pub fn new_user(vs: SfuVoiceState, rtc: Rtc) -> Self {
+        Self::new(
+            PeerKind::User {
+                voice_state: vs.inner,
+                permissions: vs.permissions,
+            },
+            rtc,
+        )
     }
 
     pub fn new_cascade(sfu_id: SfuId, rtc: Rtc) -> Self {
-        Self {
-            ty: PeerType::Cascade { remote_sfu: sfu_id },
-            permissions: SfuPermissions::all(),
-            rtc,
-            signalling: Signalling::new(),
-            subscriptions: Subscriptions::default(),
-            track_map: HashMap::new(),
-            mid_map: HashMap::new(),
-            speaking_chan: None,
-        }
+        Self::new(PeerKind::Cascade { remote_sfu: sfu_id }, rtc)
+    }
+
+    pub fn kind(&self) -> &PeerKind {
+        &self.kind
     }
 
     pub fn user_id(&self) -> Option<UserId> {
-        match &self.ty {
-            PeerType::User { voice_state } => Some(voice_state.user_id),
-            PeerType::Cascade { .. } => None,
+        match &self.kind {
+            PeerKind::User { voice_state, .. } => Some(voice_state.user_id),
+            PeerKind::Cascade { .. } => None,
         }
     }
 
@@ -116,9 +123,9 @@ impl Peer {
     pub fn handle_signalling(&mut self, cmd: SignallingCommand) -> Vec<SignallingEvent> {
         match cmd {
             SignallingCommand::Disconnect => self.rtc.disconnect(),
-            SignallingCommand::VoiceState { state } => match &mut self.ty {
-                PeerType::User { voice_state } => voice_state.apply(state),
-                PeerType::Cascade { .. } => warn!("got voice state update for cascade?"),
+            SignallingCommand::VoiceState { state } => match &mut self.kind {
+                PeerKind::User { voice_state, .. } => voice_state.apply(state),
+                PeerKind::Cascade { .. } => warn!("got voice state update for cascade?"),
             },
             SignallingCommand::Offer { sdp, tracks: _ } => {
                 match self.signalling.handle_offer(&mut self.rtc, sdp) {
@@ -160,6 +167,23 @@ impl Peer {
             Some(SessionDescription(offer.to_sdp_string()))
         } else {
             None
+        }
+    }
+
+    /// get permissions for this peer
+    ///
+    /// combines voice state and permissions
+    pub fn permissions(&self) -> Permissions {
+        match &self.kind {
+            PeerKind::User {
+                voice_state,
+                permissions,
+            } => Permissions {
+                video: permissions.video(),
+                audio: permissions.speak() && !voice_state.muted(),
+                deaf: voice_state.deafened(),
+            },
+            PeerKind::Cascade { .. } => Permissions::all(),
         }
     }
 }

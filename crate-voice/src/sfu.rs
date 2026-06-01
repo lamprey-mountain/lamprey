@@ -1,295 +1,117 @@
-//! main code for acting as a selective forwarding unit
-
-use crate::{
-    backbone::{BackboneComms, BackboneEvent},
-    backend::BackendConnection,
-    peer::{webrtc::PeerWebrtc, Command, CommandFull, Peer, PeerEndpoint},
-    util::extract_stun_ufrag,
+use std::{
+    collections::{HashMap, HashSet},
+    net::SocketAddr,
+    time::Instant,
 };
 
-use crate::PeerId;
-use anyhow::Result;
-use bytes::{Bytes, BytesMut};
-use common::v1::types::{
-    voice::{
+use bytes::Bytes;
+use common::{
+    v1::types::voice::{
         internal::SfuPermissions,
-        messages::{BackboneDatagram, BackboneDispatch, PeerEvent, SfuCommand, SfuEvent},
-        Mid, TrackMetadata, VoiceState,
+        messages::{SfuCommand, SfuEvent, SignallingCommand, SignallingEvent},
+        KeyframeRequestKind, MediaKind, Mid, Rid, Speaking, SpeakingWithUserId, TrackKey,
+        TrackMetadata, TrackMetadataWithUserId, VoiceState,
     },
-    ChannelId, SfuId, UserId,
+    v2::types::{ChannelId, UserId},
 };
-use dashmap::DashMap;
-use lamprey_backend_core::config::{Config, ConfigVoice};
-use std::{collections::HashMap, net::SocketAddr, sync::Arc};
-use tokio::{
-    net::UdpSocket,
-    sync::{broadcast, mpsc, RwLock},
-    task::LocalSet,
-};
+use futures_util::future::OptionFuture;
+use lamprey_backend_core::config::Config;
+use slotmap::SlotMap;
+use str0m::{media::Direction, Event, Output};
+use tokio::{net::UdpSocket, sync::mpsc};
 use tracing::{debug, warn};
 
-/// shared state
-pub struct StateInner {
-    pub id: RwLock<Option<SfuId>>,
-    pub config: Config,
-    pub voice_config: ConfigVoice,
-}
+use crate::{
+    backend::{BackendConnection, BackendHandle},
+    peer::{Peer, PeerKind},
+    util::{PeerId, SfuVoiceState, Track, TrackId, TrackState},
+};
 
-pub type State = Arc<StateInner>;
+use crate::prelude::*;
 
-/// the main entrypoint. creates one sfu
+/// main entry point
 pub struct Sfu {
-    state: State,
-    shards: Vec<SfuShard>,
-    calls: HashMap<ChannelId, CallHandle>,
-
-    // mapping to help routing
-    ufrag_to_peer: Arc<dashmap::DashMap<String, PeerId>>,
-    addr_to_peer: Arc<dashmap::DashMap<SocketAddr, PeerId>>,
-
-    sock_v4: Arc<UdpSocket>,
-    sock_v6: Arc<UdpSocket>,
-
-    backbone: BackboneComms,
-    backbone_rx: mpsc::UnboundedReceiver<BackboneEvent>,
-    backend: BackendConnection,
+    backend: BackendHandle,
+    shards: HashMap<ChannelId, mpsc::UnboundedSender<ShardCommand>>,
+    user_to_channel: HashMap<UserId, ChannelId>,
 }
 
-pub type CallHandle = Arc<CallHandleInner>;
+/// a single voice call
+pub struct Shard {
+    channel_id: ChannelId,
 
-pub struct CallHandleInner {
-    users: DashMap<UserId, PeerEndpoint>,
-    pub tracks: DashMap<(UserId, Mid), TrackMetadata>,
-    tx: broadcast::Sender<Arc<CommandFull>>,
+    peers: SlotMap<PeerId, Peer>,
+    tracks: SlotMap<TrackId, Track>,
+    users: HashMap<UserId, PeerId>,
+    addrs: HashMap<SocketAddr, PeerId>,
+
+    sock_v4: UdpSocket,
+    sock_v6: UdpSocket,
+    event_queue: Vec<SfuEvent>,
+    backend: BackendHandle,
+    control_rx: mpsc::UnboundedReceiver<ShardCommand>,
 }
 
-/// a set of tasks pinned to a single core
-pub struct SfuShard {
-    id: ShardId,
+/// a command sent to a shard
+pub enum ShardCommand {
+    CreatePeer {
+        state: VoiceState,
+        perms: SfuPermissions,
+    },
 
-    /// spawn futures here
-    set: LocalSet,
+    /// a signalling command that the user sent
+    Signalling {
+        user_id: UserId,
+        inner: SignallingCommand,
+    },
+
+    GenerateKeyframe {
+        user_id: UserId,
+        mid: Mid,
+        rid: Option<Rid>,
+        kind: KeyframeRequestKind,
+    },
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ShardId(pub usize);
 
 impl Sfu {
     pub async fn serve(config: Config) -> Result<()> {
-        let voice_config = config
-            .voice
-            .as_ref()
-            .expect("cannot start sfu with no voice config")
-            .clone();
+        let mut backend_conn = BackendConnection::connect(&config).await?;
+        let backend = backend_conn.handle();
 
-        let addr_v4 = SocketAddr::new(
-            crate::util::select_host_address_ipv4(voice_config.host_ipv4.as_deref())?,
-            voice_config.udp_port,
-        );
-        let sock_v4 = Arc::new(UdpSocket::bind(addr_v4).await?);
-
-        let addr_v6 = SocketAddr::new(
-            crate::util::select_host_address_ipv6(voice_config.host_ipv6.as_deref())?,
-            voice_config.udp_port,
-        );
-        let sock_v6 = Arc::new(UdpSocket::bind(addr_v6).await?);
-
-        let state = Arc::new(StateInner {
-            id: RwLock::new(None),
-            voice_config,
-            config,
-        });
-
-        let (backbone, backbone_rx) = BackboneComms::create(Arc::clone(&state))?;
-        let backend = BackendConnection::connect(Arc::clone(&state)).await?;
-
-        let me = Self {
-            state,
-            shards: vec![],
-            calls: HashMap::new(),
-            ufrag_to_peer: Arc::new(DashMap::new()),
-            addr_to_peer: Arc::new(DashMap::new()),
-            sock_v4,
-            sock_v6,
-            backbone,
-            backbone_rx,
+        let mut sfu = Self {
             backend,
+            shards: HashMap::new(),
+            user_to_channel: HashMap::new(),
         };
 
-        me.serve_inner().await
+        while let Ok(cmd) = backend_conn.poll().await {
+            sfu.handle_command(cmd).await;
+        }
+
+        Ok(())
     }
 
-    async fn serve_inner(mut self) -> Result<()> {
-        let voice_config = &self.state.voice_config;
-
-        let mut buf_v4 = BytesMut::with_capacity(2048);
-        let mut buf_v6 = BytesMut::with_capacity(2048);
-
-        let num_workers = voice_config
-            .workers
-            .unwrap_or_else(|| num_cpus::get() as u8) as usize;
-        for n in 0..num_workers {
-            self.shards.push(SfuShard {
-                id: ShardId(n),
-                set: LocalSet::new(),
-            });
-        }
-
-        loop {
-            buf_v4.resize(2000, 0);
-            buf_v6.resize(2000, 0);
-
-            tokio::select! {
-                Some(event) = self.backbone_rx.recv() => {
-                    self.handle_backbone_event(event)
-                }
-                Ok(command) = self.backend.poll() => {
-                    self.handle_command(command).await;
-                }
-                Ok((n, source)) = self.sock_v6.recv_from(&mut buf_v6) => {
-                    let packet = buf_v6.split_to(n).freeze();
-                    self.handle_packet(source, packet).await;
-                }
-                Ok((n, source)) = self.sock_v4.recv_from(&mut buf_v4) => {
-                    let packet = buf_v4.split_to(n).freeze();
-                    self.handle_packet(source, packet).await;
-                }
-            }
-        }
-    }
-
-    /// handle and forward a packet to peer
-    // NOTE: uses STUN demultiplexing to identify and forward packet to the peer
-    pub async fn handle_packet(&mut self, source: SocketAddr, data: Bytes) {
-        // TODO: make this less janky? maybe use `rtc.accepts(input)` instead?
-
-        if data.len() < 2 {
-            return;
-        }
-
-        // stun packets always start with 0x00 or 0x01
-        let is_stun = data[0] == 0x00 || data[0] == 0x01;
-
-        let peer_id = if is_stun {
-            // stun: extract ufrag and learn the ip:Port mapping
-            if let Some(ufrag) = extract_stun_ufrag(&data) {
-                if let Some(pid_ref) = self.ufrag_to_peer.get(&ufrag) {
-                    let pid = *pid_ref;
-                    // register/update the source address for future srtp packets
-                    self.addr_to_peer.insert(source, pid);
-                    Some(pid)
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        } else {
-            // srtp/srtcp: look up by previously learned ip:port
-            self.addr_to_peer
-                .get(&source)
-                .map(|ref_multi| *ref_multi.value())
-        };
-
-        if let Some((channel_id, user_id)) = peer_id {
-            if let Some(call) = self.calls.get(&channel_id) {
-                if let Some(peer) = call.users.get(&user_id) {
-                    match peer.value() {
-                        PeerEndpoint::Webrtc(p) => p.handle_network_packet(source, data),
-                        PeerEndpoint::Cascade(_) => warn!("got packet for cascade peer"),
-                    }
-                }
-            }
-        } else if is_stun {
-            warn!("couldn't demultiplex STUN packet from {}", source);
-        }
-    }
-
-    fn handle_backbone_event(&mut self, event: BackboneEvent) {
-        match event {
-            BackboneEvent::Dispatch { dispatch, .. } => match dispatch {
-                BackboneDispatch::Keyframe {
-                    user_id,
-                    mid,
-                    rid,
-                    kind,
-                } => {
-                    if let Some(channel_id) = self.find_channel_for_user(user_id) {
-                        self.peer_send(
-                            (channel_id, user_id),
-                            Command::GenerateKeyframe {
-                                mid,
-                                rid,
-                                kind,
-                                user_id,
-                            },
-                        );
-                    }
-                }
-                _ => {}
-            },
-            BackboneEvent::Datagram(dgram) => match dgram {
-                BackboneDatagram::Media(m) => {
-                    for call in self.calls.values() {
-                        for peer in call.users.iter() {
-                            peer.handle_media_data(m.clone());
-                        }
-                    }
-                }
-                BackboneDatagram::Speaking(s) => {
-                    for call in self.calls.values() {
-                        for peer in call.users.iter() {
-                            peer.handle_speaking(s.clone());
-                        }
-                    }
-                }
-            },
-            _ => {}
-        }
-    }
-
-    async fn handle_command(&mut self, command: SfuCommand) {
-        debug!("got command {command:?}");
-        match command {
+    async fn handle_command(&mut self, cmd: SfuCommand) {
+        match cmd {
             SfuCommand::Init { sfu_id } => {
-                let mut id = self.state.id.write().await;
-                *id = Some(sfu_id);
+                debug!(?sfu_id, "SFU Init");
             }
-
-            SfuCommand::RecalculateLatency { target_sfu } => {
-                let rtt = self.backbone.get_rtt(&target_sfu);
-                debug!("Latency for {}: {:?}", target_sfu, rtt);
-            }
-
-            // TODO: remove SfuCommand::MigrateUsers? sfus don't need to do anything for migrations
-            SfuCommand::MigrateUsers { .. } => todo!("unsure how to impl this command?"),
-
             SfuCommand::CreatePeer { state, permissions } => {
                 let channel_id = state.channel_id;
-                let user_id = state.user_id;
-                self.peer_create(channel_id, user_id, state, permissions);
+                let shard_tx = self.init_shard(channel_id).await;
+                let _ = shard_tx.send(ShardCommand::CreatePeer {
+                    state,
+                    perms: permissions,
+                });
             }
-            SfuCommand::PrepareCascade { sfu_id } => {
-                self.cascade_prepare(sfu_id);
-            }
-            SfuCommand::CreateCascade {
-                sfu_id,
-                token,
-                addr,
-            } => {
-                self.cascade_create(sfu_id, token, addr);
-            }
-
-            SfuCommand::RouteUpdate { .. } => todo!("do stuff with cascading peers"),
-            SfuCommand::Channel { .. } => todo!("update call?"),
-
-            // forward based on user_id
             SfuCommand::Signalling {
                 user_id,
                 channel_id,
                 inner,
             } => {
-                self.peer_send((channel_id, user_id), Command::Signalling(inner));
+                // PERF: don't create shard if it doesn't exist?
+                let shard_tx = self.init_shard(channel_id).await;
+                let _ = shard_tx.send(ShardCommand::Signalling { user_id, inner });
             }
             SfuCommand::GenerateKeyframe {
                 mid,
@@ -297,195 +119,578 @@ impl Sfu {
                 kind,
                 user_id,
             } => {
-                // find the call this user belongs to by searching all calls
-                if let Some(channel_id) = self.find_channel_for_user(user_id) {
-                    self.peer_send(
-                        (channel_id, user_id),
-                        Command::GenerateKeyframe {
-                            mid,
-                            rid,
-                            kind,
+                if let Some(channel_id) = self.user_to_channel.get(&user_id).copied() {
+                    let shard_tx = self.init_shard(channel_id).await;
+                    let _ = shard_tx.send(ShardCommand::GenerateKeyframe {
+                        user_id,
+                        mid,
+                        rid,
+                        kind,
+                    });
+                }
+            }
+
+            SfuCommand::RecalculateLatency { target_sfu: _ } => {
+                // SfuEvent::Latency { target_sfu: (), rtt: () }
+                todo!("get latency and send it back via an event")
+            }
+
+            // TODO: setting up cascade peers
+            // SfuCommand::PrepareCascade { sfu_id } => todo!(),
+            // SfuCommand::CreateCascade {
+            //     sfu_id,
+            //     token,
+            //     addr,
+            // } => todo!(),
+
+            // ignore for now
+            // SfuCommand::MigrateUsers { users, target_sfu } => todo!(),
+            // SfuCommand::RouteUpdate {
+            //     channel_id,
+            //     destinations,
+            // } => todo!(),
+            // SfuCommand::Channel { channel } => {}
+            _ => {}
+        }
+    }
+
+    async fn init_shard(&mut self, channel_id: ChannelId) -> mpsc::UnboundedSender<ShardCommand> {
+        if let Some(tx) = self.shards.get(&channel_id) {
+            return tx.clone();
+        }
+
+        // TODO: make sure the socket binds to a working address
+        let (tx, rx) = mpsc::unbounded_channel();
+        let sock_v4 = UdpSocket::bind("0.0.0.0:0")
+            .await
+            .expect("failed to bind v4");
+        let sock_v6 = UdpSocket::bind("[::]:0").await.expect("failed to bind v6");
+        debug!(
+            "Spawned SfuShard for channel {} on ports {:?}, {:?}",
+            channel_id,
+            sock_v4.local_addr().unwrap(),
+            sock_v6.local_addr().unwrap()
+        );
+
+        let backend = self.backend.clone();
+        let mut shard = Shard {
+            channel_id,
+            peers: SlotMap::with_key(),
+            tracks: SlotMap::with_key(),
+            users: HashMap::new(),
+            addrs: HashMap::new(),
+            sock_v4,
+            sock_v6,
+            event_queue: Vec::new(),
+            backend,
+            control_rx: rx,
+        };
+
+        tokio::spawn(async move {
+            shard.run().await;
+        });
+
+        self.shards.insert(channel_id, tx.clone());
+        tx
+    }
+}
+
+impl Shard {
+    pub async fn run(&mut self) {
+        let mut buf_v4 = [0u8; 2000];
+        let mut buf_v6 = [0u8; 2000];
+
+        loop {
+            for (peer_id, peer) in self.peers.iter_mut() {
+                if peer.subscriptions.dirty {
+                    let mut change = peer.rtc.sdp_api();
+                    for tid in &peer.subscriptions.tracks {
+                        if !peer.mid_map.contains_key(tid) {
+                            let track = &self.tracks[*tid];
+                            let mid = change.add_media(
+                                track.kind.into(),
+                                Direction::RecvOnly,
+                                None,
+                                None,
+                                None,
+                            );
+                            peer.mid_map.insert(*tid, mid);
+                            peer.track_map.insert(mid, *tid);
+                        }
+                    }
+
+                    // TODO: do something with the Result<Option<SdpOffer>>
+                    // peer.signalling.negotiate_if_needed(change);
+
+                    peer.subscriptions.dirty = false;
+                }
+
+                if let Some(sdp) = peer.negotiate_if_needed() {
+                    let user_id = todo!();
+                    let mut tracks = vec![];
+
+                    for (_, track) in self.tracks.iter().filter(|(_, t)| t.publisher == peer_id) {
+                        let Some(mid) = track.state.mid() else {
+                            continue;
+                        };
+
+                        tracks.push(TrackMetadataWithUserId {
+                            inner: TrackMetadata {
+                                kind: track.kind,
+                                key: track.key.clone(),
+                                mid: mid.into(),
+                                layers: track.layers.clone(),
+                            },
                             user_id,
-                        },
-                    );
+                        });
+                    }
+
+                    self.event_queue.push(SfuEvent::VoiceDispatch {
+                        user_id,
+                        channel_id: self.channel_id,
+                        payload: Box::new(SignallingEvent::Offer { sdp, tracks }),
+                    });
+                }
+            }
+
+            let instant = self.drain_all_peers().await;
+
+            for e in self.event_queue.drain(..) {
+                let _ = self.backend.send(e);
+            }
+
+            let timeout = OptionFuture::from(instant.map(|i| tokio::time::sleep_until(i.into())));
+
+            tokio::select! {
+                Ok((len, source)) = self.sock_v4.recv_from(&mut buf_v4) => {
+                    let packet = Bytes::copy_from_slice(&buf_v4[..len]);
+                    self.handle_network_packet(self.sock_v4.local_addr().unwrap(), source, packet, Instant::now()).await;
+                }
+
+                Ok((len, source)) = self.sock_v6.recv_from(&mut buf_v6) => {
+                    let packet = Bytes::copy_from_slice(&buf_v6[..len]);
+                    self.handle_network_packet(self.sock_v6.local_addr().unwrap(), source, packet, Instant::now()).await;
+                }
+
+                Some(cmd) = self.control_rx.recv() => {
+                    self.handle_command(cmd);
+                }
+
+                _ = timeout => {
+                    // TODO: send Input::Timeout to str0m?
                 }
             }
         }
     }
 
-    /// send a command to a peer
-    fn peer_send(&self, (channel_id, user_id): PeerId, command: Command) {
-        if let Some(call) = self.calls.get(&channel_id) {
-            if let Some(peer) = call.users.get(&user_id) {
-                (*peer).handle_command(command);
+    fn route_media(&mut self, publisher_id: PeerId, media: str0m::media::MediaData) {
+        let peer = &self.peers[publisher_id];
+        let Some(track_id) = peer.lookup_track(media.mid) else {
+            return;
+        };
+
+        let track = &self.tracks[track_id];
+        let always_sub = track.is_always_subscribed();
+        let perms = peer.permissions();
+
+        // enforce publisher permissions
+        let can_send = match (track.kind, &track.key) {
+            (MediaKind::Audio, TrackKey::User) => perms.audio,
+            _ => perms.video,
+        };
+
+        if !can_send {
+            return;
+        }
+
+        let peer_ids: Vec<PeerId> = self.peers.keys().collect();
+
+        for target_pid in peer_ids {
+            if target_pid == publisher_id {
+                continue;
+            }
+
+            let target = &mut self.peers[target_pid];
+            let target_perms = target.permissions();
+
+            // if target is deafened and track is audio, skip writing
+            if track.kind == MediaKind::Audio && target_perms.deaf {
+                continue;
+            }
+
+            // TODO: handle rid/simulcast
+            if always_sub || target.subscriptions.tracks.contains(&track_id) {
+                target.write_media(track_id, &media);
             }
         }
     }
 
-    /// find which call a peer belongs to
-    fn find_channel_for_user(&self, user_id: UserId) -> Option<ChannelId> {
-        // NOTE: this could be optimized, but does it need to be?
-        for (channel_id, call) in self.calls.iter() {
-            for uid in call.users.iter().map(|p| *p.key()) {
-                if uid == user_id {
-                    return Some(*channel_id);
+    /// handle a udp datagram
+    // PERF: prolly should look into that stun/ufrag/whatever thing that i couldnt get working in the old impl
+    async fn handle_network_packet(
+        &mut self,
+        destination: SocketAddr,
+        source: SocketAddr,
+        data: Bytes,
+        now: Instant,
+    ) {
+        let input = str0m::Input::Receive(
+            now,
+            str0m::net::Receive {
+                proto: str0m::net::Protocol::Udp,
+                source,
+                destination,
+                contents: data.as_ref().try_into().unwrap(),
+            },
+        );
+
+        let peer_id = match self.addrs.get(&source) {
+            Some(&id) => id,
+            None => {
+                // i don't know which peer this is from...
+                // find a peer that accepts this input
+
+                let peer_id = self.peers.iter().find_map(|(peer_id, peer)| {
+                    if peer.rtc.accepts(&input) {
+                        Some(peer_id)
+                    } else {
+                        None
+                    }
+                });
+
+                if let Some(peer_id) = peer_id {
+                    self.addrs.insert(source, peer_id);
+                    peer_id
+                } else {
+                    warn!("could not find peer for packet");
+                    return;
+                }
+            }
+        };
+
+        if let Err(e) = self.peers[peer_id].rtc.handle_input(input) {
+            warn!("Input error: {:?}", e);
+        }
+    }
+
+    /// drain all peers. returns the instant to wait until.
+    async fn drain_all_peers(&mut self) -> Option<Instant> {
+        let mut min_instant = None;
+
+        let peer_ids: Vec<PeerId> = self.peers.keys().collect();
+        for peer_id in peer_ids {
+            if let Some(timeout) = self.drain_peer(peer_id).await {
+                match min_instant {
+                    Some(t) => {
+                        if timeout < t {
+                            min_instant = Some(timeout);
+                        }
+                    }
+                    None => min_instant = Some(timeout),
+                }
+            }
+        }
+
+        min_instant
+    }
+
+    /// poll and handle every event for a peer. returns the instant to wait until if a timeout is encountered.
+    async fn drain_peer(&mut self, peer_id: PeerId) -> Option<Instant> {
+        while let Ok(output) = self.peers[peer_id].rtc.poll_output() {
+            match output {
+                Output::Transmit(t) => {
+                    if t.source.is_ipv4() {
+                        let _ = self.sock_v4.send_to(&t.contents, t.destination).await;
+                    } else {
+                        let _ = self.sock_v6.send_to(&t.contents, t.destination).await;
+                    }
+                }
+                Output::Event(e) => self.handle_peer_event(peer_id, e).await,
+                Output::Timeout(instant) => {
+                    return Some(instant);
                 }
             }
         }
         None
     }
 
-    fn peer_create(
-        &mut self,
-        channel_id: ChannelId,
-        user_id: UserId,
-        state: VoiceState,
-        permissions: SfuPermissions,
-    ) {
-        let call = self.calls.entry(channel_id).or_insert_with(|| {
-            Arc::new(CallHandleInner {
-                users: DashMap::new(),
-                tracks: DashMap::new(),
-                tx: broadcast::channel(100).0,
-            })
-        });
-
-        let sock_v4 = Arc::clone(&self.sock_v4);
-        let sock_v6 = Arc::clone(&self.sock_v6);
-
-        let peer = PeerWebrtc::spawn(
-            user_id,
-            state,
-            permissions,
-            sock_v4,
-            sock_v6,
-            call.tx.subscribe(),
-            Arc::clone(&call),
-        );
-
-        let ufrag_map = Arc::clone(&self.ufrag_to_peer);
-
-        // TODO: spawn below future on local set?
-        // self.get_channel_shard(channel_id);
-        // self.shards[0].set.spawn_local(future);
-
-        let peer2 = peer.clone();
-        let backend2 = self.backend.handle();
-        let call2 = Arc::clone(&call);
-        tokio::spawn(async move {
-            let mut peer = peer2;
-            let call = call2;
-            let backend = backend2;
-
-            while let Some(event) = peer.poll().await {
-                match event {
-                    PeerEvent::IceUfrag(ufrag) => {
-                        ufrag_map.insert(ufrag, (channel_id, user_id));
+    async fn handle_peer_event(&mut self, peer_id: PeerId, event: Event) {
+        match event {
+            Event::Connected => {
+                let peer = &self.peers[peer_id];
+                let peer_type = match peer.kind() {
+                    PeerKind::User { voice_state, .. } => {
+                        format!("User({})", voice_state.user_id)
                     }
-                    PeerEvent::Connected => {
-                        debug!("Peer {} connected in channel {}", user_id, channel_id);
+                    PeerKind::Cascade { remote_sfu } => {
+                        format!("Cascade({})", remote_sfu)
                     }
-                    PeerEvent::Disconnected => {
-                        // TODO: remove ufrag/addr mappings
-                        // TODO: remove peer
-                        // TODO: remove call tracks from this user
-                    }
-                    // TODO: log _e
-                    PeerEvent::MediaAdded(m) => {
-                        call.tracks
-                            .insert((m.user_id, m.inner.mid.into()), m.inner.clone());
+                };
+                debug!(
+                    %peer_type,
+                    channel_id = ?self.channel_id,
+                    "Peer connected",
+                );
+            }
 
-                        if let Err(_e) = call
-                            .tx
-                            .send(Arc::new(CommandFull::Inner(Command::MediaAdded(m))))
-                        {
-                            warn!("failed to send MediaAdded command");
+            Event::MediaAdded(m) => {
+                if let Some(track_id) = self.peers[peer_id].lookup_track(m.mid) {
+                    self.tracks[track_id].state = TrackState::Open(m.mid);
+                }
+            }
+            Event::MediaData(m) => self.route_media(peer_id, m),
+            // Event::MediaChanged(media_changed) => todo!(),
+            Event::ChannelOpen(chan_id, label) => {
+                // TODO: use protocol instead of label
+                // self.peers[peer_id].rtc.channel(chan_id).unwrap().config().unwrap().protocol == "speaking";
+
+                if label == "speaking" {
+                    self.peers[peer_id].speaking_chan = Some(chan_id);
+                }
+            }
+            Event::ChannelData(data) => {
+                if self.peers[peer_id].speaking_chan == Some(data.id) {
+                    if let Ok(speaking) = Speaking::from_bytes(&data.data) {
+                        let user_id = self.peers[peer_id]
+                            .user_id()
+                            .expect("TODO: handle cascading peers sending SpeakingWithUserId?");
+
+                        // map the mid from the publisher's perspective to the track id
+                        let Some(track_id) = self.peers[peer_id].lookup_track(speaking.mid.into())
+                        else {
+                            // NOTE: maybe return an error to the user "cannot send speaking for non existent mid"
+                            warn!("speaking mid not found for publisher");
+                            return;
+                        };
+
+                        let perms = self.peers[peer_id].permissions();
+                        let track = &self.tracks[track_id];
+
+                        // enforce publisher permissions
+                        let can_send = match (track.kind, &track.key) {
+                            (MediaKind::Audio, TrackKey::User) => perms.audio,
+                            _ => perms.video,
+                        };
+
+                        if !can_send {
+                            return;
                         }
-                    }
-                    PeerEvent::MediaData(m) => {
-                        if let Err(_e) = call.tx.send(Arc::new(CommandFull::MediaData(m))) {
-                            warn!("failed to send MediaData command");
-                        }
-                    }
-                    PeerEvent::Speaking(s) => {
-                        if let Err(_e) = call.tx.send(Arc::new(CommandFull::Speaking(s))) {
-                            warn!("failed to send Speaking command");
-                        }
-                    }
-                    PeerEvent::Signalling(s) => {
-                        if let Err(e) = backend.send(SfuEvent::VoiceDispatch {
-                            user_id,
-                            channel_id,
-                            payload: Box::new(s),
-                        }) {
-                            warn!("failed to send signalling event to backend: {:?}", e);
-                        }
-                    }
-                    PeerEvent::KeyframeRequest {
-                        source_mid,
-                        user_id: target_user_id,
-                        kind,
-                        rid,
-                    } => {
-                        if let Some(target_peer) = call.users.get(&target_user_id) {
-                            target_peer.handle_command(Command::GenerateKeyframe {
-                                mid: source_mid.into(),
-                                rid: rid.map(|r| r.into()),
-                                kind: kind.into(),
-                                user_id: target_user_id,
-                            });
+
+                        for (target_peer_id, target_peer) in self.peers.iter_mut() {
+                            if target_peer_id == peer_id {
+                                continue;
+                            }
+
+                            let target_perms = target_peer.permissions();
+
+                            // if target is deafened and track is audio, skip writing speaking indicator
+                            if track.kind == MediaKind::Audio && target_perms.deaf {
+                                continue;
+                            }
+
+                            // map track id to the target peer's mid
+                            let Some(&target_mid) = target_peer.mid_map.get(&track_id) else {
+                                continue;
+                            };
+
+                            if let Some(chan) = target_peer.speaking_chan {
+                                if let Some(mut c) = target_peer.rtc.channel(chan) {
+                                    let speaking_with_uid = SpeakingWithUserId {
+                                        mid: target_mid.into(),
+                                        flags: speaking.flags,
+                                        user_id,
+                                    };
+                                    let _ = c.write(true, &speaking_with_uid.to_bytes());
+                                }
+                            }
                         }
                     }
                 }
             }
+            Event::ChannelClose(chan_id) => {
+                if self.peers[peer_id].speaking_chan == Some(chan_id) {
+                    self.peers[peer_id].speaking_chan = None;
+                }
+            }
 
-            debug!("Event loop for peer {} ended", user_id);
-        });
+            Event::KeyframeRequest(keyframe_request) => {
+                if let Some(track_id) = self.peers[peer_id].lookup_track(keyframe_request.mid) {
+                    let track = &self.tracks[track_id];
+                    let publisher_peer_id = track.publisher;
+                    if let Some(mut w) = self.peers[publisher_peer_id]
+                        .rtc
+                        .writer(keyframe_request.mid)
+                    {
+                        let _ = w.request_keyframe(
+                            keyframe_request.rid.map(Into::into),
+                            keyframe_request.kind.into(),
+                        );
+                    }
+                }
+            }
 
-        call.users.insert(user_id, PeerEndpoint::Webrtc(peer));
-    }
-
-    fn cascade_prepare(&mut self, sfu_id: SfuId) {
-        let token: String = std::iter::repeat_with(fastrand::alphanumeric)
-            .take(32)
-            .collect();
-        self.backbone.add_pending_token(token.clone(), sfu_id);
-
-        let addr = format!(
-            "{}:{}",
-            self.state
-                .voice_config
-                .host_ipv4
-                .as_deref()
-                .or(self.state.voice_config.host_ipv6.as_deref())
-                .unwrap(),
-            self.state.voice_config.quic_port
-        )
-        .parse()
-        .unwrap();
-
-        if let Err(e) = self.backend.send(SfuEvent::CascadePrepared {
-            sfu_id,
-            token,
-            addr,
-        }) {
-            warn!("failed to send CascadePrepared event: {:?}", e);
+            // TODO: handle other events?
+            // Event::IceConnectionStateChange(ice_connection_state) => todo!(),
+            // Event::PeerStats(peer_stats) => todo!(),
+            // Event::MediaIngressStats(media_ingress_stats) => todo!(),
+            // Event::MediaEgressStats(media_egress_stats) => todo!(),
+            // Event::EgressBitrateEstimate(bwe_kind) => todo!(),
+            // Event::StreamPaused(stream_paused) => todo!(),
+            _ => {}
         }
     }
 
-    fn cascade_create(&mut self, sfu_id: SfuId, token: String, addr: SocketAddr) {
-        let mut backbone = self.backbone.clone();
-        tokio::spawn(async move {
-            if let Err(e) = backbone.connect(addr, token, sfu_id).await {
-                warn!("failed to connect to remote sfu {}: {:?}", sfu_id, e);
-            }
-        });
-    }
+    /// handle a shard command
+    fn handle_command(&mut self, cmd: ShardCommand) {
+        match cmd {
+            ShardCommand::CreatePeer { state, perms } => {
+                let mut rtc = str0m::RtcConfig::new()
+                    .set_ice_lite(true)
+                    .build(Instant::now());
 
-    /// get the shard id this channel belongs to
-    // TODO: use this?
-    fn get_channel_shard(&self, channel_id: ChannelId) -> ShardId {
-        let idx = (channel_id.as_u128() % self.shards.len() as u128) as usize;
-        ShardId(idx)
+                if let Ok(addr) = self.sock_v4.local_addr() {
+                    if let Ok(c) = str0m::Candidate::host(addr, "udp") {
+                        rtc.add_local_candidate(c);
+                    }
+                }
+
+                if let Ok(addr) = self.sock_v6.local_addr() {
+                    if let Ok(c) = str0m::Candidate::host(addr, "udp") {
+                        rtc.add_local_candidate(c);
+                    }
+                }
+
+                let user_id = state.user_id;
+                let voice_state = SfuVoiceState {
+                    inner: state,
+                    permissions: perms,
+                };
+                let peer = Peer::new_user(voice_state, rtc);
+                let peer_id = self.peers.insert(peer);
+                self.users.insert(user_id, peer_id);
+            }
+            ShardCommand::Signalling { user_id, inner } => {
+                if let Some(&peer_id) = self.users.get(&user_id) {
+                    match &inner {
+                        // update subscriptions
+                        SignallingCommand::Subscribe { subs } => {
+                            let mut tracks = HashSet::new();
+                            for s in subs {
+                                let Some(&peer_id) = self.users.get(&s.user_id) else {
+                                    // maybe return an error?
+                                    continue;
+                                };
+                                if let Some(track_id) =
+                                    self.peers[peer_id].lookup_track(s.mid.into())
+                                {
+                                    tracks.insert(track_id);
+                                }
+                            }
+
+                            self.peers[peer_id]
+                                .subscriptions
+                                .update(subs.clone(), tracks);
+
+                            return;
+                        }
+
+                        SignallingCommand::Offer { tracks, .. } => {
+                            let peer = &mut self.peers[peer_id];
+
+                            // register new tracks
+                            for track in tracks {
+                                let track_exists = self.tracks.iter().any(|(_, t)| {
+                                    t.publisher == peer_id
+                                        && t.state.mid() == Some(track.mid.into())
+                                });
+
+                                if !track_exists {
+                                    let mid: SMid = track.mid.into();
+                                    let track_id = self.tracks.insert(Track {
+                                        publisher: peer_id,
+                                        kind: track.kind,
+                                        key: track.key.clone(),
+                                        layers: Vec::new(),
+                                        state: TrackState::Negotiating(mid),
+                                    });
+
+                                    peer.track_map.insert(mid, track_id);
+                                    peer.mid_map.insert(track_id, mid);
+                                }
+
+                                // TODO: removing tracks? maybe a new TrackState?
+                            }
+
+                            // all tracks from this user/peer
+                            let all_peer_tracks: Vec<TrackMetadata> = self
+                                .tracks
+                                .iter()
+                                .filter(|(_, t)| t.publisher == peer_id)
+                                .filter_map(|(_, t)| {
+                                    t.state.mid().map(|mid| TrackMetadata {
+                                        kind: t.kind,
+                                        key: t.key.clone(),
+                                        mid: mid.into(),
+                                        layers: t.layers.clone(),
+                                    })
+                                })
+                                .collect();
+
+                            // broadcast a Tracks event to everyone in the channel
+                            let event = Box::new(SignallingEvent::Tracks {
+                                user_id,
+                                tracks: all_peer_tracks,
+                            });
+
+                            for (id, peer) in self.peers.iter() {
+                                if id == peer_id {
+                                    continue;
+                                }
+
+                                // find which user_id this peer has
+                                let Some(target_user_id) = peer.user_id() else {
+                                    continue;
+                                };
+
+                                self.event_queue.push(SfuEvent::VoiceDispatch {
+                                    user_id: target_user_id,
+                                    channel_id: self.channel_id,
+                                    payload: event.clone(),
+                                });
+                            }
+
+                            // TODO: user audio autosubscribe
+                        }
+
+                        _ => {}
+                    }
+
+                    let events = self.peers[peer_id]
+                        .handle_signalling(inner)
+                        .into_iter()
+                        .map(|e| SfuEvent::VoiceDispatch {
+                            user_id,
+                            channel_id: self.channel_id,
+                            payload: Box::new(e),
+                        });
+                    self.event_queue.extend(events);
+                } else {
+                    warn!("got signalling event for non existant peer")
+                }
+            }
+            ShardCommand::GenerateKeyframe {
+                user_id,
+                mid,
+                rid,
+                kind,
+            } => {
+                if let Some(&pid) = self.users.get(&user_id) {
+                    if let Some(mut w) = self.peers[pid].rtc.writer(mid.into()) {
+                        let r = rid.map(|r| r.into());
+                        let _ = w.request_keyframe(r, kind.into());
+                    }
+                }
+            }
+        }
     }
 }

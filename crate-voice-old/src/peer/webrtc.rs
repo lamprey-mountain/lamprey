@@ -176,20 +176,6 @@ impl PeerWebrtc {
     }
 }
 
-// TODO: don't send any audio if `self.voice_state.deafened()`
-// TODO: don't receive any audio if `self.voice_state.muted()`
-// TODO: disallow sending user audio if permissions.speak is denied
-// TODO: disallow sending user video if permissions.video is denied
-// TODO: disallow starting screenshare, camera, etc if permissions.video is denied
-
-// logic summary
-// if permissions.video is denied, ONLY allow a track of kind=audio, key=user
-// if permissions.speak is denied, DISALLOW a track of kind=audio, key=user (other keys are fine, including screenshare. screenshare can have audio.)
-// if both are denied, don't allow creating any tracks at all
-// if both are allowed, allow creating any tracks
-
-// FIXME: map speaking mids from source mid to local peer's mid
-
 impl PeerWebrtcInner {
     async fn run(mut self) -> Result<(), anyhow::Error> {
         loop {

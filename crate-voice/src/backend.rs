@@ -1,9 +1,8 @@
-//! connection to the backend/master
+use crate::prelude::*;
 
-use crate::sfu::State;
-use anyhow::Result;
 use common::v1::types::voice::messages::{SfuCommand, SfuEvent};
 use futures_util::{SinkExt, StreamExt};
+use lamprey_backend_core::config::Config;
 use std::time::Duration;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tokio_tungstenite::{
@@ -17,30 +16,32 @@ pub struct BackendConnection {
     command_rx: UnboundedReceiver<SfuCommand>,
 }
 
+/// a way to send events to the api server
+#[derive(Clone)]
 pub struct BackendHandle {
     event_tx: UnboundedSender<SfuEvent>,
 }
 
 impl BackendConnection {
-    /// connect to the server and start receiving events
-    pub async fn connect(state: State) -> Result<Self> {
+    pub async fn connect(config: &Config) -> Result<Self> {
         let (event_tx, mut event_rx) = mpsc::unbounded_channel::<SfuEvent>();
         let (command_tx, command_rx) = mpsc::unbounded_channel::<SfuCommand>();
 
-        let url_str = format!("{}api/v1/internal/rpc", state.config.api_url)
+        let url_str = format!("{}api/v1/internal/rpc", config.api_url)
             .replace("http", "ws")
             .replace("https", "wss");
 
-        let token = state.voice_config.token.clone();
+        let voice_config = config.voice.clone().expect("voice config required");
+        let token = voice_config.token.clone();
 
         tokio::spawn(async move {
             let mut backoff = 1u64;
             loop {
                 let result: Result<()> = async {
-                    let mut request = url_str.parse::<String>()?.into_client_request()?;
+                    let mut request = url_str.parse::<String>().expect("infallible").into_client_request()?;
                     let auth_header = format!("Server {}", token)
                         .try_into()
-                        .map_err(|e| anyhow::anyhow!("Invalid auth token: {e}"))?;
+                        .map_err(|e| Error::InvalidAuthToken(format!("{e}")))?;
                     request.headers_mut().insert("Authorization", auth_header);
 
                     info!("Connecting to backend websocket...");
@@ -100,14 +101,14 @@ impl BackendConnection {
         self.command_rx
             .recv()
             .await
-            .ok_or_else(|| anyhow::anyhow!("Backend command channel closed"))
+            .ok_or_else(|| Error::Channel("Backend command channel closed".to_string()))
     }
 
     pub fn send(&self, event: SfuEvent) -> Result<()> {
         debug!("send sfu event {event:?}");
         self.event_tx
             .send(event)
-            .map_err(|e| anyhow::anyhow!("Failed to queue event: {e}"))
+            .map_err(|e| Error::Channel(format!("Failed to queue event: {e}")))
     }
 
     pub fn handle(&self) -> BackendHandle {
@@ -122,6 +123,6 @@ impl BackendHandle {
         debug!("send sfu event {event:?}");
         self.event_tx
             .send(event)
-            .map_err(|e| anyhow::anyhow!("Failed to queue event: {e}"))
+            .map_err(|e| Error::Channel(format!("Failed to queue event: {e}")))
     }
 }

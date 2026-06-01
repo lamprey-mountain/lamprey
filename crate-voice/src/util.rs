@@ -1,92 +1,130 @@
-//! random utilities
+use std::collections::HashSet;
 
-use std::net::IpAddr;
+use crate::prelude::*;
+use common::{
+    v1::types::{
+        util::Time,
+        voice::{
+            internal::SfuPermissions, MediaKind, Subscription, TrackKey, TrackLayer, VoiceState,
+        },
+    },
+    v2::types::{ChannelId, SfuId},
+};
+use slotmap::new_key_type;
 
-use anyhow::{anyhow, Result};
-use systemstat::{Platform, System};
-use tracing::debug;
+pub mod router;
+pub mod signalling;
+pub mod permissions;
 
-pub fn select_host_address_ipv4(host_ip: Option<&str>) -> Result<IpAddr> {
-    if let Some(ip) = host_ip {
-        if let Ok(addr) = ip.parse() {
-            debug!("using configured ipv4 addr {addr}");
-            return Ok(addr);
-        }
-    }
+new_key_type! {
+    /// slotmap key for a webrtc peer
+    pub struct PeerId;
 
-    let system = System::new();
-    let networks = system
-        .networks()
-        .map_err(|e| anyhow!("failed to list network interfaces: {}", e))?;
-
-    for net in networks.values() {
-        for n in &net.addrs {
-            if let systemstat::IpAddr::V4(v) = n.addr {
-                if !v.is_loopback() && !v.is_link_local() && !v.is_broadcast() && !v.is_private() {
-                    debug!("selected ipv4 addr {v}");
-                    return Ok(IpAddr::V4(v));
-                }
-            }
-        }
-    }
-
-    Err(anyhow!("Found no usable ipv4 network interface"))
+    /// slotmap key for a track
+    ///
+    /// mids are local to each peer, `TrackId`s are shared
+    pub struct TrackId;
 }
 
-pub fn select_host_address_ipv6(host_ip: Option<&str>) -> Result<IpAddr> {
-    if let Some(ip) = host_ip {
-        if let Ok(addr) = ip.parse() {
-            debug!("using configured ipv6 addr {addr}");
-            return Ok(addr);
-        }
-    }
-    let system = System::new();
-    let networks = system
-        .networks()
-        .map_err(|e| anyhow!("failed to list network interfaces: {}", e))?;
+/// the current state of a webrtc track
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TrackState {
+    /// track exists but needs to be created
+    Pending,
 
-    for net in networks.values() {
-        for n in &net.addrs {
-            if let systemstat::IpAddr::V6(v) = n.addr {
-                if !v.is_loopback()
-                    && !v.is_unicast_link_local()
-                    && !v.is_multicast()
-                    && !v.is_unique_local()
-                {
-                    debug!("selected ipv6 addr {v}");
-                    return Ok(IpAddr::V6(v));
-                }
-            }
-        }
-    }
+    /// we have it in our local sdp, needs to be sent to peer
+    Negotiating(SMid),
 
-    Err(anyhow!("Found no usable ipv6 network interface"))
+    /// data can be sent through this track
+    Open(SMid),
 }
 
-pub fn extract_stun_ufrag(data: &[u8]) -> Option<String> {
-    if data.len() < 24 {
-        return None;
-    }
-
-    // Skip header
-    let mut pos = 20;
-
-    while pos + 4 <= data.len() {
-        let attr_type = u16::from_be_bytes([data[pos], data[pos + 1]]);
-        let attr_len = u16::from_be_bytes([data[pos + 2], data[pos + 3]]) as usize;
-        pos += 4;
-
-        if attr_type == 0x0006 {
-            // USERNAME attribute
-            if pos + attr_len <= data.len() {
-                let username = String::from_utf8_lossy(&data[pos..pos + attr_len]);
-                // ICE username is usually "local_ufrag:remote_ufrag" or just "local_ufrag"
-                return Some(username.split(':').next().unwrap_or(&username).to_string());
-            }
+impl TrackState {
+    pub fn mid(&self) -> Option<SMid> {
+        match self {
+            TrackState::Pending => None,
+            TrackState::Negotiating(mid) => Some(*mid),
+            TrackState::Open(mid) => Some(*mid),
         }
-
-        // Attributes are padded to 4 bytes
-        pos += (attr_len + 3) & !3;
     }
-    None
 }
+
+pub struct Track {
+    pub publisher: PeerId,
+    pub kind: MediaKind,
+    pub key: TrackKey,
+    pub layers: Vec<TrackLayer>,
+
+    /// the track state for the *publisher* of the track
+    // NOTE: maybe i want to remove this from Track and make TrackState management part of Peer?
+    pub state: TrackState,
+}
+
+/// a voice state with extra info, for the server
+pub struct SfuVoiceState {
+    pub inner: VoiceState,
+    pub permissions: SfuPermissions,
+}
+
+/// voice state for a cascade peer
+// NOTE: may remove if this isnt useful
+pub struct CascadeVoiceState {
+    pub sfu_id: SfuId,
+    pub channel_id: ChannelId,
+    pub joined_at: Time,
+}
+
+impl Track {
+    /// whether this track should always be subscribed
+    // NOTE: im not sure if this is a good idea or not. this feels like it could retrospectively be a strange edge case.
+    pub fn is_always_subscribed(&self) -> bool {
+        self.kind == MediaKind::Audio && self.key == TrackKey::User
+    }
+}
+
+/// what the peer is subscribed to
+#[derive(Debug, Default)]
+pub struct Subscriptions {
+    /// list of this peer's subscriptions
+    pub subs: Vec<Subscription>,
+
+    /// which tracks are we currently subscribed to
+    pub tracks: HashSet<TrackId>,
+
+    /// if true, try to create missing tracks
+    pub dirty: bool,
+}
+
+impl Subscriptions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn update(&mut self, subs: Vec<Subscription>, tracks: HashSet<TrackId>) {
+        if self.tracks != tracks {
+            self.dirty = true;
+        }
+        self.subs = subs;
+        self.tracks = tracks;
+    }
+
+    // /// remove all subscriptions to a user's stream
+    // ///
+    // /// for when a peer disconnects
+    // pub fn remove_user(&mut self, _user_id: UserId) {
+    //     // TODO: Implement track lookup by user_id to filter `self.tracks`
+    //     todo!()
+    // }
+}
+
+// fn asdf() {
+//     use str0m::media::{Simulcast, SimulcastLayer};
+//     let mut sim = Simulcast::new();
+//     let layer = SimulcastLayer::new_with_attributes("a")
+//         // .max_width(max_width)
+//         // .max_height(max_height)
+//         // .max_br(max_br)
+//         // .max_fps(max_fps)
+//         .build();
+//     sim.add_send_layer(layer);
+// }
