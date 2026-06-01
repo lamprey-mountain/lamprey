@@ -425,28 +425,43 @@ pub enum TrackKey {
     Other(String),
 }
 
-// TODO: doc comment
+// NOTE: is this necessary? should i pass around TrackEncoding directly?
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct TrackLayer {
-    pub rid: Rid,
     pub encoding: TrackEncoding,
 }
 
 /// the encoding of the track
-// TODO: explicitly specify bitrate, framerate, resolution?
+// TODO: provide a way to explicitly specify bitrate, framerate, resolution instead of only providing presets?
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum TrackEncoding {
-    /// source resolution
+    /// pass the source video through untouched
     Source,
 
-    // /// reduced resolution
-    // Reduced,
-    /// reduced thumbnail resolution
+    /// full hd
+    Full,
+
+    /// barely usable
+    Reduced,
+
+    /// low bandwidth, for thumbnails
     Thumbnail,
+}
+
+impl TrackEncoding {
+    /// get the rid for this encoding
+    pub fn rid(&self) -> Rid {
+        match self {
+            TrackEncoding::Source => Rid::new("s"),
+            TrackEncoding::Full => Rid::new("f"),
+            TrackEncoding::Reduced => Rid::new("r"),
+            TrackEncoding::Thumbnail => Rid::new("t"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -703,6 +718,7 @@ pub struct ChannelVoice {
     // TODO: discord has these, unsure if i want to add these too
     // pub region: Option<String>,
     // pub video_quality: Option<u64>,
+    // maybe use TrackEncoding for video quality? max_video_quality or video_quality_limit?
     // /// any currently active call
     // pub call: Option<Call>,
 }

@@ -201,6 +201,17 @@ impl Shard {
         let mut buf_v6 = [0u8; 2000];
 
         loop {
+            let dead_peers: Vec<_> = self
+                .peers
+                .iter()
+                .filter(|(_, p)| !p.rtc.is_alive())
+                .map(|(id, _)| id)
+                .collect();
+
+            for pid in dead_peers {
+                self.handle_disconnect(pid);
+            }
+
             for (peer_id, peer) in self.peers.iter_mut() {
                 if peer.subscriptions.dirty {
                     let mut change = peer.rtc.sdp_api();
@@ -226,7 +237,9 @@ impl Shard {
                 }
 
                 if let Some(sdp) = peer.negotiate_if_needed() {
-                    let user_id = todo!();
+                    let user_id = peer
+                        .user_id()
+                        .expect("TODO: better error handling, cascade support");
                     let mut tracks = vec![];
 
                     for (_, track) in self.tracks.iter().filter(|(_, t)| t.publisher == peer_id) {
@@ -414,6 +427,39 @@ impl Shard {
         None
     }
 
+    fn handle_disconnect(&mut self, peer_id: PeerId) {
+        let Some(peer) = self.peers.remove(peer_id) else {
+            return;
+        };
+
+        let user_id = peer.user_id();
+        debug!(?user_id, ?peer_id, "Peer disconnected");
+
+        if let Some(uid) = user_id {
+            self.users.remove(&uid);
+        }
+
+        self.addrs.retain(|_, pid| *pid != peer_id);
+
+        let mut tracks_to_remove = Vec::new();
+        for (tid, track) in self.tracks.iter() {
+            if track.publisher == peer_id {
+                tracks_to_remove.push(tid);
+            }
+        }
+
+        for tid in tracks_to_remove {
+            self.tracks.remove(tid);
+            // TODO: design Subscriptions in a way that it can be used for negotiation
+            // for (_, other_peer) in self.peers.iter_mut() {
+            //     other_peer.subscriptions.tracks.remove(&tid);
+            // }
+        }
+
+        // TODO: send voice state? or disconnect event?
+        // SfuEvent::PeerDisconnect { user_id: (), channel_id: () }
+    }
+
     async fn handle_peer_event(&mut self, peer_id: PeerId, event: Event) {
         match event {
             Event::Connected => {
@@ -599,29 +645,80 @@ impl Shard {
 
                             // register new tracks
                             for track in tracks {
-                                let track_exists = self.tracks.iter().any(|(_, t)| {
-                                    t.publisher == peer_id
-                                        && t.state.mid() == Some(track.mid.into())
+                                let mid: SMid = track.mid.into();
+
+                                let existing_track_id = self.tracks.iter().find_map(|(id, t)| {
+                                    if t.publisher == peer_id && t.state.mid() == Some(mid) {
+                                        Some(id)
+                                    } else {
+                                        None
+                                    }
                                 });
 
-                                if !track_exists {
-                                    let mid: SMid = track.mid.into();
+                                if let Some(track_id) = existing_track_id {
+                                    let t = &mut self.tracks[track_id];
+                                    t.kind = track.kind;
+                                    t.key = track.key.clone();
+                                    t.layers = track.layers.clone();
+
+                                    // // If the track was previously inactive, restore it to negotiating state
+                                    // if let TrackState::Inactive = t.state {
+                                    //     t.state = TrackState::Negotiating(mid);
+                                    // }
+                                } else {
                                     let track_id = self.tracks.insert(Track {
                                         publisher: peer_id,
                                         kind: track.kind,
                                         key: track.key.clone(),
-                                        layers: Vec::new(),
+                                        layers: track.layers.clone(),
                                         state: TrackState::Negotiating(mid),
                                     });
 
                                     peer.track_map.insert(mid, track_id);
                                     peer.mid_map.insert(track_id, mid);
                                 }
-
-                                // TODO: removing tracks? maybe a new TrackState?
                             }
 
-                            // all tracks from this user/peer
+                            // find tracks that are no longer referenced
+                            let incoming_mids: HashSet<SMid> =
+                                tracks.iter().map(|t| t.mid.into()).collect();
+                            let mut dead_tracks = Vec::new();
+
+                            for (track_id, track) in self.tracks.iter() {
+                                if track.publisher == peer_id {
+                                    if let Some(mid) = track.state.mid() {
+                                        if !incoming_mids.contains(&mid) {
+                                            dead_tracks.push((track_id, mid));
+                                        }
+                                    }
+                                }
+                            }
+
+                            // remove dead tracks
+                            if !dead_tracks.is_empty() {
+                                let mut change = peer.rtc.sdp_api();
+
+                                for (track_id, mid) in dead_tracks {
+                                    // if let Some(track) = self.tracks.get_mut(track_id) {
+                                    //     track.state = TrackState::Inactive;
+                                    // }
+
+                                    peer.track_map.remove(&mid);
+                                    peer.mid_map.remove(&track_id);
+
+                                    change.stop_media(mid);
+
+                                    // self.tracks.remove(track_id);
+
+                                    // for (_, other_peer) in self.peers.iter_mut() {
+                                    //     other_peer.subscriptions.tracks.remove(&track_id);
+                                    // }
+                                }
+
+                                // TODO: apply change
+                            }
+
+                            // get all tracks from this user/peer
                             let all_peer_tracks: Vec<TrackMetadata> = self
                                 .tracks
                                 .iter()

@@ -143,6 +143,8 @@ impl Peer {
                 if let Err(e) = self.signalling.handle_answer(&mut self.rtc, sdp) {
                     warn!("Failed to handle answer: {:?}", e);
                 }
+
+                // TODO: mark tracks as ready
             }
             SignallingCommand::Candidate { candidate } => {
                 // TODO: ice candidates
@@ -163,6 +165,7 @@ impl Peer {
     /// negotiates if needed, returning the new session description if it exists
     pub fn negotiate_if_needed(&mut self) -> Option<SessionDescription> {
         let change = self.rtc.sdp_api();
+        // change.stop_media(mid);
         if let Ok(Some(offer)) = self.signalling.negotiate_if_needed(change) {
             Some(SessionDescription(offer.to_sdp_string()))
         } else {

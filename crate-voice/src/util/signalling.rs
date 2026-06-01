@@ -1,10 +1,10 @@
+use crate::prelude::*;
 use common::v1::types::voice::SessionDescription;
 use str0m::{
     change::{SdpAnswer, SdpApi, SdpOffer, SdpPendingOffer},
     Rtc,
 };
 use tracing::{info, warn};
-use crate::prelude::*;
 
 /// utility to handle webrtc signalling
 #[derive(Debug)]
@@ -75,4 +75,3 @@ impl Signalling {
         Ok(Some(offer))
     }
 }
-

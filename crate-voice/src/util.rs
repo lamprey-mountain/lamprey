@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::prelude::*;
 use common::{
@@ -12,9 +12,9 @@ use common::{
 };
 use slotmap::new_key_type;
 
-pub mod router;
-pub mod signalling;
 pub mod permissions;
+pub mod signalling;
+pub mod simulcast;
 
 new_key_type! {
     /// slotmap key for a webrtc peer
@@ -37,6 +37,8 @@ pub enum TrackState {
 
     /// data can be sent through this track
     Open(SMid),
+    // /// this track is going to be closed
+    // Closing(SMid),
 }
 
 impl TrackState {
@@ -117,14 +119,35 @@ impl Subscriptions {
     // }
 }
 
-// fn asdf() {
-//     use str0m::media::{Simulcast, SimulcastLayer};
-//     let mut sim = Simulcast::new();
-//     let layer = SimulcastLayer::new_with_attributes("a")
-//         // .max_width(max_width)
-//         // .max_height(max_height)
-//         // .max_br(max_br)
-//         // .max_fps(max_fps)
-//         .build();
-//     sim.add_send_layer(layer);
+// /// what the peer is subscribed to
+// #[derive(Debug, Default)]
+// pub struct Subscriptions {
+//     // subs: Vec<Subscription>,
+//     tracks: HashMap<TrackId, TrackState>,
+// }
+
+// impl Subscriptions {
+//     pub fn new() -> Self {
+//         Self::default()
+//     }
+
+//     /// subscribe to a track
+//     pub fn add_track(&mut self, track_id: TrackId) {
+//         self.tracks.insert(track_id, TrackState::Pending);
+//     }
+
+//     // TODO: remove_track
+// }
+
+// impl crate::peer::Peer {
+//     fn arst(&mut self) {
+//         let mut changes = self.rtc.sdp_api();
+//         for (track_id, state) in self.subscriptions.tracks.iter_mut() {
+//             if state == TrackState::Pending {
+//                 let mid = changes.add_media(kind, dir, stream_id, track_id, simulcast);
+//                 *state = TrackState::Negotiating(mid);
+//             }
+//         }
+//         changes.apply();
+//     }
 // }
