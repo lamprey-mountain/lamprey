@@ -1,6 +1,6 @@
 use common::v1::types::{ChannelId, RoomId, UserId};
 use tantivy::{
-    query::{AllQuery, BooleanQuery, Occur, Query, TermQuery, TermSetQuery},
+    query::{AllQuery, BooleanQuery, Query, TermQuery, TermSetQuery},
     schema::IndexRecordOption,
     Term,
 };

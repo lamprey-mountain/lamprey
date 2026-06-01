@@ -505,7 +505,7 @@ pub struct DocumentChange {
 }
 
 impl FromIterator<DocumentChange> for Changeset {
-    fn from_iter<T: IntoIterator<Item = DocumentChange>>(iter: T) -> Self {
+    fn from_iter<T: IntoIterator<Item = DocumentChange>>(_iter: T) -> Self {
         todo!()
     }
 }

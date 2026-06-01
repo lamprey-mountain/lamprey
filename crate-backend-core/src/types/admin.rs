@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use common::v1::types::util::Time;
-use common::v1::types::{ChannelId, MessageCreate, MessageId, UserId};
 use uuid::Uuid;
 
 // TEMP: reexport

@@ -1,9 +1,8 @@
 use lamprey_backend_core::types::search::Doctype;
 use tantivy::{
     collector::{Count, TopDocs},
-    query::{QueryParser, TermQuery},
-    schema::IndexRecordOption,
-    DocAddress, Term,
+    query::QueryParser,
+    DocAddress,
 };
 
 use common::v1::types::search::{

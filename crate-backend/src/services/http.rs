@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use common::util::routes::{Endpoint, Request};
+// use common::util::routes::{Endpoint, Request};
 use reqwest::{Client, Response};
 use url::Url;
 

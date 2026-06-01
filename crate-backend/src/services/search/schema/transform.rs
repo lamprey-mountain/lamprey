@@ -2,23 +2,24 @@
 
 use std::collections::BTreeMap;
 
-use common::v1::types::application::Application;
-use common::v1::types::calendar::CalendarEvent;
-use common::v1::types::document::serialized::Serdoc;
-use common::v1::types::document::DocumentChange;
-use common::v1::types::emoji::EmojiCustom;
 use common::v1::types::message::Message;
-use common::v1::types::room_template::RoomTemplate;
-use common::v1::types::tag::Tag;
 use common::v1::types::util::Time;
-use common::v1::types::voice::Call;
 use common::v1::types::{
     AuditLogEntry, Channel, ChannelId, MessageAttachmentType, MessageType, Room, RoomId, User,
 };
 use common::v2::types::media::Media;
-use lamprey_backend_core::types::analytics::AnalyticsEvent;
 use tantivy::schema::OwnedValue;
 use tantivy::{DateTime as TantivyDT, TantivyDocument};
+
+// use common::v1::types::application::Application;
+// use common::v1::types::calendar::CalendarEvent;
+// use common::v1::types::document::serialized::Serdoc;
+// use common::v1::types::document::DocumentChange;
+// use common::v1::types::emoji::EmojiCustom;
+// use common::v1::types::room_template::RoomTemplate;
+// use common::v1::types::tag::Tag;
+// use common::v1::types::voice::Call;
+// use lamprey_backend_core::types::analytics::AnalyticsEvent;
 
 use crate::services::search::schema::{Doctype, UnifiedSchema};
 use crate::{Error, Result};
@@ -449,7 +450,6 @@ impl UnifiedSchema {
     //     todo!()
     // }
 
-    // // TODO: add these
     // pub fn transform_custom_emoji(&self, emoji: EmojiCustom) -> Result<TantivyDocument> {
     //     todo!()
     // }

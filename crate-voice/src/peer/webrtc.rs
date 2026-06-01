@@ -404,7 +404,7 @@ impl PeerWebrtcInner {
                     mid,
                     rid,
                     kind,
-                    user_id,
+                    user_id: _,
                 } => {
                     if let Some(mut w) = self.rtc.writer((*mid).into()) {
                         let r = rid.map(|r| r.into());

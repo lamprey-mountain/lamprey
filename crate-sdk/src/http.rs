@@ -15,7 +15,7 @@ use common::v1::types::{
     role::RoleDeleteQuery,
     ApplicationId, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelReorder, EmojiId,
     Invite, InviteCode, InviteCreate, InvitePatch, MediaId, MessageId, MessageModerate,
-    MessagePatch, MessageVerId, PeerId, PermissionOverwriteSet, PinsReorder, PuppetCreate, Role,
+    MessagePatch, MessageVerId, PermissionOverwriteSet, PinsReorder, PuppetCreate, Role,
     RoleCreate, RoleId, RoleMemberBulkPatch, RolePatch, RoleReorder, Room, RoomBan,
     RoomBanBulkCreate, RoomCreate, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut, RoomPatch,
     SessionToken, ThreadMember, ThreadMemberPut, User, UserId, UserPatch, UserWithRelationship,
@@ -29,7 +29,6 @@ use headers::HeaderMapExt;
 use lamprey_backend_core::types::admin::{
     AdminBroadcast, AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache,
     AdminPurgeCacheResponse, AdminRegisterUser, AdminWhisper, DlqEntry, SearchIndexStats,
-    SearchStats,
 };
 use reqwest::{header::HeaderMap, StatusCode, Url};
 use serde_json::json;
@@ -506,7 +505,7 @@ route!(post   "/api/v1/admin/reindex-channel/{channel_id}"      => admin_reindex
 route!(post   "/api/v1/admin/reindex-room/{room_id}"            => admin_reindex_room(room_id: RoomId));
 route!(post   "/api/v1/admin/reindex-everything"                => admin_reindex_everything() -> ());
 route!(get    "/api/v1/admin/channel-search-index-stats/{channel_id}" => admin_channel_search_index_stats(channel_id: ChannelId) -> SearchIndexStats);
-route!(get    "/api/v1/admin/search/stats"                      => admin_search_stats() -> SearchStats);
+route!(get    "/api/v1/admin/search/stats"                      => admin_search_stats() -> SearchIndexStats);
 route!(get    "/api/v1/admin/search/dlq"                        => admin_search_dlq_list(_q: PaginationQuery<SearchDlqId>) -> PaginationResponse<DlqEntry>);
 route!(delete "/api/v1/admin/search/dlq/{id}"                   => admin_search_dlq_delete(id: SearchDlqId));
 
