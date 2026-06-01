@@ -4,13 +4,11 @@ use crate::prelude::*;
 use common::{
     v1::types::{
         util::Time,
-        voice::{
-            internal::SfuPermissions, MediaKind, Subscription, TrackKey, TrackLayer, VoiceState,
-        },
+        voice::{internal::SfuPermissions, MediaKind, TrackKey, TrackLayer, VoiceState},
     },
     v2::types::{ChannelId, SfuId},
 };
-use slotmap::new_key_type;
+use slotmap::{new_key_type, SlotMap};
 
 pub mod permissions;
 pub mod signalling;
@@ -24,6 +22,8 @@ new_key_type! {
     ///
     /// mids are local to each peer, `TrackId`s are shared
     pub struct TrackId;
+
+    pub struct SinkId;
 }
 
 /// the current state of a webrtc track
@@ -37,8 +37,9 @@ pub enum TrackState {
 
     /// data can be sent through this track
     Open(SMid),
-    // /// this track is going to be closed
-    // Closing(SMid),
+
+    /// this track is going to be closed
+    Closing(SMid),
 }
 
 impl TrackState {
@@ -47,6 +48,7 @@ impl TrackState {
             TrackState::Pending => None,
             TrackState::Negotiating(mid) => Some(*mid),
             TrackState::Open(mid) => Some(*mid),
+            TrackState::Closing(mid) => Some(*mid),
         }
     }
 }
@@ -59,6 +61,12 @@ pub struct Track {
 
     /// the track state for the *publisher* of the track
     // NOTE: maybe i want to remove this from Track and make TrackState management part of Peer?
+    pub state: TrackState,
+}
+
+pub struct Sink {
+    pub subscriber: PeerId,
+    pub source: TrackId,
     pub state: TrackState,
 }
 
@@ -84,70 +92,31 @@ impl Track {
     }
 }
 
-/// what the peer is subscribed to
-#[derive(Debug, Default)]
-pub struct Subscriptions {
-    /// list of this peer's subscriptions
-    pub subs: Vec<Subscription>,
-
-    /// which tracks are we currently subscribed to
-    pub tracks: HashSet<TrackId>,
-
-    /// if true, try to create missing tracks
-    pub dirty: bool,
+// TODO: use this for routing media
+#[derive(Default)]
+pub struct Router {
+    pub links: HashMap<TrackId, HashSet<SinkId>>,
+    pub subscriptions: HashMap<(PeerId, TrackId), SinkId>,
 }
 
-impl Subscriptions {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn update(&mut self, subs: Vec<Subscription>, tracks: HashSet<TrackId>) {
-        if self.tracks != tracks {
-            self.dirty = true;
+impl Router {
+    pub fn subscribe(
+        &mut self,
+        subscriber: PeerId,
+        source: TrackId,
+        sinks: &mut SlotMap<SinkId, Sink>,
+    ) {
+        if self.subscriptions.contains_key(&(subscriber, source)) {
+            return;
         }
-        self.subs = subs;
-        self.tracks = tracks;
+
+        let sink_id = sinks.insert(Sink {
+            subscriber,
+            source,
+            state: TrackState::Pending,
+        });
+
+        self.links.entry(source).or_default().insert(sink_id);
+        self.subscriptions.insert((subscriber, source), sink_id);
     }
-
-    // /// remove all subscriptions to a user's stream
-    // ///
-    // /// for when a peer disconnects
-    // pub fn remove_user(&mut self, _user_id: UserId) {
-    //     // TODO: Implement track lookup by user_id to filter `self.tracks`
-    //     todo!()
-    // }
 }
-
-// /// what the peer is subscribed to
-// #[derive(Debug, Default)]
-// pub struct Subscriptions {
-//     // subs: Vec<Subscription>,
-//     tracks: HashMap<TrackId, TrackState>,
-// }
-
-// impl Subscriptions {
-//     pub fn new() -> Self {
-//         Self::default()
-//     }
-
-//     /// subscribe to a track
-//     pub fn add_track(&mut self, track_id: TrackId) {
-//         self.tracks.insert(track_id, TrackState::Pending);
-//     }
-
-//     // TODO: remove_track
-// }
-
-// impl crate::peer::Peer {
-//     fn arst(&mut self) {
-//         let mut changes = self.rtc.sdp_api();
-//         for (track_id, state) in self.subscriptions.tracks.iter_mut() {
-//             if state == TrackState::Pending {
-//                 let mid = changes.add_media(kind, dir, stream_id, track_id, simulcast);
-//                 *state = TrackState::Negotiating(mid);
-//             }
-//         }
-//         changes.apply();
-//     }
-// }

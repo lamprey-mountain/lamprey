@@ -474,6 +474,7 @@ pub struct Subscription {
     /// subscribe to this mid of
     pub mid: Mid,
 
+    // NOTE: client's shouldn't pass rid at all! this is automatically handled by webrtc.
     /// the layers of the track to subscribe to
     ///
     /// - clients should only subscribe to one layer at a time, but multiple can be subscribed if needed

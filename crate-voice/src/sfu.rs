@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     net::SocketAddr,
+    sync::Arc,
     time::Instant,
 };
 
@@ -9,8 +10,8 @@ use common::{
     v1::types::voice::{
         internal::SfuPermissions,
         messages::{SfuCommand, SfuEvent, SignallingCommand, SignallingEvent},
-        KeyframeRequestKind, MediaKind, Mid, Rid, Speaking, SpeakingWithUserId, TrackKey,
-        TrackMetadata, TrackMetadataWithUserId, VoiceState,
+        KeyframeRequestKind, MediaKind, Mid, Rid, SessionDescription, Speaking, SpeakingWithUserId,
+        TrackKey, TrackMetadata, TrackMetadataWithUserId, VoiceState,
     },
     v2::types::{ChannelId, UserId},
 };
@@ -24,7 +25,7 @@ use tracing::{debug, warn};
 use crate::{
     backend::{BackendConnection, BackendHandle},
     peer::{Peer, PeerKind},
-    util::{PeerId, SfuVoiceState, Track, TrackId, TrackState},
+    util::{PeerId, Router, SfuVoiceState, Sink, SinkId, Track, TrackId, TrackState},
 };
 
 use crate::prelude::*;
@@ -42,8 +43,10 @@ pub struct Shard {
 
     peers: SlotMap<PeerId, Peer>,
     tracks: SlotMap<TrackId, Track>,
+    sinks: SlotMap<SinkId, Sink>,
     users: HashMap<UserId, PeerId>,
     addrs: HashMap<SocketAddr, PeerId>,
+    router: Router,
 
     sock_v4: UdpSocket,
     sock_v6: UdpSocket,
@@ -177,6 +180,8 @@ impl Sfu {
             channel_id,
             peers: SlotMap::with_key(),
             tracks: SlotMap::with_key(),
+            sinks: SlotMap::with_key(),
+            router: Router::default(),
             users: HashMap::new(),
             addrs: HashMap::new(),
             sock_v4,
@@ -212,59 +217,7 @@ impl Shard {
                 self.handle_disconnect(pid);
             }
 
-            for (peer_id, peer) in self.peers.iter_mut() {
-                if peer.subscriptions.dirty {
-                    let mut change = peer.rtc.sdp_api();
-                    for tid in &peer.subscriptions.tracks {
-                        if !peer.mid_map.contains_key(tid) {
-                            let track = &self.tracks[*tid];
-                            let mid = change.add_media(
-                                track.kind.into(),
-                                Direction::RecvOnly,
-                                None,
-                                None,
-                                None,
-                            );
-                            peer.mid_map.insert(*tid, mid);
-                            peer.track_map.insert(mid, *tid);
-                        }
-                    }
-
-                    // TODO: do something with the Result<Option<SdpOffer>>
-                    // peer.signalling.negotiate_if_needed(change);
-
-                    peer.subscriptions.dirty = false;
-                }
-
-                if let Some(sdp) = peer.negotiate_if_needed() {
-                    let user_id = peer
-                        .user_id()
-                        .expect("TODO: better error handling, cascade support");
-                    let mut tracks = vec![];
-
-                    for (_, track) in self.tracks.iter().filter(|(_, t)| t.publisher == peer_id) {
-                        let Some(mid) = track.state.mid() else {
-                            continue;
-                        };
-
-                        tracks.push(TrackMetadataWithUserId {
-                            inner: TrackMetadata {
-                                kind: track.kind,
-                                key: track.key.clone(),
-                                mid: mid.into(),
-                                layers: track.layers.clone(),
-                            },
-                            user_id,
-                        });
-                    }
-
-                    self.event_queue.push(SfuEvent::VoiceDispatch {
-                        user_id,
-                        channel_id: self.channel_id,
-                        payload: Box::new(SignallingEvent::Offer { sdp, tracks }),
-                    });
-                }
-            }
+            self.process_sdp_negotiations();
 
             let instant = self.drain_all_peers().await;
 
@@ -303,7 +256,6 @@ impl Shard {
         };
 
         let track = &self.tracks[track_id];
-        let always_sub = track.is_always_subscribed();
         let perms = peer.permissions();
 
         // enforce publisher permissions
@@ -316,14 +268,13 @@ impl Shard {
             return;
         }
 
-        let peer_ids: Vec<PeerId> = self.peers.keys().collect();
+        let Some(sinks) = self.router.links.get(&track_id) else {
+            return;
+        };
 
-        for target_pid in peer_ids {
-            if target_pid == publisher_id {
-                continue;
-            }
-
-            let target = &mut self.peers[target_pid];
+        for &sink_id in sinks {
+            let sink = &self.sinks[sink_id];
+            let target = &mut self.peers[sink.subscriber];
             let target_perms = target.permissions();
 
             // if target is deafened and track is audio, skip writing
@@ -331,9 +282,17 @@ impl Shard {
                 continue;
             }
 
-            // TODO: handle rid/simulcast
-            if always_sub || target.subscriptions.tracks.contains(&track_id) {
-                target.write_media(track_id, &media);
+            if let TrackState::Open(out_mid) = sink.state {
+                if let Some(writer) = target.rtc.writer(out_mid) {
+                    if let Some(pt) = writer.match_params(media.params) {
+                        let _ = writer.write(
+                            pt,
+                            media.network_time,
+                            media.time,
+                            Arc::clone(&media.data),
+                        );
+                    }
+                }
             }
         }
     }
@@ -535,7 +494,10 @@ impl Shard {
                             }
 
                             // map track id to the target peer's mid
-                            let Some(&target_mid) = target_peer.mid_map.get(&track_id) else {
+                            let Some(&sink_id) = self.router.subscriptions.get(&(target_peer_id, track_id)) else {
+                                continue;
+                            };
+                            let Some(target_mid) = self.sinks[sink_id].state.mid() else {
                                 continue;
                             };
 
@@ -620,143 +582,60 @@ impl Shard {
                     match &inner {
                         // update subscriptions
                         SignallingCommand::Subscribe { subs } => {
-                            let mut tracks = HashSet::new();
+                            let mut requested_tracks = HashSet::new();
                             for s in subs {
-                                let Some(&peer_id) = self.users.get(&s.user_id) else {
-                                    // maybe return an error?
+                                let Some(&publisher_pid) = self.users.get(&s.user_id) else {
                                     continue;
                                 };
                                 if let Some(track_id) =
-                                    self.peers[peer_id].lookup_track(s.mid.into())
+                                    self.peers[publisher_pid].lookup_track(s.mid.into())
                                 {
-                                    tracks.insert(track_id);
+                                    requested_tracks.insert(track_id);
                                 }
                             }
 
-                            self.peers[peer_id]
+                            // get current subscriptions for this peer
+                            let current_subs: Vec<_> = self
+                                .router
                                 .subscriptions
-                                .update(subs.clone(), tracks);
+                                .iter()
+                                .filter(|((pid, _), _)| *pid == peer_id)
+                                .map(|((_, tid), sid)| (*tid, *sid))
+                                .collect();
 
-                            return;
-                        }
-
-                        SignallingCommand::Offer { tracks, .. } => {
-                            let peer = &mut self.peers[peer_id];
-
-                            // register new tracks
-                            for track in tracks {
-                                let mid: SMid = track.mid.into();
-
-                                let existing_track_id = self.tracks.iter().find_map(|(id, t)| {
-                                    if t.publisher == peer_id && t.state.mid() == Some(mid) {
-                                        Some(id)
-                                    } else {
-                                        None
-                                    }
-                                });
-
-                                if let Some(track_id) = existing_track_id {
-                                    let t = &mut self.tracks[track_id];
-                                    t.kind = track.kind;
-                                    t.key = track.key.clone();
-                                    t.layers = track.layers.clone();
-
-                                    // // If the track was previously inactive, restore it to negotiating state
-                                    // if let TrackState::Inactive = t.state {
-                                    //     t.state = TrackState::Negotiating(mid);
-                                    // }
-                                } else {
-                                    let track_id = self.tracks.insert(Track {
-                                        publisher: peer_id,
-                                        kind: track.kind,
-                                        key: track.key.clone(),
-                                        layers: track.layers.clone(),
-                                        state: TrackState::Negotiating(mid),
-                                    });
-
-                                    peer.track_map.insert(mid, track_id);
-                                    peer.mid_map.insert(track_id, mid);
-                                }
-                            }
-
-                            // find tracks that are no longer referenced
-                            let incoming_mids: HashSet<SMid> =
-                                tracks.iter().map(|t| t.mid.into()).collect();
-                            let mut dead_tracks = Vec::new();
-
-                            for (track_id, track) in self.tracks.iter() {
-                                if track.publisher == peer_id {
-                                    if let Some(mid) = track.state.mid() {
-                                        if !incoming_mids.contains(&mid) {
-                                            dead_tracks.push((track_id, mid));
+                            // remove subscriptions that are no longer requested
+                            for (tid, sid) in current_subs {
+                                if !requested_tracks.contains(&tid) {
+                                    if let Some(sink) = self.sinks.get_mut(sid) {
+                                        if let Some(mid) = sink.state.mid() {
+                                            sink.state = TrackState::Closing(mid);
                                         }
                                     }
                                 }
                             }
 
-                            // remove dead tracks
-                            if !dead_tracks.is_empty() {
-                                let mut change = peer.rtc.sdp_api();
-
-                                for (track_id, mid) in dead_tracks {
-                                    // if let Some(track) = self.tracks.get_mut(track_id) {
-                                    //     track.state = TrackState::Inactive;
-                                    // }
-
-                                    peer.track_map.remove(&mid);
-                                    peer.mid_map.remove(&track_id);
-
-                                    change.stop_media(mid);
-
-                                    // self.tracks.remove(track_id);
-
-                                    // for (_, other_peer) in self.peers.iter_mut() {
-                                    //     other_peer.subscriptions.tracks.remove(&track_id);
-                                    // }
-                                }
-
-                                // TODO: apply change
+                            // add new subscriptions
+                            for tid in requested_tracks {
+                                self.router.subscribe(peer_id, tid, &mut self.sinks);
                             }
 
-                            // get all tracks from this user/peer
-                            let all_peer_tracks: Vec<TrackMetadata> = self
-                                .tracks
-                                .iter()
-                                .filter(|(_, t)| t.publisher == peer_id)
-                                .filter_map(|(_, t)| {
-                                    t.state.mid().map(|mid| TrackMetadata {
-                                        kind: t.kind,
-                                        key: t.key.clone(),
-                                        mid: mid.into(),
-                                        layers: t.layers.clone(),
-                                    })
-                                })
-                                .collect();
+                            return;
+                        }
 
-                            // broadcast a Tracks event to everyone in the channel
-                            let event = Box::new(SignallingEvent::Tracks {
-                                user_id,
-                                tracks: all_peer_tracks,
-                            });
-
-                            for (id, peer) in self.peers.iter() {
-                                if id == peer_id {
-                                    continue;
-                                }
-
-                                // find which user_id this peer has
-                                let Some(target_user_id) = peer.user_id() else {
-                                    continue;
-                                };
-
+                        SignallingCommand::Offer { sdp, tracks } => {
+                            if let Some(answer) = self.handle_offer(peer_id, sdp.clone(), &tracks) {
                                 self.event_queue.push(SfuEvent::VoiceDispatch {
-                                    user_id: target_user_id,
+                                    user_id,
                                     channel_id: self.channel_id,
-                                    payload: event.clone(),
+                                    payload: Box::new(SignallingEvent::Answer { sdp: answer }),
                                 });
                             }
+                            return;
+                        }
 
-                            // TODO: user audio autosubscribe
+                        SignallingCommand::Answer { sdp } => {
+                            self.handle_answer(peer_id, sdp.clone());
+                            return;
                         }
 
                         _ => {}
@@ -788,6 +667,303 @@ impl Shard {
                     }
                 }
             }
+        }
+    }
+
+    pub fn handle_answer(&mut self, peer_id: PeerId, sdp: SessionDescription) {
+        let peer = &mut self.peers[peer_id];
+        if let Err(e) = peer.signalling.handle_answer(&mut peer.rtc, sdp) {
+            warn!("Failed to handle answer: {:?}", e);
+        }
+
+        // update tracks (publisher side)
+        for (_, track) in self
+            .tracks
+            .iter_mut()
+            .filter(|(_, t)| t.publisher == peer_id)
+        {
+            match track.state {
+                TrackState::Negotiating(mid) => track.state = TrackState::Open(mid),
+                _ => {}
+            }
+        }
+
+        // update sinks (subscriber side)
+        let mut sinks_to_remove = Vec::new();
+        for (sid, sink) in self
+            .sinks
+            .iter_mut()
+            .filter(|(_, s)| s.subscriber == peer_id)
+        {
+            match sink.state {
+                TrackState::Negotiating(mid) => sink.state = TrackState::Open(mid),
+                TrackState::Closing(_) => {
+                    sinks_to_remove.push(sid);
+                }
+                _ => {}
+            }
+        }
+
+        for sid in sinks_to_remove {
+            let sink = self.sinks.remove(sid).unwrap();
+            self.router
+                .links
+                .get_mut(&sink.source)
+                .map(|links| links.remove(&sid));
+            self.router
+                .subscriptions
+                .remove(&(sink.subscriber, sink.source));
+
+            // remove mid from peer mapping
+            let peer = &mut self.peers[peer_id];
+            peer.mid_to_sink.retain(|_, &mut id| id != sid);
+        }
+    }
+
+    pub fn handle_offer(
+        &mut self,
+        peer_id: PeerId,
+        sdp: SessionDescription,
+        tracks: &[TrackMetadata],
+    ) -> Option<SessionDescription> {
+        let answer = {
+            let peer = &mut self.peers[peer_id];
+            peer.signalling
+                .handle_offer(&mut peer.rtc, sdp)
+                .map_err(|e| warn!("Failed to handle offer: {:?}", e))
+                .ok()?
+        };
+
+        // register new tracks
+        for track in tracks {
+            let mid: SMid = track.mid.into();
+
+            let existing_track_id = self.tracks.iter().find_map(|(id, t)| {
+                if t.publisher == peer_id && t.state.mid() == Some(mid) {
+                    Some(id)
+                } else {
+                    None
+                }
+            });
+
+            if let Some(track_id) = existing_track_id {
+                let t = &mut self.tracks[track_id];
+                t.kind = track.kind;
+                t.key = track.key.clone();
+                t.layers = track.layers.clone();
+                t.state = TrackState::Open(mid);
+            } else {
+                let track_id = self.tracks.insert(Track {
+                    publisher: peer_id,
+                    kind: track.kind,
+                    key: track.key.clone(),
+                    layers: track.layers.clone(),
+                    state: TrackState::Open(mid),
+                });
+
+                {
+                    let peer = &mut self.peers[peer_id];
+                    peer.mid_to_track.insert(mid, track_id);
+                    peer.track_to_mid.insert(track_id, mid);
+                }
+
+                // automatically subscribe everyone else to this track if it's user audio
+                let is_always_sub = self.tracks[track_id].is_always_subscribed();
+                if is_always_sub {
+                    let peer_ids: Vec<_> = self.peers.keys().collect();
+                    for target_pid in peer_ids {
+                        if target_pid != peer_id {
+                            self.router.subscribe(target_pid, track_id, &mut self.sinks);
+                        }
+                    }
+                }
+            }
+        }
+
+        // find tracks that are no longer referenced
+        let incoming_mids: HashSet<SMid> = tracks.iter().map(|t| t.mid.into()).collect();
+        let mut dead_tracks = Vec::new();
+
+        for (track_id, track) in self.tracks.iter() {
+            if track.publisher == peer_id {
+                if let Some(mid) = track.state.mid() {
+                    if !incoming_mids.contains(&mid) {
+                        dead_tracks.push((track_id, mid));
+                    }
+                }
+            }
+        }
+
+        // remove dead tracks
+        if !dead_tracks.is_empty() {
+            for (track_id, mid) in dead_tracks {
+                {
+                    let peer = &mut self.peers[peer_id];
+                    peer.mid_to_track.remove(&mid);
+                    peer.track_to_mid.remove(&track_id);
+                }
+
+                self.tracks.remove(track_id);
+
+                // also remove any sinks referencing this track
+                let sinks_to_cleanup: Vec<_> = self
+                    .sinks
+                    .iter()
+                    .filter(|(_, s)| s.source == track_id)
+                    .map(|(sid, _)| sid)
+                    .collect();
+
+                for sid in sinks_to_cleanup {
+                    let sink = self.sinks.get_mut(sid).unwrap();
+                    if let Some(m) = sink.state.mid() {
+                        // Transition to closing so process_sdp_negotiations catches it and calls `stop_media`
+                        sink.state = TrackState::Closing(m);
+                    } else {
+                        // If it was Pending, we can safely delete it immediately
+                        let sink = self.sinks.remove(sid).unwrap();
+                        self.router.links.get_mut(&track_id).map(|l| l.remove(&sid));
+                        self.router
+                            .subscriptions
+                            .remove(&(sink.subscriber, track_id));
+                    }
+                }
+            }
+        }
+
+        // subscribe THIS peer to others' audio
+        for (tid, track) in self.tracks.iter() {
+            if track.publisher != peer_id && track.is_always_subscribed() {
+                self.router.subscribe(peer_id, tid, &mut self.sinks);
+            }
+        }
+
+        // broadcast a Tracks event to everyone in the channel
+        let user_id = self.peers[peer_id]
+            .user_id()
+            .expect("TODO: cascade support");
+        let all_peer_tracks: Vec<TrackMetadata> = self
+            .tracks
+            .iter()
+            .filter(|(_, t)| t.publisher == peer_id)
+            .filter_map(|(_, t)| {
+                t.state.mid().map(|mid| TrackMetadata {
+                    kind: t.kind,
+                    key: t.key.clone(),
+                    mid: mid.into(),
+                    layers: t.layers.clone(),
+                })
+            })
+            .collect();
+
+        let event = Box::new(SignallingEvent::Tracks {
+            user_id,
+            tracks: all_peer_tracks,
+        });
+
+        for (id, peer) in self.peers.iter() {
+            if id == peer_id {
+                continue;
+            }
+
+            if let Some(target_user_id) = peer.user_id() {
+                self.event_queue.push(SfuEvent::VoiceDispatch {
+                    user_id: target_user_id,
+                    channel_id: self.channel_id,
+                    payload: event.clone(),
+                });
+            }
+        }
+
+        Some(SessionDescription(answer.to_sdp_string()))
+    }
+
+    pub fn process_sdp_negotiations(&mut self) {
+        let mut changes_per_peer: HashMap<PeerId, Vec<SinkId>> = HashMap::new();
+
+        for (sink_id, sink) in self.sinks.iter() {
+            match sink.state {
+                TrackState::Pending | TrackState::Closing(_) => {
+                    changes_per_peer
+                        .entry(sink.subscriber)
+                        .or_default()
+                        .push(sink_id);
+                }
+                _ => {}
+            }
+        }
+
+        for (peer_id, sink_ids) in changes_per_peer {
+            let (offer, tracks) = {
+                let peer = &mut self.peers[peer_id];
+                let mut changes = peer.rtc.sdp_api();
+
+                for sink_id in sink_ids {
+                    let sink = &mut self.sinks[sink_id];
+                    match sink.state {
+                        TrackState::Pending => {
+                            let source = &self.tracks[sink.source];
+                            let mid = changes.add_media(
+                                source.kind.into(),
+                                Direction::SendOnly,
+                                None,
+                                None,
+                                None,
+                            );
+
+                            sink.state = TrackState::Negotiating(mid);
+                            peer.mid_to_sink.insert(mid, sink_id);
+                        }
+                        TrackState::Closing(mid) => {
+                            changes.stop_media(mid);
+                        }
+                        _ => {}
+                    }
+                }
+
+                let offer = match peer.signalling.negotiate_if_needed(changes) {
+                    Ok(Some(offer)) => SessionDescription(offer.to_sdp_string()),
+                    Ok(None) => continue,
+                    Err(e) => {
+                        warn!("Failed to negotiate: {:?}", e);
+                        continue;
+                    }
+                };
+
+                let user_id = peer.user_id().expect("TODO: cascade support");
+
+                // Collect tracks for the offer
+                let mut tracks = vec![];
+                for (sink_id, sink) in self.sinks.iter() {
+                    if sink.subscriber == peer_id {
+                        if let Some(mid) = sink.state.mid() {
+                            let source_track = &self.tracks[sink.source];
+                            let publisher_uid = self.peers[source_track.publisher]
+                                .user_id()
+                                .expect("Missing publisher user_id");
+
+                            tracks.push(TrackMetadataWithUserId {
+                                inner: TrackMetadata {
+                                    kind: source_track.kind,
+                                    key: source_track.key.clone(),
+                                    mid: mid.into(),
+                                    layers: source_track.layers.clone(),
+                                },
+                                user_id: publisher_uid,
+                            });
+                        }
+                    }
+                }
+                (offer, tracks)
+            };
+
+            let user_id = self.peers[peer_id]
+                .user_id()
+                .expect("TODO: cascade support");
+            self.event_queue.push(SfuEvent::VoiceDispatch {
+                user_id,
+                channel_id: self.channel_id,
+                payload: Box::new(SignallingEvent::Offer { sdp: offer, tracks }),
+            });
         }
     }
 }

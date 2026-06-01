@@ -26,23 +26,6 @@ use crate::{
     signalling::Signalling,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TrackState {
-    Pending,
-    Negotiating(SMid),
-    Open(SMid),
-}
-
-impl TrackState {
-    pub fn mid(&self) -> Option<SMid> {
-        match self {
-            TrackState::Pending => None,
-            TrackState::Negotiating(mid) => Some(*mid),
-            TrackState::Open(mid) => Some(*mid),
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct TrackIn {
     pub kind: MediaKind,
@@ -109,17 +92,6 @@ impl PeerWebrtc {
         let (event_tx, event_rx) = mpsc::unbounded_channel();
 
         let mut rtc_config = str0m::RtcConfig::new().set_ice_lite(true).build();
-
-        if let Ok(addr) = socket_v4.local_addr() {
-            if let Ok(c) = Candidate::host(addr, "udp") {
-                rtc_config.add_local_candidate(c);
-            }
-        }
-        if let Ok(addr) = socket_v6.local_addr() {
-            if let Ok(c) = Candidate::host(addr, "udp") {
-                rtc_config.add_local_candidate(c);
-            }
-        }
 
         // TODO: don't attempt to open all call tracks when starting peer
         // maybe add TrackState::Something to represent "dont create the track yet", then set it to Pending when subscribed
@@ -254,45 +226,6 @@ impl PeerWebrtcInner {
                 break;
             }
         }
-        Ok(())
-    }
-
-    fn negotiate_if_needed(&mut self) -> Result<(), anyhow::Error> {
-        let mut change = self.rtc.sdp_api();
-        for track in &mut self.outbound {
-            if track.state == TrackState::Pending {
-                let mid = change.add_media(track.kind, Direction::SendOnly, None, None, None);
-                track.state = TrackState::Negotiating(mid);
-            }
-        }
-
-        if let Some(offer) = self.signalling.negotiate_if_needed(change)? {
-            let tracks = self
-                .outbound
-                .iter()
-                .filter_map(|t| {
-                    if let Some(mid) = t.state.mid() {
-                        Some(TrackMetadataWithUserId {
-                            inner: TrackMetadata {
-                                kind: t.kind.into(),
-                                key: t.key.clone(),
-                                mid: mid.into(),
-                                layers: vec![], // TODO: populate
-                            },
-                            user_id: t.user_id,
-                        })
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-
-            self.emit(PeerEvent::Signalling(SignallingEvent::Offer {
-                sdp: SessionDescription(offer.to_sdp_string()),
-                tracks,
-            }));
-        }
-
         Ok(())
     }
 

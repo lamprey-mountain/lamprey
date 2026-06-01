@@ -13,9 +13,7 @@ use tracing::warn;
 
 use crate::{
     prelude::*,
-    util::{
-        permissions::Permissions, signalling::Signalling, SfuVoiceState, Subscriptions, TrackId,
-    },
+    util::{permissions::Permissions, signalling::Signalling, SfuVoiceState, SinkId, TrackId},
 };
 
 /// a webrtc connection
@@ -24,10 +22,10 @@ pub struct Peer {
     pub kind: PeerKind,
     pub rtc: Rtc,
     pub signalling: Signalling,
-    pub subscriptions: Subscriptions,
 
-    pub track_map: HashMap<SMid, TrackId>,
-    pub mid_map: HashMap<TrackId, SMid>,
+    pub mid_to_track: HashMap<SMid, TrackId>,
+    pub track_to_mid: HashMap<TrackId, SMid>,
+    pub mid_to_sink: HashMap<SMid, SinkId>,
 
     /// datachannel for speaking/voice activity messages
     ///
@@ -53,9 +51,9 @@ impl Peer {
             kind: ty,
             rtc,
             signalling: Signalling::new(),
-            subscriptions: Subscriptions::default(),
-            track_map: HashMap::new(),
-            mid_map: HashMap::new(),
+            mid_to_track: HashMap::new(),
+            track_to_mid: HashMap::new(),
+            mid_to_sink: HashMap::new(),
             speaking_chan: None,
         }
     }
@@ -87,11 +85,11 @@ impl Peer {
 
     /// get a track id from this peer's local mid
     pub fn lookup_track(&self, mid: SMid) -> Option<TrackId> {
-        self.track_map.get(&mid).copied()
+        self.mid_to_track.get(&mid).copied()
     }
 
     pub fn write_media(&mut self, track_id: TrackId, media: &str0m::media::MediaData) {
-        let Some(mid) = self.mid_map.get(&track_id) else {
+        let Some(mid) = self.track_to_mid.get(&track_id) else {
             return;
         };
 
@@ -110,7 +108,7 @@ impl Peer {
         rid: Option<SRid>,
         kind: KeyframeRequestKind,
     ) {
-        let Some(mid) = self.mid_map.get(&track_id) else {
+        let Some(mid) = self.track_to_mid.get(&track_id) else {
             return;
         };
 
@@ -159,18 +157,6 @@ impl Peer {
         }
 
         vec![]
-    }
-
-    // NOTE: does this actually do anything...? it's not changing anything?
-    /// negotiates if needed, returning the new session description if it exists
-    pub fn negotiate_if_needed(&mut self) -> Option<SessionDescription> {
-        let change = self.rtc.sdp_api();
-        // change.stop_media(mid);
-        if let Ok(Some(offer)) = self.signalling.negotiate_if_needed(change) {
-            Some(SessionDescription(offer.to_sdp_string()))
-        } else {
-            None
-        }
     }
 
     /// get permissions for this peer
