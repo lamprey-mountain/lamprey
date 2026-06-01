@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
 use axum::{extract::State, response::IntoResponse, Json};
+use common::v1::types::federation::WellKnown;
 use lamprey_backend_core::Error;
-use serde::Serialize;
-use url::Url;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::ServerState;
@@ -103,10 +102,6 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(voice::routes())
         .merge(webhook::routes())
 }
-
-use common::v1::types::federation::WellKnown;
-
-// ...
 
 /// Get well known
 pub async fn well_known(State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse, Error> {

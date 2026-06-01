@@ -83,14 +83,18 @@ impl ServiceSearch {
             Reindex::Everything => {
                 index.delete_all_documents().await?;
                 let mut data = self.state.acquire_data().await?;
+                data.search_reindex_queue_clear().await?;
                 data.search_reindex_queue_reset_all_messages().await?;
+                data.search_reindex_queue_reset_all_audit_logs().await?;
                 data.search_reindex_queue_upsert(SearchReindexQueueTarget::Users, None)
                     .await?;
                 data.search_reindex_queue_upsert(SearchReindexQueueTarget::Channels, None)
                     .await?;
+                data.search_reindex_queue_upsert(SearchReindexQueueTarget::Rooms, None)
+                    .await?;
                 data.search_reindex_queue_upsert(SearchReindexQueueTarget::Media, None)
                     .await?;
-                data.commit().await;
+                data.commit().await?;
             }
             Reindex::QueueMessages(id) => {
                 let mut data = self.state.data();

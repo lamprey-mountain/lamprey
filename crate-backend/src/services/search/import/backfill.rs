@@ -76,18 +76,28 @@ impl BackfillEtl {
 
 impl BackfillEtlInner {
     async fn spawn_worker(self: Arc<Self>, queue: SearchReindexQueue) {
-        self.active.insert(queue.target.clone());
-        match queue.target {
-            SearchReindexQueueTarget::Messages(id) => self.spawn_messages(id).await,
+        if !self.active.insert(queue.target.clone()) {
+            return;
+        }
+
+        match &queue.target {
+            SearchReindexQueueTarget::Messages(id) => self.spawn_messages(*id).await,
             SearchReindexQueueTarget::Channels => self.spawn_channels().await,
             SearchReindexQueueTarget::Rooms => self.spawn_rooms().await,
             SearchReindexQueueTarget::Users => self.spawn_users().await,
             SearchReindexQueueTarget::Media => self.spawn_media().await,
-            SearchReindexQueueTarget::AuditLogEntries(id) => self.spawn_audit_logs(id).await,
+            SearchReindexQueueTarget::AuditLogEntries(id) => self.spawn_audit_logs(*id).await,
         }
+
+        let mut data = self.s.data();
+        if let Err(e) = data.search_reindex_queue_delete(queue.target.clone()).await {
+            error!("Failed to delete reindex queue entry: {e}");
+        }
+
+        self.active.remove(&queue.target);
     }
 
-    async fn spawn_audit_logs(self: Arc<Self>, room_id: RoomId) {
+    async fn spawn_audit_logs(&self, room_id: RoomId) {
         let mut data = self.s.data();
         let mut last_id: Option<Uuid> = None;
 
@@ -147,12 +157,9 @@ impl BackfillEtlInner {
         }
 
         let _ = self.index.commit().await;
-
-        self.active
-            .remove(&SearchReindexQueueTarget::AuditLogEntries(room_id));
     }
 
-    async fn spawn_users(self: Arc<Self>) {
+    async fn spawn_users(&self) {
         let mut data = self.s.data();
         let mut last_id: Option<UserId> = None;
 
@@ -209,11 +216,9 @@ impl BackfillEtlInner {
         }
 
         let _ = self.index.commit().await;
-
-        self.active.remove(&SearchReindexQueueTarget::Users);
     }
 
-    async fn spawn_media(self: Arc<Self>) {
+    async fn spawn_media(&self) {
         let mut data = self.s.data();
         let mut last_version_id: Option<MediaVerId> = None;
 
@@ -261,11 +266,9 @@ impl BackfillEtlInner {
         }
 
         let _ = self.index.commit().await;
-
-        self.active.remove(&SearchReindexQueueTarget::Media);
     }
 
-    async fn spawn_messages(self: Arc<Self>, channel_id: ChannelId) {
+    async fn spawn_messages(&self, channel_id: ChannelId) {
         let srv = self.s.services();
         let chan = match srv.channels.get(channel_id, None).await {
             Ok(chan) => chan,
@@ -330,12 +333,9 @@ impl BackfillEtlInner {
         }
 
         let _ = self.index.commit().await;
-
-        self.active
-            .remove(&SearchReindexQueueTarget::Messages(channel_id));
     }
 
-    async fn spawn_channels(self: Arc<Self>) {
+    async fn spawn_channels(&self) {
         let mut data = self.s.data();
         let mut last_id: Option<ChannelId> = None;
 
@@ -390,11 +390,9 @@ impl BackfillEtlInner {
         }
 
         let _ = self.index.commit().await;
-
-        self.active.remove(&SearchReindexQueueTarget::Channels);
     }
 
-    async fn spawn_rooms(self: Arc<Self>) {
+    async fn spawn_rooms(&self) {
         let mut data = self.s.data();
         let mut last_id: Option<RoomId> = None;
 
@@ -446,7 +444,5 @@ impl BackfillEtlInner {
         }
 
         let _ = self.index.commit().await;
-
-        self.active.remove(&SearchReindexQueueTarget::Rooms);
     }
 }

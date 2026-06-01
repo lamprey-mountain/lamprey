@@ -81,7 +81,7 @@ impl DataSearchQueue for Postgres {
                     "media" => SearchReindexQueueTarget::Media,
                     "users" => SearchReindexQueueTarget::Users,
                     "audit_log_entries" => SearchReindexQueueTarget::AuditLogEntries(r.target_id.into()),
-                    _ => unreachable!("unknown target type"),
+                    _ => unreachable!("unknown target type: {}", r.target_type),
                 };
                 SearchReindexQueue {
                     target,
@@ -91,10 +91,28 @@ impl DataSearchQueue for Postgres {
             .collect())
     }
 
+    async fn search_reindex_queue_clear(&mut self) -> Result<()> {
+        let mut conn = self.acquire().await?;
+        query!("TRUNCATE search_reindex_queue")
+            .execute(conn.ext())
+            .await?;
+        Ok(())
+    }
+
+    async fn search_reindex_queue_reset_all_audit_logs(&mut self) -> Result<()> {
+        let mut conn = self.acquire().await?;
+        query!(
+            r#"INSERT INTO search_reindex_queue (target_id, target_type) SELECT id, 'audit_log_entries' FROM room WHERE deleted_at IS NULL ON CONFLICT (target_id, target_type) DO NOTHING"#,
+        )
+        .execute(conn.ext())
+        .await?;
+        Ok(())
+    }
+
     async fn search_reindex_queue_reset_room(&mut self, room_id: RoomId) -> Result<()> {
         let mut conn = self.begin_tx().await?;
         query!(
-            r#"INSERT INTO search_reindex_queue (target_id, target_type) SELECT id, 'channel' FROM channel WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NULL ON CONFLICT (target_id, target_type) DO NOTHING"#,
+            r#"INSERT INTO search_reindex_queue (target_id, target_type) SELECT id, 'messages' FROM channel WHERE room_id = $1 AND deleted_at IS NULL AND archived_at IS NULL ON CONFLICT (target_id, target_type) DO NOTHING"#,
             *room_id,
         )
         .execute(conn.ext())
@@ -112,7 +130,7 @@ impl DataSearchQueue for Postgres {
     async fn search_reindex_queue_reset_all_messages(&mut self) -> Result<()> {
         let mut conn = self.acquire().await?;
         query!(
-            r#"INSERT INTO search_reindex_queue (target_id, target_type) SELECT id, 'channel' FROM channel WHERE deleted_at IS NULL AND archived_at IS NULL ON CONFLICT (target_id, target_type) DO NOTHING"#,
+            r#"INSERT INTO search_reindex_queue (target_id, target_type) SELECT id, 'messages' FROM channel WHERE deleted_at IS NULL AND archived_at IS NULL ON CONFLICT (target_id, target_type) DO NOTHING"#,
         )
         .execute(conn.ext())
         .await?;

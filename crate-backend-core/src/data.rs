@@ -461,8 +461,12 @@ pub trait DataSearchQueue {
     /// look for new queues that need to be to reindexed
     async fn search_reindex_queue_poll(&mut self, limit: u32) -> Result<Vec<SearchReindexQueue>>;
 
+    /// delete all queue entries
+    async fn search_reindex_queue_clear(&mut self) -> Result<()>;
+
     // bulk queue updates
     async fn search_reindex_queue_reset_all_messages(&mut self) -> Result<()>;
+    async fn search_reindex_queue_reset_all_audit_logs(&mut self) -> Result<()>;
     async fn search_reindex_queue_reset_room(&mut self, room_id: RoomId) -> Result<()>;
 
     // dead letter queue stuff

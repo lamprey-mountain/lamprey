@@ -206,7 +206,9 @@ impl ServiceAdmin {
 
     // TODO: rework
     pub async fn reindex_room(&self, room_id: RoomId) -> Result<()> {
-        todo!()
+        let srv = self.state.services();
+        srv.search.reindex(Reindex::InsideRoom(room_id)).await?;
+        Ok(())
     }
 
     // TODO: rework

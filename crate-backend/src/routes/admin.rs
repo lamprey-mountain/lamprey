@@ -11,8 +11,8 @@ use common::v1::types::{
 use common::v1::types::{PaginationQuery, PaginationResponse};
 use http::StatusCode;
 use lamprey_backend_core::types::admin::{
-    AdminBroadcast, AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache,
-    AdminPurgeCacheResponse, AdminRegisterUser, AdminWhisper, DlqEntry, SearchIndexStats,
+    AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache, AdminPurgeCacheResponse,
+    DlqEntry, SearchIndexStats,
 };
 use lamprey_backend_core::Error;
 use lamprey_macros::handler;
