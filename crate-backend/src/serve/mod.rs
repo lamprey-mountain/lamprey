@@ -105,6 +105,9 @@ mod utoipa_utils;
         common::v1::types::search::RoomSearchOrderField,
         common::v1::types::search::MessageSearchOrderField,
         common::v1::types::search::ChannelSearchOrderField,
+        common::v1::types::search::MediaSearchOrderField,
+        common::v1::types::search::AuditLogSearchOrderField,
+        common::v1::types::search::UserSearchOrderField,
         common::v1::types::search::Order,
         // room analytics types
         common::v1::types::room_analytics::Aggregation,
