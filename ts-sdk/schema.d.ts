@@ -115,12 +115,36 @@ export interface paths {
 		put?: never;
 		/**
 		 * Admin broadcast
-		 * @description <div class="markdown-alert-permission-required">Admin</div>
+		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AdminBroadcast</div>
 		 *
-		 *     send a system dm to everyone on the server
+		 *
 		 */
-		post: operations["admin_broadcast"];
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						message: components["schemas"]["MessageCreate"];
+					};
+				};
+			};
+			responses: {
+				/** @description success */
+				202: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -204,13 +228,36 @@ export interface paths {
 		put?: never;
 		/**
 		 * Admin register user
-		 * @description <div class="markdown-alert-permission-required">Admin</div>
+		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: UserRegistered</div>
 		 *
-		 *     Registers an existing guest user, promoting them to a regular user.
-		 *     Bypasses the normal invite/auth method flow.
+		 *
 		 */
-		post: operations["admin_register_user"];
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						user_id: components["schemas"]["Id"];
+					};
+				};
+			};
+			responses: {
+				/** @description User registered */
+				202: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -280,6 +327,28 @@ export interface paths {
 		 *     Queue all channels in a room to be reindexed for search
 		 */
 		post: operations["admin_reindex_room"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/admin/search/audit-logs": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Admin search audit logs
+		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
+		 *
+		 *
+		 */
+		post: operations["admin_search_audit_logs"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -385,12 +454,37 @@ export interface paths {
 		put?: never;
 		/**
 		 * Admin whisper
-		 * @description <div class="markdown-alert-permission-required">Admin</div>
+		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AdminWhisper</div>
 		 *
-		 *     send a system dm to one person in particular
+		 *
 		 */
-		post: operations["admin_whisper"];
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						message: components["schemas"]["MessageCreate"];
+						user_id: components["schemas"]["Id"];
+					};
+				};
+			};
+			responses: {
+				/** @description success */
+				202: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -8406,7 +8500,9 @@ export interface paths {
 			};
 			requestBody: {
 				content: {
-					"application/json": Record<string, never>;
+					"application/json": {
+						target_branch_id?: null | components["schemas"]["Id"];
+					};
 				};
 			};
 			responses: {
@@ -11368,49 +11464,11 @@ export interface paths {
 			};
 			requestBody: {
 				content: {
-					"application/json": {
-						/** @description filter by archival timestamp range
-						 *
-						 *     admin only */
-						archived_at: components["schemas"]["FilterRange_Time"];
-						/** @description only return rooms created in this range */
-						created_at?: components["schemas"]["FilterRange_Time"];
-						/** @description filter by deletion timestamp range
-						 *
-						 *     admin only */
-						deleted_at: components["schemas"]["FilterRange_Time"];
-						/**
-						 * Format: int32
-						 * @description the maximum number of messages to return
-						 * @default 100
-						 */
-						limit?: number;
-						/**
-						 * Format: int32
-						 * @description the number of channels to skip before returning
-						 * @default 0
-						 */
-						offset?: number;
+					"application/json": components["schemas"]["SearchRequest"] & {
 						/** @description what order to return results in */
 						order?: components["schemas"]["RoomSearchOrderField"];
-						/** @description filter by owner id
-						 *
-						 *     admin only */
-						owner_id?: components["schemas"]["Id"][];
-						/** @description filter by if this room is public
-						 *
-						 *     required to be true for non-admins */
-						public?: boolean | null;
-						/** @description filter by quarantine status
-						 *
-						 *     admin only */
-						quarantined?: boolean | null;
-						/** @description filter by room name, description, and id */
-						query?: string | null;
 						/** @description field to sort by */
 						sort_field?: components["schemas"]["RoomSearchOrderField"];
-						/** @description sort order (ascending/descending) */
-						sort_order?: components["schemas"]["Order"];
 					};
 				};
 			};
@@ -15179,53 +15237,18 @@ export interface paths {
 		 */
 		post: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
 			requestBody: {
 				content: {
-					"application/json": {
-						/** @description Only return archived (or unarchived) threads */
-						archived?: boolean | null;
+					"application/json": components["schemas"]["SearchRequest"] & {
 						/** @description whether to include nsfw channels */
 						include_nsfw?: boolean | null;
-						/**
-						 * Format: int32
-						 * @description the maximum number of channels to return
-						 * @default 100
-						 */
-						limit?: number;
-						/** @description only include channel ids in this range */
-						message_id?: components["schemas"]["FilterRange_Id"];
-						/**
-						 * Format: int32
-						 * @description the number of channels to skip before returning
-						 * @default 0
-						 */
-						offset?: number;
-						/** @description Only return threads in these channels. Defaults to all channels. */
-						parent_id?: components["schemas"]["Id"][];
-						/** @description The full text search query. */
-						query?: string | null;
-						/** @description Only return removed (or not removed) threads */
-						removed?: boolean | null;
-						/** @description Only return threads in these rooms. Defaults to all rooms. */
-						room_id?: components["schemas"]["Id"][];
 						/** @description field to sort by */
 						sort_field?: components["schemas"]["ChannelSearchOrderField"];
-						/** @description sort order (ascending/descending) */
-						sort_order?: components["schemas"]["Order"];
-						/** @description Only return threads with these tags. */
-						tag_id?: components["schemas"]["Id"][];
-						/** @description only return channels of these types */
-						type?: components["schemas"]["ChannelType"][];
 					};
 				};
 			};
@@ -15237,10 +15260,18 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
+							/** @description the channels */
+							channels: components["schemas"]["Channel"][];
+							/** @description current page cursor */
 							cursor?: string | null;
+							/** @description whether there are more threads */
 							has_more: boolean;
-							items: components["schemas"]["Channel"][];
-							/** Format: int64 */
+							/** @description the ids of the matched channels */
+							results: components["schemas"]["Id"][];
+							/**
+							 * Format: int64
+							 * @description approximate count of total results that match this query
+							 */
 							total: number;
 						};
 					};
@@ -15277,59 +15308,11 @@ export interface paths {
 			};
 			requestBody: {
 				content: {
-					"application/json": {
-						/** @description Only return messages in these channels. Defaults to all channels. */
-						channel_id?: components["schemas"]["Id"][];
-						/** @description Only return messages that have an attachment of any type */
-						has_attachment?: boolean | null;
-						/** @description Only return messages that have an attachment of type audio/* */
-						has_audio?: boolean | null;
-						/** @description Only return messages that have an embed */
-						has_embed?: boolean | null;
-						/** @description Only return messages that have an attachment of type image/* */
-						has_image?: boolean | null;
-						/** @description Only return messages that have a link */
-						has_link?: boolean | null;
-						/** @description Only return messages that have an associated thread */
-						has_thread?: boolean | null;
-						/** @description Only return messages that have an attachment of type video/* */
-						has_video?: boolean | null;
+					"application/json": components["schemas"]["SearchRequest"] & {
 						/** @description whether to include results from nsfw channels */
 						include_nsfw?: boolean | null;
-						/**
-						 * Format: int32
-						 * @description the maximum number of messages to return
-						 * @default 100
-						 */
-						limit?: number;
-						/** @description Only return messages that have links from these domains */
-						link_hostnames?: string[];
-						/** @description Only return messages that mentions everyone */
-						mentions_everyone?: boolean | null;
-						/** @description Only return messages that mention these roles */
-						mentions_roles?: components["schemas"]["Id"][];
-						/** @description Only return messages that mention these users */
-						mentions_users?: components["schemas"]["Id"][];
-						/** @description only include messages ids in this range */
-						message_id?: components["schemas"]["FilterRange_Id"];
-						/**
-						 * Format: int32
-						 * @description the number of messages to skip before returning
-						 * @default 0
-						 */
-						offset?: number;
-						/** @description Only return pinned (or unpinned) messages */
-						pinned?: boolean | null;
-						/** @description The full text search query. */
-						query?: string | null;
-						/** @description Only return messages in these rooms. Defaults to all rooms. */
-						room_id?: components["schemas"]["Id"][];
 						/** @description field to sort by */
 						sort_field?: components["schemas"]["MessageSearchOrderField"];
-						/** @description sort order (ascending/descending) */
-						sort_order?: components["schemas"]["Order"];
-						/** @description Only return messages from these users. Defaults to all users. */
-						user_id?: components["schemas"]["Id"][];
 					};
 				};
 			};
@@ -15405,49 +15388,11 @@ export interface paths {
 			};
 			requestBody: {
 				content: {
-					"application/json": {
-						/** @description filter by archival timestamp range
-						 *
-						 *     admin only */
-						archived_at: components["schemas"]["FilterRange_Time"];
-						/** @description only return rooms created in this range */
-						created_at?: components["schemas"]["FilterRange_Time"];
-						/** @description filter by deletion timestamp range
-						 *
-						 *     admin only */
-						deleted_at: components["schemas"]["FilterRange_Time"];
-						/**
-						 * Format: int32
-						 * @description the maximum number of messages to return
-						 * @default 100
-						 */
-						limit?: number;
-						/**
-						 * Format: int32
-						 * @description the number of channels to skip before returning
-						 * @default 0
-						 */
-						offset?: number;
+					"application/json": components["schemas"]["SearchRequest"] & {
 						/** @description what order to return results in */
 						order?: components["schemas"]["RoomSearchOrderField"];
-						/** @description filter by owner id
-						 *
-						 *     admin only */
-						owner_id?: components["schemas"]["Id"][];
-						/** @description filter by if this room is public
-						 *
-						 *     required to be true for non-admins */
-						public?: boolean | null;
-						/** @description filter by quarantine status
-						 *
-						 *     admin only */
-						quarantined?: boolean | null;
-						/** @description filter by room name, description, and id */
-						query?: string | null;
 						/** @description field to sort by */
 						sort_field?: components["schemas"]["RoomSearchOrderField"];
-						/** @description sort order (ascending/descending) */
-						sort_order?: components["schemas"]["Order"];
 					};
 				};
 			};
@@ -15829,6 +15774,49 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/server/{hostname}/connect": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Server connect
+		 * @description <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     start receiving sync events from a remote server
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					hostname: null | string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description connected */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": Record<string, never>;
+					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/server/{hostname}/keys": {
 		parameters: {
 			query?: never;
@@ -15941,7 +15929,9 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					"idempotency-key"?: string;
+				};
 				path: {
 					hostname: null | string;
 				};
@@ -15962,80 +15952,7 @@ export interface paths {
 						[name: string]: unknown;
 					};
 					content: {
-						"application/json": {
-							/**
-							 * Format: int64
-							 * @description how much time to delay until sending the next batch, in milliseconds
-							 *
-							 *     this is to prevent servers from being overloaded
-							 */
-							timeout: number;
-						};
-					};
-				};
-			};
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/server/{hostname}/user": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Server user ensure
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Create a user representing a user on the requesting server
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path: {
-					hostname: null | string;
-				};
-				cookie?: never;
-			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description if this is a remote bot */
-						bot: boolean;
-						/** @description about/bio */
-						description?: string | null;
-						/** @description the id of the user on the requesting server
-						 *
-						 *     used to deduplicate users */
-						local_id: components["schemas"]["Id"];
-						/** @description display name */
-						name: string;
-						/** @description if this is for the service itself. usually paired with bot: true */
-						system: boolean;
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description an authenticated session for the user */
-							session: components["schemas"]["Session"];
-							/** @description the user that was created */
-							user: components["schemas"]["User"];
-						};
+						"application/json": Record<string, never>;
 					};
 				};
 			};
@@ -16209,21 +16126,9 @@ export interface paths {
 							id: components["schemas"]["Id"];
 							/** @description session imprint metadata */
 							imprint: components["schemas"]["SessionImprint"];
-							/**
-							 * @deprecated
-							 * @description the last seen ip address using this session
-							 */
-							ip_addr?: string | null;
-							/** @description the last time this session was used */
-							last_seen_at: components["schemas"]["Time"];
 							/** @description a human readable name for this session */
 							name?: string | null;
 							type: components["schemas"]["SessionType"];
-							/**
-							 * @deprecated
-							 * @description the last seen user agent using this session
-							 */
-							user_agent?: string | null;
 						};
 					};
 				};
@@ -16298,21 +16203,9 @@ export interface paths {
 							id: components["schemas"]["Id"];
 							/** @description session imprint metadata */
 							imprint: components["schemas"]["SessionImprint"];
-							/**
-							 * @deprecated
-							 * @description the last seen ip address using this session
-							 */
-							ip_addr?: string | null;
-							/** @description the last time this session was used */
-							last_seen_at: components["schemas"]["Time"];
 							/** @description a human readable name for this session */
 							name?: string | null;
 							type: components["schemas"]["SessionType"];
-							/**
-							 * @deprecated
-							 * @description the last seen user agent using this session
-							 */
-							user_agent?: string | null;
 						};
 					};
 				};
@@ -16330,21 +16223,9 @@ export interface paths {
 							id: components["schemas"]["Id"];
 							/** @description session imprint metadata */
 							imprint: components["schemas"]["SessionImprint"];
-							/**
-							 * @deprecated
-							 * @description the last seen ip address using this session
-							 */
-							ip_addr?: string | null;
-							/** @description the last time this session was used */
-							last_seen_at: components["schemas"]["Time"];
 							/** @description a human readable name for this session */
 							name?: string | null;
 							type: components["schemas"]["SessionType"];
-							/**
-							 * @deprecated
-							 * @description the last seen user agent using this session
-							 */
-							user_agent?: string | null;
 						};
 					};
 				};
@@ -17653,35 +17534,8 @@ export interface paths {
 			};
 			requestBody: {
 				content: {
-					"application/json": {
-						/** @description whether to only return bots or only return non-bots.
-						 *
-						 *     defaults to allowing both. */
-						bot?: boolean | null;
-						/** @description whether to only return deleted users or only return non-deleted users.
-						 *
-						 *     defaults to only non deleted users. */
-						deleted?: boolean | null;
-						/** @description whether to only return guests (non registered users) or only return non-guests.
-						 *
-						 *     defaults to allowing both. */
-						guests?: boolean | null;
-						/** @description include users who are members of these rooms */
-						member_of_room_id: components["schemas"]["Id"][];
-						/** @description whether to only return puppets or only return non-puppets.
-						 *
-						 *     defaults to allowing both. */
-						puppet?: boolean | null;
-						/** @description filter by user name, description, and id */
-						query?: string | null;
-						/** @description include users who have these roles in the server room */
-						server_role_id: components["schemas"]["Id"][];
-						sort_field: components["schemas"]["UserSearchSortField"];
-						sort_order: components["schemas"]["Order"];
-						/** @description whether to only return suspended users or only return non-suspended users.
-						 *
-						 *     defaults to allowing both. */
-						suspended?: boolean | null;
+					"application/json": components["schemas"]["SearchRequest"] & {
+						sort_field?: components["schemas"]["UserSearchOrderField"];
 					};
 				};
 			};
@@ -17691,7 +17545,38 @@ export interface paths {
 					headers: {
 						[name: string]: unknown;
 					};
-					content?: never;
+					content: {
+						"application/json": {
+							/** @description whether to only return bots or only return non-bots.
+							 *
+							 *     defaults to allowing both. */
+							bot?: boolean | null;
+							/** @description whether to only return deleted users or only return non-deleted users.
+							 *
+							 *     defaults to only non deleted users. */
+							deleted?: boolean | null;
+							/** @description whether to only return guests (non registered users) or only return non-guests.
+							 *
+							 *     defaults to allowing both. */
+							guests?: boolean | null;
+							/** @description include users who are members of these rooms */
+							member_of_room_id: components["schemas"]["Id"][];
+							/** @description whether to only return puppets or only return non-puppets.
+							 *
+							 *     defaults to allowing both. */
+							puppet?: boolean | null;
+							/** @description filter by user name, description, and id */
+							query?: string | null;
+							/** @description include users who have these roles in the server room */
+							server_role_id: components["schemas"]["Id"][];
+							sort_field: components["schemas"]["UserSearchSortField"];
+							sort_order: components["schemas"]["Order"];
+							/** @description whether to only return suspended users or only return non-suspended users.
+							 *
+							 *     defaults to allowing both. */
+							suspended?: boolean | null;
+						};
+					};
 				};
 			};
 		};
@@ -18814,10 +18699,6 @@ export interface paths {
 			requestBody: {
 				content: {
 					"application/json": {
-						/** @description channel to create a call in
-						 *
-						 *     must be a Broadcast channel */
-						channel_id: components["schemas"]["Id"];
 						/** @description call topic
 						 *
 						 *     must have VoiceMute permission in target channel to set */
@@ -19708,9 +19589,6 @@ export interface components {
 			/** @enum {string} */
 			type: "Custom";
 		};
-		AdminBroadcast: {
-			message: components["schemas"]["MessageCreate"];
-		};
 		AdminCollectGarbage: {
 			/** @description whether to return 202 accepted or calculate stats */
 			async: boolean;
@@ -19766,15 +19644,19 @@ export interface components {
 			| "Rooms"
 			| "Sessions"
 			| "Users";
-		AdminRegisterUser: {
-			user_id: components["schemas"]["Id"];
-		};
-		AdminWhisper: {
-			message: components["schemas"]["MessageCreate"];
-			user_id: components["schemas"]["Id"];
-		};
 		/** @enum {string} */
 		Aggregation: "Hourly" | "Daily" | "Weekly" | "Monthly";
+		/** @description a restriction on who can interact with this component
+		 *
+		 *     *any* of the checks must pass (checks are or'd, not anded). if all of the fields are empty, nobody can interact. */
+		Allow: {
+			/** @description only these users with these permissions can interact */
+			permissions?: components["schemas"]["Permission"][];
+			/** @description only these users with these roles can interact */
+			role_ids?: components["schemas"]["Id"][];
+			/** @description only these users can interact */
+			user_ids?: components["schemas"]["Id"][];
+		};
 		Application: {
 			bridge?: null | components["schemas"]["Bridge"];
 			description?: string | null;
@@ -20656,6 +20538,11 @@ export interface components {
 					/** @enum {string} */
 					type: "RedexVersionDelete";
 			  };
+		/** @enum {string} */
+		AuditLogSearchOrderField: "Created";
+		AuditLogSearchRequest: components["schemas"]["SearchRequest"] & {
+			sort_field?: components["schemas"]["AuditLogSearchOrderField"];
+		};
 		AutomodAction:
 			| {
 					/** @description a custom message to show to the user */
@@ -21143,7 +21030,13 @@ export interface components {
 		 * @description which field to order channel search results by
 		 * @enum {string}
 		 */
-		ChannelSearchOrderField: "Created" | "Relevancy" | "Activity" | "Archived";
+		ChannelSearchOrderField:
+			| "Created"
+			| "Relevancy"
+			| "Activity"
+			| "Archived"
+			| "Name"
+			| "Id";
 		/**
 		 * Format: int64
 		 * @description A monotonic sync token, incremented on every action in a channel.
@@ -21175,6 +21068,7 @@ export interface components {
 		Color: string;
 		/** @description a single component in a tree */
 		Component: components["schemas"]["ComponentType_Create"] & {
+			allow?: null | components["schemas"]["Allow"];
 			id: components["schemas"]["Option"];
 		};
 		/** @description A developer-defined identifier for an interactive component.
@@ -21226,12 +21120,8 @@ export interface components {
 				has_gifv: boolean;
 				/** @description Whether this media can be fetched through the `/thumb/{media_id}` cdn route. */
 				has_thumbnail: boolean;
-				/** @description the hashes of this file
-				 *
-				 *     maps hash type to unpadded url safe base64 */
-				hashes?: {
-					[key: string]: string;
-				};
+				/** @description the hashes of this file */
+				hashes?: components["schemas"]["Hashes"];
 				id: components["schemas"]["Id"];
 				/** @description what this piece of media is linked to (admin only) */
 				links?: components["schemas"]["MediaLinkType"][];
@@ -21528,14 +21418,17 @@ export interface components {
 			  };
 		/** @description a single component in a tree */
 		Component_Canonical: components["schemas"]["ComponentType_Canonical"] & {
+			allow?: null | components["schemas"]["Allow"];
 			id: components["schemas"]["ComponentId"];
 		};
 		/** @description a single component in a tree */
 		Component_Create: components["schemas"]["ComponentType_Create"] & {
+			allow?: null | components["schemas"]["Allow"];
 			id: components["schemas"]["Option"];
 		};
 		/** @description a single component in a tree */
 		Component_Encrypted: components["schemas"]["ComponentType_Encrypted"] & {
+			allow?: null | components["schemas"]["Allow"];
 			id: components["schemas"]["ComponentId"];
 		};
 		Components_Canonical: components["schemas"]["Component_Canonical"][];
@@ -21649,7 +21542,9 @@ export interface components {
 			 *     defaults to only Active */
 			state?: components["schemas"]["DocumentBranchState"][];
 		};
-		DocumentBranchMerge: Record<string, never>;
+		DocumentBranchMerge: {
+			target_branch_id?: null | components["schemas"]["Id"];
+		};
 		DocumentBranchPatch: {
 			name?: string | null;
 			/** @description once public, branches cannot be made private again */
@@ -21809,9 +21704,7 @@ export interface components {
 			content_type: components["schemas"]["Mime"];
 			filename: string;
 			/** @description hashes of decrypted content */
-			hashes: {
-				[key: string]: string;
-			};
+			hashes: components["schemas"]["Hashes"];
 			metadata: components["schemas"]["MediaMetadata"];
 			/** Format: int64 */
 			size: number;
@@ -21984,34 +21877,6 @@ export interface components {
 		 * @enum {string}
 		 */
 		FetchReason: "Initial" | "Redirect";
-		/** @description filter results to only this range */
-		FilterRange_Id: {
-			/**
-			 * Uuid
-			 * Format: uuid
-			 * @description A universally unique identifier.
-			 */
-			max?: string;
-			/**
-			 * Uuid
-			 * Format: uuid
-			 * @description A universally unique identifier.
-			 */
-			min?: string;
-		} | null;
-		/** @description filter results to only this range */
-		FilterRange_Time: {
-			/**
-			 * Format: date-time
-			 * @description A date, time, and timezone. Serialized to rfc3339.
-			 */
-			max?: string;
-			/**
-			 * Format: date-time
-			 * @description A date, time, and timezone. Serialized to rfc3339.
-			 */
-			min?: string;
-		} | null;
 		/** @description append components to an existing component */
 		FlumeAppend: {
 			/** @description components to append */
@@ -22095,6 +21960,12 @@ export interface components {
 					/** @enum {string} */
 					status: "Cancelled";
 			  };
+		/** @description a single hash */
+		HashData: components["schemas"]["Binary"];
+		/** @description a set of hashes */
+		Hashes: {
+			[key: string]: components["schemas"]["HashData"];
+		};
 		HistoryPagination: {
 			/** @description the resulting changesets, ordered oldest to newest */
 			changesets: components["schemas"]["Changeset"][];
@@ -22342,8 +22213,6 @@ export interface components {
 			 */
 			uses: number;
 		};
-		/** @enum {string} */
-		KeyframeRequestKind: "Fir" | "Pli";
 		License: string;
 		/** @description indicates that a channel is locked */
 		Locked: {
@@ -22382,12 +22251,8 @@ export interface components {
 			has_gifv: boolean;
 			/** @description Whether this media can be fetched through the `/thumb/{media_id}` cdn route. */
 			has_thumbnail: boolean;
-			/** @description the hashes of this file
-			 *
-			 *     maps hash type to unpadded url safe base64 */
-			hashes?: {
-				[key: string]: string;
-			};
+			/** @description the hashes of this file */
+			hashes?: components["schemas"]["Hashes"];
 			id: components["schemas"]["Id"];
 			/** @description what this piece of media is linked to (admin only) */
 			links?: components["schemas"]["MediaLinkType"][];
@@ -22664,11 +22529,11 @@ export interface components {
 			/** @description what order to return results in */
 			sort_order: components["schemas"]["Order"];
 		};
-		/**
-		 * @description which field to order media search results by
-		 * @enum {string}
-		 */
-		MediaSearchOrderField: "Created" | "Size";
+		/** @enum {string} */
+		MediaSearchOrderField: "Created" | "Name" | "Id";
+		MediaSearchRequest: components["schemas"]["SearchRequest"] & {
+			sort_field?: components["schemas"]["MediaSearchOrderField"];
+		};
 		/**
 		 * @description The status for this media
 		 * @enum {string}
@@ -23762,12 +23627,7 @@ export interface components {
 		Metadata: {
 			[key: string]: string;
 		};
-		/**
-		 * Format: uuid
-		 * @description a unique identifier for a media track (corresponds to a transceiver in webrtc)
-		 *
-		 *     media track ids are unique per peer connection (peer-peer pair)
-		 */
+		/** @description a unique identifier for a media track (corresponds to a transceiver in webrtc) */
 		Mid: string;
 		/**
 		 * Mime
@@ -23891,7 +23751,7 @@ export interface components {
 		};
 		Option: null | number;
 		/**
-		 * @description what order to return items in
+		 * @description what order to return search results in
 		 * @enum {string}
 		 */
 		Order: "asc" | "desc";
@@ -24518,11 +24378,8 @@ export interface components {
 			| "BanEvasion"
 			| "Underage"
 			| "Other";
-		/**
-		 * Format: int64
-		 * @description a unique identifier for a track layer
-		 */
-		Rid: number;
+		/** @description a unique identifier for a track layer */
+		Rid: string;
 		Role: {
 			/** @description the permissions to grant for this role */
 			allow: components["schemas"]["Permission"][];
@@ -24817,7 +24674,7 @@ export interface components {
 		 * @description which field to order room search results by
 		 * @enum {string}
 		 */
-		RoomSearchOrderField: "Members" | "Created" | "Name";
+		RoomSearchOrderField: "Members" | "Created" | "Name" | "Id";
 		RoomSecurity: {
 			require_mfa: boolean;
 			require_sudo: boolean;
@@ -24872,32 +24729,52 @@ export interface components {
 		 */
 		Scope: "identify" | "email" | "rooms" | "relationships" | "full" | "auth";
 		Scopes: components["schemas"]["Scope"][];
-		/** @description Search index statistics for a channel */
-		SearchIndexStats: {
-			/**
-			 * Format: int64
-			 * @description Number of documents indexed for this channel
-			 */
-			documents_indexed: number;
-			last_message_id?: null | components["schemas"]["Id"];
-		};
 		/** @description Overall search index statistics */
-		SearchStats: {
+		SearchIndexStats: {
+			/** Format: int64 */
+			count_channels: number;
 			/**
 			 * Format: int64
-			 * @description Number of entries in the backfill queue
+			 * @description total number of documents in this index
 			 */
-			backfill_queue_size: number;
+			count_documents: number;
+			/** Format: int64 */
+			count_media: number;
+			/** Format: int64 */
+			count_messages: number;
+			/** Format: int64 */
+			count_rooms: number;
+			/** Format: int64 */
+			count_users: number;
 			/**
 			 * Format: int64
-			 * @description Total number of documents in the index
-			 */
-			document_count: number;
-			/**
-			 * Format: int64
-			 * @description Size of the index in bytes
+			 * @description size of the index in bytes
 			 */
 			index_size_bytes: number;
+			/**
+			 * Format: int64
+			 * @description number of active reindex queues
+			 */
+			reindex_queues: number;
+		};
+		/** @description generic search request struct */
+		SearchRequest: {
+			/**
+			 * Format: int32
+			 * @description the maximum number of items to return
+			 * @default 100
+			 */
+			limit: number;
+			/**
+			 * Format: int32
+			 * @description the number of items to skip before returning
+			 * @default 0
+			 */
+			offset: number;
+			/** @description the full text search query. */
+			query?: string | null;
+			/** @description sort order (ascending/descending) */
+			sort_order?: components["schemas"]["Order"];
 		};
 		/** @description Plugin selection log entry. */
 		SelectPluginEntry: {
@@ -24997,21 +24874,9 @@ export interface components {
 			id: components["schemas"]["Id"];
 			/** @description session imprint metadata */
 			imprint: components["schemas"]["SessionImprint"];
-			/**
-			 * @deprecated
-			 * @description the last seen ip address using this session
-			 */
-			ip_addr?: string | null;
-			/** @description the last time this session was used */
-			last_seen_at: components["schemas"]["Time"];
 			/** @description a human readable name for this session */
 			name?: string | null;
 			type: components["schemas"]["SessionType"];
-			/**
-			 * @deprecated
-			 * @description the last seen user agent using this session
-			 */
-			user_agent?: string | null;
 		};
 		/** @description webrtc session description */
 		SessionDescription: string;
@@ -25082,15 +24947,6 @@ export interface components {
 					subscriptions: components["schemas"]["Subscription"][];
 					/** @enum {string} */
 					type: "Want";
-			  }
-			| {
-					/** @description the kind of the keyframe that should be generated */
-					kind: components["schemas"]["KeyframeRequestKind"];
-					/** @description the track to generate a keyframe for */
-					mid: components["schemas"]["Mid"];
-					rid?: null | components["schemas"]["Rid"];
-					/** @enum {string} */
-					type: "Keyframe";
 			  };
 		/** @description an event sent from the backend to the peer's sync connection */
 		SignallingEvent:
@@ -25103,8 +24959,12 @@ export interface components {
 					type: "Connected";
 			  }
 			| {
+					/** @enum {string} */
+					type: "Disconnected";
+			  }
+			| {
 					sdp: components["schemas"]["SessionDescription"];
-					tracks: components["schemas"]["TrackMetadata"][];
+					tracks: components["schemas"]["TrackMetadataWithUserId"][];
 					/** @enum {string} */
 					type: "Offer";
 			  }
@@ -25255,11 +25115,14 @@ export interface components {
 		 * @enum {string}
 		 */
 		TrackEncoding: "Source" | "Thumbnail";
-		/**
-		 * @description which stream this track is associated with. generally there will be one video track and one audio track per stream.
-		 * @enum {string}
-		 */
-		TrackKey: "user" | "screen";
+		/** @description which stream this track is associated with. generally there will be one video track and one audio track per stream. */
+		TrackKey:
+			| "user"
+			| "screen"
+			| {
+					/** @description an unknown track type */
+					other: string;
+			  };
 		TrackLayer: {
 			encoding: components["schemas"]["TrackEncoding"];
 			rid: components["schemas"]["Rid"];
@@ -25278,6 +25141,11 @@ export interface components {
 			 *
 			 *     equivalent to transceiver.mid */
 			mid: components["schemas"]["Mid"];
+		};
+		/** @description track metadata. `mid` is the **mapped** media id, ie. the mid used between the final sfu/peer */
+		TrackMetadataWithUserId: components["schemas"]["TrackMetadata"] & {
+			/** @description the source user this track came from */
+			user_id: components["schemas"]["Id"];
 		};
 		/** @description Batch unfurl request */
 		UnfurlRequest: {
@@ -25350,6 +25218,8 @@ export interface components {
 			 *     defaults to allowing both. */
 			suspended?: boolean | null;
 		};
+		/** @enum {string} */
+		UserSearchOrderField: "Name" | "Created" | "Registered" | "Id";
 		/** @enum {string} */
 		UserSearchSortField: "Name" | "Created" | "Registered";
 		UserWebhook: {
@@ -25469,28 +25339,6 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-	admin_broadcast: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["AdminBroadcast"];
-			};
-		};
-		responses: {
-			/** @description ok */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
 	admin_channel_search_index_stats: {
 		parameters: {
 			query?: never;
@@ -25569,28 +25417,6 @@ export interface operations {
 			};
 		};
 	};
-	admin_register_user: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["AdminRegisterUser"];
-			};
-		};
-		responses: {
-			/** @description User registered */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
 	admin_reindex_channel: {
 		parameters: {
 			query?: never;
@@ -25650,6 +25476,20 @@ export interface operations {
 				content?: never;
 			};
 		};
+	};
+	admin_search_audit_logs: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["AuditLogSearchRequest"];
+			};
+		};
+		responses: never;
 	};
 	admin_search_dlq_list: {
 		parameters: {
@@ -25733,30 +25573,8 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["SearchStats"];
+					"application/json": components["schemas"]["SearchIndexStats"];
 				};
-			};
-		};
-	};
-	admin_whisper: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["AdminWhisper"];
-			};
-		};
-		responses: {
-			/** @description ok */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
 			};
 		};
 	};
@@ -26013,7 +25831,7 @@ export interface operations {
 		};
 		requestBody: {
 			content: {
-				"application/json": components["schemas"]["MediaSearch"];
+				"application/json": components["schemas"]["MediaSearchRequest"];
 			};
 		};
 		responses: {
@@ -26022,7 +25840,9 @@ export interface operations {
 				headers: {
 					[name: string]: unknown;
 				};
-				content?: never;
+				content: {
+					"application/json": components["schemas"]["MediaSearch"];
+				};
 			};
 		};
 	};
