@@ -16,6 +16,7 @@ pub struct BackendConnection {
     command_rx: UnboundedReceiver<SfuCommand>,
 }
 
+/// a way to send events to the api server
 #[derive(Clone)]
 pub struct BackendHandle {
     event_tx: UnboundedSender<SfuEvent>,

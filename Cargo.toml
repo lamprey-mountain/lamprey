@@ -15,6 +15,7 @@ members = [
   "crate-sdk", "crate-unfurl",
   # "crate-unfurl",
   "crate-voice",
+  "crate-voice-new",
   "scanner-malware",
   # "crate-*",
 ]

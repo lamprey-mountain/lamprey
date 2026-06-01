@@ -286,6 +286,7 @@ pub struct VoiceStateScreenshareUpdate {
     pub thumbnail: Option<MediaId>,
 }
 
+// TODO: remove TrackMetadata. it's not helpful since mid is ambiguous.
 /// metadata about a track
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -314,14 +315,14 @@ pub struct TrackMetadata {
     // pub whisper: Option<TrackWhisper>,
 }
 
-// // TODO: whispering
-// /// whispering config (only send media from this track to these users)
-// #[derive(Debug, Clone)]
-// #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-// #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-// pub struct TrackWhisper {
-//     pub user_ids: Vec<UserId>,
-// }
+// TODO: whispering
+/// whispering config (only send media from this track to these users)
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct TrackWhisper {
+    pub user_ids: Vec<UserId>,
+}
 
 /// track metadata. `mid` is the **mapped** media id, ie. the mid used between the final sfu/peer
 #[derive(Debug, Clone)]
@@ -452,7 +453,10 @@ pub enum TrackEncoding {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Subscription {
-    /// which track to subscribe to
+    /// subscribe to this user's track
+    pub user_id: UserId,
+
+    /// subscribe to this mid of
     pub mid: Mid,
 
     /// the layers of the track to subscribe to

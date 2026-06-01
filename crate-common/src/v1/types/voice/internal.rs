@@ -159,6 +159,7 @@ impl SfuPermissions {
     }
 }
 
+// TODO: remove
 /// channel config that the sfu needs to know about
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -175,6 +176,16 @@ pub struct SfuChannel {
     // QUESTION: does this affect peers?
     // TODO: remove? this should be enforced by the api server
     pub user_limit: Option<u64>,
+}
+
+// TODO: use this instead of SfuChannel
+/// configuration for a voice call
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct VoiceConfig {
+    /// maximum audio bitrate
+    pub bitrate: u64,
+    // TODO: video resolution
 }
 
 impl From<Channel> for SfuChannel {

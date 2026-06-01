@@ -112,17 +112,9 @@ pub enum SfuCommand {
         permissions: SfuPermissions,
     },
 
-    /// prepare a new cascade connection on a sfu
-    ///
-    /// sends `CascadePrepared`
-    PrepareCascade {
-        /// the id of the connecting sfu
-        sfu_id: SfuId,
-    },
-
     /// create a new cascading connection
     ///
-    /// sends `PeerCreated` after connecting to the sfu
+    /// sends `CascadeCreated` after connecting to the sfu
     CreateCascade {
         /// the id of the target sfu
         sfu_id: SfuId,
@@ -175,6 +167,8 @@ pub enum SfuCommand {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 pub enum SfuEvent {
     /// calculated rtt latency to another sfu
+    ///
+    /// response to `SfuCommand::RecalculateLatency`, but can also be sent whenever the sfu feels like
     Latency {
         target_sfu: SfuId,
 
@@ -184,26 +178,41 @@ pub enum SfuEvent {
 
     /// stats for this sfu
     Stats { stats: SfuStats },
-    // NOTE: is this used?
-    // /// "I am now the Origin for Channel X"
-    // ChannelHealed { channel_id: ChannelId },
-    /// a peer has been created (response to `CreatePeer` and `CreateCascade`)
+
+    /// a peer has been created
     PeerCreated {
         user_id: UserId,
         channel_id: ChannelId,
     },
 
+    /// a peer has disconnected
+    // TODO: rename to PeerDisconnected
+    PeerDisconnect {
+        user_id: UserId,
+        channel_id: ChannelId,
+    },
+
+    /// a cascade has been created
+    CascadeCreated {
+        sfu_id: SfuId,
+        channel_id: ChannelId,
+    },
+
+    /// a cascade has been prepared
+    ///
+    /// contains info needed to connect to another sfu
     CascadePrepared {
         /// the id of the connecting sfu
         sfu_id: SfuId,
 
-        /// the secret token to authentication with
+        /// the secret token to authenticate with
         token: String,
 
         /// the address to connect to
         addr: SocketAddr,
     },
 
+    // TODO: CascadeDisconnected
     /// send this message to this user
     VoiceDispatch {
         user_id: UserId,
@@ -216,12 +225,6 @@ pub enum SfuEvent {
         user_id: UserId,
         channel_id: ChannelId,
         update: VoiceStateUpdate,
-    },
-
-    /// disconnect a peer
-    PeerDisconnect {
-        user_id: UserId,
-        channel_id: ChannelId,
     },
 }
 
@@ -250,12 +253,11 @@ pub enum SignallingCommand {
 
     /// request additional tracks
     ///
-    /// - all audio from track key `user` is sent by default
-    /// - all video and audio from other sources require a Want
+    /// - all audio from key `user` is sent by default
+    /// - all video and audio from other sources require a subscription
     /// - sent by server and client
-    /// - replaces the previous Want
-    // TODO: rename to Subscribe
-    Want { subscriptions: Vec<Subscription> },
+    /// - replaces the previous subscription
+    Subscribe { subs: Vec<Subscription> },
 }
 
 /// an event sent from the backend to the peer's sync connection
@@ -286,20 +288,19 @@ pub enum SignallingEvent {
     /// an ice candidate
     Candidate { candidate: IceCandidate },
 
-    /// mapping of media ids to streams
-    Have {
+    /// update (replace) available tracks for a user
+    Tracks {
         user_id: UserId,
         tracks: Vec<TrackMetadata>,
     },
 
     /// request additional tracks
     ///
-    /// - all audio from track key `user` is sent by default
-    /// - all video and audio from other sources require a Want
+    /// - all audio from key `user` is sent by default
+    /// - all video and audio from other sources require a subscription
     /// - sent by server and client
-    /// - replaces the previous Want
-    // TODO: rename to Subscribe
-    Want { subscriptions: Vec<Subscription> },
+    /// - replaces the previous subscription
+    Subscribe { subs: Vec<Subscription> },
 
     /// migrate to a new sfu
     ///

@@ -22,7 +22,7 @@ unicode-properties = "0.1.4"
 regex = "1.12.3"
 pastey = "0.1.1"
 thiserror = "2.0.18"
-str0m = { version = "0.10.0", optional = true }
+str0m = { version = "0.20.0", optional = true }
 lamprey-macros = { version = "0.1", path = "../crate-macros" }
 base64 = "0.22.1"
 http = "1.4.0"

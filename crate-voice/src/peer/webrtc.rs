@@ -547,7 +547,7 @@ impl PeerWebrtcInner {
                 SignallingCommand::VoiceState { state } => {
                     self.voice_state.apply(state);
                 }
-                SignallingCommand::Want { subscriptions } => {
+                SignallingCommand::Subscribe { subs: subscriptions } => {
                     // TODO: handle subscriptions
                     debug!("Want subscriptions: {:?}", subscriptions);
                 }

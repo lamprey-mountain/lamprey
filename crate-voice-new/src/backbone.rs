@@ -23,6 +23,7 @@ pub enum BackboneEvent {
     },
 
     /// an unreliable datagram was received from a remote SFU
+    // TODO: remove
     Datagram(BackboneDatagram),
 
     /// a backbone connection was established

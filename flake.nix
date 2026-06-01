@@ -611,7 +611,8 @@
         };
 
         devShells.default = craneLib.devShell {
-          packages = with pkgs; [nodejs pnpm chromium lld clang mold wasm-pack];
+          inputsFrom = [ backend ];
+          packages = with pkgs; [nodejs pnpm chromium wasm-pack];
           env = {
             PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
             PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = "${pkgs.chromium}/bin/chromium";
@@ -639,7 +640,8 @@
         # and check/build without needing to build twemoji-spritesheets or
         # wasm-markdown
         devShells.escape-hatch = craneLib.devShell {
-          packages = with pkgs; [nodejs pnpm lld clang mold];
+          inputsFrom = [ backend ];
+          packages = with pkgs; [nodejs pnpm];
           shellHook = ''
             cat > tsconfig.paths.json <<EOF
             {
