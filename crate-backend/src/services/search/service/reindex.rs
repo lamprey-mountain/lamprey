@@ -90,7 +90,7 @@ impl ServiceSearch {
                     .await?;
                 data.search_reindex_queue_upsert(SearchReindexQueueTarget::Media, None)
                     .await?;
-                data.commit();
+                data.commit().await;
             }
             Reindex::QueueMessages(id) => {
                 let mut data = self.state.data();
