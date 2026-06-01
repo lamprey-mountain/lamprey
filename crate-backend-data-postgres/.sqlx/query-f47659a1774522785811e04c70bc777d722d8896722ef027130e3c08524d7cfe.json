@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, user_id, token, status as \"status: _\", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, authorized_at, deauthorized_at FROM session WHERE id = $1",
+  "query": "\n            INSERT INTO session (id, user_id, token, status, name, expires_at, type, application_id, last_seen_at, ip_addr, user_agent, country_code, country_name, city_name)\n            VALUES ($1, NULL, $2, 'Unauthorized', $3, $4, $5, $6, now(), $7::text::inet, $8, NULL, NULL, NULL)\n            RETURNING id, user_id, token, status as \"status: _\", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at",
   "describe": {
     "columns": [
       {
@@ -72,18 +72,40 @@
       },
       {
         "ordinal": 11,
+        "name": "country_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "country_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "city_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
         "name": "authorized_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 12,
+        "ordinal": 15,
         "name": "deauthorized_at",
         "type_info": "Timestamp"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Text",
+        "Text",
+        "Timestamp",
+        "Text",
+        "Uuid",
+        "Text",
+        "Text"
       ]
     },
     "nullable": [
@@ -99,8 +121,11 @@
       null,
       true,
       true,
+      true,
+      true,
+      true,
       true
     ]
   },
-  "hash": "f3d4ebab14f96d373fffc6d1291ed180b2f64eb8f476960da3a0bad84920cce7"
+  "hash": "f47659a1774522785811e04c70bc777d722d8896722ef027130e3c08524d7cfe"
 }

@@ -18,7 +18,8 @@
             "kind": {
               "Enum": [
                 "Default",
-                "Server"
+                "Server",
+                "Emoji"
               ]
             }
           }

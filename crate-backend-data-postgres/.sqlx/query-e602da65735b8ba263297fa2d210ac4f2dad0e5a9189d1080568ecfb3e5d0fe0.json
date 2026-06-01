@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, user_id, token, status as \"status: _\", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, authorized_at, deauthorized_at FROM session WHERE token = $1",
+  "query": "SELECT id, user_id, token, status as \"status: _\", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at FROM session WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -72,18 +72,33 @@
       },
       {
         "ordinal": 11,
+        "name": "country_code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "country_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "city_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
         "name": "authorized_at",
         "type_info": "Timestamp"
       },
       {
-        "ordinal": 12,
+        "ordinal": 15,
         "name": "deauthorized_at",
         "type_info": "Timestamp"
       }
     ],
     "parameters": {
       "Left": [
-        "Text"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -99,8 +114,11 @@
       null,
       true,
       true,
+      true,
+      true,
+      true,
       true
     ]
   },
-  "hash": "df626fbf117b2aa11c446c37907dcef49374290e7d4be50405558be15813fbc8"
+  "hash": "e602da65735b8ba263297fa2d210ac4f2dad0e5a9189d1080568ecfb3e5d0fe0"
 }
