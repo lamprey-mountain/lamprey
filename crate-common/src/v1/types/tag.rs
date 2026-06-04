@@ -46,9 +46,9 @@ pub struct Tag {
 
     /// total number of threads with this tag (including archived threads)
     pub total_thread_count: u64,
-    // TODO
-    // /// if this tag should be considered a spoiler
-    // pub spoiler: bool,
+
+    /// if this tag should be considered a spoiler
+    pub spoiler: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,6 +68,9 @@ pub struct TagCreate {
 
     #[cfg_attr(feature = "serde", serde(default))]
     pub restricted: bool,
+
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub spoiler: bool,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -92,6 +95,7 @@ pub struct TagPatch {
 
     pub archived: Option<bool>,
     pub restricted: Option<bool>,
+    pub spoiler: Option<bool>,
 }
 
 #[derive(Debug, Default, Clone)]

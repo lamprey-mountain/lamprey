@@ -26,6 +26,7 @@ struct DbTag {
     color: Option<String>,
     is_archived: bool,
     is_restricted: bool,
+    is_spoiler: bool,
     active_thread_count: i64,
     total_thread_count: i64,
 }
@@ -40,6 +41,7 @@ impl From<DbTag> for Tag {
             color: tag.color.as_ref().and_then(|c| Color::from_str(c).ok()),
             archived: tag.is_archived,
             restricted: tag.is_restricted,
+            spoiler: tag.is_spoiler,
             active_thread_count: tag.active_thread_count as u64,
             total_thread_count: tag.total_thread_count as u64,
         }
@@ -58,9 +60,9 @@ impl DataTag for Postgres {
             DbTag,
             r#"
             WITH t AS (
-                INSERT INTO tag (id, version_id, channel_id, name, description, color, is_archived, is_restricted)
-                VALUES ($1, $1, $2, $3, $4, $5, false, $6)
-                RETURNING id, channel_id, name, description, color, is_archived, is_restricted
+                INSERT INTO tag (id, version_id, channel_id, name, description, color, is_archived, is_restricted, is_spoiler)
+                VALUES ($1, $1, $2, $3, $4, $5, false, $6, $7)
+                RETURNING id, channel_id, name, description, color, is_archived, is_restricted, is_spoiler
             )
             SELECT t.*, 0 as "active_thread_count!", 0 as "total_thread_count!" FROM t
             "#,
@@ -70,6 +72,7 @@ impl DataTag for Postgres {
             create.description,
             color,
             create.restricted,
+            create.spoiler,
         )
         .fetch_one(tx.ext())
         .await?;
@@ -95,9 +98,10 @@ impl DataTag for Postgres {
                     description = $3,
                     color = $4,
                     is_archived = $5,
-                    is_restricted = $6
+                    is_restricted = $6,
+                    is_spoiler = $7
                 WHERE id = $1
-                RETURNING id, channel_id, name, description, color, is_archived, is_restricted
+                RETURNING id, channel_id, name, description, color, is_archived, is_restricted, is_spoiler
             ),
             active_threads AS (
                 SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = $1 AND c.archived_at IS NULL
@@ -113,6 +117,7 @@ impl DataTag for Postgres {
             color.unwrap_or(old_tag.color.map(|c| c.to_string())),
             patch.archived.unwrap_or(old_tag.archived),
             patch.restricted.unwrap_or(old_tag.restricted),
+            patch.spoiler.unwrap_or(old_tag.spoiler),
         )
         .fetch_one(tx.ext())
         .await?;
@@ -142,7 +147,7 @@ impl DataTag for Postgres {
                 SELECT count(*) FROM channel_tag WHERE tag_id = $1
             )
             SELECT
-                t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
+                t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted, t.is_spoiler,
                 (SELECT count FROM active_threads) as "active_thread_count!",
                 (SELECT count FROM total_threads) as "total_thread_count!"
             FROM tag t
@@ -182,7 +187,7 @@ impl DataTag for Postgres {
                         DbTag,
                         r#"
                         SELECT
-                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
+                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted, t.is_spoiler,
                             (SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = t.id AND c.archived_at IS NULL) as "active_thread_count!",
                             (SELECT count(*) FROM channel_tag WHERE tag_id = t.id) as "total_thread_count!"
                         FROM tag t
@@ -212,7 +217,7 @@ impl DataTag for Postgres {
                         DbTag,
                         r#"
                         SELECT
-                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
+                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted, t.is_spoiler,
                             (SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = t.id AND c.archived_at IS NULL) as "active_thread_count!",
                             (SELECT count(*) FROM channel_tag WHERE tag_id = t.id) as "total_thread_count!"
                         FROM tag t
@@ -243,7 +248,7 @@ impl DataTag for Postgres {
                         DbTag,
                         r#"
                         SELECT
-                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
+                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted, t.is_spoiler,
                             (SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = t.id AND c.archived_at IS NULL) as "active_thread_count!",
                             (SELECT count(*) FROM channel_tag WHERE tag_id = t.id) as "total_thread_count!"
                         FROM tag t
@@ -286,7 +291,7 @@ impl DataTag for Postgres {
                         DbTag,
                         r#"
                         SELECT
-                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
+                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted, t.is_spoiler,
                             (SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = t.id AND c.archived_at IS NULL) as "active_thread_count!",
                             (SELECT count(*) FROM channel_tag WHERE tag_id = t.id) as "total_thread_count!"
                         FROM tag t
@@ -315,7 +320,7 @@ impl DataTag for Postgres {
                         DbTag,
                         r#"
                         SELECT
-                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
+                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted, t.is_spoiler,
                             (SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = t.id AND c.archived_at IS NULL) as "active_thread_count!",
                             (SELECT count(*) FROM channel_tag WHERE tag_id = t.id) as "total_thread_count!"
                         FROM tag t
@@ -344,7 +349,7 @@ impl DataTag for Postgres {
                         DbTag,
                         r#"
                         SELECT
-                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted,
+                            t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted, t.is_spoiler,
                             (SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = t.id AND c.archived_at IS NULL) as "active_thread_count!",
                             (SELECT count(*) FROM channel_tag WHERE tag_id = t.id) as "total_thread_count!"
                         FROM tag t

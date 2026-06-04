@@ -85,6 +85,7 @@ async fn tag_update(
                 .change("color", &tag_old.color, &tag.color)
                 .change("archived", &tag_old.archived, &tag.archived)
                 .change("restricted", &tag_old.restricted, &tag.restricted)
+                .change("spoiler", &tag_old.spoiler, &tag.spoiler)
                 .build(),
         })
         .await?;
