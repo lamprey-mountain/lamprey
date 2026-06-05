@@ -92,6 +92,8 @@ pub mod builtin {
                 },
             }],
             welcome_channel_id: Some(general_id.into()),
+            afk_channel_id: None,
+            afk_channel_timeout: 300000,
         }
     }
 }
@@ -444,6 +446,8 @@ impl ServiceRoomTemplates {
             channels: template_channels,
             roles: template_roles,
             welcome_channel_id,
+            afk_channel_id: data.room.afk_channel_id,
+            afk_channel_timeout: data.room.afk_channel_timeout,
         })
     }
 }

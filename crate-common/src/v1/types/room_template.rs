@@ -82,6 +82,8 @@ pub struct RoomTemplateSnapshot {
     pub channels: Vec<RoomTemplateChannel>,
     pub roles: Vec<RoomTemplateRole>,
     pub welcome_channel_id: Option<ChannelId>,
+    pub afk_channel_id: Option<ChannelId>,
+    pub afk_channel_timeout: u64,
 }
 
 #[derive(Debug, Clone)]
