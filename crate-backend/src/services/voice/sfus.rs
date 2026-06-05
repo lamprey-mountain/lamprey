@@ -200,6 +200,9 @@ impl ServiceVoice {
             } => {
                 info!(%user_id, %channel_id, "Peer created on SFU");
             }
+            SfuEvent::CascadeCreated { sfu_id, channel_id } => {
+                info!(%sfu_id, %channel_id, "Cascade created on SFU");
+            }
             SfuEvent::CascadePrepared {
                 sfu_id,
                 token,
@@ -241,7 +244,8 @@ impl ServiceVoice {
                         Error::ApiError(ApiError::from_code(ErrorCode::UnknownSfu))
                     })?;
 
-                    existing_sfu.send(SfuCommand::PrepareCascade { sfu_id: new_sfu_id });
+                    // TODO
+                    // existing_sfu.send(SfuCommand::PrepareCascade { sfu_id: new_sfu_id });
                     Arc::clone(&new_sfu)
                 }
             };
