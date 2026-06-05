@@ -17,9 +17,9 @@ use common::v1::types::{
     preferences::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
     reaction::{ReactionKeyParam, ReactionListItem},
     room_analytics::{
-        RoomAnalyticsChannel, RoomAnalyticsChannelParams, RoomAnalyticsInvites,
-        RoomAnalyticsMembersCount, RoomAnalyticsMembersJoin, RoomAnalyticsMembersLeave,
-        RoomAnalyticsOverview, RoomAnalyticsParams,
+        AnalyticsChannel, AnalyticsChannelParams, AnalyticsInvites,
+        AnalyticsMembersCount, AnalyticsMembersJoin, AnalyticsMembersLeave,
+        AnalyticsOverview, AnalyticsParams,
     },
     tag::{Tag, TagCreate, TagPatch},
     util::Time,
@@ -73,39 +73,39 @@ pub trait DataRoomAnalytics {
     async fn room_analytics_members_count(
         &mut self,
         room_id: RoomId,
-        q: RoomAnalyticsParams,
-    ) -> Result<Vec<RoomAnalyticsMembersCount>>;
+        q: AnalyticsParams,
+    ) -> Result<Vec<AnalyticsMembersCount>>;
 
     async fn room_analytics_members_join(
         &mut self,
         room_id: RoomId,
-        q: RoomAnalyticsParams,
-    ) -> Result<Vec<RoomAnalyticsMembersJoin>>;
+        q: AnalyticsParams,
+    ) -> Result<Vec<AnalyticsMembersJoin>>;
 
     async fn room_analytics_members_leave(
         &mut self,
         room_id: RoomId,
-        q: RoomAnalyticsParams,
-    ) -> Result<Vec<RoomAnalyticsMembersLeave>>;
+        q: AnalyticsParams,
+    ) -> Result<Vec<AnalyticsMembersLeave>>;
 
     async fn room_analytics_channels(
         &mut self,
         room_id: RoomId,
-        q: RoomAnalyticsParams,
-        q2: RoomAnalyticsChannelParams,
-    ) -> Result<Vec<RoomAnalyticsChannel>>;
+        q: AnalyticsParams,
+        q2: AnalyticsChannelParams,
+    ) -> Result<Vec<AnalyticsChannel>>;
 
     async fn room_analytics_overview(
         &mut self,
         room_id: RoomId,
-        q: RoomAnalyticsParams,
-    ) -> Result<Vec<RoomAnalyticsOverview>>;
+        q: AnalyticsParams,
+    ) -> Result<Vec<AnalyticsOverview>>;
 
     async fn room_analytics_invites(
         &mut self,
         room_id: RoomId,
-        q: RoomAnalyticsParams,
-    ) -> Result<Vec<RoomAnalyticsInvites>>;
+        q: AnalyticsParams,
+    ) -> Result<Vec<AnalyticsInvites>>;
 
     async fn room_analytics_snapshot_all(&mut self) -> Result<()>;
     async fn room_analytics_get_last_snapshot_ts(

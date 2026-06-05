@@ -113,6 +113,7 @@ pub struct Media {
         schema(required = false, min_length = 1, max_length = 8192)
     )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub alt: Option<String>,
 
     /// The underlying blob's length in bytes.
@@ -141,6 +142,7 @@ pub struct Media {
     pub quarantine: Option<MediaQuarantine>,
 
     /// The results of automated scans.
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
     pub scans: Vec<MediaScan>,
     // pub ratings: ContentRatings,
     /// Whether this media can be fetched through the `/thumb/{media_id}` cdn route.
@@ -156,9 +158,11 @@ pub struct Media {
     )]
     pub links: Vec<MediaLinkType>,
 
+    // TODO: merge into links?
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub room_id: Option<RoomId>,
 
+    // TODO: merge into links?
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub channel_id: Option<ChannelId>,
 
@@ -176,7 +180,26 @@ pub struct Media {
     #[cfg_attr(feature = "serde", serde(default))]
     pub strip_exif: bool,
 
+    /// if this media exists on a remote server
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub remote: Option<Remote>,
+    // TODO: add
+    // /// If this media will expire, data about its expiry.
+    // #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    // pub expiry: Option<MediaExpiry>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct MediaExpiry {
+    /// when this media expires at
+    pub expires_at: Time,
+
+    /// whether this media has expired
+    // NOTE: move to MediaStatus::Expired?
+    pub expired: bool,
 }
 
 // /// minimal struct to represent an image

@@ -185,9 +185,11 @@ fn true_fn() -> bool {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ParseMentions {
     /// only parse mentions for these users. an empty vec disables all mentions, while None allows all mentions.
+    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
     pub users: Option<Vec<UserId>>,
 
     /// only parse mentions for these roles. an empty vec disables all mentions, while None allows all mentions.
+    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
     pub roles: Option<Vec<RoleId>>,
 
     /// whether to parse @everyone mentions from the content
@@ -205,6 +207,7 @@ pub struct Mentions {
         feature = "serde",
         serde(default, skip_serializing_if = "Vec::is_empty")
     )]
+    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
     pub users: Vec<MentionsUser>,
 
     /// the roles that were mentioned
@@ -212,6 +215,7 @@ pub struct Mentions {
         feature = "serde",
         serde(default, skip_serializing_if = "Vec::is_empty")
     )]
+    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
     pub roles: Vec<MentionsRole>,
 
     /// the channels that were mentioned
@@ -220,6 +224,7 @@ pub struct Mentions {
         feature = "serde",
         serde(default, skip_serializing_if = "Vec::is_empty")
     )]
+    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
     pub channels: Vec<MentionsChannel>,
 
     /// the custom emojis that were used in this message
@@ -227,6 +232,7 @@ pub struct Mentions {
         feature = "serde",
         serde(default, skip_serializing_if = "Vec::is_empty")
     )]
+    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
     pub emojis: Vec<MentionsEmoji>,
 
     /// if this message mentions everyone
@@ -482,12 +488,15 @@ pub struct MessagePin {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MessageAutomodExecution {
     /// the rules that were triggered
+    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 32))]
     pub rules: Vec<AutomodRuleStripped>,
 
     /// the actions that were executed
+    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 32))]
     pub actions: Vec<AutomodAction>,
 
     /// the content that was matched
+    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 32))]
     pub matches: Vec<AutomodMatches>,
 
     /// the user who triggered this execution
@@ -878,6 +887,7 @@ pub struct MessageCall {
     pub ended_at: Option<Time>,
 
     /// the people who joined the call
+    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
     pub participants: Vec<UserId>,
 }
 
@@ -937,14 +947,17 @@ pub enum InteractionStatus {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-pub struct MessageMigrate {
+pub struct MessageMove {
     /// which messages to move
     #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 128))]
     pub message_ids: Vec<MessageId>,
 
+    /// the channel to move the messages to
+    ///
     /// must be in same room (for now...)
-    pub target_id: ChannelId,
+    pub target_channel_id: ChannelId,
 }
 
 #[derive(Debug, Clone)]
@@ -955,16 +968,19 @@ pub struct MessageModerate {
     /// which messages to delete
     #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
+    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
     pub delete: Vec<MessageId>,
 
     /// which messages to remove
     #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
+    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
     pub remove: Vec<MessageId>,
 
     /// which messages to restore
     #[cfg_attr(feature = "serde", serde(default))]
     #[cfg_attr(feature = "validator", validate(length(max = 128)))]
+    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
     pub restore: Vec<MessageId>,
 }
 
@@ -983,6 +999,52 @@ pub struct RepliesQuery {
 
     /// which parent message to fetch replies from, where 0 is the message itself, 1 is its parent, and so on.
     pub context: Option<u16>,
+}
+
+/// a response to a replies query
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RepliesResponse {
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub children: RepliesChildren,
+}
+
+/// a single message for a replies query
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RepliesMessage {
+    /// the message itself
+    pub message: Message,
+
+    /// the children for this message
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    pub children: RepliesChildren,
+}
+
+/// a list of children for a RepliesItem or the top level
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RepliesChildren {
+    /// the children for this message
+    pub children: Vec<RepliesMessage>,
+
+    /// the total number of replies to this message
+    pub count_direct: u64,
+
+    /// the total number of replies to this message, calculated recursively
+    pub count_recursive: u64,
+
+    /// the current depth of this message in the tree, or 0 for the top level
+    pub depth: u64,
+
+    /// cursor that can be used to fetch more
+    pub cursor: Option<String>,
+
+    /// whether there are more messages after the end of the children array
+    pub has_more: bool,
 }
 
 /// always returns one

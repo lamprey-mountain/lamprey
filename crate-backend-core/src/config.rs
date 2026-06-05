@@ -15,7 +15,7 @@ use url::Url;
 
 use crate::{Error, Result};
 
-use common::v1::types::federation::ServerKeyAlgorithm;
+use common::v1::types::federation::{Hostname, ServerKeyAlgorithm};
 use common::v1::types::redex::EvalLimits;
 use common::v1::types::util::Time;
 
@@ -577,10 +577,20 @@ impl Secret {
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 impl Config {
+    #[deprecated = "use hostname2"]
     pub fn hostname(&self) -> Result<&str> {
         self.hostname
             .as_deref()
             .ok_or_else(|| Error::Internal("federation hostname not configured".to_owned()))
+    }
+
+    /// get the federation hostname
+    pub fn hostname2(&self) -> Result<Hostname> {
+        let name = self
+            .hostname
+            .clone()
+            .ok_or_else(|| Error::Internal("federation hostname not configured".to_owned()))?;
+        Ok(Hostname::new(name)?)
     }
 
     /// get user agent string

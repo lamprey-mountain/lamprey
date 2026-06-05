@@ -83,7 +83,9 @@ pub mod server_ping {
 
 /// Server connect
 ///
-/// start receiving sync events from a remote server
+/// Start receiving sync events from a remote server.
+///
+/// Servers should send attempt to reconnect on startup, since remote servers may stop sending events to unreachable servers.
 #[endpoint(
     post,
     path = "/server/{hostname}/connect",

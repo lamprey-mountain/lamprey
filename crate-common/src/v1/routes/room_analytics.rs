@@ -7,10 +7,10 @@ use lamprey_macros::endpoint;
     tags = ["room_analytics"],
     scopes = [Full],
     permissions = [AnalyticsView],
-    response(OK, body = Vec<RoomAnalyticsMembersCount>, description = "success"),
+    response(OK, body = Vec<AnalyticsMembersCount>, description = "success"),
 )]
 pub mod room_analytics_members_count {
-    use crate::v1::types::room_analytics::{RoomAnalyticsMembersCount, RoomAnalyticsParams};
+    use crate::v1::types::room_analytics::{AnalyticsMembersCount, AnalyticsParams};
     use crate::v1::types::RoomId;
 
     pub struct Request {
@@ -18,12 +18,12 @@ pub mod room_analytics_members_count {
         pub room_id: RoomId,
 
         #[query]
-        pub params: RoomAnalyticsParams,
+        pub params: AnalyticsParams,
     }
 
     pub struct Response {
         #[json]
-        pub analytics: Vec<RoomAnalyticsMembersCount>,
+        pub analytics: Vec<AnalyticsMembersCount>,
     }
 }
 
@@ -34,10 +34,10 @@ pub mod room_analytics_members_count {
     tags = ["room_analytics"],
     scopes = [Full],
     permissions = [AnalyticsView],
-    response(OK, body = Vec<RoomAnalyticsMembersJoin>, description = "success"),
+    response(OK, body = Vec<AnalyticsMembersJoin>, description = "success"),
 )]
 pub mod room_analytics_members_join {
-    use crate::v1::types::room_analytics::{RoomAnalyticsMembersJoin, RoomAnalyticsParams};
+    use crate::v1::types::room_analytics::{AnalyticsMembersJoin, AnalyticsParams};
     use crate::v1::types::RoomId;
 
     pub struct Request {
@@ -45,12 +45,12 @@ pub mod room_analytics_members_join {
         pub room_id: RoomId,
 
         #[query]
-        pub params: RoomAnalyticsParams,
+        pub params: AnalyticsParams,
     }
 
     pub struct Response {
         #[json]
-        pub analytics: Vec<RoomAnalyticsMembersJoin>,
+        pub analytics: Vec<AnalyticsMembersJoin>,
     }
 }
 
@@ -61,10 +61,10 @@ pub mod room_analytics_members_join {
     tags = ["room_analytics"],
     scopes = [Full],
     permissions = [AnalyticsView],
-    response(OK, body = Vec<RoomAnalyticsMembersLeave>, description = "success"),
+    response(OK, body = Vec<AnalyticsMembersLeave>, description = "success"),
 )]
 pub mod room_analytics_members_leave {
-    use crate::v1::types::room_analytics::{RoomAnalyticsMembersLeave, RoomAnalyticsParams};
+    use crate::v1::types::room_analytics::{AnalyticsMembersLeave, AnalyticsParams};
     use crate::v1::types::RoomId;
 
     pub struct Request {
@@ -72,12 +72,12 @@ pub mod room_analytics_members_leave {
         pub room_id: RoomId,
 
         #[query]
-        pub params: RoomAnalyticsParams,
+        pub params: AnalyticsParams,
     }
 
     pub struct Response {
         #[json]
-        pub analytics: Vec<RoomAnalyticsMembersLeave>,
+        pub analytics: Vec<AnalyticsMembersLeave>,
     }
 }
 
@@ -88,11 +88,11 @@ pub mod room_analytics_members_leave {
     tags = ["room_analytics"],
     scopes = [Full],
     permissions = [AnalyticsView],
-    response(OK, body = Vec<RoomAnalyticsChannel>, description = "success"),
+    response(OK, body = Vec<AnalyticsChannel>, description = "success"),
 )]
 pub mod room_analytics_channels {
     use crate::v1::types::room_analytics::{
-        RoomAnalyticsChannel, RoomAnalyticsChannelParams, RoomAnalyticsParams,
+        AnalyticsChannel, AnalyticsChannelParams, AnalyticsParams,
     };
     use crate::v1::types::RoomId;
 
@@ -101,15 +101,15 @@ pub mod room_analytics_channels {
         pub room_id: RoomId,
 
         #[query]
-        pub params: RoomAnalyticsParams,
+        pub params: AnalyticsParams,
 
         #[query]
-        pub channel_params: RoomAnalyticsChannelParams,
+        pub channel_params: AnalyticsChannelParams,
     }
 
     pub struct Response {
         #[json]
-        pub analytics: Vec<RoomAnalyticsChannel>,
+        pub analytics: Vec<AnalyticsChannel>,
     }
 }
 
@@ -122,10 +122,10 @@ pub mod room_analytics_channels {
     tags = ["room_analytics"],
     scopes = [Full],
     permissions = [AnalyticsView],
-    response(OK, body = Vec<RoomAnalyticsOverview>, description = "success"),
+    response(OK, body = Vec<AnalyticsOverview>, description = "success"),
 )]
 pub mod room_analytics_overview {
-    use crate::v1::types::room_analytics::{RoomAnalyticsOverview, RoomAnalyticsParams};
+    use crate::v1::types::room_analytics::{AnalyticsOverview, AnalyticsParams};
     use crate::v1::types::RoomId;
 
     pub struct Request {
@@ -133,12 +133,12 @@ pub mod room_analytics_overview {
         pub room_id: RoomId,
 
         #[query]
-        pub params: RoomAnalyticsParams,
+        pub params: AnalyticsParams,
     }
 
     pub struct Response {
         #[json]
-        pub analytics: Vec<RoomAnalyticsOverview>,
+        pub analytics: Vec<AnalyticsOverview>,
     }
 }
 
@@ -149,10 +149,10 @@ pub mod room_analytics_overview {
     tags = ["room_analytics"],
     scopes = [Full],
     permissions = [AnalyticsView],
-    response(OK, body = RoomAnalyticsInvites, description = "success"),
+    response(OK, body = AnalyticsInvites, description = "success"),
 )]
 pub mod room_analytics_invites {
-    use crate::v1::types::room_analytics::{RoomAnalyticsInvites, RoomAnalyticsParams};
+    use crate::v1::types::room_analytics::{AnalyticsInvites, AnalyticsParams};
     use crate::v1::types::RoomId;
 
     pub struct Request {
@@ -160,11 +160,11 @@ pub mod room_analytics_invites {
         pub room_id: RoomId,
 
         #[query]
-        pub params: RoomAnalyticsParams,
+        pub params: AnalyticsParams,
     }
 
     pub struct Response {
         #[json]
-        pub analytics: RoomAnalyticsInvites,
+        pub analytics: AnalyticsInvites,
     }
 }

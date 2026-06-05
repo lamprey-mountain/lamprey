@@ -2,8 +2,6 @@ use crate::error::{Error, Result};
 use crate::routes::util::signing::OutgoingRequest;
 use crate::services::federation::signing::{ValidatedKey, ValidatedKeyAlgo};
 use crate::services::federation::{ServerInfo, ServiceFederation};
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
-use base64::Engine;
 use common::v1::types::federation::{Hostname, ServerKeys, ServerPingResponse, WellKnown};
 use common::v1::types::util::Time;
 use ed25519_dalek::VerifyingKey;
@@ -26,27 +24,22 @@ impl ServiceFederation {
             .ok_or_else(|| Error::BadStatic("no local signing keys"))?;
 
         let req = OutgoingRequest {
-            origin: self
-                .state
-                .config
-                .hostname()?
-                .parse()
-                .map_err(|_| Error::BadStatic("invalid hostname"))?,
-            host: hostname.0.as_str(),
+            origin: &self.state.config.hostname2()?,
+            host: &hostname,
             method: "POST",
             path: ping_url.path(),
             body: &[],
         };
 
-        let headers = req.sign(&key)?;
-
-        let mut request = self.state.services().http.client.post(ping_url);
-
-        let mut header_map = reqwest::header::HeaderMap::new();
-        headers.encode(&mut header_map);
-        request = request.headers(header_map);
-
-        let res = request.send().await?;
+        let res = self
+            .state
+            .services()
+            .http
+            .client
+            .post(ping_url.clone())
+            .headers(req.sign(&key)?)
+            .send()
+            .await?;
 
         if !res.status().is_success() {
             return Err(Error::BadStatic("ping failed"));
@@ -71,27 +64,22 @@ impl ServiceFederation {
             .ok_or_else(|| Error::BadStatic("no local signing keys"))?;
 
         let req = OutgoingRequest {
-            origin: self
-                .state
-                .config
-                .hostname()?
-                .parse()
-                .map_err(|_| Error::BadStatic("invalid hostname"))?,
-            host: hostname.0.as_str(),
+            origin: &self.state.config.hostname2()?,
+            host: &hostname,
             method: "POST",
             path: connect_url.path(),
             body: &[],
         };
 
-        let headers = req.sign(&key)?;
-
-        let mut request = self.state.services().http.client.post(connect_url);
-
-        let mut header_map = reqwest::header::HeaderMap::new();
-        headers.encode(&mut header_map);
-        request = request.headers(header_map);
-
-        let res = request.send().await?;
+        let res = self
+            .state
+            .services()
+            .http
+            .client
+            .post(connect_url.clone())
+            .headers(req.sign(&key)?)
+            .send()
+            .await?;
 
         if !res.status().is_success() {
             return Err(Error::BadStatic("connection request failed"));
@@ -150,10 +138,9 @@ impl ServiceFederation {
             .into_iter()
             .filter(|k| k.expires_at > now)
             .map(|k| {
-                let pubkey_bytes = Engine::decode(&URL_SAFE_NO_PAD, &k.pubkey)
-                    .map_err(|_| Error::BadStatic("invalid pubkey encoding"))?;
-
-                let pubkey_bytes: [u8; 32] = pubkey_bytes
+                let pubkey_bytes: [u8; 32] = k
+                    .pubkey
+                    .as_ref()
                     .try_into()
                     .map_err(|_| Error::BadStatic("invalid pubkey length"))?;
 

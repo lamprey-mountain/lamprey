@@ -10,6 +10,7 @@ use validator::Validate;
 use super::{RoleId, RoomId, User, UserId};
 
 use crate::v1::types::{
+    federation::Hostname,
     util::{Diff, Time},
     InviteCode,
 };
@@ -39,7 +40,8 @@ pub struct RoomMember {
     /// like nickname, but for your description/bio/about
     // TODO: remove. maybe replace with a room-specific "about me" without overriding your main bio/about me?
     pub override_description: Option<String>,
-
+    // TODO: override_avatar
+    // TODO: override_banner
     /// the roles that this member has
     pub roles: Vec<RoleId>,
 
@@ -54,9 +56,23 @@ pub struct RoomMember {
 
     /// temporarily prevent a member from communicating
     pub timeout_until: Option<Time>,
-
+    // pub timeout: Option<Timeout>,
     /// whether this user is quarantined by automod
     pub quarantined: bool,
+}
+
+/// a room member's timeout
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct Timeout {
+    /// when this timeout expires
+    pub expires_at: Option<Time>,
+
+    /// moderator only reason for why this timeout exists
+    ///
+    /// same as the audit log reason
+    pub reason: Option<String>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -109,8 +125,7 @@ pub struct RoomMemberPatch {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
     #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub override_description: Option<Option<String>>,
-    // #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
-    // pub override_avatar: Option<Option<String>>,
+
     /// whether this user is muted by a moderator
     pub mute: Option<bool>,
 
@@ -148,6 +163,26 @@ pub struct RoomBan {
 
     /// when the ban expires
     pub expires_at: Option<Time>,
+    // TODO: add type, remove user_id
+    // pub ty: RoomBanType,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum RoomBanType {
+    /// ban a single user
+    User { user_id: UserId },
+
+    /// ban a server by hostname
+    Server { hostname: Hostname },
+
+    /// ban an ip cidr range
+    Ip { ip_addr: String },
+    // TODO: ban emails
+    // /// ban email addresses
+    // Email { email_pattern: String },
+    // TODO: option to require email address
 }
 
 #[derive(Debug, Clone)]

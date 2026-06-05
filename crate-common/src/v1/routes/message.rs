@@ -290,24 +290,24 @@ pub mod message_moderate {
     pub struct Response {}
 }
 
-/// Message migrate
+/// Message move
 #[endpoint(
     post,
-    path = "/channel/{channel_id}/message/migrate",
+    path = "/channel/{channel_id}/message/move",
     tags = ["message"],
     scopes = [Full],
-    permissions = [MessageDelete],
+    permissions = [MessageMove],
     response(OK, description = "success"),
 )]
-pub mod message_migrate {
-    use crate::v1::types::{ChannelId, MessageMigrate};
+pub mod message_move {
+    use crate::v1::types::{ChannelId, MessageMove};
 
     pub struct Request {
         #[path]
         pub channel_id: ChannelId,
 
         #[json]
-        pub migrate: MessageMigrate,
+        pub body: MessageMove,
     }
 
     pub struct Response {}
@@ -532,7 +532,7 @@ pub mod message_list_removed {
     }
 }
 
-/// Message list atom/rss (TODO)
+/// Message list atom/rss
 ///
 /// Get an atom or rss feed of messages for this channel
 #[endpoint(
@@ -549,10 +549,12 @@ pub mod message_list_atom {
         pub channel_id: ChannelId,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        // TODO: add response type
+    }
 }
 
-/// Nudge (TODO)
+/// Nudge
 ///
 /// Nudge a user. Can only be used in dms or gdms. Can only be called once every 5 minutes per user.
 #[endpoint(
@@ -562,12 +564,21 @@ pub mod message_list_atom {
     scopes = [Full],
 )]
 pub mod message_nudge {
-    use crate::v1::types::ChannelId;
+    use crate::v1::types::{ChannelId, Message};
 
     pub struct Request {
         #[path]
         pub channel_id: ChannelId,
+
+        #[header]
+        pub idempotency_key: Option<String>,
+
+        #[header(rename = "x-timestamp")]
+        pub timestamp: Option<i64>,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[json]
+        pub message: Message,
+    }
 }

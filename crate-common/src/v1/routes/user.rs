@@ -287,6 +287,7 @@ pub mod user_list {
     }
 }
 
+// TODO: remove
 /// Harvest get
 #[endpoint(
     get,
@@ -306,6 +307,7 @@ pub mod harvest_get {
     }
 }
 
+// TODO: remove
 /// Harvest create
 #[endpoint(
     post,
@@ -315,16 +317,17 @@ pub mod harvest_get {
     response(ACCEPTED, description = "harvest has been queued"),
 )]
 pub mod harvest_create {
-    use crate::v1::types::harvest::HarvestCreate;
+    use crate::v1::types::harvest::HarvestCreateUser;
 
     pub struct Request {
         #[json]
-        pub harvest: HarvestCreate,
+        pub harvest: HarvestCreateUser,
     }
 
     pub struct Response {}
 }
 
+// TODO: remove
 /// Harvest download
 #[endpoint(
     get,

@@ -135,6 +135,12 @@ impl<const MAX_SIZE: usize> Deref for Binary<MAX_SIZE> {
     }
 }
 
+impl<const MAX_SIZE: usize> AsRef<[u8]> for Binary<MAX_SIZE> {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 // TODO: impl these
 // impl<const MAX_SIZE: usize> Binary<MAX_SIZE> {
 //     pub fn new(v: Vec<u8>) -> ApiResult<Self> {

@@ -65,6 +65,7 @@ impl ServiceVoice {
             channel_id: channel_id,
             topic: params.topic,
             created_at: Time::now_utc(),
+            audience_count: Some(0),
         };
 
         // 3. insert handle

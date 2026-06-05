@@ -9,6 +9,7 @@ use validator::Validate;
 
 use crate::v1::types::{EmojiId, MediaId, RoomId, UserId};
 
+/// a custom emoji
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -30,9 +31,24 @@ pub struct EmojiCustom {
     /// - the owner is a user and you're the creator
     pub owner: Option<EmojiOwner>,
 
+    /// whether this emoji is animated
     pub animated: bool,
 
     pub media_id: MediaId,
+    // /// the pack this emoji is from
+    // pub pack_id: Option<RoomId>,
+}
+
+/// minimal data for a custom emoji
+///
+/// only contains what is needed to render an emoji
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct EmojiCustomMinimal {
+    pub id: EmojiId,
+    pub name: String,
+    pub animated: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

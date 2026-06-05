@@ -348,6 +348,20 @@ pub enum MessageSync {
     //     /// connection id
     //     conn: String,
     // },
+    // /// successfully connected
+    // Ready {
+    //     /// current user, null if session is unauthed
+    //     user: Box<Option<User>>,
+
+    //     /// the application this bot user belongs, if the user is a bot
+    //     application: Box<Option<Application>>,
+
+    //     /// current session
+    //     session: Box<Session>,
+
+    //     /// connection id
+    //     conn: ConnectionId,
+    // },
     /// extra data for the client to function, sent after Ready
     // NOTE: should this be included for bots?
     Ambient {
@@ -370,6 +384,7 @@ pub enum MessageSync {
         room_members: Vec<RoomMember>,
 
         /// user's global preferences
+        // TODO: box
         config: PreferencesGlobal,
         // NOTE: maybe i should include even more data
         // - friends/relationships (including friend requests)
@@ -382,7 +397,7 @@ pub enum MessageSync {
     },
 
     // RoomCreate2 {
-    //     room: Room,
+    //     room: Box<Room>,
     //     roles: Vec<Role>,
     //     channels: Vec<Channel>,
     //     threads: Vec<Channel>,
@@ -394,6 +409,7 @@ pub enum MessageSync {
 
     RoomDelete {
         room_id: RoomId,
+        // TODO: add reason: unavailable, deleted, kicked/banned
     },
 
     ChannelCreate {
@@ -404,6 +420,10 @@ pub enum MessageSync {
         channel: Box<Channel>,
     },
 
+    // TODO: add
+    // ChannelDelete {
+    //     channel_id: ChannelId,
+    // },
     ChannelTyping {
         channel_id: ChannelId,
         user_id: UserId,
@@ -420,6 +440,7 @@ pub enum MessageSync {
 
     // ThreadCreate {
     //     thread: Box<Channel>,
+    //     // TODO: add reason: unarchived, created,
     // },
 
     // ThreadUpdate {
@@ -428,6 +449,21 @@ pub enum MessageSync {
 
     // ThreadDelete {
     //     thread_id: ChannelId,
+    //     // TODO: add reason: archived, deleted,
+    // },
+
+    // TODO: add
+    // // same as discord
+    // // send this when gaining access to a private channel
+    // ThreadListSync {
+    //     room_id: RoomId,
+    //     channel_ids: Vec<ChannelId>,
+
+    //     /// all active threads in this channel
+    //     threads: Vec<Channel>,
+
+    //     /// your own room member
+    //     thread_members: Vec<ThreadMember>,
     // },
     MessageCreate {
         // i know, it's cursed to return v2 messages in a v1 api. but this is still in pre alpha so i don't really care.
@@ -486,6 +522,7 @@ pub enum MessageSync {
     },
 
     HarvestUpdate {
+        // TODO: make this a box
         harvest: Harvest,
     },
 
@@ -676,7 +713,9 @@ pub enum MessageSync {
     },
 
     UserDelete {
+        // TODO: rename id -> user_id
         id: UserId,
+        // add reason: delete, suspend?
     },
 
     SessionCreate {
@@ -1051,6 +1090,8 @@ pub enum MessageSync {
     },
     // InteractionAutocompletionCreate
     // InteractionModalCreate
+
+    // TODO: box more types: PreferencesFoo, Tag, Session, Webhook, AutomodRule, Media
 }
 
 // TODO: skip sending room_members/thread_members/users if the client already has them

@@ -29,6 +29,8 @@ http = "1.4.0"
 bytes = { version = "1.11.1", features = ["serde"] }
 percent-encoding = "2.3.2"
 bitflags = { version = "2.11.1", features = ["serde"] }
+ed25519-dalek = "2.2.0"
+rand = "0.10.1"
 
 [features]
 serde = ["dep:serde", "dep:serde_json"]

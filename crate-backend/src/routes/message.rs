@@ -545,12 +545,12 @@ async fn message_moderate(
     Ok(StatusCode::OK)
 }
 
-/// Message migrate
-#[handler(routes::message_migrate)]
-async fn message_migrate(
+/// Message move
+#[handler(routes::message_move)]
+async fn message_move(
     _auth: Auth,
     State(_s): State<Arc<ServerState>>,
-    _req: routes::message_migrate::Request,
+    _req: routes::message_move::Request,
 ) -> Result<impl IntoResponse> {
     Ok(Error::Unimplemented)
 }
@@ -947,7 +947,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(message_reply_roots))
         .routes(routes2!(message_reply_list))
         .routes(routes2!(message_moderate))
-        .routes(routes2!(message_migrate))
+        .routes(routes2!(message_move))
         .routes(routes2!(message_pin))
         .routes(routes2!(message_unpin))
         .routes(routes2!(message_pins_reorder))

@@ -378,6 +378,5 @@ pub enum Dispatch {
 
     #[serde(untagged)]
     Webhook(DispatchWebhook),
-
     // TODO: add federation sync events
 }

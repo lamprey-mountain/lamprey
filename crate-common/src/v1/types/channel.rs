@@ -617,6 +617,14 @@ pub enum ChannelType {
     // create table channel_redex (channel_id, ...)
     // /// an executable script
     // Redex,
+    //
+    // TODO: moderator notes per room members (similar to Forum?)
+    // /// moderator notes per room members
+    // ModeratorNotes
+    //
+    // TODO: moderator notes per room members (similar to ThreadPublic + user_id?)
+    // /// moderator notes per room members
+    // ModeratorNotesThread
 }
 
 #[derive(Debug, Default, Clone)]

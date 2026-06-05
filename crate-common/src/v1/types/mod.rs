@@ -25,6 +25,7 @@ pub mod misc;
 pub mod moderation;
 pub mod notifications;
 pub mod oauth;
+pub mod pack;
 pub mod pagination;
 pub mod permission;
 pub mod preferences;

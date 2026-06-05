@@ -188,6 +188,9 @@ pub enum Error {
 
     #[error("max mind db: {0}")]
     MaxMindDb(#[from] maxminddb::MaxMindDbError),
+
+    #[error("signing error: {0}")]
+    Signing(#[from] common::v1::types::federation::signing::SigningError),
 }
 
 impl From<sqlx::Error> for Error {
@@ -249,6 +252,7 @@ impl Error {
                 lamprey_script::Error::RuntimeError { .. } => StatusCode::BAD_REQUEST,
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             },
+            Error::Signing(_) => StatusCode::UNAUTHORIZED,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

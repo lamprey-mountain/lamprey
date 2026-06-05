@@ -8,8 +8,6 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
-use uuid::Uuid;
-
 #[cfg(feature = "validator")]
 use validator::Validate;
 
@@ -19,6 +17,9 @@ use crate::v1::types::{
 
 #[cfg(feature = "serde")]
 use crate::v1::types::util::some_option;
+
+// TEMP: re export
+pub use super::datachannel::{Speaking, SpeakingFlags, SpeakingWithUserId};
 
 /// webrtc session description
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -151,7 +152,6 @@ impl Deref for IceCandidate {
 /// - Users can only have one voice state per channel
 /// - Non-bots can only have one state across all channels in all rooms
 /// - Bots can have any number of voice states
-// TODO: add room_id?
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -162,6 +162,9 @@ pub struct VoiceState {
     /// the channel this user is connected to
     pub channel_id: ChannelId,
 
+    // // TODO: add?
+    // /// the room this user is connected to
+    // pub room_id: RoomId,
     /// the session that's being used to connect to this voice channel
     ///
     /// this is only be returned for the user this state belongs to
@@ -198,7 +201,6 @@ pub struct VoiceState {
 
     /// when this user requested to speak
     pub requested_to_speak_at: Option<Time>,
-    // TODO: positional audio
 }
 
 /// the voice state with user/room member info
@@ -286,13 +288,13 @@ pub struct VoiceStateScreenshareUpdate {
     pub thumbnail: Option<MediaId>,
 }
 
-// TODO: remove TrackMetadata. it's not helpful since mid is ambiguous.
-/// metadata about a track
+/// metadata about a track, for offers
+// TODO: replace with next::TrackMetadataSource
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct TrackMetadata {
-    /// unique identifier for this track
+    /// unique identifier for this track, local to the user this track is from
     ///
     /// equivalent to transceiver.mid
     pub mid: Mid,
@@ -301,22 +303,23 @@ pub struct TrackMetadata {
     pub kind: MediaKind,
 
     /// group tracks together into streams; identical to ssrc but easier to manage client side
-    ///
-    /// currently there are two streams `user` and `screen` used by frontend
     pub key: TrackKey,
 
     /// simulcasting layers, only applicable for video
+    // TODO: remove?
     #[cfg_attr(
         feature = "serde",
         serde(default, skip_serializing_if = "Vec::is_empty")
     )]
     pub layers: Vec<TrackLayer>,
-    // /// whisper config
-    // pub whisper: Option<TrackWhisper>,
+
+    /// whisper config
+    pub whisper: Option<TrackWhisper>,
 }
 
-// TODO: whispering
-/// whispering config (only send media from this track to these users)
+/// track whispering config
+///
+/// only send media from this track to these users
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -325,6 +328,7 @@ pub struct TrackWhisper {
 }
 
 /// track metadata. `mid` is the **mapped** media id, ie. the mid used between the final sfu/peer
+// TODO: replace with next::TrackMetadataMapped
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -339,6 +343,7 @@ pub struct TrackMetadataWithUserId {
     pub user_id: UserId,
 }
 
+// TODO: use this
 #[cfg(any())]
 mod next {
     #[cfg(feature = "serde")]
@@ -370,8 +375,9 @@ mod next {
             serde(default, skip_serializing_if = "Vec::is_empty")
         )]
         pub layers: Vec<TrackLayer>,
-        // /// whisper config
-        // pub whisper: Option<TrackWhisper>,
+
+        /// whisper config
+        pub whisper: Option<TrackWhisper>,
     }
 
     /// metadata of the track at its origin point.
@@ -405,7 +411,9 @@ mod next {
     }
 }
 
-/// which stream this track is associated with. generally there will be one video track and one audio track per stream.
+/// which stream this track is associated with
+///
+/// generally there will be one video track and one audio track per stream.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
     feature = "serde",
@@ -413,6 +421,7 @@ mod next {
     serde(rename_all = "lowercase")
 )]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// TODO: rename to MediaKey
 pub enum TrackKey {
     /// media from the user (microphone, camera)
     User,
@@ -486,14 +495,18 @@ pub struct Subscription {
 
 /// the kind of media this track is for
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(rename_all = "lowercase")
+)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-// TODO: rename_all lowercase
 pub enum MediaKind {
     Video,
     Audio,
 }
 
+/// the kind of keyframe to request
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -503,54 +516,6 @@ pub enum KeyframeRequestKind {
 
     /// lost some data, need a keyframe to recover
     Pli,
-}
-
-/// Flags for speaking
-///
-/// Audio = 1 << 0
-/// Indicator = 1 << 1
-/// Priority = 1 << 2
-// TODO: Broadcast = 1 << 3
-#[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(transparent))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct SpeakingFlags(pub u8);
-
-impl SpeakingFlags {
-    #[inline]
-    pub fn has_audio(&self) -> bool {
-        self.0 & 1 == 1
-    }
-
-    #[inline]
-    pub fn has_indicator(&self) -> bool {
-        self.0 & 2 == 2
-    }
-
-    #[inline]
-    pub fn has_priority(&self) -> bool {
-        self.0 & 4 == 4
-    }
-}
-
-/// a message sent from the client to indicate that they're speaking (among other things)
-// could be fun to add other filters? like lowpass, reverb, etc (can be done client side)
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Speaking {
-    pub mid: Mid,
-    pub flags: SpeakingFlags,
-}
-
-/// a message sent to the client to indicate that someone is speaking
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct SpeakingWithUserId {
-    pub mid: Mid,
-    pub flags: SpeakingFlags,
-    pub user_id: UserId,
 }
 
 impl VoiceState {
@@ -635,13 +600,14 @@ pub struct Call {
     ///
     /// roughly corresponds to the time that the first user joined
     pub created_at: Time,
-    // /// how many people are in the audience
-    // ///
-    // /// only populated if this is a broadcast channel. in broadcast channels,
-    // /// only voice states for yourself and speakers (ie. users who are not
-    // /// suppressed) are sent.
-    // // TODO: skip serializing if None
-    // pub audience_count: Option<u64>,
+
+    /// how many people are in the audience
+    ///
+    /// only populated if this is a broadcast channel. in broadcast channels,
+    /// only voice states for yourself and speakers (ie. users who are not
+    /// suppressed) are sent.
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub audience_count: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -739,53 +705,6 @@ pub struct ChannelBroadcast {
     ///
     /// this should point to a calendar channel
     pub schedule_id: Option<ChannelId>,
-}
-
-impl Speaking {
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(16 + 1);
-        bytes.extend_from_slice(&self.mid.0);
-        bytes.push(self.flags.0);
-        bytes
-    }
-
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, ()> {
-        if bytes.len() != 17 {
-            return Err(());
-        }
-        let mut mid = [0u8; 16];
-        mid.copy_from_slice(&bytes[0..16]);
-        let flags = SpeakingFlags(bytes[16]);
-        Ok(Speaking {
-            mid: Mid(mid),
-            flags,
-        })
-    }
-}
-
-impl SpeakingWithUserId {
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(16 + 1 + 16);
-        bytes.extend_from_slice(&self.mid.0);
-        bytes.push(self.flags.0);
-        bytes.extend_from_slice(self.user_id.as_bytes());
-        bytes
-    }
-
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, ()> {
-        if bytes.len() != 33 {
-            return Err(());
-        }
-        let mut mid = [0u8; 16];
-        mid.copy_from_slice(&bytes[0..16]);
-        let mut peer_bytes = [0u8; 16];
-        peer_bytes.copy_from_slice(&bytes[17..33]);
-        Ok(SpeakingWithUserId {
-            mid: Mid(mid),
-            flags: SpeakingFlags(bytes[16]),
-            user_id: UserId::from(Uuid::from_bytes(peer_bytes)),
-        })
-    }
 }
 
 impl VoiceState {

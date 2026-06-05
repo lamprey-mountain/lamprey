@@ -248,6 +248,8 @@ pub enum Permission {
     /// can view redex logs, traces, metrics, and other debugging info
     // TODO: rename to RedexInspect
     ScriptInspect,
+    // TODO: maybe add new EmojiCreate permission
+    // like discord's expression create permission
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -342,10 +344,39 @@ impl Permission {
         )
     }
 
-    /// if this is a room permission
+    /// if this is a top level room permission
     ///
     /// these can only be set at the top level (ie. not as channel overwrites)
-    pub fn is_room(&self) -> bool {
+    pub fn is_top_level(&self) -> bool {
         todo!()
+    }
+
+    /// if this is a channel permission
+    ///
+    /// these can be overwritten for channels
+    pub fn is_channel(&self) -> bool {
+        todo!()
+    }
+
+    /// if this is a pack type room permission
+    pub fn is_pack(&self) -> bool {
+        matches!(
+            self,
+            Permission::Admin
+                | Permission::IntegrationsManage
+                | Permission::EmojiManage
+                | Permission::InviteCreate
+                | Permission::InviteManage
+                | Permission::MemberBan
+                | Permission::MemberKick
+                | Permission::MemberNicknameManage
+                | Permission::MemberNickname
+                | Permission::MemberTimeout
+                | Permission::RoleApply
+                | Permission::RoleManage
+                | Permission::RoomEdit
+                | Permission::AuditLogView
+                | Permission::AnalyticsView
+        )
     }
 }

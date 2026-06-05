@@ -22,7 +22,7 @@ use common::v1::types::{
 };
 use common::v1::types::{Message, SearchDlqId};
 use common::v1::types::{
-    MessageCreate, MessageMigrate, RoomBanCreate, SuspendRequest, TransferOwnership, UserCreate,
+    MessageCreate, MessageMove, RoomBanCreate, SuspendRequest, TransferOwnership, UserCreate,
 };
 use common::v2::types::media::{Media, MediaCreate, MediaCreated, MediaDoneParams};
 use headers::HeaderMapExt;
@@ -404,7 +404,7 @@ route!(patch  "/api/v1/channel/{channel_id}/pin"                  => message_pin
 
 // Message Moderate/Move Routes
 route!(patch  "/api/v1/channel/{channel_id}/message"              => message_moderate(channel_id: ChannelId), MessageModerate);
-route!(post   "/api/v1/channel/{channel_id}/move-messages"        => message_move(channel_id: ChannelId), MessageMigrate);
+route!(post   "/api/v1/channel/{channel_id}/move-messages"        => message_move(channel_id: ChannelId), MessageMove);
 
 // Room Routes
 route!(post   "/api/v1/room"                                      => room_create() -> Room, RoomCreate);

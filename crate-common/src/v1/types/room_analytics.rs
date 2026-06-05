@@ -19,7 +19,7 @@ pub enum Aggregation {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
-pub struct RoomAnalyticsParams {
+pub struct AnalyticsParams {
     pub start: Option<Time>,
     pub end: Option<Time>,
     pub aggregate: Aggregation,
@@ -28,10 +28,11 @@ pub struct RoomAnalyticsParams {
     pub limit: Option<u16>,
 }
 
+/// the count of members in this room
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct RoomAnalyticsMembersCount {
+pub struct AnalyticsMembersCount {
     /// The bucket for this data point.
     pub bucket: Time,
 
@@ -42,7 +43,7 @@ pub struct RoomAnalyticsMembersCount {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct RoomAnalyticsMembersJoin {
+pub struct AnalyticsMembersJoin {
     /// The bucket for this data point.
     pub bucket: Time,
 
@@ -53,7 +54,7 @@ pub struct RoomAnalyticsMembersJoin {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct RoomAnalyticsMembersLeave {
+pub struct AnalyticsMembersLeave {
     /// The bucket for this data point.
     pub bucket: Time,
 
@@ -63,8 +64,41 @@ pub struct RoomAnalyticsMembersLeave {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct AnalyticsUsagesCount {
+    /// The bucket for this data point.
+    pub bucket: Time,
+
+    /// Total number of usages.
+    pub count: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct AnalyticsUsagesAdd {
+    /// The bucket for this data point.
+    pub bucket: Time,
+
+    /// Total number of additions.
+    pub count: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct AnalyticsUsagesRemove {
+    /// The bucket for this data point.
+    pub bucket: Time,
+
+    /// Total number of removals.
+    pub count: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
-pub struct RoomAnalyticsChannelParams {
+pub struct AnalyticsChannelParams {
     /// return only analytics for this channel, otherwise return data points for everything
     pub channel_id: Option<ChannelId>,
 }
@@ -72,7 +106,7 @@ pub struct RoomAnalyticsChannelParams {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct RoomAnalyticsChannel {
+pub struct AnalyticsChannel {
     /// The bucket for this data point.
     pub bucket: Time,
     pub channel_id: ChannelId,
@@ -84,7 +118,7 @@ pub struct RoomAnalyticsChannel {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct RoomAnalyticsOverview {
+pub struct AnalyticsOverview {
     /// The bucket for this data point.
     pub bucket: Time,
 
@@ -101,12 +135,12 @@ pub struct RoomAnalyticsOverview {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct RoomAnalyticsInvites {
+pub struct AnalyticsInvites {
     /// The bucket for this data point.
     pub bucket: Time,
 
     /// where this member came from
-    pub origin: RoomAnalyticsInvitesOrigin,
+    pub origin: AnalyticsInvitesOrigin,
 
     /// number of times this invite was used
     pub uses: u64,
@@ -115,7 +149,7 @@ pub struct RoomAnalyticsInvites {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-pub enum RoomAnalyticsInvitesOrigin {
+pub enum AnalyticsInvitesOrigin {
     /// user joined with this invite code
     Invite { code: InviteCode },
 

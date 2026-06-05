@@ -14,10 +14,11 @@ use validator::Validate;
 
 use crate::v1::types::{
     error::{ApiError, ErrorCode},
-    misc::Time,
     MessageSync,
 };
 
+pub mod consts;
+pub mod ip_addr;
 pub mod signing;
 
 /// A hostname, used to identify a server
@@ -72,7 +73,7 @@ pub struct Remote {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct RemoteEpoch(pub u64);
+pub struct FederationEpoch(pub u64);
 
 // NOTE: maybe i could use ChannelSeq/ChannelSync stuff for syncing too?
 // pub enum RemoteEpoch2 {
@@ -82,57 +83,13 @@ pub struct RemoteEpoch(pub u64);
 // }
 
 // TODO: more type safety?
-// pub struct Remote<M: Marker> {
+// pub struct Remote<M: Identifier> {
 //     pub origin_id: Id<M>,
 //     pub hostname: Hostname,
 // }
 
-/// a server's signing key
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ServerKey {
-    /// the key algorithm
-    pub alg: ServerKeyAlgorithm,
-
-    /// public key
-    ///
-    /// base64 url safe unpadded
-    // TODO: use Binary
-    pub pubkey: String,
-
-    /// random data to sign
-    ///
-    /// base64 url safe unpadded
-    // TODO: use Binary
-    pub nonce: String,
-
-    /// the signature
-    ///
-    /// the bytes that were signed: nonce || pubkey || hostname
-    ///
-    /// base64 url safe unpadded
-    // TODO: use Binary
-    pub signature: String,
-
-    /// when this key expires
-    ///
-    /// maximum Date + 72h, should be Date + 48h and rotated every 24h
-    // NOTE: should i require more frequent rotation?
-    pub expires_at: Time,
-}
-
-/// the algorithm to sign requests with
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(rename_all = "lowercase")
-)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum ServerKeyAlgorithm {
-    Ed25519,
-}
+// TEMP: reexport
+pub use signing::{ServerKey, ServerKeyAlgorithm};
 
 /// A collection of server keys for a specific hostname
 #[derive(Debug, Clone)]
@@ -193,13 +150,14 @@ pub struct ServerSyncRequest {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct ServerSyncResponse {
+    /// the current epoch the requesting server is on
+    ///
+    /// is incremented if the sender is too lagged
+    pub epoch: FederationEpoch,
     // /// how much time to delay until sending the next batch, in milliseconds
     // ///
     // /// this is to prevent servers from being overloaded
     // pub timeout: u64,
-
-    // TODO: tell sender its lagged?
-    // pub lagged: bool,
 
     // TODO: tell sender to disconnect?
     // TODO: if lagged or disconnected, should i return some different http status code?
@@ -238,6 +196,12 @@ impl Deref for Hostname {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl AsRef<str> for Hostname {
+    fn as_ref(&self) -> &str {
         &self.0
     }
 }

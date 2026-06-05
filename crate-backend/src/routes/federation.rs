@@ -5,7 +5,8 @@ use axum::response::IntoResponse;
 use axum::Json;
 use common::v1::routes;
 use common::v1::types::federation::{
-    Hostname, ServerConnectResponse, ServerKey, ServerKeys, ServerPingResponse, ServerSyncResponse,
+    FederationEpoch, Hostname, ServerConnectResponse, ServerKey, ServerKeys, ServerPingResponse,
+    ServerSyncResponse,
 };
 use common::v1::types::misc::ServerReq;
 use lamprey_macros::handler;
@@ -13,7 +14,6 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::Result;
 use crate::routes::util::auth::Auth3;
-use crate::routes::util::signing::sign_server_key;
 use crate::{routes2, Error, ServerState};
 
 /// Server keys get
@@ -24,18 +24,18 @@ async fn server_keys_get(
     State(s): State<Arc<ServerState>>,
     req: routes::server_keys_get::Request,
 ) -> Result<impl IntoResponse> {
-    let local_hostname = s.config().hostname()?;
+    let local_hostname = s.config().hostname2()?;
 
     let requested = match &req.hostname {
         ServerReq::ServerName(name) => name.as_str(),
-        ServerReq::ServerHost => local_hostname,
+        ServerReq::ServerHost => local_hostname.as_ref(),
         ServerReq::ServerClient => {
             // TODO: let servers see what we think their keys are?
             return Err(Error::Unimplemented);
         }
     };
 
-    if requested != local_hostname {
+    if requested != local_hostname.as_ref() {
         // TODO: use this server as a notary
         return Err(Error::Unimplemented);
     }
@@ -44,11 +44,11 @@ async fn server_keys_get(
 
     let keys: Vec<ServerKey> = local_keys
         .iter()
-        .map(|local_key| sign_server_key(local_key, local_hostname))
+        .map(|local_key| local_key.sign(&local_hostname))
         .collect();
 
     Ok(Json(ServerKeys {
-        hostname: local_hostname.to_owned(),
+        hostname: local_hostname.to_string(),
         keys,
     }))
 }
@@ -62,17 +62,17 @@ async fn server_connect(
 ) -> Result<impl IntoResponse> {
     let origin = auth.origin()?;
 
-    let local_hostname = s.config().hostname()?;
+    let local_hostname = s.config().hostname2()?;
 
     let target = match &req.hostname {
         ServerReq::ServerName(name) => name.as_str(),
-        ServerReq::ServerHost => local_hostname,
+        ServerReq::ServerHost => local_hostname.as_ref(),
         ServerReq::ServerClient => {
             return Err(Error::BadRequest("invalid target hostname".to_string()));
         }
     };
 
-    if target != local_hostname {
+    if target != local_hostname.as_ref() {
         return Err(Error::BadRequest("wrong target hostname".to_string()));
     }
 
@@ -92,9 +92,11 @@ async fn server_sync_handle(
     auth: Auth3,
 ) -> Result<impl IntoResponse> {
     let _origin = auth.origin()?;
-    // TODO: return a useful http response
     s.services().federation.handle_sync(req.sync).await?;
-    Ok(Json(ServerSyncResponse {}))
+    Ok(Json(ServerSyncResponse {
+        // TODO: return actual epoch
+        epoch: FederationEpoch(0),
+    }))
 }
 
 /// Server ping
@@ -109,11 +111,11 @@ async fn server_ping(
     let origin = auth.origin().ok();
     let is_federated = origin.is_some();
 
-    let local_hostname = s.config().hostname()?;
+    let local_hostname = s.config().hostname2()?;
 
     let target = match &req.hostname {
         ServerReq::ServerName(name) => name.as_str(),
-        ServerReq::ServerHost => local_hostname,
+        ServerReq::ServerHost => local_hostname.as_ref(),
         ServerReq::ServerClient => {
             if let Some(origin) = origin {
                 origin.as_ref()
@@ -125,12 +127,12 @@ async fn server_ping(
         }
     };
 
-    if target != local_hostname {
+    if target != local_hostname.as_ref() {
         // NOTE: federated should always be true since this is a server -> server ping (client -> server -> server)
         let federated = s
             .services()
             .federation
-            .ping(Hostname(target.to_string()))
+            .ping(Hostname::new(target.to_string())?)
             .await?;
         return Ok(Json(ServerPingResponse { federated }));
     }

@@ -4,18 +4,16 @@
 
 use std::net::SocketAddr;
 
-use bytes::Bytes;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
-use uuid::Uuid;
 
 use crate::v1::types::{
     voice::{
-        internal::{MediaData, SfuChannel, SfuPermissions, SfuStats},
-        IceCandidate, KeyframeRequestKind, Mid, Rid, SessionDescription, Speaking, SpeakingFlags,
+        internal::{SfuChannel, SfuPermissions, SfuStats},
+        IceCandidate, KeyframeRequestKind, Mid, Rid, SessionDescription, Speaking,
         SpeakingWithUserId, Subscription, TrackMetadata, TrackMetadataWithUserId, VoiceErrorCode,
         VoiceState, VoiceStateUpdate,
     },
@@ -35,15 +33,17 @@ pub enum PeerCommand {
     /// sent via webrtc track
     MediaAdded(TrackMetadata),
 
-    /// the peer is sending media data
-    ///
-    /// sent via webrtc track
-    MediaData(MediaData),
-
+    // /// the peer is sending media data
+    // ///
+    // /// sent via webrtc track
+    // MediaData(MediaData),
     /// the peer is sending speaking data
     ///
     /// sent via webrtc datachannel
     Speaking(Speaking),
+    // TODO: use Datachannel instead of Speaking
+    // /// an event was sent via datachannel
+    // Datachannel(Datachannel),
 }
 
 /// an command emitted by the sfu and handled by the peer
@@ -65,16 +65,17 @@ pub enum PeerEvent {
     /// a signalling message to be sent to the user
     Signalling(SignallingEvent),
 
-    /// another peer is sending media data
-    ///
-    /// sent via webrtc track
-    MediaData(MediaData),
-
+    // /// another peer is sending media data
+    // ///
+    // /// sent via webrtc track
+    // MediaData(MediaData),
     /// another peer is sending speaking data
     ///
     /// sent via webrtc datachannel
     Speaking(SpeakingWithUserId),
-
+    // TODO: use Datachannel instead of Speaking
+    // /// an event was sent via datachannel
+    // Datachannel(Datachannel),
     /// another peer requested a keyframe
     KeyframeRequest {
         source_mid: Mid,
@@ -365,6 +366,8 @@ pub enum BackboneDispatch {
         kind: KeyframeRequestKind,
     },
 
+    // TODO: use this instead of {Track,Subscription}{Create,Remove}
+    // Signalling(SignallingCommand),
     /// sender sfu has these tracks
     TrackCreate {
         channel_id: ChannelId,
@@ -398,84 +401,85 @@ pub struct BackboneDispatchEnvelope {
     pub dispatch: BackboneDispatch,
 }
 
-/// a datagram sent between sfu hosts
-#[derive(Debug, Clone)]
-pub enum BackboneDatagram {
-    Media(MediaData),
-    Speaking(SpeakingWithUserId),
-}
+// TODO: remove?
+// /// a datagram sent between sfu hosts
+// #[derive(Debug, Clone)]
+// pub enum BackboneDatagram {
+//     Media(MediaData),
+//     Speaking(SpeakingWithUserId),
+// }
 
-#[derive(Debug, thiserror::Error)]
-pub enum BackboneDatagramDeserializeError {
-    /// payload is empty
-    #[error("payload is empty")]
-    EmptyPayload,
+// #[derive(Debug, thiserror::Error)]
+// pub enum BackboneDatagramDeserializeError {
+//     /// payload is empty
+//     #[error("payload is empty")]
+//     EmptyPayload,
 
-    /// payload unexpectedly ended
-    #[error("payload unexpectedly ended")]
-    UnexpectedEof,
+//     /// payload unexpectedly ended
+//     #[error("payload unexpectedly ended")]
+//     UnexpectedEof,
 
-    /// unknown payload type
-    #[error("unknown payload type: {0}")]
-    UnknownPayloadType(u8),
-}
+//     /// unknown payload type
+//     #[error("unknown payload type: {0}")]
+//     UnknownPayloadType(u8),
+// }
 
-impl BackboneDatagram {
-    /// serialize this datagram to bytes
-    pub fn to_bytes(&self) -> Bytes {
-        let mut buf = Vec::new();
-        use bytes::BufMut;
-        match self {
-            BackboneDatagram::Media(m) => {
-                buf.put_u8(0);
-                buf.put_slice(&m.to_bytes());
-            }
-            BackboneDatagram::Speaking(s) => {
-                buf.put_u8(1);
-                buf.put_slice(s.user_id.as_bytes());
-                buf.put_slice(&s.mid.0);
-                buf.put_u8(s.flags.0);
-            }
-        }
-        buf.into()
-    }
+// impl BackboneDatagram {
+//     /// serialize this datagram to bytes
+//     pub fn to_bytes(&self) -> Bytes {
+//         let mut buf = Vec::new();
+//         use bytes::BufMut;
+//         match self {
+//             BackboneDatagram::Media(m) => {
+//                 buf.put_u8(0);
+//                 buf.put_slice(&m.to_bytes());
+//             }
+//             BackboneDatagram::Speaking(s) => {
+//                 buf.put_u8(1);
+//                 buf.put_slice(s.user_id.as_bytes());
+//                 buf.put_slice(&s.mid.0);
+//                 buf.put_u8(s.flags.0);
+//             }
+//         }
+//         buf.into()
+//     }
 
-    /// deserialize this datagram from bytes
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, BackboneDatagramDeserializeError> {
-        if bytes.is_empty() {
-            return Err(BackboneDatagramDeserializeError::EmptyPayload);
-        }
-        let tag = bytes[0];
-        let payload = &bytes[1..];
-        match tag {
-            0 => {
-                let m = MediaData::from_bytes(payload)
-                    .map_err(|_| BackboneDatagramDeserializeError::UnexpectedEof)?;
-                Ok(BackboneDatagram::Media(m))
-            }
-            1 => {
-                use bytes::Buf;
-                let mut buf = payload;
-                if buf.remaining() < 16 + 16 + 1 {
-                    return Err(BackboneDatagramDeserializeError::UnexpectedEof);
-                }
-                let mut peer_bytes = [0u8; 16];
-                buf.copy_to_slice(&mut peer_bytes);
-                let user_id = UserId::from(Uuid::from_bytes(peer_bytes));
+//     /// deserialize this datagram from bytes
+//     pub fn from_bytes(bytes: &[u8]) -> Result<Self, BackboneDatagramDeserializeError> {
+//         if bytes.is_empty() {
+//             return Err(BackboneDatagramDeserializeError::EmptyPayload);
+//         }
+//         let tag = bytes[0];
+//         let payload = &bytes[1..];
+//         match tag {
+//             0 => {
+//                 let m = MediaData::from_bytes(payload)
+//                     .map_err(|_| BackboneDatagramDeserializeError::UnexpectedEof)?;
+//                 Ok(BackboneDatagram::Media(m))
+//             }
+//             1 => {
+//                 use bytes::Buf;
+//                 let mut buf = payload;
+//                 if buf.remaining() < 16 + 16 + 1 {
+//                     return Err(BackboneDatagramDeserializeError::UnexpectedEof);
+//                 }
+//                 let mut peer_bytes = [0u8; 16];
+//                 buf.copy_to_slice(&mut peer_bytes);
+//                 let user_id = UserId::from(Uuid::from_bytes(peer_bytes));
 
-                let mut mid_bytes = [0u8; 16];
-                buf.copy_to_slice(&mut mid_bytes);
-                let source_mid = Mid(mid_bytes);
+//                 let mut mid_bytes = [0u8; 16];
+//                 buf.copy_to_slice(&mut mid_bytes);
+//                 let source_mid = Mid(mid_bytes);
 
-                let flags = SpeakingFlags(buf.get_u8());
+//                 let flags = SpeakingFlags(buf.get_u8());
 
-                Ok(BackboneDatagram::Speaking(SpeakingWithUserId {
-                    user_id,
-                    mid: source_mid,
-                    flags,
-                }))
-            }
-            _ => Err(BackboneDatagramDeserializeError::UnknownPayloadType(tag)),
-        }
-    }
-}
+//                 Ok(BackboneDatagram::Speaking(SpeakingWithUserId {
+//                     user_id,
+//                     mid: source_mid,
+//                     flags,
+//                 }))
+//             }
+//             _ => Err(BackboneDatagramDeserializeError::UnknownPayloadType(tag)),
+//         }
+//     }
+// }

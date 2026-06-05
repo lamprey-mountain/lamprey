@@ -5,6 +5,7 @@ use bytes::Bytes;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "str0m")]
 use str0m::{format::Codec, media::MediaTime};
 use uuid::Uuid;
 
@@ -14,6 +15,7 @@ use crate::v1::types::{voice::Mid, Channel, ChannelId, UserId};
 // TODO: use this?
 pub type GlobalMid = (UserId, Mid);
 
+#[cfg(feature = "str0m")]
 /// a packet of media data
 #[derive(Debug, Clone)]
 pub struct MediaData {
@@ -36,6 +38,7 @@ pub struct MediaData {
     pub codec: Codec,
 }
 
+#[cfg(feature = "str0m")]
 impl MediaData {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut buf = Vec::new();

@@ -1,11 +1,12 @@
 use std::{sync::Arc, time::Duration};
 
+use common::v1::types::federation::signing::ServerKeySecret;
 use common::v1::types::federation::Hostname;
 use moka::future::Cache;
 use tokio::sync::RwLock;
 use tracing::error;
 
-use crate::services::federation::signing::{LocalSigningKey, ValidatedKey};
+use crate::services::federation::signing::ValidatedKey;
 use crate::ServerStateInner;
 
 pub mod import;
@@ -22,7 +23,7 @@ pub struct ServerInfo {
 
 pub struct ServiceFederation {
     cache: Cache<Hostname, ServerInfo>,
-    local_keys: RwLock<Vec<LocalSigningKey>>,
+    local_keys: RwLock<Vec<ServerKeySecret>>,
     state: Arc<ServerStateInner>,
 }
 

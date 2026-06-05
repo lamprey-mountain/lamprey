@@ -1,10 +1,9 @@
+pub mod datachannel;
 pub mod error;
+pub mod internal;
 pub mod messages;
 pub mod router;
 pub mod types;
-
-#[cfg(feature = "str0m")]
-pub mod internal;
 
 #[cfg(feature = "str0m")]
 mod str0m;

@@ -15,8 +15,7 @@ use crate::routes::util::Auth;
 use crate::types::PermissionBits;
 use crate::{Error, Result};
 
-/// A snapshot of a room's state at a point in time.
-/// Used for zero-latency reads.
+/// a snapshot of a room's state at a point in time.
 #[derive(Debug, Clone)]
 pub enum RoomSnapshot {
     /// The room is currently being loaded from the database.
@@ -36,6 +35,11 @@ pub enum RoomSnapshot {
     Unavailable(RoomUnavailable),
 }
 
+pub struct RoomSnapshotLoaded {
+    data: RoomData,
+    has_members: bool,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct RoomUnavailable {
     pub reason: RoomUnavailableReason,
@@ -53,6 +57,8 @@ pub struct RoomData {
     pub members: ImMap<UserId, CachedRoomMember>,
     pub channels: ImMap<ChannelId, CachedChannel>,
     pub roles: ImMap<RoleId, CachedRole>,
+
+    /// loaded/active threads
     pub threads: ImMap<ChannelId, CachedThread>,
 }
 

@@ -193,6 +193,40 @@ pub mod room_member_search_advanced {
     }
 }
 
+// TODO: add modnotes
+// how should these be implemented? similarly to a forum channel?
+/// Room member modnote
+///
+/// Get or create the room member moderator note channel for this user
+#[endpoint(
+    post,
+    path = "/room/{room_id}/member/{user_id}/modnote",
+    tags = ["room_member"],
+    scopes = [Full],
+    // TODO: custom permission for mod notes?
+    permissions_optional = [MemberKick, MemberTimeout, MemberNicknameManage],
+    audit_log_events = ["ChannelCreate"],
+    response(CREATED, body = Channel, description = "channel newly created"),
+    response(OK, body = Channel, description = "channel exists"),
+)]
+pub mod room_member_modnote {
+    use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::{Channel, RoomId};
+
+    pub struct Request {
+        #[path]
+        pub room_id: RoomId,
+
+        #[path]
+        pub user_id: UserIdReq,
+    }
+
+    pub struct Response {
+        #[json]
+        pub channel: Channel,
+    }
+}
+
 /// Room ban create
 #[endpoint(
     put,

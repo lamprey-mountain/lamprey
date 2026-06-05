@@ -111,13 +111,13 @@ mod utoipa_utils;
         common::v1::types::search::Order,
         // room analytics types
         common::v1::types::room_analytics::Aggregation,
-        common::v1::types::room_analytics::RoomAnalyticsInvitesOrigin,
-        common::v1::types::room_analytics::RoomAnalyticsChannel,
-        common::v1::types::room_analytics::RoomAnalyticsInvites,
-        common::v1::types::room_analytics::RoomAnalyticsMembersCount,
-        common::v1::types::room_analytics::RoomAnalyticsMembersJoin,
-        common::v1::types::room_analytics::RoomAnalyticsMembersLeave,
-        common::v1::types::room_analytics::RoomAnalyticsOverview,
+        common::v1::types::room_analytics::AnalyticsInvitesOrigin,
+        common::v1::types::room_analytics::AnalyticsChannel,
+        common::v1::types::room_analytics::AnalyticsInvites,
+        common::v1::types::room_analytics::AnalyticsMembersCount,
+        common::v1::types::room_analytics::AnalyticsMembersJoin,
+        common::v1::types::room_analytics::AnalyticsMembersLeave,
+        common::v1::types::room_analytics::AnalyticsOverview,
         // application/integration types
         common::v1::types::application::Integration,
         // moderation types
@@ -151,7 +151,8 @@ mod utoipa_utils;
         common::v1::types::room_member::RoomMemberSearchResponse,
         // harvest types
         common::v1::types::harvest::Harvest,
-        common::v1::types::harvest::HarvestCreate,
+        common::v1::types::harvest::HarvestCreateUser,
+        common::v1::types::harvest::HarvestCreateRoom,
         common::v1::types::harvest::HarvestStatus,
         // auth password types
         common::v1::types::auth::PasswordExec,

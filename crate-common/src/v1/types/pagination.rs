@@ -85,13 +85,24 @@ impl<K: PaginationKey> IntoParams for PaginationQuery<K> {
     }
 }
 
+/// the direction to paginate
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(rename_all = "lowercase")
+)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(rename_all = "lowercase"))]
 pub enum PaginationDirection {
+    /// forwards
+    // TODO: rename variant to Forwards
     #[default]
+    #[cfg_attr(feature = "serde", serde(rename = "f"))]
     F,
+
+    /// backwards
+    // TODO: rename variant to Backwards
+    #[cfg_attr(feature = "serde", serde(rename = "b"))]
     B,
 }
 

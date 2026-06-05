@@ -7,8 +7,8 @@ use axum::{
     extract::{FromRequest, FromRequestParts, Request, State},
     http::request::Parts,
 };
-use common::util::FederationBody;
 use common::v1::types::{federation::Hostname, util::Time, UserId};
+use common::{util::FederationBody, v1::types::headers::HEADER_ORIGIN};
 use http::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
 use time::OffsetDateTime;
@@ -59,34 +59,38 @@ pub async fn verify_server_request(
     parts: &http::request::Parts,
     bytes: &::axum::body::Bytes,
 ) -> Result<Hostname, Error> {
-    let signing_headers = signing::SigningHeaders::decode(&parts.headers)?;
-
-    let method = parts.method.as_str().to_string();
-    let path = parts.uri.path().to_string();
-    let host = parts
+    let method = parts.method.as_str();
+    let path = parts.uri.path();
+    let host_str = parts
         .headers
         .get(http::header::HOST)
         .and_then(|v| v.to_str().ok())
-        .unwrap_or("")
-        .to_string();
+        .unwrap_or("");
+    let origin_str = parts
+        .headers
+        .get(HEADER_ORIGIN)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    let host = Hostname::new(host_str.to_string())?;
+    let origin = Hostname::new(origin_str.to_string())?;
 
     let incoming = signing::IncomingRequest {
-        origin: signing_headers.origin.clone(),
+        origin: &origin,
         host: &host,
-        method: &method,
-        path: &path,
+        method,
+        path,
         body: bytes,
-        headers: &signing_headers,
+        headers: &parts.headers,
     };
 
     let srv = state.services();
-    let keys = srv.federation.fetch_keys(&signing_headers.origin).await?;
+    let keys = srv.federation.fetch_keys(&origin).await?;
 
     let mut verified = false;
     for key in &keys {
         let ValidatedKeyAlgo::Ed25519(verifying_key) = &key.alg;
-        if verifying_key.to_bytes() == signing_headers.pubkey[..] {
-            incoming.verify(verifying_key)?;
+        if incoming.verify(verifying_key).is_ok() {
             verified = true;
             break;
         }
@@ -98,7 +102,7 @@ pub async fn verify_server_request(
         ));
     }
 
-    Ok(signing_headers.origin)
+    Ok(origin)
 }
 
 /// middleware to authenticate federation requests
@@ -143,56 +147,15 @@ where
             return Ok(ServerAuth { origin, body });
         }
 
-        let headers = req.headers();
-
-        let signing_headers = signing::SigningHeaders::decode(headers)?;
-
-        let method = req.method().as_str().to_string();
-        let path = req.uri().path().to_string();
-        let host = headers
-            .get(http::header::HOST)
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or("")
-            .to_string();
-
-        let bytes = axum::body::to_bytes(req.into_body(), 1024 * 1024 * 16)
+        let (parts, body) = req.into_parts();
+        let bytes = axum::body::to_bytes(body, 1024 * 1024 * 16)
             .await
             .map_err(|_| Error::BadStatic("failed to read body or body too large"))?;
 
-        let incoming = signing::IncomingRequest {
-            origin: signing_headers.origin.clone(),
-            host: &host,
-            method: &method,
-            path: &path,
-            body: &bytes,
-            headers: &signing_headers,
-        };
-
-        let srv = state.services();
-        let keys = srv.federation.fetch_keys(&signing_headers.origin).await?;
-
-        let mut verified = false;
-        for key in &keys {
-            let ValidatedKeyAlgo::Ed25519(verifying_key) = &key.alg;
-            if verifying_key.to_bytes() == signing_headers.pubkey[..] {
-                incoming.verify(verifying_key)?;
-                verified = true;
-                break;
-            }
-        }
-
-        if !verified {
-            return Err(Error::BadStatic(
-                "no matching key found (possibly expired?)",
-            ));
-        }
-
+        let origin = verify_server_request(state, &parts, &bytes).await?;
         let body: T = serde_json::from_slice(&bytes)?;
 
-        Ok(ServerAuth {
-            origin: signing_headers.origin,
-            body,
-        })
+        Ok(ServerAuth { origin, body })
     }
 }
 

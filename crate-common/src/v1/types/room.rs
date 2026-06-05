@@ -252,7 +252,11 @@ pub enum RoomType {
     Server,
 
     /// emoji pack room
+    // TODO: rename to Pack
     Emoji,
+    // NOTE: maybe make room templates their own room type?
+    // /// template room
+    // Template,
 }
 
 /// features enabled for this room

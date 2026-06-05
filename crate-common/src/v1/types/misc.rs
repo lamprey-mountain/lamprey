@@ -38,6 +38,12 @@ pub enum UserIdReq {
     UserId(UserId),
 }
 
+// TODO: add?
+// pub enum RoomIdReq {
+//     RoomId(RoomId),
+//     RoomSystem,
+// }
+
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Deserialize), serde(untagged))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

@@ -2460,11 +2460,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0de51e6874e94e7bf76d726fc5d13ba782deca734ff60d5bb2fb2607c7406555"
 dependencies = [
  "cfg-if",
+ "js-sys",
  "libc",
  "r-efi 6.0.0",
  "rand_core 0.10.0",
  "wasip2",
  "wasip3",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -4407,11 +4409,13 @@ dependencies = [
  "base64 0.22.1",
  "bitflags 2.11.1",
  "bytes",
+ "ed25519-dalek",
  "http",
  "lamprey-macros",
  "mediatype",
  "pastey 0.1.1",
  "percent-encoding",
+ "rand 0.10.1",
  "regex",
  "serde",
  "serde_json",
@@ -4575,6 +4579,7 @@ dependencies = [
 name = "lamprey-markdown"
 version = "0.1.1"
 dependencies = [
+ "getrandom 0.4.2",
  "lamprey-common",
  "logos",
  "rowan",
@@ -4703,7 +4708,7 @@ dependencies = [
  "lamprey-hakari",
  "num_cpus",
  "quinn",
- "rand 0.10.0",
+ "rand 0.10.1",
  "rcgen",
  "rustls 0.23.40",
  "serde",
@@ -4737,7 +4742,7 @@ dependencies = [
  "lamprey-hakari",
  "num_cpus",
  "quinn",
- "rand 0.10.0",
+ "rand 0.10.1",
  "rcgen",
  "rustls 0.23.40",
  "serde",
@@ -6426,9 +6431,9 @@ dependencies = [
 
 [[package]]
 name = "rand"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc266eb313df6c5c09c1c7b1fbe2510961e5bcd3add930c1e31f7ed9da0feff8"
+checksum = "d2e8e8bcc7961af1fdac401278c6a831614941f6164ee3bf4ce61b7edb162207"
 dependencies = [
  "chacha20",
  "getrandom 0.4.2",
@@ -9428,7 +9433,7 @@ checksum = "a68d3c8f01c0cfa54a75291d83601161799e4a89a39e0929f4b0354d88757a37"
 dependencies = [
  "getrandom 0.4.2",
  "js-sys",
- "rand 0.10.0",
+ "rand 0.10.1",
  "serde_core",
  "wasm-bindgen",
 ]

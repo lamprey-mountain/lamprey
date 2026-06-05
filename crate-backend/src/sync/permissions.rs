@@ -305,7 +305,7 @@ impl AuthCheck {
                 AuthCheck::ChannelPerm(*channel_id, Permission::IntegrationsManage)
             }
             MessageSync::RatelimitUpdate { user_id, .. } => AuthCheck::User(*user_id),
-            MessageSync::HarvestUpdate { harvest, .. } => AuthCheck::User(harvest.user_id),
+            MessageSync::HarvestUpdate { harvest, .. } => AuthCheck::User(harvest.requester_id),
             MessageSync::DocumentEdit { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::DocumentPresence { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::DocumentSubscribed { connection_id, .. } => {
