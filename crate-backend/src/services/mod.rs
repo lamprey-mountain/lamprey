@@ -27,6 +27,7 @@ use email::ServiceEmail;
 use embed::ServiceEmbed;
 use emoji::ServiceEmoji;
 use federation::ServiceFederation;
+use harvest::ServiceHarvest;
 use ips::ServiceIps;
 use media::ServiceMedia;
 use messages::ServiceMessages;
@@ -66,6 +67,7 @@ pub mod embed;
 pub mod emoji;
 pub mod federation;
 pub mod http;
+pub mod harvest;
 pub mod interactions;
 pub mod ips;
 pub mod media;
@@ -101,6 +103,7 @@ pub struct Services {
     pub embed: ServiceEmbed,
     pub emoji: ServiceEmoji,
     pub federation: ServiceFederation,
+    pub harvest: ServiceHarvest,
     pub http: ServiceHttp,
     pub interactions: ServiceInteractions,
     pub ips: ServiceIps,
@@ -141,6 +144,7 @@ impl Services {
             embed: ServiceEmbed::new(state.clone()),
             emoji: ServiceEmoji::new(state.clone()),
             federation: ServiceFederation::new(state.clone()),
+            harvest: ServiceHarvest::new(state.clone()),
             http: ServiceHttp::new(state.clone()),
             interactions: ServiceInteractions::new(state.clone()),
             ips: ServiceIps::new(state.clone()),
@@ -180,6 +184,7 @@ impl Services {
         self.member_lists.start_background_tasks();
         self.media.start_background_tasks();
         self.search.start_background_tasks();
+        self.harvest.start_background_tasks();
     }
 
     // TODO: cleanly shutdown

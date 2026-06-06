@@ -150,6 +150,10 @@ pub enum ErrorCode {
     #[error("unknown application")]
     UnknownApplication,
 
+    /// unknown harvest
+    #[error("unknown harvest")]
+    UnknownHarvest,
+
     /// unknown automod rule
     #[error("unknown automod rule")]
     UnknownAutomodRule,

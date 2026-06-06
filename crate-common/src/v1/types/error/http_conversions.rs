@@ -21,6 +21,7 @@ impl ErrorCode {
             ErrorCode::UnknownMedia => StatusCode::NOT_FOUND,
             ErrorCode::UnknownInvite => StatusCode::NOT_FOUND,
             ErrorCode::UnknownApplication => StatusCode::NOT_FOUND,
+            ErrorCode::UnknownHarvest => StatusCode::NOT_FOUND,
             ErrorCode::UnknownAutomodRule => StatusCode::NOT_FOUND,
             ErrorCode::UnknownWebhook => StatusCode::NOT_FOUND,
             ErrorCode::UnknownRoomTemplate => StatusCode::NOT_FOUND,

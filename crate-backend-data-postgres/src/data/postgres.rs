@@ -174,6 +174,7 @@ mod document;
 mod email_queue;
 mod embed;
 mod emoji;
+mod harvest;
 mod invite;
 mod media;
 mod message;

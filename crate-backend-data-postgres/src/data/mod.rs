@@ -11,6 +11,7 @@ use common::v1::types::document::{
 };
 use common::v1::types::email::EmailAddr;
 use common::v1::types::federation::{Hostname, Remote};
+use common::v1::types::harvest::Harvest;
 use common::v1::types::message::{Message, MessageVersion};
 use common::v1::types::oauth::Scopes;
 use common::v1::types::room_template::{RoomTemplateCode, RoomTemplateCreate, RoomTemplatePatch};
@@ -26,6 +27,7 @@ use common::v1::types::{
 use common::v1::types::{ChannelSeq, RoomFeature};
 use common::v2::types::embed::Embed;
 use common::v2::types::media::{Media, MediaPatch};
+use common::v2::types::HarvestId;
 use lamprey_backend_core::data::DataScript;
 pub use lamprey_backend_core::data::{
     DataAdmin, DataApplication, DataAuditLogs, DataAutomod, DataCalendar, DataConfigInternal,
@@ -87,6 +89,7 @@ pub trait Data:
     + DataConfigInternal
     + DataRoomTemplate
     + DataScript
+    + DataHarvest
     + Send
     + Sync
 {
@@ -727,6 +730,15 @@ pub trait DataRoomTemplate {
     ) -> Result<DbRoomTemplate>;
     async fn room_template_mark_dirty(&mut self, source_room_id: RoomId) -> Result<()>;
     async fn room_template_delete(&mut self, code: RoomTemplateCode) -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataHarvest {
+    async fn harvest_put(&mut self, harvest: &Harvest) -> Result<()>;
+    async fn harvest_get(&mut self, harvest_id: HarvestId) -> Result<Option<Harvest>>;
+    async fn harvest_get_user(&mut self, user_id: UserId) -> Result<Option<Harvest>>;
+    async fn harvest_get_room(&mut self, room_id: RoomId) -> Result<Option<Harvest>>;
+    async fn harvest_claim(&mut self) -> Result<Option<Harvest>>;
 }
 
 // TODO: impl this trait
