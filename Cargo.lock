@@ -4666,6 +4666,8 @@ dependencies = [
  "rustls 0.23.40",
  "serde_json",
  "str0m",
+ "symphonia",
+ "thiserror 2.0.18",
  "tokio",
  "tokio-tungstenite 0.27.0",
  "tracing",
