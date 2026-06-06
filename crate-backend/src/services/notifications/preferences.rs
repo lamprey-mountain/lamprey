@@ -1,22 +1,13 @@
 //! notification preference calculator
 
-// TODO: redo
-
-use common::v1::types::notifications::preferences::NotifsMessages;
+use common::v1::types::notifications::preferences::{
+    Mute, NotifsGlobal, NotifsMessages, NotifsReactions, NotifsReplies, NotifsThreads,
+};
 use common::v1::types::notifications::{Notification, NotificationType};
 use common::v1::types::util::Time;
-use common::v1::types::{ChannelType, UserId};
+use common::v1::types::{Channel, ChannelType, Room, UserId};
 
 use crate::{Result, ServerStateInner};
-
-pub struct NotificationActionCalculator {
-    state: std::sync::Arc<ServerStateInner>,
-    user_id: UserId,
-    notification: Notification,
-    mentions_user: bool,
-    mentions_role: bool,
-    mentions_everyone: bool,
-}
 
 /// What action to take for a notification
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,265 +22,228 @@ pub enum NotificationAction {
     Push,
 }
 
-impl NotificationActionCalculator {
-    pub fn new(
-        state: std::sync::Arc<ServerStateInner>,
+/// notification calculator
+pub struct Calculator {
+    /// the user's global notification preferences
+    global: NotifsGlobal,
+
+    room: Option<Room>,
+    channel: Option<Channel>,
+}
+
+impl Calculator {
+    /// load a user's notification preferences
+    pub async fn load(
+        state: &ServerStateInner,
         user_id: UserId,
-        notification: Notification,
-    ) -> Self {
-        NotificationActionCalculator {
-            state,
-            user_id,
-            notification,
-            mentions_user: false,
-            mentions_role: false,
-            mentions_everyone: false,
-        }
-    }
+        notif: &Notification,
+    ) -> Result<Self> {
+        let srv = state.services();
+        let global = srv.cache.preferences_get(user_id).await?.notifs;
 
-    /// this notification occured in a dm/gdm channel
-    pub fn in_dm(self) -> Self {
-        self
-    }
-
-    /// this notification occured in a private room
-    pub fn in_private_room(self) -> Self {
-        self
-    }
-
-    /// this notification occured in a public room
-    pub fn in_public_room(self) -> Self {
-        self
-    }
-
-    /// this notification mentions the user
-    pub fn mentions_user(mut self) -> Self {
-        self.mentions_user = true;
-        self
-    }
-
-    /// this notification mentions a role the user has
-    pub fn mentions_role(mut self) -> Self {
-        self.mentions_role = true;
-        self
-    }
-
-    /// this notification mentions everyone in a channel
-    pub fn mentions_everyone(mut self) -> Self {
-        self.mentions_everyone = true;
-        self
-    }
-
-    pub async fn action(self) -> Result<NotificationAction> {
-        // Fetch channel
-        let channel_id = match self.notification.channel_id() {
-            Some(id) => id,
-            None => return Ok(NotificationAction::Skip),
-        };
-
-        let channel = self.state.data().channel_get(channel_id).await.ok();
-
-        // Fetch room if channel has room_id
-        let room = if let Some(ref ch) = channel {
-            if let Some(room_id) = ch.room_id {
-                self.state.data().room_get(room_id).await.ok()
-            } else {
-                None
-            }
+        let channel_id = notif.channel_id();
+        let channel = if let Some(id) = channel_id {
+            srv.channels.get(id, Some(user_id)).await.ok()
         } else {
             None
         };
 
-        // Fetch message if this is a message notification
-        let message = match &self.notification.ty {
-            NotificationType::Message {
-                channel_id,
-                message_id,
-                ..
-            }
-            | NotificationType::Reaction {
-                channel_id,
-                message_id,
-                ..
-            } => self
-                .state
-                .data()
-                .message_get(*channel_id, *message_id)
-                .await
-                .ok(),
+        let room_id = channel.as_ref().and_then(|ch| ch.room_id);
+        let room = if let Some(id) = room_id {
+            srv.rooms.get(id, Some(user_id)).await.ok()
+        } else {
+            None
         };
 
-        // Check if this is a DM/GDM
-        let is_dm = channel
+        Ok(Self {
+            global,
+            room,
+            channel,
+        })
+    }
+
+    /// check if global, room, or channel is muted
+    pub fn is_muted(&self) -> bool {
+        let now = Time::now_utc();
+        let check_mute = |mute: &Mute| mute.expires_at.is_none() || mute.expires_at.unwrap() > now;
+
+        if self
+            .channel
             .as_ref()
-            .map(|ch| matches!(ch.ty, ChannelType::Dm | ChannelType::Gdm))
-            .unwrap_or(false);
+            .and_then(|c| c.preferences.as_ref())
+            .and_then(|p| p.notifs.mute.as_ref())
+            .map_or(false, check_mute)
+        {
+            return true;
+        }
 
-        // Check if this is a private room
-        let is_private_room = room.as_ref().map(|r| !r.public).unwrap_or(false);
-
-        // Check if this is a public room
-        let is_public_room = room.as_ref().map(|r| r.public).unwrap_or(false);
-
-        // Check mentions from message
-        let message_mentions_user = message
+        if self
+            .room
             .as_ref()
-            .map(|m| {
-                m.latest_version
-                    .mentions
-                    .users
-                    .iter()
-                    .any(|u| u.id == self.user_id)
+            .and_then(|r| r.preferences.as_ref())
+            .and_then(|p| p.notifs.mute.as_ref())
+            .map_or(false, check_mute)
+        {
+            return true;
+        }
+
+        self.global.mute.as_ref().map_or(false, check_mute)
+    }
+
+    pub fn resolve_messages(&self) -> NotifsMessages {
+        self.channel
+            .as_ref()
+            .and_then(|c| c.preferences.as_ref())
+            .and_then(|p| p.notifs.messages.clone())
+            .or_else(|| {
+                self.room
+                    .as_ref()
+                    .and_then(|r| r.preferences.as_ref())
+                    .and_then(|p| p.notifs.messages.clone())
             })
-            .unwrap_or(false);
-
-        let message_mentions_everyone = message
-            .as_ref()
-            .map(|m| m.latest_version.mentions.everyone)
-            .unwrap_or(false);
-
-        // For role mentions, we'd need to check user's roles vs mentioned roles
-        // This is a simplified check - in production you'd fetch user's roles
-        let message_mentions_role = message
-            .as_ref()
-            .map(|m| !m.latest_version.mentions.roles.is_empty())
-            .unwrap_or(false);
-
-        let srv = self.state.services();
-
-        // Load channel config
-        let channel_config = if let Some(ref ch) = channel {
-            srv.cache
-                .preferences_channel_get(self.user_id, ch.id)
-                .await
-                .ok()
-                .map(|c| c.notifs)
-        } else {
-            None
-        };
-
-        // Load room config
-        let room_config = if let Some(ref r) = room {
-            srv.cache
-                .preferences_room_get(self.user_id, r.id)
-                .await
-                .ok()
-                .map(|c| c.notifs)
-        } else {
-            None
-        };
-
-        // Load global config
-        let global_config = srv.cache.preferences_get(self.user_id).await?.notifs;
-
-        // Check channel-level mute first (highest priority)
-        if let Some(ref channel_config) = channel_config {
-            if let Some(ref mute) = channel_config.mute {
-                if mute.expires_at.is_none() || mute.expires_at.unwrap() > Time::now_utc() {
-                    return Ok(NotificationAction::Skip);
-                }
-            }
-
-            if let Some(ref messages_config) = channel_config.messages {
-                return Ok(self.evaluate_messages_config(
-                    messages_config,
-                    is_dm,
-                    is_private_room,
-                    is_public_room,
-                    message_mentions_user,
-                    message_mentions_role,
-                    message_mentions_everyone,
-                ));
-            }
-        }
-
-        // Check room-level config
-        if let Some(ref room_config) = room_config {
-            if let Some(ref mute) = room_config.mute {
-                if mute.expires_at.is_none() || mute.expires_at.unwrap() > Time::now_utc() {
-                    return Ok(NotificationAction::Skip);
-                }
-            }
-
-            // Check room-level messages setting
-            if let Some(ref messages_config) = room_config.messages {
-                return Ok(self.evaluate_messages_config(
-                    messages_config,
-                    is_dm,
-                    is_private_room,
-                    is_public_room,
-                    message_mentions_user,
-                    message_mentions_role,
-                    message_mentions_everyone,
-                ));
-            }
-
-            // Check room-level mention settings
-            if is_public_room {
-                // Check @everyone mentions
-                if message_mentions_everyone && !room_config.mention_everyone {
-                    return Ok(NotificationAction::Skip);
-                }
-
-                // Check @role mentions
-                if message_mentions_role && !room_config.mention_roles {
-                    return Ok(NotificationAction::Skip);
-                }
-            }
-        }
-
-        // Check global mute
-        if let Some(ref mute) = global_config.mute {
-            if mute.expires_at.is_none() || mute.expires_at.unwrap() > Time::now_utc() {
-                return Ok(NotificationAction::Skip);
-            }
-        }
-
-        // Fall back to global messages setting
-        Ok(self.evaluate_messages_config(
-            &global_config.messages,
-            is_dm,
-            is_private_room,
-            is_public_room,
-            message_mentions_user,
-            message_mentions_role,
-            message_mentions_everyone,
-        ))
+            .unwrap_or_else(|| self.global.messages.clone())
     }
 
-    fn evaluate_messages_config(
-        &self,
-        messages_config: &NotifsMessages,
-        is_dm: bool,
-        is_private_room: bool,
-        _is_public_room: bool,
-        message_mentions_user: bool,
-        message_mentions_role: bool,
-        message_mentions_everyone: bool,
-    ) -> NotificationAction {
-        match messages_config {
-            NotifsMessages::Nothing => NotificationAction::Skip,
-            NotifsMessages::Mentions => {
-                // For Mentions mode, check if any relevant mentions occurred
-                let has_relevant_mention = message_mentions_user
-                    || message_mentions_role
-                    || message_mentions_everyone
-                    || is_dm
-                    || is_private_room;
+    pub fn resolve_replies(&self) -> NotifsReplies {
+        self.channel
+            .as_ref()
+            .and_then(|c| c.preferences.as_ref())
+            .and_then(|p| p.notifs.replies.clone())
+            .or_else(|| {
+                self.room
+                    .as_ref()
+                    .and_then(|r| r.preferences.as_ref())
+                    .and_then(|p| p.notifs.replies.clone())
+            })
+            .unwrap_or_else(|| self.global.replies.clone())
+    }
 
-                if has_relevant_mention {
-                    NotificationAction::Push
-                } else {
-                    NotificationAction::Inbox
-                }
-            }
-            NotifsMessages::Watching => NotificationAction::Inbox,
-            NotifsMessages::Everything => NotificationAction::Push,
-        }
+    pub fn resolve_threads(&self) -> NotifsThreads {
+        self.channel
+            .as_ref()
+            .and_then(|c| c.preferences.as_ref())
+            .and_then(|p| p.notifs.threads.clone())
+            .or_else(|| {
+                self.room
+                    .as_ref()
+                    .and_then(|r| r.preferences.as_ref())
+                    .and_then(|p| p.notifs.threads.clone())
+            })
+            .unwrap_or_else(|| self.global.threads.clone())
     }
 }
 
+/// calculate what action should be done for this notification
+pub async fn calculate(
+    state: &ServerStateInner,
+    user_id: UserId,
+    notification: &Notification,
+) -> Result<NotificationAction> {
+    let srv = state.services();
+    let calc = Calculator::load(state, user_id, &notification).await?;
+
+    let action = if calc.is_muted() {
+        match notification.ty {
+            // friend requests always go in the inbox
+            NotificationType::FriendRequestSent { .. }
+            | NotificationType::FriendRequestReceived { .. }
+            | NotificationType::FriendRequestAccepted { .. } => NotificationAction::Inbox,
+
+            // everything else gets dropped
+            _ => NotificationAction::Skip,
+        }
+    } else {
+        match notification.ty {
+            NotificationType::Message {
+                room_id,
+                channel_id,
+                message_id,
+                mention_user,
+                mention_everyone,
+                mention_role,
+                reply,
+                ..
+            } => {
+                // resolve actions for replies
+                let reply_action = if reply {
+                    calc.resolve_replies().into()
+                } else {
+                    NotificationAction::Skip
+                };
+
+                // room notification preferences restrict what counts as a mention
+                let mentioned = if let Some(room_prefs) = calc
+                    .room
+                    .as_ref()
+                    .and_then(|r| r.preferences.as_ref())
+                    .map(|p| &p.notifs)
+                {
+                    let mention_role = mention_role && room_prefs.mention_roles;
+                    let mention_everyone = mention_everyone && room_prefs.mention_everyone;
+                    mention_user || mention_role || mention_everyone
+                } else {
+                    mention_user || mention_role || mention_everyone
+                };
+
+                // resolve actions for messages
+                let prefs = calc.resolve_messages();
+                let message_action = match prefs {
+                    NotifsMessages::Everything => NotificationAction::Push,
+                    NotifsMessages::Watching => {
+                        if mentioned {
+                            NotificationAction::Push
+                        } else {
+                            NotificationAction::Inbox
+                        }
+                    }
+                    NotifsMessages::Mentions => {
+                        if mentioned {
+                            NotificationAction::Push
+                        } else {
+                            NotificationAction::Skip
+                        }
+                    }
+                    NotifsMessages::Nothing => NotificationAction::Skip,
+                };
+
+                reply_action.merge(message_action)
+            }
+            NotificationType::Thread { .. } => calc.resolve_threads().into(),
+            NotificationType::Reaction { .. } => match calc.global.reactions {
+                NotifsReactions::Always => NotificationAction::Push,
+                NotifsReactions::Restricted => {
+                    todo!("is dm or private room")
+                }
+                NotifsReactions::Dms => {
+                    let chan = calc.channel.unwrap();
+                    if matches!(chan.ty, ChannelType::Dm | ChannelType::Gdm) {
+                        NotificationAction::Push
+                    } else {
+                        NotificationAction::Skip
+                    }
+                }
+                NotifsReactions::Nothing => NotificationAction::Skip,
+            },
+            NotificationType::FriendRequestSent { .. }
+            | NotificationType::FriendRequestReceived { .. }
+            | NotificationType::FriendRequestAccepted { .. } => NotificationAction::Push,
+        }
+    };
+
+    Ok(action)
+}
+
 impl NotificationAction {
+    /// Merge these actions with other actions
+    pub fn merge(&self, other: Self) -> Self {
+        use NotificationAction::*;
+        match (*self, other) {
+            (Push, _) | (_, Push) => Push,
+            (Inbox, _) | (_, Inbox) => Inbox,
+            (Skip, Skip) => Skip,
+        }
+    }
+
     /// Whether this notification should be sent as a push notification
     pub fn should_push(&self) -> bool {
         matches!(self, NotificationAction::Push)
@@ -301,164 +255,33 @@ impl NotificationAction {
     }
 }
 
-// /// Determine the appropriate action for a notification based on user preferences
-// pub async fn notification_action(
-//     state: &ServerStateInner,
-//     user_id: UserId,
-//     notif: &Notification,
-// ) -> Result<NotificationAction> {
-//     let srv = state.services();
-
-//     let channel_config = srv
-//         .cache
-//         .user_config_channel_get(user_id, notif.channel_id)
-//         .await
-//         .ok();
-
-//     if let Some(ref config) = channel_config {
-//         if let Some(ref mute) = config.notifs.mute {
-//             if mute.expires_at.is_none() || mute.expires_at.unwrap() > Time::now_utc() {
-//                 return Ok(NotificationAction::Skip);
-//             }
-//         }
-
-//         if let Some(ref messages_config) = config.notifs.messages {
-//             return Ok(match messages_config {
-//                 NotifsMessages::Nothing => NotificationAction::Skip,
-//                 NotifsMessages::Mentions => NotificationAction::Inbox,
-//                 NotifsMessages::Watching => NotificationAction::Push,
-//                 NotifsMessages::Everything => NotificationAction::Push,
-//             });
-//         }
-//     }
-
-//     // If room_id is provided, check room preferences
-//     // Note: we need to fetch the channel to get its room_id
-//     let room_id = state
-//         .data()
-//         .channel_get(notif.channel_id)
-//         .await
-//         .ok()
-//         .and_then(|ch| ch.room_id);
-
-//     if let Some(room_id) = room_id {
-//         let room_config = srv.cache.user_config_room_get(user_id, room_id).await.ok();
-
-//         // Check room-level mute
-//         if let Some(ref config) = room_config {
-//             if let Some(ref mute) = config.notifs.mute {
-//                 if mute.expires_at.is_none() || mute.expires_at.unwrap() > Time::now_utc() {
-//                     return Ok(NotificationAction::Skip); // Muted forever or until a future time
-//                 }
-//             }
-
-//             // Check room-level messages setting
-//             if let Some(ref messages_config) = config.notifs.messages {
-//                 return Ok(match messages_config {
-//                     NotifsMessages::Nothing => NotificationAction::Skip,
-//                     NotifsMessages::Mentions => NotificationAction::Inbox,
-//                     NotifsMessages::Watching => NotificationAction::Push,
-//                     NotifsMessages::Everything => NotificationAction::Push,
-//                 });
-//             }
-//         }
-//     }
-
-//     // Fall back to global preferences
-//     let global_config = srv.cache.user_config_get(user_id).await?;
-
-//     // Check global mute
-//     if let Some(ref mute) = global_config.notifs.mute {
-//         if mute.expires_at.is_none() || mute.expires_at.unwrap() > Time::now_utc() {
-//             return Ok(NotificationAction::Skip); // Muted forever or until a future time
-//         }
-//     }
-
-//     // Check global messages setting
-//     Ok(match global_config.notifs.messages {
-//         NotifsMessages::Nothing => NotificationAction::Skip,
-//         NotifsMessages::Mentions => NotificationAction::Inbox,
-//         NotifsMessages::Watching => NotificationAction::Push,
-//         NotifsMessages::Everything => NotificationAction::Push,
-//     })
-// }
-
-mod next {
-    use std::sync::Arc;
-
-    use common::v1::types::notifications::{
-        preferences::{NotifsChannel, NotifsGlobal, NotifsRoom},
-        Notification,
-    };
-    use common::v1::types::UserId;
-
-    use crate::{Result, ServerStateInner};
-
-    // reuse
-    use super::NotificationAction;
-
-    /// notification preferences
-    pub struct NotifPrefs {
-        global: NotifsGlobal,
-        room: Option<NotifsRoom>,
-        channel: Option<NotifsChannel>,
-    }
-
-    impl NotifPrefs {
-        /// load a user's notification preferences
-        // PERF: consider caching this later?
-        pub async fn load(state: &ServerStateInner, user_id: UserId) -> Result<Self> {
-            todo!()
+impl From<NotifsMessages> for NotificationAction {
+    fn from(value: NotifsMessages) -> Self {
+        match value {
+            NotifsMessages::Nothing => NotificationAction::Skip,
+            NotifsMessages::Mentions => NotificationAction::Inbox,
+            NotifsMessages::Watching => NotificationAction::Inbox,
+            NotifsMessages::Everything => NotificationAction::Push,
         }
     }
+}
 
-
-    // pub struct Calc {
-    //     // prefs
-    //     // channel, room, etc
-    //     // user_id
-    // }
-
-    // impl Calc {
-    //     /// load necessary state for this notification the calculator
-    //     pub async fn load(
-    //         state: Arc<ServerStateInner>,
-    //         notification: Notification,
-    //     ) -> Result<Self> {
-    //         todo!()
-    //     }
-
-    //     /// get the calculated action for this notification
-    //     pub fn action(&self) -> NotificationAction {
-    //         todo!()
-    //     }
-    // }
-
-    // just have a function
-    /// calculate what action should be done for this notification
-    pub async fn calculate(
-        state: &ServerStateInner,
-        user_id: UserId,
-        notification: Notification,
-    ) -> Result<NotificationAction> {
-        let srv = state.services();
-        let prefs = NotifPrefs::load(state, user_id);
-
-        // 1. check mutes (global, room, channel). if any are muted, return Skip
-
-        // for message notifs
-        // 2. if prefs.channel, use channel messages
-        // 3. if prefs.room, use room messages
-        // 4. use global messages
-
-        // for reaction notifs
-        // 2. use global reactions
-        // 3. somehow handle Restricted/Dms?
-
-        todo!()
+impl From<NotifsReplies> for NotificationAction {
+    fn from(value: NotifsReplies) -> Self {
+        match value {
+            NotifsReplies::Notify => NotificationAction::Push,
+            NotifsReplies::Watching => NotificationAction::Inbox,
+            NotifsReplies::Nothing => NotificationAction::Skip,
+        }
     }
+}
 
-    fn notifs_messages_to_action() {
-        todo!()
+impl From<NotifsThreads> for NotificationAction {
+    fn from(value: NotifsThreads) -> Self {
+        match value {
+            NotifsThreads::Notify => NotificationAction::Push,
+            NotifsThreads::Inbox => NotificationAction::Inbox,
+            NotifsThreads::Nothing => NotificationAction::Skip,
+        }
     }
 }

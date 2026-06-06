@@ -10,25 +10,15 @@ use crate::{
     data::DataNotification,
     error::Result,
     gen_paginate,
-    types::{DbNotification, DbNotificationType, UserId},
+    types::{DbNotification, UserId},
 };
 
 use super::Postgres;
 
 impl From<DbNotification> for Notification {
     fn from(val: DbNotification) -> Self {
-        let ty = match val.ty {
-            DbNotificationType::Message => NotificationType::Message {
-                room_id: val.room_id.map(|id| id.into()),
-                channel_id: val.channel_id.into(),
-                message_id: val.message_id.into(),
-            },
-            DbNotificationType::Reaction => NotificationType::Reaction {
-                room_id: val.room_id.map(|id| id.into()),
-                channel_id: val.channel_id.into(),
-                message_id: val.message_id.into(),
-            },
-        };
+        let ty = serde_json::from_value(val.info).expect("Failed to deserialize notification info");
+
         Notification {
             id: val.id.into(),
             ty,
@@ -44,38 +34,18 @@ impl DataNotification for Postgres {
     async fn notification_add(&mut self, user_id: UserId, notif: Notification) -> Result<()> {
         let mut conn = self.acquire().await?;
 
-        let (room_id, channel_id, message_id, ty) = match &notif.ty {
-            NotificationType::Message {
-                room_id,
-                channel_id,
-                message_id,
-            } => (
-                room_id.map(|r| *r),
-                channel_id.into_inner(),
-                message_id.into_inner(),
-                DbNotificationType::Message,
-            ),
-            NotificationType::Reaction {
-                room_id,
-                channel_id,
-                message_id,
-            } => (
-                room_id.map(|r| *r),
-                channel_id.into_inner(),
-                message_id.into_inner(),
-                DbNotificationType::Reaction,
-            ),
-        };
-
+        let info = serde_json::to_value(&notif.ty).expect("Failed to serialize notification");
         let added_at = time::PrimitiveDateTime::new(notif.added_at.date(), notif.added_at.time());
+        let channel_id = notif.channel_id().map(|id| id.into_inner());
+        let room_id = notif.room_id().map(|id| id.into_inner());
+
         query!(
-            "INSERT INTO inbox (id, user_id, room_id, channel_id, message_id, type, added_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            "INSERT INTO inbox (id, user_id, info, channel_id, room_id, added_at) VALUES ($1, $2, $3, $4, $5, $6)",
             notif.id.into_inner(),
             user_id.into_inner(),
-            room_id,
+            info,
             channel_id,
-            message_id,
-            ty as _,
+            room_id,
             added_at,
         )
         .execute(conn.ext())
@@ -167,7 +137,7 @@ impl DataNotification for Postgres {
 
             query!(
                 "UPDATE inbox SET read_at = now() WHERE user_id = $1 AND (
-                    (array_length($2::uuid[], 1) IS NOT NULL AND message_id = ANY($2)) OR
+                    (array_length($2::uuid[], 1) IS NOT NULL AND (info->>'message_id')::uuid = ANY($2)) OR
                     (array_length($3::uuid[], 1) IS NOT NULL AND channel_id = ANY($3)) OR
                     (array_length($4::uuid[], 1) IS NOT NULL AND room_id = ANY($4))
                 )",
@@ -213,7 +183,7 @@ impl DataNotification for Postgres {
 
             query!(
                 "UPDATE inbox SET read_at = NULL WHERE user_id = $1 AND (
-                    (array_length($2::uuid[], 1) IS NOT NULL AND message_id = ANY($2)) OR
+                    (array_length($2::uuid[], 1) IS NOT NULL AND (info->>'message_id')::uuid = ANY($2)) OR
                     (array_length($3::uuid[], 1) IS NOT NULL AND channel_id = ANY($3)) OR
                     (array_length($4::uuid[], 1) IS NOT NULL AND room_id = ANY($4))
                 )",
@@ -249,7 +219,7 @@ impl DataNotification for Postgres {
                 AND ($2 OR read_at IS NOT NULL)
                 AND ($3::uuid IS NULL OR id <= $3)
                 AND ($4::uuid IS NULL OR id >= $4)
-                AND ($5::uuid[] IS NULL OR message_id = ANY($5))
+                AND ($5::uuid[] IS NULL OR (info->>'message_id')::uuid = ANY($5))
                 AND ($6::uuid[] IS NULL OR channel_id = ANY($6))
                 AND ($7::uuid[] IS NULL OR room_id = ANY($7))
             ",
@@ -263,7 +233,6 @@ impl DataNotification for Postgres {
         )
         .execute(conn.ext())
         .await?;
-
         Ok(())
     }
 
@@ -282,10 +251,9 @@ impl DataNotification for Postgres {
                 let user_id = UserId::from(r.user_id);
                 let notif: Notification = DbNotification {
                     id: r.id,
-                    room_id: r.room_id,
+                    info: r.info,
                     channel_id: r.channel_id,
-                    message_id: r.message_id,
-                    ty: r.ty,
+                    room_id: r.room_id,
                     added_at: r.added_at,
                     read_at: r.read_at,
                 }

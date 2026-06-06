@@ -1,4 +1,4 @@
-SELECT id, room_id, channel_id as "channel_id!", message_id as "message_id!", type as "ty!: DbNotificationType", added_at, read_at
+SELECT id, info, channel_id, room_id, added_at, read_at
 FROM inbox
 WHERE user_id = $1
   AND ($2 OR read_at IS NULL)

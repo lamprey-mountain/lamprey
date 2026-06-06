@@ -9,13 +9,13 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::v1::types::{
-    util::Time, Channel, ChannelId, Message, MessageId, NotificationId, Room, RoomId,
+    reaction::ReactionKeyParam, util::Time, Channel, ChannelId, Message, MessageId, NotificationId,
+    Room, RoomId, UserId,
 };
 
 pub mod bytes;
 pub mod preferences;
 
-// TODO: use this instead of the current notification type
 // TODO: maybe include a `completed_at` field if this action is "completable"?
 /// a notification; a unit of stuff that may show up in your inbox or be pushed to you
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -51,6 +51,21 @@ pub enum NotificationType {
 
         /// the id of the message that was sent
         message_id: MessageId,
+
+        /// the author of this message
+        user_id: UserId,
+
+        /// this notification was triggered by an @user
+        mention_user: bool,
+
+        /// this notification was triggered by an @everyone or @here mention
+        mention_everyone: bool,
+
+        /// this notification was triggered by a @role mention
+        mention_role: bool,
+
+        /// this notification was triggered by a reply
+        reply: bool,
     },
 
     /// someone reacted to a message you sent
@@ -63,20 +78,33 @@ pub enum NotificationType {
 
         /// the id of the message that was reacted to
         message_id: MessageId,
-        // TODO: user id, reaction key
-        // NOTE: i should probably aggregate all notifications into one bundle
+
+        /// the user who created this reaction
+        user_id: UserId,
+
+        reaction_key: ReactionKeyParam,
     },
 
-    // TODO: friend request notifs
-    // use user_id as the tag_id so both users have one friend request notif that updates over time
-    // /// you sent a friend request
-    // FriendRequestSent { user_id: UserId },
-    //
-    // /// someone sent a friend request to you
-    // FriendRequestReceived { user_id: UserId },
-    //
-    // /// someone accepted your friend request or you accepted someone's friend request
-    // FriendRequestAccepted { user_id: UserId },
+    /// a thread was created
+    Thread {
+        /// the room this thread was created in
+        room_id: Option<RoomId>,
+
+        /// the id of the thread
+        thread_id: ChannelId,
+
+        /// the user who created this thread
+        user_id: UserId,
+    },
+
+    /// you sent a friend request
+    FriendRequestSent { user_id: UserId },
+
+    /// someone sent a friend request to you
+    FriendRequestReceived { user_id: UserId },
+
+    /// someone accepted your friend request or you accepted someone's friend request
+    FriendRequestAccepted { user_id: UserId },
     // TODO: calendar events, document mentions, broadcast/voice activity, etc
 }
 
@@ -213,16 +241,23 @@ pub struct NotificationPagination {
     pub has_more: bool,
     pub cursor: Option<String>,
 
+    // extra context
     pub channels: Vec<Channel>,
     pub messages: Vec<Message>,
     pub rooms: Vec<Room>,
+    // TODO: add room members, thread members, users
 }
 
+// TODO: move this to Notification or move methods in Notification to NotificationType
 impl NotificationType {
     pub fn message_id(&self) -> Option<MessageId> {
         match self {
             NotificationType::Message { message_id, .. } => Some(*message_id),
             NotificationType::Reaction { message_id, .. } => Some(*message_id),
+            NotificationType::Thread { .. } => None,
+            NotificationType::FriendRequestSent { .. } => None,
+            NotificationType::FriendRequestReceived { .. } => None,
+            NotificationType::FriendRequestAccepted { .. } => None,
         }
     }
 }
@@ -236,6 +271,10 @@ impl Notification {
         match &self.ty {
             NotificationType::Message { message_id, .. } => **message_id,
             NotificationType::Reaction { message_id, .. } => **message_id,
+            NotificationType::Thread { thread_id, .. } => **thread_id,
+            NotificationType::FriendRequestSent { user_id } => **user_id,
+            NotificationType::FriendRequestReceived { user_id } => **user_id,
+            NotificationType::FriendRequestAccepted { user_id } => **user_id,
         }
     }
 
@@ -243,6 +282,10 @@ impl Notification {
         match &self.ty {
             NotificationType::Message { channel_id, .. } => Some(*channel_id),
             NotificationType::Reaction { channel_id, .. } => Some(*channel_id),
+            NotificationType::Thread { thread_id, .. } => Some(*thread_id),
+            NotificationType::FriendRequestSent { .. } => None,
+            NotificationType::FriendRequestReceived { .. } => None,
+            NotificationType::FriendRequestAccepted { .. } => None,
         }
     }
 
@@ -250,6 +293,10 @@ impl Notification {
         match &self.ty {
             NotificationType::Message { room_id, .. } => *room_id,
             NotificationType::Reaction { room_id, .. } => *room_id,
+            NotificationType::Thread { room_id, .. } => *room_id,
+            NotificationType::FriendRequestSent { .. } => None,
+            NotificationType::FriendRequestReceived { .. } => None,
+            NotificationType::FriendRequestAccepted { .. } => None,
         }
     }
 

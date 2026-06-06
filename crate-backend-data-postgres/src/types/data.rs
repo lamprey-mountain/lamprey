@@ -726,20 +726,13 @@ pub struct UrlEmbedQueue {
     pub finished_at: Option<PrimitiveDateTime>,
 }
 
-#[derive(sqlx::Type, Debug, Deserialize, PartialEq, Eq, Clone, Copy)]
-#[sqlx(type_name = "notification_type")]
-pub enum DbNotificationType {
-    Message,
-    Reaction,
-}
-
+// TODO: remove
 #[derive(Debug, sqlx::FromRow)]
 pub struct DbNotification {
     pub id: Uuid,
+    pub info: serde_json::Value,
+    pub channel_id: Option<Uuid>,
     pub room_id: Option<Uuid>,
-    pub channel_id: Uuid,
-    pub message_id: Uuid,
-    pub ty: DbNotificationType,
     pub added_at: PrimitiveDateTime,
     pub read_at: Option<PrimitiveDateTime>,
 }

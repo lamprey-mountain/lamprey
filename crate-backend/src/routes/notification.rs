@@ -115,12 +115,27 @@ async fn inbox_post(
         .ok()
         .and_then(|ch| ch.room_id);
 
+    let message = s
+        .data()
+        .message_get(req.notification.channel_id, req.notification.message_id)
+        .await?;
+
     let notif = Notification {
         id: NotificationId::new(),
         ty: NotificationType::Message {
             room_id,
             channel_id: req.notification.channel_id,
             message_id: req.notification.message_id,
+            user_id: message.author_id,
+            mention_user: message
+                .latest_version
+                .mentions
+                .users
+                .iter()
+                .any(|u| u.id == auth.user.id),
+            mention_everyone: message.latest_version.mentions.everyone,
+            mention_role: false, // FIXME
+            reply: message.latest_version.reply_id.is_some(),
         },
         added_at: req.notification.added_at.unwrap_or_else(Time::now_utc),
         read_at: None,

@@ -1,51 +1,41 @@
-use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD as B64;
 use base64::Engine;
 use common::v1::types::notifications::bytes::NotificationBytes;
-use common::v1::types::notifications::{Notification, NotificationType};
-use common::v1::types::util::Time;
-use common::v1::types::{ChannelId, Message, MessageId, NotificationId, SessionId, UserId};
+use common::v1::types::notifications::Notification;
+use common::v1::types::UserId;
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
-use lamprey_backend_data_postgres::{Channel, PushData};
+use lamprey_backend_data_postgres::PushData;
 use p256::pkcs8::EncodePrivateKey;
 use p256::SecretKey;
 use reqwest::StatusCode;
 use serde::Serialize;
 use time::OffsetDateTime;
+use tokio::sync::RwLock;
 use tokio::task::JoinSet;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 use url::Url;
 
 use crate::error::Error;
-use crate::services::notifications::preferences::{
-    NotificationAction, NotificationActionCalculator,
-};
+use crate::services::notifications::preferences::{calculate, NotificationAction};
 use crate::{Result, ServerStateInner};
 
 pub mod preferences;
 
 pub struct ServiceNotifications {
     state: Arc<ServerStateInner>,
+    vapid_keys: RwLock<Option<VapidKeys>>,
 }
 
-// TODO: review llm generated code (vapid logic)
-
-/// payload sent via web push api
-///
-/// since the web push api has a pretty low payload size, generally around 2048
-/// bytes, this is mostly a "wake up" notif. the client will fetch the full data
-/// when receiving this.
-#[derive(Debug, Serialize)]
-pub struct NotificationPayload {
-    pub id: NotificationId,
-    pub channel_id: ChannelId,
-    pub message_id: MessageId,
-    pub session_id: SessionId,
+#[derive(Clone)]
+struct VapidKeys {
+    encoding: EncodingKey,
+    public: String,
 }
 
+// TODO: use actual struct
 #[derive(Debug, Serialize)]
 struct JwtClaims {
     aud: String,
@@ -55,24 +45,33 @@ struct JwtClaims {
 
 impl ServiceNotifications {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
-        Self { state }
+        Self {
+            state,
+            vapid_keys: RwLock::new(None),
+        }
     }
 
     /// Helper to fetch and parse VAPID keys from configuration
-    async fn get_vapid_keys(&self) -> Result<Option<(EncodingKey, String)>> {
+    async fn get_vapid_keys(&self) -> Result<VapidKeys> {
+        let keys = self.vapid_keys.read().await;
+        if let Some(keys) = &*keys {
+            return Ok(keys.clone());
+        }
+
         let mut data = self.state.data();
         let config_internal = data.config_get().await?;
 
         let (vapid_private, vapid_public) = match config_internal {
             Some(c) => (c.vapid_private_key, c.vapid_public_key),
-            None => return Ok(None),
+            None => return Err(Error::Internal(format!("no internal config!"))),
         };
 
-        let encoded_private = B64.encode(&vapid_private);
-        let private_key_bytes = encoded_private.as_bytes();
+        let decoded_private = B64
+            .decode(&vapid_private)
+            .map_err(|e| Error::Internal(format!("invalid vapid private key: {}", e)))?;
 
         // Use p256 crate to convert raw private key bytes to PKCS#8 DER
-        let secret_key = SecretKey::from_slice(private_key_bytes)
+        let secret_key = SecretKey::from_slice(&decoded_private)
             .map_err(|e| Error::Internal(format!("invalid p256 secret key: {}", e)))?;
 
         let pkcs8_doc = secret_key
@@ -81,12 +80,21 @@ impl ServiceNotifications {
 
         let encoding_key = EncodingKey::from_ec_der(pkcs8_doc.as_bytes());
 
-        Ok(Some((encoding_key, vapid_public)))
+        let keys = VapidKeys {
+            encoding: encoding_key,
+            public: vapid_private,
+        };
+
+        let mut self_keys = self.vapid_keys.write().await;
+        *self_keys = Some(keys.clone());
+
+        Ok(keys)
     }
 
     /// Send a notification to all of user's sessions via web push api
     ///
     /// pushes the notification to all sessions in parallel
+    // NOTE: i may want to make this internal/private?
     pub async fn push(&self, user_id: UserId, mut payload: NotificationBytes) -> Result<()> {
         let mut data = self.state.data();
         let subscriptions = data.push_list_for_user(user_id).await?;
@@ -106,19 +114,12 @@ impl ServiceNotifications {
     }
 
     /// send a notification to a session via web push api
-    pub async fn push_inner(
+    async fn push_inner(
         state: Arc<ServerStateInner>,
         sub: PushData,
         payload: bytes::Bytes,
     ) -> Result<()> {
-        let (encoding_key, vapid_public) =
-            match state.services().notifications.get_vapid_keys().await? {
-                Some(keys) => keys,
-                None => {
-                    warn!("vapid keys not found");
-                    return Ok(());
-                }
-            };
+        let vapid_keys = state.services().notifications.get_vapid_keys().await?;
 
         let p256dh_encoded = B64.encode(&sub.key_p256dh);
         let auth_encoded = B64.encode(&sub.key_auth);
@@ -141,9 +142,14 @@ impl ServiceNotifications {
             sub: format!("mailto:admin@{}", host),
         };
 
-        let token = jsonwebtoken::encode(&Header::new(Algorithm::ES256), &claims, &encoding_key)?;
+        let token = jsonwebtoken::encode(
+            &Header::new(Algorithm::ES256),
+            &claims,
+            &vapid_keys.encoding,
+        )?;
 
         // TODO: use http service
+        // TODO: verify that headers/encoding are correct
         let client = reqwest::Client::new();
         let res = client
             .post(&sub.endpoint)
@@ -151,9 +157,9 @@ impl ServiceNotifications {
             .header("TTL", "2419200")
             .header(
                 "Authorization",
-                format!("vapid t={token}, k={vapid_public}"),
+                format!("vapid t={token}, k={}", vapid_keys.public),
             )
-            .header("Crypto-Key", format!("p256ecdsa={vapid_public}"))
+            .header("Crypto-Key", format!("p256ecdsa={}", vapid_keys.public))
             .body(ciphertext)
             .send()
             .await;
@@ -215,132 +221,41 @@ impl ServiceNotifications {
         }
     }
 
-    /// get a notification calculator for a user
-    pub fn calculator(
+    /// calculate the actions to take for a notification
+    pub async fn calculate_actions(
         &self,
         user_id: UserId,
         notif: &Notification,
-    ) -> NotificationActionCalculator {
-        NotificationActionCalculator::new(self.state.clone(), user_id, notif.clone())
+    ) -> Result<NotificationAction> {
+        calculate(&self.state, user_id, notif).await
     }
 
-    /// create notifications for a new message
-    // TODO: redo
-    pub async fn dispatch_message_creation(
-        &self,
-        message: &Message,
-        chan: &Channel,
-        author_id: UserId,
-    ) {
-        let mentions = &message.latest_version.mentions;
-        let mut notified_users = HashSet::new();
-        let is_thread = chan.is_thread();
+    /// add a notification
+    ///
+    /// inserts into the database and executes any needed actions
+    pub async fn create(&self, user_id: UserId, notification: Notification) -> Result<()> {
+        let action = self.calculate_actions(user_id, &notification).await?;
 
-        // 1. Resolve all users that need to be notified
-        let mut users_to_notify = Vec::new();
-
-        // Add directly mentioned users
-        users_to_notify.extend(mentions.users.iter().map(|u| u.id));
-
-        // Add role mention users
-        if chan.room_id.is_some() {
-            for role in &mentions.roles {
-                // TODO: use room cache/service for member list
-                if let Ok(members) = self
-                    .state
-                    .data()
-                    .role_member_list(role.id, Default::default())
-                    .await
-                {
-                    users_to_notify.extend(members.items.into_iter().map(|m| m.user_id));
-                }
+        match (action.should_add_to_inbox(), action.should_push()) {
+            (true, true) => {
+                let mut data = self.state.acquire_data().await?;
+                data.notification_add(user_id, notification).await?;
+                data.commit().await?;
             }
+            (true, false) => {
+                let mut data = self.state.acquire_data().await?;
+                data.notification_add(user_id, notification.clone()).await?;
+                data.notification_set_pushed(&[notification.id]).await?;
+                data.commit().await?;
+            }
+            (false, true) => {
+                // NOTE: this branch currently isn't reachable
+                // TODO: durable pushing without adding to inbox
+                todo!()
+            }
+            (false, false) => {}
         }
 
-        // Add @everyone users
-        if mentions.everyone {
-            if is_thread {
-                if let Ok(members) = self.state.data().thread_member_list_all(chan.id).await {
-                    users_to_notify.extend(members.into_iter().map(|m| m.user_id));
-                }
-            } else if let Some(room_id) = chan.room_id {
-                if let Ok(members) = self.state.data().room_member_list_all(room_id).await {
-                    users_to_notify.extend(members.into_iter().map(|m| m.user_id));
-                }
-            }
-        }
-
-        // 2. Process Notifications
-        for user_id in users_to_notify {
-            if user_id == author_id || !notified_users.insert(user_id) {
-                continue; // Skip author and duplicates
-            }
-
-            // Optional: Handle thread auto-join logic here
-
-            // Increment mentions
-            // PERF: bulk increment mentions count
-            let _ = self
-                .state
-                .data()
-                .unread_increment_mentions(
-                    user_id,
-                    chan.id,
-                    message.id,
-                    message.latest_version.version_id,
-                    1,
-                )
-                .await;
-
-            // Generate Inbox Notification
-            let room_id_opt = self
-                .state
-                .services()
-                .channels
-                .get(chan.id, Some(user_id))
-                .await
-                .ok()
-                .and_then(|c| c.room_id);
-            let notification = Notification {
-                id: NotificationId::new(),
-                ty: NotificationType::Message {
-                    room_id: room_id_opt,
-                    channel_id: chan.id,
-                    message_id: message.id,
-                },
-                added_at: Time::now_utc(),
-                read_at: None,
-                note: None,
-            };
-
-            let action = self
-                .calculator(user_id, &notification)
-                .action()
-                .await
-                .unwrap_or(NotificationAction::Push);
-
-            if action.should_add_to_inbox() {
-                let _ = self
-                    .state
-                    .data()
-                    .notification_add(user_id, notification)
-                    .await;
-            }
-        }
+        Ok(())
     }
-
-    // TODO: add?
-    // pub async fn create(&self, user_id: UserId, notification: Notification) {
-    //     let action = srv
-    //         .notifications
-    //         .calculator(user_id, &notification)
-    //         .action()
-    //         .await
-    //         .unwrap_or(NotificationAction::Skip);
-
-    //     if action.should_add_to_inbox() {
-    //         todo!()
-    //         // data.notification_add(user_id, notification).await?;
-    //     }
-    // }
 }

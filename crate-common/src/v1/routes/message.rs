@@ -323,6 +323,7 @@ pub mod message_move {
     audit_log_events = ["MessagePin"],
     response(NO_CONTENT, description = "success"),
 )]
+// TODO: rename to pin_create
 pub mod message_pin {
     use crate::v1::types::{ChannelId, MessageId};
 
@@ -347,6 +348,7 @@ pub mod message_pin {
     audit_log_events = ["MessageUnpin"],
     response(NO_CONTENT, description = "success"),
 )]
+// TODO: rename to pin_delete
 pub mod message_unpin {
     use crate::v1::types::{ChannelId, MessageId};
 
@@ -370,6 +372,7 @@ pub mod message_unpin {
     permissions = [ChannelView],
     response(OK, body = PaginationResponse<MessagePin>, description = "success"),
 )]
+// TODO: rename to pin_list
 pub mod message_pins_list {
     use crate::v1::types::{ChannelId, MessageId, MessagePin, PaginationQuery, PaginationResponse};
 
@@ -397,6 +400,7 @@ pub mod message_pins_list {
     audit_log_events = ["MessagePinReorder"],
     response(NO_CONTENT, description = "success"),
 )]
+// TODO: rename to pin_reorder
 pub mod message_pins_reorder {
     use crate::v1::types::{ChannelId, PinsReorder};
 

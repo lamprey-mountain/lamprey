@@ -141,6 +141,7 @@ impl ServiceRooms {
         let mut room = snapshot.get_data().unwrap().room.clone();
 
         if let Some(user_id) = user_id {
+            // PERF: cache
             let preferences = self
                 .state
                 .data()

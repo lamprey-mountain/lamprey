@@ -1339,6 +1339,12 @@ impl NotificationProcessor {
                 room_id: self.channel.room_id,
                 channel_id: self.channel.id,
                 message_id: self.message.id,
+                user_id: self.message.author_id,
+                // FIXME: populate these fields
+                mention_user: false,
+                mention_everyone: false,
+                mention_role: false,
+                reply: false,
             },
             added_at: Time::now_utc(),
             read_at: None,
@@ -1347,8 +1353,7 @@ impl NotificationProcessor {
 
         let action = srv
             .notifications
-            .calculator(user_id, &notification)
-            .action()
+            .calculate_actions(user_id, &notification)
             .await
             .unwrap_or(NotificationAction::Skip);
 

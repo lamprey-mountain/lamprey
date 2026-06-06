@@ -69,3 +69,5 @@ pub struct AckRes {
     /// The last read id in this channel. Currently unused, may be deprecated later?.
     pub version_id: MessageVerId,
 }
+
+// TODO: acks for pinned messages
