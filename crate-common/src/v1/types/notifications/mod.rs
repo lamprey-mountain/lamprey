@@ -13,9 +13,10 @@ use crate::v1::types::{
 };
 
 pub mod preferences;
+pub mod bytes;
 
 // TODO: use this instead of the current notification type
-// TODO: maybe include a `completed` field if this action is "completable"?
+// TODO: maybe include a `completed_at` field if this action is "completable"?
 /// a notification; a unit of stuff that may show up in your inbox or be pushed to you
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -206,20 +207,6 @@ pub struct NotificationPagination {
     pub messages: Vec<Message>,
     pub rooms: Vec<Room>,
 }
-
-// /// serialized notification payload, sent through web push
-// // TODO: implement
-// pub struct NotificationBytes {
-//     // 1 byte: version
-//     // 1 byte: type
-//     // 2 bytes: 0x00 0x00 (unused, use for flags?)
-
-//     // 4 bytes: notification id
-//     // 4 bytes: channel id
-//     // 4 bytes: message id
-
-//     // flags: is edit, author is ignored, channel is muted, what else?
-// }
 
 impl NotificationType {
     pub fn message_id(&self) -> Option<MessageId> {

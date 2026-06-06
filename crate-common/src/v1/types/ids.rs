@@ -187,6 +187,10 @@ impl<M: Marker> Id<M> {
     pub fn into_inner(self) -> Uuid {
         self.into()
     }
+
+    pub fn from_slice(bytes: &[u8]) -> Result<Self, uuid::Error> {
+        Ok(Uuid::from_slice(bytes)?.into())
+    }
 }
 
 impl<M: Marker> Default for Id<M> {
