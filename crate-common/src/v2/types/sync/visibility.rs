@@ -48,7 +48,7 @@ pub enum DispatchVisibility {
 
 impl DispatchVisibility {
     /// return an auth check for "either in this room or is this user"
-    fn room_or_user(room_id: RoomId, user_id: UserId) -> Self {
+    fn _room_or_user(room_id: RoomId, user_id: UserId) -> Self {
         DispatchVisibility::AnyOf(vec![
             DispatchVisibility::Room(room_id),
             DispatchVisibility::User(user_id),

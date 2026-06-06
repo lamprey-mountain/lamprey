@@ -9,7 +9,7 @@ use std::{
 use bytes::Bytes;
 
 use async_tempfile::TempFile;
-use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
+use base64::Engine;
 use common::{
     v1::types::{
         error::{ApiError, ErrorCode},

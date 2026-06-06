@@ -3,7 +3,7 @@ use crate::services::federation::ServiceFederation;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
 use common::v1::types::federation::consts::{
-    EXPIRED_KEY_RETENTION, KEY_EXPIRY, KEY_ROTATION_WINDOW,
+    EXPIRED_KEY_RETENTION, KEY_ROTATION_WINDOW,
 };
 use common::v1::types::federation::signing::ServerKeySecret;
 use common::v1::types::federation::ServerKeyAlgorithm;

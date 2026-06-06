@@ -1,7 +1,7 @@
 use common::v1::types::{
     document::DocumentUpdate,
     sync::{SyncParams, SyncResume},
-    voice::{messages::SfuCommand, VoiceStateUpdate},
+    voice::VoiceStateUpdate,
     ChannelId, ConnectionId, SessionToken, SyncSubscribeDocument, SyncSubscribeMemberList,
     SyncSubscribeScript, SyncSubscription,
 };

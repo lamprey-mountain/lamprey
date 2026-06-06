@@ -421,10 +421,7 @@ pub mod message_pins_reorder {
     response(OK, body = RepliesResponse, description = "success"),
 )]
 pub mod message_reply_roots {
-    use crate::v1::types::{
-        ChannelId, Message, MessageId, PaginationQuery, PaginationResponse, RepliesQuery,
-        RepliesResponse,
-    };
+    use crate::v1::types::{ChannelId, MessageId, PaginationQuery, RepliesQuery, RepliesResponse};
 
     pub struct Request {
         #[path]
@@ -453,10 +450,7 @@ pub mod message_reply_roots {
     response(OK, body = RepliesResponse, description = "success"),
 )]
 pub mod message_reply_list {
-    use crate::v1::types::{
-        ChannelId, Message, MessageId, PaginationQuery, PaginationResponse, RepliesQuery,
-        RepliesResponse,
-    };
+    use crate::v1::types::{ChannelId, MessageId, PaginationQuery, RepliesQuery, RepliesResponse};
 
     pub struct Request {
         #[path]

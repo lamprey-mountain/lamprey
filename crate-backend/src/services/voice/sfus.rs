@@ -3,7 +3,7 @@ use crate::services::voice::{ServiceVoice, SfuCommand, SfuStats};
 use crate::Result;
 use axum::extract::ws::WebSocket;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::voice::messages::{SfuEvent, SignallingEvent};
+use common::v1::types::voice::messages::SfuEvent;
 use common::v1::types::{ChannelId, MessageSync, SfuId, UserId};
 use lamprey_backend_core::Error;
 use std::collections::HashMap;

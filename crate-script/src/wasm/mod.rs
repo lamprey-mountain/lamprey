@@ -29,7 +29,7 @@ pub struct WasmManager {
 
 /// host-specific wasm state
 struct WasmState {
-    table: ResourceTable,
+    _table: ResourceTable,
     redex_id: RedexId,
     sender: broadcast::Sender<Arc<ExecutionEvent>>,
 }
@@ -41,7 +41,7 @@ pub struct WasmExecutor {
     linker: Arc<Linker<WasmState>>,
     redex_id: RedexId,
     redex_version_id: RedexVerId,
-    limits: Limits,
+    _limits: Limits,
     // script: Arc<JsCompiledScript>,
 }
 
@@ -53,11 +53,11 @@ pub struct WasmHandle {
     ext_recv: watch::Receiver<Option<ScriptExtracted>>,
 }
 
-/// a compiled script loaded in memory
-struct WasmCompiledScript {
-    // script_id: ScriptId,
-    // bytecode: Vec<u8>,
-}
+// /// a compiled script loaded in memory
+// struct WasmCompiledScript {
+//     // script_id: ScriptId,
+//     // bytecode: Vec<u8>,
+// }
 
 impl WasmManager {
     pub fn new(limits: Limits) -> Result<Self> {
@@ -94,7 +94,7 @@ impl WasmManager {
             linker: Arc::new(linker),
             redex_id,
             redex_version_id,
-            limits: self.limits.clone(),
+            _limits: self.limits.clone(),
         })
     }
 }
@@ -120,7 +120,7 @@ impl Executor for WasmExecutor {
         });
 
         let state = WasmState {
-            table: ResourceTable::new(),
+            _table: ResourceTable::new(),
             sender: events_tx.clone(),
             redex_id,
         };
