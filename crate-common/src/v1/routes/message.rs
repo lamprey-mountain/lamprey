@@ -418,11 +418,12 @@ pub mod message_pins_reorder {
     tags = ["message"],
     scopes = [Full],
     permissions = [ChannelView],
-    response(OK, body = PaginationResponse<Message>, description = "success"),
+    response(OK, body = RepliesResponse, description = "success"),
 )]
 pub mod message_reply_roots {
     use crate::v1::types::{
         ChannelId, Message, MessageId, PaginationQuery, PaginationResponse, RepliesQuery,
+        RepliesResponse,
     };
 
     pub struct Request {
@@ -438,7 +439,7 @@ pub mod message_reply_roots {
 
     pub struct Response {
         #[json]
-        pub replies: PaginationResponse<Message>,
+        pub replies: RepliesResponse,
     }
 }
 
@@ -449,11 +450,12 @@ pub mod message_reply_roots {
     tags = ["message"],
     scopes = [Full],
     permissions = [ChannelView],
-    response(OK, body = PaginationResponse<Message>, description = "success"),
+    response(OK, body = RepliesResponse, description = "success"),
 )]
 pub mod message_reply_list {
     use crate::v1::types::{
         ChannelId, Message, MessageId, PaginationQuery, PaginationResponse, RepliesQuery,
+        RepliesResponse,
     };
 
     pub struct Request {
@@ -472,7 +474,7 @@ pub mod message_reply_list {
 
     pub struct Response {
         #[json]
-        pub replies: PaginationResponse<Message>,
+        pub replies: RepliesResponse,
     }
 }
 

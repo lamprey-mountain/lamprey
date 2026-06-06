@@ -43,7 +43,7 @@ use crate::types::{
     DbChannelCreate, DbChannelPrivate, DbEmailQueue, DbMessageCreate, DbMessageUpdate,
     DbRoleCreate, DbRoomCreate, DbRoomTemplate, DbSessionCreate, DbUserCreate, DehydratedDocument,
     DocumentUpdateSummary, EmailPurpose, MediaLink, MediaLinkType, MentionsIds, MessageId,
-    MessageRef, MessageVerId, PushData, UrlEmbedQueue, UserPatch, UserVerId,
+    MessageRef, MessageVerId, PushData, UrlEmbedQueue, UserPatch, UserVerId, MessageWithCounts,
 };
 use common::v1::types::components::{self, Components};
 
@@ -226,6 +226,11 @@ pub trait DataMessage {
         channel_id: ChannelId,
         message_id: MessageId,
     ) -> Result<Message>;
+    async fn message_get_with_counts(
+        &mut self,
+        channel_id: ChannelId,
+        message_id: MessageId,
+    ) -> Result<MessageWithCounts>;
     async fn message_get_many(
         &mut self,
         channel_id: ChannelId,
@@ -297,7 +302,7 @@ pub trait DataMessage {
         depth: u16,
         breadth: Option<u16>,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<Message>>;
+    ) -> Result<PaginationResponse<MessageWithCounts>>;
     async fn message_pin_create(
         &mut self,
         channel_id: ChannelId,

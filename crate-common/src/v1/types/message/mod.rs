@@ -89,6 +89,12 @@ pub struct Message {
     pub ephemeral: bool,
 }
 
+impl Message {
+    pub fn reply_id(&self) -> Option<MessageId> {
+        self.latest_version.reply_id
+    }
+}
+
 /// a message's content at a point in time
 // TODO: add error "latest message version cannot be deleted"
 #[derive(Debug, Clone)]
@@ -100,6 +106,10 @@ pub struct MessageVersion {
     /// the id of who this edit. if None, this edit was made by the author
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub author_id: Option<UserId>,
+
+    /// the message this version is replying to
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub reply_id: Option<MessageId>,
 
     /// the type and content of this message
     // NOTE: message type generally shouldn't change, but i don't know how to "hoist" the type field to the top level Message struct?
@@ -1230,6 +1240,9 @@ impl MessageType {
     }
 
     /// if this will be returned in the thread activity route
+    // NOTE: update these queries when is_activity is updated
+    // crate-backend-data-postgres/sql/message_activity_paginate.sql
+    // crate-backend-data-postgres/sql/message_activity_count.sql
     pub fn is_activity(&self) -> bool {
         match self {
             MessageType::DefaultMarkdown(_) => false,

@@ -21,6 +21,15 @@ use uuid::Uuid;
 pub use common::v1::types::ids::*;
 pub use common::v1::types::misc::{SessionIdReq, UserIdReq};
 
+use common::v1::types::Message;
+
+#[derive(Debug, Clone)]
+pub struct MessageWithCounts {
+    pub message: Message,
+    pub count_direct: u64,
+    pub count_recursive: u64,
+}
+
 #[derive(Debug, sqlx::Type, Clone, Copy)]
 #[sqlx(type_name = "message_type")]
 pub enum DbMessageType {

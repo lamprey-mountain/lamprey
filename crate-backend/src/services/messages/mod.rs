@@ -11,17 +11,18 @@ use std::time::Duration;
 use tracing::{error, warn};
 use uuid::Uuid;
 
-use common::v1::types::message::{Message, MessageType, MessageVersion};
+use common::v1::types::message::{Message, MessageType, MessageVersion, RepliesResponse};
 use common::v1::types::misc::Color;
 use common::v1::types::{
     Channel, ChannelId, ContextQuery, ContextResponse, EmbedCreate, EmbedId, Mentions,
     MentionsChannel, MentionsEmoji, MentionsRole, MentionsUser, MessageId, PaginationDirection,
-    PaginationQuery, PaginationResponse, Permission, RepliesQuery, RoomId, SessionId, User,
+    PaginationQuery, PaginationResponse, Permission, RepliesChildren, RepliesMessage, RepliesQuery,
+    RoomId, SessionId, User,
 };
 use common::v1::types::{MediaId, UserId};
 use common::v2::types::embed::{Embed, EmbedType};
 
-use crate::types::{MentionsIds, MessageVerId};
+use crate::types::{MentionsIds, MessageVerId, MessageWithCounts};
 use crate::{Error, Result, ServerStateInner};
 
 pub mod create;
@@ -60,6 +61,25 @@ impl ServiceMessages {
             .await?;
 
         Ok(message)
+    }
+
+    pub async fn get_with_counts(
+        &self,
+        thread_id: ChannelId,
+        message_id: MessageId,
+        user_id: Option<UserId>,
+    ) -> Result<MessageWithCounts> {
+        let mut mwc = self
+            .state
+            .data()
+            .message_get_with_counts(thread_id, message_id)
+            .await?;
+        self.state.presign_message(&mut mwc.message).await?;
+
+        self.populate_all(thread_id, user_id, std::slice::from_mut(&mut mwc.message))
+            .await?;
+
+        Ok(mwc)
     }
 
     pub async fn get_many(
@@ -421,6 +441,8 @@ impl ServiceMessages {
             }
         }
 
+        // TODO: move presign_message calls here
+
         Ok(())
     }
 
@@ -634,8 +656,8 @@ impl ServiceMessages {
         user_id: UserId,
         query: RepliesQuery,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<Message>> {
-        let mut ancestors = match (query.context, root_message_id) {
+    ) -> Result<RepliesResponse> {
+        let ancestors = match (query.context, root_message_id) {
             (Some(context), Some(start_id)) if context > 0 && pagination.from.is_none() => {
                 self.message_reply_context(channel_id, Some(start_id), user_id, context)
                     .await?
@@ -645,7 +667,7 @@ impl ServiceMessages {
 
         let s = &self.state;
         let mut data = s.data();
-        let mut res = data
+        let res = data
             .message_replies(
                 channel_id,
                 root_message_id,
@@ -656,23 +678,36 @@ impl ServiceMessages {
             )
             .await?;
 
-        self.populate_all(channel_id, Some(user_id), &mut res.items)
+        let mut messages = Vec::with_capacity(res.items.len());
+        let mut counts = Vec::with_capacity(res.items.len());
+        for mwc in res.items {
+            messages.push(mwc.message);
+            counts.push((mwc.count_direct, mwc.count_recursive));
+        }
+
+        self.populate_all(channel_id, Some(user_id), &mut messages)
             .await?;
 
-        for message in &mut res.items {
+        for message in &mut messages {
             s.presign_message(message).await?;
         }
 
-        if !ancestors.is_empty() {
-            // NOTE: maybe i don't want to include this, since the ancestors/context aren't part of replies?
-            // res.total += ancestors.len() as u64;
-            res.total += ancestors.len() as u64;
-            // make sure ancestors come first
-            ancestors.append(&mut res.items);
-            res.items = ancestors;
+        let mut items = Vec::with_capacity(messages.len());
+        for (message, (count_direct, count_recursive)) in messages.into_iter().zip(counts) {
+            items.push(MessageWithCounts {
+                message,
+                count_direct,
+                count_recursive,
+            });
         }
 
-        Ok(res)
+        let tree = TreeBuilder {
+            messages: &items,
+            max_depth: query.depth,
+        }
+        .build(root_message_id, 0);
+
+        Ok(RepliesResponse { children: tree })
     }
 
     pub async fn list_pins(
@@ -752,5 +787,61 @@ impl ServiceMessages {
             site_name: None,
             site_avatar: None,
         })
+    }
+}
+
+struct TreeBuilder<'a> {
+    messages: &'a [MessageWithCounts],
+    max_depth: u16,
+}
+
+impl<'a> TreeBuilder<'a> {
+    fn new(messages: &'a [MessageWithCounts], max_depth: u16) -> Self {
+        Self {
+            messages,
+            max_depth,
+        }
+    }
+
+    fn build(&self, parent_id: Option<MessageId>, depth: u16) -> RepliesChildren {
+        let children: Vec<_> = self
+            .messages
+            .iter()
+            .filter(|msg| msg.message.reply_id() == parent_id)
+            .map(|msg| {
+                let (count_direct, count_recursive) = (msg.count_direct, msg.count_recursive);
+
+                let subtree = if depth < self.max_depth {
+                    self.build(Some(msg.message.id), depth + 1)
+                } else {
+                    RepliesChildren {
+                        children: vec![],
+                        count_direct,
+                        count_recursive,
+                        depth: (depth + 1) as u64,
+                        cursor: None,
+                        has_more: false,
+                    }
+                };
+
+                RepliesMessage {
+                    message: msg.message.clone(),
+                    children: RepliesChildren {
+                        count_direct,
+                        count_recursive,
+                        ..subtree
+                    },
+                }
+            })
+            .collect();
+
+        RepliesChildren {
+            count_direct: children.len() as u64,
+            count_recursive: 0,
+            children,
+            depth: depth as u64,
+            cursor: None,
+            has_more: false,
+        }
     }
 }

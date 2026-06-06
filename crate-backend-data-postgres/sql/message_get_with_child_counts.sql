@@ -25,13 +25,16 @@ SELECT
     mv.deleted_at as version_deleted_at,
     mv.created_seq as version_created_seq,
     coalesce(att_json.attachments, '{}') as "attachments!",
-    NULL::bigint as count_direct,
-    NULL::bigint as count_recursive
+    (SELECT count(*) FROM message r JOIN message_version mv_r ON r.latest_version_id = mv_r.version_id WHERE mv_r.reply_id = m.id AND r.deleted_at IS NULL) as count_direct,
+    (
+        WITH RECURSIVE rc AS (
+            SELECT id FROM message r JOIN message_version mv_r ON r.latest_version_id = mv_r.version_id WHERE mv_r.reply_id = m.id AND r.deleted_at IS NULL
+            UNION ALL
+            SELECT r.id FROM rc JOIN message_version mv_r ON mv_r.reply_id = rc.id JOIN message r ON r.latest_version_id = mv_r.version_id WHERE r.deleted_at IS NULL
+        ) SELECT count(*) FROM rc
+    ) as count_recursive
 FROM message AS m
 JOIN message_version AS mv ON m.latest_version_id = mv.version_id
 LEFT JOIN att_json ON att_json.version_id = mv.version_id
 JOIN channel AS c ON m.channel_id = c.id
-WHERE m.channel_id = $1 AND m.deleted_at IS NULL AND m.pinned IS NOT NULL
-  AND m.id > $2 AND m.id < $3
-ORDER BY (CASE WHEN $4 = 'f' THEN (m.pinned->>'position')::int END), (m.pinned->>'position')::int DESC, (CASE WHEN $4 = 'f' THEN m.id END), m.id DESC
-LIMIT $5
+WHERE m.channel_id = $1 AND m.id = $2 AND m.deleted_at IS NULL

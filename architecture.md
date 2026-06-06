@@ -28,3 +28,22 @@ how lamprey mountain is architectured
 - `scripts` random maintenance scripts (TODO: clean up)
 - `tests` a sad attempt at writing some tests (TODO: actually add some more
   tests)
+
+## tech stack
+
+- frontend
+  - typescript for typechecking
+  - nodejs
+  - biome for linting and formatting
+  - rust compiled to wasm for some things
+- backend
+  - rust
+  - tokio for async runtime
+  - postgres
+  - nats + jetstream
+- misc
+  - deno for various one off scripts
+
+todo: maybe standardize on node or deno
+
+also consider if i should use something like valkey instead of nats/jetstream

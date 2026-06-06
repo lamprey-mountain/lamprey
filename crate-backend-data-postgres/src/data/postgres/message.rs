@@ -25,6 +25,7 @@ use crate::gen_paginate;
 use crate::types::{
     ChannelId, DbChannelType, DbMessageCreate, DbMessageExtract, DbMessageType, DbMessageUpdate,
     MentionsIds, MessageId, MessageVerId, PaginationDirection, PaginationQuery, PaginationResponse,
+    MessageWithCounts,
 };
 
 use crate::data::DataMessage;
@@ -59,6 +60,8 @@ pub struct DbMessage {
     pub flume: Option<serde_json::Value>,
     pub interaction: Option<serde_json::Value>,
     pub ephemeral: bool, // WARN: ephemeral messages shouldn't be stored in the database at all? i should probably remove this column actually...
+    pub count_direct: Option<i64>,
+    pub count_recursive: Option<i64>,
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -114,11 +117,24 @@ impl From<DbMessage> for Message {
     }
 }
 
+impl From<DbMessage> for MessageWithCounts {
+    fn from(row: DbMessage) -> Self {
+        let count_direct = row.count_direct.unwrap_or(0) as u64;
+        let count_recursive = row.count_recursive.unwrap_or(0) as u64;
+        MessageWithCounts {
+            message: row.into(),
+            count_direct,
+            count_recursive,
+        }
+    }
+}
+
 impl From<DbMessageVersion> for MessageVersion {
     fn from(row: DbMessageVersion) -> Self {
         MessageVersion {
             version_id: row.version_id.into(),
             author_id: Some(row.author_id.into()),
+            reply_id: row.reply_id.map(Into::into),
             message_type: match row.message_type {
                 DbMessageType::DefaultMarkdown => {
                     let attachments: Vec<serde_json::Value> =
@@ -499,6 +515,29 @@ impl DataMessage for Postgres {
         Ok(row.into())
     }
 
+    async fn message_get_with_counts(
+        &mut self,
+        channel_id: ChannelId,
+        id: MessageId,
+    ) -> Result<MessageWithCounts> {
+        let mut conn = self.acquire().await?;
+        let row = query_file_as!(
+            DbMessage,
+            "sql/message_get_with_child_counts.sql",
+            *channel_id,
+            *id
+        )
+        .fetch_one(conn.ext())
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => {
+                Error::ApiError(ApiError::from_code(ErrorCode::UnknownMessage))
+            }
+            e => Error::Sqlx(e),
+        })?;
+        Ok(row.into())
+    }
+
     async fn message_get_many(
         &mut self,
         channel_id: ChannelId,
@@ -828,7 +867,7 @@ impl DataMessage for Postgres {
         depth: u16,
         breadth: Option<u16>,
         pagination: PaginationQuery<MessageId>,
-    ) -> Result<PaginationResponse<Message>> {
+    ) -> Result<PaginationResponse<MessageWithCounts>> {
         let p: Pagination<_> = pagination.try_into()?;
         let rmid = root_message_id.map(|i| *i);
         gen_paginate!(
@@ -853,7 +892,7 @@ impl DataMessage for Postgres {
                 depth as i32,
                 breadth.map(|b| b as i64)
             ),
-            |i: &Message| i.id.to_string()
+            |i: &MessageWithCounts| i.message.id.to_string()
         )
     }
 
@@ -1013,7 +1052,7 @@ impl DataMessage for Postgres {
         limit: u16,
     ) -> Result<Vec<Message>> {
         let mut conn = self.acquire().await?;
-        let rows = query_file_as!(
+        let rows: Vec<DbMessage> = query_file_as!(
             DbMessage,
             "sql/message_get_ancestors.sql",
             *message_id,
@@ -1225,7 +1264,9 @@ impl DataMessage for Postgres {
                 m.lifecycle_seq,
                 m.flume,
                 m.interaction,
-                m.ephemeral
+                m.ephemeral,
+                NULL::bigint as count_direct,
+                NULL::bigint as count_recursive
             FROM message AS m
             JOIN message_version AS mv ON m.latest_version_id = mv.version_id
             LEFT JOIN att_json ON att_json.version_id = mv.version_id
