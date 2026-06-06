@@ -1,14 +1,17 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use crate::{error::Result, ServerStateInner};
 use common::v1::types::{
     error::{ApiError, ErrorCode},
-    harvest::{Harvest, HarvestCreateRoom, HarvestCreateUser},
+    harvest::{Harvest, HarvestCreateRoom, HarvestCreateUser, HarvestStatus, HarvestType},
+    util::Time,
     HarvestId, RoomId, UserId,
 };
+use tokio::sync::Semaphore;
+use tracing::{error, warn};
 
 /// the maximum number of harvest jobs that can be running simultaneously
-const _MAX_HARVEST_JOBS: usize = 2;
+const MAX_HARVEST_JOBS: usize = 2;
 
 pub struct ServiceHarvest {
     state: Arc<ServerStateInner>,
@@ -20,37 +23,116 @@ impl ServiceHarvest {
     }
 
     pub(super) fn start_background_tasks(&self) {
-        tokio::spawn(async {
-            // loop { }
-            // 1. poll harvest table for pending harvests
-            // 2. call generate
+        let state = Arc::clone(&self.state);
+        tokio::spawn(async move {
+            let semaphore = Arc::new(Semaphore::new(MAX_HARVEST_JOBS));
+
+            loop {
+                let permit = match semaphore.clone().acquire_owned().await {
+                    Ok(p) => p,
+                    Err(_) => {
+                        warn!("semaphore closed");
+                        break;
+                    }
+                };
+
+                let mut db = match state.acquire_data().await {
+                    Ok(db) => db,
+                    Err(e) => {
+                        error!("failed to acquire data for harvest loop: {:?}", e);
+                        drop(permit);
+                        tokio::time::sleep(Duration::from_secs(5)).await;
+                        continue;
+                    }
+                };
+
+                match db.harvest_claim().await {
+                    Ok(Some(harvest)) => {
+                        drop(db);
+                        let state2 = Arc::clone(&state);
+                        tokio::spawn(async move {
+                            if let Err(e) = state2.services().harvest.generate(harvest).await {
+                                error!("failed to generate harvest: {:?}", e);
+                            }
+                            drop(permit);
+                        });
+                    }
+                    Ok(None) => {
+                        drop(permit);
+                        tokio::time::sleep(Duration::from_secs(5)).await;
+                    }
+                    Err(e) => {
+                        error!("failed to claim harvest: {:?}", e);
+                        drop(permit);
+                        tokio::time::sleep(Duration::from_secs(5)).await;
+                    }
+                }
+            }
         });
     }
 
     /// queue a room harvest
     pub async fn create_room(
         &self,
-        _room_id: RoomId,
-        _harvest: &HarvestCreateRoom,
+        room_id: RoomId,
+        harvest_options: &HarvestCreateRoom,
+        requester_id: UserId,
     ) -> Result<Harvest> {
-        // 1. get existing harvest if any
-        // 2. update or create harvest, insert into db
-        todo!()
+        let mut db = self.state.acquire_data().await?;
+
+        let harvest_id = if let Some(existing) = db.harvest_get_room(room_id).await? {
+            existing.id
+        } else {
+            HarvestId::new()
+        };
+
+        let harvest = Harvest {
+            id: harvest_id,
+            requester_id,
+            queued_at: Time::now_utc(),
+            status: HarvestStatus::Queued,
+            ty: HarvestType::Room {
+                target_room_id: room_id,
+                create: harvest_options.clone(),
+            },
+        };
+        db.harvest_put(&harvest).await?;
+
+        Ok(harvest)
     }
 
     /// queue an user harvest
     pub async fn create_user(
         &self,
-        _user_id: UserId,
-        _harvest: &HarvestCreateUser,
+        user_id: UserId,
+        harvest_options: &HarvestCreateUser,
+        requester_id: UserId,
     ) -> Result<Harvest> {
-        // 1. get existing harvest if any
-        // 2. update or create harvest, insert into db
-        todo!()
+        let mut db = self.state.acquire_data().await?;
+
+        let harvest_id = if let Some(existing) = db.harvest_get_user(user_id).await? {
+            existing.id
+        } else {
+            HarvestId::new()
+        };
+
+        let harvest = Harvest {
+            id: harvest_id,
+            requester_id,
+            queued_at: Time::now_utc(),
+            status: HarvestStatus::Queued,
+            ty: HarvestType::User {
+                target_user_id: user_id,
+                create: harvest_options.clone(),
+            },
+        };
+        db.harvest_put(&harvest).await?;
+
+        Ok(harvest)
     }
 
     /// generate a harvest
-    async fn _generate(&self, _harvest: Harvest) -> Result<()> {
+    async fn generate(&self, _harvest: Harvest) -> Result<()> {
         // 1. claim harvest (use postgres as queue)
         // 2. create temp sqlite file
         // 3. open with rusqlite
