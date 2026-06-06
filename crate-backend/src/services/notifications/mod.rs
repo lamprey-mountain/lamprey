@@ -2,17 +2,22 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 
+use base64::engine::general_purpose::URL_SAFE_NO_PAD as B64;
+use base64::Engine;
+use common::v1::types::notifications::bytes::NotificationBytes;
 use common::v1::types::notifications::{Notification, NotificationType};
 use common::v1::types::util::Time;
 use common::v1::types::{ChannelId, Message, MessageId, NotificationId, SessionId, UserId};
-use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
-use lamprey_backend_data_postgres::Channel;
+use jsonwebtoken::{Algorithm, EncodingKey, Header};
+use lamprey_backend_data_postgres::{Channel, PushData};
 use p256::pkcs8::EncodePrivateKey;
 use p256::SecretKey;
 use reqwest::StatusCode;
 use serde::Serialize;
 use time::OffsetDateTime;
-use tracing::{error, info};
+use tokio::task::JoinSet;
+use tracing::{error, info, warn};
+use url::Url;
 
 use crate::error::Error;
 use crate::services::notifications::preferences::{
@@ -63,14 +68,11 @@ impl ServiceNotifications {
             None => return Ok(None),
         };
 
-        let private_key_bytes = base64::Engine::decode(
-            &base64::engine::general_purpose::URL_SAFE_NO_PAD,
-            &vapid_private,
-        )
-        .map_err(|_| Error::Internal("invalid vapid key".to_string()))?;
+        let encoded_private = B64.encode(&vapid_private);
+        let private_key_bytes = encoded_private.as_bytes();
 
         // Use p256 crate to convert raw private key bytes to PKCS#8 DER
-        let secret_key = SecretKey::from_slice(&private_key_bytes)
+        let secret_key = SecretKey::from_slice(private_key_bytes)
             .map_err(|e| Error::Internal(format!("invalid p256 secret key: {}", e)))?;
 
         let pkcs8_doc = secret_key
@@ -82,114 +84,94 @@ impl ServiceNotifications {
         Ok(Some((encoding_key, vapid_public)))
     }
 
-    /// send a notification to a user through the web push api
-    pub async fn push(&self, user_id: UserId, mut payload: NotificationPayload) -> Result<()> {
+    /// Send a notification to all of user's sessions via web push api
+    ///
+    /// pushes the notification to all sessions in parallel
+    pub async fn push(&self, user_id: UserId, mut payload: NotificationBytes) -> Result<()> {
         let mut data = self.state.data();
         let subscriptions = data.push_list_for_user(user_id).await?;
-
-        if subscriptions.is_empty() {
-            return Ok(());
-        }
-
-        let (encoding_key, vapid_public) = match self.get_vapid_keys().await? {
-            Some(keys) => keys,
-            None => return Ok(()),
-        };
+        let mut tasks = JoinSet::new();
 
         for sub in subscriptions {
-            payload.session_id = sub.session_id;
-            let json_payload = serde_json::to_vec(&payload)?;
+            payload.set_session_id(sub.session_id);
+            let state = Arc::clone(&self.state);
+            tasks.spawn(Self::push_inner(state, sub, payload.to_bytes().into()));
+        }
 
-            let state = self.state.clone();
-            let endpoint = sub.endpoint.clone();
+        while let Some(res) = tasks.join_next().await {
+            res.map_err(|e| Error::Internal(format!("task join error: {}", e)))??;
+        }
 
-            // Clone for the async task
-            let encoding_key = encoding_key.clone();
-            let vapid_public = vapid_public.clone();
-            let json_payload = json_payload.clone();
+        Ok(())
+    }
 
-            // Generate token before spawning or inside? Inside is safer for moved data.
-            // But we need 'self' for generate_vapid_token if it uses self.state.config
-            // So we'll pass the token generation logic or just do it inside.
-            // To access `self` inside tokio::spawn we need to clone the arc state,
-            // but `generate_vapid_token` needs `self`.
-            // Let's just create the token inside the loop *before* spawn or clone what's needed.
-            // Actually, we can just extract the host string outside.
+    /// send a notification to a session via web push api
+    pub async fn push_inner(
+        state: Arc<ServerStateInner>,
+        sub: PushData,
+        payload: bytes::Bytes,
+    ) -> Result<()> {
+        let (encoding_key, vapid_public) =
+            match state.services().notifications.get_vapid_keys().await? {
+                Some(keys) => keys,
+                None => {
+                    warn!("vapid keys not found");
+                    return Ok(());
+                }
+            };
 
-            let host = self
-                .state
-                .config
-                .html_url
-                .host_str()
-                .unwrap_or("example.com")
-                .to_string();
+        let p256dh_encoded = B64.encode(&sub.key_p256dh);
+        let auth_encoded = B64.encode(&sub.key_auth);
+        let p256dh = p256dh_encoded.as_bytes();
+        let auth = auth_encoded.as_bytes();
+        let ciphertext = ece::encrypt(p256dh, auth, &payload)
+            .map_err(|e| Error::Internal(format!("encryption failed: {}", e)))?;
+        let host = state
+            .config
+            .html_url // NOTE: why do i use html_url here?
+            .host_str()
+            .ok_or_else(|| Error::Internal("missing host in html_url".to_string()))?
+            .to_string();
 
-            let p256dh = base64::Engine::decode(
-                &base64::engine::general_purpose::URL_SAFE_NO_PAD,
-                &sub.key_p256dh,
+        let endpoint = Url::parse(&sub.endpoint)?;
+        let claims = JwtClaims {
+            aud: endpoint.origin().ascii_serialization(),
+            exp: OffsetDateTime::now_utc().unix_timestamp() + 12 * 3600,
+            // TODO: use something better?
+            sub: format!("mailto:admin@{}", host),
+        };
+
+        let token = jsonwebtoken::encode(&Header::new(Algorithm::ES256), &claims, &encoding_key)?;
+
+        // TODO: use http service
+        let client = reqwest::Client::new();
+        let res = client
+            .post(&sub.endpoint)
+            .header("Content-Encoding", "aes128gcm")
+            .header("TTL", "2419200")
+            .header(
+                "Authorization",
+                format!("vapid t={token}, k={vapid_public}"),
             )
-            .map_err(|_| Error::Internal("invalid p256dh".to_string()))?;
-            let auth = base64::Engine::decode(
-                &base64::engine::general_purpose::URL_SAFE_NO_PAD,
-                &sub.key_auth,
-            )
-            .map_err(|_| Error::Internal("invalid auth".to_string()))?;
+            .header("Crypto-Key", format!("p256ecdsa={vapid_public}"))
+            .body(ciphertext)
+            .send()
+            .await;
 
-            let ciphertext = ece::encrypt(&p256dh, &auth, &json_payload)
-                .map_err(|e| Error::Internal(format!("encryption failed: {}", e)))?;
-
-            tokio::spawn(async move {
-                let url_parsed = match url::Url::parse(&endpoint) {
-                    Ok(u) => u,
-                    Err(_) => return,
-                };
-                let origin = url_parsed.origin().ascii_serialization();
-
-                let claims = JwtClaims {
-                    aud: origin,
-                    exp: OffsetDateTime::now_utc().unix_timestamp() + 12 * 3600,
-                    sub: format!("mailto:admin@{}", host),
-                };
-
-                let token = match encode(&Header::new(Algorithm::ES256), &claims, &encoding_key) {
-                    Ok(t) => t,
-                    Err(e) => {
-                        error!("jwt encode failed: {}", e);
-                        return;
-                    }
-                };
-
-                let client = reqwest::Client::new();
-                let res = client
-                    .post(&endpoint)
-                    .header("Content-Encoding", "aes128gcm")
-                    .header("TTL", "2419200")
-                    .header(
-                        "Authorization",
-                        format!("vapid t={token}, k={vapid_public}"),
-                    )
-                    .header("Crypto-Key", format!("p256ecdsa={vapid_public}"))
-                    .body(ciphertext)
-                    .send()
-                    .await;
-
-                match res {
-                    Ok(res) => {
-                        if !res.status().is_success() {
-                            error!("failed to send push notification: status {}", res.status());
-                            if res.status() == StatusCode::GONE
-                                || res.status() == StatusCode::NOT_FOUND
-                            {
-                                info!("subscription gone, deleting");
-                                let _ = state.data().push_delete(sub.session_id).await;
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        error!("failed to send push notification: {}", e);
+        match res {
+            Ok(res) => {
+                if !res.status().is_success() {
+                    error!("failed to send push notification: status {}", res.status());
+                    if res.status() == StatusCode::GONE || res.status() == StatusCode::NOT_FOUND {
+                        info!("subscription gone, deleting");
+                        let _ = state.data().push_delete(sub.session_id).await;
                     }
                 }
-            });
+            }
+            Err(e) => {
+                error!("failed to send push notification: {e}");
+                return Err(e.into());
+            }
         }
 
         Ok(())
@@ -206,38 +188,29 @@ impl ServiceNotifications {
             let mut data = state.data();
             let srv = state.services();
 
-            match data.notification_get_unpushed(50).await {
-                Ok(notifs) => {
-                    if notifs.is_empty() {
-                        continue;
-                    }
-
-                    let mut pushed_ids = Vec::new();
-                    for (user_id, notif) in notifs {
-                        if let (Some(channel_id), Some(message_id)) =
-                            (notif.channel_id(), notif.message_id())
-                        {
-                            let payload = NotificationPayload {
-                                id: notif.id,
-                                channel_id,
-                                message_id,
-                                session_id: SessionId::from(uuid::Uuid::nil()),
-                            };
-
-                            if let Err(e) = srv.notifications.push(user_id, payload).await {
-                                error!("failed to push notification {}: {}", notif.id, e);
-                            }
-                            pushed_ids.push(notif.id);
-                        }
-                    }
-
-                    if let Err(e) = data.notification_set_pushed(&pushed_ids).await {
-                        error!("failed to mark notifications as pushed: {}", e);
-                    }
-                }
+            let notifs = match data.notification_get_unpushed(50).await {
+                Ok(notifs) => notifs,
                 Err(e) => {
                     error!("failed to fetch unpushed notifications: {}", e);
+                    continue;
                 }
+            };
+
+            if notifs.is_empty() {
+                continue;
+            }
+
+            let mut pushed_ids = Vec::new();
+            for (user_id, notif) in notifs {
+                let id = notif.id;
+                if let Err(e) = srv.notifications.push(user_id, notif.into()).await {
+                    error!("failed to push notification {id}: {e}");
+                }
+                pushed_ids.push(id);
+            }
+
+            if let Err(e) = data.notification_set_pushed(&pushed_ids).await {
+                error!("failed to mark notifications as pushed: {}", e);
             }
         }
     }
@@ -252,6 +225,7 @@ impl ServiceNotifications {
     }
 
     /// create notifications for a new message
+    // TODO: redo
     pub async fn dispatch_message_creation(
         &self,
         message: &Message,
@@ -354,4 +328,19 @@ impl ServiceNotifications {
             }
         }
     }
+
+    // TODO: add?
+    // pub async fn create(&self, user_id: UserId, notification: Notification) {
+    //     let action = srv
+    //         .notifications
+    //         .calculator(user_id, &notification)
+    //         .action()
+    //         .await
+    //         .unwrap_or(NotificationAction::Skip);
+
+    //     if action.should_add_to_inbox() {
+    //         todo!()
+    //         // data.notification_add(user_id, notification).await?;
+    //     }
+    // }
 }

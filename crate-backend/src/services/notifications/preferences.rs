@@ -1,5 +1,7 @@
 //! notification preference calculator
 
+// TODO: redo
+
 use common::v1::types::notifications::preferences::NotifsMessages;
 use common::v1::types::notifications::{Notification, NotificationType};
 use common::v1::types::util::Time;
@@ -380,3 +382,83 @@ impl NotificationAction {
 //         NotifsMessages::Everything => NotificationAction::Push,
 //     })
 // }
+
+mod next {
+    use std::sync::Arc;
+
+    use common::v1::types::notifications::{
+        preferences::{NotifsChannel, NotifsGlobal, NotifsRoom},
+        Notification,
+    };
+    use common::v1::types::UserId;
+
+    use crate::{Result, ServerStateInner};
+
+    // reuse
+    use super::NotificationAction;
+
+    /// notification preferences
+    pub struct NotifPrefs {
+        global: NotifsGlobal,
+        room: Option<NotifsRoom>,
+        channel: Option<NotifsChannel>,
+    }
+
+    impl NotifPrefs {
+        /// load a user's notification preferences
+        // PERF: consider caching this later?
+        pub async fn load(state: &ServerStateInner, user_id: UserId) -> Result<Self> {
+            todo!()
+        }
+    }
+
+
+    // pub struct Calc {
+    //     // prefs
+    //     // channel, room, etc
+    //     // user_id
+    // }
+
+    // impl Calc {
+    //     /// load necessary state for this notification the calculator
+    //     pub async fn load(
+    //         state: Arc<ServerStateInner>,
+    //         notification: Notification,
+    //     ) -> Result<Self> {
+    //         todo!()
+    //     }
+
+    //     /// get the calculated action for this notification
+    //     pub fn action(&self) -> NotificationAction {
+    //         todo!()
+    //     }
+    // }
+
+    // just have a function
+    /// calculate what action should be done for this notification
+    pub async fn calculate(
+        state: &ServerStateInner,
+        user_id: UserId,
+        notification: Notification,
+    ) -> Result<NotificationAction> {
+        let srv = state.services();
+        let prefs = NotifPrefs::load(state, user_id);
+
+        // 1. check mutes (global, room, channel). if any are muted, return Skip
+
+        // for message notifs
+        // 2. if prefs.channel, use channel messages
+        // 3. if prefs.room, use room messages
+        // 4. use global messages
+
+        // for reaction notifs
+        // 2. use global reactions
+        // 3. somehow handle Restricted/Dms?
+
+        todo!()
+    }
+
+    fn notifs_messages_to_action() {
+        todo!()
+    }
+}

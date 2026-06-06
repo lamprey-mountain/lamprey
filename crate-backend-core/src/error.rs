@@ -13,6 +13,9 @@ use tracing::{debug, error};
 #[derive(thiserror::Error, Debug)]
 // TODO: avoid returning actual error messages to prevent leaking stuff
 pub enum Error {
+    #[error("json web token error: {0}")]
+    Jwt(#[from] jsonwebtoken::errors::Error),
+
     #[error("sqlx error: {0}")]
     Sqlx(sqlx::Error),
     #[error("blocked by other user")]
@@ -253,6 +256,7 @@ impl Error {
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             },
             Error::Signing(_) => StatusCode::UNAUTHORIZED,
+            Error::Jwt(_) => StatusCode::UNAUTHORIZED,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -292,6 +296,7 @@ impl Error {
             Error::FrontendAssetInvalidUtf8(e) => Error::FrontendAssetInvalidUtf8(*e),
             Error::FrontendTemplate(e) => Error::FrontendTemplate(e.clone()),
             Error::FrontendResponseBuilder(s) => Error::FrontendResponseBuilder(s.clone()),
+            Error::Jwt(e) => Error::Jwt(jsonwebtoken::errors::Error::from(e.kind().clone())),
             _ => Error::GenericError(self.to_string()),
         }
     }

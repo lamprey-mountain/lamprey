@@ -24,6 +24,7 @@ pub struct AckBulk {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
+// TODO: rename to Ack or AckItem
 pub struct AckBulkItem {
     /// The id of the channel being acknowledged.
     pub channel_id: ChannelId,
@@ -40,7 +41,7 @@ pub struct AckBulkItem {
     pub mention_count: u64,
 }
 
-/// Request to acknowledge a single channel/message pair.
+/// Request to acknowledge a single message in a channel pair.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

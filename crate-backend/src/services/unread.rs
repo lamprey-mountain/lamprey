@@ -67,6 +67,7 @@ impl ServiceUnread {
     pub async fn ack(
         &self,
         user_id: UserId,
+        // ack: AckBulkItem,
         channel_id: ChannelId,
         message_id: MessageId,
         version_id: MessageVerId,
@@ -118,6 +119,27 @@ impl ServiceUnread {
 
         todo!()
     }
+}
+
+// planning how the service would be like
+trait ServiceUnread2 {
+    fn new(state: Arc<ServerStateInner>) -> Self;
+
+    /// acknowledge a channel
+    async fn ack(&self, user_id: UserId, ack: AckBulkItem) -> Result<()>;
+
+    /// acknowledge many channels
+    async fn ack_bulk(&self, user_id: UserId, acks: AckBulk) -> Result<()>;
+
+    /// handle a message
+    ///
+    /// - increment mention_count
+    /// - bump channel read metadata
+    async fn handle_message(&self, message: &common::v1::types::Message) -> Result<()>;
+
+    /// save read state in to database
+    async fn flush(&self) -> Result<()>;
+    // TODO: how do i resume? how do i handle server crashes?
 }
 
 async fn atomic_update<T: Default + Serialize + DeserializeOwned, F: Fn(T) -> T>(

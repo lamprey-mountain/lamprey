@@ -1,6 +1,9 @@
 //! notification binary encoding
 
-use crate::v1::types::{ChannelId, MessageId, NotificationId};
+use crate::v1::types::{
+    notifications::{Notification, NotificationType},
+    ChannelId, MessageId, NotificationId, SessionId,
+};
 
 /// serialized notification payload, sent through web push
 #[derive(Debug, Clone)]
@@ -13,6 +16,7 @@ pub enum NotificationBytesVersion {
     // 0x00
     V1 {
         notification_id: NotificationId,
+        session_id: SessionId,
         flags: NotificationBytesFlags,
         ty: NotificationBytesType,
     },
@@ -113,12 +117,14 @@ impl NotificationBytesVersion {
         match self {
             NotificationBytesVersion::V1 {
                 notification_id,
+                session_id,
                 flags,
                 ty,
             } => {
-                let mut bytes = Vec::with_capacity(1 + 16 + 1 + 33);
+                let mut bytes = Vec::with_capacity(1 + 16 + 16 + 1 + 33);
                 bytes.push(0x00);
                 bytes.extend_from_slice(notification_id.as_bytes());
+                bytes.extend_from_slice(session_id.as_bytes());
                 bytes.push(flags.bits());
                 bytes.extend_from_slice(&ty.to_bytes());
                 bytes
@@ -133,15 +139,17 @@ impl NotificationBytesVersion {
 
         match bytes[0] {
             0x00 => {
-                if bytes.len() < 1 + 16 + 1 + 33 {
+                if bytes.len() < 1 + 16 + 16 + 1 + 33 {
                     return Err(());
                 }
 
                 let notification_id = NotificationId::from_slice(&bytes[1..17]).map_err(|_| ())?;
-                let flags = NotificationBytesFlags::from_bits(bytes[17]).ok_or(())?;
-                let ty = NotificationBytesType::from_bytes(&bytes[18..])?;
+                let session_id = SessionId::from_slice(&bytes[17..33]).map_err(|_| ())?;
+                let flags = NotificationBytesFlags::from_bits(bytes[33]).ok_or(())?;
+                let ty = NotificationBytesType::from_bytes(&bytes[34..])?;
                 Ok(NotificationBytesVersion::V1 {
                     notification_id,
+                    session_id,
                     flags,
                     ty,
                 })
@@ -152,6 +160,12 @@ impl NotificationBytesVersion {
 }
 
 impl NotificationBytes {
+    /// set the session id for this notification payload
+    pub fn set_session_id(&mut self, session_id: SessionId) {
+        let NotificationBytesVersion::V1 { session_id: s, .. } = &mut self.version;
+        *s = session_id;
+    }
+
     /// serialize this notification payload into bytes
     pub fn to_bytes(&self) -> Vec<u8> {
         self.version.to_bytes()
@@ -161,5 +175,37 @@ impl NotificationBytes {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, ()> {
         let version = NotificationBytesVersion::from_bytes(bytes)?;
         Ok(NotificationBytes { version })
+    }
+}
+
+impl From<Notification> for NotificationBytes {
+    fn from(value: Notification) -> Self {
+        let ty = match value.ty {
+            NotificationType::Message {
+                channel_id,
+                message_id,
+                ..
+            } => NotificationBytesType::Message {
+                channel_id,
+                message_id,
+            },
+            NotificationType::Reaction {
+                channel_id,
+                message_id,
+                ..
+            } => NotificationBytesType::Reaction {
+                channel_id,
+                message_id,
+            },
+        };
+
+        NotificationBytes {
+            version: NotificationBytesVersion::V1 {
+                notification_id: value.id,
+                session_id: SessionId::from(uuid::Uuid::nil()),
+                flags: NotificationBytesFlags::empty(),
+                ty,
+            },
+        }
     }
 }

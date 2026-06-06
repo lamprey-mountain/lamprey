@@ -12,8 +12,8 @@ use crate::v1::types::{
     util::Time, Channel, ChannelId, Message, MessageId, NotificationId, Room, RoomId,
 };
 
-pub mod preferences;
 pub mod bytes;
+pub mod preferences;
 
 // TODO: use this instead of the current notification type
 // TODO: maybe include a `completed_at` field if this action is "completable"?
@@ -66,8 +66,18 @@ pub enum NotificationType {
         // TODO: user id, reaction key
         // NOTE: i should probably aggregate all notifications into one bundle
     },
-    // in the future, there'll probably be calendar events, document mentions, broadcast/voice activity, etc
-    // also FriendRequestReceived and FriendRequestAccepted (notif lifecycle? like one friend notif that gets updated over time?)
+
+    // TODO: friend request notifs
+    // use user_id as the tag_id so both users have one friend request notif that updates over time
+    // /// you sent a friend request
+    // FriendRequestSent { user_id: UserId },
+    //
+    // /// someone sent a friend request to you
+    // FriendRequestReceived { user_id: UserId },
+    //
+    // /// someone accepted your friend request or you accepted someone's friend request
+    // FriendRequestAccepted { user_id: UserId },
+    // TODO: calendar events, document mentions, broadcast/voice activity, etc
 }
 
 /// query your inbox
@@ -221,6 +231,7 @@ impl Notification {
     /// get the tag for this notification
     ///
     /// notifications with the same tag will be deduplicated
+    // TODO: also deduplicate in inbox?
     pub fn tag_id(&self) -> Uuid {
         match &self.ty {
             NotificationType::Message { message_id, .. } => **message_id,
