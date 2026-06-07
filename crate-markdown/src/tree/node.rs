@@ -2,13 +2,17 @@ use crate::prelude::*;
 
 // NOTE: is u32 correct here?
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct NodeIndex(u32);
+pub struct NodeIndex(pub(crate) u32);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Node {
     kind: NodeKind,
+
+    // NOTE: maybe i don't want to store Span so that identical nodes can be reused
     span: Span,
-    children: Vec<NodeIndex>,
+
+    // TEMP: need to create a decent interface for this
+    pub(crate) children: Vec<NodeIndex>,
 }
 
 impl Node {
@@ -33,38 +37,63 @@ pub enum NodeKind {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BlockKind {
-    Code,
-    Emphasis,
-    Strong,
-    Link,
-    Autolink,
-    Strikethrough,
-    Spoiler,
-    TableHeader,
-    TableValue,
+    Codeblock,
+    Paragraph,
+    Blockquote,
+
+    // headers
+    Header1,
+    Header2,
+    Header3,
+    Header4,
+    Header5,
+    Header6,
+
+    // lists
+    ListItem,
+    ListOrdered,
+    ListUnordered,
+    ListTasks,
+
+    // tables
+    Table,
+    // TODO: design types
+    // TableRowLine,
+    // TableRow,
+    // TableAlignmentRow,
+    // TableHeader,
+    // TableBody,
 }
 
+/// the type of an inline node
+///
+/// inline nodes generally include syntax text, eg. `*` for emphasis
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InlineKind {
+    // includes
     Code,
     Emphasis,
     Strong,
-    Link,
-    Autolink,
+    Link, //
     Strikethrough,
     Spoiler,
     TableHeader,
     TableValue,
+
+    /// a url that should be automatically converted into a link
+    ///
+    /// if they exist, `<` and `>` are included in children as `Syntax`
+    Autolink,
 }
 
 /// the kind of a text fragment
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextKind {
+    /// arbitrary text content that doesnt match any of the other types
+    Text,
+
     /// a url
     Url,
-
-    /// arbitrary text content
-    Text,
 
     /// other markdown syntax
     Syntax,
@@ -73,13 +102,35 @@ pub enum TextKind {
     CodeblockLang,
 
     /// a mention
+    ///
+    /// eg. `<@user-uuid-here>`, `<&role-uuid-here>`, or `<#channel-uuid-here>`
+    // NOTE: do i include`@everyone`?
     Mention,
+
+    /// a custom emoji
+    ///
+    /// eg. `<:name:emoji-uuid-here>`
+    CustomEmoji,
 
     /// check for a ListTask item
     TaskCheck,
 
+    /// a unicode emoji character
+    // unsure if i should include this?
     UnicodeEmoji,
-    CustomEmoji,
+
+    /// the alignment to use for a table colum
+    ///
+    /// eg. `:----`, `-`, `:--:`
+    TableAlignment,
+
+    /// the `#` chars after
+    ///
+    /// the space after the hashes is `Syntax` rather than `HeaderHashes`
+    HeaderHashes,
+
+    /// a newline character (`\n`)
+    Newline,
 }
 
 /// the kind of an error node
@@ -87,6 +138,12 @@ pub enum TextKind {
 pub enum ErrorKind {
     /// missing a closing paren
     Closing,
+}
+
+impl BlockKind {
+    pub fn is_header(&self) -> bool {
+        todo!()
+    }
 }
 
 impl NodeKind {

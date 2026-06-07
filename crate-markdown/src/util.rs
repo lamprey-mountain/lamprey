@@ -13,3 +13,12 @@ impl Span {
         self.start < other.end && other.start < self.end
     }
 }
+
+impl From<(Len, Len)> for Span {
+    fn from(value: (Len, Len)) -> Self {
+        Self {
+            start: value.0,
+            end: value.1,
+        }
+    }
+}

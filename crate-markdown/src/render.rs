@@ -1,10 +1,11 @@
 use lamprey_common::v2::types::{ChannelId, RoleId, UserId};
 
-use crate::prelude::*;
 use crate::parser::Parsed;
+use crate::prelude::*;
 
 // #[cfg_attr(feature = "wasm", wasm_bindgen)]
 // TODO: concrete types instead of impl Iterator
+// TODO: use Render trait currently in ast/mod.rs
 impl Parsed {
     /// render to html
     pub fn to_html(&self) -> String {
@@ -32,6 +33,7 @@ impl Parsed {
     }
 }
 
+// TODO: move these to ast module?
 /// a link extracted from markdown
 pub struct Link {
     // href, text
@@ -53,3 +55,45 @@ pub enum MentionKind {
     Channel(ChannelId),
     Everyone,
 }
+
+/// a markdown heading
+pub struct Heading {
+    // TODO
+}
+
+/// a decoration that can be applied to the markdown source
+// TODO: better types
+pub struct Decoration {
+    pub span: Span,
+    pub attrs: DecorationAttrs,
+    // options?: { inclusiveStart?: boolean; inclusiveEnd?: boolean };
+}
+
+pub struct DecorationAttrs {
+    // consider making strings &' static str
+    pub node_name: String,
+    pub class: String,
+    pub style: String,
+}
+
+// pub struct DecorationAttr {}
+// pub enum DecorationClass {
+//     Syn,
+//     SynCodeLang,
+//     Em,
+//     B,
+//     Spoiler,
+//     Link,
+// }
+
+// impl DecorationAttr {
+//     /// get the class name for this node
+//     pub fn class_name(&self) -> &str {
+//         todo!()
+//     }
+// }
+
+// pub enum DecorationEvent {
+//     Add,
+//     Remove,
+// }

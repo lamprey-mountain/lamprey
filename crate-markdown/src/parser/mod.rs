@@ -1,8 +1,11 @@
 use crate::grammar::Table;
+use crate::parser::config::ParserConfig;
 use crate::prelude::*;
 
 use crate::tree::cursor::TreeCursor;
 use crate::tree::Tree;
+
+pub mod config;
 
 /// a markdown parser
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
@@ -11,33 +14,23 @@ pub struct Parser {
     table: Ref<Table>,
 }
 
-// // TODO: serde, use serde to wasm bindgen?
-// #[cfg_attr(feature = "wasm", wasm_bindgen)]
-// pub struct ParserConfig {
-//     /// whether to parse inline markdown
-//     pub inline: bool,
-
-//     /// whether to enable headers
-//     pub headers: bool,
-// }
-
-// impl Default for ParserConfig {
-//     fn default() -> Self {
-//         todo!()
-//     }
-// }
-
 /// parsed markdown
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct Parsed {
+    config: ParserConfig,
     table: Ref<Table>,
     tree: Tree,
+}
+
+/// the result of an edit
+pub struct EditResult {
+    // TODO: maybe have added/removed Decorations?
 }
 
 /// single parse state
 pub struct Stack {
     state_id: u32,
-    // symbol stacks, lookaheads, etc.
+    // TODO: symbol stacks, lookaheads, etc.
 }
 
 pub struct ParseContext {
@@ -58,6 +51,11 @@ impl Parser {
     pub fn parse(&self, markdown: &str) -> Parsed {
         Parsed::new(Ref::clone(&self.table), markdown)
     }
+
+    /// parse some markdown with config
+    pub fn parse_with_config(&self, markdown: &str, config: ParserConfig) -> Parsed {
+        todo!()
+    }
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
@@ -68,19 +66,6 @@ impl Parsed {
 
     /// get the source string
     pub fn source(&self) -> String {
-        todo!()
-    }
-
-    /// apply an edit
-    pub fn edit(&mut self, delete_start: u32, delete_end: u32, insert: &str) {
-        // Modify your parse loop to check the old tree cache before running the
-        // tokenizer. If a node exists at the current position that was unaffected by the
-        // edit, fast-forward the parser state and graft the old subtree directly into the
-        // new one.
-
-        // Step 1: Find the initial block-level region to reparse
-        // Step 2: Iteratively expand and reparse until boundaries stabilize
-
         todo!()
     }
 }
@@ -94,6 +79,20 @@ impl Parsed {
     /// get a cursor for the syntax tree
     // TODO: wasm compat
     pub fn cursor<'a>(&'a self) -> TreeCursor<'a> {
+        todo!()
+    }
+
+    /// apply an edit by replacing text
+    // TODO: wasm compat
+    pub fn edit(&mut self, delete: Span, insert: &str) -> EditResult {
+        // Modify your parse loop to check the old tree cache before running the
+        // tokenizer. If a node exists at the current position that was unaffected by the
+        // edit, fast-forward the parser state and graft the old subtree directly into the
+        // new one.
+
+        // Step 1: Find the initial block-level region to reparse
+        // Step 2: Iteratively expand and reparse until boundaries stabilize
+
         todo!()
     }
 }

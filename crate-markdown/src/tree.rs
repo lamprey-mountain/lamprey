@@ -2,7 +2,7 @@
 
 use crate::prelude::*;
 use crate::tree::cursor::TreeCursor;
-use crate::tree::node::Node;
+use crate::tree::node::{Node, NodeIndex};
 
 pub mod cursor;
 pub mod node;
@@ -31,12 +31,18 @@ impl Tree {
     // }
 
     /// create a cursor for traversing this tree
-    pub fn cursor<'a>(&'a self) -> TreeCursor<'a> {
-        todo!()
+    pub fn cursor(&self) -> TreeCursor<'_> {
+        TreeCursor::new(self)
     }
 }
 
-// TODO: impl Index<NodeIndex> for Tree
+impl std::ops::Index<NodeIndex> for Tree {
+    type Output = Node;
+
+    fn index(&self, index: NodeIndex) -> &Self::Output {
+        &self.node[index.0 as usize]
+    }
+}
 
 impl TreeBuilder {
     pub(crate) fn build(self) -> Tree {
