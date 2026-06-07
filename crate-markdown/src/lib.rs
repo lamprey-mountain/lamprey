@@ -1,86 +1,33 @@
-//! A markdown parser library with support for:
-//! - Inline formatting: **bold**, *italic*, ~~strikethrough~~, `code`
-//! - Links: [text](url), <https://example.com>, https://example.com
-//! - Mentions: @uuid, <@uuid>
-//! - Custom emoji: <:name:uuid> or <a:name:uuid>
-//! - Block elements: headers, lists, blockquotes, code blocks
-//! - Escape sequences: \*, \[, \\, etc.
-//! - Incremental editing with tree reuse
-//!
-//! # Architecture
-//!
-//! This library uses a transformation-based architecture:
-//!
-//! 1. **Parse** markdown into a syntax tree using [`Parser`]
-//! 2. **Transform** the tree using [`Transformation`] implementations
-//! 3. **Render** the tree to output using [`Renderer`] implementations
-//!
-//! # Example
-//! ```
-//! use lamprey_markdown::{Parser, Ast};
-//! use lamprey_markdown::transformer::{Transformation, Pipeline, StripEmoji};
-//! use lamprey_markdown::renderer::{Renderer, MarkdownRenderer};
-//!
-//! let parser = Parser::default();
-//! let ast = Ast::new(parser.parse("hello <:smile:12345678-1234-1234-1234-123456789abc>"));
-//!
-//! // Create transformation pipeline
-//! let mut pipeline = Pipeline::default();
-//! pipeline.add_transform(StripEmoji::new(vec![]));
-//!
-//! // Apply transformations and render
-//! let transformed = pipeline.apply(&ast.syntax());
-//! let transformed_node = rowan::SyntaxNode::new_root(transformed);
-//! let markdown = MarkdownRenderer.render(&transformed_node);
-//! assert!(markdown.contains(":smile:"));
-//! ```
-
 pub mod ast;
-pub mod events;
+pub mod grammar;
 pub mod parser;
-pub mod renderer;
-pub mod transformer;
-
-// Query module is not yet implemented
-// mod query;
-
-#[cfg(feature = "wasm")]
-mod wasm;
+pub mod render;
+pub mod tokenizer;
+pub mod tree;
+pub mod util;
 
 #[cfg(test)]
 mod tests;
 
-// Re-export main types for convenience
-pub use ast::{
-    AngleBracketLink,
-    Ast,
-    AstNode,
-    Autolink,
-    BlockQuote,
-    CodeBlock,
-    Document,
-    Emoji,
-    Emphasis,
-    Escape,
-    Header,
-    InlineCode,
-    Link,
-    LinkKind,
-    // Query types
-    LinkRef,
-    List,
-    ListItem,
-    Mention,
-    MentionId,
-    MentionIds,
-    Paragraph,
-    Spoiler,
-    Strikethrough,
-    Strong,
-};
-pub use events::{Event, EventFilter, EventIterator, Tag};
-pub use parser::{Edit, ParseOptions, Parsed, Parser, SyntaxKind, TokenKind};
+// for internal use
+pub(crate) mod prelude {
+    pub use crate::util::Span;
 
-// New architecture exports
-pub use renderer::{MarkdownRenderer, PlaintextRenderer, Renderer};
-pub use transformer::{apply, find_emoji_nodes, Pipeline, StripEmoji, Transformation};
+    #[cfg(feature = "wasm")]
+    pub use wasm_bindgen::prelude::*;
+
+    #[cfg(not(feature = "parallel"))]
+    pub type Ref<T> = std::rc::Rc<T>;
+
+    #[cfg(feature = "parallel")]
+    pub type Ref<T> = std::sync::Arc<T>;
+
+    // #[cfg(not(feature = "parallel"))]
+    // pub type Weak<T> = std::rc::Weak<T>;
+
+    // #[cfg(feature = "parallel")]
+    // pub type Weak<T> = std::sync::Weak<T>;
+
+    // TODO: doc comment
+    pub type Len = u16;
+}

@@ -26,5 +26,6 @@ uuid = { version = "1.22.0", features = ["serde", "v7", "js"] }
 getrandom = { version = "0.4", features = ["wasm_js"] }
 
 [features]
-default = ["dep:lamprey-common"]
+parallel = []
+default = ["dep:lamprey-common", "wasm"]
 wasm = ["dep:wasm-bindgen", "dep:serde", "dep:serde-wasm-bindgen"]
