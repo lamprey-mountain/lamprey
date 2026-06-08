@@ -139,7 +139,6 @@ pub async fn calculate(
     user_id: UserId,
     notification: &Notification,
 ) -> Result<NotificationAction> {
-    let srv = state.services();
     let calc = Calculator::load(state, user_id, &notification).await?;
 
     let action = if calc.is_muted() {
@@ -155,9 +154,6 @@ pub async fn calculate(
     } else {
         match notification.ty {
             NotificationType::Message {
-                room_id,
-                channel_id,
-                message_id,
                 mention_user,
                 mention_everyone,
                 mention_role,
