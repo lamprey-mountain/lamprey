@@ -1,10 +1,4 @@
-use crate::{
-    ast::{
-        block::{Block, Document},
-        AstNode,
-    },
-    parser::Parser,
-};
+use crate::parser::Parser;
 
 #[test]
 fn test_plain_text() {

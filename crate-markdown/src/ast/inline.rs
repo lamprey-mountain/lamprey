@@ -10,6 +10,8 @@ pub struct Strong(SyntaxNode);
 #[derive(Debug)]
 pub struct Emphasis(SyntaxNode);
 #[derive(Debug)]
+pub struct Strikethrough(SyntaxNode);
+#[derive(Debug)]
 pub struct Link(SyntaxNode);
 #[derive(Debug)]
 pub struct Spoiler(SyntaxNode);
@@ -47,6 +49,7 @@ pub enum MentionData {
 pub enum Inline {
     Strong(Strong),
     Emphasis(Emphasis),
+    Strikethrough(Strikethrough),
     Link(Link),
     Spoiler(Spoiler),
     Code(Code),
@@ -66,6 +69,8 @@ impl Inline {
                     Strong::cast(node).map(Self::Strong)
                 } else if Emphasis::can_cast(kind) {
                     Emphasis::cast(node).map(Self::Emphasis)
+                } else if Strikethrough::can_cast(kind) {
+                    Strikethrough::cast(node).map(Self::Strikethrough)
                 } else if Link::can_cast(kind) {
                     Link::cast(node).map(Self::Link)
                 } else if Spoiler::can_cast(kind) {
@@ -97,6 +102,7 @@ impl Inline {
         match self {
             Inline::Strong(s) => SyntaxElement::Node(s.syntax().clone()),
             Inline::Emphasis(e) => SyntaxElement::Node(e.syntax().clone()),
+            Inline::Strikethrough(s) => SyntaxElement::Node(s.syntax().clone()),
             Inline::Link(l) => SyntaxElement::Node(l.syntax().clone()),
             Inline::Spoiler(s) => SyntaxElement::Node(s.syntax().clone()),
             Inline::Code(c) => SyntaxElement::Node(c.syntax().clone()),
@@ -110,7 +116,11 @@ impl Inline {
 
 impl_ast!(Strong, NodeKind::Inline(InlineKind::Strong));
 impl_ast!(Emphasis, NodeKind::Inline(InlineKind::Emphasis));
-impl_ast!(Link, NodeKind::Inline(InlineKind::Link));
+impl_ast!(Strikethrough, NodeKind::Inline(InlineKind::Strikethrough));
+impl_ast!(
+    Link,
+    NodeKind::Inline(InlineKind::Link) | NodeKind::Inline(InlineKind::Autolink)
+);
 impl_ast!(Spoiler, NodeKind::Inline(InlineKind::Spoiler));
 impl_ast!(Code, NodeKind::Inline(InlineKind::Code));
 
@@ -159,24 +169,41 @@ impl Emphasis {
     }
 }
 
+impl Strikethrough {
+    pub fn children(&self) -> impl Iterator<Item = Inline> + '_ {
+        self.0
+            .children_with_tokens()
+            .filter_map(|child| Inline::cast(child))
+    }
+}
+
 impl Link {
     /// get what this link is linking to
     pub fn href(&self) -> String {
         self.0
             .children_with_tokens()
-            .find(|c| matches!(c.kind(), NodeKind::Text(TextKind::Url)))
-            .map(|c| c.to_string())
+            .filter_map(|c: SyntaxElement| {
+                if matches!(c.kind(), NodeKind::Text(TextKind::LinkUrl)) {
+                    Some(c.to_string())
+                } else if self.is_automatic() && matches!(c.kind(), NodeKind::Text(TextKind::Text)) {
+                    Some(c.to_string())
+                } else {
+                    None
+                }
+            })
+            .last()
             .expect("invalid link")
     }
 
     pub fn children(&self) -> impl Iterator<Item = Inline> + '_ {
         self.0
             .children_with_tokens()
+            .filter(move |c| !matches!(c.kind(), NodeKind::Text(TextKind::Syntax) | NodeKind::Text(TextKind::LinkUrl)))
             .filter_map(|child| Inline::cast(child))
     }
 
     pub fn is_automatic(&self) -> bool {
-        todo!()
+        self.0.kind() == NodeKind::Inline(InlineKind::Autolink)
     }
 }
 

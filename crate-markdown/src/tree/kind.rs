@@ -69,9 +69,6 @@ pub enum TextKind {
     /// arbitrary text content that doesnt match any of the other types
     Text,
 
-    /// a url
-    Url,
-
     /// a mention
     ///
     /// eg. `<@user-uuid-here>`, `<&role-uuid-here>`, or `<#channel-uuid-here>`
@@ -93,6 +90,9 @@ pub enum TextKind {
     // markdown syntax
     /// other markdown formatting/syntax
     Syntax,
+
+    /// the target url for a markdown link
+    LinkUrl,
 
     /// list item prefix syntax
     ListPrefix,
@@ -143,7 +143,7 @@ impl TextKind {
         !matches!(
             self,
             Self::Text
-                | Self::Url
+                | Self::LinkUrl
                 | Self::Mention
                 | Self::UnicodeEmoji
                 | Self::CustomEmoji

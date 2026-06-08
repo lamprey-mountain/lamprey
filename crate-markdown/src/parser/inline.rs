@@ -93,12 +93,157 @@ impl<'a> ParseContext<'a> {
                     };
                 }
 
-                // TODO: finish implementing other inline tokens
-                // Tilde2 strikethrough
-                // Pipe2 spoiler
+                // strikethrough
+                TokenKind::Tilde2 => {
+                    self.builder
+                        .start_node(NodeKind::Inline(InlineKind::Strikethrough).into());
+                    self.builder
+                        .token(NodeKind::Text(TextKind::Syntax).into(), "~~");
+                    self.parse_inline(&|t| t.kind == TokenKind::Tilde2 || stop(t));
+                    if let Some(tok) = self.tokenizer.peek() {
+                        if tok.kind == TokenKind::Tilde2 {
+                            self.tokenizer.advance();
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Syntax).into(), "~~");
+                        }
+                    }
+                    self.builder.finish_node();
+                }
+
+                // spoiler
+                TokenKind::Pipe2 => {
+                    self.builder
+                        .start_node(NodeKind::Inline(InlineKind::Spoiler).into());
+                    self.builder
+                        .token(NodeKind::Text(TextKind::Syntax).into(), "||");
+                    self.parse_inline(&|t| t.kind == TokenKind::Pipe2 || stop(t));
+                    if let Some(tok) = self.tokenizer.peek() {
+                        if tok.kind == TokenKind::Pipe2 {
+                            self.tokenizer.advance();
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Syntax).into(), "||");
+                        }
+                    }
+                    self.builder.finish_node();
+                }
+
                 // Url link (automatic)
-                // BracketOpen link
-                // AngleOpen link
+                TokenKind::Url => {
+                    self.builder
+                        .start_node(NodeKind::Inline(InlineKind::Autolink).into());
+                    self.builder.token(
+                        NodeKind::Text(TextKind::Text).into(),
+                        self.tokenizer.text(tok.span),
+                    );
+                    self.builder.finish_node();
+                }
+
+                // link
+                TokenKind::BracketOpen => {
+                    self.builder
+                        .start_node(NodeKind::Inline(InlineKind::Link).into());
+                    self.builder
+                        .token(NodeKind::Text(TextKind::Syntax).into(), "[");
+                    self.parse_inline(&|t| t.kind == TokenKind::BracketClose || stop(t));
+                    if let Some(tok) = self.tokenizer.peek() {
+                        if tok.kind == TokenKind::BracketClose {
+                            self.tokenizer.advance();
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Syntax).into(), "]");
+
+                            // check for (url)
+                            if let Some(tok) = self.tokenizer.peek() {
+                                if tok.kind == TokenKind::ParenOpen {
+                                    self.tokenizer.advance();
+                                    self.builder
+                                        .token(NodeKind::Text(TextKind::Syntax).into(), "(");
+
+                                    while let Some(nt) = self.tokenizer.peek() {
+                                        if nt.kind == TokenKind::ParenClose || stop(&nt) {
+                                            break;
+                                        }
+                                        self.tokenizer.advance();
+                                        let kind = match nt.kind {
+                                            TokenKind::Url => TextKind::LinkUrl,
+                                            // TODO: remove TextKind::Syntax logic?
+                                            // TokenKind::BracketClose | TokenKind::ParenOpen => {
+                                            //     TextKind::Syntax
+                                            // }
+                                            // handle whitespace
+                                            _ => TextKind::Text,
+                                        };
+                                        self.builder.token(
+                                            NodeKind::Text(kind).into(),
+                                            self.tokenizer.text(nt.span),
+                                        );
+                                    }
+
+                                    if let Some(tok) = self.tokenizer.peek() {
+                                        if tok.kind == TokenKind::ParenClose {
+                                            self.tokenizer.advance();
+                                            self.builder.token(
+                                                NodeKind::Text(TextKind::Syntax).into(),
+                                                ")",
+                                            );
+                                        }
+                                    }
+                                } else {
+                                    // TODO: handle syntax error?
+                                }
+                            }
+                        }
+                    }
+                    self.builder.finish_node();
+                }
+
+                // link with angle brackets
+                TokenKind::AngleOpen => {
+                    // FIXME: only become a link if theres no whitespace between <>, eg. `<foo>` is autolinked but `<bar >` and `< bar>` are not
+                    // PERF: dont clone tokenizer, use checkpoint system instead
+                    // let checkpoint = self.builder.checkpoint();
+                    // self.builder
+                    //     .start_node_at(checkpoint, NodeKind::Inline(InlineKind::Autolink).into());
+
+                    let mut temp_tokenizer = self.tokenizer.clone();
+                    let mut is_autolink = false;
+                    let mut tokens_to_consume = 0;
+
+                    while let Some(nt) = temp_tokenizer.peek() {
+                        if nt.kind == TokenKind::AngleClose {
+                            is_autolink = true;
+                            break;
+                        }
+                        if nt.kind == TokenKind::Whitespace
+                            || nt.kind == TokenKind::Newline
+                            || stop(&nt)
+                        {
+                            break;
+                        }
+                        temp_tokenizer.advance();
+                        tokens_to_consume += 1;
+                    }
+
+                    if is_autolink && tokens_to_consume > 0 {
+                        self.builder
+                            .start_node(NodeKind::Inline(InlineKind::Autolink).into());
+                        self.builder
+                            .token(NodeKind::Text(TextKind::Syntax).into(), "<");
+                        for _ in 0..tokens_to_consume {
+                            let t = self.tokenizer.advance().expect("token exists");
+                            self.builder.token(
+                                NodeKind::Text(TextKind::Text).into(),
+                                self.tokenizer.text(t.span),
+                            );
+                        }
+                        self.tokenizer.advance(); // consume >
+                        self.builder
+                            .token(NodeKind::Text(TextKind::Syntax).into(), ">");
+                        self.builder.finish_node();
+                    } else {
+                        self.builder
+                            .token(NodeKind::Text(TextKind::Text).into(), "<");
+                    }
+                }
 
                 // otherwise try to parse the token as text
                 _ => {

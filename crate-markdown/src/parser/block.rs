@@ -47,18 +47,21 @@ impl<'a> ParseContext<'a> {
                 self.builder.start_node(NodeKind::Block(kind).into());
 
                 // skip whitespace if it exists
-                // FIXME: parse as whitespace tokens
                 if let Some(tok) = self.tokenizer.peek() {
                     if tok.kind == TokenKind::Whitespace {
+                        let text = self.tokenizer.text(tok.span).to_string();
+                        self.builder
+                            .token(NodeKind::Text(TextKind::Text).into(), &text);
                         self.tokenizer.advance();
                     }
                 }
 
                 self.parse_inline(&|t| t.kind == TokenKind::Newline);
 
-                // FIXME: parse as newline token
                 if let Some(tok) = self.tokenizer.peek() {
                     if tok.kind == TokenKind::Newline {
+                        self.builder
+                            .token(NodeKind::Text(TextKind::Newline).into(), "\n");
                         self.tokenizer.advance();
                     }
                 }
@@ -67,10 +70,12 @@ impl<'a> ParseContext<'a> {
             }
 
             TokenKind::Backticks(n) if n >= 3 => {
-                // FIXME: parse as syntax text
-                self.tokenizer.advance();
+                let backticks = self.tokenizer.advance().unwrap();
+                let backticks_text = self.tokenizer.text(backticks.span).to_string();
                 self.builder
                     .start_node(NodeKind::Block(BlockKind::Codeblock).into());
+                self.builder
+                    .token(NodeKind::Text(TextKind::Syntax).into(), &backticks_text);
 
                 // peek text (language)
                 if let Some(tok) = self.tokenizer.peek() {
@@ -83,9 +88,10 @@ impl<'a> ParseContext<'a> {
                 }
 
                 // consume newline
-                // FIXME: parse as newline token
                 if let Some(tok) = self.tokenizer.peek() {
                     if tok.kind == TokenKind::Newline {
+                        self.builder
+                            .token(NodeKind::Text(TextKind::Newline).into(), "\n");
                         self.tokenizer.advance();
                     }
                 }
@@ -110,7 +116,9 @@ impl<'a> ParseContext<'a> {
                 if let Some(tok) = self.tokenizer.peek() {
                     if let TokenKind::Backticks(m) = tok.kind {
                         if m == n {
-                            // FIXME: parse backticks as syntax text
+                            let text = self.tokenizer.text(tok.span).to_string();
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Syntax).into(), &text);
                             self.tokenizer.advance();
                         }
                     }
@@ -119,14 +127,18 @@ impl<'a> ParseContext<'a> {
                 self.builder.finish_node();
             }
             TokenKind::AngleClose => {
-                // FIXME: parse > as syntax text
-                self.tokenizer.advance();
+                let tok = self.tokenizer.advance().unwrap();
+                let text = self.tokenizer.text(tok.span).to_string();
                 self.builder
                     .start_node(NodeKind::Block(BlockKind::Blockquote).into());
+                self.builder
+                    .token(NodeKind::Text(TextKind::Syntax).into(), &text);
 
                 if let Some(tok) = self.tokenizer.peek() {
                     if tok.kind == TokenKind::Whitespace {
-                        // FIXME: parse as whitespace tokens
+                        let text = self.tokenizer.text(tok.span).to_string();
+                        self.builder
+                            .token(NodeKind::Text(TextKind::Text).into(), &text);
                         self.tokenizer.advance();
                     }
                 }
@@ -141,9 +153,10 @@ impl<'a> ParseContext<'a> {
 
                 self.parse_inline(&|t| t.kind == TokenKind::Newline);
 
-                // FIXME: parse as newline token
                 if let Some(tok) = self.tokenizer.peek() {
                     if tok.kind == TokenKind::Newline {
+                        self.builder
+                            .token(NodeKind::Text(TextKind::Newline).into(), "\n");
                         self.tokenizer.advance();
                     }
                 }

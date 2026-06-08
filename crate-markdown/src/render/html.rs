@@ -15,7 +15,7 @@ impl Renderer for HtmlRenderer {
     fn render<Q: Queryable>(&self, q: Q) -> Self::Output {
         let node = q.get_root();
         if let Some(doc) = Document::cast(node) {
-            self.render(dbg!(doc))
+            self.render(doc)
         } else {
             // TODO: handle error
             String::new()
@@ -127,6 +127,12 @@ impl HtmlRenderer {
                 "<span class=\"spoiler\">{}</span>",
                 spoiler
                     .children()
+                    .map(|i| self.render_inline(i))
+                    .collect::<String>()
+            ),
+            Inline::Strikethrough(s) => format!(
+                "<s>{}</s>",
+                s.children()
                     .map(|i| self.render_inline(i))
                     .collect::<String>()
             ),

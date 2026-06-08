@@ -63,12 +63,20 @@ impl PlaintextRenderer {
             Inline::Strong(strong) => strong.children().map(|i| self.render_inline(i)).collect(),
             Inline::Emphasis(emphasis) => emphasis.children().map(|i| self.render_inline(i)).collect(),
             Inline::Link(link) => {
-                let text: String = link.children().map(|i| self.render_inline(i)).collect();
+                let text: String = dbg!(&link).children().map(|i| self.render_inline(i)).collect();
                 format!("{} ({})", text, link.href())
             }
             Inline::Spoiler(spoiler) => spoiler.children().map(|i| self.render_inline(i)).collect(),
+            Inline::Strikethrough(s) => s.children().map(|i| self.render_inline(i)).collect(),
             Inline::Code(code) => code.children().map(|i| self.render_inline(i)).collect(),
-            Inline::Text(text) => text.text(),
+            Inline::Text(text) => {
+                // ignore syntax tokens
+                if matches!(text.syntax().kind(), NodeKind::Text(TextKind::Syntax)) {
+                    "".to_string()
+                } else {
+                    text.text()
+                }
+            },
             Inline::Mention(mention) => match mention.parse() {
                 MentionData::User(u) => format!("@{}", u),
                 MentionData::Role(r) => format!("@{}", r),
