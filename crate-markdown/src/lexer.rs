@@ -1,14 +1,14 @@
 //! splits input text into tokens
 
-use logos::{Lexer, Logos};
+use logos::{Lexer as LogosLexer, Logos};
 
 use crate::prelude::*;
 
 // TODO: rename module and types to lexer
 #[derive(Clone)]
-pub struct Tokenizer<'source> {
+pub struct Lexer<'source> {
     source: &'source str,
-    lexer: Lexer<'source, TokenKind>,
+    lexer: LogosLexer<'source, TokenKind>,
     offset: usize,
     peeked: Option<Token>,
 }
@@ -72,7 +72,7 @@ pub enum TokenKind {
     Error,
 }
 
-impl<'s> Tokenizer<'s> {
+impl<'s> Lexer<'s> {
     pub fn new(source: &'s str) -> Self {
         Self {
             source,

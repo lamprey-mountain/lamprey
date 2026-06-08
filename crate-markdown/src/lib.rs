@@ -3,7 +3,7 @@ pub mod ast;
 pub mod parser;
 pub mod query;
 pub mod render;
-pub mod tokenizer;
+pub mod lexer;
 pub mod transform;
 pub mod tree;
 pub mod util;
@@ -18,7 +18,7 @@ pub(crate) mod prelude {
     pub use crate::ast::AstNode;
     pub use crate::query::Queryable;
     pub use crate::render::Renderer;
-    pub use crate::tokenizer::TokenKind;
+    pub use crate::lexer::TokenKind;
     pub use crate::tree::kind::{BlockKind, ErrorKind, InlineKind, NodeKind, TextKind};
     pub use crate::tree::node::{GreenNode, SyntaxElement, SyntaxNode, SyntaxToken};
     pub use crate::tree::Tree;

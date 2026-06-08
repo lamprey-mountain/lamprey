@@ -2,7 +2,7 @@ use crate::parser::Parser;
 
 mod basic;
 mod server;
-mod tokenization;
+mod lexing;
 mod util;
 
 #[test]

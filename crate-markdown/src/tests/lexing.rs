@@ -1,4 +1,4 @@
-use crate::tokenizer::TokenKind;
+use crate::lexer::TokenKind;
 use logos::Logos;
 
 #[test]

@@ -1,6 +1,6 @@
 use crate::parser::ParseContext;
 use crate::prelude::*;
-use crate::tokenizer::Token;
+use crate::lexer::Token;
 
 impl<'a> ParseContext<'a> {
     /// parse inline markdown

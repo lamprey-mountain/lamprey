@@ -2,7 +2,7 @@ use rowan::{GreenNodeBuilder, NodeCache};
 
 use crate::parser::config::ParserConfig;
 use crate::prelude::*;
-use crate::tokenizer::{Source, Tokenizer};
+use crate::lexer::{Source, Lexer};
 use crate::transform::Transform;
 
 mod block;
@@ -31,7 +31,7 @@ pub struct Parsed {
 // TODO: merge into Parsed?
 pub struct ParseContext<'a> {
     builder: GreenNodeBuilder<'a>,
-    tokenizer: Tokenizer<'a>,
+    tokenizer: Lexer<'a>,
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
@@ -112,7 +112,7 @@ impl<'a> ParseContext<'a> {
     pub fn new(source: &'a Source, cache: &'a mut NodeCache) -> Self {
         Self {
             builder: GreenNodeBuilder::with_cache(cache),
-            tokenizer: Tokenizer::new(&source.0),
+            tokenizer: Lexer::new(&source.0),
         }
     }
 }
