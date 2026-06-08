@@ -4,6 +4,7 @@ use logos::{Lexer, Logos};
 
 use crate::prelude::*;
 
+// TODO: rename module and types to lexer
 #[derive(Clone)]
 pub struct Tokenizer<'source> {
     source: &'source str,

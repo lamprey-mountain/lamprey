@@ -1,18 +1,18 @@
 use crate::parser::ParseContext;
 use crate::prelude::*;
-use crate::tokenizer::Tokenizer;
+use crate::tokenizer::Token;
 
 impl<'a> ParseContext<'a> {
-    pub(crate) fn parse_inline<F: FnMut(&mut Tokenizer<'a>) -> bool>(&mut self, stop: &mut F) {
-        while let Some(_tok) = self.tokenizer.peek() {
-            if stop(&mut self.tokenizer) {
+    /// parse inline markdown
+    ///
+    /// the provided `stop` function can return `true` to stop inline parsing
+    pub(crate) fn parse_inline<F: Fn(&Token) -> bool>(&mut self, stop: &F) {
+        while let Some(tok) = self.tokenizer.peek() {
+            if stop(&tok) {
                 break;
             }
 
-            let tok = self
-                .tokenizer
-                .advance()
-                .expect("a token was successfully peeked");
+            self.tokenizer.advance();
 
             match tok.kind {
                 // parse a codeblock

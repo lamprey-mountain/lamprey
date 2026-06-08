@@ -1,4 +1,5 @@
 use crate::ast::impl_ast;
+use crate::ast::inline::Inline;
 use crate::prelude::*;
 
 /// the top level document
@@ -29,6 +30,7 @@ pub enum Block {
     Paragraph(Paragraph),
     Blockquote(Blockquote),
     Codeblock(Codeblock),
+    List(List),
     ListItem(ListItem),
 }
 
@@ -68,6 +70,8 @@ impl AstNode for Block {
             Ok(Self::Blockquote(Blockquote(tn)))
         } else if Codeblock::can_cast(&tn) {
             Ok(Self::Codeblock(Codeblock(tn)))
+        } else if List::can_cast(&tn) {
+            Ok(Self::List(List(tn)))
         } else if ListItem::can_cast(&tn) {
             Ok(Self::ListItem(ListItem(tn)))
         } else {
@@ -81,6 +85,7 @@ impl AstNode for Block {
             Block::Paragraph(b) => b.node(),
             Block::Blockquote(b) => b.node(),
             Block::Codeblock(b) => b.node(),
+            Block::List(b) => b.node(),
             Block::ListItem(b) => b.node(),
         }
     }
@@ -146,8 +151,20 @@ impl ListItem {
     }
 }
 
-// TODO: add children method to Document
-// pub fn children<'a>(&'a self) -> impl Iterator<Item = Block> + 'a {
+impl Document {
+    pub fn children<'a>(&'a self) -> impl Iterator<Item = Block> + 'a {
+        self.0.children().filter_map(|child| Block::cast(child).ok())
+    }
+}
 
-// TODO: add children method to Paragraph
-// pub fn children<'a>(&'a self) -> impl Iterator<Item = Inline> + 'a {
+impl Paragraph {
+    pub fn children<'a>(&'a self) -> impl Iterator<Item = Inline> + 'a {
+        self.0.children().filter_map(|child| Inline::cast(child).ok())
+    }
+}
+
+impl Blockquote {
+    pub fn children<'a>(&'a self) -> impl Iterator<Item = Block> + 'a {
+        self.0.children().filter_map(|child| Block::cast(child).ok())
+    }
+}

@@ -2,7 +2,7 @@ use crate::parser::ParseContext;
 use crate::prelude::*;
 
 impl<'a> ParseContext<'a> {
-    pub fn parse_document(mut self) -> Tree {
+    pub(crate) fn parse_document(mut self) -> Tree {
         self.builder.start_node(NodeKind::Document.into());
 
         // keep parsing blocks until we run out of tokens
@@ -76,6 +76,7 @@ impl<'a> ParseContext<'a> {
                 //     .start_node(NodeKind::Block(BlockKind::Paragraph).into());
 
                 // parse inline until a newline is reached
+                // self.parse_inline(&|t| t.kind == TokenKind::Newline);
 
                 // self.builder.finish_node();
                 todo!()
