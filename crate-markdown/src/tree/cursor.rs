@@ -1,7 +1,4 @@
-use crate::{
-    prelude::*,
-    tree::{node::NodeIndex, Node, Tree},
-};
+use crate::{prelude::*, tree::node::NodeIndex};
 
 /// a cursor for traversing a tree
 #[derive(Clone)]
@@ -71,5 +68,15 @@ impl<'tree> TreeCursor<'tree> {
         } else {
             None
         }
+    }
+
+    /// get the zero-based index of the current node among its siblings
+    pub fn index(&self) -> Option<usize> {
+        self.path.last().map(|(_, idx)| *idx)
+    }
+
+    /// get the depth of the current node in the tree
+    pub fn depth(&self) -> Option<usize> {
+        Some(self.path.len() - 1)
     }
 }

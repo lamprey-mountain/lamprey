@@ -1,49 +1,74 @@
 use crate::prelude::*;
-use crate::render::{Heading, Link, Mention};
-use crate::tree::node::Node;
 
 pub mod block;
 pub mod inline;
+pub mod table;
 pub mod transform;
 
 /// abstract syntax tree
 ///
 /// this is a strongly typed node that corresponds to an underlying parser node
-pub trait Ast: Sized {
+pub trait AstNode: Sized {
+    /// check if a node can be convert into this
+    fn can_cast(node: &Node) -> bool;
+
     /// attempt to convert a node into this
-    fn cast(node: Node) -> Result<Self, Node>;
+    fn cast(tn: TreeNode) -> Result<Self, TreeNode>;
 
-    /// get the underlying node
-    fn node(&self) -> &Node;
+    /// get the underlying tree node
+    fn node(&self) -> &TreeNode;
+
+    fn cast_raw(tree: Ref<Tree>, node: Node) -> Result<Self, Node> {
+        Self::cast(TreeNode { tree, node }).map_err(|e| e.node)
+    }
+
+    fn node_raw(&self) -> &Node {
+        &self.node().node
+    }
 }
 
-// NOTE: do these need to be separate traits?
-pub trait Render {
-    /// render to html
-    fn to_html(&self) -> String;
-
-    /// render to plaintext, stripping any formatting
-    fn to_plain(&self) -> String;
+/// helper to make tree + node pairs easier to work with
+pub struct TreeNode {
+    pub(crate) tree: Ref<Tree>,
+    pub(crate) node: Node,
 }
 
-// pub trait AstExt {
-//     fn strip_emoji(&mut self, allowed_emojis: Vec<Uuid>) -> StripEmoji;
-// }
+impl TreeNode {
+    /// get the text of this node
+    pub fn text(&self) -> &str {
+        let span = self.node.span();
+        &self.tree.source()[span.start as usize..span.end as usize]
+    }
 
-pub trait Queryable {
-    /// iterate over all links
-    fn iter_links(&self) -> impl Iterator<Item = Link>;
-
-    /// iterate over all mentions
-    fn iter_mentions(&self) -> impl Iterator<Item = Mention>;
-
-    // TODO: iter_emoji
-
-    /// iterate over all headings
-    fn iter_headings(&self) -> impl Iterator<Item = Heading>;
-
-    // /// iterate over all decorations
-    // // NOTE: maybe i want a more efficient api? see parser EditResponse struct
-    // // NOTE: i could also have `fn decorations(&self) -> &Decorations` to access resolved decos, unsure if js-wasm boundary overhead is too much though
-    // fn iter_decorations(&self) -> impl Iterator<Item = Decoration>;
+    /// get the children of this node
+    pub fn children(&self) -> impl Iterator<Item = TreeNode> + '_ {
+        self.node.children.iter().map(|n| TreeNode {
+            tree: Ref::clone(&self.tree),
+            node: self.tree[*n].clone(),
+        })
+    }
 }
+
+macro_rules! impl_ast {
+    ($name:ident, $kind:pat $(if $guard:expr)?) => {
+        impl $crate::ast::AstNode for $name {
+            fn can_cast(node: &$crate::tree::node::Node) -> bool {
+                matches!(node.kind(), $kind $(if $guard)?)
+            }
+
+            fn cast(tn: $crate::ast::TreeNode) -> Result<Self, $crate::ast::TreeNode> {
+                if Self::can_cast(&tn.node) {
+                    Ok(Self(tn))
+                } else {
+                    Err(tn)
+                }
+            }
+
+            fn node(&self) -> &$crate::ast::TreeNode {
+                &self.0
+            }
+        }
+    };
+}
+
+pub(crate) use impl_ast;

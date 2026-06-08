@@ -7,8 +7,8 @@ use crate::tree::cursor::TreeCursor;
 use crate::tree::node::{NodeKind, TextKind};
 use crate::tree::{Cache, Tree, TreeBuilder};
 
-pub mod config;
 mod block;
+pub mod config;
 mod inline;
 
 /// a markdown parser
@@ -24,7 +24,7 @@ pub struct Parser {
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct Parsed {
     config: ParserConfig,
-    tree: Tree,
+    tree: Ref<Tree>,
 }
 
 /// the result of an edit
@@ -68,7 +68,10 @@ impl Parser {
     pub fn parse_with_config(&self, markdown: &str, config: ParserConfig) -> Parsed {
         let mut ctx = ParseContext::new(markdown, None);
         let tree = ctx.parse_document();
-        Parsed { config, tree }
+        Parsed {
+            config,
+            tree: Ref::new(tree),
+        }
     }
 }
 
@@ -84,6 +87,11 @@ impl Parsed {
     /// get the syntax tree
     pub fn tree(&self) -> &Tree {
         &self.tree
+    }
+
+    /// get a cloned ref to the syntax tree
+    pub fn tree_clone(&self) -> Ref<Tree> {
+        Ref::clone(&self.tree)
     }
 
     /// get a cursor for the syntax tree
@@ -104,7 +112,7 @@ impl Parsed {
         let cache = Cache::new(&self.tree, delete, delta);
 
         let mut ctx = ParseContext::new(&new_source, Some(cache));
-        self.tree = ctx.parse_document();
+        self.tree = Ref::new(ctx.parse_document());
 
         EditResult {}
     }

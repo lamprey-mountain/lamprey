@@ -55,6 +55,7 @@ example:
 - `<&uuid-here>` for role mentions
 - `<#uuid-here>` for channel mentions
 - `<:name:uuid-here>` for custom emoji
+- `<a:name:uuid-here>` for animated custom emoji
 - `https://example.com` urls are autolinked
 
 ## notes

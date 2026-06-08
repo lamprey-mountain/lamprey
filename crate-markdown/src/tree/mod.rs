@@ -1,4 +1,4 @@
-//! tree types
+//! syntax tree types
 
 use crate::prelude::*;
 use crate::tree::cursor::TreeCursor;
@@ -57,8 +57,14 @@ impl Tree {
         TreeCursor::new(self)
     }
 
+    /// get the markdown source text
     pub fn source(&self) -> &str {
         &self.source
+    }
+
+    /// get the root node
+    pub fn root(&self) -> &Node {
+        &self.node[0]
     }
 }
 

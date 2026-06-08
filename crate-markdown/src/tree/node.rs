@@ -13,6 +13,22 @@ pub struct Node {
     pub(crate) span: Span,
 
     pub(crate) children: Vec<NodeIndex>,
+    // NOTE: rowan has these fields:
+    // rc: Cell<u32>,
+    // parent: Cell<Option<ptr::NonNull<NodeData>>>,
+    // index: Cell<u32>,
+    // green: Green,
+
+    // /// Invariant: never changes after NodeData is created.
+    // mutable: bool,
+    // /// Absolute offset for immutable nodes, unused for mutable nodes.
+    // offset: TextSize,
+    // // The following links only have meaning when `mutable` is true.
+    // first: Cell<*const NodeData>,
+    // /// Invariant: never null if mutable.
+    // next: Cell<*const NodeData>,
+    // /// Invariant: never null if mutable.
+    // prev: Cell<*const NodeData>,
 }
 
 impl Node {
@@ -107,29 +123,34 @@ pub enum TextKind {
     /// a url
     Url,
 
-    /// other markdown syntax
-    Syntax,
-
-    /// the language of a code block
-    CodeblockLang,
-
     /// a mention
     ///
     /// eg. `<@user-uuid-here>`, `<&role-uuid-here>`, or `<#channel-uuid-here>`
     // NOTE: do i include`@everyone`?
     Mention,
 
+    /// a unicode emoji character
+    // unsure if i should include this?
+    UnicodeEmoji,
+
     /// a custom emoji
     ///
     /// eg. `<:name:emoji-uuid-here>`
     CustomEmoji,
 
-    /// check for a ListTask item
-    TaskCheck,
+    /// a newline character (`\n`)
+    Newline,
 
-    /// a unicode emoji character
-    // unsure if i should include this?
-    UnicodeEmoji,
+    // markdown syntax
+    /// list item prefix syntax
+    ListPrefix,
+
+    /// the language of a code block
+    CodeblockLang,
+
+    /// check for a ListTask item
+    // NOTE: is this part of markdown syntax..?
+    TaskCheck,
 
     /// the alignment to use for a table colum
     ///
@@ -140,9 +161,6 @@ pub enum TextKind {
     ///
     /// the space after the hashes is `Syntax` rather than `HeaderHashes`
     HeaderHashes,
-
-    /// a newline character (`\n`)
-    Newline,
 }
 
 /// the kind of an error node
@@ -154,28 +172,47 @@ pub enum ErrorKind {
 
 impl BlockKind {
     pub fn is_header(&self) -> bool {
-        todo!()
+        matches!(
+            self,
+            Self::Header1
+                | Self::Header2
+                | Self::Header3
+                | Self::Header4
+                | Self::Header5
+                | Self::Header6
+        )
+    }
+}
+
+impl TextKind {
+    /// whether this is part of markdown syntax
+    pub fn is_syntax(&self) -> bool {
+        !matches!(
+            self,
+            Self::Text
+                | Self::Url
+                | Self::Mention
+                | Self::UnicodeEmoji
+                | Self::CustomEmoji
+                | Self::Newline
+        )
     }
 }
 
 impl NodeKind {
-    /// whether this is markdown syntax
-    pub fn is_syntax(&self) -> bool {
-        todo!()
-    }
-
     /// whether this is a parse error
     pub fn is_error(&self) -> bool {
-        todo!()
+        // NOTE: error nodes dont exist yet
+        false
     }
 
     /// whether this node appears in inline markdown
     pub fn is_inline(&self) -> bool {
-        todo!()
+        matches!(self, NodeKind::Inline(_) | NodeKind::Text(_))
     }
 
     /// whether this node appears at the block level
     pub fn is_block(&self) -> bool {
-        todo!()
+        matches!(self, NodeKind::Block(_) | NodeKind::Document)
     }
 }

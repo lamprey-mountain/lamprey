@@ -1,6 +1,7 @@
 pub mod ast;
 pub mod grammar;
 pub mod parser;
+pub mod query;
 pub mod render;
 pub mod tokenizer;
 pub mod tree;
@@ -13,23 +14,28 @@ pub use parser::Parser;
 
 // for internal use
 pub(crate) mod prelude {
+    pub use crate::ast::AstNode;
+    pub use crate::query::Queryable;
+    pub use crate::render::Renderer;
+    pub use crate::tree::node::{Node, NodeIndex};
+    pub use crate::tree::Tree;
     pub use crate::util::Span;
 
     #[cfg(feature = "wasm")]
     pub use wasm_bindgen::prelude::*;
 
-    // #[cfg(not(feature = "parallel"))]
-    // pub type Ref<T> = std::rc::Rc<T>;
+    #[cfg(not(feature = "parallel"))]
+    pub type Ref<T> = std::rc::Rc<T>;
 
-    // #[cfg(feature = "parallel")]
-    // pub type Ref<T> = std::sync::Arc<T>;
+    #[cfg(feature = "parallel")]
+    pub type Ref<T> = std::sync::Arc<T>;
 
-    // #[cfg(not(feature = "parallel"))]
-    // pub type Weak<T> = std::rc::Weak<T>;
+    #[cfg(not(feature = "parallel"))]
+    pub type Weak<T> = std::rc::Weak<T>;
 
-    // #[cfg(feature = "parallel")]
-    // pub type Weak<T> = std::sync::Weak<T>;
+    #[cfg(feature = "parallel")]
+    pub type Weak<T> = std::sync::Weak<T>;
 
-    // TODO: doc comment
+    /// the type of a string's length
     pub type Len = u16;
 }
