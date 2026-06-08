@@ -2,9 +2,9 @@
 
 use crate::prelude::*;
 use crate::tree::cursor::TreeCursor;
-use crate::tree::node::{Node, NodeIndex, NodeKind};
 
 pub mod cursor;
+pub mod kind;
 pub mod node;
 
 /// an immutable parsed syntax tree
@@ -13,7 +13,7 @@ pub struct Tree {
     /// parsed nodes in this tree
     ///
     /// the root node is at index 0
-    node: Vec<Node>,
+    node: Vec<SyntaxData>,
 
     /// the source string
     // NOTE: i could make nodes store source string fragments instead?
@@ -21,7 +21,7 @@ pub struct Tree {
 }
 
 pub struct TreeBuilder {
-    nodes: Vec<Node>,
+    nodes: Vec<SyntaxData>,
     source: String,
     // NOTE: i could deduplicate nodes
     // cache: HashMap<Node, NodeIndex>,
@@ -36,6 +36,9 @@ pub struct Cache<'a> {
 
     /// how many chars were added/removed
     delta: isize,
+    // rowan:
+    // nodes: HashMap<NoHash<GreenNode>, ()>,
+    // tokens: HashMap<NoHash<GreenToken>, ()>,
 }
 
 impl Tree {
@@ -43,7 +46,7 @@ impl Tree {
     // TODO: remove?
     pub(crate) fn empty(source: String) -> Self {
         Self {
-            node: vec![Node {
+            node: vec![SyntaxData {
                 kind: NodeKind::Document,
                 span: (0, source.len() as Len).into(),
                 children: vec![],
@@ -63,15 +66,15 @@ impl Tree {
     }
 
     /// get the root node
-    pub fn root(&self) -> &Node {
+    pub fn root(&self) -> &SyntaxData {
         &self.node[0]
     }
 }
 
-impl std::ops::Index<NodeIndex> for Tree {
-    type Output = Node;
+impl std::ops::Index<SyntaxIndex> for Tree {
+    type Output = SyntaxData;
 
-    fn index(&self, index: NodeIndex) -> &Self::Output {
+    fn index(&self, index: SyntaxIndex) -> &Self::Output {
         &self.node[index.0 as usize]
     }
 }
@@ -84,9 +87,9 @@ impl TreeBuilder {
         }
     }
 
-    pub fn push_node(&mut self, kind: NodeKind, span: Span) -> NodeIndex {
-        let index = NodeIndex(self.nodes.len() as u32);
-        self.nodes.push(Node {
+    pub fn push_node(&mut self, kind: NodeKind, span: Span) -> SyntaxIndex {
+        let index = SyntaxIndex(self.nodes.len() as u32);
+        self.nodes.push(SyntaxData {
             kind,
             span,
             children: vec![],
@@ -94,7 +97,7 @@ impl TreeBuilder {
         index
     }
 
-    pub fn add_child(&mut self, parent: NodeIndex, child: NodeIndex) {
+    pub fn add_child(&mut self, parent: SyntaxIndex, child: SyntaxIndex) {
         self.nodes[parent.0 as usize].children.push(child);
     }
 
@@ -120,7 +123,7 @@ impl<'a> Cache<'a> {
     }
 
     /// checks if a block from the old tree can be reused at the given byte offset
-    pub fn find_reusable_block(&self, pos: Len) -> Option<NodeIndex> {
+    pub fn find_reusable_block(&self, pos: Len) -> Option<SyntaxIndex> {
         // Find a top-level block node in the old tree that starts at `pos` (before delta if pos > edit)
         // Ensure its span does NOT overlap with `edit_span`.
         // For simplicity in this mock incremental parser, we return None to force re-parse.
@@ -128,3 +131,9 @@ impl<'a> Cache<'a> {
         todo!()
     }
 }
+
+// impl Cache {
+//     pub fn new() -> Self {}
+
+//     pub fn insert(&mut self, node: ()) -> SyntaxData {}
+// }

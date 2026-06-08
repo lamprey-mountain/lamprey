@@ -1,21 +1,19 @@
-use crate::ast::{impl_ast, TreeNode};
+use crate::ast::impl_ast;
 use crate::prelude::*;
-use crate::tree::node::{InlineKind, Node, NodeKind, TextKind};
 use lamprey_common::v2::types::{ChannelId, RoleId, UserId};
-use uuid::Uuid;
 
 // formatting
-pub struct Strong(TreeNode);
-pub struct Emphasis(TreeNode);
-pub struct Link(TreeNode);
-pub struct Spoiler(TreeNode);
-pub struct Code(TreeNode);
+pub struct Strong(SyntaxNode);
+pub struct Emphasis(SyntaxNode);
+pub struct Link(SyntaxNode);
+pub struct Spoiler(SyntaxNode);
+pub struct Code(SyntaxNode);
 
 // terminal
-pub struct Text(TreeNode);
-pub struct Mention(TreeNode);
-pub struct CustomEmoji(TreeNode);
-pub struct UnicodeEmoji(TreeNode);
+pub struct Text(SyntaxNode);
+pub struct Mention(SyntaxNode);
+pub struct CustomEmoji(SyntaxNode);
+pub struct UnicodeEmoji(SyntaxNode);
 
 #[derive(Debug, Clone)]
 pub struct CustomEmojiData {
@@ -47,11 +45,11 @@ pub enum Inline {
 }
 
 impl AstNode for Inline {
-    fn can_cast(node: &Node) -> bool {
+    fn can_cast(node: &SyntaxData) -> bool {
         node.kind().is_inline() || matches!(node.kind(), NodeKind::Text(_))
     }
 
-    fn cast(tn: TreeNode) -> Result<Self, TreeNode> {
+    fn cast(tn: SyntaxNode) -> Result<Self, SyntaxNode> {
         if Strong::can_cast(&tn.node) {
             Ok(Self::Strong(Strong(tn)))
         } else if Emphasis::can_cast(&tn.node) {
@@ -75,7 +73,7 @@ impl AstNode for Inline {
         }
     }
 
-    fn node(&self) -> &TreeNode {
+    fn node(&self) -> &SyntaxNode {
         match self {
             Inline::Strong(s) => s.node(),
             Inline::Emphasis(e) => e.node(),

@@ -9,7 +9,7 @@ pub struct PlaintextRenderer {
 impl Renderer for PlaintextRenderer {
     type Output = String;
 
-    fn render<Q: Queryable>(&self, q: Q) -> Self::Output {
+    fn render<Q: Queryable>(&self, _q: Q) -> Self::Output {
         todo!()
     }
 }

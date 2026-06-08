@@ -1,10 +1,8 @@
-use crate::grammar::Table;
 use crate::parser::config::ParserConfig;
 use crate::prelude::*;
 
 use crate::tokenizer::Tokenizer;
 use crate::tree::cursor::TreeCursor;
-use crate::tree::node::{NodeKind, TextKind};
 use crate::tree::{Cache, Tree, TreeBuilder};
 
 mod block;

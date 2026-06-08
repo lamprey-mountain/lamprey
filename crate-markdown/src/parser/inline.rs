@@ -1,10 +1,9 @@
 use crate::parser::ParseContext;
 use crate::prelude::*;
-use crate::tokenizer::{TokenKind, Tokenizer};
-use crate::tree::node::{InlineKind, NodeIndex, NodeKind, TextKind};
+use crate::tokenizer::Tokenizer;
 
 impl<'a> ParseContext<'a> {
-    pub fn parse_inline(&mut self, parent: NodeIndex, span: Span) {
+    pub fn parse_inline(&mut self, parent: SyntaxIndex, span: Span) {
         // PERF: don't clone string
         // PERF: don't create a new lexer
         let source = self.builder.source().to_string();

@@ -1,8 +1,5 @@
 use crate::parser::ParseContext;
 use crate::prelude::*;
-use crate::tokenizer::TokenKind;
-use crate::tree::node::{BlockKind, NodeIndex, NodeKind};
-use crate::tree::Tree;
 
 impl<'a> ParseContext<'a> {
     pub fn parse_document(mut self) -> Tree {
@@ -26,7 +23,7 @@ impl<'a> ParseContext<'a> {
         self.builder.build()
     }
 
-    fn parse_block(&mut self, parent: NodeIndex) {
+    fn parse_block(&mut self, parent: SyntaxIndex) {
         let token = if let Some(tok) = self.tokenizer.peek() {
             tok
         } else {
@@ -50,7 +47,7 @@ impl<'a> ParseContext<'a> {
         }
     }
 
-    fn parse_header(&mut self, parent: NodeIndex) {
+    fn parse_header(&mut self, parent: SyntaxIndex) {
         let start = self.tokenizer.peek().unwrap().span.start;
         let mut level = 0;
 
@@ -98,7 +95,7 @@ impl<'a> ParseContext<'a> {
         self.parse_inline(node, (start, end).into());
     }
 
-    fn parse_codeblock(&mut self, parent: NodeIndex) {
+    fn parse_codeblock(&mut self, parent: SyntaxIndex) {
         let start_tok = self.tokenizer.advance().unwrap();
         let mut end = start_tok.span.end;
 
@@ -118,7 +115,7 @@ impl<'a> ParseContext<'a> {
         self.builder.add_child(parent, node);
     }
 
-    fn parse_blockquote(&mut self, parent: NodeIndex) {
+    fn parse_blockquote(&mut self, parent: SyntaxIndex) {
         let start = self.tokenizer.advance().unwrap().span.start;
         let mut end = start;
 
@@ -138,7 +135,7 @@ impl<'a> ParseContext<'a> {
         self.parse_inline(node, (start, end).into());
     }
 
-    fn parse_paragraph(&mut self, parent: NodeIndex) {
+    fn parse_paragraph(&mut self, parent: SyntaxIndex) {
         let start = self.tokenizer.peek().unwrap().span.start;
         let mut end = start;
 

@@ -1,4 +1,4 @@
-use crate::{prelude::*, tree::node::NodeIndex};
+use crate::prelude::*;
 
 /// a cursor for traversing a tree
 #[derive(Clone)]
@@ -9,19 +9,19 @@ pub struct TreeCursor<'tree> {
     /// stores (parent_node_index, current_node_index_in_parent)
     ///
     /// current_node_index_in_parent is undefined for the root node (first item in path)
-    path: Vec<(NodeIndex, usize)>,
+    path: Vec<(SyntaxIndex, usize)>,
 }
 
 impl<'tree> TreeCursor<'tree> {
     pub(crate) fn new(tree: &'tree Tree) -> Self {
         Self {
             tree,
-            path: vec![(NodeIndex(0), 0)],
+            path: vec![(SyntaxIndex(0), 0)],
         }
     }
 
     /// get the current node
-    pub fn node(&self) -> &'tree Node {
+    pub fn node(&self) -> &'tree SyntaxData {
         let (parent, idx) = self.path.last().unwrap();
         if parent.0 == 0 && self.path.len() == 1 {
             &self.tree[*parent]
@@ -31,14 +31,14 @@ impl<'tree> TreeCursor<'tree> {
     }
 
     /// go to the root node
-    pub fn root(&mut self) -> &'tree Node {
+    pub fn root(&mut self) -> &'tree SyntaxData {
         self.path.clear();
-        self.path.push((NodeIndex(0), 0));
+        self.path.push((SyntaxIndex(0), 0));
         self.node()
     }
 
     /// go to the parent node
-    pub fn parent(&mut self) -> Option<&'tree Node> {
+    pub fn parent(&mut self) -> Option<&'tree SyntaxData> {
         if self.path.len() > 1 {
             self.path.pop();
             Some(self.node())
@@ -48,7 +48,7 @@ impl<'tree> TreeCursor<'tree> {
     }
 
     /// go to the next sibling node
-    pub fn next(&mut self) -> Option<&'tree Node> {
+    pub fn next(&mut self) -> Option<&'tree SyntaxData> {
         let (parent, idx) = self.path.last_mut()?;
         let children = &self.tree[*parent].children;
         if *idx + 1 < children.len() {
@@ -60,7 +60,7 @@ impl<'tree> TreeCursor<'tree> {
     }
 
     /// go to the previous sibling node
-    pub fn prev(&mut self) -> Option<&'tree Node> {
+    pub fn prev(&mut self) -> Option<&'tree SyntaxData> {
         let (_parent, idx) = self.path.last_mut()?;
         if *idx > 0 {
             *idx -= 1;

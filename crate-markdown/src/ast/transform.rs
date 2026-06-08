@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::{ast::AstNode, tree::node::Node};
+use crate::{ast::AstNode, tree::node::SyntaxData};
 
 /// a transformation to replace custom emoji with `:name:` unless they're allowed
 // TODO

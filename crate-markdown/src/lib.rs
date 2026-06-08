@@ -17,9 +17,13 @@ pub(crate) mod prelude {
     pub use crate::ast::AstNode;
     pub use crate::query::Queryable;
     pub use crate::render::Renderer;
-    pub use crate::tree::node::{Node, NodeIndex};
+    pub use crate::tokenizer::TokenKind;
+    pub use crate::tree::kind::{BlockKind, ErrorKind, InlineKind, NodeKind, TextKind};
+    pub use crate::tree::node::{SyntaxData, SyntaxIndex, SyntaxNode};
     pub use crate::tree::Tree;
     pub use crate::util::Span;
+
+    pub use uuid::Uuid;
 
     #[cfg(feature = "wasm")]
     pub use wasm_bindgen::prelude::*;

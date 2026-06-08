@@ -1,21 +1,13 @@
 use std::str::FromStr;
 
 use crate::prelude::*;
-use crate::tree::node::TextKind;
-use crate::{
-    ast::{AstNode, TreeNode},
-    tree::{
-        node::{Node, NodeKind},
-        Tree,
-    },
-};
 
-pub struct Table(TreeNode);
-pub struct TableRow(TreeNode);
-pub struct TableCell(TreeNode);
+pub struct Table(SyntaxNode);
+pub struct TableRow(SyntaxNode);
+pub struct TableCell(SyntaxNode);
 
 pub struct TableColumn {
-    header: TreeNode,
+    header: SyntaxNode,
     alignment: Alignment,
 }
 

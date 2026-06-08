@@ -1,15 +1,14 @@
-use crate::ast::{impl_ast, TreeNode};
+use crate::ast::impl_ast;
 use crate::prelude::*;
-use crate::tree::node::{BlockKind, NodeKind, TextKind};
 
 /// the top level document
-pub struct Document(TreeNode);
-pub struct Paragraph(TreeNode);
-pub struct Blockquote(TreeNode);
-pub struct Codeblock(TreeNode);
-pub struct List(TreeNode);
-pub struct ListItem(TreeNode);
-pub struct Header(TreeNode);
+pub struct Document(SyntaxNode);
+pub struct Paragraph(SyntaxNode);
+pub struct Blockquote(SyntaxNode);
+pub struct Codeblock(SyntaxNode);
+pub struct List(SyntaxNode);
+pub struct ListItem(SyntaxNode);
+pub struct Header(SyntaxNode);
 
 impl_ast!(Document, NodeKind::Document);
 impl_ast!(Paragraph, NodeKind::Block(BlockKind::Paragraph));
@@ -57,11 +56,11 @@ impl List {
 }
 
 impl AstNode for Block {
-    fn can_cast(node: &Node) -> bool {
+    fn can_cast(node: &SyntaxData) -> bool {
         node.kind().is_block() || matches!(node.kind(), NodeKind::Document)
     }
 
-    fn cast(tn: TreeNode) -> Result<Self, TreeNode> {
+    fn cast(tn: SyntaxNode) -> Result<Self, SyntaxNode> {
         if Document::can_cast(&tn.node) {
             Ok(Self::Document(Document(tn)))
         } else if Header::can_cast(&tn.node) {
@@ -79,7 +78,7 @@ impl AstNode for Block {
         }
     }
 
-    fn node(&self) -> &TreeNode {
+    fn node(&self) -> &SyntaxNode {
         match self {
             Block::Document(b) => b.node(),
             Block::Header(b) => b.node(),

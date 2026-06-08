@@ -1,16 +1,15 @@
 use crate::ast::inline::CustomEmojiData;
-use crate::ast::TreeNode;
 use crate::prelude::*;
 use crate::render::{Heading, Link, Mention};
 
 pub trait Queryable {
     // TEMP: i probably want some kind of visitor pattern, or something that makes transforms easier
-    fn get_tree_node(&self) -> TreeNode;
+    fn get_tree_node(&self) -> SyntaxNode;
 }
 
 impl Queryable for Ref<Tree> {
-    fn get_tree_node(&self) -> TreeNode {
-        TreeNode {
+    fn get_tree_node(&self) -> SyntaxNode {
+        SyntaxNode {
             tree: Ref::clone(self),
             node: self.root().clone(),
         }

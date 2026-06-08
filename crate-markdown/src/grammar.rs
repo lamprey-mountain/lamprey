@@ -3,8 +3,6 @@
 // NOTE: maybe have two tables; a block and an inline table?
 
 use crate::prelude::*;
-use crate::tokenizer::TokenKind;
-use crate::tree::node::NodeKind;
 
 // pub const MARKDOWN: Table = todo!();
 

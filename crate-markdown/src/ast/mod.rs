@@ -9,54 +9,24 @@ pub mod transform;
 ///
 /// this is a strongly typed node that corresponds to an underlying parser node
 pub trait AstNode: Sized {
-    /// check if a node can be convert into this
-    fn can_cast(node: &Node) -> bool;
+    /// check if a syntax node can be converted into this
+    fn can_cast(node: &SyntaxData) -> bool;
 
-    /// attempt to convert a node into this
-    fn cast(tn: TreeNode) -> Result<Self, TreeNode>;
+    /// attempt to convert a syntax node into this
+    fn cast(tn: SyntaxNode) -> Result<Self, SyntaxNode>;
 
-    /// get the underlying tree node
-    fn node(&self) -> &TreeNode;
-
-    fn cast_raw(tree: Ref<Tree>, node: Node) -> Result<Self, Node> {
-        Self::cast(TreeNode { tree, node }).map_err(|e| e.node)
-    }
-
-    fn node_raw(&self) -> &Node {
-        &self.node().node
-    }
-}
-
-/// helper to make tree + node pairs easier to work with
-pub struct TreeNode {
-    pub(crate) tree: Ref<Tree>,
-    pub(crate) node: Node,
-}
-
-impl TreeNode {
-    /// get the text of this node
-    pub fn text(&self) -> &str {
-        let span = self.node.span();
-        &self.tree.source()[span.start as usize..span.end as usize]
-    }
-
-    /// get the children of this node
-    pub fn children(&self) -> impl Iterator<Item = TreeNode> + '_ {
-        self.node.children.iter().map(|n| TreeNode {
-            tree: Ref::clone(&self.tree),
-            node: self.tree[*n].clone(),
-        })
-    }
+    /// get the underlying syntax node
+    fn node(&self) -> &SyntaxNode;
 }
 
 macro_rules! impl_ast {
     ($name:ident, $kind:pat $(if $guard:expr)?) => {
-        impl $crate::ast::AstNode for $name {
-            fn can_cast(node: &$crate::tree::node::Node) -> bool {
+        impl $crate::prelude::AstNode for $name {
+            fn can_cast(node: &$crate::prelude::SyntaxData) -> bool {
                 matches!(node.kind(), $kind $(if $guard)?)
             }
 
-            fn cast(tn: $crate::ast::TreeNode) -> Result<Self, $crate::ast::TreeNode> {
+            fn cast(tn: $crate::prelude::SyntaxNode) -> Result<Self, $crate::prelude::SyntaxNode> {
                 if Self::can_cast(&tn.node) {
                     Ok(Self(tn))
                 } else {
@@ -64,7 +34,7 @@ macro_rules! impl_ast {
                 }
             }
 
-            fn node(&self) -> &$crate::ast::TreeNode {
+            fn node(&self) -> &$crate::prelude::SyntaxNode {
                 &self.0
             }
         }
