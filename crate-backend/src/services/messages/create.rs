@@ -20,7 +20,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::services::messages::util::MediaRegistry;
-use crate::services::messages::{links, mentions};
+use crate::services::messages::{links, markdown};
 use crate::services::notifications::preferences::NotificationAction;
 use crate::types::MediaLinkType;
 use crate::ServerStateInner;
@@ -798,7 +798,7 @@ impl ServiceMessages {
             MessageOperationKind::MessageEdit(_) => &ParseMentions::default(),
         };
 
-        let mention_ids = mentions::parse(content, parse_mentions);
+        let mention_ids = markdown::parse(content, parse_mentions);
         let mentions = self
             .fetch_full_mentions_from_ids(mention_ids, op.channel.room_id)
             .await?;

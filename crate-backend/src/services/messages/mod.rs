@@ -28,7 +28,7 @@ use crate::{Error, Result, ServerStateInner};
 pub mod create;
 pub mod flume;
 pub mod links;
-pub mod mentions;
+pub mod markdown;
 pub mod util;
 
 pub struct ServiceMessages {
@@ -239,7 +239,7 @@ impl ServiceMessages {
             }
         }
 
-        Ok(mentions::strip_emoji(content, &allowed_emoji))
+        Ok(markdown::strip_emoji(content, &allowed_emoji))
     }
 
     async fn fetch_mentions_data(
