@@ -2,9 +2,7 @@ use rowan::{GreenNodeBuilder, NodeCache};
 
 use crate::parser::config::ParserConfig;
 use crate::prelude::*;
-
 use crate::tokenizer::{Source, Tokenizer};
-use crate::tree::Tree;
 
 mod block;
 pub mod config;
@@ -32,7 +30,6 @@ pub struct Parsed {
 // TODO: merge into Parsed?
 pub struct ParseContext<'a> {
     builder: GreenNodeBuilder<'a>,
-    source: &'a Source,
     tokenizer: Tokenizer<'a>,
 }
 
@@ -63,14 +60,6 @@ impl Parser {
     }
 }
 
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
-impl Parsed {
-    // /// get the source string
-    // pub fn source(&self) -> String {
-    //     self.tree.source().to_string()
-    // }
-}
-
 impl Parsed {
     /// get the syntax tree
     pub fn tree(&self) -> &Tree {
@@ -81,12 +70,6 @@ impl Parsed {
     pub fn tree_clone(&self) -> Ref<Tree> {
         Ref::clone(&self.tree)
     }
-
-    // /// get a cursor for the syntax tree
-    // // TODO: wasm compat
-    // pub fn cursor<'a>(&'a self) -> TreeCursor<'a> {
-    //     self.tree.cursor()
-    // }
 
     /// apply an edit by replacing text
     // TODO: wasm compat
@@ -112,7 +95,6 @@ impl<'a> ParseContext<'a> {
         Self {
             builder: GreenNodeBuilder::with_cache(cache),
             tokenizer: Tokenizer::new(&source.0),
-            source,
         }
     }
 }

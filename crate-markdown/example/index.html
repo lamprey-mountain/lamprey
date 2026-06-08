@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>lamprey-markdown WASM Example</title>
+		<style>
+			body {
+				font-family: sans-serif;
+				padding: 20px;
+			}
+			textarea {
+				width: 100%;
+				height: 200px;
+			}
+			#output {
+				border: 1px solid #ccc;
+				padding: 10px;
+				background: #f9f9f9;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>lamprey-markdown WASM Example</h1>
+		<textarea
+			id="input"
+			placeholder="Type markdown here..."
+		>
+# Hello World!
+*italics* and **bold**</textarea>
+		<h3>Output:</h3>
+		<pre id="output"></pre>
+
+		<script type="module">
+			import init, { Parser } from "../pkg/lamprey_markdown.js";
+
+			async function run() {
+				await init();
+				const parser = new Parser();
+				const input = document.getElementById("input");
+				const output = document.getElementById("output");
+
+				function render() {
+					const markdown = input.value;
+					const parsed = parser.parse(markdown);
+					output.innerText = parsed.to_html();
+				}
+
+				input.addEventListener("input", render);
+				render();
+			}
+
+			run();
+		</script>
+	</body>
+</html>
