@@ -40,7 +40,7 @@ impl HtmlRenderer {
                     level,
                     header
                         .children()
-                        .map(|b| self.render_block(b))
+                        .map(|b| self.render_inline(b))
                         .collect::<String>(),
                     level
                 )

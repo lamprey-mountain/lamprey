@@ -34,7 +34,7 @@ impl PlaintextRenderer {
         match block {
             Block::Header(header) => header
                 .children()
-                .map(|b| self.render_block(b))
+                .map(|b| self.render_inline(b))
                 .collect::<String>(),
             Block::Paragraph(paragraph) => paragraph
                 .children()
@@ -61,9 +61,14 @@ impl PlaintextRenderer {
     fn render_inline(&self, inline: Inline) -> String {
         match inline {
             Inline::Strong(strong) => strong.children().map(|i| self.render_inline(i)).collect(),
-            Inline::Emphasis(emphasis) => emphasis.children().map(|i| self.render_inline(i)).collect(),
+            Inline::Emphasis(emphasis) => {
+                emphasis.children().map(|i| self.render_inline(i)).collect()
+            }
             Inline::Link(link) => {
-                let text: String = dbg!(&link).children().map(|i| self.render_inline(i)).collect();
+                let text: String = dbg!(&link)
+                    .children()
+                    .map(|i| self.render_inline(i))
+                    .collect();
                 format!("{} ({})", text, link.href())
             }
             Inline::Spoiler(spoiler) => spoiler.children().map(|i| self.render_inline(i)).collect(),
@@ -76,7 +81,7 @@ impl PlaintextRenderer {
                 } else {
                     text.text()
                 }
-            },
+            }
             Inline::Mention(mention) => match mention.parse() {
                 MentionData::User(u) => format!("@{}", u),
                 MentionData::Role(r) => format!("@{}", r),

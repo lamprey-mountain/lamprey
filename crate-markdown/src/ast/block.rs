@@ -119,13 +119,12 @@ impl Header {
             .unwrap_or(1)
     }
 
-    // TODO: make iterator Item = Inline
-    pub fn children<'a>(&'a self) -> impl Iterator<Item = Block> + 'a {
+    pub fn children<'a>(&'a self) -> impl Iterator<Item = Inline> + 'a {
         self.0.children_with_tokens().filter_map(|child| {
             if child.kind() == NodeKind::Text(TextKind::HeaderHashes) {
                 None
             } else {
-                child.into_node().and_then(Block::cast)
+                Inline::cast(child)
             }
         })
     }

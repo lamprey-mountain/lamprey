@@ -26,9 +26,11 @@ impl<'a> ParseContext<'a> {
         match token.kind {
             TokenKind::Hash => {
                 let mut level = 0;
+                let mut hashes = String::new();
                 while let Some(tok) = self.tokenizer.peek() {
                     if tok.kind == TokenKind::Hash {
                         level += 1;
+                        hashes.push_str(self.tokenizer.text(tok.span));
                         self.tokenizer.advance();
                     } else {
                         break;
@@ -45,6 +47,7 @@ impl<'a> ParseContext<'a> {
                 };
 
                 self.builder.start_node(NodeKind::Block(kind).into());
+                self.builder.token(NodeKind::Text(TextKind::HeaderHashes).into(), &hashes);
 
                 // skip whitespace if it exists
                 if let Some(tok) = self.tokenizer.peek() {
