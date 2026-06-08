@@ -34,6 +34,30 @@ impl ServiceSearch {
                 Doctype::Message.as_str(),
             ))
             .await?;
+        let count_channels = searcher
+            .doc_freq(&Term::from_field_text(
+                SCHEMA.doctype,
+                Doctype::Channel.as_str(),
+            ))
+            .await?;
+        let count_rooms = searcher
+            .doc_freq(&Term::from_field_text(
+                SCHEMA.doctype,
+                Doctype::Room.as_str(),
+            ))
+            .await?;
+        let count_media = searcher
+            .doc_freq(&Term::from_field_text(
+                SCHEMA.doctype,
+                Doctype::Media.as_str(),
+            ))
+            .await?;
+        let count_users = searcher
+            .doc_freq(&Term::from_field_text(
+                SCHEMA.doctype,
+                Doctype::User.as_str(),
+            ))
+            .await?;
 
         let index_size_bytes = searcher.space_usage().await?.total().get_bytes();
 
@@ -50,10 +74,10 @@ impl ServiceSearch {
         Ok(SearchIndexStats {
             count_documents,
             count_messages,
-            count_channels: todo!(),
-            count_rooms: todo!(),
-            count_media: todo!(),
-            count_users: todo!(),
+            count_channels,
+            count_rooms,
+            count_media,
+            count_users,
             index_size_bytes,
             reindex_queues: todo!(),
         })
