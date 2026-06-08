@@ -39,14 +39,15 @@ pub enum TokenKind {
     #[token(")")]         ParenClose,
     #[token("<")]         AngleOpen,
     #[token(">")]         AngleClose,
-    #[logos(text("```"))] Backtick3,
-    #[token("`")]         Backtick,
-    // #[token("`+")]        Backtick(u16), // TODO: use this instead of Backtick/Backtick3?
     #[regex(r"\n")]       Newline,
     #[token(r"\")]        Backslash,
     #[logos(text("***"))] Asterisk3,
     #[logos(text("**"))]  Asterisk2,
     #[logos(text("*"))]   Asterisk1,
+
+    // TODO: use this instead of Backtick/Backtick3
+    #[token("`+", |lex| lex.slice().len() as u16)]
+    Backticks(u16),
 
     /// uuid pattern, used for mentions and emoji
     #[regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")]

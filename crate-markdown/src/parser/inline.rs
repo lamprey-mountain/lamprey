@@ -6,7 +6,8 @@ impl<'a> ParseContext<'a> {
     /// parse inline markdown
     ///
     /// the provided `stop` function can return `true` to stop inline parsing
-    pub(crate) fn parse_inline<F: Fn(&Token) -> bool>(&mut self, stop: &F) {
+    // PERF: is creating/nesting lots of functions ok or will it cause problems?
+    pub(crate) fn parse_inline(&mut self, stop: &dyn Fn(&Token) -> bool) {
         while let Some(tok) = self.tokenizer.peek() {
             if stop(&tok) {
                 break;
@@ -16,36 +17,95 @@ impl<'a> ParseContext<'a> {
 
             match tok.kind {
                 // parse a codeblock
-                TokenKind::Backtick => {
+                // FIXME: handle n (what happens if there is more than 1 backtick?)
+                TokenKind::Backticks(_) => {
                     self.builder
                         .start_node(NodeKind::Inline(InlineKind::Code).into());
+                    // FIXME: handle closing backtick
                     self.parse_inline(stop);
                     self.builder.finish_node();
                 }
 
                 // parse strong/emphasis
-                TokenKind::Asterisk1 | TokenKind::Asterisk2 | TokenKind::Asterisk3 => {
-                    // maybe split into multiple match arms
-                    todo!()
+                TokenKind::Asterisk1 => {
+                    self.builder
+                        .start_node(NodeKind::Inline(InlineKind::Emphasis).into());
+                    // FIXME: use some kind of TextKind::Syntax
+                    self.builder
+                        .token(NodeKind::Text(TextKind::Text).into(), "*");
+                    self.parse_inline(&|t| t.kind == TokenKind::Asterisk1 || stop(t));
+                    if let Some(tok) = self.tokenizer.peek() {
+                        if tok.kind == TokenKind::Asterisk1 {
+                            self.tokenizer.advance();
+                            // FIXME: use some kind of TextKind::Syntax
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Text).into(), "*");
+                        }
+                    }
+                    self.builder.finish_node();
+                }
+                TokenKind::Asterisk2 => {
+                    self.builder
+                        .start_node(NodeKind::Inline(InlineKind::Strong).into());
+                    // FIXME: use some kind of TextKind::Syntax
+                    self.builder
+                        .token(NodeKind::Text(TextKind::Text).into(), "**");
+                    self.parse_inline(&|t| t.kind == TokenKind::Asterisk2 || stop(t));
+                    if let Some(tok) = self.tokenizer.peek() {
+                        if tok.kind == TokenKind::Asterisk2 {
+                            self.tokenizer.advance();
+                            // FIXME: use some kind of TextKind::Syntax
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Text).into(), "**");
+                        }
+                    }
+                    self.builder.finish_node();
+                }
+                TokenKind::Asterisk3 => {
+                    self.builder
+                        .start_node(NodeKind::Inline(InlineKind::Strong).into());
+                    self.builder
+                        .start_node(NodeKind::Inline(InlineKind::Emphasis).into());
+                    // FIXME: use some kind of TextKind::Syntax
+                    self.builder
+                        .token(NodeKind::Text(TextKind::Text).into(), "***");
+                    self.parse_inline(&|t| t.kind == TokenKind::Asterisk3 || stop(t));
+                    if let Some(tok) = self.tokenizer.peek() {
+                        if tok.kind == TokenKind::Asterisk3 {
+                            self.tokenizer.advance();
+                            // FIXME: use some kind of TextKind::Syntax
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Text).into(), "***");
+                        }
+                    }
+                    self.builder.finish_node();
+                    self.builder.finish_node();
                 }
 
                 // handle escape
                 TokenKind::Backslash => {
-                    todo!()
+                    let text = if let Some(next) = self.tokenizer.advance() {
+                        // FIXME: parse backslash as syntax token
+                        self.tokenizer.text(next.span).to_string()
+                    } else {
+                        // NOTE: parse backslash as text
+                        self.tokenizer.text(tok.span).to_string()
+                    };
+                    self.builder
+                        .token(NodeKind::Text(TextKind::Text).into(), &text);
                 }
 
+                // TODO: finish implementing other inline tokens
                 // Tilde2 strikethrough
                 // Pipe2 spoiler
                 // Url link (automatic)
                 // BracketOpen link
                 // AngleOpen link
 
-                // TODO: finish implementing other inline tokens
-
                 // otherwise try to parse the token as text
                 _ => {
                     let text = self.tokenizer.text(tok.span).to_string();
-                    // TODO: use correct TextKind instead of always TextKind::Text
+                    // FIXME: use correct TextKind instead of always TextKind::Text
                     self.builder
                         .token(NodeKind::Text(TextKind::Text).into(), &text);
                 }

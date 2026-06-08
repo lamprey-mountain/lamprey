@@ -14,7 +14,7 @@ impl Renderer for HtmlRenderer {
 
     fn render<Q: Queryable>(&self, q: Q) -> Self::Output {
         let node = q.get_root();
-        if let Ok(doc) = Document::cast(node) {
+        if let Some(doc) = Document::cast(node) {
             self.render(doc)
         } else {
             // TODO: handle error
@@ -23,6 +23,7 @@ impl Renderer for HtmlRenderer {
     }
 }
 
+// PERF: write using std::fmt::Write instead of using strings
 impl HtmlRenderer {
     fn render(&self, doc: Document) -> String {
         doc.children()
@@ -67,7 +68,7 @@ impl HtmlRenderer {
                     "<pre><code class=\"language-{}\">{}</code></pre>",
                     codeblock.language().unwrap_or_else(|| "text".to_string()),
                     // TODO: render codeblock children since .text() doesnt handle escapes
-                    codeblock.node().text().to_string()
+                    codeblock.syntax().text().to_string()
                 )
             }
             Block::List(list) => {

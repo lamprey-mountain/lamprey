@@ -1,5 +1,5 @@
 pub mod ast;
-pub mod grammar;
+// pub mod grammar;
 pub mod parser;
 pub mod query;
 pub mod render;
