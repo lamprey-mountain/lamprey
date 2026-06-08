@@ -4,14 +4,14 @@ use crate::prelude::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NodeIndex(pub(crate) u32);
 
+// NOTE: how do i want to handle visibility?
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Node {
-    kind: NodeKind,
+    pub(crate) kind: NodeKind,
 
     // NOTE: maybe i don't want to store Span so that identical nodes can be reused
-    span: Span,
+    pub(crate) span: Span,
 
-    // TEMP: need to create a decent interface for this
     pub(crate) children: Vec<NodeIndex>,
 }
 
@@ -22,6 +22,18 @@ impl Node {
 
     pub fn span(&self) -> Span {
         self.span
+    }
+
+    pub(crate) fn offset_span(&mut self, delta: isize) {
+        if delta > 0 {
+            self.span.start += delta as Len;
+            self.span.end += delta as Len;
+        } else if delta < 0 {
+            // TODO: better error handling for this?
+            let abs_delta = (-delta) as Len;
+            self.span.start = self.span.start.saturating_sub(abs_delta);
+            self.span.end = self.span.end.saturating_sub(abs_delta);
+        }
     }
 }
 

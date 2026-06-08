@@ -2,7 +2,7 @@
 
 use crate::prelude::*;
 use crate::tree::cursor::TreeCursor;
-use crate::tree::node::{Node, NodeIndex};
+use crate::tree::node::{Node, NodeIndex, NodeKind};
 
 pub mod cursor;
 pub mod node;
@@ -21,18 +21,44 @@ pub struct Tree {
 }
 
 pub struct TreeBuilder {
-    tree: Tree,
+    nodes: Vec<Node>,
+    source: String,
+    // NOTE: i could deduplicate nodes
     // cache: HashMap<Node, NodeIndex>,
 }
 
+/// incremental parsing cache
+pub struct Cache<'a> {
+    old_tree: &'a Tree,
+
+    /// the span that was replaced with new text
+    edit_span: Span,
+
+    /// how many chars were added/removed
+    delta: isize,
+}
+
 impl Tree {
-    // fn empty() -> Self {
-    //     todo!()
-    // }
+    /// create an empty tree
+    // TODO: remove?
+    pub(crate) fn empty(source: String) -> Self {
+        Self {
+            node: vec![Node {
+                kind: NodeKind::Document,
+                span: (0, source.len() as Len).into(),
+                children: vec![],
+            }],
+            source,
+        }
+    }
 
     /// create a cursor for traversing this tree
     pub fn cursor(&self) -> TreeCursor<'_> {
         TreeCursor::new(self)
+    }
+
+    pub fn source(&self) -> &str {
+        &self.source
     }
 }
 
@@ -45,7 +71,54 @@ impl std::ops::Index<NodeIndex> for Tree {
 }
 
 impl TreeBuilder {
-    pub(crate) fn build(self) -> Tree {
+    pub fn new(source: String) -> Self {
+        Self {
+            nodes: Vec::new(),
+            source,
+        }
+    }
+
+    pub fn push_node(&mut self, kind: NodeKind, span: Span) -> NodeIndex {
+        let index = NodeIndex(self.nodes.len() as u32);
+        self.nodes.push(Node {
+            kind,
+            span,
+            children: vec![],
+        });
+        index
+    }
+
+    pub fn add_child(&mut self, parent: NodeIndex, child: NodeIndex) {
+        self.nodes[parent.0 as usize].children.push(child);
+    }
+
+    pub fn build(self) -> Tree {
+        Tree {
+            node: self.nodes,
+            source: self.source,
+        }
+    }
+
+    pub fn source(&self) -> &str {
+        &self.source
+    }
+}
+
+impl<'a> Cache<'a> {
+    pub fn new(old_tree: &'a Tree, edit_span: Span, delta: isize) -> Self {
+        Self {
+            old_tree,
+            edit_span,
+            delta,
+        }
+    }
+
+    /// checks if a block from the old tree can be reused at the given byte offset
+    pub fn find_reusable_block(&self, pos: Len) -> Option<NodeIndex> {
+        // Find a top-level block node in the old tree that starts at `pos` (before delta if pos > edit)
+        // Ensure its span does NOT overlap with `edit_span`.
+        // For simplicity in this mock incremental parser, we return None to force re-parse.
+        // A full implementation would find matching unchanged nodes.
         todo!()
     }
 }

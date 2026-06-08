@@ -28,10 +28,15 @@ pub enum TokenKind {
     #[token("#")]         Hash,
     #[token(":")]         Colon,
     #[token("-")]         Dash,
+    #[token(".")]         Dot,
     #[token("[")]         BracketOpen,
     #[token("]")]         BracketClose,
     #[token("(")]         ParenOpen,
     #[token(")")]         ParenClose,
+    #[token("<")]         AngleOpen,
+    #[token(">")]         AngleClose,
+    #[logos(text("```"))] Backtick3,
+    #[token("`")]         Backtick,
     #[regex(r"\n")]       Newline,
     #[token(r"\")]        Backslash,
     #[logos(text("***"))] Asterisk3,
@@ -42,17 +47,16 @@ pub enum TokenKind {
     #[regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")]
     Uuid,
 
-    // TODO: redo url tokenization to handle urls with paranthases properly:
-    // [foo](https://en.wikipedia.org/wiki/Backrooms_(film))
-    // [foo](https://en.wikipedia.org/wiki/Science_fiction_film)
+    // TODO: handle nested parentheses
     /// url pattern for autolinks and link destinations
     #[regex(r"https?://[^\s\]\)>]+")]
     Url,
 
+    #[regex("[0-9]+")]
+    Number,
+
     /// any text that didn't match the above
-    // TODO: verify this is correct
-    #[regex(r"[^ \t\n*\\`<>\[\]\(\)#@:~.\-&|]+")]
-    // #[regex(".+?", priority = 2)]
+    #[regex(r"[^ \t\n*\\`<>\[\]\(\)#@:~.\-&|0-9]+")]
     Text,
 
     // part of Text?
