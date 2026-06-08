@@ -185,7 +185,8 @@ impl Link {
             .filter_map(|c: SyntaxElement| {
                 if matches!(c.kind(), NodeKind::Text(TextKind::LinkUrl)) {
                     Some(c.to_string())
-                } else if self.is_automatic() && matches!(c.kind(), NodeKind::Text(TextKind::Text)) {
+                } else if self.is_automatic() && matches!(c.kind(), NodeKind::Text(TextKind::Text))
+                {
                     Some(c.to_string())
                 } else {
                     None
@@ -198,7 +199,12 @@ impl Link {
     pub fn children(&self) -> impl Iterator<Item = Inline> + '_ {
         self.0
             .children_with_tokens()
-            .filter(move |c| !matches!(c.kind(), NodeKind::Text(TextKind::Syntax) | NodeKind::Text(TextKind::LinkUrl)))
+            .filter(move |c| {
+                !matches!(
+                    c.kind(),
+                    NodeKind::Text(TextKind::Syntax) | NodeKind::Text(TextKind::LinkUrl)
+                )
+            })
             .filter_map(|child| Inline::cast(child))
     }
 
@@ -278,15 +284,10 @@ impl CustomEmoji {
         let text = self.0.text().to_string();
         let is_animated = text.starts_with("<a:");
         let parts: Vec<&str> = text[1..text.len() - 1].split(':').collect();
-        let (name, id_str) = if is_animated {
-            (parts[1], parts[2])
-        } else {
-            (parts[0], parts[1])
-        };
         CustomEmojiData {
             animated: is_animated,
-            name: name.to_string(),
-            id: Uuid::parse_str(id_str).unwrap_or_default(),
+            name: parts[1].to_string(),
+            id: Uuid::parse_str(parts[2]).unwrap_or_default(),
         }
     }
 }

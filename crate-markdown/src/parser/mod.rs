@@ -3,6 +3,7 @@ use rowan::{GreenNodeBuilder, NodeCache};
 use crate::parser::config::ParserConfig;
 use crate::prelude::*;
 use crate::tokenizer::{Source, Tokenizer};
+use crate::transform::Transform;
 
 mod block;
 pub mod config;
@@ -77,6 +78,23 @@ impl Parsed {
         self.source.edit(delete, insert);
         let ctx = ParseContext::new(&self.source, &mut self.cache);
         self.tree = Ref::new(ctx.parse_document());
+    }
+
+    /// Apply a transformation to the parsed document.
+    pub fn transform<T: Transform>(&self, transformer: &T) -> Self {
+        let new_green = transformer.apply(self.tree.root());
+        let new_syntax_root = SyntaxNode::new_root(new_green.clone());
+
+        // PERF: don't create source until needed
+        let new_source_text = new_syntax_root.to_string();
+
+        // PERF: reuse cache
+        Self {
+            config: self.config.clone(),
+            tree: Ref::new(Tree { root: new_green }),
+            cache: NodeCache::default(),
+            source: Source::new(&new_source_text),
+        }
     }
 }
 

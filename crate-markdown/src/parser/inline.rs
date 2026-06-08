@@ -196,21 +196,16 @@ impl<'a> ParseContext<'a> {
                     self.builder.finish_node();
                 }
 
-                // link with angle brackets
+                // link with angle brackets, mention, or custom emoji
                 TokenKind::AngleOpen => {
-                    // FIXME: only become a link if theres no whitespace between <>, eg. `<foo>` is autolinked but `<bar >` and `< bar>` are not
-                    // PERF: dont clone tokenizer, use checkpoint system instead
-                    // let checkpoint = self.builder.checkpoint();
-                    // self.builder
-                    //     .start_node_at(checkpoint, NodeKind::Inline(InlineKind::Autolink).into());
+                    let mut temp = self.tokenizer.clone();
+                    let mut tokens = Vec::new();
+                    let mut close_token = None;
 
-                    let mut temp_tokenizer = self.tokenizer.clone();
-                    let mut is_autolink = false;
-                    let mut tokens_to_consume = 0;
-
-                    while let Some(nt) = temp_tokenizer.peek() {
+                    // read until the closing angle bracket
+                    while let Some(nt) = temp.advance() {
                         if nt.kind == TokenKind::AngleClose {
-                            is_autolink = true;
+                            close_token = Some(nt);
                             break;
                         }
                         if nt.kind == TokenKind::Whitespace
@@ -219,26 +214,50 @@ impl<'a> ParseContext<'a> {
                         {
                             break;
                         }
-                        temp_tokenizer.advance();
-                        tokens_to_consume += 1;
+                        tokens.push(nt);
                     }
 
-                    if is_autolink && tokens_to_consume > 0 {
-                        self.builder
-                            .start_node(NodeKind::Inline(InlineKind::Autolink).into());
-                        self.builder
-                            .token(NodeKind::Text(TextKind::Syntax).into(), "<");
-                        for _ in 0..tokens_to_consume {
+                    if let Some(close) = close_token {
+                        if self.is_mention(&tokens) {
+                            let span = Span {
+                                start: tok.span.start,
+                                end: close.span.end,
+                            };
+                            let text = self.tokenizer.text(span);
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Mention).into(), text);
+                            for _ in 0..tokens.len() + 1 {
+                                self.tokenizer.advance();
+                            }
+                        } else if self.is_emoji(&tokens) {
+                            let span = Span {
+                                start: tok.span.start,
+                                end: close.span.end,
+                            };
+                            let text = self.tokenizer.text(span);
+                            self.builder
+                                .token(NodeKind::Text(TextKind::CustomEmoji).into(), text);
+                            for _ in 0..tokens.len() + 1 {
+                                self.tokenizer.advance();
+                            }
+                        } else if self.is_url(&tokens) {
+                            self.builder
+                                .start_node(NodeKind::Inline(InlineKind::Autolink).into());
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Syntax).into(), "<");
                             let t = self.tokenizer.advance().expect("token exists");
                             self.builder.token(
                                 NodeKind::Text(TextKind::Text).into(),
                                 self.tokenizer.text(t.span),
                             );
+                            self.tokenizer.advance(); // consume >
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Syntax).into(), ">");
+                            self.builder.finish_node();
+                        } else {
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Text).into(), "<");
                         }
-                        self.tokenizer.advance(); // consume >
-                        self.builder
-                            .token(NodeKind::Text(TextKind::Syntax).into(), ">");
-                        self.builder.finish_node();
                     } else {
                         self.builder
                             .token(NodeKind::Text(TextKind::Text).into(), "<");
@@ -254,5 +273,61 @@ impl<'a> ParseContext<'a> {
                 }
             }
         }
+    }
+
+    fn is_mention(&self, tokens: &[Token]) -> bool {
+        match tokens {
+            [t1, t2] => match t1.kind {
+                TokenKind::At | TokenKind::Ampersand | TokenKind::Hash => {
+                    t2.kind == TokenKind::Uuid
+                        || (t1.kind == TokenKind::At && self.tokenizer.text(t2.span) == "everyone")
+                }
+                _ => false,
+            },
+            _ => false,
+        }
+    }
+
+    // TODO: macros for matching token patterns?
+    fn is_emoji(&self, tokens: &[Token]) -> bool {
+        match tokens {
+            [Token {
+                kind: TokenKind::Colon,
+                ..
+            }, Token {
+                kind: TokenKind::Text,
+                ..
+            }, Token {
+                kind: TokenKind::Colon,
+                ..
+            }, Token {
+                kind: TokenKind::Uuid,
+                ..
+            }] => true,
+            [t1, Token {
+                kind: TokenKind::Colon,
+                ..
+            }, Token {
+                kind: TokenKind::Text,
+                ..
+            }, Token {
+                kind: TokenKind::Colon,
+                ..
+            }, Token {
+                kind: TokenKind::Uuid,
+                ..
+            }] if t1.kind == TokenKind::Text && self.tokenizer.text(t1.span) == "a" => true,
+            _ => false,
+        }
+    }
+
+    fn is_url(&self, tokens: &[Token]) -> bool {
+        matches!(
+            tokens,
+            [Token {
+                kind: TokenKind::Url,
+                ..
+            }]
+        )
     }
 }

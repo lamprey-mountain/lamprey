@@ -1,6 +1,7 @@
 use crate::parser::Parser;
 
 mod basic;
+mod server;
 mod tokenization;
 mod util;
 

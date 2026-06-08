@@ -20,7 +20,7 @@ trait Queryable0 {
     fn iter_links(&self) -> impl Iterator<Item = Link>;
 
     /// iterate over all mentions
-    fn iter_mentions(&self) -> impl Iterator<Item = Mention>;
+    fn iter_mentions(&self) -> impl Iterator<Item = Mention<'_>>;
 
     /// iterate over all emoji
     fn iter_emoji(&self) -> impl Iterator<Item = CustomEmojiData>;

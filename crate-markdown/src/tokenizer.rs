@@ -45,7 +45,6 @@ pub enum TokenKind {
     #[token("**")]  Asterisk2,
     #[token("*")]   Asterisk1,
 
-    // TODO: use this instead of Backtick/Backtick3
     #[token("`+", |lex| lex.slice().len() as u16)]
     Backticks(u16),
 

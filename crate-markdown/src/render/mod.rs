@@ -84,6 +84,7 @@ pub trait Renderer {
     fn render<Q: Queryable>(&self, q: Q) -> Self::Output;
 }
 
+// TODO: impl for Queryable?
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 impl Parsed {
     /// render to html
