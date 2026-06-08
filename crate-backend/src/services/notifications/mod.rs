@@ -82,7 +82,7 @@ impl ServiceNotifications {
 
         let keys = VapidKeys {
             encoding: encoding_key,
-            public: vapid_private,
+            public: vapid_public,
         };
 
         let mut self_keys = self.vapid_keys.write().await;
