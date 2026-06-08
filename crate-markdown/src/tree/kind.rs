@@ -91,6 +91,9 @@ pub enum TextKind {
     Newline,
 
     // markdown syntax
+    /// other markdown formatting/syntax
+    Syntax,
+
     /// list item prefix syntax
     ListPrefix,
 

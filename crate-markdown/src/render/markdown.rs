@@ -8,7 +8,7 @@ pub struct MarkdownRenderer;
 impl Renderer for MarkdownRenderer {
     type Output = String;
 
-    fn render<Q: Queryable>(&self, _q: Q) -> Self::Output {
-        todo!()
+    fn render<Q: Queryable>(&self, q: Q) -> Self::Output {
+        q.get_root().to_string()
     }
 }

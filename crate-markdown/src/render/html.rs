@@ -15,7 +15,7 @@ impl Renderer for HtmlRenderer {
     fn render<Q: Queryable>(&self, q: Q) -> Self::Output {
         let node = q.get_root();
         if let Some(doc) = Document::cast(node) {
-            self.render(doc)
+            self.render(dbg!(doc))
         } else {
             // TODO: handle error
             String::new()

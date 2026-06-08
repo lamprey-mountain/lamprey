@@ -13,7 +13,7 @@ pub struct Tokenizer<'source> {
     peeked: Option<Token>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Token {
     pub kind: TokenKind,
     pub span: Span,
@@ -41,9 +41,9 @@ pub enum TokenKind {
     #[token(">")]         AngleClose,
     #[regex(r"\n")]       Newline,
     #[token(r"\")]        Backslash,
-    #[logos(text("***"))] Asterisk3,
-    #[logos(text("**"))]  Asterisk2,
-    #[logos(text("*"))]   Asterisk1,
+    #[token("***")] Asterisk3,
+    #[token("**")]  Asterisk2,
+    #[token("*")]   Asterisk1,
 
     // TODO: use this instead of Backtick/Backtick3
     #[token("`+", |lex| lex.slice().len() as u16)]

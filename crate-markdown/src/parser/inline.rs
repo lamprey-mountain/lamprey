@@ -30,16 +30,14 @@ impl<'a> ParseContext<'a> {
                 TokenKind::Asterisk1 => {
                     self.builder
                         .start_node(NodeKind::Inline(InlineKind::Emphasis).into());
-                    // FIXME: use some kind of TextKind::Syntax
                     self.builder
-                        .token(NodeKind::Text(TextKind::Text).into(), "*");
+                        .token(NodeKind::Text(TextKind::Syntax).into(), "*");
                     self.parse_inline(&|t| t.kind == TokenKind::Asterisk1 || stop(t));
                     if let Some(tok) = self.tokenizer.peek() {
                         if tok.kind == TokenKind::Asterisk1 {
                             self.tokenizer.advance();
-                            // FIXME: use some kind of TextKind::Syntax
                             self.builder
-                                .token(NodeKind::Text(TextKind::Text).into(), "*");
+                                .token(NodeKind::Text(TextKind::Syntax).into(), "*");
                         }
                     }
                     self.builder.finish_node();
@@ -47,16 +45,14 @@ impl<'a> ParseContext<'a> {
                 TokenKind::Asterisk2 => {
                     self.builder
                         .start_node(NodeKind::Inline(InlineKind::Strong).into());
-                    // FIXME: use some kind of TextKind::Syntax
                     self.builder
-                        .token(NodeKind::Text(TextKind::Text).into(), "**");
+                        .token(NodeKind::Text(TextKind::Syntax).into(), "**");
                     self.parse_inline(&|t| t.kind == TokenKind::Asterisk2 || stop(t));
                     if let Some(tok) = self.tokenizer.peek() {
                         if tok.kind == TokenKind::Asterisk2 {
                             self.tokenizer.advance();
-                            // FIXME: use some kind of TextKind::Syntax
                             self.builder
-                                .token(NodeKind::Text(TextKind::Text).into(), "**");
+                                .token(NodeKind::Text(TextKind::Syntax).into(), "**");
                         }
                     }
                     self.builder.finish_node();
@@ -66,16 +62,14 @@ impl<'a> ParseContext<'a> {
                         .start_node(NodeKind::Inline(InlineKind::Strong).into());
                     self.builder
                         .start_node(NodeKind::Inline(InlineKind::Emphasis).into());
-                    // FIXME: use some kind of TextKind::Syntax
                     self.builder
-                        .token(NodeKind::Text(TextKind::Text).into(), "***");
+                        .token(NodeKind::Text(TextKind::Syntax).into(), "***");
                     self.parse_inline(&|t| t.kind == TokenKind::Asterisk3 || stop(t));
                     if let Some(tok) = self.tokenizer.peek() {
                         if tok.kind == TokenKind::Asterisk3 {
                             self.tokenizer.advance();
-                            // FIXME: use some kind of TextKind::Syntax
                             self.builder
-                                .token(NodeKind::Text(TextKind::Text).into(), "***");
+                                .token(NodeKind::Text(TextKind::Syntax).into(), "***");
                         }
                     }
                     self.builder.finish_node();
@@ -84,15 +78,19 @@ impl<'a> ParseContext<'a> {
 
                 // handle escape
                 TokenKind::Backslash => {
-                    let text = if let Some(next) = self.tokenizer.advance() {
-                        // FIXME: parse backslash as syntax token
-                        self.tokenizer.text(next.span).to_string()
+                    if let Some(next) = self.tokenizer.advance() {
+                        // backslash is syntax, escaped char is text
+                        let text = self.tokenizer.text(next.span).to_string();
+                        self.builder
+                            .token(NodeKind::Text(TextKind::Syntax).into(), "\\");
+                        self.builder
+                            .token(NodeKind::Text(TextKind::Text).into(), &text);
                     } else {
-                        // NOTE: parse backslash as text
-                        self.tokenizer.text(tok.span).to_string()
+                        // if theres nothing to escape, the backslash becomes text
+                        let text = self.tokenizer.text(tok.span).to_string();
+                        self.builder
+                            .token(NodeKind::Text(TextKind::Text).into(), &text);
                     };
-                    self.builder
-                        .token(NodeKind::Text(TextKind::Text).into(), &text);
                 }
 
                 // TODO: finish implementing other inline tokens

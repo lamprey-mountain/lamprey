@@ -26,9 +26,6 @@ pub struct CustomEmoji(SyntaxToken);
 #[derive(Debug)]
 pub struct UnicodeEmoji(SyntaxToken);
 
-// maybe use this instead?
-// pub struct Text(SyntaxToken);
-
 #[derive(Debug, Clone)]
 pub struct CustomEmojiData {
     pub animated: bool,
