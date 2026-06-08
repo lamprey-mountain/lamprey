@@ -8,6 +8,8 @@ use crate::tree::node::{NodeKind, TextKind};
 use crate::tree::{Cache, Tree, TreeBuilder};
 
 pub mod config;
+mod block;
+mod inline;
 
 /// a markdown parser
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
@@ -126,35 +128,5 @@ impl<'a> ParseContext<'a> {
             cache,
             pos: 0,
         }
-    }
-
-    pub fn parse_document(mut self) -> Tree {
-        let doc_span = Span {
-            start: 0,
-            end: self.builder.source().len() as Len,
-        };
-        let root = self.builder.push_node(NodeKind::Document, doc_span);
-
-        // TODO: implement actual parsing here
-        while let Some(token) = self.tokenizer.advance() {
-            // For now, emit everything as Text nodes attached to a dummy Paragraph if not blocks.
-            // A full implementation would check block boundaries, lists, headers, etc.
-            let text_span = token.span;
-
-            // To simulate incremental checking:
-            if let Some(ref cache) = self.cache {
-                if let Some(reused) = cache.find_reusable_block(text_span.start) {
-                    // Shift subtree logic here
-                    continue;
-                }
-            }
-
-            let text_node = self
-                .builder
-                .push_node(NodeKind::Text(TextKind::Text), text_span);
-            self.builder.add_child(root, text_node);
-        }
-
-        self.builder.build()
     }
 }

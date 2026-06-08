@@ -1,3 +1,4 @@
+// TODO(future): crate for glr parsing
 // TODO: macro to generate this?
 // NOTE: maybe have two tables; a block and an inline table?
 

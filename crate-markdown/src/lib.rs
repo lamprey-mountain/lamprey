@@ -9,6 +9,8 @@ pub mod util;
 #[cfg(test)]
 mod tests;
 
+pub use parser::Parser;
+
 // for internal use
 pub(crate) mod prelude {
     pub use crate::util::Span;
@@ -16,11 +18,11 @@ pub(crate) mod prelude {
     #[cfg(feature = "wasm")]
     pub use wasm_bindgen::prelude::*;
 
-    #[cfg(not(feature = "parallel"))]
-    pub type Ref<T> = std::rc::Rc<T>;
+    // #[cfg(not(feature = "parallel"))]
+    // pub type Ref<T> = std::rc::Rc<T>;
 
-    #[cfg(feature = "parallel")]
-    pub type Ref<T> = std::sync::Arc<T>;
+    // #[cfg(feature = "parallel")]
+    // pub type Ref<T> = std::sync::Arc<T>;
 
     // #[cfg(not(feature = "parallel"))]
     // pub type Weak<T> = std::rc::Weak<T>;

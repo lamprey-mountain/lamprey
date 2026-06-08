@@ -7,6 +7,7 @@ use lamprey_markdown::Ast;
 
 use crate::types::MentionsIds;
 
+// TODO: rename to parse_mention_ids
 pub fn parse(content: &str, options: &ParseMentions) -> MentionsIds {
     let parser = Parser::default();
     let parsed = parser.parse(content);
@@ -62,3 +63,19 @@ pub fn strip_emoji(content: &str, allowed_emoji: &[EmojiId]) -> String {
     let transformed_node = SyntaxNode::new_root(transformed);
     MarkdownRenderer.render(&transformed_node)
 }
+
+pub fn strip_emoji2(content: &str, allowed_emoji: &[EmojiId]) -> String {
+    let parser = Parser::new();
+    let parsed = parser.parse(content);
+    // parsed.iter_links();
+    // let ast = Ast::new(parser.parse(content));
+
+    // let mut pipeline = Pipeline::new();
+    // pipeline.add_transform(StripEmoji::from_emoji_ids(allowed_emoji.to_vec()));
+    // let transformed = pipeline.apply(&ast.syntax());
+    // let transformed_node = SyntaxNode::new_root(transformed);
+    // MarkdownRenderer.render(&transformed_node)
+    todo!()
+}
+
+// TODO: add parse_links (copy from crate-backend/src/services/messages/links.rs?)

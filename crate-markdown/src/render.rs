@@ -18,6 +18,11 @@ impl Parsed {
         todo!()
     }
 
+    /// render to markdown
+    pub fn to_markdown(&self) -> String {
+        todo!()
+    }
+
     // fn strip_emoji(&mut self, allowed_emojis: ())
 
     /// iterate over all links

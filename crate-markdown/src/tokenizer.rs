@@ -4,11 +4,14 @@ use logos::{Lexer, Logos};
 
 use crate::prelude::*;
 
+#[derive(Clone)]
 pub struct Tokenizer<'source> {
     source: &'source str,
     lexer: Lexer<'source, TokenKind>,
+    offset: usize,
 }
 
+#[derive(Clone)]
 pub struct Token {
     pub kind: TokenKind,
     pub span: Span,
@@ -72,7 +75,23 @@ impl<'s> Tokenizer<'s> {
         Self {
             source,
             lexer: TokenKind::lexer(source),
+            offset: 0,
         }
+    }
+
+    // PERF: dont clone lexer, store `peeked: Option<Token>` on Tokenizer
+    pub fn peek(&self) -> Option<Token> {
+        let mut cloned = self.lexer.clone();
+        cloned.next().map(|kind| {
+            let s = cloned.span();
+            Token {
+                kind: kind.unwrap_or(TokenKind::Error),
+                span: Span {
+                    start: (s.start + self.offset) as Len,
+                    end: (s.end + self.offset) as Len,
+                },
+            }
+        })
     }
 
     pub fn advance(&mut self) -> Option<Token> {
@@ -81,10 +100,20 @@ impl<'s> Tokenizer<'s> {
             Token {
                 kind: kind.unwrap_or(TokenKind::Error),
                 span: Span {
-                    start: s.start as Len,
-                    end: s.end as Len,
+                    start: (s.start + self.offset) as Len,
+                    end: (s.end + self.offset) as Len,
                 },
             }
         })
+    }
+
+    pub fn fast_forward(&mut self, bytes: usize) {
+        self.offset += bytes;
+        if self.offset < self.source.len() {
+            // FIXME: lexing part of a token (eg. fast forwarding to "*" inside "**", should still be Asterisk2 not Asterisk1)
+            self.lexer = TokenKind::lexer(&self.source[self.offset..]);
+        } else {
+            self.lexer = TokenKind::lexer("");
+        }
     }
 }
