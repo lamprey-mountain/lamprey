@@ -3,27 +3,20 @@ use crate::prelude::*;
 
 impl<'a> ParseContext<'a> {
     pub fn parse_document(mut self) -> Tree {
-        let doc_span = (0, self.builder.source().len() as Len).into();
-        let root = self.builder.push_node(NodeKind::Document, doc_span);
+        self.builder.start_node(NodeKind::Document.into());
 
-        while let Some(token) = self.tokenizer.peek() {
-            let text_span = token.span;
-
-            if let Some(ref cache) = self.cache {
-                if let Some(_reused) = cache.find_reusable_block(text_span.start) {
-                    // TODO: graft node and fast forward
-                    // self.tokenizer.fast_forward(reused_length);
-                    // continue;
-                }
-            }
-
-            self.parse_block(root);
+        // keep parsing blocks until we run out of tokens
+        while let Some(_token) = self.tokenizer.peek() {
+            self.parse_block();
         }
 
-        self.builder.build()
+        self.builder.finish_node();
+        Tree {
+            root: self.builder.finish(),
+        }
     }
 
-    fn parse_block(&mut self, parent: SyntaxIndex) {
+    fn parse_block(&mut self) {
         let token = if let Some(tok) = self.tokenizer.peek() {
             tok
         } else {
@@ -32,134 +25,61 @@ impl<'a> ParseContext<'a> {
 
         match token.kind {
             TokenKind::Hash => {
-                self.parse_header(parent);
+                // let level = count number of TokenKind::Hash tokens
+
+                // let kind = match level {
+                //     1 => BlockKind::Header1,
+                //     2 => BlockKind::Header2,
+                //     3 => BlockKind::Header3,
+                //     4 => BlockKind::Header4,
+                //     5 => BlockKind::Header5,
+                //     _ => BlockKind::Header6,
+                // };
+
+                // self.builder.start_node(NodeKind::Block(kind).into());
+
+                // skip whitespace if it exists
+                // parse inline until newline reached
+
+                // self.builder.finish_node();
+                todo!()
             }
+
+            // FIXME: handle more than 3 backticks
             TokenKind::Backtick3 => {
-                self.parse_codeblock(parent);
+                self.builder
+                    .start_node(NodeKind::Block(BlockKind::Codeblock).into());
+
+                // peek text (language) or newline
+                // TextKind::CodeblockLang
+
+                // read until matching backticks or eof
+                // while let Some(tok) = self.tokenizer.next() {}
+                // parse as text; special case Backtick3 and Escape (for escaping backticks)
+                // self.builder
+                //     .token(NodeKind::Text(TextKind::Text).into(), &text);
+
+                self.builder.finish_node();
+
+                todo!()
             }
             TokenKind::AngleClose => {
-                self.parse_blockquote(parent);
+                // self.builder
+                //     .start_node(NodeKind::Block(BlockKind::Blockquote).into());
+                // skip whitespace
+                // parse paragraph
+                // self.builder.finish_node();
+                todo!()
             }
-            // TODO: list parsing, tables etc...
             _ => {
-                self.parse_paragraph(parent);
+                // self.builder
+                //     .start_node(NodeKind::Block(BlockKind::Paragraph).into());
+
+                // parse inline until a newline is reached
+
+                // self.builder.finish_node();
+                todo!()
             }
         }
-    }
-
-    fn parse_header(&mut self, parent: SyntaxIndex) {
-        let start = self.tokenizer.peek().unwrap().span.start;
-        let mut level = 0;
-
-        while let Some(tok) = self.tokenizer.peek() {
-            if tok.kind == TokenKind::Hash {
-                level += 1;
-                self.tokenizer.advance();
-            } else {
-                break;
-            }
-        }
-
-        // skip whitespace
-        if let Some(tok) = self.tokenizer.peek() {
-            if tok.kind == TokenKind::Whitespace {
-                self.tokenizer.advance();
-            }
-        }
-
-        // read until newline
-        let mut end = start;
-        while let Some(tok) = self.tokenizer.peek() {
-            if tok.kind == TokenKind::Newline {
-                self.tokenizer.advance();
-                break;
-            }
-            end = tok.span.end;
-            self.tokenizer.advance();
-        }
-
-        let kind = match level {
-            1 => BlockKind::Header1,
-            2 => BlockKind::Header2,
-            3 => BlockKind::Header3,
-            4 => BlockKind::Header4,
-            5 => BlockKind::Header5,
-            _ => BlockKind::Header6,
-        };
-
-        let node = self
-            .builder
-            .push_node(NodeKind::Block(kind), (start, end).into());
-        self.builder.add_child(parent, node);
-
-        self.parse_inline(node, (start, end).into());
-    }
-
-    fn parse_codeblock(&mut self, parent: SyntaxIndex) {
-        let start_tok = self.tokenizer.advance().unwrap();
-        let mut end = start_tok.span.end;
-
-        // read until matching backticks or EOF
-        while let Some(tok) = self.tokenizer.peek() {
-            end = tok.span.end;
-            self.tokenizer.advance();
-            if tok.kind == TokenKind::Backtick3 {
-                break;
-            }
-        }
-
-        let node = self.builder.push_node(
-            NodeKind::Block(BlockKind::Codeblock),
-            (start_tok.span.start, end).into(),
-        );
-        self.builder.add_child(parent, node);
-    }
-
-    fn parse_blockquote(&mut self, parent: SyntaxIndex) {
-        let start = self.tokenizer.advance().unwrap().span.start;
-        let mut end = start;
-
-        while let Some(tok) = self.tokenizer.peek() {
-            if tok.kind == TokenKind::Newline {
-                self.tokenizer.advance();
-                break;
-            }
-            end = tok.span.end;
-            self.tokenizer.advance();
-        }
-
-        let node = self
-            .builder
-            .push_node(NodeKind::Block(BlockKind::Blockquote), (start, end).into());
-        self.builder.add_child(parent, node);
-        self.parse_inline(node, (start, end).into());
-    }
-
-    fn parse_paragraph(&mut self, parent: SyntaxIndex) {
-        let start = self.tokenizer.peek().unwrap().span.start;
-        let mut end = start;
-
-        while let Some(tok) = self.tokenizer.peek() {
-            if tok.kind == TokenKind::Newline {
-                let mut peek_again = self.tokenizer.clone();
-                peek_again.advance();
-                if let Some(next) = peek_again.peek() {
-                    if next.kind == TokenKind::Newline {
-                        self.tokenizer.advance();
-                        break;
-                    }
-                } else {
-                    break;
-                }
-            }
-            end = tok.span.end;
-            self.tokenizer.advance();
-        }
-
-        let node = self
-            .builder
-            .push_node(NodeKind::Block(BlockKind::Paragraph), (start, end).into());
-        self.builder.add_child(parent, node);
-        self.parse_inline(node, (start, end).into());
     }
 }

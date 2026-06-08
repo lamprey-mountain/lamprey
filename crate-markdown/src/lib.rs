@@ -19,7 +19,7 @@ pub(crate) mod prelude {
     pub use crate::render::Renderer;
     pub use crate::tokenizer::TokenKind;
     pub use crate::tree::kind::{BlockKind, ErrorKind, InlineKind, NodeKind, TextKind};
-    pub use crate::tree::node::{SyntaxData, SyntaxIndex, SyntaxNode};
+    pub use crate::tree::node::{GreenNode, SyntaxNode, SyntaxToken};
     pub use crate::tree::Tree;
     pub use crate::util::Span;
 

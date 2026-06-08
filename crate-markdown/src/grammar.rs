@@ -99,3 +99,15 @@ impl TokenMask {
 
 /// the current parse state
 pub struct State(u16);
+
+// pub struct Stack {
+//     state_id: u32,
+//     // TODO: symbol stacks, lookaheads, etc.
+// }
+
+// pub struct ParseContext {
+//     /// all current glr branches
+//     ///
+//     /// contains one item if unambiguous
+//     stacks: Vec<Stack>,
+// }

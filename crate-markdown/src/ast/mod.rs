@@ -5,12 +5,15 @@ pub mod inline;
 pub mod table;
 pub mod transform;
 
+// TODO: use rowan's trait
+// use rowan::ast::AstNode;
+
 /// abstract syntax tree
 ///
 /// this is a strongly typed node that corresponds to an underlying parser node
 pub trait AstNode: Sized {
     /// check if a syntax node can be converted into this
-    fn can_cast(node: &SyntaxData) -> bool;
+    fn can_cast(node: &SyntaxNode) -> bool;
 
     /// attempt to convert a syntax node into this
     fn cast(tn: SyntaxNode) -> Result<Self, SyntaxNode>;
@@ -22,12 +25,12 @@ pub trait AstNode: Sized {
 macro_rules! impl_ast {
     ($name:ident, $kind:pat $(if $guard:expr)?) => {
         impl $crate::prelude::AstNode for $name {
-            fn can_cast(node: &$crate::prelude::SyntaxData) -> bool {
+            fn can_cast(node: &$crate::prelude::SyntaxNode) -> bool {
                 matches!(node.kind(), $kind $(if $guard)?)
             }
 
             fn cast(tn: $crate::prelude::SyntaxNode) -> Result<Self, $crate::prelude::SyntaxNode> {
-                if Self::can_cast(&tn.node) {
+                if Self::can_cast(&tn) {
                     Ok(Self(tn))
                 } else {
                     Err(tn)

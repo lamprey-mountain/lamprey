@@ -25,7 +25,6 @@ impl_ast!(Header, NodeKind::Block(b) if b.is_header());
 
 /// any block type node
 pub enum Block {
-    Document(Document),
     Header(Header),
     Paragraph(Paragraph),
     Blockquote(Blockquote),
@@ -41,7 +40,7 @@ pub enum ListKind {
 
 impl List {
     pub fn kind(&self) -> ListKind {
-        match self.0.node.kind() {
+        match self.0.kind() {
             NodeKind::Block(BlockKind::ListOrdered) => ListKind::Ordered,
             NodeKind::Block(BlockKind::ListTasks) => ListKind::Task,
             _ => ListKind::Unordered,
@@ -56,22 +55,20 @@ impl List {
 }
 
 impl AstNode for Block {
-    fn can_cast(node: &SyntaxData) -> bool {
-        node.kind().is_block() || matches!(node.kind(), NodeKind::Document)
+    fn can_cast(tn: &SyntaxNode) -> bool {
+        tn.kind().is_block() && tn.kind() != NodeKind::Document
     }
 
     fn cast(tn: SyntaxNode) -> Result<Self, SyntaxNode> {
-        if Document::can_cast(&tn.node) {
-            Ok(Self::Document(Document(tn)))
-        } else if Header::can_cast(&tn.node) {
+        if Header::can_cast(&tn) {
             Ok(Self::Header(Header(tn)))
-        } else if Paragraph::can_cast(&tn.node) {
+        } else if Paragraph::can_cast(&tn) {
             Ok(Self::Paragraph(Paragraph(tn)))
-        } else if Blockquote::can_cast(&tn.node) {
+        } else if Blockquote::can_cast(&tn) {
             Ok(Self::Blockquote(Blockquote(tn)))
-        } else if Codeblock::can_cast(&tn.node) {
+        } else if Codeblock::can_cast(&tn) {
             Ok(Self::Codeblock(Codeblock(tn)))
-        } else if ListItem::can_cast(&tn.node) {
+        } else if ListItem::can_cast(&tn) {
             Ok(Self::ListItem(ListItem(tn)))
         } else {
             Err(tn)
@@ -80,7 +77,6 @@ impl AstNode for Block {
 
     fn node(&self) -> &SyntaxNode {
         match self {
-            Block::Document(b) => b.node(),
             Block::Header(b) => b.node(),
             Block::Paragraph(b) => b.node(),
             Block::Blockquote(b) => b.node(),
@@ -95,8 +91,9 @@ impl Header {
         self.0
             .children()
             .find_map(|child| {
-                if child.node.kind() == NodeKind::Text(TextKind::HeaderHashes) {
-                    child.text().parse().ok()
+                if child.kind() == NodeKind::Text(TextKind::HeaderHashes) {
+                    // NOTE: does this include the space between the hashes and content?
+                    Some(u32::from(child.text().len()) as u8)
                 } else {
                     None
                 }
@@ -104,10 +101,10 @@ impl Header {
             .unwrap_or(1)
     }
 
+    // TODO: make iterator Item = Inline
     pub fn children<'a>(&'a self) -> impl Iterator<Item = Block> + 'a {
         self.0.children().filter_map(|child| {
-            // NOTE: do i include the space between the hashes and content?
-            if child.node.kind() == NodeKind::Text(TextKind::HeaderHashes) {
+            if child.kind() == NodeKind::Text(TextKind::HeaderHashes) {
                 None
             } else {
                 Block::cast(child).ok()
@@ -117,14 +114,11 @@ impl Header {
 }
 
 impl Codeblock {
-    pub fn language(&self) -> Option<&str> {
+    pub fn language(&self) -> Option<String> {
         self.0
             .children()
-            .find(|c| c.node.kind() == NodeKind::Text(TextKind::CodeblockLang))
-            .map(|c| {
-                let span = c.node.span();
-                &self.0.tree.source()[span.start as usize..span.end as usize]
-            })
+            .find(|c| c.kind() == NodeKind::Text(TextKind::CodeblockLang))
+            .map(|c| c.text().to_string())
     }
 }
 
@@ -139,14 +133,21 @@ impl ListItem {
     pub fn number(&self) -> Option<u64> {
         self.0
             .children()
-            .find(|c| c.node.kind() == NodeKind::Text(TextKind::ListPrefix))
-            .and_then(|c| c.text().trim_end_matches('.').parse().ok())
+            .find(|c| c.kind() == NodeKind::Text(TextKind::ListPrefix))
+            // NOTE: do i want to use the user defined number or automatically increment? i *think* commonmark always autoincrements starting from the first list item's number.
+            .and_then(|c| c.text().to_string().trim_end_matches('.').parse().ok())
     }
 
     pub fn completed(&self) -> Option<bool> {
         self.0
             .children()
-            .find(|c| c.node.kind() == NodeKind::Text(TextKind::TaskCheck))
-            .map(|c| c.text().contains('x'))
+            .find(|c| c.kind() == NodeKind::Text(TextKind::TaskCheck))
+            .map(|c| c.text().contains_char('x'))
     }
 }
+
+// TODO: add children method to Document
+// pub fn children<'a>(&'a self) -> impl Iterator<Item = Block> + 'a {
+
+// TODO: add children method to Paragraph
+// pub fn children<'a>(&'a self) -> impl Iterator<Item = Inline> + 'a {

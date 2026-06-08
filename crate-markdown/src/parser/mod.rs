@@ -1,9 +1,10 @@
+use rowan::{GreenNodeBuilder, NodeCache};
+
 use crate::parser::config::ParserConfig;
 use crate::prelude::*;
 
-use crate::tokenizer::Tokenizer;
-use crate::tree::cursor::TreeCursor;
-use crate::tree::{Cache, Tree, TreeBuilder};
+use crate::tokenizer::{Source, Tokenizer};
+use crate::tree::Tree;
 
 mod block;
 pub mod config;
@@ -23,31 +24,16 @@ pub struct Parser {
 pub struct Parsed {
     config: ParserConfig,
     tree: Ref<Tree>,
+    cache: NodeCache,
+    source: Source,
 }
 
-/// the result of an edit
-pub struct EditResult {
-    // TODO: maybe have added/removed Decorations?
-}
-
-// pub struct Stack {
-//     state_id: u32,
-//     // TODO: symbol stacks, lookaheads, etc.
-// }
-
-// pub struct ParseContext {
-//     /// all current glr branches
-//     ///
-//     /// contains one item if unambiguous
-//     stacks: Vec<Stack>,
-// }
-
-// TODO: doc comment
+// TODO: add doc comment
+// TODO: merge into Parsed?
 pub struct ParseContext<'a> {
-    builder: TreeBuilder,
+    builder: GreenNodeBuilder<'a>,
+    source: &'a Source,
     tokenizer: Tokenizer<'a>,
-    cache: Option<Cache<'a>>,
-    pos: Len,
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
@@ -64,21 +50,25 @@ impl Parser {
 
     /// parse some markdown with config
     pub fn parse_with_config(&self, markdown: &str, config: ParserConfig) -> Parsed {
-        let mut ctx = ParseContext::new(markdown, None);
+        let source = Source::new(markdown);
+        let mut cache = NodeCache::default();
+        let ctx = ParseContext::new(&source, &mut cache);
         let tree = ctx.parse_document();
         Parsed {
             config,
             tree: Ref::new(tree),
+            cache,
+            source,
         }
     }
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 impl Parsed {
-    /// get the source string
-    pub fn source(&self) -> String {
-        self.tree.source().to_string()
-    }
+    // /// get the source string
+    // pub fn source(&self) -> String {
+    //     self.tree.source().to_string()
+    // }
 }
 
 impl Parsed {
@@ -92,27 +82,18 @@ impl Parsed {
         Ref::clone(&self.tree)
     }
 
-    /// get a cursor for the syntax tree
-    // TODO: wasm compat
-    pub fn cursor<'a>(&'a self) -> TreeCursor<'a> {
-        self.tree.cursor()
-    }
+    // /// get a cursor for the syntax tree
+    // // TODO: wasm compat
+    // pub fn cursor<'a>(&'a self) -> TreeCursor<'a> {
+    //     self.tree.cursor()
+    // }
 
     /// apply an edit by replacing text
     // TODO: wasm compat
-    pub fn edit(&mut self, delete: Span, insert: &str) -> EditResult {
-        // apply string edit
-        // PERF: i may want to use a rope or something that handles edits better
-        let mut new_source = self.tree.source().to_string();
-        new_source.replace_range(delete.start as usize..delete.end as usize, insert);
-
-        let delta = insert.len() as isize - (delete.end - delete.start) as isize;
-        let cache = Cache::new(&self.tree, delete, delta);
-
-        let mut ctx = ParseContext::new(&new_source, Some(cache));
+    pub fn edit(&mut self, delete: Span, insert: &str) {
+        self.source.edit(delete, insert);
+        let ctx = ParseContext::new(&self.source, &mut self.cache);
         self.tree = Ref::new(ctx.parse_document());
-
-        EditResult {}
     }
 }
 
@@ -127,12 +108,11 @@ impl Parsed {
 }
 
 impl<'a> ParseContext<'a> {
-    pub fn new(source: &'a str, cache: Option<Cache<'a>>) -> Self {
+    pub fn new(source: &'a Source, cache: &'a mut NodeCache) -> Self {
         Self {
-            builder: TreeBuilder::new(source.to_string()),
-            tokenizer: Tokenizer::new(source),
-            cache,
-            pos: 0,
+            builder: GreenNodeBuilder::with_cache(cache),
+            tokenizer: Tokenizer::new(&source.0),
+            source,
         }
     }
 }

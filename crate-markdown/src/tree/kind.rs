@@ -1,4 +1,5 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+// TODO: rename to SyntaxKind
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum NodeKind {
     /// root node
     Document,
@@ -8,7 +9,8 @@ pub enum NodeKind {
     Text(TextKind),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[repr(u8)]
 pub enum BlockKind {
     Codeblock,
     Paragraph,
@@ -41,7 +43,8 @@ pub enum BlockKind {
 /// the type of an inline node
 ///
 /// inline nodes generally include syntax text, eg. `*` for emphasis
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[repr(u8)]
 pub enum InlineKind {
     // includes
     Code,
@@ -60,7 +63,8 @@ pub enum InlineKind {
 }
 
 /// the kind of a text fragment
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[repr(u8)]
 pub enum TextKind {
     /// arbitrary text content that doesnt match any of the other types
     Text,
@@ -109,7 +113,8 @@ pub enum TextKind {
 }
 
 /// the kind of an error node
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[repr(u8)]
 pub enum ErrorKind {
     /// missing a closing paren
     Closing,
@@ -159,5 +164,32 @@ impl NodeKind {
     /// whether this node appears at the block level
     pub fn is_block(&self) -> bool {
         matches!(self, NodeKind::Block(_) | NodeKind::Document)
+    }
+}
+
+impl From<NodeKind> for rowan::SyntaxKind {
+    fn from(kind: NodeKind) -> Self {
+        let (category, subkind) = match kind {
+            NodeKind::Document => (0, 0),
+            NodeKind::Block(bk) => (1, bk as u8),
+            NodeKind::Inline(ik) => (2, ik as u8),
+            NodeKind::Text(tk) => (3, tk as u8),
+        };
+        Self(((category as u16) << 8) | (subkind as u16))
+    }
+}
+
+impl From<rowan::SyntaxKind> for NodeKind {
+    fn from(kind: rowan::SyntaxKind) -> Self {
+        // TODO: verify that unsafe is fine here
+        let category = (kind.0 >> 8) as u8;
+        let subkind = (kind.0 & 0xFF) as u8;
+        match category {
+            0 => NodeKind::Document,
+            1 => NodeKind::Block(unsafe { std::mem::transmute(subkind) }),
+            2 => NodeKind::Inline(unsafe { std::mem::transmute(subkind) }),
+            3 => NodeKind::Text(unsafe { std::mem::transmute(subkind) }),
+            _ => panic!("Invalid category: {}", category),
+        }
     }
 }

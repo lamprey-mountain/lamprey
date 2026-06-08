@@ -2,6 +2,8 @@ use crate::ast::impl_ast;
 use crate::prelude::*;
 use lamprey_common::v2::types::{ChannelId, RoleId, UserId};
 
+// PERF: stop calling .to_string() for everything
+
 // formatting
 pub struct Strong(SyntaxNode);
 pub struct Emphasis(SyntaxNode);
@@ -15,10 +17,12 @@ pub struct Mention(SyntaxNode);
 pub struct CustomEmoji(SyntaxNode);
 pub struct UnicodeEmoji(SyntaxNode);
 
+// maybe use this instead?
+// pub struct Text(SyntaxToken);
+
 #[derive(Debug, Clone)]
 pub struct CustomEmojiData {
     pub animated: bool,
-    // PERF: consider using &'a str
     pub name: String,
     pub id: Uuid,
 }
@@ -36,37 +40,38 @@ pub enum Inline {
     Strong(Strong),
     Emphasis(Emphasis),
     Link(Link),
+    Spoiler(Spoiler),
+    Code(Code),
+
     Text(Text),
     Mention(Mention),
     CustomEmoji(CustomEmoji),
     UnicodeEmoji(UnicodeEmoji),
-    Spoiler(Spoiler),
-    Code(Code),
 }
 
 impl AstNode for Inline {
-    fn can_cast(node: &SyntaxData) -> bool {
-        node.kind().is_inline() || matches!(node.kind(), NodeKind::Text(_))
+    fn can_cast(tn: &SyntaxNode) -> bool {
+        tn.kind().is_inline()
     }
 
     fn cast(tn: SyntaxNode) -> Result<Self, SyntaxNode> {
-        if Strong::can_cast(&tn.node) {
+        if Strong::can_cast(&tn) {
             Ok(Self::Strong(Strong(tn)))
-        } else if Emphasis::can_cast(&tn.node) {
+        } else if Emphasis::can_cast(&tn) {
             Ok(Self::Emphasis(Emphasis(tn)))
-        } else if Link::can_cast(&tn.node) {
+        } else if Link::can_cast(&tn) {
             Ok(Self::Link(Link(tn)))
-        } else if Text::can_cast(&tn.node) {
+        } else if Text::can_cast(&tn) {
             Ok(Self::Text(Text(tn)))
-        } else if Mention::can_cast(&tn.node) {
+        } else if Mention::can_cast(&tn) {
             Ok(Self::Mention(Mention(tn)))
-        } else if CustomEmoji::can_cast(&tn.node) {
+        } else if CustomEmoji::can_cast(&tn) {
             Ok(Self::CustomEmoji(CustomEmoji(tn)))
-        } else if UnicodeEmoji::can_cast(&tn.node) {
+        } else if UnicodeEmoji::can_cast(&tn) {
             Ok(Self::UnicodeEmoji(UnicodeEmoji(tn)))
-        } else if Spoiler::can_cast(&tn.node) {
+        } else if Spoiler::can_cast(&tn) {
             Ok(Self::Spoiler(Spoiler(tn)))
-        } else if Code::can_cast(&tn.node) {
+        } else if Code::can_cast(&tn) {
             Ok(Self::Code(Code(tn)))
         } else {
             Err(tn)
@@ -116,14 +121,11 @@ impl Emphasis {
 
 impl Link {
     /// get what this link is linking to
-    pub fn href(&self) -> &str {
+    pub fn href(&self) -> String {
         self.0
             .children()
-            .find(|c| matches!(c.node.kind(), NodeKind::Text(TextKind::Url)))
-            .map(|c| {
-                let span = c.node.span();
-                &self.0.tree.source()[span.start as usize..span.end as usize]
-            })
+            .find(|c| matches!(c.kind(), NodeKind::Text(TextKind::Url)))
+            .map(|c| c.text().to_string())
             .expect("invalid link")
     }
 
@@ -158,26 +160,26 @@ impl Code {
 
 impl Text {
     /// get the text content of this ast
-    pub fn text(&self) -> &str {
-        self.0.text()
+    pub fn text(&self) -> String {
+        self.0.text().to_string()
     }
 }
 
 impl UnicodeEmoji {
     /// get the text content of this ast
-    pub fn text(&self) -> &str {
-        self.0.text()
+    pub fn text(&self) -> String {
+        self.0.text().to_string()
     }
 }
 
 impl Mention {
     /// get the serialized text content of this mention
-    pub fn text(&self) -> &str {
-        self.0.text()
+    pub fn text(&self) -> String {
+        self.0.text().to_string()
     }
 
     pub fn parse(&self) -> MentionData {
-        let text = self.0.text();
+        let text = self.0.text().to_string();
         if text.starts_with("<@") && text.ends_with('>') {
             let uuid: Uuid = text[2..text.len() - 1]
                 .parse()
@@ -201,12 +203,12 @@ impl Mention {
 
 impl CustomEmoji {
     /// get the serialized text content of this custom emoji
-    pub fn text(&self) -> &str {
-        self.0.text()
+    pub fn text(&self) -> String {
+        self.0.text().to_string()
     }
 
     pub fn parse(&self) -> CustomEmojiData {
-        let text = self.0.text();
+        let text = self.0.text().to_string();
         let is_animated = text.starts_with("<a:");
         let parts: Vec<&str> = text[1..text.len() - 1].split(':').collect();
         let (name, id_str) = if is_animated {

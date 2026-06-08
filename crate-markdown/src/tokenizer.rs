@@ -20,7 +20,6 @@ pub struct Token {
 
 // TODO: verify that everything i need is here
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Logos)]
-#[repr(u8)]
 #[rustfmt::skip]
 pub enum TokenKind {
     // basic symbols
@@ -41,6 +40,7 @@ pub enum TokenKind {
     #[token(">")]         AngleClose,
     #[logos(text("```"))] Backtick3,
     #[token("`")]         Backtick,
+    // #[token("`+")]        Backtick(u16), // TODO: use this instead of Backtick/Backtick3?
     #[regex(r"\n")]       Newline,
     #[token(r"\")]        Backslash,
     #[logos(text("***"))] Asterisk3,
@@ -106,6 +106,12 @@ impl<'s> Tokenizer<'s> {
         })
     }
 
+    pub fn text(&self, span: Span) -> &str {
+        &self.source[span.start as usize..span.end as usize]
+    }
+
+    // TODO: remove? idk if i need this for incremental reparsing, maybe its good enough to tokenize the whole document on every edit?
+    #[cfg(any())]
     pub fn fast_forward(&mut self, bytes: usize) {
         self.offset += bytes;
         if self.offset < self.source.len() {
@@ -116,3 +122,48 @@ impl<'s> Tokenizer<'s> {
         }
     }
 }
+
+// PERF: maybe use ropes or something that handles edits better
+pub struct Source(pub(crate) String);
+
+impl Source {
+    /// apply an edit
+    pub fn new(source: &str) -> Self {
+        Self(source.to_string())
+    }
+
+    /// apply an edit
+    pub fn edit(&mut self, delete: Span, insert: &str) {
+        self.0
+            .replace_range(delete.start as usize..delete.end as usize, insert);
+    }
+}
+
+// impl logos::Source for Source {
+//     type Slice<'a>
+//     where
+//         Self: 'a;
+
+//     fn len(&self) -> usize {
+//         todo!()
+//     }
+
+//     fn read<'a, Chunk>(&'a self, offset: usize) -> Option<logos::source::Chunk>
+//     where
+//         logos::source::Chunk: logos::source::Chunk<'a>,
+//     {
+//         todo!()
+//     }
+
+//     fn slice(&self, range: std::ops::Range<usize>) -> Option<Self::Slice<'_>> {
+//         todo!()
+//     }
+
+//     unsafe fn slice_unchecked(&self, range: std::ops::Range<usize>) -> Self::Slice<'_> {
+//         todo!()
+//     }
+
+//     fn is_boundary(&self, index: usize) -> bool {
+//         todo!()
+//     }
+// }
