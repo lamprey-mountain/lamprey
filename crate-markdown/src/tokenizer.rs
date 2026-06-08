@@ -9,6 +9,7 @@ pub struct Tokenizer<'source> {
     source: &'source str,
     lexer: Lexer<'source, TokenKind>,
     offset: usize,
+    peeked: Option<Token>,
 }
 
 #[derive(Clone)]
@@ -76,33 +77,31 @@ impl<'s> Tokenizer<'s> {
             source,
             lexer: TokenKind::lexer(source),
             offset: 0,
+            peeked: None,
         }
     }
 
-    // PERF: dont clone lexer, store `peeked: Option<Token>` on Tokenizer
-    pub fn peek(&self) -> Option<Token> {
-        let mut cloned = self.lexer.clone();
-        cloned.next().map(|kind| {
-            let s = cloned.span();
-            Token {
-                kind: kind.unwrap_or(TokenKind::Error),
-                span: Span {
-                    start: (s.start + self.offset) as Len,
-                    end: (s.end + self.offset) as Len,
-                },
-            }
-        })
+    pub fn peek(&mut self) -> Option<Token> {
+        if self.peeked.is_none() {
+            self.peeked = self.next_token();
+        }
+        self.peeked.clone()
     }
 
     pub fn advance(&mut self) -> Option<Token> {
+        if let Some(token) = self.peeked.take() {
+            Some(token)
+        } else {
+            self.next_token()
+        }
+    }
+
+    fn next_token(&mut self) -> Option<Token> {
         self.lexer.next().map(|kind| {
             let s = self.lexer.span();
             Token {
                 kind: kind.unwrap_or(TokenKind::Error),
-                span: Span {
-                    start: (s.start + self.offset) as Len,
-                    end: (s.end + self.offset) as Len,
-                },
+                span: ((s.start + self.offset) as Len, (s.end + self.offset) as Len).into(),
             }
         })
     }
