@@ -1,8 +1,12 @@
-use crate::{parser::Parser, transform::StripEmoji};
+use crate::{parser::Parser, query::QueryableExt, transform::StripEmoji};
 
 #[test]
-fn parse_mention_ids() {
-    todo!()
+fn parse_mentions() {
+    let parser = Parser::new();
+    let source = "<@00000000-0000-0000-0000-000000000000> <&00000000-0000-0000-0000-000000000001> <#00000000-0000-0000-0000-000000000002> <@everyone>";
+    let parsed = parser.parse(source);
+    let mentions: Vec<_> = parsed.tree_clone().iter_mentions().collect();
+    assert_eq!(mentions.len(), 4);
 }
 
 #[test]
@@ -24,5 +28,10 @@ fn strip_emoji() {
 
 #[test]
 fn parse_links() {
-    todo!()
+    let parser = Parser::new();
+    let source = "<https://example.com> <not-a-url>";
+    let parsed = parser.parse(source);
+    let links: Vec<_> = parsed.tree_clone().iter_links().collect();
+    assert_eq!(links.len(), 1);
+    assert_eq!(links[0].href(), "https://example.com");
 }

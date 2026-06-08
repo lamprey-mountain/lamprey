@@ -10,27 +10,6 @@ pub use html::HtmlRenderer;
 pub use markdown::MarkdownRenderer;
 pub use plaintext::PlaintextRenderer;
 
-// TODO: move these to ast module?
-mod move_me_to_ast {
-    use crate::ast::inline::MentionData;
-
-    /// a link extracted from markdown
-    pub struct Link {
-        // href, text
-    }
-
-    /// a mention extracted from markdown
-    pub struct Mention<'a> {
-        pub text: &'a str,
-        pub kind: MentionData,
-    }
-
-    /// a markdown heading
-    pub struct Heading {
-        // TODO
-    }
-}
-
 mod refactor_these_types {
     use crate::prelude::*;
 
@@ -72,7 +51,6 @@ mod refactor_these_types {
     // }
 }
 
-pub use move_me_to_ast::*;
 pub use refactor_these_types::*;
 
 /// A renderer that converts a markdown syntax tree to a specific output format.
