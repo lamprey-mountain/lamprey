@@ -4669,9 +4669,12 @@ dependencies = [
  "symphonia",
  "thiserror 2.0.18",
  "tokio",
+ "tokio-stream",
  "tokio-tungstenite 0.27.0",
  "tracing",
+ "url",
  "uuid",
+ "yrs",
 ]
 
 [[package]]
@@ -10726,9 +10729,9 @@ dependencies = [
 
 [[package]]
 name = "yoke"
-version = "0.8.1"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72d6e5c6afb84d73944e5cedb052c4680d5657337201555f9f2a16b7406d4954"
+checksum = "709fe23a0424b6a435d82152b1bd3fdfb0833487d5fa90d05d42762a9891fef5"
 dependencies = [
  "stable_deref_trait",
  "yoke-derive",
@@ -10737,9 +10740,9 @@ dependencies = [
 
 [[package]]
 name = "yoke-derive"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b659052874eb698efe5b9e8cf382204678a0086ebf46982b79d6ca3182927e5d"
+checksum = "de844c262c8848816172cef550288e7dc6c7b7814b4ee56b3e1553f275f1858e"
 dependencies = [
  "proc-macro2",
  "quote",

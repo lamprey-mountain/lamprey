@@ -1,8 +1,11 @@
+//! route implementation for [`Http`]
+
 // TODO: somehow use routes from the common crate? maybe with macros?
 
 use anyhow::{Context, Result};
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::presence::Presence;
+use common::v1::types::server::ServerInfo;
 use common::v1::types::util::Time;
 use common::v1::types::voice::{
     Call, CallCreate, CallDeleteParams, CallPatch, RingEligibility, RingStart, RingStop,
@@ -18,76 +21,26 @@ use common::v1::types::{
     MessagePatch, MessageVerId, PermissionOverwriteSet, PinsReorder, PuppetCreate, Role,
     RoleCreate, RoleId, RoleMemberBulkPatch, RolePatch, RoleReorder, Room, RoomBan,
     RoomBanBulkCreate, RoomCreate, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut, RoomPatch,
-    SessionToken, ThreadMember, ThreadMemberPut, User, UserId, UserPatch, UserWithRelationship,
+    ThreadMember, ThreadMemberPut, User, UserId, UserPatch, UserWithRelationship,
 };
 use common::v1::types::{Message, SearchDlqId};
 use common::v1::types::{
     MessageCreate, MessageMove, RoomBanCreate, SuspendRequest, TransferOwnership, UserCreate,
 };
 use common::v2::types::media::{Media, MediaCreate, MediaCreated, MediaDoneParams};
-use headers::HeaderMapExt;
+// TODO: remove these types and methods that use them? backend-core is meant to be like common but for backend
 use lamprey_backend_core::types::admin::{
     AdminBroadcast, AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache,
     AdminPurgeCacheResponse, AdminRegisterUser, AdminWhisper, DlqEntry, SearchIndexStats,
 };
-use reqwest::{header::HeaderMap, StatusCode, Url};
+use reqwest::StatusCode;
 use serde_json::json;
 use tracing::error;
 use uuid::Uuid;
 
-use crate::consts::DEFAULT_API_URL;
-
-#[derive(Clone)]
-pub struct Http {
-    token: SessionToken,
-    base_url: Url,
-    client: reqwest::Client,
-}
+use crate::http::Http;
 
 impl Http {
-    pub fn new(token: SessionToken) -> Self {
-        let base_url = Url::parse(DEFAULT_API_URL).unwrap();
-        let mut h = HeaderMap::new();
-        h.typed_insert(headers::Authorization::bearer(&token.0).unwrap());
-        let client = reqwest::Client::builder()
-            .default_headers(h)
-            .build()
-            .unwrap();
-        Self {
-            token,
-            base_url,
-            client,
-        }
-    }
-
-    pub fn with_base_url(self, base_url: Url) -> Self {
-        let mut h = HeaderMap::new();
-        h.typed_insert(headers::Authorization::bearer(&self.token.0).unwrap());
-        let client = reqwest::Client::builder()
-            .default_headers(h)
-            .build()
-            .unwrap();
-        Self {
-            base_url,
-            client,
-            ..self
-        }
-    }
-
-    pub fn for_puppet(&self, id: UserId) -> Self {
-        let mut h = HeaderMap::new();
-        h.typed_insert(headers::Authorization::bearer(&self.token.0).unwrap());
-        h.insert("x-puppet-id", id.to_string().try_into().unwrap());
-        let client = reqwest::Client::builder()
-            .default_headers(h)
-            .build()
-            .unwrap();
-        Self {
-            client,
-            ..self.clone()
-        }
-    }
-
     pub async fn media_upload(
         &self,
         target: &MediaCreated,
@@ -124,7 +77,7 @@ impl Http {
         query: &PaginationQuery<ChannelId>,
     ) -> Result<PaginationResponse<Channel>> {
         let url = self
-            .base_url
+            .api_url()
             .join(&format!("/api/v1/channel/{channel_id}/thread"))?;
         let res = self.client.get(url).query(query).send().await?;
         let res = res.error_for_status()?;
@@ -141,7 +94,7 @@ impl Http {
         query: &PaginationQuery<ChannelId>,
     ) -> Result<PaginationResponse<Channel>> {
         let url = self
-            .base_url
+            .api_url()
             .join(&format!("/api/v1/room/{room_id}/channel"))?;
         let res = self.client.get(url).query(query).send().await?;
         let res = res.error_for_status()?;
@@ -158,7 +111,7 @@ impl Http {
         query: &PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let url = self
-            .base_url
+            .api_url()
             .join(&format!("/api/v1/channel/{channel_id}/message"))?;
         let res = self.client.get(url).query(query).send().await?;
         let res = res.error_for_status()?;
@@ -170,6 +123,9 @@ impl Http {
     }
 }
 
+// TODO: proc macro for implementing route
+// impl_endpoint!(Http, common::v1::routes::foo_bar);
+// use common::v1::routes::channel_create_room;
 macro_rules! route {
     ($method: ident $url:expr => $name:ident($($param:ident: $param_type:ty),*) -> $res:ty, $req:ty) => {
         impl Http {
@@ -178,7 +134,7 @@ macro_rules! route {
                 $($param: $param_type,)*
                 body: &$req,
             ) -> Result<$res> {
-                let url = self.base_url.join(&format!($url))?;
+                let url = self.api_url().join(&format!($url))?;
                 let res = self.client
                     .$method(url.clone())
                     .header("content-type", "application/json")
@@ -205,7 +161,7 @@ macro_rules! route {
                 &self,
                 $($param: $param_type),*
             ) -> Result<$res> {
-                let url = self.base_url.join(&format!($url))?;
+                let url = self.api_url().join(&format!($url))?;
                 let res = self.client
                     .$method(url.clone())
                     .header("content-type", "application/json")
@@ -233,7 +189,7 @@ macro_rules! route {
                 $($param: $param_type),*,
                 body: &$req,
             ) -> Result<()> {
-                let url = self.base_url.join(&format!($url))?;
+                let url = self.api_url().join(&format!($url))?;
                 let res = self.client
                     .$method(url)
                     .header("content-type", "application/json")
@@ -256,7 +212,7 @@ macro_rules! route {
                 &self,
                 $($param: $param_type),*,
             ) -> Result<()> {
-                let url = self.base_url.join(&format!($url))?;
+                let url = self.api_url().join(&format!($url))?;
                 let res = self.client
                     .$method(url)
                     .header("content-type", "application/json")
@@ -281,7 +237,7 @@ macro_rules! route {
                 $($param: $param_type,)*
                 $query_param: $query_type,
             ) -> Result<$res> {
-                let url = self.base_url.join(&format!($url))?;
+                let url = self.api_url().join(&format!($url))?;
                 let res = self.client
                     .$method(url.clone())
                     .query(&$query_param)
@@ -310,7 +266,7 @@ macro_rules! route {
                 $query_param1: $query_type1,
                 $query_param2: $query_type2,
             ) -> Result<$res> {
-                let url = self.base_url.join(&format!($url))?;
+                let url = self.api_url().join(&format!($url))?;
                 let res = self.client
                     .$method(url.clone())
                     .query(&$query_param1)
@@ -339,7 +295,7 @@ macro_rules! route {
                 $($param: $param_type,)*
                 $query_param: $query_type,
             ) -> Result<()> {
-                let url = self.base_url.join(&format!($url))?;
+                let url = self.api_url().join(&format!($url))?;
                 let res = self.client
                     .$method(url)
                     .query(&$query_param)
@@ -509,6 +465,9 @@ route!(get    "/api/v1/admin/search/stats"                      => admin_search_
 route!(get    "/api/v1/admin/search/dlq"                        => admin_search_dlq_list(_q: PaginationQuery<SearchDlqId>) -> PaginationResponse<DlqEntry>);
 route!(delete "/api/v1/admin/search/dlq/{id}"                   => admin_search_dlq_delete(id: SearchDlqId));
 
+// server routes
+route!(get    "/api/v1/server/@self"                            => server_info() -> ServerInfo);
+
 impl Http {
     /// Create a message with a custom timestamp (for bridge sync)
     pub async fn message_create_with_timestamp(
@@ -518,7 +477,7 @@ impl Http {
         timestamp: Time,
     ) -> Result<Message> {
         let url = self
-            .base_url
+            .api_url()
             .join(&format!("/api/v1/channel/{}/message", channel_id))?;
         let req = self
             .client

@@ -1,12 +1,6 @@
-#![allow(dead_code)] // TEMP
-
-use common::v1::types::SessionToken;
-use handler::ErasedHandler;
-use syncer::Syncer;
-
 mod cache;
-mod consts;
-mod handler;
+mod client;
+mod error;
 mod http;
 mod member_list;
 mod messages;
@@ -15,35 +9,12 @@ mod syncer;
 #[cfg(feature = "voice")]
 mod voice;
 
-pub use handler::EventHandler;
-pub use http::Http;
+#[cfg(feature = "document")]
+mod document;
 
-pub struct Client {
-    pub syncer: Syncer,
-    pub http: Http,
-}
+pub use client::{Client, ClientBuilder};
 
-impl Client {
-    pub fn new(token: SessionToken) -> Self {
-        Self {
-            http: Http::new(token.clone()),
-            syncer: Syncer::new(token),
-        }
-    }
-
-    // TODO: custom base url
-    // pub fn with_base_url(self, base_url: Url) -> Self {
-    //     Self {
-    //         base_url,
-    //         syncer: syncer.wi
-    //         ..self
-    //     }
-    // }
-
-    pub fn with_handler(self, handler: Box<dyn ErasedHandler>) -> Self {
-        Self {
-            syncer: self.syncer.with_handler(handler),
-            ..self
-        }
-    }
+pub(crate) mod prelude {
+    pub use crate::error::Error;
+    pub type Result<T> = ::core::result::Result<T, Error>;
 }
