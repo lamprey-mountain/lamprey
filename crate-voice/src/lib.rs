@@ -5,9 +5,6 @@ pub mod sfu;
 pub mod peer;
 pub mod util;
 
-// TODO: remove
-pub mod cascade;
-
 pub mod prelude {
     pub use crate::error::{Error, Result};
     pub use str0m::media::{Mid as SMid, Rid as SRid};
