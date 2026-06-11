@@ -639,6 +639,7 @@
         # minimal shell; building won't work, but its good enough to go in
         # and check/build without needing to build twemoji-spritesheets or
         # wasm-markdown
+        # TODO: add devShells.offline, make default use @lamprey/foo packages
         devShells.escape-hatch = craneLib.devShell {
           inputsFrom = [ backend ];
           packages = with pkgs; [nodejs pnpm];

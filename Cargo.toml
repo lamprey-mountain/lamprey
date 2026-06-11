@@ -1,23 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-  "crate-backend",
-  "crate-backend-core",
-  "crate-backend-data-postgres",
-  # "crate-backend-rest",
-  # "crate-backend-sync",
-  "crate-bot",
-  "crate-bridge", "crate-cli",
-  "crate-common",
-  "crate-hakari", "crate-markdown",
-  # "crate-macros",
-  "crate-media", "crate-script",
-  "crate-sdk", "crate-unfurl",
-  # "crate-unfurl",
-  "crate-voice",
-  "crate-voice-old",
   "scanner-malware",
-  # "crate-*",
+  "crate-*",
 ]
 
 [workspace.package]
@@ -36,6 +21,7 @@ opt-level = 0
 sqlx-macros.opt-level = 3
 async-trait.opt-level = 3
 image.opt-level = 3
+lamprey-macros.opt-level = 3
 
 [workspace.metadata.crane]
 name = "lamprey"

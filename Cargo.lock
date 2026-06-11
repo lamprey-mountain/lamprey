@@ -4324,6 +4324,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "lamprey-backend-rest"
+version = "0.1.1"
+dependencies = [
+ "axum",
+ "lamprey-backend-core",
+ "lamprey-common",
+ "lamprey-macros",
+ "serde",
+ "tower-http",
+ "tracing",
+ "url",
+ "utoipa",
+ "vergen-gix",
+]
+
+[[package]]
+name = "lamprey-backend-sync"
+version = "0.1.1"
+dependencies = [
+ "axum",
+ "lamprey-backend-core",
+ "lamprey-common",
+ "lamprey-macros",
+ "tokio",
+ "tracing",
+ "yrs",
+]
+
+[[package]]
 name = "lamprey-bot"
 version = "0.1.1"
 dependencies = [
@@ -4729,37 +4758,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
-]
-
-[[package]]
-name = "lamprey-voice-old"
-version = "0.1.1"
-dependencies = [
- "anyhow",
- "async-trait",
- "bytes",
- "dashmap 6.1.0",
- "fastrand",
- "figment",
- "futures-util",
- "lamprey-backend-core",
- "lamprey-common",
- "lamprey-hakari",
- "num_cpus",
- "quinn",
- "rand 0.10.1",
- "rcgen",
- "rustls 0.23.40",
- "serde",
- "serde_json",
- "socket2",
- "str0m",
- "systemstat",
- "thiserror 2.0.18",
- "tokio",
- "tokio-tungstenite 0.27.0",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
