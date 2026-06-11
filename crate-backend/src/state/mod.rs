@@ -23,6 +23,8 @@ use crate::{
 #[cfg(any())]
 mod queue;
 
+mod messaging;
+
 type BoxStream<T> = std::pin::Pin<Box<dyn Stream<Item = T> + Send>>;
 
 /// Internal broadcast envelope containing a message and optional nonce
@@ -432,6 +434,9 @@ impl Deref for ServerState {
 // ===== NEW TYPES =====
 // TODO: implement and use these
 
+// /// global state for the server
+// pub struct ServerState2(Arc<ServerStateInner2>);
+
 // struct ServerStateInner2 {
 //     /// config for this server
 //     config: Config,
@@ -448,14 +453,12 @@ impl Deref for ServerState {
 //     messaging: MessagingService,
 // }
 
-// pub struct ServerState2(Arc<ServerStateInner2>);
-
 // impl ServerState2 {
 //     pub async fn init_from_config(config: Config) -> Result<Self> {
 //         todo!()
 //     }
 
-//     pub fn new() -> Self {
+//     pub fn new(/* ... */) -> Self {
 //         let services = Arc::new_cyclic(|weak_services| {
 //             let inner = Arc::new(ServerStateInner2 {
 //                 config: todo!(),
@@ -499,64 +502,3 @@ impl Deref for ServerState {
 //         &self.0.messaging
 //     }
 // }
-
-/// broadcast a message
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Broadcast2 {
-    /// a sync message
-    Sync(Broadcast2Sync),
-
-    /// a sfu command
-    Sfu(SfuCommand),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Broadcast2Sync {
-    pub message: MessageSync,
-    pub nonce: Option<String>,
-}
-
-impl Broadcast2 {
-    pub fn sync(message: MessageSync) -> Broadcast2Sync {
-        todo!()
-    }
-}
-
-impl Broadcast2Sync {
-    pub fn with_nonce(self, s: String) -> Self {
-        todo!()
-    }
-}
-
-impl From<MessageSync> for Broadcast2 {
-    fn from(value: MessageSync) -> Self {
-        todo!()
-    }
-}
-
-impl From<Broadcast2Sync> for Broadcast2 {
-    fn from(value: Broadcast2Sync) -> Self {
-        todo!()
-    }
-}
-
-impl MessagingService {
-    /// send a message to everyone in a room
-    pub async fn broadcast_room(
-        &self,
-        room_id: RoomId,
-        broadcast: impl Into<Broadcast2>,
-    ) -> Result<()> {
-        todo!()
-    }
-
-    // pub async fn broadcast_channel
-    // pub async fn broadcast_user
-    // pub async fn broadcast_global
-    // async fn broadcast_inner
-
-    /// subscribe to everything
-    pub async fn subscribe(&self) -> Result<BoxStream<Broadcast2>> {
-        todo!()
-    }
-}
