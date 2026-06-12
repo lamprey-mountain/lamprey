@@ -181,7 +181,7 @@ pub struct ServerPingResponse {
     pub federated: bool,
 }
 
-/// lamprey mountain's well know response
+/// lamprey mountain's well known response
 ///
 /// response to `GET /.well-known/lamprey-mountain`
 #[derive(Debug, Clone)]
