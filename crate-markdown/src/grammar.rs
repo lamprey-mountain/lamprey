@@ -111,3 +111,21 @@ pub struct State(u16);
 //     /// contains one item if unambiguous
 //     stacks: Vec<Stack>,
 // }
+
+                    // self.builder.checkpoint();
+                    // self.builder.start_node_at(checkpoint, kind);
+
+// grammar! {
+//     rule emphasis = delimited(Asterisk1, "*", Inline::Emphasis);
+//     rule strong   = delimited(Asterisk2, "**", Inline::Strong);
+//     rule strike   = delimited(Tilde2, "~~", Inline::Strikethrough);
+//     rule spoiler  = delimited(Pipe2, "||", Inline::Spoiler);
+
+//     rule strong_em = delimited(Asterisk3, "***", wraps(Strong, Emphasis));
+
+//     rule code = fenced(Backticks(n), |n, m| n == m);
+// }
+
+// grammar! {
+//     rule emoji = Colon Text Colon Uuid
+// }

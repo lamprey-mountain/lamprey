@@ -1,8 +1,8 @@
 use rowan::{GreenNodeBuilder, NodeCache};
 
+use crate::lexer::{Lexer, Source};
 use crate::parser::config::ParserConfig;
 use crate::prelude::*;
-use crate::lexer::{Source, Lexer};
 use crate::transform::Transform;
 
 mod block;
@@ -73,7 +73,6 @@ impl Parsed {
     }
 
     /// apply an edit by replacing text
-    // TODO: wasm compat
     pub fn edit(&mut self, delete: Span, insert: &str) {
         self.source.edit(delete, insert);
         let ctx = ParseContext::new(&self.source, &mut self.cache);
@@ -101,9 +100,17 @@ impl Parsed {
 #[cfg(feature = "wasm")]
 #[wasm_bindgen]
 impl Parsed {
-    /// get the syntax tree
-    #[cfg_attr(feature = "wasm", wasm_bindgen(js_name = "tree"))]
-    pub fn js_tree(&self) -> JsValue {
+    // /// get the syntax tree
+    // #[cfg_attr(feature = "wasm", wasm_bindgen(js_name = "tree"))]
+    // pub fn js_tree(&self) -> JsValue {
+    //     todo!()
+    // }
+
+    /// apply an edit by replacing text
+    ///
+    /// delete the text between `delete_start`..`delete_end` and insert text `insert`
+    #[cfg_attr(feature = "wasm", wasm_bindgen(js_name = "edit"))]
+    pub fn js_edit(&mut self, delete_start: Len, delete_end: Len, insert: &str) {
         todo!()
     }
 }

@@ -55,7 +55,7 @@ impl<'a> ParseContext<'a> {
                     if tok.kind == TokenKind::Whitespace {
                         let text = self.tokenizer.text(tok.span).to_string();
                         self.builder
-                            .token(NodeKind::Text(TextKind::Text).into(), &text);
+                            .token(NodeKind::Text(TextKind::Syntax).into(), &text);
                         self.tokenizer.advance();
                     }
                 }
@@ -142,7 +142,7 @@ impl<'a> ParseContext<'a> {
                     if tok.kind == TokenKind::Whitespace {
                         let text = self.tokenizer.text(tok.span).to_string();
                         self.builder
-                            .token(NodeKind::Text(TextKind::Text).into(), &text);
+                            .token(NodeKind::Text(TextKind::Syntax).into(), &text);
                         self.tokenizer.advance();
                     }
                 }
@@ -292,6 +292,14 @@ impl<'a> ParseContext<'a> {
 
             self.builder
                 .start_node(NodeKind::Block(BlockKind::TableCell).into());
+
+            if let Some(tok) = self.tokenizer.peek() {
+                if tok.kind == TokenKind::Whitespace {
+                    let text = self.tokenizer.text(tok.span).to_string();
+                    self.builder.token(NodeKind::Text(TextKind::Syntax).into(), &text);
+                    self.tokenizer.advance();
+                }
+            }
 
             self.parse_inline(&|t| {
                 t.kind == TokenKind::Pipe

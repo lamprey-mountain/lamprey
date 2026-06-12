@@ -1,6 +1,11 @@
 use crate::ast::block::Header;
 use crate::ast::inline::{CustomEmoji, Link, Mention};
 use crate::prelude::*;
+use crate::query::decorations::DecorationGenerator;
+
+mod decorations;
+
+pub use decorations::{Decoration, DecorationKind};
 
 pub trait Queryable {
     // TEMP: i probably want some kind of visitor pattern, or something that makes transforms easier
@@ -13,6 +18,7 @@ impl Queryable for Ref<Tree> {
     }
 }
 
+// TODO: wasm support
 pub trait QueryableExt: Queryable {
     /// iterate over all links
     fn iter_links(&self) -> impl Iterator<Item = Link> {
@@ -38,10 +44,15 @@ pub trait QueryableExt: Queryable {
         self.get_root().descendants().filter_map(Header::cast)
     }
 
-    // /// iterate over all decorations
-    // // NOTE: maybe i want a more efficient api? see parser EditResponse struct
-    // // NOTE: i could also have `fn decorations(&self) -> &Decorations` to access resolved decos, unsure if js-wasm boundary overhead is too much though
-    // fn iter_decorations(&self) -> impl Iterator<Item = Decoration>;
+    /// iterate over some decorations
+    fn iter_decorations(&self, span: Option<Span>) -> impl Iterator<Item = Decoration> {
+        let root = self.get_root();
+        let gen = match span {
+            Some(span) => DecorationGenerator::new_span(root, span),
+            None => DecorationGenerator::new_full(root),
+        };
+        gen.generate().into_iter()
+    }
 }
 
 impl<T: Queryable + ?Sized> QueryableExt for T {}

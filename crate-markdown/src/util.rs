@@ -1,5 +1,7 @@
 //! various other useful types
 
+use rowan::TextRange;
+
 use crate::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -20,5 +22,20 @@ impl From<(Len, Len)> for Span {
             start: value.0,
             end: value.1,
         }
+    }
+}
+
+impl From<TextRange> for Span {
+    fn from(value: TextRange) -> Self {
+        Self {
+            start: u32::from(value.start()) as Len,
+            end: u32::from(value.end()) as Len,
+        }
+    }
+}
+
+impl From<Span> for TextRange {
+    fn from(value: Span) -> Self {
+        TextRange::new((value.start as u32).into(), (value.end as u32).into())
     }
 }

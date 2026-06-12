@@ -27,5 +27,6 @@ getrandom = { version = "0.4", features = ["wasm_js"] }
 
 [features]
 parallel = []
-default = ["dep:lamprey-common", "wasm"]
-wasm = ["dep:wasm-bindgen", "dep:serde", "dep:serde-wasm-bindgen"]
+serde = ["dep:serde"]
+default = ["dep:lamprey-common", "wasm", "serde"]
+wasm = ["dep:wasm-bindgen", "serde", "dep:serde-wasm-bindgen"]
