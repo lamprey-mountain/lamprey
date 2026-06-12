@@ -36,7 +36,12 @@ pub struct CustomEmojiData {
 }
 
 /// the kind of a mention
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+#[cfg_attr(
+    feature = "serde",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(tag = "type", content = "id")
+)]
 pub enum MentionData {
     User(UserId),
     Role(RoleId),

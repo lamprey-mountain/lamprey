@@ -1,6 +1,6 @@
 use crate::{
     ast::{
-        block::{Block, Document, ListKind},
+        block::{Block, Document},
         inline::{Inline, MentionData},
     },
     prelude::*,
@@ -45,7 +45,11 @@ impl PlaintextRenderer {
                 .map(|b| self.render_block(b))
                 .collect::<Vec<String>>()
                 .join("\n"),
-            Block::Codeblock(codeblock) => codeblock.syntax().text().to_string(),
+            Block::Codeblock(codeblock) => codeblock
+                .content()
+                .map(|i| self.render_inline(i))
+                .collect::<String>(),
+            // FIXME: prefix list items with bullets/numbers/checkboxes
             Block::List(list) => list
                 .items()
                 .map(|item| self.render_block(Block::ListItem(item)))

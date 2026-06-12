@@ -67,8 +67,10 @@ impl HtmlRenderer {
                 format!(
                     "<pre><code class=\"language-{}\">{}</code></pre>",
                     codeblock.language().unwrap_or_else(|| "text".to_string()),
-                    // TODO: render codeblock children since .text() doesnt handle escapes
-                    codeblock.syntax().text().to_string()
+                    codeblock
+                        .content()
+                        .map(|i| self.render_inline(i))
+                        .collect::<String>()
                 )
             }
             Block::List(list) => {

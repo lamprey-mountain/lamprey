@@ -137,11 +137,22 @@ impl Header {
 }
 
 impl Codeblock {
+    /// get the language tag for this code block
     pub fn language(&self) -> Option<String> {
         self.0
             .children_with_tokens()
             .find(|c| c.kind() == NodeKind::Text(TextKind::CodeblockLang))
             .map(|c| c.to_string())
+    }
+
+    /// iterate over the content of this code block
+    pub fn content<'a>(&'a self) -> impl Iterator<Item = Inline> + 'a {
+        self.0
+            .children_with_tokens()
+            .filter_map(|child| match child.kind() {
+                NodeKind::Text(TextKind::Syntax) | NodeKind::Text(TextKind::CodeblockLang) => None,
+                _ => Inline::cast(child),
+            })
     }
 }
 

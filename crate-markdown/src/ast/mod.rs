@@ -2,6 +2,9 @@ pub mod block;
 pub mod inline;
 pub mod table;
 
+#[cfg(feature = "serde")]
+pub mod serialized;
+
 pub use rowan::ast::AstNode;
 
 macro_rules! impl_ast {
