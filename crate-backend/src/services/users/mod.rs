@@ -98,6 +98,10 @@ impl ServiceUsers {
         Ok(out)
     }
 
+    // TODO
+    // /// lookup a user from a `Remote`
+    // pub async fn get_remote(&self, remote: Remote) -> Result<User> {}
+
     pub async fn invalidate(&self, user_id: UserId) {
         self.state.services().cache.user_invalidate(user_id).await
     }

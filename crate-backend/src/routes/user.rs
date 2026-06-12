@@ -242,7 +242,7 @@ async fn user_get(
     let target_user_id = user.id;
 
     let has_email_scope = match &auth.identity {
-        crate::routes::util::auth::AuthIdentity3::Session { scopes, .. } => {
+        crate::routes::util::auth_old::AuthIdentity3::Session { scopes, .. } => {
             scopes.iter().any(|s| s.implies(&Scope::Email))
         }
         _ => false,

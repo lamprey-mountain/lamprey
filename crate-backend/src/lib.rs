@@ -13,3 +13,10 @@ pub mod types;
 
 pub use error::{Error, Result};
 pub use state::{ServerState, ServerStateInner};
+
+pub(crate) mod prelude {
+    pub use bytes::Bytes;
+    pub use lamprey_backend_core::prelude::*;
+
+    pub type CoreResult<T, E> = ::core::result::Result<T, E>;
+}

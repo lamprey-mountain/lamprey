@@ -1,6 +1,10 @@
-use crate::Result;
-use common::v1::types::{voice::messages::SfuCommand, MessageSync};
+use crate::{state::MessageBroadcastInner, Result};
+use common::v1::types::{voice::messages::SfuCommand, MessageSync, RoomId};
+use futures::Stream;
 use serde::{Deserialize, Serialize};
+use tokio::sync::broadcast::Sender;
+
+type BoxStream<T> = std::pin::Pin<Box<dyn Stream<Item = T> + Send>>;
 
 /// a message that can be broadcast
 #[derive(Debug, Clone, Serialize, Deserialize)]

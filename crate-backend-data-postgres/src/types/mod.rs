@@ -7,12 +7,6 @@ pub use permission::*;
 // Pagination types - re-export from common
 pub use common::v1::types::{PaginationDirection, PaginationQuery, PaginationResponse};
 
-// ID types - re-export from common
-// TODO: remove these
-pub use common::v1::types::{
-    ChannelId, MessageId, MessageVerId, RoleId, RoomId, SessionId, SessionToken, UserId,
-};
-
 // Pagination wrapper
 pub use crate::data::postgres::util::Pagination;
 

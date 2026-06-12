@@ -146,7 +146,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
             use ::axum::response::IntoResponse as _;
             use ::axum::extract::FromRequest;
 
-            let __extractor = crate::routes::util::body::UniversalExtractor::<#request_type_path>::from_request(
+            let __extractor = crate::routes::util::extract::UniversalExtractor::<#request_type_path>::from_request(
                 __raw_req,
                 &__state,
             )

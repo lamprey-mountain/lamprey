@@ -230,3 +230,17 @@ impl FromStr for SessionType {
         }
     }
 }
+
+impl SessionImprint {
+    /// create a new imprint with last_seen_at set to now
+    pub fn new() -> Self {
+        Self {
+            last_seen_at: Time::now_utc(),
+            ip_addr: None,
+            country_code: None,
+            country_name: None,
+            city_name: None,
+            user_agent: None,
+        }
+    }
+}

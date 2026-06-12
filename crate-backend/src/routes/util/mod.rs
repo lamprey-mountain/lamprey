@@ -17,26 +17,35 @@ use uuid::Uuid;
 use crate::{error::Error, services::federation::signing::ValidatedKeyAlgo, ServerState};
 
 pub mod audit;
+pub mod audit_old; // TODO: remove
 pub mod auth;
-pub mod body;
+pub mod auth_old; // TODO: remove
+pub mod extract;
+pub mod headers;
+pub mod multipart;
 pub mod script_http;
 pub mod signing;
 
-pub use audit::audit_log_middleware;
-pub use auth::{Auth, Auth3, AuthRelaxed2};
+pub use audit_old::audit_log_middleware;
+pub use auth_old::{Auth, Auth3, AuthRelaxed2};
 
+// TODO: remove
 /// extract the X-Reason header
 pub struct HeaderReason(pub Option<String>);
 
+// TODO: remove
 /// extract the Idempotency-Key header
 pub struct HeaderIdempotencyKey(pub Option<String>);
 
+// TODO: remove
 /// extract the X-Puppet-Id header
 pub struct HeaderPuppetId(pub Option<UserId>);
 
+// TODO: remove
 /// extract the X-Timestamp header
 pub struct HeaderTimestamp(pub Option<Time>);
 
+// TODO: remove
 /// extract caching http headers
 pub struct HeaderCache {
     if_none_match: Option<HeaderValue>,

@@ -25,7 +25,7 @@ use common::{
 use common::{
     v1::types::{MessageSync, SessionId},
     v2::types::media::{
-        Media as MediaV2, MediaCreate, MediaCreateSource, MediaMetadata, MediaScan, MediaStatus,
+        Media, MediaCreate, MediaCreateSource, MediaMetadata, MediaScan, MediaStatus,
     },
 };
 use dashmap::DashMap;
@@ -38,12 +38,13 @@ use url::Url;
 
 use crate::{
     error::{Error, Result},
-    routes::util::body::MultipartFiles,
+    routes::util::multipart::MultipartFiles,
     ServerStateInner,
 };
 
 mod ffmpeg;
 mod ffprobe;
+mod import;
 
 pub struct MediaUpload {
     pub create: MediaCreate,
@@ -103,6 +104,7 @@ impl ServiceMedia {
         }
     }
 
+    // TODO: automatically expire without background task via tokio timer
     pub fn start_background_tasks(&self) {
         let uploads = self.uploads.clone();
         tokio::spawn(async move {
@@ -166,7 +168,7 @@ impl ServiceMedia {
             }
         };
 
-        let media = MediaV2 {
+        let media = Media {
             version_id: MediaVerId::from(media_id.into_inner()),
             id: media_id,
             status: MediaStatus::Transferring,
@@ -197,11 +199,11 @@ impl ServiceMedia {
         Ok(())
     }
 
-    pub async fn get(&self, media_id: MediaId) -> Result<MediaV2> {
+    pub async fn get(&self, media_id: MediaId) -> Result<Media> {
         self.state.data().media_select(media_id).await
     }
 
-    pub async fn get_many(&self, media_ids: &[MediaId]) -> Result<Vec<MediaV2>> {
+    pub async fn get_many(&self, media_ids: &[MediaId]) -> Result<Vec<Media>> {
         let mut results = Vec::with_capacity(media_ids.len());
         for id in media_ids {
             results.push(self.get(*id).await?);
@@ -343,7 +345,7 @@ impl ServiceMedia {
         user_id: UserId,
         filename: &str,
         session_id: Option<SessionId>,
-    ) -> Result<MediaV2> {
+    ) -> Result<Media> {
         let _guard = ProcessNotifyGuard {
             media_id,
             processing: self.processing.clone(),
@@ -362,7 +364,7 @@ impl ServiceMedia {
         user_id: UserId,
         filename: &str,
         session_id: Option<SessionId>,
-    ) -> Result<MediaV2> {
+    ) -> Result<Media> {
         debug!("processing upload");
 
         let create = up.create;
@@ -375,7 +377,7 @@ impl ServiceMedia {
         };
 
         trace!("inserting processing status to db");
-        let media_processing = MediaV2 {
+        let media_processing = Media {
             version_id: MediaVerId::new(),
             id: media_id,
             status: MediaStatus::Processing,
@@ -488,7 +490,7 @@ impl ServiceMedia {
         trace!("scanning media");
         let scans = self.scan_media(&p).await;
 
-        let mut media = MediaV2 {
+        let mut media = Media {
             version_id: MediaVerId::new(),
             id: media_id,
             status: MediaStatus::Uploaded,
@@ -565,13 +567,13 @@ impl ServiceMedia {
     }
 
     /// import media from a MediaReference
-    // TODO: use this for all media hadling
+    // TODO: use this for all media handling
     pub async fn import_from_reference(
         &self,
         user_id: UserId,
         media_ref: MediaReference,
         files: &MultipartFiles,
-    ) -> Result<MediaV2> {
+    ) -> Result<Media> {
         match media_ref {
             MediaReference::Media { media_id } => self
                 .state
@@ -627,7 +629,7 @@ impl ServiceMedia {
         }
     }
 
-    pub async fn import_from_url(&self, user_id: UserId, json: MediaCreate) -> Result<MediaV2> {
+    pub async fn import_from_url(&self, user_id: UserId, json: MediaCreate) -> Result<Media> {
         self.import_from_url_with_max_size(user_id, json, self.state.config.media.max_size)
             .await
     }
@@ -637,7 +639,7 @@ impl ServiceMedia {
         user_id: UserId,
         json: MediaCreate,
         max_size: u64,
-    ) -> Result<MediaV2> {
+    ) -> Result<Media> {
         let (_filename, size, source_url) = match &json.source {
             MediaCreateSource::Upload { .. } => unreachable!(),
             MediaCreateSource::Download {
@@ -670,7 +672,7 @@ impl ServiceMedia {
         res: reqwest::Response,
         max_size: u64,
         session_id: Option<SessionId>,
-    ) -> Result<MediaV2> {
+    ) -> Result<Media> {
         let media_id = MediaId::new();
         self.create_upload(media_id, user_id, json.clone(), None)
             .await?;
@@ -686,7 +688,7 @@ impl ServiceMedia {
         res: reqwest::Response,
         max_size: u64,
         session_id: Option<SessionId>,
-    ) -> Result<MediaV2> {
+    ) -> Result<Media> {
         let (filename, size, source_url) = match &json.source {
             MediaCreateSource::Upload { .. } => unreachable!(),
             MediaCreateSource::Download {
@@ -772,7 +774,7 @@ impl ServiceMedia {
         user_id: UserId,
         json: MediaCreate,
         bytes: bytes::Bytes,
-    ) -> Result<MediaV2> {
+    ) -> Result<Media> {
         let max_size = self.state.config.media.max_size;
         let filename = match &json.source {
             MediaCreateSource::Upload { filename, .. } => filename,
@@ -832,7 +834,7 @@ impl ServiceMedia {
         user_id: UserId,
         remote: Remote,
         cdn_url: Url,
-    ) -> Result<MediaV2> {
+    ) -> Result<Media> {
         if let Some(media) = self
             .state
             .data()

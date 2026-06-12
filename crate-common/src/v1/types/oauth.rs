@@ -134,10 +134,15 @@ pub struct OauthIntrospectResponse {
 }
 
 /// an oauth scope
+// TODO: use strum for this
+// TODO: remove "implied scopes"?
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(rename_all = "lowercase")
+)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(rename_all = "lowercase"))]
 pub enum Scope {
     /// basic user profle information
     ///

@@ -13,7 +13,7 @@ use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::Result;
-use crate::routes::util::auth::Auth3;
+use crate::routes::util::auth_old::Auth3;
 use crate::{routes2, Error, ServerState};
 
 /// Server keys get

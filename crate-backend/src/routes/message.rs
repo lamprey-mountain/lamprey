@@ -13,7 +13,7 @@ use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
-use crate::routes::util::body::UniversalExtractor;
+use crate::routes::util::extract::UniversalExtractor;
 use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
 use crate::routes2;
 use crate::types::{DbMessageCreate, MessageSync, Permission};
@@ -23,20 +23,18 @@ use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 /// Message create
 #[handler(routes::message_create)]
 async fn message_create(
-    auth: Auth,
     State(s): State<Arc<ServerState>>,
     req: UniversalExtractor<routes::message_create::Request>,
 ) -> Result<impl IntoResponse> {
-    let req = req.into_inner();
-
-    auth.user.ensure_unsuspended()?;
-    auth.ensure_scopes(&[Scope::Full])?;
+    let user = req.auth.ensure_user()?;
+    user.ensure_unsuspended()?;
+    req.auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
-    let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
+    let chan = srv.channels.get(req.body.channel_id, Some(user.id)).await?;
     chan.ensure_has_text()?;
 
-    let header_timestamp = req.timestamp.and_then(|secs| {
+    let header_timestamp = req.body.timestamp.and_then(|secs| {
         time::OffsetDateTime::from_unix_timestamp(secs)
             .ok()
             .map(Time::from)
@@ -45,10 +43,10 @@ async fn message_create(
     let message = srv
         .messages
         .create(
-            req.channel_id,
+            req.body.channel_id,
             &auth,
-            req.idempotency_key,
-            req.message,
+            req.body.idempotency_key,
+            req.body.message,
             header_timestamp,
         )
         .await?;
@@ -56,16 +54,20 @@ async fn message_create(
     // automatically ack the channel for the user who sent the message
     let mut data = s.data();
     data.unread_ack(
-        auth.user.id,
-        req.channel_id,
+        user.id,
+        req.body.channel_id,
         message.id,
         message.latest_version.version_id,
         Some(0),
     )
     .await?;
     srv.channels
-        .invalidate_user(req.channel_id, auth.user.id)
+        .invalidate_user(req.body.channel_id, auth.user.id)
         .await;
+
+    // Ok(routes::message_create::Response {
+    //     message,
+    // })
 
     Ok((StatusCode::CREATED, Json(message)))
 }

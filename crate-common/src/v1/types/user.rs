@@ -413,4 +413,9 @@ impl User {
     pub fn can_friend(&self) -> bool {
         self.webhook.is_none() && !self.bot && self.puppet.is_none()
     }
+
+    /// whether auth state can be updated for this user
+    pub fn can_update_auth(&self) -> bool {
+        self.webhook.is_none() && !self.bot && self.puppet.is_none() && self.remote.is_none()
+    }
 }
