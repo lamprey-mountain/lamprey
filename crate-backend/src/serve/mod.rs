@@ -277,7 +277,7 @@ pub fn create_router(state: Arc<ServerState>) -> Router {
         .layer(cors())
         .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
         .layer(TraceLayer::new_for_http())
-        .layer(middleware::from_fn(routes::util::audit_log_middleware))
+        .layer(middleware::from_fn_with_state(Arc::clone(&state), routes::util::audit_log_middleware))
         .layer(CatchPanicLayer::new())
         .layer(PropagateHeaderLayer::new(HeaderName::from_static(
             "x-trace-id",

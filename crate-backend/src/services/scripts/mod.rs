@@ -89,7 +89,8 @@ impl ServiceScripts {
         media_id: MediaId,
         format: RedexFormat,
     ) -> Result<Box<dyn Executor>> {
-        let bytes = self.state.services().media.download(media_id).await?;
+        let item = self.state.services().media.get(media_id).await?;
+        let bytes = item.download_bytes().await?;
         let loaded = match format {
             RedexFormat::Javascript => {
                 let source = std::str::from_utf8(&bytes)?;
@@ -222,10 +223,9 @@ impl ServiceScripts {
         dbg!(&script.status);
         // TODO: verify the script status is Valid? for `spawn` but not `process`.
 
-        let bytes = srv
-            .media
-            .download(script.latest_version.location.media_id().unwrap())
-            .await?;
+        let media_id = script.latest_version.location.media_id().unwrap();
+        let item = srv.media.get(media_id).await?;
+        let bytes = item.download_bytes().await?;
 
         let loaded = match script.latest_version.format {
             RedexFormat::Javascript => {

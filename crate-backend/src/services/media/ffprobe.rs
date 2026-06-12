@@ -5,20 +5,20 @@ use tokio::process::Command;
 
 use crate::error::{Error, Result};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct Metadata {
     pub streams: Vec<Stream>,
     pub format: Format,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct Format {
     pub duration: Option<String>,
     #[serde(default)]
     pub tags: HashMap<String, String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Stream {
     pub index: u64,
     pub codec_name: Option<String>,
@@ -30,7 +30,7 @@ pub struct Stream {
     pub tags: HashMap<String, String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Disposition {
     pub default: u8,
     pub attached_pic: u8,

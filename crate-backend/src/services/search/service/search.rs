@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use common::v2::types::media::Media;
 use futures::stream::{FuturesUnordered, StreamExt};
 use tracing::trace;
 
@@ -345,6 +346,7 @@ impl ServiceSearch {
             srv.media.get_many(&media_ids).await?
         };
 
+        let media: Vec<Media> = media.iter().map(|m| (*m.media()).clone()).collect();
         let user_ids: Vec<UserId> = media.iter().filter_map(|m| m.user_id).collect();
         let users = if user_ids.is_empty() {
             vec![]

@@ -6,7 +6,6 @@ use crate::{
 };
 use axum::extract::FromRequestParts;
 use common::v1::types::{
-    error::ErrorCode,
     federation::Hostname,
     ids::{SERVER_TOKEN_SESSION_ID, SERVER_USER_ID},
     oauth::{Scope, Scopes},
@@ -19,7 +18,7 @@ pub struct Auth4 {
 }
 
 #[derive(Debug)]
-enum Identity {
+pub enum Identity {
     /// a user's session
     User {
         user: User,
@@ -49,6 +48,10 @@ enum Identity {
 }
 
 impl Auth4 {
+    pub fn identity(&self) -> &Identity {
+        &self.identity
+    }
+
     /// get the acting user
     ///
     /// for puppet/server, returns the puppeted user

@@ -14,10 +14,11 @@ use headers::authorization::Bearer;
 use headers::{Authorization, HeaderMapExt};
 use http::request::Parts;
 
+use crate::routes::util::audit::AuditTxnSlot as AuditLogSlot;
 use crate::routes::util::audit_old::AuditLoggerTransaction;
 use crate::routes::util::{FederationIdentity, HeaderPuppetId, HeaderReason};
-use crate::Error;
-use crate::{routes::util::audit_old::AuditLogSlot, ServerState};
+use crate::ServerState;
+use crate::{Error, ServerStateInner};
 
 /// Empty scopes for Server/Public identities
 static SCOPES_EMPTY: std::sync::LazyLock<Scopes> = std::sync::LazyLock::new(Scopes::default);
@@ -46,7 +47,7 @@ pub struct Auth {
     pub audit_log_slot: Option<AuditLogSlot>,
 
     /// a reference to the server state
-    pub s: Arc<ServerState>,
+    pub s: Arc<ServerStateInner>,
 }
 
 #[derive(Clone)]
@@ -68,7 +69,7 @@ pub struct Auth2 {
     pub identity: AuthIdentity,
     pub reason: Option<String>,
     pub audit_log_slot: Option<AuditLogSlot>,
-    pub s: Arc<ServerState>,
+    pub s: Arc<ServerStateInner>,
 }
 
 #[derive(Clone)]
@@ -101,7 +102,7 @@ pub struct Auth3 {
     pub identity: AuthIdentity3,
     pub reason: Option<String>,
     pub audit_log_slot: Option<AuditLogSlot>,
-    pub s: Arc<ServerState>,
+    pub s: Arc<ServerStateInner>,
 }
 
 impl Auth3 {
@@ -290,7 +291,7 @@ impl FromRequestParts<Arc<ServerState>> for Auth3 {
                 },
                 reason: HeaderReason::from_request_parts(parts, s).await?.0,
                 audit_log_slot: parts.extensions.get::<AuditLogSlot>().cloned(),
-                s: Arc::clone(s),
+                s: Arc::clone(&s.inner),
             });
         }
 
@@ -298,7 +299,7 @@ impl FromRequestParts<Arc<ServerState>> for Auth3 {
             identity: AuthIdentity3::Public,
             reason: HeaderReason::from_request_parts(parts, s).await?.0,
             audit_log_slot: parts.extensions.get::<AuditLogSlot>().cloned(),
-            s: Arc::clone(s),
+            s: Arc::clone(&s.inner),
         })
     }
 }
@@ -356,7 +357,7 @@ pub struct Auth2Relaxed {
     pub identity: Option<AuthIdentity>,
     pub reason: Option<String>,
     pub audit_log_slot: Option<AuditLogSlot>,
-    pub s: Arc<ServerState>,
+    pub s: Arc<ServerStateInner>,
 }
 
 impl Auth2Relaxed {
@@ -417,7 +418,7 @@ impl FromRequestParts<Arc<ServerState>> for Auth2Relaxed {
                 }),
                 reason: HeaderReason::from_request_parts(parts, s).await?.0,
                 audit_log_slot: parts.extensions.get::<AuditLogSlot>().cloned(),
-                s: Arc::clone(s),
+                s: Arc::clone(&s.inner),
             });
         }
 
@@ -425,7 +426,7 @@ impl FromRequestParts<Arc<ServerState>> for Auth2Relaxed {
             identity: None,
             reason: HeaderReason::from_request_parts(parts, s).await?.0,
             audit_log_slot: parts.extensions.get::<AuditLogSlot>().cloned(),
-            s: Arc::clone(s),
+            s: Arc::clone(&s.inner),
         })
     }
 }
@@ -487,7 +488,7 @@ pub struct AuthRelaxed2 {
     pub audit_log_slot: Option<AuditLogSlot>,
 
     /// a reference to the server state
-    pub s: Arc<ServerState>,
+    pub s: Arc<ServerStateInner>,
 }
 
 impl AuthRelaxed2 {
@@ -577,7 +578,7 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
                 scopes: Scopes(vec![Scope::Full]),
                 reason: HeaderReason::from_request_parts(parts, s).await?.0,
                 audit_log_slot: parts.extensions.get::<AuditLogSlot>().cloned(),
-                s: Arc::clone(s),
+                s: Arc::clone(&s.inner),
             });
         }
 
@@ -737,7 +738,7 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
             scopes,
             reason: reason.0,
             audit_log_slot,
-            s: Arc::clone(s),
+            s: Arc::clone(&s.inner),
         })
     }
 }

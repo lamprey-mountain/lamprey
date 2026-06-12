@@ -104,6 +104,7 @@ serde_path_to_error = "0.1.20"
 multer = "3.1.0"
 backtrace-on-stack-overflow = "0.3.0"
 maxminddb = "0.28.1"
+tokio-util = { version = "0.7.18", features = ["compat"] }
 # lamprey-backend-rest = { version = "0.1.1", path = "../crate-backend-rest" }
 # lamprey-backend-sync = { version = "0.1.1", path = "../crate-backend-sync" }
 

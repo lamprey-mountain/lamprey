@@ -1,62 +1,46 @@
-use std::cmp::Ordering;
 use std::sync::Arc;
 
 use axum::{
     body::Body,
-    extract::{Multipart, Path, State},
+    extract::{Path, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing, Json,
 };
+use common::v1::routes;
+use common::v2::types::media::{MediaCreateSource, MediaCreated};
 use common::{
     v1::types::error::{ApiError, ErrorCode},
-    v1::types::{application::Scope, sync::MessageSync, Permission, SERVER_ROOM_ID},
-};
-use common::{
-    v1::types::search::MediaSearchRequest,
-    v2::types::media::{
-        Media, MediaClone, MediaCreate, MediaCreateSource, MediaCreated, MediaDirectParams,
-        MediaDoneParams, MediaPatch, MediaSearch,
-    },
+    v1::types::{application::Scope, Permission, SERVER_ROOM_ID},
 };
 use futures_util::StreamExt;
-use tokio::io::AsyncWriteExt;
-use tracing::{debug, error};
-use utoipa_axum::{router::OpenApiRouter, routes};
+use lamprey_macros::handler;
+use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
-use crate::types::MediaId;
 use crate::ServerState;
 use crate::{
     error::{Error, Result},
+    routes2,
     services::search::SearchMediaVisibility,
 };
+use crate::{services::media::Import, types::MediaId};
 
 use super::util::Auth;
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
-/// Media create
-///
-/// Create a new url to upload media to. Use the media upload endpoint for
-/// actually uploading media. Media not referenced/used in other api calls will
-/// be removed after a period of time.
-#[utoipa::path(
-    post,
-    path = "/media",
-    tags = ["media", "badge.scope.full"],
-    request_body = MediaCreate,
-    responses(
-        (status = StatusCode::CREATED, description = "Create media success", body = MediaCreated)
-    )
-)]
+#[handler(routes::media_create)]
 async fn media_create(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<MediaCreate>,
+    req: routes::media_create::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    json.validate()?;
+    req.body.validate()?;
+
+    let srv = s.services();
+    let json = req.body;
     match &json.source {
         MediaCreateSource::Upload { size, .. } => {
             if *size > Some(s.config.media.max_size) {
@@ -64,10 +48,8 @@ async fn media_create(
             }
 
             let media_id = MediaId::new();
-            let srv = s.services();
-            srv.media
-                .create_upload(media_id, auth.user.id, json.clone().into(), None)
-                .await?;
+            let import = Import::new_with_id(media_id, auth.user.id).merge(json.clone());
+            srv.media.import_from_upload(import).await?;
             let upload_url = Some(
                 s.config()
                     .api_url
@@ -84,20 +66,22 @@ async fn media_create(
             res_headers.insert("upload-offset", 0.into());
             Ok((StatusCode::CREATED, res_headers, Json(res)))
         }
-        MediaCreateSource::Download { size, .. } => {
+        MediaCreateSource::Download {
+            size, source_url, ..
+        } => {
             if size.is_some_and(|sz| sz > s.config.media.max_size) {
                 return Err(Error::TooBig);
             }
 
-            let srv = s.services();
-            let media = srv
-                .media
-                .import_from_url(auth.user.id, json.clone().into())
-                .await?;
+            let media_id = MediaId::new();
+            let import = Import::new_with_id(media_id, auth.user.id).merge(json.clone());
+            srv.media.import_from_url(import, source_url).await?;
             let mut headers = HeaderMap::new();
-            headers.insert("content-length", media.size.into());
+            if let Some(sz) = size {
+                headers.insert("content-length", (*sz).into());
+            }
             let res = MediaCreated {
-                media_id: media.id,
+                media_id,
                 upload_url: None,
             };
             Ok((StatusCode::CREATED, headers, Json(res)))
@@ -105,167 +89,102 @@ async fn media_create(
     }
 }
 
-/// Media patch
-///
-/// Edit properties about some piece of media
-#[utoipa::path(
-    patch,
-    path = "/media/{media_id}",
-    tags = ["media", "badge.scope.full"],
-    params(
-        ("media_id" = MediaId, Path, description = "Media id"),
-    ),
-    request_body = MediaPatch,
-    responses((status = OK, body = Media, description = "Success")),
-)]
+#[handler(routes::media_patch)]
 async fn media_patch(
-    Path(media_id): Path<MediaId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<MediaPatch>,
+    req: routes::media_patch::Request,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    json.validate()?;
+    req.body.validate()?;
 
-    let media = s.data().media_select(media_id).await?;
-    if media.deleted_at.is_some() {
-        return Err(Error::ApiError(ApiError::from_code(
-            ErrorCode::UnknownMedia,
-        )));
-    }
+    let item = s
+        .services()
+        .media
+        .patch(auth.user.id, req.media_id, req.body)
+        .await?;
 
-    if media.user_id != Some(auth.user.id) {
-        // NOTE: should i return UnknownMedia here to prevent leaking info?
-        return Err(Error::MissingPermissions);
-    }
-
-    let should_strip_exif = json.strip_exif == Some(true);
-
-    s.data().media_update(media_id, json).await?;
-
-    if should_strip_exif {
-        s.services().media.strip_exif(media_id).await?;
-    }
-
-    let media = s.data().media_select(media_id).await?;
-    s.broadcast(MessageSync::MediaUpdate {
-        media: media.clone(),
-    })?;
-
-    Ok(Json(media))
+    Ok(Json(item.media()))
 }
 
-/// Media done
-///
-/// finishes a media upload and begins processing
-#[utoipa::path(
-    put,
-    path = "/media/{media_id}/done",
-    tags = ["media", "badge.scope.full"],
-    params(("media_id", description = "Media id")),
-    request_body = MediaDoneParams,
-    responses(
-        (status = OK, body = Media, description = "Success"),
-        (status = ACCEPTED, description = "Processing in background"),
-    ),
-)]
+#[handler(routes::media_done)]
 async fn media_done(
-    Path(media_id): Path<MediaId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(params): Json<MediaDoneParams>,
+    req: routes::media_done::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
 
-    if let Some(mut up) = s.services().media.uploads.get_mut(&media_id) {
-        if up.user_id != auth.user.id {
+    let srv = s.services();
+    let mut item = srv.media.upload_done(req.media_id).await?;
+    let media = item.media();
+
+    // FIXME: get FINAL uploaded size, not the size the user provided
+    let mut headers = HeaderMap::new();
+    headers.insert("upload-offset", media.size.into());
+    headers.insert("upload-length", media.size.into());
+
+    if req.body.process_async {
+        Ok((StatusCode::ACCEPTED, headers, Json(None)))
+    } else {
+        let media = item.ready().await;
+        Ok((StatusCode::OK, headers, Json(Some(media))))
+    }
+}
+
+#[handler(routes::media_get)]
+async fn media_get(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::media_get::Request,
+) -> Result<impl IntoResponse> {
+    let item = s.services().media.get(req.media_id).await?;
+    let media = item.media();
+
+    if media.deleted_at.is_some() {
+        let perms = s
+            .services()
+            .perms
+            .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+            .await?;
+        if !perms.has(Permission::Admin) {
             return Err(Error::ApiError(ApiError::from_code(
                 ErrorCode::UnknownMedia,
             )));
         }
-        let user_id = up.user_id;
-
-        let source_size = up
-            .create
-            .source
-            .size()
-            .expect("can only patch source upload");
-        match up.current_size.cmp(&source_size) {
-            Ordering::Greater => {
-                s.services().media.uploads.remove(&media_id);
-                return Err(Error::TooBig);
-            }
-            Ordering::Equal => {
-                up.temp_writer.flush().await?;
-                drop(up);
-                let (_, up) = s
-                    .services()
-                    .media
-                    .uploads
-                    .remove(&media_id)
-                    .expect("it was there a few milliseconds ago");
-                let filename = match &up.create.source {
-                    MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
-                    MediaCreateSource::Download { .. } => {
-                        panic!("can only patch upload")
-                    }
-                };
-
-                if params.process_async {
-                    let state = s.clone();
-                    let session_id = auth.session.id;
-                    let mut headers = HeaderMap::new();
-                    headers.insert("upload-offset", source_size.into());
-                    headers.insert("upload-length", source_size.into());
-                    tokio::spawn(async move {
-                        match state
-                            .services()
-                            .media
-                            .process_upload(up, media_id, user_id, &filename, Some(session_id))
-                            .await
-                        {
-                            Ok(_media) => {
-                                debug!("finished processing media asynchronously");
-                            }
-                            Err(e) => {
-                                error!("failed to process media asynchronously: {}", e);
-                            }
-                        }
-                    });
-                    Ok((StatusCode::ACCEPTED, headers, Json(None)))
-                } else {
-                    let media = s
-                        .services()
-                        .media
-                        .process_upload(up, media_id, auth.user.id, &filename, None)
-                        .await?;
-                    let mut headers = HeaderMap::new();
-                    headers.insert("upload-offset", media.size.into());
-                    headers.insert("upload-length", media.size.into());
-                    Ok((StatusCode::OK, headers, Json(Some(media))))
-                }
-            }
-            Ordering::Less => {
-                let mut headers = HeaderMap::new();
-                headers.insert("upload-offset", up.current_size.into());
-                headers.insert("upload-length", source_size.into());
-                drop(up);
-                Err(Error::BadStatic("incomplete upload"))
-            }
-        }
-    } else {
-        if let Some(notify) = s.services().media.processing.get(&media_id) {
-            let n = notify.clone();
-            drop(notify);
-            n.notified().await;
-        }
-        let media = s.data().media_select(media_id).await?;
-        let mut headers = HeaderMap::new();
-        headers.insert("upload-offset", media.size.into());
-        headers.insert("upload-length", media.size.into());
-        Ok((StatusCode::OK, headers, Json(Some(media))))
     }
+
+    Ok(Json(media))
+}
+
+#[handler(routes::media_delete)]
+async fn media_delete(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::media_delete::Request,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
+
+    s.services()
+        .media
+        .delete(auth.user.id, req.media_id)
+        .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[handler(routes::media_clone)]
+async fn media_clone(
+    auth: Auth,
+    State(_s): State<Arc<ServerState>>,
+    _req: routes::media_clone::Request,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
+    // TODO: implement srv.media.clone(MediaId)
+    Ok(Error::Unimplemented)
 }
 
 /// Media upload
@@ -274,274 +193,102 @@ async fn media_done(
 /// the background.
 async fn media_upload(
     Path(media_id): Path<MediaId>,
-    auth: Auth,
+    _auth: Auth,
     State(s): State<Arc<ServerState>>,
-    headers: HeaderMap,
+    headers_req: HeaderMap,
     body: Body,
 ) -> Result<impl IntoResponse> {
+    // TODO: check auth
     let srv = s.services();
-    let mut up =
-        srv.media
-            .uploads
-            .get_mut(&media_id)
-            .ok_or(Error::ApiError(ApiError::from_code(
-                ErrorCode::UnknownMedia,
-            )))?;
-    if up.user_id != auth.user.id {
-        return Err(Error::ApiError(ApiError::from_code(
-            ErrorCode::UnknownMedia,
-        )));
-    }
-    let user_id = up.user_id;
 
-    let stat = up.temp_file.metadata().await?;
-    let current_size = stat.len();
-    let current_off: u64 = headers
+    let current_off: u64 = headers_req
         .get("upload-offset")
         .ok_or(Error::BadHeader)?
         .to_str()?
         .parse()?;
-    let part_length: u64 = headers
+    let _part_length: u64 = headers_req
         .get("content-length")
         .ok_or(Error::BadHeader)?
         .to_str()?
         .parse()?;
-    if current_size != current_off {
-        return Err(Error::CantOverwrite);
-    }
-    let source_size = up
-        .create
-        .source
-        .size()
-        .expect("can only patch source upload");
-    if current_size + part_length > source_size {
-        return Err(Error::TooBig);
-    }
-    up.seek(current_off).await?;
-    let mut stream = body.into_data_stream();
 
-    while let Some(chunk) = stream.next().await {
-        if let Err(err) = up.write(&chunk?).await {
+    // TODO: ensure body length == part_length? (minor issue)
+
+    {
+        let mut up =
+            srv.media
+                .upload_get(media_id)
+                .await
+                .ok_or(Error::ApiError(ApiError::from_code(
+                    ErrorCode::UnknownMedia,
+                )))?;
+        // TODO: return these for headers_res
+        up.offset();
+        up.expected_size();
+
+        let current_size = up.offset();
+        if current_size != current_off {
+            return Err(Error::CantOverwrite);
+        }
+
+        let mut stream = body.into_data_stream();
+        while let Some(chunk) = stream.next().await {
+            up.write(&chunk?).await?;
+        }
+
+        if !up.expects_more() {
+            // drop the lock before calling upload_done
             drop(up);
-            srv.media.uploads.remove(&media_id);
-            return Err(err);
-        };
-    }
-
-    match up.current_size.cmp(&source_size) {
-        Ordering::Greater => {
-            drop(up);
-            s.services().media.uploads.remove(&media_id);
-            Err(Error::TooBig)
-        }
-        Ordering::Equal => {
-            up.temp_writer.flush().await?;
-            drop(up);
-
-            let (_, up) = s
-                .services()
-                .media
-                .uploads
-                .remove(&media_id)
-                .expect("should exist");
-
-            let mut headers = HeaderMap::new();
-            headers.insert("upload-offset", source_size.into());
-            headers.insert("upload-length", source_size.into());
-
-            let state = s.clone();
-            let session_id = auth.session.id;
-            tokio::spawn(async move {
-                let filename = match &up.create.source {
-                    MediaCreateSource::Upload { filename, .. } => filename.to_owned(),
-                    MediaCreateSource::Download { .. } => {
-                        panic!("can only patch upload")
-                    }
-                };
-                match state
-                    .services()
-                    .media
-                    .process_upload(up, media_id, user_id, &filename, Some(session_id))
-                    .await
-                {
-                    Ok(_media) => {
-                        debug!("finished processing media from upload");
-                    }
-                    Err(e) => {
-                        error!("failed to process media from upload: {}", e);
-                    }
-                }
-            });
-
-            Ok((StatusCode::NO_CONTENT, headers))
-        }
-        Ordering::Less => {
-            let mut headers = HeaderMap::new();
-            headers.insert("upload-offset", up.current_size.into());
-            headers.insert("upload-length", source_size.into());
-            Ok((StatusCode::NO_CONTENT, headers))
+            srv.media.upload_done(media_id).await?;
         }
     }
-}
 
-/// Media get
-///
-/// Get a piece of media. Currently, all media is public (though this may change in the future).
-#[utoipa::path(
-    get,
-    path = "/media/{media_id}",
-    tags = ["media", "badge.scope.full"],
-    params(("media_id", description = "Media id")),
-    responses(
-        (status = OK, body = Media, description = "Success"),
-    )
-)]
-async fn media_get(
-    Path(media_id): Path<MediaId>,
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    let media = s.data().media_select(media_id).await?;
-    if media.deleted_at.is_some() {
-        let perms = s
-            .services()
-            .perms
-            .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
-            .await?;
-        if !perms.has(Permission::Admin) {
-            return Err(Error::ApiError(ApiError::from_code(
-                ErrorCode::UnknownMedia,
-            )));
-        }
-    }
-    Ok(Json(media))
+    let item = srv.media.get(media_id).await?;
+    let media = item.media();
+
+    let mut headers_res = HeaderMap::new();
+    headers_res.insert("upload-offset", media.size.into()); // FIXME: should be up.offset()
+    headers_res.insert("upload-length", media.size.into()); // FIXME: should be up.expected_size()
+    Ok((StatusCode::NO_CONTENT, headers_res))
 }
 
 /// Media check
 ///
 /// Get headers useful for resuming an upload
-// NOTE: im not sure why this is commented out? presumably theres some issue, i'll fix it later
-// #[utoipa::path(
-//     head,
-//     path = "/media/{media_id}",
-//     tags = ["media", "badge.internal"],
-//     params(("media_id", description = "Media id")),
-//     responses(
-//         (status = NO_CONTENT, description = "no content", headers(("upload-length" = u64), ("upload-offset" = u64))),
-//     )
-// )]
 async fn media_check(
     Path(media_id): Path<MediaId>,
     auth: Auth,
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
-    if let Some(up) = s.services().media.uploads.get_mut(&media_id) {
-        if up.user_id == auth.user.id {
-            let mut headers = HeaderMap::new();
-            headers.insert("upload-offset", up.temp_file.metadata().await?.len().into());
-            headers.insert(
-                "upload-length",
-                up.create
-                    .source
-                    .size()
-                    .expect("can only check media where source = upload")
-                    .into(),
-            );
-            return Ok((StatusCode::NO_CONTENT, headers));
-        }
-    }
-    let media = s.data().media_select(media_id).await?;
-    if media.deleted_at.is_some() {
-        let perms = s
-            .services()
-            .perms
-            .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
-            .await?;
-        if !perms.has(Permission::Admin) {
-            return Err(Error::ApiError(ApiError::from_code(
-                ErrorCode::UnknownMedia,
-            )));
-        }
-    }
-    let mut headers = HeaderMap::new();
-    headers.insert("upload-offset", media.size.into());
-    headers.insert("upload-length", media.size.into());
-    Ok((StatusCode::NO_CONTENT, headers))
-}
+    let srv = s.services();
+    let up = srv
+        .media
+        .upload_get(media_id)
+        .await
+        .ok_or(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownMedia,
+        )))?;
 
-/// Media delete
-///
-/// Delete unlinked media. Does not work if the media is linked to some other
-/// resource.
-#[utoipa::path(
-    delete,
-    path = "/media/{media_id}",
-    tags = ["media", "badge.scope.full"],
-    params(("media_id", description = "Media id")),
-    responses(
-        (status = NO_CONTENT, description = "no content"),
-        (status = CONFLICT, description = "media is linked to another resource (ie. a message)"),
-    )
-)]
-async fn media_delete(
-    Path(media_id): Path<MediaId>,
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
-    auth.ensure_scopes(&[Scope::Full])?;
-    if let Some(up) = s.services().media.uploads.get_mut(&media_id) {
-        if up.user_id == auth.user.id {
-            s.services().media.uploads.remove(&media_id);
-        }
-        Ok(StatusCode::NO_CONTENT)
+    if up.user_id() == auth.user.id {
+        let mut headers = HeaderMap::new();
+        headers.insert("upload-offset", up.offset().into());
+        headers.insert("upload-length", up.expected_size().into());
+        Ok((StatusCode::NO_CONTENT, headers))
     } else {
-        let links = s.data().media_link_select(media_id).await?;
-        if links.is_empty() {
-            s.data().media_delete(media_id).await?;
-            Ok(StatusCode::NO_CONTENT)
-        } else {
-            Ok(StatusCode::CONFLICT)
-        }
+        Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::UnknownMedia,
+        )))
     }
-}
-
-/// Media clone
-///
-/// Create a new unconsumed copy of a piece of media
-#[utoipa::path(
-    post,
-    path = "/media/{media_id}/clone",
-    tags = ["media", "badge.scope.full"],
-    params(("media_id", description = "Media id")),
-    responses(
-        (status = OK, description = "success"),
-    )
-)]
-async fn media_clone(
-    Path(_media_id): Path<MediaId>,
-    auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    Json(_json): Json<MediaClone>,
-) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
-    auth.ensure_scopes(&[Scope::Full])?;
-    Ok(Error::Unimplemented)
 }
 
 /// Media search
 ///
 /// Search media. Admins can search all media, everyone else can only search their own media.
-#[utoipa::path(
-    post,
-    path = "/media/search",
-    tags = ["media", "badge.scope.full", "badge.admin_only"],
-    responses((status = OK, body = MediaSearch, description = "success")),
-)]
+#[handler(routes::media_search)]
 async fn media_search(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(json): Json<MediaSearchRequest>,
+    req: routes::media_search::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
@@ -555,149 +302,21 @@ async fn media_search(
 
     let results = srv
         .search
-        .search_media(SearchMediaVisibility::Everything, json)
+        .search_media(SearchMediaVisibility::Everything, req.body)
         .await?;
 
     Ok(Json(results))
 }
 
-/// Media upload direct
-///
-/// Directly upload a piece of media without doing the whole create/patch/done
-/// dance. Only use this for small media.
-#[utoipa::path(
-    post,
-    path = "/media/direct",
-    tags = ["media", "badge.scope.full"],
-    responses(
-        (status = StatusCode::CREATED, body = Media, description = "Success"),
-        (status = StatusCode::ACCEPTED, body = MediaCreated, description = "Processing in background")
-    ),
-)]
-async fn media_upload_direct(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-    mut multipart: Multipart,
-) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
-    auth.ensure_scopes(&[Scope::Full])?;
-
-    let srv = s.services();
-    let media_id = MediaId::new();
-    let mut data = None;
-    let mut params = MediaDirectParams::default();
-
-    while let Some(field) = multipart.next_field().await? {
-        match field
-            .name()
-            .ok_or_else(|| ApiError::from_code(ErrorCode::FieldMissingName))?
-        {
-            "json" => {
-                let bytes = field.bytes().await?;
-                params = serde_json::from_slice(&bytes)?;
-            }
-            "file" => {
-                if params.filename.is_none() {
-                    params.filename = field.file_name().map(|s| s.to_string());
-                }
-                data = Some(field.bytes().await?);
-            }
-            _ => return Err(ApiError::from_code(ErrorCode::UnknownField).into()),
-        }
-    }
-
-    let Some(data) = data else {
-        return Err(ApiError::from_code(ErrorCode::NoData).into());
-    };
-
-    let filename = params.filename.unwrap_or_else(|| "unknown".to_owned());
-
-    srv.media
-        .create_upload(
-            media_id,
-            auth.user.id,
-            MediaCreate {
-                alt: params.alt,
-                strip_exif: params.strip_exif,
-                source: MediaCreateSource::Upload {
-                    filename: filename.clone(),
-                    size: Some(data.len() as u64),
-                },
-            },
-            None,
-        )
-        .await?;
-
-    {
-        let mut up = srv.media.uploads.get_mut(&media_id).unwrap();
-        if let Err(err) = up.write(&data).await {
-            drop(up);
-            srv.media.uploads.remove(&media_id);
-            return Err(err);
-        }
-        up.temp_writer.flush().await?;
-    }
-
-    let (_, up) = s
-        .services()
-        .media
-        .uploads
-        .remove(&media_id)
-        .expect("it was there a few milliseconds ago");
-
-    if params.process_async {
-        let state = s.clone();
-        let session_id = auth.session.id;
-        tokio::spawn(async move {
-            match state
-                .services()
-                .media
-                .process_upload(up, media_id, auth.user.id, &filename, Some(session_id))
-                .await
-            {
-                Ok(_media) => {
-                    debug!("finished processing media from direct upload");
-                }
-                Err(e) => {
-                    error!("failed to process media from direct upload: {}", e);
-                }
-            }
-        });
-
-        Ok((
-            StatusCode::ACCEPTED,
-            Json(MediaCreated {
-                media_id,
-                upload_url: None,
-            }),
-        ))
-    } else {
-        let media = s
-            .services()
-            .media
-            .process_upload(up, media_id, auth.user.id, &filename, None)
-            .await?;
-
-        Ok((
-            StatusCode::CREATED,
-            Json(MediaCreated {
-                media_id: media.id,
-                upload_url: None,
-            }),
-        ))
-    }
-}
-
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes!(media_create))
-        .routes(routes!(media_patch))
-        .routes(routes!(media_get))
-        .routes(routes!(media_delete))
-        .routes(routes!(media_done))
-        .routes(routes!(media_clone))
-        .routes(routes!(media_upload_direct))
-        .routes(routes!(media_search))
+        .routes(routes2!(media_create))
+        .routes(routes2!(media_patch))
+        .routes(routes2!(media_get))
+        .routes(routes2!(media_delete))
+        .routes(routes2!(media_done))
+        .routes(routes2!(media_clone))
+        .routes(routes2!(media_search))
         // TODO: move these to cdn?
         .route(
             "/internal/media-upload/{media_id}",

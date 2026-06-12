@@ -276,25 +276,21 @@ impl ServiceChannels {
         // TODO(al2): use this when creating a channel
         let channel_id = ChannelId::new();
         let al = if let Some(room_id) = room_id {
-            Some(
-                auth.audit_log2(
-                    room_id,
-                    AuditLogEntryType::ChannelCreate {
-                        channel_id,
-                        channel_type: json.ty,
-                        changes: Changes::new()
-                            .add("name", &json.name)
-                            .add("description", &json.description)
-                            .add("nsfw", &json.nsfw)
-                            .add("user_limit", &json.user_limit)
-                            .add("bitrate", &json.bitrate)
-                            .add("type", &json.ty)
-                            .add("parent_id", &json.parent_id)
-                            .add("url", &json.url)
-                            .build(),
-                    },
-                ),
-            )
+            let ty = AuditLogEntryType::ChannelCreate {
+                channel_id,
+                channel_type: json.ty,
+                changes: Changes::new()
+                    .add("name", &json.name)
+                    .add("description", &json.description)
+                    .add("nsfw", &json.nsfw)
+                    .add("user_limit", &json.user_limit)
+                    .add("bitrate", &json.bitrate)
+                    .add("type", &json.ty)
+                    .add("parent_id", &json.parent_id)
+                    .add("url", &json.url)
+                    .build(),
+            };
+            Some((auth.audit_log(room_id), ty))
         } else {
             None
         };
@@ -577,6 +573,8 @@ impl ServiceChannels {
 
         if let Some(starter_message) = json.starter_message {
             if json.ty.is_thread() {
+                // FIXME: use Auth4
+                let auth = todo!();
                 srv.messages
                     .create(channel_id, auth, None, starter_message, None)
                     .await?;
@@ -587,8 +585,8 @@ impl ServiceChannels {
             }
         }
 
-        if let Some(al) = al {
-            al.success();
+        if let Some((al, ty)) = al {
+            al.commit_success(ty).await?;
         }
 
         if let Some(room_id) = room_id {
@@ -808,23 +806,21 @@ impl ServiceChannels {
         }
 
         if let Some(room_id) = room_id {
-            let al = auth.audit_log2(
-                room_id,
-                common::v1::types::AuditLogEntryType::ChannelCreate {
-                    channel_id: thread_id,
-                    channel_type: channel.ty,
-                    changes: common::v1::types::util::Changes::new()
-                        .add("name", &channel.name)
-                        .add("description", &channel.description)
-                        .add("nsfw", &channel.nsfw)
-                        .add("user_limit", &channel.user_limit)
-                        .add("bitrate", &channel.bitrate)
-                        .add("type", &channel.ty)
-                        .add("parent_id", &channel.parent_id)
-                        .build(),
-                },
-            );
-            al.success();
+            let ty = AuditLogEntryType::ChannelCreate {
+                channel_id: thread_id,
+                channel_type: channel.ty,
+                changes: common::v1::types::util::Changes::new()
+                    .add("name", &channel.name)
+                    .add("description", &channel.description)
+                    .add("nsfw", &channel.nsfw)
+                    .add("user_limit", &channel.user_limit)
+                    .add("bitrate", &channel.bitrate)
+                    .add("type", &channel.ty)
+                    .add("parent_id", &channel.parent_id)
+                    .build(),
+            };
+            let al = auth.audit_log(room_id);
+            al.commit_success(ty).await?;
         }
 
         Ok(channel)

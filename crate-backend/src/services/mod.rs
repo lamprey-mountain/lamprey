@@ -182,7 +182,6 @@ impl Services {
         self.room_analytics.spawn_snapshot_task();
         self.cache.start_background_tasks();
         self.member_lists.start_background_tasks();
-        self.media.start_background_tasks();
         self.search.start_background_tasks();
         self.harvest.start_background_tasks();
     }

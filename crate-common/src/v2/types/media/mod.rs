@@ -11,8 +11,8 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::{
-    federation::Remote, misc::hashes::Hashes, search::Order, util::Time, ChannelId, EmbedId,
-    MediaId, MediaVerId, MessageId, MessageVerId, Mime, RedexId, RedexVerId, RoomId, UserId,
+    federation::Remote, misc::hashes::Hashes, util::Time, ChannelId, EmbedId, MediaId, MediaVerId,
+    MessageId, MessageVerId, Mime, RedexId, RedexVerId, RoomId, UserId,
 };
 
 pub mod proxy;
@@ -20,7 +20,7 @@ pub mod scanner;
 
 /// A reference to a piece of media to be used.
 // TODO: use this in more FooCreate and FooPatch structs
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(untagged))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum MediaReference {
@@ -46,6 +46,7 @@ pub struct MediaDoneParams {
     pub process_async: bool,
 }
 
+// TODO: remove
 /// request body for `media_upload_direct`
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -393,9 +394,8 @@ pub struct MediaClone {
 
 /// What to create this media from
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(untagged))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum MediaCreateSource {
     /// create this file by downloading it
     Download {
@@ -504,40 +504,6 @@ pub enum MediaLinkType {
         script_id: RedexId,
         version_id: RedexVerId,
     },
-}
-
-/// query for searching through media
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
-pub struct MediaSearch {
-    /// The full text search query.
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 2048)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
-    #[cfg_attr(feature = "serde", serde(default))]
-    pub query: Option<String>,
-
-    /// what order to return results in
-    pub sort_order: Order,
-
-    /// field to sort by
-    pub sort_field: MediaSearchOrderField,
-}
-
-/// which field to order media search results by
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum MediaSearchOrderField {
-    /// sort by creation time
-    Created,
-
-    /// sort by file size
-    Size,
 }
 
 impl MediaCreateSource {

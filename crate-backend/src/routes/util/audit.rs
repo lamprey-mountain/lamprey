@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     body::Body,
+    extract::State,
     http::{Request, Response},
     middleware::Next,
 };
@@ -9,12 +10,13 @@ use common::v1::types::{
     util::Time, ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryStatus,
     AuditLogEntryType, MessageSync, RoomId,
 };
+use http::StatusCode;
 use tokio::sync::Mutex;
-use tracing::warn;
+use tracing::{error, warn};
 
 use crate::{prelude::*, ServerState};
 
-pub type AuditTxnSlot = Arc<Mutex<AuditTxn>>;
+pub type AuditTxnSlot = Arc<Mutex<Option<AuditTxn>>>;
 
 /// an active audit log transaction
 pub struct AuditTxn {
@@ -36,6 +38,7 @@ pub struct AuditLoggerTransaction {
     pub status: Option<AuditLogEntryStatus>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum AuditTxnState {
     Idle,
 
@@ -58,13 +61,16 @@ pub struct AuditTxnHandle {
 }
 
 impl AuditTxn {
-    pub(super) fn begin(&mut self, context_id: RoomId) -> Self {
+    pub(super) fn begin(&mut self, context_id: RoomId) {
         self.state = AuditTxnState::Created {
             context_id,
             status: None,
         };
     }
 
+    /// commit this audit log transaction
+    ///
+    /// this saves the audit log entry to the database and broadcasts an `AuditLogEntryCreate` sync message
     async fn commit(self) -> Result<()> {
         let entry = AuditLogEntry { ..todo!() };
         self.s.data().audit_logs_room_append(entry.clone()).await?;
@@ -81,18 +87,24 @@ impl AuditTxn {
 
 impl AuditTxnHandle {
     fn set_status(&mut self, status: AuditLogEntryStatus) {
-        if let Ok(txn) = self.slot.lock() {
-            txn.status = Some(status);
+        // FIXME: don't use blocking lock
+        let mut txn = self.slot.blocking_lock();
+        if let AuditTxnState::Created {
+            status: ref mut current_status,
+            ..
+        } = txn.as_mut().unwrap().state
+        {
+            *current_status = Some(status);
         }
     }
 
     /// mark this audit log transaction as successful
     pub fn success(mut self) {
-        todo!()
+        self.set_status(AuditLogEntryStatus::Success);
     }
 
     pub fn unauthorized(mut self) {
-        todo!()
+        self.set_status(AuditLogEntryStatus::Unauthorized);
     }
 
     /// mark this audit log transaction as failed
@@ -103,17 +115,17 @@ impl AuditTxnHandle {
 
 impl Drop for AuditTxnHandle {
     fn drop(&mut self) {
-        if let Ok(txn) = self.slot.lock() {
-            if txn.status.is_none() {
-                warn!("AuditTxnHandle dropped without explicit commit; marking as failed");
-            }
+        // FIXME: don't use blocking lock
+        let txn = self.slot.blocking_lock();
+        if txn.as_ref().unwrap().state != AuditTxnState::Committed {
+            warn!("AuditTxnHandle dropped without explicit commit. the audit log transaction will likely be marked as failed.");
         }
     }
 }
 
+// TODO: remove
 impl super::Auth {
     /// begin an audit log transaction
-    // TODO: automatically save failed audit logs
     #[must_use = "must call commit() to save a successful audit log entry"]
     pub fn audit_log(&self, context_id: RoomId) -> AuditLoggerTransaction {
         AuditLoggerTransaction {
@@ -181,42 +193,53 @@ impl AuditLoggerTransaction {
 }
 
 /// middleware to initialize an audit log entry
-pub async fn audit_log_middleware(mut req: Request<Body>, next: Next) -> Response<Body> {
+pub async fn audit_log_middleware(
+    State(s): State<Arc<ServerState>>,
+    mut req: Request<Body>,
+    next: Next,
+) -> Response<Body> {
     let txn = AuditTxn {
-        s: todo!(),
-        started_at: Time::now(),
+        s: Arc::clone(&s),
+        started_at: Time::now_utc(),
         state: AuditTxnState::Idle,
     };
-
-    let slot = Arc::new(Mutex::new(txn));
+    let slot = Arc::new(Mutex::new(Some(txn)));
     req.extensions_mut().insert(Arc::clone(&slot));
 
     let response = next.run(req).await;
 
-    if let Ok(mut guard) = slot.lock_owned() {
-        // TODO: commit audit log
-        // guard
-        // if let Some(mut txn) = guard.take() {
-        //     let status = if let Some(s) = txn.status.clone() {
-        //         s
-        //     } else if response.status().is_success() {
-        //         AuditLogEntryStatus::Success
-        //     } else if response.status() == StatusCode::FORBIDDEN
-        //         || response.status() == StatusCode::UNAUTHORIZED
-        //     {
-        //         AuditLogEntryStatus::Unauthorized
-        //     } else {
-        //         AuditLogEntryStatus::Failed
-        //     };
+    let mut guard = slot.lock().await;
+    let mut txn = guard.take().unwrap();
+    match &mut txn.state {
+        AuditTxnState::Idle | AuditTxnState::Committed => {
+            // unused or already committed; ignore
+        }
+        AuditTxnState::Created { status, .. } => {
+            let task = match status {
+                // explicitly set status
+                Some(_) => txn.commit(),
 
-        //     tokio::spawn(async move {
-        //         if let Err(err) = txn.commit_inner(status, txn.ty.clone().unwrap()).await {
-        //             error!("failed to save audit log: {err:?}");
-        //         }
-        //     });
-        // }
+                // guess the status
+                None => {
+                    let new_status = if matches!(
+                        response.status(),
+                        StatusCode::FORBIDDEN | StatusCode::UNAUTHORIZED
+                    ) {
+                        AuditLogEntryStatus::Unauthorized
+                    } else {
+                        AuditLogEntryStatus::Failed
+                    };
+                    *status = Some(new_status);
+                    txn.commit()
+                }
+            };
 
-        todo!()
+            tokio::spawn(async move {
+                if let Err(err) = task.await {
+                    error!("failed to save audit log: {err:?}");
+                }
+            });
+        }
     }
 
     response

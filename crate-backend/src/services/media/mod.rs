@@ -1,51 +1,217 @@
-use std::{
-    cmp::Ordering,
-    collections::HashMap,
-    io::{Cursor, SeekFrom},
-    sync::Arc,
-    time::Instant,
-};
+use std::{sync::Arc, time::Duration};
 
-use bytes::Bytes;
-
-use async_tempfile::TempFile;
+use common::v1::types::UserId;
 use common::{
     v1::types::{
         error::{ApiError, ErrorCode},
         federation::Remote,
-        misc::hashes::{HashData, HashType, Hashes},
         MediaId,
     },
-    v2::types::media::MediaReference,
-};
-use common::{
-    v1::types::{util::truncate::truncate_filename, MediaVerId, Mime, UserId},
-    v2::types::media::scanner::{MediaScanResponse, ScanRequest},
-};
-use common::{
-    v1::types::{MessageSync, SessionId},
-    v2::types::media::{
-        Media, MediaCreate, MediaCreateSource, MediaMetadata, MediaScan, MediaStatus,
-    },
+    v2::types::media::MediaPatch,
 };
 use dashmap::DashMap;
-use ffprobe::{MediaType, Metadata};
-use futures_util::{stream::FuturesUnordered, FutureExt, StreamExt};
-use sha2::{Digest, Sha512_256};
-use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader, BufWriter};
-use tracing::{debug, error, info, span, trace, Instrument, Level};
-use url::Url;
+use moka::future::Cache;
+use tokio::io::AsyncWriteExt;
+use tracing::{debug, error};
 
 use crate::{
     error::{Error, Result},
-    routes::util::multipart::MultipartFiles,
+    services::media::util::MediaItemState,
     ServerStateInner,
 };
 
 mod ffmpeg;
 mod ffprobe;
 mod import;
+mod process;
+mod util;
 
+pub use import::Upload;
+pub use util::{Import, MediaItem};
+
+pub struct ServiceMedia {
+    state: Arc<ServerStateInner>,
+    cache: Cache<MediaId, MediaItem>,
+    uploads: Arc<DashMap<MediaId, Upload>>,
+}
+
+impl ServiceMedia {
+    pub fn new(state: Arc<ServerStateInner>) -> Self {
+        Self {
+            state,
+            cache: Cache::new(1000), // TODO: make configurable
+            uploads: Arc::new(DashMap::new()),
+        }
+    }
+
+    pub async fn get(&self, media_id: MediaId) -> Result<MediaItem> {
+        if let Some(item) = self.cache.get(&media_id).await {
+            return Ok(item);
+        }
+
+        let media = self.state.data().media_select(media_id).await?;
+        let writer = MediaItem::from_media(Arc::clone(&self.state), media);
+        let item = writer.reader();
+        self.cache.insert(media_id, item.clone()).await;
+        Ok(item)
+    }
+
+    pub async fn get_remote(&self, remote: &Remote) -> Result<MediaItem> {
+        // let media = self
+        //     .state
+        //     .data()
+        //     .media_select_by_remote(&remote.hostname, remote.origin_id)
+        //     .await?;
+        // if let Some(item) = self.cache.get(&media).await {
+        //     return Ok(item);
+        // }
+
+        // let item = MediaItem::from_media(media);
+        // self.cache.insert(media_id, item.clone()).await;
+        // Ok(item)
+        todo!()
+    }
+
+    pub async fn get_many(&self, media_ids: &[MediaId]) -> Result<Vec<MediaItem>> {
+        let mut items = Vec::with_capacity(media_ids.len());
+        for id in media_ids {
+            items.push(self.get(*id).await?);
+        }
+        Ok(items)
+    }
+
+    pub async fn patch(
+        &self,
+        user_id: UserId,
+        media_id: MediaId,
+        patch: MediaPatch,
+    ) -> Result<MediaItem> {
+        let item = self.get(media_id).await?;
+        let media = item.media();
+        if media.deleted_at.is_some() {
+            return Err(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownMedia,
+            )));
+        }
+
+        if media.user_id != Some(user_id) {
+            // NOTE: should i return UnknownMedia here to prevent leaking info?
+            return Err(Error::MissingPermissions);
+        }
+
+        let should_strip_exif = patch.strip_exif == Some(true);
+
+        let mut data = self.state.acquire_data().await?;
+        data.media_update(media_id, patch).await?;
+        data.commit().await?;
+
+        if should_strip_exif {
+            // TODO: download, strip, reupload
+        }
+
+        // TODO: update media items
+        // let writer: MediaItemWriter = todo!("somehow get writer?");
+        // writer.set_media(media);
+
+        // TODO: broadcast media update
+        // let media = self.state.data().media_select(media_id).await?;
+        // item.set_media(media.clone());
+        // self.state.broadcast(MessageSync::MediaUpdate {
+        //     media: media.clone(),
+        // })?;
+
+        Ok(item)
+    }
+
+    /// attempt to delete a piece of media
+    ///
+    /// only unlinked media can be deleted
+    pub async fn delete(&self, user_id: UserId, media_id: MediaId) -> Result<()> {
+        // FIXME: check user_id
+
+        if let Some(up) = self.uploads.remove(&media_id) {
+            up.1.expire_handle.abort();
+            return Ok(());
+        }
+
+        let links = self.state.data().media_link_select(media_id).await?;
+        if links.is_empty() {
+            self.state.data().media_delete(media_id).await?;
+            self.cache.invalidate(&media_id).await;
+            Ok(())
+        } else {
+            Err(Error::Conflict)
+        }
+    }
+
+    /// get an upload to update it
+    pub async fn upload_get(
+        &self,
+        media_id: MediaId,
+    ) -> Option<dashmap::mapref::one::RefMut<MediaId, Upload>> {
+        self.bump(media_id);
+        self.uploads.get_mut(&media_id)
+    }
+
+    /// finish an upload and begin processing
+    pub async fn upload_done(&self, media_id: MediaId) -> Result<MediaItem> {
+        if let Some((_, mut up)) = self.uploads.remove(&media_id) {
+            up.expire_handle.abort();
+            up.temp_writer.flush().await?;
+
+            let item = up.writer.reader();
+            let state = Arc::clone(&self.state);
+            tokio::spawn(async move {
+                let srv = state.services();
+                if let Err(e) = srv.media.process_media(up).await {
+                    error!("failed to process media {}: {}", media_id, e);
+                }
+            });
+
+            Ok(item)
+        } else if let Some(item) = self.cache.get(&media_id).await {
+            match item.state() {
+                MediaItemState::Processing { .. } | MediaItemState::Ready => Ok(item),
+                _ => Err(Error::ApiError(ApiError::from_code(
+                    ErrorCode::UnknownMedia,
+                ))),
+            }
+        } else {
+            Err(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownMedia,
+            )))
+        }
+    }
+
+    /// reset expiration timer for an upload
+    fn bump(&self, media_id: MediaId) {
+        if let Some(mut up) = self.uploads.get_mut(&media_id) {
+            up.expire_handle.abort();
+            up.expire_handle = self.spawn_expiration_task(media_id);
+        }
+    }
+
+    fn spawn_expiration_task(&self, media_id: MediaId) -> tokio::task::JoinHandle<()> {
+        let uploads = Arc::clone(&self.uploads);
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_secs(300)).await;
+            if uploads.remove(&media_id).is_some() {
+                debug!("expired upload {}", media_id);
+            }
+        })
+    }
+}
+
+#[cfg(any())]
+pub struct ServiceMediaOld {
+    // TODO: make not pub
+    pub state: Arc<ServerStateInner>,
+    // pub cache: Cache<MediaId, Arc<MediaItem>>, // TODO: add
+    pub uploads: Arc<DashMap<MediaId, MediaUpload>>,
+    pub processing: Arc<DashMap<MediaId, Arc<tokio::sync::Notify>>>, // TODO: merge into MediaItem
+}
+
+#[cfg(any())]
 pub struct MediaUpload {
     pub create: MediaCreate,
     pub user_id: UserId,
@@ -58,82 +224,8 @@ pub struct MediaUpload {
     pub remote: Option<Remote>,
 }
 
-pub struct ServiceMedia {
-    pub state: Arc<ServerStateInner>,
-    pub uploads: Arc<DashMap<MediaId, MediaUpload>>,
-    pub processing: Arc<DashMap<MediaId, Arc<tokio::sync::Notify>>>,
-}
-
-struct ProcessNotifyGuard {
-    media_id: MediaId,
-    processing: Arc<DashMap<MediaId, Arc<tokio::sync::Notify>>>,
-    notify: Arc<tokio::sync::Notify>,
-}
-
-impl Drop for ProcessNotifyGuard {
-    fn drop(&mut self) {
-        self.processing.remove(&self.media_id);
-        self.notify.notify_waiters();
-    }
-}
-
-impl MediaUpload {
-    pub async fn write(&mut self, bytes: &[u8]) -> Result<()> {
-        let len = bytes.len() as u64;
-        if self.current_size + len > self.max_size {
-            return Err(Error::TooBig);
-        }
-
-        self.temp_writer.write_all(bytes).await?;
-        self.current_size += len;
-        Ok(())
-    }
-
-    pub async fn seek(&mut self, off: u64) -> Result<()> {
-        self.temp_writer.seek(SeekFrom::Start(off)).await?;
-        Ok(())
-    }
-}
-
-impl ServiceMedia {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
-        Self {
-            state,
-            uploads: Arc::new(DashMap::new()),
-            processing: Arc::new(DashMap::new()),
-        }
-    }
-
-    // TODO: automatically expire without background task via tokio timer
-    pub fn start_background_tasks(&self) {
-        let uploads = self.uploads.clone();
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(60));
-            loop {
-                interval.tick().await;
-                let now = Instant::now();
-                let cutoff = std::time::Duration::from_secs(300); // 5 minutes
-
-                // Collect keys to remove first to avoid borrow issues
-                let keys_to_remove: Vec<_> = uploads
-                    .iter()
-                    .filter_map(|entry| {
-                        let (key, upload) = entry.pair();
-                        if now.duration_since(upload.finished_at) > cutoff {
-                            Some(*key)
-                        } else {
-                            None
-                        }
-                    })
-                    .collect();
-
-                for key in keys_to_remove {
-                    uploads.remove(&key);
-                }
-            }
-        });
-    }
-
+#[cfg(any())]
+impl ServiceMediaOld {
     pub async fn create_upload(
         &self,
         media_id: MediaId,
@@ -199,163 +291,6 @@ impl ServiceMedia {
         Ok(())
     }
 
-    pub async fn get(&self, media_id: MediaId) -> Result<Media> {
-        self.state.data().media_select(media_id).await
-    }
-
-    pub async fn get_many(&self, media_ids: &[MediaId]) -> Result<Vec<Media>> {
-        let mut results = Vec::with_capacity(media_ids.len());
-        for id in media_ids {
-            results.push(self.get(*id).await?);
-        }
-        Ok(results)
-    }
-
-    #[tracing::instrument(skip(self))]
-    pub async fn get_metadata_and_mime(
-        &self,
-        file: &std::path::Path,
-    ) -> Result<(Option<Metadata>, String)> {
-        let meta = match ffprobe::extract(file).await {
-            Ok(meta) => meta,
-            Err(Error::Ffmpeg) => {
-                let mime = get_mime(file).await?;
-                return Ok((None, mime));
-            }
-            Err(err) => return Err(err),
-        };
-        let mut mime = get_mime(file).await?;
-        // HACK: fix webm
-        if !meta.has_video() {
-            mime = mime.replace("video/webm", "audio/webm");
-        }
-        Ok((Some(meta), mime))
-    }
-
-    /// Scan media with all configured scanners in parallel.
-    #[tracing::instrument(skip(self, path))]
-    async fn scan_media(&self, path: &std::path::Path) -> Vec<MediaScan> {
-        let scanners = &self.state.config.media.scanners;
-        if scanners.is_empty() {
-            return vec![];
-        }
-
-        let path_str = match path.to_str() {
-            Some(p) => p.to_string(),
-            None => {
-                error!("failed to convert media path to string: {:?}", path);
-                return vec![];
-            }
-        };
-
-        let client = &self.state.services().http.client;
-        let mut futs = FuturesUnordered::new();
-
-        for scanner in scanners {
-            let scan_url = scanner.scan_url.clone();
-            let key = scanner.key.clone();
-            let version = scanner.version;
-            let path = path_str.clone();
-            let client = client.clone();
-
-            futs.push(async move {
-                let req = ScanRequest { path };
-                let res = client.post(scan_url).json(&req).send().await.ok()?;
-
-                let scan_res: MediaScanResponse = res.json().await.ok()?;
-
-                Some(MediaScan {
-                    key,
-                    result: scan_res.score as f32,
-                    version,
-                })
-            });
-        }
-
-        let mut scans = Vec::new();
-        while let Some(result) = futs.next().await {
-            if let Some(scan) = result {
-                scans.push(scan);
-            }
-        }
-
-        scans
-    }
-
-    #[tracing::instrument(skip(self, meta))]
-    pub async fn generate_thumbnails(
-        &self,
-        media_id: MediaId,
-        meta: &Metadata,
-        path: &std::path::Path,
-        mime: &Mime,
-    ) -> Result<()> {
-        trace!("media_id = {:?}", media_id);
-        trace!("meta = {:?}", meta);
-        let mut fut = FuturesUnordered::new();
-        if let Some(thumb) = meta.get_thumb_stream() {
-            if thumb.codec_type == MediaType::Attachment {
-                debug!("extract thumb attachment from container");
-                let bytes = ffmpeg::extract_attachment(path, thumb.index).await?;
-                let bytes = Bytes::from(bytes);
-                fut.push(
-                    upload_extracted_thumb(self.state.clone(), bytes.clone(), media_id).boxed(),
-                );
-            } else if thumb.disposition.attached_pic == 1 {
-                debug!("extract thumb stream from container");
-                let bytes = ffmpeg::extract_stream(path, thumb.index).await?;
-                let bytes = Bytes::from(bytes);
-                fut.push(
-                    upload_extracted_thumb(self.state.clone(), bytes.clone(), media_id).boxed(),
-                );
-            } else if thumb.codec_type == MediaType::Video {
-                debug!("generate thumb from video");
-                let bytes = ffmpeg::generate_thumb(path).await?;
-                let url = self.state.get_s3_url(&format!("media/{media_id}/poster"))?;
-                let span_upload = span!(Level::DEBUG, "upload thumb");
-                async {
-                    let mut w = self
-                        .state
-                        .blobs
-                        .writer_with(url.path())
-                        .cache_control(
-                            "public, max-age=604800, immutable, stale-while-revalidate=86400",
-                        )
-                        .content_type(mime.as_str())
-                        .await?;
-                    w.write(bytes).await?;
-                    w.close().await?;
-                    Result::Ok(())
-                }
-                .instrument(span_upload)
-                .await?;
-            } else {
-                error!("no suitable thumbnail codec");
-                return Ok(());
-            }
-        }
-        while let Some(_track) = fut.next().await {}
-        Ok(())
-    }
-
-    pub async fn process_upload(
-        &self,
-        up: MediaUpload,
-        media_id: MediaId,
-        user_id: UserId,
-        filename: &str,
-        session_id: Option<SessionId>,
-    ) -> Result<Media> {
-        let _guard = ProcessNotifyGuard {
-            media_id,
-            processing: self.processing.clone(),
-            notify: up.processed_notify.clone(),
-        };
-
-        self.process_upload_inner(up, media_id, user_id, filename, session_id)
-            .await
-    }
-
     #[tracing::instrument(skip(self, up))]
     async fn process_upload_inner(
         &self,
@@ -410,109 +345,8 @@ impl ServiceMedia {
         let (meta, mime) = &services.media.get_metadata_and_mime(&p).await?;
         let mime: Mime = mime.parse()?;
 
-        trace!("calculating metadata for mime: {}", mime);
-        let metadata = match mime.parse() {
-            Ok(m) => match m.ty().as_str() {
-                "image" => {
-                    let dims = image::image_dimensions(&p).ok();
-                    MediaMetadata::Image {
-                        height: dims.as_ref().map(|d| d.1 as u64).unwrap_or_else(|| {
-                            meta.as_ref()
-                                .and_then(|m| m.height())
-                                .expect("all images have a height")
-                        }),
-                        width: dims.as_ref().map(|d| d.0 as u64).unwrap_or_else(|| {
-                            meta.as_ref()
-                                .and_then(|m| m.width())
-                                .expect("all images have a width")
-                        }),
-                    }
-                }
-                "audio" | "video" => MediaMetadata::Video {
-                    height: meta.as_ref().and_then(|m| m.height()).unwrap_or(0),
-                    width: meta.as_ref().and_then(|m| m.width()).unwrap_or(0),
-                    duration: meta
-                        .as_ref()
-                        .and_then(|m| m.duration().map(|d| d as u64))
-                        .unwrap_or(0),
-                },
-                "text" => MediaMetadata::Text,
-                _ => MediaMetadata::File,
-            },
-            Err(_) => MediaMetadata::File,
-        };
-
-        let mut hashes: HashMap<HashType, HashData> = HashMap::new();
-
-        {
-            trace!("generating blake3 hash");
-            // generate blake3 hash
-            let file = tmp.open_ro().await?;
-            let mut reader = BufReader::new(file);
-            let mut hasher = blake3::Hasher::new();
-            let mut buffer = [0u8; 8192];
-
-            loop {
-                let bytes_read = reader.read(&mut buffer).await?;
-                if bytes_read == 0 {
-                    break;
-                }
-                hasher.update(&buffer[..bytes_read]);
-            }
-
-            let result = hasher.finalize();
-            let hash = result.as_bytes().to_vec().into();
-            hashes.insert(HashType::Blake3, hash);
-        }
-
-        {
-            trace!("generating sha512/256 hash");
-            // generate sha512/256 hash
-            let file = tmp.open_ro().await?;
-            let mut reader = BufReader::new(file);
-            let mut hasher = Sha512_256::new();
-            let mut buffer = [0u8; 8192];
-
-            loop {
-                let bytes_read = reader.read(&mut buffer).await?;
-                if bytes_read == 0 {
-                    break;
-                }
-                hasher.update(&buffer[..bytes_read]);
-            }
-
-            let result = hasher.finalize();
-            let hash = result.to_vec().into();
-            hashes.insert(HashType::Sha512_256, hash);
-        }
-
         // scan media with configured scanners in parallel
-        trace!("scanning media");
         let scans = self.scan_media(&p).await;
-
-        let mut media = Media {
-            version_id: MediaVerId::new(),
-            id: media_id,
-            status: MediaStatus::Uploaded,
-            filename: filename.to_owned(),
-            alt: create.alt.clone(),
-            size: current_size,
-            content_type: mime.clone(),
-            source_url,
-            metadata,
-            user_id: Some(user_id),
-            deleted_at: None,
-            quarantine: None,
-            scans,
-            has_thumbnail: false,
-            has_gifv: false,
-            links: vec![],
-            room_id: None,
-            channel_id: None,
-            hashes: hashes.into(),
-            strip_exif: create.strip_exif,
-            remote: up.remote,
-        };
 
         debug!("finish upload for {}, mime {}", media_id, mime);
         trace!("finish upload for {} media {:?}", media_id, media);
@@ -564,120 +398,6 @@ impl ServiceMedia {
         }
 
         Ok(media)
-    }
-
-    /// import media from a MediaReference
-    // TODO: use this for all media handling
-    pub async fn import_from_reference(
-        &self,
-        user_id: UserId,
-        media_ref: MediaReference,
-        files: &MultipartFiles,
-    ) -> Result<Media> {
-        match media_ref {
-            MediaReference::Media { media_id } => self
-                .state
-                .data()
-                .media_select(media_id)
-                .await
-                .map_err(|e| match e {
-                    Error::NotFound => {
-                        Error::ApiError(ApiError::from_code(ErrorCode::UnknownMedia))
-                    }
-                    err => err,
-                }),
-            MediaReference::Url { source_url } => {
-                self.import_from_url(
-                    user_id,
-                    MediaCreate {
-                        strip_exif: false,
-                        alt: None,
-                        source: MediaCreateSource::Download {
-                            filename: None,
-                            size: None,
-                            source_url,
-                        },
-                    },
-                )
-                .await
-            }
-            MediaReference::Attachment { media_index } => {
-                let file = files
-                    .inner
-                    .get(&media_index)
-                    .ok_or(Error::BadRequest(format!(
-                        "no attachment found at index {media_index}"
-                    )))?;
-
-                let size = Some(file.data.len() as u64);
-
-                let json = MediaCreate {
-                    strip_exif: false,
-                    alt: None,
-                    source: MediaCreateSource::Upload {
-                        filename: file
-                            .filename
-                            .clone()
-                            .unwrap_or_else(|| String::from("unknown")),
-                        size,
-                    },
-                };
-
-                self.import_from_bytes(user_id, json, file.data.clone())
-                    .await
-            }
-        }
-    }
-
-    pub async fn import_from_url(&self, user_id: UserId, json: MediaCreate) -> Result<Media> {
-        self.import_from_url_with_max_size(user_id, json, self.state.config.media.max_size)
-            .await
-    }
-
-    pub async fn import_from_url_with_max_size(
-        &self,
-        user_id: UserId,
-        json: MediaCreate,
-        max_size: u64,
-    ) -> Result<Media> {
-        let (_filename, size, source_url) = match &json.source {
-            MediaCreateSource::Upload { .. } => unreachable!(),
-            MediaCreateSource::Download {
-                filename,
-                size,
-                source_url,
-            } => (filename, size, source_url),
-        };
-
-        let media_id = MediaId::new();
-        self.create_upload(media_id, user_id, json.clone(), None)
-            .await?;
-
-        let res = self.state.services().http.get(source_url.clone()).await?;
-
-        match (size, res.content_length()) {
-            (Some(max), Some(len)) if len > *max => return Err(Error::TooBig),
-            (None, Some(len)) if len > max_size => return Err(Error::TooBig),
-            _ => {}
-        }
-
-        self.import_from_response_inner(user_id, media_id, json, res, max_size, None)
-            .await
-    }
-
-    pub async fn import_from_response(
-        &self,
-        user_id: UserId,
-        json: MediaCreate,
-        res: reqwest::Response,
-        max_size: u64,
-        session_id: Option<SessionId>,
-    ) -> Result<Media> {
-        let media_id = MediaId::new();
-        self.create_upload(media_id, user_id, json.clone(), None)
-            .await?;
-        self.import_from_response_inner(user_id, media_id, json, res, max_size, session_id)
-            .await
     }
 
     pub async fn import_from_response_inner(
@@ -937,58 +657,4 @@ impl ServiceMedia {
         info!("stripped EXIF from media {}", media_id);
         Ok(())
     }
-
-    /// fully download a file from the media server
-    pub async fn download(&self, media_id: MediaId) -> Result<Bytes> {
-        let _media = self.state.data().media_select(media_id).await?;
-        let url = self.state.get_s3_url(&format!("media/{media_id}/file"))?;
-        let data = self.state.blobs.read(url.path()).await?;
-        Ok(data.to_bytes())
-    }
-}
-
-#[tracing::instrument(skip(state, bytes))]
-async fn upload_extracted_thumb(
-    state: Arc<ServerStateInner>,
-    bytes: Bytes,
-    media_id: MediaId,
-) -> Result<()> {
-    let span_probe = span!(Level::DEBUG, "probe thumbnail image");
-    let (_width, _height, mime) = async {
-        let cursor = Cursor::new(bytes.clone());
-        let reader = image::ImageReader::new(cursor).with_guessed_format()?;
-        let mime: Mime = reader
-            .format()
-            .ok_or(Error::BadStatic("failed to get mime type"))?
-            .to_mime_type()
-            .parse()?;
-        let (width, height) = reader.into_dimensions()?;
-        Result::Ok((width, height, mime))
-    }
-    .instrument(span_probe)
-    .await?;
-    let url = state.get_s3_url(&format!("media/{media_id}/poster"))?;
-    let span_upload = span!(Level::DEBUG, "upload thumb");
-    async {
-        let mut w = state
-            .blobs
-            .writer_with(url.path())
-            .cache_control("public, max-age=604800, immutable, stale-while-revalidate=86400")
-            .content_type(mime.as_str())
-            .await?;
-        w.write(bytes.clone()).await?;
-        w.close().await?;
-        Result::Ok(())
-    }
-    .instrument(span_upload)
-    .await?;
-    Ok(())
-}
-
-async fn get_mime(file: &std::path::Path) -> Result<String> {
-    let mime = infer::get_from_path(file)?
-        .map(|t| t.mime_type())
-        .unwrap_or("application/octet-stream")
-        .to_owned();
-    Ok(mime)
 }

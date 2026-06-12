@@ -26,7 +26,7 @@ use crate::error::{Error, Result};
 use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
 use crate::types::DbUserCreate;
 use crate::types::EmailPurpose;
-use crate::{routes2, ServerState};
+use crate::{routes2, ServerState, ServerStateInner};
 
 /// Auth oauth init
 #[handler(routes::auth_oauth_init)]
@@ -1080,7 +1080,7 @@ async fn ensure_can_still_login_after_removal(
 }
 
 // Helper function - used by other routes
-pub async fn fetch_auth_state(s: &ServerState, user_id: UserId) -> Result<AuthState> {
+pub async fn fetch_auth_state(s: &ServerStateInner, user_id: UserId) -> Result<AuthState> {
     let mut data = s.data();
 
     let (_totp_secret, totp_enabled) = data

@@ -33,10 +33,7 @@ pub struct MultipartFile {
     pub data: Bytes,
 }
 
-#[derive(Debug)]
-pub struct MultipartFiles {
-    pub inner: HashMap<u64, MultipartFile>,
-}
+pub type MultipartFiles = HashMap<u64, MultipartFile>;
 
 /// utility to parse a multipart body
 // NOTE: Value may be incorrect here for msgpack?
@@ -77,47 +74,47 @@ impl MultipartCollector {
         let mut errors = vec![];
 
         while let Some(field) = multipart.next_field().await? {
-            let bytes = field.bytes().await?;
-            // TODO: errors.push on Err
-            me.handle(field, bytes)?;
+            if let Err(err) = me.handle(field).await {
+                errors.push(err);
+            }
         }
 
-        // TODO: return errors
-
-        Ok(me)
+        if errors.is_empty() {
+            Ok(me)
+        } else {
+            // TODO: return all errors
+            Err(errors.into_iter().next().unwrap())
+        }
     }
 
     pub fn parse<T: DeserializeOwned>(self) -> Result<(T, MultipartFiles)> {
         let mut payload = match self.payload {
-            Some(p) => p,
-            None if !self.fields.is_empty() => Value::Object(serde_json::Map::new()),
+            Some(mut p) => {
+                for (key, value) in self.fields {
+                    if p.insert(key, value).is_some() {
+                        return Err(ExtractorError::MultipartDuplicateField.into());
+                    }
+                }
+
+                p
+            }
+            None if !self.fields.is_empty() => self.fields,
             None => return Err(ExtractorError::MissingBody.into()),
         };
 
-        if !self.fields.is_empty() {
-            let obj = payload
-                .as_object_mut()
-                .ok_or_else(|| Error::BadStatic("cannot merge fields into non-object payload"))?;
-
-            for (key, value) in self.fields {
-                if obj.insert(key, value).is_some() {
-                    return Err(ExtractorError::MultipartDuplicateField.into());
-                }
-            }
-        }
-
-        let body = serde_json::from_value(payload).map_err(|err| {
-            Error::BadStatic(format!("failed to deserialize multipart payload: {err}"))
+        let body = serde_json::to_value(payload).expect("always serializable?");
+        let body = serde_json::from_value(body).map_err(|err| {
+            Error::BadRequest(format!("failed to deserialize multipart payload: {err}"))
         })?;
 
         Ok((body, self.media))
     }
 
     pub async fn into_files(self) -> Result<MultipartFiles> {
-        Ok(MultipartFiles { inner: self.media })
+        Ok(self.media)
     }
 
-    fn handle(&mut self, field: multer::Field, bytes: Bytes) -> Result<()> {
+    async fn handle(&mut self, field: multer::Field<'_>) -> Result<()> {
         let Ok(name) = field
             .name()
             .ok_or(ExtractorError::MultipartNamelessField)?
@@ -125,6 +122,8 @@ impl MultipartCollector {
 
         let content_type = field.content_type().map(|s| s.to_owned());
         let file_name = field.file_name().map(|s| s.to_owned());
+
+        let bytes = field.bytes().await?;
         match name {
             MultipartFieldName::PayloadJson => {
                 self.add_payload(parse_json(&bytes)?);
@@ -144,14 +143,14 @@ impl MultipartCollector {
             }
             MultipartFieldName::Field(name) => {
                 let json: Value = parse_json(&bytes)?;
-                self.add_field(name, json).map_err(Into::into)?;
+                self.add_field(name, json)?;
             }
         }
 
         Ok(())
     }
 
-    fn add_payload(&mut self, payload: Value) -> CoreResult<(), ExtractorError> {
+    fn add_payload(&mut self, payload: HashMap<String, Value>) -> CoreResult<(), ExtractorError> {
         self.has_payload = true;
         if self.payload.is_some() {
             Err(ExtractorError::MultipartDuplicatePayload)

@@ -11,6 +11,7 @@ use tracing::{debug, error, info, warn};
 use url::Url;
 
 use crate::error::Error;
+use crate::services::media::Import;
 use crate::types::{DbMessageUpdate, MediaLinkType, MessageRef};
 use crate::Result;
 use crate::ServerStateInner;
@@ -218,28 +219,25 @@ impl ServiceEmbed {
         // Resolve pending media
         let pending = generation.pending_media();
         for p in pending {
-            let media = self
+            let import = Import::new(user_id).merge(MediaCreate {
+                alt: p.alt,
+                strip_exif: false,
+                source: MediaCreateSource::Download {
+                    filename: None,
+                    size: None,
+                    source_url: p.url.clone(),
+                },
+            });
+            let mut item = self
                 .state
                 .services()
                 .media
-                .import_from_url_with_max_size(
-                    user_id,
-                    MediaCreate {
-                        alt: p.alt,
-                        strip_exif: false,
-                        source: MediaCreateSource::Download {
-                            filename: None,
-                            size: None,
-                            source_url: p.url,
-                        },
-                    },
-                    MAX_SIZE_ATTACHMENT,
-                )
+                .import_from_url(import, &p.url)
                 .await?;
-
+            let media = item.ready().await;
             generation.update_media(
                 p.placeholder_media_id,
-                lamprey_unfurl::util::EmbedMedia::Finished(media.clone()),
+                lamprey_unfurl::util::EmbedMedia::Finished((*media).clone()),
             );
         }
 

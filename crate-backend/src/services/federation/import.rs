@@ -1,8 +1,14 @@
+use std::sync::Arc;
+
 use crate::error::{Error, Result};
 use crate::services::federation::ServiceFederation;
+use crate::services::media::Import;
 use crate::types::MediaLinkType;
+use common::v1::types::error::ErrorCode;
 use common::v1::types::federation::{Hostname, Remote};
-use common::v1::types::{User, UserId, UserPatch};
+use common::v1::types::{MediaId, User, UserId, UserPatch};
+use common::v2::types::media::Media;
+use lamprey_backend_data_postgres::SERVER_USER_ID;
 
 impl ServiceFederation {
     /// Load a user from a remote server, fetching and caching it locally.
@@ -59,6 +65,7 @@ impl ServiceFederation {
             banner: None,
         };
 
+        // PERF: run multiple media imports in parallel
         match (user.avatar, existing.as_ref().and_then(|e| e.avatar)) {
             (None, None) => {
                 // no op
@@ -69,16 +76,11 @@ impl ServiceFederation {
                     .await?;
             }
             (Some(origin_avatar_id), None) => {
-                let media = srv
-                    .media
-                    .load_remote_media(
-                        local_user_id,
-                        Remote {
-                            origin_id: origin_avatar_id.into(),
-                            hostname: hostname.clone(),
-                        },
-                        info.cdn_url.clone(),
-                    )
+                let media = self
+                    .load_remote_media(Remote {
+                        origin_id: origin_avatar_id.into(),
+                        hostname: hostname.clone(),
+                    })
                     .await?;
                 patch.avatar = Some(Some(media.id));
                 txn.media_link_insert(media.id, *local_user_id, MediaLinkType::UserAvatar)
@@ -88,16 +90,11 @@ impl ServiceFederation {
                 // no op
             }
             (Some(origin_avatar_id), Some(_)) => {
-                let media = srv
-                    .media
-                    .load_remote_media(
-                        local_user_id,
-                        Remote {
-                            origin_id: origin_avatar_id.into(),
-                            hostname: hostname.clone(),
-                        },
-                        info.cdn_url.clone(),
-                    )
+                let media = self
+                    .load_remote_media(Remote {
+                        origin_id: origin_avatar_id.into(),
+                        hostname: hostname.clone(),
+                    })
                     .await?;
                 patch.avatar = Some(Some(media.id));
                 txn.media_link_delete(*local_user_id, MediaLinkType::UserAvatar)
@@ -118,16 +115,11 @@ impl ServiceFederation {
                     .await?;
             }
             (Some(origin_banner_id), None) => {
-                let media = srv
-                    .media
-                    .load_remote_media(
-                        local_user_id,
-                        Remote {
-                            origin_id: origin_banner_id.into(),
-                            hostname: hostname.clone(),
-                        },
-                        info.cdn_url.clone(),
-                    )
+                let media = self
+                    .load_remote_media(Remote {
+                        origin_id: origin_banner_id.into(),
+                        hostname: hostname.clone(),
+                    })
                     .await?;
                 patch.banner = Some(Some(media.id));
                 txn.media_link_insert(media.id, *local_user_id, MediaLinkType::UserBanner)
@@ -137,16 +129,11 @@ impl ServiceFederation {
                 // no op
             }
             (Some(origin_banner_id), Some(_)) => {
-                let media = srv
-                    .media
-                    .load_remote_media(
-                        local_user_id,
-                        Remote {
-                            origin_id: origin_banner_id.into(),
-                            hostname: hostname.clone(),
-                        },
-                        info.cdn_url.clone(),
-                    )
+                let media = self
+                    .load_remote_media(Remote {
+                        origin_id: origin_banner_id.into(),
+                        hostname: hostname.clone(),
+                    })
                     .await?;
                 patch.banner = Some(Some(media.id));
                 txn.media_link_delete(*local_user_id, MediaLinkType::UserBanner)
@@ -164,6 +151,86 @@ impl ServiceFederation {
         Ok(user)
     }
 
-    // TODO: add load_remote_media -> proxy media service
-    // TODO: add load_remote_invite
+    /// Import media from a remote server, saving a copy locally.
+    pub async fn load_remote_media(&self, remote: Remote) -> Result<Arc<Media>> {
+        let srv = self.state.services();
+
+        // fetch remote media object
+        let info = self.fetch_server_info(&remote.hostname).await?;
+        let url = info
+            .api_url
+            .join(&format!("/api/v1/media/{}", remote.origin_id))?;
+        let res = srv.http.client.get(url).send().await?;
+        if !res.status().is_success() {
+            return Err(Error::BadStatic("failed to fetch remote media"));
+        }
+        let media: Media = res.json().await?;
+
+        // check existing media
+        let existing = match srv.media.get_remote(&remote).await {
+            Ok(media) => Some(media),
+            Err(Error::ApiError(err)) if err.code == ErrorCode::UnknownMedia => None,
+            Err(err) => return Err(err),
+        };
+        if let Some(existing) = existing {
+            if existing.media().version_id == media.version_id {
+                // NOTE: i would need to bump epoch later?
+                return Ok(existing.media());
+            } else {
+                // update local data.media stuff
+                todo!()
+            }
+        }
+
+        // we don't have the remote media cached locally, begin importing
+        let id = match &existing {
+            Some(m) => m.media().id,
+            None => {
+                // check for id collision
+                let id_available = srv.media.get(media.id).await.is_err_and(|err| match err {
+                    Error::ApiError(err) => err.code == ErrorCode::UnknownMedia,
+                    _ => false,
+                });
+                if id_available {
+                    media.id
+                } else {
+                    MediaId::new()
+                }
+            }
+        };
+
+        // import the media data itself
+        let cdn_url = info.cdn_url.join(&format!("/media/{}", remote.origin_id))?;
+        let mut import = Import::new_with_id(id, SERVER_USER_ID);
+        import.remote = Some(remote.clone());
+        let mut item = srv.media.import_from_url(import, &cdn_url).await?;
+        Ok(item.ready().await)
+    }
+
+    // /// Load an invite from a remote server, fetching and caching it locally.
+    // pub async fn load_remote_invite(&self, remote: Remote) -> Result<Invite> {
+    //     todo!()
+    // }
+
+    // /// Load a room from a remote server, fetching and caching it locally.
+    // ///
+    // /// rooms may require authentication to view, pass the id of a user who is able to or trying to access this room as `puppet_id`
+    // pub async fn load_remote_room(
+    //     &self,
+    //     remote: Remote,
+    //     puppet_id: Option<UserId>,
+    // ) -> Result<Room> {
+    //     todo!()
+    // }
+
+    // /// Load a channel from a remote server, fetching and caching it locally.
+    // ///
+    // /// channels may require authentication to view, pass the id of a user who is able to or trying to access this channel as `puppet_id`
+    // pub async fn load_remote_channel(
+    //     &self,
+    //     remote: Remote,
+    //     puppet_id: Option<UserId>,
+    // ) -> Result<Channel> {
+    //     todo!()
+    // }
 }

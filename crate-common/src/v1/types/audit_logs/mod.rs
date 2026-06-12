@@ -659,7 +659,7 @@ pub struct AuditLogFilter {
 }
 
 /// the status of an audit log event
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum AuditLogEntryStatus {

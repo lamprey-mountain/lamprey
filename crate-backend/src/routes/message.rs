@@ -44,7 +44,7 @@ async fn message_create(
         .messages
         .create(
             req.body.channel_id,
-            &auth,
+            &req.auth,
             req.body.idempotency_key,
             req.body.message,
             header_timestamp,
@@ -62,7 +62,7 @@ async fn message_create(
     )
     .await?;
     srv.channels
-        .invalidate_user(req.body.channel_id, auth.user.id)
+        .invalidate_user(req.body.channel_id, user.id)
         .await;
 
     // Ok(routes::message_create::Response {

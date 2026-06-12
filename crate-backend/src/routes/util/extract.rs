@@ -1,12 +1,11 @@
-use std::convert::Infallible;
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use crate::prelude::*;
-use crate::routes::util::audit::{AuditTxn, AuditTxnHandle, AuditTxnSlot};
-use crate::routes::util::audit_old::AuditLoggerTransaction;
+use crate::routes::util::audit::{AuditTxnHandle, AuditTxnSlot};
 use crate::routes::util::auth::Auth4;
 use crate::routes::util::headers::{ContentType, HeadersRequest};
-use crate::routes::util::multipart::{MultipartCollector, MultipartFieldName, MultipartFiles};
+use crate::routes::util::multipart::MultipartCollector;
+use crate::services::media::{Import, MediaItem};
 use crate::ServerState;
 use axum::extract::{FromRequest, FromRequestParts};
 use bytes::Bytes;
@@ -16,15 +15,12 @@ use common::{
     v1::{
         routes::ExtractableRoute,
         types::error::{ApiError, ErrorCode, ErrorField, ErrorFieldType},
-        RoomId,
+        types::RoomId,
     },
     v2::types::media::{Media, MediaReference},
 };
 use futures::stream;
-use multer::Multipart;
 use serde::de::DeserializeOwned;
-use serde::Deserialize;
-use serde_json::Value;
 
 /// extracts **everything**
 ///
@@ -39,25 +35,27 @@ pub struct UniversalExtractor<T> {
     pub body: T,
 
     /// resolved media
-    media: HashMap<MediaReference, Media>,
+    media: UniversalExtractorMedia,
 
     audit_txn_slot: AuditTxnSlot,
 }
 
+#[derive(Default)]
+pub struct UniversalExtractorMedia {
+    inner: HashMap<MediaReference, MediaItem>,
+}
+
 impl<T> UniversalExtractor<T> {
+    /// get the extracted body and drop everything else
     pub fn into_inner(self) -> T {
         self.body
     }
+}
 
-    // // TODO: remove
-    // pub fn into_parts(self) -> (T, MultipartFiles) {
-    //     let files = MultipartFiles { inner: self.files };
-    //     (self.body, files)
-    // }
-
-    // pub fn get_media(&self, media_ref: &MediaReference) -> &Media {
-    //     todo!()
-    // }
+impl UniversalExtractorMedia {
+    pub fn get(&self, media_ref: &MediaReference) -> &Media {
+        todo!()
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -99,12 +97,11 @@ impl From<ExtractorError> for Error {
 
 impl<Req> FromRequest<Arc<ServerState>> for UniversalExtractor<Req>
 where
-    Req: ExtractableRoute,
+    Req: ExtractableRoute + Send,
     Req::Body: Send,
 {
     type Rejection = Error;
 
-    // TODO: import media automatically
     async fn from_request(req: axum::extract::Request, state: &Arc<ServerState>) -> Result<Self> {
         let (mut parts, body) = req.into_parts();
         let bytes = if let Some(body) = parts.extensions.get::<FederationBody>() {
@@ -128,7 +125,7 @@ where
                 Ok(Self {
                     auth,
                     body: req,
-                    media: HashMap::new(),
+                    media: Default::default(),
                     audit_txn_slot,
                 })
             }
@@ -138,18 +135,39 @@ where
                 Ok(Self {
                     auth,
                     body: req,
-                    media: HashMap::new(),
+                    media: Default::default(),
                     audit_txn_slot,
                 })
             }
             ContentType::Multipart => {
-                let boundary =
-                    multer::parse_boundary(todo!("get actual content type header from parts"))?;
+                let ct = parts
+                    .headers
+                    .get("content-type")
+                    .expect("must have existed earlier")
+                    .to_str()?;
+                let boundary = multer::parse_boundary(ct)?;
                 let stream = stream::once(async move { Ok::<Bytes, std::io::Error>(bytes) });
                 let multipart = multer::Multipart::new(stream, boundary);
                 let collector = MultipartCollector::collect(multipart).await?;
-                let (body, media) = collector.parse()?;
+                let (body, files) = collector.parse()?;
                 let req = Req::extract(parts, body).map_err(Error::Response)?;
+
+                // import media
+                let srv = state.services();
+                let mut media = UniversalExtractorMedia::default();
+                if !files.is_empty() {
+                    let user = auth.ensure_user()?;
+
+                    // PERF: import in parallel
+                    for (num, file) in files {
+                        let import = Import::new(user.id);
+                        let item = srv.media.import_from_multipart(import, file).await?;
+                        media
+                            .inner
+                            .insert(MediaReference::Attachment { media_index: num }, item);
+                    }
+                }
+
                 Ok(UniversalExtractor {
                     auth,
                     body: req,
@@ -168,7 +186,7 @@ where
                     Ok(UniversalExtractor {
                         auth,
                         body: req,
-                        media: HashMap::new(),
+                        media: Default::default(),
                         audit_txn_slot,
                     })
                 } else {
@@ -187,8 +205,8 @@ impl<Req> UniversalExtractor<Req> {
         context_id: RoomId,
         ty: AuditLogEntryType,
     ) -> Result<AuditTxnHandle> {
-        let txn = self.audit_txn_slot.lock().await;
-        txn.begin(context_id);
+        let mut txn = self.audit_txn_slot.lock().await;
+        txn.as_mut().unwrap().begin(context_id);
         // let txn = AuditLoggerTransaction {
         //     context_id,
         //     auth: self.clone(),

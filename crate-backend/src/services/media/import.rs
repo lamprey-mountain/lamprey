@@ -1,124 +1,191 @@
-use common::v1::types::UserId;
-use common::v2::types::media::Media;
+use std::str::FromStr;
+use std::sync::Arc;
+use std::time::Instant;
 
-use crate::prelude::*;
+use async_tempfile::TempFile;
+use common::v1::types::{Mime, SessionId, UserId};
+use common::v2::types::media::MediaMetadata;
+use futures::StreamExt;
+use tokio::io::{AsyncWriteExt, BufWriter};
+use tokio::task::JoinHandle;
+use url::Url;
+
+use crate::routes::util::multipart::MultipartFile;
+use crate::services::media::util::{Import, MediaItem, MediaItemWriter};
 use crate::services::media::ServiceMedia;
+use crate::{prelude::*, ServerStateInner};
+
+// TODO: remove created media after 5 minutes, reset timer after any update
+// TODO: remove uploaded media after 5 minutes
 
 /// a piece of media being uploaded
-pub struct MediaUpload {
-    // pub create: MediaCreate,
-    // pub user_id: UserId,
-    // pub temp_file: TempFile,
-    // pub temp_writer: BufWriter<TempFile>,
-    // pub current_size: u64,
-    // pub max_size: u64,
-    // pub finished_at: Instant,
-    // pub processed_notify: Arc<tokio::sync::Notify>,
-    // pub remote: Option<Remote>,
+// TODO: make fields not pub?
+pub struct Upload {
+    pub import: Import,
+
+    /// the session who created this upload
+    ///
+    /// once the upload is done processing, a `MediaProcessed` event will be sent to this session
+    pub session_id: Option<SessionId>,
+
+    pub writer: MediaItemWriter,
+    pub s: Arc<ServerStateInner>,
+    pub temp_file: TempFile,
+    pub temp_writer: BufWriter<TempFile>,
+    pub current_size: u64,
+
+    pub finished_at: Instant,
+
+    pub expire_handle: JoinHandle<()>,
 }
 
-/// a piece of media on this server
-pub enum MediaItem {
-    Transferring {
-        // ...
-    },
-    Processing {
-        // ...
-    },
-    Uploaded,
-    Consumed,
-    Errored,
-}
+impl Upload {
+    pub async fn write(&mut self, bytes: &[u8]) -> Result<()> {
+        let len = bytes.len() as u64;
+        if self.current_size + len > self.expected_size() {
+            // TODO: remove self from srv.media
+            return Err(Error::TooBig);
+        } else if self.current_size + len == self.expected_size() {
+            // TODO: remove self from srv.media
+            // TODO: begin processing
+            // self.temp_writer.flush().await?;
+        }
 
-impl MediaUpload {
-    pub(super) async fn write(&mut self, bytes: &[u8]) -> Result<()> {
-        todo!()
+        self.temp_writer.write_all(bytes).await?;
+        self.current_size += len;
+        self.finished_at = Instant::now();
+        Ok(())
     }
 
-    pub(super) async fn seek(&mut self, off: u64) -> Result<()> {
-        todo!()
+    /// get the user who created this upload
+    pub fn user_id(&self) -> UserId {
+        self.import.user_id
     }
 
-    // /// return a future that resolves when this media upload is done
-    // pub fn done(&self) -> MediaUploadDone {
-    //     todo!()
-    // }
-}
+    /// get the current offset into the writers
+    pub fn offset(&self) -> u64 {
+        self.current_size
+    }
 
-struct UrlImport {}
+    /// the client provided file size for this media
+    pub fn expected_size(&self) -> u64 {
+        self.import.max_size.unwrap_or(self.s.config.media.max_size)
+    }
+
+    pub fn expects_more(&self) -> bool {
+        self.offset() < self.expected_size()
+    }
+}
 
 impl ServiceMedia {
-    // /// resolve a media reference
-    // pub async fn resolve(&self, media_ref: MediaReference) -> Result<MediaItem> {
-    //     todo!()
-    // }
+    /// import media from uploaded bytes
+    pub async fn import_from_upload(&self, import: Import) -> Result<MediaItem> {
+        // TODO: return error if expected_size (import.max_size) is too big
+        let media_id = import.media_id;
+        let media = import.clone().to_media(
+            import.filename.clone().unwrap_or_else(|| "unknown".into()),
+            import.max_size.unwrap_or_default(),
+            Mime::from_str("application/octet-stream").unwrap(),
+            MediaMetadata::File,
+        );
+        let writer = MediaItem::from_media(Arc::clone(&self.state), media);
+        let item = writer.reader();
 
-    // /// resolve a media reference, automatically importing it if it does not exist.
-    // pub async fn import(&self, media_ref: MediaReference) -> Result<MediaItem> {
-    //     todo!()
-    // }
+        let temp_file = TempFile::new().await.expect("failed to create temp file!");
+        let temp_writer = BufWriter::new(temp_file.open_rw().await?);
 
-    // pub async fn import_from_reference(
-    //     &self,
-    //     user_id: UserId,
-    //     media_ref: MediaReference,
-    // ) -> Result<MediaV2> {
-    //     todo!()
-    // }
+        let expire_handle = self.spawn_expiration_task(media_id);
+
+        let upload = Upload {
+            import,
+            session_id: None,
+            writer,
+            s: self.state.clone(),
+            temp_file,
+            temp_writer,
+            current_size: 0,
+            finished_at: Instant::now(),
+            expire_handle,
+        };
+
+        self.uploads.insert(media_id, upload);
+        self.cache.insert(media_id, item.clone()).await;
+
+        // insert initial media record into DB
+        let media = item.media();
+        self.state.data().media_insert((*media).clone()).await?;
+
+        Ok(item)
+    }
+
+    /// import media from these bytes
+    pub async fn import_from_bytes(&self, import: Import, bytes: Bytes) -> Result<MediaItem> {
+        let item = self.import_from_upload(import).await?;
+        let media_id = item.media().id;
+
+        // TODO: wrap this block in tokio::spawn
+        {
+            let mut up = self.upload_get(media_id).await.unwrap();
+            up.write(&bytes).await?;
+            self.upload_done(media_id).await?;
+        }
+
+        Ok(item)
+    }
 
     /// import media from a multipart request's file
     pub async fn import_from_multipart(
         &self,
-        user_id: UserId,
+        import: Import,
         file: MultipartFile,
-    ) -> Result<Media> {
-        todo!()
+    ) -> Result<MediaItem> {
+        let bytes = file.data.clone();
+        let import = import.merge_multipart(file);
+        self.import_from_bytes(import, bytes).await
     }
 
-    // pub async fn import_from_url(&self, user_id: UserId, json: MediaCreate) -> Result<MediaV2> {
-    // pub async fn import_from_url_with_max_size(
-    //     &self,
-    //     user_id: UserId,
-    //     json: MediaCreate,
-    //     max_size: u64,
-    // ) -> Result<MediaV2> {
-    // pub async fn import_from_response(
-    //     &self,
-    //     user_id: UserId,
-    //     json: MediaCreate,
-    //     res: reqwest::Response,
-    //     max_size: u64,
-    //     session_id: Option<SessionId>,
-    // ) -> Result<MediaV2> {
-    // pub async fn import_from_response_inner(
-    //     &self,
-    //     user_id: UserId,
-    //     media_id: MediaId,
-    //     json: MediaCreate,
-    //     res: reqwest::Response,
-    //     max_size: u64,
-    //     session_id: Option<SessionId>,
-    // ) -> Result<MediaV2> {
-    // pub async fn import_from_bytes(
-    //     &self,
-    //     user_id: UserId,
-    //     json: MediaCreate,
-    //     bytes: bytes::Bytes,
-    // ) -> Result<MediaV2> {
-    // pub fn import_multipart(&self, file: MultipartFile) {}
-    // #[tracing::instrument(skip(self))]
-    // pub async fn load_remote_media(
-    //     &self,
-    //     user_id: UserId,
-    //     remote: Remote,
-    //     cdn_url: Url,
-    // ) -> Result<MediaV2> {
+    /// import media from this url
+    pub async fn import_from_url(&self, import: Import, url: &Url) -> Result<MediaItem> {
+        let server_max_size = self.state.config.media.max_size;
+        let max_size = import.max_size;
+        match max_size {
+            Some(max) if max > server_max_size => return Err(Error::TooBig),
+            _ => {}
+        }
 
-    // pub async fn create_upload(
-    //     &self,
-    //     media_id: MediaId,
-    //     user_id: UserId,
-    //     create: MediaCreate,
-    //     remote: Option<Remote>,
-    // ) -> Result<()> {
+        let srv = self.state.services();
+        let res = srv.http.get(url.clone()).await?;
+        match (max_size, res.content_length()) {
+            (Some(max), Some(len)) if len > max => return Err(Error::TooBig),
+            (None, Some(len)) if len > server_max_size => return Err(Error::TooBig),
+            _ => {}
+        }
+
+        self.import_from_response(import, res).await
+    }
+
+    /// import media from this reqwest response
+    pub async fn import_from_response(
+        &self,
+        import: Import,
+        res: reqwest::Response,
+    ) -> Result<MediaItem> {
+        let item = self.import_from_upload(import).await?;
+        let media_id = item.media().id;
+
+        // TODO: wrap this block in tokio::spawn
+        {
+            let mut stream = res.bytes_stream();
+            let mut up = self.upload_get(media_id).await.unwrap();
+
+            while let Some(chunk) = stream.next().await {
+                let chunk = chunk?;
+                up.write(&chunk).await?;
+            }
+
+            self.upload_done(media_id).await?;
+        }
+
+        Ok(item)
+    }
 }

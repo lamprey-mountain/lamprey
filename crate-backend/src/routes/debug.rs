@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
+use crate::services::media::Import;
 use crate::types::SERVER_ROOM_ID;
 use axum::response::IntoResponse;
 use axum::{extract::State, Json};
 use common::v1::types::application::Scope;
 use common::v1::types::{ChannelId, Embed, Permission, RoomId, UserId};
+use common::v2::types::media::{MediaCreate, MediaCreateSource};
 use lamprey_unfurl::logging::LogEntry;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -315,31 +317,21 @@ async fn unfurler_debug(
     for mut gen in generations {
         let pending = gen.pending_media();
         for p in pending {
-            let mut media = s
-                .inner
-                .services()
-                .media
-                .import_from_url_with_max_size(
-                    auth.user.id,
-                    common::v2::types::media::MediaCreate {
-                        alt: p.alt,
-                        strip_exif: false,
-                        source: common::v2::types::media::MediaCreateSource::Download {
-                            filename: None,
-                            size: None,
-                            source_url: p.url,
-                        },
-                    },
-                    1024 * 1024 * 8,
-                )
-                .await?;
-
+            let import = Import::new(auth.user.id).merge(MediaCreate {
+                alt: p.alt,
+                strip_exif: false,
+                source: MediaCreateSource::Download {
+                    filename: None,
+                    size: None,
+                    source_url: p.url.clone(),
+                },
+            });
+            let mut item = s.services().media.import_from_url(import, &p.url).await?;
+            let media = item.ready().await;
             gen.update_media(
                 p.placeholder_media_id,
-                lamprey_unfurl::util::EmbedMedia::Finished(media.clone()),
+                lamprey_unfurl::util::EmbedMedia::Finished((*media).clone()),
             );
-
-            s.presign(&mut media).await?;
         }
 
         embeds.push(gen.to_embed());
@@ -382,31 +374,22 @@ async fn unfurler_unfurl(
         for mut gen in generations {
             let pending = gen.pending_media();
             for p in pending {
-                let mut media = s
-                    .inner
-                    .services()
-                    .media
-                    .import_from_url_with_max_size(
-                        auth.user.id,
-                        common::v2::types::media::MediaCreate {
-                            alt: p.alt,
-                            strip_exif: false,
-                            source: common::v2::types::media::MediaCreateSource::Download {
-                                filename: None,
-                                size: None,
-                                source_url: p.url,
-                            },
-                        },
-                        1024 * 1024 * 8,
-                    )
-                    .await?;
+                let import = Import::new(auth.user.id).merge(MediaCreate {
+                    alt: p.alt,
+                    strip_exif: false,
+                    source: MediaCreateSource::Download {
+                        filename: None,
+                        size: None,
+                        source_url: p.url.clone(),
+                    },
+                });
+                let mut item = s.services().media.import_from_url(import, &p.url).await?;
+                let media = item.ready().await;
 
                 gen.update_media(
                     p.placeholder_media_id,
-                    lamprey_unfurl::util::EmbedMedia::Finished(media.clone()),
+                    lamprey_unfurl::util::EmbedMedia::Finished((*media).clone()),
                 );
-
-                s.presign(&mut media).await?;
             }
 
             embeds.push(gen.to_embed());

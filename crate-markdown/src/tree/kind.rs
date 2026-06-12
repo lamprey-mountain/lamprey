@@ -32,12 +32,8 @@ pub enum BlockKind {
 
     // tables
     Table,
-    // TODO: design types
-    // TableRowLine,
-    // TableRow,
-    // TableAlignmentRow,
-    // TableHeader,
-    // TableBody,
+    TableRow,
+    TableCell,
 }
 
 /// the type of an inline node

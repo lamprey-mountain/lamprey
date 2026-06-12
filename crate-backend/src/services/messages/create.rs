@@ -19,6 +19,7 @@ use tracing::{error, warn};
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::routes::util::auth::{Auth4, Identity};
 use crate::services::messages::util::MediaRegistry;
 use crate::services::messages::{links, markdown};
 use crate::services::notifications::preferences::NotificationAction;
@@ -243,15 +244,17 @@ impl ServiceMessages {
     pub async fn create(
         &self,
         channel_id: ChannelId,
-        auth: &Auth,
+        auth: &Auth4,
         nonce: Option<String>,
         json: MessageCreate,
         header_timestamp: Option<Time>,
     ) -> Result<Message> {
         if let Some(nonce) = nonce {
+            // FIXME: this won't work with federation
+            let session = auth.ensure_session()?;
             self.idempotency_keys
                 .try_get_with(
-                    (auth.session.id, nonce.clone()),
+                    (session.id, nonce.clone()),
                     self.create_inner(channel_id, auth, Some(nonce), json, header_timestamp),
                 )
                 .await
@@ -293,7 +296,7 @@ impl ServiceMessages {
     async fn create_inner(
         &self,
         channel_id: ChannelId,
-        auth: &Auth,
+        auth: &Auth4,
         nonce: Option<String>,
         json: MessageCreate,
         header_timestamp: Option<Time>,
@@ -301,10 +304,25 @@ impl ServiceMessages {
         let srv = self.state.services();
         let channel = srv.channels.get(channel_id, None).await?;
 
+        // HACK/TEMP: convert Auth4 to the old Auth struct
+        let auth_old = Auth {
+            user: auth.ensure_user()?.clone(),
+            real_user: match auth.identity() {
+                Identity::User { user, .. } => Some(user.clone()),
+                Identity::Puppet { puppeteer, .. } => Some(puppeteer.clone()),
+                _ => None,
+            },
+            session: auth.ensure_session()?.clone(),
+            scopes: auth.scopes().expect("FIXME").clone(),
+            reason: None,         // FIXME: pass reason properly
+            audit_log_slot: None, // FIXME: pass slot properly
+            s: Arc::clone(&self.state),
+        };
+
         let op = MessageOperation {
             channel,
             message_id: MessageId::new(),
-            auth: AuthProvider::Session(auth.clone()),
+            auth: AuthProvider::Session(auth_old),
             kind: MessageOperationKind::MessageCreate(MessageCreateOperation { json }),
             nonce,
             stage: New { header_timestamp },

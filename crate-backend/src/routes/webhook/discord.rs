@@ -24,6 +24,7 @@ use validator::Validate;
 
 use crate::{
     error::{Error, Result},
+    services::media::Import,
     ServerState,
 };
 
@@ -411,11 +412,14 @@ pub async fn webhook_execute_discord(
             alt: attachment.description.clone(),
         };
 
-        let media = s
+        let import = Import::new(webhook_user_id).merge(media_create);
+        let mut item = s
             .services()
             .media
-            .import_from_bytes(webhook_user_id, media_create, attachment.data.into())
+            .import_from_bytes(import, attachment.data)
             .await?;
+        // PERF: process item in background
+        let media = item.ready().await;
 
         attachments.push(MessageAttachmentCreate {
             ty: MessageAttachmentCreateType::Media {
@@ -449,12 +453,14 @@ pub async fn webhook_execute_discord(
                 },
                 alt: None,
             };
-            if let Ok(media) = s
+            let import = Import::new(webhook_user_id).merge(media_create);
+            if let Ok(mut item) = s
                 .services()
                 .media
-                .import_from_url(webhook_user_id, media_create)
+                .import_from_url(import, &url)
                 .await
             {
+                let media = item.ready().await;
                 image_media = Some(MediaReference::Media { media_id: media.id });
             }
         }
@@ -473,12 +479,14 @@ pub async fn webhook_execute_discord(
                 },
                 alt: None,
             };
-            if let Ok(media) = s
+            let import = Import::new(webhook_user_id).merge(media_create);
+            if let Ok(mut item) = s
                 .services()
                 .media
-                .import_from_url(webhook_user_id, media_create)
+                .import_from_url(import, &url)
                 .await
             {
+                let media = item.ready().await;
                 thumbnail_media = Some(MediaReference::Media { media_id: media.id });
             }
         }
@@ -497,12 +505,14 @@ pub async fn webhook_execute_discord(
                 },
                 alt: None,
             };
-            if let Ok(media) = s
+            let import = Import::new(webhook_user_id).merge(media_create);
+            if let Ok(mut item) = s
                 .services()
                 .media
-                .import_from_url(webhook_user_id, media_create)
+                .import_from_url(import, &url)
                 .await
             {
+                let media = item.ready().await;
                 author_avatar_media = Some(MediaReference::Media { media_id: media.id });
             }
         }
