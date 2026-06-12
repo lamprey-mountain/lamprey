@@ -20,7 +20,7 @@ fn test_codeblocks() {
 
     assert_eq!(
         parsed.to_html(),
-        "<pre><code class=\"language-rust\">fn main() {}</code></pre>\n<pre><code class=\"language-text\">no lang</code></pre>"
+        "<pre><code class=\"language-rust\">fn main() {}</code></pre><p></p><pre><code class=\"language-text\">no lang</code></pre>"
     );
 }
 

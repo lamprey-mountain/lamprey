@@ -95,7 +95,7 @@ impl<'a> ParseContext<'a> {
                 if let Some(tok) = self.tokenizer.peek() {
                     if tok.kind == TokenKind::Newline {
                         self.builder
-                            .token(NodeKind::Text(TextKind::Newline).into(), "\n");
+                            .token(NodeKind::Text(TextKind::CodeblockPadding).into(), "\n");
                         self.tokenizer.advance();
                     }
                 }
@@ -112,9 +112,14 @@ impl<'a> ParseContext<'a> {
                     content.push_str(self.tokenizer.text(tok.span));
                 }
 
-                if !content.is_empty() {
+                let trimmed = content.strip_suffix("\n").unwrap_or(&content);
+                if !trimmed.is_empty() {
                     self.builder
-                        .token(NodeKind::Text(TextKind::Text).into(), &content);
+                        .token(NodeKind::Text(TextKind::Text).into(), trimmed);
+                    if trimmed.len() != content.len() {
+                        self.builder
+                            .token(NodeKind::Text(TextKind::CodeblockPadding).into(), "\n");
+                    }
                 }
 
                 if let Some(tok) = self.tokenizer.peek() {
@@ -296,7 +301,8 @@ impl<'a> ParseContext<'a> {
             if let Some(tok) = self.tokenizer.peek() {
                 if tok.kind == TokenKind::Whitespace {
                     let text = self.tokenizer.text(tok.span).to_string();
-                    self.builder.token(NodeKind::Text(TextKind::Syntax).into(), &text);
+                    self.builder
+                        .token(NodeKind::Text(TextKind::Syntax).into(), &text);
                     self.tokenizer.advance();
                 }
             }

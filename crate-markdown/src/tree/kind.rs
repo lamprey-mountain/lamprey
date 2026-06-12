@@ -96,6 +96,9 @@ pub enum TextKind {
     /// the language of a code block
     CodeblockLang,
 
+    /// the leading or trailing newline for a codeblock
+    CodeblockPadding,
+
     /// check for a ListTask item
     // NOTE: is this part of markdown syntax..?
     TaskCheck,

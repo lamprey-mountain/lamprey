@@ -150,7 +150,9 @@ impl Codeblock {
         self.0
             .children_with_tokens()
             .filter_map(|child| match child.kind() {
-                NodeKind::Text(TextKind::Syntax) | NodeKind::Text(TextKind::CodeblockLang) => None,
+                NodeKind::Text(TextKind::Syntax)
+                | NodeKind::Text(TextKind::CodeblockLang)
+                | NodeKind::Text(TextKind::CodeblockPadding) => None,
                 _ => Inline::cast(child),
             })
     }
