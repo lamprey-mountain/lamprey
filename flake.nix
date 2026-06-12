@@ -172,6 +172,7 @@
           (builtins.match ".*/\\.sqlx(/.*)?" path != null) ||
           (builtins.match ".*\\.html" path != null) ||
           (builtins.match ".*\\.wit" path != null) ||
+          (builtins.match ".*/package\\.json" path != null) ||
           (builtins.match ".*/docs(/.*)?" path != null);
 
         filterSrcFor = dirs: pkgs.lib.cleanSourceWith {
@@ -314,17 +315,16 @@
           nativeBuildInputs = common.nativeBuildInputs ++ [ wasm-bindgen-cli ];
 
           postBuild = ''
-            ls
-            ls $TMPDIR
             wasm-bindgen \
               target/wasm32-unknown-unknown/release/lamprey_markdown.wasm \
               --out-dir $TMPDIR/pkg \
               --target web
+            cp crate-markdown/package.json $TMPDIR/pkg/package.json
           '';
 
           installPhase = ''
             mkdir -p $out
-            cp -r $TMPDIR/pkg $out/pkg
+            cp -r $TMPDIR/pkg/* $out/
           '';
 
           doCheck = false;

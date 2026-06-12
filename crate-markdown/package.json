@@ -1,0 +1,13 @@
+{
+  "name": "@lamprey/markdown",
+  "type": "module",
+  "version": "1.1.0",
+  "description": "markdown parser",
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://git.celery.eu.org/lamprey/lamprey"
+  },
+  "main": "lamprey_markdown.js",
+  "types": "lamprey_markdown.d.ts"
+}
