@@ -6,10 +6,7 @@ fn test_headers() {
     let parser = Parser::new();
     let parsed = parser.parse(source);
 
-    assert_eq!(
-        parsed.to_html(),
-        "<h1>h1</h1>\n<h2>h2</h2>\n<h6>h6</h6>"
-    );
+    assert_eq!(parsed.to_html(), "<h1>h1</h1><h2>h2</h2><h6>h6</h6>");
 }
 
 #[test]

@@ -126,13 +126,12 @@ impl Header {
     }
 
     pub fn children<'a>(&'a self) -> impl Iterator<Item = Inline> + 'a {
-        self.0.children_with_tokens().filter_map(|child| {
-            if child.kind() == NodeKind::Text(TextKind::HeaderHashes) {
-                None
-            } else {
-                Inline::cast(child)
-            }
-        })
+        self.0
+            .children_with_tokens()
+            .filter_map(|child| match child.kind() {
+                NodeKind::Text(TextKind::HeaderHashes) | NodeKind::Text(TextKind::Padding) => None,
+                _ => Inline::cast(child),
+            })
     }
 }
 
@@ -152,7 +151,7 @@ impl Codeblock {
             .filter_map(|child| match child.kind() {
                 NodeKind::Text(TextKind::Syntax)
                 | NodeKind::Text(TextKind::CodeblockLang)
-                | NodeKind::Text(TextKind::CodeblockPadding) => None,
+                | NodeKind::Text(TextKind::Padding) => None,
                 _ => Inline::cast(child),
             })
     }

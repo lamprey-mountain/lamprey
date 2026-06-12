@@ -96,8 +96,10 @@ pub enum TextKind {
     /// the language of a code block
     CodeblockLang,
 
-    /// the leading or trailing newline for a codeblock
-    CodeblockPadding,
+    /// whitespace that is considered part of syntax
+    ///
+    /// eg. the leading or trailing newline for a codeblock, the space between a header's hashes and content, etc
+    Padding,
 
     /// check for a ListTask item
     // NOTE: is this part of markdown syntax..?

@@ -1,5 +1,5 @@
-use crate::ast::block::{Document, Header};
-use crate::ast::inline::{CustomEmoji, Link, Mention, UnicodeEmoji};
+use crate::ast::block::Header;
+use crate::ast::inline::{CustomEmoji, Link, Mention};
 use crate::prelude::*;
 use crate::query::decorations::DecorationGenerator;
 
