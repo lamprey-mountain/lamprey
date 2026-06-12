@@ -1,3 +1,5 @@
+//! services and other shared logic
+
 // TODO: use a (proc)macro for this? read all files in service, create services
 //
 // ```rs
@@ -51,6 +53,7 @@ use crate::{
         notifications::ServiceNotifications, presence::ServicePresence, search::ServiceSearch,
         unread::ServiceUnread, voice::ServiceVoice,
     },
+    state::ServerState2,
     ServerStateInner,
 };
 
@@ -66,8 +69,8 @@ pub mod email;
 pub mod embed;
 pub mod emoji;
 pub mod federation;
-pub mod http;
 pub mod harvest;
+pub mod http;
 pub mod interactions;
 pub mod ips;
 pub mod media;
@@ -126,47 +129,48 @@ pub struct Services {
     pub users: ServiceUsers,
     pub voice: ServiceVoice,
     pub webhook: ServiceWebhooks,
-    pub(super) state: Arc<ServerStateInner>,
+    pub state: ServerState2,
 }
 
 impl Services {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: ServerState2) -> Self {
+        let state_old: Arc<ServerStateInner> = state.ss1();
         Self {
-            admin: ServiceAdmin::new(state.clone()),
-            audit_logs: ServiceAuditLogs::new(state.clone()),
-            automod: ServiceAutomod::new(state.clone()),
-            cache: ServiceCache::new(state.clone()),
-            calendar: ServiceCalendar::new(state.clone()),
-            channels: ServiceChannels::new(state.clone()),
-            connections: ServiceConnections::new(state.clone()),
-            documents: ServiceDocuments::new(state.clone()),
-            email: ServiceEmail::new(state.clone()),
-            embed: ServiceEmbed::new(state.clone()),
-            emoji: ServiceEmoji::new(state.clone()),
-            federation: ServiceFederation::new(state.clone()),
-            harvest: ServiceHarvest::new(state.clone()),
-            http: ServiceHttp::new(state.clone()),
-            interactions: ServiceInteractions::new(state.clone()),
-            ips: ServiceIps::new(state.clone()),
-            media: ServiceMedia::new(state.clone()),
-            member_lists: ServiceMemberLists::new(state.clone()),
-            messages: ServiceMessages::new(state.clone()),
-            notifications: ServiceNotifications::new(state.clone()),
-            scripts: ServiceScripts::new(state.clone()),
-            oauth: ServiceOauth::new(state.clone()),
-            perms: ServicePermissions::new(state.clone()),
-            presence: ServicePresence::new(state.clone()),
-            role: ServiceRoles::new(state.clone()),
-            room_analytics: ServiceRoomAnalytics::new(state.clone()),
-            rooms: ServiceRooms::new(state.clone()),
-            room_templates: ServiceRoomTemplates::new(state.clone()),
-            search: ServiceSearch::new(state.clone()),
-            sessions: ServiceSessions::new(state.clone()),
-            tag: ServiceTags::new(state.clone()),
-            unread: ServiceUnread::new(state.clone()),
-            users: ServiceUsers::new(state.clone()),
-            voice: ServiceVoice::new(state.clone()),
-            webhook: ServiceWebhooks::new(state.clone()),
+            admin: ServiceAdmin::new(state_old.clone()),
+            audit_logs: ServiceAuditLogs::new(state_old.clone()),
+            automod: ServiceAutomod::new(state_old.clone()),
+            cache: ServiceCache::new(state_old.clone()),
+            calendar: ServiceCalendar::new(state_old.clone()),
+            channels: ServiceChannels::new(state_old.clone()),
+            connections: ServiceConnections::new(state_old.clone()),
+            documents: ServiceDocuments::new(state_old.clone()),
+            email: ServiceEmail::new(state_old.clone()),
+            embed: ServiceEmbed::new(state_old.clone()),
+            emoji: ServiceEmoji::new(state_old.clone()),
+            federation: ServiceFederation::new(state_old.clone()),
+            harvest: ServiceHarvest::new(state_old.clone()),
+            http: ServiceHttp::new(state_old.clone()),
+            interactions: ServiceInteractions::new(state_old.clone()),
+            ips: ServiceIps::new(state_old.clone()),
+            media: ServiceMedia::new(state_old.clone()),
+            member_lists: ServiceMemberLists::new(state_old.clone()),
+            messages: ServiceMessages::new(state_old.clone()),
+            notifications: ServiceNotifications::new(state_old.clone()),
+            scripts: ServiceScripts::new(state_old.clone()),
+            oauth: ServiceOauth::new(state_old.clone()),
+            perms: ServicePermissions::new(state_old.clone()),
+            presence: ServicePresence::new(state_old.clone()),
+            role: ServiceRoles::new(state_old.clone()),
+            room_analytics: ServiceRoomAnalytics::new(state_old.clone()),
+            rooms: ServiceRooms::new(state_old.clone()),
+            room_templates: ServiceRoomTemplates::new(state_old.clone()),
+            search: ServiceSearch::new(state_old.clone()),
+            sessions: ServiceSessions::new(state_old.clone()),
+            tag: ServiceTags::new(state_old.clone()),
+            unread: ServiceUnread::new(state_old.clone()),
+            users: ServiceUsers::new(state_old.clone()),
+            voice: ServiceVoice::new(state_old.clone()),
+            webhook: ServiceWebhooks::new(state_old.clone()),
             state,
         }
     }
@@ -194,7 +198,7 @@ impl Services {
 }
 
 pub trait Service {
-    fn new(state: Arc<ServerStateInner>) -> Self;
+    fn new(state: ServerState2) -> Self;
 
     /// start background tasks
     fn start_background_tasks(&self) {}

@@ -334,7 +334,6 @@ impl ServiceEmbed {
 
         let mut message = data.message_get(mref.thread_id, mref.message_id).await?;
         if message.latest_version.version_id == mref.version_id {
-            state.presign_message(&mut message).await?;
             let uid = user_id.expect("embed queue always has user_id");
             state
                 .broadcast_channel(mref.thread_id, uid, MessageSync::MessageUpdate { message })

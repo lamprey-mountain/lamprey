@@ -647,7 +647,6 @@ async fn message_pin(
         s.broadcast_channel(req.channel_id, user_id, msg).await?;
     }
 
-    s.presign_message(&mut notice_message).await?;
     srv.channels.invalidate(req.channel_id).await;
     s.broadcast_channel(
         req.channel_id,

@@ -35,8 +35,7 @@ pub struct ServerKeyInternal {
     pub expires_at: Time,
 }
 
-// TODO: derive(Clone, Serialize)
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub rust_log: String,
     pub database_url: String,
@@ -136,19 +135,19 @@ fn default_email_queue_workers() -> usize {
     5
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ConfigBlobs {
     S3(ConfigS3),
     Fs(ConfigFs),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigFs {
     pub data_dir: PathBuf,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigS3 {
     pub bucket: String,
     pub endpoint: Url,
@@ -159,7 +158,7 @@ pub struct ConfigS3 {
     // pub local_endpoint: Option<Url>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigOauthProvider {
     pub client_id: String,
     pub client_secret: String,
@@ -172,12 +171,12 @@ pub struct ConfigOauthProvider {
     pub autoregister: bool,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ConfigUrlPreview {
     // does this need anything?
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigHttp {
     /// contact information for webmasters; gner
     pub contact: Option<String>,
@@ -236,7 +235,7 @@ fn default_max_parallel_jobs() -> usize {
     8
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigSmtp {
     pub username: String,
     pub password: String,
@@ -244,7 +243,7 @@ pub struct ConfigSmtp {
     pub from: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigScripts {
     /// whether to enable the script system
     pub enabled: bool,
@@ -260,7 +259,7 @@ pub struct ConfigScripts {
 }
 
 /// config for the media server
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigMedia {
     #[serde(default = "default_cache_media")]
     pub cache_media: u64,
@@ -309,7 +308,7 @@ impl Default for ConfigMedia {
 }
 
 /// config for the voice server
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigVoice {
     /// the token for the voice servers to connect via
     pub token: String,
@@ -348,7 +347,7 @@ impl Default for ConfigScripts {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigNats {
     /// the address of the nats server
     #[serde(default = "default_nats_addr")]
@@ -362,10 +361,10 @@ fn default_nats_addr() -> String {
     "localhost:4222".to_string()
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ConfigExperiments {}
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigSearch {
     /// buffer size split between indexing threads
     ///
@@ -419,7 +418,7 @@ fn default_import_concurrency() -> usize {
     4
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 // Incompatible with deny_unknown_fields due to serde(flatten).
 pub struct ListenConfig {
     #[serde(default = "ListenComponent::all_components")]
@@ -428,7 +427,7 @@ pub struct ListenConfig {
     pub transport: ListenTransport,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, EnumIter, strum::Display)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, EnumIter, strum::Display)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 #[serde(deny_unknown_fields)]
@@ -449,7 +448,7 @@ impl ListenComponent {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[serde(deny_unknown_fields)]
 pub enum ListenTransport {
@@ -499,7 +498,7 @@ fn default_port() -> u16 {
 ///
 /// Media scanners are external services that analyze uploaded media files
 /// and return confidence scores for various categories (e.g., NSFW content, malware).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigMediaScanner {
     /// The URL to POST scan requests to.
     pub scan_url: Url,

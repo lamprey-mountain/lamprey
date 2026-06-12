@@ -14,7 +14,6 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::services::embed::DebugLogSink;
-use crate::state::MessagingService;
 use crate::ServerState;
 
 use super::util::Auth;
@@ -557,19 +556,8 @@ async fn debug_ready(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<im
 
     let object_store_ok = s.blobs.check().await.is_ok();
 
-    let messaging_ok = match &s.messaging {
-        MessagingService::Memory { .. } => true,
-        MessagingService::Nats { client, .. } => {
-            client.connection_state() == async_nats::connection::State::Connected
-        }
-    };
-
-    let queue_ok = match &s.messaging {
-        MessagingService::Memory { .. } => true,
-        MessagingService::Nats { client, .. } => {
-            client.connection_state() == async_nats::connection::State::Connected
-        }
-    };
+    let messaging_ok = s.new_state.messaging().is_connected();
+    let queue_ok = s.new_state.messaging().is_connected();
 
     let ok = database_ok && object_store_ok && messaging_ok && queue_ok;
 

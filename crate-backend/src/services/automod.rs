@@ -826,9 +826,6 @@ impl ServiceAutomod {
                             if let Ok(mut message) =
                                 data.message_get(*alert_channel_id, msg_id).await
                             {
-                                if let Err(e) = self.state.presign_message(&mut message).await {
-                                    warn!("Failed to presign automod alert: {}", e);
-                                }
                                 let msg = MessageSync::MessageCreate {
                                     message: message.clone(),
                                 };

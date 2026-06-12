@@ -396,16 +396,16 @@ async fn oauth_userinfo(
         .into_iter()
         .find(|e| e.is_primary);
     let info = Userinfo {
-        iss: srv.state.config.api_url.clone(),
+        iss: srv.state.config().api_url.clone(),
         sub: user.id,
         email: email.clone().map(|e| e.email),
         email_verified: email.map(|e| e.is_verified).unwrap_or_default(),
         name: user.name,
-        profile: format!("{}user/{}", srv.state.config.html_url, user.id),
+        profile: format!("{}user/{}", srv.state.config().html_url, user.id),
         updated_at: user.version_id.get_timestamp().unwrap().to_unix().0,
         picture: user
             .avatar
-            .map(|a| format!("{}media/{}", srv.state.config.cdn_url, a))
+            .map(|a| format!("{}media/{}", srv.state.config().cdn_url, a))
             .and_then(|u| u.parse().ok()),
     };
     Ok(Json(info))

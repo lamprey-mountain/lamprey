@@ -55,7 +55,6 @@ impl ServiceMessages {
         user_id: Option<UserId>,
     ) -> Result<Message> {
         let mut message = self.state.data().message_get(thread_id, message_id).await?;
-        self.state.presign_message(&mut message).await?;
 
         self.populate_all(thread_id, user_id, std::slice::from_mut(&mut message))
             .await?;
@@ -74,7 +73,6 @@ impl ServiceMessages {
             .data()
             .message_get_with_counts(thread_id, message_id)
             .await?;
-        self.state.presign_message(&mut mwc.message).await?;
 
         self.populate_all(thread_id, user_id, std::slice::from_mut(&mut mwc.message))
             .await?;
@@ -93,10 +91,6 @@ impl ServiceMessages {
             .data()
             .message_get_many(channel_id, message_ids)
             .await?;
-
-        for message in &mut messages {
-            self.state.presign_message(message).await?;
-        }
 
         self.populate_all(channel_id, user_id, &mut messages)
             .await?;
@@ -441,8 +435,6 @@ impl ServiceMessages {
             }
         }
 
-        // TODO: move presign_message calls here
-
         Ok(())
     }
 
@@ -475,10 +467,6 @@ impl ServiceMessages {
             .message_get_ancestors(start_message_id, context)
             .await?;
 
-        for message in &mut ancestors {
-            self.state.presign_message(message).await?;
-        }
-
         self.populate_all(channel_id, Some(user_id), &mut ancestors)
             .await?;
 
@@ -493,10 +481,6 @@ impl ServiceMessages {
     ) -> Result<PaginationResponse<Message>> {
         self.populate_all(channel_id, user_id, &mut res.items)
             .await?;
-
-        for message in &mut res.items {
-            self.state.presign_message(message).await?;
-        }
 
         Ok(res)
     }
@@ -604,10 +588,6 @@ impl ServiceMessages {
 
         self.populate_all(channel_id, user_id, &mut items).await?;
 
-        for item in &mut items {
-            s.presign_message(item).await?;
-        }
-
         Ok(ContextResponse {
             items,
             total: after.total,
@@ -629,10 +609,6 @@ impl ServiceMessages {
             .message_version_list(channel_id, message_id, pagination)
             .await?;
 
-        for message in &mut res.items {
-            s.presign_message_version(message).await?;
-        }
-
         Ok(res)
     }
 
@@ -645,7 +621,6 @@ impl ServiceMessages {
         let s = &self.state;
         let mut data = s.data();
         let mut message = data.message_version_get(channel_id, version_id).await?;
-        s.presign_message_version(&mut message).await?;
         Ok(message)
     }
 
@@ -687,10 +662,6 @@ impl ServiceMessages {
 
         self.populate_all(channel_id, Some(user_id), &mut messages)
             .await?;
-
-        for message in &mut messages {
-            s.presign_message(message).await?;
-        }
 
         let mut items = Vec::with_capacity(messages.len());
         for (message, (count_direct, count_recursive)) in messages.into_iter().zip(counts) {

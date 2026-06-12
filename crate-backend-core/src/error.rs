@@ -162,6 +162,9 @@ pub enum Error {
     #[error("nats error: {0}")]
     Nats(#[from] async_nats::Error),
 
+    #[error("nats publish error: {0}")]
+    NatsPublish(#[from] async_nats::PublishError),
+
     #[error("nats jetstream error: {0}")]
     NatsJetstream(String),
 

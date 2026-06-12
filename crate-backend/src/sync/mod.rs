@@ -1,3 +1,5 @@
+//! websocket sync
+
 use common::v1::types::{
     document::DocumentUpdate,
     sync::{SyncParams, SyncResume},

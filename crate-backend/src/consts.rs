@@ -1,3 +1,5 @@
+//! global constants
+
 // TODO: make most of these configurable per server
 // TODO: move the rest of these to crate-common, as they are protocol-level constraints
 

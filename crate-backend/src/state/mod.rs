@@ -1,24 +1,32 @@
+//! global server state
+
 use std::{
     ops::Deref,
     sync::{Arc, Weak},
+    time::Duration,
 };
 
+use axum::extract::FromRef;
+use common::v1::types::MessageSync;
 use common::v1::types::{voice::messages::SfuCommand, AuditLogEntry, ChannelId, RoomId, UserId};
-use common::v1::types::{Message, MessageAttachmentType, MessageSync, MessageType, MessageVersion};
 use futures::{Stream, StreamExt};
-use lamprey_backend_data_postgres::data::{postgres::PostgresPool, Data2};
+use lamprey_backend_data_postgres::{
+    data::{postgres::PostgresPool, Data2},
+    Data, Postgres,
+};
+use opendal::layers::LoggingLayer;
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
-use tokio::{runtime::Handle as TokioHandle, sync::broadcast::Sender};
-use tracing::{error, info, warn};
+use sqlx::{postgres::PgPoolOptions, PgPool};
+use tokio::runtime::Handle as TokioHandle;
+use tracing::{info, warn};
 use url::Url;
 
 use crate::{
     config::{self, Config},
-    data::{Data, Postgres},
     services::Services,
-    Result,
+    state::messaging::{Broadcast, Messaging},
 };
+use crate::{prelude::*, state::messaging::Transport};
 
 #[cfg(any())]
 mod queue;
@@ -32,7 +40,7 @@ type BoxStream<T> = std::pin::Pin<Box<dyn Stream<Item = T> + Send>>;
 pub struct MessageBroadcastInner {
     pub message: MessageSync,
     pub nonce: Option<String>,
-    // store the serve where this message came from
+    // store the server where this message came from
 }
 
 // TODO: write a wrapper around blobs and jetstream instead of accessing them directly?
@@ -44,30 +52,9 @@ pub struct ServerStateInner {
     pub services: Weak<Services>,
     pub blobs: opendal::Operator,
     pub jetstream: Option<async_nats::jetstream::Context>,
-    pub messaging: MessagingService,
-}
 
-// NOTE: maybe make this an actual service...?
-pub enum MessagingService {
-    /// use tokio channels to broadcast events
-    Memory {
-        /// ALL events on the server
-        sushi: Sender<MessageBroadcastInner>,
-
-        /// ALL events for voice sfus
-        sushi_sfu: Sender<SfuCommand>,
-    },
-
-    /// use nats to broadcast events
-    Nats {
-        client: async_nats::Client,
-
-        /// ALL events on the server
-        sushi: Sender<MessageBroadcastInner>,
-
-        /// ALL events for voice sfus
-        sushi_sfu: Sender<SfuCommand>,
-    },
+    // the new server state
+    pub new_state: ServerState2,
 }
 
 pub struct ServerState {
@@ -205,59 +192,30 @@ impl ServerStateInner {
 
     /// emit a message to everyone
     fn broadcast_inner(&self, msg: MessageBroadcastInner) -> Result<()> {
-        match &self.messaging {
-            MessagingService::Memory { sushi, .. } => {
-                let _ = sushi.send(msg);
-            }
-            MessagingService::Nats { client, .. } => {
-                let bytes = serde_json::to_vec(&msg)?;
-                let client = client.clone();
-                self.tokio.spawn(async move {
-                    if let Err(e) = client.publish("sushi".to_string(), bytes.into()).await {
-                        error!("NATS publish failed: {}", e);
-                    }
-                });
-            }
-        }
+        let _ = self.new_state.messaging().broadcast_room(
+            RoomId::default(), // this is ignored
+            MessageSync::from(msg.message),
+        );
         Ok(())
     }
 
     /// emit a sfu command to everyone
     pub fn broadcast_sfu(&self, cmd: SfuCommand) -> Result<()> {
-        match &self.messaging {
-            MessagingService::Memory { sushi_sfu, .. } => {
-                let _ = sushi_sfu.send(cmd);
-            }
-            MessagingService::Nats { client, .. } => {
-                let bytes = serde_json::to_vec(&cmd)?;
-                let client = client.clone();
-                self.tokio.spawn(async move {
-                    if let Err(e) = client.publish("sushi_sfu".to_string(), bytes.into()).await {
-                        error!("NATS publish failed: {}", e);
-                    }
-                });
-            }
-        }
+        let _ = self.new_state.messaging().broadcast_global(cmd);
         Ok(())
     }
 
     pub async fn subscribe_sushi(&self) -> Result<BoxStream<MessageBroadcastInner>> {
-        match &self.messaging {
-            MessagingService::Memory { sushi, .. } | MessagingService::Nats { sushi, .. } => {
-                let stream = tokio_stream::wrappers::BroadcastStream::new(sushi.subscribe());
-                Ok(Box::pin(stream.filter_map(|res| async move { res.ok() })))
+        let stream = self.new_state.messaging().subscribe().await?;
+        Ok(Box::pin(stream.filter_map(|msg| async move {
+            match msg {
+                Broadcast::Sync(s) => Some(MessageBroadcastInner {
+                    message: s.message,
+                    nonce: s.nonce,
+                }),
+                _ => None,
             }
-        }
-    }
-
-    pub async fn subscribe_sfu(&self) -> Result<BoxStream<SfuCommand>> {
-        match &self.messaging {
-            MessagingService::Memory { sushi_sfu, .. }
-            | MessagingService::Nats { sushi_sfu, .. } => {
-                let stream = tokio_stream::wrappers::BroadcastStream::new(sushi_sfu.subscribe());
-                Ok(Box::pin(stream.filter_map(|res| async move { res.ok() })))
-            }
-        }
+        })))
     }
 
     pub fn get_s3_url(&self, path: &str) -> Result<Url> {
@@ -274,13 +232,6 @@ impl ServerStateInner {
         Ok(u)
     }
 
-    /// presigns every relevant url in a piece of media
-    pub async fn presign(&self, _media: &mut common::v2::types::media::Media) -> Result<()> {
-        // in the past, media was served directly from s3
-        // this doesn't do anything, but i'll keep it just in case
-        Ok(())
-    }
-
     pub async fn audit_log_append(&self, entry: AuditLogEntry) -> Result<()> {
         self.data().audit_logs_room_append(entry.clone()).await?;
         self.broadcast_room(
@@ -292,35 +243,9 @@ impl ServerStateInner {
         Ok(())
     }
 
-    /// presigns every relevant url in a Message
-    pub async fn presign_message(&self, message: &mut Message) -> Result<()> {
-        self.presign_message_version(&mut message.latest_version)
-            .await
-    }
-
-    /// presigns every relevant url in a MessageVersion
-    pub async fn presign_message_version(&self, ver: &mut MessageVersion) -> Result<()> {
-        match &mut ver.message_type {
-            MessageType::DefaultMarkdown(m) => {
-                for attachment in &mut m.attachments {
-                    let MessageAttachmentType::Media { media } = &mut attachment.ty;
-                    self.presign(media).await?;
-                }
-                for emb in &mut m.embeds {
-                    if let Some(m) = &mut emb.media {
-                        self.presign(m).await?;
-                    }
-                    if let Some(m) = &mut emb.author_avatar {
-                        self.presign(m).await?;
-                    }
-                    if let Some(m) = &mut emb.site_avatar {
-                        self.presign(m).await?;
-                    }
-                }
-            }
-            _ => {}
-        }
-        Ok(())
+    /// get a handle to the new server state
+    pub fn ss2(&self) -> ServerState2 {
+        self.new_state.clone()
     }
 }
 
@@ -331,82 +256,24 @@ impl ServerState {
         blobs: opendal::Operator,
         nats: Option<async_nats::Client>,
     ) -> Self {
-        if config.http.contact.is_none() {
-            warn!("http.contact is not set in your config! set it so an email or something so webmasters can contact you.");
-        }
+        let state =
+            ServerState2::legacy_init(config.clone(), pool.clone(), blobs.clone(), nats.clone())
+                .await
+                .expect("TODO better error handling");
 
-        // a bit hacky for now since i need to work around the existing ServerState
-        // though i probably need some way to access global state/services from within them anyways
-        let services = Arc::new_cyclic(|weak| {
-            let inner = Arc::new(ServerStateInner {
-                tokio: TokioHandle::current(),
-                config,
-                database: Box::new(PostgresPool::new(pool)),
-                services: weak.to_owned(),
-                blobs,
-                jetstream: nats.clone().map(async_nats::jetstream::new),
-                messaging: match nats {
-                    Some(c) => {
-                        info!("using NATS for messaging");
-                        let (sushi_tx, _) = tokio::sync::broadcast::channel(100);
-                        let (sushi_sfu_tx, _) = tokio::sync::broadcast::channel(100);
+        let inner = ServerStateInner {
+            tokio: TokioHandle::current(),
+            config,
+            database: state.inner.database.clone(),
+            services: Weak::clone(&state.inner.services),
+            blobs,
+            jetstream: nats.clone().map(async_nats::jetstream::new),
+            new_state: state.clone(),
+        };
 
-                        let c_clone = c.clone();
-                        let sushi_tx_clone = sushi_tx.clone();
-                        tokio::spawn(async move {
-                            let mut sub = match c_clone.subscribe("sushi").await {
-                                Ok(sub) => sub,
-                                Err(e) => {
-                                    error!("failed to subscribe to NATS 'sushi': {}", e);
-                                    return;
-                                }
-                            };
-                            while let Some(msg) = sub.next().await {
-                                if let Ok(m) = serde_json::from_slice(&msg.payload) {
-                                    let _ = sushi_tx_clone.send(m);
-                                }
-                            }
-                        });
-
-                        let c_clone = c.clone();
-                        let sushi_sfu_tx_clone = sushi_sfu_tx.clone();
-                        tokio::spawn(async move {
-                            let mut sub = match c_clone.subscribe("sushi_sfu").await {
-                                Ok(sub) => sub,
-                                Err(e) => {
-                                    error!("failed to subscribe to NATS 'sushi_sfu': {}", e);
-                                    return;
-                                }
-                            };
-                            while let Some(msg) = sub.next().await {
-                                if let Ok(m) = serde_json::from_slice(&msg.payload) {
-                                    let _ = sushi_sfu_tx_clone.send(m);
-                                }
-                            }
-                        });
-
-                        MessagingService::Nats {
-                            client: c,
-                            sushi: sushi_tx,
-                            sushi_sfu: sushi_sfu_tx,
-                        }
-                    }
-                    None => {
-                        info!("using in-memory messaging");
-                        MessagingService::Memory {
-                            // maybe i should increase the limit at some point? or make it unlimited?
-                            sushi: tokio::sync::broadcast::channel(100).0,
-                            sushi_sfu: tokio::sync::broadcast::channel(100).0,
-                        }
-                    }
-                },
-            });
-            Services::new(inner.clone())
-        });
         Self {
-            inner: services.state.clone(),
-            // channel_user: Arc::new(DashMap::new()),
-            services,
+            inner: Arc::new(inner),
+            services: state.services(),
         }
     }
 
@@ -432,73 +299,208 @@ impl Deref for ServerState {
 }
 
 // ===== NEW TYPES =====
-// TODO: implement and use these
+// TODO: switch over to ServerState2 entirely
 
-// /// global state for the server
-// pub struct ServerState2(Arc<ServerStateInner2>);
+/// global state for the server
+#[derive(Clone)]
+pub struct ServerState2 {
+    inner: Arc<ServerStateInner2>,
+}
 
-// struct ServerStateInner2 {
-//     /// config for this server
-//     config: Config,
+struct ServerStateInner2 {
+    /// config for this server
+    config: Config,
 
-//     // /// reference to the database for persistent data
-//     // database: Box<dyn Data2>,
-//     /// services
-//     services: Weak<Services>,
+    /// reference to the database for persistent data
+    // database: Box<dyn Data2>,
+    database: Box<PostgresPool>,
 
-//     /// storage for large blobs
-//     blobs: opendal::Operator,
+    /// storage for large blobs
+    blobs: opendal::Operator,
 
-//     /// send and receive messages
-//     messaging: MessagingService,
-// }
+    /// send and receive messages
+    messaging: Messaging,
 
-// impl ServerState2 {
-//     pub async fn init_from_config(config: Config) -> Result<Self> {
-//         todo!()
-//     }
+    /// services
+    services: Weak<Services>,
+}
 
-//     pub fn new(/* ... */) -> Self {
-//         let services = Arc::new_cyclic(|weak_services| {
-//             let inner = Arc::new(ServerStateInner2 {
-//                 config: todo!(),
-//                 services: weak_services,
-//                 blobs: todo!(),
-//                 messaging: todo!(),
-//             });
+impl ServerState2 {
+    pub async fn init_from_config(config: Config) -> Result<Self> {
+        // lint config
+        if config.http.contact.is_none() {
+            warn!("http.contact is not set in your config! set it so an email or something so webmasters can contact you.");
+        }
 
-//             Services::new(inner)
-//         });
+        // setup the database connection
+        let pool = PgPoolOptions::new()
+            .max_connections(5)
+            .acquire_timeout(Duration::from_secs(5))
+            .connect(&config.database_url)
+            .await?;
+        let database = Box::new(PostgresPool::new(pool));
+        database.migrate().await?;
 
-//         let inner = Arc::clone(&services.state);
+        // setup the object storage connection
+        let blobs = match &config.blobs {
+            config::ConfigBlobs::S3(s3) => {
+                let builder = opendal::services::S3::default()
+                    .bucket(&s3.bucket)
+                    .endpoint(s3.endpoint.as_str())
+                    .region(&s3.region)
+                    .access_key_id(&s3.access_key_id)
+                    .secret_access_key(&s3.secret_access_key);
+                opendal::Operator::new(builder)?
+                    .layer(LoggingLayer::default())
+                    .finish()
+            }
+            config::ConfigBlobs::Fs(fs) => {
+                let builder = opendal::services::Fs::default().root(fs.data_dir.to_str().unwrap());
+                opendal::Operator::new(builder)?
+                    .layer(LoggingLayer::default())
+                    .finish()
+            }
+        };
+        // TODO: don't require blobs to be healthy to start server
+        blobs.check().await?;
 
-//         Ok(Self(inner))
-//     }
+        // set up messaging
+        let transport = if let Some(nats_config) = &config.nats {
+            info!("using NATS for messaging");
+            let mut nats_options = async_nats::ConnectOptions::new();
+            if let Some(credentials_path) = &nats_config.credentials {
+                nats_options = nats_options
+                    .credentials_file(credentials_path)
+                    .await
+                    .map_err(|e| Error::Internal(format!("NATS credentials file failed: {}", e)))?;
+            }
+            let nats = async_nats::connect_with_options(&nats_config.addr, nats_options)
+                .await
+                .map_err(|e| Error::Internal(format!("NATS connect failed: {}", e)))?;
+            Transport::nats(nats)
+        } else {
+            info!("using in-memory messaging");
+            Transport::memory()
+        };
+        let messaging = Messaging::new(transport);
 
-//     // TODO: maybe merge Server here...? maybe not...
-//     // /// start the http server
-//     // pub async fn serve(&self) -> Result<()> {
-//     //     todo!()
-//     // }
+        // create services and tie up the arc cycle
+        let services = Arc::new_cyclic(|weak_services| {
+            let state = ServerState2 {
+                inner: Arc::new(ServerStateInner2 {
+                    config,
+                    services: weak_services.clone(),
+                    database,
+                    blobs,
+                    messaging,
+                }),
+            };
 
-//     /// access the database
-//     pub fn data(&self) -> Box<dyn Data2<DataTxn = Postgres>> {
-//         Box::new((*self.0.database).clone())
-//     }
+            Services::new(state)
+        });
 
-//     /// acquire a database transaction
-//     pub async fn acquire(&self) -> Result<Box<dyn Data>> {
-//         todo!()
-//     }
+        // initialize server
+        // TODO: setup_vapid_keys(&state).await?;
+        // TODO: setup_server_room(&state).await?;
 
-//     pub fn services(&self) -> Arc<Services> {
-//         self.0
-//             .services
-//             .upgrade()
-//             .expect("services should always exist while ServerStateInner is alive")
-//     }
+        // FIXME: Services is dropped immediately, since the only reference after this fn returns is Weak
 
-//     pub fn messaging(&self) -> &MessagingService {
-//         &self.0.messaging
-//     }
-// }
+        Ok(services.state.clone())
+    }
+
+    // TEMP
+    pub async fn legacy_init(
+        config: Config,
+        pool: PgPool,
+        blobs: opendal::Operator,
+        nats: Option<async_nats::Client>,
+    ) -> Result<Self> {
+        if config.http.contact.is_none() {
+            warn!("http.contact is not set in your config! set it so an email or something so webmasters can contact you.");
+        }
+
+        let database = Box::new(PostgresPool::new(pool));
+
+        let transport = if let Some(nats) = nats {
+            info!("using NATS for messaging");
+            Transport::nats(nats)
+        } else {
+            info!("using in-memory messaging");
+            Transport::memory()
+        };
+        let messaging = Messaging::new(transport);
+
+        let services = Arc::new_cyclic(|weak_services| {
+            let state = ServerState2 {
+                inner: Arc::new(ServerStateInner2 {
+                    config,
+                    services: weak_services.clone(),
+                    database,
+                    blobs,
+                    messaging,
+                }),
+            };
+
+            Services::new(state)
+        });
+
+        Ok(services.state.clone())
+    }
+
+    // TODO: maybe merge Server here...? maybe not...
+    // /// start the http server
+    // pub async fn serve(&self) -> Result<()> {
+    //     todo!()
+    // }
+
+    /// legacy: acquire a connection to the database that auto-commits on every query
+    // TEMP: compat
+    pub fn data(&self) -> Box<dyn Data> {
+        Box::new(Postgres {
+            pool: self.inner.database.pool.clone(),
+            txn: None,
+            use_legacy_behavior: true,
+        })
+    }
+
+    /// acquire/begin a database transaction
+    pub async fn acquire(&self) -> Result<Box<dyn Data>> {
+        let txn = self.inner.database.begin().await?;
+        Ok(Box::new(txn))
+    }
+
+    pub fn services(&self) -> Arc<Services> {
+        self.inner
+            .services
+            .upgrade()
+            .expect("services should always exist while ServerStateInner is alive")
+    }
+
+    pub fn messaging(&self) -> &Messaging {
+        &self.inner.messaging
+    }
+
+    pub fn config(&self) -> &Config {
+        &self.inner.config
+    }
+
+    /// create a handle to the old ServerStateInner struct
+    pub fn ss1(&self) -> Arc<ServerStateInner> {
+        let inner = ServerStateInner {
+            tokio: TokioHandle::current(),
+            config: self.config().clone(),
+            database: self.inner.database.clone(),
+            services: Weak::clone(&self.inner.services),
+            blobs: self.inner.blobs.clone(),
+            jetstream: None, // FIXME: populate jetstream
+            new_state: self.clone(),
+        };
+        Arc::new(inner)
+    }
+}
+
+impl FromRef<Arc<ServerState>> for ServerState2 {
+    fn from_ref(input: &Arc<ServerState>) -> Self {
+        input.ss2()
+    }
+}

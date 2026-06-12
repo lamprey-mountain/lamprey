@@ -1,3 +1,5 @@
+//! rest routes
+
 use std::sync::Arc;
 
 use axum::{extract::State, response::IntoResponse, Json};

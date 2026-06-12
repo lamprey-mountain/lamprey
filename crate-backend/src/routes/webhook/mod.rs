@@ -469,8 +469,6 @@ async fn webhook_message_get(
         )));
     }
 
-    s.presign_message(&mut message).await?;
-
     Ok(Json(message))
 }
 
