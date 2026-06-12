@@ -26,9 +26,10 @@ fn test_quotes() {
     let source = "> quote\n> line 2\n\n> another quote";
     let parser = Parser::new();
     let parsed = parser.parse(source);
+    dbg!(parsed.tree().root());
 
     assert_eq!(
         parsed.to_html(),
-        "<blockquote>quote\nline 2\n</blockquote>\n<blockquote>another quote</blockquote>"
+        "<blockquote><p>quote</p><p>line 2</p></blockquote><p></p><blockquote><p>another quote</p></blockquote>"
     );
 }

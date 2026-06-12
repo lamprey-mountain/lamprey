@@ -135,6 +135,7 @@ impl<'a> ParseContext<'a> {
 
                 self.builder.finish_node();
             }
+
             TokenKind::AngleClose => {
                 let tok = self.tokenizer.advance().unwrap();
                 let text = self.tokenizer.text(tok.span).to_string();
@@ -143,16 +144,30 @@ impl<'a> ParseContext<'a> {
                 self.builder
                     .token(NodeKind::Text(TextKind::Syntax).into(), &text);
 
-                if let Some(tok) = self.tokenizer.peek() {
-                    if tok.kind == TokenKind::Whitespace {
-                        let text = self.tokenizer.text(tok.span).to_string();
-                        self.builder
-                            .token(NodeKind::Text(TextKind::Syntax).into(), &text);
-                        self.tokenizer.advance();
+                loop {
+                    if let Some(tok) = self.tokenizer.peek() {
+                        if tok.kind == TokenKind::Whitespace {
+                            let text = self.tokenizer.text(tok.span).to_string();
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Padding).into(), &text);
+                            self.tokenizer.advance();
+                        }
                     }
-                }
 
-                self.parse_block();
+                    self.parse_block();
+
+                    if let Some(tok) = self.tokenizer.peek() {
+                        if tok.kind == TokenKind::AngleClose {
+                            let text = self.tokenizer.text(tok.span).to_string();
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Syntax).into(), &text);
+                            self.tokenizer.advance();
+                            continue;
+                        }
+                    }
+
+                    break;
+                }
 
                 self.builder.finish_node();
             }

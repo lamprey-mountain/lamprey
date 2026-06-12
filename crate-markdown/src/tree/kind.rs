@@ -81,6 +81,7 @@ pub enum TextKind {
     CustomEmoji,
 
     /// a newline character (`\n`)
+    // TODO: remove; either use Text or Padding
     Newline,
 
     // markdown syntax
