@@ -1,5 +1,5 @@
-use crate::ast::block::Header;
-use crate::ast::inline::{CustomEmoji, Link, Mention};
+use crate::ast::block::{Document, Header};
+use crate::ast::inline::{CustomEmoji, Link, Mention, UnicodeEmoji};
 use crate::prelude::*;
 use crate::query::decorations::DecorationGenerator;
 
@@ -52,6 +52,34 @@ pub trait QueryableExt: Queryable {
             None => DecorationGenerator::new_full(root),
         };
         gen.generate().into_iter()
+    }
+
+    /// check if this document contains only emoji. if it does, returns the number of emoji contained within.
+    fn only_emoji(&self) -> Option<u32> {
+        let root = self.get_root();
+        let mut emoji_count = 0;
+
+        for el in root.descendants_with_tokens() {
+            match el.kind() {
+                NodeKind::Text(TextKind::CustomEmoji) | NodeKind::Text(TextKind::UnicodeEmoji) => {
+                    emoji_count += 1;
+                }
+
+                // ignore whitespace
+                NodeKind::Text(TextKind::Newline) => {}
+                NodeKind::Text(TextKind::Text)
+                    if el.as_token()?.text().chars().all(|c| c.is_whitespace()) => {}
+
+                // some root level elements are ignored
+                NodeKind::Document => {}
+                NodeKind::Block(BlockKind::Paragraph) => {}
+
+                // this isn't an emoji!
+                _ => return None,
+            }
+        }
+
+        Some(emoji_count)
     }
 }
 
