@@ -96,6 +96,44 @@ impl HtmlRenderer {
                         .collect::<String>()
                 )
             }
+            Block::Table(table) => {
+                let mut rows = table.rows().peekable();
+                let mut html = String::new();
+                html.push_str("<table>");
+
+                if let Some(header_row) = rows.next() {
+                    html.push_str("<thead><tr>");
+                    for cell in header_row.cells() {
+                        let text = cell
+                            .children()
+                            .map(|i| self.render_inline(i))
+                            .collect::<String>();
+                        html.push_str(&format!("<th>{}</th>", text.trim()));
+                    }
+                    html.push_str("</tr></thead>");
+                }
+
+                rows.next(); // skip alignment row
+
+                if rows.peek().is_some() {
+                    html.push_str("<tbody>");
+                    for row in rows {
+                        html.push_str("<tr>");
+                        for cell in row.cells() {
+                            let text = cell
+                                .children()
+                                .map(|i| self.render_inline(i))
+                                .collect::<String>();
+                            html.push_str(&format!("<td>{}</td>", text.trim()));
+                        }
+                        html.push_str("</tr>");
+                    }
+                    html.push_str("</tbody>");
+                }
+
+                html.push_str("</table>");
+                html
+            }
         }
     }
 

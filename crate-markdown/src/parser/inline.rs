@@ -1,6 +1,6 @@
+use crate::lexer::Token;
 use crate::parser::ParseContext;
 use crate::prelude::*;
-use crate::lexer::Token;
 
 impl<'a> ParseContext<'a> {
     /// parse inline markdown
@@ -17,12 +17,31 @@ impl<'a> ParseContext<'a> {
 
             match tok.kind {
                 // parse a codeblock
-                // FIXME: handle n (what happens if there is more than 1 backtick?)
-                TokenKind::Backticks(_) => {
+                TokenKind::Backticks(n) => {
                     self.builder
                         .start_node(NodeKind::Inline(InlineKind::Code).into());
-                    // FIXME: handle closing backtick
-                    self.parse_inline(stop);
+                    self.builder.token(
+                        NodeKind::Text(TextKind::Syntax).into(),
+                        self.tokenizer.text(tok.span),
+                    );
+                    self.parse_inline(&|t| {
+                        if let TokenKind::Backticks(m) = t.kind {
+                            m == n || stop(t)
+                        } else {
+                            stop(t)
+                        }
+                    });
+                    if let Some(next_tok) = self.tokenizer.peek() {
+                        if let TokenKind::Backticks(m) = next_tok.kind {
+                            if m == n {
+                                self.tokenizer.advance();
+                                self.builder.token(
+                                    NodeKind::Text(TextKind::Syntax).into(),
+                                    self.tokenizer.text(next_tok.span),
+                                );
+                            }
+                        }
+                    }
                     self.builder.finish_node();
                 }
 

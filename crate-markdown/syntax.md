@@ -30,7 +30,7 @@ example:
 
 ### tables
 
-- table content is a set of blocks
+- table content is a list of inline content (note: unsure if i want to support full blocks or not? probably not...)
 - table row lines are a sequences of text starting with, ending with, and separated by pipes `|`
 - table rows are one or more table row lines separated with newlines.
   - each line in a table row is be split by `|`

@@ -4,6 +4,7 @@ mod basic;
 mod server;
 mod lexing;
 mod util;
+mod tables;
 
 #[test]
 fn test() {

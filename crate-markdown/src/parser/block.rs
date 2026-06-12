@@ -47,7 +47,8 @@ impl<'a> ParseContext<'a> {
                 };
 
                 self.builder.start_node(NodeKind::Block(kind).into());
-                self.builder.token(NodeKind::Text(TextKind::HeaderHashes).into(), &hashes);
+                self.builder
+                    .token(NodeKind::Text(TextKind::HeaderHashes).into(), &hashes);
 
                 // skip whitespace if it exists
                 if let Some(tok) = self.tokenizer.peek() {
@@ -151,21 +152,222 @@ impl<'a> ParseContext<'a> {
                 self.builder.finish_node();
             }
             _ => {
-                self.builder
-                    .start_node(NodeKind::Block(BlockKind::Paragraph).into());
+                if self.is_table() {
+                    self.parse_table();
+                } else {
+                    self.builder
+                        .start_node(NodeKind::Block(BlockKind::Paragraph).into());
 
-                self.parse_inline(&|t| t.kind == TokenKind::Newline);
+                    self.parse_inline(&|t| t.kind == TokenKind::Newline);
 
-                if let Some(tok) = self.tokenizer.peek() {
-                    if tok.kind == TokenKind::Newline {
-                        self.builder
-                            .token(NodeKind::Text(TextKind::Newline).into(), "\n");
-                        self.tokenizer.advance();
+                    if let Some(tok) = self.tokenizer.peek() {
+                        if tok.kind == TokenKind::Newline {
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Newline).into(), "\n");
+                            self.tokenizer.advance();
+                        }
                     }
-                }
 
-                self.builder.finish_node();
+                    self.builder.finish_node();
+                }
             }
         }
+    }
+
+    fn is_table(&self) -> bool {
+        let mut lexer = self.tokenizer.clone();
+
+        // skip whitespace
+        if let Some(tok) = lexer.peek() {
+            if tok.kind == TokenKind::Whitespace {
+                lexer.advance();
+            }
+        }
+
+        if let Some(tok) = lexer.peek() {
+            if tok.kind != TokenKind::Pipe && tok.kind != TokenKind::Pipe2 {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        loop {
+            let mut has_dash = false;
+            let mut has_pipe = false;
+            let mut valid_align_chars = true;
+            let mut is_empty = true;
+
+            while let Some(tok) = lexer.advance() {
+                if tok.kind == TokenKind::Newline {
+                    break;
+                }
+                is_empty = false;
+                match tok.kind {
+                    TokenKind::Dash => has_dash = true,
+                    TokenKind::Pipe | TokenKind::Pipe2 => has_pipe = true,
+                    TokenKind::Colon | TokenKind::Whitespace => {}
+                    _ => valid_align_chars = false,
+                }
+            }
+
+            if is_empty {
+                return false;
+            }
+
+            if valid_align_chars && has_dash && has_pipe {
+                return true;
+            }
+        }
+    }
+
+    fn is_alignment_row(&self) -> bool {
+        let mut lexer = self.tokenizer.clone();
+        let mut has_dash = false;
+        let mut valid_chars = true;
+        let mut align_row_empty = true;
+
+        while let Some(tok) = lexer.advance() {
+            if tok.kind == TokenKind::Newline {
+                break;
+            }
+            align_row_empty = false;
+            match tok.kind {
+                TokenKind::Dash => has_dash = true,
+                TokenKind::Pipe | TokenKind::Pipe2 => {}
+                TokenKind::Colon | TokenKind::Whitespace => {}
+                _ => valid_chars = false,
+            }
+        }
+
+        !align_row_empty && valid_chars && has_dash
+    }
+
+    fn parse_table(&mut self) {
+        self.builder
+            .start_node(NodeKind::Block(BlockKind::Table).into());
+
+        while let Some(tok) = self.tokenizer.peek() {
+            if tok.kind == TokenKind::Newline {
+                break;
+            }
+
+            if self.is_alignment_row() {
+                self.parse_alignment_row();
+            } else {
+                self.parse_table_row();
+            }
+
+            if let Some(tok) = self.tokenizer.peek() {
+                if tok.kind == TokenKind::Newline {
+                    self.builder
+                        .token(NodeKind::Text(TextKind::Newline).into(), "\n");
+                    self.tokenizer.advance();
+                } else {
+                    break;
+                }
+            }
+        }
+
+        self.builder.finish_node();
+    }
+
+    fn parse_table_row(&mut self) {
+        self.builder
+            .start_node(NodeKind::Block(BlockKind::TableRow).into());
+
+        if let Some(tok) = self.tokenizer.peek() {
+            if tok.kind == TokenKind::Pipe || tok.kind == TokenKind::Pipe2 {
+                let text = self.tokenizer.text(tok.span).to_string();
+                self.builder
+                    .token(NodeKind::Text(TextKind::Syntax).into(), &text);
+                self.tokenizer.advance();
+            }
+        }
+
+        while let Some(tok) = self.tokenizer.peek() {
+            if tok.kind == TokenKind::Newline {
+                break;
+            }
+
+            self.builder
+                .start_node(NodeKind::Block(BlockKind::TableCell).into());
+
+            self.parse_inline(&|t| {
+                t.kind == TokenKind::Pipe
+                    || t.kind == TokenKind::Pipe2
+                    || t.kind == TokenKind::Newline
+            });
+
+            self.builder.finish_node();
+
+            if let Some(t) = self.tokenizer.peek() {
+                if t.kind == TokenKind::Pipe || t.kind == TokenKind::Pipe2 {
+                    let text = self.tokenizer.text(t.span).to_string();
+                    self.builder
+                        .token(NodeKind::Text(TextKind::Syntax).into(), &text);
+                    self.tokenizer.advance();
+                } else if t.kind == TokenKind::Newline {
+                    break;
+                }
+            }
+        }
+
+        self.builder.finish_node();
+    }
+
+    fn parse_alignment_row(&mut self) {
+        self.builder
+            .start_node(NodeKind::Block(BlockKind::TableRow).into());
+
+        if let Some(tok) = self.tokenizer.peek() {
+            if tok.kind == TokenKind::Pipe || tok.kind == TokenKind::Pipe2 {
+                let text = self.tokenizer.text(tok.span).to_string();
+                self.builder
+                    .token(NodeKind::Text(TextKind::Syntax).into(), &text);
+                self.tokenizer.advance();
+            }
+        }
+
+        while let Some(tok) = self.tokenizer.peek() {
+            if tok.kind == TokenKind::Newline {
+                break;
+            }
+
+            self.builder
+                .start_node(NodeKind::Block(BlockKind::TableCell).into());
+
+            let mut align_text = String::new();
+            while let Some(t) = self.tokenizer.peek() {
+                if t.kind == TokenKind::Pipe
+                    || t.kind == TokenKind::Pipe2
+                    || t.kind == TokenKind::Newline
+                {
+                    break;
+                }
+                align_text.push_str(self.tokenizer.text(t.span));
+                self.tokenizer.advance();
+            }
+
+            if !align_text.is_empty() {
+                self.builder
+                    .token(NodeKind::Text(TextKind::TableAlignment).into(), &align_text);
+            }
+
+            self.builder.finish_node();
+
+            if let Some(t) = self.tokenizer.peek() {
+                if t.kind == TokenKind::Pipe || t.kind == TokenKind::Pipe2 {
+                    let text = self.tokenizer.text(t.span).to_string();
+                    self.builder
+                        .token(NodeKind::Text(TextKind::Syntax).into(), &text);
+                    self.tokenizer.advance();
+                } else if t.kind == TokenKind::Newline {
+                    break;
+                }
+            }
+        }
+
+        self.builder.finish_node();
     }
 }

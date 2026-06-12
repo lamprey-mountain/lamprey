@@ -45,7 +45,7 @@ pub enum TokenKind {
     #[token("**")]  Asterisk2,
     #[token("*")]   Asterisk1,
 
-    #[token("`+", |lex| lex.slice().len() as u16)]
+    #[regex("`+", |lex| lex.slice().len() as u16)]
     Backticks(u16),
 
     /// uuid pattern, used for mentions and emoji

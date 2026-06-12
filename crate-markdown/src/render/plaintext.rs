@@ -55,6 +55,7 @@ impl PlaintextRenderer {
                 .content()
                 .map(|b| self.render_block(b))
                 .collect::<String>(),
+            Block::Table(_table) => String::new(), // TODO: render table to plaintext
         }
     }
 

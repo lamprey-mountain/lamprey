@@ -19,6 +19,8 @@ pub struct ListItem(SyntaxNode);
 #[derive(Debug)]
 pub struct Header(SyntaxNode);
 
+pub use crate::ast::table::Table;
+
 impl_ast!(Document, NodeKind::Document);
 impl_ast!(Paragraph, NodeKind::Block(BlockKind::Paragraph));
 impl_ast!(Blockquote, NodeKind::Block(BlockKind::Blockquote));
@@ -41,6 +43,7 @@ pub enum Block {
     Codeblock(Codeblock),
     List(List),
     ListItem(ListItem),
+    Table(Table),
 }
 
 pub enum ListKind {
@@ -86,6 +89,8 @@ impl AstNode for Block {
             List::cast(tn).map(Self::List)
         } else if ListItem::can_cast(kind) {
             ListItem::cast(tn).map(Self::ListItem)
+        } else if Table::can_cast(kind) {
+            Table::cast(tn).map(Self::Table)
         } else {
             None
         }
@@ -99,6 +104,7 @@ impl AstNode for Block {
             Block::Codeblock(b) => b.syntax(),
             Block::List(b) => b.syntax(),
             Block::ListItem(b) => b.syntax(),
+            Block::Table(b) => b.syntax(),
         }
     }
 }
