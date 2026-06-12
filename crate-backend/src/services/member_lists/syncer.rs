@@ -2,17 +2,17 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
 use common::v1::types::{ChannelId, MemberListOp, MessageSync, RoomId, UserId};
-use tokio_stream::{wrappers::BroadcastStream, StreamExt, StreamMap, StreamNotifyClose};
+use tokio_stream::{StreamExt, StreamMap, StreamNotifyClose, wrappers::BroadcastStream};
 use uuid::Uuid;
 
 use crate::{
+    Error, ServerStateInner,
     error::Result,
     services::member_lists::{
         actor::{MemberListCommand, MemberListEvent},
         util::{MemberListKey, MemberListKey1, MemberListTarget},
     },
     services::rooms::MemberListCommandMsg,
-    Error, ServerStateInner,
 };
 
 /// Syncer for member list events
@@ -140,7 +140,7 @@ impl MemberListSyncer {
                 Err(e) => {
                     return Err(Error::Internal(format!(
                         "failed to send member list command: {e}"
-                    )))
+                    )));
                 }
             };
 
@@ -149,7 +149,7 @@ impl MemberListSyncer {
                 None => {
                     return Err(Error::Internal(
                         "member list command returned None".to_string(),
-                    ))
+                    ));
                 }
             };
 
@@ -171,7 +171,7 @@ impl MemberListSyncer {
             Err(e) => {
                 return Err(Error::Internal(format!(
                     "failed to receive initial ranges: {e}"
-                )))
+                )));
             }
         };
 
@@ -180,7 +180,7 @@ impl MemberListSyncer {
             None => {
                 return Err(Error::Internal(
                     "member list command returned None".to_string(),
-                ))
+                ));
             }
         };
 
@@ -258,7 +258,7 @@ impl MemberListSyncer {
 
     fn patch_msg(&mut self, msg: &mut MessageSync, user_id: UserId) {
         if let MessageSync::MemberListSync {
-            user_id: ref mut uid,
+            user_id: uid,
             room_id,
             channel_id,
             ops,

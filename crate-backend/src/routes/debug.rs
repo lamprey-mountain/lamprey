@@ -313,8 +313,8 @@ async fn unfurler_debug(
         .await?;
 
     let mut embeds = Vec::new();
-    for mut gen in generations {
-        let pending = gen.pending_media();
+    for mut g in generations {
+        let pending = g.pending_media();
         for p in pending {
             let import = Import::new(auth.user.id).merge(MediaCreate {
                 alt: p.alt,
@@ -327,13 +327,13 @@ async fn unfurler_debug(
             });
             let mut item = s.services().media.import_from_url(import, &p.url).await?;
             let media = item.ready().await;
-            gen.update_media(
+            g.update_media(
                 p.placeholder_media_id,
                 lamprey_unfurl::util::EmbedMedia::Finished((*media).clone()),
             );
         }
 
-        embeds.push(gen.to_embed());
+        embeds.push(g.to_embed());
     }
 
     Ok(Json(DebugResponse {
@@ -370,8 +370,8 @@ async fn unfurler_unfurl(
     for url in json.urls {
         let generations = s.inner.services().embed.unfurl(&url).await?;
 
-        for mut gen in generations {
-            let pending = gen.pending_media();
+        for mut g in generations {
+            let pending = g.pending_media();
             for p in pending {
                 let import = Import::new(auth.user.id).merge(MediaCreate {
                     alt: p.alt,
@@ -385,13 +385,13 @@ async fn unfurler_unfurl(
                 let mut item = s.services().media.import_from_url(import, &p.url).await?;
                 let media = item.ready().await;
 
-                gen.update_media(
+                g.update_media(
                     p.placeholder_media_id,
                     lamprey_unfurl::util::EmbedMedia::Finished((*media).clone()),
                 );
             }
 
-            embeds.push(gen.to_embed());
+            embeds.push(g.to_embed());
         }
     }
 

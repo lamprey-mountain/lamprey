@@ -47,11 +47,11 @@ pub trait QueryableExt: Queryable {
     /// iterate over some decorations
     fn iter_decorations(&self, span: Option<Span>) -> impl Iterator<Item = Decoration> {
         let root = self.get_root();
-        let gen = match span {
+        let decos = match span {
             Some(span) => DecorationGenerator::new_span(root, span),
             None => DecorationGenerator::new_full(root),
         };
-        gen.generate().into_iter()
+        decos.generate().into_iter()
     }
 
     /// check if this document contains only emoji. if it does, returns the number of emoji contained within.

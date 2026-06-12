@@ -7,7 +7,7 @@ members = [
 
 [workspace.package]
 version = "0.1.1"
-edition = "2021"
+edition = "2024"
 authors = ["tezlm"]
 description = "yet another chat thing?"
 license = "MIT OR Apache-2.0"

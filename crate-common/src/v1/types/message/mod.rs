@@ -849,7 +849,7 @@ impl Validate for MessageAttachmentCreateType {
                     }
                 }
 
-                if let Some(ref filename_val) = filename {
+                if let Some(filename_val) = filename {
                     if !filename_val.validate_length(Some(1), Some(256), None) {
                         let mut err = ValidationError::new("length");
                         err.add_param("min".into(), &json!(1));
@@ -1148,7 +1148,7 @@ impl Diff for MessagePatch {
                                     }
 
                                     // alt: Option<Option<String>> vs existing_media.alt: Option<String>
-                                    (if let Some(ref alt_val) = alt {
+                                    (if let Some(alt_val) = alt {
                                         alt_val != &existing_media.alt
                                     } else {
                                         false
