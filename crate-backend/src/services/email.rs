@@ -19,7 +19,7 @@ pub struct ServiceEmail {
 impl ServiceEmail {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         let config = state.config.smtp.clone();
-        let creds = Credentials::new(config.username, config.password);
+        let creds = Credentials::new(config.username, config.password.load()?.to_string());
         let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(&config.host)
             .unwrap()
             .credentials(creds)

@@ -1,5 +1,9 @@
 use core::fmt;
-use std::{env, fs, path::PathBuf, sync::{Arc, RwLock}};
+use std::{
+    env, fs,
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 
 use crate::prelude::*;
 
@@ -58,6 +62,13 @@ impl fmt::Debug for Secret {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // reuse Display so the secret value is never accidentally exposed via {:?}
         fmt::Display::fmt(self, f)
+    }
+}
+
+impl Clone for Secret {
+    fn clone(&self) -> Self {
+        // PERF: maybe make value an Arc<RwLock<_>> for cloning?
+        Self::new(self.source.clone())
     }
 }
 

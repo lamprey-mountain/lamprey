@@ -349,7 +349,7 @@ impl ServerState2 {
                     .endpoint(s3.endpoint.as_str())
                     .region(&s3.region)
                     .access_key_id(&s3.access_key_id)
-                    .secret_access_key(&s3.secret_access_key);
+                    .secret_access_key(s3.secret_access_key.load()?.as_ref());
                 opendal::Operator::new(builder)?
                     .layer(LoggingLayer::default())
                     .finish()

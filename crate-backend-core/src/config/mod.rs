@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 use url::Url;
 
-use crate::{Error, Result};
+use crate::{Error, Result, config::secret::Secret};
 
 use common::v1::types::federation::Hostname;
 use common::v1::types::redex::EvalLimits;
@@ -141,7 +141,7 @@ pub struct ConfigS3 {
     pub endpoint: Url,
     pub region: String,
     pub access_key_id: String,
-    pub secret_access_key: String,
+    pub secret_access_key: Secret,
     // /// alternative host instead of going though the reverse proxy
     // pub local_endpoint: Option<Url>,
 }
@@ -149,7 +149,7 @@ pub struct ConfigS3 {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigOauthProvider {
     pub client_id: String,
-    pub client_secret: String,
+    pub client_secret: Secret,
     pub authorization_url: String,
     pub token_url: String,
     pub revocation_url: String,
@@ -227,7 +227,7 @@ fn default_max_parallel_jobs() -> usize {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigSmtp {
     pub username: String,
-    pub password: String,
+    pub password: Secret,
     pub host: String,
     pub from: String,
 }
@@ -300,7 +300,7 @@ impl Default for ConfigMedia {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigVoice {
     /// the token for the voice servers to connect via
-    pub token: String,
+    pub token: Secret,
 
     /// override the ipv4 address to listen on
     pub host_ipv4: Option<String>,
@@ -343,6 +343,7 @@ pub struct ConfigNats {
     pub addr: String,
 
     /// path to a nats credential file, if authentication is required
+    // TODO: make this support Secret?
     pub credentials: Option<PathBuf>,
 }
 
