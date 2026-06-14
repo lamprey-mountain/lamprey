@@ -15,7 +15,7 @@ use headers::{Authorization, HeaderMapExt};
 use http::request::Parts;
 
 use crate::routes::util::audit::AuditTxnSlot as AuditLogSlot;
-use crate::routes::util::audit_old::AuditLoggerTransaction;
+use crate::routes::util::audit::AuditLoggerTransaction;
 use crate::routes::util::{FederationIdentity, HeaderPuppetId, HeaderReason};
 use crate::ServerState;
 use crate::{Error, ServerStateInner};

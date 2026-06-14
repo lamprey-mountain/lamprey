@@ -17,7 +17,6 @@ use uuid::Uuid;
 use crate::{error::Error, services::federation::signing::ValidatedKeyAlgo, ServerState};
 
 pub mod audit;
-pub mod audit_old; // TODO: remove
 pub mod auth;
 pub mod auth_old; // TODO: remove
 pub mod extract;
@@ -26,7 +25,7 @@ pub mod multipart;
 pub mod script_http;
 pub mod signing;
 
-pub use audit_old::audit_log_middleware;
+pub use audit::audit_log_middleware;
 pub use auth_old::{Auth, Auth3, AuthRelaxed2};
 
 // TODO: remove
