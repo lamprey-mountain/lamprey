@@ -16,23 +16,25 @@ use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
+use crate::routes::util::Auth;
 use crate::ServerState;
 
-use super::util::Auth;
+use crate::routes::util::auth::Auth4;
 use crate::error::{Error, Result};
 use crate::routes2;
 
 /// Thread member list
 #[handler(routes::thread_member_list)]
 async fn thread_member_list(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::thread_member_list::Request,
 ) -> Result<impl IntoResponse> {
     let mut d = s.data();
+    let user = auth.ensure_user()?;
     s.services()
         .perms
-        .for_channel3(Some(auth.user.id), req.thread_id)
+        .for_channel3(Some(user.id), req.thread_id)
         .await?
         .ensure_view()?
         .check()?;
@@ -43,15 +45,16 @@ async fn thread_member_list(
 /// Thread member get
 #[handler(routes::thread_member_get)]
 async fn thread_member_get(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::thread_member_get::Request,
 ) -> Result<impl IntoResponse> {
-    let target_user_id = req.user_id.unwrap_or(auth.user.id);
+    let user = auth.ensure_user()?;
+    let target_user_id = req.user_id.unwrap_or(user.id);
     let mut d = s.data();
     s.services()
         .perms
-        .for_channel3(Some(auth.user.id), req.thread_id)
+        .for_channel3(Some(user.id), req.thread_id)
         .await?
         .ensure_view()?
         .check()?;
@@ -62,24 +65,25 @@ async fn thread_member_get(
 /// Thread member add
 #[handler(routes::thread_member_add)]
 async fn thread_member_add(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::thread_member_add::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    auth.ensure_user()?.ensure_unsuspended()?;
     // ThreadMemberPut is empty, no validation needed
-    let target_user_id = req.user_id.unwrap_or(auth.user.id);
+    let user = auth.ensure_user()?;
+    let target_user_id = req.user_id.unwrap_or(user.id);
     let mut d = s.data();
     let srv = s.services();
     let mut perms = srv
         .perms
-        .for_channel3(Some(auth.user.id), req.thread_id)
+        .for_channel3(Some(user.id), req.thread_id)
         .await?
         .ensure_view()?;
-    let thread = srv.channels.get(req.thread_id, Some(auth.user.id)).await?;
+    let thread = srv.channels.get(req.thread_id, Some(user.id)).await?;
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
-    if target_user_id != auth.user.id {
+    if target_user_id != user.id {
         if !thread.invitable {
             perms.needs(Permission::MemberKick);
         }
@@ -103,7 +107,7 @@ async fn thread_member_add(
             }
 
             let relationship = d
-                .user_relationship_get(auth.user.id, target_user_id)
+                .user_relationship_get(user.id, target_user_id)
                 .await?;
 
             let are_friends =
@@ -119,13 +123,13 @@ async fn thread_member_add(
         .await?;
     let res = d.thread_member_get(req.thread_id, target_user_id).await?;
 
-    if target_user_id != auth.user.id {
+    if target_user_id != user.id {
         let message_id = d
             .message_create(crate::types::DbMessageCreate {
                 id: None,
                 channel_id: req.thread_id,
                 attachment_ids: vec![],
-                author_id: auth.user.id,
+                author_id: user.id,
                 embeds: vec![],
                 components: vec![],
                 message_type: MessageType::MemberAdd(MessageMember { target_user_id }).into(),
@@ -145,12 +149,12 @@ async fn thread_member_add(
             .await?;
         let message = srv
             .messages
-            .get(req.thread_id, message_id, Some(auth.user.id))
+            .get(req.thread_id, message_id, Some(user.id))
             .await?;
         srv.channels.invalidate(req.thread_id).await;
         s.broadcast_channel(
             req.thread_id,
-            auth.user.id,
+            user.id,
             MessageSync::MessageCreate {
                 message: message.clone(),
             },
@@ -169,7 +173,7 @@ async fn thread_member_add(
 
     s.broadcast_channel(
         req.thread_id,
-        auth.user.id,
+        user.id,
         MessageSync::ThreadMemberUpsert {
             room_id: thread.room_id,
             thread_id: req.thread_id,
@@ -362,7 +366,7 @@ async fn thread_list_removed(
 /// Thread list atom/rss (TODO)
 #[handler(routes::thread_list_atom)]
 async fn thread_list_atom(
-    _auth: Auth,
+    _auth: Auth4,
     State(_s): State<Arc<ServerState>>,
     _req: routes::thread_list_atom::Request,
 ) -> Result<impl IntoResponse> {
@@ -372,11 +376,12 @@ async fn thread_list_atom(
 /// Thread create
 #[handler(routes::thread_create)]
 async fn thread_create(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::thread_create::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    auth.ensure_user()?.ensure_unsuspended()?;
+    let user = auth.ensure_user()?;
 
     if !matches!(
         req.thread.ty,
@@ -391,7 +396,7 @@ async fn thread_create(
     let parent_channel = s
         .services()
         .channels
-        .get(req.channel_id, Some(auth.user.id))
+        .get(req.channel_id, Some(user.id))
         .await?;
     let room_id = parent_channel.room_id;
 
@@ -415,11 +420,11 @@ async fn thread_create(
 /// Thread create from message
 #[handler(routes::thread_create_from_message)]
 async fn thread_create_from_message(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::thread_create_from_message::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    auth.ensure_user()?.ensure_unsuspended()?;
 
     let channel = s
         .services()
@@ -433,12 +438,12 @@ async fn thread_create_from_message(
 /// Thread list room
 #[handler(routes::thread_list_room)]
 async fn thread_list_room(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::thread_list_room::Request,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let user_id = auth.user.id;
+    let user = auth.ensure_user()?;
 
     let snapshot = srv.cache.load_room(req.room_id, false).await?;
 
@@ -448,11 +453,11 @@ async fn thread_list_room(
         let thread_channel = &thread.thread;
         let thread_id = thread_channel.id;
 
-        let perms = srv.perms.for_channel3(Some(user_id), thread_id).await?;
+        let perms = srv.perms.for_channel3(Some(user.id), thread_id).await?;
         let can_view = if thread_channel.ty == ChannelType::ThreadPublic {
             perms.visible
         } else {
-            perms.has(Permission::ThreadManage) || thread.members.contains_key(&user_id)
+            perms.has(Permission::ThreadManage) || thread.members.contains_key(&user.id)
         };
 
         if can_view {
@@ -462,7 +467,7 @@ async fn thread_list_room(
 
     let threads = srv
         .channels
-        .get_many(&filtered_thread_ids, Some(user_id))
+        .get_many(&filtered_thread_ids, Some(user.id))
         .await?;
 
     Ok(Json(ThreadListRoom { threads }))
@@ -471,23 +476,24 @@ async fn thread_list_room(
 /// Thread activity
 #[handler(routes::thread_activity)]
 async fn thread_activity(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::thread_activity::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    auth.ensure_user()?.ensure_unsuspended()?;
+    let user = auth.ensure_user()?;
 
     let srv = s.services();
 
     srv.perms
-        .for_channel3(Some(auth.user.id), req.channel_id)
+        .for_channel3(Some(user.id), req.channel_id)
         .await?
         .ensure_view()?
         .check()?;
 
     let res = srv
         .messages
-        .list_activity(req.channel_id, auth.user.id, req.pagination)
+        .list_activity(req.channel_id, user.id, req.pagination)
         .await?;
 
     Ok(Json(res))
@@ -496,16 +502,17 @@ async fn thread_activity(
 /// Channel member search
 #[handler(routes::channel_member_search)]
 async fn channel_member_search(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::channel_member_search::Request,
 ) -> Result<impl IntoResponse> {
     let _d = s.data();
     let srv = s.services();
+    let user = auth.ensure_user()?;
 
     let mut perms = srv
         .perms
-        .for_channel3(Some(auth.user.id), req.channel_id)
+        .for_channel3(Some(user.id), req.channel_id)
         .await?
         .ensure_view()?;
 

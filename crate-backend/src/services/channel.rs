@@ -18,7 +18,7 @@ use tracing::warn;
 use validator::Validate;
 
 use crate::error::{Error, Result};
-use crate::routes::util::Auth;
+use crate::routes::util::auth::Auth4;
 use crate::types::{DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCreate};
 use crate::ServerStateInner;
 
@@ -252,7 +252,7 @@ impl ServiceChannels {
 
     pub async fn create_channel(
         &self,
-        auth: &Auth,
+        auth: &Auth4,
         room_id: Option<RoomId>,
         json: ChannelCreate,
         nonce: Option<String>,
@@ -272,7 +272,7 @@ impl ServiceChannels {
 
     async fn create_channel_inner(
         &self,
-        auth: &Auth,
+        auth: &Auth4,
         room_id: Option<RoomId>,
         json: ChannelCreate,
         nonce: Option<String>,
@@ -301,10 +301,11 @@ impl ServiceChannels {
         };
         let srv = self.state.services();
         let mut data = self.state.data();
+        let user = auth.ensure_user()?;
         let perms = if let Some(parent_id) = json.parent_id {
-            srv.perms.for_channel(auth.user.id, parent_id).await?
+            srv.perms.for_channel(user.id, parent_id).await?
         } else if let Some(room_id) = room_id {
-            srv.perms.for_room(auth.user.id, room_id).await?
+            srv.perms.for_room(user.id, room_id).await?
         } else {
             return Err(Error::BadStatic(
                 "Channel must have a parent or be in a room",
@@ -314,7 +315,7 @@ impl ServiceChannels {
 
         let parent_id_opt = json.parent_id;
         let parent = if let Some(parent_id) = parent_id_opt {
-            Some(srv.channels.get(parent_id, Some(auth.user.id)).await?)
+            Some(srv.channels.get(parent_id, Some(user.id)).await?)
         } else {
             None
         };
@@ -344,7 +345,7 @@ impl ServiceChannels {
                 if !perms.can_bypass_slowmode() {
                     if let Some(parent_id) = parent_id_opt {
                         if let Some(thread_slowmode_expire_at) = data
-                            .channel_get_thread_slowmode_expire_at(parent_id, auth.user.id)
+                            .channel_get_thread_slowmode_expire_at(parent_id, user.id)
                             .await?
                         {
                             if thread_slowmode_expire_at > Time::now_utc() {
@@ -358,7 +359,7 @@ impl ServiceChannels {
                                 Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
                             data.channel_set_thread_slowmode_expire_at(
                                 parent_id,
-                                auth.user.id,
+                                user.id,
                                 next_thread_time,
                             )
                             .await?;
@@ -372,7 +373,7 @@ impl ServiceChannels {
                 if !perms.can_bypass_slowmode() {
                     if let Some(parent_id) = parent_id_opt {
                         if let Some(thread_slowmode_expire_at) = data
-                            .channel_get_thread_slowmode_expire_at(parent_id, auth.user.id)
+                            .channel_get_thread_slowmode_expire_at(parent_id, user.id)
                             .await?
                         {
                             if thread_slowmode_expire_at > Time::now_utc() {
@@ -385,7 +386,7 @@ impl ServiceChannels {
                                 Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
                             data.channel_set_thread_slowmode_expire_at(
                                 parent_id,
-                                auth.user.id,
+                                user.id,
                                 next_thread_time,
                             )
                             .await?;
@@ -399,7 +400,7 @@ impl ServiceChannels {
                 if !perms.can_bypass_slowmode() {
                     if let Some(parent_id) = parent_id_opt {
                         if let Some(thread_slowmode_expire_at) = data
-                            .channel_get_thread_slowmode_expire_at(parent_id, auth.user.id)
+                            .channel_get_thread_slowmode_expire_at(parent_id, user.id)
                             .await?
                         {
                             if thread_slowmode_expire_at > Time::now_utc() {
@@ -412,7 +413,7 @@ impl ServiceChannels {
                                 Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
                             data.channel_set_thread_slowmode_expire_at(
                                 parent_id,
-                                auth.user.id,
+                                user.id,
                                 next_thread_time,
                             )
                             .await?;
@@ -515,7 +516,7 @@ impl ServiceChannels {
         let channel_id = data
             .channel_create(DbChannelCreate {
                 room_id: room_id.map(|id| id.into_inner()),
-                creator_id: auth.user.id,
+                creator_id: user.id,
                 name: json.name.clone(),
                 description: json.description.clone(),
                 ty: match json.ty {
@@ -570,16 +571,14 @@ impl ServiceChannels {
             .await?;
         }
 
-        data.thread_member_put(channel_id, auth.user.id, ThreadMemberPut {})
+        data.thread_member_put(channel_id, user.id, ThreadMemberPut {})
             .await?;
-        let thread_member = data.thread_member_get(channel_id, auth.user.id).await?;
+        let thread_member = data.thread_member_get(channel_id, user.id).await?;
 
-        let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+        let channel = srv.channels.get(channel_id, Some(user.id)).await?;
 
         if let Some(starter_message) = json.starter_message {
             if json.ty.is_thread() {
-                // FIXME: use Auth4
-                let auth = todo!();
                 srv.messages
                     .create(channel_id, auth, None, starter_message, None)
                     .await?;
@@ -598,7 +597,7 @@ impl ServiceChannels {
             self.state
                 .broadcast_room_with_nonce(
                     room_id,
-                    auth.user.id,
+                    user.id,
                     nonce.as_deref(),
                     MessageSync::ChannelCreate {
                         channel: Box::new(channel.clone()),
@@ -609,7 +608,7 @@ impl ServiceChannels {
             self.state
                 .broadcast_channel_with_nonce(
                     parent_id,
-                    auth.user.id,
+                    user.id,
                     nonce.as_deref(),
                     MessageSync::ChannelCreate {
                         channel: Box::new(channel.clone()),
@@ -626,7 +625,7 @@ impl ServiceChannels {
                         id: None,
                         channel_id: parent_id,
                         attachment_ids: vec![],
-                        author_id: auth.user.id,
+                        author_id: user.id,
                         embeds: vec![],
                         components: vec![],
                         message_type: MessageType::ThreadCreated(MessageThreadCreated {
@@ -645,13 +644,13 @@ impl ServiceChannels {
 
                 let system_message = srv
                     .messages
-                    .get(parent_id, system_message_id, Some(auth.user.id))
+                    .get(parent_id, system_message_id, Some(user.id))
                     .await?;
 
                 self.state
                     .broadcast_channel(
                         parent_id,
-                        auth.user.id,
+                        user.id,
                         MessageSync::MessageCreate {
                             message: system_message,
                         },
@@ -663,7 +662,7 @@ impl ServiceChannels {
         self.state
             .broadcast_channel(
                 channel.id,
-                auth.user.id,
+                user.id,
                 MessageSync::ThreadMemberUpsert {
                     room_id: channel.room_id,
                     thread_id: channel.id,
@@ -678,24 +677,25 @@ impl ServiceChannels {
 
     pub async fn create_thread_from_message(
         &self,
-        auth: &Auth,
+        auth: &Auth4,
         parent_channel_id: ChannelId,
         source_message_id: MessageId,
         mut json: ChannelCreate,
     ) -> Result<Channel> {
         let srv = self.state.services();
         let mut data = self.state.data();
+        let user = auth.ensure_user()?;
 
         let perms = srv
             .perms
-            .for_channel(auth.user.id, parent_channel_id)
+            .for_channel(user.id, parent_channel_id)
             .await?;
         perms.ensure(Permission::ChannelView)?;
         perms.ensure(Permission::ThreadCreatePublic)?;
 
         let parent_channel = srv
             .channels
-            .get(parent_channel_id, Some(auth.user.id))
+            .get(parent_channel_id, Some(user.id))
             .await?;
         if !parent_channel.ty.has_public_threads() && !parent_channel.ty.has_forum2_threads() {
             return Err(Error::BadStatic(
@@ -705,7 +705,7 @@ impl ServiceChannels {
 
         let source_message = srv
             .messages
-            .get(parent_channel_id, source_message_id, Some(auth.user.id))
+            .get(parent_channel_id, source_message_id, Some(user.id))
             .await?;
         if !source_message.latest_version.message_type.is_threadable() {
             return Err(Error::BadStatic(
@@ -729,7 +729,7 @@ impl ServiceChannels {
 
         let create = DbChannelCreate {
             room_id: room_id.map(|id| id.into_inner()),
-            creator_id: auth.user.id,
+            creator_id: user.id,
             name: json.name.clone(),
             description: json.description.clone(),
             url: json.url.clone(),
@@ -756,15 +756,15 @@ impl ServiceChannels {
 
         data.channel_create_with_id(thread_id, create).await?;
 
-        data.thread_member_put(thread_id, auth.user.id, ThreadMemberPut::default())
+        data.thread_member_put(thread_id, user.id, ThreadMemberPut::default())
             .await?;
 
-        let channel = srv.channels.get(thread_id, Some(auth.user.id)).await?;
+        let channel = srv.channels.get(thread_id, Some(user.id)).await?;
 
         self.state
             .broadcast_channel(
                 parent_channel_id,
-                auth.user.id,
+                user.id,
                 MessageSync::ChannelCreate {
                     channel: Box::new(channel.clone()),
                 },
@@ -778,7 +778,7 @@ impl ServiceChannels {
                     id: None,
                     channel_id: parent_channel_id,
                     attachment_ids: vec![],
-                    author_id: auth.user.id,
+                    author_id: user.id,
                     embeds: vec![],
                     components: vec![],
                     message_type: MessageType::ThreadCreated(MessageThreadCreated {
@@ -797,12 +797,12 @@ impl ServiceChannels {
 
             let system_message = srv
                 .messages
-                .get(parent_channel_id, system_message_id, Some(auth.user.id))
+                .get(parent_channel_id, system_message_id, Some(user.id))
                 .await?;
             self.state
                 .broadcast_channel(
                     parent_channel_id,
-                    auth.user.id,
+                    user.id,
                     MessageSync::MessageCreate {
                         message: system_message,
                     },
@@ -833,16 +833,17 @@ impl ServiceChannels {
 
     pub async fn update(
         &self,
-        auth: &Auth,
+        auth: &Auth4,
         thread_id: ChannelId,
         patch: ChannelPatch,
     ) -> Result<Channel> {
+        let user = auth.ensure_user()?;
         // check update perms
         let perms = self
             .state
             .services()
             .perms
-            .for_channel(auth.user.id, thread_id)
+            .for_channel(user.id, thread_id)
             .await?;
         perms.ensure(Permission::ChannelView)?;
         let mut data = self.state.data();
@@ -870,7 +871,7 @@ impl ServiceChannels {
         other_changes.locked = None;
         if other_changes.changes(&chan_old) {
             if chan_old.is_thread() {
-                if chan_old.creator_id != auth.user.id {
+                if chan_old.creator_id != user.id {
                     perms.ensure(Permission::ThreadEdit)?;
                 }
             } else {
@@ -942,13 +943,13 @@ impl ServiceChannels {
             if new_parent_id_opt != chan_old.parent_id {
                 if let Some(old_parent_id) = chan_old.parent_id {
                     let old_parent_perms =
-                        srv.perms.for_channel(auth.user.id, old_parent_id).await?;
+                        srv.perms.for_channel(user.id, old_parent_id).await?;
                     old_parent_perms.ensure(Permission::ThreadManage)?;
                 }
 
                 if let Some(new_parent_id) = new_parent_id_opt {
                     let new_parent_perms =
-                        srv.perms.for_channel(auth.user.id, new_parent_id).await?;
+                        srv.perms.for_channel(user.id, new_parent_id).await?;
                     new_parent_perms.ensure(Permission::ThreadManage)?;
                 }
             }
@@ -969,7 +970,7 @@ impl ServiceChannels {
 
         if patch.archived.is_some_and(|a| a != chan_old.is_archived()) {
             chan_old.ensure_is_thread()?;
-            data.thread_member_get(thread_id, auth.user.id).await?;
+            data.thread_member_get(thread_id, user.id).await?;
         }
 
         if patch.locked.as_ref().is_some_and(|a| a != &chan_old.locked) {
@@ -994,7 +995,7 @@ impl ServiceChannels {
             }
 
             // allow creator to edit tags, otherwise require ThreadEdit or ThreadManage
-            if chan_old.creator_id != auth.user.id {
+            if chan_old.creator_id != user.id {
                 if !perms.has(Permission::ThreadEdit) && !perms.has(Permission::ThreadManage) {
                     return Err(Error::MissingPermissions);
                 }
@@ -1056,8 +1057,8 @@ impl ServiceChannels {
             data.room_template_mark_dirty(room_id).await?;
         }
         self.invalidate(thread_id).await;
-        self.invalidate_user(thread_id, auth.user.id).await;
-        let chan_new = self.get(thread_id, Some(auth.user.id)).await?;
+        self.invalidate_user(thread_id, user.id).await;
+        let chan_new = self.get(thread_id, Some(user.id)).await?;
         if let Some(room_id) = chan_new.room_id {
             let al = auth.audit_log(room_id);
             al.commit_success(AuditLogEntryType::ChannelUpdate {
@@ -1244,7 +1245,7 @@ impl ServiceChannels {
                     id: None,
                     channel_id: thread_id,
                     attachment_ids: vec![],
-                    author_id: auth.user.id,
+                    author_id: user.id,
                     embeds: vec![],
                     components: vec![],
                     message_type: MessageType::ChannelRename(MessageChannelRename {
@@ -1264,7 +1265,7 @@ impl ServiceChannels {
             self.state
                 .broadcast_channel(
                     thread_id,
-                    auth.user.id,
+                    user.id,
                     MessageSync::MessageCreate {
                         message: rename_message,
                     },
@@ -1278,7 +1279,7 @@ impl ServiceChannels {
                     id: None,
                     channel_id: thread_id,
                     attachment_ids: vec![],
-                    author_id: auth.user.id,
+                    author_id: user.id,
                     embeds: vec![],
                     components: vec![],
                     message_type: MessageType::ChannelIcon(MessageChannelIcon {
@@ -1298,7 +1299,7 @@ impl ServiceChannels {
             self.state
                 .broadcast_channel(
                     thread_id,
-                    auth.user.id,
+                    user.id,
                     MessageSync::MessageCreate {
                         message: icon_message,
                     },
@@ -1313,7 +1314,7 @@ impl ServiceChannels {
                     id: None,
                     channel_id: thread_id,
                     attachment_ids: vec![],
-                    author_id: auth.user.id,
+                    author_id: user.id,
                     embeds: vec![],
                     components: vec![],
                     message_type: MessageType::ChannelMoved(MessageChannelMoved {
@@ -1333,7 +1334,7 @@ impl ServiceChannels {
             self.state
                 .broadcast_channel(
                     thread_id,
-                    auth.user.id,
+                    user.id,
                     MessageSync::MessageCreate {
                         message: move_message,
                     },
@@ -1346,7 +1347,7 @@ impl ServiceChannels {
         };
         if let Some(room_id) = chan_new.room_id {
             self.state
-                .broadcast_room(room_id, auth.user.id, msg)
+                .broadcast_room(room_id, user.id, msg)
                 .await?;
         }
 

@@ -18,8 +18,10 @@ use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::routes::util::auth::Auth4;
 use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
 use crate::routes2;
+use crate::state::ServerState2;
 use crate::types::{
     ChannelPatch, DbChannelCreate, DbChannelType, DbRoomCreate, MediaLinkType, MessageSync,
     Permission,
@@ -30,11 +32,11 @@ use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 /// Channel create room
 #[handler(routes::channel_create_room)]
 async fn channel_create_room(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::channel_create_room::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    auth.ensure_user()?.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
@@ -42,13 +44,10 @@ async fn channel_create_room(
     room.room_type.ensure_channels_manageable()?;
 
     let mut json = req.channel;
+    let user = auth.ensure_user()?;
     if json.ty.is_thread() {
         if let Some(parent_id) = json.parent_id {
-            let parent_channel = s
-                .services()
-                .channels
-                .get(parent_id, Some(auth.user.id))
-                .await?;
+            let parent_channel = s.services().channels.get(parent_id, Some(user.id)).await?;
             if json.auto_archive_duration.is_none() {
                 json.auto_archive_duration = parent_channel.default_auto_archive_duration;
             }
@@ -67,21 +66,23 @@ async fn channel_create_room(
 /// Channel create dm
 #[handler(routes::channel_create_dm)]
 async fn channel_create_dm(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
+    auth: Auth4,
+    State(s): State<ServerState2>,
     mut req: routes::channel_create_dm::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    auth.ensure_user()?.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     req.channel.validate()?;
     let srv = s.services();
-    let mut data = s.data();
+    let user = auth.ensure_user()?;
     srv.perms
-        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .for_room3(Some(user.id), SERVER_ROOM_ID)
         .await?
         .ensure_view()?
         .needs(Permission::DmCreate)
         .check()?;
+    let m = s.messaging();
+    let mut data = s.begin().await?;
     match req.channel.ty {
         ChannelType::Dm => {
             let Some(recipients) = &req.channel.recipients else {
@@ -91,13 +92,11 @@ async fn channel_create_dm(
                 return Err(ApiError::from_code(ErrorCode::DmThreadSinglePersonOnly).into());
             }
             let target_user_id = recipients.first().unwrap();
-            let (thread, is_new) = srv
-                .users
-                .init_dm(auth.user.id, *target_user_id, false)
-                .await?;
-            s.broadcast(MessageSync::ChannelCreate {
+            let (thread, is_new) = srv.users.init_dm(user.id, *target_user_id, false).await?;
+            m.broadcast_global(MessageSync::ChannelCreate {
                 channel: Box::new(thread.clone()),
-            })?;
+            })
+            .await?;
             if is_new {
                 return Ok((StatusCode::CREATED, Json(thread)));
             } else {
@@ -107,16 +106,14 @@ async fn channel_create_dm(
         ChannelType::Gdm => {
             let recipients = req.channel.recipients.clone().unwrap_or_default();
             let mut recipients = recipients;
-            recipients.push(auth.user.id);
+            recipients.push(user.id);
 
             if recipients.len() as u32 > crate::consts::MAX_GDM_MEMBERS {
                 return Err(ApiError::from_code(ErrorCode::GdmTooManyMembers).into());
             }
 
-            for recipient_id in recipients.iter().filter(|id| **id != auth.user.id) {
-                let relationship = data
-                    .user_relationship_get(auth.user.id, *recipient_id)
-                    .await?;
+            for recipient_id in recipients.iter().filter(|id| **id != user.id) {
+                let relationship = data.user_relationship_get(user.id, *recipient_id).await?;
 
                 let are_friends =
                     relationship.is_some_and(|r| r.relation == Some(RelationshipType::Friend));
@@ -153,7 +150,7 @@ async fn channel_create_dm(
     let channel_id = data
         .channel_create(DbChannelCreate {
             room_id: None,
-            creator_id: auth.user.id,
+            creator_id: user.id,
             name: json.name.clone(),
             description: json.description.clone(),
             icon: json.icon.map(|i| *i),
@@ -162,7 +159,7 @@ async fn channel_create_dm(
             bitrate: json.bitrate.map(|b| b as i32),
             user_limit: json.bitrate.map(|u| u as i32),
             parent_id: None,
-            owner_id: Some(*auth.user.id),
+            owner_id: Some(*user.id),
             invitable: json.invitable,
             auto_archive_duration: json.auto_archive_duration.map(|d| d as i64),
             default_auto_archive_duration: json.default_auto_archive_duration.map(|d| d as i64),
@@ -180,7 +177,7 @@ async fn channel_create_dm(
             .await?;
     }
 
-    let thread = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+    let thread = srv.channels.get(channel_id, Some(user.id)).await?;
     let mut members = vec![];
 
     if let Some(recipients) = &json.recipients {
@@ -191,17 +188,20 @@ async fn channel_create_dm(
             members.push(thread_member);
         }
     }
+    data.commit().await?;
 
-    s.broadcast(MessageSync::ChannelCreate {
+    m.broadcast_global(MessageSync::ChannelCreate {
         channel: Box::new(thread.clone()),
-    })?;
+    })
+    .await?;
     if !members.is_empty() {
-        s.broadcast(MessageSync::ThreadMemberUpsert {
+        m.broadcast_global(MessageSync::ThreadMemberUpsert {
             room_id: thread.room_id,
             thread_id: thread.id,
             added: members,
             removed: vec![],
-        })?;
+        })
+        .await?;
     }
 
     Ok((StatusCode::CREATED, Json(thread)))
@@ -316,16 +316,17 @@ async fn channel_list_removed(
 /// Room channel reorder
 #[handler(routes::channel_reorder)]
 async fn channel_reorder(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::channel_reorder::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    auth.ensure_user()?.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let mut data = s.data();
     let srv = s.services();
+    let user = auth.ensure_user()?;
     srv.perms
-        .for_room3(Some(auth.user.id), req.room_id)
+        .for_room3(Some(user.id), req.room_id)
         .await?
         .ensure_view()?
         .needs(Permission::ChannelManage)
@@ -340,7 +341,7 @@ async fn channel_reorder(
         channels_old.insert(channel_data.id, channel_data.clone());
 
         srv.perms
-            .for_channel3(Some(auth.user.id), channel.id)
+            .for_channel3(Some(user.id), channel.id)
             .await?
             .ensure_view()?
             .needs(Permission::ChannelManage)
@@ -348,7 +349,7 @@ async fn channel_reorder(
 
         if let Some(Some(parent_id)) = channel.parent_id {
             srv.perms
-                .for_channel3(Some(auth.user.id), parent_id)
+                .for_channel3(Some(user.id), parent_id)
                 .await?
                 .ensure_view()?
                 .needs(Permission::ChannelManage)
@@ -375,7 +376,7 @@ async fn channel_reorder(
         }
         s.broadcast_room(
             req.room_id,
-            auth.user.id,
+            user.id,
             MessageSync::ChannelUpdate {
                 channel: Box::new(chan),
             },
@@ -394,11 +395,11 @@ async fn channel_reorder(
 /// Channel update
 #[handler(routes::channel_update)]
 async fn channel_update(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::channel_update::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    auth.ensure_user()?.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     req.patch.validate()?;
     if req.patch.owner_id.is_some() {
@@ -406,11 +407,12 @@ async fn channel_update(
     }
 
     let srv = s.services();
-    let chan_pre = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
+    let user = auth.ensure_user()?;
+    let chan_pre = srv.channels.get(req.channel_id, Some(user.id)).await?;
     if let Some(room_id) = chan_pre.room_id {
         let _room_perms = srv
             .perms
-            .for_room3(Some(auth.user.id), room_id)
+            .for_room3(Some(user.id), room_id)
             .await?
             .ensure_view()?;
     }
@@ -485,19 +487,20 @@ async fn channel_ack(
 /// Channel remove
 #[handler(routes::channel_remove)]
 async fn channel_remove(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::channel_remove::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    auth.ensure_user()?.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let mut data = s.data();
     let srv = s.services();
+    let user = auth.ensure_user()?;
 
-    let chan_before = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
+    let chan_before = srv.channels.get(req.channel_id, Some(user.id)).await?;
     let mut perms = srv
         .perms
-        .for_channel3(Some(auth.user.id), req.channel_id)
+        .for_channel3(Some(user.id), req.channel_id)
         .await?
         .ensure_view()?;
     if chan_before.is_thread() {
@@ -509,19 +512,19 @@ async fn channel_remove(
 
     if let Some(room_id) = chan_before.room_id {
         let al = auth.audit_log(room_id);
-        let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+        let room = srv.rooms.get(room_id, Some(user.id)).await?;
         if room.security.require_sudo {
             auth.ensure_sudo()?;
         }
         if room.security.require_mfa {
-            let user = srv.users.get(auth.user.id, None).await?;
+            let user = srv.users.get(user.id, None).await?;
             let totp = data.auth_totp_get(user.id).await?;
             if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
                 return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
             }
         }
 
-        let chan_before = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
+        let chan_before = srv.channels.get(req.channel_id, Some(user.id)).await?;
         if chan_before.is_removed() {
             return Ok(StatusCode::NO_CONTENT);
         }
@@ -529,7 +532,7 @@ async fn channel_remove(
         data.room_template_mark_dirty(room_id).await?;
         srv.channels.invalidate(req.channel_id).await;
         srv.voice.call_disconnect_all(req.channel_id).await?;
-        let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
+        let chan = srv.channels.get(req.channel_id, Some(user.id)).await?;
 
         al.commit_success(AuditLogEntryType::ChannelUpdate {
             channel_id: req.channel_id,
@@ -542,14 +545,14 @@ async fn channel_remove(
 
         s.broadcast_room(
             room_id,
-            auth.user.id,
+            user.id,
             MessageSync::ChannelUpdate {
                 channel: Box::new(chan),
             },
         )
         .await?;
     } else {
-        let chan_before = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
+        let chan_before = srv.channels.get(req.channel_id, Some(user.id)).await?;
         if chan_before.is_removed() {
             return Ok(StatusCode::NO_CONTENT);
         }
@@ -818,16 +821,17 @@ async fn channel_upgrade(
 /// Channel transfer ownership
 #[handler(routes::channel_transfer_ownership)]
 async fn channel_transfer_ownership(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::channel_transfer_ownership::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    auth.ensure_user()?.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     auth.ensure_sudo()?;
 
     let srv = s.services();
     let target_user_id = req.owner_id;
+    let user = auth.ensure_user()?;
 
     s.data()
         .thread_member_get(req.channel_id, target_user_id)
@@ -835,10 +839,10 @@ async fn channel_transfer_ownership(
 
     let _perms = srv
         .perms
-        .for_channel3(Some(auth.user.id), req.channel_id)
+        .for_channel3(Some(user.id), req.channel_id)
         .await?;
-    let thread_start = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
-    if thread_start.owner_id != Some(auth.user.id) {
+    let thread_start = srv.channels.get(req.channel_id, Some(user.id)).await?;
+    if thread_start.owner_id != Some(user.id) {
         return Err(ApiError::from_code(ErrorCode::NotThreadOwner).into());
     }
 
@@ -857,7 +861,7 @@ async fn channel_transfer_ownership(
     let msg = MessageSync::ChannelUpdate {
         channel: Box::new(thread.clone()),
     };
-    s.broadcast_channel(req.channel_id, auth.user.id, msg)
+    s.broadcast_channel(req.channel_id, user.id, msg)
         .await?;
     Ok(Json(thread))
 }
