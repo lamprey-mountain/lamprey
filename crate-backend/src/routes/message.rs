@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
@@ -13,11 +13,12 @@ use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
+use crate::routes::util::auth::Auth4;
 use crate::routes::util::extract::UniversalExtractor;
 use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
 use crate::routes2;
 use crate::types::{DbMessageCreate, MessageSync, Permission};
-use crate::{error::Result, Error, ServerState};
+use crate::{Error, ServerState, error::Result};
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 /// Message create
@@ -141,21 +142,22 @@ async fn message_get(
 /// Message edit
 #[handler(routes::message_edit)]
 async fn message_edit(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::message_edit::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    let user = auth.ensure_user()?;
+    user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
     let mut perms = srv
         .perms
-        .for_channel3(Some(auth.user.id), req.channel_id)
+        .for_channel3(Some(user.id), req.channel_id)
         .await?
         .ensure_view()?;
     perms.needs_unlocked();
 
-    let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
+    let thread = srv.channels.get(req.channel_id, Some(user.id)).await?;
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
     thread.ensure_has_text()?;

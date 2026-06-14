@@ -14,11 +14,12 @@ use common::v1::types::{
 };
 use http::request::Parts;
 
+#[derive(Clone)]
 pub struct Auth4 {
     identity: Identity,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Identity {
     /// a user's session
     User {

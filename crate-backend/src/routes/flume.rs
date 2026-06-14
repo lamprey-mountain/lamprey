@@ -10,18 +10,18 @@ use common::v1::types::util::Time;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::routes::util::Auth;
+use crate::routes::util::auth::Auth4;
 use crate::routes2;
 use crate::{error::Result, ServerState};
 
 /// Flume create
 #[handler(routes::flume::flume_create)]
 async fn flume_create(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::flume::flume_create::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    auth.ensure_user()?.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
     let header_timestamp = req.timestamp.and_then(|secs| {
@@ -48,11 +48,11 @@ async fn flume_create(
 /// Flume ping
 #[handler(routes::flume::flume_ping)]
 async fn flume_ping(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::flume::flume_ping::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    auth.ensure_user()?.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
     s.services()
@@ -66,11 +66,11 @@ async fn flume_ping(
 /// Flume commit
 #[handler(routes::flume::flume_commit)]
 async fn flume_commit(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::flume::flume_commit::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    auth.ensure_user()?.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
     let message = s
@@ -85,11 +85,11 @@ async fn flume_commit(
 /// Flume delta
 #[handler(routes::flume::flume_delta)]
 async fn flume_delta(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::flume::flume_delta::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    auth.ensure_user()?.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
 
     let status = s

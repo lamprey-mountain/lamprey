@@ -4,11 +4,11 @@ use std::time::Duration;
 
 use common::v2::types::media::MediaReference;
 use dashmap::mapref::one::RefMut;
-use futures::stream::FuturesUnordered;
 use futures::StreamExt;
+use futures::stream::FuturesUnordered;
 
 use crate::services::messages::util::MediaRegistry;
-use crate::{routes::util::Auth, services::messages::ServiceMessages, Error, Result};
+use crate::{Error, Result, routes::util::auth::Auth4, services::messages::ServiceMessages};
 
 use common::v1::types::components::{self, Components, Thin};
 use common::v1::types::error::{ApiError, ErrorCode};
@@ -61,13 +61,14 @@ impl ServiceMessages {
     pub async fn flume_create(
         &self,
         channel_id: ChannelId,
-        auth: &Auth,
+        auth: &Auth4,
         _nonce: Option<String>,
         json: FlumeCreate,
         header_timestamp: Option<Time>,
     ) -> Result<(StatusCode, Message)> {
         let srv = self.state.services();
-        let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+        let user_id = auth.user().map(|u| u.id);
+        let channel = srv.channels.get(channel_id, user_id).await?;
         channel.ensure_has_text()?;
 
         // permission checks (reuses validate_session_permissions from create.rs)
@@ -99,7 +100,7 @@ impl ServiceMessages {
         // 3. commit
         let message_id = MessageId::new();
         let version_id = (*message_id).into();
-        let user_id = auth.user.id;
+        let user_id = auth.ensure_user()?.id;
 
         let payload = MessageType::DefaultMarkdown(MessageDefaultMarkdown {
             content: None,
@@ -177,14 +178,15 @@ impl ServiceMessages {
         &self,
         channel_id: ChannelId,
         message_id: MessageId,
-        auth: &Auth,
+        auth: &Auth4,
         delta: FlumeDelta,
     ) -> Result<StatusCode> {
         let mut flume_ref = self.flume_lookup(channel_id, message_id).await?;
 
         // check author: only author can update flume
         let message = self.get(channel_id, message_id, None).await?;
-        if message.author_id != auth.user.id {
+        let user_id = auth.ensure_user()?.id;
+        if message.author_id != user_id {
             return Err(ApiError::from_code(ErrorCode::OnlyMessageAuthorCanManageFlume).into());
         }
 
@@ -210,7 +212,7 @@ impl ServiceMessages {
         // 3. validate media ownership if there are new media IDs
         if !all_media_ids.known.is_empty() {
             let version_id = (*message_id).into();
-            self.validate_media(&all_media_ids, message_id, auth.user.id)
+            self.validate_media(&all_media_ids, message_id, user_id)
                 .await?;
             self.claim_media(&mut all_media_ids, message_id, version_id)
                 .await?;
@@ -234,13 +236,14 @@ impl ServiceMessages {
         &self,
         channel_id: ChannelId,
         message_id: MessageId,
-        auth: &Auth,
+        auth: &Auth4,
     ) -> Result<()> {
         let mut flume_ref = self.flume_lookup(channel_id, message_id).await?;
 
         // check author
         let message = self.get(channel_id, message_id, None).await?;
-        if message.author_id != auth.user.id {
+        let user_id = auth.ensure_user()?.id;
+        if message.author_id != user_id {
             return Err(ApiError::from_code(ErrorCode::OnlyMessageAuthorCanManageFlume).into());
         }
 
@@ -301,7 +304,7 @@ impl ServiceMessages {
             _ => {
                 return Err(Error::Internal(
                     "somehow message became not DefaultMarkdown?".to_string(),
-                ))
+                ));
             }
         };
 

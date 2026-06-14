@@ -21,7 +21,7 @@ use crate::routes::util::auth::{Auth4, Identity};
 use crate::services::messages::util::MediaRegistry;
 use crate::services::messages::{links, markdown};
 use crate::types::MediaLinkType;
-use crate::{Error, Result, routes::util::Auth, services::messages::ServiceMessages};
+use crate::{Error, Result, services::messages::ServiceMessages};
 
 struct MessageOperation<'a, S> {
     channel: Channel,
@@ -36,7 +36,7 @@ struct MessageOperation<'a, S> {
 }
 
 enum AuthProvider {
-    Session(Auth),
+    Auth(Auth4),
     Webhook { user: User },
     Server,
 }
@@ -44,7 +44,7 @@ enum AuthProvider {
 impl AuthProvider {
     pub fn user_id(&self) -> Option<UserId> {
         match self {
-            Self::Session(s) => Some(s.user.id),
+            Self::Auth(a) => a.user().map(|u| u.id),
             Self::Webhook { user } => Some(user.id),
             Self::Server => None,
         }
@@ -300,25 +300,10 @@ impl ServiceMessages {
         let srv = self.state.services();
         let channel = srv.channels.get(channel_id, None).await?;
 
-        // HACK/TEMP: convert Auth4 to the old Auth struct
-        let auth_old = Auth {
-            user: auth.ensure_user()?.clone(),
-            real_user: match auth.identity() {
-                Identity::User { user, .. } => Some(user.clone()),
-                Identity::Puppet { puppeteer, .. } => Some(puppeteer.clone()),
-                _ => None,
-            },
-            session: auth.ensure_session()?.clone(),
-            scopes: auth.scopes().expect("FIXME").clone(),
-            reason: None,         // FIXME: pass reason properly
-            audit_log_slot: None, // FIXME: pass slot properly
-            s: Arc::clone(&self.state),
-        };
-
         let op = MessageOperation {
             channel,
             message_id: MessageId::new(),
-            auth: AuthProvider::Session(auth_old),
+            auth: AuthProvider::Auth(auth.clone()),
             kind: MessageOperationKind::MessageCreate(MessageCreateOperation { json }),
             nonce,
             stage: New { header_timestamp },
@@ -337,7 +322,7 @@ impl ServiceMessages {
         &self,
         channel_id: ChannelId,
         message_id: MessageId,
-        auth: &Auth,
+        auth: &Auth4,
         json: MessagePatch,
         header_timestamp: Option<Time>,
     ) -> Result<(StatusCode, Message)> {
@@ -364,19 +349,20 @@ impl ServiceMessages {
         &self,
         channel_id: ChannelId,
         message_id: MessageId,
-        auth: &Auth,
+        auth: &Auth4,
         json: MessagePatch,
         header_timestamp: Option<Time>,
     ) -> Result<(StatusCode, Message)> {
         let srv = self.state.services();
-        let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+        let user_id = auth.user().map(|u| u.id);
+        let channel = srv.channels.get(channel_id, user_id).await?;
 
-        let original = self.get(channel_id, message_id, Some(auth.user.id)).await?;
+        let original = self.get(channel_id, message_id, user_id).await?;
 
         let op = MessageOperation {
             channel,
             message_id,
-            auth: AuthProvider::Session(auth.clone()),
+            auth: AuthProvider::Auth(auth.clone()),
             kind: MessageOperationKind::MessageEdit(MessageEditOperation { json, original }),
             nonce: None,
             stage: New { header_timestamp },
@@ -609,7 +595,7 @@ impl ServiceMessages {
     /// Returns (allow_external_emoji, generate_embeds, created_at).
     pub(super) async fn validate_session_permissions(
         &self,
-        auth: &Auth,
+        auth: &Auth4,
         channel: &Channel,
         has_attachments: bool,
         has_embeds: bool,
@@ -618,9 +604,11 @@ impl ServiceMessages {
         let srv = self.state.services();
         let mut data = self.state.data();
 
+        let user = auth.ensure_user()?;
+
         let mut perms = srv
             .perms
-            .for_channel3(Some(auth.user.id), channel.id)
+            .for_channel3(Some(user.id), channel.id)
             .await?
             .ensure_view()?;
         perms.needs_unlocked().needs_slowmode_message_bypass();
@@ -639,11 +627,11 @@ impl ServiceMessages {
         perms.check()?;
 
         let created_at = if let Some(ts) = header_timestamp {
-            let owner_id = if let Some(puppet) = &auth.user.puppet {
+            let owner_id = if let Some(puppet) = &user.puppet {
                 (*puppet.owner_id).into()
-            } else if auth.user.bot {
+            } else if user.bot {
                 let app = data
-                    .application_get(auth.user.id.into_inner().into())
+                    .application_get(user.id.into_inner().into())
                     .await
                     .map_err(|_| {
                         Error::BadStatic("MemberBridge permission required to override timestamp")
@@ -702,7 +690,7 @@ impl ServiceMessages {
         }
 
         match &op.auth {
-            AuthProvider::Session(auth) => {
+            AuthProvider::Auth(auth) => {
                 let (has_attachments, has_embeds) = match &op.kind {
                     MessageOperationKind::MessageCreate(o) => {
                         (!o.json.attachments.is_empty(), !o.json.embeds.is_empty())
@@ -1078,7 +1066,7 @@ impl ServiceMessages {
         let srv = self.state.services();
 
         // TODO: unarchive thread for system, webhooks
-        let AuthProvider::Session(auth) = &op.auth else {
+        let AuthProvider::Auth(auth) = &op.auth else {
             return Ok(());
         };
 
