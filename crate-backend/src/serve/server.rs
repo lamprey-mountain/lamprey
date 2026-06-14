@@ -13,7 +13,7 @@ use lamprey_backend_core::{
     Error,
 };
 use lamprey_backend_data_postgres::{
-    data::Data2, DbRoomCreate, DbUserCreate, RoomCreate, SERVER_ROOM_ID, SERVER_USER_ID,
+    data::Database, DbRoomCreate, DbUserCreate, RoomCreate, SERVER_ROOM_ID, SERVER_USER_ID,
 };
 use opendal::layers::LoggingLayer;
 use opentelemetry_otlp::WithExportConfig;

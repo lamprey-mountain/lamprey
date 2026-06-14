@@ -25,9 +25,9 @@ use common::v1::types::{
     SessionToken, Suspended, User, UserId, UserListFilter,
 };
 use common::v1::types::{ChannelSeq, RoomFeature};
+use common::v2::types::HarvestId;
 use common::v2::types::embed::Embed;
 use common::v2::types::media::{Media, MediaPatch};
-use common::v2::types::HarvestId;
 use lamprey_backend_core::data::DataScript;
 pub use lamprey_backend_core::data::{
     DataAdmin, DataApplication, DataAuditLogs, DataAutomod, DataCalendar, DataConfigInternal,
@@ -43,10 +43,11 @@ use crate::types::{
     DbChannelCreate, DbChannelPrivate, DbEmailQueue, DbMessageCreate, DbMessageUpdate,
     DbRoleCreate, DbRoomCreate, DbRoomTemplate, DbSessionCreate, DbUserCreate, DehydratedDocument,
     DocumentUpdateSummary, EmailPurpose, MediaLink, MediaLinkType, MentionsIds, MessageId,
-    MessageRef, MessageVerId, PushData, UrlEmbedQueue, UserPatch, UserVerId, MessageWithCounts,
+    MessageRef, MessageVerId, MessageWithCounts, PushData, UrlEmbedQueue, UserPatch, UserVerId,
 };
 use common::v1::types::components::{self, Components};
 
+/// a transaction or connection that can be used to query or update the database
 #[async_trait]
 pub trait Data:
     DataRoom
@@ -97,14 +98,22 @@ pub trait Data:
     async fn commit(self: Box<Self>) -> Result<()>;
 }
 
-#[async_trait]
-pub trait Data2: Send + Sync {
-    // TODO: find a way to erase this type
-    type DataTxn: Data;
+pub type AnyData = Box<dyn Data>;
 
+/// a handle to the database
+#[async_trait]
+pub trait Database: Send + Sync {
+    /// apply all pending migrations
     async fn migrate(&self) -> Result<()>;
+
+    /// check if the database is reachable and healthy
     async fn check_database(&self) -> Result<bool>;
-    async fn begin(&self) -> Result<Self::DataTxn>;
+
+    /// create a new unit of work in a new transaction
+    async fn begin(&self) -> Result<AnyData>;
+
+    /// start a new unit of work with no transaction
+    async fn begin_read(&self) -> Result<AnyData>;
 }
 
 #[async_trait]
@@ -660,7 +669,7 @@ pub trait DataDocument {
         status: DocumentBranchState,
     ) -> Result<()>;
     async fn document_branch_list(&mut self, document_id: ChannelId)
-        -> Result<Vec<DocumentBranch>>;
+    -> Result<Vec<DocumentBranch>>;
     async fn document_branch_paginate(
         &mut self,
         document_id: ChannelId,

@@ -3,18 +3,19 @@ use std::sync::Arc;
 use crate::services::media::Import;
 use crate::types::SERVER_ROOM_ID;
 use axum::response::IntoResponse;
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 use common::v1::types::application::Scope;
 use common::v1::types::{ChannelId, Embed, Permission, RoomId, UserId};
 use common::v2::types::media::{MediaCreate, MediaCreateSource};
+use lamprey_backend_data_postgres::data::Database;
 use lamprey_unfurl::logging::LogEntry;
 use serde::{Deserialize, Serialize};
 use url::Url;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::services::embed::DebugLogSink;
 use crate::ServerState;
+use crate::services::embed::DebugLogSink;
 
 use super::util::Auth;
 use crate::error::Result;

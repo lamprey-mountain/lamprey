@@ -22,9 +22,8 @@ impl ServiceConfig {
             return Ok(config.to_owned());
         }
 
-        let config = self
-            .state
-            .data()
+        let mut data = self.state.begin_read().await?;
+        let config = data
             .config_get()
             .await?
             .ok_or_else(|| Error::Internal("internal config not initialized".to_string()))?;
@@ -35,7 +34,9 @@ impl ServiceConfig {
 
     /// set the server's internal config
     pub async fn internal_set(&self, cfg: ConfigInternal) -> Result<()> {
-        self.state.data().config_put(cfg.clone()).await?;
+        let mut data = self.state.begin().await?;
+        data.config_put(cfg.clone()).await?;
+        data.commit().await?;
         *self.internal_config.write().await = Some(cfg);
         Ok(())
     }

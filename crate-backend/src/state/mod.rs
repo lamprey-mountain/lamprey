@@ -11,8 +11,8 @@ use common::v1::types::MessageSync;
 use common::v1::types::{AuditLogEntry, ChannelId, RoomId, UserId, voice::messages::SfuCommand};
 use futures::{Stream, StreamExt};
 use lamprey_backend_data_postgres::{
-    Data, Postgres,
-    data::{Data2, postgres::PostgresPool},
+    Postgres,
+    data::{AnyData, Database, postgres::PostgresPool},
 };
 use opendal::layers::LoggingLayer;
 use serde::{Deserialize, Serialize};
@@ -65,7 +65,7 @@ pub struct ServerState {
 impl ServerStateInner {
     /// legacy: acquire a connection to the database that auto-commits on every query
     // TODO: remove
-    pub fn data(&self) -> Box<dyn Data> {
+    pub fn data(&self) -> AnyData {
         Box::new(Postgres {
             pool: self.database.pool.clone(),
             txn: None,
@@ -73,14 +73,14 @@ impl ServerStateInner {
         })
     }
 
-    pub fn database(&self) -> Box<dyn Data2<DataTxn = Postgres>> {
+    pub fn database(&self) -> Box<PostgresPool> {
         Box::new((*self.database).clone())
     }
 
     /// acquire a transaction
-    pub async fn acquire_data(&self) -> Result<Box<dyn Data>> {
+    pub async fn acquire_data(&self) -> Result<AnyData> {
         let txn_wrapped = self.database.begin().await?;
-        Ok(Box::new(txn_wrapped))
+        Ok(txn_wrapped)
     }
 
     pub fn services(&self) -> Arc<Services> {
@@ -281,7 +281,7 @@ impl ServerState {
         &self.inner.config
     }
 
-    pub fn data(&self) -> Box<dyn Data> {
+    pub fn data(&self) -> AnyData {
         self.inner.data()
     }
 
@@ -461,9 +461,9 @@ impl ServerState2 {
     //     todo!()
     // }
 
-    /// legacy: acquire a connection to the database that auto-commits on every query
-    // TEMP: compat
-    pub fn data(&self) -> Box<dyn Data> {
+    // TEMP: remove
+    #[deprecated = "use begin() or begin_read()"]
+    pub fn data(&self) -> AnyData {
         Box::new(Postgres {
             pool: self.inner.database.pool.clone(),
             txn: None,
@@ -471,10 +471,20 @@ impl ServerState2 {
         })
     }
 
-    /// acquire/begin a database transaction
-    pub async fn acquire(&self) -> Result<Box<dyn Data>> {
+    /// begin a database transaction
+    ///
+    /// use this for writes and for reads that need consistency
+    pub async fn begin(&self) -> Result<AnyData> {
         let txn = self.inner.database.begin().await?;
-        Ok(Box::new(txn))
+        Ok(txn)
+    }
+
+    /// begin a database session without a transaction
+    ///
+    /// use this for isolated single reads
+    pub async fn begin_read(&self) -> Result<AnyData> {
+        let txn = self.inner.database.begin_read().await?;
+        Ok(txn)
     }
 
     pub fn services(&self) -> Arc<Services> {

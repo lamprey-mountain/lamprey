@@ -78,7 +78,7 @@ impl ServiceAdmin {
         req: AdminCollectGarbage,
     ) -> Result<AdminCollectGarbageResponse> {
         let mut stats = vec![];
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
 
         for target in req.targets {
             let start_time = std::time::Instant::now();

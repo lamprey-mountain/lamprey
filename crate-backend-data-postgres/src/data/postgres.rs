@@ -2,8 +2,20 @@ use async_trait::async_trait;
 use sqlx::PgPool;
 use tracing::warn;
 
-use crate::{data::Data2, error::Result, Data};
+use crate::{
+    Data,
+    data::{AnyData, Database},
+    error::Result,
+};
 
+/// entry point for accessing postgres
+#[derive(Debug, Clone)]
+pub struct PostgresPool {
+    // TEMP: pub fields
+    pub pool: PgPool,
+}
+
+/// a single unit of work
 #[derive(Debug)]
 pub struct Postgres {
     // TEMP: pub fields
@@ -17,36 +29,102 @@ pub struct Postgres {
     pub use_legacy_behavior: bool,
 }
 
-#[derive(Debug, Clone)]
-pub struct PostgresPool {
-    // TEMP: pub fields
-    pub pool: PgPool,
+/// a way to access the postgresql database
+pub(crate) enum DbHandle<'a> {
+    /// Using this unit of work's transaction
+    GlobalTx(&'a mut sqlx::PgConnection),
+
+    /// acquired a temporary connection for this database query
+    // TEMP: legacy behavior
+    LocalConn(sqlx::pool::PoolConnection<sqlx::Postgres>),
+
+    /// started a temporary transaction for this database query
+    // TEMP: legacy behavior
+    LocalTx(sqlx::Transaction<'static, sqlx::Postgres>),
 }
 
 impl PostgresPool {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
+}
 
-    /// Acquire a connection handle for use with sqlx macros.
-    /// For backward compatibility with gen_paginate! macro.
-    pub async fn acquire(&self) -> Result<DbHandle<'_>> {
-        let conn = self.pool.acquire().await?;
-        Ok(DbHandle::LocalConn(conn))
+#[async_trait]
+impl Database for PostgresPool {
+    async fn migrate(&self) -> Result<()> {
+        sqlx::migrate!("./migrations").run(&self.pool).await?;
+        Ok(())
+    }
+
+    async fn check_database(&self) -> Result<bool> {
+        Ok(sqlx::query_scalar::<_, bool>("SELECT true")
+            .fetch_one(&self.pool)
+            .await?)
+    }
+
+    async fn begin(&self) -> Result<AnyData> {
+        let txn = self.pool.begin().await?;
+        Ok(Box::new(Postgres {
+            pool: self.pool.clone(),
+            txn: Some(txn),
+            use_legacy_behavior: false,
+        }))
+    }
+
+    async fn begin_read(&self) -> Result<AnyData> {
+        Ok(Box::new(Postgres {
+            pool: self.pool.clone(),
+            txn: None,
+            use_legacy_behavior: false,
+        }))
     }
 }
 
-/// A handle to a PostgreSQL connection/transaction, abstracting away whether
-/// we're using a global transaction (new behavior) or a local one (legacy behavior).
-pub enum DbHandle<'a> {
-    /// Using the global transaction managed by the caller (New Behavior)
-    GlobalTx(&'a mut sqlx::PgConnection),
+impl Postgres {
+    /// acquire a connection. use this for reads.
+    pub(crate) async fn acquire(&mut self) -> Result<DbHandle<'_>> {
+        if let Some(ref mut txn) = self.txn {
+            Ok(DbHandle::GlobalTx(&mut **txn))
+        } else {
+            let conn = self.pool.acquire().await?;
+            Ok(DbHandle::LocalConn(conn))
+        }
+    }
 
-    /// Acquired a temporary connection for a single query (Legacy Behavior)
-    LocalConn(sqlx::pool::PoolConnection<sqlx::Postgres>),
+    /// begin a transaction. use this for writes.
+    pub(crate) async fn begin_tx(&mut self) -> Result<DbHandle<'_>> {
+        if let Some(ref mut txn) = self.txn {
+            Ok(DbHandle::GlobalTx(&mut **txn))
+        } else {
+            let tx = self.pool.begin().await?;
+            Ok(DbHandle::LocalTx(tx))
+        }
+    }
+}
 
-    /// Started a local transaction specifically for this function (Legacy Behavior)
-    LocalTx(sqlx::Transaction<'static, sqlx::Postgres>),
+#[async_trait]
+impl Data for Postgres {
+    async fn rollback(mut self: Box<Self>) -> Result<()> {
+        if let Some(txn) = self.txn.take() {
+            txn.rollback().await?;
+        }
+        Ok(())
+    }
+
+    async fn commit(mut self: Box<Self>) -> Result<()> {
+        if let Some(txn) = self.txn.take() {
+            txn.commit().await?;
+        }
+        Ok(())
+    }
+}
+
+impl Drop for Postgres {
+    fn drop(&mut self) {
+        if !self.use_legacy_behavior && self.txn.is_some() {
+            warn!("postgres transaction implicitly rolled back");
+        }
+    }
 }
 
 impl<'a> DbHandle<'a> {
@@ -84,78 +162,6 @@ impl<'a> DbHandle<'a> {
                 tx.rollback().await?;
                 Ok(())
             }
-        }
-    }
-}
-
-impl Postgres {
-    /// acquire a connection. use this for reads.
-    pub async fn acquire(&mut self) -> Result<DbHandle<'_>> {
-        if let Some(ref mut txn) = self.txn {
-            Ok(DbHandle::GlobalTx(&mut **txn))
-        } else {
-            let conn = self.pool.acquire().await?;
-            Ok(DbHandle::LocalConn(conn))
-        }
-    }
-
-    /// begin a transaction. use this for writes.
-    pub async fn begin_tx(&mut self) -> Result<DbHandle<'_>> {
-        if let Some(ref mut txn) = self.txn {
-            Ok(DbHandle::GlobalTx(&mut **txn))
-        } else {
-            let tx = self.pool.begin().await?;
-            Ok(DbHandle::LocalTx(tx))
-        }
-    }
-}
-
-#[async_trait]
-impl Data for Postgres {
-    async fn rollback(mut self: Box<Self>) -> Result<()> {
-        if let Some(txn) = self.txn.take() {
-            txn.rollback().await?;
-        }
-        Ok(())
-    }
-
-    async fn commit(mut self: Box<Self>) -> Result<()> {
-        if let Some(txn) = self.txn.take() {
-            txn.commit().await?;
-        }
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl Data2 for PostgresPool {
-    type DataTxn = Postgres;
-
-    async fn migrate(&self) -> Result<()> {
-        sqlx::migrate!("./migrations").run(&self.pool).await?;
-        Ok(())
-    }
-
-    async fn check_database(&self) -> Result<bool> {
-        Ok(sqlx::query_scalar::<_, bool>("SELECT true")
-            .fetch_one(&self.pool)
-            .await?)
-    }
-
-    async fn begin(&self) -> Result<Postgres> {
-        let txn = self.pool.begin().await?;
-        Ok(Postgres {
-            pool: self.pool.clone(),
-            txn: Some(txn),
-            use_legacy_behavior: false,
-        })
-    }
-}
-
-impl Drop for Postgres {
-    fn drop(&mut self) {
-        if !self.use_legacy_behavior && self.txn.is_some() {
-            warn!("postgres transaction implicitly committed");
         }
     }
 }

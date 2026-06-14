@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
-use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
@@ -11,7 +11,7 @@ use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, SessionStatus, UserPatch,
     UserWithRelationship,
 };
-use common::v1::types::{AuditLogEntryStatus, Permission, Suspended, SERVER_ROOM_ID};
+use common::v1::types::{AuditLogEntryStatus, Permission, SERVER_ROOM_ID, Suspended};
 use http::StatusCode;
 use lamprey_macros::handler;
 use tracing::warn;
@@ -20,7 +20,7 @@ use utoipa_axum::router::OpenApiRouter;
 use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
 use crate::state::ServerState2;
 use crate::types::{DbUserCreate, MediaLinkType, RoomMemberPut, UserIdReq};
-use crate::{routes2, ServerState};
+use crate::{ServerState, routes2};
 
 use crate::error::{Error, Result};
 
@@ -229,7 +229,7 @@ async fn user_get(
     }
 
     let srv = s.services();
-    let mut data = s.data();
+    let mut data = s.begin().await?;
 
     let mut user = match req.user_id {
         UserIdReq::UserSelf => srv.users.get(auth.user()?.id, auth.user_id()).await?,
@@ -252,6 +252,7 @@ async fn user_get(
         user.emails = None;
     }
 
+    // TODO: move this logic to users service
     let relationship = if let Ok(user) = auth.user() {
         data.user_relationship_get(user.id, target_user_id)
             .await?
@@ -259,6 +260,9 @@ async fn user_get(
     } else {
         Default::default()
     };
+
+    data.commit().await?;
+
     Ok(Json(UserWithRelationship {
         inner: user,
         relationship,
