@@ -140,7 +140,7 @@ impl Services {
         let state_old: Arc<ServerStateInner> = state.ss1();
         Self {
             admin: ServiceAdmin::new(state.clone()),
-            audit_logs: ServiceAuditLogs::new(state_old.clone()),
+            audit_logs: ServiceAuditLogs::new(state.clone()),
             automod: ServiceAutomod::new(state_old.clone()),
             cache: ServiceCache::new(state_old.clone()),
             calendar: ServiceCalendar::new(state_old.clone()),

@@ -94,6 +94,7 @@ pub trait Data:
     + Send
     + Sync
 {
+    // PERF: dont require awaiting for rollback
     async fn rollback(self: Box<Self>) -> Result<()>;
     async fn commit(self: Box<Self>) -> Result<()>;
 }

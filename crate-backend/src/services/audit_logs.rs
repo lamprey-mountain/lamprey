@@ -1,18 +1,16 @@
-use std::sync::Arc;
-
 use common::v1::types::{
-    audit_logs::resolve::AuditLogResolve, AuditLogEntryId, AuditLogFilter,
-    AuditLogPaginationResponse, PaginationQuery, RoomId,
+    AuditLogEntryId, AuditLogFilter, AuditLogPaginationResponse, PaginationQuery, RoomId,
+    audit_logs::resolve::AuditLogResolve,
 };
 
-use crate::{error::Result, ServerStateInner};
+use crate::{error::Result, state::ServerState2};
 
 pub struct ServiceAuditLogs {
-    state: Arc<ServerStateInner>,
+    state: ServerState2,
 }
 
 impl ServiceAuditLogs {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: ServerState2) -> Self {
         Self { state }
     }
 
@@ -22,7 +20,7 @@ impl ServiceAuditLogs {
         paginate: PaginationQuery<AuditLogEntryId>,
         filter: AuditLogFilter,
     ) -> Result<AuditLogPaginationResponse> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
 
         let entries = data
             .audit_logs_room_fetch(room_id, paginate, filter.clone())
@@ -89,6 +87,9 @@ impl ServiceAuditLogs {
                 tags.push(tag);
             }
         }
+
+        // PERF: dont require awaiting for rollback
+        data.rollback().await?;
 
         Ok(AuditLogPaginationResponse {
             audit_log_entries: entries.items,
