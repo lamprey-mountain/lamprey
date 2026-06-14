@@ -1,3 +1,5 @@
+#![allow(unused)] // TEMP: suppress warnings here for now
+
 use std::sync::Arc;
 
 use tokio::sync::OnceCell;

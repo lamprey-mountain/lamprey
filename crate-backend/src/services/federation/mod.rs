@@ -1,3 +1,5 @@
+#![allow(unused)] // TEMP: suppress warnings here for now
+
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::federation::signing::ServerKeySecret;

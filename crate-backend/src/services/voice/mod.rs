@@ -1,3 +1,5 @@
+#![allow(unused)] // TEMP: suppress warnings here for now
+
 use crate::services::voice::calls::CallHandle;
 use crate::services::voice::sfus::SfuHandle;
 use crate::ServerStateInner;
