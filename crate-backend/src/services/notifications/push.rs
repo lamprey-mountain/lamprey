@@ -1,10 +1,8 @@
-use std::sync::Arc;
 use std::time::Duration;
 
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD as B64;
 use common::v1::types::UserId;
-use common::v1::types::notifications::Notification;
 use common::v1::types::notifications::bytes::NotificationBytes;
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
 use lamprey_backend_data_postgres::PushData;
@@ -13,7 +11,6 @@ use p256::pkcs8::EncodePrivateKey;
 use reqwest::StatusCode;
 use serde::Serialize;
 use time::OffsetDateTime;
-use tokio::sync::RwLock;
 use tokio::task::JoinSet;
 use tracing::{error, info};
 use url::Url;

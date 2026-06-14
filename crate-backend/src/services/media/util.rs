@@ -100,7 +100,7 @@ impl MediaItem {
 
         let (tm, rm) = watch::channel(Arc::new(media));
         let (ts, rs) = watch::channel(state);
-        let (tr, rr) = watch::channel(false);
+        let (tr, _rr) = watch::channel(false);
 
         let inner = MediaItemInner {
             media: rm,
@@ -166,7 +166,7 @@ impl MediaItem {
         self.inner
             .tempfile
             .get_or_try_init(|| async {
-                let mut file = TempFile::new().await?;
+                let file = TempFile::new().await?;
                 let mut writer = file.open_rw().await?;
 
                 // if bytes already cached, write them out instead of refetching
@@ -182,7 +182,7 @@ impl MediaItem {
                     .inner
                     .s
                     .get_s3_url(&format!("media/{}/file", media.id))?;
-                let mut reader = self.inner.s.blobs.reader_with(url.path()).await?;
+                let reader = self.inner.s.blobs.reader_with(url.path()).await?;
                 let mut reader = reader.into_futures_async_read(0..).await?.compat();
                 tokio::io::copy(&mut reader, &mut writer).await?;
                 writer.flush().await?;
@@ -345,11 +345,11 @@ impl MediaPaths {
         format!("{}/poster", self.base(media_id))
     }
 
-    pub fn thumb(&self, media_id: MediaId, size: u64, ext: &str) -> String {
+    pub fn _thumb(&self, media_id: MediaId, size: u64, ext: &str) -> String {
         format!("{}/thumb/{}x{}.{}", self.base(media_id), size, size, ext)
     }
 
-    pub fn thumb_static(&self, media_id: MediaId, size: u64, ext: &str) -> String {
+    pub fn _thumb_static(&self, media_id: MediaId, size: u64, ext: &str) -> String {
         format!(
             "{}/thumb/{}x{}_static.{}",
             self.base(media_id),

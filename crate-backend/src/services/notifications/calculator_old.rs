@@ -1,14 +1,12 @@
 //! notification preference calculator
 
 use common::v1::types::notifications::preferences::{
-    Mute, NotifsChannel, NotifsGlobal, NotifsMessages, NotifsReactions, NotifsReplies, NotifsRoom,
-    NotifsThreads,
+    Mute, NotifsGlobal, NotifsMessages, NotifsReactions, NotifsReplies, NotifsThreads,
 };
 use common::v1::types::notifications::{Notification, NotificationType};
 use common::v1::types::util::Time;
-use common::v1::types::{Channel, ChannelType, Message, Room, UserId};
+use common::v1::types::{Channel, ChannelType, Room, UserId};
 
-use crate::state::ServerState2;
 use crate::{Result, ServerStateInner};
 
 /// What action to take for a notification
