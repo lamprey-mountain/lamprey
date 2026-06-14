@@ -1,4 +1,4 @@
-use crate::v1::types::{oauth::Scope, Permission};
+use crate::v1::types::{Permission, oauth::Scope};
 use bytes::Bytes;
 use serde::de::DeserializeOwned;
 
@@ -146,16 +146,7 @@ pub struct Endpoint {
     pub audit_log_events: &'static [&'static str],
 }
 
-/// HTTP method for an endpoint.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum EndpointMethod {
-    Get,
-    Post,
-    Put,
-    Patch,
-    Delete,
-    Head,
-}
+pub use crate::util::routes::Method as EndpointMethod;
 
 impl From<EndpointMethod> for ::utoipa::openapi::HttpMethod {
     fn from(m: EndpointMethod) -> Self {

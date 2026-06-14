@@ -1,5 +1,6 @@
 pub mod routes;
 
+// PERF: use a streamable body?
 /// wrapper for body bytes
 #[derive(Clone)]
 pub struct FederationBody(pub ::bytes::Bytes);

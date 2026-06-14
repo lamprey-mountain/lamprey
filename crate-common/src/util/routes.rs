@@ -14,8 +14,16 @@ pub trait Endpoint {
 // TODO: move struct here
 pub use crate::v1::routes::Endpoint as Metadata;
 
-// TODO: move enum here
-pub use crate::v1::routes::EndpointMethod as Method;
+/// HTTP method for an endpoint.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Method {
+    Get,
+    Post,
+    Put,
+    Patch,
+    Delete,
+    Head,
+}
 
 pub trait Request: Sized {
     /// encode this into an http request

@@ -26,7 +26,7 @@ use crate::v1::types::error::{ApiResult, ErrorCode};
 use crate::v1::types::federation::Hostname;
 use crate::v1::types::{MediaId, MessageId};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Deserialize), serde(untagged))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum UserIdReq {
@@ -45,7 +45,7 @@ pub enum UserIdReq {
 //     RoomSystem,
 // }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Deserialize), serde(untagged))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum MediaIdReq {
@@ -53,7 +53,7 @@ pub enum MediaIdReq {
     MediaId(MediaId),
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, ToSchema)]
 #[cfg_attr(feature = "serde", serde(untagged))]
 pub enum ApplicationIdReq {
     #[cfg_attr(feature = "serde", serde(deserialize_with = "const_self"))]
@@ -61,7 +61,7 @@ pub enum ApplicationIdReq {
     ApplicationId(ApplicationId),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serde",
     derive(Deserialize, serde::Serialize),
@@ -83,7 +83,7 @@ impl Display for SessionIdReq {
     }
 }
 
-#[derive(Debug, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Deserialize, ToSchema)]
 #[cfg_attr(feature = "serde", serde(untagged))]
 pub enum ServerReq {
     /// the target server
@@ -101,7 +101,7 @@ pub enum ServerReq {
     ServerName(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Deserialize), serde(untagged))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum InteractionMessageReq {

@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 
 mod diff;
 mod endpoint;
-// mod endpoint_new;
+mod endpoint_new;
 mod handler;
 mod ids;
 mod parse;
@@ -15,6 +15,13 @@ pub fn derive_diff(input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn endpoint(args: TokenStream, item: TokenStream) -> TokenStream {
     endpoint::expand(args.into(), item.into())
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+#[proc_macro_attribute]
+pub fn endpoint_new(args: TokenStream, item: TokenStream) -> TokenStream {
+    endpoint_new::expand(args.into(), item.into())
         .unwrap_or_else(|e| e.to_compile_error())
         .into()
 }
