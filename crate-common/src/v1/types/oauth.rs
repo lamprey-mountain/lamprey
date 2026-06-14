@@ -3,21 +3,20 @@ use std::{ops::Deref, str::FromStr};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use strum::EnumIter;
 use url::Url;
 
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
+    ApplicationId, User, UserId,
     application::Application,
     email::EmailAddr,
     error::{ApiError, ErrorCode},
-    ApplicationId, User, UserId,
 };
 
 /// openid connect automatic configuration
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Autoconfig {
@@ -33,7 +32,7 @@ pub struct Autoconfig {
 }
 
 /// user info response for openid connect
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Userinfo {
@@ -62,17 +61,25 @@ pub struct Userinfo {
     pub picture: Option<Url>,
 }
 
-#[derive(Debug)]
+/// information about an application that can be granted access to your account
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct OauthAuthorizeInfo {
+    /// the application itself
     pub application: Application,
+
+    /// if the application is a bot, this is the bot user
     pub bot_user: User,
+
+    /// the user who requested this info
     pub auth_user: User,
+
+    /// whether this application is already authorized
     pub authorized: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 pub struct OauthAuthorizeParams {
@@ -89,14 +96,14 @@ pub struct OauthAuthorizeParams {
     pub code_challenge_method: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct OauthAuthorizeResponse {
     pub redirect_uri: Url,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct OauthTokenRequest {
@@ -109,7 +116,7 @@ pub struct OauthTokenRequest {
     pub code_verifier: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct OauthTokenResponse {
@@ -120,7 +127,7 @@ pub struct OauthTokenResponse {
     pub scope: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct OauthIntrospectResponse {
@@ -134,9 +141,9 @@ pub struct OauthIntrospectResponse {
 }
 
 /// an oauth scope
-// TODO: use strum for this
+// TODO: use strum for this (if it can handle "identify" | "openid")
 // TODO: remove "implied scopes"?
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, strum::EnumIter)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -178,10 +185,22 @@ pub enum Scope {
     Auth,
 }
 
+bitflags::bitflags! {
+    /// compact representation of a set of scopes
+    ///
+    /// for internal use, not sent to clients
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+    pub struct ScopeBits: u8 {
+        const Identify = 1 << 0;
+        const Email = 1 << 1;
+        const Rooms = 1 << 2;
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(transparent))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(transparent))]
 pub struct Scopes(pub Vec<Scope>);
 
 impl Deref for Scopes {

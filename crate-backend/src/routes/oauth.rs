@@ -1,18 +1,18 @@
 use std::{collections::HashSet, str::FromStr, sync::Arc, time::Duration};
 
+use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
-use axum::Json;
-use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
+use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
 use common::v1::routes;
 use common::v1::types::{
+    AuditLogEntryType, SessionStatus, SessionToken, SessionType,
     application::{Application, Scope, Scopes},
     oauth::{
         Autoconfig, OauthAuthorizeInfo, OauthAuthorizeResponse, OauthIntrospectResponse,
         OauthTokenResponse, Userinfo,
     },
     util::Time,
-    AuditLogEntryType, SessionStatus, SessionToken, SessionType,
 };
 use headers::HeaderMapExt;
 use http::{HeaderMap, StatusCode};
@@ -24,7 +24,7 @@ use uuid::Uuid;
 use crate::error::{Error, Result};
 use crate::routes::util::Auth;
 use crate::types::DbSessionCreate;
-use crate::{routes2, ServerState};
+use crate::{ServerState, routes2};
 use common::v1::types::error::{ApiError, ErrorCode};
 
 /// Oauth info
@@ -212,7 +212,7 @@ async fn oauth_token(
                     _ => {
                         return Err(
                             ApiError::from_code(ErrorCode::UnsupportedCodeChallengeMethod).into(),
-                        )
+                        );
                     }
                 };
                 if !valid {

@@ -1,6 +1,8 @@
 use lamprey_macros::endpoint;
 
 /// Oauth info
+///
+/// Fetch information about an OAuth application before authorization.
 #[endpoint(
     get,
     path = "/oauth/authorize",
@@ -23,6 +25,8 @@ pub mod oauth_info {
 }
 
 /// Oauth authorize
+///
+/// Grant an application access to some resources.
 #[endpoint(
     post,
     path = "/oauth/authorize",
@@ -46,7 +50,7 @@ pub mod oauth_authorize {
 
 /// Oauth token
 ///
-/// Exchange an authorization token for an access token
+/// Exchange an authorization token for an access token.
 #[endpoint(
     post,
     path = "/oauth/token",
@@ -68,6 +72,8 @@ pub mod oauth_token {
 }
 
 /// Oauth introspect
+///
+/// Validate an access token and retrieve its associated information and scopes.
 #[endpoint(
     post,
     path = "/oauth/introspect",
@@ -96,6 +102,8 @@ pub mod oauth_introspect {
 }
 
 /// Oauth userinfo
+///
+/// Retrieve profile information about the user currently authorized by an access token.
 #[endpoint(
     get,
     path = "/oauth/userinfo",
@@ -115,6 +123,8 @@ pub mod oauth_userinfo {
 }
 
 /// Oauth revoke
+///
+/// Invalidate an active access or refresh token, terminating the application's access.
 #[endpoint(
     post,
     path = "/oauth/revoke",
@@ -139,6 +149,9 @@ pub mod oauth_revoke {
 }
 
 /// Oauth autoconfig
+///
+/// Retrieve the OpenID Connect discovery document for automatic client configuration.
+// NOTE: should this be at the root? nesting it under `/api/v1` feels wrong but seems to work.
 #[endpoint(
     get,
     path = "/.well-known/oauth-authorization-server",
