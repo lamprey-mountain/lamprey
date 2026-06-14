@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use common::v1::types::notifications::Notification;
 use common::v1::types::{Channel, Message, UserId};
+use lamprey_backend_data_postgres::MAX_ROLE_MENTION_MEMBERS;
 use tokio::sync::RwLock;
 
 use crate::prelude::*;
@@ -78,23 +79,56 @@ impl ServiceNotifications {
     ) -> Result<MentionedUsers> {
         let mut m = MentionedUsers::default();
         let mentions = &message.latest_version.mentions;
+        let mut data = self.state.begin_read().await?;
 
-        // collect user mentions
+        // add user mentions
         for u in &mentions.users {
             m.users_from_direct.insert(u.id);
         }
 
+        // add recipients for dms
         if channel.ty.is_dm() {
-            // add recipients
-        } else if channel.ty.is_thread() {
-            // collect role mentions
-            // if role member count > MAX_ROLE_MENTION_MEMBERS_ADD, skip adding user ids for this role to the set
+            for recipient in &channel.recipients {
+                m.users_from_recipient.insert(recipient.id);
+            }
+        }
 
-            // collect everyone mentions as all thread members
-        } else {
-            // collect role mentions
+        if mentions.everyone || !mentions.roles.is_empty() {
+            let is_thread = channel.ty.is_thread();
 
-            // collect everyone mentions as all room members
+            // collect role mentions
+            for r in &mentions.roles {
+                // TODO: read members from room actor, filter by role
+                if let Ok(members) = data.role_member_list(r.id, Default::default()).await {
+                    if !is_thread || members.items.len() as u32 <= MAX_ROLE_MENTION_MEMBERS {
+                        for member in members.items {
+                            m.users_from_role.insert(member.user_id);
+                        }
+                    }
+                }
+            }
+
+            // collect everyone mentions
+            if mentions.everyone {
+                let everyone_ids = if is_thread {
+                    data.thread_member_list_all(channel.id)
+                        .await
+                        .ok()
+                        .map(|members| members.into_iter().map(|u| u.user_id).collect::<Vec<_>>())
+                } else if let Some(room_id) = channel.room_id {
+                    data.room_member_list_all(room_id)
+                        .await
+                        .ok()
+                        .map(|members| members.into_iter().map(|u| u.user_id).collect::<Vec<_>>())
+                } else {
+                    // TODO: handle dms (@everyone mentions all recipients in dms/gdms)
+                    None
+                };
+
+                if let Some(ids) = everyone_ids {
+                    m.users_from_everyone.extend(ids);
+                }
+            }
         }
 
         Ok(m)
