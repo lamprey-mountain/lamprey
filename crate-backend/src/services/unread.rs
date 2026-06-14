@@ -1,3 +1,5 @@
+// TODO: merge into ServiceNotifications
+
 // TODO: high performance unread handling
 //
 // Instead of fetching from db, store read states and quickly changing channel data in memory. Flush channel data to postgres occasionally.
@@ -8,166 +10,132 @@ use std::sync::Arc;
 use async_nats::jetstream::kv::{Store, UpdateErrorKind};
 use bytes::Bytes;
 use common::v1::types::{
-    ack::{AckBulk, AckBulkItem},
-    Channel, ChannelId, MessageId, MessageVerId, UserId,
+    Channel, ChannelId, Message, MessageId, MessageSync, MessageType, MessageVerId, NotificationId,
+    UserId,
+    ack::{Ack, AckBulk, AckCreate, AckState, ChannelAckMetadata},
+    notifications::{Notification, NotificationType},
+    util::Time,
 };
 use dashmap::DashMap;
-use lamprey_backend_core::prelude::*;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use lamprey_backend_data_postgres::DbChannelPrivate;
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
-use crate::ServerStateInner;
+use crate::prelude::*;
+use crate::{ServerStateInner, services::notifications::calculator::Calculator};
 
 pub struct ServiceUnread {
-    state: Arc<ServerStateInner>,
-    cache_channel: DashMap<ChannelId, ChannelReadMetadata>,
-    cache_user: DashMap<(ChannelId, UserId), ReadState>,
+    state: ServerState2,
+    cache_channel: DashMap<ChannelId, ChannelAckMetadata>,
+    cache_user_message: DashMap<(ChannelId, UserId), AckStateUserMessage>,
+    cache_user_pins: DashMap<(ChannelId, UserId), AckStateUserPins>,
 }
 
-#[derive(Default, Serialize, Deserialize)]
-pub struct ChannelReadMetadata {
-    pub last_version_id: Option<MessageVerId>,
-    pub last_message_id: Option<MessageId>,
-    pub message_count: Option<u64>,
-    pub root_message_count: Option<u64>,
+#[derive(Debug)]
+struct AckStateUserMessage {
+    last_read_message_id: MessageId,
+    mention_count: u64,
 }
 
-#[derive(Default, Serialize, Deserialize)]
-pub struct ReadState {
-    pub is_unread: bool,
-    pub last_read_id: Option<MessageVerId>,
-    pub mention_count: u64,
-}
-
-impl ChannelReadMetadata {
-    pub fn apply(&self, channel: &mut Channel) {
-        channel.last_version_id = self.last_version_id;
-        channel.last_message_id = self.last_message_id;
-        channel.message_count = self.message_count;
-        channel.root_message_count = self.root_message_count;
-    }
-}
-
-impl ReadState {
-    pub fn apply(&self, channel: &mut Channel) {
-        channel.is_unread = Some(self.is_unread);
-        channel.last_read_id = self.last_read_id;
-        channel.mention_count = Some(self.mention_count);
-    }
+#[derive(Debug)]
+struct AckStateUserPins {
+    last_read_pin_timestamp: Option<Time>,
 }
 
 impl ServiceUnread {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: ServerState2) -> Self {
         Self {
             state,
             cache_channel: DashMap::new(),
-            cache_user: DashMap::new(),
+            cache_user_message: DashMap::new(),
+            cache_user_pins: DashMap::new(),
         }
     }
 
-    pub async fn ack(
-        &self,
-        user_id: UserId,
-        // ack: AckBulkItem,
-        channel_id: ChannelId,
-        message_id: MessageId,
-        version_id: MessageVerId,
-        mention_count: u64,
-    ) -> Result<()> {
-        self.ack_bulk(
-            user_id,
-            AckBulk {
-                acks: vec![AckBulkItem {
-                    channel_id,
-                    message_id: Some(message_id),
-                    version_id,
-                    mention_count,
-                }],
-            },
-        )
-        .await
+    /// acknowledge a channel
+    pub async fn ack(&self, user_id: UserId, channel_id: ChannelId, ack: AckCreate) -> Result<()> {
+        // update in memory cache
+        // update jetstream
+        todo!()
     }
 
-    /// acknowledge a bunch of channels at once
-    pub async fn ack_bulk(&self, _user_id: UserId, _acks: AckBulk) -> Result<()> {
-        let js = self.state.jetstream.as_ref().unwrap();
-        let kv = js
-            .create_key_value(async_nats::jetstream::kv::Config {
-                bucket: "read_states_channels".to_owned(),
-                history: 1,
-                ..Default::default()
-            })
-            .await
-            .unwrap();
-        // let kv = js
-        //     .create_key_value(async_nats::jetstream::kv::Config {
-        //         bucket: "read_states".to_owned(),
-        //         history: 1,
-        //         ..Default::default()
-        //     })
-        //     .await
-        //     .unwrap();
+    /// acknowledge many channels
+    pub async fn ack_bulk(&self, user_id: UserId, acks: AckBulk) -> Result<()> {
+        todo!()
+    }
 
-        let key = "channel-id-here";
-        // let key = "channelid:userid";
+    /// handle a sync event
+    pub async fn handle_sync(&self, sync: &MessageSync) -> Result<()> {
+        match sync {
+            MessageSync::MessageCreate { .. } => todo!("handle_message"),
+            MessageSync::ChannelCreate { .. } => todo!("handle_channel"),
+            // TODO: handle other events
+            _ => {}
+        }
+    }
 
-        atomic_update(&kv, key, |metadata: ChannelReadMetadata| {
-            // metadata.last_message_id = Some(new_last_message_id);
-            // metadata.message_count = Some(metadata.message_count.unwrap_or(0) + 1);
-            metadata
-        })
-        .await?;
+    /// handle a message
+    pub async fn handle_message(&self, message: &Message) -> Result<()> {
+        let srv = self.state.services();
 
+        if is_in_dm {
+            // if matches!(message type, MessageType::MemberRemove(_)); skip next for loop
+
+            for user in recipients {
+                // check that (channel is not muted) or (message mentions user)
+                // check that message author is not blocked or ignored by user
+                // if true, increment mention_count by 1
+            }
+        } else {
+            let mentioned_users = todo!("get a full list of mentioned users");
+            for user in mentioned_users {
+                // check that message author is not blocked or ignored by user
+                // increment mention_count by 1
+            }
+        }
+
+        // TODO: reset ack state for message.author_id (mention_count -> 0, last_read_message_id -> chan.last_message_id)
+
+        // TODO: bump channel read metadata (last_message_id)
+
+        Ok(())
+    }
+
+    /// handle a channel create event
+    pub async fn handle_channel(&self, channel: &Channel) -> Result<()> {
+        // if channel is a thread and thread's parent.ty.is_thread_only()
+        // then reset ack state for channel.creator_id in channel.parent_id (mention_count -> 0, last_read_message_id -> parent.last_message_id)
+
+        todo!()
+    }
+
+    /// save read state in to database
+    pub async fn flush(&self) -> Result<()> {
+        self.state.messaging().temp_jetstream().await?;
+        // PERF: have some way to bulk upsert ack state in database?
+        todo!()
+    }
+
+    pub fn put_channel(&self, a: ChannelAckMetadata) -> Result<()> {
+        todo!()
+    }
+
+    pub fn put_user_channel(&self, a: AckStateUserMessage) -> Result<()> {
         todo!()
     }
 }
 
-// planning how the service would be like
-trait ServiceUnread2 {
-    fn new(state: Arc<ServerStateInner>) -> Self;
-
-    /// acknowledge a channel
-    async fn ack(&self, user_id: UserId, ack: AckBulkItem) -> Result<()>;
-
-    /// acknowledge many channels
-    async fn ack_bulk(&self, user_id: UserId, acks: AckBulk) -> Result<()>;
-
-    /// handle a message
-    ///
-    /// - increment mention_count
-    /// - bump channel read metadata
-    async fn handle_message(&self, message: &common::v1::types::Message) -> Result<()>;
-
-    /// save read state in to database
-    async fn flush(&self) -> Result<()>;
-    // TODO: how do i resume? how do i handle server crashes?
+fn a(a: &ChannelAckMetadata) -> Bytes {
+    todo!()
 }
 
-async fn atomic_update<T: Default + Serialize + DeserializeOwned, F: Fn(T) -> T>(
-    kv: &Store,
-    key: &str,
-    update: F,
-) -> Result<()> {
-    loop {
-        let (data, revision) = match kv
-            .entry(key)
-            .await
-            .expect("FIXME: add nats error to error enum")
-        {
-            Some(entry) => {
-                let m: T = serde_json::from_slice(&entry.value)?;
-                (m, entry.revision)
-            }
-            None => (T::default(), 0),
-        };
+fn b(a: &AckState) -> Bytes {
+    todo!()
+}
 
-        let data = update(data);
-        let bytes = Bytes::from(serde_json::to_vec(&data)?);
+fn c(bytes: &Bytes) -> Result<ChannelAckMetadata> {
+    todo!()
+}
 
-        match kv.update(key, bytes, revision).await {
-            Ok(_) => return Ok(()),
-            Err(e) if e.kind() == UpdateErrorKind::WrongLastRevision => continue,
-            // Err(e) => return Err(e.into()),
-            Err(_e) => panic!("FIXME: add nats error to error enum"),
-        }
-    }
+fn c(bytes: &Bytes) -> Result<AckState> {
+    todo!()
 }

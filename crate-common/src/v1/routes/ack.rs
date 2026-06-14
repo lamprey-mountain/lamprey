@@ -13,7 +13,7 @@ pub mod ack_bulk {
 
     pub struct Request {
         #[json]
-        pub ack: AckBulk,
+        pub body: AckBulk,
     }
 
     pub struct Response {}

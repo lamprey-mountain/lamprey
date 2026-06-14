@@ -222,6 +222,7 @@ pub struct DbChannel {
     pub slowmode_message: Option<i32>,
     pub default_slowmode_message: Option<i32>,
     pub last_activity_at: Option<PrimitiveDateTime>,
+    pub last_pin_timestamp: Option<PrimitiveDateTime>,
     pub document: Option<serde_json::Value>,
     pub wiki: Option<serde_json::Value>,
     pub calendar: Option<serde_json::Value>,
@@ -362,6 +363,7 @@ impl From<DbChannel> for Channel {
             latest_seq: ChannelSeq(row.latest_seq as u64),
             last_version_id: row.last_version_id.map(|i| i.into()),
             last_message_id: row.last_message_id.map(|i| i.into()),
+            last_pin_timestamp: row.last_pin_timestamp.map(|t| t.into()),
             message_count: Some(row.message_count.try_into().expect("count is negative?")),
             parent_id: row.parent_id.map(|i| i.into()),
             position: row

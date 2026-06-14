@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -6,26 +5,23 @@ use common::v1::types::components::{self, ComponentThin, Components};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::message::MessageAttachmentCreateType;
 use common::v1::types::misc::Time;
-use common::v1::types::notifications::{Notification, NotificationType};
 use common::v1::types::{
     Channel, ChannelId, ChannelPatch, Mentions, Message, MessageAttachmentType, MessageCreate,
     MessageId, MessagePatch, MessageSync, MessageType, MessageVersion, ParseMentions, Permission,
-    ThreadMember, ThreadMemberPut, User, UserId,
+    ThreadMemberPut, User, UserId,
 };
 use common::v2::types::media::MediaReference;
 use http::StatusCode;
-use lamprey_backend_data_postgres::{MediaId, NotificationId, SERVER_USER_ID};
-use tracing::{error, warn};
+use lamprey_backend_data_postgres::{MediaId, SERVER_USER_ID};
+use tracing::error;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::routes::util::auth::{Auth4, Identity};
 use crate::services::messages::util::MediaRegistry;
 use crate::services::messages::{links, markdown};
-use crate::services::notifications::preferences::NotificationAction;
 use crate::types::MediaLinkType;
-use crate::ServerStateInner;
-use crate::{routes::util::Auth, services::messages::ServiceMessages, Error, Result};
+use crate::{Error, Result, routes::util::Auth, services::messages::ServiceMessages};
 
 struct MessageOperation<'a, S> {
     channel: Channel,
@@ -1182,203 +1178,201 @@ impl ServiceMessages {
         &self,
         op: &mut MessageOperation<'_, Committed>,
     ) -> Result<()> {
-        // TODO: skip if message is ephemeral
-
-        let p = NotificationProcessor {
-            state: self.state.clone(),
-            channel: Arc::new(op.channel.clone()),
-            message: op.stage.message.clone(),
-        };
-
-        tokio::spawn(p.process());
-
+        let srv = self.state.services();
+        let channel = op.channel.clone();
+        let message = op.stage.message.clone();
+        tokio::spawn(async move {
+            srv.notifications.process_message(channel, message);
+        });
         Ok(())
     }
 }
 
-struct NotificationProcessor {
-    state: Arc<ServerStateInner>,
-    channel: Arc<Channel>,
-    message: Message,
-    // in the future, i'll probably wrap a lot of stuff in `Arc`s
-    // but channel: Arc<Channel> is kinda useless for now
-}
+// TODO: port NotificationProcessor to ServiceNotifications
+// TODO: remove commented out NotificationProcessor code
+// struct NotificationProcessor {
+//     state: Arc<ServerStateInner>,
+//     channel: Arc<Channel>,
+//     message: Message,
+//     // in the future, i'll probably wrap a lot of stuff in `Arc`s
+//     // but channel: Arc<Channel> is kinda useless for now
+// }
 
-struct NotificationTargets {
-    notify: HashSet<UserId>,
-    add_to_thread: HashSet<UserId>,
-}
+// struct NotificationTargets {
+//     notify: HashSet<UserId>,
+//     add_to_thread: HashSet<UserId>,
+// }
 
-impl NotificationProcessor {
-    async fn process(self) {
-        let targets = match self.get_mentioned_users().await {
-            Ok(t) => t,
-            Err(err) => {
-                warn!("failed to get mention targets, skipping: {err:?}");
-                return;
-            }
-        };
+// impl NotificationProcessor {
+//     async fn process(self) {
+//         let targets = match self.get_mentioned_users().await {
+//             Ok(t) => t,
+//             Err(err) => {
+//                 warn!("failed to get mention targets, skipping: {err:?}");
+//                 return;
+//             }
+//         };
 
-        let mut thread_members = vec![];
-        for target in targets.notify {
-            match self.process_mention(target).await {
-                Ok(Some(thread_member)) => thread_members.push(thread_member),
-                Ok(None) => {}
-                Err(err) => warn!("failed to process mention, skipping: {err:?}"),
-            }
-        }
+//         let mut thread_members = vec![];
+//         for target in targets.notify {
+//             match self.process_mention(target).await {
+//                 Ok(Some(thread_member)) => thread_members.push(thread_member),
+//                 Ok(None) => {}
+//                 Err(err) => warn!("failed to process mention, skipping: {err:?}"),
+//             }
+//         }
 
-        let srv = self.state.services();
+//         let srv = self.state.services();
 
-        if !thread_members.is_empty() {
-            let thread_id = self.channel.id;
+//         if !thread_members.is_empty() {
+//             let thread_id = self.channel.id;
 
-            // NOTE: do i need this? presumably only member count is dirty (from thread members)
-            srv.channels.invalidate(thread_id).await;
+//             // NOTE: do i need this? presumably only member count is dirty (from thread members)
+//             srv.channels.invalidate(thread_id).await;
 
-            let msg = MessageSync::ThreadMemberUpsert {
-                room_id: self.channel.room_id,
-                thread_id,
-                added: thread_members,
-                removed: vec![],
-            };
+//             let msg = MessageSync::ThreadMemberUpsert {
+//                 room_id: self.channel.room_id,
+//                 thread_id,
+//                 added: thread_members,
+//                 removed: vec![],
+//             };
 
-            if let Err(err) = self.state.broadcast(msg) {
-                warn!("failed to broadcast message: {err:?}");
-            };
-        }
-    }
+//             if let Err(err) = self.state.broadcast(msg) {
+//                 warn!("failed to broadcast message: {err:?}");
+//             };
+//         }
+//     }
 
-    async fn get_mentioned_users(&self) -> Result<NotificationTargets> {
-        let mut users_to_notify = HashSet::new();
-        let is_thread = self.channel.ty.is_thread();
-        let mentions = &self.message.latest_version.mentions;
-        let mut data = self.state.data();
-        let author_id = self.message.author_id;
-        let channel_id = self.channel.id;
+//     async fn get_mentioned_users(&self) -> Result<NotificationTargets> {
+//         let mut users_to_notify = HashSet::new();
+//         let is_thread = self.channel.ty.is_thread();
+//         let mentions = &self.message.latest_version.mentions;
+//         let mut data = self.state.data();
+//         let author_id = self.message.author_id;
+//         let channel_id = self.channel.id;
 
-        // 1. collect user mentions
-        for u in &mentions.users {
-            if u.id != author_id {
-                users_to_notify.insert(u.id);
-            }
-        }
+//         // 1. collect user mentions
+//         for u in &mentions.users {
+//             if u.id != author_id {
+//                 users_to_notify.insert(u.id);
+//             }
+//         }
 
-        // 2. collect role mentions
-        for r in &mentions.roles {
-            if let Ok(members) = data.role_member_list(r.id, Default::default()).await {
-                // Check if we should auto-add role members to the thread
-                let should_add_to_thread = is_thread
-                    && members.items.len() < crate::consts::MAX_ROLE_MENTION_MEMBERS_ADD as usize;
+//         // 2. collect role mentions
+//         for r in &mentions.roles {
+//             if let Ok(members) = data.role_member_list(r.id, Default::default()).await {
+//                 // Check if we should auto-add role members to the thread
+//                 let should_add_to_thread = is_thread
+//                     && members.items.len() < crate::consts::MAX_ROLE_MENTION_MEMBERS_ADD as usize;
 
-                for member in members.items {
-                    if member.user_id != author_id {
-                        users_to_notify.insert(member.user_id);
+//                 for member in members.items {
+//                     if member.user_id != author_id {
+//                         users_to_notify.insert(member.user_id);
 
-                        // Specific logic for bulk-adding role members to threads
-                        if should_add_to_thread {
-                            let _ = data
-                                .thread_member_put(channel_id, member.user_id, Default::default())
-                                .await;
-                        }
-                    }
-                }
-            }
-        }
+//                         // Specific logic for bulk-adding role members to threads
+//                         if should_add_to_thread {
+//                             let _ = data
+//                                 .thread_member_put(channel_id, member.user_id, Default::default())
+//                                 .await;
+//                         }
+//                     }
+//                 }
+//             }
+//         }
 
-        // 3. collect @everyone mentions
-        if mentions.everyone {
-            let everyone_ids = if is_thread {
-                data.thread_member_list_all(channel_id)
-                    .await
-                    .ok()
-                    .map(|m| m.into_iter().map(|u| u.user_id).collect::<Vec<_>>())
-            } else if let Some(r_id) = self.channel.room_id {
-                // use room cache for this? it also might be a good idea to see if i can avoid creating a vec of every user id in a room on an everyone mention.
-                data.room_member_list_all(r_id)
-                    .await
-                    .ok()
-                    .map(|m| m.into_iter().map(|u| u.user_id).collect::<Vec<_>>())
-            } else {
-                None
-            };
+//         // 3. collect @everyone mentions
+//         if mentions.everyone {
+//             let everyone_ids = if is_thread {
+//                 data.thread_member_list_all(channel_id)
+//                     .await
+//                     .ok()
+//                     .map(|m| m.into_iter().map(|u| u.user_id).collect::<Vec<_>>())
+//             } else if let Some(r_id) = self.channel.room_id {
+//                 // use room cache for this? it also might be a good idea to see if i can avoid creating a vec of every user id in a room on an everyone mention.
+//                 data.room_member_list_all(r_id)
+//                     .await
+//                     .ok()
+//                     .map(|m| m.into_iter().map(|u| u.user_id).collect::<Vec<_>>())
+//             } else {
+//                 None
+//             };
 
-            if let Some(ids) = everyone_ids {
-                for id in ids {
-                    if id != author_id {
-                        users_to_notify.insert(id);
-                    }
-                }
-            }
-        }
+//             if let Some(ids) = everyone_ids {
+//                 for id in ids {
+//                     if id != author_id {
+//                         users_to_notify.insert(id);
+//                     }
+//                 }
+//             }
+//         }
 
-        Ok(NotificationTargets {
-            notify: users_to_notify.clone(),
-            add_to_thread: users_to_notify.clone(),
-        })
-    }
+//         Ok(NotificationTargets {
+//             notify: users_to_notify.clone(),
+//             add_to_thread: users_to_notify.clone(),
+//         })
+//     }
 
-    async fn process_mention(&self, user_id: UserId) -> Result<Option<ThreadMember>> {
-        let mut data = self.state.data();
-        let srv = self.state.services();
-        let is_thread = self.channel.ty.is_thread();
-        let channel_id = self.channel.id;
+//     async fn process_mention(&self, user_id: UserId) -> Result<Option<ThreadMember>> {
+//         let mut data = self.state.data();
+//         let srv = self.state.services();
+//         let is_thread = self.channel.ty.is_thread();
+//         let channel_id = self.channel.id;
 
-        // 1. ensure thread membership
-        let thread_member = if is_thread {
-            if data.thread_member_get(channel_id, user_id).await.is_err() {
-                // PERF: either make thread_member_put return ThreadMember or make it take a full struct
-                data.thread_member_put(channel_id, user_id, ThreadMemberPut::default())
-                    .await?;
-                let thread_member = data.thread_member_get(channel_id, user_id).await?;
-                Some(thread_member)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
+//         // 1. ensure thread membership
+//         let thread_member = if is_thread {
+//             if data.thread_member_get(channel_id, user_id).await.is_err() {
+//                 // PERF: either make thread_member_put return ThreadMember or make it take a full struct
+//                 data.thread_member_put(channel_id, user_id, ThreadMemberPut::default())
+//                     .await?;
+//                 let thread_member = data.thread_member_get(channel_id, user_id).await?;
+//                 Some(thread_member)
+//             } else {
+//                 None
+//             }
+//         } else {
+//             None
+//         };
 
-        // 2. increment unread count
-        // PERF: this should probably be done in bulk
-        data.unread_increment_mentions(
-            user_id,
-            self.channel.id,
-            self.message.id,
-            self.message.latest_version.version_id,
-            1,
-        )
-        .await?;
+//         // 2. increment unread count
+//         // PERF: this should probably be done in bulk
+//         data.unread_increment_mentions(
+//             user_id,
+//             self.channel.id,
+//             self.message.id,
+//             self.message.latest_version.version_id,
+//             1,
+//         )
+//         .await?;
 
-        // 3. notifiation action calculation
-        let notification = Notification {
-            id: NotificationId::new(),
-            ty: NotificationType::Message {
-                room_id: self.channel.room_id,
-                channel_id: self.channel.id,
-                message_id: self.message.id,
-                user_id: self.message.author_id,
-                // FIXME: populate these fields
-                mention_user: false,
-                mention_everyone: false,
-                mention_role: false,
-                reply: false,
-            },
-            added_at: Time::now_utc(),
-            read_at: None,
-            note: None,
-        };
+//         // 3. notifiation action calculation
+//         let notification = Notification {
+//             id: NotificationId::new(),
+//             ty: NotificationType::Message {
+//                 room_id: self.channel.room_id,
+//                 channel_id: self.channel.id,
+//                 message_id: self.message.id,
+//                 user_id: self.message.author_id,
+//                 // FIXME: populate these fields
+//                 mention_user: false,
+//                 mention_everyone: false,
+//                 mention_role: false,
+//                 reply: false,
+//             },
+//             added_at: Time::now_utc(),
+//             read_at: None,
+//             note: None,
+//         };
 
-        let action = srv
-            .notifications
-            .calculate_actions(user_id, &notification)
-            .await
-            .unwrap_or(NotificationAction::Skip);
+//         let action = srv
+//             .notifications
+//             .calculate_actions(user_id, &notification)
+//             .await
+//             .unwrap_or(NotificationAction::Skip);
 
-        if action.should_add_to_inbox() {
-            data.notification_add(user_id, notification).await?;
-        }
+//         if action.should_add_to_inbox() {
+//             data.notification_add(user_id, notification).await?;
+//         }
 
-        Ok(thread_member)
-    }
-}
+//         Ok(thread_member)
+//     }
+// }

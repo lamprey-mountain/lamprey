@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::notifications::{
-    InboxListParams, Notification, NotificationFlush, NotificationMarkRead, NotificationType,
+    InboxListParams, Notification, NotificationFlush, NotificationMarkRead,
 };
 use common::v1::types::{NotificationId, PaginationDirection, PaginationQuery, PaginationResponse};
 use sqlx::{query, query_file, query_file_as, query_file_scalar};

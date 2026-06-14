@@ -27,7 +27,7 @@ use crate::ServerStateInner;
 // then only invalidate (or directly update) that one part of the cache at a time
 pub struct ServiceChannels {
     state: Arc<ServerStateInner>,
-    cache_thread: Cache<ChannelId, Channel>, // TODO: remove
+    cache_thread: Cache<ChannelId, Channel>, // TODO: remove?
     cache_thread_private: Cache<(ChannelId, UserId), DbChannelPrivate>,
     cache_thread_recipients: Cache<ChannelId, Vec<User>>,
     typing: Cache<(ChannelId, UserId), OffsetDateTime>,
@@ -101,6 +101,11 @@ impl ServiceChannels {
             // PERF: n+1 query
             // fetch private data for this channel
             if let Ok(private) = data.channel_get_private(channel.id, user_id).await {
+                let srv = self.state.services();
+                // TODO: update ack state
+                // let ack_state = AckStateUserChannel { };
+                // srv.unread.put_user_channel(ack_state);
+                // NOTE: ignore updating self.cache_thread_private...?
                 channel.is_unread = Some(private.is_unread);
                 channel.last_read_id = private.last_read_id.map(Into::into);
                 channel.mention_count = Some(private.mention_count as u64);

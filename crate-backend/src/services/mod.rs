@@ -53,7 +53,7 @@ use crate::{
         calendar::ServiceCalendar, documents::ServiceDocuments, http::ServiceHttp,
         interactions::ServiceInteractions, member_lists::ServiceMemberLists,
         notifications::ServiceNotifications, presence::ServicePresence, search::ServiceSearch,
-        unread::ServiceUnread, voice::ServiceVoice,
+        voice::ServiceVoice,
     },
     state::ServerState2,
 };
@@ -90,7 +90,6 @@ pub mod scripts;
 pub mod search;
 pub mod sessions;
 pub mod tag;
-pub mod unread;
 pub mod users;
 pub mod voice;
 pub mod webhook;
@@ -128,7 +127,6 @@ pub struct Services {
     pub search: ServiceSearch,
     pub sessions: ServiceSessions,
     pub tag: ServiceTags,
-    pub unread: ServiceUnread,
     pub users: ServiceUsers,
     pub voice: ServiceVoice,
     pub webhook: ServiceWebhooks,
@@ -159,7 +157,7 @@ impl Services {
             media: ServiceMedia::new(state_old.clone()),
             member_lists: ServiceMemberLists::new(state_old.clone()),
             messages: ServiceMessages::new(state_old.clone()),
-            notifications: ServiceNotifications::new(state_old.clone()),
+            notifications: ServiceNotifications::new(state.clone()),
             scripts: ServiceScripts::new(state_old.clone()),
             oauth: ServiceOauth::new(state_old.clone()),
             perms: ServicePermissions::new(state_old.clone()),
@@ -171,7 +169,6 @@ impl Services {
             search: ServiceSearch::new(state_old.clone()),
             sessions: ServiceSessions::new(state_old.clone()),
             tag: ServiceTags::new(state_old.clone()),
-            unread: ServiceUnread::new(state_old.clone()),
             users: ServiceUsers::new(state_old.clone()),
             voice: ServiceVoice::new(state_old.clone()),
             webhook: ServiceWebhooks::new(state_old.clone()),

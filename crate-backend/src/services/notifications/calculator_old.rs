@@ -1,12 +1,14 @@
 //! notification preference calculator
 
 use common::v1::types::notifications::preferences::{
-    Mute, NotifsGlobal, NotifsMessages, NotifsReactions, NotifsReplies, NotifsThreads,
+    Mute, NotifsChannel, NotifsGlobal, NotifsMessages, NotifsReactions, NotifsReplies, NotifsRoom,
+    NotifsThreads,
 };
 use common::v1::types::notifications::{Notification, NotificationType};
 use common::v1::types::util::Time;
-use common::v1::types::{Channel, ChannelType, Room, UserId};
+use common::v1::types::{Channel, ChannelType, Message, Room, UserId};
 
+use crate::state::ServerState2;
 use crate::{Result, ServerStateInner};
 
 /// What action to take for a notification
@@ -41,6 +43,7 @@ impl Calculator {
         let srv = state.services();
         let global = srv.cache.preferences_get(user_id).await?.notifs;
 
+        // NOTE: why do i call .ok() instead of propagating errors?
         let channel_id = notif.channel_id();
         let channel = if let Some(id) = channel_id {
             srv.channels.get(id, Some(user_id)).await.ok()
@@ -61,6 +64,31 @@ impl Calculator {
             channel,
         })
     }
+
+    // pub async fn load_from_message(
+    //     state: &ServerState2,
+    //     user_id: UserId,
+    //     message: &Message,
+    // ) -> Result<Self> {
+    //     let srv = state.services();
+    //     let global = srv.cache.preferences_get(user_id).await?.notifs;
+
+    //     let channel_id = message.channel_id;
+    //     let channel = srv.channels.get(message.channel_id, Some(user_id)).await?;
+
+    //     let room_id = channel.as_ref().and_then(|ch| ch.room_id);
+    //     let room = if let Some(id) = room_id {
+    //         srv.rooms.get(id, Some(user_id)).await?
+    //     } else {
+    //         None
+    //     };
+
+    //     Ok(Self {
+    //         global,
+    //         room,
+    //         channel,
+    //     })
+    // }
 
     /// check if global, room, or channel is muted
     pub fn is_muted(&self) -> bool {

@@ -1,10 +1,10 @@
 use async_trait::async_trait;
+use common::v1::types::ack::AckBulkItem;
 use common::v1::types::redex::{
     Eval, EvalLogEntry, EvalStatus, Redex, RedexFormat, RedexLocation, RedexMetadata, RedexVersion,
     RedexVersionStatus,
 };
 use common::v1::types::{
-    ack::AckBulkItem,
     application::{Application, Connection, Scopes},
     automod::{AutomodRule, AutomodRuleCreate, AutomodRuleUpdate},
     calendar::{
@@ -325,7 +325,7 @@ pub trait DataUnread {
         version_id: MessageVerId,
         mention_count: Option<u64>,
     ) -> Result<()>;
-    async fn unread_ack_bulk(&mut self, user_id: UserId, acks: Vec<AckBulkItem>) -> Result<()>;
+    async fn unread_ack_bulk(&mut self, user_id: UserId, acks: &[AckBulkItem]) -> Result<()>;
     async fn unread_put_all_in_room(
         &mut self,
         user_id: UserId,

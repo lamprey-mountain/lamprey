@@ -7,6 +7,7 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+use crate::v1::types::ack::AckState;
 #[cfg(feature = "feat_e2ee")]
 use crate::v1::types::e2ee::{CrossSigningBundle, KeyshareRequest, KeyshareResponse};
 use crate::v1::types::error::SyncErrorCode;
@@ -16,6 +17,9 @@ use crate::v1::types::message::flume::FlumeDelta;
 use crate::v1::types::redex::{Eval, EvalLogEntry, Redex, RedexVersion};
 use crate::v1::types::voice::messages::{SignallingCommand, SignallingEvent};
 use crate::v1::types::{
+    ApplicationId, AuditLogEntry, AutomodRuleId, CalendarEventId, ConnectionId, DocumentBranchId,
+    DocumentTagId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember,
+    WebhookId,
     application::{Application, Connection},
     automod::{AutomodRule, AutomodRuleExecution},
     document::{DocumentBranch, DocumentStateVector, DocumentTag, DocumentUpdate},
@@ -23,14 +27,13 @@ use crate::v1::types::{
     util::Time,
     voice::Call,
     webhook::Webhook,
-    ApplicationId, AuditLogEntry, AutomodRuleId, CalendarEventId, ConnectionId, DocumentBranchId,
-    DocumentTagId, InviteTargetId, InviteWithMetadata, Relationship, RoomBan, ThreadMember,
-    WebhookId,
 };
 use crate::v1::types::{EvalId, InteractionId, Message, RedexId, RedexVerId};
 use crate::v2::types::media::Media;
 
 use super::{
+    Channel, ChannelId, EmojiId, InviteCode, MessageId, MessageVerId, Role, RoleId, Room, RoomId,
+    RoomMember, Session, SessionId, SessionToken, TagId, User, UserId,
     calendar::{CalendarEvent, CalendarEventParticipant, CalendarOverwrite},
     channel::ChannelSeq,
     emoji::EmojiCustom,
@@ -41,8 +44,6 @@ use super::{
     role::RoleReorderItem,
     tag::Tag,
     voice::{VoiceState, VoiceStateUpdate},
-    Channel, ChannelId, EmojiId, InviteCode, MessageId, MessageVerId, Role, RoleId, Room, RoomId,
-    RoomMember, Session, SessionId, SessionToken, TagId, User, UserId,
 };
 
 /// Response from the channel sync endpoint.
@@ -437,6 +438,13 @@ pub enum MessageSync {
         message_id: MessageId,
         version_id: MessageVerId,
     },
+
+    // TODO: add
+    // /// ack update
+    // Ack {
+    //     user_id: UserId,
+    //     ack: AckState,
+    // },
 
     // ThreadCreate {
     //     thread: Box<Channel>,

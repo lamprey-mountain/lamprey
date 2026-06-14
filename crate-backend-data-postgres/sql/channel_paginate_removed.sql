@@ -1,5 +1,5 @@
 SELECT
-    t.id, t.room_id, t.creator_id, t.owner_id, t.version_id, t.name, t.description, t.icon, t.url, t.type as "ty: _", t.nsfw, t.latest_seq, t.locked, t.locked_until, t.locked_roles, t.archived_at, t.deleted_at, t.parent_id, t.position, t.bitrate, t.user_limit, t.invitable, t.auto_archive_duration, t.default_auto_archive_duration, t.slowmode_thread, t.slowmode_message, t.default_slowmode_message, t.last_activity_at,
+    t.id, t.room_id, t.creator_id, t.owner_id, t.version_id, t.name, t.description, t.icon, t.url, t.type as "ty: _", t.nsfw, t.latest_seq, t.locked, t.locked_until, t.locked_roles, t.archived_at, t.deleted_at, t.parent_id, t.position, t.bitrate, t.user_limit, t.invitable, t.auto_archive_duration, t.default_auto_archive_duration, t.slowmode_thread, t.slowmode_message, t.default_slowmode_message, t.last_activity_at, t.last_pin_timestamp,
     (SELECT coalesce(COUNT(*), 0) FROM thread_member WHERE channel_id = t.id AND membership = 'Join') AS "member_count!",
     t.last_version_id as last_version_id,
     t.last_message_id as last_message_id,

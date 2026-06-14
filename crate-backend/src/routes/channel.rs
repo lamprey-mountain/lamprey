@@ -1,18 +1,17 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use common::v1::routes;
-use common::v1::types::ack::AckRes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
 use common::v1::types::{
     AuditLogEntryType, ChannelType, RelationshipType, RoomCreate, RoomMemberOrigin, RoomType,
-    ThreadMemberPut, SERVER_ROOM_ID,
+    SERVER_ROOM_ID, ThreadMemberPut,
 };
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
@@ -25,7 +24,7 @@ use crate::types::{
     ChannelPatch, DbChannelCreate, DbChannelType, DbRoomCreate, MediaLinkType, MessageSync,
     Permission,
 };
-use crate::{error::Result, Error, ServerState};
+use crate::{Error, ServerState, error::Result};
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 
 /// Channel create room
@@ -442,42 +441,45 @@ async fn channel_ack(
     State(s): State<Arc<ServerState>>,
     req: routes::channel_ack::Request,
 ) -> Result<impl IntoResponse> {
-    auth.ensure_scopes(&[Scope::Full])?;
-    let mut data = s.data();
-    let srv = s.services();
-    srv.perms
-        .for_channel3(Some(auth.user.id), req.channel_id)
-        .await?
-        .ensure_view()?
-        .check()?;
-    let version_id = req.ack.version_id;
-    let message_id = if let Some(message_id) = req.ack.message_id {
-        message_id
-    } else {
-        data.message_id_get_by_version(req.channel_id, version_id)
-            .await?
-    };
-    data.unread_ack(
-        auth.user.id,
-        req.channel_id,
-        message_id,
-        version_id,
-        Some(req.ack.mention_count),
-    )
-    .await?;
-    srv.channels
-        .invalidate_user(req.channel_id, auth.user.id)
-        .await;
-    s.broadcast(MessageSync::ChannelAck {
-        user_id: auth.user.id,
-        channel_id: req.channel_id,
-        message_id,
-        version_id,
-    })?;
-    Ok(Json(AckRes {
-        message_id,
-        version_id,
-    }))
+    // auth.ensure_scopes(&[Scope::Full])?;
+    // let mut data = s.data();
+    // let srv = s.services();
+    // srv.perms
+    //     .for_channel3(Some(auth.user.id), req.channel_id)
+    //     .await?
+    //     .ensure_view()?
+    //     .check()?;
+    // let version_id = req.ack.version_id;
+    // let message_id = if let Some(message_id) = req.ack.message_id {
+    //     message_id
+    // } else {
+    //     data.message_id_get_by_version(req.channel_id, version_id)
+    //         .await?
+    // };
+    // data.unread_ack(
+    //     auth.user.id,
+    //     req.channel_id,
+    //     message_id,
+    //     version_id,
+    //     Some(req.ack.mention_count),
+    // )
+    // .await?;
+    // srv.channels
+    //     .invalidate_user(req.channel_id, auth.user.id)
+    //     .await;
+    // s.broadcast(MessageSync::ChannelAck {
+    //     user_id: auth.user.id,
+    //     channel_id: req.channel_id,
+    //     message_id,
+    //     version_id,
+    // })?;
+    // Ok(Json(AckRes {
+    //     message_id,
+    //     version_id,
+    // }))
+
+    // TODO: use the new ack system, move logic to notification service(?)
+    Ok(Error::Unimplemented)
 }
 
 /// Channel remove

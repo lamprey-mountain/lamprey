@@ -27,6 +27,7 @@ SELECT
     t.slowmode_message,
     t.default_slowmode_message,
     t.last_activity_at,
+    t.last_pin_timestamp,
     (SELECT coalesce(COUNT(*), 0) FROM thread_member WHERE channel_id = t.id AND membership = 'Join') AS "member_count!",
     t.last_version_id as last_version_id,
     t.last_message_id as last_message_id,

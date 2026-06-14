@@ -205,23 +205,23 @@ pub mod channel_update {
     tags = ["channel"],
     scopes = [Full],
     permissions = [ChannelView],
-    response(OK, body = AckRes, description = "success"),
+    response(OK, body = AckState, description = "success"),
 )]
 pub mod channel_ack {
-    use crate::v1::types::ack::{AckReq, AckRes};
     use crate::v1::types::ChannelId;
+    use crate::v1::types::ack::{AckCreate, AckState};
 
     pub struct Request {
         #[path]
         pub channel_id: ChannelId,
 
         #[json]
-        pub ack: AckReq,
+        pub ack: AckCreate,
     }
 
     pub struct Response {
         #[json]
-        pub ack: AckRes,
+        pub ack: AckState,
     }
 }
 

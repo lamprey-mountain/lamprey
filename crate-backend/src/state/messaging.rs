@@ -1,5 +1,6 @@
 use crate::prelude::*;
-use common::v1::types::{voice::messages::SfuCommand, ChannelId, MessageSync, RoomId, UserId};
+use async_nats::jetstream::kv::UpdateErrorKind;
+use common::v1::types::{ChannelId, MessageSync, RoomId, UserId, voice::messages::SfuCommand};
 use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast::{self, Sender};
@@ -82,6 +83,7 @@ pub enum Transport {
     /// use nats to broadcast events
     Nats {
         client: async_nats::Client,
+        jetstream: async_nats::jetstream::Context,
 
         /// ALL events on the server
         sushi: Sender<BroadcastSync>,
@@ -130,7 +132,8 @@ impl Transport {
         spawn_forwarder(client.clone(), "sushi_sfu", sushi_sfu.clone());
 
         Self::Nats {
-            client,
+            client: client.clone(),
+            jetstream: async_nats::jetstream::new(client),
             sushi,
             sushi_sfu,
         }
@@ -223,4 +226,88 @@ impl Messaging {
             }
         }
     }
+
+    pub async fn temp_jetstream(&self) -> Result<()> {
+        let js = match &self.transport {
+            Transport::Memory { .. } => return Ok(()), // NOTE: log/warn/error?
+            Transport::Nats { jetstream, .. } => jetstream,
+        };
+
+        // get the kv instance
+        let kv = js
+            .create_key_value(async_nats::jetstream::kv::Config {
+                bucket: "unreads".to_owned(),
+                history: 1,
+                ..Default::default()
+            })
+            .await
+            .map_err(|err| Error::Internal(err.to_string()))?;
+
+        // responding to updates
+        let mut watch = kv
+            .watch_all()
+            .await
+            .map_err(|err| Error::Internal(err.to_string()))?;
+        while let Some(entry) = watch.next().await {
+            let entry = entry.map_err(|err| Error::Internal(err.to_string()))?;
+            // TODO: update ack state
+        }
+
+        // atomic updates
+        // NOTE: if i shard properly i shouldnt need atomic updates
+        // TODO: use this for ack state
+        let key = "";
+        loop {
+            let entry = kv
+                .entry(key)
+                .await
+                .map_err(|err| Error::Internal(err.to_string()))?
+                .unwrap();
+            let current: i64 = String::from_utf8(entry.value.to_vec())
+                .map_err(|err| Error::Internal(err.to_string()))?
+                .parse()?;
+            let new_val = current + 1;
+
+            match kv
+                .update(key, new_val.to_string().into(), entry.revision)
+                .await
+            {
+                Ok(_) => break,
+                Err(e) if e.kind() == UpdateErrorKind::WrongLastRevision => continue,
+                Err(e) => return Err(Error::Internal(e.to_string())),
+            }
+        }
+
+        Ok(())
+    }
 }
+
+// async fn atomic_update<T: Default + Serialize + DeserializeOwned, F: Fn(T) -> T>(
+//     kv: &Store,
+//     key: &str,
+//     update: F,
+// ) -> Result<()> {
+//     loop {
+//         let (data, revision) = match kv
+//             .entry(key)
+//             .await
+//             .expect("FIXME: add nats error to error enum")
+//         {
+//             Some(entry) => {
+//                 let m: T = serde_json::from_slice(&entry.value)?;
+//                 (m, entry.revision)
+//             }
+//             None => (T::default(), 0),
+//         };
+
+//         let data = update(data);
+//         let bytes = Bytes::from(serde_json::to_vec(&data)?);
+
+//         match kv.update(key, bytes, revision).await {
+//             Ok(_) => return Ok(()),
+//             Err(e) if e.kind() == UpdateErrorKind::WrongLastRevision => continue,
+//             // Err(e) => return Err(e.into()),
+//             Err(_e) => panic!("FIXME: add nats error to error enum"),
+//         }
+//     }
+// }

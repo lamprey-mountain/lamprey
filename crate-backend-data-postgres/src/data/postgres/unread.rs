@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use common::v1::types::ack::AckBulkItem;
 use common::v1::types::MessageId;
+use common::v1::types::ack::{AckBulkItem, AckType};
 use sqlx::{query, query_file};
 use uuid::Uuid;
 
@@ -43,33 +43,52 @@ impl DataUnread for Postgres {
         Ok(())
     }
 
-    async fn unread_ack_bulk(&mut self, user_id: UserId, acks: Vec<AckBulkItem>) -> Result<()> {
+    async fn unread_ack_bulk(&mut self, user_id: UserId, acks: &[AckBulkItem]) -> Result<()> {
         let mut conn = self.acquire().await?;
-        let channel_ids: Vec<Uuid> = acks.iter().map(|a| *a.channel_id).collect();
-        let message_ids: Vec<Uuid> = acks
-            .iter()
-            .map(|a| a.message_id.map(|m| *m).unwrap_or_default())
-            .collect();
-        let version_ids: Vec<Uuid> = acks.iter().map(|a| *a.version_id).collect();
-        let mention_counts: Vec<i32> = acks.iter().map(|a| a.mention_count as i32).collect();
 
-        query!(
-            r#"
-            INSERT INTO unread (channel_id, user_id, message_id, version_id, mention_count)
-            SELECT unnest($1::uuid[]), $2, unnest($3::uuid[]), unnest($4::uuid[]), unnest($5::int4[])
-            ON CONFLICT ON CONSTRAINT unread_pkey DO UPDATE SET
-                message_id = excluded.message_id,
-                version_id = excluded.version_id,
-                mention_count = excluded.mention_count;
-            "#,
-            &channel_ids,
-            *user_id,
-            &message_ids,
-            &version_ids,
-            &mention_counts
-        )
-        .execute(conn.ext())
-        .await?;
+        let mut channel_ids = Vec::new();
+        let mut message_ids = Vec::new();
+        let mut version_ids = Vec::new();
+        let mut mention_counts = Vec::new();
+
+        for ack in acks {
+            match &ack.ty {
+                AckType::Message {
+                    channel_id,
+                    message_id,
+                    mention_count,
+                } => {
+                    channel_ids.push(channel_id.into_inner());
+                    message_ids.push(message_id.into_inner());
+                    // TODO: remove version_id
+                    version_ids.push(Uuid::nil());
+                    mention_counts.push(*mention_count as i32);
+                }
+                _ => continue,
+            }
+        }
+
+        if !channel_ids.is_empty() {
+            query!(
+                r#"
+                INSERT INTO unread (channel_id, user_id, message_id, version_id, mention_count)
+                SELECT u.channel_id, $2, u.message_id, u.version_id, u.mention_count
+                FROM UNNEST($1::uuid[], $3::uuid[], $4::uuid[], $5::int4[])
+                    AS u(channel_id, message_id, version_id, mention_count)
+                ON CONFLICT ON CONSTRAINT unread_pkey DO UPDATE SET
+                    message_id = excluded.message_id,
+                    version_id = excluded.version_id,
+                    mention_count = excluded.mention_count;
+                "#,
+                &channel_ids,
+                *user_id,
+                &message_ids,
+                &version_ids,
+                &mention_counts
+            )
+            .execute(conn.ext())
+            .await?;
+        }
 
         Ok(())
     }

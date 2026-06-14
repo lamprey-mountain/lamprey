@@ -44,6 +44,7 @@ select
     channel.slowmode_message,
     channel.default_slowmode_message,
     channel.last_activity_at,
+    channel.last_pin_timestamp,
     coalesce(message_count.count, 0) as "message_count!",
     coalesce(member_count.count, 0) as "member_count!",
     channel.last_version_id as "last_version_id",

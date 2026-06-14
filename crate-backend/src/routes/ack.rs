@@ -3,13 +3,13 @@ use std::sync::Arc;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use common::v1::routes;
-use common::v1::types::application::Scope;
+use common::v1::{routes, types::ack::AckType};
 use common::v1::types::MessageSync;
+use common::v1::types::application::Scope;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::{routes2, ServerState};
+use crate::{ServerState, routes2};
 
 use super::util::Auth;
 use crate::error::Result;
@@ -28,34 +28,38 @@ async fn ack_bulk(
 
     let mut valid_acks = Vec::new();
 
-    for ack in req.ack.acks {
-        srv.perms
-            .for_channel3(Some(auth.user.id), ack.channel_id)
-            .await?
-            .ensure_view()?
-            .check()?;
-
-        if ack.message_id.is_none() {
-            continue;
+    // PERF: somehow check in bulk or parallel?
+    // TODO: handle other `AckType`s
+    for ack in req.body.acks {
+        match &ack.ty {
+            AckType::Message { channel_id, message_id, .. } => {
+                srv.perms
+                    .for_channel3(Some(auth.user.id), *channel_id)
+                    .await?
+                    .ensure_view()?
+                    .check()?;
+                valid_acks.push(ack.clone());
+            }
+            _ => continue,
         }
-
-        valid_acks.push(ack);
     }
 
     if !valid_acks.is_empty() {
-        data.unread_ack_bulk(auth.user.id, valid_acks.clone())
+        data.unread_ack_bulk(auth.user.id, &valid_acks)
             .await?;
 
         for ack in valid_acks {
-            srv.channels
-                .invalidate_user(ack.channel_id, auth.user.id)
-                .await;
-            s.broadcast(MessageSync::ChannelAck {
-                user_id: auth.user.id,
-                channel_id: ack.channel_id,
-                message_id: ack.message_id.unwrap(),
-                version_id: ack.version_id,
-            })?;
+            if let AckType::Message { channel_id, message_id, .. } = ack.ty {
+                srv.channels
+                    .invalidate_user(channel_id, auth.user.id)
+                    .await;
+                s.broadcast(MessageSync::ChannelAck {
+                    user_id: auth.user.id,
+                    channel_id,
+                    message_id,
+                    version_id: uuid::Uuid::nil().into(),
+                })?;
+            }
         }
     }
 

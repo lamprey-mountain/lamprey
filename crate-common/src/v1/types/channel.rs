@@ -11,7 +11,7 @@ use crate::v1::types::error::{ApiError, ErrorCode};
 use crate::v1::types::preferences::PreferencesChannel;
 use crate::v1::types::tag::Tag;
 use crate::v1::types::util::Time;
-use crate::v1::types::{util::Diff, ChannelVerId, PermissionOverwrite};
+use crate::v1::types::{ChannelVerId, PermissionOverwrite, util::Diff};
 use crate::v1::types::{
     MediaId, MessageCreate, MessageId, MessageVerId, RoleId, TagId, ThreadMember, User,
 };
@@ -150,6 +150,7 @@ pub struct Channel {
     pub last_message_id: Option<MessageId>,
     pub message_count: Option<u64>,
     pub root_message_count: Option<u64>,
+    pub last_pin_timestamp: Option<Time>,
 
     /// bitrate, for voice channels. defaults to 65535 (64Kibps).
     #[cfg_attr(feature = "validator", validate(range(min = 8192)))]
@@ -163,7 +164,7 @@ pub struct Channel {
     // the idea was that ignored/muted users could skip incrementing is_unread, but that would require each event to be separately filtered per user
     // individual filtering has some performance implications that i dont know if i want to take on
     pub is_unread: Option<bool>,
-    pub last_read_id: Option<MessageVerId>,
+    pub last_read_id: Option<MessageId>,
     pub mention_count: Option<u64>,
     pub preferences: Option<PreferencesChannel>,
 
@@ -351,6 +352,8 @@ impl Serialize for Channel {
             #[serde(skip_serializing_if = "Option::is_none")]
             last_message_id: Option<MessageId>,
             #[serde(skip_serializing_if = "Option::is_none")]
+            last_pin_timestamp: Option<Time>,
+            #[serde(skip_serializing_if = "Option::is_none")]
             message_count: Option<u64>,
             #[serde(skip_serializing_if = "Option::is_none")]
             root_message_count: Option<u64>,
@@ -363,7 +366,7 @@ impl Serialize for Channel {
             #[serde(skip_serializing_if = "Option::is_none")]
             is_unread: Option<bool>,
             #[serde(skip_serializing_if = "Option::is_none")]
-            last_read_id: Option<MessageVerId>,
+            last_read_id: Option<MessageId>,
             #[serde(skip_serializing_if = "Option::is_none")]
             mention_count: Option<u64>,
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -454,6 +457,7 @@ impl Serialize for Channel {
             latest_seq: self.latest_seq,
             last_version_id: self.last_version_id,
             last_message_id: self.last_message_id,
+            last_pin_timestamp: self.last_pin_timestamp,
             message_count: if self.has_text() {
                 self.message_count
             } else {
@@ -1135,6 +1139,7 @@ impl Diff for ChannelPatch {
     }
 }
 
+// PERF: add #[inline] to a lot of is_foo fns
 impl Channel {
     /// remove private user data
     pub fn strip(self) -> Channel {
@@ -1200,8 +1205,12 @@ impl Channel {
         self.ty.has_wiki()
     }
 
+    pub fn is_dm(&self) -> bool {
+        self.ty.is_dm()
+    }
+
     pub fn has_recipients(&self) -> bool {
-        matches!(self.ty, ChannelType::Dm | ChannelType::Gdm)
+        self.is_dm()
     }
 
     pub fn has_calendar(&self) -> bool {
@@ -1297,6 +1306,10 @@ impl ChannelType {
         }
     }
 
+    pub fn is_dm(&self) -> bool {
+        matches!(self, ChannelType::Dm | ChannelType::Gdm)
+    }
+
     pub fn has_members(&self) -> bool {
         matches!(
             self,
@@ -1354,6 +1367,13 @@ impl ChannelType {
 
     pub fn has_threads(&self) -> bool {
         self.has_public_threads() || self.has_private_threads() || self.has_forum2_threads()
+    }
+
+    pub fn is_thread_only(&self) -> bool {
+        matches!(
+            self,
+            ChannelType::Forum | ChannelType::Forum2 | ChannelType::Ticket
+        )
     }
 
     pub fn ensure_has_threads(&self) -> Result<(), ApiError> {

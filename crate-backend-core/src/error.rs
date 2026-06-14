@@ -1,11 +1,11 @@
 use std::num::{ParseFloatError, ParseIntError};
 
 use axum::extract::multipart::{MultipartError, MultipartRejection};
-use axum::{http::StatusCode, response::IntoResponse, Json};
+use axum::{Json, http::StatusCode, response::IntoResponse};
 use bytes::Bytes;
+use common::v1::types::MessageSync;
 use common::v1::types::application::Scopes;
 use common::v1::types::error::{ApiError, SyncErrorCode};
-use common::v1::types::MessageSync;
 use opentelemetry_otlp::ExporterBuildError;
 use serde_json::json;
 use tracing::{debug, error};
@@ -159,6 +159,7 @@ pub enum Error {
     #[error("tantivy query error: {0}")]
     TantivyQuery(String),
 
+    // TODO: remove this? its just box dyn error
     #[error("nats error: {0}")]
     Nats(#[from] async_nats::Error),
 

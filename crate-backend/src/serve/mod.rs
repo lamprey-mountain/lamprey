@@ -80,6 +80,7 @@ mod utoipa_utils;
         common::v1::types::document::WikiPatch,
         common::v1::types::document::serialized::Serdoc,
         // ack types
+        common::v1::types::ack::AckCreate,
         common::v1::types::ack::AckBulk,
         common::v1::types::ack::AckBulkItem,
         // session types
