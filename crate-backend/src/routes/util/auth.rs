@@ -14,7 +14,7 @@ use common::v1::types::{
 };
 use http::request::Parts;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Auth4 {
     identity: Identity,
 }

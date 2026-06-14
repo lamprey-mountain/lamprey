@@ -1,12 +1,13 @@
 use std::{collections::HashMap, sync::Arc};
 
+use crate::ServerState;
 use crate::prelude::*;
+use crate::routes::util::audit::AuditTxnContext;
 use crate::routes::util::audit::{AuditTxnHandle, AuditTxnSlot};
 use crate::routes::util::auth::Auth4;
 use crate::routes::util::headers::{ContentType, HeadersRequest};
 use crate::routes::util::multipart::MultipartCollector;
 use crate::services::media::{Import, MediaItem};
-use crate::ServerState;
 use axum::extract::{FromRequest, FromRequestParts};
 use bytes::Bytes;
 use common::v1::types::AuditLogEntryType;
@@ -14,8 +15,8 @@ use common::{
     util::FederationBody,
     v1::{
         routes::ExtractableRoute,
-        types::error::{ApiError, ErrorCode, ErrorField, ErrorFieldType},
         types::RoomId,
+        types::error::{ApiError, ErrorCode, ErrorField, ErrorFieldType},
     },
     v2::types::media::{Media, MediaReference},
 };
@@ -36,6 +37,8 @@ pub struct UniversalExtractor<T> {
 
     /// resolved media
     media: UniversalExtractorMedia,
+
+    reason: Option<String>,
 
     audit_txn_slot: AuditTxnSlot,
 }
@@ -126,6 +129,7 @@ where
                     auth,
                     body: req,
                     media: Default::default(),
+                    reason: headers.reason,
                     audit_txn_slot,
                 })
             }
@@ -136,6 +140,7 @@ where
                     auth,
                     body: req,
                     media: Default::default(),
+                    reason: headers.reason,
                     audit_txn_slot,
                 })
             }
@@ -172,6 +177,7 @@ where
                     auth,
                     body: req,
                     media,
+                    reason: headers.reason,
                     audit_txn_slot,
                 })
             }
@@ -187,6 +193,7 @@ where
                         auth,
                         body: req,
                         media: Default::default(),
+                        reason: headers.reason,
                         audit_txn_slot,
                     })
                 } else {
@@ -202,20 +209,18 @@ impl<Req> UniversalExtractor<Req> {
     #[must_use = "must call commit() to save a successful audit log entry"]
     pub async fn begin_audit_log(
         &self,
-        context_id: RoomId,
+        room_id: RoomId,
         ty: AuditLogEntryType,
     ) -> Result<AuditTxnHandle> {
         let mut txn = self.audit_txn_slot.lock().await;
-        txn.as_mut().unwrap().begin(context_id);
-        // let txn = AuditLoggerTransaction {
-        //     context_id,
-        //     auth: self.clone(),
-        //     reason: self.reason.clone(),
-        //     started_at: Time::now_utc(),
-        //     application_id: self.session.app_id,
-        //     ty: Some(ty),
-        //     status: None,
-        // };
+        txn.as_mut().unwrap().begin(AuditTxnContext {
+            room_id,
+            reason: self.reason.clone(),
+            status: None,
+            auth: self.auth.clone(),
+            application_id: self.auth.session().and_then(|s| s.app_id),
+            ty,
+        });
 
         Ok(AuditTxnHandle {
             slot: Arc::clone(&self.audit_txn_slot),
