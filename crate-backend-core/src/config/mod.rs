@@ -10,30 +10,18 @@ use http::HeaderValue;
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
-use tracing::error;
 use url::Url;
 
 use crate::{Error, Result};
 
-use common::v1::types::federation::{Hostname, ServerKeyAlgorithm};
+use common::v1::types::federation::Hostname;
 use common::v1::types::redex::EvalLimits;
-use common::v1::types::util::Time;
 
-/// a server's signing key for internal use (includes private key)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ServerKeyInternal {
-    /// the key algorithm
-    pub alg: ServerKeyAlgorithm,
+mod internal;
+mod secret;
 
-    /// public key (base64 url safe unpadded)
-    pub pubkey: String,
-
-    /// private key (base64 url safe unpadded)
-    pub privkey: String,
-
-    /// when this key expires
-    pub expires_at: Time,
-}
+// TEMP: reexport
+pub use internal::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
@@ -171,6 +159,7 @@ pub struct ConfigOauthProvider {
     pub autoregister: bool,
 }
 
+// TODO: remove
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ConfigUrlPreview {
     // does this need anything?
@@ -427,7 +416,9 @@ pub struct ListenConfig {
     pub transport: ListenTransport,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, EnumIter, strum::Display)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, EnumIter, strum::Display,
+)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 #[serde(deny_unknown_fields)]
@@ -514,63 +505,6 @@ pub struct ConfigMediaScanner {
     /// This version is stored alongside scan results to track which scanner
     /// version was used for each scan.
     pub version: u16,
-}
-
-/// internal config that is saved in the database
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ConfigInternal {
-    /// web push api vapid public key
-    pub vapid_private_key: String,
-
-    /// web push api vapid private key
-    pub vapid_public_key: String,
-
-    /// openid connect key
-    pub oidc_jwk_key: String,
-
-    /// a token that can be used to do administrative operations on this server
-    ///
-    /// - DO NOT LEAK THIS TOKEN!
-    /// - if this is None, there is no valid token
-    /// - this gets rotated every 5 minutes
-    /// - cli tools will fetch this token from the db, then do admin tasks through the http api
-    pub admin_token: Option<String>,
-
-    /// federation signing keys
-    #[serde(default)]
-    pub federation_keys: Vec<ServerKeyInternal>,
-}
-
-// TODO: use this for loading secrets
-// do i use this type in config structs, or just use this to decode?
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum Secret {
-    /// a secret that is included directly in the config file. avoid in production.
-    Inline(String),
-
-    /// load this secret from a file. trailing newlines are removed.
-    File { file_path: PathBuf },
-
-    /// load this secret from an environment variable
-    Env { env_var: String },
-}
-
-impl Secret {
-    /// load this secret
-    pub fn load(&self) -> Result<String> {
-        match self {
-            Secret::Inline(s) => Ok(s.to_owned()),
-            Secret::File { file_path } => {
-                let s = std::fs::read_to_string(file_path)?;
-                Ok(s.trim_end().to_owned())
-            }
-            Secret::Env { env_var } => std::env::var(env_var).map_err(|_| {
-                error!("environment variable {env_var} not set");
-                Error::Internal(format!("environment variable {env_var} not set"))
-            }),
-        }
-    }
 }
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
