@@ -88,7 +88,7 @@ impl MultipartCollector {
     }
 
     pub fn parse<T: DeserializeOwned>(self) -> Result<(T, MultipartFiles)> {
-        let mut payload = match self.payload {
+        let payload = match self.payload {
             Some(mut p) => {
                 for (key, value) in self.fields {
                     if p.insert(key, value).is_some() {
@@ -126,10 +126,10 @@ impl MultipartCollector {
         let bytes = field.bytes().await?;
         match name {
             MultipartFieldName::PayloadJson => {
-                self.add_payload(parse_json(&bytes)?);
+                self.add_payload(parse_json(&bytes)?)?;
             }
             MultipartFieldName::PayloadMsgpack => {
-                self.add_payload(parse_msgpack(&bytes)?);
+                self.add_payload(parse_msgpack(&bytes)?)?;
             }
             MultipartFieldName::Media(n) => {
                 let file = MultipartFile {

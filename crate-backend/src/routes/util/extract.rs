@@ -244,6 +244,6 @@ pub(crate) fn parse_json<T: DeserializeOwned>(bytes: &[u8]) -> Result<T> {
     Ok(data)
 }
 
-pub(crate) fn parse_msgpack<T: DeserializeOwned>(bytes: &[u8]) -> Result<T> {
+pub(crate) fn parse_msgpack<T: DeserializeOwned>(_bytes: &[u8]) -> Result<T> {
     todo!()
 }

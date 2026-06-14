@@ -13,6 +13,7 @@ use common::v1::types::{
     Session, SessionImprint, SessionStatus, SessionToken, SessionType, User,
 };
 use http::request::Parts;
+
 pub struct Auth4 {
     identity: Identity,
 }
