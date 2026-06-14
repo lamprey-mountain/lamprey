@@ -461,7 +461,7 @@ async fn webhook_message_get(
     let chan = srv.channels.get(channel_id, None).await?;
     chan.ensure_has_text()?;
 
-    let mut message = s.data().message_get(channel_id, message_id).await?;
+    let message = s.data().message_get(channel_id, message_id).await?;
 
     if message.author_id != webhook_user_id {
         return Err(Error::ApiError(ApiError::from_code(

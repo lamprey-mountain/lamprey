@@ -605,7 +605,7 @@ impl ServiceMessages {
     ) -> Result<PaginationResponse<MessageVersion>> {
         let s = &self.state;
         let mut data = s.data();
-        let mut res = data
+        let res = data
             .message_version_list(channel_id, message_id, pagination)
             .await?;
 
@@ -620,7 +620,7 @@ impl ServiceMessages {
     ) -> Result<MessageVersion> {
         let s = &self.state;
         let mut data = s.data();
-        let mut message = data.message_version_get(channel_id, version_id).await?;
+        let message = data.message_version_get(channel_id, version_id).await?;
         Ok(message)
     }
 

@@ -10,9 +10,9 @@ use validator::Validate;
 use super::{RoleId, RoomId, User, UserId};
 
 use crate::v1::types::{
+    InviteCode,
     federation::Hostname,
     util::{Diff, Time},
-    InviteCode,
 };
 
 #[cfg(feature = "serde")]
@@ -46,6 +46,7 @@ pub struct RoomMember {
     pub roles: Vec<RoleId>,
 
     /// how this member joined the room, moderator only. is None if the origin is unknown.
+    // TODO: box
     pub origin: Option<RoomMemberOrigin>,
 
     /// whether this user is muted by a moderator

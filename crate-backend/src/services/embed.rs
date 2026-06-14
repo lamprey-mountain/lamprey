@@ -332,7 +332,7 @@ impl ServiceEmbed {
         )
         .await?;
 
-        let mut message = data.message_get(mref.thread_id, mref.message_id).await?;
+        let message = data.message_get(mref.thread_id, mref.message_id).await?;
         if message.latest_version.version_id == mref.version_id {
             let uid = user_id.expect("embed queue always has user_id");
             state

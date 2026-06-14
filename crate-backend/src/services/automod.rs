@@ -823,7 +823,7 @@ impl ServiceAutomod {
 
                     match data.message_create(message_create).await {
                         Ok(msg_id) => {
-                            if let Ok(mut message) =
+                            if let Ok(message) =
                                 data.message_get(*alert_channel_id, msg_id).await
                             {
                                 let msg = MessageSync::MessageCreate {

@@ -630,7 +630,7 @@ async fn message_pin(
             ephemeral: false,
         })
         .await?;
-    let mut notice_message = data.message_get(req.channel_id, notice_message_id).await?;
+    let notice_message = data.message_get(req.channel_id, notice_message_id).await?;
 
     let user_id = auth.user.id;
     let tm = data.thread_member_get(req.channel_id, user_id).await;
