@@ -7,7 +7,7 @@ use thiserror::Error;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{application::Scope, redex::error::RedexError, Permission};
+use crate::v1::types::{Permission, application::Scope, redex::error::RedexError};
 
 mod codes;
 mod http_conversions;
@@ -239,6 +239,12 @@ impl ApiError {
                 .collect(),
             ..self
         }
+    }
+}
+
+impl From<ErrorCode> for ApiError {
+    fn from(value: ErrorCode) -> Self {
+        Self::from_code(value)
     }
 }
 

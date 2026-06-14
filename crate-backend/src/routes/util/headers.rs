@@ -1,3 +1,5 @@
+use std::{net::IpAddr, sync::Arc};
+
 use crate::ServerState;
 use crate::prelude::*;
 use axum::{
@@ -9,7 +11,6 @@ use headers::Authorization;
 use headers::authorization::Bearer;
 use headers::{ETag, HeaderMapExt, IfMatch, IfModifiedSince, IfNoneMatch, LastModified};
 use http::request::Parts;
-use std::sync::Arc;
 
 pub struct HeadersRequest {
     pub authorization: Option<Authorization<Bearer>>,
@@ -31,6 +32,12 @@ pub struct HeadersRequest {
     pub if_modified_since: Option<IfModifiedSince>,
 
     pub content_type: ContentType,
+
+    /// user-agent
+    pub user_agent: Option<String>,
+
+    /// x-forwarded-for
+    pub ip_addr: Option<IpAddr>,
 }
 
 pub struct HeadersResponse {
@@ -102,6 +109,14 @@ impl HeadersRequest {
             }
         }
 
+        let ip_addr = parts
+            .headers
+            .get("x-forwarded-for")
+            .and_then(|h| h.to_str().ok())
+            .and_then(|s| s.split(',').next())
+            .map(|s| s.trim())
+            .and_then(|s| s.parse().ok());
+
         Ok(Self {
             authorization: parts.headers.typed_get(),
             reason,
@@ -126,6 +141,12 @@ impl HeadersRequest {
             if_none_match: parts.headers.typed_get(),
             if_modified_since: parts.headers.typed_get(),
             content_type,
+            user_agent: parts
+                .headers
+                .get("user-agent")
+                .and_then(|h| h.to_str().ok())
+                .map(|s| s.to_string()),
+            ip_addr,
         })
     }
 }
