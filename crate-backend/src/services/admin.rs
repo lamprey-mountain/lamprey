@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::time::Duration;
 
 use common::v1::types::{ChannelId, RoomId};
 use lamprey_backend_core::types::admin::{
@@ -7,40 +7,23 @@ use lamprey_backend_core::types::admin::{
     AdminPurgeCacheStat, AdminPurgeCacheTarget,
 };
 use subtle::ConstantTimeEq;
-use tokio::sync::RwLock;
+use tracing::{debug, error};
 
-use crate::{config::ConfigInternal, error::Result, services::search::Reindex, ServerStateInner};
+use crate::prelude::*;
+use crate::services::search::Reindex;
 
 pub struct ServiceAdmin {
-    state: Arc<ServerStateInner>,
-    cache: RwLock<Option<ConfigInternal>>,
+    state: ServerState2,
 }
 
 impl ServiceAdmin {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
-        Self {
-            state,
-            cache: RwLock::new(None),
-        }
-    }
-
-    pub async fn get_config(&self) -> Result<ConfigInternal> {
-        if let Some(config) = self.cache.read().await.as_ref() {
-            return Ok(config.to_owned());
-        }
-
-        let config =
-            self.state.data().config_get().await?.ok_or_else(|| {
-                crate::Error::Internal("internal config not initialized".to_string())
-            })?;
-
-        *self.cache.write().await = Some(config.clone());
-        Ok(config)
+    pub fn new(state: ServerState2) -> Self {
+        Self { state }
     }
 
     pub async fn verify_admin_token(&self, token: &str) -> bool {
-        if let Some(admin_token) = &self.state.config.admin_token {
-            tracing::debug!("checking against static override: {}", admin_token);
+        if let Some(admin_token) = &self.state.config().admin_token {
+            debug!("checking against static override: {}", admin_token);
             if admin_token.len() == token.len()
                 && admin_token.as_bytes().ct_eq(token.as_bytes()).into()
             {
@@ -48,7 +31,8 @@ impl ServiceAdmin {
             }
         }
 
-        let Ok(config) = self.get_config().await else {
+        let srv = self.state.services();
+        let Ok(config) = srv.config.internal_get().await else {
             return false;
         };
 
@@ -67,27 +51,21 @@ impl ServiceAdmin {
         let state = self.state.clone();
         tokio::spawn(async move {
             let srv = state.services();
-            if !state.config.enable_admin_token {
-                let mut data = state.data();
-                if let Ok(Some(mut config_internal)) = data.config_get().await {
+            if !state.config().enable_admin_token {
+                if let Ok(mut config_internal) = srv.config.internal_get().await {
                     config_internal.admin_token = None;
-                    if let Ok(()) = data.config_put(config_internal.clone()).await {
-                        *srv.admin.cache.write().await = Some(config_internal);
-                    }
+                    let _ = srv.config.internal_set(config_internal).await;
                 }
                 return;
             }
 
-            let mut interval = tokio::time::interval(std::time::Duration::from_secs(300));
+            let mut interval = tokio::time::interval(Duration::from_secs(300));
             loop {
-                let mut data = state.data();
-                if let Ok(Some(mut config_internal)) = data.config_get().await {
+                if let Ok(mut config_internal) = srv.config.internal_get().await {
                     let token = nanoid::nanoid!(32);
                     config_internal.admin_token = Some(token);
-                    if let Err(err) = data.config_put(config_internal.clone()).await {
-                        tracing::error!("failed to rotate admin token: {err:?}");
-                    } else {
-                        *srv.admin.cache.write().await = Some(config_internal);
+                    if let Err(err) = srv.config.internal_set(config_internal).await {
+                        error!("failed to rotate admin token: {err:?}");
                     }
                 }
                 interval.tick().await;
@@ -130,7 +108,7 @@ impl ServiceAdmin {
 
     async fn gc_media(&self, mode: AdminCollectGarbageMode) -> Result<(u64, u64)> {
         let mut data = self.state.data();
-        let blobs = &self.state.blobs;
+        let blobs = self.state.blobs();
         match mode {
             AdminCollectGarbageMode::Mark => {
                 let rows = data.gc_media_mark().await?;

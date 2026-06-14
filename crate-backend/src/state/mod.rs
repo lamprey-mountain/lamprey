@@ -8,15 +8,15 @@ use std::{
 
 use axum::extract::FromRef;
 use common::v1::types::MessageSync;
-use common::v1::types::{voice::messages::SfuCommand, AuditLogEntry, ChannelId, RoomId, UserId};
+use common::v1::types::{AuditLogEntry, ChannelId, RoomId, UserId, voice::messages::SfuCommand};
 use futures::{Stream, StreamExt};
 use lamprey_backend_data_postgres::{
-    data::{postgres::PostgresPool, Data2},
     Data, Postgres,
+    data::{Data2, postgres::PostgresPool},
 };
 use opendal::layers::LoggingLayer;
 use serde::{Deserialize, Serialize};
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use tokio::runtime::Handle as TokioHandle;
 use tracing::{info, warn};
 use url::Url;
@@ -265,7 +265,7 @@ impl ServerState {
             tokio: TokioHandle::current(),
             config,
             database: state.inner.database.clone(),
-            services: Weak::clone(&state.inner.services),
+            services: Arc::downgrade(&state.inner.services),
             blobs,
             jetstream: nats.clone().map(async_nats::jetstream::new),
             new_state: state.clone(),
@@ -300,6 +300,8 @@ impl Deref for ServerState {
 
 // ===== NEW TYPES =====
 // TODO: switch over to ServerState2 entirely
+// looks like this type ended up being pretty similar to the original ServerState, oh well
+// at least the fields won't be pub now?
 
 /// global state for the server
 #[derive(Clone)]
@@ -322,14 +324,18 @@ struct ServerStateInner2 {
     messaging: Messaging,
 
     /// services
-    services: Weak<Services>,
+    // hold a strong reference to Services so it isnt immediately dropped
+    // yes, this does technically cause a memory leak. i'm not sure what the best way to fix this is though.
+    services: Arc<Services>,
 }
 
 impl ServerState2 {
     pub async fn init_from_config(config: Config) -> Result<Self> {
         // lint config
         if config.http.contact.is_none() {
-            warn!("http.contact is not set in your config! set it so an email or something so webmasters can contact you.");
+            warn!(
+                "http.contact is not set in your config! set it so an email or something so webmasters can contact you."
+            );
         }
 
         // setup the database connection
@@ -389,7 +395,7 @@ impl ServerState2 {
             let state = ServerState2 {
                 inner: Arc::new(ServerStateInner2 {
                     config,
-                    services: weak_services.clone(),
+                    services: weak_services.upgrade().unwrap(),
                     database,
                     blobs,
                     messaging,
@@ -399,11 +405,11 @@ impl ServerState2 {
             Services::new(state)
         });
 
+        services.start_background_tasks().await;
+
         // initialize server
         // TODO: setup_vapid_keys(&state).await?;
         // TODO: setup_server_room(&state).await?;
-
-        // FIXME: Services is dropped immediately, since the only reference after this fn returns is Weak
 
         Ok(services.state.clone())
     }
@@ -416,7 +422,9 @@ impl ServerState2 {
         nats: Option<async_nats::Client>,
     ) -> Result<Self> {
         if config.http.contact.is_none() {
-            warn!("http.contact is not set in your config! set it so an email or something so webmasters can contact you.");
+            warn!(
+                "http.contact is not set in your config! set it so an email or something so webmasters can contact you."
+            );
         }
 
         let database = Box::new(PostgresPool::new(pool));
@@ -434,7 +442,7 @@ impl ServerState2 {
             let state = ServerState2 {
                 inner: Arc::new(ServerStateInner2 {
                     config,
-                    services: weak_services.clone(),
+                    services: weak_services.upgrade().unwrap(),
                     database,
                     blobs,
                     messaging,
@@ -470,10 +478,7 @@ impl ServerState2 {
     }
 
     pub fn services(&self) -> Arc<Services> {
-        self.inner
-            .services
-            .upgrade()
-            .expect("services should always exist while ServerStateInner is alive")
+        self.inner.services.clone()
     }
 
     pub fn messaging(&self) -> &Messaging {
@@ -484,13 +489,18 @@ impl ServerState2 {
         &self.inner.config
     }
 
+    // TEMP: i should write a wrapper for opendal
+    pub fn blobs(&self) -> &opendal::Operator {
+        &self.inner.blobs
+    }
+
     /// create a handle to the old ServerStateInner struct
     pub fn ss1(&self) -> Arc<ServerStateInner> {
         let inner = ServerStateInner {
             tokio: TokioHandle::current(),
             config: self.config().clone(),
             database: self.inner.database.clone(),
-            services: Weak::clone(&self.inner.services),
+            services: Arc::downgrade(&self.inner.services),
             blobs: self.inner.blobs.clone(),
             jetstream: None, // FIXME: populate jetstream
             new_state: self.clone(),

@@ -2,9 +2,9 @@ use std::{sync::Arc, time::Duration};
 
 use common::v1::types::email::EmailAddr;
 use lettre::{
+    AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
     message::{Mailbox, MultiPart},
     transport::smtp::authentication::Credentials,
-    AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
 };
 use tokio::time::sleep;
 use tracing::{error, info};
@@ -19,7 +19,12 @@ pub struct ServiceEmail {
 impl ServiceEmail {
     pub fn new(state: Arc<ServerStateInner>) -> Self {
         let config = state.config.smtp.clone();
-        let creds = Credentials::new(config.username, config.password.load()?.to_string());
+        let password = config
+            .password
+            .load()
+            .expect("TODO: better error handling")
+            .to_string();
+        let creds = Credentials::new(config.username, password);
         let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(&config.host)
             .unwrap()
             .credentials(creds)

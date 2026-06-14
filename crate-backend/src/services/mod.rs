@@ -24,6 +24,7 @@ use std::sync::Arc;
 
 use cache::ServiceCache;
 use channel::ServiceChannels;
+use config::ServiceConfig;
 use connections::ServiceConnections;
 use email::ServiceEmail;
 use embed::ServiceEmbed;
@@ -46,6 +47,7 @@ use users::ServiceUsers;
 use webhook::ServiceWebhooks;
 
 use crate::{
+    ServerStateInner,
     services::{
         admin::ServiceAdmin, audit_logs::ServiceAuditLogs, automod::ServiceAutomod,
         calendar::ServiceCalendar, documents::ServiceDocuments, http::ServiceHttp,
@@ -54,7 +56,6 @@ use crate::{
         unread::ServiceUnread, voice::ServiceVoice,
     },
     state::ServerState2,
-    ServerStateInner,
 };
 
 pub mod admin;
@@ -63,6 +64,7 @@ pub mod automod;
 pub mod cache;
 pub mod calendar;
 pub mod channel;
+pub mod config;
 pub mod connections;
 pub mod documents;
 pub mod email;
@@ -100,6 +102,7 @@ pub struct Services {
     pub cache: ServiceCache,
     pub calendar: ServiceCalendar,
     pub channels: ServiceChannels,
+    pub config: ServiceConfig,
     pub connections: ServiceConnections,
     pub documents: ServiceDocuments,
     pub email: ServiceEmail,
@@ -136,12 +139,13 @@ impl Services {
     pub fn new(state: ServerState2) -> Self {
         let state_old: Arc<ServerStateInner> = state.ss1();
         Self {
-            admin: ServiceAdmin::new(state_old.clone()),
+            admin: ServiceAdmin::new(state.clone()),
             audit_logs: ServiceAuditLogs::new(state_old.clone()),
             automod: ServiceAutomod::new(state_old.clone()),
             cache: ServiceCache::new(state_old.clone()),
             calendar: ServiceCalendar::new(state_old.clone()),
             channels: ServiceChannels::new(state_old.clone()),
+            config: ServiceConfig::new(state.clone()),
             connections: ServiceConnections::new(state_old.clone()),
             documents: ServiceDocuments::new(state_old.clone()),
             email: ServiceEmail::new(state_old.clone()),
