@@ -1,26 +1,26 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
-use axum::Json;
 use common::v1::routes;
-use common::v1::types::thread::ThreadListRoom;
 use common::v1::types::Permission;
+use common::v1::types::thread::ThreadListRoom;
 use common::v1::types::{
-    error::{ApiError, ErrorCode},
     AuditLogEntryType, ChannelId, ChannelType, Mentions, MentionsUser, MessageMember, MessageSync,
     MessageType, RelationshipType, SERVER_ROOM_ID,
+    error::{ApiError, ErrorCode},
 };
 use http::StatusCode;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
-use crate::routes::util::Auth;
 use crate::ServerState;
+use crate::routes::util::Auth;
 
-use crate::routes::util::auth::Auth4;
 use crate::error::{Error, Result};
+use crate::routes::util::auth::Auth4;
 use crate::routes2;
 
 /// Thread member list
@@ -106,9 +106,7 @@ async fn thread_member_add(
                 return Err(ApiError::from_code(ErrorCode::GdmTooManyMembers).into());
             }
 
-            let relationship = d
-                .user_relationship_get(user.id, target_user_id)
-                .await?;
+            let relationship = d.user_relationship_get(user.id, target_user_id).await?;
 
             let are_friends =
                 relationship.is_some_and(|r| r.relation == Some(RelationshipType::Friend));
@@ -162,12 +160,15 @@ async fn thread_member_add(
         .await?;
 
         if let Some(room_id) = thread.room_id {
-            let al = auth.audit_log(room_id);
-            al.commit_success(AuditLogEntryType::ThreadMemberAdd {
-                thread_id: req.thread_id,
-                user_id: target_user_id,
-            })
-            .await?;
+            auth.begin_audit_log(
+                room_id,
+                AuditLogEntryType::ThreadMemberAdd {
+                    thread_id: req.thread_id,
+                    user_id: target_user_id,
+                },
+            )
+            .await?
+            .success();
         }
     }
 

@@ -8,19 +8,19 @@ use common::v1::types::{
     AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType,
     MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageId, MessageSync,
     MessageThreadCreated, MessageType, PaginationQuery, Permission, PermissionOverwrite, RoomId,
-    ThreadMemberPut, User, UserId, SERVER_USER_ID,
+    SERVER_USER_ID, ThreadMemberPut, User, UserId,
 };
-use futures::stream::{self, StreamExt};
 use futures::TryStreamExt;
+use futures::stream::{self, StreamExt};
 use moka::future::Cache;
 use time::OffsetDateTime;
 use tracing::warn;
 use validator::Validate;
 
+use crate::ServerStateInner;
 use crate::error::{Error, Result};
 use crate::routes::util::auth::Auth4;
 use crate::types::{DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCreate};
-use crate::ServerStateInner;
 
 // TODO: split caches more
 // have a cache for public data, per-user data, member counts, etc
@@ -295,7 +295,7 @@ impl ServiceChannels {
                     .add("url", &json.url)
                     .build(),
             };
-            Some((auth.audit_log(room_id), ty))
+            auth.begin_audit_log(room_id, ty).await.ok()
         } else {
             None
         };
@@ -424,7 +424,7 @@ impl ServiceChannels {
             ChannelType::Dm | ChannelType::Gdm => {
                 return Err(Error::BadStatic(
                     "can't create a direct message thread in a room",
-                ))
+                ));
             }
             ChannelType::Document => {
                 if let Some(parent) = parent.as_ref() {
@@ -589,8 +589,8 @@ impl ServiceChannels {
             }
         }
 
-        if let Some((al, ty)) = al {
-            al.commit_success(ty).await?;
+        if let Some(al) = al {
+            al.success();
         }
 
         if let Some(room_id) = room_id {
@@ -686,17 +686,11 @@ impl ServiceChannels {
         let mut data = self.state.data();
         let user = auth.ensure_user()?;
 
-        let perms = srv
-            .perms
-            .for_channel(user.id, parent_channel_id)
-            .await?;
+        let perms = srv.perms.for_channel(user.id, parent_channel_id).await?;
         perms.ensure(Permission::ChannelView)?;
         perms.ensure(Permission::ThreadCreatePublic)?;
 
-        let parent_channel = srv
-            .channels
-            .get(parent_channel_id, Some(user.id))
-            .await?;
+        let parent_channel = srv.channels.get(parent_channel_id, Some(user.id)).await?;
         if !parent_channel.ty.has_public_threads() && !parent_channel.ty.has_forum2_threads() {
             return Err(Error::BadStatic(
                 "Cannot create a thread in this channel type",
@@ -824,8 +818,8 @@ impl ServiceChannels {
                     .add("parent_id", &channel.parent_id)
                     .build(),
             };
-            let al = auth.audit_log(room_id);
-            al.commit_success(ty).await?;
+            let al = auth.begin_audit_log(room_id, ty).await?;
+            al.success();
         }
 
         Ok(channel)
@@ -942,14 +936,12 @@ impl ServiceChannels {
         if let Some(new_parent_id_opt) = patch.parent_id {
             if new_parent_id_opt != chan_old.parent_id {
                 if let Some(old_parent_id) = chan_old.parent_id {
-                    let old_parent_perms =
-                        srv.perms.for_channel(user.id, old_parent_id).await?;
+                    let old_parent_perms = srv.perms.for_channel(user.id, old_parent_id).await?;
                     old_parent_perms.ensure(Permission::ThreadManage)?;
                 }
 
                 if let Some(new_parent_id) = new_parent_id_opt {
-                    let new_parent_perms =
-                        srv.perms.for_channel(user.id, new_parent_id).await?;
+                    let new_parent_perms = srv.perms.for_channel(user.id, new_parent_id).await?;
                     new_parent_perms.ensure(Permission::ThreadManage)?;
                 }
             }
@@ -1060,8 +1052,7 @@ impl ServiceChannels {
         self.invalidate_user(thread_id, user.id).await;
         let chan_new = self.get(thread_id, Some(user.id)).await?;
         if let Some(room_id) = chan_new.room_id {
-            let al = auth.audit_log(room_id);
-            al.commit_success(AuditLogEntryType::ChannelUpdate {
+            let ty = AuditLogEntryType::ChannelUpdate {
                 channel_id: thread_id,
                 channel_type: chan_new.ty,
                 changes: Changes::new()
@@ -1234,8 +1225,8 @@ impl ServiceChannels {
                             .unwrap_or_default(),
                     )
                     .build(),
-            })
-            .await?;
+            };
+            auth.begin_audit_log(room_id, ty).await?.success();
         }
 
         if chan_old.name != chan_new.name {
@@ -1346,9 +1337,7 @@ impl ServiceChannels {
             channel: Box::new(chan_new.clone()),
         };
         if let Some(room_id) = chan_new.room_id {
-            self.state
-                .broadcast_room(room_id, user.id, msg)
-                .await?;
+            self.state.broadcast_room(room_id, user.id, msg).await?;
         }
 
         Ok(chan_new)
@@ -1481,7 +1470,7 @@ mod next {
     use std::{collections::HashMap, sync::Arc};
 
     use common::v1::types::{
-        preferences::PreferencesChannel, util::Time, ChannelId, MessageId, MessageVerId, UserId,
+        ChannelId, MessageId, MessageVerId, UserId, preferences::PreferencesChannel, util::Time,
     };
     use moka::future::Cache;
 

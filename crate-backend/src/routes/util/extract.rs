@@ -206,6 +206,7 @@ where
 
 impl<Req> UniversalExtractor<Req> {
     // TODO: don't require calculating AuditLogEntryType up front
+    /// begin an audit log transaction
     #[must_use = "must call commit() to save a successful audit log entry"]
     pub async fn begin_audit_log(
         &self,
@@ -219,6 +220,30 @@ impl<Req> UniversalExtractor<Req> {
             status: None,
             auth: self.auth.clone(),
             application_id: self.auth.session().and_then(|s| s.app_id),
+            ty,
+        });
+
+        Ok(AuditTxnHandle {
+            slot: Arc::clone(&self.audit_txn_slot),
+        })
+    }
+}
+
+impl Auth4 {
+    /// begin an audit log transaction
+    #[must_use = "must call commit() to save a successful audit log entry"]
+    pub async fn begin_audit_log(
+        &self,
+        room_id: RoomId,
+        ty: AuditLogEntryType,
+    ) -> Result<AuditTxnHandle> {
+        let mut txn = self.audit_txn_slot.lock().await;
+        txn.as_mut().unwrap().begin(AuditTxnContext {
+            room_id,
+            reason: self.reason.clone(),
+            status: None,
+            auth: self.clone(),
+            application_id: self.session().and_then(|s| s.app_id),
             ty,
         });
 

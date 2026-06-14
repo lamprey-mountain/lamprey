@@ -16,6 +16,7 @@ use tracing::{error, warn};
 
 use crate::{ServerState, prelude::*, routes::util::auth::Auth4};
 
+// NOTE: i might not need to use a slot
 pub type AuditTxnSlot = Arc<Mutex<Option<AuditTxn>>>;
 
 /// an active audit log transaction

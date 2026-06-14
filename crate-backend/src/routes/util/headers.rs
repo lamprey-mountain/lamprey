@@ -1,12 +1,12 @@
-use crate::prelude::*;
 use crate::ServerState;
+use crate::prelude::*;
 use axum::{
     extract::FromRequestParts,
     response::{IntoResponseParts, ResponseParts},
 };
-use common::v1::types::{util::Time, UserId};
-use headers::authorization::Bearer;
+use common::v1::types::{UserId, util::Time};
 use headers::Authorization;
+use headers::authorization::Bearer;
 use headers::{ETag, HeaderMapExt, IfMatch, IfModifiedSince, IfNoneMatch, LastModified};
 use http::request::Parts;
 use std::sync::Arc;
@@ -66,7 +66,7 @@ pub enum ContentType {
 }
 
 impl HeadersRequest {
-    pub fn from_parts(parts: &Parts) -> Self {
+    pub fn from_parts(parts: &Parts) -> Result<Self> {
         // FIXME: properly parse content-type; handle `application/foobar+json`
         let content_type = parts
             .headers
@@ -88,13 +88,23 @@ impl HeadersRequest {
             })
             .unwrap_or(ContentType::Missing);
 
-        Self {
+        let reason = parts
+            .headers
+            .get("x-reason")
+            .and_then(|h| h.to_str().ok())
+            .map(|h| h.to_string());
+
+        if let Some(ref reason) = reason {
+            if reason.chars().count() > 1024 {
+                return Err(Error::BadRequest(
+                    "X-Audit-Reason must be 1024 characters or less".to_string(),
+                ));
+            }
+        }
+
+        Ok(Self {
             authorization: parts.headers.typed_get(),
-            reason: parts
-                .headers
-                .get("x-reason")
-                .and_then(|h| h.to_str().ok())
-                .map(|h| h.to_string()),
+            reason,
             idempotency_key: parts
                 .headers
                 .get("idempotency-key")
@@ -116,7 +126,7 @@ impl HeadersRequest {
             if_none_match: parts.headers.typed_get(),
             if_modified_since: parts.headers.typed_get(),
             content_type,
-        }
+        })
     }
 }
 
@@ -124,7 +134,7 @@ impl FromRequestParts<Arc<ServerState>> for HeadersRequest {
     type Rejection = Error;
 
     async fn from_request_parts(parts: &mut Parts, _state: &Arc<ServerState>) -> Result<Self> {
-        Ok(Self::from_parts(parts))
+        Self::from_parts(parts)
     }
 }
 

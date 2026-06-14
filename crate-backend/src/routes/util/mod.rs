@@ -7,14 +7,14 @@ use axum::{
     extract::{FromRequest, FromRequestParts, Request, State},
     http::request::Parts,
 };
-use common::v1::types::{federation::Hostname, util::Time, UserId};
+use common::v1::types::{UserId, federation::Hostname, util::Time};
 use common::{util::FederationBody, v1::types::headers::HEADER_ORIGIN};
 use http::{HeaderMap, HeaderName, HeaderValue};
 use serde::de::DeserializeOwned;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::{error::Error, services::federation::signing::ValidatedKeyAlgo, ServerState};
+use crate::{ServerState, error::Error, services::federation::signing::ValidatedKeyAlgo};
 
 pub mod audit;
 pub mod auth;
@@ -51,6 +51,7 @@ pub struct HeaderCache {
     if_modified_since: Option<HeaderValue>,
 }
 
+// TODO: move the below into a separate module
 /// A verified federation identity
 #[derive(Debug, Clone)]
 pub struct FederationIdentity(pub Hostname);

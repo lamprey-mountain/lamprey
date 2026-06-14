@@ -332,8 +332,6 @@ async fn channel_reorder(
         .needs(Permission::ChannelManage)
         .check()?;
 
-    let al = auth.audit_log(req.room_id);
-
     let mut channels_old = HashMap::new();
 
     for channel in &req.reorder.channels {
@@ -384,10 +382,10 @@ async fn channel_reorder(
         .await?;
     }
 
-    al.commit_success(AuditLogEntryType::ChannelReorder {
+    let ty = AuditLogEntryType::ChannelReorder {
         channels: req.reorder.channels,
-    })
-    .await?;
+    };
+    auth.begin_audit_log(req.room_id, ty).await?.success();
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -511,7 +509,6 @@ async fn channel_remove(
     perms.check()?;
 
     if let Some(room_id) = chan_before.room_id {
-        let al = auth.audit_log(room_id);
         let room = srv.rooms.get(room_id, Some(user.id)).await?;
         if room.security.require_sudo {
             auth.ensure_sudo()?;
@@ -534,14 +531,14 @@ async fn channel_remove(
         srv.voice.call_disconnect_all(req.channel_id).await?;
         let chan = srv.channels.get(req.channel_id, Some(user.id)).await?;
 
-        al.commit_success(AuditLogEntryType::ChannelUpdate {
+        let ty = AuditLogEntryType::ChannelUpdate {
             channel_id: req.channel_id,
             channel_type: chan.ty,
             changes: Changes::new()
                 .change("deleted_at", &chan_before.deleted_at, &chan.deleted_at)
                 .build(),
-        })
-        .await?;
+        };
+        auth.begin_audit_log(room_id, ty).await?.success();
 
         s.broadcast_room(
             room_id,
@@ -861,8 +858,7 @@ async fn channel_transfer_ownership(
     let msg = MessageSync::ChannelUpdate {
         channel: Box::new(thread.clone()),
     };
-    s.broadcast_channel(req.channel_id, user.id, msg)
-        .await?;
+    s.broadcast_channel(req.channel_id, user.id, msg).await?;
     Ok(Json(thread))
 }
 

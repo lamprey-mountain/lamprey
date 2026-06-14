@@ -1,22 +1,37 @@
+use core::fmt;
 use std::{sync::Arc, time::Duration};
 
 use crate::{
-    prelude::*, routes::util::headers::HeadersRequest, routes::util::FederationIdentity,
     ServerState,
+    prelude::*,
+    routes::util::{FederationIdentity, audit::AuditTxnSlot, headers::HeadersRequest},
 };
 use axum::extract::FromRequestParts;
 use common::v1::types::{
+    Session, SessionImprint, SessionStatus, SessionToken, SessionType, User,
     federation::Hostname,
     ids::{SERVER_TOKEN_SESSION_ID, SERVER_USER_ID},
     oauth::{Scope, Scopes},
     util::Time,
-    Session, SessionImprint, SessionStatus, SessionToken, SessionType, User,
 };
 use http::request::Parts;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Auth4 {
     identity: Identity,
+
+    // TEMP: make begin_audit_log work
+    pub(super) reason: Option<String>,
+    pub(super) audit_txn_slot: AuditTxnSlot,
+}
+
+// TEMP: AuditTxnSlot is not Debug
+impl fmt::Debug for Auth4 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Auth4")
+            .field("identity", &self.identity)
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -139,7 +154,12 @@ impl Auth4 {
 impl Auth4 {
     pub async fn calculate(parts: &Parts, state: &ServerState) -> Result<Self> {
         let srv = state.services();
-        let headers = HeadersRequest::from_parts(parts);
+
+        // TEMP: make begin_audit_log work
+        let headers = HeadersRequest::from_parts(parts)?;
+        let reason = headers.reason;
+        let audit_txn: &AuditTxnSlot = parts.extensions.get().expect("always exists");
+        let audit_txn_slot = Arc::clone(audit_txn);
 
         // bearer authorization token
         if let Some(auth) = &headers.authorization {
@@ -176,6 +196,8 @@ impl Auth4 {
                         session,
                         scopes: Scopes(vec![Scope::Full]),
                     },
+                    reason,
+                    audit_txn_slot,
                 });
             }
 
@@ -207,10 +229,14 @@ impl Auth4 {
                         session,
                         scopes,
                     },
+                    reason,
+                    audit_txn_slot,
                 });
             } else {
                 return Ok(Auth4 {
                     identity: Identity::Guest { session, scopes },
+                    reason,
+                    audit_txn_slot,
                 });
             }
         }
@@ -224,12 +250,16 @@ impl Auth4 {
                     hostname: origin,
                     puppet: None, // TODO: puppet support
                 },
+                reason,
+                audit_txn_slot,
             });
         }
 
         // public endpoints
         Ok(Auth4 {
             identity: Identity::Public,
+            reason,
+            audit_txn_slot,
         })
     }
 }
