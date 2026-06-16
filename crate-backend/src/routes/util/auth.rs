@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{net::IpAddr, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 use crate::{
     ServerState,

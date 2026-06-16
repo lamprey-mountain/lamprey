@@ -5,18 +5,17 @@ use common::v2::types::embed::Embed;
 use common::v2::types::media::{MediaCreate, MediaCreateSource};
 use lamprey_unfurl::{DirectMediaPlugin, HtmlStreamPlugin, Unfurler};
 use moka::future::Cache;
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::{Mutex, broadcast};
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info, warn};
 use url::Url;
 
-use crate::error::Error;
+use crate::ServerStateInner;
+use crate::prelude::*;
 use crate::services::media::Import;
 use crate::types::{DbMessageUpdate, MediaLinkType, MessageRef};
-use crate::Result;
-use crate::ServerStateInner;
 
-const MAX_SIZE_ATTACHMENT: u64 = 1024 * 1024 * 8;
+/// how long can embeds be reused for
 const MAX_EMBED_AGE: Duration = Duration::from_secs(60 * 5);
 
 pub struct ServiceEmbed {

@@ -251,7 +251,7 @@ impl Messaging {
             .await
             .map_err(|err| Error::Internal(err.to_string()))?;
         while let Some(entry) = watch.next().await {
-            let entry = entry.map_err(|err| Error::Internal(err.to_string()))?;
+            let _entry = entry.map_err(|err| Error::Internal(err.to_string()))?;
             // TODO: update ack state
         }
 

@@ -1,5 +1,4 @@
 use std::marker::PhantomData;
-use std::sync::Arc;
 
 use common::v1::types::components::{self, ComponentThin, Components};
 use common::v1::types::error::{ApiError, ErrorCode};
@@ -17,7 +16,7 @@ use tracing::error;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::routes::util::auth::{Auth4, Identity};
+use crate::routes::util::auth::Auth4;
 use crate::services::messages::util::MediaRegistry;
 use crate::services::messages::{links, markdown};
 use crate::types::MediaLinkType;

@@ -101,7 +101,7 @@ impl ServiceChannels {
             // PERF: n+1 query
             // fetch private data for this channel
             if let Ok(private) = data.channel_get_private(channel.id, user_id).await {
-                let srv = self.state.services();
+                // let srv = self.state.services();
                 // TODO: update ack state
                 // let ack_state = AckStateUserChannel { };
                 // srv.unread.put_user_channel(ack_state);

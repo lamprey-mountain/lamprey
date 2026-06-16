@@ -32,7 +32,7 @@ async fn ack_bulk(
     // TODO: handle other `AckType`s
     for ack in req.body.acks {
         match &ack.ty {
-            AckType::Message { channel_id, message_id, .. } => {
+            AckType::Message { channel_id, .. } => {
                 srv.perms
                     .for_channel3(Some(auth.user.id), *channel_id)
                     .await?

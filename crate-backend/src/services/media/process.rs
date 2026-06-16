@@ -4,12 +4,12 @@ use async_tempfile::TempFile;
 use bytes::BytesMut;
 use common::{
     v1::types::{
-        misc::hashes::{HashData, HashType, Hashes},
         MessageSync, Mime,
+        misc::hashes::{HashData, HashType, Hashes},
     },
     v2::types::media::{
-        scanner::{MediaScanResponse, ScanRequest},
         Media, MediaMetadata, MediaScan, MediaStatus,
+        scanner::{MediaScanResponse, ScanRequest},
     },
 };
 use futures::stream::FuturesUnordered;
@@ -18,18 +18,17 @@ use mediatype::MediaTypeBuf;
 use sha2::{Digest, Sha512_256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio_stream::StreamExt;
-use tracing::{debug, span, trace, Instrument, Level};
+use tracing::{Instrument, Level, debug, span, trace};
 
 use crate::{
+    ServerStateInner,
     prelude::*,
     services::media::{
-        ffmpeg,
+        ServiceMedia, ffmpeg,
         ffprobe::{self, MediaType},
         import::Upload,
         util::{Import, MediaItemState, MediaPaths},
-        ServiceMedia,
     },
-    ServerStateInner,
 };
 
 /// cache control header for immutable
@@ -51,7 +50,7 @@ struct MediaPipeline {
 
 #[derive(Debug, Clone)]
 struct Poster {
-    bytes: Bytes,
+    _bytes: Bytes,
 }
 
 // // TODO: split out context/cache into separate struct?
@@ -277,7 +276,7 @@ impl MediaPipeline {
         .instrument(span_upload)
         .await?;
 
-        let poster = Poster { bytes };
+        let poster = Poster { _bytes: bytes };
         self.poster = Some(Some(poster.clone()));
         Ok(Some(poster))
     }
@@ -460,7 +459,6 @@ impl MediaPipeline {
 impl ServiceMedia {
     /// Run the media processing pipeine for an `Upload`
     pub(super) async fn process_media(&self, upload: Upload) -> Result<()> {
-        let media_id = upload.import.media_id;
         let writer = upload.writer;
         let mut pipe =
             MediaPipeline::from_upload(Arc::clone(&self.state), upload.import, upload.temp_file);
@@ -471,12 +469,12 @@ impl ServiceMedia {
 
         let _transformed = pipe.strip_exif().await?;
 
-        let meta = pipe.get_ffprobe_metadata().await?;
+        let _ffprobe_metadata = pipe.get_ffprobe_metadata().await?;
         let mime = pipe.sniff_mime().await?;
         let hashes = pipe.calculate_hashes().await?;
         let scans = pipe.scan_media().await?;
         let metadata = pipe.get_metadata().await?;
-        let poster = pipe.process_poster().await?;
+        let _poster = pipe.process_poster().await?;
         let has_thumbnail = pipe.has_thumbnail().await?;
 
         pipe.generate_thumbnails().await?;

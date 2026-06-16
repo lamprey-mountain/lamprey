@@ -27,7 +27,7 @@ pub use state::{ServerState, ServerStateInner};
 pub(crate) mod prelude {
     pub use std::sync::Arc;
 
-    pub use crate::state::{GlobalsOwned, Globals};
+    pub use crate::state::Globals;
     pub use bytes::Bytes;
     pub use lamprey_backend_core::prelude::*;
 

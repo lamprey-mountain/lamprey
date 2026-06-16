@@ -54,7 +54,7 @@ impl ServiceNotifications {
             return;
         }
 
-        let mentioned_users = self
+        let _mentioned_users = self
             .get_mentioned_users(&channel, &message)
             .await
             .expect("TODO: better error handling");
@@ -137,7 +137,7 @@ impl ServiceNotifications {
     /// add a notification
     ///
     /// inserts into the database and executes any needed actions
-    pub async fn create(&self, user_id: UserId, notification: Notification) -> Result<()> {
+    pub async fn create(&self, _user_id: UserId, _notification: Notification) -> Result<()> {
         todo!()
         // let action = self.calculate_actions(user_id, &notification).await?;
 

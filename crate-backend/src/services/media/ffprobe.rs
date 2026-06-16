@@ -1,3 +1,5 @@
+#![allow(unused)] // TEMP: suppress warnings here for now
+
 use std::collections::HashMap;
 
 use serde::Deserialize;
@@ -14,6 +16,7 @@ pub struct Metadata {
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct Format {
     pub duration: Option<String>,
+
     #[serde(default)]
     pub tags: HashMap<String, String>,
 }

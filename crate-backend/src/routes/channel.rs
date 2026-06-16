@@ -21,7 +21,7 @@ use validator::Validate;
 use crate::routes::util::auth::Auth4;
 use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
 use crate::routes2;
-use crate::state::{Globals, GlobalsOwned};
+use crate::state::Globals;
 use crate::types::{
     ChannelPatch, DbChannelCreate, DbChannelType, DbRoomCreate, MediaLinkType, MessageSync,
     Permission,
@@ -437,9 +437,9 @@ async fn channel_update(
 /// Channel ack
 #[handler(routes::channel_ack)]
 async fn channel_ack(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-    req: routes::channel_ack::Request,
+    _auth: Auth,
+    State(_s): State<Arc<ServerState>>,
+    _req: routes::channel_ack::Request,
 ) -> Result<impl IntoResponse> {
     // auth.ensure_scopes(&[Scope::Full])?;
     // let mut data = s.data();

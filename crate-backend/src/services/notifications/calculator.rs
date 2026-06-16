@@ -20,12 +20,12 @@ pub struct Preferences {
 
 /// notification calculator
 pub struct Calculator {
-    state: GlobalsOwned,
+    _state: Globals,
 
     // context
-    room: Option<Room>,
-    channel: Option<Channel>,
-    message: Option<Message>,
+    _room: Option<Room>,
+    _channel: Option<Channel>,
+    _message: Option<Message>,
     // notification: Option<Notification>,
     // TODO
 }
@@ -38,19 +38,19 @@ pub struct Actions {
 impl Calculator {
     // pub async fn load_for_message(state: ServerState2, message: &Message) -> Result<Self> {
     pub async fn load_for_message(
-        state: GlobalsOwned,
-        channel: &Channel,
-        message: &Message,
+        _state: Globals,
+        _channel: &Channel,
+        _message: &Message,
     ) -> Result<Self> {
         todo!()
     }
 
-    pub async fn load_for_notification(state: GlobalsOwned, notif: &Notification) -> Result<Self> {
+    pub async fn load_for_notification(_state: Globals, _notif: &Notification) -> Result<Self> {
         todo!()
     }
 
     /// calculate notification actions for a user
-    pub async fn calculate(&self, user_id: UserId) -> Result<Actions> {
+    pub async fn calculate(&self, _user_id: UserId) -> Result<Actions> {
         // TODO: return a Notification/NotificationType?
         todo!()
     }
@@ -97,8 +97,11 @@ impl Preferences {
     /// check if global, room, or channel is muted
     pub fn is_muted(&self) -> bool {
         let now = Time::now_utc();
-        let check_mute =
-            |mute: &Mute| mute.expires_at.as_ref().map_or(true, |&expires| expires > now);
+        let check_mute = |mute: &Mute| {
+            mute.expires_at
+                .as_ref()
+                .map_or(true, |&expires| expires > now)
+        };
 
         if self
             .channel

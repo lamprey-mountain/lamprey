@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc, time::Duration};
+use std::{str::FromStr, sync::Arc};
 
 use crate::{
     Result, ServerState, config,
@@ -15,9 +15,7 @@ use lamprey_backend_core::{
 use lamprey_backend_data_postgres::{
     DbRoomCreate, DbUserCreate, RoomCreate, SERVER_ROOM_ID, SERVER_USER_ID, data::Database,
 };
-use opendal::layers::LoggingLayer;
 use opentelemetry_otlp::WithExportConfig;
-use sqlx::postgres::PgPoolOptions;
 use tokio::task::JoinSet;
 use tracing::{error, info};
 use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};

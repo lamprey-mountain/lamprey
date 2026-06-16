@@ -1,3 +1,5 @@
+#![allow(unused)] // TEMP: suppress warnings here for now
+
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -195,7 +197,7 @@ impl ServiceInteractions {
                 let channel_id = match &entry.interaction.ty {
                     InteractionType::Button { channel, .. } => channel.id,
                     InteractionType::Ping => {
-                        return Err(Error::BadStatic("cannot reply to ping interaction"))
+                        return Err(Error::BadStatic("cannot reply to ping interaction"));
                     }
                     InteractionType::Unfurl { channel, .. } => channel.id,
                 };
@@ -230,7 +232,7 @@ impl ServiceInteractions {
                 let channel_id = match &entry.interaction.ty {
                     InteractionType::Button { channel, .. } => channel.id,
                     InteractionType::Ping => {
-                        return Err(Error::BadStatic("cannot edit message in ping interaction"))
+                        return Err(Error::BadStatic("cannot edit message in ping interaction"));
                     }
                     InteractionType::Unfurl { channel, .. } => channel.id,
                 };
@@ -266,7 +268,7 @@ impl ServiceInteractions {
             InteractionType::Ping => {
                 return Err(Error::BadStatic(
                     "probably should design types to avoid this",
-                ))
+                ));
             }
             InteractionType::Unfurl { user, .. } => user.id,
         };

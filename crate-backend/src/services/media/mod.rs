@@ -56,7 +56,7 @@ impl ServiceMedia {
         Ok(item)
     }
 
-    pub async fn get_remote(&self, remote: &Remote) -> Result<MediaItem> {
+    pub async fn get_remote(&self, _remote: &Remote) -> Result<MediaItem> {
         // let media = self
         //     .state
         //     .data()
@@ -126,7 +126,7 @@ impl ServiceMedia {
     /// attempt to delete a piece of media
     ///
     /// only unlinked media can be deleted
-    pub async fn delete(&self, user_id: UserId, media_id: MediaId) -> Result<()> {
+    pub async fn delete(&self, _user_id: UserId, media_id: MediaId) -> Result<()> {
         // FIXME: check user_id
 
         if let Some(up) = self.uploads.remove(&media_id) {
@@ -148,7 +148,7 @@ impl ServiceMedia {
     pub async fn upload_get(
         &self,
         media_id: MediaId,
-    ) -> Option<dashmap::mapref::one::RefMut<MediaId, Upload>> {
+    ) -> Option<dashmap::mapref::one::RefMut<'_, MediaId, Upload>> {
         self.bump(media_id);
         self.uploads.get_mut(&media_id)
     }

@@ -7,7 +7,7 @@ use axum::{Json, extract::State};
 use common::v1::types::application::Scope;
 use common::v1::types::{ChannelId, Embed, Permission, RoomId, UserId};
 use common::v2::types::media::{MediaCreate, MediaCreateSource};
-use lamprey_backend_data_postgres::data::Database;
+use lamprey_backend_core::Error;
 use lamprey_unfurl::logging::LogEntry;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -464,23 +464,6 @@ struct CheckHealthResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
-struct CheckReadyResponse {
-    ok: bool,
-
-    /// is the database reachable?
-    database_ok: bool,
-
-    /// is the object store reachable?
-    object_store_ok: bool,
-
-    /// is messaging reachable?
-    messaging_ok: bool,
-
-    /// is the queue reachable?
-    queue_ok: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
 struct CheckDoctorResponse {
     ok: bool,
     issues: Vec<DoctorIssue>,
@@ -553,23 +536,9 @@ async fn debug_ready(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<im
     perms.needs(Permission::Admin);
     perms.check()?;
 
-    let database_ok = s.database().check_database().await.is_ok();
-
-    let object_store_ok = s.blobs.check().await.is_ok();
-
     // FIXME: use healthcheck service
-    let messaging_ok = todo!();
-    let queue_ok = todo!();
 
-    let ok = database_ok && object_store_ok && messaging_ok && queue_ok;
-
-    Ok(Json(CheckReadyResponse {
-        ok,
-        database_ok,
-        object_store_ok,
-        messaging_ok,
-        queue_ok,
-    }))
+    Ok(Error::Unimplemented)
 }
 
 /// Check doctor
