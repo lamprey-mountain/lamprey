@@ -1,4 +1,4 @@
-use lamprey_macros::endpoint;
+use lamprey_macros::{endpoint, endpoint_new};
 
 /// Media create
 #[endpoint(
@@ -8,6 +8,27 @@ use lamprey_macros::endpoint;
     response(CREATED, body = MediaCreated, description = "Media create success"),
 )]
 pub mod media_create {
+    use crate::v2::types::media::{MediaCreate, MediaCreated};
+
+    pub struct Request {
+        #[json]
+        pub body: MediaCreate,
+    }
+
+    pub struct Response {
+        #[json]
+        pub media: MediaCreated,
+    }
+}
+
+/// Media create
+#[endpoint_new(
+    post,
+    path = "/media",
+    tags = ["media"],
+    response(CREATED, body = MediaCreated, description = "Media create success"),
+)]
+pub mod media_create_new {
     use crate::v2::types::media::{MediaCreate, MediaCreated};
 
     pub struct Request {
@@ -163,5 +184,45 @@ pub mod media_search {
     pub struct Response {
         #[json]
         pub results: MediaSearch,
+    }
+}
+
+/// Media upload (internal)
+///
+/// Upload a chunk of a piece of media.
+///
+/// Always returns immediately, but will automatically begin processing media in
+/// the background.
+#[endpoint_new(
+    patch,
+    path = "/internal/media-upload/{media_id}",
+    tags = ["media"], // NOTE: maybe tag this as "internal" instead?
+    response(NO_CONTENT, description = "Upload success"),
+)]
+pub mod media_upload {
+    use bytes::Bytes;
+
+    use crate::v1::types::MediaId;
+
+    pub struct Request {
+        #[path]
+        pub media_id: MediaId,
+
+        #[header]
+        pub upload_offset: u64,
+
+        #[header]
+        pub content_length: u64,
+
+        #[body]
+        pub body: Bytes,
+    }
+
+    pub struct Response {
+        #[header]
+        pub upload_offset: u64,
+
+        #[header]
+        pub content_length: u64,
     }
 }

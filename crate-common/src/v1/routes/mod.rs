@@ -49,6 +49,7 @@ pub mod user_connection;
 pub mod user_email;
 pub mod voice;
 pub mod webhook;
+pub mod well_known;
 
 /// route definitions for the cdn/media proxy
 pub mod media_proxy;
@@ -91,6 +92,7 @@ pub use user_connection::*;
 pub use user_email::*;
 pub use voice::*;
 pub use webhook::*;
+pub use well_known::*;
 
 mod path_param;
 

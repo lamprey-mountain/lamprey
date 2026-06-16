@@ -156,6 +156,48 @@ fn build_extract_response_fn(
     };
 
     let json_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Json));
+    let header_fields: Vec<_> = fields
+        .iter()
+        .filter(|f| matches!(f.kind, FieldKind::Header(_)))
+        .collect();
+
+    let header_extraction = header_fields.iter().map(|f| {
+        let ident = &f.ident;
+        let ty = &f.ty;
+        let header_name = match &f.kind {
+            FieldKind::Header(Some(n)) => n.clone(),
+            _ => ident.to_string().replace('_', "-"),
+        };
+        let is_option = matches!(ty, syn::Type::Path(tp) if tp.path.segments.last().map(|s| s.ident == "Option").unwrap_or(false));
+        if is_option {
+            quote! {
+                let #ident: #ty = parts
+                    .headers
+                    .get(#header_name)
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|v| v.parse().ok());
+            }
+        } else {
+            quote! {
+                let #ident: #ty = parts
+                    .headers
+                    .get(#header_name)
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|v| v.parse().ok())
+                    .ok_or_else(|| {
+                        // FIXME: use ApiError correctly
+                        ::http::Response::builder()
+                            .status(::http::StatusCode::BAD_REQUEST)
+                            .body(::bytes::Bytes::from(
+                                format!("missing or invalid header: {}", #header_name)
+                            ))
+                            .unwrap()
+                    })?;
+            }
+        }
+    });
+
+    let header_idents: Vec<_> = header_fields.iter().map(|f| &f.ident).collect();
 
     if let Some(json_field) = json_field {
         let ident = &json_field.ident;
@@ -165,7 +207,8 @@ fn build_extract_response_fn(
             fn extract(resp: ::http::Response<::bytes::Bytes>) -> ::core::result::Result<Self, ::http::Response<::bytes::Bytes>> {
                 let status = resp.status();
                 #status_check
-                let (_parts, body) = resp.into_parts();
+                let (parts, body) = resp.into_parts();
+                #(#header_extraction)*
                 let #ident: #ty = ::serde_json::from_slice(&body)
                     .map_err(|_| {
                         // FIXME: proper error handling
@@ -174,7 +217,7 @@ fn build_extract_response_fn(
                             .body(::bytes::Bytes::from("failed to parse response json"))
                             .unwrap()
                     })?;
-                Ok(Response { #ident })
+                Ok(Response { #ident, #(#header_idents,)* })
             }
         })
     } else {
@@ -182,7 +225,9 @@ fn build_extract_response_fn(
             fn extract(resp: ::http::Response<::bytes::Bytes>) -> ::core::result::Result<Self, ::http::Response<::bytes::Bytes>> {
                 let status = resp.status();
                 #status_check
-                Ok(Response {})
+                let (parts, _body) = resp.into_parts();
+                #(#header_extraction)*
+                Ok(Response { #(#header_idents,)* })
             }
         })
     }

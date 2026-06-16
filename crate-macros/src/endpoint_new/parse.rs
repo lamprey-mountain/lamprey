@@ -14,16 +14,6 @@ pub struct EndpointModule {
     pub response: ItemStruct,
 }
 
-pub struct EndpointRequest {
-    pub inner: ItemStruct,
-    pub fields: Vec<EndpointField>,
-}
-
-pub struct EndpointResponse {
-    pub inner: ItemStruct,
-    pub fields: Vec<EndpointField>,
-}
-
 // TODO: #[derive(darling::FromMeta)]
 /// macro attrs for an endpoint
 pub struct EndpointArgs {

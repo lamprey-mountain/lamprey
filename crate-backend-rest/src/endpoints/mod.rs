@@ -1,10 +1,8 @@
 use crate::prelude::*;
 
 mod v1;
-
-// TODO: add
-// mod v2;
-// mod unversioned; (for well_known)
+mod v2;
+mod unversioned;
 
 pub struct Endpoints;
 
