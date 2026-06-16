@@ -5,6 +5,13 @@ use common::v1::types::redex::{
     RedexVersionStatus,
 };
 use common::v1::types::{
+    ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogFilter, AutomodRuleId, CalendarEventId,
+    Channel, ChannelId, EmojiId, InviteCode, InvitePatch, InviteWithMetadata, MediaId, MessageId,
+    MessageVerId, NotificationId, PaginationQuery, PaginationResponse, Permission,
+    PermissionOverwriteType, Relationship, RelationshipPatch, RelationshipWithUserId, RoleId,
+    RoomBan, RoomId, RoomMember, RoomMemberOrigin, RoomMemberPatch, RoomMemberPut,
+    RoomMemberSearchAdvanced, RoomMemberSearchResponse, SearchDlqId, TagId, ThreadMember,
+    ThreadMemberPut, UserId, WebhookId,
     application::{Application, Connection, Scopes},
     automod::{AutomodRule, AutomodRuleCreate, AutomodRuleUpdate},
     calendar::{
@@ -17,27 +24,19 @@ use common::v1::types::{
     preferences::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
     reaction::{ReactionKeyParam, ReactionListItem},
     room_analytics::{
-        AnalyticsChannel, AnalyticsChannelParams, AnalyticsInvites,
-        AnalyticsMembersCount, AnalyticsMembersJoin, AnalyticsMembersLeave,
-        AnalyticsOverview, AnalyticsParams,
+        AnalyticsChannel, AnalyticsChannelParams, AnalyticsInvites, AnalyticsMembersCount,
+        AnalyticsMembersJoin, AnalyticsMembersLeave, AnalyticsOverview, AnalyticsParams,
     },
     tag::{Tag, TagCreate, TagPatch},
     util::Time,
     webhook::{Webhook, WebhookCreate, WebhookUpdate},
-    ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogFilter, AutomodRuleId, CalendarEventId,
-    Channel, ChannelId, EmojiId, InviteCode, InvitePatch, InviteWithMetadata, MediaId, MessageId,
-    MessageVerId, NotificationId, PaginationQuery, PaginationResponse, Permission,
-    PermissionOverwriteType, Relationship, RelationshipPatch, RelationshipWithUserId, RoleId,
-    RoomBan, RoomId, RoomMember, RoomMemberOrigin, RoomMemberPatch, RoomMemberPut,
-    RoomMemberSearchAdvanced, RoomMemberSearchResponse, SearchDlqId, TagId, ThreadMember,
-    ThreadMemberPut, UserId, WebhookId,
 };
 use common::v1::types::{EvalId, RedexId, RedexVerId};
 use std::collections::HashMap;
 use uuid::Uuid;
 
 use crate::types::data::{SearchReindexQueue, SearchReindexQueueTarget};
-use crate::{config::ConfigInternal, types::admin::AdminCollectGarbageMode, Result};
+use crate::{Result, config::ConfigInternal, types::admin::AdminCollectGarbageMode};
 
 #[async_trait]
 pub trait DataRoleMember {
@@ -150,7 +149,7 @@ pub trait DataWebhook {
     ) -> Result<Webhook>;
     async fn webhook_delete(&mut self, webhook_id: WebhookId) -> Result<()>;
     async fn webhook_delete_with_token(&mut self, webhook_id: WebhookId, token: &str)
-        -> Result<()>;
+    -> Result<()>;
 }
 
 #[async_trait]
@@ -456,7 +455,7 @@ pub trait DataSearchQueue {
 
     /// delete a finished queue
     async fn search_reindex_queue_delete(&mut self, target: SearchReindexQueueTarget)
-        -> Result<()>;
+    -> Result<()>;
 
     /// look for new queues that need to be to reindexed
     async fn search_reindex_queue_poll(&mut self, limit: u32) -> Result<Vec<SearchReindexQueue>>;

@@ -35,11 +35,6 @@ pub enum RoomSnapshot {
     Unavailable(RoomUnavailable),
 }
 
-pub struct RoomSnapshotLoaded {
-    data: RoomData,
-    has_members: bool,
-}
-
 #[derive(Debug, Clone, Copy)]
 pub struct RoomUnavailable {
     pub reason: RoomUnavailableReason,

@@ -3,6 +3,8 @@ use crate::prelude::*;
 use axum::extract::FromRequest;
 use common::util::routes::Endpoint;
 
+use crate::util::Auth;
+
 /// the current state for a request
 ///
 /// can be used as an axum extractor

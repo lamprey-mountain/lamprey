@@ -1104,10 +1104,10 @@ pub enum MessageSync {
 
 // TODO: skip sending room_members/thread_members/users if the client already has them
 // TODO: move member list stuff to a submodule
+// NOTE: maybe i should move users/room_members/thread_members to the MemberListSync event
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum MemberListOp {
     /// replace a range of members
     Sync {

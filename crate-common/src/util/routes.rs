@@ -7,6 +7,10 @@ pub trait Endpoint {
 
     /// get the metadata for this endpoint
     fn metadata() -> Metadata;
+
+    /// get the utoipa path item for this request
+    #[cfg(feature = "utoipa")]
+    fn path_item() -> utoipa::openapi::PathItem;
 }
 
 // TODO: move struct here

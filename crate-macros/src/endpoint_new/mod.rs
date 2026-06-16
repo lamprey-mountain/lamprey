@@ -37,6 +37,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     let extract_response_fn = build_extract_response_fn(&args, &resp_fields)?;
 
     let meta_fn = build_metadata_fn(&args, &module.module)?;
+    let path_item_fn = build_path_item_fn(&args, &req_fields, &resp_fields)?;
 
     // Preserve all original items except Request/Response structs
     let items = module
@@ -74,6 +75,9 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
                 type Response = Response;
 
                 #meta_fn
+
+                #[cfg(feature = "utoipa")]
+                #path_item_fn
             }
 
             impl crate::util::routes::Request for Request {
@@ -658,6 +662,243 @@ fn parse_doc_attrs(attrs: &[Attribute]) -> (String, Option<String>) {
     };
 
     (summary, description)
+}
+
+fn build_path_item_fn(
+    args: &EndpointArgs,
+    req_fields: &[EndpointField],
+    resp_fields: &[EndpointField],
+) -> syn::Result<TokenStream> {
+    let mut req_body_stream = quote! {};
+
+    // 1. Generate Request Body Documentation
+    if let Some(f) = req_fields
+        .iter()
+        .find(|f| matches!(f.kind, FieldKind::Json))
+    {
+        let ty = &f.ty;
+        let (schema_ty, required) = if let Some(inner) = extract_inner_option_type(ty) {
+            (inner, quote! { ::utoipa::openapi::Required::False })
+        } else {
+            (ty, quote! { ::utoipa::openapi::Required::True })
+        };
+        req_body_stream = quote! {
+            op = op.request_body(Some(
+                ::utoipa::openapi::request_body::RequestBodyBuilder::new()
+                    .content(
+                        "application/json",
+                        ::utoipa::openapi::ContentBuilder::new()
+                            .schema(Some(<#schema_ty as ::utoipa::PartialSchema>::schema()))
+                            .build()
+                    )
+                    .required(Some(#required))
+                    .build()
+            ));
+        };
+    } else if let Some(f) = req_fields
+        .iter()
+        .find(|f| matches!(f.kind, FieldKind::Form))
+    {
+        let ty = &f.ty;
+        let (schema_ty, required) = if let Some(inner) = extract_inner_option_type(ty) {
+            (inner, quote! { ::utoipa::openapi::Required::False })
+        } else {
+            (ty, quote! { ::utoipa::openapi::Required::True })
+        };
+        req_body_stream = quote! {
+            op = op.request_body(Some(
+                ::utoipa::openapi::request_body::RequestBodyBuilder::new()
+                    .content(
+                        "application/x-www-form-urlencoded",
+                        ::utoipa::openapi::ContentBuilder::new()
+                            .schema(Some(<#schema_ty as ::utoipa::PartialSchema>::schema()))
+                            .build()
+                    )
+                    .required(Some(#required))
+                    .build()
+            ));
+        };
+    } else if req_fields.iter().any(|f| matches!(f.kind, FieldKind::Body)) {
+        req_body_stream = quote! {
+            op = op.request_body(Some(
+                ::utoipa::openapi::request_body::RequestBodyBuilder::new()
+                    .content(
+                        "application/octet-stream",
+                        ::utoipa::openapi::ContentBuilder::new()
+                            .schema(Some(::utoipa::openapi::schema::ObjectBuilder::new()
+                                .schema_type(::utoipa::openapi::schema::Type::String)
+                                .format(Some(::utoipa::openapi::schema::SchemaFormat::KnownFormat(
+                                    ::utoipa::openapi::schema::KnownFormat::Binary
+                                )))
+                                .build()
+                            ))
+                            .build()
+                    )
+                    .required(Some(::utoipa::openapi::Required::True))
+                    .build()
+            ));
+        };
+    }
+
+    // 2. Generate Responses
+    let mut resp_stream = quote! {};
+    if !args.responses.is_empty() {
+        for spec in &args.responses {
+            let status_str = spec.status.base10_digits();
+            let description = spec
+                .description
+                .as_ref()
+                .map(|d| d.value())
+                .unwrap_or_else(|| "Success".to_string());
+
+            let mut content_stream = quote! {};
+            if let Some(body_ty) = &spec.body {
+                content_stream = quote! {
+                    .content(
+                        "application/json",
+                        ::utoipa::openapi::ContentBuilder::new()
+                            .schema(Some(<#body_ty as ::utoipa::PartialSchema>::schema()))
+                            .build()
+                    )
+                };
+            }
+
+            resp_stream.extend(quote! {
+                op = op.response(
+                    #status_str,
+                    ::utoipa::openapi::ResponseBuilder::new()
+                        .description(#description)
+                        #content_stream
+                        .build()
+                );
+            });
+        }
+    } else {
+        // Fallback to original logic
+        if let Some(f) = resp_fields
+            .iter()
+            .find(|f| matches!(f.kind, FieldKind::Json))
+        {
+            let ty = &f.ty;
+            let schema_ty = extract_inner_option_type(ty).unwrap_or(ty);
+            resp_stream = quote! {
+                op = op.response(
+                    "200",
+                    ::utoipa::openapi::ResponseBuilder::new()
+                        .description("Success")
+                        .content(
+                            "application/json",
+                            ::utoipa::openapi::ContentBuilder::new()
+                                .schema(Some(<#schema_ty as ::utoipa::PartialSchema>::schema()))
+                                .build()
+                        )
+                        .build()
+                );
+            };
+        } else {
+            resp_stream = quote! {
+                op = op.response(
+                    "200",
+                    ::utoipa::openapi::ResponseBuilder::new()
+                        .description("Success")
+                        .build()
+                );
+            };
+        }
+    }
+
+    // 3. Add Path, Query, and Header Parameters automatically
+    let mut params_stream = quote! {};
+    for f in req_fields {
+        match &f.kind {
+            FieldKind::Path(rename) => {
+                let name = rename.clone().unwrap_or_else(|| f.ident.to_string());
+                let ty = &f.ty;
+                let schema_ty = extract_inner_option_type(ty).unwrap_or(ty);
+                params_stream.extend(quote! {
+                    op = op.parameter(
+                        ::utoipa::openapi::path::ParameterBuilder::new()
+                            .name(#name)
+                            .parameter_in(::utoipa::openapi::path::ParameterIn::Path)
+                            .required(::utoipa::openapi::Required::True)
+                            .schema(Some(<#schema_ty as ::utoipa::PartialSchema>::schema()))
+                            .build()
+                    );
+                });
+            }
+            FieldKind::Query(rename) => {
+                let _name = rename.clone().unwrap_or_else(|| f.ident.to_string());
+                let ty = &f.ty;
+                // For #[query] structs implementing IntoParams, call into_params() to expand
+                params_stream.extend(quote! {
+                    let query_params = <#ty as ::utoipa::IntoParams>::into_params(
+                        || Some(::utoipa::openapi::path::ParameterIn::Query)
+                    );
+                    for param in query_params {
+                        op = op.parameter(param);
+                    }
+                });
+            }
+            FieldKind::Header(rename) => {
+                let name = rename
+                    .clone()
+                    .unwrap_or_else(|| f.ident.to_string().replace('_', "-"));
+                let ty = &f.ty;
+                let (schema_ty, required) = if let Some(inner) = extract_inner_option_type(ty) {
+                    (inner, quote! { ::utoipa::openapi::Required::False })
+                } else {
+                    (ty, quote! { ::utoipa::openapi::Required::True })
+                };
+                params_stream.extend(quote! {
+                    op = op.parameter(
+                        ::utoipa::openapi::path::ParameterBuilder::new()
+                            .name(#name)
+                            .parameter_in(::utoipa::openapi::path::ParameterIn::Header)
+                            .required(#required)
+                            .schema(Some(<#schema_ty as ::utoipa::PartialSchema>::schema()))
+                            .build()
+                    );
+                });
+            }
+            _ => {}
+        }
+    }
+
+    Ok(quote! {
+        fn path_item() -> ::utoipa::openapi::path::PathItem {
+            let meta = Self::metadata();
+            let mut op = ::utoipa::openapi::path::OperationBuilder::new()
+                .summary(Some(meta.summary.to_string()))
+                .description(meta.description.map(|s| s.to_string()))
+                .operation_id(Some(meta.operation_id.to_string()));
+
+            for tag in meta.tags_full {
+                op = op.tag(*tag);
+            }
+
+            #req_body_stream
+            #resp_stream
+            #params_stream
+
+            ::utoipa::openapi::path::PathItem::new(meta.method.into(), op.build())
+        }
+    })
+}
+
+/// get the `T` from an `Option<T>`
+fn extract_inner_option_type(ty: &syn::Type) -> Option<&syn::Type> {
+    if let syn::Type::Path(tp) = ty {
+        if let Some(segment) = tp.path.segments.last() {
+            if segment.ident == "Option" {
+                if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+                    if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
+                        return Some(inner_ty);
+                    }
+                }
+            }
+        }
+    }
+    None
 }
 
 /// remove all macro-specific attributes from a struct

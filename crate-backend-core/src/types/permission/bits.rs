@@ -1,6 +1,7 @@
 use common::v1::types::Permission;
 
 /// compressed representation of permissions, for faster perm checks
+// TODO: use bitflags crate
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct PermissionBits(u128);
 
