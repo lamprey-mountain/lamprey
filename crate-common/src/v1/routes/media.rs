@@ -33,12 +33,18 @@ pub mod media_create_new {
 
     pub struct Request {
         #[json]
-        pub body: MediaCreate,
+        pub create: MediaCreate,
     }
 
     pub struct Response {
+        #[header]
+        pub upload_offset: Option<u64>,
+
+        #[header]
+        pub content_length: Option<u64>,
+
         #[json]
-        pub media: MediaCreated,
+        pub created: MediaCreated,
     }
 }
 
