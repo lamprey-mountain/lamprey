@@ -1,9 +1,10 @@
 use common::v1::types::components::{self, Components};
 use common::v1::types::emoji::EmojiOwner;
 use common::v1::types::reaction::{ReactionCount, ReactionCounts, ReactionKey, ReactionKeyParam};
+use common::v2::types::MessageVerId;
 use common::v2::types::media::{Media, MediaErrorReason, MediaReference};
 use dashmap::DashMap;
-use futures::{stream::FuturesUnordered, StreamExt};
+use futures::{StreamExt, stream::FuturesUnordered};
 use moka::future::Cache;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -22,7 +23,7 @@ use common::v1::types::{
 use common::v1::types::{MediaId, UserId};
 use common::v2::types::embed::{Embed, EmbedType};
 
-use crate::types::{MentionsIds, MessageVerId, MessageWithCounts};
+use crate::types::{MentionsIds, MessageWithCounts};
 use crate::{Error, Result, ServerStateInner};
 
 pub mod create;

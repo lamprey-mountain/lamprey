@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::services::media::Import;
-use crate::types::SERVER_ROOM_ID;
+use common::v1::types::SERVER_ROOM_ID;
 use axum::response::IntoResponse;
 use axum::{Json, extract::State};
 use common::v1::types::application::Scope;

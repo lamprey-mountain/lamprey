@@ -4,29 +4,31 @@ use std::{
     time::{Duration, Instant},
 };
 
-use common::v1::types::{
-    components::{Component, ComponentCanonical, ComponentCreate, ComponentType, IdAllocator},
-    document::serialized::Serdoc,
+use common::{
+    v1::types::{
+        components::{Component, ComponentCanonical, ComponentCreate, ComponentType, IdAllocator},
+        document::serialized::Serdoc,
+    },
+    v2::types::{ConnectionId, UserId},
 };
 use kameo::{
-    prelude::{Context, Message},
     Actor,
+    prelude::{Context, Message},
 };
 use lamprey_backend_core::{Error, Result};
-use lamprey_backend_data_postgres::{ConnectionId, UserId};
 use tokio::sync::broadcast;
 use tracing::{debug, warn};
 use uuid::Uuid;
 use yrs::updates::encoder::Encode;
 use yrs::{
+    DeepObservable, Doc, Out, ReadTxn, StateVector, Transact, Update,
     types::{Delta, Event},
     updates::decoder::Decode,
-    DeepObservable, Doc, Out, ReadTxn, StateVector, Transact, Update,
 };
 
 use crate::{
-    services::documents::{util::get_update_len, DocumentEvent, EditContextId, DOCUMENT_ROOT_NAME},
     ServerStateInner,
+    services::documents::{DOCUMENT_ROOT_NAME, DocumentEvent, EditContextId, util::get_update_len},
 };
 
 /// A pending change to be persisted

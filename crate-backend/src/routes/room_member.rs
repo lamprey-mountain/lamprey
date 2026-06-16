@@ -21,7 +21,8 @@ use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
 use crate::routes::util::AuthRelaxed2;
-use crate::{routes2, types::UserIdReq, ServerState};
+use crate::{routes2, ServerState};
+use common::v1::types::misc::UserIdReq;
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 use super::util::Auth;

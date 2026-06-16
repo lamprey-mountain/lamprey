@@ -18,8 +18,8 @@ use std::str::FromStr;
 use time::PrimitiveDateTime;
 use uuid::Uuid;
 
-pub use common::v1::types::ids::*;
-pub use common::v1::types::misc::{SessionIdReq, UserIdReq};
+pub(crate) use common::v1::types::ids::*;
+pub(crate) use common::v1::types::misc::{SessionIdReq, UserIdReq};
 
 use common::v1::types::Message;
 

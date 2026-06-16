@@ -6,9 +6,9 @@ use crate::services::media::Import;
 use crate::types::MediaLinkType;
 use common::v1::types::error::ErrorCode;
 use common::v1::types::federation::{Hostname, Remote};
-use common::v1::types::{MediaId, User, UserId, UserPatch};
+use common::v1::types::{Channel, Invite, MediaId, Room, User, UserId, UserPatch};
+use common::v2::types::SERVER_USER_ID;
 use common::v2::types::media::Media;
-use lamprey_backend_data_postgres::SERVER_USER_ID;
 
 impl ServiceFederation {
     /// Load a user from a remote server, fetching and caching it locally.

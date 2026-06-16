@@ -11,7 +11,7 @@ use lamprey_backend_core::types::permission::{
     CheckVisibility, MemberState, PermissionBits, Permissions2, ResourceContext,
     BROADCAST_LURKER_PERMS, QUARANTINE_PERMS, VIEW_PERMS,
 };
-use lamprey_backend_data_postgres::Permissions2Metadata;
+use lamprey_backend_core::types::permission::Permissions2Metadata;
 use tracing::warn;
 
 use crate::{

@@ -1,20 +1,12 @@
-mod data;
-pub mod permission {
-    pub use lamprey_backend_core::types::permission::*;
-}
-pub use permission::*;
+// TODO: stop reexporting everything
 
-// Pagination types - re-export from common
+mod data;
+
 pub use common::v1::types::{PaginationDirection, PaginationQuery, PaginationResponse};
 
-// Pagination wrapper
-pub use crate::data::postgres::util::Pagination;
-
-// Re-export all types from data module
 pub use data::*;
 
-// Common types - re-export from common crate
-pub use common::v1::types::{
-    Channel, ChannelPatch, ChannelVerId, Invite, InviteCode, MediaId, Role, RolePatch, RoleVerId,
-    Room, RoomCreate, RoomPatch, RoomVerId, Session, UserPatch,
+pub(crate) use common::v1::types::{
+    ChannelPatch, ChannelVerId, Invite, InviteCode, MediaId, Role, RolePatch, RoleVerId, Room,
+    RoomCreate, RoomPatch, RoomVerId, Session, UserPatch,
 };

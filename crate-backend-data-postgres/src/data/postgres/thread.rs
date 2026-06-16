@@ -1,12 +1,12 @@
 use async_trait::async_trait;
-use common::v1::types::{ChannelId, PaginationQuery, PaginationResponse, RoomId, UserId};
+use common::v1::types::{Channel, ChannelId, PaginationQuery, PaginationResponse, RoomId, UserId};
 use sqlx::{query, query_as, query_file_as, query_file_scalar};
 
-use crate::data::postgres::Pagination;
 use crate::data::DataThread;
+use crate::data::postgres::Pagination;
 use crate::error::Result;
 use crate::gen_paginate;
-use crate::types::{Channel, ChannelVerId, DbChannel, PaginationDirection};
+use crate::types::{ChannelVerId, DbChannel, PaginationDirection};
 
 use super::Postgres;
 

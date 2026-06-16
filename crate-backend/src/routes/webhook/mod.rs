@@ -1,35 +1,39 @@
 use std::sync::Arc;
 
 use axum::{
+    Json,
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
-use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
+    Message, MessageCreate, MessageId, MessagePatch, Permission, UserId, WebhookId,
     audit_logs::{AuditLogChange, AuditLogEntryType},
     pagination::{PaginationQuery, PaginationResponse},
     sync::MessageSync,
     util::Changes,
     webhook::{Webhook, WebhookCreate, WebhookUpdate},
-    Message, MessageCreate, MessageId, MessagePatch, Permission, UserId, WebhookId,
+};
+use common::{
+    v1::types::application::Scope,
+    v2::types::{ChannelId, RoomId},
 };
 use serde_json::Value;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::{Auth, HeaderIdempotencyKey};
 use crate::{
-    error::{Error, Result},
-    types::{ChannelId, RoomId},
     ServerState,
+    error::{Error, Result},
 };
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 mod discord;
 mod github;
 mod slack;
+
+// TODO: use common routes
 
 /// Webhook create
 #[utoipa::path(

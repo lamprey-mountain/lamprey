@@ -8,9 +8,9 @@ use common::v1::types::interactions::{
     InteractionResponse, InteractionResponseCreate, InteractionResponseCreateType, InteractionType,
 };
 use common::v1::types::{InteractionId, MessageSync, Permission, UserId};
+use common::v2::types::ApplicationId;
 use dashmap::DashMap;
 use lamprey_backend_core::Error;
-use lamprey_backend_data_postgres::ApplicationId;
 use tokio::task::JoinHandle;
 
 use crate::{Result, ServerStateInner};

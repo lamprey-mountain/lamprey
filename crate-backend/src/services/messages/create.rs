@@ -10,8 +10,8 @@ use common::v1::types::{
     ThreadMemberPut, User, UserId,
 };
 use common::v2::types::media::MediaReference;
+use common::v2::types::{MediaId, SERVER_USER_ID};
 use http::StatusCode;
-use lamprey_backend_data_postgres::{MediaId, SERVER_USER_ID};
 use tracing::error;
 use uuid::Uuid;
 use validator::Validate;

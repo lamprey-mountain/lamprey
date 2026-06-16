@@ -1,7 +1,7 @@
 use crate::{Error, Result};
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v2::types::MediaId;
 use common::v2::types::media::MediaReference;
-use lamprey_backend_data_postgres::MediaId;
 use std::collections::HashSet;
 
 #[derive(Default)]
@@ -46,7 +46,10 @@ impl MediaRegistry {
             let dupes: Vec<_> = self.duplicates.iter().map(|m| m.to_string()).collect();
             Err(Error::ApiError(ApiError::with_message(
                 ErrorCode::DuplicateMediaId,
-                format!("You've used some media ids multiple times, but media can only be used once. Media ids: {}", dupes.join(", ")),
+                format!(
+                    "You've used some media ids multiple times, but media can only be used once. Media ids: {}",
+                    dupes.join(", ")
+                ),
             )))
         }
     }

@@ -3,9 +3,9 @@ use std::sync::Arc;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use common::v1::{routes, types::ack::AckType};
 use common::v1::types::MessageSync;
 use common::v1::types::application::Scope;
+use common::v1::{routes, types::ack::AckType};
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
@@ -45,14 +45,16 @@ async fn ack_bulk(
     }
 
     if !valid_acks.is_empty() {
-        data.unread_ack_bulk(auth.user.id, &valid_acks)
-            .await?;
+        data.unread_ack_bulk(auth.user.id, &valid_acks).await?;
 
         for ack in valid_acks {
-            if let AckType::Message { channel_id, message_id, .. } = ack.ty {
-                srv.channels
-                    .invalidate_user(channel_id, auth.user.id)
-                    .await;
+            if let AckType::Message {
+                channel_id,
+                message_id,
+                ..
+            } = ack.ty
+            {
+                srv.channels.invalidate_user(channel_id, auth.user.id).await;
                 s.broadcast(MessageSync::ChannelAck {
                     user_id: auth.user.id,
                     channel_id,

@@ -6,15 +6,16 @@ use crate::{
     state::Globals,
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
-use common::v1::types::{RoomType, util::Time};
+use common::{
+    v1::types::{RoomCreate, RoomType, util::Time},
+    v2::types::{SERVER_ROOM_ID, SERVER_USER_ID},
+};
 use lamprey_backend_core::{
     Error,
     config::{Config, ListenComponent},
     types::admin::{AdminCollectGarbage, AdminCollectGarbageMode, AdminCollectGarbageTarget},
 };
-use lamprey_backend_data_postgres::{
-    DbRoomCreate, DbUserCreate, RoomCreate, SERVER_ROOM_ID, SERVER_USER_ID, data::Database,
-};
+use lamprey_backend_data_postgres::{DbRoomCreate, DbUserCreate, data::Database};
 use opentelemetry_otlp::WithExportConfig;
 use tokio::task::JoinSet;
 use tracing::{error, info};

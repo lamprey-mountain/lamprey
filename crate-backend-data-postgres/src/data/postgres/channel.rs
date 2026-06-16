@@ -8,17 +8,17 @@ use common::v1::types::document::{
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::misc::Color;
 use common::v1::types::util::Time;
-use common::v1::types::{ChannelReorder, RoomVerId};
+use common::v1::types::{Channel, ChannelReorder, RoomVerId};
 use sqlx::{query, query_file_as, query_scalar};
 use time::PrimitiveDateTime;
 use tracing::{info, warn};
 
 use crate::error::Result;
 use crate::types::{
-    Channel, ChannelId, ChannelPatch, ChannelVerId, DbChannel, DbChannelCreate, DbChannelPrivate,
+    ChannelId, ChannelPatch, ChannelVerId, DbChannel, DbChannelCreate, DbChannelPrivate,
     DbChannelType, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId,
 };
-use crate::{gen_paginate, Error};
+use crate::{Error, gen_paginate};
 
 use crate::data::DataChannel;
 

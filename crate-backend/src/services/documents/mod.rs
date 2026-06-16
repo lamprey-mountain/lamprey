@@ -7,25 +7,25 @@ use common::v1::types::document::serialized::Serdoc;
 use common::v1::types::document::{Changeset, DocumentTag, HistoryParams};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
-    document::{DocumentStateVector, DocumentUpdate},
     ChannelId, ConnectionId, DocumentBranchId, MessageSync, UserId,
+    document::{DocumentStateVector, DocumentUpdate},
 };
 use dashmap::DashMap;
-use futures::stream::FuturesUnordered;
 use futures::StreamExt;
+use futures::stream::FuturesUnordered;
 use kameo::actor::{ActorRef, Spawn};
+use lamprey_backend_data_postgres::DocumentUpdateSummary;
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::error::RecvError;
 use tracing::{debug, error, warn};
 use yrs::ReadTxn;
-use yrs::{updates::decoder::Decode, Doc, StateVector, Transact, Update};
+use yrs::{Doc, StateVector, Transact, Update, updates::decoder::Decode};
 
 use crate::services::documents::actor::{
     ApplyUpdate, BroadcastPresence, CheckUnload, DocumentActor, GetDiff, GetSnapshot,
     GetStateVector, PersistAndUnload, PresenceDelete, PresenceGet, SerdocGet, SerdocPut, Subscribe,
 };
-use crate::services::documents::util::{HistoryPaginationSummary, DOCUMENT_ROOT_NAME};
-use crate::types::DocumentUpdateSummary;
+use crate::services::documents::util::{DOCUMENT_ROOT_NAME, HistoryPaginationSummary};
 use crate::{Error, Result, ServerStateInner};
 
 // mod validate;

@@ -24,7 +24,8 @@ use crate::{
     routes2,
     services::search::SearchMediaVisibility,
 };
-use crate::{services::media::Import, types::MediaId};
+use crate::services::media::Import;
+use common::v1::types::MediaId;
 
 use super::util::Auth;
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
