@@ -12,7 +12,11 @@ use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 use url::Url;
 
-use crate::{Error, Result, config::secret::Secret};
+use crate::{
+    Error, Result,
+    config::secret::Secret,
+    types::health::{Healthcheck, HealthcheckIssue, HealthcheckSeverity},
+};
 
 use common::v1::types::federation::Hostname;
 use common::v1::types::redex::EvalLimits;
@@ -417,6 +421,7 @@ pub struct ListenConfig {
     pub transport: ListenTransport,
 }
 
+/// what to serve
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, EnumIter, strum::Display,
 )]
@@ -429,7 +434,12 @@ pub enum ListenComponent {
 
     // TODO: merge media serving here
     // /// the media proxy server
+    // ///
+    // /// it's not recommended to have Api or Redex enabled with Media for the same listener
     // Media,
+    // TODO: merge redex serving here
+    // /// http handlers for redexes
+    // Redex,
     /// metrics for this service
     Metrics,
 }
@@ -542,5 +552,23 @@ impl Config {
     /// get user agent string
     pub fn user_agent_header_value(&self) -> Result<HeaderValue> {
         Ok(HeaderValue::from_str(&self.user_agent())?)
+    }
+}
+
+impl Config {
+    pub fn lint(&self) -> Vec<HealthcheckIssue> {
+        let mut issues = vec![];
+
+        if self.http.contact.is_none() {
+            issues.push(
+                HealthcheckIssue::warning("config", "`http.contact` is not set")
+                    .detail("Webmasters should be able to contact you if there are any issues.")
+                    .suggestion("Set this field to your email or something."),
+            );
+        }
+
+        // TODO: more validation
+
+        issues
     }
 }

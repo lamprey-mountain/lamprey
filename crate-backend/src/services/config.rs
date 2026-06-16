@@ -4,12 +4,12 @@ use tokio::sync::RwLock;
 use crate::prelude::*;
 
 pub struct ServiceConfig {
-    state: ServerState2,
+    state: ServerState2Handle,
     internal_config: RwLock<Option<ConfigInternal>>,
 }
 
 impl ServiceConfig {
-    pub fn new(state: ServerState2) -> Self {
+    pub fn new(state: ServerState2Handle) -> Self {
         Self {
             state,
             internal_config: RwLock::new(None),

@@ -3,14 +3,14 @@ use common::v1::types::{
     audit_logs::resolve::AuditLogResolve,
 };
 
-use crate::{error::Result, state::ServerState2};
+use crate::prelude::*;
 
 pub struct ServiceAuditLogs {
-    state: ServerState2,
+    state: ServerState2Handle,
 }
 
 impl ServiceAuditLogs {
-    pub fn new(state: ServerState2) -> Self {
+    pub fn new(state: ServerState2Handle) -> Self {
         Self { state }
     }
 

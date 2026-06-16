@@ -31,7 +31,7 @@ use crate::{prelude::*, state::messaging::Transport};
 #[cfg(any())]
 mod queue;
 
-mod messaging;
+pub mod messaging;
 
 type BoxStream<T> = std::pin::Pin<Box<dyn Stream<Item = T> + Send>>;
 
@@ -52,9 +52,7 @@ pub struct ServerStateInner {
     pub services: Weak<Services>,
     pub blobs: opendal::Operator,
     pub jetstream: Option<async_nats::jetstream::Context>,
-
-    // the new server state
-    pub new_state: ServerState2,
+    pub messaging: Messaging,
 }
 
 pub struct ServerState {
@@ -192,7 +190,7 @@ impl ServerStateInner {
 
     /// emit a message to everyone
     fn broadcast_inner(&self, msg: MessageBroadcastInner) -> Result<()> {
-        let _ = self.new_state.messaging().broadcast_room(
+        let _ = self.messaging.broadcast_room(
             RoomId::default(), // this is ignored
             MessageSync::from(msg.message),
         );
@@ -201,12 +199,12 @@ impl ServerStateInner {
 
     /// emit a sfu command to everyone
     pub fn broadcast_sfu(&self, cmd: SfuCommand) -> Result<()> {
-        let _ = self.new_state.messaging().broadcast_global(cmd);
+        let _ = self.messaging.broadcast_global(cmd);
         Ok(())
     }
 
     pub async fn subscribe_sushi(&self) -> Result<BoxStream<MessageBroadcastInner>> {
-        let stream = self.new_state.messaging().subscribe().await?;
+        let stream = self.messaging.subscribe().await?;
         Ok(Box::pin(stream.filter_map(|msg| async move {
             match msg {
                 Broadcast::Sync(s) => Some(MessageBroadcastInner {
@@ -245,7 +243,7 @@ impl ServerStateInner {
 
     /// get a handle to the new server state
     pub fn ss2(&self) -> ServerState2 {
-        self.new_state.clone()
+        todo!()
     }
 }
 
@@ -265,15 +263,15 @@ impl ServerState {
             tokio: TokioHandle::current(),
             config,
             database: state.inner.database.clone(),
-            services: Arc::downgrade(&state.inner.services),
+            services: Arc::downgrade(&state.services),
             blobs,
             jetstream: nats.clone().map(async_nats::jetstream::new),
-            new_state: state.clone(),
+            messaging: state.inner.messaging.clone(),
         };
 
         Self {
             inner: Arc::new(inner),
-            services: state.services(),
+            services: state.services.clone(),
         }
     }
 
@@ -306,10 +304,18 @@ impl Deref for ServerState {
 /// global state for the server
 #[derive(Clone)]
 pub struct ServerState2 {
-    inner: Arc<ServerStateInner2>,
+    inner: Arc<ServerState2Inner>,
+    services: Arc<Services>,
 }
 
-struct ServerStateInner2 {
+/// a handle to access ServerState
+#[derive(Clone)]
+pub struct ServerState2Handle {
+    inner: Arc<ServerState2Inner>,
+    services: Weak<Services>,
+}
+
+struct ServerState2Inner {
     /// config for this server
     config: Config,
 
@@ -322,11 +328,6 @@ struct ServerStateInner2 {
 
     /// send and receive messages
     messaging: Messaging,
-
-    /// services
-    // hold a strong reference to Services so it isnt immediately dropped
-    // yes, this does technically cause a memory leak. i'm not sure what the best way to fix this is though.
-    services: Arc<Services>,
 }
 
 impl ServerState2 {
@@ -392,14 +393,14 @@ impl ServerState2 {
 
         // create services and tie up the arc cycle
         let services = Arc::new_cyclic(|weak_services| {
-            let state = ServerState2 {
-                inner: Arc::new(ServerStateInner2 {
+            let state = ServerState2Handle {
+                inner: Arc::new(ServerState2Inner {
                     config,
-                    services: weak_services.upgrade().unwrap(),
                     database,
                     blobs,
                     messaging,
                 }),
+                services: weak_services.clone(),
             };
 
             Services::new(state)
@@ -411,10 +412,10 @@ impl ServerState2 {
         // TODO: setup_vapid_keys(&state).await?;
         // TODO: setup_server_room(&state).await?;
 
-        Ok(services.state.clone())
+        todo!()
     }
 
-    // TEMP
+    // TEMP: for use with old ServerState
     pub async fn legacy_init(
         config: Config,
         pool: PgPool,
@@ -438,30 +439,79 @@ impl ServerState2 {
         };
         let messaging = Messaging::new(transport);
 
+        let inner = Arc::new(ServerState2Inner {
+            config,
+            database,
+            blobs,
+            messaging,
+        });
+
         let services = Arc::new_cyclic(|weak_services| {
-            let state = ServerState2 {
-                inner: Arc::new(ServerStateInner2 {
-                    config,
-                    services: weak_services.upgrade().unwrap(),
-                    database,
-                    blobs,
-                    messaging,
-                }),
+            let state = ServerState2Handle {
+                inner: Arc::clone(&inner),
+                services: weak_services.clone(),
             };
 
             Services::new(state)
         });
 
-        Ok(services.state.clone())
+        Ok(Self { inner, services })
     }
 
-    // TODO: maybe merge Server here...? maybe not...
-    // /// start the http server
-    // pub async fn serve(&self) -> Result<()> {
-    //     todo!()
-    // }
+    /// get a handle
+    pub fn handle(&self) -> ServerState2Handle {
+        ServerState2Handle {
+            inner: Arc::clone(&self.inner),
+            services: Arc::downgrade(&self.services),
+        }
+    }
 
-    // TEMP: remove
+    // TEMP: compatability
+    #[deprecated = "use begin() or begin_read()"]
+    pub fn data(&self) -> AnyData {
+        Box::new(Postgres {
+            pool: self.inner.database.pool.clone(),
+            txn: None,
+            use_legacy_behavior: true,
+        })
+    }
+
+    /// begin a database transaction
+    ///
+    /// use this for writes and for reads that need consistency
+    pub async fn begin(&self) -> Result<AnyData> {
+        let txn = self.inner.database.begin().await?;
+        Ok(txn)
+    }
+
+    /// begin a database session without a transaction
+    ///
+    /// use this for isolated single reads
+    pub async fn begin_read(&self) -> Result<AnyData> {
+        let txn = self.inner.database.begin_read().await?;
+        Ok(txn)
+    }
+
+    pub fn messaging(&self) -> &Messaging {
+        &self.inner.messaging
+    }
+
+    pub fn config(&self) -> &Config {
+        &self.inner.config
+    }
+
+    // TEMP: i should write a wrapper for opendal
+    pub fn blobs(&self) -> &opendal::Operator {
+        &self.inner.blobs
+    }
+
+    pub fn services(&self) -> Arc<Services> {
+        self.services.clone()
+    }
+}
+
+impl ServerState2Handle {
+    // TEMP: compatability
     #[deprecated = "use begin() or begin_read()"]
     pub fn data(&self) -> AnyData {
         Box::new(Postgres {
@@ -488,7 +538,7 @@ impl ServerState2 {
     }
 
     pub fn services(&self) -> Arc<Services> {
-        self.inner.services.clone()
+        self.services.upgrade().unwrap()
     }
 
     pub fn messaging(&self) -> &Messaging {
@@ -504,16 +554,17 @@ impl ServerState2 {
         &self.inner.blobs
     }
 
+    // TEMP: compat
     /// create a handle to the old ServerStateInner struct
     pub fn ss1(&self) -> Arc<ServerStateInner> {
         let inner = ServerStateInner {
             tokio: TokioHandle::current(),
             config: self.config().clone(),
             database: self.inner.database.clone(),
-            services: Arc::downgrade(&self.inner.services),
+            services: self.services.clone(),
             blobs: self.inner.blobs.clone(),
             jetstream: None, // FIXME: populate jetstream
-            new_state: self.clone(),
+            messaging: self.inner.messaging.clone(),
         };
         Arc::new(inner)
     }

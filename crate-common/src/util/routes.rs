@@ -1,7 +1,5 @@
 use bytes::Bytes;
 
-// TODO: use traits for endpoint macro
-
 /// an http endpoint
 pub trait Endpoint {
     type Request: Request;
@@ -43,15 +41,4 @@ pub trait Response: Sized {
     ///
     /// on failure, returns the original http response
     fn extract(req: http::Response<Bytes>) -> Result<Self, http::Response<Bytes>>;
-
-    // TODO: inline ExtractableRoute
-    // type Body: DeserializeOwned;
-
-    // /// extract this from http request parts and deserialized Body
-    // fn extract_from_parts(
-    //     parts: http::request::Parts,
-    //     body: Self::Body,
-    // ) -> Result<Self, http::Response<Bytes>> {
-    //     todo!()
-    // }
 }

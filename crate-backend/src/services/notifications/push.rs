@@ -93,7 +93,7 @@ impl ServiceNotifications {
     }
 
     /// send a notification to a session via web push api
-    async fn push_inner(state: ServerState2, sub: PushData, payload: Bytes) -> Result<()> {
+    async fn push_inner(state: ServerState2Handle, sub: PushData, payload: Bytes) -> Result<()> {
         let vapid_keys = state.services().notifications.get_vapid_keys().await?;
 
         let p256dh_encoded = B64.encode(&sub.key_p256dh);
@@ -158,7 +158,7 @@ impl ServiceNotifications {
         Ok(())
     }
 
-    pub(super) async fn spawn_push_task(state: ServerState2) {
+    pub(super) async fn spawn_push_task(state: ServerState2Handle) {
         let mut interval = tokio::time::interval(Duration::from_secs(5));
         loop {
             interval.tick().await;

@@ -8,6 +8,9 @@ pub trait PathParam: Sized {
     fn from_path_param(s: &str) -> Result<Self, PathParamError>;
 }
 
+// TODO: update type
+// pub trait PathParam: std::str::FromStr<Err = PathParamError>;
+
 /// Error type for path parameter extraction
 #[derive(Debug)]
 pub struct PathParamError(pub String);

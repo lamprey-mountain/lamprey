@@ -48,6 +48,7 @@ use webhook::ServiceWebhooks;
 
 use crate::{
     ServerStateInner,
+    prelude::*,
     services::{
         admin::ServiceAdmin, audit_logs::ServiceAuditLogs, automod::ServiceAutomod,
         calendar::ServiceCalendar, documents::ServiceDocuments, http::ServiceHttp,
@@ -55,7 +56,6 @@ use crate::{
         notifications::ServiceNotifications, presence::ServicePresence, search::ServiceSearch,
         voice::ServiceVoice,
     },
-    state::ServerState2,
 };
 
 pub mod admin;
@@ -65,6 +65,7 @@ pub mod cache;
 pub mod calendar;
 pub mod channel;
 pub mod config;
+pub mod health;
 pub mod connections;
 pub mod documents;
 pub mod email;
@@ -130,11 +131,11 @@ pub struct Services {
     pub users: ServiceUsers,
     pub voice: ServiceVoice,
     pub webhook: ServiceWebhooks,
-    pub state: ServerState2,
+    pub state: ServerState2Handle,
 }
 
 impl Services {
-    pub fn new(state: ServerState2) -> Self {
+    pub fn new(state: ServerState2Handle) -> Self {
         let state_old: Arc<ServerStateInner> = state.ss1();
         Self {
             admin: ServiceAdmin::new(state.clone()),
@@ -199,7 +200,7 @@ impl Services {
 }
 
 pub trait Service {
-    fn new(state: ServerState2) -> Self;
+    fn new(state: ServerState2Handle) -> Self;
 
     /// start background tasks
     fn start_background_tasks(&self) {}

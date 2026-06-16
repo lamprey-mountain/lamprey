@@ -59,7 +59,7 @@ impl Calculator {
 impl Preferences {
     /// load a user's notification preferences
     pub async fn load(
-        state: &ServerState2,
+        state: &ServerState2Handle,
         user_id: UserId,
         room_id: Option<RoomId>,
         channel_id: Option<ChannelId>,

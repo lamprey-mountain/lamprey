@@ -97,6 +97,7 @@ mod path_param;
 pub use path_param::{PathParam, PathParamError};
 
 /// Create an error response for invalid path matches
+// TODO: better error response
 pub fn invalid_path_error() -> http::Response<bytes::Bytes> {
     http::Response::builder()
         .status(http::StatusCode::NOT_FOUND)

@@ -66,7 +66,7 @@ impl From<SfuCommand> for Broadcast {
 
 #[derive(Clone)]
 pub struct Messaging {
-    transport: Transport,
+    transport: Arc<Transport>,
 }
 
 #[derive(Clone)]
@@ -142,11 +142,13 @@ impl Transport {
 
 impl Messaging {
     pub fn new(transport: Transport) -> Self {
-        Self { transport }
+        Self {
+            transport: Arc::new(transport),
+        }
     }
 
     pub fn is_connected(&self) -> bool {
-        match &self.transport {
+        match &*self.transport {
             Transport::Memory { .. } => true,
             Transport::Nats { client, .. } => {
                 client.connection_state() == async_nats::connection::State::Connected
@@ -184,7 +186,7 @@ impl Messaging {
     }
 
     async fn broadcast_inner(&self, broadcast: Broadcast) -> Result<()> {
-        match &self.transport {
+        match &*self.transport {
             Transport::Memory { sushi, sushi_sfu } => match broadcast {
                 Broadcast::Sync(s) => {
                     let _ = sushi.send(s);
@@ -211,7 +213,7 @@ impl Messaging {
 
     /// subscribe to everything
     pub async fn subscribe(&self) -> Result<BoxStream<Broadcast>> {
-        match &self.transport {
+        match &*self.transport {
             Transport::Memory { sushi, sushi_sfu }
             | Transport::Nats {
                 sushi, sushi_sfu, ..
@@ -228,7 +230,7 @@ impl Messaging {
     }
 
     pub async fn temp_jetstream(&self) -> Result<()> {
-        let js = match &self.transport {
+        let js = match &*self.transport {
             Transport::Memory { .. } => return Ok(()), // NOTE: log/warn/error?
             Transport::Nats { jetstream, .. } => jetstream,
         };

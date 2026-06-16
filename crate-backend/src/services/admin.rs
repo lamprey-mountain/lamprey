@@ -13,11 +13,11 @@ use crate::prelude::*;
 use crate::services::search::Reindex;
 
 pub struct ServiceAdmin {
-    state: ServerState2,
+    state: ServerState2Handle,
 }
 
 impl ServiceAdmin {
-    pub fn new(state: ServerState2) -> Self {
+    pub fn new(state: ServerState2Handle) -> Self {
         Self { state }
     }
 

@@ -1,8 +1,11 @@
 pub mod routes;
-pub mod serve;
+pub mod server;
 pub mod services;
 pub mod state;
 pub mod sync;
+
+// TODO: remove, merge into mod server
+pub mod serve;
 
 // TODO: remove, merge logic into lamprey-cli instead?
 pub mod cli;
@@ -22,7 +25,9 @@ pub use error::{Error, Result};
 pub use state::{ServerState, ServerStateInner};
 
 pub(crate) mod prelude {
-    pub use crate::state::ServerState2;
+    pub use std::sync::Arc;
+
+    pub use crate::state::{ServerState2, ServerState2Handle};
     pub use bytes::Bytes;
     pub use lamprey_backend_core::prelude::*;
 

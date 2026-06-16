@@ -557,8 +557,9 @@ async fn debug_ready(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<im
 
     let object_store_ok = s.blobs.check().await.is_ok();
 
-    let messaging_ok = s.new_state.messaging().is_connected();
-    let queue_ok = s.new_state.messaging().is_connected();
+    // FIXME: use healthcheck service
+    let messaging_ok = todo!();
+    let queue_ok = todo!();
 
     let ok = database_ok && object_store_ok && messaging_ok && queue_ok;
 
