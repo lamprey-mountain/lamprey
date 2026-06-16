@@ -156,8 +156,17 @@ impl DataMedia for Postgres {
             }
             e => Error::Sqlx(e),
         })?;
-        let mut parsed: MediaV2 = serde_json::from_value::<DbMediaData>(media.data)
-            .unwrap()
+
+        let mut data = media.data;
+        if let serde_json::Value::Object(ref mut map) = data {
+            map.insert("user_id".to_string(), serde_json::json!(media.user_id));
+        }
+
+        let mut parsed: MediaV2 = serde_json::from_value::<DbMediaData>(data)
+            .map_err(|e| {
+                warn!(?e, "failed to parse media data");
+                Error::BadStatic("failed to parse media data")
+            })?
             .into();
         parsed.deleted_at = media.deleted_at.map(Into::into);
         parsed.version_id = media.version_id.into();
