@@ -1,5 +1,5 @@
 [package]
-name = "crate-backend-services"
+name = "lamprey-backend-services"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

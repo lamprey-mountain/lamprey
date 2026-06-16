@@ -1,8 +1,17 @@
-use std::sync::{Arc, Weak};
+use std::sync::Weak;
 
 use lamprey_backend_core::config::Config;
 
-mod rooms;
+use crate::prelude::*;
+use crate::services::Services;
+
+pub mod services;
+
+pub(crate) mod prelude {
+    pub use crate::Globals;
+    pub use lamprey_backend_core::prelude::*;
+    pub use std::sync::Arc;
+}
 
 /// owned handle for the server's global state
 #[derive(Clone)]
@@ -24,22 +33,9 @@ struct GlobalsInner {
     // /// reference to the database for persistent data
     // database: Box<dyn Database>,
 
-    // // TEMP: compat
-    // database_compat: Box<PostgresPool>,
-
     // /// storage for large blobs
     // blobs: opendal::Operator,
 
     // /// send and receive messages
     // messaging: Messaging,
-}
-
-pub struct Services {
-    pub rooms: rooms::Service,
-}
-
-impl Services {
-    pub fn new(/* ... */) -> Self {
-        todo!()
-    }
 }
