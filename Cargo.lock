@@ -1338,6 +1338,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d5a8f82fd5124f009f72167e60139245cd3b56cfd4b53050f22110c48c5f4da1"
 
 [[package]]
+name = "crate-backend-services"
+version = "0.1.1"
+dependencies = [
+ "lamprey-backend-core",
+ "lamprey-common",
+ "lamprey-macros",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "crc"
 version = "3.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

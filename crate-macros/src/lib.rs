@@ -4,6 +4,7 @@ mod diff;
 mod endpoint;
 mod endpoint_new;
 mod handler;
+mod handlers_new;
 mod ids;
 mod parse;
 
@@ -20,6 +21,13 @@ pub fn endpoint(args: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+pub fn handler(args: TokenStream, item: TokenStream) -> TokenStream {
+    handler::expand(args.into(), item.into())
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+#[proc_macro_attribute]
 pub fn endpoint_new(args: TokenStream, item: TokenStream) -> TokenStream {
     endpoint_new::expand(args.into(), item.into())
         .unwrap_or_else(|e| e.to_compile_error())
@@ -27,8 +35,8 @@ pub fn endpoint_new(args: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn handler(args: TokenStream, item: TokenStream) -> TokenStream {
-    handler::expand(args.into(), item.into())
+pub fn handlers_new(args: TokenStream, item: TokenStream) -> TokenStream {
+    handlers_new::expand(args.into(), item.into())
         .unwrap_or_else(|e| e.to_compile_error())
         .into()
 }

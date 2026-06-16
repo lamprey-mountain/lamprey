@@ -20,6 +20,85 @@ pub struct Link {
     // reversed: bool,
 }
 
+// // populated link
+// pub struct Link2<'a, T> {
+//     data: &mut 'a T,
+// }
+
+// pub trait Links2 {
+//     fn visit() -> ();
+//     fn visit_links(&self) -> ();
+//     fn visit_links_mut(&mut self) -> ();
+// }
+
+/// resolving media refs
+mod media {
+    use std::collections::HashMap;
+
+    use crate::v2::types::{MediaId, media::MediaReference};
+
+    #[cfg(feature = "serde")]
+    use serde::{Deserialize, Serialize};
+
+    use url::Url;
+    #[cfg(feature = "utoipa")]
+    use utoipa::ToSchema;
+
+    /// A reference to a piece of media to be used.
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+    // #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    pub struct MediaRef {
+        ty: MediaRefType,
+        resolved: Option<MediaId>,
+    }
+
+    #[cfg(feature = "serde")]
+    mod s {
+        use serde::Deserialize;
+
+        use super::{MediaRef, MediaRefType};
+
+        impl<'de> Deserialize<'de> for MediaRef {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                let ty = MediaRefType::deserialize(deserializer)?;
+                Ok(MediaRef { ty, resolved: None })
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(untagged))]
+    pub enum MediaRefType {
+        /// Use this piece of uploaded media. Prefer using this whenever possible.
+        Media { media_id: MediaId },
+
+        /// Shortcut to download media from a url. Saves a few requests for uploading.
+        Url { source_url: Url },
+
+        /// Shortcut to create media from form data. Only usable if the request body is multipart/form-data.
+        Attachment { media_index: u64 },
+    }
+
+    impl MediaRef {
+        /// mark this as resolved with a particular id
+        pub fn resolve(&mut self, media_id: MediaId) {
+            self.resolved = Some(media_id);
+        }
+
+        /// get the resolved media id for this reference
+        pub fn media_id(&self) -> Option<MediaId> {
+            self.resolved
+        }
+    }
+
+    pub trait MediaResolvable {
+        fn resolve_media(&mut self, resolver: &dyn Fn(&mut MediaRef));
+    }
+}
+
 pub enum Constraint {
     /// prevent deletion
     Required,
@@ -75,7 +154,7 @@ impl LinksVisitor for Vec<Link> {
 }
 
 pub mod resolve {
-    use crate::v2::types::{media::Media, MediaId};
+    use crate::v2::types::{MediaId, media::Media};
 
     pub struct Query {
         media: Vec<MediaId>,
@@ -120,8 +199,8 @@ mod example {
     use std::marker::PhantomData;
 
     use crate::v2::types::{
-        links::{Constraint, Link, Links, ResourceType},
         MediaId,
+        links::{Constraint, Link, Links, ResourceType},
     };
 
     use super::LinksVisitor;
