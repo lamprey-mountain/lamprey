@@ -183,7 +183,7 @@ pub struct Media {
 
     /// if this media exists on a remote server
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    pub remote: Option<Remote>,
+    pub remote: Option<Remote<MediaId>>,
     // TODO: add
     // /// If this media will expire, data about its expiry.
     // #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]

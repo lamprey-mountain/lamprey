@@ -9,11 +9,12 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::{
+    ChannelId, MediaId, Permission, UserId,
     error::{ApiError, ApiResult, ErrorCode},
+    federation::Remote,
     notifications::preferences::NotifsRoom,
     preferences::PreferencesRoom,
     util::Diff,
-    ChannelId, MediaId, Permission, UserId,
 };
 
 #[cfg(feature = "serde")]
@@ -106,8 +107,7 @@ pub struct Room {
     /// features enabled for this room
     pub features: RoomFeatures,
 
-    #[cfg(any())]
-    pub remote: Option<Remote>,
+    pub remote: Option<Remote<RoomId>>,
 }
 
 impl Room {
@@ -285,6 +285,7 @@ pub enum RoomFeature {
     // Discoverable,
 }
 
+// TODO: impl default
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

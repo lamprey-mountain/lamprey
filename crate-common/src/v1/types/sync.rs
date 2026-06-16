@@ -7,7 +7,6 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::ack::AckState;
 #[cfg(feature = "feat_e2ee")]
 use crate::v1::types::e2ee::{CrossSigningBundle, KeyshareRequest, KeyshareResponse};
 use crate::v1::types::error::SyncErrorCode;
@@ -35,7 +34,6 @@ use super::{
     Channel, ChannelId, EmojiId, InviteCode, MessageId, MessageVerId, Role, RoleId, Room, RoomId,
     RoomMember, Session, SessionId, SessionToken, TagId, User, UserId,
     calendar::{CalendarEvent, CalendarEventParticipant, CalendarOverwrite},
-    channel::ChannelSeq,
     emoji::EmojiCustom,
     harvest::Harvest,
     notifications::{Notification, NotificationFlush, NotificationMarkRead},
@@ -45,22 +43,6 @@ use super::{
     tag::Tag,
     voice::{VoiceState, VoiceStateUpdate},
 };
-
-/// Response from the channel sync endpoint.
-/// Contains incremental sync events to apply to local state.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ChannelSync {
-    /// sync events to apply to local state
-    pub events: Vec<MessageSync>,
-
-    /// the new latest sequence number you have
-    pub seq: ChannelSeq,
-
-    /// not all events were returned. call this endpoint again with the new `seq`
-    pub partial: bool,
-}
 
 // TODO: include nonce/seq for MessageClient too, so theres some way to associate an error response to a request
 #[derive(Debug, Clone)]

@@ -8,6 +8,7 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::error::{ApiError, ErrorCode};
+use crate::v1::types::federation::Remote;
 use crate::v1::types::preferences::PreferencesChannel;
 use crate::v1::types::tag::Tag;
 use crate::v1::types::util::Time;
@@ -21,32 +22,11 @@ use crate::v1::types::util::some_option;
 
 use super::ChannelId;
 
-// TODO: move to mirror (once its part of v1)
-/// A monotonic sync token, incremented on every action in a channel.
-/// Used for incremental sync to determine what events the client is missing.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ChannelSeq(pub u64);
-
-impl ChannelSeq {
-    pub fn is_zero(&self) -> bool {
-        self.0 == 0
-    }
-}
-
-impl std::fmt::Display for ChannelSeq {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
 use super::calendar::{Calendar, CalendarPatch};
 use super::document::{Document, DocumentPatch, Wiki, WikiPatch};
 use super::{RoomId, UserId};
 
 /// A channel
-// TODO(#878): minimal data for channels
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -223,73 +203,9 @@ pub struct Channel {
 
     /// when the current user can create a new message
     pub slowmode_message_expire_at: Option<Time>,
+
+    pub remote: Option<Remote<ChannelId>>,
 }
-
-// struct ChannelText {
-//     /// minimum delay in seconds between creating new messages
-//     ///
-//     /// can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
-//     pub slowmode_message: Option<u64>,
-
-//     /// when the current user can create a new message
-//     pub slowmode_message_expire_at: Option<Time>,
-
-//     // pub is_unread: Option<bool>,
-//     pub last_read_id: Option<MessageVerId>,
-//     pub mention_count: Option<u64>,
-
-//     pub last_message_id: Option<MessageId>,
-//     pub message_count: Option<u64>,
-//     pub root_message_count: Option<u64>,
-// }
-
-// struct ChannelThreaded {
-//     /// minimum delay in seconds between creating new threads
-//     ///
-//     /// can only be set on channels with has_threads. must have ChannelManage permission to change.
-//     pub slowmode_thread: Option<u64>,
-
-//     /// the default auto archive duration in seconds to copy to threads created in this channel
-//     pub default_auto_archive_duration: Option<u64>,
-
-//     /// default slowmode_message for new threads
-//     ///
-//     /// this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
-//     pub default_slowmode_message: Option<u64>,
-
-//     /// when the current user can create a new thread
-//     pub slowmode_thread_expire_at: Option<Time>,
-// }
-
-// struct ChannelThread {
-//     /// when to automatically archive this thread due to inactivity, in seconds
-//     pub auto_archive_duration: Option<u64>,
-
-//     /// whether users without ThreadManage can add other members to this thread
-//     #[cfg_attr(feature = "serde", serde(default))]
-//     pub invitable: bool,
-
-//     /// The user's thread member object, if the channel is a thread and the user is a member.
-//     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-//     pub thread_member: Option<Box<ThreadMember>>,
-// }
-
-// /// data private to a user
-// struct ChannelPrivate {
-//     pub last_read_id: Option<MessageVerId>,
-//     pub mention_count: Option<u64>,
-//     pub preferences: Option<PreferencesChannel>,
-
-//     /// when the current user can create a new message
-//     pub slowmode_message_expire_at: Option<Time>,
-
-//     /// when the current user can create a new thread
-//     pub slowmode_thread_expire_at: Option<Time>,
-
-//     /// The user's thread member object, if the channel is a thread and the user is a member.
-//     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-//     pub thread_member: Option<Box<ThreadMember>>,
-// }
 
 #[cfg(feature = "serde")]
 impl Serialize for Channel {
@@ -406,6 +322,9 @@ impl Serialize for Channel {
             slowmode_thread_expire_at: Option<Time>,
             #[serde(skip_serializing_if = "Option::is_none")]
             slowmode_message_expire_at: Option<Time>,
+
+            #[serde(skip_serializing_if = "Option::is_none")]
+            remote: Option<Remote<ChannelId>>,
         }
 
         fn is_false(b: &bool) -> bool {
@@ -548,6 +467,7 @@ impl Serialize for Channel {
             } else {
                 None
             },
+            remote: self.remote.clone(),
         };
 
         view.serialize(serializer)
@@ -702,123 +622,6 @@ pub struct ChannelCreate {
     ///
     /// required for Forum2 threads. cannot be used elsewhere.
     pub starter_message: Option<MessageCreate>,
-}
-
-// TODO(#874) split out channel create structs
-#[cfg(any())]
-mod split_channel_types {
-    use super::{ChannelId, UserId};
-    use crate::v1::types::PermissionOverwrite;
-    use crate::v1::types::{ChannelType, MediaId, MessageCreate, TagId};
-
-    /// data needed to create a new channel in a room
-    // NOTE: do i allow creating threads with this endpoint?
-    pub struct ChannelCreateRoom {
-        pub name: String,
-        pub description: Option<String>,
-        // // room channels can't have icons (yet?)
-        // pub icon: Option<MediaId>,
-        pub ty: ChannelType,
-        pub nsfw: bool,
-        pub bitrate: Option<u64>,
-        pub user_limit: Option<u64>,
-        pub parent_id: Option<ChannelId>,
-        pub permission_overwrites: Vec<PermissionOverwrite>,
-        pub auto_archive_duration: Option<u64>,
-        pub default_auto_archive_duration: Option<u64>,
-        pub slowmode_thread: Option<u64>,
-        pub slowmode_message: Option<u64>,
-        pub default_slowmode_message: Option<u64>,
-    }
-
-    // channel create dm
-    /// data needed to create a new dm or gdm
-    pub struct ChannelCreateDm {
-        pub name: String,
-        pub description: Option<String>,
-        pub icon: Option<MediaId>,
-        /// must be Dm or Gdm
-        pub ty: ChannelType,
-        pub recipients: Option<Vec<UserId>>,
-    }
-
-    /// data needed to create a new thread
-    // maybe have a separate ThreadCreateForum type too?
-    pub struct ThreadCreate {
-        pub name: String,
-        pub description: Option<String>,
-
-        /// must be ThreadPublic or ThreadPrivate. must be ThreadPublic in forums (remove?)
-        pub ty: ChannelType,
-
-        /// tags to apply, only usable in forums
-        pub tags: Option<Vec<TagId>>,
-
-        /// the initial message for this thread, required in forums
-        pub starter_message: Option<MessageCreate>,
-
-        pub invitable: bool,
-        pub auto_archive_duration: Option<u64>,
-        pub slowmode_message: Option<u64>,
-    }
-
-    /// data needed to create a new thread from a mesage
-    pub struct ThreadCreateFromMessage {
-        pub name: String,
-        pub description: Option<String>,
-        /// must be ThreadPublic (remove in this case)
-        pub ty: ChannelType,
-        pub auto_archive_duration: Option<u64>,
-        pub slowmode_message: Option<u64>,
-    }
-
-    struct ThreadCreateMaybeUnused {
-        // // inherits from parent
-        // pub nsfw: bool,
-        // // maybe include this as users to include by default?
-        // pub recipients: Option<Vec<UserId>>,
-        // // exists as route param
-        // pub parent_id: Option<ChannelId>,
-    }
-}
-
-// unlikely to be used
-#[cfg(any())]
-mod granular_channel_data {
-    use crate::v1::types::PermissionOverwrite;
-
-    pub struct Channel {
-        voice: Option<ChannelVoice>,
-        thread: Option<ChannelThread>,
-        threadable: Option<ChannelThreadable>,
-        text: Option<ChannelText>,
-        room: Option<ChannelRoom>,
-    }
-
-    pub struct ChannelVoice {
-        pub bitrate: Option<u64>,
-        pub user_limit: Option<u64>,
-    }
-
-    pub struct ChannelThread {
-        pub auto_archive_duration: Option<u64>,
-    }
-
-    pub struct ChannelThreadable {
-        pub default_auto_archive_duration: Option<u64>,
-        pub slowmode_thread: Option<u64>,
-        pub default_slowmode_message: Option<u64>,
-    }
-
-    pub struct ChannelText {
-        pub slowmode_message: Option<u64>,
-    }
-
-    // for top level room channels
-    pub struct ChannelRoom {
-        pub nsfw: bool,
-        pub permission_overwrites: Vec<PermissionOverwrite>,
-    }
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -1550,3 +1353,6 @@ impl ChannelType {
 pub struct ChannelListRemovedQuery {
     pub parent_id: Option<ChannelId>,
 }
+
+// TEMP: reexport
+pub use super::mirror::ChannelSeq;

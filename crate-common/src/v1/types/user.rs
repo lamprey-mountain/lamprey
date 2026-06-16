@@ -83,7 +83,7 @@ pub struct User {
     /// public connections on this user that you can view
     pub connections: Vec<Connection>,
 
-    pub remote: Option<Remote>,
+    pub remote: Option<Remote<UserId>>,
 }
 
 #[derive(Debug, Clone)]

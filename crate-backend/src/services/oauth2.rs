@@ -18,6 +18,8 @@ use crate::{
     ServerStateInner,
 };
 
+// TODO: move these structs to common?
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OauthTokenExchange {
     pub grant_type: String,

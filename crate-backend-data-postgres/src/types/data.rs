@@ -1,17 +1,17 @@
 // TODO: move into data mod
 
+use common::v1::types::User;
 use common::v1::types::automod::{AutomodAction, AutomodTarget, AutomodTrigger};
 use common::v1::types::calendar::{CalendarEvent, CalendarOverwrite};
 use common::v1::types::components::ComponentThin;
 use common::v1::types::document::DocumentBranchState;
 use common::v1::types::federation::Remote;
 use common::v1::types::message::MessageType;
-use common::v1::types::User;
-use common::v1::types::{
-    util::Time, Channel, ChannelSeq, ChannelType, Embed, Permission, Puppet, Room, RoomFeature,
-    RoomFeatures, RoomType, Session, SessionImprint, SessionStatus, SessionToken, SessionType,
-};
 use common::v1::types::{AuditLogEntryStatus, Mentions, RoomSecurity};
+use common::v1::types::{
+    Channel, ChannelSeq, ChannelType, Embed, Permission, Puppet, Room, RoomFeature, RoomFeatures,
+    RoomType, Session, SessionImprint, SessionStatus, SessionToken, SessionType, util::Time,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::str::FromStr;
@@ -139,7 +139,7 @@ pub struct DbUserCreate {
     pub puppet: Option<Puppet>,
     pub registered_at: Option<Time>,
     pub system: bool,
-    pub remote: Option<Remote>,
+    pub remote: Option<Remote<UserId>>,
 }
 
 #[derive(sqlx::Type, PartialEq)]
@@ -179,7 +179,8 @@ impl From<DbRoom> for Room {
             afk_channel_id: row.afk_channel_id.map(|i| i.into()),
             afk_channel_timeout: row.afk_channel_timeout as u64,
             invites_paused_until: row.invites_paused_until.map(|t| Time::from(t.assume_utc())),
-            features: RoomFeatures(row.features.into_iter().map(|f| f.into()).collect()),
+            features: RoomFeatures(row.features.into_iter().map(Into::into).collect()),
+            remote: None,
         }
     }
 }
@@ -401,6 +402,7 @@ impl From<DbChannel> for Channel {
             online_count: 0,
             slowmode_thread_expire_at: None,
             slowmode_message_expire_at: None,
+            remote: None,
         }
     }
 }

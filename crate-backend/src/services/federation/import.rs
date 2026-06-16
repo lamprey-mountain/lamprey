@@ -5,10 +5,14 @@ use crate::services::federation::ServiceFederation;
 use crate::services::media::Import;
 use crate::types::MediaLinkType;
 use common::v1::types::error::ErrorCode;
-use common::v1::types::federation::{Hostname, Remote};
-use common::v1::types::{Channel, Invite, MediaId, Room, User, UserId, UserPatch};
+use common::v1::types::federation::signing::OutgoingRequest;
+use common::v1::types::federation::{FederationEpoch, Hostname, Remote, RemoteReq};
+use common::v1::types::{
+    Channel, ChannelId, Invite, MediaId, Room, RoomId, User, UserId, UserPatch,
+};
 use common::v2::types::SERVER_USER_ID;
 use common::v2::types::media::Media;
+use uuid::Uuid;
 
 impl ServiceFederation {
     /// Load a user from a remote server, fetching and caching it locally.
@@ -29,8 +33,9 @@ impl ServiceFederation {
 
         let mut user: User = res.json().await?;
         let remote = Remote {
-            origin_id: origin_user_id.into_inner(),
+            origin_id: origin_user_id,
             hostname: hostname.clone(),
+            epoch: FederationEpoch(0),
         };
         user.remote = Some(remote.clone());
 
@@ -77,7 +82,7 @@ impl ServiceFederation {
             }
             (Some(origin_avatar_id), None) => {
                 let media = self
-                    .load_remote_media(Remote {
+                    .load_remote_media(RemoteReq {
                         origin_id: origin_avatar_id.into(),
                         hostname: hostname.clone(),
                     })
@@ -91,7 +96,7 @@ impl ServiceFederation {
             }
             (Some(origin_avatar_id), Some(_)) => {
                 let media = self
-                    .load_remote_media(Remote {
+                    .load_remote_media(RemoteReq {
                         origin_id: origin_avatar_id.into(),
                         hostname: hostname.clone(),
                     })
@@ -116,7 +121,7 @@ impl ServiceFederation {
             }
             (Some(origin_banner_id), None) => {
                 let media = self
-                    .load_remote_media(Remote {
+                    .load_remote_media(RemoteReq {
                         origin_id: origin_banner_id.into(),
                         hostname: hostname.clone(),
                     })
@@ -130,7 +135,7 @@ impl ServiceFederation {
             }
             (Some(origin_banner_id), Some(_)) => {
                 let media = self
-                    .load_remote_media(Remote {
+                    .load_remote_media(RemoteReq {
                         origin_id: origin_banner_id.into(),
                         hostname: hostname.clone(),
                     })
@@ -152,7 +157,7 @@ impl ServiceFederation {
     }
 
     /// Import media from a remote server, saving a copy locally.
-    pub async fn load_remote_media(&self, remote: Remote) -> Result<Arc<Media>> {
+    pub async fn load_remote_media(&self, remote: RemoteReq<MediaId>) -> Result<Arc<Media>> {
         let srv = self.state.services();
 
         // fetch remote media object
@@ -202,35 +207,80 @@ impl ServiceFederation {
         // import the media data itself
         let cdn_url = info.cdn_url.join(&format!("/media/{}", remote.origin_id))?;
         let mut import = Import::new_with_id(id, SERVER_USER_ID);
-        import.remote = Some(remote.clone());
+        import.remote = Some(remote.with_epoch(FederationEpoch(0))); // TODO: get actual epoch
         let mut item = srv.media.import_from_url(import, &cdn_url).await?;
         Ok(item.ready().await)
     }
 
-    // /// Load an invite from a remote server, fetching and caching it locally.
-    // pub async fn load_remote_invite(&self, remote: Remote) -> Result<Invite> {
-    //     todo!()
-    // }
+    /// Load an invite from a remote server, fetching and caching it locally.
+    // TODO: i can't use RemoteReq<InviteCode>, i'll have to manually pass hostname/invite code?
+    pub async fn load_remote_invite(&self, remote: ()) -> Result<Invite> {
+        todo!()
+    }
 
-    // /// Load a room from a remote server, fetching and caching it locally.
-    // ///
-    // /// rooms may require authentication to view, pass the id of a user who is able to or trying to access this room as `puppet_id`
-    // pub async fn load_remote_room(
-    //     &self,
-    //     remote: Remote,
-    //     puppet_id: Option<UserId>,
-    // ) -> Result<Room> {
-    //     todo!()
-    // }
+    /// Load a room from a remote server, fetching and caching it locally.
+    ///
+    /// rooms may require authentication to view, pass the id of a user who is able to or trying to access this room as `puppet_id`
+    pub async fn load_remote_room(
+        &self,
+        remote: RemoteReq<RoomId>,
+        puppet_id: Option<UserId>,
+    ) -> Result<Room> {
+        let info = self.fetch_server_info(&remote.hostname).await?;
+        let url = info
+            .api_url
+            .join(&format!("/api/v1/room/{}", remote.origin_id))?;
 
-    // /// Load a channel from a remote server, fetching and caching it locally.
-    // ///
-    // /// channels may require authentication to view, pass the id of a user who is able to or trying to access this channel as `puppet_id`
-    // pub async fn load_remote_channel(
-    //     &self,
-    //     remote: Remote,
-    //     puppet_id: Option<UserId>,
-    // ) -> Result<Channel> {
-    //     todo!()
-    // }
+        let key = self
+            .get_local_keys()
+            .await
+            .into_iter()
+            .next()
+            .ok_or_else(|| Error::BadStatic("no local signing keys"))?;
+
+        let req = OutgoingRequest {
+            origin: &self.state.config.hostname2()?,
+            host: &remote.hostname,
+            method: "GET",
+            path: url.path(),
+            body: &[],
+        };
+
+        let res = self
+            .state
+            .services()
+            .http
+            .client
+            .post(url.clone())
+            .headers(req.sign(&key)?)
+            .send()
+            .await?;
+
+        if !res.status().is_success() {
+            return Err(Error::BadStatic("request failed"));
+        }
+
+        let room: Room = res.json().await?;
+
+        // TODO: see crate-backend/src/services/rooms/mod.rs
+
+        // 1. check if we have an existing Room. if the epoch matches, return it.
+        // 2. fetch room from remote server
+        // 3. reuse or create new id (same logic as load_user), insert or update room in database
+        // 4. process media for icon, banner. import media if needed and update media links.
+        // 5. return the room
+
+        todo!()
+    }
+
+    /// Load a channel from a remote server, fetching and caching it locally.
+    ///
+    /// channels may require authentication to view, pass the id of a user who is able to or trying to access this channel as `puppet_id`
+    pub async fn load_remote_channel(
+        &self,
+        remote: RemoteReq<ChannelId>,
+        puppet_id: Option<UserId>,
+    ) -> Result<Channel> {
+        todo!()
+    }
 }

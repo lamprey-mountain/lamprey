@@ -21,6 +21,7 @@ pub mod interactions;
 pub mod invite;
 pub mod media;
 pub mod message;
+pub mod mirror;
 pub mod misc;
 pub mod moderation;
 pub mod notifications;
@@ -74,3 +75,6 @@ pub use session::*;
 pub use sync::*;
 pub use thread_member::*;
 pub use user::*;
+
+// TEMP: reexport
+pub use mirror::ChannelSync;

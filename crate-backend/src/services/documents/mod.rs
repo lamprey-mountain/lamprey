@@ -588,6 +588,7 @@ pub struct DocumentSyncer {
     user_id: Option<UserId>,
 }
 
+// TODO: move to mod syncer;
 impl DocumentSyncer {
     pub async fn set_user_id(&mut self, user_id: Option<UserId>) {
         self.user_id = user_id;

@@ -1,7 +1,6 @@
 use std::ops::Deref;
 
 use url::Url;
-use uuid::Uuid;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -13,8 +12,8 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::{
+    Identifier, MessageSync,
     error::{ApiError, ErrorCode},
-    MessageSync,
 };
 
 pub mod consts;
@@ -50,21 +49,53 @@ impl std::str::FromStr for Hostname {
     }
 }
 
-/// a piece of content on a remote server
+/// a reference to a piece of content on a remote server
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct Remote {
+pub struct Remote<I: Identifier> {
     /// the id of this resource on the origin server
-    pub origin_id: Uuid,
+    pub origin_id: I,
 
     /// the hostname of the server
     pub hostname: Hostname,
-    // TODO: add
-    // /// the epoch that this remote resource was fetched during
-    // ///
-    // /// if `item.epoch != server.sync_epoch`, this is stale and should be refetched
-    // pub epoch: RemoteEpoch,
+
+    /// the epoch that this remote resource was fetched during
+    ///
+    /// if `item.epoch != server.sync_epoch`, this is stale and should be refetched
+    pub epoch: FederationEpoch,
+}
+
+/// a reference to a piece of content on a remote server, with an unknown epoch
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct RemoteReq<I: Identifier> {
+    /// the id of this resource on the origin server
+    pub origin_id: I,
+
+    /// the hostname of the server
+    pub hostname: Hostname,
+}
+
+impl<I: Identifier> Remote<I> {
+    pub fn into_req(self) -> RemoteReq<I> {
+        RemoteReq {
+            origin_id: self.origin_id,
+            hostname: self.hostname,
+        }
+    }
+}
+
+
+impl<I: Identifier> RemoteReq<I> {
+    pub fn with_epoch(self, epoch: FederationEpoch) -> Remote<I> {
+        Remote {
+            origin_id: self.origin_id,
+            hostname: self.hostname,
+            epoch,
+        }
+    }
 }
 
 /// monotonic counter that increments every time sync fails/disconnects
@@ -75,17 +106,13 @@ pub struct Remote {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct FederationEpoch(pub u64);
 
+// TODO: impl conversions FederationEpoch <-> u64
+
 // NOTE: maybe i could use ChannelSeq/ChannelSync stuff for syncing too?
 // pub enum RemoteEpoch2 {
 //     Channel(ChannelSeq),
 //     Room(RoomSeq),
 //     Global(u64),
-// }
-
-// TODO: more type safety?
-// pub struct Remote<M: Identifier> {
-//     pub origin_id: Id<M>,
-//     pub hostname: Hostname,
 // }
 
 // TEMP: reexport

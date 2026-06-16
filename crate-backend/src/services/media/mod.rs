@@ -1,5 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
+use common::v1::types::federation::RemoteReq;
 use common::v1::types::UserId;
 use common::{
     v1::types::{
@@ -56,7 +57,7 @@ impl ServiceMedia {
         Ok(item)
     }
 
-    pub async fn get_remote(&self, _remote: &Remote) -> Result<MediaItem> {
+    pub async fn get_remote(&self, _remote: &RemoteReq<MediaId>) -> Result<MediaItem> {
         // let media = self
         //     .state
         //     .data()

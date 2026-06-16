@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::federation::{Hostname, Remote};
+use common::v1::types::federation::{FederationEpoch, Hostname, Remote};
 use common::v1::types::{MediaTrack as MediaTrackV1, MediaV0 as MediaV1};
 use common::v2::types::media::{Media as MediaV2, MediaPatch as MediaPatchV2, MediaStatus};
 use serde::{Deserialize, Serialize};
@@ -113,7 +113,7 @@ impl DataMedia for Postgres {
         let media_id = media.id;
         let user_id = media.user_id.expect("server always has user id");
 
-        let remote_origin_id = media.remote.as_ref().map(|r| r.origin_id);
+        let remote_origin_id = media.remote.as_ref().map(|r| *r.origin_id);
         let remote_hostname = media.remote.as_ref().map(|r| r.hostname.0.clone());
 
         let data =
@@ -173,8 +173,9 @@ impl DataMedia for Postgres {
 
         if let (Some(origin_id), Some(hostname)) = (media.remote_origin_id, media.remote_hostname) {
             parsed.remote = Some(Remote {
-                origin_id,
+                origin_id: origin_id.into(),
                 hostname: Hostname(hostname),
+                epoch: FederationEpoch(0),
             });
         }
 
@@ -331,7 +332,7 @@ impl DataMedia for Postgres {
         let mut tx = self.begin_tx().await?;
         let media_id = media.id;
 
-        let remote_origin_id = media.remote.as_ref().map(|r| r.origin_id);
+        let remote_origin_id = media.remote.as_ref().map(|r| *r.origin_id);
         let remote_hostname = media.remote.as_ref().map(|r| r.hostname.0.clone());
 
         let data =
@@ -565,8 +566,9 @@ impl DataMedia for Postgres {
                     (row.remote_origin_id, row.remote_hostname)
                 {
                     parsed.remote = Some(Remote {
-                        origin_id,
+                        origin_id: origin_id.into(),
                         hostname: Hostname(hostname),
+                        epoch: FederationEpoch(0),
                     });
                 }
 
@@ -607,8 +609,9 @@ impl DataMedia for Postgres {
 
         if let (Some(origin_id), Some(hostname)) = (media.remote_origin_id, media.remote_hostname) {
             parsed.remote = Some(Remote {
-                origin_id,
+                origin_id: origin_id.into(),
                 hostname: Hostname(hostname),
+                epoch: FederationEpoch(0),
             });
         }
 

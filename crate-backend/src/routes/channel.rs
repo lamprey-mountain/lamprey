@@ -1062,12 +1062,12 @@ async fn channel_ratelimit_delete_all(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Channel sync
-#[handler(routes::channel_sync)]
-async fn channel_sync(
+/// Channel mirror
+#[handler(routes::channel_mirror)]
+async fn channel_mirror(
     auth: AuthRelaxed2,
     State(s): State<Arc<ServerState>>,
-    req: routes::channel_sync::Request,
+    req: routes::channel_mirror::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
@@ -1105,5 +1105,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(channel_ratelimit_update))
         .routes(routes2!(channel_ratelimit_delete))
         .routes(routes2!(channel_ratelimit_delete_all))
-        .routes(routes2!(channel_sync))
+        .routes(routes2!(channel_mirror))
 }

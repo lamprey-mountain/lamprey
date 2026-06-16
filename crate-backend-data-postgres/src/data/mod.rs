@@ -15,7 +15,7 @@ use common::v1::types::harvest::Harvest;
 use common::v1::types::message::{Message, MessageVersion};
 use common::v1::types::oauth::Scopes;
 use common::v1::types::room_template::{RoomTemplateCode, RoomTemplateCreate, RoomTemplatePatch};
-use common::v1::types::sync::ChannelSync;
+use common::v1::types::mirror::ChannelSync;
 use common::v1::types::util::Time;
 use common::v1::types::{
     ApplicationId, Channel, ChannelId, ChannelPatch, ChannelReorder, ChannelVerId,
@@ -488,7 +488,7 @@ pub trait DataUser {
     async fn user_delete(&mut self, user_id: UserId) -> Result<()>;
     async fn user_undelete(&mut self, user_id: UserId) -> Result<()>;
     async fn user_get(&mut self, user_id: UserId) -> Result<User>;
-    async fn user_get_remote(&mut self, remote: &Remote) -> Result<User>;
+    async fn user_get_remote(&mut self, remote: &Remote<UserId>) -> Result<User>;
     async fn user_get_many(&mut self, user_ids: &[UserId]) -> Result<Vec<User>>;
     async fn user_list(
         &mut self,

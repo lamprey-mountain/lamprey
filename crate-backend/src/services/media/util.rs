@@ -229,7 +229,7 @@ pub struct Import {
     pub filename: Option<String>,
     pub max_size: Option<u64>,
 
-    pub remote: Option<Remote>,
+    pub remote: Option<Remote<MediaId>>,
 }
 
 impl Import {

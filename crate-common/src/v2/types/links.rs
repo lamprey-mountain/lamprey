@@ -35,7 +35,10 @@ pub struct Link {
 mod media {
     use std::collections::HashMap;
 
-    use crate::v2::types::{MediaId, media::MediaReference};
+    use crate::{
+        v1::types::{MessageAttachmentCreateType, MessageCreate},
+        v2::types::{MediaId, media::MediaReference},
+    };
 
     #[cfg(feature = "serde")]
     use serde::{Deserialize, Serialize};
@@ -97,6 +100,16 @@ mod media {
     pub trait MediaResolvable {
         fn resolve_media(&mut self, resolver: &dyn Fn(&mut MediaRef));
     }
+
+    // impl MediaResolvable for MessageCreate {
+    //     fn resolve_media(&mut self, resolver: &dyn Fn(&mut MediaRef)) {
+    //         for att in &self.attachments {
+    //             match &mut att.ty {
+    //                 MessageAttachmentCreateType::Media { media, .. } => resolver(media),
+    //             }
+    //         }
+    //     }
+    // }
 }
 
 pub enum Constraint {

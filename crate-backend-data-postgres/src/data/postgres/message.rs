@@ -10,7 +10,7 @@ use common::v1::types::message::{
     MessageVersion,
 };
 use common::v1::types::reaction::{ReactionCounts, ReactionKey};
-use common::v1::types::sync::ChannelSync;
+use common::v1::types::mirror::ChannelSync;
 use common::v1::types::util::Time;
 use common::v1::types::{ChannelSeq, ChannelType, Mentions, UserId};
 use common::v2::types::embed::Embed;

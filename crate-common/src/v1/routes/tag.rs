@@ -11,8 +11,8 @@ use lamprey_macros::endpoint;
     response(CREATED, body = Tag, description = "Create tag success"),
 )]
 pub mod tag_create {
-    use crate::v1::types::tag::{Tag, TagCreate};
     use crate::v1::types::ChannelId;
+    use crate::v1::types::tag::{Tag, TagCreate};
 
     pub struct Request {
         #[path]
@@ -171,5 +171,61 @@ pub mod tag_search {
     pub struct Response {
         #[json]
         pub tags: PaginationResponse<Tag>,
+    }
+}
+
+// TODO: implement tag_query
+/// Tag query
+///
+/// Query a list of ids to full Tag objects
+#[endpoint(
+    post,
+    path = "/channel/{channel_id}/tag/query",
+    tags = ["tag"],
+    scopes = [Full],
+    response(OK, body = ResponseBody, description = "Query tags success"),
+)]
+pub mod tag_query {
+    use crate::v1::types::tag::Tag;
+    use crate::v1::types::{ChannelId, TagId};
+
+    #[cfg(feature = "serde")]
+    use serde::{Deserialize, Serialize};
+
+    #[cfg(feature = "utoipa")]
+    use utoipa::ToSchema;
+
+    #[cfg(feature = "validator")]
+    use validator::Validate;
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[json]
+        pub body: RequestBody,
+    }
+
+    pub struct Response {
+        #[json]
+        pub body: ResponseBody,
+    }
+
+    #[derive(Debug, Clone)]
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    #[cfg_attr(feature = "validator", derive(Validate))]
+    pub struct RequestBody {
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
+        pub tag_ids: Vec<TagId>,
+    }
+
+    #[derive(Debug, Clone)]
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+    #[cfg_attr(feature = "utoipa", derive(ToSchema))]
+    #[cfg_attr(feature = "validator", derive(Validate))]
+    pub struct ResponseBody {
+        #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
+        pub tags: Vec<Tag>,
     }
 }

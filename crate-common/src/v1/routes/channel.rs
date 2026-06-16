@@ -112,14 +112,14 @@ pub mod channel_list {
 
 /// Room channel list removed
 ///
-/// List removed threads in a room. Requires the `ChannelManage` permission.
+/// List removed channels in a room. Requires the `ChannelManage` permission.
 #[endpoint(
     get,
     path = "/room/{room_id}/channel/removed",
     tags = ["channel"],
     scopes = [Full],
     permissions = [ChannelManage],
-    response(OK, body = PaginationResponse<Channel>, description = "List removed room threads success"),
+    response(OK, body = PaginationResponse<Channel>, description = "List removed room channels success"),
 )]
 pub mod channel_list_removed {
     use crate::v1::types::channel::ChannelListRemovedQuery;
@@ -421,43 +421,4 @@ pub mod channel_ratelimit_delete_all {
     }
 
     pub struct Response {}
-}
-
-/// Channel sync
-///
-/// Get incremental sync events for a channel since a given sequence number.
-/// Use this to catch up when reconnecting or after being offline.
-#[endpoint(
-    get,
-    path = "/channel/{channel_id}/sync",
-    tags = ["sync"],
-    scopes = [Full],
-    permissions = [ChannelView],
-    response(OK, body = ChannelSync, description = "channel sync success"),
-)]
-pub mod channel_sync {
-    use crate::v1::types::{ChannelId, ChannelSeq, ChannelSync, MessageId, PaginationQuery};
-    use utoipa::IntoParams;
-
-    #[derive(Debug, IntoParams, serde::Deserialize, serde::Serialize)]
-    pub struct SinceQuery {
-        /// the sequence number to sync from (exclusive). use 0 to get all events.
-        pub since: ChannelSeq,
-    }
-
-    pub struct Request {
-        #[path]
-        pub channel_id: ChannelId,
-
-        #[query]
-        pub since: SinceQuery,
-
-        #[query]
-        pub pagination: PaginationQuery<MessageId>,
-    }
-
-    pub struct Response {
-        #[json]
-        pub sync: ChannelSync,
-    }
 }

@@ -10,7 +10,7 @@ use uuid::Uuid;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{util::Time, PaginationKey};
+use crate::v1::types::{PaginationKey, util::Time};
 
 #[cfg(not(feature = "utoipa"))]
 pub trait Identifier: From<Uuid> + Into<Uuid> + Display + Clone + Copy {}
@@ -130,8 +130,9 @@ impl<M: Marker> fmt::Debug for Id<M> {
 #[cfg(feature = "utoipa")]
 mod schema {
     use utoipa::{
-        openapi::{schema::Schema, RefOr},
-        schema, PartialSchema, ToSchema,
+        PartialSchema, ToSchema,
+        openapi::{RefOr, schema::Schema},
+        schema,
     };
 
     use super::{Id, Marker};

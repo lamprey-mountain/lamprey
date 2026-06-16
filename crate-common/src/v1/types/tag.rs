@@ -7,7 +7,7 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{misc::Color, ChannelId, TagId};
+use crate::v1::types::{ChannelId, TagId, misc::Color};
 
 #[cfg(feature = "serde")]
 use crate::v1::types::util::{default_false_opt, some_option};
@@ -21,6 +21,7 @@ use crate::v1::types::util::{default_false_opt, some_option};
 pub struct Tag {
     pub id: TagId,
 
+    // TODO: remove?
     pub channel_id: ChannelId,
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
@@ -29,13 +30,17 @@ pub struct Tag {
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub description: Option<String>,
 
     /// the color of this tag
     #[cfg_attr(feature = "utoipa", schema(required = false))]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub color: Option<Color>,
 
-    /// whether this tag is archived. this tag cant be applied to any new threads and won't appear in the tag picker.
+    /// whether this tag is archived
+    ///
+    /// archived tags cant be applied to any new threads and won't appear in the tag picker.
     pub archived: bool,
 
     /// only members with ThreadEdit or ThreadManage can apply this tag
@@ -48,6 +53,24 @@ pub struct Tag {
     pub total_thread_count: u64,
 
     /// if this tag should be considered a spoiler
+    pub spoiler: bool,
+}
+
+/// minimal data needed to render a tag
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct TagMinimal {
+    pub id: TagId,
+
+    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
+    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    pub name: String,
+
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub color: Option<Color>,
+
     pub spoiler: bool,
 }
 

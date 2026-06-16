@@ -136,7 +136,7 @@ impl DataUser for Postgres {
             serde_json::to_value(user.suspended)?,
             user.registered_at.map(|t| time::PrimitiveDateTime::from(t)),
             user.system,
-            user.remote.as_ref().map(|r| r.origin_id),
+            user.remote.as_ref().map(|r| *r.origin_id),
             user.remote.as_ref().map(|r| &r.hostname.0),
         )
         .execute(tx.ext())
@@ -250,7 +250,7 @@ impl DataUser for Postgres {
         Ok(row.into())
     }
 
-    async fn user_get_remote(&mut self, remote: &Remote) -> Result<User> {
+    async fn user_get_remote(&mut self, remote: &Remote<UserId>) -> Result<User> {
         let mut conn = self.acquire().await?;
         let row = query_as!(
             DbUser,
@@ -264,7 +264,7 @@ impl DataUser for Postgres {
             LEFT JOIN puppet p ON u.id = p.id
             WHERE u.remote_origin_id = $1 AND u.remote_hostname = $2
             "#,
-            remote.origin_id,
+            *remote.origin_id,
             remote.hostname.0,
         )
         .fetch_one(conn.ext())
