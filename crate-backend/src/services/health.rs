@@ -29,8 +29,6 @@ impl ServiceHealth {
             .check()
             .await
             .map_or(HealthcheckStatus::Healthy, |_| HealthcheckStatus::Failed);
-        // let health_messaging = s.messaging().is_connected();
-        // let health_queue = s.messaging().is_connected();
         let health_messaging = todo!();
         let health_queue = todo!();
         let health_email = s

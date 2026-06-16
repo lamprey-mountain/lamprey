@@ -31,6 +31,7 @@ use embed::ServiceEmbed;
 use emoji::ServiceEmoji;
 use federation::ServiceFederation;
 use harvest::ServiceHarvest;
+use health::ServiceHealth;
 use ips::ServiceIps;
 use media::ServiceMedia;
 use messages::ServiceMessages;
@@ -110,6 +111,7 @@ pub struct Services {
     pub emoji: ServiceEmoji,
     pub federation: ServiceFederation,
     pub harvest: ServiceHarvest,
+    pub health: ServiceHealth,
     pub http: ServiceHttp,
     pub interactions: ServiceInteractions,
     pub ips: ServiceIps,
@@ -162,6 +164,7 @@ impl Services {
             emoji: ServiceEmoji::new(state_old.clone()),
             federation: ServiceFederation::new(state_old.clone()),
             harvest: ServiceHarvest::new(state_old.clone()),
+            health: ServiceHealth::new(globals.clone()),
             http: ServiceHttp::new(state_old.clone()),
             interactions: ServiceInteractions::new(state_old.clone()),
             ips: ServiceIps::new(state_old.clone()),
