@@ -16,3 +16,8 @@ common = { package = "lamprey-common", version = "0.1.0", path = "../crate-commo
 lamprey-macros = { path = "../crate-macros" }
 opendal = { version = "0.54.1", features = ["services-s3", "services-fs"] }
 lamprey-backend-data-postgres = { version = "0.1.1", path = "../crate-backend-data-postgres" }
+jsonwebtoken = "10.4.0"
+uuid = "1.23.3"
+bytes = "1.11.1"
+url = "2.5.8"
+reqwest = "0.13.4"

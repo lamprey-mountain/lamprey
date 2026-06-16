@@ -4027,9 +4027,9 @@ dependencies = [
 
 [[package]]
 name = "jsonwebtoken"
-version = "10.3.0"
+version = "10.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0529410abe238729a60b108898784df8984c87f6054c9c4fcacc47e4803c1ce1"
+checksum = "eba32bfb4ffdeaca3e34431072faf01745c9b26d25504aa7a6cf5684334fc4fc"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek",
@@ -4046,6 +4046,7 @@ dependencies = [
  "sha2",
  "signature",
  "simple_asn1",
+ "zeroize",
 ]
 
 [[package]]
@@ -4264,6 +4265,8 @@ dependencies = [
 name = "lamprey-backend-services"
 version = "0.1.1"
 dependencies = [
+ "bytes",
+ "jsonwebtoken",
  "lamprey-backend-core",
  "lamprey-backend-data-postgres",
  "lamprey-common",
@@ -4271,6 +4274,7 @@ dependencies = [
  "opendal",
  "tokio",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -9276,9 +9280,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.22.0"
+version = "1.23.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a68d3c8f01c0cfa54a75291d83601161799e4a89a39e0929f4b0354d88757a37"
+checksum = "144d6b123cef80b301b8f72a9e2ca4370ddec21950d0a103dd22c437006d2db7"
 dependencies = [
  "getrandom 0.4.2",
  "js-sys",

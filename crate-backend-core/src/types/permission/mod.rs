@@ -1,3 +1,5 @@
+// TODO: clean up this code
+
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{ChannelId, Permission, RoomId};
 
@@ -6,7 +8,7 @@ use crate::error::{Error, Result};
 pub mod bits;
 pub mod flags;
 
-pub use bits::{PermissionBits, BROADCAST_LURKER_PERMS, QUARANTINE_PERMS, VIEW_PERMS};
+pub use bits::{BROADCAST_LURKER_PERMS, PermissionBits, QUARANTINE_PERMS, VIEW_PERMS};
 pub use flags::PermissionsFlags;
 
 /// representation of what permissions a user has

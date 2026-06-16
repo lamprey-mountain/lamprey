@@ -12,6 +12,7 @@ use crate::{
 };
 
 // TODO: copy member list logic to common or core?
+// TODO: channel member list
 /// a room's member list
 #[derive(Debug)]
 pub struct List {

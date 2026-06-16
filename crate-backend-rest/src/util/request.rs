@@ -16,6 +16,7 @@ pub struct Req<E: Endpoint> {
     media: (),
 
     reason: Option<String>,
+    // headers: (),
     // audit_txn_slot: AuditTxnSlot,
 }
 
@@ -31,8 +32,31 @@ where
     }
 }
 
+impl Req<E: Endpoint> {
+    // pub fn get_media(&self, media_ref: &MediaReference) -> &Media {
+    //     todo!()
+    // }
+
+    // /// begin an audit log transaction
+    // #[must_use = "must call commit() to save a successful audit log entry"]
+    // pub async fn begin_audit_log(
+    //     &self,
+    //     room_id: RoomId,
+    //     ty: AuditLogEntryType,
+    // ) -> Result<AuditTxnHandle> {
+    //     todo!()
+    // }
+}
+
+// // see crate-backend-services/src/services/permissions.rs
+// pub struct Requirements;
+
+// // resolved permissions?
+// pub struct Permissions;
+
 // impl Req<E: Endpoint> {
-//     pub fn a(&self) -> () {
+//     /// enforce a set of requirements
+//     pub fn enforce(&self, requirements: Requirements) -> Result<Permissions> {
 //         todo!()
 //     }
 // }
