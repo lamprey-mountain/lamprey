@@ -1,6 +1,6 @@
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
-use syn::{parse2, spanned::Spanned, Attribute, Fields, Ident, Item, ItemMod, ItemStruct, LitStr};
+use syn::{Attribute, Fields, Ident, Item, ItemMod, ItemStruct, LitStr, parse2, spanned::Spanned};
 
 use crate::parse::{EndpointArgs, EndpointField, FieldKind};
 
@@ -76,6 +76,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
         ));
     }
 
+    let operation_id = module.ident.clone();
     let request_clean = build_clean_struct(request_struct.clone())?;
     let response_clean = build_clean_struct(response_struct.clone())?;
     let extract_request_fn = build_extract_request_fn(&req_fields, &args.path)?;
@@ -83,7 +84,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     let encode_response_fn = build_encode_response_fn(&args, response_struct)?;
     let encode_request_fn = build_encode_request_fn(&req_fields, &args.path, &args)?;
     let extract_response_fn = build_extract_response_fn(&args, response_struct)?;
-    let meta_fn = build_meta_fn(&args, &mod_attrs)?;
+    let meta_fn = build_meta_fn(&args, &mod_attrs, operation_id)?;
     let openapi_ext_fn = build_openapi_ext_fn(&args, &req_fields, &resp_fields)?;
 
     // Preserve all original items except Request/Response structs
@@ -707,7 +708,11 @@ fn build_extract_response_fn(
 // encode_request (client-side)
 // ---------------------------------------------------------------------------
 
-fn build_encode_request_fn(fields: &[EndpointField], path: &LitStr, args: &EndpointArgs) -> syn::Result<TokenStream> {
+fn build_encode_request_fn(
+    fields: &[EndpointField],
+    path: &LitStr,
+    args: &EndpointArgs,
+) -> syn::Result<TokenStream> {
     let path_fields: Vec<_> = fields
         .iter()
         .filter(|f| matches!(f.kind, FieldKind::Path(_)))
@@ -874,7 +879,13 @@ fn build_encode_request_fn(fields: &[EndpointField], path: &LitStr, args: &Endpo
 }
 
 /// build the `route_module::meta()` function
-fn build_meta_fn(args: &EndpointArgs, mod_attrs: &[&Attribute]) -> syn::Result<TokenStream> {
+fn build_meta_fn(
+    args: &EndpointArgs,
+    mod_attrs: &[&Attribute],
+    operation_id: Ident,
+) -> syn::Result<TokenStream> {
+    let operation_id = LitStr::new(&operation_id.to_string(), operation_id.span());
+
     let method_str = &args.method.value();
     // Convert to PascalCase (e.g., "GET" -> "Get", "POST" -> "Post")
     let method_pascal = match method_str.as_str() {
@@ -932,6 +943,7 @@ fn build_meta_fn(args: &EndpointArgs, mod_attrs: &[&Attribute]) -> syn::Result<T
     Ok(quote! {
         pub fn metadata() -> crate::v1::routes::Endpoint {
             crate::v1::routes::Endpoint {
+                operation_id: #operation_id,
                 summary: #summary,
                 description: #description,
                 method: crate::v1::routes::EndpointMethod::#method_ident,
@@ -1022,7 +1034,7 @@ fn extract_fields(s: &ItemStruct) -> syn::Result<Vec<EndpointField>> {
             return Err(syn::Error::new(
                 s.span(),
                 "Request/Response must have named fields",
-            ))
+            ));
         }
     };
 
@@ -1109,13 +1121,13 @@ fn try_parse_rename_arg(attr: &Attribute) -> syn::Result<Option<String>> {
                     return Err(syn::Error::new(
                         nv.value.span(),
                         "rename value must be a string literal, e.g., rename = \"...\"",
-                    ))
+                    ));
                 }
                 _ => {
                     return Err(syn::Error::new(
                         nv.value.span(),
                         "rename value must be a string literal",
-                    ))
+                    ));
                 }
             }
         } else {

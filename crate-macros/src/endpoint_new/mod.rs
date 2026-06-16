@@ -524,6 +524,8 @@ fn build_extract_request_fn(
 }
 
 fn build_metadata_fn(args: &EndpointArgs, module: &ItemMod) -> syn::Result<TokenStream> {
+    let operation_id = LitStr::new(&module.ident.to_string(), module.ident.span());
+
     let method_str = args.method.value();
     let method_pascal = match method_str.as_str() {
         "GET" => "Get",
@@ -582,6 +584,7 @@ fn build_metadata_fn(args: &EndpointArgs, module: &ItemMod) -> syn::Result<Token
     Ok(quote! {
         fn metadata() -> crate::util::routes::Metadata {
             crate::util::routes::Metadata {
+                operation_id: #operation_id,
                 summary: #summary,
                 description: #description,
                 method: crate::v1::routes::EndpointMethod::#method_ident,
