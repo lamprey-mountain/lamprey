@@ -1,10 +1,6 @@
 //! global server state
 
-use std::{
-    ops::Deref,
-    sync::{Arc, Weak},
-    time::Duration,
-};
+use std::{ops::Deref, sync::Weak};
 
 use axum::extract::FromRef;
 use common::v1::types::MessageSync;
@@ -14,19 +10,16 @@ use lamprey_backend_data_postgres::{
     Postgres,
     data::{AnyData, Database, postgres::PostgresPool},
 };
-use opendal::layers::LoggingLayer;
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, postgres::PgPoolOptions};
 use tokio::runtime::Handle as TokioHandle;
-use tracing::{info, warn};
 use url::Url;
 
+use crate::prelude::*;
 use crate::{
     config::{self, Config},
     services::Services,
     state::messaging::{Broadcast, Messaging},
 };
-use crate::{prelude::*, state::messaging::Transport};
 
 #[cfg(any())]
 mod queue;
@@ -53,6 +46,7 @@ pub struct ServerStateInner {
     pub blobs: opendal::Operator,
     pub jetstream: Option<async_nats::jetstream::Context>,
     pub messaging: Messaging,
+    pub globals: Globals,
 }
 
 pub struct ServerState {
@@ -240,41 +234,9 @@ impl ServerStateInner {
         .await?;
         Ok(())
     }
-
-    /// get a handle to the new server state
-    pub fn ss2(&self) -> ServerState2 {
-        todo!()
-    }
 }
 
 impl ServerState {
-    pub async fn init(
-        config: Config,
-        pool: PgPool,
-        blobs: opendal::Operator,
-        nats: Option<async_nats::Client>,
-    ) -> Self {
-        let state =
-            ServerState2::legacy_init(config.clone(), pool.clone(), blobs.clone(), nats.clone())
-                .await
-                .expect("TODO better error handling");
-
-        let inner = ServerStateInner {
-            tokio: TokioHandle::current(),
-            config,
-            database: state.inner.database.clone(),
-            services: Arc::downgrade(&state.services),
-            blobs,
-            jetstream: nats.clone().map(async_nats::jetstream::new),
-            messaging: state.inner.messaging.clone(),
-        };
-
-        Self {
-            inner: Arc::new(inner),
-            services: state.services.clone(),
-        }
-    }
-
     pub fn config(&self) -> &Config {
         &self.inner.config
     }
@@ -296,282 +258,10 @@ impl Deref for ServerState {
     }
 }
 
-// ===== NEW TYPES =====
-// TODO: switch over to ServerState2 entirely
-// looks like this type ended up being pretty similar to the original ServerState, oh well
-// at least the fields won't be pub now?
+pub use crate::server::globals::{Globals, GlobalsOwned};
 
-/// global state for the server
-#[derive(Clone)]
-pub struct ServerState2 {
-    inner: Arc<ServerState2Inner>,
-    services: Arc<Services>,
-}
-
-/// a handle to access ServerState
-#[derive(Clone)]
-pub struct ServerState2Handle {
-    inner: Arc<ServerState2Inner>,
-    services: Weak<Services>,
-}
-
-struct ServerState2Inner {
-    /// config for this server
-    config: Config,
-
-    /// reference to the database for persistent data
-    // database: Box<dyn Data2>,
-    database: Box<PostgresPool>,
-
-    /// storage for large blobs
-    blobs: opendal::Operator,
-
-    /// send and receive messages
-    messaging: Messaging,
-}
-
-impl ServerState2 {
-    pub async fn init_from_config(config: Config) -> Result<Self> {
-        // lint config
-        if config.http.contact.is_none() {
-            warn!(
-                "http.contact is not set in your config! set it so an email or something so webmasters can contact you."
-            );
-        }
-
-        // setup the database connection
-        let pool = PgPoolOptions::new()
-            .max_connections(5)
-            .acquire_timeout(Duration::from_secs(5))
-            .connect(&config.database_url)
-            .await?;
-        let database = Box::new(PostgresPool::new(pool));
-        database.migrate().await?;
-
-        // setup the object storage connection
-        let blobs = match &config.blobs {
-            config::ConfigBlobs::S3(s3) => {
-                let builder = opendal::services::S3::default()
-                    .bucket(&s3.bucket)
-                    .endpoint(s3.endpoint.as_str())
-                    .region(&s3.region)
-                    .access_key_id(&s3.access_key_id)
-                    .secret_access_key(s3.secret_access_key.load()?.as_ref());
-                opendal::Operator::new(builder)?
-                    .layer(LoggingLayer::default())
-                    .finish()
-            }
-            config::ConfigBlobs::Fs(fs) => {
-                let builder = opendal::services::Fs::default().root(fs.data_dir.to_str().unwrap());
-                opendal::Operator::new(builder)?
-                    .layer(LoggingLayer::default())
-                    .finish()
-            }
-        };
-        // TODO: don't require blobs to be healthy to start server
-        blobs.check().await?;
-
-        // set up messaging
-        let transport = if let Some(nats_config) = &config.nats {
-            info!("using NATS for messaging");
-            let mut nats_options = async_nats::ConnectOptions::new();
-            if let Some(credentials_path) = &nats_config.credentials {
-                nats_options = nats_options
-                    .credentials_file(credentials_path)
-                    .await
-                    .map_err(|e| Error::Internal(format!("NATS credentials file failed: {}", e)))?;
-            }
-            let nats = async_nats::connect_with_options(&nats_config.addr, nats_options)
-                .await
-                .map_err(|e| Error::Internal(format!("NATS connect failed: {}", e)))?;
-            Transport::nats(nats)
-        } else {
-            info!("using in-memory messaging");
-            Transport::memory()
-        };
-        let messaging = Messaging::new(transport);
-
-        // create services and tie up the arc cycle
-        let services = Arc::new_cyclic(|weak_services| {
-            let state = ServerState2Handle {
-                inner: Arc::new(ServerState2Inner {
-                    config,
-                    database,
-                    blobs,
-                    messaging,
-                }),
-                services: weak_services.clone(),
-            };
-
-            Services::new(state)
-        });
-
-        services.start_background_tasks().await;
-
-        // initialize server
-        // TODO: setup_vapid_keys(&state).await?;
-        // TODO: setup_server_room(&state).await?;
-
-        todo!()
-    }
-
-    // TEMP: for use with old ServerState
-    pub async fn legacy_init(
-        config: Config,
-        pool: PgPool,
-        blobs: opendal::Operator,
-        nats: Option<async_nats::Client>,
-    ) -> Result<Self> {
-        if config.http.contact.is_none() {
-            warn!(
-                "http.contact is not set in your config! set it so an email or something so webmasters can contact you."
-            );
-        }
-
-        let database = Box::new(PostgresPool::new(pool));
-
-        let transport = if let Some(nats) = nats {
-            info!("using NATS for messaging");
-            Transport::nats(nats)
-        } else {
-            info!("using in-memory messaging");
-            Transport::memory()
-        };
-        let messaging = Messaging::new(transport);
-
-        let inner = Arc::new(ServerState2Inner {
-            config,
-            database,
-            blobs,
-            messaging,
-        });
-
-        let services = Arc::new_cyclic(|weak_services| {
-            let state = ServerState2Handle {
-                inner: Arc::clone(&inner),
-                services: weak_services.clone(),
-            };
-
-            Services::new(state)
-        });
-
-        Ok(Self { inner, services })
-    }
-
-    /// get a handle
-    pub fn handle(&self) -> ServerState2Handle {
-        ServerState2Handle {
-            inner: Arc::clone(&self.inner),
-            services: Arc::downgrade(&self.services),
-        }
-    }
-
-    // TEMP: compatability
-    #[deprecated = "use begin() or begin_read()"]
-    pub fn data(&self) -> AnyData {
-        Box::new(Postgres {
-            pool: self.inner.database.pool.clone(),
-            txn: None,
-            use_legacy_behavior: true,
-        })
-    }
-
-    /// begin a database transaction
-    ///
-    /// use this for writes and for reads that need consistency
-    pub async fn begin(&self) -> Result<AnyData> {
-        let txn = self.inner.database.begin().await?;
-        Ok(txn)
-    }
-
-    /// begin a database session without a transaction
-    ///
-    /// use this for isolated single reads
-    pub async fn begin_read(&self) -> Result<AnyData> {
-        let txn = self.inner.database.begin_read().await?;
-        Ok(txn)
-    }
-
-    pub fn messaging(&self) -> &Messaging {
-        &self.inner.messaging
-    }
-
-    pub fn config(&self) -> &Config {
-        &self.inner.config
-    }
-
-    // TEMP: i should write a wrapper for opendal
-    pub fn blobs(&self) -> &opendal::Operator {
-        &self.inner.blobs
-    }
-
-    pub fn services(&self) -> Arc<Services> {
-        self.services.clone()
-    }
-}
-
-impl ServerState2Handle {
-    // TEMP: compatability
-    #[deprecated = "use begin() or begin_read()"]
-    pub fn data(&self) -> AnyData {
-        Box::new(Postgres {
-            pool: self.inner.database.pool.clone(),
-            txn: None,
-            use_legacy_behavior: true,
-        })
-    }
-
-    /// begin a database transaction
-    ///
-    /// use this for writes and for reads that need consistency
-    pub async fn begin(&self) -> Result<AnyData> {
-        let txn = self.inner.database.begin().await?;
-        Ok(txn)
-    }
-
-    /// begin a database session without a transaction
-    ///
-    /// use this for isolated single reads
-    pub async fn begin_read(&self) -> Result<AnyData> {
-        let txn = self.inner.database.begin_read().await?;
-        Ok(txn)
-    }
-
-    pub fn services(&self) -> Arc<Services> {
-        self.services.upgrade().unwrap()
-    }
-
-    pub fn messaging(&self) -> &Messaging {
-        &self.inner.messaging
-    }
-
-    pub fn config(&self) -> &Config {
-        &self.inner.config
-    }
-
-    // TEMP: i should write a wrapper for opendal
-    pub fn blobs(&self) -> &opendal::Operator {
-        &self.inner.blobs
-    }
-
-    // TEMP: compat
-    /// create a handle to the old ServerStateInner struct
-    pub fn ss1(&self) -> Arc<ServerStateInner> {
-        let inner = ServerStateInner {
-            tokio: TokioHandle::current(),
-            config: self.config().clone(),
-            database: self.inner.database.clone(),
-            services: self.services.clone(),
-            blobs: self.inner.blobs.clone(),
-            jetstream: None, // FIXME: populate jetstream
-            messaging: self.inner.messaging.clone(),
-        };
-        Arc::new(inner)
-    }
-}
-
-impl FromRef<Arc<ServerState>> for ServerState2 {
+impl FromRef<Arc<ServerState>> for Globals {
     fn from_ref(input: &Arc<ServerState>) -> Self {
-        input.ss2()
+        input.globals.clone()
     }
 }

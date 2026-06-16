@@ -14,7 +14,7 @@ pub mod calculator_old;
 pub mod push;
 
 pub struct ServiceNotifications {
-    state: ServerState2Handle,
+    state: Globals,
     vapid_keys: RwLock<Option<VapidKeys>>,
 }
 
@@ -34,7 +34,7 @@ struct MentionedUsers {
 }
 
 impl ServiceNotifications {
-    pub fn new(state: ServerState2Handle) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self {
             state,
             vapid_keys: RwLock::new(None),

@@ -3,11 +3,11 @@ use lamprey_backend_core::types::health::{Healthcheck, HealthcheckServices, Heal
 use crate::prelude::*;
 
 pub struct ServiceHealth {
-    state: ServerState2Handle,
+    state: Globals,
 }
 
 impl ServiceHealth {
-    pub fn new(state: ServerState2Handle) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self { state }
     }
 

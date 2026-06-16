@@ -18,7 +18,7 @@ use tracing::warn;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
-use crate::state::ServerState2;
+use crate::state::Globals;
 use crate::types::{DbUserCreate, MediaLinkType, RoomMemberPut, UserIdReq};
 use crate::{ServerState, routes2};
 
@@ -221,7 +221,7 @@ async fn user_undelete(
 #[handler(routes::user_get)]
 async fn user_get(
     auth: Auth3,
-    State(s): State<ServerState2>,
+    State(s): State<Globals>,
     req: routes::user_get::Request,
 ) -> Result<impl IntoResponse> {
     if !auth.is_public() {

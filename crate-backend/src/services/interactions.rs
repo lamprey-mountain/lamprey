@@ -92,7 +92,8 @@ impl ServiceInteractions {
                         .await?;
                     let user = srv.users.get(user_id, Some(user_id)).await?;
                     let room_member = if let Some(room_id) = room.as_ref().map(|r| r.id) {
-                        Some(srv.state.data().room_member_get(room_id, user_id).await?)
+                        let mut data = srv.state.begin_read().await?;
+                        Some(data.room_member_get(room_id, user_id).await?)
                     } else {
                         None
                     };

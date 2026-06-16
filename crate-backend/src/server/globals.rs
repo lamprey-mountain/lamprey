@@ -1,16 +1,18 @@
+//! global server state
+
 use std::sync::Weak;
 use std::time::Duration;
 
 use lamprey_backend_core::config::{Config, ConfigBlobs};
-use lamprey_backend_data_postgres::Postgres;
 use lamprey_backend_data_postgres::data::postgres::PostgresPool;
 use lamprey_backend_data_postgres::data::{AnyData, Database};
 use opendal::layers::LoggingLayer;
 use sqlx::postgres::PgPoolOptions;
-use tracing::{info, warn};
+use tokio::runtime::Handle as TokioHandle;
+use tracing::info;
 
-use crate::prelude::*;
 use crate::state::messaging::Transport;
+use crate::{ServerState, ServerStateInner, prelude::*};
 use crate::{services::Services, state::messaging::Messaging};
 
 /// owned handle for the server's global state
@@ -34,11 +36,14 @@ struct GlobalsInner {
     /// reference to the database for persistent data
     database: Box<dyn Database>,
 
+    // TEMP: compat
+    database_compat: Box<PostgresPool>,
+
     /// storage for large blobs
     blobs: opendal::Operator,
 
     /// send and receive messages
-    messaging: Box<Messaging>,
+    messaging: Messaging,
 }
 
 impl GlobalsOwned {
@@ -47,6 +52,25 @@ impl GlobalsOwned {
         Globals {
             inner: Arc::clone(&self.inner),
             services: Arc::downgrade(&self.services),
+        }
+    }
+
+    // TEMP: compat
+    pub fn temp_to_server_state(self) -> ServerState {
+        let inner = ServerStateInner {
+            tokio: TokioHandle::current(),
+            config: (*self.inner.config).clone(),
+            database: self.inner.database_compat.clone(),
+            services: Arc::downgrade(&self.services),
+            blobs: self.inner.blobs.clone(),
+            jetstream: None,
+            messaging: self.inner.messaging.clone(),
+            globals: self.handle(),
+        };
+
+        ServerState {
+            inner: Arc::new(inner),
+            services: self.services.clone(),
         }
     }
 }
@@ -104,11 +128,12 @@ impl Globals {
             info!("using in-memory messaging");
             Transport::memory()
         };
-        let messaging = Box::new(Messaging::new(transport));
+        let messaging = Messaging::new(transport);
 
         let inner = Arc::new(GlobalsInner {
             config: Box::new(config),
-            database,
+            database: database.clone(),
+            database_compat: database,
             blobs,
             messaging,
         });
@@ -119,13 +144,12 @@ impl Globals {
                 inner: Arc::clone(&inner),
                 services: weak_services.clone(),
             };
-            // Services::new(globals)
-            todo!()
+            Services::new(globals)
         });
 
         // initialize server
         inner.database.migrate().await?;
-        inner.blobs.check().await?;
+        inner.blobs.check().await?; // TODO: remove
         srv.start_background_tasks().await;
 
         // TODO: add these
@@ -136,6 +160,16 @@ impl Globals {
             inner,
             services: srv,
         })
+    }
+
+    // TEMP: compat
+    pub fn temp_database_compat(&self) -> Box<PostgresPool> {
+        self.inner.database_compat.clone()
+    }
+
+    // TEMP: compat
+    pub fn temp_services_raw(&self) -> Weak<Services> {
+        self.services.clone()
     }
 
     /// begin a database transaction

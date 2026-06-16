@@ -75,7 +75,7 @@ impl ServiceNotifications {
     /// pushes the notification to all sessions in parallel
     // NOTE: i may want to make this internal/private?
     pub async fn push(&self, user_id: UserId, mut payload: NotificationBytes) -> Result<()> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin_read().await?;
         let subscriptions = data.push_list_for_user(user_id).await?;
         let mut tasks = JoinSet::new();
 
@@ -93,7 +93,7 @@ impl ServiceNotifications {
     }
 
     /// send a notification to a session via web push api
-    async fn push_inner(state: ServerState2Handle, sub: PushData, payload: Bytes) -> Result<()> {
+    async fn push_inner(state: Globals, sub: PushData, payload: Bytes) -> Result<()> {
         let vapid_keys = state.services().notifications.get_vapid_keys().await?;
 
         let p256dh_encoded = B64.encode(&sub.key_p256dh);
@@ -145,7 +145,10 @@ impl ServiceNotifications {
                     error!("failed to send push notification: status {}", res.status());
                     if res.status() == StatusCode::GONE || res.status() == StatusCode::NOT_FOUND {
                         info!("subscription gone, deleting");
-                        let _ = state.data().push_delete(sub.session_id).await;
+                        let mut data = state.begin().await?;
+                        let _ = data.push_delete(sub.session_id).await;
+                        let _ = data.commit().await?;
+                        // TODO: better error handling? its fine if we can't delete it immediately though
                     }
                 }
             }
@@ -158,11 +161,19 @@ impl ServiceNotifications {
         Ok(())
     }
 
-    pub(super) async fn spawn_push_task(state: ServerState2Handle) {
+    pub(super) async fn spawn_push_task(state: Globals) {
         let mut interval = tokio::time::interval(Duration::from_secs(5));
         loop {
             interval.tick().await;
-            let mut data = state.data();
+
+            let mut data = match state.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    error!("failed to begin transaction: {}", e);
+                    continue;
+                }
+            };
+
             let srv = state.services();
 
             let notifs = match data.notification_get_unpushed(50).await {
@@ -188,6 +199,10 @@ impl ServiceNotifications {
 
             if let Err(e) = data.notification_set_pushed(&pushed_ids).await {
                 error!("failed to mark notifications as pushed: {}", e);
+            }
+
+            if let Err(e) = data.commit().await {
+                error!("failed to commit transaction: {}", e);
             }
         }
     }

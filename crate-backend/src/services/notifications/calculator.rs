@@ -20,7 +20,7 @@ pub struct Preferences {
 
 /// notification calculator
 pub struct Calculator {
-    state: ServerState2,
+    state: GlobalsOwned,
 
     // context
     room: Option<Room>,
@@ -38,14 +38,14 @@ pub struct Actions {
 impl Calculator {
     // pub async fn load_for_message(state: ServerState2, message: &Message) -> Result<Self> {
     pub async fn load_for_message(
-        state: ServerState2,
+        state: GlobalsOwned,
         channel: &Channel,
         message: &Message,
     ) -> Result<Self> {
         todo!()
     }
 
-    pub async fn load_for_notification(state: ServerState2, notif: &Notification) -> Result<Self> {
+    pub async fn load_for_notification(state: GlobalsOwned, notif: &Notification) -> Result<Self> {
         todo!()
     }
 
@@ -59,7 +59,7 @@ impl Calculator {
 impl Preferences {
     /// load a user's notification preferences
     pub async fn load(
-        state: &ServerState2Handle,
+        state: &Globals,
         user_id: UserId,
         room_id: Option<RoomId>,
         channel_id: Option<ChannelId>,

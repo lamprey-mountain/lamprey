@@ -65,7 +65,6 @@ pub mod cache;
 pub mod calendar;
 pub mod channel;
 pub mod config;
-pub mod health;
 pub mod connections;
 pub mod documents;
 pub mod email;
@@ -73,6 +72,7 @@ pub mod embed;
 pub mod emoji;
 pub mod federation;
 pub mod harvest;
+pub mod health;
 pub mod http;
 pub mod interactions;
 pub mod ips;
@@ -131,20 +131,30 @@ pub struct Services {
     pub users: ServiceUsers,
     pub voice: ServiceVoice,
     pub webhook: ServiceWebhooks,
-    pub state: ServerState2Handle,
+    pub state: Globals,
 }
 
 impl Services {
-    pub fn new(state: ServerState2Handle) -> Self {
-        let state_old: Arc<ServerStateInner> = state.ss1();
+    pub fn new(globals: Globals) -> Self {
+        let state_old = Arc::new(ServerStateInner {
+            tokio: tokio::runtime::Handle::current(),
+            config: (*globals.config()).clone(),
+            database: globals.temp_database_compat(),
+            services: globals.temp_services_raw(),
+            blobs: globals.blobs().clone(),
+            jetstream: None,
+            messaging: globals.messaging().clone(),
+            globals: globals.clone(),
+        });
+
         Self {
-            admin: ServiceAdmin::new(state.clone()),
-            audit_logs: ServiceAuditLogs::new(state.clone()),
+            admin: ServiceAdmin::new(globals.clone()),
+            audit_logs: ServiceAuditLogs::new(globals.clone()),
             automod: ServiceAutomod::new(state_old.clone()),
             cache: ServiceCache::new(state_old.clone()),
             calendar: ServiceCalendar::new(state_old.clone()),
             channels: ServiceChannels::new(state_old.clone()),
-            config: ServiceConfig::new(state.clone()),
+            config: ServiceConfig::new(globals.clone()),
             connections: ServiceConnections::new(state_old.clone()),
             documents: ServiceDocuments::new(state_old.clone()),
             email: ServiceEmail::new(state_old.clone()),
@@ -158,7 +168,7 @@ impl Services {
             media: ServiceMedia::new(state_old.clone()),
             member_lists: ServiceMemberLists::new(state_old.clone()),
             messages: ServiceMessages::new(state_old.clone()),
-            notifications: ServiceNotifications::new(state.clone()),
+            notifications: ServiceNotifications::new(globals.clone()),
             scripts: ServiceScripts::new(state_old.clone()),
             oauth: ServiceOauth::new(state_old.clone()),
             perms: ServicePermissions::new(state_old.clone()),
@@ -173,7 +183,7 @@ impl Services {
             users: ServiceUsers::new(state_old.clone()),
             voice: ServiceVoice::new(state_old.clone()),
             webhook: ServiceWebhooks::new(state_old.clone()),
-            state,
+            state: globals,
         }
     }
 
@@ -200,7 +210,7 @@ impl Services {
 }
 
 pub trait Service {
-    fn new(state: ServerState2Handle) -> Self;
+    fn new(state: Globals) -> Self;
 
     /// start background tasks
     fn start_background_tasks(&self) {}

@@ -21,7 +21,7 @@ use validator::Validate;
 use crate::routes::util::auth::Auth4;
 use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
 use crate::routes2;
-use crate::state::ServerState2;
+use crate::state::{Globals, GlobalsOwned};
 use crate::types::{
     ChannelPatch, DbChannelCreate, DbChannelType, DbRoomCreate, MediaLinkType, MessageSync,
     Permission,
@@ -67,7 +67,7 @@ async fn channel_create_room(
 #[handler(routes::channel_create_dm)]
 async fn channel_create_dm(
     auth: Auth4,
-    State(s): State<ServerState2>,
+    State(s): State<Globals>,
     mut req: routes::channel_create_dm::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_user()?.ensure_unsuspended()?;

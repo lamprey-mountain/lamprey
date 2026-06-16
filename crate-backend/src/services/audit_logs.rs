@@ -6,11 +6,11 @@ use common::v1::types::{
 use crate::prelude::*;
 
 pub struct ServiceAuditLogs {
-    state: ServerState2Handle,
+    state: Globals,
 }
 
 impl ServiceAuditLogs {
-    pub fn new(state: ServerState2Handle) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self { state }
     }
 

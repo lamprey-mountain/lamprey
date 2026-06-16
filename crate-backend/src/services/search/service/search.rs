@@ -15,6 +15,8 @@ use common::v1::types::{
     AuditLogEntryId, ChannelId, MediaId, MessageId, PaginationQuery, RoomId, UserId,
 };
 
+use crate::Result;
+use crate::services::search::ServiceSearch;
 use crate::services::search::index::searcher::{
     ContentSearcher, TantivySearchAuditLogEntries, TantivySearchChannels, TantivySearchMedia,
     TantivySearchMessages, TantivySearchRooms, TantivySearchUsers,
@@ -23,8 +25,6 @@ use crate::services::search::util::visibility::{
     ChannelVisibility, SearchAuditLogVisibility, SearchChannelsVisibility, SearchMediaVisibility,
     SearchMessagesVisibility, SearchRoomsVisibility,
 };
-use crate::services::search::ServiceSearch;
-use crate::Result;
 
 impl ServiceSearch {
     pub async fn search_messages(
@@ -211,13 +211,12 @@ impl ServiceSearch {
         req: ChannelSearchRequest,
     ) -> Result<ChannelSearch> {
         let srv = self.state.services();
+        let mut data = self.state.data();
         let index = self.get_index().await?;
         let searcher = index.searcher().await?;
         let cs = ContentSearcher::new(searcher);
 
-        let rooms = srv
-            .state
-            .data()
+        let rooms = data
             .room_list(
                 user_id,
                 PaginationQuery {

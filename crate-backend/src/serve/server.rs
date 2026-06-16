@@ -1,26 +1,26 @@
 use std::{str::FromStr, sync::Arc, time::Duration};
 
 use crate::{
-    config,
+    Result, ServerState, config,
     serve::{self, serve_transport},
-    Result, ServerState,
+    state::Globals,
 };
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use common::v1::types::{util::Time, RoomType};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use common::v1::types::{RoomType, util::Time};
 use lamprey_backend_core::{
+    Error,
     config::{Config, ListenComponent},
     types::admin::{AdminCollectGarbage, AdminCollectGarbageMode, AdminCollectGarbageTarget},
-    Error,
 };
 use lamprey_backend_data_postgres::{
-    data::Database, DbRoomCreate, DbUserCreate, RoomCreate, SERVER_ROOM_ID, SERVER_USER_ID,
+    DbRoomCreate, DbUserCreate, RoomCreate, SERVER_ROOM_ID, SERVER_USER_ID, data::Database,
 };
 use opendal::layers::LoggingLayer;
 use opentelemetry_otlp::WithExportConfig;
 use sqlx::postgres::PgPoolOptions;
 use tokio::task::JoinSet;
 use tracing::{error, info};
-use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};
 
 /// the api server
 pub struct Server {
@@ -75,51 +75,8 @@ impl Server {
 }
 
 async fn create_server_state(config: Config) -> Result<ServerState> {
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .acquire_timeout(Duration::from_secs(5))
-        .connect(&config.database_url)
-        .await?;
-
-    let blobs = match &config.blobs {
-        config::ConfigBlobs::S3(s3) => {
-            let builder = opendal::services::S3::default()
-                .bucket(&s3.bucket)
-                .endpoint(s3.endpoint.as_str())
-                .region(&s3.region)
-                .access_key_id(&s3.access_key_id)
-                .secret_access_key(s3.secret_access_key.load()?.as_ref());
-            opendal::Operator::new(builder)?
-                .layer(LoggingLayer::default())
-                .finish()
-        }
-        config::ConfigBlobs::Fs(fs) => {
-            let builder = opendal::services::Fs::default().root(fs.data_dir.to_str().unwrap());
-            opendal::Operator::new(builder)?
-                .layer(LoggingLayer::default())
-                .finish()
-        }
-    };
-    blobs.check().await?;
-
-    let nats = if let Some(nats_config) = &config.nats {
-        let mut nats_options = async_nats::ConnectOptions::new();
-        if let Some(credentials_path) = &nats_config.credentials {
-            nats_options = nats_options
-                .credentials_file(credentials_path)
-                .await
-                .map_err(|e| Error::Internal(format!("NATS credentials file failed: {}", e)))?;
-        }
-        Some(
-            async_nats::connect_with_options(&nats_config.addr, nats_options)
-                .await
-                .map_err(|e| Error::Internal(format!("NATS connect failed: {}", e)))?,
-        )
-    } else {
-        None
-    };
-
-    let state = ServerState::init(config, pool, blobs, nats).await;
+    let globals = Globals::init_from_config(config).await?;
+    let state = globals.temp_to_server_state();
     state.database.migrate().await?;
     setup_vapid_keys(&state).await?;
     setup_server_room(&state).await?;

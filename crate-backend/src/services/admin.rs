@@ -13,11 +13,11 @@ use crate::prelude::*;
 use crate::services::search::Reindex;
 
 pub struct ServiceAdmin {
-    state: ServerState2Handle,
+    state: Globals,
 }
 
 impl ServiceAdmin {
-    pub fn new(state: ServerState2Handle) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self { state }
     }
 
@@ -107,12 +107,12 @@ impl ServiceAdmin {
     }
 
     async fn gc_media(&self, mode: AdminCollectGarbageMode) -> Result<(u64, u64)> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let blobs = self.state.blobs();
-        match mode {
+        let res = match mode {
             AdminCollectGarbageMode::Mark => {
                 let rows = data.gc_media_mark().await?;
-                Ok((rows, 0))
+                (rows, 0)
             }
             AdminCollectGarbageMode::Sweep => {
                 let mut rows_deleted = 0;
@@ -138,14 +138,16 @@ impl ServiceAdmin {
                     let deleted = data.gc_media_delete_swept(&media_to_delete).await?;
                     rows_deleted += deleted;
                 }
-                Ok((rows_deleted, bytes_deleted))
+                (rows_deleted, bytes_deleted)
             }
             AdminCollectGarbageMode::Dry => {
                 // For mark: count what would be marked.
                 // For sweep: count what would be swept, and their sizes.
                 todo!()
             }
-        }
+        };
+        data.commit().await?;
+        Ok(res)
     }
 
     pub async fn purge_caches(&self, req: AdminPurgeCache) -> Result<AdminPurgeCacheResponse> {
