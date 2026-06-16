@@ -12,16 +12,13 @@ use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 use url::Url;
 
-use crate::{
-    Error, Result,
-    config::secret::Secret,
-    types::health::{Healthcheck, HealthcheckIssue, HealthcheckSeverity},
-};
+use crate::{Error, Result, config::secret::Secret, types::health::HealthcheckIssue};
 
 use common::v1::types::federation::Hostname;
 use common::v1::types::redex::EvalLimits;
 
 mod internal;
+mod limits;
 mod secret;
 
 // TEMP: reexport
