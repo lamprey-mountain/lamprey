@@ -3,6 +3,7 @@ use crate::parser::Parser;
 mod basic;
 mod blocks;
 mod lexing;
+mod invalid_links;
 mod server;
 mod tables;
 mod util;

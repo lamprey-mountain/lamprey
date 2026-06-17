@@ -198,7 +198,7 @@ impl Link {
                 }
             })
             .last()
-            .expect("invalid link")
+            .unwrap_or_default()
     }
 
     pub fn children(&self) -> impl Iterator<Item = Inline> + '_ {
