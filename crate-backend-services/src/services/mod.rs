@@ -1,4 +1,5 @@
 pub mod channels;
+pub mod documents;
 pub mod member_lists;
 pub mod notifications;
 // pub mod permissions;
@@ -11,6 +12,7 @@ pub mod oauth2;
 
 pub struct Services {
     pub channels: channels::Service,
+    pub documents: documents::Service,
     // pub config: config::Service,
     // pub documents: documents::Service,
     // pub email: email::Service,

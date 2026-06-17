@@ -1,5 +1,7 @@
 //! crdt types
 
+// TODO: use Bytes
+
 /// a pointer to a client's state at a point in time
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DocumentStateVector(pub Vec<u8>);
