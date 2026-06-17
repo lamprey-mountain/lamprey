@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
-use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::server::{
@@ -13,7 +13,7 @@ use common::v1::types::{Permission, SERVER_ROOM_ID};
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::{routes2, ServerState};
+use crate::{ServerState, routes2};
 
 use super::util::{Auth, Auth3};
 use crate::error::Result;

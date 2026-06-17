@@ -3,13 +3,13 @@ use std::{
     path::Path,
     pin::Pin,
     sync::{
-        atomic::{AtomicBool, AtomicU32, Ordering},
         Arc,
+        atomic::{AtomicBool, AtomicU32, Ordering},
     },
     time::Duration,
 };
 
-use futures_util::{stream, Stream, StreamExt};
+use futures_util::{Stream, StreamExt, stream};
 use str0m::media::{Frequency, MediaTime};
 use symphonia::core::{
     formats::FormatOptions, io::MediaSourceStream, meta::MetadataOptions, probe::Hint,
@@ -249,7 +249,7 @@ impl AudioSource for AudioFile {
                     Err(symphonia::core::errors::Error::IoError(e))
                         if e.kind() == std::io::ErrorKind::UnexpectedEof =>
                     {
-                        return None
+                        return None;
                     }
                     Err(e) => {
                         return Some((Err(VoiceError::from(e)), (state, interval)));

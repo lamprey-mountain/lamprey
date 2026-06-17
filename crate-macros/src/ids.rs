@@ -12,7 +12,7 @@ pub fn expand_typed_id(lit: LitStr, phantom_ty: &str) -> TokenStream {
         Err(e) => {
             return syn::Error::new(lit.span(), format!("invalid UUID: {e}"))
                 .to_compile_error()
-                .into()
+                .into();
         }
     };
 

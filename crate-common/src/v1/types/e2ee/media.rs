@@ -10,8 +10,8 @@ use validator::Validate;
 
 use crate::{
     v1::types::{
-        misc::{binary::Binary, hashes::Hashes},
         MediaId, Mime,
+        misc::{binary::Binary, hashes::Hashes},
     },
     v2::types::media::MediaMetadata,
 };

@@ -1,4 +1,4 @@
-use rquickjs::{class::Trace, Ctx, JsLifetime, Result as JsResult};
+use rquickjs::{Ctx, JsLifetime, Result as JsResult, class::Trace};
 
 // most of this will be implemented in js, this is used internally
 #[rquickjs::class]

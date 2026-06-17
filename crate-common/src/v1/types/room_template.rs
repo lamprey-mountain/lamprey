@@ -11,12 +11,12 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use super::{
+    PaginationKey,
     channel::ChannelCreate,
     ids::{ChannelId, RoomId},
     role::RoleCreate,
     user::User,
     util::Time,
-    PaginationKey,
 };
 
 /// a short, unique identifier for a room template.

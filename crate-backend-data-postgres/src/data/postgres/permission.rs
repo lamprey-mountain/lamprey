@@ -3,7 +3,7 @@ use common::v1::types::{ChannelId, Permission, PermissionOverwriteType, UserId};
 use sqlx::query_scalar;
 use uuid::Uuid;
 
-use crate::{data::DataPermission, Result};
+use crate::{Result, data::DataPermission};
 
 use super::Postgres;
 

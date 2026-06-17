@@ -3,11 +3,11 @@
 use std::sync::Arc;
 
 use crate::{
+    Result, ServerStateInner,
     services::search::{
         import::{backfill::BackfillEtl, live::LiveEtl},
         index::AsyncIndexHandle,
     },
-    Result, ServerStateInner,
 };
 
 mod backfill;

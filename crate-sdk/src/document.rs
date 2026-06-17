@@ -3,10 +3,10 @@
 use std::collections::HashMap;
 
 use common::{
-    v1::types::{document::DocumentUpdate, MessageSync},
+    v1::types::{MessageSync, document::DocumentUpdate},
     v2::types::{ChannelId, DocumentBranchId, UserId},
 };
-use futures_util::{stream::BoxStream, StreamExt};
+use futures_util::{StreamExt, stream::BoxStream};
 use yrs::Transact;
 
 use crate::Client;

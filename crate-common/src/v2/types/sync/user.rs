@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{harvest::Harvest, preferences::PreferencesGlobal, UserId};
+use crate::v1::types::{UserId, harvest::Harvest, preferences::PreferencesGlobal};
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

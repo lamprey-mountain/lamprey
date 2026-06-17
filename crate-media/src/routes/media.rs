@@ -9,9 +9,9 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::{
-    error::{Error, Result},
-    routes::util::{build_headers, ContentInfo},
     AppState,
+    error::{Error, Result},
+    routes::util::{ContentInfo, build_headers},
 };
 
 /// Head media

@@ -9,8 +9,8 @@ use validator::{Validate, ValidateLength, ValidationError, ValidationErrors};
 
 use crate::v1::types::automod::{AutomodAction, AutomodMatches, AutomodRuleStripped};
 use crate::v1::types::components::{self, Components};
-use crate::v1::types::e2ee::media::EncryptedMedia;
 use crate::v1::types::e2ee::MlsEpoch;
+use crate::v1::types::e2ee::media::EncryptedMedia;
 use crate::v1::types::flume::MessageFlume;
 use crate::v1::types::metadata::Metadata;
 use crate::v1::types::misc::binary::Binary;
@@ -25,8 +25,8 @@ use crate::v1::types::util::some_option;
 
 use crate::v2::types::media::{Media, MediaReference};
 
-use super::channel::Channel;
 use super::EmbedCreate;
+use super::channel::Channel;
 use super::{ChannelId, MessageId, MessageVerId};
 use std::fmt;
 

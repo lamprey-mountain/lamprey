@@ -10,8 +10,8 @@ use lamprey_macros::endpoint;
     response(OK, body = Vec<AnalyticsMembersCount>, description = "success"),
 )]
 pub mod room_analytics_members_count {
-    use crate::v1::types::room_analytics::{AnalyticsMembersCount, AnalyticsParams};
     use crate::v1::types::RoomId;
+    use crate::v1::types::room_analytics::{AnalyticsMembersCount, AnalyticsParams};
 
     pub struct Request {
         #[path]
@@ -37,8 +37,8 @@ pub mod room_analytics_members_count {
     response(OK, body = Vec<AnalyticsMembersJoin>, description = "success"),
 )]
 pub mod room_analytics_members_join {
-    use crate::v1::types::room_analytics::{AnalyticsMembersJoin, AnalyticsParams};
     use crate::v1::types::RoomId;
+    use crate::v1::types::room_analytics::{AnalyticsMembersJoin, AnalyticsParams};
 
     pub struct Request {
         #[path]
@@ -64,8 +64,8 @@ pub mod room_analytics_members_join {
     response(OK, body = Vec<AnalyticsMembersLeave>, description = "success"),
 )]
 pub mod room_analytics_members_leave {
-    use crate::v1::types::room_analytics::{AnalyticsMembersLeave, AnalyticsParams};
     use crate::v1::types::RoomId;
+    use crate::v1::types::room_analytics::{AnalyticsMembersLeave, AnalyticsParams};
 
     pub struct Request {
         #[path]
@@ -91,10 +91,10 @@ pub mod room_analytics_members_leave {
     response(OK, body = Vec<AnalyticsChannel>, description = "success"),
 )]
 pub mod room_analytics_channels {
+    use crate::v1::types::RoomId;
     use crate::v1::types::room_analytics::{
         AnalyticsChannel, AnalyticsChannelParams, AnalyticsParams,
     };
-    use crate::v1::types::RoomId;
 
     pub struct Request {
         #[path]
@@ -125,8 +125,8 @@ pub mod room_analytics_channels {
     response(OK, body = Vec<AnalyticsOverview>, description = "success"),
 )]
 pub mod room_analytics_overview {
-    use crate::v1::types::room_analytics::{AnalyticsOverview, AnalyticsParams};
     use crate::v1::types::RoomId;
+    use crate::v1::types::room_analytics::{AnalyticsOverview, AnalyticsParams};
 
     pub struct Request {
         #[path]
@@ -152,8 +152,8 @@ pub mod room_analytics_overview {
     response(OK, body = AnalyticsInvites, description = "success"),
 )]
 pub mod room_analytics_invites {
-    use crate::v1::types::room_analytics::{AnalyticsInvites, AnalyticsParams};
     use crate::v1::types::RoomId;
+    use crate::v1::types::room_analytics::{AnalyticsInvites, AnalyticsParams};
 
     pub struct Request {
         #[path]

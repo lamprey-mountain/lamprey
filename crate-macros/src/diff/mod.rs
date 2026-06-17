@@ -4,7 +4,7 @@ mod attr;
 mod expand;
 
 use darling::FromDeriveInput;
-use syn::{parse_macro_input, DeriveInput};
+use syn::{DeriveInput, parse_macro_input};
 
 /// Main entry point for the `#[derive(Diff)]` macro.
 pub fn expand_diff_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {

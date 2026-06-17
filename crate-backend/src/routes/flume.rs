@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::util::Time;
@@ -12,7 +12,7 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::routes::util::auth::Auth4;
 use crate::routes2;
-use crate::{error::Result, ServerState};
+use crate::{ServerState, error::Result};
 
 /// Flume create
 #[handler(routes::flume::flume_create)]

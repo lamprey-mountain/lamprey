@@ -1,8 +1,8 @@
-use crate::data::postgres::{Pagination, Postgres};
 use crate::data::DataDocument;
+use crate::data::postgres::{Pagination, Postgres};
 use crate::error::{Error, Result};
 use crate::types::{DehydratedDocument, DocumentUpdateSummary, PaginationDirection};
-use crate::{gen_paginate, EditContextId};
+use crate::{EditContextId, gen_paginate};
 use async_trait::async_trait;
 use common::v1::types::document::{
     DocumentBranch, DocumentBranchCreate, DocumentBranchListParams, DocumentBranchPatch,
@@ -151,7 +151,7 @@ impl DataDocument for Postgres {
             None => {
                 return Err(Error::ApiError(ApiError::from_code(
                     ErrorCode::UnknownDocumentBranch,
-                )))
+                )));
             }
         };
 
@@ -203,7 +203,7 @@ impl DataDocument for Postgres {
             None => {
                 return Err(Error::ApiError(ApiError::from_code(
                     ErrorCode::UnknownDocumentRevision,
-                )))
+                )));
             }
         };
 
@@ -302,7 +302,7 @@ impl DataDocument for Postgres {
             None => {
                 return Err(Error::ApiError(ApiError::from_code(
                     ErrorCode::UnknownDocumentBranch,
-                )))
+                )));
             }
         };
 

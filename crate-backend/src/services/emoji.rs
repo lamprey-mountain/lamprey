@@ -10,9 +10,9 @@ use common::v1::types::{EmojiId, PaginationQuery, PaginationResponse, Permission
 use moka::future::Cache;
 use validator::Validate;
 
+use crate::ServerStateInner;
 use crate::error::Result;
 use crate::routes::util::Auth;
-use crate::ServerStateInner;
 
 pub struct ServiceEmoji {
     state: Arc<ServerStateInner>,

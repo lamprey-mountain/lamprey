@@ -3,8 +3,8 @@ use std::sync::Arc;
 use common::v1::types::defaults::EVERYONE_TRUSTED;
 use common::v1::types::util::Time;
 use common::v1::types::{
-    ChannelId, ConnectionId, Permission, PermissionOverwriteType, RoomId, Session, UserId,
-    SERVER_ROOM_ID,
+    ChannelId, ConnectionId, Permission, PermissionOverwriteType, RoomId, SERVER_ROOM_ID, Session,
+    UserId,
 };
 use dashmap::DashMap;
 use lamprey_backend_core::types::permission::{
@@ -15,9 +15,9 @@ use moka::future::Cache;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
+use crate::ServerStateInner;
 use crate::error::Result;
 use crate::sync::permissions::AuthCheck;
-use crate::ServerStateInner;
 
 // TODO(#995): remove much of this code?
 // the permission cache can take up a lot of memory and is unnecessary since i can recalculate when needed, thanks to the new cache system

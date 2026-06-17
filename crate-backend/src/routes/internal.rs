@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{ws::WebSocketUpgrade, State},
+    extract::{State, ws::WebSocketUpgrade},
     response::IntoResponse,
 };
 use http::HeaderMap;

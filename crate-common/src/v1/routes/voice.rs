@@ -9,9 +9,9 @@ use lamprey_macros::endpoint;
     response(OK, body = VoiceState, description = "ok"),
 )]
 pub mod voice_state_get {
+    use crate::v1::types::ChannelId;
     use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::voice::VoiceState;
-    use crate::v1::types::ChannelId;
 
     pub struct Request {
         #[path]
@@ -37,9 +37,9 @@ pub mod voice_state_get {
     response(OK, body = VoiceState, description = "ok"),
 )]
 pub mod voice_state_patch {
+    use crate::v1::types::ChannelId;
     use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::voice::{VoiceState, VoiceStatePatch};
-    use crate::v1::types::ChannelId;
 
     pub struct Request {
         #[path]
@@ -68,9 +68,9 @@ pub mod voice_state_patch {
     response(OK, body = VoiceState, description = "ok"),
 )]
 pub mod voice_state_move {
+    use crate::v1::types::ChannelId;
     use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::voice::{VoiceState, VoiceStateMove};
-    use crate::v1::types::ChannelId;
 
     pub struct Request {
         #[path]
@@ -99,8 +99,8 @@ pub mod voice_state_move {
     response(NO_CONTENT, description = "ok"),
 )]
 pub mod voice_state_move_bulk {
-    use crate::v1::types::voice::VoiceStateMoveBulk;
     use crate::v1::types::ChannelId;
+    use crate::v1::types::voice::VoiceStateMoveBulk;
 
     pub struct Request {
         #[path]
@@ -124,8 +124,8 @@ pub mod voice_state_move_bulk {
     response(NO_CONTENT, description = "ok"),
 )]
 pub mod voice_state_disconnect {
-    use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::ChannelId;
+    use crate::v1::types::misc::UserIdReq;
 
     pub struct Request {
         #[path]
@@ -195,8 +195,8 @@ pub mod voice_state_list {
     response(CREATED, body = Call, description = "ok"),
 )]
 pub mod voice_call_create {
-    use crate::v1::types::voice::{Call, CallCreate};
     use crate::v1::types::ChannelId;
+    use crate::v1::types::voice::{Call, CallCreate};
 
     pub struct Request {
         #[path]
@@ -221,8 +221,8 @@ pub mod voice_call_create {
     response(NO_CONTENT, description = "ok"),
 )]
 pub mod voice_call_delete {
-    use crate::v1::types::voice::CallDeleteParams;
     use crate::v1::types::ChannelId;
+    use crate::v1::types::voice::CallDeleteParams;
 
     pub struct Request {
         #[path]
@@ -244,8 +244,8 @@ pub mod voice_call_delete {
     response(OK, body = Call, description = "ok"),
 )]
 pub mod voice_call_patch {
-    use crate::v1::types::voice::{Call, CallPatch};
     use crate::v1::types::ChannelId;
+    use crate::v1::types::voice::{Call, CallPatch};
 
     pub struct Request {
         #[path]
@@ -270,8 +270,8 @@ pub mod voice_call_patch {
     response(OK, body = Call, description = "ok"),
 )]
 pub mod voice_call_get {
-    use crate::v1::types::voice::Call;
     use crate::v1::types::ChannelId;
+    use crate::v1::types::voice::Call;
 
     pub struct Request {
         #[path]
@@ -297,8 +297,8 @@ pub mod voice_call_get {
     response(NO_CONTENT, description = "ok"),
 )]
 pub mod voice_ring_start {
-    use crate::v1::types::voice::RingStart;
     use crate::v1::types::ChannelId;
+    use crate::v1::types::voice::RingStart;
 
     pub struct Request {
         #[path]
@@ -322,8 +322,8 @@ pub mod voice_ring_start {
     response(NO_CONTENT, description = "ok"),
 )]
 pub mod voice_ring_stop {
-    use crate::v1::types::voice::RingStop;
     use crate::v1::types::ChannelId;
+    use crate::v1::types::voice::RingStop;
 
     pub struct Request {
         #[path]
@@ -347,8 +347,8 @@ pub mod voice_ring_stop {
     response(OK, body = RingEligibility, description = "ok"),
 )]
 pub mod voice_ring_eligibility {
-    use crate::v1::types::voice::RingEligibility;
     use crate::v1::types::ChannelId;
+    use crate::v1::types::voice::RingEligibility;
 
     pub struct Request {
         #[path]

@@ -10,8 +10,8 @@ use lamprey_macros::endpoint;
     response(OK, body = Vec<AutomodRule>, description = "List automod rules success"),
 )]
 pub mod automod_rule_list {
-    use crate::v1::types::automod::AutomodRule;
     use crate::v1::types::RoomId;
+    use crate::v1::types::automod::AutomodRule;
 
     pub struct Request {
         #[path]
@@ -35,8 +35,8 @@ pub mod automod_rule_list {
     response(CREATED, body = AutomodRule, description = "Create automod rule success"),
 )]
 pub mod automod_rule_create {
-    use crate::v1::types::automod::{AutomodRule, AutomodRuleCreate};
     use crate::v1::types::RoomId;
+    use crate::v1::types::automod::{AutomodRule, AutomodRuleCreate};
 
     pub struct Request {
         #[path]
@@ -144,8 +144,8 @@ pub mod automod_rule_delete {
     response(OK, body = AutomodRuleTest, description = "Test automod rule success"),
 )]
 pub mod automod_rule_test {
-    use crate::v1::types::automod::{AutomodRuleTest, AutomodRuleTestRequest};
     use crate::v1::types::RoomId;
+    use crate::v1::types::automod::{AutomodRuleTest, AutomodRuleTestRequest};
 
     pub struct Request {
         #[path]

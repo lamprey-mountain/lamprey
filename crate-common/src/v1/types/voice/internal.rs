@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use str0m::{format::Codec, media::MediaTime};
 use uuid::Uuid;
 
-use crate::v1::types::{voice::Mid, Channel, ChannelId, UserId};
+use crate::v1::types::{Channel, ChannelId, UserId, voice::Mid};
 
 /// a globally unique media id identifier
 // TODO: use this?

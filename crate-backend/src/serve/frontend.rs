@@ -4,12 +4,12 @@ use crate::ServerState;
 use axum::{
     body::Body,
     extract::{Path, State},
-    http::{header, Uri},
+    http::{Uri, header},
     response::{IntoResponse, Response},
 };
-use base64::{engine::general_purpose::STANDARD, Engine};
+use base64::{Engine, engine::general_purpose::STANDARD};
 use common::v1::types::{InviteCode, InviteTarget};
-use minijinja::{context, Environment};
+use minijinja::{Environment, context};
 use rand::RngCore;
 use rust_embed::RustEmbed;
 use serde::Serialize;

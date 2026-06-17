@@ -3,12 +3,12 @@ pub mod documents;
 pub mod member_lists;
 pub mod notifications;
 // pub mod permissions;
-pub mod preferences;
-pub mod rooms;
-pub mod users;
 pub mod federation;
 pub mod http;
 pub mod oauth2;
+pub mod preferences;
+pub mod rooms;
+pub mod users;
 
 pub struct Services {
     pub channels: channels::Service,

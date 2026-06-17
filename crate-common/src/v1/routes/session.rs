@@ -100,8 +100,8 @@ pub mod session_delete {
     response(OK, body = Session, description = "success"),
 )]
 pub mod session_get {
-    use crate::v1::types::misc::SessionIdReq;
     use crate::v1::types::Session;
+    use crate::v1::types::misc::SessionIdReq;
 
     pub struct Request {
         #[path]

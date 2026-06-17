@@ -10,10 +10,10 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::{
+    CalendarEventId, ChannelId, RoomMember, User, UserId,
     error::{ApiError, ErrorCode, ErrorField, ErrorFieldType},
     misc::Color,
     pagination::PaginationDirection,
-    CalendarEventId, ChannelId, RoomMember, User, UserId,
 };
 
 #[cfg(feature = "serde")]

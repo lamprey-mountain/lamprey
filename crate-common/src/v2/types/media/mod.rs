@@ -11,8 +11,8 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::{
-    federation::Remote, misc::hashes::Hashes, util::Time, ChannelId, EmbedId, MediaId, MediaVerId,
-    MessageId, MessageVerId, Mime, RedexId, RedexVerId, RoomId, UserId,
+    ChannelId, EmbedId, MediaId, MediaVerId, MessageId, MessageVerId, Mime, RedexId, RedexVerId,
+    RoomId, UserId, federation::Remote, misc::hashes::Hashes, util::Time,
 };
 
 pub mod proxy;

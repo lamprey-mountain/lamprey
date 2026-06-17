@@ -1,34 +1,34 @@
 use std::{
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
     },
     time::Instant,
 };
 
 use async_trait::async_trait;
 use common::v1::types::{
+    EvalId, RedexId, RedexVerId,
     redex::{
-        metadata::{License, Semver},
         Eval, EvalInput, EvalStatus, RedexHandlerType,
+        metadata::{License, Semver},
     },
     util::Time,
-    EvalId, RedexId, RedexVerId,
 };
 use cpu_time::ProcessTime;
 use dashmap::DashMap;
-use rquickjs::{async_with, Ctx, FromJs};
+use rquickjs::{Ctx, FromJs, async_with};
 use tokio::sync::broadcast;
 use tracing::error;
 
 use crate::{
+    Error, ExecutionHandle, Executor, Result,
     engine::{ExecutionEvent, ScriptExtracted},
     javascript::{
         glue::register::ScriptRegistry,
         loader::{ModuleLoader, ModuleResolver},
     },
     limits::Limits,
-    Error, ExecutionHandle, Executor, Result,
 };
 
 mod glue;

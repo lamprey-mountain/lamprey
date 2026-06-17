@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{emoji::EmojiCustomMinimal, misc::binary::Binary, RoomId};
+use crate::v1::types::{RoomId, emoji::EmojiCustomMinimal, misc::binary::Binary};
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

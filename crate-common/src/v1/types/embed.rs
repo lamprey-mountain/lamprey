@@ -1,5 +1,5 @@
 use crate::{
-    v1::types::{misc::Color, util::truncate::truncate_with_ellipsis, EmbedId},
+    v1::types::{EmbedId, misc::Color, util::truncate::truncate_with_ellipsis},
     v2::types::media::{Media, MediaReference},
 };
 

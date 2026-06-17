@@ -9,8 +9,8 @@ use common::v1::types::message::{
     Message, MessageAttachment, MessageAttachmentType, MessageDefaultMarkdown, MessageType,
     MessageVersion,
 };
-use common::v1::types::reaction::{ReactionCounts, ReactionKey};
 use common::v1::types::mirror::ChannelSync;
+use common::v1::types::reaction::{ReactionCounts, ReactionKey};
 use common::v1::types::util::Time;
 use common::v1::types::{ChannelSeq, ChannelType, Mentions, UserId};
 use common::v2::types::embed::Embed;
@@ -24,8 +24,8 @@ use crate::error::{Error, Result};
 use crate::gen_paginate;
 use crate::types::{
     ChannelId, DbChannelType, DbMessageCreate, DbMessageExtract, DbMessageType, DbMessageUpdate,
-    MentionsIds, MessageId, MessageVerId, PaginationDirection, PaginationQuery, PaginationResponse,
-    MessageWithCounts,
+    MentionsIds, MessageId, MessageVerId, MessageWithCounts, PaginationDirection, PaginationQuery,
+    PaginationResponse,
 };
 
 use crate::data::DataMessage;
@@ -217,7 +217,9 @@ impl From<DbMessageVersion> for MessageVersion {
                         .expect("invalid data in db"),
                 ),
                 ty @ DbMessageType::ThreadUpdate | ty @ DbMessageType::DefaultTagged => {
-                    panic!("{ty:?} messages are deprecated and shouldn't exist in the database anymore")
+                    panic!(
+                        "{ty:?} messages are deprecated and shouldn't exist in the database anymore"
+                    )
                 }
             },
             mentions: Mentions::default(),
@@ -1183,9 +1185,9 @@ impl DataMessage for Postgres {
         pagination: PaginationQuery<MessageId>,
         _user_id: Option<UserId>,
     ) -> Result<ChannelSync> {
+        use common::v1::types::MessageSync;
         use common::v1::types::emoji::EmojiCustom;
         use common::v1::types::reaction::ReactionKeyParam;
-        use common::v1::types::MessageSync;
         use std::str::FromStr;
 
         let mut conn = self.acquire().await?;

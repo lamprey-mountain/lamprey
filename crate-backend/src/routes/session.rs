@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
@@ -16,7 +16,7 @@ use validator::Validate;
 
 use crate::routes::util::{Auth, Auth3};
 use crate::types::{DbSessionCreate, SessionIdReq};
-use crate::{routes2, ServerState};
+use crate::{ServerState, routes2};
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::{Error, Result};

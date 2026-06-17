@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use common::v1::types::{
-    preferences::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
     ChannelId, RoomId,
+    preferences::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
 };
 use sqlx::{query, query_scalar};
 

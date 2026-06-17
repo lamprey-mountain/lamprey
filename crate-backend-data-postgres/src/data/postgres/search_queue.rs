@@ -80,7 +80,9 @@ impl DataSearchQueue for Postgres {
                     "rooms" => SearchReindexQueueTarget::Rooms,
                     "media" => SearchReindexQueueTarget::Media,
                     "users" => SearchReindexQueueTarget::Users,
-                    "audit_log_entries" => SearchReindexQueueTarget::AuditLogEntries(r.target_id.into()),
+                    "audit_log_entries" => {
+                        SearchReindexQueueTarget::AuditLogEntries(r.target_id.into())
+                    }
                     _ => unreachable!("unknown target type: {}", r.target_type),
                 };
                 SearchReindexQueue {

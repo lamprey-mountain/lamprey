@@ -1,18 +1,18 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
-use axum::Json;
 use common::v1::routes;
-use common::v1::types::application::Scope;
 use common::v1::types::MessageSync;
+use common::v1::types::application::Scope;
 use lamprey_macros::handler;
 use tower_http::limit::RequestBodyLimitLayer;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::Result;
 use crate::routes::util::Auth;
-use crate::{routes2, ServerState};
+use crate::{ServerState, routes2};
 
 /// Preferences global put
 #[handler(routes::preferences_global_put)]

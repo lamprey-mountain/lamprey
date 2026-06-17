@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use kameo::actor::Spawn;
 use kameo::message::{Context, Message};
 use kameo::prelude::{ActorStopReason, WeakActorRef};

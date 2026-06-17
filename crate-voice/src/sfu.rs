@@ -8,17 +8,17 @@ use std::{
 use bytes::Bytes;
 use common::{
     v1::types::voice::{
-        internal::SfuPermissions,
-        messages::{SfuCommand, SfuEvent, SignallingCommand, SignallingEvent},
         KeyframeRequestKind, MediaKind, Mid, Rid, SessionDescription, Speaking, SpeakingWithUserId,
         TrackKey, TrackMetadata, TrackMetadataWithUserId, VoiceState,
+        internal::SfuPermissions,
+        messages::{SfuCommand, SfuEvent, SignallingCommand, SignallingEvent},
     },
     v2::types::{ChannelId, UserId},
 };
 use futures_util::future::OptionFuture;
 use lamprey_backend_core::config::Config;
 use slotmap::SlotMap;
-use str0m::{media::Direction, Event, Output};
+use str0m::{Event, Output, media::Direction};
 use tokio::{net::UdpSocket, sync::mpsc};
 use tracing::{debug, warn};
 
@@ -494,7 +494,9 @@ impl Shard {
                             }
 
                             // map track id to the target peer's mid
-                            let Some(&sink_id) = self.router.subscriptions.get(&(target_peer_id, track_id)) else {
+                            let Some(&sink_id) =
+                                self.router.subscriptions.get(&(target_peer_id, track_id))
+                            else {
                                 continue;
                             };
                             let Some(target_mid) = self.sinks[sink_id].state.mid() else {

@@ -1,14 +1,14 @@
 use std::{
-    sync::{atomic::AtomicU8, Arc},
+    sync::{Arc, atomic::AtomicU8},
     time::Duration,
 };
 
 use crate::prelude::*;
 use common::v1::types::{
-    presence::Presence, MessageClient, MessageEnvelope, MessagePayload, MessageSync, SessionToken,
-    SyncResume,
+    MessageClient, MessageEnvelope, MessagePayload, MessageSync, SessionToken, SyncResume,
+    presence::Presence,
 };
-use futures_util::{stream::BoxStream, SinkExt, StreamExt};
+use futures_util::{SinkExt, StreamExt, stream::BoxStream};
 use reqwest::Url;
 use tokio::sync::{broadcast, mpsc};
 use tokio_stream::wrappers::BroadcastStream;

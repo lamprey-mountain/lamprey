@@ -6,16 +6,16 @@ use std::{
     time::{Duration, Instant},
 };
 
-use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::SessionId;
+use common::v1::types::error::{ApiError, ErrorCode};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 use url::Url;
 use uuid::Uuid;
 
 use crate::{
-    error::{Error, Result},
     ServerStateInner,
+    error::{Error, Result},
 };
 
 // TODO: move these structs to common?

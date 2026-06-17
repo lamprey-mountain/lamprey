@@ -13,8 +13,8 @@ use lamprey_macros::endpoint;
 )]
 pub mod redex_create {
     use crate::v1::types::{
-        redex::{Redex, RedexCreate},
         ChannelId,
+        redex::{Redex, RedexCreate},
     };
 
     pub struct Request {
@@ -43,7 +43,7 @@ pub mod redex_create {
     response(OK, body = PaginationResponse<Redex>, description = "List scripts success"),
 )]
 pub mod redex_list {
-    use crate::v1::types::{redex::Redex, ChannelId, PaginationQuery, PaginationResponse, RedexId};
+    use crate::v1::types::{ChannelId, PaginationQuery, PaginationResponse, RedexId, redex::Redex};
 
     pub struct Request {
         #[path]
@@ -71,7 +71,7 @@ pub mod redex_list {
     response(OK, body = Redex, description = "Get redex success"),
 )]
 pub mod redex_get {
-    use crate::v1::types::{redex::Redex, ChannelId, RedexId};
+    use crate::v1::types::{ChannelId, RedexId, redex::Redex};
 
     pub struct Request {
         #[path]
@@ -126,8 +126,8 @@ pub mod redex_delete {
 )]
 pub mod redex_content_update {
     use crate::v1::types::{
-        redex::{RedexContentUpdate, RedexVersion},
         ChannelId, RedexId,
+        redex::{RedexContentUpdate, RedexVersion},
     };
 
     pub struct Request {
@@ -159,8 +159,8 @@ pub mod redex_content_update {
 )]
 pub mod redex_trigger {
     use crate::v1::types::{
-        redex::{Eval, EvalCreateManual},
         ChannelId, RedexId,
+        redex::{Eval, EvalCreateManual},
     };
 
     pub struct Request {
@@ -193,7 +193,7 @@ pub mod redex_trigger {
 )]
 pub mod redex_version_list {
     use crate::v1::types::{
-        redex::RedexVersion, ChannelId, PaginationQuery, PaginationResponse, RedexId, RedexVerId,
+        ChannelId, PaginationQuery, PaginationResponse, RedexId, RedexVerId, redex::RedexVersion,
     };
 
     pub struct Request {
@@ -225,7 +225,7 @@ pub mod redex_version_list {
     response(OK, body = RedexVersion, description = "Get redex version success"),
 )]
 pub mod redex_version_get {
-    use crate::v1::types::{redex::RedexVersion, ChannelId, RedexId, RedexVerId};
+    use crate::v1::types::{ChannelId, RedexId, RedexVerId, redex::RedexVersion};
 
     pub struct Request {
         #[path]
@@ -285,7 +285,7 @@ pub mod redex_version_delete {
     response(OK, body = RedexVersion, description = "Restore redex version success"),
 )]
 pub mod redex_version_restore {
-    use crate::v1::types::{redex::RedexVersion, ChannelId, RedexId, RedexVerId};
+    use crate::v1::types::{ChannelId, RedexId, RedexVerId, redex::RedexVersion};
 
     pub struct Request {
         #[path]
@@ -316,7 +316,7 @@ pub mod redex_version_restore {
     response(OK, body = RedexDependencyGraph, description = "Get redex dependencies success"),
 )]
 pub mod redex_depends {
-    use crate::v1::types::{redex::RedexDependencyGraph, ChannelId, RedexId};
+    use crate::v1::types::{ChannelId, RedexId, redex::RedexDependencyGraph};
 
     pub struct Request {
         #[path]
@@ -345,8 +345,8 @@ pub mod redex_depends {
 )]
 pub mod redex_depends_update {
     use crate::v1::types::{
-        redex::{RedexDependenciesUpdate, RedexVersion},
         ChannelId, RedexId,
+        redex::{RedexDependenciesUpdate, RedexVersion},
     };
 
     pub struct Request {
@@ -379,7 +379,7 @@ pub mod redex_depends_update {
 )]
 pub mod redex_eval_list {
     use crate::v1::types::{
-        redex::Eval, ChannelId, EvalId, PaginationQuery, PaginationResponse, RedexId,
+        ChannelId, EvalId, PaginationQuery, PaginationResponse, RedexId, redex::Eval,
     };
 
     pub struct Request {
@@ -411,7 +411,7 @@ pub mod redex_eval_list {
     response(OK, body = Eval, description = "Get redex eval success"),
 )]
 pub mod redex_eval_get {
-    use crate::v1::types::{redex::Eval, ChannelId, EvalId, RedexId};
+    use crate::v1::types::{ChannelId, EvalId, RedexId, redex::Eval};
 
     pub struct Request {
         #[path]
@@ -471,7 +471,7 @@ pub mod redex_eval_stop {
 )]
 pub mod redex_eval_log {
     use crate::v1::types::{
-        redex::EvalLogEntry, ChannelId, EvalId, PaginationQuery, PaginationResponse, RedexId,
+        ChannelId, EvalId, PaginationQuery, PaginationResponse, RedexId, redex::EvalLogEntry,
     };
 
     pub struct Request {

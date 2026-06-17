@@ -12,8 +12,8 @@ use crate::consts::IDLE_TIMEOUT_MEMBER_LIST;
 use crate::services::cache::permissions::PermissionsCalculator;
 use crate::services::rooms::{RoomData, RoomSnapshot};
 use crate::{
-    services::member_lists::util::{MemberGroupInfo, MemberKey, MemberListKey},
     Result, ServerStateInner,
+    services::member_lists::util::{MemberGroupInfo, MemberKey, MemberListKey},
 };
 
 /// member list state machine, now owned by RoomActor

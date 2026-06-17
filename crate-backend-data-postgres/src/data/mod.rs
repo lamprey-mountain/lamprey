@@ -13,9 +13,9 @@ use common::v1::types::email::EmailAddr;
 use common::v1::types::federation::{Hostname, Remote};
 use common::v1::types::harvest::Harvest;
 use common::v1::types::message::{Message, MessageVersion};
+use common::v1::types::mirror::ChannelSync;
 use common::v1::types::oauth::Scopes;
 use common::v1::types::room_template::{RoomTemplateCode, RoomTemplateCreate, RoomTemplatePatch};
-use common::v1::types::mirror::ChannelSync;
 use common::v1::types::util::Time;
 use common::v1::types::{
     ApplicationId, Channel, ChannelId, ChannelPatch, ChannelReorder, ChannelVerId,

@@ -35,8 +35,8 @@ pub mod report_create_server {
     response(OK, body = Report, description = "success"),
 )]
 pub mod report_create_room {
-    use crate::v1::types::moderation::{Report, ReportCreate};
     use crate::v1::types::RoomId;
+    use crate::v1::types::moderation::{Report, ReportCreate};
 
     pub struct Request {
         #[path]

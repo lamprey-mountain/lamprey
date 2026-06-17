@@ -13,17 +13,18 @@ use validator::Validate;
 
 use crate::{
     v1::types::{
+        ChannelId, ConnectionId, DocumentBranchId, Session, SessionId, SessionToken, User, UserId,
         application::Application,
         document::DocumentUpdate,
         error::SyncErrorCode,
         presence::Presence,
         voice::{
-            messages::{SignallingCommand, SignallingEvent},
             VoiceState, VoiceStateUpdate,
+            messages::{SignallingCommand, SignallingEvent},
         },
-        ChannelId, ConnectionId, DocumentBranchId, Session, SessionId, SessionToken, User, UserId,
     },
     v2::types::{
+        ShardId, SyncId,
         media::Media,
         sync::{
             channel::DispatchChannel,
@@ -34,7 +35,6 @@ use crate::{
             user::DispatchUser,
             webhook::DispatchWebhook,
         },
-        ShardId, SyncId,
     },
 };
 

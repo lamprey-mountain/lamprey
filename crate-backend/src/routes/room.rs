@@ -1,10 +1,10 @@
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::misc::time::Time;
@@ -20,7 +20,7 @@ use crate::routes::util::{Auth, Auth3};
 use crate::routes2;
 use crate::services::search::SearchRoomsVisibility;
 use crate::types::{DbRoomCreate, MediaLinkType, MessageSync, PaginationResponse, Permission};
-use crate::{error::Result, Error, ServerState};
+use crate::{Error, ServerState, error::Result};
 use common::v1::types::error::{ApiError, ErrorCode};
 
 fn build_cache_headers(version_id: &Uuid) -> Result<HeaderMap> {

@@ -5,8 +5,8 @@ use axum::extract::ws::WebSocket;
 use common::v1::types::{MessageClient, MessageEnvelope, SyncFormat};
 use flate2::{Compress, Decompress, FlushCompress, FlushDecompress};
 use futures::{
-    stream::{self, BoxStream, SplitSink, SplitStream},
     SinkExt, StreamExt,
+    stream::{self, BoxStream, SplitSink, SplitStream},
 };
 use lamprey_backend_core::prelude::*;
 

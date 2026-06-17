@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use axum::{response::Html, routing::get, Json};
+use axum::{Json, response::Html, routing::get};
 use http::HeaderName;
 use opentelemetry_otlp::WithExportConfig;
 use tower_http::{
@@ -8,11 +8,11 @@ use tower_http::{
     trace::TraceLayer,
 };
 use tracing::info;
-use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::{config::Config, routes, state::AppState, Result};
+use crate::{Result, config::Config, routes, state::AppState};
 
 pub struct MediaServer {
     state: AppState,
@@ -102,7 +102,7 @@ pub fn create_router(state: AppState) -> axum::Router {
 }
 
 fn cors() -> CorsLayer {
-    use http::header::{HeaderName, AUTHORIZATION, CONTENT_TYPE};
+    use http::header::{AUTHORIZATION, CONTENT_TYPE, HeaderName};
     const UPLOAD_OFFSET: HeaderName = HeaderName::from_static("upload-offset");
     const UPLOAD_LENGTH: HeaderName = HeaderName::from_static("upload-length");
     CorsLayer::very_permissive()

@@ -2,8 +2,8 @@
 
 use common::{
     v1::types::{
-        emoji::EmojiOwner, ChannelId, ConnectionId, InviteTarget, InviteTargetId, MessageSync,
-        Permission, RoomId, SessionId, UserId,
+        ChannelId, ConnectionId, InviteTarget, InviteTargetId, MessageSync, Permission, RoomId,
+        SessionId, UserId, emoji::EmojiOwner,
     },
     v2::types::media::MediaLinkType,
 };

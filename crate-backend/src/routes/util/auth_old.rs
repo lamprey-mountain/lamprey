@@ -7,17 +7,17 @@ use common::v1::types::federation::Hostname;
 use common::v1::types::ids::SERVER_TOKEN_SESSION_ID;
 use common::v1::types::oauth::Scope;
 use common::v1::types::util::Time;
-use common::v1::types::{oauth::Scopes, Session, User};
-use common::v1::types::{RoomId, SessionImprint, SessionType, UserId, SERVER_USER_ID};
+use common::v1::types::{RoomId, SERVER_USER_ID, SessionImprint, SessionType, UserId};
+use common::v1::types::{Session, User, oauth::Scopes};
 use common::v1::types::{SessionStatus, SessionToken};
 use headers::authorization::Bearer;
 use headers::{Authorization, HeaderMapExt};
 use http::request::Parts;
 
-use crate::routes::util::audit::AuditTxnSlot as AuditLogSlot;
-use crate::routes::util::audit::AuditLoggerTransaction;
-use crate::routes::util::{FederationIdentity, HeaderPuppetId, HeaderReason};
 use crate::ServerState;
+use crate::routes::util::audit::AuditLoggerTransaction;
+use crate::routes::util::audit::AuditTxnSlot as AuditLogSlot;
+use crate::routes::util::{FederationIdentity, HeaderPuppetId, HeaderReason};
 use crate::{Error, ServerStateInner};
 
 /// Empty scopes for Server/Public identities

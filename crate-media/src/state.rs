@@ -6,10 +6,10 @@ use common::{
 };
 use lamprey_backend_core::config::{ConfigBlobs, ConfigMedia};
 use moka::future::Cache;
-use opendal::{layers::LoggingLayer, Operator};
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use opendal::{Operator, layers::LoggingLayer};
+use sqlx::{PgPool, postgres::PgPoolOptions};
 
-use crate::{config::Config, data, Error, Result};
+use crate::{Error, Result, config::Config, data};
 
 #[derive(Clone)]
 pub struct AppState {

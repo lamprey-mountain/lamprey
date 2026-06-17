@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{federation::Hostname, ChannelId, RedexId, UserId};
+use crate::v1::types::{ChannelId, RedexId, UserId, federation::Hostname};
 
 /// metadata about a redex
 #[derive(Debug, Clone)]
@@ -120,7 +120,7 @@ pub struct License(pub String);
 
 #[cfg(feature = "utoipa")]
 mod u {
-    use utoipa::{openapi::ObjectBuilder, PartialSchema, ToSchema};
+    use utoipa::{PartialSchema, ToSchema, openapi::ObjectBuilder};
 
     use super::License;
 

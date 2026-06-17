@@ -8,8 +8,8 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::v1::types::{
-    document::DocumentStateVector, ChannelId, ConnectionId, DocumentBranchId, InviteCode, RedexId,
-    RoleId, RoomId, RoomMember, ThreadMember, User, UserId,
+    ChannelId, ConnectionId, DocumentBranchId, InviteCode, RedexId, RoleId, RoomId, RoomMember,
+    ThreadMember, User, UserId, document::DocumentStateVector,
 };
 
 /// update what the client is subscribed to

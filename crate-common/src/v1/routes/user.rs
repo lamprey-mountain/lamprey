@@ -12,7 +12,7 @@ use lamprey_macros::endpoint;
     errors(UnknownUser),
 )]
 pub mod user_get {
-    use crate::v1::types::{misc::UserIdReq, UserWithRelationship};
+    use crate::v1::types::{UserWithRelationship, misc::UserIdReq};
 
     pub struct Request {
         /// the user id to fetch
@@ -39,7 +39,7 @@ pub mod user_get {
     response(NOT_MODIFIED, description = "not modified"),
 )]
 pub mod user_update {
-    use crate::v1::types::{misc::UserIdReq, User, UserPatch};
+    use crate::v1::types::{User, UserPatch, misc::UserIdReq};
 
     pub struct Request {
         #[path]
@@ -108,7 +108,7 @@ pub mod user_undelete {
     response(OK, body = PaginationResponse<Room>, description = "success"),
 )]
 pub mod user_room_list {
-    use crate::v1::types::{misc::UserIdReq, PaginationResponse, Room, RoomId};
+    use crate::v1::types::{PaginationResponse, Room, RoomId, misc::UserIdReq};
 
     pub struct Request {
         #[path]
@@ -133,8 +133,8 @@ pub mod user_room_list {
 )]
 pub mod user_audit_logs {
     use crate::v1::types::{
-        misc::UserIdReq, AuditLogEntryId, AuditLogFilter, AuditLogPaginationResponse,
-        PaginationQuery,
+        AuditLogEntryId, AuditLogFilter, AuditLogPaginationResponse, PaginationQuery,
+        misc::UserIdReq,
     };
 
     pub struct Request {
@@ -191,7 +191,7 @@ pub mod guest_create {
     response(OK, body = User, description = "success"),
 )]
 pub mod user_suspend {
-    use crate::v1::types::{misc::UserIdReq, SuspendRequest, User};
+    use crate::v1::types::{SuspendRequest, User, misc::UserIdReq};
 
     pub struct Request {
         #[path]
@@ -220,7 +220,7 @@ pub mod user_suspend {
     response(OK, body = User, description = "success"),
 )]
 pub mod user_unsuspend {
-    use crate::v1::types::{misc::UserIdReq, User};
+    use crate::v1::types::{User, misc::UserIdReq};
 
     pub struct Request {
         #[path]
@@ -358,8 +358,8 @@ pub mod harvest_download {
     response(OK, body = UserSearch, description = "success"),
 )]
 pub mod user_search {
-    use crate::v1::types::search::UserSearchRequest;
     use crate::v1::types::UserSearch;
+    use crate::v1::types::search::UserSearchRequest;
 
     pub struct Request {
         #[json]

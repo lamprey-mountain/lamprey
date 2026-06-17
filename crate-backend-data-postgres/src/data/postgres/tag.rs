@@ -2,9 +2,9 @@ use std::str::FromStr;
 
 use async_trait::async_trait;
 use common::v1::types::{
+    ChannelId, TagId,
     misc::Color,
     tag::{Tag, TagCreate, TagPatch},
-    ChannelId, TagId,
 };
 use sqlx::{query, query_as, query_scalar};
 use uuid::Uuid;
@@ -182,7 +182,8 @@ impl DataTag for Postgres {
         match archived {
             Some(true) => {
                 gen_paginate!(
-                    p, self,
+                    p,
+                    self,
                     query_as!(
                         DbTag,
                         r#"
@@ -212,7 +213,8 @@ impl DataTag for Postgres {
             }
             Some(false) => {
                 gen_paginate!(
-                    p, self,
+                    p,
+                    self,
                     query_as!(
                         DbTag,
                         r#"

@@ -1,20 +1,20 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use common::v1::routes;
+use common::v1::types::Permission;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::Permission;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
 use crate::error::{Error, Result};
 use crate::routes::util::Auth;
-use crate::{routes2, ServerState};
+use crate::{ServerState, routes2};
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 /// Room template create

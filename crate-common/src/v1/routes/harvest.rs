@@ -54,7 +54,7 @@ pub mod harvest_user_create {
     response(NOT_FOUND, description = "no harvest found"),
 )]
 pub mod harvest_room_get {
-    use crate::v1::types::{harvest::Harvest, RoomId};
+    use crate::v1::types::{RoomId, harvest::Harvest};
 
     pub struct Request {
         #[path]
@@ -77,7 +77,7 @@ pub mod harvest_room_get {
     response(ACCEPTED, description = "harvest has been queued"),
 )]
 pub mod harvest_room_create {
-    use crate::v1::types::{harvest::HarvestCreateRoom, RoomId};
+    use crate::v1::types::{RoomId, harvest::HarvestCreateRoom};
 
     pub struct Request {
         #[path]
@@ -99,7 +99,7 @@ pub mod harvest_room_create {
     response(OK, description = "success"),
 )]
 pub mod harvest_get {
-    use crate::v1::types::{harvest::Harvest, HarvestId};
+    use crate::v1::types::{HarvestId, harvest::Harvest};
 
     pub struct Request {
         #[path]

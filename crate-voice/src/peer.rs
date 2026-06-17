@@ -2,9 +2,9 @@ use std::{collections::HashMap, sync::Arc};
 
 use common::{
     v1::types::voice::{
+        KeyframeRequestKind, SessionDescription, VoiceState,
         internal::SfuPermissions,
         messages::{SignallingCommand, SignallingEvent},
-        KeyframeRequestKind, SessionDescription, VoiceState,
     },
     v2::types::{SfuId, UserId},
 };
@@ -13,7 +13,7 @@ use tracing::warn;
 
 use crate::{
     prelude::*,
-    util::{permissions::Permissions, signalling::Signalling, SfuVoiceState, SinkId, TrackId},
+    util::{SfuVoiceState, SinkId, TrackId, permissions::Permissions, signalling::Signalling},
 };
 
 /// a webrtc connection
@@ -130,7 +130,7 @@ impl Peer {
                     Ok(answer) => {
                         return vec![SignallingEvent::Answer {
                             sdp: SessionDescription(answer.to_sdp_string()),
-                        }]
+                        }];
                     }
                     Err(e) => {
                         warn!("Failed to handle offer: {:?}", e);

@@ -7,11 +7,11 @@ use std::{
     time::Instant,
 };
 use str0m::{
+    Candidate, Rtc,
     change::{SdpAnswer, SdpOffer, SdpPendingOffer},
     format::Codec,
     media::{Frequency, MediaTime, Mid},
     net::Protocol,
-    Candidate, Rtc,
 };
 use stunclient::StunClient;
 use symphonia::core::{

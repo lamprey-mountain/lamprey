@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{misc::Time, SfuId};
+use crate::v1::types::{SfuId, misc::Time};
 
 /// public moderation capabilities for a server
 #[derive(Debug, Clone)]

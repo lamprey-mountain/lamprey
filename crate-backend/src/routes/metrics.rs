@@ -6,6 +6,7 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use prometheus::{Encoder, TextEncoder};
 
 use crate::{
+    Result, ServerState,
     metrics::{
         CHANNEL_COUNT_BROADCAST, CHANNEL_COUNT_CALENDAR, CHANNEL_COUNT_DM, CHANNEL_COUNT_GDM,
         CHANNEL_COUNT_TEXT, CHANNEL_COUNT_THREAD_PRIVATE, CHANNEL_COUNT_THREAD_PUBLIC,
@@ -15,7 +16,6 @@ use crate::{
     },
     routes::util::Auth,
     types::{Permission, SERVER_ROOM_ID},
-    Result, ServerState,
 };
 
 pub async fn get_metrics(

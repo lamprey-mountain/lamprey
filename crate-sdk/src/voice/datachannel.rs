@@ -1,5 +1,5 @@
 use common::v1::types::voice::{Mid, SpeakingFlags, SpeakingWithUserId};
-use futures_util::{stream::BoxStream, StreamExt};
+use futures_util::{StreamExt, stream::BoxStream};
 
 use crate::voice::VoiceError;
 

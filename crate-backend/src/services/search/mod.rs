@@ -7,7 +7,7 @@ use tokio::sync::OnceCell;
 use crate::services::search::import::IndexEtl;
 use crate::services::search::index::{AsyncIndex, AsyncIndexHandle};
 use crate::services::search::schema::unified::UnifiedIndex;
-use crate::{error::Result, ServerStateInner};
+use crate::{ServerStateInner, error::Result};
 
 mod directory;
 mod import;

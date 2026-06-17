@@ -8,10 +8,10 @@ use url::Url;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::v1::types::MediaId;
 use crate::v1::types::components::acl::Allow;
 use crate::v1::types::e2ee::media::EncryptedMedia;
 use crate::v1::types::misc::Color;
-use crate::v1::types::MediaId;
 use crate::v2::types::media::{Media, MediaReference};
 
 /// maximum number of components in a tree
@@ -76,7 +76,7 @@ mod _s {
     use serde::{Deserialize, Serialize};
 
     use crate::v1::types::components::{
-        acl::Allow, Canonical, ComponentState, Create, Encrypted, Thin,
+        Canonical, ComponentState, Create, Encrypted, Thin, acl::Allow,
     };
 
     use super::{Component, ComponentCreate, ComponentId, ComponentType, Components};
@@ -224,9 +224,10 @@ mod _s {
 #[cfg(feature = "utoipa")]
 mod _u {
     use utoipa::{
-        openapi::{schema::Schema, RefOr},
-        schema, ToSchema,
         __dev::ComposeSchema,
+        ToSchema,
+        openapi::{RefOr, schema::Schema},
+        schema,
     };
 
     use crate::v1::types::components::{Canonical, Create, Encrypted};

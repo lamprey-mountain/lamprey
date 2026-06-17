@@ -1,6 +1,6 @@
-use crate::services::search::schema::Doctype;
-use crate::services::search::{util::SCHEMA, ServiceSearch};
 use crate::Result;
+use crate::services::search::schema::Doctype;
+use crate::services::search::{ServiceSearch, util::SCHEMA};
 use common::v1::types::{ChannelId, RoomId};
 use lamprey_backend_core::types::data::SearchReindexQueueTarget;
 use tantivy::Term;

@@ -1,4 +1,4 @@
-use rquickjs::{class::Trace, JsLifetime, Result as JsResult};
+use rquickjs::{JsLifetime, Result as JsResult, class::Trace};
 
 /// global configuration data
 #[rquickjs::class]

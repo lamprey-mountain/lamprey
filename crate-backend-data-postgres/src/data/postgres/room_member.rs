@@ -640,7 +640,8 @@ impl DataRoomMember for Postgres {
     ) -> Result<PaginationResponse<ApplicationId>> {
         let p: Pagination<_> = paginate.try_into()?;
         gen_paginate!(
-            p, self,
+            p,
+            self,
             query_scalar!(
                 r#"
                 SELECT user_id FROM room_member
@@ -654,7 +655,10 @@ impl DataRoomMember for Postgres {
                 p.dir.to_string(),
                 (p.limit + 1) as i32
             ),
-            query_scalar!("SELECT count(*) FROM room_member WHERE room_id = $1 AND membership = 'Join' AND EXISTS (SELECT 1 FROM application WHERE application.id = room_member.user_id)", *room_id),
+            query_scalar!(
+                "SELECT count(*) FROM room_member WHERE room_id = $1 AND membership = 'Join' AND EXISTS (SELECT 1 FROM application WHERE application.id = room_member.user_id)",
+                *room_id
+            ),
             |i: &ApplicationId| i.to_string()
         )
     }

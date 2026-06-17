@@ -9,8 +9,8 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::v1::types::{
-    reaction::ReactionKeyParam, util::Time, Channel, ChannelId, Message, MessageId, NotificationId,
-    Room, RoomId, UserId,
+    Channel, ChannelId, Message, MessageId, NotificationId, Room, RoomId, UserId,
+    reaction::ReactionKeyParam, util::Time,
 };
 
 pub mod bytes;

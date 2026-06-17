@@ -94,7 +94,7 @@ impl HashData {
     }
 
     pub fn into_bytes(self) -> Bytes {
-        self.0 .0
+        self.0.0
     }
 }
 

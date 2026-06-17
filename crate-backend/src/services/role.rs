@@ -13,10 +13,10 @@ use common::v1::types::{
 use moka::future::Cache;
 use validator::Validate;
 
+use crate::ServerStateInner;
 use crate::error::{Error, Result};
 use crate::routes::util::Auth;
 use crate::types::DbRoleCreate;
-use crate::ServerStateInner;
 
 pub struct ServiceRoles {
     state: Arc<ServerStateInner>,

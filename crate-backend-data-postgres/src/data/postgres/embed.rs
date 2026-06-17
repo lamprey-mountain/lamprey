@@ -5,10 +5,10 @@ use sqlx::{query, query_as};
 
 use uuid::Uuid;
 
-use crate::data::postgres::Postgres;
-use crate::data::DataEmbed;
-use crate::types::UrlEmbedQueue;
 use crate::Result;
+use crate::data::DataEmbed;
+use crate::data::postgres::Postgres;
+use crate::types::UrlEmbedQueue;
 
 #[async_trait]
 impl DataEmbed for Postgres {

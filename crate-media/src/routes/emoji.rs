@@ -11,9 +11,9 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::{
+    AppState,
     error::Result,
     routes::thumb::{get_thumb, head_thumb},
-    AppState,
 };
 
 /// Fetch emoji

@@ -12,7 +12,7 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::{
-    util::Time, ChannelId, ConnectionId, MediaId, RoomId, RoomMember, SessionId, User, UserId,
+    ChannelId, ConnectionId, MediaId, RoomId, RoomMember, SessionId, User, UserId, util::Time,
 };
 
 #[cfg(feature = "serde")]
@@ -352,7 +352,7 @@ mod next {
     #[cfg(feature = "utoipa")]
     use utoipa::ToSchema;
 
-    use crate::v1::types::{voice::Mid, UserId};
+    use crate::v1::types::{UserId, voice::Mid};
 
     use super::{MediaKind, TrackKey, TrackLayer};
 

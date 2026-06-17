@@ -1,6 +1,6 @@
 use figment::{
-    providers::{Env, Format, Toml},
     Figment,
+    providers::{Env, Format, Toml},
 };
 use lamprey_media::{config::Config, server::MediaServer};
 use tracing::info;

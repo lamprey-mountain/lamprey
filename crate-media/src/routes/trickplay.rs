@@ -10,7 +10,7 @@ use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use crate::{error::Result, AppState};
+use crate::{AppState, error::Result};
 
 /// Fetch trickplay (TODO)
 #[utoipa::path(get, path = "/trickplay/{media_id}")]

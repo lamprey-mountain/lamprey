@@ -1,7 +1,7 @@
+use crate::Result;
+use crate::services::search::ServiceSearch;
 use crate::services::search::schema::Doctype;
 use crate::services::search::util::SCHEMA;
-use crate::services::search::ServiceSearch;
-use crate::Result;
 use common::v1::types::{ChannelId, RoomId};
 use lamprey_backend_core::types::admin::{
     SearchIndexStats, SearchIndexStatsChannel, SearchIndexStatsRoom,

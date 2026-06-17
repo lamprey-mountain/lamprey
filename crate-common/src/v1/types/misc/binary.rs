@@ -15,8 +15,9 @@ pub struct Binary<const MAX_SIZE: usize>(pub Bytes);
 #[cfg(feature = "utoipa")]
 mod _u {
     use utoipa::{
-        openapi::{schema::AnyOf, RefOr, Schema},
-        schema, PartialSchema, ToSchema,
+        PartialSchema, ToSchema,
+        openapi::{RefOr, Schema, schema::AnyOf},
+        schema,
     };
 
     use crate::v1::types::misc::binary::Binary;
@@ -48,9 +49,9 @@ mod _u {
 mod _s {
     use core::fmt;
 
-    use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
+    use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
     use bytes::Bytes;
-    use serde::{de, Deserialize, Serialize};
+    use serde::{Deserialize, Serialize, de};
 
     use crate::v1::types::misc::binary::Binary;
 

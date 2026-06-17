@@ -12,11 +12,7 @@ pub fn truncate(a: &str, max_len: usize) -> &str {
                 let b = &a[0..idx]
                     .trim_end_matches(|c: char| c.is_alphanumeric())
                     .trim_end();
-                if b.is_empty() {
-                    &a[0..idx]
-                } else {
-                    b
-                }
+                if b.is_empty() { &a[0..idx] } else { b }
             } else {
                 &a[0..idx]
             }

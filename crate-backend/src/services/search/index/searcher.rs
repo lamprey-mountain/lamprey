@@ -1,8 +1,8 @@
 use lamprey_backend_core::types::search::Doctype;
 use tantivy::{
+    DocAddress,
     collector::{Count, TopDocs},
     query::QueryParser,
-    DocAddress,
 };
 
 use common::v1::types::search::{
@@ -10,17 +10,17 @@ use common::v1::types::search::{
     MessageSearchOrderField, MessageSearchRequest, RoomSearchRequest, UserSearchRequest,
 };
 
+use crate::services::search::util::SCHEMA;
 use crate::services::search::util::visibility::{
     SearchAuditLogVisibility, SearchChannelsVisibility, SearchMediaVisibility,
     SearchMessagesVisibility, SearchRoomsVisibility, TantivyVisibility,
 };
-use crate::services::search::util::SCHEMA;
 use crate::services::search::{
     index::glue::{TantivyAuditLogEntry, TantivyChannel, TantivyMedia, TantivyRoom, TantivyUser},
     util::BqBuilder,
 };
 use crate::services::search::{
-    index::{glue::TantivyMessage, AsyncSearcher},
+    index::{AsyncSearcher, glue::TantivyMessage},
     util::IntoTantivyOrder,
 };
 use crate::{Error, Result};

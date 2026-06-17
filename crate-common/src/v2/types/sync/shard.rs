@@ -6,8 +6,8 @@ use url::Url;
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
-    v1::types::{misc::Time, SyncCompression, SyncVersion},
-    v2::types::{sync::filter::DispatchFilter, ChannelId, ShardId, SyncId},
+    v1::types::{SyncCompression, SyncVersion, misc::Time},
+    v2::types::{ChannelId, ShardId, SyncId, sync::filter::DispatchFilter},
 };
 
 use super::SyncEncoding;

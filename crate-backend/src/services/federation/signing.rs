@@ -1,12 +1,10 @@
 use crate::error::{Error, Result};
 use crate::services::federation::ServiceFederation;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
-use common::v1::types::federation::consts::{
-    EXPIRED_KEY_RETENTION, KEY_ROTATION_WINDOW,
-};
-use common::v1::types::federation::signing::ServerKeySecret;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use common::v1::types::federation::ServerKeyAlgorithm;
+use common::v1::types::federation::consts::{EXPIRED_KEY_RETENTION, KEY_ROTATION_WINDOW};
+use common::v1::types::federation::signing::ServerKeySecret;
 use common::v1::types::util::Time;
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use lamprey_backend_core::config::ServerKeyInternal;

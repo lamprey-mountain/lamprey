@@ -19,9 +19,9 @@ pub(crate) mod prelude {
     pub use crate::lexer::TokenKind;
     pub use crate::query::Queryable;
     pub use crate::render::Renderer;
+    pub use crate::tree::Tree;
     pub use crate::tree::kind::{BlockKind, ErrorKind, InlineKind, NodeKind, TextKind};
     pub use crate::tree::node::{GreenNode, SyntaxElement, SyntaxNode, SyntaxToken};
-    pub use crate::tree::Tree;
     pub use crate::util::Span;
 
     pub use uuid::Uuid;

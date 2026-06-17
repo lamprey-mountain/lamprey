@@ -1,14 +1,14 @@
 use async_trait::async_trait;
 use common::v1::types::{
+    ApplicationId, PaginationDirection, PaginationQuery, PaginationResponse, UserId,
     application::Application,
     error::{ApiError, ErrorCode},
-    ApplicationId, PaginationDirection, PaginationQuery, PaginationResponse, UserId,
 };
 use lamprey_backend_core::Error;
 use sqlx::{query, query_scalar};
 
 use crate::{
-    data::{postgres::Pagination, DataApplication},
+    data::{DataApplication, postgres::Pagination},
     gen_paginate,
 };
 

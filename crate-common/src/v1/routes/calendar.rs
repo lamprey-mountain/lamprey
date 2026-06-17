@@ -31,8 +31,8 @@ pub mod calendar_event_list_user {
     response(OK, body = Vec<CalendarEvent>, description = "ok"),
 )]
 pub mod calendar_event_list {
-    use crate::v1::types::calendar::{CalendarEvent, CalendarEventListQuery};
     use crate::v1::types::ChannelId;
+    use crate::v1::types::calendar::{CalendarEvent, CalendarEventListQuery};
 
     pub struct Request {
         #[path]
@@ -59,8 +59,8 @@ pub mod calendar_event_list {
     response(CREATED, body = CalendarEvent, description = "Create calendar event success"),
 )]
 pub mod calendar_event_create {
-    use crate::v1::types::calendar::{CalendarEvent, CalendarEventCreate};
     use crate::v1::types::ChannelId;
+    use crate::v1::types::calendar::{CalendarEvent, CalendarEventCreate};
 
     pub struct Request {
         #[path]

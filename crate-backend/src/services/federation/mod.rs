@@ -2,14 +2,14 @@
 
 use std::{sync::Arc, time::Duration};
 
-use common::v1::types::federation::signing::ServerKeySecret;
 use common::v1::types::federation::Hostname;
+use common::v1::types::federation::signing::ServerKeySecret;
 use moka::future::Cache;
 use tokio::sync::RwLock;
 use tracing::error;
 
-use crate::services::federation::signing::ValidatedKey;
 use crate::ServerStateInner;
+use crate::services::federation::signing::ValidatedKey;
 
 pub mod import;
 pub mod net;

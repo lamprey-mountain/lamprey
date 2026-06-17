@@ -3,7 +3,7 @@ use std::convert::Infallible;
 use std::str::FromStr;
 
 use crate::prelude::*;
-use crate::routes::util::extract::{parse_json, parse_msgpack, ExtractorError};
+use crate::routes::util::extract::{ExtractorError, parse_json, parse_msgpack};
 use multer::Multipart;
 use serde::de::DeserializeOwned;
 use serde_json::Value;

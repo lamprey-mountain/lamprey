@@ -5,18 +5,18 @@ use std::{
 };
 
 use tantivy::{
+    DocAddress, Index, IndexReader, IndexWriter, Searcher, TantivyDocument, Term,
     collector::Collector, query::Query, schema::document::DocumentDeserialize,
-    space_usage::SearcherSpaceUsage, DocAddress, Index, IndexReader, IndexWriter, Searcher,
-    TantivyDocument, Term,
+    space_usage::SearcherSpaceUsage,
 };
 use tokio::sync::{mpsc, oneshot};
 use tracing::error;
 
 use crate::{
+    Error, Result, ServerStateInner,
     services::search::{
         directory::ObjectDirectory, schema::IndexDefinition, tokenizer::DynamicTokenizer,
     },
-    Error, Result, ServerStateInner,
 };
 
 pub mod glue;

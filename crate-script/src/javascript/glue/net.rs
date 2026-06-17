@@ -1,4 +1,4 @@
-use rquickjs::{class::Trace, Ctx, JsLifetime, Result as JsResult};
+use rquickjs::{Ctx, JsLifetime, Result as JsResult, class::Trace};
 
 /// network manager for making HTTP requests and future protocols
 #[rquickjs::class]

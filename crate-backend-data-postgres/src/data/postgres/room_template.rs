@@ -4,7 +4,7 @@ use sqlx::{query, query_as};
 use uuid::Uuid;
 
 use crate::{
-    data::{postgres::Pagination, DataRoomTemplate},
+    data::{DataRoomTemplate, postgres::Pagination},
     error::{Error, Result},
     gen_paginate,
     types::{DbRoomTemplate, PaginationDirection, PaginationResponse},

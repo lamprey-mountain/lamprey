@@ -1,6 +1,6 @@
 use clap::Parser;
 use common::{
-    v1::types::{util::Time, AuditLogEntry, AuditLogEntryType},
+    v1::types::{AuditLogEntry, AuditLogEntryType, util::Time},
     v2::types::{AuditLogEntryId, SERVER_USER_ID},
 };
 use figment::providers::{Env, Format, Toml};
@@ -10,7 +10,7 @@ use tracing::info;
 use lamprey_backend::{
     cli, config, error,
     serve::server::{Server, gc, setup_otel},
-    types::{self,  RoomMemberPut, SERVER_ROOM_ID},
+    types::{self, RoomMemberPut, SERVER_ROOM_ID},
 };
 
 use config::Config;

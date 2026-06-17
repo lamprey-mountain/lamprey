@@ -8,11 +8,11 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::{
+    ChannelId, RoomMember, ThreadMember, User, UserId,
     components::ComponentCreate,
     ids::{DocumentBranchId, DocumentTagId},
     misc::Time,
     util::Diff,
-    ChannelId, RoomMember, ThreadMember, User, UserId,
 };
 
 #[cfg(feature = "serde")]
@@ -324,7 +324,7 @@ impl TryFrom<String> for DocumentRevisionId {
 
 #[cfg(feature = "utoipa")]
 mod document_revision_id_schema {
-    use utoipa::{openapi::ObjectBuilder, PartialSchema, ToSchema};
+    use utoipa::{PartialSchema, ToSchema, openapi::ObjectBuilder};
 
     use super::DocumentRevisionId;
 

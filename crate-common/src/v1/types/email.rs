@@ -16,7 +16,7 @@ pub struct EmailAddr(String);
 
 #[cfg(feature = "utoipa")]
 mod u {
-    use utoipa::{openapi::ObjectBuilder, PartialSchema, ToSchema};
+    use utoipa::{PartialSchema, ToSchema, openapi::ObjectBuilder};
 
     use crate::v1::types::email::EmailAddr;
 

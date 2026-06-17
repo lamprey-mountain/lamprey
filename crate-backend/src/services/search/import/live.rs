@@ -7,11 +7,11 @@ use tokio_stream::StreamExt;
 use tracing::{error, info};
 
 use crate::{
-    services::{
-        search::{index::AsyncIndexHandle, util::SCHEMA},
-        Services,
-    },
     Result, ServerStateInner,
+    services::{
+        Services,
+        search::{index::AsyncIndexHandle, util::SCHEMA},
+    },
 };
 
 pub struct LiveEtl {

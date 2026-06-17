@@ -3,8 +3,8 @@ use std::time::Duration;
 use time::OffsetDateTime;
 use tracing::{error, info};
 
-use crate::error::Result;
 use crate::ServerStateInner;
+use crate::error::Result;
 
 pub struct ServiceRoomAnalytics {
     state: Arc<ServerStateInner>,

@@ -196,8 +196,8 @@ pub mod ignore_list {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod ignore_add {
-    use crate::v1::types::user::Ignore;
     use crate::v1::types::UserId;
+    use crate::v1::types::user::Ignore;
 
     pub struct Request {
         #[path]

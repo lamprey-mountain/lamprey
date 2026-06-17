@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::RoomFeature;
+use common::v1::types::error::{ApiError, ErrorCode};
 use sqlx::{query, query_as, query_scalar};
 use time::PrimitiveDateTime;
 use tracing::info;
@@ -11,7 +11,7 @@ use crate::types::{
     DbRoom, DbRoomCreate, DbRoomFeature, DbRoomType, PaginationDirection, PaginationQuery,
     PaginationResponse, Room, RoomCreate, RoomId, RoomPatch, RoomVerId, UserId,
 };
-use crate::{gen_paginate, Error};
+use crate::{Error, gen_paginate};
 
 use crate::data::DataRoom;
 

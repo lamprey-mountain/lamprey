@@ -1,8 +1,8 @@
 use common::v1::types::redex::{RedexHandler, RedexHandlerType};
 use nanoid::nanoid;
 use rquickjs::{
-    class::{Trace, Tracer},
     Ctx, Function, JsLifetime, Persistent, Result as JsResult,
+    class::{Trace, Tracer},
 };
 use std::sync::{Arc, Mutex};
 

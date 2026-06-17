@@ -9,12 +9,12 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{util::Time, ApplicationId};
+use crate::v1::types::{ApplicationId, util::Time};
 
 #[cfg(feature = "serde")]
 use crate::v1::types::util::some_option;
 
-use super::{ids::SessionId, UserId};
+use super::{UserId, ids::SessionId};
 
 // TODO(#250): verify Hash here is timing safe?
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]

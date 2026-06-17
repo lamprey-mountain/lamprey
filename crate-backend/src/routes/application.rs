@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
-use axum::{extract::State, response::IntoResponse, Json};
+use axum::{Json, extract::State, response::IntoResponse};
 use common::v1::routes;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::misc::ApplicationIdReq;
 use common::v1::types::{
+    AuditLogChange, AuditLogEntryType, MessageSync, Permission, Puppet, RoomMemberOrigin,
+    RoomMemberPut, SERVER_ROOM_ID, SessionStatus, SessionToken, SessionType, SessionWithToken,
+    UserId,
     application::Application,
     util::{Changes, Diff, Time},
-    AuditLogChange, AuditLogEntryType, MessageSync, Permission, Puppet, RoomMemberOrigin,
-    RoomMemberPut, SessionStatus, SessionToken, SessionType, SessionWithToken, UserId,
-    SERVER_ROOM_ID,
 };
 use http::StatusCode;
 use lamprey_macros::handler;
@@ -18,9 +18,9 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
+    ServerState,
     routes::util::Auth,
     types::{DbSessionCreate, DbUserCreate},
-    ServerState,
 };
 use utoipa_axum::router::OpenApiRouter;
 

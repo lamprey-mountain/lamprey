@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use common::v1::types::{
+    RoomId,
     room_analytics::{
         Aggregation, AnalyticsChannel, AnalyticsChannelParams, AnalyticsInvites,
-        AnalyticsMembersCount, AnalyticsMembersJoin, AnalyticsMembersLeave,
-        AnalyticsOverview, AnalyticsParams,
+        AnalyticsMembersCount, AnalyticsMembersJoin, AnalyticsMembersLeave, AnalyticsOverview,
+        AnalyticsParams,
     },
-    RoomId,
 };
 use sqlx::{query, query_scalar};
 use time::{Duration, OffsetDateTime, PrimitiveDateTime};

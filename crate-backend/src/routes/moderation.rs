@@ -8,7 +8,7 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::{Error, Result};
 use crate::routes::util::Auth;
-use crate::{routes2, ServerState};
+use crate::{ServerState, routes2};
 
 /// Report create server (TODO)
 ///

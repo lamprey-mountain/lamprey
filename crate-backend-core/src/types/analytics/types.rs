@@ -1,4 +1,4 @@
-use common::v1::types::{util::Time, ChannelId, MediaId, RoomId, RoomMemberOrigin, UserId};
+use common::v1::types::{ChannelId, MediaId, RoomId, RoomMemberOrigin, UserId, util::Time};
 
 use crate::types::analytics::{AbuseMetadata, ResourceAction};
 

@@ -13,8 +13,8 @@ pub struct DocumentUpdate(pub Vec<u8>);
 #[cfg(feature = "serde")]
 mod serde_impl {
     use super::{DocumentStateVector, DocumentUpdate};
-    use base64::{prelude::BASE64_URL_SAFE_NO_PAD, Engine};
-    use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+    use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
     impl Serialize for DocumentStateVector {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -82,7 +82,7 @@ mod serde_impl {
 #[cfg(feature = "utoipa")]
 mod utoipa_impl {
     use super::{DocumentStateVector, DocumentUpdate};
-    use utoipa::{openapi::ObjectBuilder, PartialSchema, ToSchema};
+    use utoipa::{PartialSchema, ToSchema, openapi::ObjectBuilder};
 
     impl ToSchema for DocumentStateVector {}
     impl PartialSchema for DocumentStateVector {

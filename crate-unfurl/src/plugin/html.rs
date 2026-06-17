@@ -8,7 +8,7 @@ use html5ever::{
         BufferQueue, TagKind, Token, TokenSink, TokenSinkResult, Tokenizer, TokenizerOpts,
     },
 };
-use lamprey_common::v1::types::{misc::Color, EmbedType};
+use lamprey_common::v1::types::{EmbedType, misc::Color};
 use reqwest::Response;
 use url::Url;
 

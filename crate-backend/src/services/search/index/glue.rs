@@ -1,10 +1,10 @@
 use common::v1::types::{
-    util::Time, AuditLogEntryId, ChannelId, MediaId, MessageId, RoomId, UserId,
+    AuditLogEntryId, ChannelId, MediaId, MessageId, RoomId, UserId, util::Time,
 };
 use lamprey_backend_core::Error;
 use tantivy::schema::{
-    document::{DeserializeError, DocumentDeserialize, DocumentDeserializer},
     OwnedValue,
+    document::{DeserializeError, DocumentDeserialize, DocumentDeserializer},
 };
 
 use crate::services::search::util::SCHEMA;

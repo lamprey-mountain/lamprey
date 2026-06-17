@@ -4,9 +4,9 @@ use common::{
     v1::types::voice::{MediaKind, Mid, TrackKey},
     v2::types::UserId,
 };
-use futures_util::{stream::BoxStream, StreamExt};
+use futures_util::{StreamExt, stream::BoxStream};
 
-use crate::voice::{peer::ConnectionState, VoiceError};
+use crate::voice::{VoiceError, peer::ConnectionState};
 
 /// sending data
 pub struct Outbound {

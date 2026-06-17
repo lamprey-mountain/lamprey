@@ -2,11 +2,11 @@ use std::default::Default;
 use std::sync::Arc;
 
 use axum::{
+    Json,
     body::to_bytes,
     extract::{FromRequest, Multipart, Path, Query, Request, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use bytes::Bytes;
 use common::v2::types::media::{MediaCreate, MediaCreateSource};
@@ -23,9 +23,9 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::{
+    ServerState,
     error::{Error, Result},
     services::media::Import,
-    ServerState,
 };
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
@@ -454,12 +454,7 @@ pub async fn webhook_execute_discord(
                 alt: None,
             };
             let import = Import::new(webhook_user_id).merge(media_create);
-            if let Ok(mut item) = s
-                .services()
-                .media
-                .import_from_url(import, &url)
-                .await
-            {
+            if let Ok(mut item) = s.services().media.import_from_url(import, &url).await {
                 let media = item.ready().await;
                 image_media = Some(MediaReference::Media { media_id: media.id });
             }
@@ -480,12 +475,7 @@ pub async fn webhook_execute_discord(
                 alt: None,
             };
             let import = Import::new(webhook_user_id).merge(media_create);
-            if let Ok(mut item) = s
-                .services()
-                .media
-                .import_from_url(import, &url)
-                .await
-            {
+            if let Ok(mut item) = s.services().media.import_from_url(import, &url).await {
                 let media = item.ready().await;
                 thumbnail_media = Some(MediaReference::Media { media_id: media.id });
             }
@@ -506,12 +496,7 @@ pub async fn webhook_execute_discord(
                 alt: None,
             };
             let import = Import::new(webhook_user_id).merge(media_create);
-            if let Ok(mut item) = s
-                .services()
-                .media
-                .import_from_url(import, &url)
-                .await
-            {
+            if let Ok(mut item) = s.services().media.import_from_url(import, &url).await {
                 let media = item.ready().await;
                 author_avatar_media = Some(MediaReference::Media { media_id: media.id });
             }

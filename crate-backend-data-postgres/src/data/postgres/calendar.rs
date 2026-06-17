@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::{
+    CalendarEventId, ChannelId, PaginationKey, UserId,
     calendar::{
         CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventParticipant,
         CalendarEventParticipantQuery, CalendarEventPatch, CalendarOverwrite, CalendarOverwritePut,
@@ -7,7 +8,6 @@ use common::v1::types::{
     },
     error::{ApiError, ErrorCode},
     pagination::{PaginationDirection, PaginationResponse},
-    CalendarEventId, ChannelId, PaginationKey, UserId,
 };
 use lamprey_backend_core::Error;
 use std::collections::HashSet;
@@ -17,7 +17,7 @@ use time::PrimitiveDateTime;
 use uuid::Uuid;
 
 use crate::{
-    data::{postgres::Pagination, DataCalendar},
+    data::{DataCalendar, postgres::Pagination},
     error::Result,
     gen_paginate,
 };
@@ -180,7 +180,8 @@ impl DataCalendar for Postgres {
             .unwrap_or(PrimitiveDateTime::MAX);
 
         gen_paginate!(
-            p, self,
+            p,
+            self,
             query_as!(
                 DbCalendarEvent,
                 r#"

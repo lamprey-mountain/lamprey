@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::{extract::State, response::IntoResponse, Json};
+use axum::{Json, extract::State, response::IntoResponse};
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
@@ -10,9 +10,9 @@ use http::StatusCode;
 use lamprey_macros::handler;
 
 use super::util::Auth;
+use crate::ServerState;
 use crate::error::Result;
 use crate::routes2;
-use crate::ServerState;
 use utoipa_axum::router::OpenApiRouter;
 
 /// Reaction list

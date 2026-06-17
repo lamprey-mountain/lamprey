@@ -46,7 +46,7 @@ impl<K: PaginationKey> IntoParams for PaginationQuery<K> {
     fn into_params(
         parameter_in_provider: impl Fn() -> Option<utoipa::openapi::path::ParameterIn>,
     ) -> Vec<utoipa::openapi::path::Parameter> {
-        use utoipa::openapi::{path::ParameterBuilder, ObjectBuilder};
+        use utoipa::openapi::{ObjectBuilder, path::ParameterBuilder};
         let ident = ObjectBuilder::new()
             .schema_type(utoipa::openapi::schema::Type::String)
             .build();

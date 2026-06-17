@@ -6,13 +6,13 @@ use tokio::task::JoinHandle;
 
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
-    sync::SyncSubscription, ChannelId, ConnectionId, DocumentBranchId, MessageSync, Permission,
-    RedexId, UserId,
+    ChannelId, ConnectionId, DocumentBranchId, MessageSync, Permission, RedexId, UserId,
+    sync::SyncSubscription,
 };
 
+use crate::ServerState;
 use crate::error::{Error, Result};
 use crate::services::member_lists::util::MemberListTarget;
-use crate::ServerState;
 
 /// manager for all the subscriptions for a connection
 pub struct ConnectionSubscriptions {

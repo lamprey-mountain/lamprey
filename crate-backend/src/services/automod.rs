@@ -1,6 +1,9 @@
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::{
+    AutomodRuleId, Channel, ChannelCreate, ChannelId, ChannelPatch, Mentions, MentionsUser,
+    Message, MessageAutomodExecution, MessageCreate, MessageId, MessagePatch, MessageSync,
+    MessageType, Permission, RoomId, RoomMember, RoomMemberPatch, User, UserId,
     automod::{
         AutomodAction, AutomodMatches, AutomodRule, AutomodRuleStripped, AutomodRuleTest,
         AutomodTarget, AutomodTextLocation, AutomodTrigger,
@@ -8,15 +11,12 @@ use common::v1::types::{
     error::{ApiError, ErrorCode},
     ids::AUTOMOD_USER_ID,
     util::Time,
-    AutomodRuleId, Channel, ChannelCreate, ChannelId, ChannelPatch, Mentions, MentionsUser,
-    Message, MessageAutomodExecution, MessageCreate, MessageId, MessagePatch, MessageSync,
-    MessageType, Permission, RoomId, RoomMember, RoomMemberPatch, User, UserId,
 };
 use dashmap::DashMap;
 use tracing::{error, warn};
 
 use crate::services::messages::links;
-use crate::{types::DbMessageCreate, Result, ServerStateInner};
+use crate::{Result, ServerStateInner, types::DbMessageCreate};
 
 pub struct ServiceAutomod {
     state: Arc<ServerStateInner>,
@@ -823,9 +823,7 @@ impl ServiceAutomod {
 
                     match data.message_create(message_create).await {
                         Ok(msg_id) => {
-                            if let Ok(message) =
-                                data.message_get(*alert_channel_id, msg_id).await
-                            {
+                            if let Ok(message) = data.message_get(*alert_channel_id, msg_id).await {
                                 let msg = MessageSync::MessageCreate {
                                     message: message.clone(),
                                 };

@@ -5,10 +5,10 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::v1::types::{
+    Permission, RoleId, RoomMember, User, UserId,
     components::{Component, ComponentState, Components},
     error::{ApiError, ApiResult, ErrorCode},
     interactions::InteractionCreate,
-    Permission, RoleId, RoomMember, User, UserId,
 };
 
 /// a restriction on who can interact with this component

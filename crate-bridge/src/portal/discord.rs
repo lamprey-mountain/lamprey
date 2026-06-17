@@ -1,6 +1,6 @@
 use anyhow::Result;
 use common::v1::types::util::Time;
-use common::v1::types::{self, util::Diff, EmbedCreate};
+use common::v1::types::{self, EmbedCreate, util::Diff};
 use common::v2::types::media::MediaReference;
 use futures::future::try_join_all;
 use reqwest::Url;

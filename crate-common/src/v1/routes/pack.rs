@@ -58,7 +58,7 @@ pub mod pack_upgrade {
     response(OK, description = "success"),
 )]
 pub mod pack_import {
-    use crate::v1::types::{pack::PackImport, RoomId};
+    use crate::v1::types::{RoomId, pack::PackImport};
 
     pub struct Request {
         #[path]
@@ -80,7 +80,7 @@ pub mod pack_import {
     response(OK, body = PackSnapshot, description = "success"),
 )]
 pub mod pack_export {
-    use crate::v1::types::{pack::PackSnapshot, RoomId};
+    use crate::v1::types::{RoomId, pack::PackSnapshot};
 
     pub struct Request {
         #[path]
@@ -127,7 +127,7 @@ pub mod pack_list_user {
     response(OK, body = PackInstallation, description = "success"),
 )]
 pub mod pack_install_user {
-    use crate::v1::types::{pack::PackInstallation, RoomId, UserId};
+    use crate::v1::types::{RoomId, UserId, pack::PackInstallation};
 
     pub struct Request {
         #[path]
@@ -178,7 +178,7 @@ pub mod pack_list_room {
     response(OK, body = PackInstallation, description = "success"),
 )]
 pub mod pack_install_room {
-    use crate::v1::types::{pack::PackInstallation, RoomId};
+    use crate::v1::types::{RoomId, pack::PackInstallation};
 
     pub struct Request {
         #[path]

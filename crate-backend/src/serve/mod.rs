@@ -1,19 +1,19 @@
 use std::sync::Arc;
 
 use axum::{
+    Json, Router,
     extract::DefaultBodyLimit,
     middleware,
     response::{Html, IntoResponse},
     routing::get,
-    Json, Router,
 };
 use common::v1::types::{
+    MessageClient, MessageId, MessageSync, PaginationQuery,
     error::{ApiError, ErrorCode},
     misc::ApplicationIdReq,
-    MessageClient, MessageId, MessageSync, PaginationQuery,
 };
-use http::{header, HeaderName};
-use lamprey_backend_core::{config::ListenTransport, Error};
+use http::{HeaderName, header};
+use lamprey_backend_core::{Error, config::ListenTransport};
 use tower_http::{
     catch_panic::CatchPanicLayer, cors::CorsLayer, propagate_header::PropagateHeaderLayer,
     sensitive_headers::SetSensitiveHeadersLayer, trace::TraceLayer,
@@ -23,9 +23,10 @@ use utoipa::{Modify, OpenApi};
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
+    ServerState,
     routes::{self, util::script_http::script_http},
     serve::utoipa_utils::{BadgeModifier, NestedTags},
-    types, ServerState,
+    types,
 };
 
 #[cfg(feature = "embed-frontend")]
@@ -278,7 +279,10 @@ pub fn create_router(state: Arc<ServerState>) -> Router {
         .layer(cors())
         .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
         .layer(TraceLayer::new_for_http())
-        .layer(middleware::from_fn_with_state(Arc::clone(&state), routes::util::audit_log_middleware))
+        .layer(middleware::from_fn_with_state(
+            Arc::clone(&state),
+            routes::util::audit_log_middleware,
+        ))
         .layer(CatchPanicLayer::new())
         .layer(PropagateHeaderLayer::new(HeaderName::from_static(
             "x-trace-id",
@@ -290,7 +294,7 @@ async fn api_fallback() -> impl IntoResponse {
 }
 
 fn cors() -> CorsLayer {
-    use header::{HeaderName, AUTHORIZATION, CONTENT_TYPE};
+    use header::{AUTHORIZATION, CONTENT_TYPE, HeaderName};
     const UPLOAD_OFFSET: HeaderName = HeaderName::from_static("upload-offset");
     const UPLOAD_LENGTH: HeaderName = HeaderName::from_static("upload-length");
     const IDEMPOTENCY_KEY: HeaderName = HeaderName::from_static("idempotency-key");

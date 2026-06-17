@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::State;
 use axum::response::{Html, IntoResponse};
-use axum::Json;
 use common::v1::routes;
 use common::v1::types::auth::{
     AuthState, CaptchaChallenge, PasswordExecIdent, TotpInit, TotpRecoveryCode, TotpRecoveryCodes,
@@ -12,7 +12,7 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryStatus, AuditLogEntryType, MessageSync,
-    RoomMemberPut, SessionStatus, UserId, SERVER_ROOM_ID,
+    RoomMemberPut, SERVER_ROOM_ID, SessionStatus, UserId,
 };
 use http::StatusCode;
 use lamprey_macros::handler;
@@ -26,7 +26,7 @@ use crate::error::{Error, Result};
 use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
 use crate::types::DbUserCreate;
 use crate::types::EmailPurpose;
-use crate::{routes2, ServerState, ServerStateInner};
+use crate::{ServerState, ServerStateInner, routes2};
 
 /// Auth oauth init
 #[handler(routes::auth_oauth_init)]
@@ -758,7 +758,9 @@ async fn auth_email_reset(
     .await?;
     let mut url = s.config.html_url.join("email-auth")?;
     url.set_query(Some(&format!("code={code}")));
-    let message = format!("click this link to reset password: {url}\n\nif you didn't request this, ignore this email.");
+    let message = format!(
+        "click this link to reset password: {url}\n\nif you didn't request this, ignore this email."
+    );
     srv.email
         .send(email, "Lamprey password reset".to_string(), message, None)
         .await?;

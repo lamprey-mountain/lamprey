@@ -12,8 +12,8 @@ use lamprey_macros::endpoint;
     response(OK, body = HistoryPagination, description = "ok"),
 )]
 pub mod wiki_history {
-    use crate::v1::types::document::{HistoryPagination, HistoryParams};
     use crate::v1::types::ChannelId;
+    use crate::v1::types::document::{HistoryPagination, HistoryParams};
 
     pub struct Request {
         #[path]
@@ -237,8 +237,8 @@ pub mod document_branch_sync {
     response(CREATED, description = "ok"),
 )]
 pub mod document_tag_create {
-    use crate::v1::types::document::DocumentTagCreate;
     use crate::v1::types::ChannelId;
+    use crate::v1::types::document::DocumentTagCreate;
 
     pub struct Request {
         #[path]
@@ -261,8 +261,8 @@ pub mod document_tag_create {
     response(OK, body = Vec<DocumentTag>, description = "ok"),
 )]
 pub mod document_tag_list {
-    use crate::v1::types::document::DocumentTag;
     use crate::v1::types::ChannelId;
+    use crate::v1::types::document::DocumentTag;
 
     pub struct Request {
         #[path]
@@ -452,9 +452,9 @@ pub mod document_crdt_apply {
     response(OK, body = Serdoc, description = "ok"),
 )]
 pub mod document_content_get {
-    use crate::v1::types::document::serialized::Serdoc;
-    use crate::v1::types::document::DocumentRevisionId;
     use crate::v1::types::ChannelId;
+    use crate::v1::types::document::DocumentRevisionId;
+    use crate::v1::types::document::serialized::Serdoc;
 
     pub struct Request {
         #[path]
@@ -509,8 +509,8 @@ pub mod document_content_put {
     response(NO_CONTENT, description = "successfully reverted"),
 )]
 pub mod document_content_revert {
-    use crate::v1::types::document::{DocumentRevert, DocumentRevisionId};
     use crate::v1::types::ChannelId;
+    use crate::v1::types::document::{DocumentRevert, DocumentRevisionId};
 
     pub struct Request {
         #[path]

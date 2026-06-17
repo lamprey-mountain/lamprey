@@ -2,18 +2,18 @@ use std::default::Default;
 use std::sync::Arc;
 
 use axum::{
+    Json,
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
-    Json,
 };
 use common::v1::types::{EmbedCreate, MessageCreate, UserId, WebhookId};
 use serde::Deserialize;
 use tracing::debug;
 
 use crate::{
-    error::{Error, Result},
     ServerState,
+    error::{Error, Result},
 };
 
 #[derive(Debug, Deserialize)]

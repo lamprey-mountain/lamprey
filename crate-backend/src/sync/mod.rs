@@ -1,11 +1,11 @@
 //! websocket sync
 
 use common::v1::types::{
+    ChannelId, ConnectionId, SessionToken, SyncSubscribeDocument, SyncSubscribeMemberList,
+    SyncSubscribeScript, SyncSubscription,
     document::DocumentUpdate,
     sync::{SyncParams, SyncResume},
     voice::VoiceStateUpdate,
-    ChannelId, ConnectionId, SessionToken, SyncSubscribeDocument, SyncSubscribeMemberList,
-    SyncSubscribeScript, SyncSubscription,
 };
 use std::sync::Arc;
 
@@ -25,13 +25,13 @@ pub mod subscriptions;
 pub mod transport;
 pub mod util;
 
+use crate::ServerState;
 use crate::error::{Error, Result};
-use crate::sync::util::{ConnectionState, Timeout, HEARTBEAT_TIME, MAX_QUEUE_LEN};
+use crate::sync::util::{ConnectionState, HEARTBEAT_TIME, MAX_QUEUE_LEN, Timeout};
 use crate::sync::{
     connection_queue::ConnectionQueue, permissions::AuthCheck,
     subscriptions::ConnectionSubscriptions, transport::TransportSink,
 };
-use crate::ServerState;
 
 type WsMessage = axum::extract::ws::Message;
 

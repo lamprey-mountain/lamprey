@@ -1,22 +1,22 @@
 use std::sync::Arc;
 
 use crate::{
-    engine::{ExecutionEvent, ScriptExtracted},
     Error, ExecutionHandle, Executor, Limits, Result,
+    engine::{ExecutionEvent, ScriptExtracted},
 };
 use async_trait::async_trait;
 use common::v1::types::{
+    EvalId, RedexId, RedexVerId,
     redex::{
-        metadata::{License, RedexMetadata, Semver},
         Eval, EvalInput, EvalStatus,
+        metadata::{License, RedexMetadata, Semver},
     },
     util::Time,
-    EvalId, RedexId, RedexVerId,
 };
 use tokio::sync::{broadcast, watch};
 use wasmtime::{
-    component::{Component, HasSelf, Linker, ResourceTable},
     Config, Engine, Store,
+    component::{Component, HasSelf, Linker, ResourceTable},
 };
 
 mod glue;

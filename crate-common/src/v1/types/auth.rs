@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-use crate::v1::types::{email::EmailAddr, util::Time, UserId};
+use crate::v1::types::{UserId, email::EmailAddr, util::Time};
 
 #[cfg(feature = "validator")]
 use validator::Validate;

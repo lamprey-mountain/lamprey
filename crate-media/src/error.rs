@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use axum::{
-    response::{IntoResponse, Response},
     Json,
+    response::{IntoResponse, Response},
 };
 use http::StatusCode;
 use serde::Serialize;

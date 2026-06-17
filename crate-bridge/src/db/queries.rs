@@ -29,7 +29,7 @@ pub trait Data {
     ) -> Result<Option<AttachmentMetadata>>;
     async fn get_last_message_ch(&self, thread_id: ChannelId) -> Result<Option<MessageMetadata>>;
     async fn get_last_message_dc(&self, channel_id: DcChannelId)
-        -> Result<Option<MessageMetadata>>;
+    -> Result<Option<MessageMetadata>>;
     async fn insert_message(&self, meta: MessageMetadata) -> Result<()>;
     async fn insert_attachment(&self, meta: AttachmentMetadata) -> Result<()>;
     async fn delete_message(&self, message_id: MessageId) -> Result<()>;

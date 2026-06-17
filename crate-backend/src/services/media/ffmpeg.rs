@@ -3,7 +3,7 @@ use std::{path::Path, process::Stdio};
 use tokio::process::Command;
 use tracing::{error, trace};
 
-use crate::{error::Error, Result};
+use crate::{Result, error::Error};
 
 async fn run_ffmpeg(cmd: &mut Command, context: &str) -> Result<Vec<u8>> {
     let out = tokio::time::timeout(std::time::Duration::from_secs(10), cmd.output())

@@ -9,7 +9,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{misc::binary::Binary, ChannelId, SessionId, UserId};
+use crate::v1::types::{ChannelId, SessionId, UserId, misc::binary::Binary};
 
 pub mod media;
 

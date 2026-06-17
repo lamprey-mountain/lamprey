@@ -39,8 +39,8 @@ pub mod interaction_respond {
     use serde::{Deserialize, Serialize};
     use utoipa::{IntoParams, ToSchema};
 
-    use crate::v1::types::interactions::{InteractionResponse, InteractionResponseCreate};
     use crate::v1::types::InteractionId;
+    use crate::v1::types::interactions::{InteractionResponse, InteractionResponseCreate};
 
     pub struct Request {
         #[path]
@@ -113,7 +113,7 @@ pub mod interaction_message_create {
     response(OK, body = Message, description = "Get interaction message success"),
 )]
 pub mod interaction_message_get {
-    use crate::v1::types::{misc::InteractionMessageReq, InteractionId, Message};
+    use crate::v1::types::{InteractionId, Message, misc::InteractionMessageReq};
 
     pub struct Request {
         #[path]
@@ -144,7 +144,7 @@ pub mod interaction_message_get {
     response(NO_CONTENT, description = "no change"),
 )]
 pub mod interaction_message_edit {
-    use crate::v1::types::{misc::InteractionMessageReq, InteractionId, Message, MessagePatch};
+    use crate::v1::types::{InteractionId, Message, MessagePatch, misc::InteractionMessageReq};
 
     pub struct Request {
         #[path]
@@ -180,7 +180,7 @@ pub mod interaction_message_edit {
     response(NO_CONTENT, description = "Delete interaction message success"),
 )]
 pub mod interaction_message_delete {
-    use crate::v1::types::{misc::InteractionMessageReq, InteractionId};
+    use crate::v1::types::{InteractionId, misc::InteractionMessageReq};
 
     pub struct Request {
         #[path]

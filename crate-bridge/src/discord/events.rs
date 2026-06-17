@@ -9,7 +9,7 @@ use serenity::all::{
 };
 use serenity::model::prelude::{ChannelId, GuildId, MessageId, Reaction, TypingStartEvent};
 use serenity::prelude::*;
-use tracing::{debug, error, info, trace, Instrument};
+use tracing::{Instrument, debug, error, info, trace};
 
 use crate::bridge::BridgeMessage;
 use crate::bridge_common::{Globals, GlobalsTrait};

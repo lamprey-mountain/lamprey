@@ -1,14 +1,14 @@
 use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
-    webhook::{Webhook, WebhookCreate, WebhookUpdate},
     ChannelId, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId, WebhookId,
+    webhook::{Webhook, WebhookCreate, WebhookUpdate},
 };
 
 use uuid::Uuid;
 
 use crate::{
-    data::{postgres::Pagination, DataWebhook},
+    data::{DataWebhook, postgres::Pagination},
     error::{Error, Result},
     gen_paginate,
 };
@@ -175,7 +175,8 @@ impl DataWebhook for Postgres {
         let p: Pagination<_> = pagination.try_into()?;
 
         gen_paginate!(
-            p, self,
+            p,
+            self,
             sqlx::query_as!(
                 DbWebhook,
                 r#"
@@ -217,7 +218,8 @@ impl DataWebhook for Postgres {
         let p: Pagination<_> = pagination.try_into()?;
 
         gen_paginate!(
-            p, self,
+            p,
+            self,
             sqlx::query_as!(
                 DbWebhook,
                 r#"
@@ -360,7 +362,7 @@ impl DataWebhook for Postgres {
             None => {
                 return Err(Error::ApiError(ApiError::from_code(
                     ErrorCode::UnknownWebhook,
-                )))
+                )));
             }
         };
 

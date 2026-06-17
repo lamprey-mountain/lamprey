@@ -1,5 +1,5 @@
 use lamprey_common::{
-    v1::types::{misc::Color, EmbedType, MediaId, Mime},
+    v1::types::{EmbedType, MediaId, Mime, misc::Color},
     v2::types::media::Media,
 };
 use url::Url;

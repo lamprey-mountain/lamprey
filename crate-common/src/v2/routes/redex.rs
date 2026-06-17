@@ -13,7 +13,7 @@ use lamprey_macros::endpoint;
 )]
 pub mod redex_create {
     use crate::{
-        v1::types::{redex::RedexCreate, ChannelId},
+        v1::types::{ChannelId, redex::RedexCreate},
         v2::types::redex::Redex,
     };
 
@@ -74,7 +74,7 @@ pub mod redex_list {
     response(OK, body = Redex, description = "Get redex success"),
 )]
 pub mod redex_get {
-    use crate::v2::types::{redex::Redex, RedexId};
+    use crate::v2::types::{RedexId, redex::Redex};
 
     pub struct Request {
         #[path]
@@ -146,8 +146,8 @@ pub mod redex_deploy {
 )]
 pub mod redex_trigger {
     use crate::v1::types::{
-        redex::{Eval, EvalCreateManual},
         RedexId,
+        redex::{Eval, EvalCreateManual},
     };
 
     pub struct Request {
@@ -233,7 +233,7 @@ pub mod redex_depends_update {
     response(OK, body = PaginationResponse<Eval>, description = "List redex evals success"),
 )]
 pub mod redex_eval_list {
-    use crate::v1::types::{redex::Eval, EvalId, PaginationQuery, PaginationResponse, RedexId};
+    use crate::v1::types::{EvalId, PaginationQuery, PaginationResponse, RedexId, redex::Eval};
 
     pub struct Request {
         #[path]
@@ -261,7 +261,7 @@ pub mod redex_eval_list {
     response(OK, body = Eval, description = "Get redex eval success"),
 )]
 pub mod redex_eval_get {
-    use crate::v1::types::{redex::Eval, EvalId, RedexId};
+    use crate::v1::types::{EvalId, RedexId, redex::Eval};
 
     pub struct Request {
         #[path]
@@ -315,7 +315,7 @@ pub mod redex_eval_stop {
 )]
 pub mod redex_eval_log {
     use crate::v1::types::{
-        redex::EvalLogEntry, EvalId, PaginationQuery, PaginationResponse, RedexId,
+        EvalId, PaginationQuery, PaginationResponse, RedexId, redex::EvalLogEntry,
     };
 
     pub struct Request {

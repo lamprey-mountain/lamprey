@@ -12,8 +12,8 @@ use serde_json::Value;
 use sqlx::{query, query_as, query_scalar};
 use uuid::Uuid;
 
-use crate::data::postgres::Pagination;
 use crate::data::DataUser;
+use crate::data::postgres::Pagination;
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::{DbUserCreate, UserPatch, UserVerId};
@@ -287,7 +287,8 @@ impl DataUser for Postgres {
         match filter {
             Some(UserListFilter::Guest) => {
                 gen_paginate!(
-                    p, self,
+                    p,
+                    self,
                     query_as!(
                         DbUser,
                         r#"
@@ -307,13 +308,16 @@ impl DataUser for Postgres {
                         p.dir.to_string(),
                         (p.limit + 1) as i32
                     ),
-                    query_scalar!("SELECT count(*) FROM usr u LEFT JOIN puppet p ON u.id = p.id WHERE u.registered_at IS NULL AND u.bot = false AND p.id IS NULL AND u.system = false"),
+                    query_scalar!(
+                        "SELECT count(*) FROM usr u LEFT JOIN puppet p ON u.id = p.id WHERE u.registered_at IS NULL AND u.bot = false AND p.id IS NULL AND u.system = false"
+                    ),
                     |i: &User| i.id.to_string()
                 )
             }
             Some(UserListFilter::Registered) => {
                 gen_paginate!(
-                    p, self,
+                    p,
+                    self,
                     query_as!(
                         DbUser,
                         r#"
@@ -333,7 +337,9 @@ impl DataUser for Postgres {
                         p.dir.to_string(),
                         (p.limit + 1) as i32
                     ),
-                    query_scalar!("SELECT count(*) FROM usr u LEFT JOIN puppet p ON u.id = p.id WHERE u.registered_at IS NOT NULL AND u.bot = false AND p.id IS NULL AND u.system = false"),
+                    query_scalar!(
+                        "SELECT count(*) FROM usr u LEFT JOIN puppet p ON u.id = p.id WHERE u.registered_at IS NOT NULL AND u.bot = false AND p.id IS NULL AND u.system = false"
+                    ),
                     |i: &User| i.id.to_string()
                 )
             }
@@ -392,7 +398,8 @@ impl DataUser for Postgres {
             }
             None => {
                 gen_paginate!(
-                    p, self,
+                    p,
+                    self,
                     query_as!(
                         DbUser,
                         r#"
@@ -412,7 +419,9 @@ impl DataUser for Postgres {
                         p.dir.to_string(),
                         (p.limit + 1) as i32
                     ),
-                    query_scalar!("SELECT count(*) FROM usr u LEFT JOIN puppet p ON u.id = p.id WHERE u.bot = false AND p.id IS NULL AND u.system = false"),
+                    query_scalar!(
+                        "SELECT count(*) FROM usr u LEFT JOIN puppet p ON u.id = p.id WHERE u.bot = false AND p.id IS NULL AND u.system = false"
+                    ),
                     |i: &User| i.id.to_string()
                 )
             }

@@ -1,11 +1,11 @@
 use crate::services::voice::ServiceVoice;
 use crate::{Error, Result};
 use common::v1::types::{
-    voice::{
-        messages::{SfuCommand, SignallingCommand},
-        VoiceStateUpdate,
-    },
     ChannelId, ConnectionId, Session,
+    voice::{
+        VoiceStateUpdate,
+        messages::{SfuCommand, SignallingCommand},
+    },
 };
 
 // TODO: clean up stale voice states (delete voice state when connection is disconnected for too long)

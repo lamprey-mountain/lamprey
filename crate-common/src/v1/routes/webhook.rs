@@ -11,8 +11,8 @@ use lamprey_macros::endpoint;
     response(CREATED, body = Webhook, description = "Create webhook success"),
 )]
 pub mod webhook_create {
-    use crate::v1::types::webhook::{Webhook, WebhookCreate};
     use crate::v1::types::ChannelId;
+    use crate::v1::types::webhook::{Webhook, WebhookCreate};
 
     pub struct Request {
         #[path]
@@ -41,8 +41,8 @@ pub mod webhook_create {
     response(OK, body = PaginationResponse<Webhook>, description = "List webhooks success"),
 )]
 pub mod webhook_list_channel {
-    use crate::v1::types::webhook::Webhook;
     use crate::v1::types::WebhookId;
+    use crate::v1::types::webhook::Webhook;
     use crate::v1::types::{ChannelId, PaginationQuery, PaginationResponse};
 
     pub struct Request {
@@ -69,8 +69,8 @@ pub mod webhook_list_channel {
     response(OK, body = PaginationResponse<Webhook>, description = "List webhooks success"),
 )]
 pub mod webhook_list_room {
-    use crate::v1::types::webhook::Webhook;
     use crate::v1::types::WebhookId;
+    use crate::v1::types::webhook::Webhook;
     use crate::v1::types::{PaginationQuery, PaginationResponse, RoomId};
 
     pub struct Request {
@@ -97,8 +97,8 @@ pub mod webhook_list_room {
     response(OK, body = Webhook, description = "Get webhook success"),
 )]
 pub mod webhook_get {
-    use crate::v1::types::webhook::Webhook;
     use crate::v1::types::WebhookId;
+    use crate::v1::types::webhook::Webhook;
 
     pub struct Request {
         #[path]
@@ -119,8 +119,8 @@ pub mod webhook_get {
     response(OK, body = Webhook, description = "Get webhook success"),
 )]
 pub mod webhook_get_with_token {
-    use crate::v1::types::webhook::Webhook;
     use crate::v1::types::WebhookId;
+    use crate::v1::types::webhook::Webhook;
 
     pub struct Request {
         #[path]
@@ -189,8 +189,8 @@ pub mod webhook_delete_with_token {
     response(OK, body = Webhook, description = "Update webhook success"),
 )]
 pub mod webhook_update {
-    use crate::v1::types::webhook::{Webhook, WebhookUpdate};
     use crate::v1::types::WebhookId;
+    use crate::v1::types::webhook::{Webhook, WebhookUpdate};
 
     pub struct Request {
         #[path]
@@ -214,8 +214,8 @@ pub mod webhook_update {
     response(OK, body = Webhook, description = "Update webhook success"),
 )]
 pub mod webhook_update_with_token {
-    use crate::v1::types::webhook::{Webhook, WebhookUpdate};
     use crate::v1::types::WebhookId;
+    use crate::v1::types::webhook::{Webhook, WebhookUpdate};
 
     pub struct Request {
         #[path]

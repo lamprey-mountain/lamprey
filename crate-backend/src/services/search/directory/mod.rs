@@ -10,11 +10,11 @@ use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use opendal::{ErrorKind, Operator};
 use tantivy::{
-    directory::{
-        error::{DeleteError, OpenReadError, OpenWriteError},
-        FileHandle, OwnedBytes, TerminatingWrite, WatchCallback, WatchHandle, WritePtr,
-    },
     Directory, HasLen,
+    directory::{
+        FileHandle, OwnedBytes, TerminatingWrite, WatchCallback, WatchHandle, WritePtr,
+        error::{DeleteError, OpenReadError, OpenWriteError},
+    },
 };
 use tokio::runtime::Handle as TokioHandle;
 use tokio::task::JoinSet;

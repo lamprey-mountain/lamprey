@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
-use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::redex::{
@@ -20,7 +20,7 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::consts::MAX_SCRIPT_FILE_SIZE;
 use crate::error::Result;
-use crate::{routes2, Error, ServerState};
+use crate::{Error, ServerState, routes2};
 
 use super::util::{Auth, Auth3};
 

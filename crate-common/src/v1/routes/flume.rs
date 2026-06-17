@@ -14,9 +14,9 @@ use lamprey_macros::endpoint;
     response(CREATED, body = Message, description = "Flume created successfully"),
 )]
 pub mod flume_create {
-    use crate::v1::types::message::flume::FlumeCreate;
     use crate::v1::types::ChannelId;
     use crate::v1::types::Message;
+    use crate::v1::types::message::flume::FlumeCreate;
 
     pub struct Request {
         #[path]
@@ -107,7 +107,7 @@ pub mod flume_commit {
     response(NOT_MODIFIED, description = "Delta did not cause any change"),
 )]
 pub mod flume_delta {
-    use crate::v1::types::{flume::FlumeDelta, ChannelId, MessageId};
+    use crate::v1::types::{ChannelId, MessageId, flume::FlumeDelta};
 
     pub struct Request {
         #[path]

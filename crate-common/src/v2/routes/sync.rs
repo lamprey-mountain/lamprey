@@ -17,7 +17,7 @@ use lamprey_macros::endpoint;
     response(OK, body = SyncLimits, description = "Get sync limits"),
 )]
 pub mod sync_init {
-    use crate::v2::types::sync::{shard::SyncLimits, WebsocketSyncParams};
+    use crate::v2::types::sync::{WebsocketSyncParams, shard::SyncLimits};
 
     pub struct Request {
         // TODO: make optional
@@ -63,8 +63,8 @@ pub mod sync_create {
     response(OK, body = Syncer, description = "success"),
 )]
 pub mod sync_get {
-    use crate::v2::types::sync::shard::Syncer;
     use crate::v2::types::SyncId;
+    use crate::v2::types::sync::shard::Syncer;
 
     pub struct Request {
         #[path]
@@ -103,8 +103,8 @@ pub mod sync_delete {
     response(CREATED, body = Shard, description = "success"),
 )]
 pub mod shard_create {
-    use crate::v2::types::sync::shard::{Shard, ShardCreate};
     use crate::v2::types::SyncId;
+    use crate::v2::types::sync::shard::{Shard, ShardCreate};
 
     pub struct Request {
         #[path]

@@ -4,11 +4,11 @@ use crate::prelude::*;
 use common::{
     v1::types::{
         util::Time,
-        voice::{internal::SfuPermissions, MediaKind, TrackKey, TrackLayer, VoiceState},
+        voice::{MediaKind, TrackKey, TrackLayer, VoiceState, internal::SfuPermissions},
     },
     v2::types::{ChannelId, SfuId},
 };
-use slotmap::{new_key_type, SlotMap};
+use slotmap::{SlotMap, new_key_type};
 
 pub mod permissions;
 pub mod signalling;

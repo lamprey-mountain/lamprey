@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
-use common::v1::types::presence::{Presence, Status};
 use common::v1::types::MessageSync;
+use common::v1::types::presence::{Presence, Status};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
 use tokio::task::JoinHandle;

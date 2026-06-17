@@ -4,9 +4,9 @@ use common::v1::types::{RoleReorder, UserId};
 use sqlx::{query, query_as, query_scalar};
 use tracing::info;
 
+use crate::Error;
 use crate::error::Result;
 use crate::types::{DbPermission, DbRoleCreate, Role, RoleId, RolePatch, RoleVerId, RoomId};
-use crate::Error;
 
 use crate::data::DataRole;
 

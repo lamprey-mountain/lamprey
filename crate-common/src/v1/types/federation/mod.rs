@@ -87,7 +87,6 @@ impl<I: Identifier> Remote<I> {
     }
 }
 
-
 impl<I: Identifier> RemoteReq<I> {
     pub fn with_epoch(self, epoch: FederationEpoch) -> Remote<I> {
         Remote {

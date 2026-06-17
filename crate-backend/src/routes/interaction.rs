@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::{routes2, Error, ServerState};
+use crate::{Error, ServerState, routes2};
 
 use super::util::Auth;
 use crate::error::Result;

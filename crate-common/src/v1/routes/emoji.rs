@@ -13,8 +13,8 @@ use lamprey_macros::endpoint;
     response(CREATED, body = EmojiCustom, description = "new emoji created"),
 )]
 pub mod emoji_create {
-    use crate::v1::types::emoji::{EmojiCustom, EmojiCustomCreate};
     use crate::v1::types::RoomId;
+    use crate::v1::types::emoji::{EmojiCustom, EmojiCustomCreate};
 
     pub struct Request {
         #[path]
@@ -187,8 +187,8 @@ pub mod emoji_search {
     response(OK, body = EmojiCustom, description = "success"),
 )]
 pub mod emoji_lookup {
-    use crate::v1::types::emoji::EmojiCustom;
     use crate::v1::types::EmojiId;
+    use crate::v1::types::emoji::EmojiCustom;
 
     pub struct Request {
         #[path]

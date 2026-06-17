@@ -16,10 +16,10 @@ use tokio_util::io::ReaderStream;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
+    AppState,
     error::{Error, Result},
     ffmpeg,
-    routes::util::{build_headers, ContentInfo},
-    AppState,
+    routes::util::{ContentInfo, build_headers},
 };
 
 async fn gifv_response(

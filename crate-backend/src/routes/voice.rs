@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
-use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
@@ -18,7 +18,7 @@ use utoipa_axum::router::OpenApiRouter;
 use super::util::Auth;
 
 use crate::error::{Error, Result};
-use crate::{routes2, ServerState};
+use crate::{ServerState, routes2};
 
 /// Voice state get
 #[handler(routes::voice_state_get)]

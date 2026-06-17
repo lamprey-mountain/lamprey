@@ -70,7 +70,7 @@ pub async fn script_http(
                 return Err(Error::ApiError(ApiError::with_message(
                     ErrorCode::ScriptError,
                     "script crashed while generating a response".to_string(),
-                )))
+                )));
             }
             ExecutionEvent::Status(EvalStatus::Exited) => break,
             _ => {}

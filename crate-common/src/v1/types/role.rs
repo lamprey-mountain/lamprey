@@ -7,7 +7,7 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{util::Diff, UserId};
+use crate::v1::types::{UserId, util::Diff};
 
 #[cfg(feature = "serde")]
 use crate::v1::types::util::{deserialize_sorted, deserialize_sorted_option, some_option};

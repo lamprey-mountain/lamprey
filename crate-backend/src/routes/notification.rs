@@ -1,20 +1,20 @@
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use common::v1::routes;
+use common::v1::types::NotificationId;
 use common::v1::types::application::Scope;
 use common::v1::types::notifications::{Notification, NotificationPagination, NotificationType};
 use common::v1::types::util::Time;
-use common::v1::types::NotificationId;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::Result;
 use crate::routes::util::Auth;
-use crate::{routes2, ServerState};
+use crate::{ServerState, routes2};
 
 /// Inbox get
 ///

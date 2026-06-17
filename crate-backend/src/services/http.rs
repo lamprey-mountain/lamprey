@@ -5,8 +5,8 @@ use reqwest::{Client, Response};
 use url::Url;
 
 use crate::{
-    error::{Error, Result},
     ServerStateInner,
+    error::{Error, Result},
 };
 
 pub struct ServiceHttp {

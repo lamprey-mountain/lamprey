@@ -3,8 +3,8 @@ use common::v1::types::UserId;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::types::MessageRef;
 use crate::Result;
+use crate::types::MessageRef;
 
 pub trait Queue: QueueUrl + QueueEmail + QueueNotification + QueueSearch {}
 

@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
-use axum::Json;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::automod::AutomodAction;
@@ -21,7 +21,7 @@ use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
 use crate::routes::util::AuthRelaxed2;
-use crate::{routes2, ServerState};
+use crate::{ServerState, routes2};
 use common::v1::types::misc::UserIdReq;
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 

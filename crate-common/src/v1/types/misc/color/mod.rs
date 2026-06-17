@@ -555,8 +555,8 @@ impl<'de> Deserialize<'de> for ColorVariant {
 #[cfg(feature = "utoipa")]
 mod _u {
     use utoipa::{
-        openapi::{schema::Schema, ObjectBuilder},
         PartialSchema, ToSchema,
+        openapi::{ObjectBuilder, schema::Schema},
     };
 
     use crate::v1::types::misc::Color;

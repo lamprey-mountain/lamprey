@@ -4,19 +4,19 @@ use std::sync::Arc;
 
 use common::v1::types::util::Time;
 use common::v1::types::{
-    Channel, ChannelType, Permission, PermissionOverwriteType, RoleId, RoomId, RoomMember, UserId,
-    SERVER_USER_ID,
-};
-use lamprey_backend_core::types::permission::{
-    CheckVisibility, MemberState, PermissionBits, Permissions2, ResourceContext,
-    BROADCAST_LURKER_PERMS, QUARANTINE_PERMS, VIEW_PERMS,
+    Channel, ChannelType, Permission, PermissionOverwriteType, RoleId, RoomId, RoomMember,
+    SERVER_USER_ID, UserId,
 };
 use lamprey_backend_core::types::permission::Permissions2Metadata;
+use lamprey_backend_core::types::permission::{
+    BROADCAST_LURKER_PERMS, CheckVisibility, MemberState, PermissionBits, Permissions2,
+    QUARANTINE_PERMS, ResourceContext, VIEW_PERMS,
+};
 use tracing::warn;
 
 use crate::{
-    services::rooms::{CachedChannel, RoomSnapshot},
     Error, Result,
+    services::rooms::{CachedChannel, RoomSnapshot},
 };
 
 /// a permission calculator for a room

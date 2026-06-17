@@ -1,6 +1,6 @@
 use rquickjs::{
-    class::{Trace, Tracer},
     Ctx, Function, JsLifetime, Persistent, Result as JsResult,
+    class::{Trace, Tracer},
 };
 
 /// manages key value stores

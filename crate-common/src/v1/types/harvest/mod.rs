@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::{
-    v1::types::{misc::Time, HarvestId, RoomId, UserId},
+    v1::types::{HarvestId, RoomId, UserId, misc::Time},
     v2::types::media::Media,
 };
 

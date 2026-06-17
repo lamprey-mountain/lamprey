@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
 
-use crate::v1::types::{misc::Time, ChannelId, InviteCode, UserId};
+use crate::v1::types::{ChannelId, InviteCode, UserId, misc::Time};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

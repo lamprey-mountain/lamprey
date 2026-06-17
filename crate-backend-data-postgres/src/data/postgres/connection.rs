@@ -1,12 +1,12 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    application::{Application, Connection, Scopes},
     ApplicationId, PaginationDirection, PaginationQuery, PaginationResponse, UserId,
+    application::{Application, Connection, Scopes},
 };
 use sqlx::{query, query_as, query_scalar};
 
 use crate::{
-    data::{postgres::Pagination, DataConnection},
+    data::{DataConnection, postgres::Pagination},
     error::Result,
     gen_paginate,
 };

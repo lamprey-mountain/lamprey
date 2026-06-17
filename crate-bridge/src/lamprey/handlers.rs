@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 use common::v1::types::util::Time;
-use common::v1::types::{self, misc::UserIdReq, pagination::PaginationQuery, RoomMemberPut};
+use common::v1::types::{self, RoomMemberPut, misc::UserIdReq, pagination::PaginationQuery};
 use common::v2::types::media::{MediaCreate, MediaCreateSource, MediaDoneParams};
 use sdk::Http;
 use std::sync::Arc;

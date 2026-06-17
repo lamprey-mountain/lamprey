@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use crate::ast::inline::Inline;
-use crate::ast::{impl_ast, AstNode};
+use crate::ast::{AstNode, impl_ast};
 use crate::prelude::*;
 use crate::tree::node::MarkdownLanguage;
 

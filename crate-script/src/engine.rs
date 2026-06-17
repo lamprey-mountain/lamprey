@@ -4,8 +4,8 @@ use async_trait::async_trait;
 #[cfg(feature = "javascript")]
 use common::v1::types::RedexVerId;
 use common::v1::types::{
-    redex::{metadata::RedexMetadata, Eval, EvalInput, EvalLogEntry, EvalStatus, RedexHandler},
     EvalId, RedexId,
+    redex::{Eval, EvalInput, EvalLogEntry, EvalStatus, RedexHandler, metadata::RedexMetadata},
 };
 
 #[cfg(feature = "wasm")]

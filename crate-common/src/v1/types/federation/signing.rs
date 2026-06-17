@@ -2,15 +2,15 @@
 
 use crate::v1::types::{
     federation::{
-        consts::{KEY_EXPIRY, SIGNATURE_MAX_AGE},
         Hostname,
+        consts::{KEY_EXPIRY, SIGNATURE_MAX_AGE},
     },
     headers::{HEADER_ORIGIN, HEADER_PUBKEY, HEADER_SIGNATURE, HEADER_TIMESTAMP},
-    misc::{binary::Binary, Time},
+    misc::{Time, binary::Binary},
 };
 
 use bytes::Bytes;
-use ed25519_dalek::{ed25519::signature::Signer, Signature, SigningKey, VerifyingKey};
+use ed25519_dalek::{Signature, SigningKey, VerifyingKey, ed25519::signature::Signer};
 use http::{HeaderMap, HeaderValue};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};

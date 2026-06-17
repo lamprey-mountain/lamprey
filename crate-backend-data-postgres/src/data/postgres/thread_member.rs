@@ -9,8 +9,8 @@ use sqlx::{query, query_as, query_scalar};
 use tracing::info;
 use uuid::Uuid;
 
-use crate::data::postgres::Pagination;
 use crate::data::DataThreadMember;
+use crate::data::postgres::Pagination;
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::DbMembership;

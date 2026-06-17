@@ -43,8 +43,9 @@ impl Display for Mime {
 #[cfg(feature = "utoipa")]
 mod schema {
     use utoipa::{
+        PartialSchema, ToSchema,
         openapi::{RefOr, Schema},
-        schema, PartialSchema, ToSchema,
+        schema,
     };
 
     use super::Mime;

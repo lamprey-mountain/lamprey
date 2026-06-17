@@ -1,6 +1,6 @@
+use crate::Postgres;
 use crate::data::DataHarvest;
 use crate::error::Result;
-use crate::Postgres;
 use async_trait::async_trait;
 use common::v1::types::harvest::{Harvest, HarvestType};
 use common::v1::types::{HarvestId, RoomId, UserId};

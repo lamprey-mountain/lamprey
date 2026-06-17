@@ -106,7 +106,7 @@ pub mod e2ee_cs_signature_publish {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod e2ee_channel_commit {
-    use crate::v1::types::{e2ee::MlsCommitCreate, ChannelId};
+    use crate::v1::types::{ChannelId, e2ee::MlsCommitCreate};
 
     pub struct Request {
         #[path]
@@ -128,7 +128,7 @@ pub mod e2ee_channel_commit {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod e2ee_channel_welcome {
-    use crate::v1::types::{e2ee::MlsWelcomeCreate, ChannelId};
+    use crate::v1::types::{ChannelId, e2ee::MlsWelcomeCreate};
 
     pub struct Request {
         #[path]

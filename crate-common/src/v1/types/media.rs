@@ -7,7 +7,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{util::Time, MediaId, UserId};
+use crate::v1::types::{MediaId, UserId, util::Time};
 
 mod mime;
 mod track;

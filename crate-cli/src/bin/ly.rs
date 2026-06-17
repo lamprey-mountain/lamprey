@@ -3,9 +3,9 @@ use std::path::PathBuf;
 use clap::Parser;
 use demand::{DemandOption, Input, Select};
 use figment::providers::{Env, Format, Toml};
+use lamprey_cli::AuthType;
 use lamprey_cli::args::ly::{Args, AuthCommand, Command};
 use lamprey_cli::config::LyConfig;
-use lamprey_cli::AuthType;
 
 type Result<T> = std::result::Result<T, anyhow::Error>;
 

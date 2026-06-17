@@ -3,15 +3,15 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::{error::Result, types::PaginationQuery, Error, ServerStateInner};
+use crate::{Error, ServerStateInner, error::Result, types::PaginationQuery};
 use common::v1::types::{
+    ChannelId, InviteTarget, InviteTargetId, MessageSync, Permission, Room, RoomId, RoomMember,
+    SERVER_ROOM_ID, User, UserId,
     emoji::{EmojiCustom, EmojiOwner},
     ids::EmojiId,
     preferences::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
-    ChannelId, InviteTarget, InviteTargetId, MessageSync, Permission, Room, RoomId, RoomMember,
-    User, UserId, SERVER_ROOM_ID,
 };
-use futures::{future::BoxFuture, StreamExt};
+use futures::{StreamExt, future::BoxFuture};
 use moka::future::Cache;
 
 pub mod permissions;

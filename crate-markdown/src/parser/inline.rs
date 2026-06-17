@@ -310,32 +310,43 @@ impl<'a> ParseContext<'a> {
     // TODO: macros for matching token patterns?
     fn is_emoji(&self, tokens: &[Token]) -> bool {
         match tokens {
-            [Token {
-                kind: TokenKind::Colon,
-                ..
-            }, Token {
-                kind: TokenKind::Text,
-                ..
-            }, Token {
-                kind: TokenKind::Colon,
-                ..
-            }, Token {
-                kind: TokenKind::Uuid,
-                ..
-            }] => true,
-            [t1, Token {
-                kind: TokenKind::Colon,
-                ..
-            }, Token {
-                kind: TokenKind::Text,
-                ..
-            }, Token {
-                kind: TokenKind::Colon,
-                ..
-            }, Token {
-                kind: TokenKind::Uuid,
-                ..
-            }] if t1.kind == TokenKind::Text && self.tokenizer.text(t1.span) == "a" => true,
+            [
+                Token {
+                    kind: TokenKind::Colon,
+                    ..
+                },
+                Token {
+                    kind: TokenKind::Text,
+                    ..
+                },
+                Token {
+                    kind: TokenKind::Colon,
+                    ..
+                },
+                Token {
+                    kind: TokenKind::Uuid,
+                    ..
+                },
+            ] => true,
+            [
+                t1,
+                Token {
+                    kind: TokenKind::Colon,
+                    ..
+                },
+                Token {
+                    kind: TokenKind::Text,
+                    ..
+                },
+                Token {
+                    kind: TokenKind::Colon,
+                    ..
+                },
+                Token {
+                    kind: TokenKind::Uuid,
+                    ..
+                },
+            ] if t1.kind == TokenKind::Text && self.tokenizer.text(t1.span) == "a" => true,
             _ => false,
         }
     }

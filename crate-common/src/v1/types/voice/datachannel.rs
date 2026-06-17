@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    v1::types::{misc::hashes::Hashes, voice::Mid, Mime, UserId},
+    v1::types::{Mime, UserId, misc::hashes::Hashes, voice::Mid},
     v2::types::media::MediaMetadata,
 };
 

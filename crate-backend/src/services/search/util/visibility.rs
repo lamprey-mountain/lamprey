@@ -1,8 +1,8 @@
 use common::v1::types::{ChannelId, RoomId, UserId};
 use tantivy::{
+    Term,
     query::{AllQuery, BooleanQuery, Query, TermQuery, TermSetQuery},
     schema::IndexRecordOption,
-    Term,
 };
 
 use crate::services::search::util::{BqBuilder, SCHEMA};

@@ -3,8 +3,8 @@ use common::v1::types::voice::messages::{SfuCommand, SignallingCommand, Signalli
 use lamprey_backend_core::Error;
 use std::sync::Arc;
 
-use crate::services::voice::ServiceVoice;
 use crate::Result;
+use crate::services::voice::ServiceVoice;
 use common::v1::types::util::Time;
 use common::v1::types::voice::internal::SfuPermissions;
 use common::v1::types::voice::{CallCreate, VoiceState, VoiceStateUpdate};

@@ -1,9 +1,9 @@
 use bytes::Bytes;
 use http::{HeaderMap, HeaderName, HeaderValue};
 use rquickjs::{
+    Ctx, FromJs, IntoJs, Iterable, JsLifetime, Result as JsResult,
     class::{Trace, Tracer},
     prelude::Opt,
-    Ctx, FromJs, IntoJs, Iterable, JsLifetime, Result as JsResult,
 };
 
 /// http request object

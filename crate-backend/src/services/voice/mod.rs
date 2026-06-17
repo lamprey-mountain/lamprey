@@ -1,8 +1,8 @@
 #![allow(unused)] // TEMP: suppress warnings here for now
 
+use crate::ServerStateInner;
 use crate::services::voice::calls::CallHandle;
 use crate::services::voice::sfus::SfuHandle;
-use crate::ServerStateInner;
 use common::v1::types::voice::internal::SfuStats;
 use common::v1::types::voice::messages::SfuCommand;
 use common::v1::types::voice::router::{VoiceRouter, VoiceRouterConfig};

@@ -11,13 +11,13 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::v1::types::{
+    ChannelId, SfuId, UserId,
     voice::{
-        internal::{SfuChannel, SfuPermissions, SfuStats},
         IceCandidate, KeyframeRequestKind, Mid, Rid, SessionDescription, Speaking,
         SpeakingWithUserId, Subscription, TrackMetadata, TrackMetadataWithUserId, VoiceErrorCode,
         VoiceState, VoiceStateUpdate,
+        internal::{SfuChannel, SfuPermissions, SfuStats},
     },
-    ChannelId, SfuId, UserId,
 };
 
 /// an command emitted by the peer and handled by the sfu

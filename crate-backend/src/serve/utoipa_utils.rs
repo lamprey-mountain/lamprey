@@ -1,5 +1,5 @@
 use serde_json::json;
-use utoipa::{openapi::extensions::Extensions, Modify};
+use utoipa::{Modify, openapi::extensions::Extensions};
 
 pub struct BadgeModifier;
 

@@ -11,8 +11,8 @@ use tracing::error;
 use uuid::Uuid;
 
 use crate::{
-    services::search::{index::AsyncIndexHandle, util::SCHEMA},
     ServerStateInner,
+    services::search::{index::AsyncIndexHandle, util::SCHEMA},
 };
 
 #[derive(Clone)]

@@ -6,12 +6,12 @@ use tokio::sync::broadcast;
 
 use crate::services::rooms::{MemberListCommandMsg, MemberListSubscribeMsg, RoomActor, RoomHandle};
 use crate::{
+    Result, ServerStateInner,
     services::member_lists::{
         actor::{MemberListCommand, MemberListEvent},
         util::{MemberListKey, MemberListKey1},
         visibility::MemberListVisibility,
     },
-    Result, ServerStateInner,
 };
 
 pub mod actor;

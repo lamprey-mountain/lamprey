@@ -3,13 +3,13 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use common::v1::types::util::Time;
 use common::v1::types::Message as LMessage;
+use common::v1::types::util::Time;
 use common::v1::types::{
-    self,
+    self, Channel, ChannelId, ChannelType, MessageCreate, MessageId, MessageSync, RoomId, Session,
+    User, UserId,
     pagination::{PaginationQuery, PaginationResponse},
-    presence, Channel, ChannelId, ChannelType, MessageCreate, MessageId, MessageSync, RoomId,
-    Session, User, UserId,
+    presence,
 };
 use common::v2::types::media::Media;
 use kameo::message::Context;

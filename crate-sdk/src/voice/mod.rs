@@ -1,6 +1,6 @@
 use common::{v1::types::voice::SpeakingWithUserId, v2::types::ChannelId};
 
-use crate::{voice::peer::PeerBuilder, Client};
+use crate::{Client, voice::peer::PeerBuilder};
 
 pub mod datachannel;
 pub mod error;

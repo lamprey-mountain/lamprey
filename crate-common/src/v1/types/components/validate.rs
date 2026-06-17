@@ -1,10 +1,10 @@
 use super::types::*;
 use crate::{
     v1::types::{
+        MediaId,
         components::{IdAllocator, ValidationState},
         error::{ApiError, ErrorCode},
         flume::FlumeDelta,
-        MediaId,
     },
     v2::types::media::{Media, MediaReference},
 };
@@ -481,7 +481,7 @@ impl Component<Canonical> {
                 return Err(ApiError::with_message(
                     ErrorCode::InvalidData,
                     "Cannot clone a reference".into(),
-                ))
+                ));
             }
         };
 
@@ -558,7 +558,7 @@ impl Component<Thin> {
                 return Err(ApiError::with_message(
                     ErrorCode::InvalidData,
                     "Cannot clone a reference".into(),
-                ))
+                ));
             }
         };
 

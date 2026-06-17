@@ -7,9 +7,9 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::{util::Time, RoomMember, User};
+use crate::v1::types::{RoomMember, User, util::Time};
 
-use super::{util::Diff, ApplicationId, UserId};
+use super::{ApplicationId, UserId, util::Diff};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

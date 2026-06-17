@@ -6,7 +6,7 @@ use axum::{
 };
 use common::v1::types::WebhookId;
 
-use crate::{error::Error, Result, ServerState};
+use crate::{Result, ServerState, error::Error};
 
 /// Webhook execute slack (TODO)
 #[utoipa::path(

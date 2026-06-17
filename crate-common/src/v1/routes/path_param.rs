@@ -1,6 +1,6 @@
 use crate::v1::types::{
-    document::DocumentRevisionId, reaction::ReactionKeyParam, room_template::RoomTemplateCode, Id,
-    InviteCode, RoomFeature,
+    Id, InviteCode, RoomFeature, document::DocumentRevisionId, reaction::ReactionKeyParam,
+    room_template::RoomTemplateCode,
 };
 
 /// Trait for types that can be parsed from a path parameter string

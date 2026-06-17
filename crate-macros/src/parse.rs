@@ -1,8 +1,8 @@
 use proc_macro2::TokenStream;
 use syn::{
+    Attribute, Ident, LitStr, Token, Type,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    Attribute, Ident, LitStr, Token, Type,
 };
 
 pub struct EndpointArgs {
@@ -105,7 +105,7 @@ impl Parse for EndpointArgs {
                     return Err(syn::Error::new(
                         key.span(),
                         format!("unknown endpoint arg `{other}`"),
-                    ))
+                    ));
                 }
             }
 
@@ -174,7 +174,7 @@ fn parse_response_parens(input: ParseStream) -> syn::Result<ResponseSpec> {
                     return Err(syn::Error::new(
                         ident.span(),
                         format!("unknown status code `{other}`, use a numeric literal instead"),
-                    ))
+                    ));
                 }
             },
             ident.span(),
@@ -197,7 +197,7 @@ fn parse_response_parens(input: ParseStream) -> syn::Result<ResponseSpec> {
                 return Err(syn::Error::new(
                     k.span(),
                     format!("unknown response field `{other}`"),
-                ))
+                ));
             }
         }
     }

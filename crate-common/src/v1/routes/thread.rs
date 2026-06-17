@@ -90,8 +90,8 @@ pub mod thread_member_add {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod thread_member_delete {
-    use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::ChannelId;
+    use crate::v1::types::misc::UserIdReq;
 
     pub struct Request {
         #[path]
@@ -243,8 +243,8 @@ pub mod thread_create_from_message {
     response(OK, body = ThreadListRoom, description = "List room threads success"),
 )]
 pub mod thread_list_room {
-    use crate::v1::types::thread::ThreadListRoom;
     use crate::v1::types::RoomId;
+    use crate::v1::types::thread::ThreadListRoom;
 
     pub struct Request {
         #[path]

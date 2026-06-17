@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{emoji::EmojiCustom, util::Time, EmojiId};
+use crate::v1::types::{EmojiId, emoji::EmojiCustom, util::Time};
 
 use super::{MessageId, UserId};
 
@@ -101,7 +101,7 @@ mod u {
 mod s {
     use std::str::FromStr;
 
-    use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
     use super::ReactionKeyParam;
 

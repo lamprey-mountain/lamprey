@@ -1,16 +1,16 @@
 use common::v1::types::{ChannelId, RoomId, UserId};
 use tantivy::{
+    Term,
     query::{Query, TermQuery},
     schema::{
-        self, IndexRecordOption, JsonObjectOptions, Schema, SchemaBuilder, TextFieldIndexing,
-        TextOptions, FAST, STORED, STRING, TEXT,
+        self, FAST, IndexRecordOption, JsonObjectOptions, STORED, STRING, Schema, SchemaBuilder,
+        TEXT, TextFieldIndexing, TextOptions,
     },
-    Term,
 };
 use uuid::Uuid;
 
-use crate::services::search::schema::doctype::Doctype;
 use crate::services::search::schema::IndexDefinition;
+use crate::services::search::schema::doctype::Doctype;
 
 /// an index containing any lamprey data type
 #[derive(Default)]

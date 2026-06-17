@@ -1,8 +1,8 @@
 //! notification binary encoding
 
 use crate::v1::types::{
-    notifications::{Notification, NotificationType},
     ChannelId, MessageId, NotificationId, SessionId, UserId,
+    notifications::{Notification, NotificationType},
 };
 
 /// serialized notification payload, sent through web push

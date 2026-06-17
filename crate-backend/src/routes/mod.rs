@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use axum::{extract::State, response::IntoResponse, Json};
+use axum::{Json, extract::State, response::IntoResponse};
 use common::v1::types::federation::WellKnown;
 use lamprey_backend_core::Error;
 use utoipa_axum::router::OpenApiRouter;

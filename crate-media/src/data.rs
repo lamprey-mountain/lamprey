@@ -1,7 +1,7 @@
 use common::v1::types::{EmojiId, MediaId, MediaTrack, MediaV0};
 use common::v2::types::media::{Media, MediaStatus};
 use serde::Deserialize;
-use sqlx::{query_scalar, types::JsonValue, Executor, Postgres};
+use sqlx::{Executor, Postgres, query_scalar, types::JsonValue};
 
 use crate::error::Result;
 

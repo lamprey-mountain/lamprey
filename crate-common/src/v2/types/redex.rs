@@ -11,11 +11,11 @@ use validator::Validate;
 
 use crate::{
     v1::types::{
-        misc::{hashes::Hashes, Time},
+        ChannelId, RedexId, UserId,
+        misc::{Time, hashes::Hashes},
         redex::{
             License, RedexAuthor, RedexFormat, RedexHandler, RedexOrigin, RedexPermission, Semver,
         },
-        ChannelId, RedexId, UserId,
     },
     v2::types::media::{Media, MediaReference},
 };

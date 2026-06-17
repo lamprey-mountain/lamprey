@@ -3,7 +3,7 @@ use std::{path::Path, process::Stdio};
 use tokio::process::Command;
 use tracing::error;
 
-use crate::{error::Error, Result};
+use crate::{Result, error::Error};
 
 pub async fn transcode_to_webm(in_path: &Path, out_path: &Path) -> Result<()> {
     let cmd = Command::new("ffmpeg")

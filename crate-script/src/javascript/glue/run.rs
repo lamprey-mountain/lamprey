@@ -1,4 +1,4 @@
-use rquickjs::{class::Trace, Ctx, JsLifetime, Result as JsResult};
+use rquickjs::{Ctx, JsLifetime, Result as JsResult, class::Trace};
 
 /// manages other runs: spawning, sending messages, stopping, etc.
 #[rquickjs::class]

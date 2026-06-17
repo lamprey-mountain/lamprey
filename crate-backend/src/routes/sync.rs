@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use axum::extract::ws::WebSocket;
 use axum::extract::WebSocketUpgrade;
+use axum::extract::ws::WebSocket;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
 use axum::routing::any;
@@ -10,9 +10,9 @@ use common::v1::types::{MessageEnvelope, MessagePayload, SyncParams};
 use futures_util::StreamExt;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::sync::transport::{Transport, TransportEvent, TransportSink, WebsocketTransport};
-use crate::sync::{util::Timeout, Connection};
 use crate::ServerState;
+use crate::sync::transport::{Transport, TransportEvent, TransportSink, WebsocketTransport};
+use crate::sync::{Connection, util::Timeout};
 
 /// Sync init
 ///

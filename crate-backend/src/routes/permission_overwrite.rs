@@ -6,7 +6,7 @@ use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
-    util::Changes, AuditLogEntryType, MessageSync, Permission, PermissionOverwriteType,
+    AuditLogEntryType, MessageSync, Permission, PermissionOverwriteType, util::Changes,
 };
 use http::StatusCode;
 use lamprey_macros::handler;
@@ -14,7 +14,7 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::Result;
 use crate::routes::util::Auth;
-use crate::{routes2, ServerState};
+use crate::{ServerState, routes2};
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 /// Permission overwrite

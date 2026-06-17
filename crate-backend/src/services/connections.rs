@@ -3,7 +3,7 @@ use std::sync::Arc;
 use common::v1::types::ConnectionId;
 use dashmap::DashMap;
 
-use crate::{sync::Connection, ServerStateInner};
+use crate::{ServerStateInner, sync::Connection};
 
 pub struct ServiceConnections {
     _state: Arc<ServerStateInner>,

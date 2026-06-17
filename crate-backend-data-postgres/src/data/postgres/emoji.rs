@@ -1,7 +1,7 @@
 use async_trait::async_trait;
+use common::v1::types::EmojiId;
 use common::v1::types::emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiOwner};
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::EmojiId;
 use sqlx::{query, query_as, query_scalar};
 use uuid::Uuid;
 
@@ -11,7 +11,7 @@ use crate::error::Result;
 use crate::types::{
     MediaLinkType, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId,
 };
-use crate::{gen_paginate, Error};
+use crate::{Error, gen_paginate};
 
 use super::{Pagination, Postgres};
 

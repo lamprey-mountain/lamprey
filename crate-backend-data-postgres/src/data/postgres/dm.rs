@@ -10,14 +10,10 @@ use crate::types::{ChannelId, DbChannel, DbChannelType, UserId};
 
 use crate::data::DataDm;
 
-use super::{util::Pagination, Postgres};
+use super::{Postgres, util::Pagination};
 
 fn ensure_canonical(a: UserId, b: UserId) -> (UserId, UserId) {
-    if a < b {
-        (a, b)
-    } else {
-        (b, a)
-    }
+    if a < b { (a, b) } else { (b, a) }
 }
 
 #[async_trait]

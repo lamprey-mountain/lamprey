@@ -1,6 +1,6 @@
+use crate::Result;
 use crate::services::voice::voice_state::VoiceStateHandle;
 use crate::services::voice::{ServiceVoice, SfuCommand, SfuStats};
-use crate::Result;
 use axum::extract::ws::WebSocket;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::voice::messages::SfuEvent;
@@ -8,7 +8,7 @@ use common::v1::types::{ChannelId, MessageSync, SfuId, UserId};
 use lamprey_backend_core::Error;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::{RwLock, mpsc};
 use tracing::{debug, error, info, warn};
 
 pub struct SfuHandleInner {

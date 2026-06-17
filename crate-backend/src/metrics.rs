@@ -1,5 +1,5 @@
 use once_cell::sync::Lazy;
-use prometheus::{register_int_gauge, IntGauge, Opts};
+use prometheus::{IntGauge, Opts, register_int_gauge};
 
 macro_rules! register_gauge {
     ($NAME:ident, $help:expr) => {

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{misc::Time, EvalId, MessageSync, RedexId, RedexVerId, UserId};
+use crate::v1::types::{EvalId, MessageSync, RedexId, RedexVerId, UserId, misc::Time};
 
 /// a redex being run
 #[derive(Debug, Clone)]

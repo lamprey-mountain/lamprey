@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{metadata::Metadata, misc::Time, RedexId};
+use crate::v1::types::{RedexId, metadata::Metadata, misc::Time};
 
 /// a log entry from an eval
 #[derive(Debug, Clone)]

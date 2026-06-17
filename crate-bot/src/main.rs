@@ -5,13 +5,13 @@ use anyhow::anyhow;
 use clap::Parser;
 use common::v1::types::Message;
 use common::v1::types::{
-    voice::{SignallingMessage, VoiceState, VoiceStateUpdate},
     MessageClient, MessageCreate, MessageSync, Session, User,
+    voice::{SignallingMessage, VoiceState, VoiceStateUpdate},
 };
 use figment::providers::{Env, Format, Toml};
 use sdk::{Client, EventHandler, Http};
 use sqlx::SqlitePool;
-use tokio::sync::{mpsc::Sender, Mutex};
+use tokio::sync::{Mutex, mpsc::Sender};
 use tracing::{debug, error, info, warn};
 
 use crate::{

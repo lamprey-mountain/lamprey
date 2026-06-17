@@ -6,11 +6,11 @@ use common::v1::types::misc::hashes::Hashes;
 use common::v1::types::{MediaId, Mime, UserId};
 use common::v2::types::media::{Media, MediaCreate, MediaCreateSource, MediaMetadata, MediaStatus};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::sync::{watch, OnceCell};
+use tokio::sync::{OnceCell, watch};
 use tokio_util::compat::FuturesAsyncReadCompatExt;
 
 use crate::routes::util::multipart::MultipartFile;
-use crate::{prelude::*, ServerStateInner};
+use crate::{ServerStateInner, prelude::*};
 
 // TODO: remove created media after 5 minutes, reset timer after any update
 // TODO: remove uploaded media after 5 minutes

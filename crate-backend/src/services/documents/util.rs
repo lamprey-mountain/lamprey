@@ -1,5 +1,5 @@
-use common::v1::types::document::{Changeset, DocumentTag};
 use common::v1::types::UserId;
+use common::v1::types::document::{Changeset, DocumentTag};
 use tracing::trace;
 use yrs::{GetString, Out};
 

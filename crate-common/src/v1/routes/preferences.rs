@@ -31,8 +31,8 @@ pub mod preferences_global_put {
     response(OK, body = PreferencesRoom, description = "success"),
 )]
 pub mod preferences_room_put {
-    use crate::v1::types::preferences::PreferencesRoom;
     use crate::v1::types::RoomId;
+    use crate::v1::types::preferences::PreferencesRoom;
 
     pub struct Request {
         #[path]
@@ -57,8 +57,8 @@ pub mod preferences_room_put {
     response(OK, body = PreferencesChannel, description = "success"),
 )]
 pub mod preferences_channel_put {
-    use crate::v1::types::preferences::PreferencesChannel;
     use crate::v1::types::ChannelId;
+    use crate::v1::types::preferences::PreferencesChannel;
 
     pub struct Request {
         #[path]
@@ -83,8 +83,8 @@ pub mod preferences_channel_put {
     response(OK, body = PreferencesUser, description = "success"),
 )]
 pub mod preferences_user_put {
-    use crate::v1::types::preferences::PreferencesUser;
     use crate::v1::types::UserId;
+    use crate::v1::types::preferences::PreferencesUser;
 
     pub struct Request {
         #[path]
@@ -128,8 +128,8 @@ pub mod preferences_global_get {
     response(OK, body = PreferencesRoom, description = "success"),
 )]
 pub mod preferences_room_get {
-    use crate::v1::types::preferences::PreferencesRoom;
     use crate::v1::types::RoomId;
+    use crate::v1::types::preferences::PreferencesRoom;
 
     pub struct Request {
         #[path]
@@ -151,8 +151,8 @@ pub mod preferences_room_get {
     response(OK, body = PreferencesChannel, description = "success"),
 )]
 pub mod preferences_channel_get {
-    use crate::v1::types::preferences::PreferencesChannel;
     use crate::v1::types::ChannelId;
+    use crate::v1::types::preferences::PreferencesChannel;
 
     pub struct Request {
         #[path]
@@ -174,8 +174,8 @@ pub mod preferences_channel_get {
     response(OK, body = PreferencesUser, description = "success"),
 )]
 pub mod preferences_user_get {
-    use crate::v1::types::preferences::PreferencesUser;
     use crate::v1::types::UserId;
+    use crate::v1::types::preferences::PreferencesUser;
 
     pub struct Request {
         #[path]

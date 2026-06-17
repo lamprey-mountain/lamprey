@@ -12,12 +12,12 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::{
+    AppState,
     error::{Error, Result},
     routes::{
         media::{get_media, head_media},
-        util::{build_headers, probably_can_thumbnail, ContentInfo},
+        util::{ContentInfo, build_headers, probably_can_thumbnail},
     },
-    AppState,
 };
 
 // TODO: maybe allow generating png, jpeg, or webp thumbnails?

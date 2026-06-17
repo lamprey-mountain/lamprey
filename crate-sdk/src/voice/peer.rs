@@ -2,24 +2,24 @@ use std::{net::SocketAddr, sync::Arc, time::Instant};
 
 use common::{
     v1::types::voice::{
+        VoiceState,
         datachannel::DatachannelProtocol,
         messages::{SignallingCommand, SignallingEvent},
-        VoiceState,
     },
     v2::types::ChannelId,
 };
-use futures_util::{stream::BoxStream, StreamExt};
+use futures_util::{StreamExt, stream::BoxStream};
 use str0m::Rtc;
 use tokio::{net::UdpSocket, sync::mpsc, time};
 use tracing::{error, info};
 
 use crate::{
+    Client,
     voice::{
+        VoiceError, VoiceEvent,
         player::{AudioSource, VideoSource},
         track::{Inbound, OutboundPending},
-        VoiceError, VoiceEvent,
     },
-    Client,
 };
 
 pub(crate) struct ConnectionState {

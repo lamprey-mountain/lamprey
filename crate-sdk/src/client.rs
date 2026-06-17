@@ -1,4 +1,4 @@
-use common::v1::types::{presence::Presence, SessionToken};
+use common::v1::types::{SessionToken, presence::Presence};
 use url::Url;
 
 use crate::prelude::*;

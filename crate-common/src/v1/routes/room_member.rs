@@ -125,9 +125,9 @@ pub mod room_member_update {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod room_member_delete {
+    use crate::v1::types::RoomId;
     use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::room_member::RoomMemberDeleteQuery;
-    use crate::v1::types::RoomId;
 
     pub struct Request {
         #[path]
@@ -319,8 +319,8 @@ pub mod room_ban_get {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod room_ban_delete {
-    use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::RoomId;
+    use crate::v1::types::misc::UserIdReq;
 
     pub struct Request {
         #[path]

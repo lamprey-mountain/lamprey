@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse2, ItemImpl, ImplItem, Path};
+use syn::{ImplItem, ItemImpl, Path, parse2};
 
 pub fn expand(_args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> {
     let mut input = parse2::<ItemImpl>(item)?;
@@ -10,7 +10,10 @@ pub fn expand(_args: TokenStream, item: TokenStream) -> syn::Result<TokenStream>
 
     for impl_item in &mut input.items {
         if let ImplItem::Fn(method) = impl_item {
-            let endpoint_attr_pos = method.attrs.iter().position(|a| a.path().is_ident("endpoint"));
+            let endpoint_attr_pos = method
+                .attrs
+                .iter()
+                .position(|a| a.path().is_ident("endpoint"));
 
             if let Some(idx) = endpoint_attr_pos {
                 let attr = method.attrs.remove(idx);

@@ -1,12 +1,12 @@
 use std::{sync::Arc, time::Duration};
 
-use common::v1::types::federation::RemoteReq;
 use common::v1::types::UserId;
+use common::v1::types::federation::RemoteReq;
 use common::{
     v1::types::{
+        MediaId,
         error::{ApiError, ErrorCode},
         federation::Remote,
-        MediaId,
     },
     v2::types::media::MediaPatch,
 };
@@ -16,9 +16,9 @@ use tokio::io::AsyncWriteExt;
 use tracing::{debug, error};
 
 use crate::{
+    ServerStateInner,
     error::{Error, Result},
     services::media::util::MediaItemState,
-    ServerStateInner,
 };
 
 mod ffmpeg;

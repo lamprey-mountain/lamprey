@@ -4,7 +4,7 @@ use sqlx::{query, query_file, query_scalar};
 use time::{Duration, OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
-use crate::{data::DataAdmin, error::Result, types::MediaId, Error};
+use crate::{Error, data::DataAdmin, error::Result, types::MediaId};
 
 use super::Postgres;
 

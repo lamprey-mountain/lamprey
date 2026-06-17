@@ -10,7 +10,7 @@ use http::StatusCode;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
-use crate::{error::Result, AppState};
+use crate::{AppState, error::Result};
 
 /// Fetch stream (TODO)
 #[utoipa::path(get, path = "/stream/{media_id}")]

@@ -1,6 +1,8 @@
 use common::{
     v1::types::{
-        ack::{AckBulk, AckCreate}, notifications::Notification, Channel, Message
+        Channel, Message,
+        ack::{AckBulk, AckCreate},
+        notifications::Notification,
     },
     v2::types::{ChannelId, UserId},
 };
