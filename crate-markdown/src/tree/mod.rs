@@ -2,7 +2,6 @@
 
 use crate::prelude::*;
 
-// pub mod cursor; // TODO: remove?
 pub mod kind;
 pub mod node;
 
