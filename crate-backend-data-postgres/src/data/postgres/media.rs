@@ -180,9 +180,9 @@ impl DataMedia for Postgres {
     async fn media_select(&mut self, media_id: MediaId) -> Result<MediaV2> {
         let mut conn = self.acquire().await?;
         let media = query_as!(
-            DbMedia,
+            DbMediaWithId,
             r#"
-            SELECT user_id, deleted_at, data, version_id, remote_origin_id, remote_hostname
+            SELECT id, user_id, deleted_at, data, version_id, remote_origin_id, remote_hostname
             FROM media
             WHERE id = $1
         "#,
@@ -197,22 +197,7 @@ impl DataMedia for Postgres {
             e => Error::Sqlx(e),
         })?;
 
-        let mut parsed: MediaV2 = DbMediaData::from_row(media.data, media.user_id)
-            .map_err(|e| {
-                warn!(?e, "failed to parse media data");
-                Error::BadStatic("failed to parse media data")
-            })?
-            .into();
-        parsed.deleted_at = media.deleted_at.map(Into::into);
-        parsed.version_id = media.version_id.into();
-
-        if let (Some(origin_id), Some(hostname)) = (media.remote_origin_id, media.remote_hostname) {
-            parsed.remote = Some(Remote {
-                origin_id: origin_id.into(),
-                hostname: Hostname(hostname),
-                epoch: FederationEpoch(0),
-            });
-        }
+        let mut parsed: MediaV2 = media.parse();
 
         let links = query_as!(
             MediaLink,
@@ -285,10 +270,10 @@ impl DataMedia for Postgres {
 
     async fn media_update(&mut self, media_id: MediaId, patch: MediaPatchV2) -> Result<()> {
         let mut tx = self.begin_tx().await?;
-        let mut media = query_as!(
-            DbMedia,
+        let media = query_as!(
+            DbMediaWithId,
             r#"
-            SELECT user_id, deleted_at, data, version_id, remote_origin_id, remote_hostname
+            SELECT id, user_id, deleted_at, data, version_id, remote_origin_id, remote_hostname
             FROM media
             WHERE id = $1
             FOR UPDATE
@@ -304,9 +289,7 @@ impl DataMedia for Postgres {
             return Ok(());
         }
 
-        let media_data: DbMediaData =
-            DbMediaData::from_row(media.data, media.user_id).expect("invalid data in db");
-        let mut media_data: MediaV2 = media_data.into();
+        let mut media_data: MediaV2 = media.parse();
 
         if let Some(alt) = patch.alt {
             media_data.alt = alt;
@@ -344,7 +327,7 @@ impl DataMedia for Postgres {
             media_data.strip_exif = strip_exif;
         }
 
-        media.data =
+        let data =
             serde_json::to_value(&DbMediaData::V2(media_data)).expect("failed to serialize media");
 
         query!(
@@ -354,7 +337,7 @@ impl DataMedia for Postgres {
             WHERE id = $1
         "#,
             *media_id,
-            media.data,
+            data,
             Uuid::now_v7(),
         )
         .execute(tx.ext())
@@ -597,9 +580,9 @@ impl DataMedia for Postgres {
     ) -> Result<Option<MediaV2>> {
         let mut conn = self.acquire().await?;
         let media = query_as!(
-            DbMedia,
+            DbMediaWithId,
             r#"
-            SELECT user_id, deleted_at, data, version_id, remote_origin_id, remote_hostname
+            SELECT id, user_id, deleted_at, data, version_id, remote_origin_id, remote_hostname
             FROM media
             WHERE remote_hostname = $1 AND remote_origin_id = $2
             LIMIT 1
@@ -614,20 +597,6 @@ impl DataMedia for Postgres {
             return Ok(None);
         };
 
-        let mut parsed: MediaV2 = DbMediaData::from_row(media.data, media.user_id)
-            .unwrap()
-            .into();
-        parsed.deleted_at = media.deleted_at.map(Into::into);
-        parsed.version_id = media.version_id.into();
-
-        if let (Some(origin_id), Some(hostname)) = (media.remote_origin_id, media.remote_hostname) {
-            parsed.remote = Some(Remote {
-                origin_id: origin_id.into(),
-                hostname: Hostname(hostname),
-                epoch: FederationEpoch(0),
-            });
-        }
-
-        Ok(Some(parsed))
+        Ok(Some(media.parse()))
     }
 }

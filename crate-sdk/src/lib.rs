@@ -1,10 +1,10 @@
 mod cache;
-mod client;
+pub mod client;
 mod error;
-mod http;
+pub mod http;
 mod member_list;
 mod messages;
-mod syncer;
+pub mod syncer;
 
 #[cfg(feature = "voice")]
 mod voice;

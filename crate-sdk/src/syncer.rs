@@ -28,7 +28,7 @@ pub struct Syncer {
 
 /// a handle to a syncer
 pub struct SyncerHandle {
-    state: AtomicU8,
+    state: Arc<AtomicU8>,
     tx: mpsc::Sender<SyncerCommand>,
     rx: broadcast::Receiver<Arc<SyncerEvent>>,
 }
@@ -124,12 +124,12 @@ impl SyncerBuilder {
         self
     }
 
-    pub async fn connect(self) -> Result<SyncerHandle> {
+    pub fn build(self) -> Result<SyncerHandle> {
         let (cmd_tx, cmd_rx) = mpsc::channel(100);
         let (evt_tx, _) = broadcast::channel(100);
 
         let syncer = Syncer {
-            state: AtomicU8::new(SyncerState::Connecting.into()),
+            state: AtomicU8::new(SyncerState::Disconnected.into()),
             client: None,
             resume: None,
             rx: cmd_rx,
@@ -146,7 +146,7 @@ impl SyncerBuilder {
         tokio::spawn(syncer.run(token, base_url));
 
         Ok(SyncerHandle {
-            state: AtomicU8::new(SyncerState::Connecting.into()),
+            state: Arc::new(AtomicU8::new(SyncerState::Connecting.into())),
             tx: cmd_tx,
             rx: evt_tx.subscribe(),
         })
@@ -160,7 +160,7 @@ enum Propagated {
 
 impl Syncer {
     pub fn builder() -> SyncerBuilder {
-        todo!()
+        SyncerBuilder::default()
     }
 
     fn state(&self) -> SyncerState {
@@ -409,6 +409,17 @@ impl Syncer {
 }
 
 impl SyncerHandle {
+    /// get another handle
+    ///
+    /// resubscribes to the event stream
+    pub fn handle(&self) -> Self {
+        Self {
+            state: Arc::clone(&self.state),
+            tx: self.tx.clone(),
+            rx: self.rx.resubscribe(),
+        }
+    }
+
     /// get the syncer's current state
     pub fn state(&self) -> SyncerState {
         self.state

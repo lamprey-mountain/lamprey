@@ -21,12 +21,14 @@ pub struct Http {
 struct HttpConfig {
     token: SessionToken,
     api_url: Url,
+    cdn_url: Url,
 }
 
 #[derive(Debug, Default)]
 pub struct HttpBuilder {
     token: Option<SessionToken>,
     api_url: Option<Url>,
+    cdn_url: Option<Url>,
 }
 
 impl HttpBuilder {
@@ -40,6 +42,11 @@ impl HttpBuilder {
         self
     }
 
+    pub fn cdn_url(mut self, url: Url) -> Self {
+        self.cdn_url = Some(url);
+        self
+    }
+
     pub fn build(self) -> Result<Http> {
         let token = self
             .token
@@ -47,6 +54,9 @@ impl HttpBuilder {
         let api_url = self
             .api_url
             .ok_or_else(|| Error::MissingBuilderField("api_url".to_string()))?;
+        let cdn_url = self
+            .cdn_url
+            .ok_or_else(|| Error::MissingBuilderField("cdn_url".to_string()))?;
 
         let mut h = HeaderMap::new();
         h.typed_insert(headers::Authorization::bearer(&token.0).map_err(|_| Error::InvalidHeader)?);
@@ -54,7 +64,11 @@ impl HttpBuilder {
         let client = reqwest::Client::builder().default_headers(h).build()?;
 
         Ok(Http {
-            config: Arc::new(HttpConfig { token, api_url }),
+            config: Arc::new(HttpConfig {
+                token,
+                api_url,
+                cdn_url,
+            }),
             client,
         })
     }
@@ -67,6 +81,10 @@ impl Http {
 
     pub fn api_url(&self) -> &Url {
         &self.config.api_url
+    }
+
+    pub fn cdn_url(&self) -> &Url {
+        &self.config.cdn_url
     }
 
     pub fn token(&self) -> &SessionToken {
