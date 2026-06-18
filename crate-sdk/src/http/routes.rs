@@ -22,7 +22,8 @@ use common::v1::types::{
     misc::UserIdReq,
     reaction::{ReactionKeyParam, ReactionListItem},
     role::RoleDeleteQuery,
-};
+    ContextQuery, ContextResponse,
+    };
 use common::v1::types::{Message, SearchDlqId};
 use common::v1::types::{
     MessageCreate, MessageMove, RoomBanCreate, SuspendRequest, TransferOwnership, UserCreate,
@@ -344,6 +345,7 @@ route!(post   "/api/v1/channel/{channel_id}/typing"               => channel_typ
 
 // Message Routes
 route!(post   "/api/v1/channel/{channel_id}/message"              => message_create(channel_id: ChannelId) -> Message, MessageCreate);
+route!(get    "/api/v1/channel/{channel_id}/context/{message_id}" => message_context(channel_id: ChannelId, message_id: MessageId, context: ContextQuery) -> ContextResponse);
 route!(get    "/api/v1/channel/{channel_id}/message/{message_id}" => message_get(channel_id: ChannelId, message_id: MessageId) -> Message);
 route!(patch  "/api/v1/channel/{channel_id}/message/{message_id}" => message_edit(channel_id: ChannelId, message_id: MessageId) -> Message, MessagePatch);
 route!(delete "/api/v1/channel/{channel_id}/message/{message_id}" => message_delete(channel_id: ChannelId, message_id: MessageId));
@@ -468,8 +470,18 @@ route!(delete "/api/v1/admin/search/dlq/{id}"                   => admin_search_
 // server routes
 route!(get    "/api/v1/server/@self"                            => server_info() -> ServerInfo);
 
+pub struct MessageCreateOptions {
+    pub channel_id: ChannelId,
+    pub body: MessageCreate,
+
+    // http Idempotency-Key header
+    pub nonce: Option<String>,
+    pub timestamp: Option<Time>,
+}
+
 impl Http {
     /// Create a message with a custom timestamp (for bridge sync)
+    // TODO: merge with message_create_with_options
     pub async fn message_create_with_timestamp(
         &self,
         channel_id: ChannelId,
@@ -495,6 +507,42 @@ impl Http {
         serde_json::from_str(&text).with_context(|| {
             format!(
                 "failed to decode response body for message_create_with_timestamp (body: {text})"
+            )
+        })
+    }
+
+    /// Create a message with custom options
+    pub async fn message_create_with_options(
+        &self,
+        options: MessageCreateOptions,
+    ) -> Result<Message> {
+        let url = self
+            .api_url()
+            .join(&format!("/api/v1/channel/{}/message", options.channel_id))?;
+
+        let mut req = self
+            .client
+            .post(url)
+            .header("content-type", "application/json");
+
+        if let Some(nonce) = options.nonce {
+            req = req.header("Idempotency-Key", nonce);
+        }
+
+        if let Some(timestamp) = options.timestamp {
+            req = req.header("X-Timestamp", timestamp.unix_timestamp().to_string());
+        }
+
+        let res = req.json(&options.body).send().await?;
+
+        let status = res.status();
+        let text = res.text().await?;
+        if !status.is_success() {
+            anyhow::bail!("message_create_with_options failed: status={status} body={text}");
+        }
+        serde_json::from_str(&text).with_context(|| {
+            format!(
+                "failed to decode response body for message_create_with_options (body: {text})"
             )
         })
     }

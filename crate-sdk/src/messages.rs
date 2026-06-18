@@ -1,371 +1,369 @@
-// TODO: rip everything out and try again
+// TODO: use Arc::clone instead of .clone()
 
-use std::{
-    collections::{BTreeMap, HashMap},
-    sync::Arc,
+use std::collections::BTreeMap;
+use std::sync::Arc;
+
+use common::v1::types::{
+    ChannelId, ContextQuery, Message, MessageCreate, MessageId, MessagePatch, MessagePayload,
+    MessageSync, PaginationDirection, PaginationQuery,
 };
+use futures_util::{Stream, StreamExt};
+use tokio::sync::RwLock;
 
-use common::v1::types::{ChannelId, Message, MessageId, MessageSync, PaginationResponse};
+use crate::Client;
+use crate::http::Http;
+use crate::prelude::*;
+use crate::syncer::{SyncerEvent, SyncerHandle};
 
-/// messages in a channel
-pub struct ChannelData {
-    /// Global map of every message we know about in this channel.
-    messages: BTreeMap<MessageId, Arc<Message>>,
-
-    /// Metadata describing which segments of the BTreeMap are "connected".
-    /// These MUST be kept sorted and disjoint.
-    ranges: Vec<TimelineMetadata>,
+/// the messages in a channel
+#[derive(Debug, Clone)]
+pub struct Messages {
+    channel_id: ChannelId,
+    http: Http,
+    inner: Arc<RwLock<MessagesInner>>,
 }
 
-/// a timeline is a sequence of contiguous messages
-#[derive(Debug, Clone)]
-pub struct TimelineMetadata {
-    pub start: MessageId,
-    pub end: MessageId,
-    pub has_more_before: bool,
-    pub has_more_after: bool,
+#[derive(Debug)]
+struct MessagesInner {
+    // TODO: message versions
+    /// every known message in this channel
+    messages: BTreeMap<MessageId, Arc<Message>>,
+
+    /// sorted and disjoint list of loaded message ranges
+    ranges: Vec<Range>,
+
+    /// pending messages without server ids
+    local: Vec<Local>,
+
+    /// the very first message id in this channel, if it is known
+    start: Option<MessageId>,
+}
+
+/// a range of messages that are known to be loaded
+#[derive(Debug, Clone, Copy)]
+struct Range {
+    /// the start of this interval (inclusive)
+    start: MessageId,
+
+    /// the end of this interval (inclusive)
+    end: MessageId,
 
     /// whether this range is stale
     ///
     /// stale ranges can be used in the ui while loading, but MUST be replaced
     /// with fresh data from the server if it is received. eg. if paginating
     /// backwards, don't reuse stale ranges; instead fetch and write over them.
-    pub stale: bool,
+    stale: bool,
 }
 
-impl TimelineMetadata {
-    pub fn contains(&self, _message_id: MessageId) -> bool {
-        todo!("check if self.start <= message_id <= self.end")
-    }
+/// a local message in the process of being sent
+#[derive(Debug)]
+struct Local {
+    create: MessageCreate,
+    nonce: String,
 }
 
-// pub struct Timeline<'a> {
-//     pub timeline: &'a TimelineMetadata,
-//     pub messages: Vec<&'a Message>,
-// }
-
-/// an update to the timeline
-pub enum TimelineUpdate {
-    /// a sync event from the websocket
-    Sync(MessageSync),
-
-    /// a response from the server
-    FetchResult {
-        task: FetchTask,
-        response: PaginationResponse<Message>,
-    },
+#[derive(Debug)]
+pub struct MessageSlice {
+    messages: Vec<Arc<Message>>,
+    // has_forward: bool,
+    // has_backwards: bool,
+    // stale: bool,
 }
 
-pub struct QueryResult {
-    pub channel_id: ChannelId,
-    pub fragments: Vec<QueryResultFragment>,
-    /// Does the server have even older messages than the first fragment?
-    pub has_more_before: bool,
-    /// Does the server have even newer messages than the last fragment?
-    pub has_more_after: bool,
-}
-
-pub enum QueryResultFragment {
-    /// A contiguous block of messages.
-    Messages {
-        items: Vec<Arc<Message>>,
-        stale: bool,
-    },
-    /// A identified gap between two blocks or at a boundary.
-    Gap(FetchTask),
-}
-
-#[derive(Debug, Clone)]
-pub enum FetchTask {
-    Backwards {
-        from: MessageId,
-        limit: u16,
-    },
-    Forwards {
-        from: MessageId,
-        limit: u16,
-    },
-    /// Fetching the newest messages in the channel.
-    Live {
-        limit: u16,
-    },
-    /// Fetching surrounding context for a specific message.
-    Context {
-        target: MessageId,
-        limit: u16,
-    },
-}
-
-#[derive(Debug, Clone)]
-pub enum QueryAnchor {
-    Latest,
-    Around(MessageId),
-    Before(MessageId),
-    After(MessageId),
-}
-
-struct Messages {
-    channels: HashMap<ChannelId, ChannelData>,
-}
-
-impl ChannelData {
-    pub fn new(_channel_id: ChannelId) -> Self {
-        Self {
-            messages: BTreeMap::new(),
-            ranges: Vec::new(),
+// NOTE: maybe allow multiple in flight requests as long as they're deduplicated?
+impl Messages {
+    /// fetch a single message
+    pub async fn fetch(&self, id: MessageId) -> Result<Arc<Message>> {
+        {
+            let read = self.inner.read().await;
+            if let Some(m) = read.messages.get(&id) {
+                return Ok(m.clone());
+            }
         }
+
+        let message = Arc::new(
+            self.http
+                .message_get(self.channel_id, id)
+                .await
+                .map_err(|e| anyhow::anyhow!("failed to fetch message: {}", e))?,
+        );
+
+        {
+            let mut write = self.inner.write().await;
+            write.insert_message(message.clone());
+            write.insert_range(Range {
+                start: id,
+                end: id,
+                stale: false,
+            });
+        }
+
+        Ok(message)
     }
 
-    /// Internal: Add messages to the map and update ranges
-    fn apply_fetch(&mut self, messages: Vec<Message>, task: FetchTask, has_more: bool) {
-        if messages.is_empty() {
-            // If the server returns empty, we update the existing range boundary
-            self.mark_end_of_stream(&task);
-            return;
+    /// fetch a range of messages before this message
+    ///
+    /// the returned `MessageRange` may contain more or less messages than `limit`
+    pub async fn fetch_before(&self, id: MessageId, limit: u16) -> Result<MessageSlice> {
+        {
+            let read = self.inner.read().await;
+            if let Some(range) = read.find_range(id) {
+                let have: Vec<_> = read
+                    .messages
+                    .range(range.start..=id)
+                    .take(limit as usize)
+                    .map(|(_, m)| m.clone())
+                    .collect();
+                if have.len() == limit as usize || Some(range.start) == read.start {
+                    return Ok(MessageSlice { messages: have });
+                }
+            }
         }
 
-        // 1. Insert messages into the store
-        let mut min_id = messages[0].id;
-        let mut max_id = messages[0].id;
-
-        for msg in messages {
-            let id = msg.id;
-            min_id = min_id.min(id);
-            max_id = max_id.max(id);
-            self.messages.insert(id, Arc::new(msg));
-        }
-
-        // 2. Create a temporary range for this fetch
-        let (more_before, more_after) = match task {
-            FetchTask::Backwards { .. } => (has_more, false),
-            FetchTask::Forwards { .. } => (false, has_more),
-            FetchTask::Live { .. } => (has_more, false), // Live is usually a backwards fetch from the tip
-            FetchTask::Context { .. } => (has_more, has_more), // Simplification: context often has both
-        };
-
-        let new_range = TimelineMetadata {
-            start: min_id,
-            end: max_id,
-            has_more_before: more_before,
-            has_more_after: more_after,
+        let res = self
+            .http
+            .message_list(
+                self.channel_id,
+                &PaginationQuery {
+                    from: Some(id),
+                    to: None,
+                    dir: Some(PaginationDirection::B),
+                    limit: Some(limit),
+                },
+            )
+            .await?;
+        let msgs: Vec<Arc<Message>> = res.items.into_iter().map(Arc::new).collect();
+        let new_range = Range {
+            start: msgs.first().map(|m| m.id).unwrap_or(id),
+            end: id,
             stale: false,
         };
 
-        // 3. Reconcile
-        self.merge_into_ranges(new_range);
-    }
-
-    fn merge_into_ranges(&mut self, mut new_range: TimelineMetadata) {
-        let mut next_ranges = Vec::new();
-
-        for existing in self.ranges.drain(..) {
-            // Check for overlap or adjacency
-            let overlapping =
-                (new_range.start <= existing.end) && (existing.start <= new_range.end);
-
-            // Adjacency check (if no 'more' flag exists between them, they are one timeline)
-            let adjacent_after = new_range.end == existing.start && !new_range.has_more_after;
-            let adjacent_before = existing.end == new_range.start && !existing.has_more_after;
-
-            if overlapping || adjacent_after || adjacent_before {
-                // Fold into new_range
-                new_range.start = new_range.start.min(existing.start);
-                new_range.end = new_range.end.max(existing.end);
-
-                // If either is fresh, the result is fresh
-                new_range.stale = new_range.stale && existing.stale;
-
-                // Inherit boundary flags from the outermost ranges
-                if existing.start < new_range.start {
-                    new_range.has_more_before = existing.has_more_before;
-                }
-                if existing.end > new_range.end {
-                    new_range.has_more_after = existing.has_more_after;
-                }
-            } else {
-                next_ranges.push(existing);
+        {
+            let mut write = self.inner.write().await;
+            for m in msgs.iter().cloned() {
+                write.insert_message(m);
             }
+            write.insert_range(new_range);
         }
 
-        next_ranges.push(new_range);
-        next_ranges.sort_by_key(|r| r.start);
-        self.ranges = next_ranges;
+        Ok(MessageSlice { messages: msgs })
     }
 
-    fn mark_end_of_stream(&mut self, task: &FetchTask) {
-        match task {
-            FetchTask::Backwards { from, .. } => {
-                if let Some(r) = self.ranges.iter_mut().find(|r| r.contains(*from)) {
-                    r.has_more_before = false;
-                }
-            }
-            FetchTask::Forwards { from, .. } => {
-                if let Some(r) = self.ranges.iter_mut().find(|r| r.contains(*from)) {
-                    r.has_more_after = false;
-                }
+    pub async fn fetch_after(&self, id: MessageId, limit: u16) -> Result<MessageSlice> {
+        // copy fetch_before
+        todo!()
+    }
+
+    pub async fn fetch_context(&self, id: MessageId, limit: u16) -> Result<MessageSlice> {
+        // copy fetch_before with this logic
+        let res = self
+            .http
+            .message_context(
+                self.channel_id,
+                id,
+                ContextQuery {
+                    to_start: None,
+                    to_end: None,
+                    limit: Some(limit),
+                },
+            )
+            .await?;
+        // page.items; // Vec<Message>, includes message with id param
+        // page.has_after; // bool
+        // page.has_before; // bool
+        todo!()
+    }
+
+    pub async fn send(&self, create: MessageCreate) -> Result<&Message> {
+        // 1. immediately insert into self.segments and update subscribers
+
+        // 2. send message
+        let message = self.http.message_create(self.channel_id, &create).await?;
+
+        // 3. update self.segments, merge ranges if needed
+        // NOTE: whether the http route returns first or the websocket sends a message first is a race condition, i need to handle both
+
+        // 4. return sent message
+
+        todo!()
+    }
+
+    // TODO: allow editing in flight (local) messages
+    pub async fn edit(&self, id: MessageId, patch: MessagePatch) -> Result<&Message> {
+        todo!()
+    }
+
+    /// subscribe to the live timeline
+    ///
+    /// returns a stream of message slices containing the last `limit` messages in this channel
+    pub fn subscribe_live(&self, limit: u16) -> impl Stream<Item = MessageSlice> {
+        futures_util::stream::empty().boxed()
+    }
+
+    // // ???
+    // // maybe have subscribe_foo variants of fetch_foo?
+    // pub fn subscribe_range(&self, limit: u16) -> impl Stream<Item = MessageSlice<'_>> {
+    //     futures_util::stream::empty().boxed()
+    // }
+}
+
+impl MessagesInner {
+    fn insert_message(&mut self, message: Arc<Message>) {
+        self.messages.insert(message.id, message);
+    }
+
+    /// insert a new range, merging with overlapping/adjacent ranges
+    fn insert_range(&mut self, new_range: Range) {
+        let idx = self.ranges.partition_point(|r| r.end < new_range.start);
+
+        let mut merged = new_range;
+        let mut remove_start = idx;
+        let mut remove_end = idx;
+
+        // merge backwards
+        while remove_start > 0 && self.ranges[remove_start - 1].touches(merged) {
+            merged = merged.merge(self.ranges[remove_start - 1]);
+            remove_start -= 1;
+        }
+
+        // merge forwards
+        while remove_end < self.ranges.len() && self.ranges[remove_end].touches(merged) {
+            merged = merged.merge(self.ranges[remove_end]);
+            remove_end += 1;
+        }
+
+        self.ranges.splice(remove_start..remove_end, [merged]);
+    }
+
+    /// get which range this message id is in
+    fn find_range(&self, id: MessageId) -> Option<Range> {
+        let idx = self.ranges.partition_point(|r| r.end < id);
+        self.ranges.get(idx).filter(|r| r.contains(id)).copied()
+    }
+}
+
+impl Range {
+    /// construct a new [`Range`] containing a single (non stale) message id
+    pub fn single(id: MessageId) -> Self {
+        Self {
+            start: id,
+            end: id,
+            stale: false,
+        }
+    }
+
+    /// whether this range and another range are overlapping or adjacent (should merge)
+    pub fn touches(&self, other: Range) -> bool {
+        self.start <= other.end && other.start <= self.end
+    }
+
+    pub fn contains(&self, id: MessageId) -> bool {
+        self.start <= id && id <= self.end
+    }
+
+    /// merge this range with another range
+    pub fn merge(&self, other: Range) -> Range {
+        Range {
+            start: self.start.min(other.start),
+            end: self.end.max(other.end),
+            stale: self.stale && other.stale,
+        }
+    }
+}
+
+impl MessageSlice {
+    pub fn is_empty(&self) -> bool {
+        todo!()
+    }
+
+    pub fn start(&self) -> Option<MessageId> {
+        todo!()
+    }
+
+    pub fn end(&self) -> Option<MessageId> {
+        todo!()
+    }
+
+    pub fn contains(&self, id: MessageId) -> bool {
+        todo!()
+    }
+
+    pub fn len(&self) -> usize {
+        todo!()
+    }
+
+    // TODO: allow using slice syntax? (core::ops::something)
+    pub fn slice(&self, start: usize, end: usize) -> MessageSlice {
+        todo!()
+    }
+
+    /// whether there are more (possibly unloaded) messages before the start of this slice
+    pub fn has_backwads(&self) -> bool {
+        todo!()
+    }
+
+    /// whether there are more (possibly unloaded) messages after the end of this slice
+    pub fn has_forwards(&self) -> bool {
+        todo!()
+    }
+}
+
+async fn spawn_sync_task(syncer: SyncerHandle, inner: Arc<RwLock<MessagesInner>>) {
+    let mut s = syncer.subscribe();
+    while let Some(e) = s.next().await {
+        match &*e {
+            SyncerEvent::Message(m) => match &m.payload {
+                MessagePayload::Sync { data, nonce, .. } => match &**data {
+                    MessageSync::MessageCreate { message } => {
+                        // NOTE: if nonce == idempotency_key we sent this message
+                        // let a = inner.write().await;
+                        // a.insert_message(message);
+                        // a.insert_range(new_range);
+                        // Range::single(message.id)
+                        todo!()
+                    }
+                    MessageSync::MessageUpdate { message } => todo!(),
+                    MessageSync::MessageDelete {
+                        channel_id,
+                        message_id,
+                    } => todo!(),
+                    MessageSync::MessageDeleteBulk {
+                        channel_id,
+                        message_ids,
+                    } => todo!(),
+                    MessageSync::MessageVersionDelete {
+                        channel_id,
+                        message_id,
+                        version_id,
+                    } => todo!(),
+                    MessageSync::MessageRemove {
+                        channel_id,
+                        message_ids,
+                    } => todo!(),
+                    MessageSync::MessageRestore {
+                        channel_id,
+                        message_ids,
+                    } => todo!(),
+                    _ => {}
+                },
+                _ => {}
+            },
+            SyncerEvent::StateChanged => {
+                todo!("mark as stale if disconnected and failed to resume")
             }
             _ => {}
         }
     }
 }
 
-impl Messages {
-    pub fn new() -> Self {
-        Self {
-            channels: HashMap::new(),
-        }
-    }
-
-    pub fn query(&self, channel_id: ChannelId, anchor: QueryAnchor, limit: u16) -> QueryResult {
-        let Some(data) = self.channels.get(&channel_id) else {
-            return QueryResult {
-                channel_id,
-                fragments: vec![QueryResultFragment::Gap(FetchTask::Live { limit })],
-                has_more_before: true,
-                has_more_after: false,
-            };
-        };
-
-        let mut fragments = Vec::new();
-        let limit = limit as usize;
-
-        match anchor {
-            QueryAnchor::Latest => {
-                // Find the "live" range (the one with no more messages after it)
-                if let Some(live) = data.ranges.iter().find(|r| !r.has_more_after) {
-                    let items: Vec<_> = data
-                        .messages
-                        .range(live.start..=live.end)
-                        .rev() // Start from the newest
-                        .take(limit)
-                        .map(|(_, m)| Arc::clone(m))
-                        .collect::<Vec<_>>()
-                        .into_iter()
-                        .rev() // Back to chronological
-                        .collect();
-
-                    fragments.push(QueryResultFragment::Messages {
-                        items,
-                        stale: live.stale,
-                    });
-
-                    // If we didn't fill the limit and the live range has more before it...
-                    if fragments_len(&fragments) < limit && live.has_more_before {
-                        fragments.insert(
-                            0,
-                            QueryResultFragment::Gap(FetchTask::Backwards {
-                                from: live.start,
-                                limit: (limit - fragments_len(&fragments)) as u16,
-                            }),
-                        );
-                    }
-                } else {
-                    fragments.push(QueryResultFragment::Gap(FetchTask::Live {
-                        limit: limit as u16,
-                    }));
-                }
-            }
-            QueryAnchor::Around(id) => {
-                if let Some(range) = data.ranges.iter().find(|r| r.contains(id)) {
-                    // Extract context
-                    let half = limit / 2;
-                    let items: Vec<_> = data
-                        .messages
-                        .range(..=id)
-                        .rev()
-                        .take(half)
-                        .map(|(_, m)| Arc::clone(m))
-                        .collect::<Vec<_>>()
-                        .into_iter()
-                        .rev()
-                        .chain(
-                            data.messages
-                                .range(id..)
-                                .skip(1)
-                                .take(half)
-                                .map(|(_, m)| Arc::clone(m)),
-                        )
-                        .collect();
-
-                    fragments.push(QueryResultFragment::Messages {
-                        items,
-                        stale: range.stale,
-                    });
-                } else {
-                    fragments.push(QueryResultFragment::Gap(FetchTask::Context {
-                        target: id,
-                        limit: limit as u16,
-                    }));
-                }
-            }
-            _ => todo!("Implement Before/After anchors"),
-        }
-
-        QueryResult {
+impl Client {
+    pub async fn messages(&self, channel_id: ChannelId) -> Messages {
+        Messages {
             channel_id,
-            fragments,
-            has_more_before: true, // Simplified
-            has_more_after: false, // Simplified
+            http: self.http(),
+            inner: todo!(),
         }
     }
-
-    pub fn apply_event(&mut self, channel_id: ChannelId, event: TimelineUpdate) {
-        let data = self
-            .channels
-            .entry(channel_id)
-            .or_insert_with(|| ChannelData::new(channel_id));
-
-        match event {
-            TimelineUpdate::FetchResult { task, response } => {
-                data.apply_fetch(response.items, task, response.has_more);
-            }
-            TimelineUpdate::Sync(sync) => match sync {
-                MessageSync::MessageCreate { message } => {
-                    // Optimized: try to append to the "live" range if it exists
-                    let id = message.id;
-                    data.messages.insert(id, Arc::new(message));
-
-                    if let Some(live) = data.ranges.iter_mut().find(|r| !r.has_more_after) {
-                        // If it's contiguous, just expand
-                        if id >= live.end {
-                            live.end = id;
-                        } else {
-                            // Message is older than live end? Re-merge
-                            data.merge_into_ranges(TimelineMetadata {
-                                start: id,
-                                end: id,
-                                has_more_before: true,
-                                has_more_after: false,
-                                stale: false,
-                            });
-                        }
-                    } else {
-                        // No live range? Create one
-                        data.ranges.push(TimelineMetadata {
-                            start: id,
-                            end: id,
-                            has_more_before: true,
-                            has_more_after: false,
-                            stale: false,
-                        });
-                    }
-                }
-                MessageSync::MessageDelete { message_id, .. } => {
-                    data.messages.remove(&message_id);
-                    // Note: We DO NOT shrink ranges on delete to maintain continuity
-                }
-                _ => {}
-            },
-        }
-    }
-}
-
-fn fragments_len(frags: &[QueryResultFragment]) -> usize {
-    frags
-        .iter()
-        .map(|f| match f {
-            QueryResultFragment::Messages { items, .. } => items.len(),
-            _ => 0,
-        })
-        .sum()
 }

@@ -3,7 +3,7 @@ pub mod client;
 mod error;
 pub mod http;
 mod member_list;
-mod messages;
+pub mod messages;
 pub mod syncer;
 
 #[cfg(feature = "voice")]
