@@ -1,0 +1,6 @@
+{
+  "name": "@lamprey/markdown",
+  "version": "0.1.0",
+  "license": "MIT",
+  "exports": "./lamprey_markdown.js"
+}

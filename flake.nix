@@ -173,6 +173,7 @@
           (builtins.match ".*\\.html" path != null) ||
           (builtins.match ".*\\.wit" path != null) ||
           (builtins.match ".*/package\\.json" path != null) ||
+          (builtins.match ".*/jsr\\.json" path != null) ||
           (builtins.match ".*/docs(/.*)?" path != null);
 
         filterSrcFor = dirs: pkgs.lib.cleanSourceWith {
@@ -320,6 +321,7 @@
               --out-dir $TMPDIR/pkg \
               --target web
             cp crate-markdown/package.json $TMPDIR/pkg/package.json
+            cp crate-markdown/jsr.json $TMPDIR/pkg/jsr.json
           '';
 
           installPhase = ''
