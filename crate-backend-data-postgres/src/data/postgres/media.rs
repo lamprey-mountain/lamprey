@@ -48,6 +48,16 @@ pub enum DbMediaData {
     Raw(DbMediaRaw),
 }
 
+impl DbMediaData {
+    pub fn from_row(data: serde_json::Value, user_id: Uuid) -> serde_json::Result<Self> {
+        let mut data = data;
+        if let serde_json::Value::Object(map) = &mut data {
+            map.insert("user_id".to_string(), serde_json::json!(user_id));
+        }
+        serde_json::from_value(data)
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DbMediaRaw {
     id: MediaId,
@@ -157,12 +167,7 @@ impl DataMedia for Postgres {
             e => Error::Sqlx(e),
         })?;
 
-        let mut data = media.data;
-        if let serde_json::Value::Object(ref mut map) = data {
-            map.insert("user_id".to_string(), serde_json::json!(media.user_id));
-        }
-
-        let mut parsed: MediaV2 = serde_json::from_value::<DbMediaData>(data)
+        let mut parsed: MediaV2 = DbMediaData::from_row(media.data, media.user_id)
             .map_err(|e| {
                 warn!(?e, "failed to parse media data");
                 Error::BadStatic("failed to parse media data")
@@ -270,7 +275,7 @@ impl DataMedia for Postgres {
         }
 
         let media_data: DbMediaData =
-            serde_json::from_value(media.data).expect("invalid data in db");
+            DbMediaData::from_row(media.data, media.user_id).expect("invalid data in db");
         let mut media_data: MediaV2 = media_data.into();
 
         if let Some(alt) = patch.alt {
@@ -512,7 +517,7 @@ impl DataMedia for Postgres {
 
         let count = rows.len() as u64;
         for row in rows {
-            let media: DbMediaData = match serde_json::from_value(row.data) {
+            let media: DbMediaData = match DbMediaData::from_row(row.data, row.user_id) {
                 Ok(media) => media,
                 Err(err) => {
                     warn!(media_id = ?row.id, "unreadable data in db {err:?}");
@@ -556,7 +561,7 @@ impl DataMedia for Postgres {
         Ok(rows
             .into_iter()
             .map(|row| {
-                let mut parsed: MediaV2 = serde_json::from_value::<DbMediaData>(row.data)
+                let mut parsed: MediaV2 = DbMediaData::from_row(row.data, row.user_id)
                     .unwrap()
                     .into();
                 parsed.deleted_at = row.deleted_at.map(Into::into);
@@ -601,7 +606,7 @@ impl DataMedia for Postgres {
             return Ok(None);
         };
 
-        let mut parsed: MediaV2 = serde_json::from_value::<DbMediaData>(media.data)
+        let mut parsed: MediaV2 = DbMediaData::from_row(media.data, media.user_id)
             .unwrap()
             .into();
         parsed.deleted_at = media.deleted_at.map(Into::into);
