@@ -1,5 +1,5 @@
 [package]
-name = "lamprey-bridge"
+name = "lamprey-bridge-old"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -37,5 +37,3 @@ lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 kameo = "0.19"
 regex = "1.11"
 once_cell = "1.21"
-url = "2.5.8"
-strum = { version = "0.28.0", features = ["derive"] }

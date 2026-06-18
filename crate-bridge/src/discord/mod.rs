@@ -1,8 +1,10 @@
-mod actor;
-mod commands;
-mod events;
-mod presence;
-mod sync;
+use crate::{bridge::BridgeHandle, config::DiscordConfig};
 
-pub use actor::Discord;
-pub use presence::process_presence_update;
+mod interactions;
+
+// re export discord (serenity) types
+pub use serenity::all::{ChannelId, GuildId, MessageId, UserId, AttachmentId};
+
+pub fn spawn(bridge: BridgeHandle, config: DiscordConfig) {
+    todo!()
+}
