@@ -2,7 +2,9 @@ use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::federation::{FederationEpoch, Hostname, Remote};
 use common::v1::types::{MediaTrack as MediaTrackV1, MediaV0 as MediaV1};
-use common::v2::types::media::{Media as MediaV2, MediaPatch as MediaPatchV2, MediaStatus};
+use common::v2::types::media::{
+    Media as MediaV2, MediaErrorReason, MediaPatch as MediaPatchV2, MediaStatus,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
 use time::PrimitiveDateTime;
@@ -48,13 +50,41 @@ pub enum DbMediaData {
     Raw(DbMediaRaw),
 }
 
-impl DbMediaData {
-    pub fn from_row(data: serde_json::Value, user_id: Uuid) -> serde_json::Result<Self> {
-        let mut data = data;
+impl DbMediaWithId {
+    #[tracing::instrument]
+    pub fn parse(self) -> MediaV2 {
+        self.id;
+
+        let mut data = self.data;
         if let serde_json::Value::Object(map) = &mut data {
-            map.insert("user_id".to_string(), serde_json::json!(user_id));
+            map.insert("user_id".to_string(), serde_json::json!(self.user_id));
         }
-        serde_json::from_value(data)
+
+        let media: DbMediaData = match serde_json::from_value(data) {
+            Ok(m) => m,
+            Err(err) => {
+                tracing::error!("parsing failed: {err}");
+                return MediaV2::errored(
+                    self.id.into(),
+                    self.version_id.into(),
+                    MediaErrorReason::Corrupted,
+                );
+            }
+        };
+
+        let mut media: MediaV2 = media.into();
+        media.deleted_at = self.deleted_at.map(Into::into);
+        media.version_id = self.version_id.into();
+
+        if let (Some(origin_id), Some(hostname)) = (self.remote_origin_id, self.remote_hostname) {
+            media.remote = Some(Remote {
+                origin_id: origin_id.into(),
+                hostname: Hostname(hostname),
+                epoch: FederationEpoch(0),
+            });
+        }
+
+        media
     }
 }
 
@@ -517,14 +547,7 @@ impl DataMedia for Postgres {
 
         let count = rows.len() as u64;
         for row in rows {
-            let media: DbMediaData = match DbMediaData::from_row(row.data, row.user_id) {
-                Ok(media) => media,
-                Err(err) => {
-                    warn!(media_id = ?row.id, "unreadable data in db {err:?}");
-                    continue;
-                }
-            };
-            let media: MediaV2 = media.into();
+            let media = row.parse();
             let media_id = media.id;
             let data =
                 serde_json::to_value(&DbMediaData::V2(media)).expect("failed to serialize media");
@@ -561,22 +584,7 @@ impl DataMedia for Postgres {
         Ok(rows
             .into_iter()
             .map(|row| {
-                let mut parsed: MediaV2 = DbMediaData::from_row(row.data, row.user_id)
-                    .unwrap()
-                    .into();
-                parsed.deleted_at = row.deleted_at.map(Into::into);
-                parsed.version_id = row.version_id.into();
-
-                if let (Some(origin_id), Some(hostname)) =
-                    (row.remote_origin_id, row.remote_hostname)
-                {
-                    parsed.remote = Some(Remote {
-                        origin_id: origin_id.into(),
-                        hostname: Hostname(hostname),
-                        epoch: FederationEpoch(0),
-                    });
-                }
-
+                let parsed: MediaV2 = row.parse().into();
                 parsed
             })
             .collect())
