@@ -9,6 +9,7 @@ use crate::syncer::{Syncer, SyncerHandle};
 pub struct Client {
     syncer: SyncerHandle,
     http: Http,
+    // cache: Arc<dyn Cache>,
 }
 
 pub struct ClientBuilder {
@@ -79,7 +80,7 @@ impl ClientBuilder {
             .api_url
             .ok_or_else(|| Error::Other("missing api_url".to_string()))?;
 
-        let mut http = Http::builder()
+        let http = Http::builder()
             .token(token.clone())
             .api_url(api_url.clone())
             .build()?;
@@ -107,7 +108,7 @@ impl ClientBuilder {
         }
 
         let cdn_url = cdn_url.ok_or_else(|| Error::Other("missing cdn_url".to_string()))?;
-        let mut http = Http::builder()
+        let http = Http::builder()
             .token(token.clone())
             .api_url(api_url.clone())
             .cdn_url(cdn_url.clone())

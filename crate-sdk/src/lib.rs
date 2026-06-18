@@ -1,4 +1,4 @@
-mod cache;
+pub mod cache;
 pub mod client;
 mod error;
 pub mod http;
