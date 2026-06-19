@@ -12,7 +12,11 @@ use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 use url::Url;
 
-use crate::{Error, Result, config::secret::Secret, types::health::HealthcheckIssue};
+use crate::{
+    Error, Result,
+    config::{limits::Limits, secret::Secret},
+    types::health::HealthcheckIssue,
+};
 
 use common::v1::types::federation::Hostname;
 use common::v1::types::redex::EvalLimits;
@@ -106,6 +110,9 @@ pub struct Config {
     ///
     /// eg. `GeoLite2-Country.mmdb`
     pub mmdb_path: Option<PathBuf>,
+
+    #[serde(default)]
+    pub limits: Limits,
 }
 
 fn default_require_server_invite() -> bool {
