@@ -58,7 +58,10 @@ export function Search() {
 					{(s) => (
 						<ul class="stats-list">
 							<li>
-								<strong style="background:oklch(var(--color-blue) / .5)">Total Documents:</strong> {s().count_documents}
+								<strong style="background:oklch(var(--color-blue) / .5)">
+									Total Documents:
+								</strong>{" "}
+								{s().count_documents}
 							</li>
 							<li>
 								<strong>Total Messages:</strong> {s().count_messages}

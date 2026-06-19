@@ -42,6 +42,23 @@ export class UsersService extends BaseService<UserWithRelationship> {
 		);
 	}
 
+	async search(query: string): Promise<any> {
+		const data = await this.retryWithBackoff<{
+			users: UserWithRelationship[];
+			results: string[];
+		}>(() =>
+			this.client.http.POST("/api/v1/user/search", {
+				body: { query },
+			}),
+		);
+		if (data.users) {
+			for (const user of data.users) {
+				this.upsert(user);
+			}
+		}
+		return data;
+	}
+
 	async setPreferences(body: Preferences): Promise<void> {
 		await this.retryWithBackoff(() =>
 			this.client.http.PUT("/api/v1/preferences", { body }),

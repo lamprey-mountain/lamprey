@@ -145,9 +145,7 @@ export function createMarkdownInputRulesPlugin() {
 					if (
 						$from.parent.type === schema.nodes.code_block &&
 						// FIXME: code blocks must close with the same fence as it opened with
-						bounds.text
-							.trim()
-							.startsWith("```")
+						bounds.text.trim().startsWith("```")
 					) {
 						const insertPos = tr.mapping.map($from.after($from.depth));
 						tr.insert(insertPos, schema.nodes.paragraph.create());

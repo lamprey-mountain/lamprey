@@ -1,5 +1,6 @@
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
-import { createMemo, createSignal, For, Show } from "solid-js";
+import { throttle } from "@solid-primitives/scheduled";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { useUsers } from "@/api";
 import { Time } from "@/atoms/Time.tsx";
 import { Avatar } from "@/components/shared/User";
@@ -8,6 +9,30 @@ import { useMenu } from "@/contexts/mod.tsx";
 export function Users() {
 	const { setMenu } = useMenu();
 	const users2 = useUsers();
+	const [query, setQuery] = createSignal("");
+	const [searchResults, setSearchResults] = createSignal<any[]>([]);
+
+	const throttledSearch = throttle(async (q: string) => {
+		if (q.length > 0) {
+			const results = await users2.search(q);
+			if (results && results.results) {
+				setSearchResults(
+					results.results
+						.map((id: string) => users2.cache.get(id))
+						.filter(Boolean),
+				);
+			} else {
+				setSearchResults([]);
+			}
+		} else {
+			setSearchResults([]);
+		}
+	}, 500);
+
+	createEffect(() => {
+		throttledSearch(query());
+	});
+
 	const users = createMemo(() => [...users2.cache.values()]);
 
 	const fetchMore = () => {
@@ -28,13 +53,22 @@ export function Users() {
 	return (
 		<div class="room-settings-members">
 			<h2>Users</h2>
+			<input
+				type="text"
+				placeholder="Search users..."
+				onInput={(e) => setQuery(e.currentTarget.value)}
+			/>
 			<header>
 				<div class="name">name</div>
 				<div class="joined">registered</div>
 			</header>
-			<Show when={users().length > 0}>
+			<Show
+				when={
+					query().length > 0 ? searchResults().length > 0 : users().length > 0
+				}
+			>
 				<ul>
-					<For each={users()}>
+					<For each={query().length > 0 ? searchResults() : users()}>
 						{(user) => (
 							<li>
 								<div class="profile">
@@ -71,7 +105,9 @@ export function Users() {
 						)}
 					</For>
 				</ul>
-				<div ref={setBottom}></div>
+				<Show when={query().length === 0}>
+					<div ref={setBottom}></div>
+				</Show>
 			</Show>
 		</div>
 	);

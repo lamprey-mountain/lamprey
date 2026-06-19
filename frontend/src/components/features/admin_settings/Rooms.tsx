@@ -1,12 +1,36 @@
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
+import { throttle } from "@solid-primitives/scheduled";
 import { getTimestampFromUUID } from "sdk";
-import { createSignal, For, Show } from "solid-js";
+import { createEffect, createSignal, For, Show } from "solid-js";
 import { useRooms } from "@/api";
 import { Time } from "@/atoms/Time.tsx";
 import { getThumbFromId } from "@/media/util.tsx";
 
 export function Rooms() {
 	const rooms2 = useRooms();
+	const [query, setQuery] = createSignal("");
+	const [searchResults, setSearchResults] = createSignal<any[]>([]);
+
+	const throttledSearch = throttle(async (q: string) => {
+		if (q.length > 0) {
+			const results = await rooms2.search(q);
+			if (results && results.results && results.rooms) {
+				const roomMap = new Map(results.rooms.map((r: any) => [r.id, r]));
+				setSearchResults(
+					results.results.map((id: string) => roomMap.get(id)).filter(Boolean),
+				);
+			} else {
+				setSearchResults([]);
+			}
+		} else {
+			setSearchResults([]);
+		}
+	}, 500);
+
+	createEffect(() => {
+		throttledSearch(query());
+	});
+
 	const rooms = rooms2.useListAll();
 
 	const fetchMore = () => {
@@ -29,15 +53,24 @@ export function Rooms() {
 	return (
 		<div class="room-settings-members">
 			<h2>Rooms</h2>
+			<input
+				type="text"
+				placeholder="Search rooms..."
+				onInput={(e) => setQuery(e.currentTarget.value)}
+			/>
 			<header>
 				<div class="name">name</div>
 				<div class="joined">created</div>
 			</header>
-			<Show when={rooms.ids.length > 0}>
+			<Show
+				when={
+					query().length > 0 ? searchResults().length > 0 : rooms.ids.length > 0
+				}
+			>
 				<ul>
-					<For each={rooms.ids}>
-						{(id) => {
-							const room = rooms2.cache.get(id);
+					<For each={query().length > 0 ? searchResults() : rooms.ids}>
+						{(item) => {
+							const room = query().length > 0 ? item : rooms2.cache.get(item);
 							if (!room) return null;
 							return (
 								<li>
@@ -68,7 +101,9 @@ export function Rooms() {
 						}}
 					</For>
 				</ul>
-				<div ref={setBottom}></div>
+				<Show when={query().length === 0}>
+					<div ref={setBottom}></div>
+				</Show>
 			</Show>
 		</div>
 	);

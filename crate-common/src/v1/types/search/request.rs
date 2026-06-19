@@ -9,6 +9,8 @@ use validator::Validate;
 
 use crate::v1::types::search::Order;
 
+// TODO: make query not an Option?
+
 /// generic search request struct
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

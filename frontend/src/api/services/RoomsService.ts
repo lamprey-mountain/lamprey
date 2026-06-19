@@ -35,6 +35,23 @@ export class RoomsService extends BaseService<Room> {
 		return data;
 	}
 
+	async search(query: string): Promise<any> {
+		const data = await this.retryWithBackoff<{
+			rooms: Room[];
+			results: string[];
+		}>(() =>
+			this.client.http.POST("/api/v1/room/search", {
+				body: { query },
+			}),
+		);
+		if (data.rooms) {
+			for (const room of data.rooms) {
+				this.upsert(room);
+			}
+		}
+		return data;
+	}
+
 	async update(room_id: string, body: Record<string, unknown>): Promise<Room> {
 		const data = await this.retryWithBackoff<Room>(() =>
 			this.client.http.PATCH("/api/v1/room/{room_id}", {
@@ -102,7 +119,7 @@ export class RoomsService extends BaseService<Room> {
 			this.roomList.state.ids.length === 0 &&
 			!this.roomList.state.isLoading
 		) {
-			this.fetchPage(this.roomList, this.fetchList);
+			this.fetchPage(this.roomList, (cursor) => this.fetchList(cursor));
 		}
 		return this.roomList.state;
 	}
@@ -112,7 +129,7 @@ export class RoomsService extends BaseService<Room> {
 			this.roomListAll.state.ids.length === 0 &&
 			!this.roomListAll.state.isLoading
 		) {
-			this.fetchPage(this.roomListAll, this.fetchListAll);
+			this.fetchPage(this.roomListAll, (cursor) => this.fetchListAll(cursor));
 		}
 		return this.roomListAll.state;
 	}
