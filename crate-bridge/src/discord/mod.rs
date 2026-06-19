@@ -10,6 +10,7 @@ pub use serenity::all::{
     UserId,
 };
 
+// TODO: listen to bridge.events
 pub fn spawn(bridge: BridgeHandle, config: DiscordConfig) {
     let bridge = bridge.clone();
     tokio::spawn(async move {
