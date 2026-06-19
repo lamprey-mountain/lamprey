@@ -358,6 +358,7 @@ pub struct MessageCreate {
     pub components: Option<Components<components::Create>>,
 
     /// whether to make this message ephemeral
+    #[cfg_attr(feature = "serde", serde(default))]
     pub ephemeral: bool,
 }
 
