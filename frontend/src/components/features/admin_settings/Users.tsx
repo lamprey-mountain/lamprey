@@ -1,13 +1,11 @@
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { useUsers } from "@/api";
-import { useCtx } from "@/app/context";
 import { Time } from "@/atoms/Time.tsx";
 import { Avatar } from "@/components/shared/User";
 import { useMenu } from "@/contexts/mod.tsx";
 
 export function Users() {
-	const _ctx = useCtx();
 	const { setMenu } = useMenu();
 	const users2 = useUsers();
 	const users = createMemo(() => [...users2.cache.values()]);
