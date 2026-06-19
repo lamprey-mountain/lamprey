@@ -506,6 +506,11 @@ pub trait DataThreadMember {
         user_id: UserId,
         put: ThreadMemberPut,
     ) -> Result<()>;
+    async fn thread_member_put_bulk(
+        &mut self,
+        thread_id: ChannelId,
+        user_ids: &[UserId],
+    ) -> Result<()>;
     async fn thread_member_leave(&mut self, thread_id: ChannelId, user_id: UserId) -> Result<()>;
     async fn thread_member_delete(&mut self, thread_id: ChannelId, user_id: UserId) -> Result<()>;
     async fn thread_member_get(

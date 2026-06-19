@@ -65,6 +65,42 @@ impl DataThreadMember for Postgres {
         Ok(())
     }
 
+    async fn thread_member_put_bulk(
+        &mut self,
+        thread_id: ChannelId,
+        user_ids: &[UserId],
+    ) -> Result<()> {
+        if user_ids.is_empty() {
+            return Ok(());
+        }
+
+        let mut conn = self.begin_tx().await?;
+        let user_ids: Vec<Uuid> = user_ids.iter().map(|id| id.into_inner()).collect();
+
+        query!(
+            r#"
+            INSERT INTO thread_member (user_id, channel_id, membership, joined_at)
+            SELECT u, $1, $2, now()
+            FROM unnest($3::uuid[]) as u
+            ON CONFLICT ON CONSTRAINT thread_member_pkey DO UPDATE SET
+                membership = excluded.membership,
+                joined_at = CASE
+                    WHEN excluded.membership = 'Leave' THEN now()
+                    ELSE thread_member.joined_at
+                END
+            "#,
+            *thread_id,
+            DbMembership::Join as _,
+            &user_ids
+        )
+        .execute(conn.ext())
+        .await?;
+        conn.commit().await?;
+
+        info!("inserted {} thread members", user_ids.len());
+        Ok(())
+    }
+
     async fn thread_member_leave(&mut self, channel_id: ChannelId, user_id: UserId) -> Result<()> {
         let mut conn = self.acquire().await?;
         query!(
