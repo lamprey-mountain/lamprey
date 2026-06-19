@@ -42,7 +42,11 @@ impl AppState {
                     .endpoint(s3.endpoint.as_str())
                     .region(&s3.region)
                     .access_key_id(&s3.access_key_id)
-                    .secret_access_key(&s3.secret_access_key);
+                    .secret_access_key(
+                        &s3.secret_access_key
+                            .load()
+                            .map_err(|e| Error::Internal(format!("failed to load secret: {e}")))?,
+                    );
                 opendal::Operator::new(builder)?
                     .layer(LoggingLayer::default())
                     .finish()
