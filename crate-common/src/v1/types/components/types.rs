@@ -37,6 +37,15 @@ pub(crate) const MAX_TOTAL_TEXT_LENGTH: usize = 65535;
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ComponentId(pub u16);
 
+impl std::ops::Deref for ComponentId {
+    type Target = u16;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+
 /// A developer-defined identifier for an interactive component.
 ///
 /// Min 1 char, max 128 chars.
