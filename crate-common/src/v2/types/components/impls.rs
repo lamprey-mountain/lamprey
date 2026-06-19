@@ -1,4 +1,4 @@
-use std::ops::Deref;
+use std::{collections::HashSet, ops::Deref};
 
 use crate::{
     v1::types::{components::IdAllocator, error::ApiResult, flume::FlumeDelta},
@@ -43,7 +43,7 @@ impl ComponentType {
 
 impl Components {
     /// Get a component by its id
-    pub fn get(&self, id: ComponentId) -> Option<ComponentRef> {
+    pub fn get(&self, id: ComponentId) -> Option<ComponentRef<'_>> {
         self.items
             .iter()
             .find(|c| c.id == id)
@@ -54,7 +54,7 @@ impl Components {
     }
 
     /// Get an iterator over all components
-    pub fn walk(&self) -> impl Iterator<Item = ComponentRef> {
+    pub fn walk(&self) -> impl Iterator<Item = ComponentRef<'_>> {
         self.items.iter().map(|c| ComponentRef {
             components: self,
             component: c,
@@ -62,18 +62,44 @@ impl Components {
     }
 
     /// Get an iterator over all root components
-    pub fn children(&self) -> impl Iterator<Item = ComponentRef> {
+    pub fn children(&self) -> impl Iterator<Item = ComponentRef<'_>> {
         self.roots.iter().map(|id| self.get(*id).unwrap())
     }
 
     /// Whether these components are interactive.
     pub fn is_interactive(&self) -> bool {
-        todo!("fold over root ids")
+        self.children().any(|c| c.is_interactive())
     }
 
     /// Delete a component by its id
+    ///
+    /// returns true if the component was deleted, false if the component didn't exist
     pub fn delete(&mut self, id: ComponentId) -> bool {
-        todo!()
+        if !self.items.iter().any(|c| c.id == id) {
+            return false;
+        }
+
+        self.roots.retain(|r| *r != id);
+
+        for comp in &mut self.items {
+            match &mut comp.ty {
+                ComponentType::Container { components, .. } => components.retain(|c| *c != id),
+                ComponentType::Details {
+                    summary, details, ..
+                } => {
+                    summary.retain(|c| *c != id);
+                    details.retain(|c| *c != id);
+                }
+                ComponentType::Section { components, .. } => components.retain(|c| *c != id),
+                ComponentType::Form { components, .. } => components.retain(|c| *c != id),
+                ComponentType::Row { components, .. } => components.retain(|c| *c != id),
+                _ => {}
+            }
+        }
+
+        self.items.retain(|c| c.id != id);
+
+        true
     }
 
     /// apply a [`FlumeDelta`] to this set of components
@@ -113,12 +139,27 @@ impl Components {
 
     /// Return a vec of all media ids that are referenced in these components.
     pub fn all_media_ids(&self) -> Vec<MediaId> {
-        todo!()
+        let mut ids = Vec::new();
+        for comp in &self.items {
+            match &comp.ty {
+                ComponentType::Media { items } | ComponentType::Gallery { items } => {
+                    for item in items {
+                        ids.push(item.media_id);
+                    }
+                }
+                _ => {}
+            }
+        }
+        ids
     }
 
     /// Return a vec of media ids that are referenced but not in `media`.
     pub fn missing_media_ids(&self) -> Vec<MediaId> {
-        todo!()
+        let all = self.all_media_ids();
+        let existing: HashSet<_> = self.media.iter().map(|m| m.id).collect();
+        all.into_iter()
+            .filter(|id| !existing.contains(id))
+            .collect()
     }
 }
 
