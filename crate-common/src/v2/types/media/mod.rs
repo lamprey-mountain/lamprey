@@ -549,6 +549,18 @@ mod val {
 }
 
 impl MediaReference {
+    pub fn new(media_id: MediaId) -> Self {
+        todo!()
+    }
+
+    pub fn new_download(url: Url) -> Self {
+        todo!()
+    }
+
+    pub fn new_attachment(media_index: u64) -> Self {
+        todo!()
+    }
+
     pub fn media_id(&self) -> Option<MediaId> {
         match self {
             MediaReference::Media { media_id } => Some(*media_id),

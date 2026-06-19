@@ -153,6 +153,8 @@ pub enum MemberListTarget {
     /// subscribe to a channel's member list
     Channel {
         /// the room id. required if this channel is in a room
+        // NOTE: maybe i should make it optional?
+        // if i do, maybe i can populate it in the server response...
         room_id: Option<RoomId>,
 
         channel_id: ChannelId,
@@ -173,6 +175,7 @@ pub enum MemberListRange {
     },
 
     /// a member list group
+    // TODO: implement
     Group { group: MemberListGroup },
 }
 
@@ -191,29 +194,10 @@ pub enum MemberListOperation {
 
         /// the users in this range
         items: Vec<UserId>,
-
-        /// only returned if channel is in a room and not already cached by client
-        // TODO: skip serializing if empty
-        room_members: Vec<RoomMember>,
-
-        /// only returned if listing members in a thread and not already cached by client
-        // TODO: skip serializing if empty
-        thread_members: Vec<ThreadMember>,
-
-        /// users in this range that are not already cached by client
-        // TODO: skip serializing if empty
-        users: Vec<User>,
     },
 
     /// insert a member
-    Insert {
-        position: u64,
-        user_id: UserId,
-
-        room_member: Option<Box<RoomMember>>,
-        thread_member: Option<Box<ThreadMember>>,
-        user: Option<Box<User>>,
-    },
+    Insert { position: u64, user_id: UserId },
 
     /// delete a range of one or more members
     Delete {
@@ -222,6 +206,7 @@ pub enum MemberListOperation {
 
         /// how many items to delete
         // internally, this will usually will be 1
+        // NOTE: maybe this should be a NonZeroWhatever?
         count: u64,
     },
 }
@@ -232,6 +217,8 @@ pub enum MemberListOperation {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MemberListGroup {
     pub id: MemberListGroupId,
+
+    /// the number of users in this group
     pub count: u64,
 }
 
@@ -260,7 +247,7 @@ pub enum MemberListGroupId {
     /// members "connected" to this channel
     ///
     /// includes members without a role
-    // TODO: currently voice channels and documents use this
+    // TODO: voice channels and documents will use this
     Connected,
 
     /// hoisted roles
@@ -268,14 +255,44 @@ pub enum MemberListGroupId {
     Role(RoleId),
 }
 
+/// an update to a member list
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct MemberListDispatch {
-    /// which user this list sync is for
+    /// which user this sync is for
     pub user_id: UserId,
+
+    /// which member list this sync is for
     pub target: MemberListTarget,
+
+    /// what ranges of the member list are being synced
     pub ranges: Vec<MemberListRange>,
+
+    /// operations to apply to your local copy of the member list
     pub ops: Vec<MemberListOperation>,
+
+    /// all groups in this member list
     pub groups: Vec<MemberListGroup>,
+
+    /// relevant room members. the server shouldn't send room members the client already has.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Vec::is_empty")
+    )]
+    pub room_members: Vec<RoomMember>,
+
+    /// relevant thread members. the server shouldn't send thread members the client already has.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Vec::is_empty")
+    )]
+    pub thread_members: Vec<ThreadMember>,
+
+    /// relevant users. the server shouldn't send users the client already has.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Vec::is_empty")
+    )]
+    pub users: Vec<User>,
 }
