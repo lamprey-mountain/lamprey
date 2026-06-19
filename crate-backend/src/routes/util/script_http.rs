@@ -23,21 +23,23 @@ pub async fn script_http(
     req: Request,
     next: Next,
 ) -> Result<Response> {
-    let Some(suffix) = dbg!(&state.config.scripts.suffix) else {
+    let Some(suffix) = &state.config.scripts.suffix else {
         return Ok(next.run(req).await);
     };
 
-    let Some(prefix) = dbg!(dbg!(host.hostname()).strip_suffix(suffix)) else {
+    let Some(prefix) = host.hostname().strip_suffix(suffix) else {
         return Ok(next.run(req).await);
     };
 
-    let Ok(script_id) = dbg!(RedexId::from_str(prefix)) else {
+    let Ok(script_id) = RedexId::from_str(prefix) else {
         return Ok(next.run(req).await);
     };
 
     let mut data = state.data();
-    let script =
-        dbg!(data.script_get(script_id).await?).ok_or(Error::BadStatic("script not found"))?;
+    let script = data
+        .script_get(script_id)
+        .await?
+        .ok_or(Error::BadStatic("script not found"))?;
 
     let (parts, body) = req.into_parts();
     let body_bytes = to_bytes(body, 1024 * 1024 * 16)
@@ -60,7 +62,7 @@ pub async fn script_http(
         .await?;
 
     while let Ok(event) = handle.poll().await {
-        match dbg!(&*event) {
+        match &*event {
             ExecutionEvent::HttpResponse(res) => {
                 let (parts, bytes) = res.to_owned().into_parts();
                 let res = http::Response::from_parts(parts, axum::body::Body::from(bytes));

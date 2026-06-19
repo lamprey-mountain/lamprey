@@ -122,9 +122,9 @@ impl JsManager {
         // TODO: try to reuse cache
         let context = rquickjs::AsyncContext::full(&rt).await?;
         let bytecode = async_with!(context => |ctx| {
-            let module = dbg!(rquickjs::Module::declare(ctx.clone(), module_name, module_source))?;
+            let module = rquickjs::Module::declare(ctx.clone(), module_name, module_source)?;
             let opts = rquickjs::WriteOptions::default();
-            let bytes = dbg!(module.write(opts))?;
+            let bytes = module.write(opts)?;
 
             rquickjs::Result::Ok(bytes)
         })
@@ -320,7 +320,7 @@ async fn exec_inner<'js>(
     }
 
     let r = registry.lock().unwrap();
-    for input in dbg!(&r.inputs) {
+    for input in &r.inputs {
         extracted.inputs.push(input.definition.clone());
     }
 
@@ -353,7 +353,7 @@ async fn exec_inner<'js>(
         }
     }
 
-    match dbg!(input) {
+    match input {
         EvalInput::Extraction => {
             // don't do anything just extract
         }
@@ -450,7 +450,7 @@ impl ExecutionHandle for JsExecutionHandle {
             .await
             .map_err(|e| Error::WatchChanged(e.to_string()))?;
 
-        if let Some(e) = dbg!(&*self.ext_recv.borrow()) {
+        if let Some(e) = &*self.ext_recv.borrow() {
             Ok(e.clone())
         } else {
             Err(Error::ExtractionDataMissing)

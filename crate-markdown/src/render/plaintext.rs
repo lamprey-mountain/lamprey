@@ -70,10 +70,7 @@ impl PlaintextRenderer {
                 emphasis.children().map(|i| self.render_inline(i)).collect()
             }
             Inline::Link(link) => {
-                let text: String = dbg!(&link)
-                    .children()
-                    .map(|i| self.render_inline(i))
-                    .collect();
+                let text: String = link.children().map(|i| self.render_inline(i)).collect();
                 format!("{} ({})", text, link.href())
             }
             Inline::Spoiler(spoiler) => spoiler.children().map(|i| self.render_inline(i)).collect(),

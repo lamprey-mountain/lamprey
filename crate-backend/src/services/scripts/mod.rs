@@ -220,7 +220,6 @@ impl ServiceScripts {
             .script_get(redex_id)
             .await?
             .ok_or(Error::BadStatic("script not found"))?;
-        dbg!(&script.status);
         // TODO: verify the script status is Valid? for `spawn` but not `process`.
 
         let media_id = script.latest_version.location.media_id().unwrap();
