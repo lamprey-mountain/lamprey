@@ -930,7 +930,7 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 			href={`/channel/${props.channel.id}`}
 			class="menu-channel channel-link"
 			data-unread={
-				props.channel.type !== "Voice" && !!props.channel.is_unread
+				props.channel.type !== "Voice" && props.channel.is_unread
 					? "true"
 					: undefined
 			}

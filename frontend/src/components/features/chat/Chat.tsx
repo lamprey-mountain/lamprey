@@ -5,7 +5,6 @@ import { Portal } from "solid-js/web";
 import { uuidv7 } from "uuidv7";
 import { useApi, useMessages } from "@/api";
 import type { MessageListAnchor } from "@/api/services/MessagesService.ts";
-import { useCtx } from "@/app/context";
 import { createList2 } from "@/atoms/list.tsx";
 import { useChannel } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
@@ -28,7 +27,6 @@ type ChatProps = {
 export const ChatMain = (props: ChatProps) => {
 	const api2 = useApi();
 	const messagesService = useMessages();
-	const { t } = useCtx();
 	const { markChannelRead } = useReadTracking();
 	const [channelState, setChannelState] = useChannel()!;
 

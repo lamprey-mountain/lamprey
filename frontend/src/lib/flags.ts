@@ -4,10 +4,6 @@ type Env = {
 	DEV: boolean;
 };
 
-type ImportMeta = {
-	env: Env;
-};
-
 export const allFlags = [
 	{
 		id: "dev",

@@ -184,7 +184,8 @@ export type MentionsChannel = components["schemas"]["MentionsChannel"];
 export type MentionsRole = components["schemas"]["MentionsRole"];
 export type MentionsEmoji = components["schemas"]["MentionsEmoji"];
 export type ParseMentions = components["schemas"]["ParseMentions"];
-export type MessageMetadata = components["schemas"]["MessageMetadata"];
+export type MessageMetadata = components["schemas"]["Metadata"];
+export type TrackKey = components["schemas"]["TrackKey"];
 
 // TODO: use openai schema for all of the types below
 

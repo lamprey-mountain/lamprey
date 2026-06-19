@@ -7,7 +7,7 @@ import { useContextMenu } from "./useContextMenu.ts";
 export function useGlobalEventHandlers() {
 	const ctx = useCtx();
 	const [modals, modalCtl] = useModals();
-	const { menu, setMenu } = useMenu();
+	const { setMenu } = useMenu();
 	const { setUserView } = useUserPopout();
 	const { handleContextMenu } = useContextMenu(setMenu);
 

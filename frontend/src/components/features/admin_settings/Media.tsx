@@ -1,8 +1,8 @@
 import { throttle } from "@solid-primitives/scheduled";
 import { createEffect, createSignal, For, Show } from "solid-js";
+import type { Media as MediaT } from "ts-sdk";
 import { useMedia } from "@/api";
 import { formatBytes, getThumbFromId } from "@/media/util.tsx";
-import { Media as MediaT } from "ts-sdk";
 
 export function Media() {
 	const media2 = useMedia();

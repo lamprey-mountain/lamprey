@@ -18,15 +18,6 @@ import type { Api } from "@/api";
 import { getColor } from "@/lib/colors";
 import { base64UrlDecode, base64UrlEncode } from "./editor-utils.ts";
 
-type DocumentPresenceMessage = {
-	type: "DocumentPresence";
-	channel_id: string;
-	branch_id: string;
-	user_id: string;
-	cursor_head?: string;
-	cursor_tail?: string;
-};
-
 const cursorPluginKey = new PluginKey("cursorPlugin");
 
 export const cursorPlugin = (

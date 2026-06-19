@@ -50,4 +50,5 @@ class VADProcessor extends AudioWorkletProcessor {
 
 // @ts-expect-error
 registerProcessor("vad-processor", VADProcessor);
+
 export {};

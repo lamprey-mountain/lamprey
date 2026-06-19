@@ -73,8 +73,6 @@ const toggleFormat = (wrapper: string) => {
 };
 
 export const FormattingToolbar = (_props: FormattingToolbarProps) => {
-	const { hideToolbar } = useFormattingToolbar();
-
 	const applyFormat = (wrapper: string) => {
 		if (!currentView) return;
 		setIsApplyingFormat(true);

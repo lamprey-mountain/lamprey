@@ -412,7 +412,7 @@ export const SearchInput = (props: {
 		}
 	});
 
-	const [autocompleteFocused, setAutocompleteFocused] = createSignal(false);
+	const [_autocompleteFocused, setAutocompleteFocused] = createSignal(false);
 
 	const roomId = () => props.channel?.room_id ?? props.room?.id ?? null;
 	const channelId = () => props.channel?.id ?? undefined;

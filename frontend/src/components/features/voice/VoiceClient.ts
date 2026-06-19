@@ -4,6 +4,7 @@ import type {
 	MessageClient,
 	SignallingCommand,
 	SignallingEvent,
+	TrackKey,
 	TrackMetadata,
 	VoiceState,
 	VoiceSubscription,
@@ -39,7 +40,7 @@ type RemoteStream = {
 	id: string;
 	user_id: string;
 	mids: string[];
-	key: string;
+	key: TrackKey;
 	media: MediaStream;
 };
 
