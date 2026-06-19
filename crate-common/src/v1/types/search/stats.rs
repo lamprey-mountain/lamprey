@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{ChannelId, MessageId};
+use crate::v1::types::{ChannelId, MessageId, RoomId};
 
 /// Overall search index statistics
 #[derive(Debug, Clone)]
@@ -21,9 +21,8 @@ pub struct SearchIndexStats {
     // TODO: etc...
     /// size of the index in bytes
     pub index_size_bytes: u64,
-
-    /// number of active reindex queues
-    pub reindex_queues: u64,
+    // /// number of active reindex queues
+    // pub reindex_queues: u64,
 }
 
 /// Search index statistics for a channel
@@ -45,5 +44,10 @@ pub struct SearchIndexStatsChannel {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct SearchIndexStatsRoom {
-    // TODO
+    pub room_id: RoomId,
+
+    pub count_documents: u64,
+    pub count_channels: u64,
+    pub count_messages: u64,
+    pub count_media: u64,
 }
