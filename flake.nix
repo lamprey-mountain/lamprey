@@ -199,16 +199,16 @@
           src = ./.;
           version = "0.0.0";
 
-          nativeBuildInputs = with pkgs; [ nodejs pnpm.configHook git ];
+          nativeBuildInputs = with pkgs; [ nodejs pnpm pnpmConfigHook git ];
 
           VITE_GIT_SHA = self.rev or self.dirtyRev or "unknown";
           VITE_GIT_DIRTY = if (self ? rev) then "false" else "true";
           TWEMOJI_SPRITESHEETS = "${twemoji-spritesheets}";
 
-          pnpmDepsHash = "sha256-C972zg0tzaa9N/bty0aisDMpzWHnjiWcbdCvFCnugQw=";
-          pnpmDeps = pkgs.pnpm.fetchDeps {
+          pnpmDepsHash = "sha256-be8kOlOHRmNRISiqWJTASwzOwu9MoN2VhWNJalAaayg=";
+          pnpmDeps = pkgs.fetchPnpmDeps {
             inherit (finalAttrs) src pname version;
-            fetcherVersion = 2;
+            fetcherVersion = 3;
             hash = pnpmDepsHash;
           };
 
