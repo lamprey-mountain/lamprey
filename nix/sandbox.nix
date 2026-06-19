@@ -115,6 +115,7 @@ let
             "workspace.mount" "network-online.target"
             "sccache.mount" "cargo-home.mount" "pnpm-store.mount"
           ];
+          wants = [ "network-online.target" ];
           wantedBy = [ "multi-user.target" ];
           path = with pkgs; [ bash coreutils util-linux ];
           serviceConfig = {
