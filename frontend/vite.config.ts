@@ -16,7 +16,6 @@ const readEnv = (v: string) => {
 	}
 };
 
-const WASM_MARKDOWN_PKG = readEnv("WASM_MARKDOWN_PKG");
 const TWEMOJI_SPRITESHEETS = readEnv("TWEMOJI_SPRITESHEETS");
 
 function getGitCommit() {
@@ -46,7 +45,6 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
-			"@wasm-markdown": path.resolve(__dirname, WASM_MARKDOWN_PKG),
 			"@twemoji-spritesheets": path.resolve(__dirname, TWEMOJI_SPRITESHEETS),
 		},
 	},
@@ -84,7 +82,6 @@ export default defineConfig({
 		fs: {
 			allow: [
 				searchForWorkspaceRoot(process.cwd()),
-				path.resolve(WASM_MARKDOWN_PKG),
 				path.resolve(TWEMOJI_SPRITESHEETS),
 			],
 		},

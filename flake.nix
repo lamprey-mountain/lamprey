@@ -203,7 +203,6 @@
 
           VITE_GIT_SHA = self.rev or self.dirtyRev or "unknown";
           VITE_GIT_DIRTY = if (self ? rev) then "false" else "true";
-          WASM_MARKDOWN_PKG = "${wasm-markdown}/pkg";
           TWEMOJI_SPRITESHEETS = "${twemoji-spritesheets}";
 
           pnpmDepsHash = "sha256-C972zg0tzaa9N/bty0aisDMpzWHnjiWcbdCvFCnugQw=";
@@ -219,8 +218,6 @@
               "compilerOptions": {
                 "paths": {
                   "@/*": ["frontend/src/*"],
-                  "@wasm-markdown": ["${wasm-markdown}/pkg"],
-                  "@wasm-markdown/*": ["${wasm-markdown}/pkg/*"],
                   "@twemoji-spritesheets": ["${twemoji-spritesheets}"],
                   "@twemoji-spritesheets/*": ["${twemoji-spritesheets}/*"]
                 }
@@ -430,7 +427,6 @@
           env = {
             PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
             PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = "${pkgs.chromium}/bin/chromium";
-            WASM_MARKDOWN_PKG = "${wasm-markdown}/pkg";
             TWEMOJI_SPRITESHEETS = "${twemoji-spritesheets}";
           };
           shellHook = ''
@@ -439,30 +435,8 @@
               "compilerOptions": {
                 "paths": {
                   "@/*": ["frontend/src/*"],
-                  "@wasm-markdown": ["${wasm-markdown}/pkg"],
-                  "@wasm-markdown/*": ["${wasm-markdown}/pkg/*"],
                   "@twemoji-spritesheets": ["${twemoji-spritesheets}"],
                   "@twemoji-spritesheets/*": ["${twemoji-spritesheets}/*"]
-                }
-              }
-            }
-            EOF
-          '';
-        };
-
-        # minimal shell; building won't work, but its good enough to go in
-        # and check/build without needing to build twemoji-spritesheets or
-        # wasm-markdown
-        # TODO: add devShells.offline, make default use @lamprey/foo packages
-        devShells.escape-hatch = craneLib.devShell {
-          inputsFrom = [ backend ];
-          packages = with pkgs; [nodejs pnpm];
-          shellHook = ''
-            cat > tsconfig.paths.json <<EOF
-            {
-              "compilerOptions": {
-                "paths": {
-                  "@/*": ["frontend/src/*"]
                 }
               }
             }
