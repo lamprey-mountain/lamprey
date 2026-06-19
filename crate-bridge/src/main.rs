@@ -89,7 +89,8 @@ async fn main() -> Result<()> {
             .expect("TODO: better error handling");
     }
 
-    // TODO: wait for everything to finish
+    // TODO: proper shutdown handling
+    futures::future::pending::<()>().await;
 
     Ok(())
 }
