@@ -23,7 +23,10 @@ export function MessageMenu(props: MessageMenuProps) {
 	const channels2 = useChannels();
 	const messagesService = useMessages();
 	const { markThreadRead } = useReadTracking();
-	const message = messagesService.use(() => props.message_id);
+	const message = messagesService.use(
+		() => props.channel_id,
+		() => props.message_id,
+	);
 	const channelContext = () => ctx.channel_contexts.get(props.channel_id);
 	const [, chUpdate] = channelContext() ?? [null, undefined];
 	const [, modalCtl] = useModals();

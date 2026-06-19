@@ -393,7 +393,10 @@ export function ReplyView(props: {
 	room_id?: string;
 }) {
 	const messagesService = useMessages();
-	const reply = messagesService.use(() => props.reply_id);
+	const reply = messagesService.use(
+		() => props.thread_id,
+		() => props.reply_id,
+	);
 	const [_ch, chUpdate] = useOptionalChannel();
 
 	const content = () => {

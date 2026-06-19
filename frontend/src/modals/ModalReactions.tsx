@@ -31,7 +31,10 @@ export const ModalReactions = (props: ModalReactionsProps) => {
 	const api2 = useApi();
 	const users2 = useUsers();
 	const messagesService = useMessages();
-	const message = messagesService.use(() => props.message_id);
+	const message = messagesService.use(
+		() => props.channel_id,
+		() => props.message_id,
+	);
 
 	const reactions = () => message()?.reactions ?? [];
 	const [selectedReaction, setSelectedReaction] =

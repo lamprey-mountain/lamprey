@@ -267,7 +267,52 @@ export class MessagesService extends BaseService<Message> {
 	}
 
 	async fetch(_id: string): Promise<Message> {
-		throw new Error("Use fetchInThread(channel_id, message_id)");
+		throw new Error("Use fetchInChannel(channel_id, message_id)");
+	}
+
+	use(
+		channel_id: Accessor<string>,
+		message_id: Accessor<string | undefined>,
+	): Resource<Message | undefined> {
+		const [resource, { mutate }] = createResource(
+			() => ({ channel_id: channel_id(), message_id: message_id() }),
+			async ({ channel_id, message_id }) => {
+				if (!message_id) return undefined;
+
+				const cached = this.cache.get(message_id);
+				if (cached) return cached;
+
+				if (this.db && this.cacheName) {
+					try {
+						const cached = await this.db.get(
+							this.cacheName,
+							this.getDbKey(message_id),
+						);
+						if (cached) {
+							this.upsert(cached);
+							this.fetchInChannel(channel_id, message_id).catch(() => {});
+							return cached;
+						}
+					} catch (_e) {
+						// IndexedDB error, continue with API fetch
+					}
+				}
+
+				return this.fetchInChannel(channel_id, message_id);
+			},
+		);
+
+		createEffect(() => {
+			const messageId = message_id();
+			if (!messageId) return;
+
+			const item = this.cache.get(messageId);
+			if (item !== undefined && resource() !== item) {
+				mutate(() => item);
+			}
+		});
+
+		return resource;
 	}
 
 	async fetchInChannel(
