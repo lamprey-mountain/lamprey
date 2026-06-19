@@ -98,8 +98,10 @@ impl AuditTxn {
 
 impl AuditTxnHandle {
     fn set_status(&mut self, status: AuditLogEntryStatus) {
-        // FIXME: don't use blocking lock
-        let mut txn = self.slot.blocking_lock();
+        let mut txn = self
+            .slot
+            .try_lock()
+            .expect("AuditTxnSlot lock should not be contended during set_status");
         if let AuditTxnState::Created(ctx) = &mut txn.as_mut().unwrap().state {
             ctx.status = Some(status);
         }
@@ -122,8 +124,10 @@ impl AuditTxnHandle {
 
 impl Drop for AuditTxnHandle {
     fn drop(&mut self) {
-        // FIXME: don't use blocking lock
-        let txn = self.slot.blocking_lock();
+        let Ok(txn) = self.slot.try_lock() else {
+            warn!("AuditTxnHandle dropped but could not acquire lock");
+            return;
+        };
         match txn.as_ref().unwrap().state {
             AuditTxnState::Committed => {}
             _ => {
