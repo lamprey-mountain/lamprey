@@ -6,7 +6,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use common::v1::routes;
-use common::v1::types::ack::{AckBulkItem, AckState, AckType};
+use common::v1::types::ack::{AckState, AckType};
 use common::v1::types::application::Scope;
 use common::v1::types::misc::time::Time;
 use common::v1::types::util::Changes;

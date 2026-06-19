@@ -19,7 +19,6 @@ use time::PrimitiveDateTime;
 use uuid::Uuid;
 
 pub(crate) use common::v1::types::ids::*;
-pub(crate) use common::v1::types::misc::{SessionIdReq, UserIdReq};
 
 use common::v1::types::Message;
 
