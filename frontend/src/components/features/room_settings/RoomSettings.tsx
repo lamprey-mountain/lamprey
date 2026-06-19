@@ -153,7 +153,7 @@ const adminTabs: TabItem[] = [
 	{ category: "resources" },
 	{ name: "users", path: "users", component: Admin.Users },
 	{ name: "rooms", path: "rooms", component: Admin.Rooms },
-	{ name: "media", path: "media", component: todo("query and manage media") },
+	{ name: "media", path: "media", component: Admin.Media },
 	{
 		name: "applications",
 		path: "applications",

@@ -46,6 +46,10 @@ export function useRooms() {
 	return useApi().rooms;
 }
 
+export function useMedia() {
+	return useApi().media;
+}
+
 export function useChannels() {
 	return useApi().channels;
 }

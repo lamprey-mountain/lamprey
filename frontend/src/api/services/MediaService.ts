@@ -1,4 +1,4 @@
-import type { Media } from "sdk";
+import type { Media, User } from "sdk";
 import { BaseService } from "../core/Service";
 
 export class MediaService extends BaseService<Media> {
@@ -14,5 +14,30 @@ export class MediaService extends BaseService<Media> {
 				params: { path: { media_id: id } },
 			}),
 		);
+	}
+
+	async search(
+		query: string,
+	): Promise<{ media: Media[]; results: string[]; users: User[] }> {
+		const data = await this.retryWithBackoff<{
+			media: Media[];
+			results: string[];
+			users: User[];
+		}>(() =>
+			this.client.http.POST("/api/v1/media/search", {
+				body: { query },
+			}),
+		);
+		if (data.media) {
+			for (const m of data.media) {
+				this.upsert(m);
+			}
+		}
+		if (data.users) {
+			for (const user of data.users) {
+				this.store.users.upsert(user);
+			}
+		}
+		return data;
 	}
 }
