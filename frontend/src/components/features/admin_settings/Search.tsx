@@ -58,14 +58,26 @@ export function Search() {
 					{(s) => (
 						<ul class="stats-list">
 							<li>
-								<strong>Total Documents:</strong> {s().document_count}
+								<strong style="background:oklch(var(--color-blue) / .5)">Total Documents:</strong> {s().count_documents}
+							</li>
+							<li>
+								<strong>Total Messages:</strong> {s().count_messages}
+							</li>
+							<li>
+								<strong>Total Channels:</strong> {s().count_channels}
+							</li>
+							<li>
+								<strong>Total Rooms:</strong> {s().count_rooms}
+							</li>
+							<li>
+								<strong>Total Media:</strong> {s().count_media}
+							</li>
+							<li>
+								<strong>Total Users:</strong> {s().count_users}
 							</li>
 							<li>
 								<strong>Index Size:</strong>{" "}
 								{(s().index_size_bytes / 1024 / 1024).toFixed(2)} MB
-							</li>
-							<li>
-								<strong>Backfill Queue:</strong> {s().backfill_queue_size} items
 							</li>
 						</ul>
 					)}
