@@ -72,7 +72,7 @@ impl DataUnread for Postgres {
 
         Ok(records
             .into_iter()
-            .map(|r| (r.channel_id.into(), r.message_id.into()))
+            .filter_map(|r| r.message_id.map(|m| (r.channel_id.into(), m.into())))
             .collect())
     }
 
