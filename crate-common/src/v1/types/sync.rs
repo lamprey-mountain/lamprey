@@ -7,6 +7,7 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+use crate::v1::types::ack::AckState;
 #[cfg(feature = "feat_e2ee")]
 use crate::v1::types::e2ee::{CrossSigningBundle, KeyshareRequest, KeyshareResponse};
 use crate::v1::types::error::SyncErrorCode;
@@ -413,20 +414,19 @@ pub enum MessageSync {
         until: Time,
     },
 
-    /// read receipt update
-    ChannelAck {
+    /// passive update for a user's acks
+    PassiveAck {
         user_id: UserId,
-        channel_id: ChannelId,
-        message_id: MessageId,
-        version_id: MessageVerId,
+        ack_states: Vec<AckState>,
     },
 
-    // TODO: add
-    // /// ack update
-    // Ack {
-    //     user_id: UserId,
-    //     ack: AckState,
-    // },
+    /// passive update for a user in a room
+    PassiveRoom {
+        user_id: UserId,
+        room_id: RoomId,
+        ack_states: Vec<AckState>,
+        voice_states: Vec<VoiceState>,
+    },
 
     // ThreadCreate {
     //     thread: Box<Channel>,

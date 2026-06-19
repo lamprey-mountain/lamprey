@@ -6,6 +6,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use common::v1::routes;
+use common::v1::types::ack::{AckBulkItem, AckState, AckType};
 use common::v1::types::application::Scope;
 use common::v1::types::misc::time::Time;
 use common::v1::types::util::Changes;
@@ -442,18 +443,22 @@ async fn room_ack(
         .ensure_view()?
         .check()?;
 
-    let updated_unreads = data
-        .unread_put_all_in_room(auth.user.id, req.room_id)
-        .await?;
+    let acks = data.unread_ack_room(auth.user.id, req.room_id).await?;
 
-    for (channel_id, message_id, version_id) in updated_unreads {
-        s.broadcast(MessageSync::ChannelAck {
-            user_id: auth.user.id,
-            channel_id,
-            message_id,
-            version_id,
-        })?;
-    }
+    s.broadcast(MessageSync::PassiveAck {
+        user_id: auth.user.id,
+        ack_states: acks
+            .into_iter()
+            .map(|(channel_id, message_id)| AckState {
+                ty: AckType::Message {
+                    channel_id,
+                    message_id,
+                    mention_count: 0,
+                },
+                unread: false,
+            })
+            .collect(),
+    })?;
 
     Ok(StatusCode::OK)
 }

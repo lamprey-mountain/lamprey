@@ -135,6 +135,27 @@ impl ChannelAckMetadata {
     }
 }
 
+impl AckBulkItem {
+    pub fn message(channel_id: ChannelId, message_id: MessageId) -> Self {
+        AckBulkItem {
+            ty: AckType::Message {
+                channel_id,
+                message_id,
+                mention_count: 0,
+            },
+        }
+    }
+}
+
+impl AckType {
+    pub fn channel_id(&self) -> Option<ChannelId> {
+        match self {
+            AckType::Message { channel_id, .. } => Some(*channel_id),
+            AckType::Pins { channel_id } => Some(*channel_id),
+        }
+    }
+}
+
 impl AckState {
     /// apply this read state to a channel
     pub fn apply(&self, channel: &mut Channel) {

@@ -6,6 +6,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use common::v1::routes;
+use common::v1::types::ack::{AckBulkItem, AckState, AckType};
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
@@ -437,49 +438,54 @@ async fn channel_update(
 /// Channel ack
 #[handler(routes::channel_ack)]
 async fn channel_ack(
-    _auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::channel_ack::Request,
+    auth: Auth,
+    State(s): State<Globals>,
+    req: routes::channel_ack::Request,
 ) -> Result<impl IntoResponse> {
-    // auth.ensure_scopes(&[Scope::Full])?;
-    // let mut data = s.data();
-    // let srv = s.services();
-    // srv.perms
-    //     .for_channel3(Some(auth.user.id), req.channel_id)
-    //     .await?
-    //     .ensure_view()?
-    //     .check()?;
-    // let version_id = req.ack.version_id;
-    // let message_id = if let Some(message_id) = req.ack.message_id {
-    //     message_id
-    // } else {
-    //     data.message_id_get_by_version(req.channel_id, version_id)
-    //         .await?
-    // };
-    // data.unread_ack(
-    //     auth.user.id,
-    //     req.channel_id,
-    //     message_id,
-    //     version_id,
-    //     Some(req.ack.mention_count),
-    // )
-    // .await?;
-    // srv.channels
-    //     .invalidate_user(req.channel_id, auth.user.id)
-    //     .await;
-    // s.broadcast(MessageSync::ChannelAck {
-    //     user_id: auth.user.id,
-    //     channel_id: req.channel_id,
-    //     message_id,
-    //     version_id,
-    // })?;
-    // Ok(Json(AckRes {
-    //     message_id,
-    //     version_id,
-    // }))
+    auth.ensure_scopes(&[Scope::Full])?;
+    let srv = s.services();
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
 
-    // TODO: use the new ack system, move logic to notification service(?)
-    Ok(Error::Unimplemented)
+    let message_id = if let Some(id) = req.ack.message_id {
+        id
+    } else {
+        let chan = srv.channels.get(req.channel_id, None).await?;
+        match chan.last_message_id {
+            Some(id) => id,
+            None => return Err(Error::BadStatic("channel doesnt have a last_message_id")),
+        }
+    };
+
+    let ack_ty = AckType::Message {
+        channel_id: req.channel_id,
+        message_id,
+        mention_count: req.ack.mention_count,
+    };
+    let mut data = s.begin().await?;
+    data.unread_ack_bulk(auth.user.id, &[AckBulkItem { ty: ack_ty.clone() }])
+        .await?;
+    data.commit().await?;
+    srv.channels
+        .invalidate_user(req.channel_id, auth.user.id)
+        .await;
+    let state = AckState {
+        ty: ack_ty,
+        unread: false,
+    };
+    s.messaging()
+        .broadcast_user(
+            auth.user.id,
+            MessageSync::PassiveAck {
+                user_id: auth.user.id,
+                ack_states: vec![state.clone()],
+            },
+        )
+        .await?;
+    Ok(Json(state))
 }
 
 /// Channel remove

@@ -5,6 +5,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use common::v1::routes;
+use common::v1::types::ack::{AckBulkItem, AckType};
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Time;
@@ -54,14 +55,19 @@ async fn message_create(
 
     // automatically ack the channel for the user who sent the message
     let mut data = s.data();
-    data.unread_ack(
+    data.unread_ack_bulk(
         user.id,
-        req.body.channel_id,
-        message.id,
-        message.latest_version.version_id,
-        Some(0),
+        &[AckBulkItem {
+            ty: AckType::Message {
+                channel_id: req.body.channel_id,
+                message_id: message.id,
+                mention_count: 0,
+            },
+        }],
     )
     .await?;
+    data.commit().await?;
+
     srv.channels
         .invalidate_user(req.body.channel_id, user.id)
         .await;

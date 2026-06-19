@@ -192,7 +192,8 @@ impl AuthCheck {
                 AuthCheck::Any(checks)
             }
             MessageSync::ChannelTyping { channel_id, .. } => AuthCheck::Channel(*channel_id),
-            MessageSync::ChannelAck { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::PassiveAck { user_id, .. }  => AuthCheck::User(*user_id),
+            MessageSync::PassiveRoom { user_id, .. }  => AuthCheck::User(*user_id),
             MessageSync::RelationshipUpsert { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::RelationshipDelete { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::ReactionCreate { channel_id, .. } => AuthCheck::Channel(*channel_id),

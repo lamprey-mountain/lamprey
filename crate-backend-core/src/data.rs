@@ -316,27 +316,25 @@ pub trait DataPermission {
 
 #[async_trait]
 pub trait DataUnread {
-    async fn unread_ack(
-        &mut self,
-        user_id: UserId,
-        channel_id: ChannelId,
-        message_id: MessageId,
-        version_id: MessageVerId,
-        mention_count: Option<u64>,
-    ) -> Result<()>;
+    /// apply a batch of acks for a user
     async fn unread_ack_bulk(&mut self, user_id: UserId, acks: &[AckBulkItem]) -> Result<()>;
-    async fn unread_put_all_in_room(
+
+    /// mark all channels in a room as read
+    async fn unread_ack_room(
         &mut self,
         user_id: UserId,
         room_id: RoomId,
-    ) -> Result<Vec<(ChannelId, MessageId, MessageVerId)>>;
-    async fn unread_increment_mentions(
+    ) -> Result<Vec<(ChannelId, MessageId)>>;
+
+    /// increment unread counters for all of these users in a particular channel
+    ///
+    /// - increment the `mention_count` for all users in `mentioned_user_ids`
+    /// - increment the `unread_count` for all users in `mentioned_user_ids` + `unread_user_ids`
+    async fn unread_increment_counts(
         &mut self,
-        user_id: UserId,
         channel_id: ChannelId,
-        message_id: MessageId,
-        version_id: MessageVerId,
-        count: u32,
+        mentioned_user_ids: &[UserId],
+        unread_user_ids: &[UserId],
     ) -> Result<()>;
 }
 
