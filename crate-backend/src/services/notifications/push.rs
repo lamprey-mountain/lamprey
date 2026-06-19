@@ -185,6 +185,7 @@ impl ServiceNotifications {
             };
 
             if notifs.is_empty() {
+                let _ = data.rollback().await;
                 continue;
             }
 
