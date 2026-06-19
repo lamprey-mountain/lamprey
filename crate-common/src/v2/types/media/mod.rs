@@ -550,15 +550,15 @@ mod val {
 
 impl MediaReference {
     pub fn new(media_id: MediaId) -> Self {
-        todo!()
+        Self::Media { media_id }
     }
 
-    pub fn new_download(url: Url) -> Self {
-        todo!()
+    pub fn new_download(source_url: Url) -> Self {
+        Self::Url { source_url }
     }
 
     pub fn new_attachment(media_index: u64) -> Self {
-        todo!()
+        Self::Attachment { media_index }
     }
 
     pub fn media_id(&self) -> Option<MediaId> {
