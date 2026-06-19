@@ -193,13 +193,14 @@ impl Database for SqliteDatabase {
 
     async fn message_create(&self, portal_id: PortalId, message: Message) -> Result<()> {
         let source_platform = message.source_platform.to_string();
+        let mut txn = self.pool.begin().await?;
         let message_id = query!(
             "INSERT INTO message (portal_id, source_platform, source_id) VALUES (?, ?, ?)",
             portal_id,
             source_platform,
             message.source_id
         )
-        .execute(&self.pool)
+        .execute(&mut *txn)
         .await?
         .last_insert_rowid() as u32;
 
@@ -212,9 +213,11 @@ impl Database for SqliteDatabase {
                 lamprey_media_str,
                 discord_attachment_str
             )
-            .execute(&self.pool)
+            .execute(&mut *txn)
             .await?;
         }
+
+        txn.commit().await?;
         Ok(())
     }
 
