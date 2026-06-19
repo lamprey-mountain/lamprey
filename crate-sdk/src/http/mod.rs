@@ -10,6 +10,8 @@ use url::Url;
 
 mod routes;
 
+pub use routes::MessageCreateOptions;
+
 /// an http client for interacting with the rest api
 #[derive(Debug, Clone)]
 pub struct Http {

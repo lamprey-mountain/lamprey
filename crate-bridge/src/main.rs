@@ -73,16 +73,15 @@ async fn main() -> Result<()> {
         }
     }
 
-    // TODO: load from database
-    let realms: Vec<(RealmId, Realm)> = vec![];
-    let portals: Vec<(PortalId, Portal)> = vec![];
+    let realms = bridge.db.realm_list().await?;
+    let portals = bridge.db.portal_list().await?;
 
     for (id, realm) in realms {
         // TODO: create realms
     }
 
     for (id, portal) in portals {
-        let handle = bridge.portal_handle(id);
+        let handle = bridge.create_portal_handle(id);
         let event = BridgeEvent::PortalInit(id, portal, handle);
         bridge
             .events

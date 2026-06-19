@@ -9,7 +9,6 @@ use crate::{database::Database, prelude::*};
 pub type PortalId = u32;
 pub type RealmId = u32;
 pub type MessageId = u32;
-pub type UserId = u32;
 
 /// a set of portals
 ///
@@ -19,7 +18,6 @@ pub struct Realm {
     pub continuous: bool,
 }
 
-// TODO: use this type
 /// a single logical channel. forwards messages across platforms.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Portal {
@@ -66,8 +64,14 @@ pub struct User {
     pub discord_id: discord::UserId,
 
     // used for syncing media
-    pub discord_avatar_url: Option<Url>,
-    pub discord_banner_url: Option<Url>,
+    pub discord_avatar_url: Option<String>,
+    pub discord_banner_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SourceId {
+    pub source_platform: Platform,
+    pub source_id: String,
 }
 
 /// an event that's broadcast to a bridge
@@ -96,6 +100,12 @@ pub enum BridgeEvent {
     // MemberUpdate,
     // MemberDelete,
     // PresenceUpdate,
+
+    // UserUpdate {
+    //     source_user_id: UserId,
+    //     avatar_url: Option<Url>,
+    //     banner_url: Option<Url>,
+    // },
 }
 
 #[derive(Debug, Clone)]
@@ -120,20 +130,35 @@ pub enum ChannelKind {
     Text,
 }
 
+#[derive(Debug, Clone)]
+pub struct Attachment {
+    pub filename: String,
+    pub bytes: Vec<u8>,
+}
+
+#[derive(Debug, Clone)]
+pub enum MessageData {
+    Lamprey(lamprey::Message),
+    Discord(discord::Message),
+}
+
+impl MessageData {
+    // TODO
+}
+
 /// an event that's broadcast to a portal
 #[derive(Debug, Clone)]
 pub enum PortalEvent {
-    // TODO: flesh out types
-    Typing(UserId),
-    MessageCreate,
-    MessageUpdate,
-    MessageDelete,
-    ReactionCreate,
-    ReactionDelete,
-    ReactionDeleteEmoji,
-    ReactionDeleteAll,
-    // /// begin backfilling from this id
-    // Backfill,
+    Typing(User),
+
+    MessageCreate(MessageData),
+    MessageUpdate(MessageId, MessageData),
+    MessageDelete(MessageId),
+
+    ReactionCreate(MessageId, String, User),
+    ReactionDelete(MessageId, String, User),
+    ReactionDeleteEmoji(MessageId, String),
+    ReactionDeleteAll(MessageId, String),
 }
 
 #[derive(Debug, Clone)]
@@ -157,7 +182,7 @@ impl BridgeHandle {
         Self { events, db }
     }
 
-    pub fn portal_handle(&self, id: PortalId) -> PortalHandle {
+    pub fn create_portal_handle(&self, id: PortalId) -> PortalHandle {
         PortalHandle::new(id, self.clone())
     }
 }

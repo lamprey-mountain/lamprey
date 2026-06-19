@@ -3,6 +3,7 @@
 // TODO: somehow use routes from the common crate? maybe with macros?
 
 use anyhow::{Context, Result};
+use common::v1::types::misc::ApplicationIdReq;
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::presence::Presence;
 use common::v1::types::server::ServerInfo;
@@ -12,8 +13,8 @@ use common::v1::types::voice::{
     VoiceState, VoiceStateMove, VoiceStateMoveBulk, VoiceStatePatch,
 };
 use common::v1::types::{
-    ApplicationId, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelReorder, EmojiId,
-    Invite, InviteCode, InviteCreate, InvitePatch, MediaId, MessageId, MessageModerate,
+    Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelReorder, ContextQuery, ContextResponse,
+    EmojiId, Invite, InviteCode, InviteCreate, InvitePatch, MediaId, MessageId, MessageModerate,
     MessagePatch, MessageVerId, PermissionOverwriteSet, PinsReorder, PuppetCreate, Role,
     RoleCreate, RoleId, RoleMemberBulkPatch, RolePatch, RoleReorder, Room, RoomBan,
     RoomBanBulkCreate, RoomCreate, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut, RoomPatch,
@@ -22,8 +23,7 @@ use common::v1::types::{
     misc::UserIdReq,
     reaction::{ReactionKeyParam, ReactionListItem},
     role::RoleDeleteQuery,
-    ContextQuery, ContextResponse,
-    };
+};
 use common::v1::types::{Message, SearchDlqId};
 use common::v1::types::{
     MessageCreate, MessageMove, RoomBanCreate, SuspendRequest, TransferOwnership, UserCreate,
@@ -34,7 +34,6 @@ use lamprey_backend_core::types::admin::{
     AdminBroadcast, AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache,
     AdminPurgeCacheResponse, AdminRegisterUser, AdminWhisper, DlqEntry, SearchIndexStats,
 };
-use reqwest::StatusCode;
 use serde_json::json;
 use tracing::error;
 use uuid::Uuid;
@@ -42,14 +41,14 @@ use uuid::Uuid;
 use crate::http::Http;
 
 impl Http {
-    pub async fn media_upload(
-        &self,
-        target: &MediaCreated,
-        body: Vec<u8>,
-    ) -> Result<Option<Media>> {
-        let res = self
-            .client
-            .patch(target.upload_url.clone().unwrap())
+    pub async fn media_upload(&self, target: &MediaCreated, body: Vec<u8>) -> Result<()> {
+        self.client
+            .patch(
+                target
+                    .upload_url
+                    .clone()
+                    .expect("TODO: better error handling"),
+            )
             .header("upload-offset", "0")
             .header("content-type", "application/octet-stream")
             .header("content-length", body.len())
@@ -57,19 +56,7 @@ impl Http {
             .send()
             .await?
             .error_for_status()?;
-        match res.status() {
-            StatusCode::OK => {
-                let text = res.text().await?;
-                serde_json::from_str(&text)
-                    .with_context(|| {
-                        error!(response_body = %text, "failed to decode media upload response body");
-                        "failed to decode media upload response body"
-                    })
-                    .map(Some)
-            }
-            StatusCode::NO_CONTENT => Ok(None),
-            _ => unreachable!("technically reachable with a bad server"),
-        }
+        Ok(())
     }
 
     pub async fn thread_list(
@@ -407,7 +394,7 @@ route!(post   "/api/v1/user/@self/dm/{target_id}"                 => dm_init(tar
 route!(get    "/api/v1/user/@self/dm/{target_id}"                 => dm_get(target_id: UserId) -> Channel);
 
 // Puppet/App Routes
-route!(put    "/api/v1/app/{app_id}/puppet/{puppet_id}"           => puppet_ensure(app_id: ApplicationId, puppet_id: String) -> User, PuppetCreate);
+route!(put    "/api/v1/app/{app_id}/puppet/{puppet_id}"           => puppet_ensure(app_id: ApplicationIdReq, puppet_id: String) -> User, PuppetCreate);
 
 // Emoji Routes
 route!(post   "/api/v1/room/{room_id}/emoji"                      => emoji_create(room_id: RoomId) -> EmojiCustom, EmojiCustomCreate);
@@ -541,9 +528,7 @@ impl Http {
             anyhow::bail!("message_create_with_options failed: status={status} body={text}");
         }
         serde_json::from_str(&text).with_context(|| {
-            format!(
-                "failed to decode response body for message_create_with_options (body: {text})"
-            )
+            format!("failed to decode response body for message_create_with_options (body: {text})")
         })
     }
 }
