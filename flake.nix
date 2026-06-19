@@ -76,12 +76,12 @@
 
           buildInputs = with pkgs; [
             openssl
-            pkg-config
           ] ++ lib.optionals pkgs.stdenv.isDarwin [
             pkgs.libiconv
           ];
 
           nativeBuildInputs = with pkgs; [
+            pkg-config
             perl
             mold
             clang
