@@ -13,7 +13,7 @@ use http::StatusCode;
 use lamprey_backend_core::Error;
 use lamprey_backend_core::types::admin::{
     AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache, AdminPurgeCacheResponse,
-    DlqEntry, SearchIndexStats,
+    DlqEntry, SearchIndexStats, SearchIndexStatsRoom,
 };
 use lamprey_macros::handler;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -385,6 +385,40 @@ async fn admin_channel_search_index_stats(
     Ok(Json(stats))
 }
 
+/// Admin room search index stats
+///
+/// Get search index statistics for a room
+#[utoipa::path(
+    get,
+    path = "/admin/room-search-index-stats/{room_id}",
+    tags = ["admin", "badge.admin_only", "badge.server-perm.Admin"],
+    params(
+        ("room_id" = String, Path, description = "Room id to get stats for"),
+    ),
+    responses(
+        (status = OK, body = SearchIndexStatsRoom, description = "Search index statistics for the room"),
+    )
+)]
+async fn admin_room_search_index_stats(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    Path(room_id): Path<RoomId>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+
+    let srv = s.services();
+
+    srv.perms
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?
+        .needs(Permission::Admin)
+        .check()?;
+
+    let stats = srv.search.get_room_stats(room_id).await?;
+    Ok(Json(stats))
+}
+
 /// Admin search stats
 #[utoipa::path(
     get,
@@ -557,6 +591,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(admin_reindex_room))
         .routes(routes!(admin_reindex_everything))
         .routes(routes!(admin_channel_search_index_stats))
+        .routes(routes!(admin_room_search_index_stats))
         .routes(routes!(admin_search_stats))
         .routes(routes!(admin_search_dlq_list))
         .routes(routes!(admin_search_dlq_delete))
