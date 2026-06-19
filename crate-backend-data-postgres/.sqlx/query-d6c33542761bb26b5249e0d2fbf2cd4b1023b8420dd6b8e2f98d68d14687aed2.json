@@ -1,0 +1,75 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select\n    channel.id,\n    channel.type as \"ty: DbChannelType\",\n    u.message_id as \"last_read_id?\",\n    coalesce(u.message_id < channel.last_message_id, true) as \"is_unread!\",\n    coalesce(u.mention_count, 0) as \"mention_count!\"\nfrom channel\nleft join unread u on u.channel_id = channel.id and u.user_id = $2\nwhere channel.id = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "ty: DbChannelType",
+        "type_info": {
+          "Custom": {
+            "name": "channel_type",
+            "kind": {
+              "Enum": [
+                "Text",
+                "DmUnused",
+                "Forum",
+                "Voice",
+                "Dm",
+                "Gdm",
+                "Category",
+                "ThreadPublic",
+                "ThreadPrivate",
+                "Calendar",
+                "Broadcast",
+                "Announcement",
+                "Forum2",
+                "Info",
+                "ThreadForum2",
+                "Ticket",
+                "Document",
+                "DocumentComment",
+                "Wiki",
+                "Scripts"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "last_read_id?",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "is_unread!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "mention_count!",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      null,
+      null
+    ]
+  },
+  "hash": "d6c33542761bb26b5249e0d2fbf2cd4b1023b8420dd6b8e2f98d68d14687aed2"
+}

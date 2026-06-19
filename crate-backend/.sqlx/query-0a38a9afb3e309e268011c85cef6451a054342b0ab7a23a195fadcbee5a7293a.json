@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update usr set totp_secret = $2, totp_enabled = $3 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0a38a9afb3e309e268011c85cef6451a054342b0ab7a23a195fadcbee5a7293a"
+}

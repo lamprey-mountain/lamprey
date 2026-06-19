@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE portal SET realm_id = ?, lamprey_channel_id = ?, lamprey_room_id = ?, lamprey_last_id = ?, discord_guild_id = ?, discord_parent_id = ?, discord_channel_id = ?, discord_webhook_url = ?, discord_last_id = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 10
+    },
+    "nullable": []
+  },
+  "hash": "eb7223c376e6ac9aaa0cc7901ffb8f3b940d280c1d875f9105cb8b5e5c3e7999"
+}

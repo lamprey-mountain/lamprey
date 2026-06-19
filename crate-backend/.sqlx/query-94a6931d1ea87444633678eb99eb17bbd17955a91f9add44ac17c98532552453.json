@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            WITH seqs AS (\n                SELECT created_seq as seq FROM message WHERE channel_id = $1 AND created_seq > $2\n                UNION\n                SELECT lifecycle_seq as seq FROM message WHERE channel_id = $1 AND lifecycle_seq > $2 AND lifecycle_seq != created_seq\n                UNION\n                SELECT mv.created_seq as seq FROM message_version mv JOIN message m ON mv.message_id = m.id WHERE m.channel_id = $1 AND mv.created_seq > $2 AND mv.created_seq != m.created_seq\n                UNION\n                SELECT created_seq as seq FROM reaction WHERE channel_id = $1 AND created_seq > $2\n                UNION\n                SELECT deleted_seq as seq FROM reaction WHERE channel_id = $1 AND deleted_seq IS NOT NULL AND deleted_seq > $2\n                ORDER BY seq ASC LIMIT $3\n            )\n            SELECT MAX(seq) FROM seqs\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "max",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "94a6931d1ea87444633678eb99eb17bbd17955a91f9add44ac17c98532552453"
+}

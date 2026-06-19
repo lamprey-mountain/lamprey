@@ -1,0 +1,213 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH recursive message_tree AS (\n    SELECT\n        m.id,\n        mv.reply_id,\n        1 AS depth\n    FROM\n        message m\n        JOIN message_version mv ON m.latest_version_id = mv.version_id\n    WHERE\n        ($2::uuid IS NOT NULL AND m.id = $2::uuid)\n        OR ($2::uuid IS NULL AND mv.reply_id IS NULL)\n    UNION ALL\n    SELECT\n        m.id,\n        mv2.reply_id,\n        mt.depth + 1\n    FROM\n        message m\n        JOIN message_version mv2 ON m.latest_version_id = mv2.version_id\n        JOIN message_tree mt ON mv2.reply_id = mt.id\n    WHERE\n        mt.depth < $3\n),\nranked_messages AS (\n    SELECT\n        id,\n        depth,\n        row_number() OVER (PARTITION BY reply_id ORDER BY id) AS rn\n    FROM\n        message_tree\n),\nfiltered_messages AS (\n    SELECT id\n    FROM ranked_messages\n    WHERE (depth = 1 OR rn <= $4 OR $4 IS NULL)\n),\ndirect_counts AS (\n    SELECT mv.reply_id as id, count(*) as count_direct\n    FROM message m\n    JOIN message_version mv ON m.latest_version_id = mv.version_id\n    WHERE m.channel_id = $1 AND m.deleted_at IS NULL AND mv.reply_id IS NOT NULL\n    GROUP BY mv.reply_id\n),\nrecursive_counts_cte AS (\n    SELECT mv.reply_id, m.id as descendant_id\n    FROM message m\n    JOIN message_version mv ON m.latest_version_id = mv.version_id\n    WHERE m.channel_id = $1 AND m.deleted_at IS NULL AND mv.reply_id IS NOT NULL\n    UNION ALL\n    SELECT rc.reply_id, m.id\n    FROM recursive_counts_cte rc\n    JOIN message_version mv ON mv.reply_id = rc.descendant_id\n    JOIN message m ON m.latest_version_id = mv.version_id\n    WHERE m.channel_id = $1 AND m.deleted_at IS NULL\n),\nrecursive_counts AS (\n    SELECT reply_id as id, count(*) as count_recursive\n    FROM recursive_counts_cte\n    GROUP BY reply_id\n)\nSELECT\n    mv.type as \"message_type: DbMessageType\",\n    m.id,\n    m.channel_id,\n    c.room_id,\n    m.author_id,\n    m.created_at,\n    m.deleted_at,\n    m.removed_at,\n    m.pinned,\n    m.created_seq,\n    m.lifecycle_seq,\n    m.flume,\n    m.interaction,\n    m.ephemeral,\n    mv.version_id,\n    mv.author_id as version_author_id,\n    mv.content,\n    mv.metadata,\n    mv.reply_id,\n    mv.override_name,\n    mv.embeds as \"embeds\",\n    mv.components as \"components\",\n    mv.created_at as version_created_at,\n    mv.deleted_at as version_deleted_at,\n    mv.created_seq as version_created_seq,\n    coalesce(att_json.attachments, '{}') as \"attachments!\",\n    coalesce(dc.count_direct, 0) as count_direct,\n    coalesce(rc.count_recursive, 0) as count_recursive\nFROM message AS m\nJOIN filtered_messages fm ON m.id = fm.id\nJOIN message_version AS mv ON m.latest_version_id = mv.version_id\nLEFT JOIN att_json ON att_json.version_id = mv.version_id\nJOIN channel AS c ON m.channel_id = c.id\nLEFT JOIN direct_counts dc ON m.id = dc.id\nLEFT JOIN recursive_counts rc ON m.id = rc.id\nWHERE m.channel_id = $1 AND m.deleted_at IS NULL\n  AND m.id > $5 AND m.id < $6\nORDER BY (CASE WHEN $7 = 'f' THEN m.id END), m.id DESC LIMIT $8\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "message_type: DbMessageType",
+        "type_info": {
+          "Custom": {
+            "name": "message_type",
+            "kind": {
+              "Enum": [
+                "DefaultMarkdown",
+                "ThreadUpdate",
+                "DefaultTagged",
+                "ChannelRename",
+                "MemberAdd",
+                "MemberRemove",
+                "MemberJoin",
+                "MessagePinned",
+                "ChannelIcon",
+                "AutomodExecution",
+                "ChannelMoved",
+                "ChannelPingback",
+                "Call",
+                "ThreadCreated"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "channel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "author_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 6,
+        "name": "deleted_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 7,
+        "name": "removed_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 8,
+        "name": "pinned",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_seq",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 10,
+        "name": "lifecycle_seq",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 11,
+        "name": "flume",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 12,
+        "name": "interaction",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 13,
+        "name": "ephemeral",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 14,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 15,
+        "name": "version_author_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 16,
+        "name": "content",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 17,
+        "name": "metadata",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 18,
+        "name": "reply_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 19,
+        "name": "override_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 20,
+        "name": "embeds",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 21,
+        "name": "components",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 22,
+        "name": "version_created_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 23,
+        "name": "version_deleted_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 24,
+        "name": "version_created_seq",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 25,
+        "name": "attachments!",
+        "type_info": "Json"
+      },
+      {
+        "ordinal": 26,
+        "name": "count_direct",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 27,
+        "name": "count_recursive",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int4",
+        "Int8",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      false,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "83098cb1ed832718472aceb092523f2e1fdd2412f4ce04eeceffdc2a879eae52"
+}

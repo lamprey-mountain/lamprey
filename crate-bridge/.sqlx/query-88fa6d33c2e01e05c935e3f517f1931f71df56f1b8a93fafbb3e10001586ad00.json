@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, realm_id, lamprey_channel_id, lamprey_room_id, lamprey_last_id, discord_guild_id, discord_parent_id, discord_channel_id, discord_webhook_url, discord_last_id FROM portal",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "realm_id",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "lamprey_channel_id",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "lamprey_room_id",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "lamprey_last_id",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "discord_guild_id",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "discord_parent_id",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "discord_channel_id",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "discord_webhook_url",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "discord_last_id",
+        "ordinal": 9,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "88fa6d33c2e01e05c935e3f517f1931f71df56f1b8a93fafbb3e10001586ad00"
+}

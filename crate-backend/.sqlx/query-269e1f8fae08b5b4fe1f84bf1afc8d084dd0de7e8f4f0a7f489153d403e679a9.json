@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE room_templates\n            SET dirty = true, updated_at = NOW()\n            WHERE source_room_id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "269e1f8fae08b5b4fe1f84bf1afc8d084dd0de7e8f4f0a7f489153d403e679a9"
+}

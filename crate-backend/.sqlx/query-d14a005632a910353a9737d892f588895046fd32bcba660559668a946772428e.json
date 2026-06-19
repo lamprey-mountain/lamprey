@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE room_templates\n            SET name = $1, description = $2, updated_at = NOW()\n            WHERE code = $3\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d14a005632a910353a9737d892f588895046fd32bcba660559668a946772428e"
+}

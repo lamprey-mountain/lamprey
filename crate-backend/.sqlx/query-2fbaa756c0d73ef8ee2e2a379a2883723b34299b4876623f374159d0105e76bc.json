@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            select 1\n            from room_member a\n            join room_member b on a.room_id = b.room_id\n            where a.user_id = $1 and b.user_id = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "?column?",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "2fbaa756c0d73ef8ee2e2a379a2883723b34299b4876623f374159d0105e76bc"
+}

@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO redex (id, channel_id, creator_id, created_at, deleted_at, data)\n            VALUES ($1, $2, $3, CURRENT_TIMESTAMP, NULL, $4)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9bde76d9ce7f52cebdf0e1a2a21929e0538cfa011c3ab10aa8982b25eedb1a90"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            update room_member\n            set membership = 'Join', left_at = null\n            where room_id = $1\n            and membership = 'Leave'\n            and left_at = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9e8aeb258df80a78e0c27c9dc50bbbe3d45af4c3d9a5e61382d119fd8622b075"
+}

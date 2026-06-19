@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE channel_wiki\n                SET\n                    allow_indexing = $2,\n                    page_index = $3,\n                    page_notfound = $4\n                WHERE channel_id = $1\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6c736224d20646ad12266c3d89b65630d4b6603d8bc3de4b4f6c56d2cbc8b971"
+}
