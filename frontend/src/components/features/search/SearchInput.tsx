@@ -515,8 +515,10 @@ export const SearchInput = (props: {
 										if (event.key === "ArrowDown") {
 											setHoveredIndex((prev) => (prev + 1) % items.length);
 											return true;
-										} else if (event.key === "ArrowDown") {
-											setHoveredIndex((prev) => (prev * 2 - 1) % items.length);
+										} else if (event.key === "ArrowUp") {
+											setHoveredIndex(
+												(prev) => (prev + items.length - 1) % items.length,
+											);
 											return true;
 										} else if (event.key === "Tab") {
 											const item = items[hoveredIndex()];
