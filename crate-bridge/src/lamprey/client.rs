@@ -2,9 +2,9 @@ use crate::bridge::BridgeHandle;
 use crate::prelude::*;
 use common::util::Diff;
 use common::v1::types::misc::{ApplicationIdReq, UserIdReq};
-use common::v1::types::{PuppetCreate, User, UserPatch};
-use common::v2::types::UserId;
+use common::v1::types::{Message, PuppetCreate, User, UserPatch};
 use common::v2::types::media::{Media, MediaCreate, MediaCreateSource, MediaDoneParams};
+use common::v2::types::{MessageId, UserId};
 use url::Url;
 
 /// wrapper around the lamprey client for common operations
@@ -143,6 +143,7 @@ impl LampreyClient {
             patch.banner = banner;
 
             bridge::User {
+                source_platform: bridge::Platform::Discord,
                 lamprey_id: puppet.id,
                 discord_id: message.author.id,
                 discord_avatar_url: message.author.avatar_url(),
@@ -159,6 +160,7 @@ impl LampreyClient {
         }
 
         // TODO: sync guild member nickname -> room member override name
+        // probably need to add a new table to support this?
 
         Ok(puppet)
     }
@@ -192,6 +194,10 @@ impl LampreyClient {
             .await?
             .expect("media should be processed synchronously");
         Ok(media)
+    }
+
+    pub async fn fetch_after(&self, id: MessageId) -> Result<Vec<Message>> {
+        todo!()
     }
 }
 

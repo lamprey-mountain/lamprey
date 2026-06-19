@@ -1,4 +1,5 @@
 create table "user" (
+    source_platform text not null,
     lamprey_id text not null,
     discord_id text not null,
     discord_avatar_url text,

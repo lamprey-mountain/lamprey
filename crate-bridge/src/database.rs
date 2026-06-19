@@ -21,12 +21,8 @@ pub trait Database: fmt::Debug + Send + Sync {
     async fn portal_list(&self) -> Result<Vec<(PortalId, Portal)>>;
 
     async fn message_create(&self, portal_id: PortalId, message: Message) -> Result<()>;
-    async fn message_delete(
-        &self,
-        portal_id: PortalId,
-        source_platform: String,
-        source_id: String,
-    ) -> Result<()>;
+    async fn message_delete_by_discord(&self, portal_id: PortalId, discord_message_id: discord::MessageId) -> Result<()>;
+    async fn message_delete_by_lamprey(&self, portal_id: PortalId, lamprey_message_id: lamprey::MessageId) -> Result<()>;
 
     // TODO: rename to user_foo
     async fn puppet_create(&self, puppet: User) -> Result<()>;
@@ -193,12 +189,16 @@ impl Database for SqliteDatabase {
 
     async fn message_create(&self, portal_id: PortalId, message: Message) -> Result<()> {
         let source_platform = message.source_platform.to_string();
+        let lamprey_message_id = message.lamprey_message_id.map(|id| id.to_string());
+        let discord_message_id = message.discord_message_id.map(|id| id.to_string());
+
         let mut txn = self.pool.begin().await?;
         let message_id = query!(
-            "INSERT INTO message (portal_id, source_platform, source_id) VALUES (?, ?, ?)",
+            "INSERT INTO message (portal_id, source_platform, lamprey_message_id, discord_message_id) VALUES (?, ?, ?, ?)",
             portal_id,
             source_platform,
-            message.source_id
+            lamprey_message_id,
+            discord_message_id
         )
         .execute(&mut *txn)
         .await?
@@ -221,18 +221,47 @@ impl Database for SqliteDatabase {
         Ok(())
     }
 
-    async fn message_delete(
+    async fn message_delete_by_discord(
         &self,
         portal_id: PortalId,
-        source_platform: String,
-        source_id: String,
+        discord_message_id: discord::MessageId,
     ) -> Result<()> {
-        // Need to find the message id first
+        let discord_message_id_str = discord_message_id.to_string();
         let message = query!(
-            "SELECT id FROM message WHERE portal_id = ? AND source_platform = ? AND source_id = ?",
+            "SELECT id FROM message WHERE portal_id = ? AND discord_message_id = ?",
             portal_id,
-            source_platform,
-            source_id
+            discord_message_id_str
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(msg) = message {
+            let message_id = msg.id;
+
+            query!(
+                "DELETE FROM message_attachment WHERE message_id = ?",
+                message_id
+            )
+            .execute(&self.pool)
+            .await?;
+
+            query!("DELETE FROM message WHERE id = ?", message_id)
+                .execute(&self.pool)
+                .await?;
+        }
+        Ok(())
+    }
+
+    async fn message_delete_by_lamprey(
+        &self,
+        portal_id: PortalId,
+        lamprey_message_id: lamprey::MessageId,
+    ) -> Result<()> {
+        let lamprey_message_id_str = lamprey_message_id.to_string();
+        let message = query!(
+            "SELECT id FROM message WHERE portal_id = ? AND lamprey_message_id = ?",
+            portal_id,
+            lamprey_message_id_str
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -255,13 +284,15 @@ impl Database for SqliteDatabase {
     }
 
     async fn puppet_create(&self, puppet: User) -> Result<()> {
+        let source_platform = puppet.source_platform.to_string();
         let lamprey_id = puppet.lamprey_id.to_string();
         let discord_id = puppet.discord_id.to_string();
         let discord_avatar_url = puppet.discord_avatar_url.map(|u| u.to_string());
         let discord_banner_url = puppet.discord_banner_url.map(|u| u.to_string());
 
         query!(
-            "INSERT INTO \"user\" (lamprey_id, discord_id, discord_avatar_url, discord_banner_url) VALUES (?, ?, ?, ?)",
+            "INSERT INTO \"user\" (source_platform, lamprey_id, discord_id, discord_avatar_url, discord_banner_url) VALUES (?, ?, ?, ?, ?)",
+            source_platform,
             lamprey_id,
             discord_id,
             discord_avatar_url,
@@ -274,12 +305,13 @@ impl Database for SqliteDatabase {
 
     async fn puppet_get_by_lamprey_id(&self, lamprey_id: String) -> Result<Option<User>> {
         let row = query!(
-            "SELECT lamprey_id, discord_id, discord_avatar_url, discord_banner_url FROM \"user\" WHERE lamprey_id = ?",
+            "SELECT source_platform, lamprey_id, discord_id, discord_avatar_url, discord_banner_url FROM \"user\" WHERE lamprey_id = ?",
             lamprey_id
         )
         .fetch_optional(&self.pool)
         .await?;
         Ok(row.map(|r| User {
+            source_platform: r.source_platform.parse().unwrap(),
             lamprey_id: r.lamprey_id.parse().unwrap(),
             discord_id: r.discord_id.parse().unwrap(),
             discord_avatar_url: r.discord_avatar_url,
@@ -289,12 +321,13 @@ impl Database for SqliteDatabase {
 
     async fn puppet_get_by_discord_id(&self, discord_id: String) -> Result<Option<User>> {
         let row = query!(
-            "SELECT lamprey_id, discord_id, discord_avatar_url, discord_banner_url FROM \"user\" WHERE discord_id = ?",
+            "SELECT source_platform, lamprey_id, discord_id, discord_avatar_url, discord_banner_url FROM \"user\" WHERE discord_id = ?",
             discord_id
         )
         .fetch_optional(&self.pool)
         .await?;
         Ok(row.map(|r| User {
+            source_platform: r.source_platform.parse().unwrap(),
             lamprey_id: r.lamprey_id.parse().unwrap(),
             discord_id: r.discord_id.parse().unwrap(),
             discord_avatar_url: r.discord_avatar_url,

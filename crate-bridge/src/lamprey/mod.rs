@@ -3,17 +3,19 @@ use std::collections::HashMap;
 use common::v1::types::presence::{Activity, Presence, Status};
 use common::v1::types::{MessageSync, PuppetCreate};
 use common::v2::types::ApplicationId;
-use common::v2::types::media::MediaDoneParams;
+use common::v2::types::media::{MediaDoneParams, MediaReference};
 use futures::StreamExt;
 use sdk::http::{Http, MessageCreateOptions};
 use sdk::syncer::{SyncerEvent, SyncerState};
+use tokio::sync::broadcast;
 use tokio::task::JoinSet;
+use tracing::warn;
 
 use crate::bridge::{
     BridgeEvent, BridgeHandle, Platform, Portal, PortalEvent, PortalHandle, PortalId,
 };
 use crate::config::LampreyConfig;
-use crate::lamprey::client::LampreyClient;
+use crate::lamprey::client::{ImportUrl, LampreyClient};
 use crate::prelude::*;
 
 // re export lamprey types
@@ -115,19 +117,18 @@ impl Lamprey {
                     }
                 }
                 MessageSync::MessageCreate { message } => {
-                    // let portal_id = self.portal_lookup.get(&message.channel_id).unwrap();
-                    // let _nothing = self
-                    //     .bridge
-                    //     .db
-                    //     .message_create(
-                    //         *portal_id,
-                    //         bridge::Message {
-                    //             source_platform: Platform::Lamprey,
-                    //             source_id: message.id.to_string(),
-                    //             attachments: vec![], // this will be filled in later
-                    //         },
-                    //     )
-                    //     .await?;
+                    if let Some(db_user) = self
+                        .bridge
+                        .db
+                        .puppet_get_by_lamprey_id(message.author_id.to_string())
+                        .await?
+                    {
+                        if db_user.source_platform != Platform::Lamprey {
+                            // make sure not to get stuck in an infinite loop. only forward messages that came from us.
+                            return Ok(());
+                        }
+                    }
+
                     self.route_portal_event(
                         &message.channel_id,
                         PortalEvent::MessageCreate(bridge::MessageData::Lamprey(message.clone())),
@@ -219,8 +220,34 @@ async fn spawn_portal_inner(
     let mut events = handle.events.subscribe();
     let ly = LampreyClient::new(http, handle.bridge.clone());
 
+    // TODO: backfill should be a task that doesn't block the portal
+    // HOWEVER, the portal should bridge messages until backfilling is done
+    let mut last_id = portal.lamprey.as_ref().expect("handle None").last_id;
     loop {
-        let event = events.recv().await?;
+        let messages = ly.fetch_after(last_id).await?;
+
+        // break if messages is empty
+        let Some(last) = messages.last() else {
+            break;
+        };
+
+        // try to forward/bridge message. skip if its already bridged.
+
+        // TODO: update db -> portal -> lamprey_last_id
+        last_id = last.id;
+        // TODO: every time i insert/update a row in the "message" table, also update last_id
+    }
+
+    loop {
+        let event = match events.recv().await {
+            Ok(e) => e,
+            Err(broadcast::error::RecvError::Lagged(n)) => {
+                warn!(portal_id, n, "portal event receiver lagged, skipping");
+                continue;
+            }
+            Err(broadcast::error::RecvError::Closed) => break,
+        };
+
         match &*event {
             PortalEvent::Typing(_) => todo!(),
             PortalEvent::MessageCreate(data) => {
@@ -238,6 +265,7 @@ async fn spawn_portal_inner(
 
                 let puppet = ly.sync_puppet_discord(dm).await?;
 
+                // TODO: ly -> async fn process_discord_message(&self, ...) -> Result<MessageCreate>
                 let mut create = MessageCreate {
                     content: None,
                     attachments: vec![],
@@ -249,40 +277,88 @@ async fn spawn_portal_inner(
                     ephemeral: false,
                 };
 
-                // TODO: process attachments
-                // PERF: process attachments in parallel
-                // create.attachments.push()
+                // process attachments
+                let attachment_futures = dm.attachments.iter().map(|a| {
+                    let ly = &ly;
+                    let mut import = ImportUrl::from(a.clone());
+                    import.user_id = Some(puppet.id);
+                    async move {
+                        let media = ly.import_url(import).await?;
+                        Ok::<_, Error>(MessageAttachmentCreate {
+                            ty: MessageAttachmentCreateType::Media {
+                                media: MediaReference::Media { media_id: media.id },
+                                alt: None,
+                                filename: None,
+                            },
+                            // FIXME: spoilered attachments support
+                            spoiler: false,
+                        })
+                    }
+                });
+                create.attachments = futures::future::try_join_all(attachment_futures).await?;
 
-                // TODO: process embeds
+                // process embeds
+                for emb in dm.embeds.iter().cloned() {
+                    // TODO: process embed media
+                    let create_embed = EmbedCreate {
+                        url: emb.url.and_then(|u| u.parse().ok()),
+                        title: emb.title,
+                        description: emb.description,
+                        color: emb.colour.map(|c| format!("#{}", c.hex())),
+                        media: None,
+                        thumbnail: None,
+                        author_name: emb.author.as_ref().map(|a| a.name.clone()),
+                        author_url: emb.author.and_then(|a| a.url).and_then(|u| u.parse().ok()),
+                        author_avatar: None,
+                    };
+                    create.embeds.push(create_embed);
+                }
 
                 // TODO: reformat text (mentions, mostly)
+                // see mentions::convert_discord_mentions_to_lamprey
+                create.content = Some(dm.content.clone());
 
-                // TODO: populate reply_id
+                // populate reply_id
+                if let Some(reference) = &dm.message_reference {
+                    // match reference.kind {
+                    //     serenity::all::MessageReferenceKind::Default => {},
+                    //     serenity::all::MessageReferenceKind::Forward => {},
+                    //     _ => {},
+                    // }
+                    if let Some(referenced_message) = &dm.referenced_message {
+                        // TODO: need a way to look up the bridged message id for the reference
+                        // handle.bridge.db.message_get_by_discord_id(...)
+                    }
+                }
 
-                ly.http
+                let sent_message = ly
+                    .http
                     .for_puppet(puppet.id)?
                     .message_create_with_options(MessageCreateOptions {
-                        channel_id: todo!(),
+                        channel_id: portal.lamprey.as_ref().unwrap().channel_id,
                         body: create,
                         nonce: None,
-                        timestamp: todo!(),
+                        timestamp: None, // FIXME: timestamp massaging
                     })
                     .await?;
 
+                // FIXME: make sure i don't accidentally overwrite a row (race condition)
                 handle
                     .bridge
                     .db
                     .message_create(
                         portal_id,
                         bridge::Message {
-                            source_platform: todo!(),
-                            source_id: todo!(),
-                            attachments: todo!(),
+                            source_platform: Platform::Lamprey,
+                            attachments: vec![], // FIXME: populate from sent_message
+                            portal_id,
+                            lamprey_message_id: Some(sent_message.id),
+                            discord_message_id: Some(dm.id),
                         },
                     )
                     .await?;
             }
-            PortalEvent::MessageUpdate(_, data) => todo!(),
+            PortalEvent::MessageUpdate(data) => todo!(),
             PortalEvent::MessageDelete(_) => todo!(),
             PortalEvent::ReactionCreate(_, _, _) => todo!(),
             PortalEvent::ReactionDelete(_, _, _) => todo!(),
@@ -290,4 +366,8 @@ async fn spawn_portal_inner(
             PortalEvent::ReactionDeleteAll(_, _) => todo!(),
         }
     }
+
+    // log (warn?) on exit?
+
+    Ok(())
 }

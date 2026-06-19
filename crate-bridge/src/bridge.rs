@@ -41,18 +41,19 @@ pub struct PortalDiscord {
     pub webhook_url: Url,
     pub last_id: discord::MessageId,
 }
-
 /// metadata for a single logical message
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Message {
+    pub portal_id: PortalId,
     pub source_platform: Platform,
-    pub source_id: String,
 
+    pub lamprey_message_id: Option<lamprey::MessageId>,
+    pub discord_message_id: Option<discord::MessageId>,
     /// media/attachment ids to know what needs to be uploaded on edit vs what can be reused
     pub attachments: Vec<(lamprey::MediaId, discord::AttachmentId)>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, strum::Display, strum::EnumString)]
+#[derive(Debug, Clone, Serialize, Deserialize, strum::Display, strum::EnumString, PartialEq, Eq)]
 pub enum Platform {
     Lamprey,
     Discord,
@@ -60,18 +61,13 @@ pub enum Platform {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
+    pub source_platform: Platform,
     pub lamprey_id: lamprey::UserId,
     pub discord_id: discord::UserId,
 
     // used for syncing media
     pub discord_avatar_url: Option<String>,
     pub discord_banner_url: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SourceId {
-    pub source_platform: Platform,
-    pub source_id: String,
 }
 
 /// an event that's broadcast to a bridge
@@ -152,7 +148,7 @@ pub enum PortalEvent {
     Typing(User),
 
     MessageCreate(MessageData),
-    MessageUpdate(MessageId, MessageData),
+    MessageUpdate(MessageData),
     MessageDelete(MessageId),
 
     ReactionCreate(MessageId, String, User),
