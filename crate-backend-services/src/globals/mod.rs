@@ -48,6 +48,9 @@ impl GlobalsOwned {
 }
 
 impl Globals {
+    // TODO: add (note that &Database doesnt work due to Database being a trait)
+    // pub fn database(&self) -> &Database {}
+
     /// begin a database transaction
     ///
     /// use this for writes and for reads that need consistency

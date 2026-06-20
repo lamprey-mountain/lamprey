@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::services::media::Import;
+use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Json, extract::State};
 use common::v1::types::SERVER_ROOM_ID;
@@ -536,11 +537,15 @@ async fn debug_ready(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<im
     perms.needs(Permission::Admin);
     perms.check()?;
 
-    // FIXME: use healthcheck service
-
-    Ok(Error::Unimplemented)
+    let health = s.services().health.healthcheck().await;
+    if health.is_ready() {
+        Ok(StatusCode::OK)
+    } else {
+        Ok(StatusCode::SERVICE_UNAVAILABLE)
+    }
 }
 
+// TODO: merge with healthcheck
 /// Check doctor
 ///
 /// what's wrong with this server and how do i fix it?
@@ -563,10 +568,8 @@ async fn debug_doctor(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<i
     perms.needs(Permission::Admin);
     perms.check()?;
 
-    Ok(Json(CheckDoctorResponse {
-        ok: true,
-        issues: vec![],
-    }))
+    let health = s.services().health.healthcheck().await;
+    Ok(Json(health))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
