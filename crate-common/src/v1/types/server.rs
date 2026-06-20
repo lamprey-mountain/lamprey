@@ -141,6 +141,7 @@ pub struct ServerWebPush {
     pub vapid_public_key: String,
 }
 
+// NOTE: maybe i should include supported api versions for federation (and expose supported versions on a top level endpoint)
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -148,20 +149,13 @@ pub struct ServerVersion {
     /// the implementation thats being used
     pub implementation: String,
 
-    /// the version of the implementation
+    /// the semantic version of the implementation
+    // NOTE: how do i handle invalid semver?
     pub version: String,
 
     /// extra metadata for this server
+    #[cfg_attr(feature = "serde", serde(flatten))]
     pub extra: HashMap<String, String>,
-}
-
-// maybe remove this and have user/room-specific constraints
-// also could remove other limits above (eg. media max_file_size)
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ServerLimits {
-    // TODO: move crate-backend/src/consts.rs here?
 }
 
 /// sfu metadata for admins
