@@ -1,5 +1,8 @@
 use lamprey_macros::endpoint;
 
+// NOTE: should i remove the HEAD routes? they're kind of implied by GET.
+// i'd probably need to add a #[method] attr to get the request method.
+
 /// Head media
 ///
 /// get headers for a piece of media
