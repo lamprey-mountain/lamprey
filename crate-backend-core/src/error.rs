@@ -3,7 +3,6 @@ use std::num::{ParseFloatError, ParseIntError};
 use axum::extract::multipart::{MultipartError, MultipartRejection};
 use axum::{Json, http::StatusCode, response::IntoResponse};
 use bytes::Bytes;
-use common::v1::types::MessageSync;
 use common::v1::types::application::Scopes;
 use common::v1::types::error::{ApiError, SyncErrorCode};
 use opentelemetry_otlp::ExporterBuildError;
@@ -50,8 +49,6 @@ pub enum Error {
     Serde(#[from] serde_json::Error),
     #[error("axum error")]
     Axum(#[from] axum::Error),
-    #[error("sushi send error: {0}")]
-    SushiSend(#[from] tokio::sync::broadcast::error::SendError<MessageSync>),
     #[error("parse int error: {0}")]
     ParseInt(#[from] ParseIntError),
     #[error("parse float error: {0}")]
