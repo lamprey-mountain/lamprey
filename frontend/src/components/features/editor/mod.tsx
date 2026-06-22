@@ -9,7 +9,7 @@ import {
 	EditorView,
 	type EditorProps as ProsemirrorEditorProps,
 } from "prosemirror-view";
-import { onCleanup, onMount } from "solid-js";
+import { createEffect, onCleanup, onMount } from "solid-js";
 import { pastePluginKey, submitPluginKey } from "./core-plugins.ts";
 import { schema as defaultSchema } from "./schema";
 
@@ -191,21 +191,27 @@ export const createEditor = (opts: EditorOptions) => {
 				view?.destroy();
 			});
 
-			// Update props on every render - queued via microtask to avoid
-			// dispatching during render
-			if (initialized && view) {
-				const instance = viewInstances.get(view);
-				if (instance) {
-					// Only update if props actually changed
-					if (lastDisabled !== (props.disabled ?? false)) {
-						lastDisabled = props.disabled ?? false;
-						view.setProps({
-							editable: () => !lastDisabled,
-						});
+			createEffect(() => {
+				// access properties to track them
+				props.disabled;
+				props.placeholder;
+				props.onSubmit;
+				props.submitOnEnter;
+				props.onUpload;
+
+				if (view && !view.isDestroyed) {
+					const instance = viewInstances.get(view);
+					if (instance) {
+						if (lastDisabled !== (props.disabled ?? false)) {
+							lastDisabled = props.disabled ?? false;
+							view.setProps({
+								editable: () => !lastDisabled,
+							});
+						}
+						scheduleUpdate(instance, props);
 					}
-					scheduleUpdate(instance, props);
 				}
-			}
+			});
 
 			return (
 				<div

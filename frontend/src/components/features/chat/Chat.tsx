@@ -230,9 +230,8 @@ export const ChatMain = (props: ChatProps) => {
 		tl();
 		if (jumpingToEnd) {
 			queueMicrotask(() => {
-			list.scrollToBottom();
-
-			})
+				list.scrollToBottom();
+			});
 			jumpingToEnd = false;
 		}
 	});
