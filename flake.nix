@@ -205,7 +205,7 @@
           VITE_GIT_DIRTY = if (self ? rev) then "false" else "true";
           TWEMOJI_SPRITESHEETS = "${twemoji-spritesheets}";
 
-          pnpmDepsHash = "sha256-m/yOm63rt/CzPoEpGokB7zdE1KSgVsvXiOATyfa21rk=";
+          pnpmDepsHash = "sha256-EXWlEKBJVTfPBm51j3NsVJqmrFWzXH+OuFfol0nf7FY=";
           pnpmDeps = pkgs.fetchPnpmDeps {
             inherit (finalAttrs) src pname version;
             fetcherVersion = 3;
