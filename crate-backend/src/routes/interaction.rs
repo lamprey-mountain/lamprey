@@ -40,7 +40,7 @@ async fn interaction_create(
             .needs_unlocked()
             // .needs_slowmode_message_bypass() // NOTE: should interactions be limited by slowmode?
             .needs(Permission::MessageCreate) // TODO: separate InteractionCreate permission
-            .check();
+            .check()?;
     } else {
         warn!("not enforcing any permissions for interaction not in a channel");
     }
