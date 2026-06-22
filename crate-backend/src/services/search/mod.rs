@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use tokio::sync::OnceCell;
+use tracing::error;
 
 use crate::services::search::import::IndexEtl;
 use crate::services::search::index::{AsyncIndex, AsyncIndexHandle};
@@ -49,6 +50,10 @@ impl ServiceSearch {
 
     pub fn start_background_tasks(&self) {
         let srv = self.state.services();
-        _ = tokio::spawn(async move { srv.search.get_index().await.unwrap() });
+        _ = tokio::spawn(async move {
+            if let Err(err) = srv.search.get_index().await {
+                error!("failed to open index: {err}");
+            }
+        });
     }
 }
