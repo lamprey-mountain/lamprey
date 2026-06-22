@@ -197,7 +197,7 @@ impl Lamprey {
                     let _ = handle.events.send(Arc::new(event.clone()));
                 }
             }
-            _ => todo!(),
+            _ => {}, // TODO: handle more events
         }
     }
 }
@@ -267,7 +267,7 @@ async fn spawn_portal_inner(
 
                 // TODO: ly -> async fn process_discord_message(&self, ...) -> Result<MessageCreate>
                 let mut create = MessageCreate {
-                    content: None,
+                    content: Some(dm.content.clone()),
                     attachments: vec![],
                     metadata: None,
                     reply_id: None,
@@ -277,48 +277,11 @@ async fn spawn_portal_inner(
                     ephemeral: false,
                 };
 
-                // process attachments
-                let attachment_futures = dm.attachments.iter().map(|a| {
-                    let ly = &ly;
-                    let mut import = ImportUrl::from(a.clone());
-                    import.user_id = Some(puppet.id);
-                    async move {
-                        let media = ly.import_url(import).await?;
-                        Ok::<_, Error>(MessageAttachmentCreate {
-                            ty: MessageAttachmentCreateType::Media {
-                                media: MediaReference::Media { media_id: media.id },
-                                alt: None,
-                                filename: None,
-                            },
-                            // FIXME: spoilered attachments support
-                            spoiler: false,
-                        })
-                    }
-                });
-                create.attachments = futures::future::try_join_all(attachment_futures).await?;
-
-                // process embeds
-                for emb in dm.embeds.iter().cloned() {
-                    // TODO: process embed media
-                    let create_embed = EmbedCreate {
-                        url: emb.url.and_then(|u| u.parse().ok()),
-                        title: emb.title,
-                        description: emb.description,
-                        color: emb.colour.map(|c| format!("#{}", c.hex())),
-                        media: None,
-                        thumbnail: None,
-                        author_name: emb.author.as_ref().map(|a| a.name.clone()),
-                        author_url: emb.author.and_then(|a| a.url).and_then(|u| u.parse().ok()),
-                        author_avatar: None,
-                    };
-                    create.embeds.push(create_embed);
-                }
-
                 // TODO: reformat text (mentions, mostly)
                 // see mentions::convert_discord_mentions_to_lamprey
-                create.content = Some(dm.content.clone());
 
                 // populate reply_id
+                // ...
                 if let Some(reference) = &dm.message_reference {
                     // match reference.kind {
                     //     serenity::all::MessageReferenceKind::Default => {},

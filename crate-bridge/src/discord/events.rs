@@ -7,7 +7,7 @@ use serenity::all::{
     GuildMemberUpdateEvent, Interaction, Message, MessageId, MessageUpdateEvent, Presence,
     Reaction, Ready, TypingStartEvent,
 };
-use tokio::sync::RwLock;
+use tokio::sync::mpsc;
 use tracing::{error, info, trace};
 
 use crate::{
@@ -15,11 +15,12 @@ use crate::{
     discord::interactions::get_commands,
 };
 
-pub(super) struct Handler {
-    pub bridge: BridgeHandle,
-    // PERF: use dashmap?
-    pub portal_handles: Arc<RwLock<HashMap<PortalId, PortalHandle>>>,
-    pub portal_lookup: Arc<RwLock<HashMap<ChannelId, PortalId>>>,
+pub struct Handler {
+    pub tx: mpsc::Sender<DiscordEvent>,
+}
+
+pub enum DiscordEvent {
+    MessageCreate(Message),
 }
 
 #[async_trait]
@@ -38,17 +39,7 @@ impl EventHandler for Handler {
 
     async fn message(&self, _ctx: Context, message: Message) {
         info!("discord message create: {:?}", message.content);
-
-        // TODO: helper method to look up a portal
-        // TODO: helper method to send a PortalEvent to a channel_id
-        let portal_lookup = self.portal_lookup.read().await;
-        if let Some(portal_id) = portal_lookup.get(&message.channel_id) {
-            let portal_handles = self.portal_handles.read().await;
-            if let Some(handle) = portal_handles.get(portal_id) {
-                let event = PortalEvent::MessageCreate(MessageData::Discord(message));
-                let _ = handle.events.send(Arc::new(event)); // TODO: better error handling
-            }
-        }
+        let _ = self.tx.send(DiscordEvent::MessageCreate(message)).await;
     }
 
     async fn message_update(
