@@ -1,22 +1,20 @@
 use std::collections::HashMap;
 
+use common::v1::types::MessageSync;
 use common::v1::types::presence::{Activity, Presence, Status};
-use common::v1::types::{MessageSync, PuppetCreate};
-use common::v2::types::ApplicationId;
-use common::v2::types::media::{MediaDoneParams, MediaReference};
 use futures::StreamExt;
 use sdk::http::{Http, MessageCreateOptions};
-use sdk::syncer::{SyncerEvent, SyncerState};
+use sdk::syncer::SyncerEvent;
 use tokio::sync::{broadcast, oneshot};
 use tokio::task::JoinSet;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 use crate::bridge::{
     BridgeEvent, BridgeHandle, Platform, PlatformHandle, Portal, PortalEvent, PortalHandle,
     PortalId,
 };
 use crate::config::LampreyConfig;
-use crate::lamprey::client::{ImportUrl, LampreyClient};
+use crate::lamprey::client::LampreyClient;
 use crate::prelude::*;
 
 // re export lamprey types
