@@ -11,7 +11,7 @@
 	margin-bottom: calc(var(--text-margin) * -1);
 
 	.container, .details {
-		border: solid $sep-300 1px;
+		border: solid $sep-400 1px;
 		border-radius: 4px;
 		background: $bg-150;
 		padding: 2px 0;
@@ -82,12 +82,18 @@
 		--button-color: oklch(var(--color-green));
 	}
 
-	details {
-		margin: 4px var(--text-margin);
+	.details {
+		/* margin: 4px var(--text-margin); */
+		background: $bg-300;
+		padding: 0;
+		overflow: hidden;
 	}
 
 	summary {
-		background: $bg-200;
+		/* border: solid $sep-300 1px; */
+		/* margin: -3px -1px 0 -1px; */
+		padding: 4px;
+		background: $bg-150;
 		list-style: none;
 		display: flex;
 		align-items: center;
@@ -96,6 +102,7 @@
 		&::before {
 			content: "▶";
 			display: inline-block;
+			margin-left: 6px;
 			margin-right: 6px;
 			font-size: 0.7em;
 			color: $fg-500;
@@ -105,6 +112,10 @@
 
 		&::-webkit-details-marker {
 			display: none;
+		}
+
+		&:hover {
+			background: $bg-100;
 		}
 	}
 

@@ -105,7 +105,7 @@ const ComponentRenderer = (props: { component: LampreyComponent }) => {
 			<Match when={matches(props.component, (e) => e.type === "LinkButton")}>
 				{(m) => (
 					<a
-						class="button"
+						class="button component-button button-secondary"
 						href={m().url ?? undefined}
 						target="_blank"
 						rel="noopener noreferrer"
