@@ -104,6 +104,14 @@ impl UnfurlPlugin for HtmlStreamPlugin {
             author_url: None,
             author_avatar: None,
             site_avatar: None,
+
+            // TODO: handle favicon as site_avatar
+            // i need some way to avoid constantly refetching the same favicon though...
+            // site_avatar: data.favicon_url.and_then(|u| url.join(&u).ok()).map(|u| {
+            //     EmbedMediaPending::new(u)
+            //         .mime_guess("image/x-icon".parse().unwrap())
+            //         .into()
+            // }),
         };
 
         // Handle nested/recursive media
@@ -404,7 +412,8 @@ impl TokenSink for MetaSink {
 
                                 for r in rels {
                                     match r.to_lowercase().as_str() {
-                                        "icon" | "shortcut icon" => {
+                                        "icon" => {
+                                            // TODO: make some icon rels higher priority than others?
                                             if data.favicon_url.is_none() {
                                                 data.favicon_url = Some(href.clone());
                                             }

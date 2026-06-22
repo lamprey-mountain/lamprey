@@ -37,12 +37,11 @@ pub struct Embed {
     pub id: EmbedId,
 
     /// what kind of thing this is
-    #[cfg_attr(feature = "serde", serde(rename = "type"))]
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[cfg_attr(feature = "serde", serde(default, rename = "type"))]
     pub ty: EmbedType,
 
     /// the url this embed was requested for
-    // TODO: validate length
+    // FIXME: validate length
     pub url: Option<Url>,
 
     /// the final resolved url, after redirects and canonicalization. If None, its the same as `url`.
@@ -87,6 +86,7 @@ pub struct Embed {
     // pub field: Vec<name, value, inline?>
 }
 
+// TODO: rename to EmbedGenerate
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -101,6 +101,7 @@ pub struct EmbedRequest {
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct EmbedCreate {
     /// the url this embed was requested for
+    // FIXME: validate max length
     pub url: Option<Url>,
 
     #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
