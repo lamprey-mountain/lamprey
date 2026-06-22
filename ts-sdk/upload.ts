@@ -19,27 +19,6 @@ export type Upload = {
 };
 
 export async function createUpload(opts: UploadOptions): Promise<Upload> {
-	let unsubscribeSync: (() => void) | undefined;
-
-	function cleanupSync() {
-		if (unsubscribeSync) {
-			unsubscribeSync();
-			unsubscribeSync = undefined;
-		}
-	}
-
-	const originalOnComplete = opts.onComplete;
-	opts.onComplete = (media) => {
-		cleanupSync();
-		originalOnComplete(media);
-	};
-
-	const originalOnFail = opts.onFail;
-	opts.onFail = (err) => {
-		cleanupSync();
-		originalOnFail(err);
-	};
-
 	const { data, error } = await opts.client.http.POST("/api/v1/media", {
 		body: {
 			filename: opts.file.name,
@@ -62,7 +41,6 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 	let offset = 0;
 	let currentOffset = 0;
 	let xhr: XMLHttpRequest;
-	let _uploadComplete = false;
 
 	async function resumeUpload() {
 		// make sure to cancel the currently in flight upload, in case resume is called multiple times
@@ -110,15 +88,15 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 
 		xhr.onload = async () => {
 			if (xhr.status === 204) {
-				_uploadComplete = true;
-				unsubscribeSync = opts.client.onSync((msg) => {
-					if (msg.type === "MediaProcessed" && msg.media.id === media_id) {
-						opts.onComplete(msg.media);
-					}
-				});
-			} else if (xhr.status === 200) {
-				const media = JSON.parse(xhr.responseText);
-				opts.onComplete(media);
+				const { data, error } = await opts.client.http.PUT(
+					"/api/v1/media/{media_id}/done",
+					{
+						params: { path: { media_id } },
+						body: { async: false },
+					},
+				);
+				if (error) throw error;
+				if (data) opts.onComplete(data);
 			} else {
 				opts.onFail(new Error(`upload failed: ${xhr.responseText}`));
 			}
@@ -168,7 +146,6 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 	}
 
 	async function abort() {
-		cleanupSync();
 		xhr?.abort();
 		await opts.client.http.DELETE("/api/v1/media/{media_id}", {
 			params: {
