@@ -53,8 +53,6 @@ pub enum DbMediaData {
 impl DbMediaWithId {
     #[tracing::instrument]
     pub fn parse(self) -> MediaV2 {
-        self.id;
-
         let mut data = self.data;
         if let serde_json::Value::Object(map) = &mut data {
             map.insert("user_id".to_string(), serde_json::json!(self.user_id));

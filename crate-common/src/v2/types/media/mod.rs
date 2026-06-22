@@ -143,7 +143,10 @@ pub struct Media {
     pub quarantine: Option<MediaQuarantine>,
 
     /// The results of automated scans.
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Vec::is_empty")
+    )]
     pub scans: Vec<MediaScan>,
     // pub ratings: ContentRatings,
     /// Whether this media can be fetched through the `/thumb/{media_id}` cdn route.
