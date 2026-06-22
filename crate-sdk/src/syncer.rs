@@ -170,7 +170,7 @@ impl Syncer {
             .unwrap_or(SyncerState::Disconnected)
     }
 
-    async fn run(mut self, token: SessionToken, base_url: Url) {
+    async fn run(mut self, token: SessionToken, mut base_url: Url) {
         loop {
             if self.state() == SyncerState::Disconnected {
                 match self.rx.recv().await {
@@ -183,14 +183,19 @@ impl Syncer {
                 }
             }
 
+            base_url.set_scheme(match base_url.scheme() {
+                "http" => "ws",
+                _ => "wss",
+            }).unwrap();
+
             let url = base_url
                 .join("/api/v1/sync?version=1")
                 .expect("invalid url");
 
             let (client, _) = match tokio_tungstenite::connect_async(url.as_str()).await {
                 Ok(res) => res,
-                Err(_) => {
-                    warn!("websocket failed to connect, retrying in 1 second...");
+                Err(err) => {
+                    warn!(?err, "websocket failed to connect, retrying in 1 second...");
                     self.set_state(SyncerState::Waiting).ok();
                     tokio::select! {
                         _ = tokio::time::sleep(Duration::from_secs(1)) => {}
