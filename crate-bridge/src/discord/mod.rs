@@ -99,7 +99,9 @@ impl Discord {
                         events::DiscordEvent::MessageCreate(message) => {
                             self.route_portal_event(
                                 message.channel_id,
-                                PortalEvent::MessageCreate(MessageData::Discord(message)),
+                                PortalEvent::MessageCreate(MessageData::Discord {
+                                    message: Box::new(message),
+                                }),
                             );
                         }
                     }
@@ -177,9 +179,14 @@ async fn spawn_portal_inner(
         match &*event {
             PortalEvent::Typing(_) => todo!(),
             PortalEvent::MessageCreate(data) => {
-                let msg = match data {
-                    MessageData::Lamprey(m) => m,
-                    MessageData::Discord(_) => continue,
+                let (msg, user, room_member, info) = match data {
+                    MessageData::Lamprey {
+                        message,
+                        user,
+                        room_member,
+                        info,
+                    } => (&**message, &**user, room_member.as_deref(), &**info),
+                    MessageData::Discord { .. } => continue,
                 };
 
                 let discord_cfg = portal.discord.as_ref().unwrap();
@@ -205,6 +212,15 @@ async fn spawn_portal_inner(
                         "".to_owned()
                     }
                 });
+
+                let username = room_member
+                    .and_then(|rm| rm.override_name.clone())
+                    .unwrap_or_else(|| user.name.clone());
+
+                let avatar_url = user
+                    .avatar
+                    .as_ref()
+                    .map(|media_id| format!("{}/thumb/{}", info.cdn_url, media_id));
 
                 let mut embeds = vec![];
                 if let Some(reply_id) = msg.reply_id() {
@@ -241,10 +257,15 @@ async fn spawn_portal_inner(
                 // TODO: handle attachments
                 // TODO: handle mentions
 
-                let builder = ExecuteWebhook::new().content(content).embeds(embeds);
-                // // TODO: set profile
-                // .username(username)
-                // .avatar_url(avatar_url)
+                let mut builder = ExecuteWebhook::new()
+                    .content(content)
+                    .embeds(embeds)
+                    .username(username);
+
+                if let Some(avatar_url) = avatar_url {
+                    builder = builder.avatar_url(avatar_url);
+                }
+
                 // // TODO: handle threads
                 // .in_thread(thread_id)
                 // // TODO: handle other stuff

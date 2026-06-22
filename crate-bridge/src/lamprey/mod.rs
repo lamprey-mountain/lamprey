@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use common::v1::types::MessageSync;
+use common::v1::types::misc::UserIdReq;
 use common::v1::types::presence::{Activity, Presence, Status};
 use futures::StreamExt;
 use sdk::http::{Http, MessageCreateOptions};
@@ -20,7 +21,8 @@ use crate::prelude::*;
 // re export lamprey types
 pub use common::v1::types::{
     ChannelId, MediaId, Mentions, Message, MessageAttachment, MessageAttachmentCreate,
-    MessageAttachmentCreateType, MessageCreate, MessageId, ParseMentions, RoomId, UserId,
+    MessageAttachmentCreateType, MessageCreate, MessageId, ParseMentions, RoomId, RoomMember, User,
+    UserId,
     embed::{Embed, EmbedCreate, EmbedType},
 };
 pub use common::v2::types::media::{Media, MediaCreate, MediaCreateSource};
@@ -141,9 +143,30 @@ impl Lamprey {
                         }
                     }
 
+                    // PERF: cache this
+                    let user = self
+                        .client
+                        .http()
+                        .user_get(UserIdReq::UserId(message.author_id))
+                        .await?;
+
+                    // // TODO: fetch room member if message.room_id is some
+                    // let room_member = self
+                    //     .client
+                    //     .http()
+                    //     .room_member_get(room_id, UserIdReq::UserId(message.author_id))
+                    //     .await?;
+
                     self.route_portal_event(
                         &message.channel_id,
-                        PortalEvent::MessageCreate(bridge::MessageData::Lamprey(message.clone())),
+                        PortalEvent::MessageCreate(bridge::MessageData::Lamprey {
+                            message: Box::new(message.clone()),
+                            user: Box::new(user.inner),
+                            room_member: None,
+                            info: Box::new(bridge::LampreyInfo {
+                                cdn_url: self.client.http().cdn_url().clone(),
+                            }),
+                        }),
                     );
                 }
                 // MessageSync::MessageUpdate { message } => {
@@ -264,11 +287,11 @@ async fn spawn_portal_inner(
             PortalEvent::Typing(_) => todo!(),
             PortalEvent::MessageCreate(data) => {
                 let dm = match data {
-                    bridge::MessageData::Lamprey(_) => {
+                    bridge::MessageData::Lamprey { .. } => {
                         // don't send messages from lamprey back to lamprey
                         continue;
                     }
-                    bridge::MessageData::Discord(message) => {
+                    bridge::MessageData::Discord { message } => {
                         // TODO: filter out messages on the discord side
                         // message.webhook_id == Some(webhook_id)
                         message

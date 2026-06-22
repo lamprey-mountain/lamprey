@@ -1,8 +1,10 @@
-use crate::bridge::BridgeHandle;
+use crate::bridge::{BridgeHandle, PortalHandle};
 use crate::prelude::*;
 use common::util::Diff;
 use common::v1::types::misc::{ApplicationIdReq, UserIdReq};
-use common::v1::types::{Message, PuppetCreate, User, UserPatch};
+use common::v1::types::{
+    Message, PaginationDirection, PaginationQuery, PuppetCreate, User, UserPatch,
+};
 use common::v2::types::media::{Media, MediaCreate, MediaCreateSource, MediaDoneParams};
 use common::v2::types::{MessageId, UserId};
 use url::Url;
@@ -197,7 +199,20 @@ impl LampreyClient {
     }
 
     pub async fn fetch_after(&self, id: MessageId) -> Result<Vec<Message>> {
-        todo!()
+        let channel_id = todo!();
+        let page = self
+            .http
+            .message_list(
+                channel_id,
+                &PaginationQuery {
+                    from: Some(id),
+                    to: None,
+                    dir: Some(PaginationDirection::F),
+                    limit: Some(256),
+                },
+            )
+            .await?;
+        Ok(page.items)
     }
 }
 

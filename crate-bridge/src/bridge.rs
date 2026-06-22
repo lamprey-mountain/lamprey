@@ -138,9 +138,22 @@ pub struct Attachment {
 }
 
 #[derive(Debug, Clone)]
+pub struct LampreyInfo {
+    pub cdn_url: Url,
+}
+
+#[derive(Debug, Clone)]
 pub enum MessageData {
-    Lamprey(lamprey::Message),
-    Discord(discord::Message),
+    Lamprey {
+        message: Box<lamprey::Message>,
+        user: Box<lamprey::User>,
+        room_member: Option<Box<lamprey::RoomMember>>,
+        info: Box<LampreyInfo>,
+    },
+
+    Discord {
+        message: Box<discord::Message>,
+    },
 }
 
 impl MessageData {
