@@ -1,4 +1,5 @@
 use crate::bridge::{BridgeHandle, PortalHandle};
+use crate::lamprey::ChannelId;
 use crate::prelude::*;
 use common::util::Diff;
 use common::v1::types::misc::{ApplicationIdReq, UserIdReq};
@@ -13,11 +14,20 @@ use url::Url;
 pub struct LampreyClient {
     pub http: sdk::http::Http,
     pub bridge: BridgeHandle,
+    pub channel_id: ChannelId,
 }
 
 impl LampreyClient {
-    pub fn new(http: sdk::http::Http, bridge: BridgeHandle) -> Self {
-        Self { http, bridge }
+    pub fn new(
+        http: sdk::http::Http,
+        bridge: BridgeHandle,
+        channel_id: ChannelId,
+    ) -> Self {
+        Self {
+            http,
+            bridge,
+            channel_id,
+        }
     }
 
     // sync puppet, return puppet user
@@ -199,11 +209,10 @@ impl LampreyClient {
     }
 
     pub async fn fetch_after(&self, id: MessageId) -> Result<Vec<Message>> {
-        let channel_id = todo!();
         let page = self
             .http
             .message_list(
-                channel_id,
+                self.channel_id,
                 &PaginationQuery {
                     from: Some(id),
                     to: None,

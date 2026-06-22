@@ -216,15 +216,20 @@ impl Lamprey {
     fn handle_bridge_event(&mut self, event: &BridgeEvent) {
         match event {
             BridgeEvent::PortalInit(id, portal, handle) => {
-                if let Some(lamprey) = &portal.lamprey {
+                let channel_id = if let Some(lamprey) = &portal.lamprey {
                     self.portal_lookup.insert(lamprey.channel_id, *id);
-                }
+                    lamprey.channel_id
+                } else {
+                    // we aren't part of this bridge
+                    return;
+                };
                 self.portal_handles.insert(*id, handle.clone());
                 self.portal_tasks.spawn(spawn_portal(
                     *id,
                     portal.clone(),
                     handle.clone(),
                     self.client.http(),
+                    channel_id,
                 ));
             }
             BridgeEvent::PortalEvent(id, event) => {
@@ -242,8 +247,12 @@ async fn spawn_portal(
     portal: Portal,
     handle: PortalHandle,
     http: Http,
+    channel_id: ChannelId,
 ) -> (PortalId, Result<()>) {
-    (id, spawn_portal_inner(id, portal, handle, http).await)
+    (
+        id,
+        spawn_portal_inner(id, portal, handle, http, channel_id).await,
+    )
 }
 
 async fn spawn_portal_inner(
@@ -251,9 +260,10 @@ async fn spawn_portal_inner(
     portal: Portal,
     handle: PortalHandle,
     http: Http,
+    channel_id: ChannelId,
 ) -> Result<()> {
     let mut events = handle.events.subscribe();
-    let ly = LampreyClient::new(http, handle.bridge.clone());
+    let ly = LampreyClient::new(http, handle.bridge.clone(), channel_id);
 
     // TODO: backfill should be a task that doesn't block the portal
     // HOWEVER, the portal should bridge messages until backfilling is done
