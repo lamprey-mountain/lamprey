@@ -6,6 +6,7 @@ import { useOptionalChannel } from "@/contexts/channel";
 import { useRoom } from "@/contexts/room";
 import type { ChannelSearch } from "@/types/chat";
 import { MessageView } from "./Message";
+import { Dropdown } from "@/atoms/Dropdown";
 
 export const SearchResults = (props: {
 	channel?: Channel;
@@ -40,6 +41,26 @@ export const SearchResults = (props: {
 				<Show when={!props.search.loading} fallback={<>Searching...</>}>
 					{props.search.results?.approximate_total ?? 0} results
 				</Show>
+				<div style="flex:1"></div>
+				<Dropdown
+					required
+					selected={props.search.sort ?? "newest"}
+					options={[
+						{ item: "newest", label: "Newest" },
+						{ item: "oldest", label: "Oldest" },
+						{ item: "relevancy", label: "Relevancy" },
+					]}
+					enableWheel={false}
+					onSelect={(item) => {
+						if (item) {
+							if (props.channel && channelCtx[1]) {
+								channelCtx[1]("search", "sort", item);
+							} else if (props.room && roomCtx) {
+								roomCtx[1]("search", "sort", item);
+							}
+						}
+					}}
+				/>
 				<button
 					type="button"
 					class="button"

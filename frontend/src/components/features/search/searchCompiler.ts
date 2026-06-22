@@ -10,7 +10,7 @@ import { type FilterASTNode, SEARCH_FILTERS } from "./filters.config";
 export interface SearchRequestBody {
 	query?: string;
 	sort_order: "asc" | "desc";
-	sort_field: "Created";
+	sort_field: "Created" | "Relevancy" | "Activity" | "Archived" | "Name" | "Id" | "Members";
 	limit: number;
 }
 
@@ -23,15 +23,31 @@ export function buildBackendSearchBody(
 	context: {
 		channel?: ThreadT;
 		room?: RoomT;
+		sort?: "newest" | "oldest" | "relevancy";
 	},
 ): SearchRequestBody {
 	const ast = extractAST(state);
 	const queryParts = compileAST(ast, context);
 
+	let sort_field: SearchRequestBody["sort_field"] = "Created";
+	let sort_order: SearchRequestBody["sort_order"] = "desc";
+
+	if (context.sort === "oldest") {
+		sort_field = "Created";
+		sort_order = "asc";
+	} else if (context.sort === "relevancy") {
+		sort_field = "Relevancy";
+		sort_order = "desc";
+	} else {
+		// Default to newest
+		sort_field = "Created";
+		sort_order = "desc";
+	}
+
 	return {
 		query: queryParts.length > 0 ? queryParts.join(" ") : undefined,
-		sort_order: "desc" as const,
-		sort_field: "Created" as const,
+		sort_order,
+		sort_field,
 		limit: 100,
 	};
 }

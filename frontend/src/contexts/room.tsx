@@ -10,6 +10,7 @@ export type RoomSearch = {
 	before?: string;
 	after?: string;
 	channel?: string[];
+	sort?: "newest" | "oldest" | "relevancy";
 };
 
 export type RoomState = {

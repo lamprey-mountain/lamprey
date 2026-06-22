@@ -64,6 +64,7 @@ export type ChannelSearch = {
 	before?: string;
 	after?: string;
 	channel?: string[];
+	sort?: "newest" | "oldest" | "relevancy";
 };
 
 export type ThreadsViewData = {

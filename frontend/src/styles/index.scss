@@ -2116,11 +2116,12 @@ body.resizing {
 	flex-direction: column;
 
 	& > header {
-		padding: 2px 8px;
+		padding: 4px 8px;
 		display: flex;
-		justify-content: space-between;
 		align-items: center;
+		gap: 4px;
 		background: $bg-100;
+		border-bottom: solid $bg-200 1px;
 	}
 
 	& > ul {
@@ -2135,6 +2136,10 @@ body.resizing {
 		border-radius: 4px;
 		border: solid $sep-300 1px;
 	}
+}
+
+.search-results > header > .dropdown-container {
+	width: 8em;
 }
 
 .voice-chat-sidebar {

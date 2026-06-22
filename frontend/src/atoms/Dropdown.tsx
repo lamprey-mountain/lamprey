@@ -93,6 +93,7 @@ export function createDropdown<T>(props: {
 	options: () => Array<DropdownItem<T>>;
 	mount?: Element | DocumentFragment | null;
 	placeholder?: string;
+	enableWheel?: boolean;
 }) {
 	const [shown, setShown] = createSignal(false);
 	const [inputEl, setInputEl] = createSignal<HTMLInputElement>();
@@ -119,6 +120,14 @@ export function createDropdown<T>(props: {
 
 	const select = (item: T | null) => {
 		setSelected(() => item);
+		if (!props.ignoreMissingLabel) {
+			const opt = props.options().find((i) => i.item === selected());
+			if (opt) {
+				setValue(opt.label);
+			} else {
+				setValue("");
+			}
+		}
 		setShown(false);
 		props.onSelect?.(item);
 	};
@@ -171,6 +180,7 @@ export function createDropdown<T>(props: {
 
 	function handleWheel(e: WheelEvent) {
 		e.preventDefault();
+		if (props.enableWheel === false) return;
 		const options = props.options();
 		if (e.deltaY < 0) {
 			if (shown()) {
@@ -304,6 +314,8 @@ export function createDropdown<T>(props: {
 												tabindex="-1"
 												onMouseOver={() => selector.setHovered(entry.obj)}
 												onMouseDown={(e) => {
+													// TODO: handle click instead?
+													// TODO: use pointer rather than mouse events
 													e.preventDefault();
 													select(entry.obj.item);
 												}}
@@ -530,6 +542,7 @@ export function Dropdown<T>(
 		mount?: Element | DocumentFragment | null;
 		ignoreMissingLabel?: boolean;
 		placeholder?: string;
+		enableWheel?: boolean;
 	}>,
 ) {
 	const dropdown = createDropdown<T>({
@@ -542,6 +555,7 @@ export function Dropdown<T>(
 		mount: props.mount,
 		ignoreMissingLabel: props.ignoreMissingLabel,
 		placeholder: props.placeholder,
+		enableWheel: props.enableWheel,
 	});
 
 	return <dropdown.View style={props.style} />;

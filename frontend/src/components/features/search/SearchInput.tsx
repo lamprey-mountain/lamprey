@@ -298,6 +298,17 @@ export const SearchInput = (props: {
 		}
 	});
 
+	createEffect((prevSort) => {
+		const search = currentSearch();
+		const currentSort = search?.sort;
+
+		if (prevSort !== undefined && currentSort !== prevSort) {
+			handleSubmit();
+		}
+
+		return currentSort;
+	}, currentSearch()?.sort);
+
 	/**
 	 * Build the backend query using the compiler and execute the search.
 	 * All backend-specific logic lives in `buildBackendSearchBody`.
@@ -327,6 +338,7 @@ export const SearchInput = (props: {
 		const body = buildBackendSearchBody(editor.view.state, {
 			channel: props.channel,
 			room: props.room,
+			sort: currentSearch()?.sort,
 		}) as unknown as Record<string, unknown>;
 
 		const res = await messagesService.search(body);
