@@ -7,12 +7,13 @@ use common::v2::types::media::{MediaDoneParams, MediaReference};
 use futures::StreamExt;
 use sdk::http::{Http, MessageCreateOptions};
 use sdk::syncer::{SyncerEvent, SyncerState};
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, oneshot};
 use tokio::task::JoinSet;
-use tracing::warn;
+use tracing::{debug, info, warn};
 
 use crate::bridge::{
-    BridgeEvent, BridgeHandle, Platform, Portal, PortalEvent, PortalHandle, PortalId,
+    BridgeEvent, BridgeHandle, Platform, PlatformHandle, Portal, PortalEvent, PortalHandle,
+    PortalId,
 };
 use crate::config::LampreyConfig;
 use crate::lamprey::client::{ImportUrl, LampreyClient};
@@ -20,8 +21,8 @@ use crate::prelude::*;
 
 // re export lamprey types
 pub use common::v1::types::{
-    ChannelId, MediaId, Message, MessageAttachment, MessageAttachmentCreate,
-    MessageAttachmentCreateType, MessageCreate, MessageId, RoomId, UserId,
+    ChannelId, MediaId, Mentions, Message, MessageAttachment, MessageAttachmentCreate,
+    MessageAttachmentCreateType, MessageCreate, MessageId, ParseMentions, RoomId, UserId,
     embed::{Embed, EmbedCreate, EmbedType},
 };
 pub use common::v2::types::media::{Media, MediaCreate, MediaCreateSource};
@@ -29,8 +30,14 @@ pub use common::v2::types::media::{Media, MediaCreate, MediaCreateSource};
 mod client;
 mod interactions;
 
-pub fn spawn(bridge: BridgeHandle, config: LampreyConfig) {
-    tokio::spawn(Lamprey::connect(bridge, config));
+pub fn spawn(bridge: BridgeHandle, config: LampreyConfig) -> PlatformHandle {
+    let (tx, rx) = oneshot::channel();
+    let task = tokio::spawn(Lamprey::connect(bridge, config, tx));
+    PlatformHandle {
+        name: "lamprey",
+        ready: rx,
+        task,
+    }
 }
 
 struct Lamprey {
@@ -42,7 +49,11 @@ struct Lamprey {
 }
 
 impl Lamprey {
-    async fn connect(bridge: BridgeHandle, config: LampreyConfig) -> Result<()> {
+    async fn connect(
+        bridge: BridgeHandle,
+        config: LampreyConfig,
+        ready_tx: oneshot::Sender<()>,
+    ) -> Result<()> {
         let client = sdk::Client::builder()
             .api_url(config.api_url.clone())
             .sync_url(config.ws_url.clone().unwrap_or(config.api_url.clone()))
@@ -67,16 +78,19 @@ impl Lamprey {
             portal_handles: HashMap::new(),
             portal_lookup: HashMap::new(),
         };
-        me.start().await;
+        me.start(ready_tx).await;
 
         Ok(())
     }
 
-    async fn start(mut self) {
+    async fn start(mut self, ready_tx: oneshot::Sender<()>) {
         let sync = self.client.syncer();
         let mut sub = sync.subscribe();
         let mut ctl = self.bridge.events.subscribe();
         sync.connect();
+
+        info!("connected");
+        ready_tx.send(()).unwrap();
 
         loop {
             // TODO: handle cancellation
@@ -197,7 +211,7 @@ impl Lamprey {
                     let _ = handle.events.send(Arc::new(event.clone()));
                 }
             }
-            _ => {}, // TODO: handle more events
+            _ => {} // TODO: handle more events
         }
     }
 }

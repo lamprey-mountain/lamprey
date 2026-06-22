@@ -4,7 +4,7 @@ use figment::{
     providers::{Env, Format, Toml},
 };
 use lamprey_bridge::{
-    bridge::{BridgeEvent, BridgeHandle, Portal, PortalId, Realm, RealmId},
+    bridge::{BridgeEvent, BridgeHandle},
     config::{Config, ConfigPlatform},
     database::SqliteDatabase,
     discord, lamprey,
@@ -12,7 +12,8 @@ use lamprey_bridge::{
 use opentelemetry_otlp::WithExportConfig;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::{str::FromStr, sync::Arc};
-use tracing::info;
+use tokio::task::JoinSet;
+use tracing::{error, info, warn};
 use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};
 
 #[tokio::main]
@@ -61,18 +62,26 @@ async fn main() -> Result<()> {
     sqlx::migrate!("./migrations").run(&pool).await?;
     let db = SqliteDatabase::new(pool);
 
+    // spawn connections to platforms
+    let mut readys = vec![];
+    let mut tasks = vec![];
     let bridge = BridgeHandle::new(Arc::new(db));
 
-    // TODO: supervise platform tasks
-    // platform_tasks: JoinSet<(String, Result<()>)>,
-
-    for (name, s) in &config.platform {
-        match s {
+    for (_name, s) in &config.platform {
+        let p = match s {
             ConfigPlatform::Lamprey(c) => lamprey::spawn(bridge.clone(), c.clone()),
             ConfigPlatform::Discord(c) => discord::spawn(bridge.clone(), c.clone()),
-        }
+        };
+
+        readys.push(p.ready);
+        tasks.push((p.name, p.task));
     }
 
+    for ready in readys {
+        ready.await.unwrap();
+    }
+
+    // init realms and portals
     let realms = bridge.db.realm_list().await?;
     let portals = bridge.db.portal_list().await?;
 
@@ -87,6 +96,24 @@ async fn main() -> Result<()> {
             .events
             .send(Arc::new(event))
             .expect("TODO: better error handling");
+    }
+
+    // supervise everything
+    let mut taskset = JoinSet::new();
+    for (name, task) in tasks {
+        taskset.spawn(async move {
+            let result = task.await;
+            (name, result)
+        });
+    }
+
+    while let Some(result) = taskset.join_next().await {
+        let (name, res) = result?;
+        match res {
+            Ok(_) => warn!(name, "platform exited cleanly"),
+            Err(err) => error!(name, ?err, "platform crashed"),
+            // TODO: restart logic here
+        }
     }
 
     // TODO: proper shutdown handling

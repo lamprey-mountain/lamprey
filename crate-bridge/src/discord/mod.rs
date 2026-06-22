@@ -2,11 +2,11 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use serenity::all::{ExecuteWebhook, GatewayIntents};
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinSet;
 use tracing::{debug, info, warn};
 
-use crate::bridge::{MessageData, Portal, PortalHandle, PortalId};
+use crate::bridge::{MessageData, PlatformHandle, Portal, PortalHandle, PortalId};
 use crate::prelude::*;
 use crate::{
     bridge::{BridgeEvent, BridgeHandle, PortalEvent},
@@ -18,16 +18,18 @@ mod interactions;
 
 // re export discord (serenity) types
 pub use serenity::all::{
-    Attachment, AttachmentId, ChannelId, CreateEmbed, Embed, GuildId, Message, MessageId, User,
-    UserId,
+    Attachment, AttachmentId, ChannelId, CreateAllowedMentions, CreateEmbed, Embed, GuildId,
+    Message, MessageId, User, UserId,
 };
 
-pub fn spawn(bridge: BridgeHandle, config: DiscordConfig) {
-    tokio::spawn(async move {
-        if let Err(err) = Discord::connect(bridge, config).await {
-            warn!("Discord connect error: {err:?}",);
-        }
-    });
+pub fn spawn(bridge: BridgeHandle, config: DiscordConfig) -> PlatformHandle {
+    let (tx, rx) = oneshot::channel();
+    let task = tokio::spawn(Discord::connect(bridge, config, tx));
+    PlatformHandle {
+        name: "discord",
+        ready: rx,
+        task,
+    }
 }
 
 struct Discord {
@@ -41,7 +43,11 @@ struct Discord {
 }
 
 impl Discord {
-    async fn connect(bridge: BridgeHandle, config: DiscordConfig) -> Result<()> {
+    async fn connect(
+        bridge: BridgeHandle,
+        config: DiscordConfig,
+        ready_tx: oneshot::Sender<()>,
+    ) -> Result<()> {
         let (tx, rx) = mpsc::channel(1024);
         let handler = events::Handler { tx };
         let client = serenity::Client::builder(
@@ -52,21 +58,28 @@ impl Discord {
         .await
         .map_err(|e| anyhow::anyhow!("Error creating client: {:?}", e))?;
 
+        let http = client.http.clone();
+        let cache = client.cache.clone();
+
         let me = Self {
             bridge,
             rx,
             portal_tasks: JoinSet::new(),
             portal_handles: HashMap::new(),
             portal_lookup: HashMap::new(),
-            http: client.http.clone(),
-            cache: client.cache.clone(),
+            http,
+            cache,
         };
-        me.start(client).await;
+        me.start(client, ready_tx).await?;
 
         Ok(())
     }
 
-    async fn start(mut self, mut client: serenity::Client) -> Result<()> {
+    async fn start(
+        mut self,
+        mut client: serenity::Client,
+        ready_tx: oneshot::Sender<()>,
+    ) -> Result<()> {
         tokio::spawn(async move {
             if let Err(why) = client.start().await {
                 eprintln!("Client error: {:?}", why);
@@ -74,6 +87,7 @@ impl Discord {
         });
 
         let mut bridge_events = self.bridge.events.subscribe();
+        ready_tx.send(()).unwrap();
 
         loop {
             tokio::select! {

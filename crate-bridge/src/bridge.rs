@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::sync::broadcast;
+use tokio::{
+    sync::{broadcast, oneshot},
+    task::JoinHandle,
+};
 use url::Url;
 
 use crate::{database::Database, prelude::*};
@@ -170,6 +173,12 @@ pub struct PortalHandle {
     pub id: PortalId,
     pub events: broadcast::Sender<Arc<PortalEvent>>,
     pub bridge: BridgeHandle,
+}
+
+pub struct PlatformHandle {
+    pub name: &'static str,
+    pub ready: oneshot::Receiver<()>,
+    pub task: JoinHandle<Result<()>>,
 }
 
 pub const BROADCAST_CHANNEL_CAPACITY: usize = 1024;

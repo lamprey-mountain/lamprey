@@ -83,6 +83,7 @@ impl ClientBuilder {
         let http = Http::builder()
             .token(token.clone())
             .api_url(api_url.clone())
+            .cdn_url(api_url.clone()) // cdn_url isn't used
             .build()?;
 
         let mut sync_url = self.sync_url;
