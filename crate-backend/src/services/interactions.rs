@@ -32,7 +32,7 @@ pub struct ServiceInteractions {
 
     // TODO: support multiple server instances
     // maybe use nats jetstream or redis or whatever for this
-    interactions: DashMap<InteractionId, InteractionEntry>,
+    interactions: DashMap<InteractionId, Arc<InteractionEntry>>,
     interaction_nonce_to_id: DashMap<String, InteractionId>,
 }
 
@@ -186,7 +186,7 @@ impl ServiceInteractions {
             nonce: nonce.clone(),
             state: InteractionEntryState::Created { expire_handle },
         };
-        self.interactions.insert(id, entry);
+        self.interactions.insert(id, Arc::new(entry));
         if let Some(nonce) = nonce.clone() {
             self.interaction_nonce_to_id.insert(nonce, id);
         }
@@ -340,14 +340,15 @@ impl ServiceInteractions {
 
         self.interactions.insert(
             id,
-            InteractionEntry {
-                nonce: entry.nonce,
-                interaction: entry.interaction,
+            Arc::new(InteractionEntry {
+                nonce: entry.nonce.clone(),
+                interaction: entry.interaction.clone(),
                 state: InteractionEntryState::Responded {
                     expire_handle,
                     deferred,
+                    original_message_id: None, // TODO
                 },
-            },
+            }),
         );
 
         let resp = InteractionResponse {
@@ -372,14 +373,14 @@ impl ServiceInteractions {
         self.state.broadcast(MessageSync::InteractionFailure {
             user_id: interaction_user_id,
             interaction_id: i.interaction.id,
-            nonce: i.nonce,
+            nonce: i.nonce.clone(),
             error_code,
         })?;
 
         Ok(())
     }
 
-    fn remove(&self, id: InteractionId) -> Option<InteractionEntry> {
+    fn remove(&self, id: InteractionId) -> Option<Arc<InteractionEntry>> {
         let it = self.interactions.remove(&id);
         if let Some(nonce) = it.as_ref().and_then(|(_, i)| i.nonce.as_ref()) {
             self.interaction_nonce_to_id.remove(nonce);
@@ -389,11 +390,11 @@ impl ServiceInteractions {
     }
 
     /// get an interaction if it isn't expired
-    pub async fn get(&self, id: InteractionId) -> Result<&InteractionEntry> {
+    pub async fn get(&self, id: InteractionId) -> Result<Arc<InteractionEntry>> {
         let entry = self
             .interactions
             .get(&id)
             .ok_or(Error::BadStatic("unknown or expired interaction"))?;
-        Ok(&*entry)
+        Ok(entry.value().clone())
     }
 }
