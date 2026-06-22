@@ -152,12 +152,55 @@ impl Messages {
     }
 
     pub async fn fetch_after(&self, id: MessageId, limit: u16) -> Result<MessageSlice> {
-        // copy fetch_before
-        todo!()
+        {
+            let read = self.inner.read().await;
+            if let Some(range) = read.find_range(id) {
+                // messages in range after id
+                let have: Vec<_> = read
+                    .messages
+                    .range(id..=range.end)
+                    .take(limit as usize)
+                    .map(|(_, m)| m.clone())
+                    .collect();
+                if have.len() == limit as usize {
+                    return Ok(MessageSlice { messages: have });
+                }
+            }
+        }
+
+        let res = self
+            .http
+            .message_list(
+                self.channel_id,
+                &PaginationQuery {
+                    from: Some(id),
+                    to: None,
+                    dir: Some(PaginationDirection::F),
+                    limit: Some(limit),
+                },
+            )
+            .await?;
+        let msgs: Vec<Arc<Message>> = res.items.into_iter().map(Arc::new).collect();
+        let new_range = Range {
+            start: id,
+            end: msgs.last().map(|m| m.id).unwrap_or(id),
+            stale: false,
+        };
+
+        {
+            let mut write = self.inner.write().await;
+            for m in msgs.iter().cloned() {
+                write.insert_message(m);
+            }
+            write.insert_range(new_range);
+        }
+
+        Ok(MessageSlice { messages: msgs })
     }
 
     pub async fn fetch_context(&self, id: MessageId, limit: u16) -> Result<MessageSlice> {
-        // copy fetch_before with this logic
+        // TODO: return existing messge slice if it exists
+
         let res = self
             .http
             .message_context(
@@ -170,10 +213,24 @@ impl Messages {
                 },
             )
             .await?;
-        // page.items; // Vec<Message>, includes message with id param
-        // page.has_after; // bool
-        // page.has_before; // bool
-        todo!()
+
+        let msgs: Vec<Arc<Message>> = res.items.into_iter().map(Arc::new).collect();
+
+        if !msgs.is_empty() {
+            let new_range = Range {
+                start: msgs.first().unwrap().id,
+                end: msgs.last().unwrap().id,
+                stale: false,
+            };
+
+            let mut write = self.inner.write().await;
+            for m in msgs.iter().cloned() {
+                write.insert_message(m);
+            }
+            write.insert_range(new_range);
+        }
+
+        Ok(MessageSlice { messages: msgs })
     }
 
     pub async fn send(&self, create: MessageCreate) -> Result<&Message> {
