@@ -844,6 +844,7 @@ impl DataChannel for Postgres {
     }
 }
 
+#[cfg(any())]
 impl Postgres {
     async fn channel_create2(&mut self, channel: Channel) -> Result<()> {
         let mut tx = self.begin_tx().await?;
