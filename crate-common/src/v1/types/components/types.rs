@@ -45,7 +45,6 @@ impl std::ops::Deref for ComponentId {
     }
 }
 
-
 /// A developer-defined identifier for an interactive component.
 ///
 /// Min 1 char, max 128 chars.

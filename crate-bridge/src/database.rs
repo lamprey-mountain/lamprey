@@ -21,8 +21,16 @@ pub trait Database: fmt::Debug + Send + Sync {
     async fn portal_list(&self) -> Result<Vec<(PortalId, Portal)>>;
 
     async fn message_create(&self, portal_id: PortalId, message: Message) -> Result<()>;
-    async fn message_delete_by_discord(&self, portal_id: PortalId, discord_message_id: discord::MessageId) -> Result<()>;
-    async fn message_delete_by_lamprey(&self, portal_id: PortalId, lamprey_message_id: lamprey::MessageId) -> Result<()>;
+    async fn message_delete_by_discord(
+        &self,
+        portal_id: PortalId,
+        discord_message_id: discord::MessageId,
+    ) -> Result<()>;
+    async fn message_delete_by_lamprey(
+        &self,
+        portal_id: PortalId,
+        lamprey_message_id: lamprey::MessageId,
+    ) -> Result<()>;
 
     // TODO: rename to user_foo
     async fn puppet_create(&self, puppet: User) -> Result<()>;

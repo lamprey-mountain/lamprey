@@ -1,7 +1,7 @@
-use crate::parser::Parser;
-use crate::ast::block::Document;
 use crate::ast::block::Block;
+use crate::ast::block::Document;
 use crate::ast::inline::Inline;
+use crate::parser::Parser;
 use crate::prelude::*;
 
 #[test]
@@ -9,7 +9,7 @@ fn test_link_panic() {
     let source = "[link]";
     let parser = Parser::new();
     let parsed = parser.parse(source);
-    
+
     let doc = Document::cast(parsed.tree().root().clone()).unwrap();
     for block in doc.children() {
         if let Block::Paragraph(p) = block {
@@ -27,7 +27,7 @@ fn test_incomplete_link_panic() {
     let source = "[link](";
     let parser = Parser::new();
     let parsed = parser.parse(source);
-    
+
     let doc = Document::cast(parsed.tree().root().clone()).unwrap();
     for block in doc.children() {
         if let Block::Paragraph(p) = block {
@@ -45,7 +45,7 @@ fn test_empty_link_panic() {
     let source = "[link]()";
     let parser = Parser::new();
     let parsed = parser.parse(source);
-    
+
     let doc = Document::cast(parsed.tree().root().clone()).unwrap();
     for block in doc.children() {
         if let Block::Paragraph(p) = block {

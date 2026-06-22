@@ -53,7 +53,9 @@ pub struct Message {
     pub attachments: Vec<(lamprey::MediaId, discord::AttachmentId)>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, strum::Display, strum::EnumString, PartialEq, Eq)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, strum::Display, strum::EnumString, PartialEq, Eq,
+)]
 pub enum Platform {
     Lamprey,
     Discord,

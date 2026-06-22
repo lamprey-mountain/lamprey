@@ -31,12 +31,27 @@ async fn server_info(
 
     let mut extra = std::collections::HashMap::new();
     extra.insert("debug".to_string(), env!("VERGEN_CARGO_DEBUG").to_string());
-    extra.insert("target".to_string(), env!("VERGEN_CARGO_TARGET_TRIPLE").to_string());
+    extra.insert(
+        "target".to_string(),
+        env!("VERGEN_CARGO_TARGET_TRIPLE").to_string(),
+    );
     extra.insert("rev".to_string(), env!("VERGEN_GIT_SHA").to_string());
-    extra.insert("rustc_semver".to_string(), env!("VERGEN_RUSTC_SEMVER").to_string());
-    extra.insert("rustc_llvm".to_string(), env!("VERGEN_RUSTC_LLVM_VERSION").to_string());
-    extra.insert("rustc_rev".to_string(), env!("VERGEN_RUSTC_COMMIT_HASH").to_string());
-    extra.insert("rustc_channel".to_string(), env!("VERGEN_RUSTC_CHANNEL").to_string());
+    extra.insert(
+        "rustc_semver".to_string(),
+        env!("VERGEN_RUSTC_SEMVER").to_string(),
+    );
+    extra.insert(
+        "rustc_llvm".to_string(),
+        env!("VERGEN_RUSTC_LLVM_VERSION").to_string(),
+    );
+    extra.insert(
+        "rustc_rev".to_string(),
+        env!("VERGEN_RUSTC_COMMIT_HASH").to_string(),
+    );
+    extra.insert(
+        "rustc_channel".to_string(),
+        env!("VERGEN_RUSTC_CHANNEL").to_string(),
+    );
 
     let info = ServerInfo {
         api_url: s.config.api_url.clone(),
