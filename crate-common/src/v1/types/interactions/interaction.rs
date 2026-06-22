@@ -1,6 +1,6 @@
 use crate::v1::types::{
     ApplicationId, Channel, ChannelId, Embed, InteractionId, Message, MessageCreate, MessageId,
-    MessagePatch, Permission, Room, RoomMember, User,
+    MessagePatch, Permission, Room, RoomMember, User, UserId,
 };
 
 #[cfg(feature = "serde")]
@@ -114,14 +114,6 @@ pub enum InteractionType {
     // TODO: add authorizers?
 }
 
-impl InteractionType {
-    /// whether messages can be sent in reply to this interaction
-    // TODO: use this
-    pub fn can_reply(&self) -> bool {
-        matches!(self, InteractionType::Button { .. })
-    }
-}
-
 /// respond to an interaction
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -166,4 +158,47 @@ pub enum InteractionResponseCreateType {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct InteractionResponse {
     // TODO: return extra data here
+}
+
+impl InteractionType {
+    /// whether messages can be sent in reply to this interaction
+    // TODO: use this
+    pub fn can_reply(&self) -> bool {
+        matches!(self, InteractionType::Button { .. })
+    }
+
+    /// get the id of the channel this interaction exists in
+    pub fn channel_id(&self) -> Option<ChannelId> {
+        match self {
+            Self::Ping => None,
+            Self::Button { channel, .. } => Some(channel.id),
+            Self::Unfurl { channel, .. } => Some(channel.id),
+        }
+    }
+
+    /// get the id of the user who created this interaction
+    pub fn user_id(&self) -> Option<UserId> {
+        match self {
+            Self::Ping => None,
+            Self::Button { user, .. } => Some(user.id),
+            Self::Unfurl { user, .. } => Some(user.id),
+        }
+    }
+
+    /// get the id of the message that this interaction was created from
+    fn source_message_id(&self) -> Option<MessageId> {
+        match self {
+            Self::Button { message, .. } => Some(message.id),
+            Self::Ping => None,
+            Self::Unfurl { message, .. } => Some(message.id),
+        }
+    }
+}
+
+impl InteractionCreateType {
+    pub fn channel_id(&self) -> Option<ChannelId> {
+        match self {
+            InteractionCreateType::Button { channel_id, .. } => Some(*channel_id),
+        }
+    }
 }

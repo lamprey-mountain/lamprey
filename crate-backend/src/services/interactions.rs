@@ -1,5 +1,7 @@
 #![allow(unused)] // TEMP: suppress warnings here for now
 
+// TODO: impl accepting interactions via webhooks
+
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -7,11 +9,12 @@ use common::v1::types::interactions::{
     Interaction, InteractionCreate, InteractionCreateType, InteractionErrorCode,
     InteractionResponse, InteractionResponseCreate, InteractionResponseCreateType, InteractionType,
 };
-use common::v1::types::{InteractionId, MessageSync, Permission, UserId};
-use common::v2::types::ApplicationId;
+use common::v1::types::{InteractionId, MessageInteraction, MessageSync, Permission, UserId};
+use common::v2::types::{ApplicationId, MessageId};
 use dashmap::DashMap;
 use lamprey_backend_core::Error;
 use tokio::task::JoinHandle;
+use uuid::Uuid;
 
 use crate::{Result, ServerStateInner};
 
@@ -33,12 +36,21 @@ pub struct ServiceInteractions {
     interaction_nonce_to_id: DashMap<String, InteractionId>,
 }
 
-struct InteractionEntry {
-    nonce: Option<String>,
+/// an interaction on the server
+#[derive(Debug)]
+pub struct InteractionEntry {
+    /// the interaction itself
     interaction: Interaction,
+
+    /// the current state of the interaction
     state: InteractionEntryState,
+
+    /// the idempotency-key used to create this interaction
+    nonce: Option<String>,
 }
 
+/// the current state of an interaction
+#[derive(Debug)]
 enum InteractionEntryState {
     /// interaction created, waiting for response
     Created {
@@ -49,7 +61,26 @@ enum InteractionEntryState {
     Responded {
         expire_handle: JoinHandle<Result<()>>,
         deferred: bool,
+        original_message_id: Option<MessageId>,
     },
+}
+
+impl InteractionEntry {
+    /// get the interaction itself
+    pub fn inner(&self) -> &Interaction {
+        &self.interaction
+    }
+
+    /// get the id of the first message sent in response to this interaction
+    pub fn original_message_id(&self) -> Option<MessageId> {
+        match &self.state {
+            InteractionEntryState::Created { .. } => None,
+            InteractionEntryState::Responded {
+                original_message_id,
+                ..
+            } => *original_message_id,
+        }
+    }
 }
 
 impl ServiceInteractions {
@@ -61,6 +92,7 @@ impl ServiceInteractions {
         }
     }
 
+    /// create a new interaction
     pub async fn create(
         &self,
         user_id: UserId,
@@ -74,7 +106,7 @@ impl ServiceInteractions {
         let inter = Interaction {
             id,
             application_id: create.application_id,
-            token: Some(uuid::Uuid::new_v4().to_string()),
+            token: Some(Uuid::new_v4().to_string()),
             version: 1,
             ty: match create.ty {
                 InteractionCreateType::Button {
@@ -126,6 +158,15 @@ impl ServiceInteractions {
             },
         };
 
+        // TODO: insert interaction into db
+        // let mut data = self.state.acquire_data().await?;
+        // data.interaction_create(&inter).await?;
+        // data.commit().await?;
+
+        // TODO: trait DataInteraction { ... }
+        // TODO: trait DataInteractionMessage { ... }
+        // TODO: clean up old interactions from db
+
         self.state.broadcast(MessageSync::InteractionCreate {
             interaction: Box::new(inter.clone()),
             user_id: user_id,
@@ -153,16 +194,18 @@ impl ServiceInteractions {
         Ok(inter)
     }
 
+    /// create a new ping interaction for a webhook
     pub async fn create_ping(&self, application_id: ApplicationId) -> Result<Interaction> {
         let _inter = Interaction {
             id: InteractionId::new(),
             application_id,
-            token: Some(uuid::Uuid::new_v4().to_string()),
+            token: Some(Uuid::new_v4().to_string()),
             version: 1,
             ty: InteractionType::Ping,
         };
 
-        // TODO: for webhooks, disable them if the Ping times out
+        // TODO: when webhooks are implemented, disable them if the Ping times out
+        // reuse federation signing code - do i use server keys or create a pubkey per application?
 
         todo!()
     }
@@ -218,6 +261,14 @@ impl ServiceInteractions {
                     InteractionType::Ping => unreachable!(),
                     InteractionType::Unfurl { user, .. } => user.clone(),
                 };
+
+                // TODO: add message_interaction to message
+                // let message_interaction = MessageInteraction {
+                //     id,
+                //     application_id: todo!(),
+                //     user_id: todo!(),
+                //     source_message_id: todo!(),
+                // };
 
                 let _message = srv
                     .messages
@@ -335,5 +386,14 @@ impl ServiceInteractions {
         }
 
         it.map(|i| i.1)
+    }
+
+    /// get an interaction if it isn't expired
+    pub async fn get(&self, id: InteractionId) -> Result<&InteractionEntry> {
+        let entry = self
+            .interactions
+            .get(&id)
+            .ok_or(Error::BadStatic("unknown or expired interaction"))?;
+        Ok(&*entry)
     }
 }
