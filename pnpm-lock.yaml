@@ -75,8 +75,8 @@ importers:
         specifier: ^0.15.4
         version: 0.15.4(solid-js@1.9.11)
       '@tanstack/solid-virtual':
-        specifier: ^3.13.21
-        version: 3.13.21(solid-js@1.9.11)
+        specifier: ^3.13.28
+        version: 3.13.28(solid-js@1.9.11)
       codemirror:
         specifier: ^6.0.2
         version: 6.0.2
@@ -977,13 +977,13 @@ packages:
     peerDependencies:
       solid-js: ^1.8.6
 
-  '@tanstack/solid-virtual@3.13.21':
-    resolution: {integrity: sha512-SOwgCLVFHzousW9TnbkRMlUxdCHWP8xmp+v9ay2S6aaNT4MgEp6w3/EAFPQuXGVoRgyh8i4M+KZKpmliyTsNfw==}
+  '@tanstack/solid-virtual@3.13.28':
+    resolution: {integrity: sha512-kRuOEL5orH/rzGgxNgfgOttsgV6cgrUeupVtrHMITb5p0rZ3hnxhbu/lhKcR9+7x+EJdfUtJIb2CVC85mlw15g==}
     peerDependencies:
       solid-js: ^1.3.0
 
-  '@tanstack/virtual-core@3.13.21':
-    resolution: {integrity: sha512-ww+fmLHyCbPSf7JNbWZP3g7wl6SdNo3ah5Aiw+0e9FDErkVHLKprYUrwTm7dF646FtEkN/KkAKPYezxpmvOjxw==}
+  '@tanstack/virtual-core@3.17.0':
+    resolution: {integrity: sha512-gOxY/hFkPh/XQYhnThBHzkbkX3Ed+z/iushyz+R+JAr213aXxUDgQoTgTdrDpBSRsjFM73P/KfUyWmaF9WHMkQ==}
 
   '@types/audioworklet@0.0.100':
     resolution: {integrity: sha512-mWt4Z5CWi0CupDnSYWJgx6dw61XUk9JSRGrM9F/YNrpOoY/0XG+sxP+8rAjQq80H4febOe8PrzGmmN/X3w8LsQ==}
@@ -2782,12 +2782,12 @@ snapshots:
     dependencies:
       solid-js: 1.9.11
 
-  '@tanstack/solid-virtual@3.13.21(solid-js@1.9.11)':
+  '@tanstack/solid-virtual@3.13.28(solid-js@1.9.11)':
     dependencies:
-      '@tanstack/virtual-core': 3.13.21
+      '@tanstack/virtual-core': 3.17.0
       solid-js: 1.9.11
 
-  '@tanstack/virtual-core@3.13.21': {}
+  '@tanstack/virtual-core@3.17.0': {}
 
   '@types/audioworklet@0.0.100': {}
 
