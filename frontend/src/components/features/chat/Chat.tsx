@@ -103,7 +103,6 @@ export const ChatMain = (props: ChatProps) => {
 		log.debug("tl", { tl: [...tl()], msgs: messages() });
 	});
 
-	let _last_thread_id: string | undefined;
 	let chatRef: HTMLDivElement | undefined;
 	const list = createList2({
 		items: tl,
@@ -136,23 +135,24 @@ export const ChatMain = (props: ChatProps) => {
 						message_id: msgs.items[idx]?.id,
 					});
 				} else {
-					// live timeline - only switch if we aren't already on backwards
-					if (old.type !== "backwards") {
-						setChannelState("anchor", {
-							type: "backwards",
-							limit: SLICE_LEN,
-						});
-					}
+					// live timeline
+					setChannelState("anchor", {
+						type: "backwards",
+						limit: SLICE_LEN,
+						message_id: undefined,
+					});
 
 					if (list.isAtBottom()) markRead();
 				}
-			} else if (msgs.has_backwards) {
-				const idx = Math.min(PAGINATE_LEN, msgs.items.length - 1);
-				setChannelState("anchor", {
-					type: "backwards",
-					limit: SLICE_LEN,
-					message_id: msgs.items[idx]?.id,
-				});
+			} else if (dir === "backwards") {
+				if (msgs.has_backwards) {
+					const idx = Math.min(PAGINATE_LEN, msgs.items.length - 1);
+					setChannelState("anchor", {
+						type: "backwards",
+						limit: SLICE_LEN,
+						message_id: msgs.items[idx]?.id,
+					});
+				}
 			}
 
 			const anchor = { ...channelState.anchor };
