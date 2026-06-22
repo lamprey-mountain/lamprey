@@ -1,34 +1,22 @@
-#![allow(unused)] // TEMP: suppress warnings here for now
-
 use std::cmp::Ordering;
 use std::sync::Arc;
 
+use common::v1::types::federation::Remote;
 use common::v1::types::{Channel, Permission, ThreadMemberPut};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
 use tracing::debug;
 
+use crate::services::users::util::DmKey;
 use crate::types::{DbChannelCreate, DbChannelType};
 use crate::{Error, Result, ServerStateInner};
 
 mod affinity;
+mod util;
 
 pub struct ServiceUsers {
     state: Arc<ServerStateInner>,
     dm_lock: DashMap<(UserId, UserId), ()>,
-}
-
-/// an identifier for a dm channel
-pub struct DmKey(UserId, UserId);
-impl DmKey {
-    /// create a new dm key, automatically sorting user ids
-    pub fn new(_a: UserId, _b: UserId) -> Self {
-        todo!()
-    }
-
-    pub fn get_users(&self) -> (UserId, UserId) {
-        todo!()
-    }
 }
 
 // TODO: make services federation aware?
@@ -98,9 +86,10 @@ impl ServiceUsers {
         Ok(out)
     }
 
-    // TODO
-    // /// lookup a user from a `Remote`
-    // pub async fn get_remote(&self, remote: Remote) -> Result<User> {}
+    /// lookup a user from a `Remote` (TODO)
+    pub async fn get_remote(&self, _remote: Remote<UserId>) -> Result<User> {
+        todo!()
+    }
 
     pub async fn invalidate(&self, user_id: UserId) {
         self.state.services().cache.user_invalidate(user_id).await
@@ -116,18 +105,18 @@ impl ServiceUsers {
         other_id: UserId,
         locked: bool,
     ) -> Result<(Channel, bool)> {
-        let (user_id, other_id) = ensure_dm_canonical(user_id, other_id)?;
-        let mut data = self.state.data();
+        let (user_id, other_id) = DmKey::new(user_id, other_id)?.get_users();
+        let mut data = self.state.acquire_data().await?;
         let srv = self.state.services();
         let _lock = self.dm_lock.entry((user_id, other_id)).or_default();
         if let Some(thread_id) = data.dm_get(user_id, other_id).await? {
             debug!("dm thread id {thread_id}");
-            let thread = srv.channels.get(thread_id, Some(user_id)).await?;
+            let chan = srv.channels.get(thread_id, Some(user_id)).await?;
             data.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
                 .await?;
             data.thread_member_put(thread_id, other_id, ThreadMemberPut::default())
                 .await?;
-            return Ok((thread, false));
+            return Ok((chan, false));
         }
         let thread_id = data
             .channel_create(DbChannelCreate {
@@ -158,20 +147,13 @@ impl ServiceUsers {
             .await?;
         data.thread_member_put(thread_id, other_id, ThreadMemberPut::default())
             .await?;
-        let thread = srv.channels.get(thread_id, Some(user_id)).await?;
-        Ok((thread, true))
+        data.commit().await?;
+        let chan = srv.channels.get(thread_id, Some(user_id)).await?;
+        Ok((chan, true))
     }
 
-    /// add private user data to each user
+    /// add private user data to each user (TODO)
     pub async fn populate_private(&self, _users: &mut [User], _user_id: UserId) -> Result<()> {
         Ok(())
-    }
-}
-
-fn ensure_dm_canonical(a: UserId, b: UserId) -> Result<(UserId, UserId)> {
-    match a.cmp(&b) {
-        Ordering::Less => Ok((a, b)),
-        Ordering::Equal => Err(Error::BadStatic("cant dm yourself")),
-        Ordering::Greater => Ok((b, a)),
     }
 }

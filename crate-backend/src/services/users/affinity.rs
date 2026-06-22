@@ -1,4 +1,5 @@
 // TODO: remove?
+// this is like permissions for users - maybe i could merge this with the permission system instead?
 
 // TODO: add method to calculate affinity from one person to another
 

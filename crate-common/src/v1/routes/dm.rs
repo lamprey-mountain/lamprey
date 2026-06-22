@@ -12,6 +12,7 @@ use lamprey_macros::endpoint;
     response(CREATED, body = Channel, description = "new dm created"),
     response(OK, body = Channel, description = "already exists"),
 )]
+#[deprecated = "use channel_create_dm"]
 pub mod dm_init {
     use crate::v1::types::{Channel, UserId};
 

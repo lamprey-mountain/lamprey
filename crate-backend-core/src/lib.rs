@@ -1,7 +1,7 @@
 pub mod config;
 pub mod data;
-pub mod queue;
 pub mod error;
+pub mod queue;
 pub mod types;
 
 pub use error::{Error, Result};

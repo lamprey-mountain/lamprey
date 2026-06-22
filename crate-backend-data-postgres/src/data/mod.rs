@@ -393,6 +393,7 @@ pub trait DataSession {
 
 #[async_trait]
 pub trait DataChannel {
+    // async fn channel_create(&mut self, channel: Channel) -> Result<()>;
     async fn channel_create(&mut self, create: DbChannelCreate) -> Result<ChannelId>;
     async fn channel_create_with_id(
         &mut self,
@@ -479,6 +480,68 @@ pub trait DataChannel {
         channel_id: ChannelId,
         calendar_patch: &CalendarPatch,
     ) -> Result<()>;
+}
+
+#[async_trait]
+pub trait DataChannel2 {
+    /// insert a channel into the database
+    ///
+    /// fails if the channel already exists
+    async fn channel2_create(&mut self, channel: Channel) -> Result<()>;
+
+    /// update a channel in the database
+    ///
+    /// fails if the channel doesn't exist
+    async fn channel2_update(&mut self, channel: Channel) -> Result<()>;
+
+    async fn channel2_get(&mut self, channel_id: ChannelId) -> Result<Channel>;
+    async fn channel2_get_many(&mut self, channel_ids: &[ChannelId]) -> Result<Vec<Channel>>;
+
+    /// list all channels in a room
+    async fn channel2_list_room(&mut self, room_id: RoomId) -> Result<Vec<Channel>>;
+
+    /// paginate all known channels
+    async fn channel2_list(
+        &mut self,
+        p: PaginationQuery<ChannelId>,
+    ) -> Result<PaginationResponse<Channel>>;
+
+    /// paginate removed channels in a room
+    async fn channel2_list_removed(
+        &mut self,
+        room_id: RoomId,
+        pagination: PaginationQuery<ChannelId>,
+        parent_id: Option<ChannelId>,
+    ) -> Result<PaginationResponse<Channel>>;
+
+    // superseded by channel2_update + deleted_at
+    // async fn channel2_remove(&mut self, channel_id: ChannelId) -> Result<()>;
+    // async fn channel2_restore(&mut self, channel_id: ChannelId) -> Result<()>;
+
+    /// bulk update channels with `ChannelReorder`
+    async fn channel2_reorder(&mut self, reorder: ChannelReorder) -> Result<()>;
+
+    // superseded by channel2_update + type
+    // async fn channel_upgrade_gdm(&mut self, channel_id: ChannelId, room_id: RoomId) -> Result<()>;
+
+    // move to DataSlowmode
+    // async fn slowmode_message_get
+    // async fn slowmode_message_set
+    // async fn slowmode_message_delete_all
+    // async fn slowmode_thread_get
+    // async fn slowmode_thread_set
+    // async fn slowmode_thread_delete_all
+
+    // merge into channel2_create/channel2_update
+    // async fn channel_document_insert(
+    // async fn channel_document_get
+    // async fn channel_document_update
+    // async fn channel_wiki_insert
+    // async fn channel_wiki_get
+    // async fn channel_wiki_update
+    // async fn channel_calendar_insert
+    // async fn channel_calendar_get
+    // async fn channel_calendar_update
 }
 
 #[async_trait]
@@ -762,4 +825,14 @@ pub trait DataHarvest {
 //     async fn server_delete(&mut self, hostname: Hostname) -> Result<()>;
 //     async fn server_get(&mut self, hostname: Hostname) -> Result<ServerData>;
 //     // probably need some way to list servers
+// }
+
+// #[async_trait]
+// pub trait DataQueue {
+//     async fn queue_insert(
+//         &mut self,
+//     ) -> Result<Uuid>;
+//     async fn queue_claim(&mut self) -> Result<Option<DbEmailQueue>>;
+//     async fn queue_finish(&mut self, id: Uuid) -> Result<()>;
+//     async fn queue_fail(&mut self, error_message: String, id: Uuid) -> Result<()>;
 // }

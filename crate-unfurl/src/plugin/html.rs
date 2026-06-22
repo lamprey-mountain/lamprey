@@ -104,7 +104,6 @@ impl UnfurlPlugin for HtmlStreamPlugin {
             author_url: None,
             author_avatar: None,
             site_avatar: None,
-
             // TODO: handle favicon as site_avatar
             // i need some way to avoid constantly refetching the same favicon though...
             // site_avatar: data.favicon_url.and_then(|u| url.join(&u).ok()).map(|u| {

@@ -85,6 +85,7 @@ pub struct Channel {
     // NOTE: if i want to have unlimited tags, i'd have to remove this
     // TODO: remove
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    #[deprecated]
     pub tags_available: Option<Vec<Tag>>,
 
     // TODO: rename to removed_at

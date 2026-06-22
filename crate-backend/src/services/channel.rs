@@ -527,6 +527,7 @@ impl ServiceChannels {
                     ty: match json.ty {
                         ChannelType::Dm | ChannelType::Gdm => {
                             // this should be unreachable due to the check above
+                            // TODO: allow creating dm channels?
                             warn!("unreachable: dm/gdm thread creation in room");
                             return Err(Error::BadStatic(
                                 "can't create a direct message thread in a room",

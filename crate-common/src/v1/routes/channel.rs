@@ -42,8 +42,8 @@ pub mod channel_create_room {
     scopes = [Full],
     permissions = [DmCreate],
     audit_log_events = ["ChannelCreate"],
-    response(CREATED, body = Channel, description = "Create thread success"),
-    response(OK, body = Channel, description = "already exists"),
+    response(CREATED, body = Channel, description = "Created channel"),
+    response(OK, body = Channel, description = "Dm already exists"),
 )]
 pub mod channel_create_dm {
     use crate::v1::types::{Channel, ChannelCreate};

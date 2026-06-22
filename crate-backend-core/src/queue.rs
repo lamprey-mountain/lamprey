@@ -34,6 +34,10 @@ pub struct QueuedItem<T> {
     pub data: T,
 }
 
+// impl QueuedItem {
+//     pub fn map(self<T>, f: T -> U) -> Self<U>
+// }
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageRef {
     pub message_id: MessageId,

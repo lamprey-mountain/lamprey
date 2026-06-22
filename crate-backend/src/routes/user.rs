@@ -494,7 +494,7 @@ async fn user_presence_set(
 /// User list
 ///
 /// Admin only. List all users on this server.
-// TODO: deprecate
+// TODO: deprecate?
 #[handler(routes::user_list)]
 async fn user_list(
     auth: Auth,
@@ -532,7 +532,8 @@ async fn harvest_get(
     if auth.user.bot || auth.user.webhook.is_some() || auth.user.puppet.is_some() {
         return Err(ApiError::from_code(ErrorCode::BotsCannotUseThisEndpoint).into());
     }
-    auth.user.ensure_unsuspended()?;
+
+    // suspended users can get a harvest for themselves
 
     Ok(Error::Unimplemented)
 }
@@ -547,7 +548,8 @@ async fn harvest_create(
     if auth.user.bot || auth.user.webhook.is_some() || auth.user.puppet.is_some() {
         return Err(ApiError::from_code(ErrorCode::BotsCannotUseThisEndpoint).into());
     }
-    auth.user.ensure_unsuspended()?;
+
+    // suspended users can create a harvest for themselves
 
     Ok(Error::Unimplemented)
 }

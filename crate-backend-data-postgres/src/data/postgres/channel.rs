@@ -845,6 +845,87 @@ impl DataChannel for Postgres {
 }
 
 impl Postgres {
+    async fn channel_create2(&mut self, channel: Channel) -> Result<()> {
+        let mut tx = self.begin_tx().await?;
+
+        // TODO: enforce this at a higher level
+        if let Some(room_id) = channel.room_id {
+            let count: i64 = query_scalar!(
+                "SELECT count(*) FROM channel WHERE room_id = $1 AND archived_at IS NULL AND deleted_at IS NULL",
+                *room_id
+            )
+            .fetch_one(tx.ext())
+            .await?
+            .unwrap_or(0);
+
+            if count as u32 >= crate::consts::MAX_CHANNEL_COUNT {
+                return Err(Error::BadRequest(format!(
+                    "too many active channels (max {})",
+                    crate::consts::MAX_CHANNEL_COUNT
+                )));
+            }
+        }
+
+        let ty: DbChannelType = channel.ty.into();
+        let locked = todo!("handle locked, locked_until, locked_roles");
+
+        // missing fields: position, deleted_at, archived_at, latest_seq, document, wiki, calendar
+        // may need separate query: permission_overwrites, recipients
+        // maybe shouldn't be manually inserted: last_version_id, last_message_id, message_count, root_message_count, last_pin_timestamp
+        // some more in crate-common/src/v1/types/channel.rs
+
+        query!(
+            "
+			INSERT INTO channel (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon, invitable, auto_archive_duration, default_auto_archive_duration, slowmode_thread, slowmode_message, default_slowmode_message, url, locked_until, locked_roles, last_message_id, last_version_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $21, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, null, $22, $23, $34)
+        ",
+            *channel.id,
+            *channel.version_id,
+            *channel.creator_id,
+            channel.room_id.as_deref(),
+            channel.name,
+            channel.description,
+            ty as _,
+            channel.nsfw,
+            channel.bitrate.map(|s| s as i32),
+            channel.user_limit.map(|s| s as i32),
+            channel.parent_id.as_deref(),
+            channel.owner_id.as_deref(),
+            channel.icon.as_deref(),
+            channel.invitable,
+            channel.auto_archive_duration.map(|s| s as i64),
+            channel.default_auto_archive_duration.map(|s| s as i64),
+            channel.slowmode_thread.map(|s| s as i32),
+            channel.slowmode_message.map(|s| s as i32),
+            channel.default_slowmode_message.map(|s| s as i32),
+            channel.url,
+            locked,
+            todo!(),
+            todo!(),
+            &[],
+        )
+        .execute(tx.ext())
+        .await?;
+
+        if let Some(tags) = &channel.tags {
+            if !tags.is_empty() {
+                let tag_ids: Vec<_> = tags.iter().map(|t| t.into_inner()).collect();
+                query!(
+                    "INSERT INTO channel_tag (channel_id, tag_id) SELECT $1, * FROM UNNEST($2::uuid[])",
+                    *channel.id,
+                    &tag_ids
+                )
+                .execute(tx.ext())
+                .await?;
+            }
+        }
+
+        tx.commit().await?;
+        Ok(())
+    }
+}
+
+impl Postgres {
     async fn channel_document_insert_impl(
         tx: &mut sqlx::PgConnection,
         channel_id: ChannelId,
