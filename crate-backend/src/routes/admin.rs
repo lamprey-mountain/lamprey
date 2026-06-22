@@ -15,6 +15,7 @@ use lamprey_backend_core::types::admin::{
     AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache, AdminPurgeCacheResponse,
     DlqEntry, SearchIndexStats, SearchIndexStatsRoom,
 };
+use lamprey_backend_core::types::search::Reindex;
 use lamprey_macros::handler;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -269,7 +270,13 @@ async fn admin_reindex_channel(
         .needs(Permission::Admin)
         .check()?;
 
-    srv.admin.reindex_channel(channel_id).await?;
+    srv.search
+        .reindex(Reindex {
+            doctypes: vec![],
+            room_ids: vec![],
+            channel_ids: vec![channel_id],
+        })
+        .await?;
 
     al.commit_success(AuditLogEntryType::ChannelReindex { channel_id })
         .await?;
@@ -308,7 +315,13 @@ async fn admin_reindex_room(
         .needs(Permission::Admin)
         .check()?;
 
-    srv.admin.reindex_room(room_id).await?;
+    srv.search
+        .reindex(Reindex {
+            doctypes: vec![],
+            room_ids: vec![room_id],
+            channel_ids: vec![],
+        })
+        .await?;
 
     al.commit_success(AuditLogEntryType::RoomReindex { room_id })
         .await?;
@@ -343,7 +356,13 @@ async fn admin_reindex_everything(
         .needs(Permission::Admin)
         .check()?;
 
-    srv.admin.reindex_everything().await?;
+    srv.search
+        .reindex(Reindex {
+            doctypes: vec![],
+            room_ids: vec![],
+            channel_ids: vec![],
+        })
+        .await?;
 
     al.commit_success(AuditLogEntryType::ReindexEverything)
         .await?;

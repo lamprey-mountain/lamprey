@@ -1,5 +1,6 @@
 pub mod config;
 pub mod data;
+pub mod queue;
 pub mod error;
 pub mod types;
 

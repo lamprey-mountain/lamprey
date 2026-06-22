@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use common::v1::types::{ChannelId, RoomId};
 use lamprey_backend_core::types::admin::{
     AdminCollectGarbage, AdminCollectGarbageMode, AdminCollectGarbageResponse,
     AdminCollectGarbageStat, AdminCollectGarbageTarget, AdminPurgeCache, AdminPurgeCacheResponse,
@@ -10,7 +9,6 @@ use subtle::ConstantTimeEq;
 use tracing::{debug, error};
 
 use crate::prelude::*;
-use crate::services::search::Reindex;
 
 pub struct ServiceAdmin {
     state: Globals,
@@ -173,28 +171,5 @@ impl ServiceAdmin {
             });
         }
         Ok(AdminPurgeCacheResponse { stats })
-    }
-
-    // TODO: rework
-    pub async fn reindex_channel(&self, channel_id: ChannelId) -> Result<()> {
-        let srv = self.state.services();
-        srv.search
-            .reindex(Reindex::QueueMessages(channel_id))
-            .await?;
-        Ok(())
-    }
-
-    // TODO: rework
-    pub async fn reindex_room(&self, room_id: RoomId) -> Result<()> {
-        let srv = self.state.services();
-        srv.search.reindex(Reindex::InsideRoom(room_id)).await?;
-        Ok(())
-    }
-
-    // TODO: rework
-    pub async fn reindex_everything(&self) -> Result<()> {
-        let srv = self.state.services();
-        srv.search.reindex(Reindex::Everything).await?;
-        Ok(())
     }
 }
