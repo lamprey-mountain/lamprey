@@ -32,6 +32,12 @@ pub trait Database: fmt::Debug + Send + Sync {
         lamprey_message_id: lamprey::MessageId,
     ) -> Result<()>;
 
+    async fn message_get_by_lamprey_id(
+        &self,
+        portal_id: PortalId,
+        lamprey_message_id: lamprey::MessageId,
+    ) -> Result<Option<Message>>;
+
     // TODO: rename to user_foo
     async fn puppet_create(&self, puppet: User) -> Result<()>;
     async fn puppet_get_by_lamprey_id(&self, lamprey_id: String) -> Result<Option<User>>;
@@ -289,6 +295,50 @@ impl Database for SqliteDatabase {
                 .await?;
         }
         Ok(())
+    }
+
+    async fn message_get_by_lamprey_id(
+        &self,
+        portal_id: PortalId,
+        lamprey_message_id: lamprey::MessageId,
+    ) -> Result<Option<Message>> {
+        let lamprey_message_id_str = lamprey_message_id.to_string();
+        let row = query!(
+            "SELECT id, source_platform, lamprey_message_id, discord_message_id FROM message WHERE portal_id = ? AND lamprey_message_id = ?",
+            portal_id,
+            lamprey_message_id_str
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(row) = row {
+            let message_id = row.id as u32;
+
+            let attachments = query!(
+                "SELECT lamprey_media_id, discord_attachment_id FROM message_attachment WHERE message_id = ?",
+                message_id
+            )
+            .fetch_all(&self.pool)
+            .await?;
+
+            Ok(Some(Message {
+                portal_id,
+                source_platform: row.source_platform.parse().unwrap(),
+                lamprey_message_id: row.lamprey_message_id.map(|id| id.parse().unwrap()),
+                discord_message_id: row.discord_message_id.map(|id| id.parse().unwrap()),
+                attachments: attachments
+                    .into_iter()
+                    .map(|a| {
+                        (
+                            a.lamprey_media_id.parse().unwrap(),
+                            a.discord_attachment_id.parse().unwrap(),
+                        )
+                    })
+                    .collect(),
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn puppet_create(&self, puppet: User) -> Result<()> {

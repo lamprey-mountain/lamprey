@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use serenity::all::{ExecuteWebhook, GatewayIntents};
+use serenity::all::{ExecuteWebhook, GatewayIntents, Mentionable};
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinSet;
 use tracing::{debug, info, warn};
@@ -195,7 +195,7 @@ async fn spawn_portal_inner(
                     }
                 };
 
-                let content = msg_inner.content.to_owned().unwrap_or_else(|| {
+                let mut content = msg_inner.content.to_owned().unwrap_or_else(|| {
                     if msg_inner.attachments.is_empty()
                         && msg_inner.embeds.is_empty()
                         && msg_inner.components.is_empty()
@@ -206,12 +206,42 @@ async fn spawn_portal_inner(
                     }
                 });
 
-                // TODO: handle reply_id
+                let mut embeds = vec![];
+                if let Some(reply_id) = msg.reply_id() {
+                    if let Some(bridge_msg) = handle
+                        .bridge
+                        .db
+                        .message_get_by_lamprey_id(portal_id, reply_id)
+                        .await?
+                    {
+                        if let Some(discord_msg_id) = bridge_msg.discord_message_id {
+                            let discord_msg = http
+                                .get_message(discord_cfg.channel_id, discord_msg_id)
+                                .await?;
+                            let reply_content = format_discord_reply_content(&discord_msg);
+                            let description = format!(
+                                "**[replying to](https://canary.discord.com/channels/{}/{}/{})**\n{}",
+                                discord_cfg.guild_id,
+                                discord_cfg.channel_id,
+                                discord_msg_id,
+                                reply_content,
+                            );
+                            content = format!("{} {}", discord_msg.author.mention(), content);
+                            embeds.push(CreateEmbed::new().description(description));
+                            if let Some(att) = discord_msg.attachments.first() {
+                                embeds.push(CreateEmbed::new().image(&att.url));
+                            }
+                        }
+                    } else {
+                        // TODO: handle unknown reply
+                    }
+                }
+
                 // TODO: handle embeds (download, reupload)
                 // TODO: handle attachments
                 // TODO: handle mentions
 
-                let builder = ExecuteWebhook::new().content(content);
+                let builder = ExecuteWebhook::new().content(content).embeds(embeds);
                 // // TODO: set profile
                 // .username(username)
                 // .avatar_url(avatar_url)
@@ -220,7 +250,6 @@ async fn spawn_portal_inner(
                 // // TODO: handle other stuff
                 // .files(files)
                 // .components(components)
-                // .embeds(embeds)
                 // .allowed_mentions(allowed_mentions);
 
                 webhook.execute(&http, false, builder).await?;
@@ -235,4 +264,25 @@ async fn spawn_portal_inner(
     }
 
     Ok(())
+}
+
+fn format_discord_reply_content(discord_msg: &serenity::all::Message) -> String {
+    if !discord_msg.content.is_empty() {
+        discord_msg.content.to_owned()
+    } else if !discord_msg.attachments.is_empty() {
+        let names: Vec<_> = discord_msg
+            .attachments
+            .iter()
+            .map(|a| a.filename.to_owned())
+            .collect();
+        format!(
+            "{} attachment(s): {}",
+            discord_msg.attachments.len(),
+            names.join(", ")
+        )
+    } else if !discord_msg.embeds.is_empty() {
+        format!("{} embed(s)", discord_msg.embeds.len())
+    } else {
+        "(no content?)".to_owned()
+    }
 }
