@@ -185,6 +185,58 @@ export const ChatMain = (props: ChatProps) => {
 		},
 	});
 
+	let jumpingToEnd = false;
+
+	const jumpToEnd = (markRead = false) => {
+		const channel_id = props.channel.id;
+		const old = { ...channelState.anchor } as MessageListAnchor;
+
+		// messages are approx. 20 px high, show 3 pages of messages
+		// TODO: dedupe SLICE_LEN calculation code
+		const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
+
+		setChannelState("scroll_pos", -1);
+
+		setChannelState("anchor", {
+			type: "backwards",
+			limit: SLICE_LEN,
+			message_id: undefined,
+		});
+
+		if (markRead) {
+			// FIXME: use message_id, not version_id
+			const version_id =
+				messagesService._ranges.get(channel_id)?.live.end ??
+				props.channel.last_version_id!;
+			markChannelRead(channel_id, version_id, true, false);
+
+			// NOTE: unnecessary with markChannelRead?
+			// setChannelState("read_marker_id", undefined);
+		}
+
+		const anchor = { ...channelState.anchor };
+		if (deepEqual(old, anchor)) {
+			list.scrollToBottom();
+		} else {
+			jumpingToEnd = true;
+		}
+	};
+
+	setChannelState("timeline", {
+		jumpToEnd,
+	});
+
+	createEffect(() => {
+		tl();
+		if (jumpingToEnd) {
+			queueMicrotask(() => {
+			list.scrollToBottom();
+
+			})
+			jumpingToEnd = false;
+		}
+	});
+
 	// effect to initialize new channels
 	createEffect(
 		on(
@@ -245,18 +297,18 @@ export const ChatMain = (props: ChatProps) => {
 		lastLiveEnd = currentEnd;
 	});
 
-	createEffect(
-		on(
-			() => channelState.anchor,
-			(a) => {
-				if (a && a.type === "backwards" && !a.message_id) {
-					setTimeout(() => {
-						list.scrollToBottom();
-					});
-				}
-			},
-		),
-	);
+	// createEffect(
+	// 	on(
+	// 		() => channelState.anchor,
+	// 		(a) => {
+	// 			if (a && a.type === "backwards" && !a.message_id) {
+	// 				setTimeout(() => {
+	// 					list.scrollToBottom();
+	// 				});
+	// 			}
+	// 		},
+	// 	),
+	// );
 
 	createEffect(on(list.scrollPos, setPos));
 
@@ -283,28 +335,7 @@ export const ChatMain = (props: ChatProps) => {
 			role="log"
 			onKeyDown={(e) => {
 				if (e.key === "Escape") {
-					const channel_id = props.channel.id;
-					const SLICE_LEN = Math.ceil(globalThis.innerHeight / 20) * 3;
-
-					setChannelState("scroll_pos", -1);
-					setChannelState("read_marker_id", undefined);
-
-					setChannelState("anchor", {
-						type: "backwards",
-						limit: SLICE_LEN,
-					});
-
-					const version_id =
-						messagesService._ranges.get(channel_id)?.live.end ??
-						props.channel.last_version_id;
-
-					if (version_id) {
-						markChannelRead(channel_id, version_id, true, false);
-					}
-
-					setTimeout(() => {
-						list.scrollToBottom();
-					});
+					jumpToEnd(true);
 				} else if (e.key === "PageDown") {
 					list.scrollBy(globalThis.innerHeight * 0.8, true);
 				} else if (e.key === "PageUp") {

@@ -15,6 +15,10 @@ export type ChannelSearch = {
 	channel?: string[];
 };
 
+export type Timeline = {
+	jumpToEnd(): void;
+};
+
 export type ChannelState = {
 	anchor?: MessageListAnchor;
 	attachments: Array<Attachment>;
@@ -24,10 +28,14 @@ export type ChannelState = {
 	reply_id?: string;
 	scroll_pos?: number;
 	search?: ChannelSearch;
+	timeline: Timeline;
+
+	// TODO: merge these into sidebar: Sidebar
 	pinned_view: boolean;
 	voice_chat_sidebar_open: boolean;
 	history_view: boolean;
 	thread_chat_sidebar_thread_id?: string;
+
 	slowmode_expire_at: Date | null;
 	editingMessage?: {
 		message_id: string;
@@ -52,6 +60,11 @@ export function createInitialChannelState(): ChannelState {
 		slowmode_expire_at: null,
 		selectMode: false,
 		selectedMessages: [],
+		timeline: {
+			jumpToEnd() {
+				throw new Error("dummy timeline impl");
+			},
+		},
 	};
 }
 

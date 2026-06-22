@@ -4131,16 +4131,21 @@ input[type="color"] {
 
 .jump-to-latest {
 	font-size: 0.8rem;
-	background: #111c;
+	background: #181818cc;
 	border: none;
-	padding: 4px;
+	padding: 4px 8px;
 	border-top-left-radius: 4px;
 	border-top-right-radius: 4px;
 	position: relative;
 	bottom: -2px;
+	cursor: pointer;
 
 	&:hover {
-		background: #111f;
+		background: #111111ee;
+	}
+
+	&:active {
+		bottom: -3px;
 	}
 }
 

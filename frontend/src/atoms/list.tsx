@@ -25,6 +25,7 @@ export function createList2<
 	isLoading?: Accessor<boolean>;
 	containerRef?: Accessor<HTMLElement | undefined>;
 }) {
+	// TODO: store in Timeline
 	const [scrollPos, setScrollPos] = createSignal(0);
 	const [isAtBottom, setIsAtBottom] = createSignal(true);
 	const [visibleRange, setVisibleRange] = createSignal({ start: 0, end: 0 });
@@ -36,6 +37,7 @@ export function createList2<
 	let isProgrammaticScroll = false;
 
 	// --- height + offset tracking ---
+	// TODO: store in Timeline
 	const [heights, setHeights] = createStore<Record<string, number>>({});
 
 	// Use nonce as the cache key if available, otherwise fall back to id
@@ -64,7 +66,6 @@ export function createList2<
 	// --- ResizeObserver for height correction ---
 	const ro = new ResizeObserver((entries) => {
 		if (!wrapperEl) return;
-		// console.log("a");
 		let heightDiff = 0;
 		let changed = false;
 
@@ -151,7 +152,6 @@ export function createList2<
 	// --- visible range ---
 	function getVisibleRange(): { start: number; end: number } {
 		if (!wrapperEl) return { start: 0, end: 0 };
-		// console.log("b");
 		const items = options.items();
 		const scrollTop = wrapperEl.scrollTop;
 		const viewportH = wrapperEl.clientHeight;
@@ -183,7 +183,6 @@ export function createList2<
 	// --- render loop ---
 	function updateRender() {
 		if (!wrapperEl || !containerEl) return;
-		// console.log("c");
 		const range = getVisibleRange();
 		const current = visibleRange();
 		if (range.start !== current.start || range.end !== current.end) {
@@ -195,7 +194,6 @@ export function createList2<
 	let ticking = false;
 	function onScroll() {
 		if (!wrapperEl) return;
-		// console.log("d");
 		const pos = wrapperEl.scrollTop;
 		const bottom = wrapperEl.scrollHeight - wrapperEl.clientHeight;
 		setScrollPos(pos);
@@ -230,7 +228,6 @@ export function createList2<
 			return;
 		}
 
-		// console.log("e");
 		const prevLen = prevItems.length;
 
 		const ignoreIds = new Set([

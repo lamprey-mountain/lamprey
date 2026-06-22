@@ -307,13 +307,8 @@ export function Input(props: InputProps) {
 	const messages = messagesService.useList(() => props.channel.id, anchor);
 
 	const jumpToLatest = () => {
-		// messages are approx. 20 px high, show 3 pages of messages
-		const SLICE_LEN = Math.max(Math.ceil(globalThis.innerHeight / 20) * 3, 50);
-
-		chUpdate("anchor", {
-			type: "backwards",
-			limit: SLICE_LEN,
-		});
+		ch.timeline.jumpToEnd();
+		// TODO: mark as read (including local marker)
 	};
 
 	const jumpToReplySource = () => {
