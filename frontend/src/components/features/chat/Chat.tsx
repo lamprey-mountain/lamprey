@@ -13,7 +13,7 @@ import { useUploads } from "@/contexts/uploads.tsx";
 import { deepEqual } from "@/utils/deepEqual.ts";
 import { logger } from "@/utils/logger";
 import { Input } from "./Input.tsx";
-import { MessageSkeleton } from "./MessageSkeleton.tsx";
+import { MessageSkeletons } from "./MessageSkeleton.tsx";
 import {
 	renderTimeline,
 	TimelineItem,
@@ -365,7 +365,7 @@ export const ChatMain = (props: ChatProps) => {
 				}
 			>
 				<ul class="skeleton-message-list">
-					<MessageSkeleton />
+					<MessageSkeletons />
 				</ul>
 			</Show>
 			<Input channel={props.channel} />
