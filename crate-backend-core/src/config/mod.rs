@@ -387,6 +387,9 @@ pub struct ConfigSearch {
     /// defaults to 4
     #[serde(default = "default_import_concurrency")]
     pub import_concurrency: usize,
+
+    /// path to the local filesystem cache for the search index
+    pub cache_dir: Option<PathBuf>,
 }
 
 impl Default for ConfigSearch {
@@ -396,6 +399,7 @@ impl Default for ConfigSearch {
             commit_interval: default_commit_interval(),
             max_uncommitted: default_max_uncommitted(),
             import_concurrency: default_import_concurrency(),
+            cache_dir: None,
         }
     }
 }

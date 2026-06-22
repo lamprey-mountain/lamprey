@@ -166,10 +166,15 @@ impl AsyncIndex {
         let config = s.config.search.clone();
 
         let (index, writer, reader) = tokio::task::spawn_blocking(move || {
+            let cache_path = s.config.search.cache_dir
+                .clone()
+                .map(|p| p.join(&name_clone))
+                .unwrap_or_else(|| PathBuf::from(format!("/tmp/tantivy/{name_clone}")));
+
             let dir = ObjectDirectory::new(
                 s,
                 PathBuf::from(format!("tantivy/{name_clone}")),
-                PathBuf::from(format!("/tmp/tantivy/{name_clone}")),
+                cache_path,
             );
 
             let index = Index::open_or_create(dir, schema)
