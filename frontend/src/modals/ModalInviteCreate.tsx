@@ -24,6 +24,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 	const currentUser = useCurrentUser();
 
 	const rooms2 = useRooms();
+	const room = rooms2.use(() => props.room_id as string);
 	const roles = () => roles2.listByRoom(props.room_id as string);
 
 	const currentUserId = () => currentUser()?.id;
@@ -43,8 +44,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 		);
 		const hasRoleApply =
 			permissions.has("RoleApply") || permissions.has("Admin");
-		const room = rooms2.use(() => roomId)();
-		const isOwner = room?.owner_id === userId;
+		const isOwner = room()?.owner_id === userId;
 		return { canApply: hasRoleApply, rank, isOwner };
 	});
 

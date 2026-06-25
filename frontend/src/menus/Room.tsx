@@ -68,6 +68,18 @@ export function RoomMenu(props: { room_id: string }) {
 			>
 				privacy
 			</Item>
+			<Show when={hasPermission("InviteCreate")}>
+				<Item
+					onClick={() =>
+						modalctl.open({
+							type: "invite_create",
+							room_id: props.room_id,
+						})
+					}
+				>
+					create invite
+				</Item>
+			</Show>
 			<Show when={room()}>{(r) => <RoomNotificationMenu room={r()} />}</Show>
 			<Separator />
 			<Show when={hasPermission("ChannelManage")}>

@@ -191,6 +191,18 @@ export function ChannelMenu(props: { channel_id: string }) {
 			<Show when={channel()}>
 				{(c) => <ChannelNotificationMenu channel={c()} />}
 			</Show>
+			<Show when={hasPermission("InviteCreate")}>
+				<Item
+					onClick={() =>
+						modalCtl.open({
+							type: "invite_create",
+							channel_id: props.channel_id,
+						})
+					}
+				>
+					create invite
+				</Item>
+			</Show>
 			<Show when={channel() && isThread()}>
 				<Item onClick={joinOrLeaveChannel}>
 					{self_channel_member() ? "leave" : "join"}
