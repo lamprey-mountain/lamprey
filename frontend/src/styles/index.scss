@@ -3971,7 +3971,6 @@ kbd {
 
 		input {
 			flex: 1;
-			padding: 0 2px;
 		}
 
 		.filter {
@@ -4503,4 +4502,35 @@ button.link {
 
 .emoji-sprite {
 	background-repeat: no-repeat;
+}
+
+.search {
+	display: flex;
+	align-items: center;
+	position: relative;
+	background-color: $bg-150;
+	border: solid 1px $sep-300;
+	padding: 2px 4px;
+
+	& > .icon,
+	& > .icon2 {
+		position: absolute;
+		left: 6px;
+		pointer-events: none;
+		--icon-color: oklch(var(--color-fg5));
+	}
+
+	& > input {
+		border: none;
+		background: none;
+		padding-left: 24px;
+
+		&:focus {
+			border: none;
+		}
+	}
+
+	&:focus-within {
+		border: solid 1px $link-500;
+	}
 }

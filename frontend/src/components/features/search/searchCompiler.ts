@@ -10,7 +10,14 @@ import { type FilterASTNode, SEARCH_FILTERS } from "./filters.config";
 export interface SearchRequestBody {
 	query?: string;
 	sort_order: "asc" | "desc";
-	sort_field: "Created" | "Relevancy" | "Activity" | "Archived" | "Name" | "Id" | "Members";
+	sort_field:
+		| "Created"
+		| "Relevancy"
+		| "Activity"
+		| "Archived"
+		| "Name"
+		| "Id"
+		| "Members";
 	limit: number;
 }
 

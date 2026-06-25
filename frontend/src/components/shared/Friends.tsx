@@ -2,6 +2,7 @@ import { useNavigate } from "@solidjs/router";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { useApi, useDms, useUsers } from "@/api";
 import { AvatarWithStatus } from "./User";
+import { Search } from "@/atoms/Search";
 
 type FilterType = "all" | "online" | "incoming" | "outgoing";
 
@@ -56,8 +57,7 @@ export const Friends = () => {
 		<div class="friends" style="padding:8px">
 			<h1>friends</h1>
 			<div class="info">
-				{/* TODO; add search icon here */}
-				<input type="search" placeholder="search" />
+				<Search placeholder="search" />
 				<div class="filter">
 					<button
 						type="button"

@@ -236,11 +236,10 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 			<header>
 				<Search
 					placeholder="shift for multiple, ctrl for raw text"
-					size="input"
 					value={search}
-					onValue={setSearch}
-					submitted={handleSubmit}
-					escaped={() => props.selected(null, false)}
+					onInput={setSearch}
+					onSubmit={handleSubmit}
+					onEscape={() => props.selected(null, false)}
 				/>
 				{/* TODO: (low priority) skin tone */}
 				<div

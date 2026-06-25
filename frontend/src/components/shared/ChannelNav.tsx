@@ -680,6 +680,15 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					</Show>
 				</Show>
 
+				<Show when={flags.has("friends")}>
+					<li class="channel-item">
+						<A href="/friends" class="channel-link" draggable={false} end>
+							{/* TODO: use correct icon */}
+							<Icon src={icInbox} color={colors.fg500} /> friends
+						</A>
+					</li>
+				</Show>
+
 				<For each={categories()}>
 					{({ category, channels }) => (
 						<>

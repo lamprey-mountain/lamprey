@@ -4,7 +4,7 @@ import { colors } from "@/lib/colors";
 export type IconProps = {
 	src: string;
 	alt?: string;
-	color?: string;
+	color?: string | null;
 };
 
 const DEFAULT_ICON_COLOR = colors.fg400;
@@ -17,7 +17,10 @@ export const Icon = (props: VoidProps<IconProps>) => {
 			aria-label={props.alt}
 			style={{
 				"mask-image": `url(${props.src})`,
-				"--icon-color": props.color ?? DEFAULT_ICON_COLOR,
+				"--icon-color":
+					props.color === null
+						? undefined
+						: (props.color ?? DEFAULT_ICON_COLOR),
 			}}
 		/>
 	);
