@@ -109,7 +109,7 @@ export const ChannelIconGdm = (props: {
 	pad?: number;
 	animate?: boolean;
 }) => {
-	const pad = () => props.pad ?? 4;
+	const pad = () => props.pad ?? 8;
 	const size = 64;
 	const totalSize = () => size + pad() * 2;
 	return (

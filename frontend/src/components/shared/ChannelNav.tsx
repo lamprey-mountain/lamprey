@@ -704,6 +704,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 							</A>
 						</li>
 					</Show>
+
+					<hr class="separator" />
 				</Show>
 
 				<For each={categories()}>
@@ -770,6 +772,9 @@ export const ChannelNav = (props: { room_id?: string }) => {
 										{(channel) => (
 											<li
 												class="channel-item"
+												classList={{
+													dm: channel.type === "Dm" || channel.type === "Gdm",
+												}}
 												data-drag-mode={getDragMode(channel.id)}
 												data-is-dragging={isDraggingThis(channel.id)}
 												data-voice-target={

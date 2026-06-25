@@ -124,6 +124,17 @@
 			background: oklch(var(--color-green) / 0.2);
 			border: solid $color-green 1px;
 		}
+
+		&.dm .avatar {
+			margin: -4px;
+			margin-right: 0;
+			height: 36px;
+			width: 36px;
+		}
+
+		&.dm .channel-link::before {
+			top: 14px;
+		}
 	}
 
 	.channel-link {
@@ -335,6 +346,11 @@
 		&[data-speaking="true"] .avatar {
 			border-color: $color-green;
 		}
+	}
+
+	.separator {
+		border-bottom: solid $sep-300 1px;
+		margin: 8px;
 	}
 }
 
