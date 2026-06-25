@@ -346,3 +346,5 @@ export type LampreyComponentMedia = {
 };
 
 export type ButtonStyle = "Primary" | "Secondary" | "Danger";
+
+export type UserStatus = components["schemas"]["Status"];

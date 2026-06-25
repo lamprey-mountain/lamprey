@@ -2051,12 +2051,17 @@ blockquote {
 	height: 12px;
 	aspect-ratio: 1/1;
 
+	& .indicator {
+		fill-rule: evenodd;
+		transition: fill 100ms, d 100ms;
+	}
+
 	&[data-status="Online"] .indicator {
 		fill: $status-online;
 	}
 
 	&[data-status="Offline"] .indicator {
-		fill: $status-offline;
+		fill: $sep-800;
 	}
 
 	&[data-status="Away"] .indicator {
@@ -2065,6 +2070,10 @@ blockquote {
 
 	&[data-status="Busy"] .indicator {
 		fill: $color-red;
+	}
+
+	&[data-status="Available"] .indicator {
+		fill: $color-blue;
 	}
 }
 

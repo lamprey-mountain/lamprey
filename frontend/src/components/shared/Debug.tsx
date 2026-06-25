@@ -6,6 +6,8 @@ import { Dropdown } from "@/atoms/Dropdown.tsx";
 import { MessageView } from "@/components/features/chat/Message.tsx";
 import { EmbedView } from "@/components/shared/UrlEmbed";
 import { flags } from "@/lib/flags";
+import { AvatarWithStatus } from "./User";
+import { useCurrentUser } from "@/contexts/currentUser";
 
 // @ts-expect-error
 const packageJson = __VITE_PACKAGE_JSON__;
@@ -17,9 +19,33 @@ const gitCommit = __VITE_GIT_COMMIT__;
 const gitDirty = __VITE_GIT_DIRTY__;
 
 export const Debug = (): JSX.Element => {
+	const u = useCurrentUser();
+	const [status, setStatus] = createSignal("Online");
+
 	return (
 		<div class="debug">
 			<h3>area 51</h3>
+			<details>
+				<summary>change status</summary>
+				<button onClick={() => setStatus("Online")}>Online</button>
+				<button onClick={() => setStatus("Offline")}>Offline</button>
+				<button onClick={() => setStatus("Away")}>Away</button>
+				<button onClick={() => setStatus("Busy")}>Busy</button>
+				<button onClick={() => setStatus("Available")}>Available</button>
+				<div>
+					<Show when={u()} fallback="no current user">
+						{(u) => (
+							<AvatarWithStatus
+								style="height:32px"
+								user={{
+									...u(),
+									presence: { status: status(), activities: [] },
+								}}
+							/>
+						)}
+					</Show>
+				</div>
+			</details>
 			<details>
 				<summary>build info</summary>
 				commit {gitCommit} {gitDirty && "(dirty)"}
