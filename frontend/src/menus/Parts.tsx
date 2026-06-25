@@ -116,7 +116,6 @@ export function Submenu(
 		>
 			<button
 				type="button"
-				class="button"
 				onClick={(e) => {
 					e.stopPropagation();
 					props.onClick?.(e);
@@ -127,7 +126,7 @@ export function Submenu(
 					[`color-${props.color}`]: !!props.color,
 				}}
 			>
-				{props.content}
+				<div class="inner">{props.content}</div>
 			</button>
 			<div
 				ref={setSubEl}
@@ -186,7 +185,6 @@ export function Item(
 		<li>
 			<button
 				type="button"
-				class="button"
 				onClick={(e) => {
 					props.onClick?.(e);
 					if (!props.onClick) {
@@ -202,7 +200,7 @@ export function Item(
 					[`color-${props.color}`]: !!props.color,
 				}}
 			>
-				{props.children}
+				<div class="inner">{props.children}</div>
 			</button>
 		</li>
 	);

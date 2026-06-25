@@ -794,22 +794,33 @@ em {
 }
 
 .contextmenu menu {
-	background-color: $bg-300;
-	border: solid 1px $sep-500;
+	background-color: $bg-150;
+	border: solid 1px $sep-400;
 	box-shadow: 2px 2px 8px $bg-100;
 	color: $fg-400;
 	overflow: hidden;
 	min-width: 128px;
+	border-radius: 4px;
+	padding: 4px 0;
 
 	& button {
 		border: none;
-		padding: 2px 8px;
+		padding: 2px 4px;
+		margin: -2px 0;
 		width: 100%;
 		text-align: left;
+		background: none;
+		cursor: pointer;
+		color: $fg-300;
 
-		&:hover,
-		&:focus {
-			background-color: oklch(var(--color-bg1) / 0.5);
+		& > .inner {
+			padding: 2px 4px;
+			border-radius: 2px;
+		}
+
+		&:hover > .inner,
+		&:focus > .inner {
+			background-color: #fff2;
 		}
 
 		&.color-danger {
@@ -835,7 +846,8 @@ em {
 	& hr {
 		border: none;
 		height: 1px;
-		background-color: $bg-400;
+		background-color: $sep-300;
+		margin: 4px 0;
 	}
 }
 
