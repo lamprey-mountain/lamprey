@@ -273,6 +273,7 @@ function shouldSplitInner(a: Message, b: Message) {
 	if (a.latest_version.type !== "DefaultMarkdown") return true;
 	if (b.latest_version.type !== "DefaultMarkdown") return true;
 	if (a.author_id !== b.author_id) return true;
+	if (a.latest_version.reply_id) return true;
 	if (getMessageOverrideName(a) !== getMessageOverrideName(b)) return true;
 	const ts_a = get_msg_ts(a);
 	const ts_b = get_msg_ts(b);
