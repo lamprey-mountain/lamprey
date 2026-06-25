@@ -1,14 +1,40 @@
 import type { User, UserStatus } from "sdk";
-import {
-	createResource,
-	createUniqueId,
-	Match,
-	Show,
-	Switch,
-	type VoidProps,
-} from "solid-js";
+import { createResource, createUniqueId, Show, type VoidProps } from "solid-js";
 import { generatePfp, pfpsLoaded } from "@/lib/pfp";
 import { getThumbFromId } from "@/media/util";
+
+const SIZE = 64;
+const STATUS_RADIUS = 8;
+const STATUS_MARGIN = 8;
+
+const MARGIN = STATUS_RADIUS / 2;
+const TOTAL_SIZE = SIZE + MARGIN * 2;
+
+export type AvatarProps2 = {
+	/**
+	 * the user who's avatar to show
+	 *
+	 * if the user does not have an avatar, one will be generated
+	 */
+	user: User;
+	// room_member?: RoomMember,
+
+	/**
+	 * whether to include padding round the avatar
+	 *
+	 * if false, the status indicator may clip outside of the image. defaults to true.
+	 */
+	pad?: boolean;
+
+	/** whether to animate the avatar (for animated gif/webp avatars)*/
+	animate?: boolean;
+
+	/** whether to show the user's status */
+	status?: boolean;
+
+	/** additional css styles to include */
+	style?: string;
+};
 
 export type AvatarProps = {
 	user?: User;
@@ -49,6 +75,79 @@ const getStatusPath = (status: UserStatus) => {
 			return `M ${cx} ${cy - r} a ${r} ${r} 0 1 1 0 ${r * 2} a ${r} ${r} 0 1 1 0 -${r * 2} Z`;
 		}
 	}
+};
+
+export const AvatarDefs = () => {
+	return (
+		<defs>
+			<mask id="rbox">
+				<rect
+					rx="6"
+					width={SIZE}
+					height={SIZE}
+					x={MARGIN}
+					y={MARGIN}
+					fill="white"
+				/>
+				<circle
+					cx={SIZE}
+					cy={SIZE}
+					r={STATUS_RADIUS + STATUS_MARGIN}
+					fill="black"
+				/>
+			</mask>
+		</defs>
+	);
+};
+
+export const Avatar2 = (props: VoidProps<AvatarProps2>) => {
+	const [pfp] = createResource(
+		() => [props.user, pfpsLoaded(), props.animate] as const,
+		async ([user, loaded, anim]) => {
+			if (user.avatar) return getThumbFromId(user.avatar, 64, anim);
+			if (!loaded) return "";
+			return generatePfp(user.id);
+		},
+	);
+
+	const status = () => props.user?.presence.status ?? "Offline";
+	const pad = () => ((props.pad ?? true) ? "" : `margin: -${MARGIN}px;`);
+
+	return (
+		<svg
+			aria-hidden="true"
+			role="img"
+			class="avatar2"
+			data-status={status()}
+			data-user-id={props.user.id}
+			data-generated={!props.user.avatar}
+			viewBox={`0 0 ${TOTAL_SIZE} ${TOTAL_SIZE}`}
+			style={pad() + props.style}
+			classList={{ unpadded: props.pad === false }}
+		>
+			<g mask={props.status ? "url(#rbox)" : undefined}>
+				<rect
+					class="backdrop"
+					width={SIZE}
+					height={SIZE}
+					x={MARGIN}
+					y={MARGIN}
+				/>
+				<image
+					// TODO: properly crop avatars on upload
+					preserveAspectRatio="xMidYMid slice"
+					width={SIZE}
+					height={SIZE}
+					x={MARGIN}
+					y={MARGIN}
+					href={pfp()}
+				/>
+			</g>
+			<Show when={props.status}>
+				<path class="status" d={getStatusPath(status())} />
+			</Show>
+		</svg>
+	);
 };
 
 export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {

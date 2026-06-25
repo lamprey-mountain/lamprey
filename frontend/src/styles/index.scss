@@ -4567,3 +4567,40 @@ button.link {
 		border: solid 1px $link-500;
 	}
 }
+
+.avatar2 {
+	display: block;
+	object-fit: contain;
+	height: 64px;
+	width: 64px;
+	aspect-ratio: 1/1;
+
+	& .backdrop {
+		fill: $bg-300;
+	}
+
+	& .status {
+		fill-rule: evenodd;
+		transition: fill 100ms, d 100ms;
+	}
+
+	&[data-status="Online"] .status {
+		fill: $status-online;
+	}
+
+	&[data-status="Offline"] .status {
+		fill: $sep-800;
+	}
+
+	&[data-status="Away"] .status {
+		fill: $color-yellow;
+	}
+
+	&[data-status="Busy"] .status {
+		fill: $color-red;
+	}
+
+	&[data-status="Available"] .status {
+		fill: $color-blue;
+	}
+}
