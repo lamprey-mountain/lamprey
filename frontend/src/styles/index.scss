@@ -4046,9 +4046,25 @@ kbd {
 				align-items: center;
 				justify-content: center;
 				background: $bg-200;
+				height: 32px;
+				width: 32px;
+				--icon-color: oklch(var(--color-fg4));
+
+				& > .icon2 {
+					height: 18px;
+					width: 18px;
+				}
 
 				&:hover {
 					background: #fff2;
+				}
+
+				&.accept:hover {
+					--icon-color: oklch(var(--color-green));
+				}
+
+				&.reject:hover {
+					--icon-color: oklch(var(--color-red));
 				}
 			}
 		}

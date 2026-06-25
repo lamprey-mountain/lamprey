@@ -25,6 +25,8 @@ export const Friends = () => {
 	const users2 = useUsers();
 	const [filter, setFilter] = createSignal<FilterType>("all");
 
+	// TODO: add relationship service
+
 	const [friends] = createResource(async () => {
 		const { data } = await api2.client.http.GET("/api/v1/user/@self/friend", {
 			params: { query: {} },
@@ -209,27 +211,27 @@ const Friend = (props: {
 				<Switch>
 					<Match when={props.relation === "Incoming"}>
 						<button
-							class="round"
+							class="round accept"
 							ref={acceptTooltip.content}
 							onClick={acceptRequest}
 						>
-							<Icon src={icCheck} alt="accept friend request" />
+							<Icon src={icCheck} alt="accept friend request" color={null} />
 						</button>
 						<button
-							class="round"
+							class="round reject"
 							ref={rejectTooltip.content}
 							onClick={rejectRequest}
 						>
-							<Icon src={icX} alt="reject friend request" />
+							<Icon src={icX} alt="reject friend request" color={null} />
 						</button>
 					</Match>
 					<Match when={props.relation === "Outgoing"}>
 						<button
-							class="round"
+							class="round reject"
 							ref={cancelTooltip.content}
 							onClick={rejectRequest}
 						>
-							<Icon src={icX} alt="cancel friend request" />
+							<Icon src={icX} alt="cancel friend request" color={null} />
 						</button>
 					</Match>
 					<Match when={props.relation === "Friend"}>
