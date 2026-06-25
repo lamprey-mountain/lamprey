@@ -3962,23 +3962,30 @@ kbd {
 }
 
 .friends {
-	.info {
+	& > header {
+		background-color: $bg-150;
+		border-bottom: solid 1px $sep-300;
+		padding: 0.5rem;
+		/* box-shadow: 0 2px 8px $bg-100; */
+	}
+
+	& > main {
+		padding: 8px;
+	}
+
+	& .friends-filters {
 		display: flex;
 		gap: 4px;
 		margin-top: 4px;
 		margin-bottom: 4px;
 		padding: 0 4px;
 
-		input {
+		& > .search {
 			flex: 1;
 		}
 
-		.filter {
-			border: solid $sep-500 1px;
-
-			button {
-				border: none;
-			}
+		& > .button.primary {
+			border-radius: 2px;
 		}
 	}
 
@@ -3990,14 +3997,18 @@ kbd {
 		border: none;
 		width: 100%;
 		text-align: left;
-		font: inherit;
-		color: inherit;
 		padding: 0;
+		cursor: pointer;
+		border-radius: 4px;
 
 		.avatar {
 			padding: 8px;
 			height: 32px;
 			width: 32px;
+		}
+
+		&:hover {
+			background: #fff2;
 		}
 	}
 }
@@ -4103,6 +4114,7 @@ input[type="color"] {
 		border: none;
 
 		&.active {
+			// TODO: restyle
 			background: #fff2;
 		}
 	}

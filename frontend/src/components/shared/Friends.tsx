@@ -54,57 +54,61 @@ export const Friends = () => {
 	};
 
 	return (
-		<div class="friends" style="padding:8px">
-			<h1>friends</h1>
-			<div class="info">
-				<Search placeholder="search" />
-				<div class="filter">
-					<button
-						type="button"
-						class="button"
-						classList={{ active: filter() === "online" }}
-						onClick={() => setFilter("online")}
-					>
-						online
-					</button>
-					<button
-						type="button"
-						class="button"
-						classList={{ active: filter() === "all" }}
-						onClick={() => setFilter("all")}
-					>
-						all
-					</button>
-					<button
-						type="button"
-						class="button"
-						classList={{ active: filter() === "incoming" }}
-						onClick={() => setFilter("incoming")}
-					>
-						incoming
-					</button>
-					<button
-						type="button"
-						class="button"
-						classList={{ active: filter() === "outgoing" }}
-						onClick={() => setFilter("outgoing")}
-					>
-						outgoing
+		<div class="friends">
+			<header>
+				<h1>friends</h1>
+			</header>
+			<main>
+				<div class="friends-filters">
+					<Search placeholder="search" />
+					<div class="filters">
+						<button
+							type="button"
+							class="button"
+							classList={{ active: filter() === "online" }}
+							onClick={() => setFilter("online")}
+						>
+							online
+						</button>
+						<button
+							type="button"
+							class="button"
+							classList={{ active: filter() === "all" }}
+							onClick={() => setFilter("all")}
+						>
+							all
+						</button>
+						<button
+							type="button"
+							class="button"
+							classList={{ active: filter() === "incoming" }}
+							onClick={() => setFilter("incoming")}
+						>
+							incoming
+						</button>
+						<button
+							type="button"
+							class="button"
+							classList={{ active: filter() === "outgoing" }}
+							onClick={() => setFilter("outgoing")}
+						>
+							outgoing
+						</button>
+					</div>
+					<button type="button" class="button primary" onClick={sendRequest}>
+						add
 					</button>
 				</div>
-				<button type="button" class="primary" onClick={sendRequest}>
-					add
-				</button>
-			</div>
-			<ul>
-				<For each={filteredFriends()}>
-					{(i) => (
-						<li>
-							<Friend user_id={i.user_id} />
-						</li>
-					)}
-				</For>
-			</ul>
+				<ul>
+					<For each={filteredFriends()}>
+						{(i) => (
+							<li>
+								<Friend user_id={i.user_id} />
+							</li>
+						)}
+					</For>
+				</ul>
+			</main>
 		</div>
 	);
 };
