@@ -9,6 +9,7 @@ use common::{
 
 use crate::prelude::*;
 
+#[axum::debug_handler]
 #[handler(routes::media_create_new)]
 async fn create(
     req: Req<routes::media_create_new::Endpoint>,
@@ -72,6 +73,7 @@ async fn create(
 }
 
 #[handler(routes::media_upload)]
+#[axum::debug_handler]
 async fn upload(
     req: Req<routes::media_upload::Endpoint>,
 ) -> Result<routes::media_upload::Response> {

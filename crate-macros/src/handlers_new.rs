@@ -15,7 +15,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
 
         ::inventory::submit! {
             crate::util::routes::Handler {
-                tag: if #ep_type::metadata().tags.contains("cdn") {
+                tag: if #ep_type::metadata().tags.contains(&"cdn") {
                     "cdn"
                 } else {
                     "api"

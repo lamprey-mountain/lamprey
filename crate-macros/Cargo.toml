@@ -24,3 +24,6 @@ proc-macro-crate = "3.5.0"
 
 [dev-dependencies]
 macrotest = "1"
+
+[features]
+use_new_endpoint_macro = []

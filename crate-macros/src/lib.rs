@@ -67,6 +67,7 @@ pub fn components(input: TokenStream) -> TokenStream {
         .into()
 }
 
+#[cfg(not(feature = "use_new_endpoint_macro"))]
 #[proc_macro_attribute]
 pub fn endpoint(args: TokenStream, item: TokenStream) -> TokenStream {
     endpoint::expand(args.into(), item.into())
@@ -83,6 +84,14 @@ pub fn handler(args: TokenStream, item: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn endpoint_new(args: TokenStream, item: TokenStream) -> TokenStream {
+    endpoint_new::expand(args.into(), item.into())
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
+}
+
+#[cfg(feature = "use_new_endpoint_macro")]
+#[proc_macro_attribute]
+pub fn endpoint(args: TokenStream, item: TokenStream) -> TokenStream {
     endpoint_new::expand(args.into(), item.into())
         .unwrap_or_else(|e| e.to_compile_error())
         .into()

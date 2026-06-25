@@ -1,7 +1,10 @@
+use std::sync::Arc;
+
 use crate::prelude::*;
 
 use axum::extract::FromRequest;
 use common::util::routes::Endpoint;
+use lamprey_backend_services::services::Services;
 
 use crate::util::Auth;
 
@@ -27,15 +30,15 @@ where
     E: Endpoint + Send,
     E::Request: Send,
 {
-    type Rejection = Error;
+    type Rejection = ServerError;
 
-    async fn from_request(req: axum::extract::Request, state: &Globals) -> Result<Self> {
+    async fn from_request(req: axum::extract::Request, state: &Globals) -> ServerResult<Self> {
         todo!()
     }
 }
 
 impl<E: Endpoint> Req<E> {
-    pub fn services(&self) -> ! {
+    pub fn services(&self) -> Arc<Services> {
         todo!()
     }
 

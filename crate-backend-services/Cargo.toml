@@ -13,7 +13,7 @@ tokio = { version = "1.42.0", features = ["rt", "macros"] }
 tracing = "0.1.41"
 lamprey-backend-core = { path = "../crate-backend-core" }
 common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common", features = ["utoipa", "validator"] }
-lamprey-macros = { path = "../crate-macros" }
+lamprey-macros = { version = "0.1.1", path = "../crate-macros", features = ["use_new_endpoint_macro"] }
 opendal = { version = "0.54.1", features = ["services-s3", "services-fs"] }
 lamprey-backend-data-postgres = { version = "0.1.1", path = "../crate-backend-data-postgres" }
 jsonwebtoken = "10.4.0"

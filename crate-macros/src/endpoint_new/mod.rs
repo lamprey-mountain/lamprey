@@ -64,10 +64,8 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
 
             pub struct Endpoint;
 
-            #[derive(Debug, Clone)]
             #request_clean
 
-            #[derive(Debug, Clone)]
             #response_clean
 
             impl crate::util::routes::Endpoint for Endpoint {

@@ -1,9 +1,10 @@
 use crate::prelude::*;
+use routes::media_proxy as r;
 
-#[handler(routes::ack_bulk_new)]
-async fn bulk(req: Req<routes::ack_bulk_new::Endpoint>) -> Result<routes::ack_bulk_new::Response> {
+#[handler(r::media_get)]
+async fn media_get(req: Req<r::media_get::Endpoint>) -> Result<r::media_get::Response> {
     // req.auth.ensure_scopes(&[Scope::Full])?;
     // TODO
 
-    Ok(routes::ack_bulk_new::Response {})
+    Ok(r::media_get::Response {})
 }
