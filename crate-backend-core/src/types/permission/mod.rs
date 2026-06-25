@@ -7,6 +7,7 @@ use crate::error::{Error, Result};
 
 pub mod bits;
 pub mod flags;
+pub mod requirements;
 
 pub use bits::{BROADCAST_LURKER_PERMS, PermissionBits, QUARANTINE_PERMS, VIEW_PERMS};
 pub use flags::PermissionsFlags;

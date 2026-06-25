@@ -88,40 +88,6 @@ impl Permissions<PermissionsRoom> {
     }
 }
 
-impl<C> Requirements<C> {
-    /// the user needs this permission
-    pub fn permission(&mut self, _perm: Permission) -> &mut Self {
-        todo!()
-    }
-
-    /// the user needs this oauth2 scope
-    pub fn scope(&mut self, _scope: Scope) -> &mut Self {
-        todo!()
-    }
-
-    /// the target resource does not need to be visible
-    pub fn always_visible(&mut self) -> &mut Self {
-        todo!()
-    }
-}
-
-impl Requirements<RequirementsChannel> {
-    /// the target channel does not need to be unlocked
-    pub fn always_unlocked(&mut self) -> &mut Self {
-        todo!()
-    }
-
-    /// the channel must not have thread slowmode active, or the user must be able to bypass it
-    pub fn slowmode_thread(&mut self) -> &mut Self {
-        todo!()
-    }
-
-    /// the channel must not have message slowmode active, or the user must be able to bypass it
-    pub fn slowmode_message(&mut self) -> &mut Self {
-        todo!()
-    }
-}
-
 // // PERF: use this
 // pub struct RequirementsBits(u128);
 
