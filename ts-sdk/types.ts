@@ -348,3 +348,5 @@ export type LampreyComponentMedia = {
 export type ButtonStyle = "Primary" | "Secondary" | "Danger";
 
 export type UserStatus = components["schemas"]["Status"];
+export type Presence = components["schemas"]["Presence"];
+export type PresenceActivity = components["schemas"]["Activity"];

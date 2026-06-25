@@ -1,8 +1,22 @@
 import { useNavigate } from "@solidjs/router";
-import { createResource, createSignal, For, Show } from "solid-js";
+import {
+	createResource,
+	createSignal,
+	For,
+	Match,
+	Show,
+	Switch,
+} from "solid-js";
 import { useApi, useUsers } from "@/api";
 import { AvatarWithStatus } from "./User";
 import { Search } from "@/atoms/Search";
+import { createTooltip } from "@/atoms/Tooltip";
+import { useMenu } from "@/contexts/mod.tsx";
+import icCheck from "@/assets/check-1.png";
+import icX from "@/assets/x-1.png";
+import icDm from "@/assets/dm.png";
+import icMore from "@/assets/more.png";
+import { Icon } from "@/atoms/Icon";
 
 type FilterType = "all" | "online" | "incoming" | "outgoing";
 
@@ -18,7 +32,7 @@ export const Friends = () => {
 		return data;
 	});
 
-	const [_pending] = createResource(async () => {
+	const [pending] = createResource(async () => {
 		const { data } = await api2.client.http.GET(
 			"/api/v1/user/@self/friend/pending",
 			{ params: { query: {} } },
@@ -35,7 +49,7 @@ export const Friends = () => {
 	};
 
 	const filteredFriends = () => {
-		const items = friends()?.items ?? [];
+		const items = [...(friends()?.items ?? []), ...(pending()?.items ?? [])];
 		const currentFilter = filter();
 
 		if (currentFilter === "incoming") {
@@ -44,10 +58,14 @@ export const Friends = () => {
 			return items.filter((i) => i.relation === "Outgoing");
 		} else if (currentFilter === "online") {
 			return items.filter((i) => {
+				if (i.relation !== "Friend") return false;
 				const user = users2.cache.get(i.user_id);
 				return user?.presence?.status !== "Offline";
 			});
+		} else if (currentFilter === "all") {
+			return items.filter((i) => i.relation === "Friend");
 		}
+
 		return items;
 	};
 
@@ -94,14 +112,14 @@ export const Friends = () => {
 						</button>
 					</div>
 					<button type="button" class="button primary" onClick={sendRequest}>
-						add
+						add friend
 					</button>
 				</div>
 				<ul>
 					<For each={filteredFriends()}>
 						{(i) => (
 							<li>
-								<Friend user_id={i.user_id} />
+								<Friend user_id={i.user_id} relation={i.relation} />
 							</li>
 						)}
 					</For>
@@ -111,11 +129,20 @@ export const Friends = () => {
 	);
 };
 
-const Friend = (props: { user_id: string }) => {
+const Friend = (props: {
+	user_id: string;
+	relation: string | null | undefined;
+}) => {
 	const api2 = useApi();
 	const users2 = useUsers();
 	const navigate = useNavigate();
+	const { setMenu } = useMenu();
 	const user = users2.use(() => props.user_id);
+	const acceptTooltip = createTooltip({ tip: () => "Accept" });
+	const rejectTooltip = createTooltip({ tip: () => "Reject" });
+	const cancelTooltip = createTooltip({ tip: () => "Cancel" });
+	const dmTooltip = createTooltip({ tip: () => "DM" });
+	const moreTooltip = createTooltip({ tip: () => "More" });
 
 	const openDm = async () => {
 		const { data } = await api2.client.http.POST(
@@ -127,25 +154,98 @@ const Friend = (props: { user_id: string }) => {
 		}
 	};
 
+	const acceptRequest = async (e: MouseEvent) => {
+		e.stopPropagation();
+		await api2.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
+			params: { path: { target_id: props.user_id } },
+		});
+		// TODO: refresh friend list
+	};
+
+	const rejectRequest = async (e: MouseEvent) => {
+		e.stopPropagation();
+		await api2.client.http.DELETE("/api/v1/user/@self/friend/{target_id}", {
+			params: { path: { target_id: props.user_id } },
+		});
+		// TODO: refresh friend list
+	};
+
+	const openMore = (e: MouseEvent) => {
+		e.stopPropagation();
+		setMenu({
+			type: "user",
+			user_id: props.user_id,
+			x: e.clientX,
+			y: e.clientY,
+			admin: false,
+		});
+	};
+
+	const handleDmClick = (e: MouseEvent) => {
+		e.stopPropagation();
+		openDm();
+	};
+
 	return (
-		<button
-			type="button"
+		<div
 			class="friend menu-user"
 			data-user-id={props.user_id}
 			onClick={openDm}
 			onKeyDown={(e) => e.key === "Enter" && openDm()}
 		>
 			<AvatarWithStatus user={user()} />
-			<div>
+			<div style="flex:1">
 				<div>{user()?.name}</div>
 				<Show
 					when={
+						// TODO: refactor into more robust function
 						user()?.presence.activities.find((a) => a.type === "Custom")?.text
 					}
 				>
 					{(t) => <div class="dim">{t()}</div>}
 				</Show>
 			</div>
-		</button>
+			<menu>
+				<Switch>
+					<Match when={props.relation === "Incoming"}>
+						<button
+							class="round"
+							ref={acceptTooltip.content}
+							onClick={acceptRequest}
+						>
+							<Icon src={icCheck} alt="accept friend request" />
+						</button>
+						<button
+							class="round"
+							ref={rejectTooltip.content}
+							onClick={rejectRequest}
+						>
+							<Icon src={icX} alt="reject friend request" />
+						</button>
+					</Match>
+					<Match when={props.relation === "Outgoing"}>
+						<button
+							class="round"
+							ref={cancelTooltip.content}
+							onClick={rejectRequest}
+						>
+							<Icon src={icX} alt="cancel friend request" />
+						</button>
+					</Match>
+					<Match when={props.relation === "Friend"}>
+						<button
+							class="round"
+							ref={dmTooltip.content}
+							onClick={handleDmClick}
+						>
+							<Icon src={icDm} alt="open dm" />
+						</button>
+					</Match>
+				</Switch>
+				<button class="round" ref={moreTooltip.content} onClick={openMore}>
+					<Icon src={icMore} alt="more..." />
+				</button>
+			</menu>
+		</div>
 	);
 };

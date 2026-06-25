@@ -4010,6 +4010,10 @@ kbd {
 		}
 	}
 
+	& > main > ul > li + li {
+		border-top: solid $sep-300 1px;
+	}
+
 	.friend {
 		display: flex;
 		gap: 8px;
@@ -4018,7 +4022,7 @@ kbd {
 		border: none;
 		width: 100%;
 		text-align: left;
-		padding: 0;
+		padding: 8px 4px;
 		cursor: pointer;
 		border-radius: 4px;
 
@@ -4030,6 +4034,23 @@ kbd {
 
 		&:hover {
 			background: #fff2;
+		}
+
+		& > menu {
+			margin-right: 4px;
+			display: flex;
+			gap: 4px;
+
+			& > button {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				background: $bg-200;
+
+				&:hover {
+					background: #fff2;
+				}
+			}
 		}
 	}
 }
@@ -4604,4 +4625,10 @@ button.link {
 	&[data-status="Available"] .status {
 		fill: $color-blue;
 	}
+}
+
+button.round {
+	border-radius: 50%;
+	height: 24px;
+	width: 24px;
 }
