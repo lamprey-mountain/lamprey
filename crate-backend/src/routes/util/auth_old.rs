@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::extract::FromRequestParts;
+use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::federation::Hostname;
 use common::v1::types::ids::SERVER_TOKEN_SESSION_ID;
 use common::v1::types::oauth::Scope;
@@ -452,12 +453,16 @@ impl Auth {
         match &self.session.status {
             SessionStatus::Unauthorized => Err(Error::UnauthSession),
             SessionStatus::Bound { .. } => Err(Error::UnauthSession),
-            SessionStatus::Authorized { .. } => Err(Error::BadStatic("needs sudo")),
+            SessionStatus::Authorized { .. } => Err(Error::ApiError(ApiError::from_code(
+                ErrorCode::SudoRequired,
+            ))),
             SessionStatus::Sudo {
                 sudo_expires_at, ..
             } => {
                 if *sudo_expires_at < Time::now_utc() {
-                    Err(Error::BadStatic("sudo session expired"))
+                    Err(Error::ApiError(ApiError::from_code(
+                        ErrorCode::SudoSessionExpired,
+                    )))
                 } else {
                     Ok(())
                 }
