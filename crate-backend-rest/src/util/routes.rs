@@ -6,6 +6,13 @@ use utoipa::openapi::{Components, Info, OpenApiBuilder, PathItem, Tag, extension
 
 use crate::util::Globals;
 
+pub struct Handler {
+    pub register: fn(&mut Routes),
+    pub tag: &'static str,
+}
+
+inventory::collect!(Handler);
+
 pub struct Routes {
     openapi: utoipa::openapi::OpenApi,
     router: Option<Router<Globals>>,
@@ -14,9 +21,10 @@ pub struct Routes {
 }
 
 impl Routes {
-    pub fn new() -> Self {
+    /// create a new Routes for all api routes
+    pub fn new_api() -> Self {
         let info = Info::builder()
-            .title("api doccery") // TODO: better name
+            .title("Lamprey Mountain API")
             .version(env!("CARGO_PKG_VERSION"))
             .description(Some(include_str!("./../../../crate-backend/docs/index.md"))) // TODO: copy docs to somewhere else?
             // .license(env!("CARGO_PKG_LICENSE")) // TODO: parsing license into here
@@ -65,12 +73,41 @@ impl Routes {
         //     .get_or_insert_default()
         //     .merge(Extensions::builder().add("x-tagGroups", todo!()).build());
 
-        Self {
+        let mut me = Self {
             openapi,
             router: Some(Router::new()),
             prefix: String::new(),
             last_path: None,
+        };
+
+        for handler in inventory::iter::<Handler> {
+            (handler.register)(&mut me);
         }
+
+        me
+    }
+
+    /// create a new Routes for all media/cdn routes
+    pub fn new_media() -> Self {
+        let info = Info::builder()
+            .title("Lamprey Mountain API")
+            .version(env!("CARGO_PKG_VERSION"))
+            .description(Some("documentation for the cdn")) // TODO: write more docs
+            .build();
+
+        let openapi = OpenApiBuilder::new().info(info).build();
+
+        let mut me = Self {
+            openapi,
+            router: Some(Router::new()),
+            prefix: String::new(),
+            last_path: None,
+        };
+
+        for handler in inventory::iter::<Handler> {
+            (handler.register)(&mut me);
+        }
+        me
     }
 
     /// convert this into an axum router
@@ -91,7 +128,7 @@ impl Routes {
         // )
     }
 
-    pub fn nest<F: FnMut(&mut Self)>(&mut self, prefix: &str, mut f: F) {
+    pub(crate) fn nest<F: FnMut(&mut Self)>(&mut self, prefix: &str, mut f: F) {
         // PERF: theres probably some cool way to use std::mem::swap(x, y); instead of cloning
         let old_prefix = self.prefix.clone();
         self.prefix = format!("{}{}", self.prefix, prefix);
@@ -101,7 +138,7 @@ impl Routes {
 
     /// register a path for the openapi schema
     #[rustfmt::skip]
-    pub fn path(&mut self, path: &str, item: PathItem) {
+    pub(crate) fn path(&mut self, path: &str, item: PathItem) {
         use std::collections::btree_map::Entry;
         match self.openapi.paths.paths.entry(path.to_string()) {
             Entry::Vacant(v) => {
@@ -122,15 +159,10 @@ impl Routes {
     }
 
     /// register a new axum route
-    pub fn route(&mut self, path: &str, method_router: MethodRouter<Globals>) {
+    pub(crate) fn route(&mut self, path: &str, method_router: MethodRouter<Globals>) {
         let full_path = format!("{}{}", self.prefix, path);
         let r = self.router.take().unwrap();
         self.router = Some(r.route(&full_path, method_router));
         self.last_path = Some(full_path);
     }
-}
-
-/// a set of http endpoint handlers
-pub trait Handlers {
-    fn register(routes: &mut Routes);
 }

@@ -12,6 +12,8 @@ pub struct Req<E: Endpoint> {
     pub auth: Auth,
     pub body: E::Request,
 
+    pub globals: Globals,
+
     /// resolved media
     media: (),
 
@@ -32,7 +34,11 @@ where
     }
 }
 
-impl Req<E: Endpoint> {
+impl<E: Endpoint> Req<E> {
+    pub fn services(&self) -> ! {
+        todo!()
+    }
+
     // pub fn get_media(&self, media_ref: &MediaReference) -> &Media {
     //     todo!()
     // }

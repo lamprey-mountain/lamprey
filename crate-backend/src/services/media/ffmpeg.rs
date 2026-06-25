@@ -30,6 +30,70 @@ async fn run_ffmpeg(cmd: &mut Command, context: &str) -> Result<Vec<u8>> {
     }
 }
 
+pub async fn transcode_to_webm(in_path: &Path, out_path: &Path) -> Result<()> {
+    let mut cmd = Command::new("ffmpeg");
+    cmd.args(["-v", "quiet", "-y", "-i"])
+        .arg(in_path)
+        .args([
+            "-c:v",
+            "libvpx-vp9",
+            "-crf",
+            "30",
+            "-b:v",
+            "0",
+            "-an",
+            "-f",
+            "webm",
+        ])
+        .arg(out_path)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    cmd.output().await.map_err(|_| Error::Ffmpeg)?;
+    Ok(())
+}
+
+pub async fn generate_thumbnail(
+    in_path: &Path,
+    out_path: &Path,
+    size: u32,
+    animate: bool,
+) -> Result<()> {
+    let mut cmd = Command::new("ffmpeg");
+    cmd.args(["-v", "quiet", "-y", "-i"]).arg(in_path);
+
+    if animate {
+        // Generate animated WebP for thumbnails
+        cmd.args([
+            "-vf",
+            &format!("scale={size}:{size}:force_original_aspect_ratio=decrease"),
+            "-loop",
+            "0",
+            "-f",
+            "webp",
+        ]);
+    } else {
+        // Generate static AVIF (first frame)
+        cmd.args([
+            "-vf",
+            &format!("scale={size}:{size}:force_original_aspect_ratio=decrease"),
+            "-frames:v",
+            "1",
+            "-f",
+            "avif",
+        ]);
+    }
+
+    cmd.arg(out_path)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    cmd.output().await.map_err(|_| Error::Ffmpeg)?;
+    Ok(())
+}
+
 pub async fn extract_attachment(path: &Path, index: u64) -> Result<Vec<u8>> {
     let mut cmd = Command::new("ffmpeg");
     cmd.args([

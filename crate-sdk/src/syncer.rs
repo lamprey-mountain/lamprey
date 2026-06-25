@@ -183,10 +183,12 @@ impl Syncer {
                 }
             }
 
-            base_url.set_scheme(match base_url.scheme() {
-                "http" => "ws",
-                _ => "wss",
-            }).unwrap();
+            base_url
+                .set_scheme(match base_url.scheme() {
+                    "http" => "ws",
+                    _ => "wss",
+                })
+                .unwrap();
 
             let url = base_url
                 .join("/api/v1/sync?version=1")

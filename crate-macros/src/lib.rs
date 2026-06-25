@@ -89,7 +89,7 @@ pub fn endpoint_new(args: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn handlers_new(args: TokenStream, item: TokenStream) -> TokenStream {
+pub fn handler_new(args: TokenStream, item: TokenStream) -> TokenStream {
     handlers_new::expand(args.into(), item.into())
         .unwrap_or_else(|e| e.to_compile_error())
         .into()

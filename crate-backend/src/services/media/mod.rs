@@ -6,7 +6,6 @@ use common::{
     v1::types::{
         MediaId,
         error::{ApiError, ErrorCode},
-        federation::Remote,
     },
     v2::types::media::MediaPatch,
 };

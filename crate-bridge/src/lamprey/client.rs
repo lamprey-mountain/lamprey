@@ -18,11 +18,7 @@ pub struct LampreyClient {
 }
 
 impl LampreyClient {
-    pub fn new(
-        http: sdk::http::Http,
-        bridge: BridgeHandle,
-        channel_id: ChannelId,
-    ) -> Self {
+    pub fn new(http: sdk::http::Http, bridge: BridgeHandle, channel_id: ChannelId) -> Self {
         Self {
             http,
             bridge,

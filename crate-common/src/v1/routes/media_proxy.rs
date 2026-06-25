@@ -9,7 +9,7 @@ use lamprey_macros::endpoint;
 #[endpoint(
     head,
     path = "/media/{media_id}",
-    tags = ["media"],
+    tags = ["cdn"],
     response(OK, description = "success"),
 )]
 pub mod media_head {
@@ -32,7 +32,7 @@ pub mod media_head {
 #[endpoint(
     get,
     path = "/media/{media_id}",
-    tags = ["media"],
+    tags = ["cdn"],
     response(OK, description = "success"),
 )]
 pub mod media_get {
@@ -55,7 +55,7 @@ pub mod media_get {
 #[endpoint(
     head,
     path = "/media/{media_id}/{filename}",
-    tags = ["media"],
+    tags = ["cdn"],
     response(OK, description = "success"),
 )]
 pub mod media_head_filename {
@@ -81,7 +81,7 @@ pub mod media_head_filename {
 #[endpoint(
     get,
     path = "/media/{media_id}/{filename}",
-    tags = ["media"],
+    tags = ["cdn"],
     response(OK, description = "success"),
 )]
 pub mod media_get_filename {
@@ -107,7 +107,7 @@ pub mod media_get_filename {
 #[endpoint(
     get,
     path = "/thumb/{media_id}",
-    tags = ["media"],
+    tags = ["cdn"],
     response(OK, description = "success"),
 )]
 pub mod thumb_get {
@@ -136,7 +136,7 @@ pub mod thumb_get {
 #[endpoint(
     head,
     path = "/thumb/{media_id}",
-    tags = ["media"],
+    tags = ["cdn"],
     response(OK, description = "success"),
 )]
 pub mod thumb_head {
@@ -165,7 +165,7 @@ pub mod thumb_head {
 #[endpoint(
     get,
     path = "/gifv/{media_id}",
-    tags = ["media"],
+    tags = ["cdn"],
     response(OK, description = "success"),
 )]
 pub mod gifv_get {
@@ -188,7 +188,7 @@ pub mod gifv_get {
 #[endpoint(
     head,
     path = "/gifv/{media_id}",
-    tags = ["media"],
+    tags = ["cdn"],
     response(OK, description = "success"),
 )]
 pub mod gifv_head {
@@ -211,7 +211,7 @@ pub mod gifv_head {
 #[endpoint(
     get,
     path = "/emoji/{emoji_id}",
-    tags = ["media"],
+    tags = ["cdn"],
     response(OK, description = "success"),
 )]
 pub mod emoji_get {
@@ -240,7 +240,7 @@ pub mod emoji_get {
 #[endpoint(
     head,
     path = "/emoji/{emoji_id}",
-    tags = ["media"],
+    tags = ["cdn"],
     response(OK, description = "success"),
 )]
 pub mod emoji_head {
@@ -267,7 +267,7 @@ pub mod emoji_head {
 #[endpoint(
     get,
     path = "/trickplay/{media_id}",
-    tags = ["media"],
+    tags = ["cdn"],
     response(OK, description = "success"),
 )]
 pub mod trickplay_get {
@@ -294,7 +294,7 @@ pub mod trickplay_get {
 #[endpoint(
     head,
     path = "/trickplay/{media_id}",
-    tags = ["media"],
+    tags = ["cdn"],
     response(OK, description = "success"),
 )]
 pub mod trickplay_head {
@@ -321,7 +321,7 @@ pub mod trickplay_head {
 #[endpoint(
     get,
     path = "/stream/{media_id}",
-    tags = ["media"],
+    tags = ["cdn"],
     response(OK, description = "success"),
 )]
 pub mod stream_get {
@@ -348,7 +348,7 @@ pub mod stream_get {
 #[endpoint(
     head,
     path = "/stream/{media_id}",
-    tags = ["media"],
+    tags = ["cdn"],
     response(OK, description = "success"),
 )]
 pub mod stream_head {
