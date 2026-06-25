@@ -92,8 +92,11 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		Set<string>
 	>(new Set());
 
-	// Load DMs when not in a room
-	const _dms = !props.room_id ? dms2.useList() : null;
+	// load dms
+	createEffect(() => {
+		currentUserId(); // retrigger useList on load
+		dms2.useList();
+	});
 
 	const room = rooms2.use(() => props.room_id);
 	const roomMembers2 = useRoomMembers();
