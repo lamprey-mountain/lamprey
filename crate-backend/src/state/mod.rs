@@ -15,6 +15,7 @@ use tokio::runtime::Handle as TokioHandle;
 use url::Url;
 
 use crate::prelude::*;
+use crate::state::messaging::BroadcastSync;
 use crate::{
     config::{self, Config},
     services::Services,
@@ -184,10 +185,14 @@ impl ServerStateInner {
 
     /// emit a message to everyone
     fn broadcast_inner(&self, msg: MessageBroadcastInner) -> Result<()> {
-        let _ = self.messaging.broadcast_room(
-            RoomId::default(), // this is ignored
-            MessageSync::from(msg.message),
-        );
+        let messaging = self.messaging.clone();
+        let broadcast = BroadcastSync {
+            message: msg.message,
+            nonce: msg.nonce,
+        };
+        tokio::spawn(async move {
+            let _ = messaging.broadcast_global(broadcast).await;
+        });
         Ok(())
     }
 
