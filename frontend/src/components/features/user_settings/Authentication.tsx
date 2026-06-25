@@ -14,6 +14,16 @@ import { Modal } from "@/modals/mod";
 
 export function Authentication(props: VoidProps<{ user: User }>) {
 	const [, modalctl] = useModals();
+	const api2 = useApi();
+
+	const sudoEnter = async () => {
+		await api2.client.http.POST("/api/v1/auth/sudo/upgrade", {});
+	};
+
+	// TODO: make enter sudo button exit sudo if you're in sudo mode
+	const sudoExit = async () => {
+		await api2.client.http.DELETE("/api/v1/auth/sudo");
+	};
 
 	return (
 		<div class="user-settings-auth">
@@ -33,6 +43,16 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 			<br />
 			<div class="danger">
 				<h3>danger zone</h3>
+				<div style="height: 4px"></div>
+				<label>
+					<button type="button" class="button" onClick={sudoEnter}>
+						enter sudo mode
+					</button>
+					<span style="margin-left:8px">
+						sudo mode allows you to take dangerous actions on your account. in
+						the future, sudo mode will be prompted for automatically.
+					</span>
+				</label>
 				<div style="height: 4px"></div>
 				<label>
 					<button
@@ -174,7 +194,7 @@ function Oauth() {
 
 	const [enabledOauthProviders, { refetch: refetchOauthProviders }] =
 		createResource(async () => {
-			const { data } = await api2.client.http.GET("/api/v1/auth" as any, {});
+			const { data } = await api2.client.http.GET("/api/v1/auth/state", {});
 			return (data as any)?.oauth_providers ?? [];
 		});
 
