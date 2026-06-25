@@ -410,7 +410,9 @@ pub mod auth_webauthn_delete {
     pub struct Response {}
 }
 
-/// Auth sudo upgrade
+/// Auth sudo upgrade (TEMP)
+///
+/// Immediately upgrade a session to sudo mode. For debugging, will be removed later.
 #[endpoint(
     post,
     path = "/auth/sudo/upgrade",

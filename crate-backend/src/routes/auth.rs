@@ -652,11 +652,28 @@ async fn auth_webauthn_delete(
 #[handler(routes::auth_sudo_upgrade)]
 async fn auth_sudo_upgrade(
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    State(s): State<Arc<ServerState>>,
     _req: routes::auth_sudo_upgrade::Request,
 ) -> Result<impl IntoResponse> {
-    auth.ensure_sudo()?;
-    // TODO: implement sudo upgrade
+    let expires_at = Time::now_utc().saturating_add(Duration::minutes(5));
+
+    s.data()
+        .session_set_status(
+            auth.session.id,
+            SessionStatus::Sudo {
+                user_id: auth.user.id,
+                sudo_expires_at: expires_at.into(),
+            },
+        )
+        .await?;
+    s.services().sessions.invalidate(auth.session.id).await;
+
+    let al = auth.audit_log(auth.user.id.into_inner().into());
+    al.commit_success(AuditLogEntryType::AuthSudo {
+        session_id: auth.session.id,
+    })
+    .await?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
