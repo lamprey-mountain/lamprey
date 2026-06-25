@@ -198,7 +198,10 @@ impl ServerStateInner {
 
     /// emit a sfu command to everyone
     pub fn broadcast_sfu(&self, cmd: SfuCommand) -> Result<()> {
-        let _ = self.messaging.broadcast_global(cmd);
+        let messaging = self.messaging.clone();
+        tokio::spawn(async move {
+            let _ = messaging.broadcast_global(cmd).await;
+        });
         Ok(())
     }
 
