@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::sync::Arc;
 
 use common::v1::types::federation::Remote;
@@ -9,7 +8,7 @@ use tracing::debug;
 
 use crate::services::users::util::DmKey;
 use crate::types::{DbChannelCreate, DbChannelType};
-use crate::{Error, Result, ServerStateInner};
+use crate::{Result, ServerStateInner};
 
 mod affinity;
 mod util;

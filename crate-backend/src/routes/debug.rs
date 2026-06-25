@@ -8,7 +8,6 @@ use common::v1::types::SERVER_ROOM_ID;
 use common::v1::types::application::Scope;
 use common::v1::types::{ChannelId, Embed, Permission, RoomId, UserId};
 use common::v2::types::media::{MediaCreate, MediaCreateSource};
-use lamprey_backend_core::Error;
 use lamprey_unfurl::logging::LogEntry;
 use serde::{Deserialize, Serialize};
 use url::Url;
