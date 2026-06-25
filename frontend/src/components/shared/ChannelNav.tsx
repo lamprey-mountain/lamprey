@@ -18,6 +18,7 @@ import icHome from "@/assets/home.png";
 import icInbox from "@/assets/inbox.png";
 import icMemberAdd from "@/assets/member-add.png";
 import icSettings from "@/assets/settings.png";
+import icMembers from "@/assets/members.png";
 import { Icon } from "@/atoms/Icon";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useDisplay, useMenu } from "@/contexts/mod";
@@ -683,8 +684,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 				<Show when={flags.has("friends")}>
 					<li class="channel-item">
 						<A href="/friends" class="channel-link" draggable={false} end>
-							{/* TODO: use correct icon */}
-							<Icon src={icInbox} color={colors.fg500} /> friends
+							<Icon src={icMembers} color={colors.fg500} /> friends
 						</A>
 					</li>
 				</Show>
