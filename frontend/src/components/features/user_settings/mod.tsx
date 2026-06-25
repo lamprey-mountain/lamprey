@@ -9,6 +9,7 @@ export * from "./Data.tsx";
 export * from "./Keybinds.tsx";
 export * from "./Language.tsx";
 export * from "./Notifications.tsx";
+export * from "./Privacy.tsx";
 export * from "./Profile.tsx";
 export * from "./Sessions.tsx";
 export * from "./Voice.tsx";

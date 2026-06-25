@@ -24,6 +24,19 @@ export default {
 		reduced_motion_sync: "Sync reduced motion with system settings",
 		autoplay_gifs: "Autoplay GIFs in messages",
 		autoplay_emoji: "Autoplay animated emoji",
+		privacy: "Privacy",
+		privacy_friends: "Friend Requests",
+		privacy_allow_everyone: "Allow friend requests from everyone",
+		privacy_allow_mutual_room: "Allow friend requests from mutual room members",
+		privacy_allow_mutual_friend: "Allow friend requests from mutual friends",
+		privacy_rooms: "Room defaults",
+		privacy_rooms_description:
+			"These settings will be copied to new rooms you join.",
+		privacy_dms: "Allow direct messages",
+		privacy_rpc: "Share rich presence",
+		privacy_exif: "Retain EXIF metadata",
+		privacy_exif_description:
+			"Retain potentially sensitive exif metadata (ie. camera model or location) for images you upload.",
 		notifications: "Notifications",
 		notifications_permission_text:
 			"You haven't given lamprey permission to send notifications",
