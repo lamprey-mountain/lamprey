@@ -578,17 +578,11 @@ export const RoomNav = () => {
 					"drag-over-after":
 						target()?.id === props.room.id && target()?.position === "after",
 					"folder-preview": folderPreview() === props.room.id,
-					"no-icon": !props.room.icon,
 					unread: getRoomUnread(props.room.id),
 				}}
 			>
 				<A draggable="false" href={`/room/${props.room.id}`} class="nav">
-					<Show
-						when={props.room.icon}
-						fallback={<div class="avatar">{props.room.name}</div>}
-					>
-						<RoomIcon room={props.room} mentionCount={mentionCount()} />
-					</Show>
+					<RoomIcon room={props.room} mentionCount={mentionCount()} />
 				</A>
 			</li>
 		);
