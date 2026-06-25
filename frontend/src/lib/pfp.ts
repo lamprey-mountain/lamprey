@@ -1,10 +1,12 @@
 import { createSignal } from "solid-js";
 import pfpsUrl from "@/assets/pfps.png";
+import roomLayersUrl from "@/assets/room-layers.png";
 import { getColor } from "@/lib/colors";
 import { cyrb53, LCG } from "@/lib/rng";
 
 const SIZE = 80;
 const layers = [6, 6, 6];
+const roomLayers = [4];
 
 const pfpsImg = new Image();
 pfpsImg.src = pfpsUrl;
@@ -15,6 +17,16 @@ pfpsImg.onload = () => {
 };
 
 const pfpCache = new Map<string, string>();
+
+const roomLayersImg = new Image();
+roomLayersImg.src = roomLayersUrl;
+
+export const [roomLayersLoaded, setRoomLayersLoaded] = createSignal(false);
+roomLayersImg.onload = () => {
+	setRoomLayersLoaded(true);
+};
+
+const roomIconCache = new Map<string, string>();
 
 export async function generatePfp(userId: string): Promise<string> {
 	if (!pfpsLoaded()) return "";
@@ -61,8 +73,8 @@ export async function generatePfp(userId: string): Promise<string> {
 }
 
 export async function generateRoomIcon(roomId: string): Promise<string> {
-	if (!pfpsLoaded()) return "";
-	const cached = pfpCache.get(roomId);
+	if (!roomLayersLoaded()) return "";
+	const cached = roomIconCache.get(roomId);
 	if (cached) {
 		return cached;
 	}
@@ -83,24 +95,24 @@ export async function generateRoomIcon(roomId: string): Promise<string> {
 	ctx.fillRect(0, 0, SIZE, SIZE);
 
 	// TODO: layers for room icons
-	// const PADDING = 0;
-	// for (let i = 0; i < layers.length; i++) {
-	// 	const numOptions = layers[i];
-	// 	ctx.drawImage(
-	// 		pfpsImg,
-	// 		SIZE * rnd(numOptions),
-	// 		SIZE * i,
-	// 		SIZE,
-	// 		SIZE,
-	// 		PADDING,
-	// 		PADDING,
-	// 		SIZE - PADDING * 2,
-	// 		SIZE - PADDING * 2,
-	// 	);
-	// }
+	const PADDING = 0;
+	for (let i = 0; i < roomLayers.length; i++) {
+		const numOptions = roomLayers[i];
+		ctx.drawImage(
+			roomLayersImg,
+			SIZE * rnd(numOptions),
+			SIZE * i,
+			SIZE,
+			SIZE,
+			PADDING,
+			PADDING,
+			SIZE - PADDING * 2,
+			SIZE - PADDING * 2,
+		);
+	}
 
 	const blob = await canvas.convertToBlob();
 	const dataUrl = URL.createObjectURL(blob);
-	pfpCache.set(roomId, dataUrl);
+	roomIconCache.set(roomId, dataUrl);
 	return dataUrl;
 }
