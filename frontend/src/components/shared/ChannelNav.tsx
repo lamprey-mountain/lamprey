@@ -128,9 +128,23 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	const categories = createMemo<
 		Array<{ category: Channel | null; channels: Array<Channel> }>
 	>(() => {
-		const allChannels = channels2
-			.listByRoom(props.room_id ?? null)
-			.filter((c) => !c.deleted_at);
+		const allChannelsMap = new Map<string, Channel>();
+
+		for (const c of channels2.listByRoom(props.room_id ?? null)) {
+			if (!c.deleted_at) {
+				allChannelsMap.set(c.id, c);
+			}
+		}
+
+		if (!props.room_id) {
+			for (const c of dms2.cache.values()) {
+				if (!c.deleted_at) {
+					allChannelsMap.set(c.id, c);
+				}
+			}
+		}
+
+		const allChannels = Array.from(allChannelsMap.values());
 
 		const threads = allChannels.filter(
 			(c) =>
