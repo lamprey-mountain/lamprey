@@ -20,6 +20,7 @@ import {
 import { RolesService } from "../services/RolesService";
 import { RoomMembersService } from "../services/RoomMembersService";
 import { RoomsService } from "../services/RoomsService";
+import { RelationshipsService } from "../services/RelationshipsService";
 import { ScriptLogsService } from "../services/ScriptLogsService";
 import { ScriptRunsService } from "../services/ScriptRunsService";
 import { ScriptsService } from "../services/ScriptsService";
@@ -96,6 +97,7 @@ export class RootStore {
 	tags: TagsService;
 	threads: ThreadsService;
 	webhooks: WebhooksService;
+	relationships: RelationshipsService;
 	auditLog: AuditLogService;
 	inbox: InboxService;
 	documents: DocumentsService;
@@ -191,6 +193,7 @@ export class RootStore {
 		this.roomBans = new RoomBansService(this, getDb);
 		this.roomMembers = new RoomMembersService(this, getDb);
 		this.rooms = new RoomsService(this, getDb);
+		this.relationships = new RelationshipsService(this, getDb);
 		this.sessions = new SessionsService(this, getDb);
 		this.tags = new TagsService(this, getDb);
 		this.threadMembers = new ThreadMembersService(this, getDb);
@@ -462,6 +465,10 @@ export class RootStore {
 			this.scriptRuns.upsert(msg.run);
 		} else if (msg.type === "ScriptLogCreate") {
 			this.scriptLogs.upsert(msg.entry);
+		} else if (msg.type === "RelationshipUpsert") {
+			this.relationships.upsert(msg.target_user_id, msg.relationship);
+		} else if (msg.type === "RelationshipDelete") {
+			this.relationships.delete(msg.target_user_id);
 		}
 	}
 

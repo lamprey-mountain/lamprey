@@ -24,6 +24,7 @@ export type {
 } from "./services/MessagesService";
 export type { NotificationService } from "./services/NotificationService";
 export type { PreferencesService } from "./services/PreferencesService";
+export type { RelationshipsService } from "./services/RelationshipsService";
 export type { RoomAnalyticsService } from "./services/RoomAnalyticsService";
 export type { ScriptLogsService } from "./services/ScriptLogsService";
 export type { ScriptRunsService } from "./services/ScriptRunsService";
@@ -148,6 +149,10 @@ export function useDocumentTags() {
 
 export function usePreferences() {
 	return useApi().preferences;
+}
+
+export function useRelationships() {
+	return useApi().relationships;
 }
 
 export function useScripts() {

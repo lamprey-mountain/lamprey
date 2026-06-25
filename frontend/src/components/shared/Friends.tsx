@@ -7,7 +7,7 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { useApi, useUsers } from "@/api";
+import { useApi, useRelationships, useUsers } from "@/api";
 import { AvatarWithStatus } from "./User";
 import { Search } from "@/atoms/Search";
 import { createTooltip } from "@/atoms/Tooltip";
@@ -22,6 +22,7 @@ type FilterType = "all" | "online" | "incoming" | "outgoing";
 
 export const Friends = () => {
 	const api2 = useApi();
+	const relationships = useRelationships();
 	const users2 = useUsers();
 	const [filter, setFilter] = createSignal<FilterType>("all");
 
@@ -45,9 +46,7 @@ export const Friends = () => {
 	const sendRequest = () => {
 		const target_id = prompt("target_id");
 		if (!target_id) return;
-		api2.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
-			params: { path: { target_id } },
-		});
+		relationships.send(target_id);
 	};
 
 	const filteredFriends = () => {
@@ -136,6 +135,7 @@ const Friend = (props: {
 	relation: string | null | undefined;
 }) => {
 	const api2 = useApi();
+	const relationships = useRelationships();
 	const users2 = useUsers();
 	const navigate = useNavigate();
 	const { setMenu } = useMenu();
@@ -158,17 +158,13 @@ const Friend = (props: {
 
 	const acceptRequest = async (e: MouseEvent) => {
 		e.stopPropagation();
-		await api2.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
-			params: { path: { target_id: props.user_id } },
-		});
+		await relationships.accept(props.user_id);
 		// TODO: refresh friend list
 	};
 
 	const rejectRequest = async (e: MouseEvent) => {
 		e.stopPropagation();
-		await api2.client.http.DELETE("/api/v1/user/@self/friend/{target_id}", {
-			params: { path: { target_id: props.user_id } },
-		});
+		await relationships.reject(props.user_id);
 		// TODO: refresh friend list
 	};
 
