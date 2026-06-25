@@ -42,13 +42,16 @@ export function timeAgo(date: Date): string {
 
 type TimeProps = {
 	animGroup?: string;
+	class?: string;
 } & ({ ts: number } | { date: Date });
 
 export function Time(props: VoidProps<TimeProps>) {
 	const date = () => ("date" in props ? props.date : new Date(props.ts));
 
 	const wrap = (
-		<time datetime={date().toISOString()}>{(tick(), timeAgo(date()))}</time>
+		<time datetime={date().toISOString()} class={props.class}>
+			{(tick(), timeAgo(date()))}
+		</time>
 	) as HTMLElement;
 
 	return tooltip(
