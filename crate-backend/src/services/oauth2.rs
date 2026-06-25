@@ -9,6 +9,7 @@ use std::{
 use common::v1::types::SessionId;
 use common::v1::types::error::{ApiError, ErrorCode};
 use dashmap::DashMap;
+use http::HeaderValue;
 use serde::{Deserialize, Serialize};
 use url::Url;
 use uuid::Uuid;
@@ -25,6 +26,10 @@ pub struct OauthTokenExchange {
     pub grant_type: String,
     pub code: String,
     pub redirect_uri: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_secret: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -175,23 +180,50 @@ impl ServiceOauth {
             .config
             .api_url
             .join(&format!("/api/v1/auth/oauth/{}/redirect", s.provider))?;
-        let body = OauthTokenExchange {
-            grant_type: "authorization_code".to_string(),
-            code,
-            redirect_uri: redirect_uri.into(),
+
+        let ua = match s.provider.as_str() {
+            "discord" => HeaderValue::from_static(
+                "User-Agent: DiscordBot (https://git.celery.eu.org/lamprey/lamprey, v0.1.0)",
+            ),
+            _ => self.state.config.user_agent_header_value()?,
         };
 
-        let res: OauthTokenResponse = client
+        let (use_basic_auth, body) = match s.provider.as_str() {
+            "github" => (
+                false,
+                OauthTokenExchange {
+                    grant_type: "authorization_code".to_string(),
+                    code,
+                    redirect_uri: redirect_uri.into(),
+                    client_id: Some(p.client_id.clone()),
+                    client_secret: Some(p.client_secret.load()?.to_string()),
+                },
+            ),
+            _ => (
+                true,
+                OauthTokenExchange {
+                    grant_type: "authorization_code".to_string(),
+                    code,
+                    redirect_uri: redirect_uri.into(),
+                    client_id: None,
+                    client_secret: None,
+                },
+            ),
+        };
+
+        let req = client
             .post(&p.token_url)
-            .basic_auth(&p.client_id, Some(&p.client_secret))
             .header("Accept", "application/json")
-            .header("User-Agent", self.state.config.user_agent_header_value()?)
-            .form(&body)
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
+            .header("User-Agent", ua)
+            .form(&body);
+
+        let req = if use_basic_auth {
+            req.basic_auth(&p.client_id, Some(&p.client_secret))
+        } else {
+            req
+        };
+
+        let res: OauthTokenResponse = req.send().await?.error_for_status()?.json().await?;
 
         Ok((res, s.session_id))
     }
