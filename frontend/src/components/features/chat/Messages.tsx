@@ -165,15 +165,6 @@ export const TimelineItem = (props: {
 	}
 };
 
-/** @deprecated use TimelineItem component instead */
-export function renderTimelineItem(
-	thread: ThreadT,
-	item: TimelineItemT,
-	currentUser: () => UserWithRelationship | undefined,
-) {
-	return <TimelineItem thread={thread} item={item} currentUser={currentUser} />;
-}
-
 type RenderTimelineParams = {
 	items: Array<Message>;
 	read_marker_id: string | null;
