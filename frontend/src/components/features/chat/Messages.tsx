@@ -1,8 +1,7 @@
 import type { Message, UserWithRelationship } from "sdk";
-import { createMemo, Show } from "solid-js";
+import { createMemo, Match, Show, Switch } from "solid-js";
 import { createMutable } from "solid-js/store";
 import { useFlumes, useRoomMembers } from "@/api";
-import { useCtx } from "@/app/context";
 import { ChannelIcon } from "@/components/shared/User";
 import { useChannel } from "@/contexts/channel";
 import { md } from "@/lib/markdown";
@@ -28,80 +27,89 @@ export type TimelineItemT = { id: string; class?: string; nonce?: string } & (
 	  }
 );
 
+const TimelineMessageItem = (props: {
+	thread: ThreadT;
+	item: Extract<TimelineItemT, { type: "message" }>;
+	currentUser: () => UserWithRelationship | undefined;
+}) => {
+	const roomMembersService = useRoomMembers();
+	const [ch] = useChannel()!;
+	const flumes = useFlumes();
+	const room_member = roomMembersService.useMember(
+		() => props.thread.room_id ?? "",
+		() => props.currentUser()?.id ?? "",
+	);
+
+	const is_mentioned = createMemo(() => {
+		const me = props.currentUser();
+		if (!me) return false;
+		const mentions = (props.item.message as Message).mentions as
+			| {
+					users?: Array<{ id: string }>;
+					everyone?: boolean;
+					roles?: Array<{ id: string }>;
+			  }
+			| undefined;
+		if (!mentions) return false;
+
+		if (mentions.users?.some((u) => u.id === me.id)) {
+			return true;
+		}
+		if (mentions.everyone) {
+			return true;
+		}
+		const rm = room_member();
+		if (rm && mentions.roles) {
+			for (const role of mentions.roles) {
+				if (rm.roles.some((r) => r === role.id)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	});
+
+	const isSelected = createMemo(() => {
+		const selected = ch.selectedMessages;
+		return selected?.includes(props.item.message.id) ?? false;
+	});
+
+	const hasFlume = createMemo(() => {
+		return flumes.cache.has(props.item.id);
+	});
+
+	return (
+		<li
+			class="message"
+			classList={{
+				selected: props.item.message.id === ch.reply_id,
+				"message-selected": isSelected(),
+				mentioned: is_mentioned(),
+				flume: hasFlume(),
+			}}
+		>
+			<MessageView
+				message={props.item.message}
+				separate={props.item.separate}
+			/>
+		</li>
+	);
+};
+
 export const TimelineItem = (props: {
 	thread: ThreadT;
 	item: TimelineItemT;
 	currentUser: () => UserWithRelationship | undefined;
 }) => {
-	switch (props.item.type) {
-		case "message": {
-			const roomMembersService = useRoomMembers();
-			const [ch] = useChannel()!;
-			const flumes = useFlumes();
-			const room_member = roomMembersService.useMember(
-				() => props.thread.room_id ?? "",
-				() => props.currentUser()?.id ?? "",
-			);
-
-			const is_mentioned = createMemo(() => {
-				const me = props.currentUser();
-				if (!me || props.item.type !== "message") return false;
-				const mentions = (props.item.message as Message).mentions as
-					| {
-							users?: Array<{ id: string }>;
-							everyone?: boolean;
-							roles?: Array<{ id: string }>;
-					  }
-					| undefined;
-				if (!mentions) return false;
-
-				if (mentions.users?.some((u) => u.id === me.id)) {
-					return true;
-				}
-				if (mentions.everyone) {
-					return true;
-				}
-				const rm = room_member();
-				if (rm && mentions.roles) {
-					for (const role of mentions.roles) {
-						if (rm.roles.some((r) => r === role.id)) {
-							return true;
-						}
-					}
-				}
-				return false;
-			});
-
-			const isSelected = createMemo(() => {
-				if (props.item.type !== "message") return false;
-				const selected = ch.selectedMessages;
-				return selected?.includes(props.item.message.id) ?? false;
-			});
-
-			const hasFlume = createMemo(() => {
-				if (props.item.type !== "message") return false;
-				return flumes.cache.has(props.item.id);
-			});
-
-			return (
-				<li
-					class="message"
-					classList={{
-						selected: props.item.message.id === ch.reply_id,
-						"message-selected": isSelected(),
-						mentioned: is_mentioned(),
-						flume: hasFlume(),
-					}}
-				>
-					<MessageView
-						message={props.item.message}
-						separate={props.item.separate}
-					/>
-				</li>
-			);
-		}
-		case "info": {
-			return (
+	return (
+		<Switch>
+			<Match when={props.item.type === "message"}>
+				<TimelineMessageItem
+					{...props}
+					item={props.item as Extract<TimelineItemT, { type: "message" }>}
+				/>
+			</Match>
+			<Match when={props.item.type === "info"}>
 				<li class="header">
 					<header>
 						<Show when={false}>
@@ -125,44 +133,58 @@ export const TimelineItem = (props: {
 						</p>
 					</header>
 				</li>
-			);
-		}
-		case "spacer": {
-			return <li class="spacer" style="min-height:800px;flex:1"></li>;
-		}
-		case "spacer-mini2": {
-			return <li class="spacer" style="min-height:8rem;flex:1"></li>;
-		}
-		case "spacer-mini": {
-			return <li class="spacer mini"></li>;
-		}
-		case "divider": {
-			return (
-				<li
-					class="divider"
-					classList={{ unread: props.item.unread, time: !!props.item.date }}
-				>
-					<Show when={props.item.unread}>
-						<div class="new">new</div>
-					</Show>
-					<hr />
-					<Show when={props.item.date}>
-						{(d) => (
-							<>
-								<time datetime={d().toISOString()}>{d().toDateString()}</time>
-								<hr />
-							</>
-						)}
-					</Show>
-					<Show when={props.item.unread}>
-						<div class="new hidden">new</div>
-					</Show>
-				</li>
-			);
-		}
-		default:
-			return null;
-	}
+			</Match>
+			<Match when={props.item.type === "spacer"}>
+				<li class="spacer" style="min-height:800px;flex:1"></li>
+			</Match>
+			<Match when={props.item.type === "spacer-mini2"}>
+				<li class="spacer" style="min-height:8rem;flex:1"></li>
+			</Match>
+			<Match when={props.item.type === "spacer-mini"}>
+				<li class="spacer mini"></li>
+			</Match>
+			<Match when={props.item.type === "divider" && props.item}>
+				{(item) => (
+					<li
+						class="divider timeline-divider"
+						classList={{ unread: item().unread, time: !!item().date }}
+					>
+						<Show when={item().unread}>
+							<div class="new">new</div>
+						</Show>
+						<hr />
+						<Show when={item().date}>
+							{(d) => (
+								<>
+									<time datetime={d().toISOString()}>{d().toDateString()}</time>
+									<hr />
+								</>
+							)}
+						</Show>
+						<Show when={item().unread}>
+							<div class="new hidden">new</div>
+						</Show>
+					</li>
+				)}
+			</Match>
+		</Switch>
+	);
+};
+
+// TODO
+export const TimelineItem2 = (props: {
+	thread: ThreadT;
+	item: TimelineItemT;
+}) => {
+	return (
+		<Switch>
+			<Match when={props.item.type === "message" && props.item}>
+				{(item) => (
+					<MessageView message={item().message} separate={item().separate} />
+				)}
+			</Match>
+		</Switch>
+	);
 };
 
 type RenderTimelineParams = {

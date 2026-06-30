@@ -14,13 +14,11 @@ import { deepEqual } from "@/utils/deepEqual.ts";
 import { logger } from "@/utils/logger";
 import { Input } from "./Input.tsx";
 import { MessageSkeletons } from "./MessageSkeleton.tsx";
-import {
-	renderTimeline,
-	TimelineItem,
-	type TimelineItemT,
-} from "./Messages.tsx";
+import { renderTimeline, type TimelineItemT } from "./Messages.tsx";
+import { highlight } from "./util.ts";
+import { Timeline } from "./Timeline.tsx";
 
-type ChatProps = {
+export type ChatProps = {
 	channel: Channel;
 };
 
@@ -107,6 +105,7 @@ export const ChatMain = (props: ChatProps) => {
 	const list = createList2({
 		items: tl,
 		autoscroll,
+		estimateSize: () => 80,
 		onPaginate(dir) {
 			log.debug(`paginate dir=${dir} loading=${messages.loading}`);
 
@@ -296,19 +295,6 @@ export const ChatMain = (props: ChatProps) => {
 		lastLiveEnd = currentEnd;
 	});
 
-	// createEffect(
-	// 	on(
-	// 		() => channelState.anchor,
-	// 		(a) => {
-	// 			if (a && a.type === "backwards" && !a.message_id) {
-	// 				setTimeout(() => {
-	// 					list.scrollToBottom();
-	// 				});
-	// 			}
-	// 		},
-	// 	),
-	// );
-
 	createEffect(on(list.scrollPos, setPos));
 
 	const [dragging, setDragging] = createSignal(false);
@@ -331,7 +317,6 @@ export const ChatMain = (props: ChatProps) => {
 			class="chat"
 			classList={{ "has-typing": !!getTyping().length }}
 			data-channel-id={props.channel.id}
-			role="log"
 			onKeyDown={(e) => {
 				if (e.key === "Escape") {
 					jumpToEnd(true);
@@ -380,24 +365,7 @@ export const ChatMain = (props: ChatProps) => {
 					</button>
 				</div>
 			</Show>
-			<Show
-				when={messages.loading && tl().length === 0}
-				fallback={
-					<list.List>
-						{(item) => (
-							<TimelineItem
-								thread={props.channel}
-								item={item}
-								currentUser={currentUser}
-							/>
-						)}
-					</list.List>
-				}
-			>
-				<ul class="skeleton-message-list">
-					<MessageSkeletons />
-				</ul>
-			</Show>
+			<Timeline channel={props.channel} />
 			<Input channel={props.channel} />
 			<Portal>
 				<Show when={dragging()}>
@@ -409,28 +377,3 @@ export const ChatMain = (props: ChatProps) => {
 		</div>
 	);
 };
-
-function highlight(el: Element) {
-	el.animate(
-		[
-			{
-				boxShadow: "4px 0 0 -1px inset oklch(var(--color-highlight))",
-				backgroundColor: "oklch(var(--color-highlight) / 0.15)",
-				offset: 0,
-			},
-			{
-				boxShadow: "4px 0 0 -1px inset oklch(var(--color-highlight))",
-				backgroundColor: "oklch(var(--color-highlight) / 0.15)",
-				offset: 0.8,
-			},
-			{
-				boxShadow: "none",
-				backgroundColor: "transparent",
-				offset: 1,
-			},
-		],
-		{
-			duration: 1000,
-		},
-	);
-}

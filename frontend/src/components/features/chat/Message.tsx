@@ -1,10 +1,10 @@
 import { useNavigate } from "@solidjs/router";
 import {
 	type Attachment,
-	type Channel,
+	type Channel as ChannelT,
 	getTimestampFromUUID,
-	type Message,
-	type MessageVersion,
+	type Message as MessageT,
+	type MessageVersion as MessageVersionT,
 	type Preferences,
 	type ReactionKey,
 	type UserWithRelationship,
@@ -63,7 +63,6 @@ import {
 	TextView,
 	VideoView,
 } from "@/media/mod.tsx";
-import type { MessageT, ThreadT } from "@/types";
 import { openThread } from "@/utils/channel";
 import { Reactions } from "./Reactions.tsx";
 
@@ -307,8 +306,8 @@ function MessageEditor(props: { message: MessageT }) {
 }
 
 export function MessageThread(props: {
-	thread: ThreadT;
-	parentChannel: Channel;
+	thread: ChannelT;
+	parentChannel: ChannelT;
 	preferences: Preferences;
 }) {
 	const nav = useNavigate();
@@ -341,7 +340,7 @@ export function MessageThread(props: {
 	);
 }
 type SystemMessageProps = {
-	message: Message;
+	message: MessageT;
 	date: Date;
 	separate: boolean;
 	toolbarVisible: boolean;
@@ -522,7 +521,7 @@ export function AttachmentView(props: { att: Attachment }) {
 	}
 }
 
-export const MessageToolbar = (props: { message: Message }) => {
+export const MessageToolbar = (props: { message: MessageT }) => {
 	const api2 = useApi();
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
@@ -1097,7 +1096,9 @@ function DefaultMessage(
 function SystemMessageMemberAdd(props: SystemMessageProps) {
 	const { t } = useCtx();
 	const version = () =>
-		props.message.latest_version as MessageVersion & { target_user_id: string };
+		props.message.latest_version as MessageVersionT & {
+			target_user_id: string;
+		};
 
 	return (
 		<SystemMessage
@@ -1135,7 +1136,9 @@ function SystemMessageMemberAdd(props: SystemMessageProps) {
 function SystemMessageMemberRemove(props: SystemMessageProps) {
 	const { t } = useCtx();
 	const version = () =>
-		props.message.latest_version as MessageVersion & { target_user_id: string };
+		props.message.latest_version as MessageVersionT & {
+			target_user_id: string;
+		};
 
 	return (
 		<SystemMessage
@@ -1202,7 +1205,7 @@ function SystemMessagePinned(props: SystemMessageProps) {
 	const { t } = useCtx();
 	const navigate = useNavigate();
 	const version = () =>
-		props.message.latest_version as MessageVersion & {
+		props.message.latest_version as MessageVersionT & {
 			pinned_message_id: string;
 		};
 
@@ -1252,7 +1255,7 @@ function SystemMessagePinned(props: SystemMessageProps) {
 function SystemMessageChannelRename(props: SystemMessageProps) {
 	const { t } = useCtx();
 	const version = () =>
-		props.message.latest_version as MessageVersion & { name_new: string };
+		props.message.latest_version as MessageVersionT & { name_new: string };
 
 	return (
 		<SystemMessage
@@ -1284,7 +1287,7 @@ function SystemMessageChannelRename(props: SystemMessageProps) {
 function SystemMessageCall(props: SystemMessageProps) {
 	const { t } = useCtx();
 	const version = () =>
-		props.message.latest_version as MessageVersion & {
+		props.message.latest_version as MessageVersionT & {
 			ended_at?: string | null;
 			participants: string[];
 		};
@@ -1390,7 +1393,7 @@ function SystemMessageThreadCreated(props: SystemMessageProps) {
 	const ctx = useCtx();
 
 	const threadId = () =>
-		(props.message.latest_version as MessageVersion & { thread_id?: string })
+		(props.message.latest_version as MessageVersionT & { thread_id?: string })
 			.thread_id;
 
 	const link = (text: string) => (
