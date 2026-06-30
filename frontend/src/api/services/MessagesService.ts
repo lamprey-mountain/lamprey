@@ -375,6 +375,29 @@ export class MessagesService extends BaseService<Message> {
 		return resource;
 	}
 
+	async fetchSlice(
+		channel_id: string,
+		anchor: MessageListAnchor,
+	): Promise<MessageRange> {
+		await this.ensureHydrated(channel_id);
+		const cache = this.getOrCreateCache(channel_id);
+		const slice = this.getSlice(cache, anchor);
+
+		if (slice && !slice.stale) return slice;
+
+		return await this.fetchRange(channel_id, anchor, cache);
+	}
+
+	getCachedSlice(
+		channel_id: string,
+		anchor: MessageListAnchor,
+	): MessageRange | undefined {
+		const cache = this._ranges.get(channel_id);
+		if (!cache) return undefined;
+		const slice = this.getSlice(cache, anchor);
+		return slice && !slice.stale ? slice : undefined;
+	}
+
 	private getSlice(
 		ranges: MessageRanges,
 		dir: MessageListAnchor,

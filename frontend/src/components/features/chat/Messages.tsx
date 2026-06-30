@@ -11,6 +11,7 @@ import {
 	getMessageOverrideName,
 } from "@/utils/general";
 import { MessageView } from "./Message.tsx";
+import { shouldSplit } from "./util.ts";
 
 export type TimelineItemT = { id: string; class?: string; nonce?: string } & (
 	| { type: "info"; header: boolean }
@@ -178,6 +179,7 @@ type RenderTimelineParams = {
 	has_after: boolean;
 };
 
+// TODO: message skeletons when loading, has_before, has_after
 export function renderTimeline({
 	items,
 	read_marker_id,
@@ -260,21 +262,4 @@ export function renderTimeline({
 		});
 	}
 	return newItems;
-}
-
-function shouldSplit(a: Message, b: Message) {
-	return shouldSplitInner(a, b);
-}
-
-function shouldSplitInner(a: Message, b: Message) {
-	if (a.latest_version.type !== "DefaultMarkdown") return true;
-	if (b.latest_version.type !== "DefaultMarkdown") return true;
-	if (a.author_id !== b.author_id) return true;
-	if (a.latest_version.reply_id) return true;
-	if (getMessageOverrideName(a) !== getMessageOverrideName(b)) return true;
-	const ts_a = get_msg_ts(a);
-	const ts_b = get_msg_ts(b);
-	if (+ts_a - +ts_b > 1000 * 60 * 5) return true;
-	if (a.thread) return true;
-	return false;
 }

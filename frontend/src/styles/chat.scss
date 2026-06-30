@@ -602,9 +602,9 @@ article.message.toolbar-visible > .message-toolbar {
 
 .timeline {
 	overflow-y: auto;
+	overflow-anchor: none;
 	width: 100%;
 	height: 100%;
-	/* min-height: 0; */
 
 	& > .timeline-items {
 		width: 100%;
@@ -615,6 +615,10 @@ article.message.toolbar-visible > .message-toolbar {
 			top: 0;
 			left: 0;
 			width: 100%;
+
+			& > .spacer.mini {
+				min-height: 3.5rem;
+			}
 		}
 	}
 }

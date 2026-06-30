@@ -16,12 +16,15 @@ export type ChannelSearch = {
 	sort?: "newest" | "oldest" | "relevancy";
 };
 
-export type Timeline = {
-	jumpToEnd(): void;
+export type TimelineController = {
+	jumpToEnd(markRead?: boolean): void;
+	jumpToMessage(message_id: string, highlight?: boolean): void;
+	scrollBy(px: number, smooth: boolean): void;
+	isAtBottom(): boolean;
+	scrollToBottom(): void;
 };
 
 export type ChannelState = {
-	anchor?: MessageListAnchor;
 	attachments: Array<Attachment>;
 	editor_state?: EditorState;
 	highlight?: string;
@@ -29,7 +32,7 @@ export type ChannelState = {
 	reply_id?: string;
 	scroll_pos?: number;
 	search?: ChannelSearch;
-	timeline: Timeline;
+	timeline: TimelineController;
 
 	// TODO: merge these into sidebar: Sidebar
 	pinned_view: boolean;
@@ -49,6 +52,7 @@ export type ChannelState = {
 	reply_jump_source?: string;
 	editing_name?: string | null;
 	script_id?: string;
+	has_forward?: boolean; // TODO: move to TimelineController
 };
 
 export function createInitialChannelState(): ChannelState {
@@ -58,11 +62,25 @@ export function createInitialChannelState(): ChannelState {
 		voice_chat_sidebar_open: false,
 		history_view: false,
 		thread_chat_sidebar_thread_id: undefined,
+		read_marker_id: undefined,
+		has_forward: false,
 		slowmode_expire_at: null,
 		selectMode: false,
 		selectedMessages: [],
 		timeline: {
 			jumpToEnd() {
+				throw new Error("dummy timeline impl");
+			},
+			jumpToMessage() {
+				throw new Error("dummy timeline impl");
+			},
+			scrollBy() {
+				throw new Error("dummy timeline impl");
+			},
+			isAtBottom() {
+				return true;
+			},
+			scrollToBottom() {
 				throw new Error("dummy timeline impl");
 			},
 		},

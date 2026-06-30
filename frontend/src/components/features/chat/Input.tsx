@@ -296,16 +296,6 @@ export function Input(props: InputProps) {
 		return `${mins}:${secs.toString().padStart(2, "0")}`;
 	};
 
-	const anchor =
-		(): import("../../../api/services/MessagesService").MessageListAnchor => {
-			const a = ch.anchor;
-			const r = ch.read_marker_id;
-			if (a) return a;
-			if (r) return { type: "context", limit: 50, message_id: r };
-			return { type: "backwards", limit: 50 };
-		};
-	const messages = messagesService.useList(() => props.channel.id, anchor);
-
 	const jumpToLatest = () => {
 		ch.timeline.jumpToEnd();
 		// TODO: mark as read (including local marker)
@@ -314,12 +304,7 @@ export function Input(props: InputProps) {
 	const jumpToReplySource = () => {
 		const source = ch.reply_jump_source;
 		if (source) {
-			chUpdate("anchor", {
-				type: "context",
-				limit: 50,
-				message_id: source,
-			});
-			chUpdate("highlight", source);
+			ch.timeline.jumpToMessage(source, true);
 			chUpdate("reply_jump_source", undefined);
 		}
 	};
@@ -347,7 +332,8 @@ export function Input(props: InputProps) {
 				</div>
 			</Show>
 			<Switch>
-				<Match when={messages()?.has_forward}>
+				{/* TODO: move to top level Chat component(?) */}
+				<Match when={ch.has_forward}>
 					<button type="button" class="jump-to-latest" onClick={jumpToLatest}>
 						you are viewing older messages &bull; click to jump to present
 					</button>
