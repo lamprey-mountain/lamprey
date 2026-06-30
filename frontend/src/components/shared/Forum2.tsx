@@ -49,10 +49,7 @@ import { Markdown } from "@/atoms/Markdown";
 import { Resizable } from "@/atoms/Resizable";
 import { Time } from "@/atoms/Time";
 import { createTooltip } from "@/atoms/Tooltip";
-import {
-	MessageToolbar,
-	UserDisplayName,
-} from "@/components/features/chat/Message";
+import { UserDisplayName } from "@/components/features/chat/Message";
 import { Reactions } from "@/components/features/chat/Reactions";
 import { createEditor } from "@/components/features/editor/Editor";
 import { serializeToMarkdown } from "@/components/features/editor/serializer.ts";
@@ -80,6 +77,7 @@ import type { MediaProps } from "@/media/util";
 import type { Attachment } from "@/types/chat";
 import { getMessageOverrideName } from "@/utils/general";
 import { ChannelIcon } from "./User";
+import { MessageToolbar } from "../features/chat/MessageToolbar";
 
 // Type guard for RoomMember with override_name
 function hasOverrideName(

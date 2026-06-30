@@ -65,12 +65,15 @@ import {
 } from "@/media/mod.tsx";
 import { openThread } from "@/utils/channel";
 import { Reactions } from "./Reactions.tsx";
+import { useMessageToolbar } from "./message-toolbar-context.tsx";
 
 export type MessageProps = {
 	message: MessageT;
 	separate?: boolean;
 };
 
+// TODO: move elsewhere
+// TODO: extract user name logic into a hook
 export function UserDisplayName(props: {
 	user_id: string;
 	room_id?: string;
@@ -153,6 +156,7 @@ function MessageTextMarkdown(props: { message: MessageT }) {
 	);
 }
 
+// TODO: move elsewhere
 function MessageEditor(props: { message: MessageT }) {
 	const messagesService = useMessages();
 	const [ch, chUpdate] = useOptionalChannel();
@@ -339,6 +343,7 @@ export function MessageThread(props: {
 		</div>
 	);
 }
+
 type SystemMessageProps = {
 	message: MessageT;
 	date: Date;
@@ -359,6 +364,8 @@ function SystemMessage(
 		class?: string;
 	},
 ) {
+	const toolbar = useMessageToolbar();
+
 	return (
 		<article
 			ref={props.messageArticleRef}
@@ -374,13 +381,19 @@ function SystemMessage(
 				props.onMouseDown(e);
 				props.handleAltClick(e);
 			}}
-			onMouseEnter={() => props.setHovered(true)}
-			onMouseLeave={() => props.setHovered(false)}
+			onMouseEnter={(e) => {
+				props.setHovered(true);
+				toolbar.setTarget({ message: props.message, element: e.currentTarget });
+			}}
+			onMouseLeave={() => {
+				props.setHovered(false);
+				toolbar.setTarget(null);
+				// FIXME: dont clear if toolbar needs to exist for interaction
+			}}
 		>
 			<img class="icon main" src={props.icon} />
 			<div class="content">{props.content}</div>
 			<Time date={props.date} animGroup="message-ts" />
-			<MessageToolbar message={props.message} />
 		</article>
 	);
 }
@@ -521,174 +534,7 @@ export function AttachmentView(props: { att: Attachment }) {
 	}
 }
 
-export const MessageToolbar = (props: { message: MessageT }) => {
-	const api2 = useApi();
-	const ctx = useCtx();
-	const { setMenu } = useMenu();
-	const [ch, chUpdate] = useOptionalChannel();
-	const [showReactionPicker, setShowReactionPicker] = createSignal(false);
-	let reactionButtonRef: HTMLButtonElement | undefined;
-
-	const areReactionKeysEqual = (a: ReactionKey, b: ReactionKey): boolean => {
-		if (a.type !== b.type) return false;
-		if (a.type === "Text" && b.type === "Text") return a.content === b.content;
-		if (a.type === "Custom" && b.type === "Custom") return a.id === b.id;
-		return false;
-	};
-
-	const addReaction = (emoji: string) => {
-		const existing = props.message.reactions?.find((r) =>
-			areReactionKeysEqual(r.key, { type: "Text", content: emoji }),
-		);
-		if (!existing || !existing.self) {
-			api2.reactions.add(
-				props.message.channel_id,
-				props.message.id,
-				`t:${emoji}`,
-			);
-		}
-	};
-
-	createEffect(() => {
-		if (showReactionPicker()) {
-			ctx.setPopout({
-				id: "emoji",
-				ref: reactionButtonRef,
-				placement: "left-start",
-				props: {
-					selected: (emoji: string | null, keepOpen: boolean) => {
-						if (emoji) {
-							addReaction(emoji);
-						}
-						if (!keepOpen) setShowReactionPicker(false);
-					},
-				},
-			});
-		} else {
-			const popout = ctx.popout();
-			if (
-				popout &&
-				"id" in popout &&
-				popout.id === "emoji" &&
-				popout.ref === reactionButtonRef
-			) {
-				ctx.setPopout(null);
-			}
-		}
-	});
-
-	const closePicker = (e: MouseEvent) => {
-		const popoutEl = document.querySelector(".popout");
-		if (
-			reactionButtonRef &&
-			!reactionButtonRef.contains(e.target as Node) &&
-			(!popoutEl || !popoutEl.contains(e.target as Node))
-		) {
-			setShowReactionPicker(false);
-		}
-	};
-
-	createEffect(() => {
-		if (showReactionPicker()) {
-			document.addEventListener("click", closePicker);
-		}
-		onCleanup(() => document.removeEventListener("click", closePicker));
-	});
-
-	const currentUser = useCurrentUser();
-	const isOwnMessage = () => {
-		return currentUser()?.id === props.message.author_id;
-	};
-
-	const canEditMessage = () => {
-		return (
-			props.message.latest_version.type === "DefaultMarkdown" &&
-			!props.message.is_local &&
-			isOwnMessage()
-		);
-	};
-
-	const handleAddReaction = (e: MouseEvent) => {
-		e.stopPropagation();
-		setShowReactionPicker(!showReactionPicker());
-	};
-
-	const handleReply = () => {
-		if (!ch || !chUpdate) return;
-		chUpdate("reply_id", props.message.id);
-	};
-
-	const handleEdit = () => {
-		if (!canEditMessage() || !chUpdate) return;
-		chUpdate("editingMessage", {
-			message_id: props.message.id,
-			selection: "end",
-		});
-	};
-
-	const handleContextMenu = (e: MouseEvent) => {
-		e.preventDefault();
-
-		const button = e.currentTarget as HTMLButtonElement;
-		const rect = button.getBoundingClientRect();
-
-		queueMicrotask(() => {
-			setMenu({
-				x: rect.left,
-				y: rect.bottom,
-				type: "message",
-				channel_id: props.message.channel_id,
-				message_id: props.message.id,
-				version_id: props.message.latest_version.version_id,
-			});
-		});
-	};
-
-	return (
-		<div class="message-toolbar">
-			<button
-				type="button"
-				class="button"
-				ref={reactionButtonRef}
-				onClick={handleAddReaction}
-				title="Add reaction"
-				aria-label="Add reaction"
-			>
-				<Icon src={icReactionAdd} />
-			</button>
-			<button
-				type="button"
-				class="button"
-				onClick={handleReply}
-				title="Reply"
-				aria-label="Reply"
-			>
-				<Icon src={icReply} />
-			</button>
-			<Show when={canEditMessage()}>
-				<button
-					type="button"
-					class="button"
-					onClick={handleEdit}
-					title="Edit"
-					aria-label="Edit"
-				>
-					<Icon src={icEdit} />
-				</button>
-			</Show>
-			<button
-				type="button"
-				class="button"
-				onClick={handleContextMenu}
-				title="More options"
-				aria-label="More options"
-			>
-				<Icon src={icMore} />
-			</button>
-		</div>
-	);
-};
-
+// TODO: rename to Message
 export function MessageView(props: MessageProps) {
 	const channels = useChannels();
 	const messagesService = useMessages();
@@ -841,7 +687,7 @@ export function MessageView(props: MessageProps) {
 					onMouseLeave={() => setHovered(false)}
 				>
 					unknown message: {props.message.latest_version.type}
-					<MessageToolbar message={props.message} />
+					{/* TODO: re-add message toolbar? */}
 				</article>
 			}
 		>
@@ -899,6 +745,7 @@ function DefaultMessage(
 ) {
 	const flumes = useFlumes();
 
+	const toolbar = useMessageToolbar();
 	const version = () =>
 		props.message.latest_version.type === "DefaultMarkdown"
 			? props.message.latest_version
@@ -922,8 +769,15 @@ function DefaultMessage(
 				props.onMouseDown(e);
 				props.handleAltClick(e);
 			}}
-			onMouseEnter={() => props.setHovered(true)}
-			onMouseLeave={() => props.setHovered(false)}
+			onMouseEnter={(e) => {
+				props.setHovered(true);
+				toolbar.setTarget({ message: props.message, element: e.currentTarget });
+			}}
+			onMouseLeave={() => {
+				props.setHovered(false);
+				toolbar.setTarget(null);
+				// FIXME: dont clear if toolbar needs to exist for interaction
+			}}
 		>
 			<Show when={version()?.reply_id}>
 				{(reply) => (
@@ -1088,7 +942,6 @@ function DefaultMessage(
 				</div>
 				<Time date={props.date} animGroup="message-ts" />
 			</Show>
-			<MessageToolbar message={props.message} />
 		</article>
 	);
 }

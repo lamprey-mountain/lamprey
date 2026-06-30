@@ -171,22 +171,6 @@ export const TimelineItem = (props: {
 	);
 };
 
-// TODO
-export const TimelineItem2 = (props: {
-	thread: ThreadT;
-	item: TimelineItemT;
-}) => {
-	return (
-		<Switch>
-			<Match when={props.item.type === "message" && props.item}>
-				{(item) => (
-					<MessageView message={item().message} separate={item().separate} />
-				)}
-			</Match>
-		</Switch>
-	);
-};
-
 type RenderTimelineParams = {
 	items: Array<Message>;
 	read_marker_id: string | null;

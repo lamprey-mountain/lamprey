@@ -14,9 +14,11 @@ import { deepEqual } from "@/utils/deepEqual.ts";
 import { logger } from "@/utils/logger";
 import { Input } from "./Input.tsx";
 import { MessageSkeletons } from "./MessageSkeleton.tsx";
+import { MessageToolbarContainer } from "./MessageToolbarContainer.tsx";
 import { renderTimeline, type TimelineItemT } from "./Messages.tsx";
 import { highlight } from "./util.ts";
 import { Timeline } from "./Timeline.tsx";
+import { MessageToolbarProvider } from "./message-toolbar-context.tsx";
 
 export type ChatProps = {
 	channel: Channel;
@@ -312,68 +314,74 @@ export const ChatMain = (props: ChatProps) => {
 	const uploads = useUploads();
 
 	return (
-		<div
-			ref={chatRef}
-			class="chat"
-			classList={{ "has-typing": !!getTyping().length }}
-			data-channel-id={props.channel.id}
-			onKeyDown={(e) => {
-				if (e.key === "Escape") {
-					jumpToEnd(true);
-				} else if (e.key === "PageDown") {
-					list.scrollBy(globalThis.innerHeight * 0.8, true);
-				} else if (e.key === "PageUp") {
-					list.scrollBy(-globalThis.innerHeight * 0.8, true);
-				}
-			}}
-			onDragEnter={(e) => {
-				e.preventDefault();
-				dragCounter++;
-				setDragging(true);
-			}}
-			onDragOver={(e) => {
-				e.preventDefault();
-				setDragging(true);
-			}}
-			onDragLeave={(e) => {
-				e.preventDefault();
-				dragCounter--;
-				if (dragCounter === 0) setDragging(false);
-			}}
-			onDrop={(e) => {
-				e.preventDefault();
-				dragCounter = 0;
-				setDragging(false);
-				for (const file of Array.from(e.dataTransfer?.files ?? [])) {
-					const local_id = uuidv7();
-					uploads.init(local_id, props.channel.id, file);
-				}
-			}}
-		>
-			<Show
-				when={
-					messages()?.has_forward &&
-					props.channel.last_version_id !== channelState.read_marker_id
-				}
+		<MessageToolbarProvider>
+			<div
+				ref={chatRef}
+				class="chat"
+				classList={{ "has-typing": !!getTyping().length }}
+				data-channel-id={props.channel.id}
+				onKeyDown={(e) => {
+					if (e.key === "Escape") {
+						jumpToEnd(true);
+					} else if (e.key === "PageDown") {
+						list.scrollBy(globalThis.innerHeight * 0.8, true);
+					} else if (e.key === "PageUp") {
+						list.scrollBy(-globalThis.innerHeight * 0.8, true);
+					}
+				}}
+				onDragEnter={(e) => {
+					e.preventDefault();
+					dragCounter++;
+					setDragging(true);
+				}}
+				onDragOver={(e) => {
+					e.preventDefault();
+					setDragging(true);
+				}}
+				onDragLeave={(e) => {
+					e.preventDefault();
+					dragCounter--;
+					if (dragCounter === 0) setDragging(false);
+				}}
+				onDrop={(e) => {
+					e.preventDefault();
+					dragCounter = 0;
+					setDragging(false);
+					for (const file of Array.from(e.dataTransfer?.files ?? [])) {
+						const local_id = uuidv7();
+						uploads.init(local_id, props.channel.id, file);
+					}
+				}}
 			>
-				<div class="new-messages">
-					<button type="button" class="jump-read" onClick={jumpToLastRead}>
-						jump to unread
-					</button>
-					<button type="button" class="mark-read" onClick={markReadImmediately}>
-						mark as read
-					</button>
-				</div>
-			</Show>
-			<Timeline channel={props.channel} />
-			<Input channel={props.channel} />
-			<Portal>
-				<Show when={dragging()}>
-					<div class="dnd-upload-message">
-						<div class="inner">drop to upload</div>
+				<Show
+					when={
+						messages()?.has_forward &&
+						props.channel.last_version_id !== channelState.read_marker_id
+					}
+				>
+					<div class="new-messages">
+						<button type="button" class="jump-read" onClick={jumpToLastRead}>
+							jump to unread
+						</button>
+						<button
+							type="button"
+							class="mark-read"
+							onClick={markReadImmediately}
+						>
+							mark as read
+						</button>
 					</div>
 				</Show>
-			</Portal>
-		</div>
+				<Timeline channel={props.channel} />
+				<Input channel={props.channel} />
+				<Portal>
+					<Show when={dragging()}>
+						<div class="dnd-upload-message">
+							<div class="inner">drop to upload</div>
+						</div>
+					</Show>
+				</Portal>
+			</div>
+		</MessageToolbarProvider>
 	);
 };

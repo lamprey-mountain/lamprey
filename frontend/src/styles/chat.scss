@@ -1,126 +1,81 @@
 @use "./util.scss" as *;
 
-.chat {
+#root > .chat {
 	grid-area: main;
+}
+
+.chat {
 	background-color: $bg-200;
 	color: $fg-200;
-	/* display: grid; */
-	/* grid-template-rows: 1fr auto; */
 	contain: strict;
 	scrollbar-color: $bg-300 $bg-150;
 	scrollbar-gutter: stable;
 
-	& > .list {
-		display: flex;
-		flex-direction: column;
-		overflow-y: auto;
-		justify-content: end;
+	/* & > .list { */
+	/* display: flex; */
+	/* flex-direction: column; */
+	/* overflow-y: auto; */
+	/* justify-content: end; */
 
-		& .list-inner > .header {
-			flex: 1;
-			display: flex;
-			justify-content: end;
-			flex-direction: column;
-		}
+	/* & .list-inner > .header { */
+	/* flex: 1; */
+	/* display: flex; */
+	/* justify-content: end; */
+	/* flex-direction: column; */
+	/* } */
 
-		& .list-inner > .header > header {
-			padding: 0 8px;
-			margin-top: 32px;
-			margin-bottom: 16px;
-			box-shadow: 0 2px 8px $bg-200;
-		}
+	/* & .list-inner > .header > header { */
+	/* padding: 0 8px; */
+	/* margin-top: 32px; */
+	/* margin-bottom: 16px; */
+	/* box-shadow: 0 2px 8px $bg-200; */
+	/* } */
 
-		& .list-inner > li {
-			display: grid;
-			grid-template-columns: 128px 1fr max-content;
+	/* & .list-inner > li { */
+	/* display: grid; */
+	/* grid-template-columns: 128px 1fr max-content; */
 
-			&.message {
-				grid-template-columns: 1fr;
-			}
+	/* &.message { */
+	/* grid-template-columns: 1fr; */
+	/* } */
 
-			&:not(.message) {
-				overflow-anchor: none;
-			}
+	/* &:not(.message) { */
+	/* overflow-anchor: none; */
+	/* } */
 
-			&.selected > article.message {
-				box-shadow: 4px 0 0 -1px inset #67dc82;
-				background-color: #67dc8222;
-			}
+	/* &.selected > article.message { */
+	/* box-shadow: 4px 0 0 -1px inset #67dc82; */
+	/* background-color: #67dc8222; */
+	/* } */
 
-			&.context > article.message {
-				box-shadow: 4px 0 0 -1px inset oklch(var(--color-highlight));
-				background-color: oklch(var(--color-highlight) / 0.15);
-			}
+	/* &.context > article.message { */
+	/* box-shadow: 4px 0 0 -1px inset oklch(var(--color-highlight)); */
+	/* background-color: oklch(var(--color-highlight) / 0.15); */
+	/* } */
 
-			&.mentioned > article.message {
-				box-shadow: 4px 0 0 -1px inset $link-500;
-				background-color: oklch(var(--color-link-500) / 0.1);
-			}
-		}
-	}
+	/* &.mentioned > article.message { */
+	/* box-shadow: 4px 0 0 -1px inset $link-500; */
+	/* background-color: oklch(var(--color-link-500) / 0.1); */
+	/* } */
+	/* } */
+	/* } */
 
-	& > .loading {
-		position: absolute;
-		top: 8px;
-		left: 8px;
-		padding: 8px;
-		background: $bg-100;
-		z-index: 100;
-	}
+	/* & > .loading { */
+	/* position: absolute; */
+	/* top: 8px; */
+	/* left: 8px; */
+	/* padding: 8px; */
+	/* background: $bg-100; */
+	/* z-index: 100; */
+	/* } */
 
-	& .spacer.mini {
-		min-height: 3.5rem;
-	}
+	/* & .spacer.mini { */
+	/* min-height: 3.5rem; */
+	/* } */
 
-	&.has-typing .spacer.mini {
-		min-height: 4.5rem;
-	}
-}
-
-.chat-messages {
-	overflow-y: auto;
-}
-
-.chat > .list .list-inner > li.divider {
-	display: flex;
-	color: $fg-600;
-	font-size: 0.9rem;
-	align-items: center;
-	margin: 8px;
-	position: relative;
-
-	& > hr {
-		flex: 1;
-		border-bottom: solid $sep-500 1px;
-		margin: 0 8px;
-	}
-
-	/* visually center text */
-	& > time {
-		margin-top: -1px;
-	}
-
-	& > .new {
-		margin-top: -3px;
-
-		&.hidden {
-			/* HACK: this hidden div with hacky styles exists to center the date text */
-			margin-top: 0;
-			margin-left: -8px;
-			padding-left: 8px;
-			height: 0;
-			color: transparent;
-			border-bottom: solid #3fa9c9 1px;
-		}
-	}
-
-	&.unread {
-		color: #3fa9c9;
-
-		& > hr {
-			border-bottom: solid #3fa9c9 1px;
-		}
-	}
+	/* &.has-typing .spacer.mini { */
+	/* min-height: 4.5rem; */
+	/* } */
 }
 
 .chat-header {
@@ -589,16 +544,12 @@ article.message.oneline {
 .message-toolbar {
 	background: $bg-150;
 	display: flex;
-	position: absolute;
-	top: -8px;
-	right: 8px;
 	border: solid $sep-400 1px;
 	box-shadow: 0 2px 8px $bg-100;
 	border-radius: 4px;
 	overflow: hidden;
-	visibility: hidden;
 
-	& > button {
+	& > button.button {
 		display: grid;
 		place-items: center;
 		height: 24px;

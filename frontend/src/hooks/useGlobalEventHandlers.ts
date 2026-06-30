@@ -7,14 +7,35 @@ import { useContextMenu } from "./useContextMenu.ts";
 export function useGlobalEventHandlers() {
 	const ctx = useCtx();
 	const [modals, modalCtl] = useModals();
-	const { setMenu } = useMenu();
+	const { menu, setMenu } = useMenu();
 	const { setUserView } = useUserPopout();
 	const { handleContextMenu } = useContextMenu(setMenu);
 
 	const handleClick = (e: MouseEvent) => {
-		setMenu(null);
+		// 1. close context menu if open
+		if (menu()) {
+			setMenu(null);
+			return;
+		}
+
+		// TODO: implement as written
+		// 2. close existing overlay (user view, reaction picker, etc...)
+		// NOTE: or overlay*s*? how would multiple work?
 		setUserView(null);
 		ctx.setThreadsView(null);
+
+		// TODO: implement as written
+		// 3. close modal if background clicked
+		// if (modals.length) {
+		// 	modalCtl.close();
+		// }
+
+		// TODO: implement as written
+		// 4. open user view
+		// const target = (e.target as Element);
+		// target.closest(".user-view");
+		// data-user-id
+
 		if (!e.isTrusted) return;
 	};
 

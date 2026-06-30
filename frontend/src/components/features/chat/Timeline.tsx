@@ -8,6 +8,7 @@ import { ChatProps } from "./Chat";
 import { type TimelineItemT, renderTimeline, TimelineItem } from "./Messages";
 import { useSync } from "@/hooks/useSync";
 import { MessageSync } from "ts-sdk";
+import { MessageToolbarMount } from "./MessageToolbar";
 
 const RELEVANT_SYNC_EVENTS = new Set<MessageSync["type"]>([
 	"MessageCreate",
@@ -157,7 +158,24 @@ export const Timeline = (props: ChatProps) => {
 						);
 					}}
 				</For>
+				<MessageToolbarMount />
 			</div>
 		</div>
 	);
 };
+
+// TODO
+// export const TimelineItem2 = (props: {
+// 	channel: ChannelT;
+// 	item: TimelineItemT;
+// }) => {
+// 	return (
+// 		<Switch>
+// 			<Match when={props.item.type === "message" && props.item}>
+// 				{(item) => (
+// 					<MessageView message={item().message} separate={item().separate} />
+// 				)}
+// 			</Match>
+// 		</Switch>
+// 	);
+// };

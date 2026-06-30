@@ -1,3 +1,5 @@
+// TODO: split apart this component?
+
 import {
 	autoUpdate,
 	type ClientRectObject,
