@@ -149,12 +149,16 @@
 		gap: 4px;
 		border-radius: 2px;
 
+		// TODO: brighten icons when channel hovered/focused
 		&:hover, &:focus {
 			background-color: $bg-400;
+			color: $fg-200;
 		}
 
+		// TODO: brighten icons when channel selected
 		&.active {
 			background-color: $bg-300;
+			color: $fg-200;
 		}
 
 		&[data-muted="true"] {
