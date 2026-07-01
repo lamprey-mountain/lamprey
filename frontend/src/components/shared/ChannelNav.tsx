@@ -35,6 +35,16 @@ import { Avatar, ChannelIcon } from "./User";
 
 // TODO: review llm code here because im lazy and dont like implementing drag and drop
 
+const CHANNEL_TYPES_HAS_UNREAD = new Set<ChannelType>([
+	"Text",
+	"ThreadPublic",
+	"ThreadPrivate",
+	"ThreadForum2",
+	"Dm",
+	"Gdm",
+	"Announcement",
+]);
+
 function getLastViewedChannel(roomId: string): string | null {
 	const key = `last_channel_${roomId}`;
 	return localStorage.getItem(key);
@@ -799,10 +809,10 @@ export const ChannelNav = (props: { room_id?: string }) => {
 												>
 													<ul class="thread-list">
 														<For each={(channel as ChannelWithThreads).threads}>
-															{(thread: Channel) => (
+															{(chan: Channel) => (
 																<li
 																	class="channel-item"
-																	data-channel-id={thread.id}
+																	data-channel-id={chan.id}
 																	draggable={true}
 																	onDragStart={handleDragStart}
 																	onDragOver={handleDragOver}
@@ -813,12 +823,13 @@ export const ChannelNav = (props: { room_id?: string }) => {
 																	}}
 																	classList={{
 																		unread:
-																			thread.type !== "Voice" &&
-																			!!thread.is_unread,
+																			CHANNEL_TYPES_HAS_UNREAD.has(chan.type) &&
+																			chan.last_read_id !==
+																				chan.last_message_id,
 																	}}
 																>
 																	<ItemChannel
-																		channel={thread}
+																		channel={chan}
 																		room_id={props.room_id}
 																	/>
 																</li>
@@ -961,9 +972,8 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 			href={`/channel/${props.channel.id}`}
 			class="menu-channel channel-link"
 			data-unread={
-				props.channel.type !== "Voice" && props.channel.is_unread
-					? "true"
-					: undefined
+				CHANNEL_TYPES_HAS_UNREAD.has(props.channel.type) &&
+				props.channel.last_read_id !== props.channel.last_message_id
 			}
 			data-muted={isMuted() ? "true" : undefined}
 			data-channel-id={props.channel.id}
