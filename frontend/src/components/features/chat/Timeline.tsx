@@ -12,29 +12,26 @@ import {
 	onCleanup,
 	Switch,
 	Match,
+	createSignal,
 } from "solid-js";
 import { ChatProps } from "./Chat";
 import { renderTimeline, TimelineItem, TimelineItemT } from "./Messages";
+import { highlight } from "./util";
 import { MessageToolbarMount } from "./MessageToolbar";
-import { MessageRange } from "@/api/services/MessagesService";
 import { createStore, reconcile } from "solid-js/store";
 import { TimelineState, useTimeline } from "./timeline-context";
 import { Queue } from "@/utils/queue";
 import { ChannelT } from "@/types";
 import { MessageView } from "./Message";
 
-// TODO: add logging
 const log = logger.for("timeline");
 
 const PAGINATE_THRESHOLD = 200;
 const OVERSCAN = 20;
 
-// how should i handle state management with Timeline? should i make Chat.tsx swap out TimelineState and store it in contexts? or make Timeline reactively respond to the current channel?
-
 type TimelineTask =
 	| { type: "SET_ANCHOR"; anchor: MessageListAnchor }
-	| { type: "CALLBACK"; fn: () => void }
-	| { type: "HIGHLIGHT" }
+	| { type: "HIGHLIGHT"; message_id: string }
 	| { type: "SCROLL_TOP"; smooth?: boolean }
 	| { type: "SCROLL_BOTTOM"; smooth?: boolean }
 	| { type: "SCROLL_MESSAGE"; message_id: string; smooth?: boolean };
@@ -43,6 +40,15 @@ export const Timeline = (props: ChatProps) => {
 	const messagesService = useMessages();
 	const [timeline, updateTimeline] = useTimeline();
 	const currentUser = useCurrentUser(); // TEMP: compat
+	const [pendingHighlight, setPendingHighlight] = createSignal<string | null>(
+		null,
+	);
+	let highlightTimer: number | undefined;
+
+	const resetHighlight = () => {
+		setPendingHighlight(null);
+		clearTimeout(highlightTimer);
+	};
 
 	const fetchMessages = async (a: MessageListAnchor) => {
 		if (timeline.loading) return;
@@ -61,15 +67,21 @@ export const Timeline = (props: ChatProps) => {
 			return timeline.items.length;
 		},
 		anchorTo: "end",
+		followOnAppend: true,
+		scrollEndThreshold: 80,
 		getScrollElement: () => scrollEl,
 		estimateSize: () => 80, // TODO: more accurate size estimation
 		overscan: OVERSCAN,
+		getItemKey(index) {
+			return timeline.items[index]?.id;
+		},
 	});
 
 	const queue = new Queue(async (task: TimelineTask) => {
 		log.debug("execute task", task);
 		switch (task.type) {
 			case "SET_ANCHOR": {
+				resetHighlight();
 				updateTimeline("anchor", task.anchor);
 				await fetchMessages(task.anchor);
 
@@ -88,12 +100,13 @@ export const Timeline = (props: ChatProps) => {
 				await new Promise<void>((r) => queueMicrotask(r));
 				break;
 			}
-			case "CALLBACK": {
-				task.fn();
-				break;
-			}
 			case "HIGHLIGHT": {
-				// TODO
+				clearTimeout(highlightTimer);
+				setPendingHighlight(task.message_id);
+				highlightTimer = window.setTimeout(
+					() => setPendingHighlight(null),
+					3000, // TODO: extract 3000 into a const
+				);
 				break;
 			}
 			case "SCROLL_TOP": {
@@ -199,6 +212,12 @@ export const Timeline = (props: ChatProps) => {
 				smooth: data.smooth,
 			},
 		);
+		if (data.highlight) {
+			queue.push({
+				type: "HIGHLIGHT",
+				message_id: data.message_id,
+			});
+		}
 	});
 
 	timeline.commands.listen((e) => {
@@ -214,6 +233,7 @@ export const Timeline = (props: ChatProps) => {
 	const calculatePaginateLen = () => Math.floor(calculateSliceLen() / 3);
 
 	const handleScrollEnd = () => {
+		resetHighlight();
 		if (timeline.loading) return;
 		const el = scrollEl;
 		if (!el) return;
@@ -256,49 +276,6 @@ export const Timeline = (props: ChatProps) => {
 
 		setPos();
 	};
-
-	// TODO: merge with jumpToMessage command
-	// createEffect(
-	// 	on(
-	// 		() => timeline.items,
-	// 		(items) => {
-	// 			if (items.length === 0) return;
-	// 			// HACK: delay to allow items to render/measure
-	// 			setTimeout(() => {
-	// 				const a = timeline.anchor;
-	// 				if (a.type === "context") {
-	// 					const idx = items.findIndex(
-	// 						(x) => x.type === "message" && x.message.id === a.message_id,
-	// 					);
-	// 					if (idx !== -1) {
-	// 						const offset = virtualizer.getOffsetForIndex(idx);
-	// 						if (offset !== null) {
-	// 							const targetOffset = offset - (scrollEl?.clientHeight ?? 0) / 2;
-	// 							const distance = Math.abs(
-	// 								virtualizer.scrollOffset - targetOffset,
-	// 							);
-	// 							const shouldSmooth =
-	// 								distance < (scrollEl?.clientHeight ?? 0) * 3;
-	// 							virtualizer.scrollToOffset(targetOffset, {
-	// 								behavior: shouldSmooth ? "smooth" : "auto",
-	// 							});
-	// 						}
-	// 					} else {
-	// 						// fallback
-	// 						virtualizer.scrollToOffset(virtualizer.getTotalSize());
-	// 					}
-	// 				} else {
-	// 					const pos = timeline.scroll_pos;
-	// 					if (pos === undefined || pos === -1) {
-	// 						virtualizer.scrollToOffset(virtualizer.getTotalSize());
-	// 					} else {
-	// 						virtualizer.scrollToOffset(pos);
-	// 					}
-	// 				}
-	// 			}, 0);
-	// 		},
-	// 	),
-	// );
 
 	// PERF: is constantly setting pos too heavy?
 	const setPos = throttle(() => {
@@ -344,8 +321,17 @@ export const Timeline = (props: ChatProps) => {
 							let el: HTMLDivElement | null = null;
 
 							createEffect(() => {
-								item();
+								const it = item();
 								virtualizer.measureElement(el);
+
+								if (
+									it?.type === "message" &&
+									it.message.id === pendingHighlight() &&
+									el
+								) {
+									highlight(el);
+									resetHighlight();
+								}
 							});
 
 							return (

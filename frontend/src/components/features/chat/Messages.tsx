@@ -233,23 +233,24 @@ export function renderTimeline({
 		let item: TimelineItemT | undefined = cache?.get(cacheKey);
 
 		if (!item || item.type !== "message" || item.message !== msg) {
-			item = createMutable({
+			const newItem = createMutable({
 				type: "message" as const,
-				id: msg.id,
-				nonce: msg.nonce,
+				id: msg.nonce ?? msg.id,
 				message: msg as any,
 				separate,
 				get class() {
 					return this.separate ? "separate" : "";
 				},
-			}) as TimelineItemT;
-			cache?.set(cacheKey, item);
+			} as TimelineItemT & { type: "message" });
+			cache?.set(cacheKey, newItem);
+			item = newItem;
 		} else {
 			// Update separate without changing object reference
 			item.separate = separate;
 			item.message = msg as any;
 		}
-		newItems.push(item);
+		// TODO: make typescript happy
+		newItems.push(item!);
 	}
 	if (has_after) {
 		newItems.push({

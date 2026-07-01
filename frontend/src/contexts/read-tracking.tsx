@@ -6,7 +6,10 @@ import type { ChannelsService } from "@/api/services/ChannelsService.ts";
 import type { ChannelContextT } from "@/contexts/channel";
 import type { Data } from "@/types/chat";
 
+// TODO: rename to AckContext
+
 export type ReadTrackingContextT = {
+	// TODO: remove these
 	markThreadRead: (
 		thread_id: string,
 		version_id: string,
@@ -20,6 +23,15 @@ export type ReadTrackingContextT = {
 		also_local: boolean,
 		delay: boolean,
 	) => Promise<void>;
+
+	// TODO: use this everywhere
+	ack: (
+		channel_id: string,
+		message_id: string,
+		also_local: boolean,
+		delay: boolean,
+	) => Promise<void>;
+	// TODO: add bulk ack method
 };
 
 const ReadTrackingContext = createContext<ReadTrackingContextT>();
@@ -140,10 +152,48 @@ export function createReadTrackingProvider(
 		}
 	};
 
+	const ack = async (
+		channel_id: string,
+		message_id: string,
+		also_local: boolean,
+		delay: boolean,
+	) => {
+		if (delay) {
+			setTimeout(() => {
+				markChannelRead(channel_id, message_id, also_local, false);
+			}, 300);
+			return;
+		}
+
+		// FIXME: implement
+		// const cc = channel_contexts.get(channel_id);
+		// if (cc) {
+		// 	const [_ch, chUpdate] = cc;
+		// 	if (also_local) {
+		// 		chUpdate("read_marker_id", message_id);
+		// 	}
+		// 	await channels2.ack(channel_id, undefined, message_id);
+		// } else {
+		// 	const c = channels2.cache.get(channel_id);
+		// 	if (c) {
+		// 		if (also_local) {
+		// 			dataUpdate(
+		// 				"channels",
+		// 				channel_id,
+		// 				"read_marker_id",
+		// 				c.last_version_id!,
+		// 			);
+		// 		}
+		// 		await channels2.ack(channel_id, undefined, c.last_version_id!);
+		// 	}
+		// }
+	};
+
 	return {
 		markThreadRead,
 		markCategoryRead,
 		markChannelRead,
+		ack,
 	};
 }
 
