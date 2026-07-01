@@ -174,16 +174,22 @@ export function createReadTrackingProvider(
 			return;
 		}
 
-		// PERF: immediately call ackMessage, rollback if channels2.ack() fails/throws (optimistic ui)
+		const cc = channel_contexts.get(channel_id);
+		const timelineState = cc?.[0].timelineStore?.[0];
+		const previous_read_id = timelineState?.last_read_message_id;
 
-		await channels2.ack(channel_id, message_id, undefined);
+		// optimistically update, rollback on failure
+		if (also_local && cc) {
+			cc[0].timeline.ackMessage(message_id);
+		}
 
-		if (also_local) {
-			const cc = channel_contexts.get(channel_id);
-			if (cc) {
-				const [chState] = cc;
-				chState.timeline.ackMessage(message_id);
+		try {
+			await channels2.ack(channel_id, message_id, undefined);
+		} catch (e) {
+			if (also_local && cc && previous_read_id) {
+				cc[0].timeline.ackMessage(previous_read_id);
 			}
+			throw e;
 		}
 	};
 
