@@ -86,6 +86,7 @@ import {
 	useMessageToolbar,
 } from "../features/chat/message-toolbar-context.tsx";
 import { MessageToolbarMount } from "../features/chat/MessageToolbar.tsx";
+import { RenderUploadItem } from "../features/chat/Input";
 
 // Type guard for RoomMember with override_name
 function hasOverrideName(
@@ -1386,114 +1387,6 @@ const Comment = (props: {
 		</div>
 	);
 };
-
-export function RenderUploadItem(props: {
-	thread_id: string;
-	att: Attachment;
-}) {
-	const uploads = useUploads();
-	const thumbUrl = isUploadingAttachment(props.att)
-		? URL.createObjectURL(props.att.file)
-		: "";
-	if (thumbUrl) {
-		onCleanup(() => {
-			URL.revokeObjectURL(thumbUrl);
-		});
-	}
-
-	function renderInfo(att: Attachment) {
-		if (isUploadingAttachment(att)) {
-			if (att.progress === 1) {
-				return `processing`;
-			} else {
-				const percent = (att.progress * 100).toFixed(2);
-				return `${percent}%`;
-			}
-		} else {
-			return "";
-		}
-	}
-
-	function getProgress(att: Attachment) {
-		if (isUploadingAttachment(att)) {
-			return att.progress;
-		} else {
-			return 1;
-		}
-	}
-
-	function removeAttachment(local_id: string) {
-		uploads.cancel(local_id, props.thread_id);
-	}
-
-	function pause() {
-		if (isUploadingAttachment(props.att)) {
-			uploads.pause(props.att.local_id);
-		}
-	}
-
-	function resume() {
-		if (isUploadingAttachment(props.att)) {
-			uploads.resume(props.att.local_id);
-		}
-	}
-
-	return (
-		<div class="upload-item">
-			<div
-				class="thumb"
-				style={{ "background-image": `url(${thumbUrl})` }}
-			></div>
-			<div class="info">
-				<svg
-					aria-hidden="true"
-					class="progress"
-					viewBox="0 0 1 1"
-					preserveAspectRatio="none"
-				>
-					<rect class="bar" height="1" width={getProgress(props.att)}></rect>
-				</svg>
-				<div style="display: flex">
-					<div style="flex: 1;white-space:nowrap;text-overflow:ellipsis;overflow:hidden">
-						{isUploadingAttachment(props.att)
-							? props.att.file.name
-							: "uploaded"}
-						<span style="color:#888;margin-left:.5ex">
-							{renderInfo(props.att)}
-						</span>
-					</div>
-					<menu>
-						<Switch>
-							<Match
-								when={isUploadingAttachment(props.att) && props.att.paused}
-							>
-								<button type="button" class="button" onClick={resume}>
-									⬆️
-								</button>
-							</Match>
-							<Match when={isUploadingAttachment(props.att)}>
-								<button type="button" class="button" onClick={pause}>
-									⏸️
-								</button>
-							</Match>
-						</Switch>
-						<button
-							type="button"
-							class="button"
-							onClick={() =>
-								removeAttachment(
-									isUploadingAttachment(props.att) ? props.att.local_id : "",
-								)
-							}
-						>
-							<Icon src={icDelete} />
-						</button>
-					</menu>
-				</div>
-			</div>
-		</div>
-	);
-}
 
 // TODO: name colors
 // <div class="author">

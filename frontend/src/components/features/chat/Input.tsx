@@ -401,7 +401,6 @@ export function RenderUploadItem(props: {
 	thread_id: string;
 	att: Attachment;
 }) {
-	const _ctx = useCtx();
 	const uploads = useUploads();
 	const [, modalCtl] = useModals();
 	const thumbUrl =
