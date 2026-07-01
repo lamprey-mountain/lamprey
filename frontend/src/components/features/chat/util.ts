@@ -2,6 +2,7 @@ import { MessageT } from "@/types";
 import { getMessageOverrideName, getMsgTs } from "@/utils/general";
 
 export function highlight(el: Element) {
+	el.getAnimations().forEach((a) => a.cancel());
 	el.animate(
 		[
 			{
@@ -21,7 +22,7 @@ export function highlight(el: Element) {
 			},
 		],
 		{
-			duration: 1000,
+			duration: 2000,
 		},
 	);
 }
