@@ -497,7 +497,7 @@ impl ServiceChannels {
                 json.ty.ensure_is_thread()?;
             }
 
-            if json.ty == ChannelType::Forum2 && json.starter_message.is_none() {
+            if json.ty == ChannelType::ThreadForum2 && json.starter_message.is_none() {
                 return Err(Error::BadStatic(
                     "starter_message is required for Forum2 threads",
                 ));
@@ -523,6 +523,7 @@ impl ServiceChannels {
                     "threads must have a parent channel to have tags",
                 ))?;
 
+                // FIXME: tags_available is deprecated, fetch from db?
                 let forum_channel = self.get(parent_id, None).await?;
                 let available_tags = forum_channel.tags_available.unwrap_or_default();
 
