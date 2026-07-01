@@ -24,12 +24,16 @@ export const Home = () => {
 	const [password, setPassword] = createSignal("");
 	const [, modalctl] = useModals();
 
-	function createRoom() {
+	function openRoomModal() {
 		modalctl.open({
-			type: "room_create",
-			cont: (data: { name: string; public: boolean } | null) => {
+			type: "room_create_or_join",
+			onCreate: (data: { name: string; public: boolean } | null) => {
 				if (!data) return;
 				rooms.create({ name: data.name, public: data.public });
+			},
+			onInvite: (invite_code: string | null) => {
+				if (!invite_code) return;
+				invites.accept(invite_code);
 			},
 		});
 	}
@@ -158,15 +162,9 @@ export const Home = () => {
 				<br />
 				<br />
 				<Show when={user()}>
-					<button type="button" class="button" onClick={createRoom}>
-						create room
+					<button type="button" class="button" onClick={openRoomModal}>
+						create or join room
 					</button>
-					<br />
-					<button type="button" class="button" onClick={useInvite}>
-						use invite
-					</button>
-					<br />
-					<A href="/settings">settings</A>
 					<br />
 				</Show>
 			</Show>
@@ -177,10 +175,6 @@ export const Home = () => {
 			<br />
 			<Show when={flags.has("dev")}>
 				<A href="/debug">debug</A>
-				<br />
-			</Show>
-			<Show when={flags.has("friends")}>
-				<A href="/friends">friends</A>
 				<br />
 			</Show>
 		</div>

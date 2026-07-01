@@ -1,0 +1,12 @@
+@use "./util.scss" as *;
+
+.modal.room-create-or-join {
+	// TODO: animation
+	// interpolate-size: allow-keywords;
+	// transition: height .3s ease;
+
+	& > .room-name-input-label {
+		display: block;
+		margin-top: 12px;
+	}
+}

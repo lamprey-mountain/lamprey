@@ -18,16 +18,24 @@ import { ModalNotifications } from "./ModalNotifications.tsx";
 import { ModalPalette } from "./ModalPalette.tsx";
 import { ModalPrivacy } from "./ModalPrivacy.tsx";
 import { ModalReactions } from "./ModalReactions.tsx";
-import { ModalRoomCreate } from "./ModalRoomCreate";
+import { ModalRoomCreateOrJoin } from "./ModalRoomCreateOrJoin";
 import { ModalTagEditor } from "./ModalTagEditor.tsx";
 import { ModalTimeout } from "./ModalTimeout.tsx";
 
 export const Modal = (
-	props: ParentProps & { onKeyDown?: (e: KeyboardEvent) => void },
+	props: ParentProps<{
+		onKeyDown?: (e: KeyboardEvent) => void;
+		class?: string;
+	}>,
 ) => {
 	const [, modalCtl] = useModals();
 	return (
-		<div class="modal" onKeyDown={props.onKeyDown} tabindex="-1" autofocus>
+		<div
+			class={`modal ${props.class ?? ""}`}
+			onKeyDown={props.onKeyDown}
+			tabindex="-1"
+			autofocus
+		>
 			<div class="bg" onClick={() => modalCtl.close()}></div>
 			<div class="content">
 				<div class="base"></div>
@@ -166,10 +174,10 @@ function isCameraPreview(
 	return modal.type === "camera_preview";
 }
 
-function isRoomCreate(
+function isRoomCreateOrJoin(
 	modal: ModalType,
-): modal is Extract<ModalType, { type: "room_create" }> {
-	return modal.type === "room_create";
+): modal is Extract<ModalType, { type: "room_create_or_join" }> {
+	return modal.type === "room_create_or_join";
 }
 
 export function getModal(modal: ModalType) {
@@ -274,8 +282,13 @@ export function getModal(modal: ModalType) {
 	if (isCameraPreview(modal)) {
 		return <ModalCameraPreview stream={modal.stream} />;
 	}
-	if (isRoomCreate(modal)) {
-		return <ModalRoomCreate cont={modal.cont} />;
+	if (isRoomCreateOrJoin(modal)) {
+		return (
+			<ModalRoomCreateOrJoin
+				onCreate={modal.onCreate}
+				onInvite={modal.onInvite}
+			/>
+		);
 	}
 }
 

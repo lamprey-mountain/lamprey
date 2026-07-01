@@ -23,6 +23,7 @@
 @use "./mobile.scss";
 @use "./components.scss";
 @use "./scripts.scss";
+@use "./modal-room-create-or-join.scss";
 
 :root {
 	font: 16px/1.3 var(--font-default);
