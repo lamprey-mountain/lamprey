@@ -5,14 +5,11 @@ import { useCurrentUser } from "@/contexts/currentUser";
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { leading, throttle } from "@solid-primitives/scheduled";
 import { ReactiveSet } from "@solid-primitives/set";
-import { useNavigate } from "@solidjs/router";
 import type { EditorState, Transaction } from "prosemirror-state";
 import {
 	type Channel,
 	getTimestampFromUUID,
-	type Media,
 	type Message,
-	type MessageVersion,
 	type RoomMember,
 	RepliesMessage,
 } from "sdk";
@@ -23,14 +20,12 @@ import {
 	createResource,
 	createSignal,
 	For,
-	Match,
 	onCleanup,
 	onMount,
 	Show,
-	Switch,
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import { Portal, render } from "solid-js/web";
+import { Portal } from "solid-js/web";
 import { uuidv7 } from "uuidv7";
 import {
 	useApi,
@@ -41,7 +36,6 @@ import {
 	useUsers,
 } from "@/api";
 import { useCtx } from "@/app/context";
-import icDelete from "@/assets/delete.png";
 import cancelIc from "@/assets/x.png";
 import { Dropdown } from "@/atoms/Dropdown";
 import { EmojiButton } from "@/atoms/EmojiButton";
@@ -70,15 +64,6 @@ import { useMessageSubmit } from "@/hooks/useMessageSubmit";
 import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
 import { md } from "@/lib/markdown";
-import {
-	AudioView,
-	FileView,
-	ImageView,
-	TextView,
-	VideoView,
-} from "@/media/mod";
-import type { MediaProps } from "@/media/util";
-import type { Attachment } from "@/types/chat";
 import { getMessageOverrideName } from "@/utils/general";
 import { ChannelIcon } from "./User";
 import {
@@ -87,6 +72,7 @@ import {
 } from "../features/chat/message-toolbar-context.tsx";
 import { MessageToolbarMount } from "../features/chat/MessageToolbar.tsx";
 import { RenderUploadItem } from "../features/chat/Input";
+import { highlight } from "../features/chat/util.ts";
 
 // Type guard for RoomMember with override_name
 function hasOverrideName(
@@ -100,27 +86,6 @@ function hasLastVersionId(
 	ch: Channel,
 ): ch is Channel & { last_version_id: string } {
 	return "last_version_id" in ch;
-}
-
-// Type guard for Message with DefaultMarkdown type
-function _isDefaultMarkdown(msg: Message): msg is Message & {
-	latest_version: MessageVersion & {
-		type: "DefaultMarkdown";
-		content?: string | null;
-	};
-} {
-	return msg.latest_version.type === "DefaultMarkdown";
-}
-
-// Type guard for uploading attachment
-function isUploadingAttachment(att: Attachment): att is Attachment & {
-	status: "uploading";
-	file: File;
-	progress: number;
-	paused: boolean;
-	local_id: string;
-} {
-	return "status" in att && att.status === "uploading";
 }
 
 const InputReply = (props: { thread: Channel; reply: Message }) => {
@@ -169,7 +134,6 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const channels2 = useChannels();
 	const threads2 = useThreads();
-	const _nav = useNavigate();
 	const [, modalctl] = useModals();
 	const room_id = () => props.channel.room_id ?? "";
 	const forum_id = () => props.channel.id;
@@ -547,18 +511,6 @@ export const Forum2 = (props: { channel: Channel }) => {
 	);
 };
 
-function EditorUserMention(props: { id: string }) {
-	const users2 = useUsers();
-	const user = users2.use(() => props.id);
-	return <span class="mention-user">@{user()?.name ?? props.id}</span>;
-}
-
-function EditorChannelMention(props: { id: string }) {
-	const channels2 = useChannels();
-	const channel = createMemo(() => channels2.cache.get(props.id));
-	return <span class="mention-channel">#{channel()?.name ?? props.id}</span>;
-}
-
 export const Forum2Thread = (props: { channel: Channel }) => {
 	const channels2 = useChannels();
 	const messagesService = useMessages();
@@ -684,12 +636,6 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 				return draft;
 			}
 		})(),
-		mentionRenderer: (node, userId) => {
-			render(() => <EditorUserMention id={userId} />, node);
-		},
-		mentionChannelRenderer: (node, channelId) => {
-			render(() => <EditorChannelMention id={channelId} />, node);
-		},
 	});
 
 	const onChange = (state: EditorState) => {
@@ -946,6 +892,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	);
 };
 
+// TODO: implement
 const _ThreadLog = (props: {
 	comments: { items: Array<{ id: string }> } | undefined;
 	commentTree: Array<unknown>;
@@ -1010,33 +957,6 @@ export const Forum2Comments = (props: {
 		</div>
 	);
 };
-
-const _contentToHtml = new WeakMap();
-
-function highlight(el: Element) {
-	el.animate(
-		[
-			{
-				boxShadow: "4px 0 0 -1px inset #cc1856",
-				backgroundColor: "#cc185622",
-				offset: 0,
-			},
-			{
-				boxShadow: "4px 0 0 -1px inset #cc1856",
-				backgroundColor: "#cc185622",
-				offset: 0.8,
-			},
-			{
-				boxShadow: "none",
-				backgroundColor: "transparent",
-				offset: 1,
-			},
-		],
-		{
-			duration: 1000,
-		},
-	);
-}
 
 function CommentEditor(props: { message: Message; channel: Channel }) {
 	const messagesService = useMessages();
