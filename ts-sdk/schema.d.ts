@@ -15,7 +15,7 @@ export interface paths {
 		 * Oauth autoconfig
 		 * @description
 		 *
-		 *
+		 *     Retrieve the OpenID Connect discovery document for automatic client configuration.
 		 */
 		get: {
 			parameters: {
@@ -327,6 +327,28 @@ export interface paths {
 		 *     Queue all channels in a room to be reindexed for search
 		 */
 		post: operations["admin_reindex_room"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/admin/room-search-index-stats/{room_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Admin room search index stats
+		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
+		 *
+		 *     Get search index statistics for a room
+		 */
+		get: operations["admin_room_search_index_stats"];
+		put?: never;
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -836,7 +858,7 @@ export interface paths {
 							presence: components["schemas"]["Presence"];
 							puppet?: null | components["schemas"]["Puppet"];
 							registered_at?: null | components["schemas"]["Time"];
-							remote?: null | components["schemas"]["Remote"];
+							remote?: null | components["schemas"]["Remote_Id"];
 							suspended?: null | components["schemas"]["Suspended"];
 							/** @description whether this user is an official system user */
 							system: boolean;
@@ -869,7 +891,7 @@ export interface paths {
 							presence: components["schemas"]["Presence"];
 							puppet?: null | components["schemas"]["Puppet"];
 							registered_at?: null | components["schemas"]["Time"];
-							remote?: null | components["schemas"]["Remote"];
+							remote?: null | components["schemas"]["Remote_Id"];
 							suspended?: null | components["schemas"]["Suspended"];
 							/** @description whether this user is an official system user */
 							system: boolean;
@@ -1562,11 +1584,11 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Auth sudo upgrade
+		 * Auth sudo upgrade (TEMP)
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthSudo</div>
 		 *
-		 *
+		 *     Immediately upgrade a session to sudo mode. For debugging, will be removed later.
 		 */
 		post: {
 			parameters: {
@@ -2950,7 +2972,7 @@ export interface paths {
 				};
 			};
 			responses: {
-				/** @description already exists */
+				/** @description Dm already exists */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -2991,6 +3013,7 @@ export interface paths {
 							invitable?: boolean;
 							is_unread?: boolean | null;
 							last_message_id?: null | components["schemas"]["Id"];
+							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
 							/** @description monotonic sync sequence number, incremented on every action.
@@ -3030,6 +3053,7 @@ export interface paths {
 							preferences?: null | components["schemas"]["PreferencesChannel"];
 							/** @description for dm and gdm channels, this is who the dm is with */
 							recipients?: components["schemas"]["User"][];
+							remote?: null | components["schemas"]["Remote_Id"];
 							room_id?: null | components["schemas"]["Id"];
 							/** Format: int64 */
 							root_message_count?: number | null;
@@ -3056,7 +3080,10 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/** @description the tags that are available in this forum. exists on Forum channels only. */
+							/**
+							 * @deprecated
+							 * @description the tags that are available in this forum. exists on Forum channels only.
+							 */
 							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
@@ -3074,7 +3101,7 @@ export interface paths {
 						};
 					};
 				};
-				/** @description Create thread success */
+				/** @description Created channel */
 				201: {
 					headers: {
 						[name: string]: unknown;
@@ -3115,6 +3142,7 @@ export interface paths {
 							invitable?: boolean;
 							is_unread?: boolean | null;
 							last_message_id?: null | components["schemas"]["Id"];
+							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
 							/** @description monotonic sync sequence number, incremented on every action.
@@ -3154,6 +3182,7 @@ export interface paths {
 							preferences?: null | components["schemas"]["PreferencesChannel"];
 							/** @description for dm and gdm channels, this is who the dm is with */
 							recipients?: components["schemas"]["User"][];
+							remote?: null | components["schemas"]["Remote_Id"];
 							room_id?: null | components["schemas"]["Id"];
 							/** Format: int64 */
 							root_message_count?: number | null;
@@ -3180,7 +3209,10 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/** @description the tags that are available in this forum. exists on Forum channels only. */
+							/**
+							 * @deprecated
+							 * @description the tags that are available in this forum. exists on Forum channels only.
+							 */
 							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
@@ -3272,6 +3304,7 @@ export interface paths {
 							invitable?: boolean;
 							is_unread?: boolean | null;
 							last_message_id?: null | components["schemas"]["Id"];
+							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
 							/** @description monotonic sync sequence number, incremented on every action.
@@ -3311,6 +3344,7 @@ export interface paths {
 							preferences?: null | components["schemas"]["PreferencesChannel"];
 							/** @description for dm and gdm channels, this is who the dm is with */
 							recipients?: components["schemas"]["User"][];
+							remote?: null | components["schemas"]["Remote_Id"];
 							room_id?: null | components["schemas"]["Id"];
 							/** Format: int64 */
 							root_message_count?: number | null;
@@ -3337,7 +3371,10 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/** @description the tags that are available in this forum. exists on Forum channels only. */
+							/**
+							 * @deprecated
+							 * @description the tags that are available in this forum. exists on Forum channels only.
+							 */
 							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
@@ -3460,6 +3497,7 @@ export interface paths {
 							invitable?: boolean;
 							is_unread?: boolean | null;
 							last_message_id?: null | components["schemas"]["Id"];
+							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
 							/** @description monotonic sync sequence number, incremented on every action.
@@ -3499,6 +3537,7 @@ export interface paths {
 							preferences?: null | components["schemas"]["PreferencesChannel"];
 							/** @description for dm and gdm channels, this is who the dm is with */
 							recipients?: components["schemas"]["User"][];
+							remote?: null | components["schemas"]["Remote_Id"];
 							room_id?: null | components["schemas"]["Id"];
 							/** Format: int64 */
 							root_message_count?: number | null;
@@ -3525,7 +3564,10 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/** @description the tags that are available in this forum. exists on Forum channels only. */
+							/**
+							 * @deprecated
+							 * @description the tags that are available in this forum. exists on Forum channels only.
+							 */
 							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
@@ -3584,6 +3626,7 @@ export interface paths {
 							invitable?: boolean;
 							is_unread?: boolean | null;
 							last_message_id?: null | components["schemas"]["Id"];
+							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
 							/** @description monotonic sync sequence number, incremented on every action.
@@ -3623,6 +3666,7 @@ export interface paths {
 							preferences?: null | components["schemas"]["PreferencesChannel"];
 							/** @description for dm and gdm channels, this is who the dm is with */
 							recipients?: components["schemas"]["User"][];
+							remote?: null | components["schemas"]["Remote_Id"];
 							room_id?: null | components["schemas"]["Id"];
 							/** Format: int64 */
 							root_message_count?: number | null;
@@ -3649,7 +3693,10 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/** @description the tags that are available in this forum. exists on Forum channels only. */
+							/**
+							 * @deprecated
+							 * @description the tags that are available in this forum. exists on Forum channels only.
+							 */
 							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
@@ -3704,8 +3751,6 @@ export interface paths {
 						 */
 						mention_count?: number;
 						message_id?: null | components["schemas"]["Id"];
-						/** @description The last read message vewsion id in this channel. */
-						version_id: components["schemas"]["Id"];
 					};
 				};
 			};
@@ -3716,11 +3761,9 @@ export interface paths {
 						[name: string]: unknown;
 					};
 					content: {
-						"application/json": {
-							/** @description The last read message id */
-							message_id: components["schemas"]["Id"];
-							/** @description The last read id in this channel. Currently unused, may be deprecated later?. */
-							version_id: components["schemas"]["Id"];
+						"application/json": components["schemas"]["AckType"] & {
+							/** @description whether this is considered unread */
+							unread: boolean;
 						};
 					};
 				};
@@ -4352,7 +4395,7 @@ export interface paths {
 						content?: string | null;
 						embeds?: components["schemas"]["EmbedCreate"][];
 						/** @description whether to make this message ephemeral */
-						ephemeral: boolean;
+						ephemeral?: boolean;
 						mentions?: components["schemas"]["ParseMentions"];
 						metadata?: null | components["schemas"]["Metadata"];
 						reply_id?: null | components["schemas"]["Id"];
@@ -4446,7 +4489,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Message list atom/rss (TODO)
+		 * Message list atom/rss
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *
 		 *     Get an atom or rss feed of messages for this channel
@@ -4534,7 +4577,7 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/channel/{channel_id}/message/migrate": {
+	"/api/v1/channel/{channel_id}/message/move": {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -4544,8 +4587,8 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Message migrate
-		 * @description <div class="markdown-alert-permission-required">MessageDelete</div>
+		 * Message move
+		 * @description <div class="markdown-alert-permission-required">MessageMove</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *
 		 *
@@ -4564,8 +4607,10 @@ export interface paths {
 					"application/json": {
 						/** @description which messages to move */
 						message_ids?: components["schemas"]["Id"][];
-						/** @description must be in same room (for now...) */
-						target_id: components["schemas"]["Id"];
+						/** @description the channel to move the messages to
+						 *
+						 *     must be in same room (for now...) */
+						target_channel_id: components["schemas"]["Id"];
 					};
 				};
 			};
@@ -5122,6 +5167,7 @@ export interface paths {
 							invitable?: boolean;
 							is_unread?: boolean | null;
 							last_message_id?: null | components["schemas"]["Id"];
+							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
 							/** @description monotonic sync sequence number, incremented on every action.
@@ -5161,6 +5207,7 @@ export interface paths {
 							preferences?: null | components["schemas"]["PreferencesChannel"];
 							/** @description for dm and gdm channels, this is who the dm is with */
 							recipients?: components["schemas"]["User"][];
+							remote?: null | components["schemas"]["Remote_Id"];
 							room_id?: null | components["schemas"]["Id"];
 							/** Format: int64 */
 							root_message_count?: number | null;
@@ -5187,7 +5234,10 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/** @description the tags that are available in this forum. exists on Forum channels only. */
+							/**
+							 * @deprecated
+							 * @description the tags that are available in this forum. exists on Forum channels only.
+							 */
 							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
@@ -5371,6 +5421,65 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/channel/{channel_id}/mirror": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Channel mirror
+		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Get incremental sync events for a channel since a given sequence number.
+		 *     Use this to catch up when reconnecting or after being offline.
+		 */
+		get: {
+			parameters: {
+				query: {
+					/** @description the sequence number to sync from (exclusive). use 0 to get all events. */
+					since: components["schemas"]["ChannelSeq"];
+					from?: string;
+					to?: string;
+					dir?: "b" | "f";
+					limit?: number;
+				};
+				header?: never;
+				path: {
+					channel_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description channel sync success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description sync events to apply to local state */
+							events: components["schemas"]["MessageSync"][];
+							/** @description not all events were returned. call this endpoint again with the new `seq` */
+							partial: boolean;
+							/** @description the new latest sequence number you have */
+							seq: components["schemas"]["ChannelSeq"];
+						};
+					};
+				};
+			};
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/channel/{channel_id}/nudge": {
 		parameters: {
 			query?: never;
@@ -5381,7 +5490,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/**
-		 * Nudge (TODO)
+		 * Nudge
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *
 		 *     Nudge a user. Can only be used in dms or gdms. Can only be called once every 5 minutes per user.
@@ -5389,7 +5498,10 @@ export interface paths {
 		post: {
 			parameters: {
 				query?: never;
-				header?: never;
+				header?: {
+					"idempotency-key"?: string;
+					"x-timestamp"?: number;
+				};
 				path: {
 					channel_id: string;
 				};
@@ -5402,7 +5514,29 @@ export interface paths {
 					headers: {
 						[name: string]: unknown;
 					};
-					content?: never;
+					content: {
+						"application/json": {
+							/** @description the id of who sent this message */
+							author_id: components["schemas"]["Id"];
+							channel_id: components["schemas"]["Id"];
+							/** @description when this message was created */
+							created_at: components["schemas"]["Time"];
+							deleted_at?: null | components["schemas"]["Time"];
+							/** @description whether this message is ephemeral
+							 *
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							ephemeral?: boolean;
+							flume?: null | components["schemas"]["MessageFlume"];
+							id: components["schemas"]["Id"];
+							interaction?: null | components["schemas"]["MessageInteraction"];
+							latest_version: components["schemas"]["MessageVersion"];
+							pinned?: null | components["schemas"]["Pinned"];
+							reactions?: components["schemas"]["ReactionCounts"];
+							removed_at?: null | components["schemas"]["Time"];
+							room_id?: null | components["schemas"]["Id"];
+							thread?: null | components["schemas"]["Channel"];
+						};
+					};
 				};
 			};
 		};
@@ -6732,13 +6866,7 @@ export interface paths {
 						[name: string]: unknown;
 					};
 					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Message"][];
-							/** Format: int64 */
-							total: number;
-						};
+						"application/json": components["schemas"]["RepliesChildren"];
 					};
 				};
 			};
@@ -6794,72 +6922,7 @@ export interface paths {
 						[name: string]: unknown;
 					};
 					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Message"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
-		};
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/sync": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Channel sync
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get incremental sync events for a channel since a given sequence number.
-		 *     Use this to catch up when reconnecting or after being offline.
-		 */
-		get: {
-			parameters: {
-				query: {
-					/** @description the sequence number to sync from (exclusive). use 0 to get all events. */
-					since: components["schemas"]["ChannelSeq"];
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
-				header?: never;
-				path: {
-					channel_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: {
-				/** @description channel sync success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description sync events to apply to local state */
-							events: components["schemas"]["MessageSync"][];
-							/** @description not all events were returned. call this endpoint again with the new `seq` */
-							partial: boolean;
-							/** @description the new latest sequence number you have */
-							seq: components["schemas"]["ChannelSeq"];
-						};
+						"application/json": components["schemas"]["RepliesChildren"];
 					};
 				};
 			};
@@ -6949,6 +7012,7 @@ export interface paths {
 						description?: string | null;
 						name: string;
 						restricted?: boolean;
+						spoiler?: boolean;
 					};
 				};
 			};
@@ -6965,7 +7029,9 @@ export interface paths {
 							 * @description total number of threads with this tag (excluding archived threads)
 							 */
 							active_thread_count: number;
-							/** @description whether this tag is archived. this tag cant be applied to any new threads and won't appear in the tag picker. */
+							/** @description whether this tag is archived
+							 *
+							 *     archived tags cant be applied to any new threads and won't appear in the tag picker. */
 							archived: boolean;
 							channel_id: components["schemas"]["Id"];
 							color?: null | components["schemas"]["Color"];
@@ -6974,6 +7040,8 @@ export interface paths {
 							name: string;
 							/** @description only members with ThreadEdit or ThreadManage can apply this tag */
 							restricted: boolean;
+							/** @description if this tag should be considered a spoiler */
+							spoiler: boolean;
 							/**
 							 * Format: int64
 							 * @description total number of threads with this tag (including archived threads)
@@ -7086,7 +7154,9 @@ export interface paths {
 							 * @description total number of threads with this tag (excluding archived threads)
 							 */
 							active_thread_count: number;
-							/** @description whether this tag is archived. this tag cant be applied to any new threads and won't appear in the tag picker. */
+							/** @description whether this tag is archived
+							 *
+							 *     archived tags cant be applied to any new threads and won't appear in the tag picker. */
 							archived: boolean;
 							channel_id: components["schemas"]["Id"];
 							color?: null | components["schemas"]["Color"];
@@ -7095,6 +7165,8 @@ export interface paths {
 							name: string;
 							/** @description only members with ThreadEdit or ThreadManage can apply this tag */
 							restricted: boolean;
+							/** @description if this tag should be considered a spoiler */
+							spoiler: boolean;
 							/**
 							 * Format: int64
 							 * @description total number of threads with this tag (including archived threads)
@@ -7166,6 +7238,7 @@ export interface paths {
 						description?: string | null;
 						name?: string | null;
 						restricted?: boolean | null;
+						spoiler?: boolean | null;
 					};
 				};
 			};
@@ -7182,7 +7255,9 @@ export interface paths {
 							 * @description total number of threads with this tag (excluding archived threads)
 							 */
 							active_thread_count: number;
-							/** @description whether this tag is archived. this tag cant be applied to any new threads and won't appear in the tag picker. */
+							/** @description whether this tag is archived
+							 *
+							 *     archived tags cant be applied to any new threads and won't appear in the tag picker. */
 							archived: boolean;
 							channel_id: components["schemas"]["Id"];
 							color?: null | components["schemas"]["Color"];
@@ -7191,6 +7266,8 @@ export interface paths {
 							name: string;
 							/** @description only members with ThreadEdit or ThreadManage can apply this tag */
 							restricted: boolean;
+							/** @description if this tag should be considered a spoiler */
+							spoiler: boolean;
 							/**
 							 * Format: int64
 							 * @description total number of threads with this tag (including archived threads)
@@ -7346,6 +7423,7 @@ export interface paths {
 							invitable?: boolean;
 							is_unread?: boolean | null;
 							last_message_id?: null | components["schemas"]["Id"];
+							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
 							/** @description monotonic sync sequence number, incremented on every action.
@@ -7385,6 +7463,7 @@ export interface paths {
 							preferences?: null | components["schemas"]["PreferencesChannel"];
 							/** @description for dm and gdm channels, this is who the dm is with */
 							recipients?: components["schemas"]["User"][];
+							remote?: null | components["schemas"]["Remote_Id"];
 							room_id?: null | components["schemas"]["Id"];
 							/** Format: int64 */
 							root_message_count?: number | null;
@@ -7411,7 +7490,10 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/** @description the tags that are available in this forum. exists on Forum channels only. */
+							/**
+							 * @deprecated
+							 * @description the tags that are available in this forum. exists on Forum channels only.
+							 */
 							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
@@ -7663,6 +7745,7 @@ export interface paths {
 							invitable?: boolean;
 							is_unread?: boolean | null;
 							last_message_id?: null | components["schemas"]["Id"];
+							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
 							/** @description monotonic sync sequence number, incremented on every action.
@@ -7702,6 +7785,7 @@ export interface paths {
 							preferences?: null | components["schemas"]["PreferencesChannel"];
 							/** @description for dm and gdm channels, this is who the dm is with */
 							recipients?: components["schemas"]["User"][];
+							remote?: null | components["schemas"]["Remote_Id"];
 							room_id?: null | components["schemas"]["Id"];
 							/** Format: int64 */
 							root_message_count?: number | null;
@@ -7728,7 +7812,10 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/** @description the tags that are available in this forum. exists on Forum channels only. */
+							/**
+							 * @deprecated
+							 * @description the tags that are available in this forum. exists on Forum channels only.
+							 */
 							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
@@ -7873,6 +7960,7 @@ export interface paths {
 							public: boolean;
 							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 							quarantined: boolean;
+							remote?: null | components["schemas"]["Remote_Id"];
 							/** @description security configuration for this room */
 							security: components["schemas"]["RoomSecurity"];
 							type: components["schemas"]["RoomType"];
@@ -9008,6 +9096,7 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
+							/** @description whether this emoji is animated */
 							animated: boolean;
 							creator_id?: null | components["schemas"]["Id"];
 							id: components["schemas"]["Id"];
@@ -9086,7 +9175,7 @@ export interface paths {
 							presence: components["schemas"]["Presence"];
 							puppet?: null | components["schemas"]["Puppet"];
 							registered_at?: null | components["schemas"]["Time"];
-							remote?: null | components["schemas"]["Remote"];
+							remote?: null | components["schemas"]["Remote_Id"];
 							suspended?: null | components["schemas"]["Suspended"];
 							/** @description whether this user is an official system user */
 							system: boolean;
@@ -9542,7 +9631,7 @@ export interface paths {
 						content?: string | null;
 						embeds?: components["schemas"]["EmbedCreate"][];
 						/** @description whether to make this message ephemeral */
-						ephemeral: boolean;
+						ephemeral?: boolean;
 						mentions?: components["schemas"]["ParseMentions"];
 						metadata?: null | components["schemas"]["Metadata"];
 						reply_id?: null | components["schemas"]["Id"];
@@ -9993,36 +10082,49 @@ export interface paths {
 		put?: never;
 		/**
 		 * Media create
-		 * @description <div class="markdown-alert-scope-required">full</div>
+		 * @description
 		 *
-		 *     Create a new url to upload media to. Use the media upload endpoint for
-		 *     actually uploading media. Media not referenced/used in other api calls will
-		 *     be removed after a period of time.
+		 *
 		 */
-		post: operations["media_create"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/media/direct": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": components["schemas"]["MediaCreateSource"] & {
+						/** @description Descriptive alt text, not entirely unlike a caption */
+						alt?: string | null;
+						/** @description Whether to strip sensitive exif info, like location or camera make and model.
+						 *
+						 *     Once strip_exif is set to true, cannot be set to false. */
+						strip_exif?: boolean;
+					};
+				};
+			};
+			responses: {
+				/** @description Media create success */
+				201: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description The id of the media that has been created */
+							media_id: components["schemas"]["Id"];
+							/**
+							 * Format: uri
+							 * @description A url to upload your media to. Is `None` if you used `MediaCreateSource::Download`.
+							 */
+							upload_url?: string | null;
+						};
+					};
+				};
+			};
 		};
-		get?: never;
-		put?: never;
-		/**
-		 * Media upload direct
-		 * @description <div class="markdown-alert-scope-required">full</div>
-		 *
-		 *     Directly upload a piece of media without doing the whole create/patch/done
-		 *     dance. Only use this for small media.
-		 */
-		post: operations["media_upload_direct"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -10040,11 +10142,52 @@ export interface paths {
 		put?: never;
 		/**
 		 * Media search
-		 * @description <div class="markdown-alert-scope-required">full</div>
+		 * @description
 		 *
-		 *     Search media. Admins can search all media, everyone else can only search their own media.
+		 *
 		 */
-		post: operations["media_search"];
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": components["schemas"]["SearchRequest"] & {
+						sort_field?: components["schemas"]["MediaSearchOrderField"];
+					};
+				};
+			};
+			responses: {
+				/** @description Media search success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description current page cursor */
+							cursor?: string | null;
+							/** @description whether there are more threads */
+							has_more: boolean;
+							/** @description the media */
+							media: components["schemas"]["Media"][];
+							/** @description the ids of the matched media */
+							results: components["schemas"]["Id"][];
+							/**
+							 * Format: int64
+							 * @description approximate count of total results that match this query
+							 */
+							total: number;
+							/** @description the media creators/uploaders */
+							users: components["schemas"]["User"][];
+						};
+					};
+				};
+			};
+		};
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -10060,30 +10203,193 @@ export interface paths {
 		};
 		/**
 		 * Media get
-		 * @description <div class="markdown-alert-scope-required">full</div>
+		 * @description
 		 *
-		 *     Get a piece of media. Currently, all media is public (though this may change in the future).
+		 *
 		 */
-		get: operations["media_get"];
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					media_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Media get success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description Descriptive alt text. */
+							alt?: string | null;
+							channel_id?: null | components["schemas"]["Id"];
+							/** @description The mime type of this piece of media. */
+							content_type: components["schemas"]["Mime"];
+							deleted_at?: null | components["schemas"]["Time"];
+							filename: string;
+							/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
+							has_gifv: boolean;
+							/** @description Whether this media can be fetched through the `/thumb/{media_id}` cdn route. */
+							has_thumbnail: boolean;
+							/** @description the hashes of this file */
+							hashes?: components["schemas"]["Hashes"];
+							id: components["schemas"]["Id"];
+							/** @description what this piece of media is linked to (admin only) */
+							links?: components["schemas"]["MediaLinkType"][];
+							/** @description Additional filetype-specific metadata for the file */
+							metadata: components["schemas"]["MediaMetadata"];
+							quarantine?: null | components["schemas"]["MediaQuarantine"];
+							remote?: null | components["schemas"]["Remote_Id"];
+							room_id?: null | components["schemas"]["Id"];
+							/** @description The results of automated scans. */
+							scans?: components["schemas"]["MediaScan"][];
+							/**
+							 * Format: int64
+							 * @description The underlying blob's length in bytes.
+							 */
+							size: number;
+							/**
+							 * Format: uri
+							 * @description Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
+							 */
+							source_url?: string | null;
+							status: components["schemas"]["MediaStatus"];
+							/** @description Whether sensitive exif info has been stripped from this media.
+							 *
+							 *     Once set to `true`, this cannot be unset. */
+							strip_exif?: boolean;
+							user_id?: null | components["schemas"]["Id"];
+							version_id: components["schemas"]["Id"];
+						};
+					};
+				};
+			};
+		};
 		put?: never;
 		post?: never;
 		/**
 		 * Media delete
-		 * @description <div class="markdown-alert-scope-required">full</div>
+		 * @description
 		 *
-		 *     Delete unlinked media. Does not work if the media is linked to some other
-		 *     resource.
+		 *
 		 */
-		delete: operations["media_delete"];
+		delete: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					media_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: {
+				/** @description Media delete success */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+				/** @description Media linked to another resource */
+				409: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
 		options?: never;
 		head?: never;
 		/**
 		 * Media patch
-		 * @description <div class="markdown-alert-scope-required">full</div>
+		 * @description
 		 *
-		 *     Edit properties about some piece of media
+		 *
 		 */
-		patch: operations["media_patch"];
+		patch: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					media_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						/** @description Descriptive alt text, not entirely unlike a caption */
+						alt?: string | null;
+						/** @description The filename for this piece of media */
+						filename?: string | null;
+						/** @description Whether to strip sensitive exif info, like location or camera make and model.
+						 *
+						 *     This can only be changed if the media status is not `Consumed`. Once
+						 *     strip_exif is set to true, cannot be set to false. */
+						strip_exif?: boolean | null;
+					};
+				};
+			};
+			responses: {
+				/** @description Media patch success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description Descriptive alt text. */
+							alt?: string | null;
+							channel_id?: null | components["schemas"]["Id"];
+							/** @description The mime type of this piece of media. */
+							content_type: components["schemas"]["Mime"];
+							deleted_at?: null | components["schemas"]["Time"];
+							filename: string;
+							/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
+							has_gifv: boolean;
+							/** @description Whether this media can be fetched through the `/thumb/{media_id}` cdn route. */
+							has_thumbnail: boolean;
+							/** @description the hashes of this file */
+							hashes?: components["schemas"]["Hashes"];
+							id: components["schemas"]["Id"];
+							/** @description what this piece of media is linked to (admin only) */
+							links?: components["schemas"]["MediaLinkType"][];
+							/** @description Additional filetype-specific metadata for the file */
+							metadata: components["schemas"]["MediaMetadata"];
+							quarantine?: null | components["schemas"]["MediaQuarantine"];
+							remote?: null | components["schemas"]["Remote_Id"];
+							room_id?: null | components["schemas"]["Id"];
+							/** @description The results of automated scans. */
+							scans?: components["schemas"]["MediaScan"][];
+							/**
+							 * Format: int64
+							 * @description The underlying blob's length in bytes.
+							 */
+							size: number;
+							/**
+							 * Format: uri
+							 * @description Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
+							 */
+							source_url?: string | null;
+							status: components["schemas"]["MediaStatus"];
+							/** @description Whether sensitive exif info has been stripped from this media.
+							 *
+							 *     Once set to `true`, this cannot be unset. */
+							strip_exif?: boolean;
+							user_id?: null | components["schemas"]["Id"];
+							version_id: components["schemas"]["Id"];
+						};
+					};
+				};
+			};
+		};
 		trace?: never;
 	};
 	"/api/v1/media/{media_id}/clone": {
@@ -10097,11 +10403,82 @@ export interface paths {
 		put?: never;
 		/**
 		 * Media clone
-		 * @description <div class="markdown-alert-scope-required">full</div>
+		 * @description
 		 *
-		 *     Create a new unconsumed copy of a piece of media
+		 *
 		 */
-		post: operations["media_clone"];
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					media_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						/** @description Descriptive alt text, not entirely unlike a caption */
+						alt?: string | null;
+						/** @description Set to override the filename */
+						filename?: string | null;
+					};
+				};
+			};
+			responses: {
+				/** @description Media clone success */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description Descriptive alt text. */
+							alt?: string | null;
+							channel_id?: null | components["schemas"]["Id"];
+							/** @description The mime type of this piece of media. */
+							content_type: components["schemas"]["Mime"];
+							deleted_at?: null | components["schemas"]["Time"];
+							filename: string;
+							/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
+							has_gifv: boolean;
+							/** @description Whether this media can be fetched through the `/thumb/{media_id}` cdn route. */
+							has_thumbnail: boolean;
+							/** @description the hashes of this file */
+							hashes?: components["schemas"]["Hashes"];
+							id: components["schemas"]["Id"];
+							/** @description what this piece of media is linked to (admin only) */
+							links?: components["schemas"]["MediaLinkType"][];
+							/** @description Additional filetype-specific metadata for the file */
+							metadata: components["schemas"]["MediaMetadata"];
+							quarantine?: null | components["schemas"]["MediaQuarantine"];
+							remote?: null | components["schemas"]["Remote_Id"];
+							room_id?: null | components["schemas"]["Id"];
+							/** @description The results of automated scans. */
+							scans?: components["schemas"]["MediaScan"][];
+							/**
+							 * Format: int64
+							 * @description The underlying blob's length in bytes.
+							 */
+							size: number;
+							/**
+							 * Format: uri
+							 * @description Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
+							 */
+							source_url?: string | null;
+							status: components["schemas"]["MediaStatus"];
+							/** @description Whether sensitive exif info has been stripped from this media.
+							 *
+							 *     Once set to `true`, this cannot be unset. */
+							strip_exif?: boolean;
+							user_id?: null | components["schemas"]["Id"];
+							version_id: components["schemas"]["Id"];
+						};
+					};
+				};
+			};
+		};
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -10118,11 +10495,89 @@ export interface paths {
 		get?: never;
 		/**
 		 * Media done
-		 * @description <div class="markdown-alert-scope-required">full</div>
+		 * @description
 		 *
-		 *     finishes a media upload and begins processing
+		 *
 		 */
-		put: operations["media_done"];
+		put: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					media_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						/** @description Whether to process this media asynchronously.
+						 *
+						 *     If this is true, return 202 Accepted immediately and send a `MediaProcessed` event when your media is done processing. */
+						async?: boolean;
+					};
+				};
+			};
+			responses: {
+				/** @description Media processing finished */
+				200: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content: {
+						"application/json": {
+							/** @description Descriptive alt text. */
+							alt?: string | null;
+							channel_id?: null | components["schemas"]["Id"];
+							/** @description The mime type of this piece of media. */
+							content_type: components["schemas"]["Mime"];
+							deleted_at?: null | components["schemas"]["Time"];
+							filename: string;
+							/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
+							has_gifv: boolean;
+							/** @description Whether this media can be fetched through the `/thumb/{media_id}` cdn route. */
+							has_thumbnail: boolean;
+							/** @description the hashes of this file */
+							hashes?: components["schemas"]["Hashes"];
+							id: components["schemas"]["Id"];
+							/** @description what this piece of media is linked to (admin only) */
+							links?: components["schemas"]["MediaLinkType"][];
+							/** @description Additional filetype-specific metadata for the file */
+							metadata: components["schemas"]["MediaMetadata"];
+							quarantine?: null | components["schemas"]["MediaQuarantine"];
+							remote?: null | components["schemas"]["Remote_Id"];
+							room_id?: null | components["schemas"]["Id"];
+							/** @description The results of automated scans. */
+							scans?: components["schemas"]["MediaScan"][];
+							/**
+							 * Format: int64
+							 * @description The underlying blob's length in bytes.
+							 */
+							size: number;
+							/**
+							 * Format: uri
+							 * @description Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
+							 */
+							source_url?: string | null;
+							status: components["schemas"]["MediaStatus"];
+							/** @description Whether sensitive exif info has been stripped from this media.
+							 *
+							 *     Once set to `true`, this cannot be unset. */
+							strip_exif?: boolean;
+							user_id?: null | components["schemas"]["Id"];
+							version_id: components["schemas"]["Id"];
+						};
+					};
+				};
+				/** @description Media processing in background */
+				202: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
+				};
+			};
+		};
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -10141,7 +10596,7 @@ export interface paths {
 		 * Oauth info
 		 * @description <div class="markdown-alert-scope-required">Identify</div>
 		 *
-		 *
+		 *     Fetch information about an OAuth application before authorization.
 		 */
 		get: {
 			parameters: {
@@ -10168,9 +10623,13 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
+							/** @description the application itself */
 							application: components["schemas"]["Application"];
+							/** @description the user who requested this info */
 							auth_user: components["schemas"]["User"];
+							/** @description whether this application is already authorized */
 							authorized: boolean;
+							/** @description if the application is a bot, this is the bot user */
 							bot_user: components["schemas"]["User"];
 						};
 					};
@@ -10182,7 +10641,7 @@ export interface paths {
 		 * Oauth authorize
 		 * @description <div class="markdown-alert-scope-required">Identify</div>
 		 *
-		 *
+		 *     Grant an application access to some resources.
 		 */
 		post: {
 			parameters: {
@@ -10235,7 +10694,7 @@ export interface paths {
 		 * Oauth introspect
 		 * @description
 		 *
-		 *
+		 *     Validate an access token and retrieve its associated information and scopes.
 		 */
 		post: {
 			parameters: {
@@ -10291,7 +10750,7 @@ export interface paths {
 		 * Oauth revoke
 		 * @description
 		 *
-		 *
+		 *     Invalidate an active access or refresh token, terminating the application's access.
 		 */
 		post: {
 			parameters: {
@@ -10336,7 +10795,7 @@ export interface paths {
 		 * Oauth token
 		 * @description
 		 *
-		 *     Exchange an authorization token for an access token
+		 *     Exchange an authorization token for an access token.
 		 */
 		post: {
 			parameters: {
@@ -10395,7 +10854,7 @@ export interface paths {
 		 * Oauth userinfo
 		 * @description <div class="markdown-alert-scope-required">Identify</div>
 		 *
-		 *
+		 *     Retrieve profile information about the user currently authorized by an access token.
 		 */
 		get: {
 			parameters: {
@@ -11129,6 +11588,7 @@ export interface paths {
 							public: boolean;
 							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 							quarantined: boolean;
+							remote?: null | components["schemas"]["Remote_Id"];
 							/** @description security configuration for this room */
 							security: components["schemas"]["RoomSecurity"];
 							type: components["schemas"]["RoomType"];
@@ -11564,6 +12024,7 @@ export interface paths {
 							public: boolean;
 							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 							quarantined: boolean;
+							remote?: null | components["schemas"]["Remote_Id"];
 							/** @description security configuration for this room */
 							security: components["schemas"]["RoomSecurity"];
 							type: components["schemas"]["RoomType"];
@@ -11703,6 +12164,7 @@ export interface paths {
 							public: boolean;
 							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 							quarantined: boolean;
+							remote?: null | components["schemas"]["Remote_Id"];
 							/** @description security configuration for this room */
 							security: components["schemas"]["RoomSecurity"];
 							type: components["schemas"]["RoomType"];
@@ -11870,7 +12332,7 @@ export interface paths {
 							/** @description The bucket for this data point. */
 							bucket: components["schemas"]["Time"];
 							/** @description where this member came from */
-							origin: components["schemas"]["RoomAnalyticsInvitesOrigin"];
+							origin: components["schemas"]["AnalyticsInvitesOrigin"];
 							/**
 							 * Format: int64
 							 * @description number of times this invite was used
@@ -12910,6 +13372,7 @@ export interface paths {
 							invitable?: boolean;
 							is_unread?: boolean | null;
 							last_message_id?: null | components["schemas"]["Id"];
+							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
 							/** @description monotonic sync sequence number, incremented on every action.
@@ -12949,6 +13412,7 @@ export interface paths {
 							preferences?: null | components["schemas"]["PreferencesChannel"];
 							/** @description for dm and gdm channels, this is who the dm is with */
 							recipients?: components["schemas"]["User"][];
+							remote?: null | components["schemas"]["Remote_Id"];
 							room_id?: null | components["schemas"]["Id"];
 							/** Format: int64 */
 							root_message_count?: number | null;
@@ -12975,7 +13439,10 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/** @description the tags that are available in this forum. exists on Forum channels only. */
+							/**
+							 * @deprecated
+							 * @description the tags that are available in this forum. exists on Forum channels only.
+							 */
 							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
@@ -13047,7 +13514,7 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *
-		 *     List removed threads in a room. Requires the `ChannelManage` permission.
+		 *     List removed channels in a room. Requires the `ChannelManage` permission.
 		 */
 		get: {
 			parameters: {
@@ -13066,7 +13533,7 @@ export interface paths {
 			};
 			requestBody?: never;
 			responses: {
-				/** @description List removed room threads success */
+				/** @description List removed room channels success */
 				200: {
 					headers: {
 						[name: string]: unknown;
@@ -13174,6 +13641,7 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
+							/** @description whether this emoji is animated */
 							animated: boolean;
 							creator_id?: null | components["schemas"]["Id"];
 							id: components["schemas"]["Id"];
@@ -13223,6 +13691,7 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
+							/** @description whether this emoji is animated */
 							animated: boolean;
 							creator_id?: null | components["schemas"]["Id"];
 							id: components["schemas"]["Id"];
@@ -13300,6 +13769,7 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
+							/** @description whether this emoji is animated */
 							animated: boolean;
 							creator_id?: null | components["schemas"]["Id"];
 							id: components["schemas"]["Id"];
@@ -13389,6 +13859,7 @@ export interface paths {
 							public: boolean;
 							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 							quarantined: boolean;
+							remote?: null | components["schemas"]["Remote_Id"];
 							/** @description security configuration for this room */
 							security: components["schemas"]["RoomSecurity"];
 							type: components["schemas"]["RoomType"];
@@ -13472,6 +13943,7 @@ export interface paths {
 							public: boolean;
 							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 							quarantined: boolean;
+							remote?: null | components["schemas"]["Remote_Id"];
 							/** @description security configuration for this room */
 							security: components["schemas"]["RoomSecurity"];
 							type: components["schemas"]["RoomType"];
@@ -14226,6 +14698,7 @@ export interface paths {
 							public: boolean;
 							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 							quarantined: boolean;
+							remote?: null | components["schemas"]["Remote_Id"];
 							/** @description security configuration for this room */
 							security: components["schemas"]["RoomSecurity"];
 							type: components["schemas"]["RoomType"];
@@ -14309,6 +14782,7 @@ export interface paths {
 							public: boolean;
 							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 							quarantined: boolean;
+							remote?: null | components["schemas"]["Remote_Id"];
 							/** @description security configuration for this room */
 							security: components["schemas"]["RoomSecurity"];
 							type: components["schemas"]["RoomType"];
@@ -14986,6 +15460,7 @@ export interface paths {
 							public: boolean;
 							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 							quarantined: boolean;
+							remote?: null | components["schemas"]["Remote_Id"];
 							/** @description security configuration for this room */
 							security: components["schemas"]["RoomSecurity"];
 							type: components["schemas"]["RoomType"];
@@ -15135,6 +15610,7 @@ export interface paths {
 							public: boolean;
 							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 							quarantined: boolean;
+							remote?: null | components["schemas"]["Remote_Id"];
 							/** @description security configuration for this room */
 							security: components["schemas"]["RoomSecurity"];
 							type: components["schemas"]["RoomType"];
@@ -15787,7 +16263,9 @@ export interface paths {
 		 * Server connect
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *
-		 *     start receiving sync events from a remote server
+		 *     Start receiving sync events from a remote server.
+		 *
+		 *     Servers should send attempt to reconnect on startup, since remote servers may stop sending events to unreachable servers.
 		 */
 		post: {
 			parameters: {
@@ -15952,7 +16430,12 @@ export interface paths {
 						[name: string]: unknown;
 					};
 					content: {
-						"application/json": Record<string, never>;
+						"application/json": {
+							/** @description the current epoch the requesting server is on
+							 *
+							 *     is incremented if the sender is too lagged */
+							epoch: components["schemas"]["FederationEpoch"];
+						};
 					};
 				};
 			};
@@ -16767,6 +17250,7 @@ export interface paths {
 							invitable?: boolean;
 							is_unread?: boolean | null;
 							last_message_id?: null | components["schemas"]["Id"];
+							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
 							/** @description monotonic sync sequence number, incremented on every action.
@@ -16806,6 +17290,7 @@ export interface paths {
 							preferences?: null | components["schemas"]["PreferencesChannel"];
 							/** @description for dm and gdm channels, this is who the dm is with */
 							recipients?: components["schemas"]["User"][];
+							remote?: null | components["schemas"]["Remote_Id"];
 							room_id?: null | components["schemas"]["Id"];
 							/** Format: int64 */
 							root_message_count?: number | null;
@@ -16832,7 +17317,10 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/** @description the tags that are available in this forum. exists on Forum channels only. */
+							/**
+							 * @deprecated
+							 * @description the tags that are available in this forum. exists on Forum channels only.
+							 */
 							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
@@ -16912,6 +17400,7 @@ export interface paths {
 							invitable?: boolean;
 							is_unread?: boolean | null;
 							last_message_id?: null | components["schemas"]["Id"];
+							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
 							/** @description monotonic sync sequence number, incremented on every action.
@@ -16951,6 +17440,7 @@ export interface paths {
 							preferences?: null | components["schemas"]["PreferencesChannel"];
 							/** @description for dm and gdm channels, this is who the dm is with */
 							recipients?: components["schemas"]["User"][];
+							remote?: null | components["schemas"]["Remote_Id"];
 							room_id?: null | components["schemas"]["Id"];
 							/** Format: int64 */
 							root_message_count?: number | null;
@@ -16977,7 +17467,10 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/** @description the tags that are available in this forum. exists on Forum channels only. */
+							/**
+							 * @deprecated
+							 * @description the tags that are available in this forum. exists on Forum channels only.
+							 */
 							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
@@ -17036,6 +17529,7 @@ export interface paths {
 							invitable?: boolean;
 							is_unread?: boolean | null;
 							last_message_id?: null | components["schemas"]["Id"];
+							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
 							/** @description monotonic sync sequence number, incremented on every action.
@@ -17075,6 +17569,7 @@ export interface paths {
 							preferences?: null | components["schemas"]["PreferencesChannel"];
 							/** @description for dm and gdm channels, this is who the dm is with */
 							recipients?: components["schemas"]["User"][];
+							remote?: null | components["schemas"]["Remote_Id"];
 							room_id?: null | components["schemas"]["Id"];
 							/** Format: int64 */
 							root_message_count?: number | null;
@@ -17101,7 +17596,10 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/** @description the tags that are available in this forum. exists on Forum channels only. */
+							/**
+							 * @deprecated
+							 * @description the tags that are available in this forum. exists on Forum channels only.
+							 */
 							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
@@ -17328,11 +17826,14 @@ export interface paths {
 						[name: string]: unknown;
 					};
 					content: {
-						"application/json": components["schemas"]["HarvestStatus"] & {
-							created_at: components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							user_id: components["schemas"]["Id"];
-						};
+						"application/json": components["schemas"]["HarvestStatus"] &
+							components["schemas"]["HarvestType"] & {
+								id: components["schemas"]["Id"];
+								/** @description when this archive was created */
+								queued_at: components["schemas"]["Time"];
+								/** @description user who requested this harvest to be generated */
+								requester_id: components["schemas"]["Id"];
+							};
 					};
 				};
 				/** @description no harvest found */
@@ -17708,7 +18209,7 @@ export interface paths {
 							presence: components["schemas"]["Presence"];
 							puppet?: null | components["schemas"]["Puppet"];
 							registered_at?: null | components["schemas"]["Time"];
-							remote?: null | components["schemas"]["Remote"];
+							remote?: null | components["schemas"]["Remote_Id"];
 							suspended?: null | components["schemas"]["Suspended"];
 							/** @description whether this user is an official system user */
 							system: boolean;
@@ -18526,7 +19027,7 @@ export interface paths {
 							presence: components["schemas"]["Presence"];
 							puppet?: null | components["schemas"]["Puppet"];
 							registered_at?: null | components["schemas"]["Time"];
-							remote?: null | components["schemas"]["Remote"];
+							remote?: null | components["schemas"]["Remote_Id"];
 							suspended?: null | components["schemas"]["Suspended"];
 							/** @description whether this user is an official system user */
 							system: boolean;
@@ -18579,7 +19080,7 @@ export interface paths {
 							presence: components["schemas"]["Presence"];
 							puppet?: null | components["schemas"]["Puppet"];
 							registered_at?: null | components["schemas"]["Time"];
-							remote?: null | components["schemas"]["Remote"];
+							remote?: null | components["schemas"]["Remote_Id"];
 							suspended?: null | components["schemas"]["Suspended"];
 							/** @description whether this user is an official system user */
 							system: boolean;
@@ -18668,6 +19169,15 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
+							/**
+							 * Format: int64
+							 * @description how many people are in the audience
+							 *
+							 *     only populated if this is a broadcast channel. in broadcast channels,
+							 *     only voice states for yourself and speakers (ie. users who are not
+							 *     suppressed) are sent.
+							 */
+							audience_count?: number | null;
 							channel_id: components["schemas"]["Id"];
 							/** @description when this call was created
 							 *
@@ -18714,6 +19224,15 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
+							/**
+							 * Format: int64
+							 * @description how many people are in the audience
+							 *
+							 *     only populated if this is a broadcast channel. in broadcast channels,
+							 *     only voice states for yourself and speakers (ie. users who are not
+							 *     suppressed) are sent.
+							 */
+							audience_count?: number | null;
 							channel_id: components["schemas"]["Id"];
 							/** @description when this call was created
 							 *
@@ -18792,6 +19311,15 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
+							/**
+							 * Format: int64
+							 * @description how many people are in the audience
+							 *
+							 *     only populated if this is a broadcast channel. in broadcast channels,
+							 *     only voice states for yourself and speakers (ie. users who are not
+							 *     suppressed) are sent.
+							 */
+							audience_count?: number | null;
 							channel_id: components["schemas"]["Id"];
 							/** @description when this call was created
 							 *
@@ -19568,21 +20096,39 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
 	schemas: {
+		/** @description acknowledge many things at once */
 		AckBulk: {
 			acks: components["schemas"]["AckBulkItem"][];
 		};
-		AckBulkItem: {
-			/** @description The id of the channel being acknowledged. */
-			channel_id: components["schemas"]["Id"];
+		AckBulkItem: components["schemas"]["AckType"];
+		/** @description acknowledge a message in a channel */
+		AckCreate: {
 			/**
 			 * Format: int64
 			 * @description The new mention count. Defaults to 0.
 			 */
 			mention_count?: number;
 			message_id?: null | components["schemas"]["Id"];
-			/** @description The last read message vewsion id in this channel. */
-			version_id: components["schemas"]["Id"];
 		};
+		/** @description a user's read state for a resource */
+		AckState: components["schemas"]["AckType"] & {
+			/** @description whether this is considered unread */
+			unread: boolean;
+		};
+		AckType:
+			| {
+					channel_id: components["schemas"]["Id"];
+					/** Format: int64 */
+					mention_count?: number;
+					message_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Message";
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Pins";
+			  };
 		Activity: {
 			clear_at?: null | components["schemas"]["Time"];
 			text: string;
@@ -19656,6 +20202,99 @@ export interface components {
 			role_ids?: components["schemas"]["Id"][];
 			/** @description only these users can interact */
 			user_ids?: components["schemas"]["Id"][];
+		};
+		AnalyticsChannel: {
+			/** @description The bucket for this data point. */
+			bucket: components["schemas"]["Time"];
+			channel_id: components["schemas"]["Id"];
+			/** Format: int64 */
+			media_count: number;
+			/** Format: int64 */
+			media_size: number;
+			/** Format: int64 */
+			message_count: number;
+		};
+		AnalyticsInvites: {
+			/** @description The bucket for this data point. */
+			bucket: components["schemas"]["Time"];
+			/** @description where this member came from */
+			origin: components["schemas"]["AnalyticsInvitesOrigin"];
+			/**
+			 * Format: int64
+			 * @description number of times this invite was used
+			 */
+			uses: number;
+		};
+		AnalyticsInvitesOrigin:
+			| {
+					code: components["schemas"]["InviteCode"];
+					/** @enum {string} */
+					type: "Invite";
+			  }
+			| {
+					/** @enum {string} */
+					type: "BotInstall";
+			  }
+			| {
+					/** @description the bridge that owns this puppet */
+					bridge_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Bridged";
+			  }
+			| {
+					/** @enum {string} */
+					type: "PublicJoin";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Other";
+			  };
+		/** @description the count of members in this room */
+		AnalyticsMembersCount: {
+			/** @description The bucket for this data point. */
+			bucket: components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description Total number of members in this room.
+			 */
+			count: number;
+		};
+		AnalyticsMembersJoin: {
+			/** @description The bucket for this data point. */
+			bucket: components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description Total number of members who joined this room.
+			 */
+			count: number;
+		};
+		AnalyticsMembersLeave: {
+			/** @description The bucket for this data point. */
+			bucket: components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description Total number of members who left this room.
+			 */
+			count: number;
+		};
+		AnalyticsOverview: {
+			/** @description The bucket for this data point. */
+			bucket: components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description number of files sent
+			 */
+			media_count: number;
+			/**
+			 * Format: int64
+			 * @description number of files sent
+			 */
+			media_size: number;
+			/**
+			 * Format: int64
+			 * @description number of messages sent
+			 */
+			message_count: number;
 		};
 		Application: {
 			bridge?: null | components["schemas"]["Bridge"];
@@ -20796,6 +21435,15 @@ export interface components {
 		CalendarRsvpStatus: "interested" | "uninterested";
 		/** @description a currently active voice session */
 		Call: {
+			/**
+			 * Format: int64
+			 * @description how many people are in the audience
+			 *
+			 *     only populated if this is a broadcast channel. in broadcast channels,
+			 *     only voice states for yourself and speakers (ie. users who are not
+			 *     suppressed) are sent.
+			 */
+			audience_count?: number | null;
 			channel_id: components["schemas"]["Id"];
 			/** @description when this call was created
 			 *
@@ -20871,6 +21519,7 @@ export interface components {
 			invitable?: boolean;
 			is_unread?: boolean | null;
 			last_message_id?: null | components["schemas"]["Id"];
+			last_pin_timestamp?: null | components["schemas"]["Time"];
 			last_read_id?: null | components["schemas"]["Id"];
 			last_version_id?: null | components["schemas"]["Id"];
 			/** @description monotonic sync sequence number, incremented on every action.
@@ -20910,6 +21559,7 @@ export interface components {
 			preferences?: null | components["schemas"]["PreferencesChannel"];
 			/** @description for dm and gdm channels, this is who the dm is with */
 			recipients?: components["schemas"]["User"][];
+			remote?: null | components["schemas"]["Remote_Id"];
 			room_id?: null | components["schemas"]["Id"];
 			/** Format: int64 */
 			root_message_count?: number | null;
@@ -20936,7 +21586,10 @@ export interface components {
 			tag_count?: number;
 			/** @description tags that are applied to this thread */
 			tags?: components["schemas"]["Id"][] | null;
-			/** @description the tags that are available in this forum. exists on Forum channels only. */
+			/**
+			 * @deprecated
+			 * @description the tags that are available in this forum. exists on Forum channels only.
+			 */
 			tags_available?: components["schemas"]["Tag"][] | null;
 			thread_member?: null | components["schemas"]["ThreadMember"];
 			/** @description type specific data for this channel */
@@ -21040,6 +21693,7 @@ export interface components {
 		/**
 		 * Format: int64
 		 * @description A monotonic sync token, incremented on every action in a channel.
+		 *
 		 *     Used for incremental sync to determine what events the client is missing.
 		 */
 		ChannelSeq: number;
@@ -21128,10 +21782,10 @@ export interface components {
 				/** @description Additional filetype-specific metadata for the file */
 				metadata: components["schemas"]["MediaMetadata"];
 				quarantine?: null | components["schemas"]["MediaQuarantine"];
-				remote?: null | components["schemas"]["Remote"];
+				remote?: null | components["schemas"]["Remote_Id"];
 				room_id?: null | components["schemas"]["Id"];
 				/** @description The results of automated scans. */
-				scans: components["schemas"]["MediaScan"][];
+				scans?: components["schemas"]["MediaScan"][];
 				/**
 				 * Format: int64
 				 * @description The underlying blob's length in bytes.
@@ -21681,7 +22335,9 @@ export interface components {
 		};
 		/** @enum {string} */
 		EmbedType: "Media" | "Link" | "Custom";
+		/** @description a custom emoji */
 		EmojiCustom: {
+			/** @description whether this emoji is animated */
 			animated: boolean;
 			creator_id?: null | components["schemas"]["Id"];
 			id: components["schemas"]["Id"];
@@ -21856,6 +22512,13 @@ export interface components {
 			/** @description Human-readable failure message */
 			message: string;
 		};
+		/**
+		 * Format: int64
+		 * @description monotonic counter that increments every time sync fails/disconnects
+		 *
+		 *     intended to invalidate cache
+		 */
+		FederationEpoch: number;
 		/** @description HTTP fetch log entry. */
 		FetchEntry: {
 			/** @description First ~4KB of the response body */
@@ -21921,26 +22584,60 @@ export interface components {
 		 * @enum {string}
 		 */
 		FlumeState: "Live" | "Committed" | "Autocommitted";
-		Harvest: components["schemas"]["HarvestStatus"] & {
-			created_at: components["schemas"]["Time"];
-			id: components["schemas"]["Id"];
-			user_id: components["schemas"]["Id"];
+		Harvest: components["schemas"]["HarvestStatus"] &
+			components["schemas"]["HarvestType"] & {
+				id: components["schemas"]["Id"];
+				/** @description when this archive was created */
+				queued_at: components["schemas"]["Time"];
+				/** @description user who requested this harvest to be generated */
+				requester_id: components["schemas"]["Id"];
+			};
+		/**
+		 * @description the reason why harvest generation was cancelled
+		 * @enum {string}
+		 */
+		HarvestCancelReason: "CancelledByUser" | "CancelledByAdmin" | "Other";
+		/** @description how to create a harvest
+		 *
+		 *     including extra data will make the export slower */
+		HarvestCreateRoom: {
+			/** @description include all members in this room */
+			include_members: boolean;
+			/** @description include all messages in this room */
+			include_messages: boolean;
+			/** @description include all individual reactions
+			 *
+			 *     otherwise only include counts */
+			include_reactions: boolean;
 		};
 		/** @description how to create a harvest
 		 *
 		 *     including extra data will make the export slower */
-		HarvestCreate: {
+		HarvestCreateUser: {
 			/** @description include all messages you have sent */
 			include_messages: boolean;
 			/** @description include all reactions you have sent */
 			include_reactions: boolean;
 		};
+		/**
+		 * @description the reason why harvest generation failed
+		 * @enum {string}
+		 */
+		HarvestFailedCode: "Other";
 		HarvestStatus:
 			| {
 					/** @enum {string} */
 					status: "Queued";
 			  }
 			| {
+					eta_at?: null | components["schemas"]["Time"];
+					/** @description when archiving started */
+					started_at: components["schemas"]["Time"];
+					/** @enum {string} */
+					status: "Archiving";
+			  }
+			| {
+					code: components["schemas"]["HarvestFailedCode"];
 					failed_at: components["schemas"]["Time"];
 					message: string;
 					/** @enum {string} */
@@ -21949,16 +22646,33 @@ export interface components {
 			| {
 					completed_at: components["schemas"]["Time"];
 					expires_at: components["schemas"]["Time"];
+					media: components["schemas"]["Media"];
+					started_at: components["schemas"]["Time"];
 					/** @enum {string} */
 					status: "Completed";
-					/** Format: uri */
-					url: string;
 			  }
 			| {
 					cancelled_at: components["schemas"]["Time"];
 					message: string;
+					reason: components["schemas"]["HarvestCancelReason"];
 					/** @enum {string} */
 					status: "Cancelled";
+			  };
+		/** @description what this harvest was generated for */
+		HarvestType:
+			| {
+					/** @description the create options */
+					create: components["schemas"]["HarvestCreateUser"];
+					target_user_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "User";
+			  }
+			| {
+					/** @description the create options */
+					create: components["schemas"]["HarvestCreateRoom"];
+					target_room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Room";
 			  };
 		/** @description a single hash */
 		HashData: components["schemas"]["Binary"];
@@ -22259,10 +22973,10 @@ export interface components {
 			/** @description Additional filetype-specific metadata for the file */
 			metadata: components["schemas"]["MediaMetadata"];
 			quarantine?: null | components["schemas"]["MediaQuarantine"];
-			remote?: null | components["schemas"]["Remote"];
+			remote?: null | components["schemas"]["Remote_Id"];
 			room_id?: null | components["schemas"]["Id"];
 			/** @description The results of automated scans. */
-			scans: components["schemas"]["MediaScan"][];
+			scans?: components["schemas"]["MediaScan"][];
 			/**
 			 * Format: int64
 			 * @description The underlying blob's length in bytes.
@@ -22280,12 +22994,6 @@ export interface components {
 			strip_exif?: boolean;
 			user_id?: null | components["schemas"]["Id"];
 			version_id: components["schemas"]["Id"];
-		};
-		MediaClone: {
-			/** @description Descriptive alt text, not entirely unlike a caption */
-			alt?: string | null;
-			/** @description Set to override the filename */
-			filename?: string | null;
 		};
 		/** @description a request body for `media_create` */
 		MediaCreate: components["schemas"]["MediaCreateSource"] & {
@@ -22321,23 +23029,6 @@ export interface components {
 					 */
 					size?: number | null;
 			  };
-		/** @description response body for `media_create` */
-		MediaCreated: {
-			/** @description The id of the media that has been created */
-			media_id: components["schemas"]["Id"];
-			/**
-			 * Format: uri
-			 * @description A url to upload your media to. Is `None` if you used `MediaCreateSource::Download`.
-			 */
-			upload_url?: string | null;
-		};
-		/** @description request body for `media_done` */
-		MediaDoneParams: {
-			/** @description Whether to process this media asynchronously.
-			 *
-			 *     If this is true, return 202 Accepted immediately and send a `MediaProcessed` event when your media is done processing. */
-			async?: boolean;
-		};
 		/**
 		 * @description the algorithm used to encrypt a piece of media
 		 * @enum {string}
@@ -22349,7 +23040,7 @@ export interface components {
 		 * @description the kind of media this track is for
 		 * @enum {string}
 		 */
-		MediaKind: "Video" | "Audio";
+		MediaKind: "video" | "audio";
 		/** @description describes how this piece of media is linked to another resource
 		 *
 		 *     objects can be linked to multiple objects; for example, media linked to
@@ -22474,18 +23165,6 @@ export interface components {
 					/** @enum {string} */
 					type: "Errored";
 			  };
-		/** @description An update to a piece of media */
-		MediaPatch: {
-			/** @description Descriptive alt text, not entirely unlike a caption */
-			alt?: string | null;
-			/** @description The filename for this piece of media */
-			filename?: string | null;
-			/** @description Whether to strip sensitive exif info, like location or camera make and model.
-			 *
-			 *     This can only be changed if the media status is not `Consumed`. Once
-			 *     strip_exif is set to true, cannot be set to false. */
-			strip_exif?: boolean | null;
-		};
 		MediaQuarantine: {
 			/** @description why this media was quarantined */
 			reason?: string | null;
@@ -22520,20 +23199,8 @@ export interface components {
 			 */
 			version: number;
 		};
-		/** @description query for searching through media */
-		MediaSearch: {
-			/** @description The full text search query. */
-			query?: string | null;
-			/** @description field to sort by */
-			sort_field: components["schemas"]["MediaSearchOrderField"];
-			/** @description what order to return results in */
-			sort_order: components["schemas"]["Order"];
-		};
 		/** @enum {string} */
 		MediaSearchOrderField: "Created" | "Name" | "Id";
-		MediaSearchRequest: components["schemas"]["SearchRequest"] & {
-			sort_field?: components["schemas"]["MediaSearchOrderField"];
-		};
 		/**
 		 * @description The status for this media
 		 * @enum {string}
@@ -22800,7 +23467,7 @@ export interface components {
 			content?: string | null;
 			embeds?: components["schemas"]["EmbedCreate"][];
 			/** @description whether to make this message ephemeral */
-			ephemeral: boolean;
+			ephemeral?: boolean;
 			mentions?: components["schemas"]["ParseMentions"];
 			metadata?: null | components["schemas"]["Metadata"];
 			reply_id?: null | components["schemas"]["Id"];
@@ -22904,12 +23571,18 @@ export interface components {
 					user_id: components["schemas"]["Id"];
 			  }
 			| {
-					channel_id: components["schemas"]["Id"];
-					message_id: components["schemas"]["Id"];
+					ack_states: components["schemas"]["AckState"][];
 					/** @enum {string} */
-					type: "ChannelAck";
+					type: "PassiveAck";
 					user_id: components["schemas"]["Id"];
-					version_id: components["schemas"]["Id"];
+			  }
+			| {
+					ack_states: components["schemas"]["AckState"][];
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "PassiveRoom";
+					user_id: components["schemas"]["Id"];
+					voice_states: components["schemas"]["VoiceState"][];
 			  }
 			| {
 					message: components["schemas"]["Message"];
@@ -23608,6 +24281,7 @@ export interface components {
 			deleted_at?: null | components["schemas"]["Time"];
 			/** @description who this message mentioned */
 			mentions?: components["schemas"]["Mentions"];
+			reply_id?: null | components["schemas"]["Id"];
 			version_id: components["schemas"]["Id"];
 		};
 		/** @description arbitrary key-value metadata used in various places
@@ -23680,25 +24354,63 @@ export interface components {
 			| {
 					/** @description the channel this message was sent in */
 					channel_id: components["schemas"]["Id"];
+					/** @description this notification was triggered by an @everyone or @here mention */
+					mention_everyone: boolean;
+					/** @description this notification was triggered by a @role mention */
+					mention_role: boolean;
+					/** @description this notification was triggered by an @user */
+					mention_user: boolean;
 					/** @description the id of the message that was sent */
 					message_id: components["schemas"]["Id"];
+					/** @description this notification was triggered by a reply */
+					reply: boolean;
 					room_id?: null | components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "Message";
+					/** @description the author of this message */
+					user_id: components["schemas"]["Id"];
 			  }
 			| {
 					/** @description the channel this reaction was sent in */
 					channel_id: components["schemas"]["Id"];
 					/** @description the id of the message that was reacted to */
 					message_id: components["schemas"]["Id"];
+					reaction_key: components["schemas"]["ReactionKeyParam"];
 					room_id?: null | components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "Reaction";
+					/** @description the user who created this reaction */
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					room_id?: null | components["schemas"]["Id"];
+					/** @description the id of the thread */
+					thread_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Thread";
+					/** @description the user who created this thread */
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					/** @enum {string} */
+					type: "FriendRequestSent";
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					/** @enum {string} */
+					type: "FriendRequestReceived";
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					/** @enum {string} */
+					type: "FriendRequestAccepted";
+					user_id: components["schemas"]["Id"];
 			  };
 		/** @description notification config for a channel */
 		NotifsChannel: {
 			messages?: null | components["schemas"]["NotifsMessages"];
 			mute?: null | components["schemas"]["Mute"];
+			replies?: null | components["schemas"]["NotifsReplies"];
 			threads?: null | components["schemas"]["NotifsThreads"];
 		};
 		/** @description notification config for a user (works globally) */
@@ -23706,6 +24418,7 @@ export interface components {
 			messages: components["schemas"]["NotifsMessages"];
 			mute?: null | components["schemas"]["Mute"];
 			reactions: components["schemas"]["NotifsReactions"];
+			replies: components["schemas"]["NotifsReplies"];
 			threads: components["schemas"]["NotifsThreads"];
 			tts: components["schemas"]["NotifsTts"];
 		};
@@ -23719,6 +24432,11 @@ export interface components {
 		 * @enum {string}
 		 */
 		NotifsReactions: "Always" | "Restricted" | "Dms" | "Nothing";
+		/**
+		 * @description how to handle new replies
+		 * @enum {string}
+		 */
+		NotifsReplies: "Notify" | "Watching" | "Nothing";
 		/** @description notification config for a room */
 		NotifsRoom: {
 			/** @description whether to receive @everyone and @here mentions */
@@ -23727,6 +24445,7 @@ export interface components {
 			mention_roles: boolean;
 			messages?: null | components["schemas"]["NotifsMessages"];
 			mute?: null | components["schemas"]["Mute"];
+			replies?: null | components["schemas"]["NotifsReplies"];
 			threads?: null | components["schemas"]["NotifsThreads"];
 		};
 		/**
@@ -23755,7 +24474,10 @@ export interface components {
 		 * @enum {string}
 		 */
 		Order: "asc" | "desc";
-		/** @enum {string} */
+		/**
+		 * @description the direction to paginate
+		 * @enum {string}
+		 */
 		PaginationDirection: "f" | "b";
 		PaginationQuery_Id: {
 			dir?: null | components["schemas"]["PaginationDirection"];
@@ -24343,16 +25065,52 @@ export interface components {
 		RelationshipWithUserId: components["schemas"]["Relationship"] & {
 			user_id: components["schemas"]["Id"];
 		};
-		/** @description a piece of content on a remote server */
-		Remote: {
+		/** @description a reference to a piece of content on a remote server */
+		Remote_Id: {
+			/** @description the epoch that this remote resource was fetched during
+			 *
+			 *     if `item.epoch != server.sync_epoch`, this is stale and should be refetched */
+			epoch: components["schemas"]["FederationEpoch"];
 			/** @description the hostname of the server */
 			hostname: components["schemas"]["Hostname"];
 			/**
+			 * Uuid
 			 * Format: uuid
-			 * @description the id of this resource on the origin server
+			 * @description A universally unique identifier.
 			 */
 			origin_id: string;
 		};
+		/** @description a list of children for a RepliesItem or the top level */
+		RepliesChildren: {
+			/** @description the children for this message */
+			children: components["schemas"]["RepliesMessage"][];
+			/**
+			 * Format: int64
+			 * @description the total number of replies to this message
+			 */
+			count_direct: number;
+			/**
+			 * Format: int64
+			 * @description the total number of replies to this message, calculated recursively
+			 */
+			count_recursive: number;
+			/** @description cursor that can be used to fetch more */
+			cursor?: string | null;
+			/**
+			 * Format: int64
+			 * @description the current depth of this message in the tree, or 0 for the top level
+			 */
+			depth: number;
+			/** @description whether there are more messages after the end of the children array */
+			has_more: boolean;
+		};
+		/** @description a single message for a replies query */
+		RepliesMessage: components["schemas"]["RepliesChildren"] & {
+			/** @description the message itself */
+			message: components["schemas"]["Message"];
+		};
+		/** @description a response to a replies query */
+		RepliesResponse: components["schemas"]["RepliesChildren"];
 		/**
 		 * @description who the report is sent to
 		 * @enum {string}
@@ -24479,6 +25237,7 @@ export interface components {
 			public: boolean;
 			/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 			quarantined: boolean;
+			remote?: null | components["schemas"]["Remote_Id"];
 			/** @description security configuration for this room */
 			security: components["schemas"]["RoomSecurity"];
 			type: components["schemas"]["RoomType"];
@@ -24488,98 +25247,6 @@ export interface components {
 			 */
 			version_id: string;
 			welcome_channel_id?: null | components["schemas"]["Id"];
-		};
-		RoomAnalyticsChannel: {
-			/** @description The bucket for this data point. */
-			bucket: components["schemas"]["Time"];
-			channel_id: components["schemas"]["Id"];
-			/** Format: int64 */
-			media_count: number;
-			/** Format: int64 */
-			media_size: number;
-			/** Format: int64 */
-			message_count: number;
-		};
-		RoomAnalyticsInvites: {
-			/** @description The bucket for this data point. */
-			bucket: components["schemas"]["Time"];
-			/** @description where this member came from */
-			origin: components["schemas"]["RoomAnalyticsInvitesOrigin"];
-			/**
-			 * Format: int64
-			 * @description number of times this invite was used
-			 */
-			uses: number;
-		};
-		RoomAnalyticsInvitesOrigin:
-			| {
-					code: components["schemas"]["InviteCode"];
-					/** @enum {string} */
-					type: "Invite";
-			  }
-			| {
-					/** @enum {string} */
-					type: "BotInstall";
-			  }
-			| {
-					/** @description the bridge that owns this puppet */
-					bridge_id: components["schemas"]["Id"];
-					/** @enum {string} */
-					type: "Bridged";
-			  }
-			| {
-					/** @enum {string} */
-					type: "PublicJoin";
-			  }
-			| {
-					/** @enum {string} */
-					type: "Other";
-			  };
-		RoomAnalyticsMembersCount: {
-			/** @description The bucket for this data point. */
-			bucket: components["schemas"]["Time"];
-			/**
-			 * Format: int64
-			 * @description Total number of members in this room.
-			 */
-			count: number;
-		};
-		RoomAnalyticsMembersJoin: {
-			/** @description The bucket for this data point. */
-			bucket: components["schemas"]["Time"];
-			/**
-			 * Format: int64
-			 * @description Total number of members who joined this room.
-			 */
-			count: number;
-		};
-		RoomAnalyticsMembersLeave: {
-			/** @description The bucket for this data point. */
-			bucket: components["schemas"]["Time"];
-			/**
-			 * Format: int64
-			 * @description Total number of members who left this room.
-			 */
-			count: number;
-		};
-		RoomAnalyticsOverview: {
-			/** @description The bucket for this data point. */
-			bucket: components["schemas"]["Time"];
-			/**
-			 * Format: int64
-			 * @description number of files sent
-			 */
-			media_count: number;
-			/**
-			 * Format: int64
-			 * @description number of files sent
-			 */
-			media_size: number;
-			/**
-			 * Format: int64
-			 * @description number of messages sent
-			 */
-			message_count: number;
 		};
 		/** @description represents a restriction on who can join the room */
 		RoomBan: {
@@ -24717,6 +25384,9 @@ export interface components {
 		};
 		/** @description a snapshot of a room */
 		RoomTemplateSnapshot: {
+			afk_channel_id?: null | components["schemas"]["Id"];
+			/** Format: int64 */
+			afk_channel_timeout: number;
 			channels: components["schemas"]["RoomTemplateChannel"][];
 			roles: components["schemas"]["RoomTemplateRole"][];
 			welcome_channel_id?: null | components["schemas"]["Id"];
@@ -24751,11 +25421,18 @@ export interface components {
 			 * @description size of the index in bytes
 			 */
 			index_size_bytes: number;
-			/**
-			 * Format: int64
-			 * @description number of active reindex queues
-			 */
-			reindex_queues: number;
+		};
+		/** @description Search index statistics for a room */
+		SearchIndexStatsRoom: {
+			/** Format: int64 */
+			count_channels: number;
+			/** Format: int64 */
+			count_documents: number;
+			/** Format: int64 */
+			count_media: number;
+			/** Format: int64 */
+			count_messages: number;
+			room_id: components["schemas"]["Id"];
 		};
 		/** @description generic search request struct */
 		SearchRequest: {
@@ -24833,20 +25510,14 @@ export interface components {
 			 *
 			 *     maximum Date + 72h, should be Date + 48h and rotated every 24h */
 			expires_at: components["schemas"]["Time"];
-			/** @description random data to sign
-			 *
-			 *     base64 url safe unpadded */
-			nonce: string;
-			/** @description public key
-			 *
-			 *     base64 url safe unpadded */
-			pubkey: string;
+			/** @description random data to sign */
+			nonce: components["schemas"]["Binary"];
+			/** @description public key */
+			pubkey: components["schemas"]["Binary"];
 			/** @description the signature
 			 *
-			 *     the bytes that were signed: nonce || pubkey || hostname
-			 *
-			 *     base64 url safe unpadded */
-			signature: string;
+			 *     the bytes that were signed: nonce || pubkey || hostname */
+			signature: components["schemas"]["Binary"];
 		};
 		/**
 		 * @description the algorithm to sign requests with
@@ -24944,9 +25615,9 @@ export interface components {
 					type: "Candidate";
 			  }
 			| {
-					subscriptions: components["schemas"]["Subscription"][];
+					subs: components["schemas"]["Subscription"][];
 					/** @enum {string} */
-					type: "Want";
+					type: "Subscribe";
 			  };
 		/** @description an event sent from the backend to the peer's sync connection */
 		SignallingEvent:
@@ -24981,13 +25652,13 @@ export interface components {
 			| {
 					tracks: components["schemas"]["TrackMetadata"][];
 					/** @enum {string} */
-					type: "Have";
+					type: "Tracks";
 					user_id: components["schemas"]["Id"];
 			  }
 			| {
-					subscriptions: components["schemas"]["Subscription"][];
+					subs: components["schemas"]["Subscription"][];
 					/** @enum {string} */
-					type: "Want";
+					type: "Subscribe";
 			  }
 			| {
 					new_sfu_id: components["schemas"]["Id"];
@@ -25005,7 +25676,7 @@ export interface components {
 		/** @enum {string} */
 		Status: "Offline" | "Online" | "Away" | "Busy" | "Available";
 		Subscription: {
-			/** @description which track to subscribe to */
+			/** @description subscribe to this mid of */
 			mid: components["schemas"]["Mid"];
 			/** @description the layers of the track to subscribe to
 			 *
@@ -25013,6 +25684,8 @@ export interface components {
 			 *     - the server may subscribe to multiple depending on if multiple resolutions are requested
 			 *     - leave empty for audio tracks */
 			rid?: components["schemas"]["Rid"][];
+			/** @description subscribe to this user's track */
+			user_id: components["schemas"]["Id"];
 		};
 		Suspended: {
 			created_at: components["schemas"]["Time"];
@@ -25057,7 +25730,9 @@ export interface components {
 			 * @description total number of threads with this tag (excluding archived threads)
 			 */
 			active_thread_count: number;
-			/** @description whether this tag is archived. this tag cant be applied to any new threads and won't appear in the tag picker. */
+			/** @description whether this tag is archived
+			 *
+			 *     archived tags cant be applied to any new threads and won't appear in the tag picker. */
 			archived: boolean;
 			channel_id: components["schemas"]["Id"];
 			color?: null | components["schemas"]["Color"];
@@ -25066,6 +25741,8 @@ export interface components {
 			name: string;
 			/** @description only members with ThreadEdit or ThreadManage can apply this tag */
 			restricted: boolean;
+			/** @description if this tag should be considered a spoiler */
+			spoiler: boolean;
 			/**
 			 * Format: int64
 			 * @description total number of threads with this tag (including archived threads)
@@ -25077,6 +25754,7 @@ export interface components {
 			description?: string | null;
 			name: string;
 			restricted?: boolean;
+			spoiler?: boolean;
 		};
 		TagPatch: {
 			archived?: boolean | null;
@@ -25084,6 +25762,7 @@ export interface components {
 			description?: string | null;
 			name?: string | null;
 			restricted?: boolean | null;
+			spoiler?: boolean | null;
 		};
 		TestPermissionsRequest: {
 			channel_id?: null | components["schemas"]["Id"];
@@ -25114,8 +25793,10 @@ export interface components {
 		 * @description the encoding of the track
 		 * @enum {string}
 		 */
-		TrackEncoding: "Source" | "Thumbnail";
-		/** @description which stream this track is associated with. generally there will be one video track and one audio track per stream. */
+		TrackEncoding: "Source" | "Full" | "Reduced" | "Thumbnail";
+		/** @description which stream this track is associated with
+		 *
+		 *     generally there will be one video track and one audio track per stream. */
 		TrackKey:
 			| "user"
 			| "screen"
@@ -25125,27 +25806,31 @@ export interface components {
 			  };
 		TrackLayer: {
 			encoding: components["schemas"]["TrackEncoding"];
-			rid: components["schemas"]["Rid"];
 		};
-		/** @description metadata about a track */
+		/** @description metadata about a track, for offers */
 		TrackMetadata: {
-			/** @description group tracks together into streams; identical to ssrc but easier to manage client side
-			 *
-			 *     currently there are two streams `user` and `screen` used by frontend */
+			/** @description group tracks together into streams; identical to ssrc but easier to manage client side */
 			key: components["schemas"]["TrackKey"];
 			/** @description whether this track is for audio or video */
 			kind: components["schemas"]["MediaKind"];
 			/** @description simulcasting layers, only applicable for video */
 			layers?: components["schemas"]["TrackLayer"][];
-			/** @description unique identifier for this track
+			/** @description unique identifier for this track, local to the user this track is from
 			 *
 			 *     equivalent to transceiver.mid */
 			mid: components["schemas"]["Mid"];
+			whisper?: null | components["schemas"]["TrackWhisper"];
 		};
 		/** @description track metadata. `mid` is the **mapped** media id, ie. the mid used between the final sfu/peer */
 		TrackMetadataWithUserId: components["schemas"]["TrackMetadata"] & {
 			/** @description the source user this track came from */
 			user_id: components["schemas"]["Id"];
+		};
+		/** @description track whispering config
+		 *
+		 *     only send media from this track to these users */
+		TrackWhisper: {
+			user_ids: components["schemas"]["Id"][];
 		};
 		/** @description Batch unfurl request */
 		UnfurlRequest: {
@@ -25175,7 +25860,7 @@ export interface components {
 			presence: components["schemas"]["Presence"];
 			puppet?: null | components["schemas"]["Puppet"];
 			registered_at?: null | components["schemas"]["Time"];
-			remote?: null | components["schemas"]["Remote"];
+			remote?: null | components["schemas"]["Remote_Id"];
 			suspended?: null | components["schemas"]["Suspended"];
 			/** @description whether this user is an official system user */
 			system: boolean;
@@ -25477,6 +26162,29 @@ export interface operations {
 			};
 		};
 	};
+	admin_room_search_index_stats: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description Room id to get stats for */
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Search index statistics for the room */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SearchIndexStatsRoom"];
+				};
+			};
+		};
+	};
 	admin_search_audit_logs: {
 		parameters: {
 			query?: never;
@@ -25762,220 +26470,6 @@ export interface operations {
 		responses: {
 			/** @description Switching Protocols */
 			101: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	media_create: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["MediaCreate"];
-			};
-		};
-		responses: {
-			/** @description Create media success */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["MediaCreated"];
-				};
-			};
-		};
-	};
-	media_upload_direct: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Success */
-			201: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Media"];
-				};
-			};
-			/** @description Processing in background */
-			202: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["MediaCreated"];
-				};
-			};
-		};
-	};
-	media_search: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["MediaSearchRequest"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["MediaSearch"];
-				};
-			};
-		};
-	};
-	media_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Media id */
-				media_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Media"];
-				};
-			};
-		};
-	};
-	media_delete: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Media id */
-				media_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description no content */
-			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-			/** @description media is linked to another resource (ie. a message) */
-			409: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	media_patch: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Media id */
-				media_id: components["schemas"]["Id"];
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["MediaPatch"];
-			};
-		};
-		responses: {
-			/** @description Success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Media"];
-				};
-			};
-		};
-	};
-	media_clone: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Media id */
-				media_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["MediaClone"];
-			};
-		};
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	media_done: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Media id */
-				media_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": components["schemas"]["MediaDoneParams"];
-			};
-		};
-		responses: {
-			/** @description Success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["Media"];
-				};
-			};
-			/** @description Processing in background */
-			202: {
 				headers: {
 					[name: string]: unknown;
 				};
