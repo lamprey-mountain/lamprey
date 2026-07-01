@@ -2,8 +2,13 @@ import type { EditorState } from "prosemirror-state";
 import type { Message, Pagination } from "sdk";
 import { createContext, useContext } from "solid-js";
 import type { SetStoreFunction, Store } from "solid-js/store";
-import type { MessageListAnchor } from "@/api/services/MessagesService.ts";
 import type { Attachment } from "@/types/chat";
+import {
+	createTimelineController,
+	TimelineController,
+	TimelineState,
+	TimelineStore,
+} from "@/components/features/chat/timeline-context";
 
 export type ChannelSearch = {
 	query: string;
@@ -16,23 +21,23 @@ export type ChannelSearch = {
 	sort?: "newest" | "oldest" | "relevancy";
 };
 
-export type TimelineController = {
-	jumpToEnd(markRead?: boolean): void;
-	jumpToMessage(message_id: string, highlight?: boolean): void;
-	scrollBy(px: number, smooth: boolean): void;
-	isAtBottom(): boolean;
-	scrollToBottom(): void;
-};
+// TODO: use this (see below)
+// export type ChannelSidebar
+// 	= { type: "pinned_messages" }
+// 	| { type: "document_history" }
+// 	| { type: "message_search" }
+// 	| { type: "voice_chat" } //
+// 	| { type: "thread_chat", thread_id: string }
+// NOTE: maybe i should make this "layerable" (or an object), since you can eg. open pinned messages inside a voice chat and closing pinned messages should return to the voice chat
 
+// TODO: split this context apart
 export type ChannelState = {
 	attachments: Array<Attachment>;
 	editor_state?: EditorState;
-	highlight?: string;
-	read_marker_id?: string;
 	reply_id?: string;
-	scroll_pos?: number;
 	search?: ChannelSearch;
 	timeline: TimelineController;
+	timelineStore?: TimelineStore;
 
 	// TODO: merge these into sidebar: Sidebar
 	pinned_view: boolean;
@@ -52,7 +57,6 @@ export type ChannelState = {
 	reply_jump_source?: string;
 	editing_name?: string | null;
 	script_id?: string;
-	has_forward?: boolean; // TODO: move to TimelineController
 };
 
 export function createInitialChannelState(): ChannelState {
@@ -62,28 +66,10 @@ export function createInitialChannelState(): ChannelState {
 		voice_chat_sidebar_open: false,
 		history_view: false,
 		thread_chat_sidebar_thread_id: undefined,
-		read_marker_id: undefined,
-		has_forward: false,
 		slowmode_expire_at: null,
 		selectMode: false,
 		selectedMessages: [],
-		timeline: {
-			jumpToEnd() {
-				throw new Error("dummy timeline impl");
-			},
-			jumpToMessage() {
-				throw new Error("dummy timeline impl");
-			},
-			scrollBy() {
-				throw new Error("dummy timeline impl");
-			},
-			isAtBottom() {
-				return true;
-			},
-			scrollToBottom() {
-				throw new Error("dummy timeline impl");
-			},
-		},
+		timeline: createTimelineController(),
 	};
 }
 

@@ -1,4 +1,4 @@
-// TODO: update imports to import from mod.tsx instead of files directly
+// TODO: move context definitions to their respective feature folders?
 
 export * from "./autocomplete.tsx";
 export * from "./channel.tsx";

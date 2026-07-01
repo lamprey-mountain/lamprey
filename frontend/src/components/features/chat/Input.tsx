@@ -297,7 +297,7 @@ export function Input(props: InputProps) {
 	};
 
 	const jumpToLatest = () => {
-		ch.timeline.jumpToEnd();
+		ch.timeline.jumpToBottom();
 		// TODO: mark as read (including local marker)
 	};
 

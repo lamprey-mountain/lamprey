@@ -1,24 +1,17 @@
 import { useMessages, type MessageListAnchor } from "@/api";
-import { TimelineController, useChannel } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { throttle } from "@solid-primitives/scheduled";
 import { useReadTracking } from "@/contexts/read-tracking";
 import { logger } from "@/utils/logger";
 import { createVirtualizer } from "@tanstack/solid-virtual";
-import {
-	createSignal,
-	createEffect,
-	on,
-	createMemo,
-	For,
-	Show,
-} from "solid-js";
+import { createEffect, on, For, Show, onCleanup } from "solid-js";
 import { ChatProps } from "./Chat";
 import { renderTimeline, TimelineItem, TimelineItemT } from "./Messages";
 import { MessageToolbarMount } from "./MessageToolbar";
 import { MessageRange } from "@/api/services/MessagesService";
-import { createEmitter, Emitter } from "@solid-primitives/event-bus";
 import { createStore, reconcile } from "solid-js/store";
+import { TimelineState, useTimeline } from "./timeline-context";
+import { Queue } from "@/utils/queue";
 
 // TODO: add logging
 const log = logger.for("timeline");
@@ -26,132 +19,86 @@ const log = logger.for("timeline");
 const PAGINATE_THRESHOLD = 200;
 const OVERSCAN = 20;
 
-export type TimelineEvents = {
-	/** scroll position updated */
-	scrollPosition: number;
-
-	/** scrolled to top of channel */
-	scrollTop: void;
-
-	/** scrolled to bottom of channel */
-	scrollBottom: void;
-};
-
-// TODO: use this for Timeline
-// save TimelineState in channel context, swap it out when switching channels
-export type TimelineState = {
-	controller: TimelineController;
-	events: Emitter<TimelineEvents>;
-}
-
-export type TimelineProps = {
-	tl: TimelineState;
-}
-
-export function createTimeline(): TimelineState {
-	// TODO
-
-	return {
-		// TODO
-	}
-}
-
 // how should i handle state management with Timeline? should i make Chat.tsx swap out TimelineState and store it in contexts? or make Timeline reactively respond to the current channel?
 
-// TODO: remove highlight from ChannelState
+type TimelineTask =
+	| { type: "SET_ANCHOR"; anchor: MessageListAnchor }
+	| { type: "CALLBACK"; fn: () => void }
+	// | { type: "SCROLL" }
+	| { type: "HIGHLIGHT" };
 
 export const Timeline = (props: ChatProps) => {
 	const messagesService = useMessages();
-	const [channelState, setChannelState] = useChannel()!;
-	const currentUser = useCurrentUser();
-	const { markChannelRead } = useReadTracking();
-
-	const getInitialAnchor = (): MessageListAnchor => {
-		const readMarker = channelState.read_marker_id;
-		const hasReadMarker =
-			readMarker && readMarker !== props.channel.last_version_id;
-		if (hasReadMarker) {
-			return { type: "context", limit: 50, message_id: readMarker };
-		} else {
-			return { type: "backwards", limit: 50 };
-		}
-	};
-
-	const [anchor, setAnchor] = createSignal<MessageListAnchor>(
-		getInitialAnchor(),
-	);
-
-	// TODO: add event emitter
-	// const events = createEmitter<TimelineEvents>();
-	// events.emit("scrollPosition", 123);
-	// events.emit("scrollTop");
-	// events.on("scrollPosition", (n) => {});
-
-	const [messages, setMessages] = createSignal<MessageRange | null>(null);
-	const [loading, setLoading] = createSignal(false);
+	const [timeline, updateTimeline] = useTimeline();
+	const currentUser = useCurrentUser(); // TEMP: compat
 
 	const fetchMessages = async (a: MessageListAnchor) => {
-		if (loading()) return;
-		setLoading(true);
+		if (timeline.loading) return;
+		updateTimeline("loading", true);
 		try {
 			const range = await messagesService.fetchSlice(props.channel.id, a);
-			setMessages(range);
+			updateTimeline("messages", range);
 		} finally {
-			setLoading(false);
+			updateTimeline("loading", false);
 		}
 	};
 
-	// reactively refetch messages whenever anchor changes
-	createEffect(
-		on(anchor, (a) => {
-			fetchMessages(a);
-		}),
-	);
+	const queue = new Queue(async (task: TimelineTask) => {
+		log.debug("execute task", task);
+		switch (task.type) {
+			case "SET_ANCHOR": {
+				updateTimeline("anchor", task.anchor);
+				await fetchMessages(task.anchor);
+				break;
+			}
+			case "CALLBACK": {
+				task.fn();
+				break;
+			}
+			case "HIGHLIGHT": {
+				// TODO
+				break;
+			}
+		}
+	});
+
+	// fetch initial messages
+	queue.push({ type: "SET_ANCHOR", anchor: timeline.anchor });
 
 	// reactively refetch messages whenever a channel's message version is bumped
+	// TODO: merge into queue handler
 	createEffect(
 		on(
 			() => messagesService._versions.get(props.channel.id),
 			() => {
-				const m = messages();
-				if (m) fetchMessages(anchor());
+				// queue.push({ type: "SET_ANCHOR", anchor: timeline.anchor });
+				// const m = timeline.messages;
+				// if (m) fetchMessages(timeline.anchor);
 			},
 			{ defer: true },
 		),
 	);
-
-	// reset when channel changes
-	createEffect(
-		on(
-			() => props.channel.id,
-			(channelId) => {
-				// TODO: reset
-			},
-			{ defer: true },
-		),
-	);
-
-	const [timeline, updateTimeline] = createStore([] as TimelineItemT[]);
-	const items = () => timeline;
 
 	// reactively update timeline when messages are received
 	// FIXME: rerender when channelState.read_marker_id updates
 	createEffect(() => {
-		const m = messages();
-		const rendered = m?.items ? renderTimeline({
-			items: m.items,
-			has_after: m.has_forward,
-			has_before: m.has_backwards,
-			read_marker_id: channelState.read_marker_id ?? null,
-		}) : [];
+		const m = timeline.messages;
+		const rendered = m?.items
+			? renderTimeline({
+					items: m.items,
+					has_after: m.has_forward,
+					has_before: m.has_backwards,
+					read_marker_id: timeline.last_read_message_id ?? null,
+				})
+			: [];
 		log.debug("update timeline", rendered);
-		updateTimeline(reconcile(rendered));
+		updateTimeline("items", reconcile(rendered));
 	});
 
 	let scrollEl = null as HTMLDivElement | null;
 	const virtualizer = createVirtualizer({
 		get count() {
-			return items().length;
+			return timeline.items.length;
 		},
 		anchorTo: "end",
 		getScrollElement: () => scrollEl,
@@ -159,24 +106,88 @@ export const Timeline = (props: ChatProps) => {
 		overscan: OVERSCAN,
 	});
 
-	// TODO: move outside of timeline
-	const markRead = throttle(() => {
-		const version_id = props.channel.last_version_id;
-		if (version_id !== props.channel.last_read_id) {
-			markChannelRead(props.channel.id, version_id, false, true);
-		}
-	}, 300);
+	timeline.commands.on("scrollBy", (data) => {
+		const newOffset = (virtualizer.scrollOffset ?? 0) + data.px;
+		virtualizer.scrollToOffset(newOffset, {
+			behavior: data.smooth ? "smooth" : "auto",
+		});
+	});
+
+	timeline.commands.on("jumpToBottom", (data) => {
+		queue.push(
+			{ type: "SET_ANCHOR", anchor: { type: "backwards", limit: 50 } },
+			{
+				type: "CALLBACK",
+				fn: () => {
+					virtualizer.scrollToEnd({
+						behavior: data.smooth ? "smooth" : "auto",
+					});
+				},
+			},
+		);
+	});
+
+	timeline.commands.on("jumpToTop", (data) => {
+		queue.push(
+			{ type: "SET_ANCHOR", anchor: { type: "forwards", limit: 50 } },
+			{
+				type: "CALLBACK",
+				fn: () => {
+					virtualizer.scrollToOffset(0, {
+						behavior: data.smooth ? "smooth" : "auto",
+					});
+				},
+			},
+		);
+	});
+
+	timeline.commands.on("jumpToMessage", (data) => {
+		queue.push(
+			{
+				type: "SET_ANCHOR",
+				anchor: {
+					type: "context",
+					limit: 50,
+					message_id: data.message_id,
+				},
+			},
+			{
+				type: "CALLBACK",
+				fn: () => {
+					const idx = timeline.items.findIndex(
+						(x) => x.type === "message" && x.message.id === data.message_id,
+					);
+					if (idx !== -1) {
+						virtualizer.scrollToIndex(idx, {
+							align: "center",
+							behavior: data.smooth ? "smooth" : "auto",
+						});
+					} else {
+						log.warn("couldn't find message after scrolling", data);
+					}
+				},
+			},
+		);
+	});
+
+	timeline.commands.listen((e) => {
+		log.debug(e.name, "command", e.details ?? null);
+	});
+
+	timeline.events.listen((e) => {
+		log.debug(e.name, "event", e.details ?? null);
+	});
 
 	const calculateSliceLen = () =>
 		Math.max(50, Math.ceil(globalThis.innerHeight / 20) * 3);
 	const calculatePaginateLen = () => Math.floor(calculateSliceLen() / 3);
 
 	const handleScrollEnd = () => {
-		if (loading()) return;
+		if (timeline.loading) return;
 		const el = scrollEl;
 		if (!el) return;
 
-		const msgs = messages();
+		const msgs = timeline.messages;
 		if (!msgs) return;
 
 		// PERF: use IntersectionObserver; using .scrollHeight/.scrollTop forces a sync layout recalc
@@ -184,140 +195,104 @@ export const Timeline = (props: ChatProps) => {
 		const atBottom =
 			el.scrollHeight - el.scrollTop - el.clientHeight < PAGINATE_THRESHOLD;
 
-		if (atTop && msgs.has_backwards) {
-			const len = calculatePaginateLen();
-			const idx = Math.min(len, msgs.items.length - 1);
-			setAnchor({
-				type: "backwards",
-				limit: calculateSliceLen(),
-				message_id: msgs.items[idx]?.id,
-			});
-		} else if (atBottom && msgs.has_forward) {
-			const len = calculatePaginateLen();
-			const idx = Math.max(0, msgs.items.length - len);
-			setAnchor({
-				type: "forwards",
-				limit: calculateSliceLen(),
-				message_id: msgs.items[idx]?.id,
-			});
-		} else if (atBottom && !msgs.has_forward) {
-			markRead();
+		if (atTop) {
+			if (msgs.has_backwards) {
+				const len = calculatePaginateLen();
+				const idx = Math.min(len, msgs.items.length - 1);
+				const anchor: MessageListAnchor = {
+					type: "backwards",
+					limit: calculateSliceLen(),
+					message_id: msgs.items[idx]?.id,
+				};
+				queue.push({ type: "SET_ANCHOR", anchor });
+			} else {
+				timeline.events.emit("scrollTop");
+			}
+		} else if (atBottom) {
+			if (msgs.has_forward) {
+				const len = calculatePaginateLen();
+				const idx = Math.max(0, msgs.items.length - len);
+				const anchor: MessageListAnchor = {
+					type: "forwards",
+					limit: calculateSliceLen(),
+					message_id: msgs.items[idx]?.id,
+				};
+				queue.push({ type: "SET_ANCHOR", anchor });
+			} else {
+				timeline.events.emit("scrollBottom");
+			}
 		}
 
 		setPos();
 	};
 
-	createEffect(
-		on(items, (items) => {
-			if (items.length === 0) return;
-			// HACK: delay to allow items to render/measure
-			setTimeout(() => {
-				const a = anchor();
-				if (a.type === "context") {
-					const idx = items.findIndex(
-						(x) => x.type === "message" && x.message.id === a.message_id,
-					);
-					if (idx !== -1) {
-						const offset = virtualizer.getOffsetForIndex(idx);
-						if (offset !== null) {
-							const targetOffset = offset - (scrollEl?.clientHeight ?? 0) / 2;
-							const distance = Math.abs(
-								virtualizer.scrollOffset - targetOffset,
-							);
-							const shouldSmooth = distance < (scrollEl?.clientHeight ?? 0) * 3;
-							virtualizer.scrollToOffset(targetOffset, {
-								behavior: shouldSmooth ? "smooth" : "auto",
-							});
-						}
-					} else {
-						// fallback
-						virtualizer.scrollToOffset(virtualizer.getTotalSize());
-					}
-				} else {
-					const pos = channelState.scroll_pos;
-					if (pos === undefined || pos === -1) {
-						virtualizer.scrollToOffset(virtualizer.getTotalSize());
-					} else {
-						virtualizer.scrollToOffset(pos);
-					}
-				}
-			}, 0);
-		}),
-	);
+	// TODO: merge with jumpToMessage command
+	// createEffect(
+	// 	on(
+	// 		() => timeline.items,
+	// 		(items) => {
+	// 			if (items.length === 0) return;
+	// 			// HACK: delay to allow items to render/measure
+	// 			setTimeout(() => {
+	// 				const a = timeline.anchor;
+	// 				if (a.type === "context") {
+	// 					const idx = items.findIndex(
+	// 						(x) => x.type === "message" && x.message.id === a.message_id,
+	// 					);
+	// 					if (idx !== -1) {
+	// 						const offset = virtualizer.getOffsetForIndex(idx);
+	// 						if (offset !== null) {
+	// 							const targetOffset = offset - (scrollEl?.clientHeight ?? 0) / 2;
+	// 							const distance = Math.abs(
+	// 								virtualizer.scrollOffset - targetOffset,
+	// 							);
+	// 							const shouldSmooth =
+	// 								distance < (scrollEl?.clientHeight ?? 0) * 3;
+	// 							virtualizer.scrollToOffset(targetOffset, {
+	// 								behavior: shouldSmooth ? "smooth" : "auto",
+	// 							});
+	// 						}
+	// 					} else {
+	// 						// fallback
+	// 						virtualizer.scrollToOffset(virtualizer.getTotalSize());
+	// 					}
+	// 				} else {
+	// 					const pos = timeline.scroll_pos;
+	// 					if (pos === undefined || pos === -1) {
+	// 						virtualizer.scrollToOffset(virtualizer.getTotalSize());
+	// 					} else {
+	// 						virtualizer.scrollToOffset(pos);
+	// 					}
+	// 				}
+	// 			}, 0);
+	// 		},
+	// 	),
+	// );
 
 	// PERF: is constantly setting pos too heavy?
 	const setPos = throttle(() => {
 		if (!scrollEl) return;
-		console.log("setPos")
 		// use virtualizer offset instead of scrollTop since it's more accurate
-		const offset = virtualizer.scrollOffset;
+		// NOTE: verify this claim
+		const offset = virtualizer.scrollOffset ?? -1; // NOTE: what do i do when scrollOffset is null?
 		const atBottom =
 			scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight < 50;
 		const pos = atBottom ? -1 : offset;
-		setChannelState("scroll_pos", pos);
+		timeline.events.emit("scrollPosition", pos);
+		updateTimeline("scroll_pos", pos);
 	}, 300);
 
-	// reactively update has_forward
-	createEffect(() => {
-		const m = messages();
-		if (m) {
-			setChannelState("has_forward", m.has_forward);
-		}
-	});
-
-	// register timeline controller
-	setChannelState("timeline", {
-		jumpToEnd(markAsRead = false) {
-			setAnchor({ type: "backwards", limit: calculateSliceLen() });
-			if (markAsRead) markRead();
-			queueMicrotask(() =>
-				virtualizer.scrollToOffset(virtualizer.getTotalSize()),
-			);
-		},
-		jumpToMessage(message_id: string, highlight = false) {
-			setAnchor({ type: "context", limit: 50, message_id });
-			if (highlight) setChannelState("highlight", message_id);
-		},
-		scrollBy(px: number, smooth: boolean) {
-			virtualizer.scrollBy(px, { behavior: smooth ? "smooth" : "auto" });
-		},
-		isAtBottom() {
-			if (!scrollEl) return true;
-			const bottom = scrollEl.scrollHeight - scrollEl.clientHeight;
-			return virtualizer.scrollOffset >= bottom - 64;
-		},
-		scrollToBottom(smooth = false) {
-			virtualizer.scrollToEnd({ behavior: smooth ? "smooth" : "auto" });
-		},
-	});
+	// TODO: remove? and remove has_forward?
+	// // reactively update has_forward
+	// createEffect(() => {
+	// 	const m = timeline.messages;
+	// 	if (m) {
+	// 		updateTimeline("has_forward", m.has_forward);
+	// 	}
+	// });
 
 	return (
 		<>
-			{/* TODO: move jump to unread/mark as read buttons into Chat.tsx */}
-			<Show
-				when={
-					messages()?.has_forward &&
-					props.channel.last_version_id !== channelState.read_marker_id
-				}
-			>
-				<div class="new-messages">
-					<button
-						type="button"
-						class="jump-read"
-						onClick={() =>
-							channelState.timeline.jumpToMessage(
-								channelState.read_marker_id!,
-								true,
-							)
-						}
-					>
-						jump to unread
-					</button>
-					<button type="button" class="mark-read" onClick={markRead}>
-						mark as read
-					</button>
-				</div>
-			</Show>
 			<div
 				class="timeline"
 				role="log"
@@ -334,7 +309,7 @@ export const Timeline = (props: ChatProps) => {
 				>
 					<For each={virtualizer.getVirtualItems()}>
 						{(row) => {
-							const item = () => items()[row.index];
+							const item = () => timeline.items[row.index];
 							let el: HTMLDivElement | null = null;
 
 							createEffect(() => {
@@ -386,12 +361,3 @@ export const Timeline = (props: ChatProps) => {
 // 		</Switch>
 // 	);
 // };
-
-// TODO: extract timeline logic out of component
-// export type TimelineProps = {
-// 	tl: TimelineController;
-// };
-//
-// export const createTimeline = (): TimelineController => {
-// 	return { ... }
-// }
