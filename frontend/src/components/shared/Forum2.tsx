@@ -81,7 +81,11 @@ import type { MediaProps } from "@/media/util";
 import type { Attachment } from "@/types/chat";
 import { getMessageOverrideName } from "@/utils/general";
 import { ChannelIcon } from "./User";
-import { MessageToolbar } from "../features/chat/MessageToolbar";
+import {
+	MessageToolbarProvider,
+	useMessageToolbar,
+} from "../features/chat/message-toolbar-context.tsx";
+import { MessageToolbarMount } from "../features/chat/MessageToolbar.tsx";
 
 // Type guard for RoomMember with override_name
 function hasOverrideName(
@@ -824,114 +828,120 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	const isEmpty = () => !ch.editor_state?.doc.textContent.trim();
 
 	return (
-		<div class="thread">
-			<div class="main">
-				<div>
-					<h2 class="title">{props.channel.name}</h2>
-				</div>
-				<div style="display:flex">
-					<div style="flex:1">
-						{/* FIXME: total comment count */}
-						{comments()?.children.length ?? 0} comments
-						<button type="button" class="button" onClick={collapseAll}>
-							collapse replies
-						</button>
-						<button type="button" class="button" onClick={expandAll}>
-							expand all
-						</button>
-					</div>
+		<MessageToolbarProvider>
+			<div class="thread">
+				<div class="main">
 					<div>
+						<h2 class="title">{props.channel.name}</h2>
+					</div>
+					<div style="display:flex">
+						<div style="flex:1">
+							{/* FIXME: total comment count */}
+							{comments()?.children.length ?? 0} comments
+							<button type="button" class="button" onClick={collapseAll}>
+								collapse replies
+							</button>
+							<button type="button" class="button" onClick={expandAll}>
+								expand all
+							</button>
+						</div>
 						<div>
-							order by{" "}
-							<Dropdown
-								options={[
-									{ item: "new", label: "newest comments first" },
-									{ item: "old", label: "oldest comments first" },
-									{
-										item: "activity",
-										label: "recently active comment threads",
-									},
-									{ item: "reactions:+1", label: "most +1 reactions" },
-									{ item: "random", label: "random ordering" },
-									{ item: "hot", label: "mystery algorithm 1" },
-									{ item: "hot2", label: "mystery algorithm 2" },
-									// NOTE: hacker news algorithm
-									//   score = points / ((time + 2) ** gravity)
-									//   time = how old the post is in hours(?)
-									//   gravity = 1.8
-								]}
-							/>
+							<div>
+								order by{" "}
+								<Dropdown
+									options={[
+										{ item: "new", label: "newest comments first" },
+										{ item: "old", label: "oldest comments first" },
+										{
+											item: "activity",
+											label: "recently active comment threads",
+										},
+										{ item: "reactions:+1", label: "most +1 reactions" },
+										{ item: "random", label: "random ordering" },
+										{ item: "hot", label: "mystery algorithm 1" },
+										{ item: "hot2", label: "mystery algorithm 2" },
+										// NOTE: hacker news algorithm
+										//   score = points / ((time + 2) ** gravity)
+										//   time = how old the post is in hours(?)
+										//   gravity = 1.8
+									]}
+								/>
+							</div>
 						</div>
 					</div>
-				</div>
-				<Forum2Comments
-					channel={props.channel}
-					commentTree={commentTree()}
-					collapsed={collapsed}
-				/>
-				<div class="comment-input" classList={{ locked: locked() }}>
-					<Show when={reply()}>
-						{(r) => <InputReply thread={props.channel} reply={r()} />}
-					</Show>
-					<Show when={atts()?.length}>
-						<div class="attachments">
-							<header>
-								{atts()?.length}{" "}
-								{atts()?.length === 1 ? "attachment" : "attachments"}
-							</header>
-							<ul>
-								<For each={atts()}>
-									{(att) => (
-										<RenderUploadItem thread_id={props.channel.id} att={att} />
-									)}
-								</For>
-							</ul>
-						</div>
-					</Show>
-					<div class="text">
-						<label class="upload">
-							+
-							<input
-								multiple
-								type="file"
-								onInput={uploadFile}
-								value="upload file"
-								disabled={locked()}
-							/>
-						</label>
-						<editor.View
-							onSubmit={onSubmit}
-							onChange={onChange}
-							placeholder={
-								locked() ? "This thread is locked" : "add a comment..."
-							}
-							channelId={props.channel.id}
-							submitOnEnter={false}
-							disabled={locked()}
-						/>
-						<EmojiButton picked={onEmojiPick} />
-					</div>
-					<footer style="display: flex; align-items: center;">
-						<Show when={props.channel.slowmode_message || slowmodeActive()}>
-							<div class="slowmode" ref={slowmodeRef}>
-								{slowmodeFormatted()}
+					<Forum2Comments
+						channel={props.channel}
+						commentTree={commentTree()}
+						collapsed={collapsed}
+					/>
+					<div class="comment-input" classList={{ locked: locked() }}>
+						<Show when={reply()}>
+							{(r) => <InputReply thread={props.channel} reply={r()} />}
+						</Show>
+						<Show when={atts()?.length}>
+							<div class="attachments">
+								<header>
+									{atts()?.length}{" "}
+									{atts()?.length === 1 ? "attachment" : "attachments"}
+								</header>
+								<ul>
+									<For each={atts()}>
+										{(att) => (
+											<RenderUploadItem
+												thread_id={props.channel.id}
+												att={att}
+											/>
+										)}
+									</For>
+								</ul>
 							</div>
 						</Show>
-						<div style="flex:1"></div>
-						<menu>
-							<button
-								type="button"
-								class="big primary"
-								onClick={send}
-								disabled={locked() || isEmpty()}
-							>
-								send
-							</button>
-						</menu>
-					</footer>
+						<div class="text">
+							<label class="upload">
+								+
+								<input
+									multiple
+									type="file"
+									onInput={uploadFile}
+									value="upload file"
+									disabled={locked()}
+								/>
+							</label>
+							<editor.View
+								onSubmit={onSubmit}
+								onChange={onChange}
+								placeholder={
+									locked() ? "This thread is locked" : "add a comment..."
+								}
+								channelId={props.channel.id}
+								submitOnEnter={false}
+								disabled={locked()}
+							/>
+							<EmojiButton picked={onEmojiPick} />
+						</div>
+						<footer style="display: flex; align-items: center;">
+							<Show when={props.channel.slowmode_message || slowmodeActive()}>
+								<div class="slowmode" ref={slowmodeRef}>
+									{slowmodeFormatted()}
+								</div>
+							</Show>
+							<div style="flex:1"></div>
+							<menu>
+								<button
+									type="button"
+									class="big primary"
+									onClick={send}
+									disabled={locked() || isEmpty()}
+								>
+									send
+								</button>
+							</menu>
+						</footer>
+					</div>
 				</div>
+				<MessageToolbarMount />
 			</div>
-		</div>
+		</MessageToolbarProvider>
 	);
 };
 
@@ -1149,6 +1159,7 @@ const Comment = (props: {
 	const children = () => props.node.children;
 	const api2 = useApi();
 	const [ch, chUpdate] = useChannel();
+	const toolbar = useMessageToolbar();
 
 	const collapsed = () => props.collapsed.has(message().id);
 	const isEditing = () => ch.editingMessage?.message_id === message().id;
@@ -1261,6 +1272,12 @@ const Comment = (props: {
 				"--is-darker": props.depth % 2 === 1 ? 1 : 0,
 			}}
 			onClick={handleClick}
+			onMouseEnter={(e) => {
+				toolbar.setTarget({ message: message(), element: e.currentTarget });
+			}}
+			onMouseLeave={() => {
+				toolbar.setTarget(null);
+			}}
 		>
 			<div class="inner">
 				<header>
@@ -1347,7 +1364,6 @@ const Comment = (props: {
 						<Show when={message().reactions?.length}>
 							<Reactions message={message()} />
 						</Show>
-						<MessageToolbar message={message()} />
 					</Show>
 				</Show>
 			</div>
