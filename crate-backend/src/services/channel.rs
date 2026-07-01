@@ -472,7 +472,10 @@ impl ServiceChannels {
                     perms.ensure(Permission::DocumentComment)?;
                 }
             };
-            if json.bitrate.is_some_and(|b| b > 393216) {
+            if json
+                .bitrate
+                .is_some_and(|b| b > self.state.config.limits.room.max_bitrate as u64)
+            {
                 return Err(Error::BadStatic("bitrate is too high"));
             }
             // TODO: move some of this validation to common
@@ -987,7 +990,9 @@ impl ServiceChannels {
             }
         }
 
-        if patch.bitrate.is_some_and(|b| b.is_some_and(|b| b > 393216)) {
+        if patch.bitrate.is_some_and(|b| {
+            b.is_some_and(|b| (b as u32) > self.state.config.limits.room.max_bitrate)
+        }) {
             return Err(Error::BadStatic("bitrate is too high"));
         }
         if patch.bitrate.is_some() {

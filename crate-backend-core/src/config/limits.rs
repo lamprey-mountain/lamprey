@@ -83,6 +83,10 @@ pub struct LimitsRoom {
     /// the maximum number of webhooks per room
     #[serde(default = "default_max_total_webhooks")]
     pub max_total_webhooks: u32,
+
+    /// the maximum bitrate for voice channels
+    #[serde(default = "default_max_bitrate")]
+    pub max_bitrate: u32,
 }
 
 fn default_max_roles() -> u16 {
@@ -109,6 +113,9 @@ fn default_max_channel_webhooks() -> u32 {
 fn default_max_total_webhooks() -> u32 {
     1024
 }
+fn default_max_bitrate() -> u32 {
+    393216
+}
 
 impl Default for LimitsRoom {
     fn default() -> Self {
@@ -121,6 +128,7 @@ impl Default for LimitsRoom {
             max_role_mention_members_add: default_max_role_mention_members_add(),
             max_channel_webhooks: default_max_channel_webhooks(),
             max_total_webhooks: default_max_total_webhooks(),
+            max_bitrate: default_max_bitrate(),
         }
     }
 }
