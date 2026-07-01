@@ -61,6 +61,7 @@ import { flags } from "@/lib/flags";
 import { md } from "@/lib/markdown";
 import { getMessageOverrideName } from "@/utils/general";
 import { ChannelIcon } from "./User";
+import { Forum2CreateForm } from "./Forum2CreateForm.tsx";
 import {
 	MessageToolbarProvider,
 	useMessageToolbar,
@@ -180,8 +181,6 @@ export const Forum2 = (props: { channel: Channel }) => {
 		return activeThreads;
 	};
 
-	const [_bottom, setBottom] = createSignal<Element | undefined>();
-
 	// TODO: Implement proper pagination for threads
 
 	const getThreads = () => {
@@ -208,44 +207,16 @@ export const Forum2 = (props: { channel: Channel }) => {
 	};
 
 	function createThread() {
-		const rid = room_id();
-		if (!rid) throw new Error("not in a room");
-
-		// channels2.create(rid, {
-		// 	name,
-		// 	parent_id: props.channel.id
-		// })
-
-		modalctl.prompt("name?", (name) => {
-			if (!name) return;
-			channels2.create(rid, {
-				name,
-				parent_id: props.channel.id,
-				type: "ThreadForum2",
-				// tags: [],
-				// starter_message: {
-				// 	content: "",
-				// 	attachments: [],
-				// 	mentions: {},
-				// },
-			});
-		});
+		setShowCreateForm(true);
 	}
 
-	const [ch, chUpdate] = useChannel();
+	const [_bottom, setBottom] = createSignal<Element | undefined>();
+	const [showCreateForm, setShowCreateForm] = createSignal(false);
+	const [_ch, chUpdate] = useChannel();
+
 	const currentUser = useCurrentUser();
 	const user_id = () => currentUser()?.id;
 	const perms = usePermissions(user_id, room_id, () => undefined);
-
-	// const [threadId, setThreadId] = createSignal<null | string>(null);
-
-	const getOrCreateChannelContext = (channelId: string) => {
-		if (!ctx.channel_contexts.has(channelId)) {
-			const store = createStore(createInitialChannelState());
-			ctx.channel_contexts.set(channelId, store);
-		}
-		return ctx.channel_contexts.get(channelId);
-	};
 
 	return (
 		<div class="forum2">
@@ -266,6 +237,13 @@ export const Forum2 = (props: { channel: Channel }) => {
 						create thread
 					</button>
 				</div>
+				<Show when={showCreateForm()}>
+					<Forum2CreateForm
+						channel={props.channel}
+						onCancel={() => setShowCreateForm(false)}
+						onSuccess={() => setShowCreateForm(false)}
+					/>
+				</Show>
 				<div style="display:flex; align-items:center">
 					<h3 style="font-size:1rem; margin-top:8px;flex:1">
 						{getThreads().length} {threadFilter()} threads

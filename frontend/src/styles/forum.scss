@@ -287,3 +287,44 @@
 .forum2 .comment-input > footer {
 	height: auto;
 }
+
+.forum2-create-form {
+	margin: 8px 0;
+	padding: 8px;
+	background: $bg-200;
+	border: solid $sep-300 1px;
+	border-radius: 4px;
+
+	& > .title-input {
+		width: 100%;
+		margin-bottom: 8px;
+	}
+
+	& > .editor {
+		border: solid transparent 1px;
+
+		&:focus-within {
+			border: solid $sep-500 1px;
+		}
+	}
+
+	& > .editor > .ProseMirror {
+		min-height: 3lh;
+
+		& .placeholder {
+			color: $fg-600;
+		}
+	}
+
+	& .upload.button {
+		background-color: $bg-300;
+		cursor: pointer;
+		padding: 2px 4px;
+		border: solid $sep-500 1px;
+
+		&:hover,
+		&:focus {
+			background-color: $bg-400;
+		}
+	}
+}
