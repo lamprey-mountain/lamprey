@@ -70,18 +70,20 @@ export const Document = (
 	const [editor, setEditor] = createSignal<any>(null);
 
 	return (
-		<div class="document">
+		<>
 			<DocumentHeader channel={props.channel} editor={editor} />
-			<DocumentMain
-				channel={props.channel}
-				setEditor={setEditor}
-				editor={() => editor()}
-				selectedSeq={props.selectedSeq}
-				onSelectChangeset={props.onSelectChangeset}
-				hoverSeq={props.hoverSeq}
-				onHoverChangeset={props.onHoverChangeset}
-			/>
-		</div>
+			<div class="document">
+				<DocumentMain
+					channel={props.channel}
+					setEditor={setEditor}
+					editor={() => editor()}
+					selectedSeq={props.selectedSeq}
+					onSelectChangeset={props.onSelectChangeset}
+					hoverSeq={props.hoverSeq}
+					onHoverChangeset={props.onHoverChangeset}
+				/>
+			</div>
+		</>
 	);
 };
 
@@ -323,7 +325,7 @@ const DocumentHeader = (
 	});
 
 	return (
-		<header>
+		<header class="document-header">
 			<div class="menu-group">
 				<button
 					type="button"

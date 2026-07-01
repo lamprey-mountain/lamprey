@@ -1,25 +1,13 @@
 @use "./util.scss" as *;
 
-.document {
-	grid-area: main;
-	background-color: $bg-200;
+.document-header {
 	display: flex;
-	flex-direction: column;
-	overflow-y: auto;
-	position: relative;
-
-	& > header {
-		padding: 4px;
-		background: $bg-100;
-		display: flex;
-		box-shadow: 2px 2px 4px oklch(var(--color-bg1) / 0.5);
-		border-bottom: solid $sep-300 1px;
-	}
-
-	& > main {
-		flex: 1;
-		padding: 8px;
-	}
+	align-items: center;
+	height: 48px;
+	padding: 4px;
+	background: $bg-100;
+	box-shadow: 2px 2px 4px oklch(var(--color-bg1) / 0.5);
+	border-bottom: solid $sep-300 1px;
 
 	& .menu-group {
 		display: flex;
@@ -43,6 +31,20 @@
 				background: $bg-100;
 			}
 		}
+	}
+}
+
+.document {
+	grid-area: main;
+	background-color: $bg-200;
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+	position: relative;
+
+	& > div > main {
+		flex: 1;
+		padding: 8px;
 	}
 
 	.document-presence-cursor {
