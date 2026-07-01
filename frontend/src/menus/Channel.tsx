@@ -24,7 +24,8 @@ export function ChannelMenu(props: { channel_id: string }) {
 	const channels2 = useChannels();
 	const threadMembers2 = useThreadMembers();
 	const tags2 = useTags();
-	const { markThreadRead, markCategoryRead } = useReadTracking();
+	const { markCategoryRead } = useReadTracking();
+	const readTracking = useReadTracking();
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
 
@@ -56,9 +57,9 @@ export function ChannelMenu(props: { channel_id: string }) {
 		if (c.type === "Category") {
 			markCategoryRead(props.channel_id);
 		} else {
-			const version_id = c.last_version_id;
-			if (!version_id) return;
-			markThreadRead(props.channel_id, version_id, true);
+			const message_id = c.last_message_id;
+			if (!message_id) return;
+			readTracking.ack(props.channel_id, message_id, true, false);
 		}
 	};
 

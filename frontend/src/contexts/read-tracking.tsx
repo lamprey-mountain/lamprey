@@ -159,34 +159,24 @@ export function createReadTrackingProvider(
 		delay: boolean,
 	) => {
 		if (delay) {
+			// FIXME: `delay` should debounce acks
 			setTimeout(() => {
-				markChannelRead(channel_id, message_id, also_local, false);
+				ack(channel_id, message_id, also_local, false);
 			}, 300);
 			return;
 		}
 
-		// FIXME: implement
-		// const cc = channel_contexts.get(channel_id);
-		// if (cc) {
-		// 	const [_ch, chUpdate] = cc;
-		// 	if (also_local) {
-		// 		chUpdate("read_marker_id", message_id);
-		// 	}
-		// 	await channels2.ack(channel_id, undefined, message_id);
-		// } else {
-		// 	const c = channels2.cache.get(channel_id);
-		// 	if (c) {
-		// 		if (also_local) {
-		// 			dataUpdate(
-		// 				"channels",
-		// 				channel_id,
-		// 				"read_marker_id",
-		// 				c.last_version_id!,
-		// 			);
-		// 		}
-		// 		await channels2.ack(channel_id, undefined, c.last_version_id!);
-		// 	}
-		// }
+		// PERF: immediately call ackMessage, rollback if channels2.ack() fails/throws (optimistic ui)
+
+		await channels2.ack(channel_id, message_id, undefined);
+
+		if (also_local) {
+			const cc = channel_contexts.get(channel_id);
+			if (cc) {
+				const [chState] = cc;
+				chState.timeline.ackMessage(message_id);
+			}
+		}
 	};
 
 	return {

@@ -109,27 +109,30 @@ export class ChannelsService extends BaseService<Channel> {
 		);
 	}
 
+	// TODO: copy this logic to ackBulk
 	async ack(
 		channel_id: string,
 		message_id: string | undefined,
-		version_id: string,
+		version_id: string | undefined,
 	): Promise<void> {
-		await this.retryWithBackoff(() =>
+		const data = await this.retryWithBackoff(() =>
 			this.client.http.PUT("/api/v1/channel/{channel_id}/ack", {
 				params: { path: { channel_id } },
 				body: { message_id, version_id },
 			}),
 		);
 
+		if (data.type !== "Message")
+			throw new Error("got incorrect Ack type; expected Message ack");
+
 		// Update cache
 		const t = this.cache.get(channel_id);
 		if (t) {
-			const is_unread = version_id < (t.last_version_id ?? "");
 			this.cache.set(channel_id, {
 				...t,
-				last_read_id: version_id,
-				mention_count: 0,
-				is_unread,
+				last_read_id: data.message_id,
+				mention_count: data.mention_count ?? 0,
+				is_unread: data.unread,
 			} as Channel);
 		}
 	}

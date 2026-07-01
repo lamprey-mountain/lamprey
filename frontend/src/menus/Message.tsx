@@ -22,7 +22,7 @@ export function MessageMenu(props: MessageMenuProps) {
 	const api2 = useApi();
 	const channels2 = useChannels();
 	const messagesService = useMessages();
-	const { markThreadRead } = useReadTracking();
+	const readTracking = useReadTracking();
 	const message = messagesService.use(
 		() => props.channel_id,
 		() => props.message_id,
@@ -62,8 +62,7 @@ export function MessageMenu(props: MessageMenuProps) {
 
 		const prev = tl[index - 1];
 		if (prev) {
-			const prev_version_id = prev.latest_version.version_id;
-			markThreadRead(props.channel_id, prev_version_id, true);
+			readTracking.ack(props.channel_id, prev.id, true, false);
 		} else {
 			// If no previous message, we mark everything as unread
 			// In our current system, setting it to undefined or a very old ID might work.

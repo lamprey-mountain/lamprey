@@ -23,20 +23,23 @@ export const ChatMain = (props: ChatProps) => {
 	const readTracking = useReadTracking();
 
 	const markReadFn = throttle(() => {
-		const version_id = props.channel.last_version_id;
+		const message_id = props.channel.last_message_id;
 		const read_id = props.channel.last_read_id;
-		if (version_id && version_id !== read_id) {
-			readTracking.markChannelRead(props.channel.id, version_id, false, true);
+		if (message_id && message_id !== read_id) {
+			readTracking.ack(props.channel.id, message_id, false, true);
 		}
 	}, 300);
 
 	// ack channel when scrolled to bottom
 	channelState.timeline.events.on("scrollBottom", markReadFn);
 
-	const jumpToEnd = (markRead = false) => {
+	// when esc pressed, jump to end of timeline and mark channel as read
+	const jumpToEnd = () => {
 		channelState.timeline.jumpToBottom();
-		if (markRead) {
-			markReadFn();
+		const message_id = props.channel.last_message_id;
+		const read_id = props.channel.last_read_id;
+		if (message_id && message_id !== read_id) {
+			readTracking.ack(props.channel.id, message_id, true, false);
 		}
 	};
 
@@ -71,7 +74,7 @@ export const ChatMain = (props: ChatProps) => {
 							}}
 							onKeyDown={(e) => {
 								if (e.key === "Escape") {
-									jumpToEnd(true);
+									jumpToEnd();
 								} else if (e.key === "PageDown") {
 									channelState.timeline.scrollBy(
 										globalThis.innerHeight * 0.8,

@@ -220,6 +220,24 @@ export const Timeline = (props: ChatProps) => {
 		}
 	});
 
+	timeline.commands.on("ackMessage", (data) => {
+		updateTimeline("last_read_message_id", data.message_id);
+
+		// re-render to update read markers
+		// PERF: only re-render if last_read_message_id is inside the current message range
+		// m?.contains(data.message_id)
+		const m = timeline.messages;
+		if (m) {
+			const rendered = renderTimeline({
+				items: m.items,
+				has_after: m.has_forward,
+				has_before: m.has_backwards,
+				read_marker_id: data.message_id,
+			});
+			updateTimeline("items", reconcile(rendered));
+		}
+	});
+
 	timeline.commands.listen((e) => {
 		log.debug(e.name, "command", e.details ?? null);
 	});

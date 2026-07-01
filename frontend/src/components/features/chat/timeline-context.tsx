@@ -19,6 +19,7 @@ export type TimelineController = {
 		highlight?: boolean,
 	): void;
 	scrollBy(px: number, smooth?: boolean): void;
+	ackMessage(message_id: string): void;
 
 	events: GlobalEmitter<TimelineEvents>;
 	commands: GlobalEmitter<TimelineCommands>;
@@ -40,6 +41,7 @@ export type TimelineCommands = {
 	jumpToBottom: { smooth: boolean };
 	jumpToTop: { smooth: boolean };
 	jumpToMessage: { message_id: string; smooth: boolean; highlight: boolean };
+	ackMessage: { message_id: string };
 };
 
 export type TimelineState = {
@@ -131,6 +133,9 @@ export const createTimelineController = (): TimelineController => {
 		},
 		scrollBy(px: number, smooth = false) {
 			commands.emit("scrollBy", { px, smooth });
+		},
+		ackMessage(message_id: string) {
+			commands.emit("ackMessage", { message_id });
 		},
 
 		events,
