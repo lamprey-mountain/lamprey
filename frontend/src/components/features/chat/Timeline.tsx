@@ -4,7 +4,15 @@ import { throttle } from "@solid-primitives/scheduled";
 import { useReadTracking } from "@/contexts/read-tracking";
 import { logger } from "@/utils/logger";
 import { createVirtualizer } from "@tanstack/solid-virtual";
-import { createEffect, on, For, Show, onCleanup } from "solid-js";
+import {
+	createEffect,
+	on,
+	For,
+	Show,
+	onCleanup,
+	Switch,
+	Match,
+} from "solid-js";
 import { ChatProps } from "./Chat";
 import { renderTimeline, TimelineItem, TimelineItemT } from "./Messages";
 import { MessageToolbarMount } from "./MessageToolbar";
@@ -12,6 +20,8 @@ import { MessageRange } from "@/api/services/MessagesService";
 import { createStore, reconcile } from "solid-js/store";
 import { TimelineState, useTimeline } from "./timeline-context";
 import { Queue } from "@/utils/queue";
+import { ChannelT } from "@/types";
+import { MessageView } from "./Message";
 
 // TODO: add logging
 const log = logger.for("timeline");
@@ -322,10 +332,6 @@ export const Timeline = (props: ChatProps) => {
 									class="timeline-item"
 									data-index={row.index}
 									style={{
-										position: "absolute",
-										top: 0,
-										left: 0,
-										width: "100%",
 										transform: `translateY(${row.start}px)`,
 									}}
 									ref={el!}
@@ -346,18 +352,42 @@ export const Timeline = (props: ChatProps) => {
 	);
 };
 
-// TODO: rewrite TimelineItem
-// export const TimelineItem2 = (props: {
-// 	channel: ChannelT;
-// 	item: TimelineItemT;
-// }) => {
-// 	return (
-// 		<Switch>
-// 			<Match when={props.item.type === "message" && props.item}>
-// 				{(item) => (
-// 					<MessageView message={item().message} separate={item().separate} />
-// 				)}
-// 			</Match>
-// 		</Switch>
-// 	);
-// };
+export const TimelineItem2 = (props: {
+	channel: ChannelT;
+	item: TimelineItemT;
+}) => {
+	// TODO: rename spacer, spacer-mini?
+	// TODO: remove spacer-mini2
+	// TODO: render message skeletons for spacer
+
+	return (
+		<li
+			classList={{
+				mentioned: false,
+				flume: false,
+				selected: false,
+				"reply-target": false,
+			}}
+		>
+			<Switch>
+				<Match when={props.item.type === "message" && props.item}>
+					{(item) => (
+						<MessageView message={item().message} separate={item().separate} />
+					)}
+				</Match>
+				<Match when={props.item.type === "info" && props.item}>
+					{(item) => <header>todo</header>}
+				</Match>
+				<Match when={props.item.type === "divider" && props.item}>
+					{(item) => <div class="timeline-divider">todo</div>}
+				</Match>
+				<Match when={props.item.type === "spacer"}>
+					<div class="spacer"></div>
+				</Match>
+				<Match when={props.item.type === "spacer-mini"}>
+					<div class="spacer-mini"></div>
+				</Match>
+			</Switch>
+		</li>
+	);
+};

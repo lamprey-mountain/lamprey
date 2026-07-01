@@ -19,6 +19,10 @@ import { getTwemoji } from "@/lib/emoji";
 import { flags } from "@/lib/flags";
 import { md } from "@/lib/markdown";
 import { getEmojiUrl } from "@/media/util";
+import { Dynamic } from "solid-js/web";
+
+// TODO: avoid unnecessary tags/nesting
+// eg. <span class="markdown "><span>yo</span></span>
 
 // --- Context ---
 
@@ -501,14 +505,15 @@ export const Markdown = (
 
 	return (
 		<MarkdownContext.Provider value={{ channel: channel() }}>
-			<div
+			<Dynamic
+				component={props.inline ? "span" : "div"}
 				class={`markdown ${props.class ?? ""}`}
 				classList={props.classList}
 				ref={props.ref as any}
 			>
 				<RenderTokens tokens={tokens()} />
 				{props.children}
-			</div>
+			</Dynamic>
 		</MarkdownContext.Provider>
 	);
 };

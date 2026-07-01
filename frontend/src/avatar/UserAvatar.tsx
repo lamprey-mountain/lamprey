@@ -258,6 +258,7 @@ export const Avatar = (props: VoidProps<AvatarProps>) => {
 			aria-hidden="true"
 			class="avatar"
 			data-status={props.user?.presence?.status ?? "Offline"}
+			data-user-id={props.user?.id}
 			viewBox={`0 0 ${totalSize()} ${totalSize()}`}
 			role="img"
 			style={`--pad: ${pad()}px; ${props.style ?? ""}`}

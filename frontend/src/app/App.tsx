@@ -201,6 +201,11 @@ export const AppShell: Component<ParentProps> = (props) => {
 			classList={{
 				"underline-links": ctx.preferences().frontend.underline_links === "yes",
 			}}
+			data-message-style={
+				ctx.preferences().frontend.message_style === "compact"
+					? "compact"
+					: "cozy"
+			}
 		>
 			<Show when={cursorStats()}>
 				{(stats) => (
@@ -282,6 +287,7 @@ const Title = (props: { title?: string }) => {
 	return undefined;
 };
 
+// TODO: move to routes
 function RouteSettings(p: RouteSectionProps): JSX.Element {
 	const { t } = useCtx();
 	const user = useCurrentUser();

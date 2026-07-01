@@ -79,6 +79,7 @@ export function UserDisplayName(props: {
 	room_id?: string;
 	thread_id?: string;
 	onClick?: boolean;
+	class?: string;
 }) {
 	const roomMembers2 = useRoomMembers();
 	const users2 = useUsers();
@@ -112,7 +113,7 @@ export function UserDisplayName(props: {
 
 	return (
 		<span
-			class="user"
+			class={`user ${props.class ?? ""}`}
 			classList={{ "menu-user": props.onClick }}
 			data-user-id={props.user_id}
 			onClick={handleClick}
@@ -399,21 +400,23 @@ function SystemMessage(
 }
 
 export function ReplyView(props: {
-	thread_id: string;
+	channel_id: string;
 	reply_id: string;
 	source_id: string;
 	room_id?: string;
 }) {
 	const messagesService = useMessages();
 	const reply = messagesService.use(
-		() => props.thread_id,
+		() => props.channel_id,
 		() => props.reply_id,
 	);
-	const [_ch, chUpdate] = useOptionalChannel();
+	const [ch, chUpdate] = useOptionalChannel();
 
 	const content = () => {
 		const r = reply();
 		if (!r) return;
+		// TODO: handle embeds, components only messages
+		// TODO: apply different style for messages without content
 		return (
 			(r.latest_version.type === "DefaultMarkdown" &&
 				r.latest_version.content) ||
@@ -424,71 +427,41 @@ export function ReplyView(props: {
 		);
 	};
 
-	const ReplyContent = () => {
-		const r = reply();
-		if (
-			!r ||
-			r.latest_version.type !== "DefaultMarkdown" ||
-			!r.latest_version.content
-		)
-			return <>{content()}</>;
-
-		return (
-			<Markdown
-				content={r.latest_version.content}
-				channel_id={props.thread_id}
-				inline
-			/>
-		);
-	};
-
 	const scrollToReply = () => {
 		if (!chUpdate) return;
 		chUpdate("reply_jump_source", props.source_id);
-		chUpdate("anchor", {
-			type: "context",
-			limit: 50,
-			message_id: props.reply_id,
-		});
-		chUpdate("highlight", props.reply_id);
+		ch.timeline.jumpToMessage(props.reply_id, true, true);
 	};
 
 	return (
-		<div class="reply">
-			<div class="arrow">
-				<svg
-					aria-hidden="true"
-					viewBox="0 0 100 100"
-					preserveAspectRatio="none"
-				>
-					<path
-						vector-effect="non-scaling-stroke"
-						shape-rendering="crispEdges"
-						d="M 50 100 L 50 50 L 100 50"
-					/>
-				</svg>
-			</div>
-			<div class="content" style="display:flex" onClick={scrollToReply}>
+		<div class="reply" onClick={scrollToReply}>
+			<div class="spine"></div>
+			<div class="content">
 				<Show when={!reply.loading} fallback="loading...">
 					<Show when={reply()}>
 						{(r) => (
-							<UserDisplayName
-								user_id={r().author_id}
-								room_id={props.room_id}
-								thread_id={r().channel_id}
-								onClick
-							/>
+							<>
+								<UserDisplayName
+									user_id={r().author_id}
+									room_id={props.room_id}
+									thread_id={r().channel_id}
+									onClick
+									class="author"
+								/>
+								{/* TODO: typescript compatibility */}
+								<Show
+									when={r().latest_version.type === "DefaultMarkdown"}
+									fallback={content()}
+								>
+									<Markdown
+										content={(r().latest_version as any).content}
+										channel_id={props.channel_id}
+										inline
+									/>
+								</Show>
+							</>
 						)}
 					</Show>
-					{(() => {
-						const r = reply();
-						const version = r?.latest_version;
-						return version?.type === "DefaultMarkdown" && version.content ? (
-							<ReplyContent />
-						) : (
-							content()
-						);
-					})()}
 				</Show>
 			</div>
 		</div>
@@ -643,9 +616,6 @@ export function MessageView(props: MessageProps) {
 		return ch?.editingMessage?.message_id === props.message.id;
 	};
 
-	const messageStyle = () => ctx.preferences().frontend.message_style || "cozy";
-	const withAvatar = () => messageStyle() === "cozy";
-
 	const systemProps = {
 		get message() {
 			return props.message;
@@ -721,7 +691,6 @@ export function MessageView(props: MessageProps) {
 			<Match when={props.message.latest_version.type === "DefaultMarkdown"}>
 				<DefaultMessage
 					{...systemProps}
-					withAvatar={withAvatar()}
 					user={user()}
 					hovered={hovered()}
 					isEditing={isEditing()}
@@ -733,9 +702,9 @@ export function MessageView(props: MessageProps) {
 	);
 }
 
+// TODO: move props into DefaultMessageProps
 function DefaultMessage(
 	props: SystemMessageProps & {
-		withAvatar: boolean;
 		user: UserWithRelationship | undefined;
 		hovered: boolean;
 		isEditing: boolean;
@@ -744,7 +713,6 @@ function DefaultMessage(
 	},
 ) {
 	const flumes = useFlumes();
-
 	const toolbar = useMessageToolbar();
 	const version = () =>
 		props.message.latest_version.type === "DefaultMarkdown"
@@ -753,16 +721,34 @@ function DefaultMessage(
 	const flume = () =>
 		props.message.flume?.state === "Live" && flumes.get(props.message.id);
 
+	const isCozy = () =>
+		(props.ctx.preferences().frontend.message_style || "cozy") === "cozy";
+
+	const openUserView = (e: MouseEvent) => {
+		e.stopPropagation();
+		const currentTarget = e.currentTarget as HTMLElement;
+		const { userView, setUserView } = useUserPopout();
+		if (userView()?.ref === currentTarget) {
+			setUserView(null);
+		} else {
+			setUserView({
+				user_id: props.message.author_id,
+				room_id: props.room_id,
+				channel_id: props.message.channel_id,
+				ref: currentTarget,
+				source: "message",
+			});
+		}
+	};
+
 	return (
 		<article
 			ref={props.messageArticleRef}
 			class="message menu-message"
 			data-message-id={props.message.id}
+			data-author-id={props.message.author_id}
 			classList={{
-				withavatar: props.withAvatar,
 				separate: props.separate,
-				notseparate: !props.separate,
-				"toolbar-visible": props.toolbarVisible,
 			}}
 			onClick={props.handleClick}
 			onMouseDown={(e) => {
@@ -782,166 +768,118 @@ function DefaultMessage(
 			<Show when={version()?.reply_id}>
 				{(reply) => (
 					<ReplyView
-						thread_id={props.message.channel_id}
+						channel_id={props.message.channel_id}
 						reply_id={reply()}
 						source_id={props.message.id}
 						room_id={props.room_id}
 					/>
 				)}
 			</Show>
-			<Show when={props.withAvatar}>
-				<Show when={props.separate}>
-					<div
-						class="avatar-wrap menu-user"
-						data-user-id={props.message.author_id}
-						onClick={(e) => {
-							e.stopPropagation();
-							const currentTarget = e.currentTarget as HTMLElement;
-							const { userView, setUserView } = useUserPopout();
-							if (userView()?.ref === currentTarget) {
-								setUserView(null);
-							} else {
-								setUserView({
-									user_id: props.message.author_id,
-									room_id: props.room_id,
-									channel_id: props.message.channel_id,
-									ref: currentTarget,
-									source: "message",
-								});
-							}
-						}}
-					>
-						<Avatar user={props.user} animate={props.hovered} />
-						<Show when={props.message.thread}>
-							<div class="thread-spine"></div>
-						</Show>
-					</div>
-					<div class="author">
-						<Show when={flume()}>
-							<div class="flume-spinner">
-								<Icon src={icGear} color={colors.fg600} />
-							</div>
-						</Show>
-						<UserDisplayName
-							user_id={props.message.author_id}
-							room_id={props.room_id}
-							thread_id={props.message.channel_id}
-							onClick
-						/>
-						<Time date={props.date} animGroup="message-ts" />
+
+			<header class="header">
+				<Show when={flume()}>
+					<div class="flume-spinner">
+						<Icon src={icGear} color={colors.fg600} />
 					</div>
 				</Show>
-				<Show when={!props.separate}>
-					<div class="avatar"></div>
+				<UserDisplayName
+					user_id={props.message.author_id}
+					room_id={props.room_id}
+					thread_id={props.message.channel_id}
+					onClick
+					class="author"
+				/>
+				<Time
+					date={props.date}
+					animGroup="message-ts"
+					class="time"
+					format="time"
+				/>
+				<Time
+					date={props.date}
+					animGroup="message-ts"
+					class="full"
+					format="full"
+				/>
+			</header>
+
+			<aside class="aside">
+				<Avatar user={props.user} animate={props.hovered} />
+				<Show when={props.message.thread}>
+					<div class="thread-spine"></div>
 				</Show>
-				<div class="content">
-					<Show
-						when={!props.isEditing}
-						fallback={<MessageEditor message={props.message} />}
-					>
-						<MessageTextMarkdown message={props.message} />
-					</Show>
-					<Show when={version()?.attachments?.length}>
-						<ul class="attachments">
-							<For each={version()?.attachments}>
-								{(att) => <AttachmentView att={att} />}
-							</For>
-						</ul>
-					</Show>
-					<Show when={version()?.embeds?.length}>
-						<ul class="embeds">
-							<For each={version()?.embeds}>
-								{(embed) => <EmbedView embed={embed} />}
-							</For>
-						</ul>
-					</Show>
-					<Show when={flume()}>
-						{(f) => (
-							<Components
-								components={f().components}
-								channelId={props.message.channel_id}
-							/>
-						)}
-					</Show>
-					<Show when={version()?.components?.length && !flume()}>
+				<Time date={props.date} animGroup="message-ts" format="time" />
+			</aside>
+
+			<div class="content">
+				{/* markdown content */}
+				<Show
+					when={!props.isEditing}
+					fallback={<MessageEditor message={props.message} />}
+				>
+					<MessageTextMarkdown message={props.message} />
+				</Show>
+
+				{/* attachments */}
+				<Show when={version()?.attachments?.length}>
+					<ul class="attachments">
+						<For each={version()?.attachments}>
+							{(att) => <AttachmentView att={att} />}
+						</For>
+					</ul>
+				</Show>
+
+				{/* embeds */}
+				<Show when={version()?.embeds?.length}>
+					<ul class="embeds">
+						<For each={version()?.embeds}>
+							{(embed) => <EmbedView embed={embed} />}
+						</For>
+					</ul>
+				</Show>
+
+				{/* flume */}
+				<Show when={flume()}>
+					{(f) => (
 						<Components
-							components={version()?.components ?? []}
+							components={f().components}
 							channelId={props.message.channel_id}
 						/>
-					</Show>
-					<Show
-						when={props.message.reactions && props.message.reactions.length > 0}
-					>
-						<Reactions message={props.message} />
-					</Show>
-					<Show when={props.message.thread}>
-						{(thread) => (
-							<Show when={props.channels2.get(props.message.channel_id)}>
-								{(parentChannel) => (
-									<MessageThread
-										thread={thread()}
-										parentChannel={parentChannel()}
-										preferences={props.ctx.preferences()}
-									/>
-								)}
-							</Show>
-						)}
-					</Show>
-				</div>
-			</Show>
-			<Show when={!props.withAvatar}>
-				<div class="author-wrap">
-					<div class="author sticky" data-user-id={props.message.author_id}>
-						<UserDisplayName
-							user_id={props.message.author_id}
-							room_id={props.room_id}
-							thread_id={props.message.channel_id}
-							onClick
-						/>
-					</div>
-				</div>
-				<div class="content">
-					<Show
-						when={!props.isEditing}
-						fallback={<MessageEditor message={props.message} />}
-					>
-						<MessageTextMarkdown message={props.message} />
-					</Show>
-					<Show when={version()?.attachments?.length}>
-						<ul class="attachments">
-							<For each={version()?.attachments}>
-								{(att) => <AttachmentView att={att} />}
-							</For>
-						</ul>
-					</Show>
-					<Show when={version()?.embeds?.length}>
-						<ul class="embeds">
-							<For each={version()?.embeds}>
-								{(embed) => <EmbedView embed={embed} />}
-							</For>
-						</ul>
-					</Show>
-					<Show
-						when={props.message.reactions && props.message.reactions.length > 0}
-					>
-						<Reactions message={props.message} />
-					</Show>
-					<Show when={props.message.thread}>
-						{(thread) => (
-							<Show when={props.channels2.get(props.message.channel_id)}>
-								{(parentChannel) => (
-									<MessageThread
-										thread={thread()}
-										parentChannel={parentChannel()}
-										preferences={props.ctx.preferences()}
-									/>
-								)}
-							</Show>
-						)}
-					</Show>
-				</div>
-				<Time date={props.date} animGroup="message-ts" />
-			</Show>
+					)}
+				</Show>
+
+				{/* components */}
+				<Show when={version()?.components?.length && !flume()}>
+					<Components
+						components={version()?.components ?? []}
+						channelId={props.message.channel_id}
+					/>
+				</Show>
+
+				{/* reactions */}
+				<Show
+					when={props.message.reactions && props.message.reactions.length > 0}
+				>
+					<Reactions message={props.message} />
+				</Show>
+
+				{/* thread */}
+				<Show when={props.message.thread}>
+					{(thread) => (
+						<Show when={props.channels2.get(props.message.channel_id)}>
+							{(parentChannel) => (
+								<MessageThread
+									thread={thread()}
+									parentChannel={parentChannel()}
+									preferences={props.ctx.preferences()}
+								/>
+							)}
+						</Show>
+					)}
+				</Show>
+			</div>
+
+			<Time date={props.date} animGroup="message-ts" />
 		</article>
 	);
 }

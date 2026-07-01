@@ -65,6 +65,10 @@ export const ChatMain = (props: ChatProps) => {
 							class="chat"
 							classList={{ "has-typing": !!getTyping().length }}
 							data-channel-id={props.channel.id}
+							onClick={(e) => {
+								console.log(e.target.closest(".avatar[data-user-id]"));
+								// TODO: open user view
+							}}
 							onKeyDown={(e) => {
 								if (e.key === "Escape") {
 									jumpToEnd(true);

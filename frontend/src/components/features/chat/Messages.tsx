@@ -41,6 +41,7 @@ const TimelineMessageItem = (props: {
 		() => props.currentUser()?.id ?? "",
 	);
 
+	// TODO: move is mentioned calculation into a hook/function
 	const is_mentioned = createMemo(() => {
 		const me = props.currentUser();
 		if (!me) return false;
@@ -81,7 +82,6 @@ const TimelineMessageItem = (props: {
 
 	return (
 		<li
-			class="message"
 			classList={{
 				selected: props.item.message.id === ch.reply_id,
 				"message-selected": isSelected(),
@@ -111,9 +111,10 @@ export const TimelineItem = (props: {
 				/>
 			</Match>
 			<Match when={props.item.type === "info"}>
-				<li class="header">
+				<li class="timeline-header">
 					<header>
 						<Show when={false}>
+							{/* TODO: add channel icon? */}
 							<div style="display:flex;align-items:center;gap:4px;">
 								<div style="background:red;border-radius:50%;display:grid;place-items:center;height:32px;width:32px;">
 									<ChannelIcon

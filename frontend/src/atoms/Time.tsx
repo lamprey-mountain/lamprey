@@ -40,17 +40,39 @@ export function timeAgo(date: Date): string {
 	return "long ago"; // fixme: i18n
 }
 
+export function formatTime(date: Date, format: TimeFormat): string {
+	// TODO: proper i18n support
+
+	// TODO: read from user preferences
+	const TWENTYFOUR_HOUR = true;
+
+	switch (format) {
+		case "relative":
+			return timeAgo(date);
+		case "time":
+			return `${TWENTYFOUR_HOUR ? date.getHours() : date.getHours() % 12 || 12}:${date.getMinutes().toString().padStart(2, "0")}`;
+		case "full":
+			return new Intl.DateTimeFormat("en", {
+				dateStyle: "medium",
+				timeStyle: "medium",
+			}).format(date);
+	}
+}
+
+type TimeFormat = "relative" | "time" | "full";
+
 type TimeProps = {
 	animGroup?: string;
 	class?: string;
+	format?: TimeFormat;
 } & ({ ts: number } | { date: Date });
 
 export function Time(props: VoidProps<TimeProps>) {
 	const date = () => ("date" in props ? props.date : new Date(props.ts));
 
 	const wrap = (
-		<time datetime={date().toISOString()} class={props.class}>
-			{(tick(), timeAgo(date()))}
+		<time datetime={date().toISOString()} class={`time ${props.class ?? ""}`}>
+			{(tick(), formatTime(date(), props.format ?? "relative"))}
 		</time>
 	) as HTMLElement;
 
