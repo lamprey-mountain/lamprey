@@ -229,11 +229,11 @@
 	.editor {
 		border: none;
 		padding: 0;
-	}
 
-	& .placeholder {
-		position: absolute;
-		color: $fg-400;
+		.placeholder {
+			position: absolute;
+			color: $fg-600;
+		}
 	}
 
 	& .syn {
