@@ -29,6 +29,36 @@ pub mod wiki_history {
     }
 }
 
+// TODO: this can be done in the future, its not very high priority right now
+/// Wiki graph (TODO)
+///
+/// Query links between documents in this wiki
+#[endpoint(
+    get,
+    path = "/wiki/{channel_id}/graph",
+    tags = ["document"],
+    scopes = [Full],
+    permissions = [ChannelView],
+    response(OK, body = WikiGraph, description = "ok"),
+)]
+pub mod wiki_graph {
+    use crate::v1::types::ChannelId;
+    use crate::v1::types::document::{WikiGraph, WikiGraphQuery};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[query]
+        pub query: WikiGraphQuery,
+    }
+
+    pub struct Response {
+        #[json]
+        pub graph: WikiGraph,
+    }
+}
+
 /// Document branch list
 #[endpoint(
     get,
@@ -415,6 +445,7 @@ pub mod document_crdt_diff {
 }
 
 /// Document CRDT apply
+///
 /// Note: Uses base64-encoded update in JSON body since raw binary isn't supported
 #[endpoint(
     patch,
@@ -443,6 +474,8 @@ pub mod document_crdt_apply {
 }
 
 /// Document content get
+///
+/// Get serialized document content
 #[endpoint(
     get,
     path = "/document/{channel_id}/revision/{revision_id}/content",
@@ -453,7 +486,7 @@ pub mod document_crdt_apply {
 )]
 pub mod document_content_get {
     use crate::v1::types::ChannelId;
-    use crate::v1::types::document::DocumentRevisionId;
+    use crate::v1::types::document::DocumentRevisionRef;
     use crate::v1::types::document::serialized::Serdoc;
 
     pub struct Request {
@@ -461,7 +494,7 @@ pub mod document_content_get {
         pub channel_id: ChannelId,
 
         #[path]
-        pub revision_id: DocumentRevisionId,
+        pub revision_id: DocumentRevisionRef,
     }
 
     pub struct Response {
@@ -471,6 +504,8 @@ pub mod document_content_get {
 }
 
 /// Document content put
+///
+/// Replace a document with serialized content. Creates a new revision.
 #[endpoint(
     put,
     path = "/document/{channel_id}/branch/{branch_id}/content",
@@ -510,18 +545,69 @@ pub mod document_content_put {
 )]
 pub mod document_content_revert {
     use crate::v1::types::ChannelId;
-    use crate::v1::types::document::{DocumentRevert, DocumentRevisionId};
+    use crate::v1::types::document::{DocumentRevert, DocumentRevisionRef};
 
     pub struct Request {
         #[path]
         pub channel_id: ChannelId,
 
         #[path]
-        pub revision_id: DocumentRevisionId,
+        pub revision_id: DocumentRevisionRef,
 
         #[json]
         pub body: DocumentRevert,
     }
 
     pub struct Response {}
+}
+
+// TODO: implement
+/// Document media attach
+///
+/// Attach a piece of media to a document. This **MUST** be called when uploading media to a document, otherwise the media may be garbage collected.
+///
+/// Note that the current system is very dumb, and will only garbage collect media when the document is deleted.
+///
+/// In the future, document-media linking will be maintained automatically as the crdt is edited.
+#[endpoint(
+    post,
+    path = "/document/{channel_id}/media",
+    tags = ["document"],
+    scopes = [Full],
+    permissions = [DocumentEdit],
+    response(NO_CONTENT, description = "successfully linked"),
+)]
+pub mod document_media_attach {
+    use crate::v1::types::ChannelId;
+    use crate::v1::types::document::DocumentMediaAttach;
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[json]
+        pub body: DocumentMediaAttach,
+    }
+
+    pub struct Response {}
+}
+
+mod next {
+    // TODO(future): add these endpoints
+
+    // POST /wiki/{wiki_id}/document -- wiki_document_create
+    // cf channel create. optional serdoc.
+    // struct DocumentCreate {
+    //     name: String,
+    //     tags: Vec<TagId>, // thread tags
+    //     content: Option<SerializedDocument>,
+    // }
+
+    // endpoint to append via serdoc
+    // endpoint to edit via serdoc
+    // cf flumes?
+    // the document editing endpoint should probably take a batch/transaction and be atomic
+
+    // endpoints for document comments
+    // maybe reuse thread endpoints + DocumentThread
 }

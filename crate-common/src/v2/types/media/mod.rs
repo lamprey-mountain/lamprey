@@ -507,6 +507,12 @@ pub enum MediaLinkType {
         script_id: RedexId,
         version_id: RedexVerId,
     },
+
+    /// this piece of media is used in a document
+    Document {
+        channel_id: ChannelId,
+        document_id: ChannelId,
+    },
 }
 
 impl MediaCreateSource {

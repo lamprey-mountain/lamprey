@@ -709,6 +709,7 @@ pub enum MediaLinkType {
     CustomEmoji,
     Script,
     ScriptVersion,
+    Document,
 }
 
 // TODO: surely there's a better way than manually managing media links/references

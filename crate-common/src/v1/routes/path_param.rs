@@ -1,5 +1,5 @@
 use crate::v1::types::{
-    Id, InviteCode, RoomFeature, document::DocumentRevisionId, reaction::ReactionKeyParam,
+    Id, InviteCode, RoomFeature, document::DocumentRevisionRef, reaction::ReactionKeyParam,
     room_template::RoomTemplateCode,
 };
 
@@ -91,7 +91,7 @@ impl PathParam for ReactionKeyParam {
     }
 }
 
-impl PathParam for DocumentRevisionId {
+impl PathParam for DocumentRevisionRef {
     fn from_path_param(s: &str) -> Result<Self, PathParamError> {
         s.parse()
             .map_err(|e: String| PathParamError(format!("invalid document revision id: {}", e)))

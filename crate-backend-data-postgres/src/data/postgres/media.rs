@@ -255,6 +255,10 @@ impl DataMedia for Postgres {
                         None => None,
                     },
                     DbMediaLinkType::ScriptVersion => None,
+                    DbMediaLinkType::Document => Some(MediaLinkTypeV2::Document {
+                        channel_id: link.target_id.into(),
+                        document_id: link.target_id.into(),
+                    }),
                 }
             })
             .collect();

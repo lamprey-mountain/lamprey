@@ -17,3 +17,8 @@ export function bytesToUuid(bytes: Uint8Array): string {
 		hex.substring(20, 32),
 	].join("-");
 }
+
+export function isUuid(uuid: string): boolean {
+	const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+	return regex.test(uuid);
+}

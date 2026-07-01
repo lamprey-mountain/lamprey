@@ -246,10 +246,11 @@ impl ServiceChannels {
         message_id: MessageId,
         version_id: MessageVerId,
     ) {
+        dbg!((thread_id, message_id, version_id,));
         self.cache_thread
             .entry(thread_id)
             .and_compute_with(|entry| async {
-                match entry {
+                match dbg!(entry) {
                     Some(e) => {
                         let mut chan = e.into_value();
                         chan.last_message_id = Some(message_id);

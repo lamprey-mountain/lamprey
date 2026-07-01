@@ -6,7 +6,7 @@ use crate::{EditContextId, gen_paginate};
 use async_trait::async_trait;
 use common::v1::types::document::{
     DocumentBranch, DocumentBranchCreate, DocumentBranchListParams, DocumentBranchPatch,
-    DocumentBranchState, DocumentTag, DocumentVersionId,
+    DocumentBranchState, DocumentRevisionId, DocumentTag,
 };
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
@@ -40,7 +40,7 @@ impl From<DbDocumentBranch> for DocumentBranch {
             default: row.is_default,
             private: row.private,
             state: row.state,
-            parent_id: row.parent_branch_id.map(|branch_id| DocumentVersionId {
+            parent_id: row.parent_branch_id.map(|branch_id| DocumentRevisionId {
                 branch_id: branch_id.into(),
                 seq: row.parent_seq.unwrap_or(0) as u64,
             }),

@@ -6,7 +6,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use common::v1::routes;
 use common::v1::types::application::Scope;
-use common::v1::types::document::{DocumentBranchState, DocumentRevisionId, HistoryPagination};
+use common::v1::types::document::{DocumentBranchState, DocumentRevisionRef, HistoryPagination};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{MessageSync, Permission};
 use lamprey_macros::handler;
@@ -448,14 +448,14 @@ async fn document_tag_create(
     perms.needs(Permission::DocumentEdit);
 
     let (branch_id, revision_seq) = match req.tag.revision {
-        common::v1::types::document::DocumentRevisionId::Branch { branch_id: _ } => {
+        common::v1::types::document::DocumentRevisionRef::Branch { branch_id: _ } => {
             // TODO: implement tagging branch heads
             return Err(Error::Unimplemented);
         }
-        common::v1::types::document::DocumentRevisionId::Revision { version_id } => {
+        common::v1::types::document::DocumentRevisionRef::Revision { version_id } => {
             (version_id.branch_id, version_id.seq)
         }
-        common::v1::types::document::DocumentRevisionId::Tag { .. } => {
+        common::v1::types::document::DocumentRevisionRef::Tag { .. } => {
             return Err(Error::ApiError(ApiError::from_code(
                 ErrorCode::CannotTagAnotherTag,
             )));
@@ -796,9 +796,11 @@ async fn document_content_get(
         .check()?;
 
     let (branch_id, seq) = match req.revision_id {
-        DocumentRevisionId::Branch { branch_id } => (branch_id, None),
-        DocumentRevisionId::Revision { version_id } => (version_id.branch_id, Some(version_id.seq)),
-        DocumentRevisionId::Tag { tag_id } => {
+        DocumentRevisionRef::Branch { branch_id } => (branch_id, None),
+        DocumentRevisionRef::Revision { version_id } => {
+            (version_id.branch_id, Some(version_id.seq))
+        }
+        DocumentRevisionRef::Tag { tag_id } => {
             let tag = data.document_tag_get(tag_id).await?;
             (tag.branch_id, Some(tag.revision_seq as u64))
         }
@@ -865,6 +867,58 @@ async fn document_content_put(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Document media attach
+///
+/// Attach a piece of media to a document. This **MUST** be called when uploading media to a document, otherwise the media may be garbage collected.
+///
+/// Note that the current system is very dumb, and will only garbage collect media when the document is deleted.
+///
+/// In the future, document-media linking will be maintained automatically as the crdt is edited.
+#[handler(routes::document_media_attach)]
+async fn document_media_attach(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::document_media_attach::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
+    auth.user.ensure_unsuspended()?;
+
+    let srv = s.services();
+    let user_id = auth.user.id;
+
+    srv.perms
+        .for_channel3(Some(user_id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::DocumentEdit)
+        .check()?;
+
+    let mut txn = s.acquire_data().await?;
+
+    let media = txn.media_select(req.body.media_id).await?;
+    if media.user_id != Some(user_id) {
+        return Err(Error::MissingPermissions);
+    }
+
+    let existing_links = txn.media_link_select(req.body.media_id).await?;
+    if !existing_links.is_empty() {
+        return Err(Error::ApiError(ApiError::from_code(
+            ErrorCode::MediaAlreadyUsed,
+        )));
+    }
+
+    txn.media_link_insert(
+        req.body.media_id,
+        req.channel_id.into_inner(),
+        crate::types::MediaLinkType::Document,
+    )
+    .await?;
+
+    txn.commit().await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes2!(wiki_history))
@@ -885,4 +939,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(document_crdt_apply))
         .routes(routes2!(document_content_get))
         .routes(routes2!(document_content_put))
+        .routes(routes2!(document_media_attach))
 }

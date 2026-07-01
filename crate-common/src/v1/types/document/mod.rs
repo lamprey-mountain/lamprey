@@ -8,7 +8,7 @@ use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::v1::types::{
-    ChannelId, RoomMember, ThreadMember, User, UserId,
+    ChannelId, MediaId, RoomMember, ThreadMember, User, UserId,
     components::ComponentCreate,
     ids::{DocumentBranchId, DocumentTagId},
     misc::Time,
@@ -19,9 +19,42 @@ use crate::v1::types::{
 use crate::v1::types::util::some_option;
 
 pub mod crdt;
+pub mod ids;
 pub mod serialized;
 
+pub mod channel {
+    //! channel components
+
+    pub struct Document;
+    pub struct DocumentArchived;
+    pub struct DocumentPublished;
+    pub struct DocumentPatch; // rename to DocumentUpdate
+    pub struct DocumentPublishedPatch; // Patch -> Update
+    pub struct DocumentArchivedPatch; // Patch -> Update
+    pub struct Wiki;
+    pub struct WikiPatch; // rename to WikiUpdate
+}
+
+pub mod wiki {
+    // ...
+}
+
+mod next {
+    //! todo: write docs for the document system
+    //!
+    //! ## glossary
+    //!
+    //! - **document**: a crdt for collaborative text editing, many documents per channel?
+    //! - **branch**: an isolated context, many branches per document
+    //! - **tag**: similar to a git commit *and* a git tag
+}
+
+// pub mod branch {}
+// pub mod tag {}
+// pub mod change {} // or history
+
 pub use crdt::{DocumentStateVector, DocumentUpdate};
+pub use ids::{DocumentRevisionId, DocumentRevisionRef};
 
 /// channel metadata for a document
 ///
@@ -84,6 +117,8 @@ pub struct DocumentBranch {
     ///
     /// The default branch cannot be deleted and has the same id as the document
     // NOTE: maybe i want to rename this to "main" or "master" or something?
+    // or maybe "root" or "canonical"
+    // NOTE: i can remove this and use parent_id == None as is_default()
     pub default: bool,
 
     /// Whether this is a private branch.
@@ -97,7 +132,7 @@ pub struct DocumentBranch {
     /// the parent version that this branch was forked from
     ///
     /// is None if this is the default branch
-    pub parent_id: Option<DocumentVersionId>,
+    pub parent_id: Option<DocumentRevisionId>,
     // pub merged_at: Option<Time>,
     // pub merged_into: Option<DocumentBranchId>,
 }
@@ -179,6 +214,8 @@ pub struct DocumentBranchMerge {
     //
     // unsure if needed:
     // PATCH  /document/{channel_id}/merge/{branch_id}        -- edit merge request
+    //
+    // NOTE: the above could probably be folded into document threads/comments
 }
 
 #[derive(Debug, Clone)]
@@ -209,142 +246,6 @@ pub enum DocumentBranchMergeResultStatus {
 
     /// can't merge because there are too many conflicts
     Conflicted,
-}
-
-/// a version of a document at a point in time
-///
-/// serialized as `branch-uuid@seq`
-// NOTE: this is kind of what yrs/yjs' StateVector is supposed to be for
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(try_from = "String", into = "String"))]
-pub struct DocumentVersionId {
-    pub branch_id: DocumentBranchId,
-    pub seq: u64,
-}
-
-impl std::fmt::Display for DocumentVersionId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}@{}", self.branch_id, self.seq)
-    }
-}
-
-impl std::str::FromStr for DocumentVersionId {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (branch_str, seq_str) = s
-            .split_once('@')
-            .ok_or_else(|| "invalid format".to_string())?;
-        let branch_id = branch_str.parse().map_err(|e: uuid::Error| e.to_string())?;
-        let seq = seq_str
-            .parse()
-            .map_err(|e: std::num::ParseIntError| e.to_string())?;
-        Ok(Self { branch_id, seq })
-    }
-}
-
-impl From<DocumentVersionId> for String {
-    fn from(id: DocumentVersionId) -> Self {
-        id.to_string()
-    }
-}
-
-impl TryFrom<String> for DocumentVersionId {
-    type Error = String;
-    fn try_from(s: String) -> Result<Self, Self::Error> {
-        s.parse()
-    }
-}
-
-/// a revision of a document at a point in time
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(try_from = "String", into = "String")
-)]
-pub enum DocumentRevisionId {
-    /// the current head of this branch
-    ///
-    /// serialized as `branch-id`
-    Branch { branch_id: DocumentBranchId },
-
-    /// this one specific revision
-    ///
-    /// serialized as `branch-uuid@seq`
-    Revision { version_id: DocumentVersionId },
-
-    /// this one specific revision
-    ///
-    /// serialized as `~tag`
-    Tag { tag_id: DocumentTagId },
-}
-
-impl std::fmt::Display for DocumentRevisionId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Branch { branch_id } => write!(f, "{}", branch_id),
-            Self::Revision { version_id } => write!(f, "{}", version_id),
-            Self::Tag { tag_id } => write!(f, "~{}", tag_id),
-        }
-    }
-}
-
-impl std::str::FromStr for DocumentRevisionId {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Some(tag_str) = s.strip_prefix('~') {
-            let tag_id = tag_str.parse().map_err(|e: uuid::Error| e.to_string())?;
-            Ok(Self::Tag { tag_id })
-        } else if s.contains('@') {
-            let version_id = s.parse()?;
-            Ok(Self::Revision { version_id })
-        } else {
-            let branch_id = s.parse().map_err(|e: uuid::Error| e.to_string())?;
-            Ok(Self::Branch { branch_id })
-        }
-    }
-}
-
-impl From<DocumentRevisionId> for String {
-    fn from(id: DocumentRevisionId) -> Self {
-        id.to_string()
-    }
-}
-
-impl TryFrom<String> for DocumentRevisionId {
-    type Error = String;
-    fn try_from(s: String) -> Result<Self, Self::Error> {
-        s.parse()
-    }
-}
-
-#[cfg(feature = "utoipa")]
-mod document_revision_id_schema {
-    use utoipa::{PartialSchema, ToSchema, openapi::ObjectBuilder};
-
-    use super::DocumentRevisionId;
-
-    impl ToSchema for DocumentRevisionId {}
-
-    impl PartialSchema for DocumentRevisionId {
-        fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
-            ObjectBuilder::new()
-                .schema_type(utoipa::openapi::schema::Type::String)
-                .description(Some(
-                    "A revision of a document at a point in time.\n\n\
-                    Serialized as:\n\
-                    - `branch-id` for the current head of a branch\n\
-                    - `branch-uuid@seq` for a specific revision\n\
-                    - `~tag` for a specific tag",
-                ))
-                .build()
-                .into()
-        }
-    }
 }
 
 /// a named version
@@ -397,7 +298,7 @@ pub struct DocumentTagCreate {
     #[cfg_attr(feature = "validator", validate(length(max = 4096)))]
     pub description: Option<String>,
 
-    pub revision: DocumentRevisionId,
+    pub revision: DocumentRevisionRef,
 }
 
 #[derive(Debug, Clone)]
@@ -576,13 +477,14 @@ pub struct DocumentPublished {
     pub time: Time,
 
     /// the revision of the document that was published
-    pub revision: DocumentRevisionId,
+    pub revision: DocumentRevisionRef,
 
     /// published but doesnt show up in any search results
     #[cfg_attr(feature = "serde", serde(default))]
     pub unlisted: bool,
 }
 
+// TODO: move to `mod serialized`
 /// update a serdoc
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -610,7 +512,7 @@ pub struct DocumentPatch {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct DocumentPublishedPatch {
-    pub revision: Option<DocumentRevisionId>,
+    pub revision: Option<DocumentRevisionRef>,
     #[cfg_attr(feature = "serde", serde(default))]
     pub unlisted: Option<bool>,
 }
@@ -803,4 +705,47 @@ pub struct WikiPatch {
 pub struct DocumentRevert {
     /// overwrite where to merge to, defaults to the parent branch
     pub target_branch_id: Option<DocumentBranchId>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct DocumentMediaAttach {
+    pub media_id: MediaId,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(IntoParams, ToSchema))]
+#[cfg_attr(feature = "validator", derive(Validate))]
+pub struct WikiGraphQuery {
+    /// maximum number of documents to return
+    // TODO: default 10, max 1024
+    pub limit: u16,
+
+    /// feature/center on this document
+    pub document_id: Option<ChannelId>,
+}
+
+// NOTE: open questions:
+// should i rank links by pagerank?
+// should i also have weight for links/edges?
+// should links be directed or undirected?
+// should `links` be renamed to `edges` and/or `documents` renamed to `nodes`?
+// maybe i should add a way to filter documents by tag?
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct WikiGraph {
+    pub links: Vec<(ChannelId, ChannelId)>,
+    pub documents: Vec<WikiGraphDocument>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub struct WikiGraphDocument {
+    pub channel_id: ChannelId,
+    pub title: String,
+    pub weight: u64,
 }

@@ -1,4 +1,4 @@
-//! crdt types
+//! types for interacting with the underlying yrs crdt
 
 // TODO: use Binary (or Bytes)
 

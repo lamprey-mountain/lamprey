@@ -358,6 +358,9 @@ impl AuthCheck {
                             MediaLinkType::ScriptVersion { channel_id, .. } => {
                                 AuthCheck::Channel(*channel_id)
                             }
+                            MediaLinkType::Document { channel_id, .. } => {
+                                AuthCheck::Channel(*channel_id)
+                            }
                         };
                         auth_checks.push(check);
                     }
