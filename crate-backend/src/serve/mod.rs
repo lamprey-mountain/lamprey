@@ -93,6 +93,7 @@ mod utoipa_utils;
         common::v1::types::reaction::ReactionListItem,
         // message types
         common::v1::types::message::PinsReorderItem,
+        common::v1::types::message::RepliesResponse,
         // push types
         common::v1::types::push::PushCreate,
         common::v1::types::push::PushInfo,
@@ -218,6 +219,7 @@ mod utoipa_utils;
         common::v2::types::media::MediaMetadata,
         common::v2::types::media::MediaScan,
         common::v2::types::media::MediaQuarantine,
+        common::v2::types::media::MediaCreate,
         // interactions
         common::v1::types::interactions::InteractionCreate,
         common::v1::types::interactions::InteractionCreateType,

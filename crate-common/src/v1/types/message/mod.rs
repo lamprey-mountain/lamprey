@@ -1031,6 +1031,7 @@ pub struct RepliesMessage {
 
     /// the children for this message
     #[cfg_attr(feature = "serde", serde(flatten))]
+    #[cfg_attr(feature = "utoipa", schema(no_recursion))]
     pub children: RepliesChildren,
 }
 
