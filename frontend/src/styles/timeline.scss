@@ -483,6 +483,7 @@
 	}
 
 	& > .content {
+		display: inline-block;
 		flex-direction: row;
 		align-items: end;
 		white-space: nowrap;
@@ -495,6 +496,15 @@
 		& > .time.full {
 			display: none;
 		}
+
+		& > .body {
+			display: inline;
+
+			// HACK: make the first markdown paragraph also display inline
+			& > p:first-child {
+				display: inline;
+			}
+		}
 	}
 
 	&:hover > .content {
@@ -503,7 +513,7 @@
 		}
 
 		& > .time.full {
-			display: block;
+			display: inline;
 		}
 	}
 }
