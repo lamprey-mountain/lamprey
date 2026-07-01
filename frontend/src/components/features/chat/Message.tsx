@@ -792,7 +792,7 @@ function DefaultMessage(
 				<Time
 					date={props.date}
 					animGroup="message-ts"
-					class="time"
+					class="onlytime"
 					format="time"
 				/>
 				<Time
@@ -878,8 +878,6 @@ function DefaultMessage(
 					)}
 				</Show>
 			</div>
-
-			<Time date={props.date} animGroup="message-ts" />
 		</article>
 	);
 }

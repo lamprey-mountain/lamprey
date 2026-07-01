@@ -544,19 +544,12 @@
 		}
 	}
 
-	&.separate {
-		margin-top: 8px;
-		padding: 4px 0;
+	& > .time {
+		grid-area: time;
+		color: $fg-500;
+		font-size: 0.7em;
 
-		& > .header {
-			display: flex;
-		}
-
-		& > .aside > .avatar {
-			display: block;
-		}
-
-		& > .aside > .time {
+		&.full {
 			display: none;
 		}
 	}
@@ -573,13 +566,12 @@
 			visibility: visible;
 		}
 
-		& > .header > .time.time {
+		& > .header > .time.onlytime {
 			display: none;
 		}
 
 		& > .header > .time.full {
 			display: block;
-			/* visibility: visible; */
 		}
 	}
 }
@@ -628,50 +620,66 @@
 	/* } */
 	/* } */
 
-	/* & > .author { */
-	/* grid-area: author; */
-	/* text-align: left; */
-	/* padding: 0; */
+	&.separate {
+		margin-top: 8px;
+		padding: 4px 0;
 
-	/* & > time { */
-	/* margin-left: 4px; */
-	/* visibility: hidden; */
-	/* color: $fg-500; */
-	/* } */
-	/* } */
+		& > .header {
+			display: flex;
+		}
 
-	/* &:hover { */
-	/* background-color: oklch(var(--color-bg1) / 0.3); */
+		& > .aside > .avatar {
+			display: block;
+		}
 
-	/* & > .author > time { */
-	/* visibility: visible; */
-	/* } */
-	/* } */
+		& > .aside > .time {
+			display: none;
+		}
+	}
 }
 
 #root[data-message-style="compact"] .message {
-	/* TODO */
-	grid-template-columns: 128px 1fr max-content;
+	grid-template-columns: 2em 128px 1fr max-content;
 	grid-template-rows: auto auto;
-	grid-template-areas: "reply reply reply" "header content time";
+	grid-template-areas: ". reply reply reply" "aside header content time";
+
+	& > .content {
+		grid-area: content;
+
+		& > .body {
+			text-indent: 2em;
+			margin-left: -2em;
+		}
+	}
+
+	& > .header {
+		display: flex;
+		justify-content: end;
+
+		& > .time {
+			display: none;
+		}
+
+		& > .author {
+			z-index: 1;
+			padding-right: 8px;
+			@include truncate;
+		}
+	}
 
 	& > .aside {
-		display: none;
+		z-index: 2;
+		display: flex;
+		grid-area: aside;
+
+		& > .avatar {
+			display: none;
+		}
+
+		& > .time {
+			/* align-self: stretch; */
+		}
 	}
-
-	& > .header > .time {
-		display: none;
-	}
-
-	/* & > .author-wrap { */
-	/* text-align: right; */
-	/* margin-right: 8px; */
-
-	/* & > .author { */
-	/* position: sticky; */
-	/* top: 4px; */
-	/* } */
-	/* } */
 }
 
 .message.skeleton {
