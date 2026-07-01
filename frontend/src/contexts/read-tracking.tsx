@@ -42,6 +42,8 @@ export function createReadTrackingProvider(
 	channel_contexts: ReactiveMap<string, ChannelContextT>,
 	dataUpdate: SetStoreFunction<Data>,
 ) {
+	const pendingAcks = new Map<string, ReturnType<typeof setTimeout>>();
+
 	const markThreadRead = async (
 		thread_id: string,
 		version_id: string,
@@ -159,10 +161,16 @@ export function createReadTrackingProvider(
 		delay: boolean,
 	) => {
 		if (delay) {
-			// FIXME: `delay` should debounce acks
-			setTimeout(() => {
-				ack(channel_id, message_id, also_local, false);
-			}, 300);
+			const existing = pendingAcks.get(channel_id);
+			if (existing) clearTimeout(existing);
+
+			pendingAcks.set(
+				channel_id,
+				setTimeout(() => {
+					pendingAcks.delete(channel_id);
+					ack(channel_id, message_id, also_local, false);
+				}, 300),
+			);
 			return;
 		}
 
