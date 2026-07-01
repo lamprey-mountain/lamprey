@@ -31,7 +31,11 @@ import { Category } from "@/components/shared/Category";
 import { ChannelNav } from "@/components/shared/ChannelNav";
 import { Feed } from "@/components/shared/Feed";
 import { Forum } from "@/components/shared/Forum";
-import { Forum2, Forum2ThreadPage } from "@/components/shared/Forum2";
+import {
+	Forum2,
+	Forum2Thread,
+	Forum2ThreadPage,
+} from "@/components/shared/Forum2";
 import { Friends } from "@/components/shared/Friends";
 import { Home } from "@/components/shared/Home";
 import { Inbox } from "@/components/shared/Inbox";
@@ -283,7 +287,14 @@ const ThreadChatSidebar = (props: { thread_id: string }) => {
 											<button type="button" class="close" onClick={onClose}>
 												<Icon src={icX} />
 											</button>
-											<ChatMain channel={t()} />
+											<Switch>
+												<Match when={t().type === "ThreadForum2"}>
+													<Forum2Thread channel={t()} />
+												</Match>
+												<Match when={true}>
+													<ChatMain channel={t()} />
+												</Match>
+											</Switch>
 										</DocumentContext.Provider>
 									</ChannelContext.Provider>
 								)}

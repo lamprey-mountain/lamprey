@@ -51,6 +51,12 @@
 	.comments {
 		padding: 8px;
 
+		& .time {
+			color: $fg-500;
+			/* font-size: 0.7em; */
+			font-size: 0.8em;
+		}
+
 		.comment {
 			position: relative;
 			border-left: solid $sep-500 1px;
@@ -62,11 +68,6 @@
 
 			&.selectable {
 				cursor: pointer;
-			}
-
-			& > .inner:hover > .message-toolbar,
-			&.toolbar-visible > .message-toolbar {
-				visibility: visible;
 			}
 		}
 
@@ -250,4 +251,39 @@
 			border: none;
 		}
 	}
+}
+
+.forum2-list {
+	padding: 8px;
+	width: 100%;
+}
+
+.forum2-header {
+	display: flex;
+	align-items: center;
+
+	& > .search {
+		flex: 1;
+	}
+}
+
+.thread-chat-sidebar > .thread.forum2 {
+	overflow-y: auto;
+	height: 100%;
+}
+
+.thread.forum2 {
+	& > .main {
+		width: 100%;
+
+		& > .header {
+			padding: 8px;
+			background: $bg-150;
+			border-bottom: solid $sep-300 1px;
+		}
+	}
+}
+
+.forum2 .comment-input > footer {
+	height: auto;
 }

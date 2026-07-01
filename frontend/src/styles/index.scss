@@ -118,43 +118,45 @@ input[type="submit"] {
 	border-radius: 4px;
 	max-width: 800px;
 
-	& > .top,
-	& > .bottom {
-		display: flex;
-		width: 100%;
-		background: none;
-		border: none;
-		text-align: left;
-		font: inherit;
-		color: inherit;
-		padding: 4px 8px;
-		cursor: pointer;
-	}
-
-	& > .top {
-		align-items: center;
-		gap: 8px;
-
-		& > .spacer {
-			@include truncate;
-			flex: 1;
+	& > header {
+		& > .top,
+		& > .bottom {
+			display: flex;
+			width: 100%;
+			background: none;
+			border: none;
+			text-align: left;
+			font: inherit;
+			color: inherit;
+			padding: 4px 8px;
+			cursor: pointer;
 		}
 
-		& > .time {
-			color: $fg-500;
+		& > .top {
+			align-items: center;
+			gap: 8px;
+
+			& > .spacer {
+				@include truncate;
+				flex: 1;
+			}
+
+			& > .time {
+				color: $fg-500;
+			}
 		}
-	}
 
-	& > .bottom {
-		flex-direction: column;
+		& > .bottom {
+			flex-direction: column;
 
-		.dim {
-			font-size: 0.8rem;
-			color: $fg-500;
-		}
+			.dim {
+				font-size: 0.8rem;
+				color: $fg-500;
+			}
 
-		.description {
-			margin-top: 8px;
+			.description {
+				margin-top: 8px;
+			}
 		}
 	}
 
@@ -170,6 +172,7 @@ input[type="submit"] {
 	}
 
 	&:hover {
+		// TODO: don't darken as much
 		background-color: $bg-200;
 	}
 }
@@ -3598,10 +3601,6 @@ input[type="color"] {
 	& li:not(:first-child) {
 		border-top: solid 1px $sep-400;
 	}
-}
-
-.search-pad {
-	padding: 2px 4px;
 }
 
 .jump-to-latest {

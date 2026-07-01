@@ -76,10 +76,7 @@ export class ChannelsService extends BaseService<Channel> {
 		);
 	}
 
-	async create(
-		room_id: string,
-		body: { name: string; parent_id?: string },
-	): Promise<Channel> {
+	async create(room_id: string, body: ChannelCreate): Promise<Channel> {
 		const data = await this.retryWithBackoff<Channel>(() =>
 			this.client.http.POST("/api/v1/room/{room_id}/channel", {
 				params: { path: { room_id } },

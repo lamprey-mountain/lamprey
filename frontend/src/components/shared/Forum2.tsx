@@ -41,7 +41,6 @@ import { Dropdown } from "@/atoms/Dropdown";
 import { EmojiButton } from "@/atoms/EmojiButton";
 import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown";
-import { Resizable } from "@/atoms/Resizable";
 import { Time } from "@/atoms/Time";
 import { createTooltip } from "@/atoms/Tooltip";
 import {
@@ -52,11 +51,7 @@ import { Reactions } from "@/components/features/chat/Reactions";
 import { createEditor } from "@/components/features/editor/Editor";
 import { serializeToMarkdown } from "@/components/features/editor/serializer.ts";
 import { useAutocomplete } from "@/contexts/autocomplete";
-import {
-	ChannelContext,
-	createInitialChannelState,
-	useChannel,
-} from "@/contexts/channel";
+import { createInitialChannelState, useChannel } from "@/contexts/channel";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal";
 import { useUploads } from "@/contexts/uploads";
@@ -73,6 +68,7 @@ import {
 import { MessageToolbarMount } from "../features/chat/MessageToolbar.tsx";
 import { RenderUploadItem } from "../features/chat/Input";
 import { highlight } from "../features/chat/util.ts";
+import { Search } from "@/atoms/Search.tsx";
 
 // Type guard for RoomMember with override_name
 function hasOverrideName(
@@ -211,21 +207,37 @@ export const Forum2 = (props: { channel: Channel }) => {
 		});
 	};
 
-	function createThread(room_id: string) {
+	function createThread() {
+		const rid = room_id();
+		if (!rid) throw new Error("not in a room");
+
+		// channels2.create(rid, {
+		// 	name,
+		// 	parent_id: props.channel.id
+		// })
+
 		modalctl.prompt("name?", (name) => {
 			if (!name) return;
-			channels2.create(room_id, {
+			channels2.create(rid, {
 				name,
 				parent_id: props.channel.id,
+				type: "ThreadForum2",
+				// tags: [],
+				// starter_message: {
+				// 	content: "",
+				// 	attachments: [],
+				// 	mentions: {},
+				// },
 			});
 		});
 	}
 
+	const [ch, chUpdate] = useChannel();
 	const currentUser = useCurrentUser();
 	const user_id = () => currentUser()?.id;
 	const perms = usePermissions(user_id, room_id, () => undefined);
 
-	const [threadId, setThreadId] = createSignal<null | string>(null);
+	// const [threadId, setThreadId] = createSignal<null | string>(null);
 
 	const getOrCreateChannelContext = (channelId: string) => {
 		if (!ctx.channel_contexts.has(channelId)) {
@@ -237,276 +249,259 @@ export const Forum2 = (props: { channel: Channel }) => {
 
 	return (
 		<div class="forum2">
-			<Resizable
-				storageKey="forum-sidebar-width"
-				side="left"
-				initialWidth={350}
-				minWidth={250}
-				maxWidth={600}
-			>
-				<div class="list">
-					<Show when={flags.has("thread_quick_create")}>
-						<br />
-						{/* TODO: <QuickCreate channel={props.channel} /> */}
-						<br />
-					</Show>
-					<div style="display:flex; align-items:center">
-						<input placeholder="search" type="search" class="search-pad" />
+			<div class="forum2-list list">
+				<Show when={flags.has("thread_quick_create") && false}>
+					<br />
+					{/* TODO: <QuickCreate channel={props.channel} /> */}
+					<br />
+				</Show>
+				<div class="forum2-header">
+					<Search placeholder="search threads..." />
+					<button
+						type="button"
+						class="button primary"
+						style="margin-left: 8px;border-radius:4px"
+						onClick={createThread}
+					>
+						create thread
+					</button>
+				</div>
+				<div style="display:flex; align-items:center">
+					<h3 style="font-size:1rem; margin-top:8px;flex:1">
+						{getThreads().length} {threadFilter()} threads
+					</h3>
+					{/* TODO: move .sort-view-container into a separate component */}
+					<div class="sort-view-container">
 						<button
 							type="button"
-							class="primary"
-							style="margin-left: 8px;border-radius:4px"
-							onClick={() => {
-								const rid = room_id();
-								if (rid) createThread(rid);
-							}}
+							class="button secondary sort-view-button"
+							ref={setReferenceEl}
+							onClick={() => setMenuOpen(!menuOpen())}
+							classList={{ selected: menuOpen() }}
 						>
-							create thread
+							<span>sort and view</span>
+							<svg
+								aria-hidden="true"
+								width="10"
+								height="6"
+								viewBox="0 0 10 6"
+								fill="none"
+								xmlns="http://www.w3.org/2000/svg"
+							>
+								<path
+									d="M1 1L5 5L9 1"
+									stroke="currentColor"
+									stroke-width="1.5"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
+							</svg>
 						</button>
-					</div>
-					<div style="display:flex; align-items:center">
-						<h3 style="font-size:1rem; margin-top:8px;flex:1">
-							{getThreads().length} {threadFilter()} threads
-						</h3>
-						<div class="sort-view-container">
-							<button
-								type="button"
-								class="button secondary sort-view-button"
-								ref={setReferenceEl}
-								onClick={() => setMenuOpen(!menuOpen())}
-								classList={{ selected: menuOpen() }}
-							>
-								<span>sort and view</span>
-								<svg
-									aria-hidden="true"
-									width="10"
-									height="6"
-									viewBox="0 0 10 6"
-									fill="none"
-									xmlns="http://www.w3.org/2000/svg"
+						<Portal>
+							<Show when={menuOpen()}>
+								<div
+									ref={setFloatingEl}
+									class="sort-view-menu"
+									style={{
+										position: position.strategy,
+										top: `${position.y ?? 0}px`,
+										left: `${position.x ?? 0}px`,
+										"z-index": 1000,
+									}}
 								>
-									<path
-										d="M1 1L5 5L9 1"
-										stroke="currentColor"
-										stroke-width="1.5"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									/>
-								</svg>
-							</button>
-							<Portal>
-								<Show when={menuOpen()}>
-									<div
-										ref={setFloatingEl}
-										class="sort-view-menu"
-										style={{
-											position: position.strategy,
-											top: `${position.y ?? 0}px`,
-											left: `${position.x ?? 0}px`,
-											"z-index": 1000,
-										}}
-									>
-										<menu>
-											<div class="subtext header">sort by</div>
-											<button
-												type="button"
-												class="button menu-item"
-												onClick={() => {
-													setSortBy("new");
-													setMenuOpen(false);
-												}}
-											>
-												Newest threads first
-												<Show when={sortBy() === "new"}>
-													<span>✓</span>
-												</Show>
-											</button>
-											<button
-												type="button"
-												class="button menu-item"
-												onClick={() => {
-													setSortBy("activity");
-													setMenuOpen(false);
-												}}
-											>
-												Recently active threads
-												<Show when={sortBy() === "activity"}>
-													<span>✓</span>
-												</Show>
-											</button>
-											<button
-												type="button"
-												class="button menu-item"
-												onClick={() => {
-													setSortBy("reactions:+1");
-													setMenuOpen(false);
-												}}
-											>
-												Expected to be helpful
-												<Show when={sortBy() === "reactions:+1"}>
-													<span>✓</span>
-												</Show>
-											</button>
-											<button
-												type="button"
-												class="button menu-item"
-												onClick={() => {
-													setSortBy("random");
-													setMenuOpen(false);
-												}}
-											>
-												Random ordering
-												<Show when={sortBy() === "random"}>
-													<span>✓</span>
-												</Show>
-											</button>
-											<button
-												type="button"
-												class="button menu-item"
-												onClick={() => {
-													setSortBy("hot");
-													setMenuOpen(false);
-												}}
-											>
-												Hot
-												<Show when={sortBy() === "hot"}>
-													<span>✓</span>
-												</Show>
-											</button>
-											<button
-												type="button"
-												class="button menu-item"
-												onClick={() => {
-													setSortBy("hot2");
-													setMenuOpen(false);
-												}}
-											>
-												Hot 2
-												<Show when={sortBy() === "hot2"}>
-													<span>✓</span>
-												</Show>
-											</button>
-											<hr />
-											<div class="subtext header">view as</div>
-											<button
-												type="button"
-												class="button menu-item"
-												onClick={() => {
-													setViewAs("list");
-													setMenuOpen(false);
-												}}
-											>
-												List
-												<Show when={viewAs() === "list"}>
-													<span>✓</span>
-												</Show>
-											</button>
-											<button
-												type="button"
-												class="button menu-item"
-												onClick={() => {
-													setViewAs("gallery");
-													setMenuOpen(false);
-												}}
-											>
-												Gallery
-												<Show when={viewAs() === "gallery"}>
-													<span>✓</span>
-												</Show>
-											</button>
-										</menu>
-									</div>
-								</Show>
-							</Portal>
-						</div>
-						<div class="filters">
-							<button
-								type="button"
-								class="button"
-								classList={{ selected: threadFilter() === "active" }}
-								onClick={[setThreadFilter, "active"]}
-							>
-								active
-							</button>
-							<button
-								type="button"
-								class="button"
-								classList={{ selected: threadFilter() === "archived" }}
-								onClick={[setThreadFilter, "archived"]}
-							>
-								archived
-							</button>
-							<Show when={perms.has("ThreadManage")}>
-								<button
-									type="button"
-									class="button"
-									classList={{ selected: threadFilter() === "removed" }}
-									onClick={[setThreadFilter, "removed"]}
-								>
-									removed
-								</button>
+									<menu>
+										<div class="subtext header">sort by</div>
+										<button
+											type="button"
+											class="button menu-item"
+											onClick={() => {
+												setSortBy("new");
+												setMenuOpen(false);
+											}}
+										>
+											Newest threads first
+											<Show when={sortBy() === "new"}>
+												<span>✓</span>
+											</Show>
+										</button>
+										<button
+											type="button"
+											class="button menu-item"
+											onClick={() => {
+												setSortBy("activity");
+												setMenuOpen(false);
+											}}
+										>
+											Recently active threads
+											<Show when={sortBy() === "activity"}>
+												<span>✓</span>
+											</Show>
+										</button>
+										<button
+											type="button"
+											class="button menu-item"
+											onClick={() => {
+												setSortBy("reactions:+1");
+												setMenuOpen(false);
+											}}
+										>
+											Expected to be helpful
+											<Show when={sortBy() === "reactions:+1"}>
+												<span>✓</span>
+											</Show>
+										</button>
+										<button
+											type="button"
+											class="button menu-item"
+											onClick={() => {
+												setSortBy("random");
+												setMenuOpen(false);
+											}}
+										>
+											Random ordering
+											<Show when={sortBy() === "random"}>
+												<span>✓</span>
+											</Show>
+										</button>
+										<button
+											type="button"
+											class="button menu-item"
+											onClick={() => {
+												setSortBy("hot");
+												setMenuOpen(false);
+											}}
+										>
+											Hot
+											<Show when={sortBy() === "hot"}>
+												<span>✓</span>
+											</Show>
+										</button>
+										<button
+											type="button"
+											class="button menu-item"
+											onClick={() => {
+												setSortBy("hot2");
+												setMenuOpen(false);
+											}}
+										>
+											Hot 2
+											<Show when={sortBy() === "hot2"}>
+												<span>✓</span>
+											</Show>
+										</button>
+										<hr />
+										<div class="subtext header">view as</div>
+										<button
+											type="button"
+											class="button menu-item"
+											onClick={() => {
+												setViewAs("list");
+												setMenuOpen(false);
+											}}
+										>
+											List
+											<Show when={viewAs() === "list"}>
+												<span>✓</span>
+											</Show>
+										</button>
+										<button
+											type="button"
+											class="button menu-item"
+											onClick={() => {
+												setViewAs("gallery");
+												setMenuOpen(false);
+											}}
+										>
+											Gallery
+											<Show when={viewAs() === "gallery"}>
+												<span>✓</span>
+											</Show>
+										</button>
+									</menu>
+								</div>
 							</Show>
-						</div>
+						</Portal>
 					</div>
-					<ul>
-						<For each={getThreads()}>
-							{(thread) => (
-								<li>
-									<article
-										class="thread menu-thread thread-card"
-										data-thread-id={thread.id}
-									>
-										<header onClick={() => setThreadId(thread.id)}>
-											<div class="top">
-												<ChannelIcon channel={thread} />
-												<div class="spacer">{thread.name}</div>
-												<div class="time">
-													Created{" "}
-													<Time date={getTimestampFromUUID(thread.id)} />
-												</div>
-											</div>
-											<div
-												class="bottom"
-												onClick={() => setThreadId(thread.id)}
-											>
-												<div class="dim">
-													{thread.message_count} message(s) &bull; last msg{" "}
-													<Time
-														date={getTimestampFromUUID(
-															hasLastVersionId(thread)
-																? thread.last_version_id
-																: thread.id,
-														)}
-													/>
-												</div>
-												<Show when={thread.description}>
-													<div
-														class="description markdown"
-														innerHTML={md(thread.description ?? "") as string}
-													></div>
-												</Show>
-											</div>
-										</header>
-									</article>
-								</li>
-							)}
-						</For>
-					</ul>
-					<div ref={setBottom}></div>
+					<div class="filters">
+						<button
+							type="button"
+							class="button"
+							classList={{ selected: threadFilter() === "active" }}
+							onClick={[setThreadFilter, "active"]}
+						>
+							active
+						</button>
+						<button
+							type="button"
+							class="button"
+							classList={{ selected: threadFilter() === "archived" }}
+							onClick={[setThreadFilter, "archived"]}
+						>
+							archived
+						</button>
+						<Show when={perms.has("ThreadManage")}>
+							<button
+								type="button"
+								class="button"
+								classList={{ selected: threadFilter() === "removed" }}
+								onClick={[setThreadFilter, "removed"]}
+							>
+								removed
+							</button>
+						</Show>
+					</div>
 				</div>
-			</Resizable>
-			<Show when={threadId()}>
-				{(tid) => {
-					const threadChannel = channels2.cache.get(tid());
-					if (!threadChannel) return;
-					const threadCtx = getOrCreateChannelContext(tid());
-					return (
-						<ChannelContext.Provider value={threadCtx}>
-							<Forum2Thread channel={threadChannel} />
-						</ChannelContext.Provider>
-					);
-				}}
-			</Show>
+				<ul>
+					<For each={getThreads()}>
+						{(thread) => (
+							<li>
+								<article
+									class="thread menu-thread thread-card"
+									data-thread-id={thread.id}
+								>
+									<header
+										onClick={() =>
+											chUpdate("thread_chat_sidebar_thread_id", thread.id)
+										}
+									>
+										<div class="top">
+											<ChannelIcon channel={thread} />
+											<div class="spacer">{thread.name}</div>
+											<div class="time">
+												Created <Time date={getTimestampFromUUID(thread.id)} />
+											</div>
+										</div>
+										<div
+											class="bottom"
+											onClick={() =>
+												chUpdate("thread_chat_sidebar_thread_id", thread.id)
+											}
+										>
+											<div class="dim">
+												{thread.message_count} message(s) &bull; last msg{" "}
+												<Time
+													date={getTimestampFromUUID(
+														hasLastVersionId(thread)
+															? thread.last_version_id
+															: thread.id,
+													)}
+												/>
+											</div>
+											<Show when={thread.description}>
+												<div
+													class="description markdown"
+													innerHTML={md(thread.description ?? "") as string}
+												></div>
+											</Show>
+										</div>
+									</header>
+								</article>
+							</li>
+						)}
+					</For>
+				</ul>
+				<div ref={setBottom}></div>
+			</div>
 		</div>
 	);
 };
@@ -776,12 +771,12 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 
 	return (
 		<MessageToolbarProvider>
-			<div class="thread">
+			<div class="thread forum2">
 				<div class="main">
-					<div>
+					<header class="header">
 						<h2 class="title">{props.channel.name}</h2>
-					</div>
-					<div style="display:flex">
+					</header>
+					<div style="display:flex; padding:8px">
 						<div style="flex:1">
 							{/* FIXME: total comment count */}
 							{comments()?.children.length ?? 0} comments
@@ -792,7 +787,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 								expand all
 							</button>
 						</div>
-						<div>
+						<div style="display:none">
 							<div>
 								order by{" "}
 								<Dropdown
@@ -939,7 +934,6 @@ export const Forum2Comments = (props: {
 }) => {
 	return (
 		<div class="comments">
-			<div>comments</div>
 			<ul>
 				<For each={props.commentTree}>
 					{(node) => (

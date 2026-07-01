@@ -131,7 +131,7 @@ export const Forum = (props: { channel: Channel }) => {
 				</div>
 				<button
 					type="button"
-					class="primary"
+					class="button primary"
 					style="margin-left: 8px;border-radius:4px"
 					onClick={() => {
 						const rid = room_id();
