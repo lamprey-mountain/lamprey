@@ -11,6 +11,7 @@ import { ChannelIcon } from "@/components/shared/User";
 import { useModals } from "@/contexts/modal";
 import { getThumbFromId } from "@/media/util";
 import { Modal } from "./mod";
+import { autofocus } from "@/lib/autofocus";
 
 export const ModalPalette = () => {
 	const channels2 = useChannels();
@@ -284,7 +285,7 @@ export const ModalPalette = () => {
 				<h3 class="dim">palette</h3>
 				<input
 					type="text"
-					autofocus
+					use:autofocus
 					ref={(a) => queueMicrotask(() => a.focus())}
 					value={query()}
 					onInput={(e) => setQuery(e.currentTarget.value)}

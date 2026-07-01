@@ -1,9 +1,10 @@
-import { createSignal, For } from "solid-js";
+import { createSignal, For, onMount } from "solid-js";
 import { RadioDot } from "@/atoms/icons";
 import type { ChannelTypeOption } from "@/contexts/modal";
 import { useModals } from "@/contexts/modal";
 import { flags } from "@/lib/flags";
 import { Modal } from "./mod";
+import { autofocus } from "@/lib/autofocus";
 
 interface ModalChannelCreateProps {
 	room_id: string;
@@ -123,7 +124,7 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 						onInput={(e) => setChannelName(e.currentTarget.value)}
 						placeholder="talking"
 						required
-						autofocus
+						use:autofocus
 					/>
 				</label>
 

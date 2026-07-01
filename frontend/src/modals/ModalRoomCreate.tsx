@@ -2,6 +2,7 @@ import { createSignal } from "solid-js";
 import { CheckboxOptionWithLabel } from "@/atoms/CheckboxOption";
 import { useModals } from "@/contexts/modal";
 import { Modal } from "./mod";
+import { autofocus } from "@/lib/autofocus";
 
 interface ModalRoomCreateProps {
 	cont: (data: { name: string; public: boolean } | null) => void;
@@ -40,7 +41,7 @@ export const ModalRoomCreate = (props: ModalRoomCreateProps) => {
 						onInput={(e) => setRoomName(e.currentTarget.value)}
 						placeholder="my awesome room"
 						required
-						autofocus
+						use:autofocus
 					/>
 				</label>
 
