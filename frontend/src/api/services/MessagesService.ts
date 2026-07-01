@@ -6,6 +6,8 @@ import type {
 	MessageSearch,
 	Pagination,
 	PaginationQuery,
+	RepliesMessage,
+	RepliesResponse,
 	UserWithRelationship,
 } from "sdk";
 import {
@@ -895,7 +897,7 @@ export class MessagesService extends BaseService<Message> {
 		channel_id: () => string,
 		message_id: () => string | undefined,
 		query?: () => { depth?: number; breadth?: number } & PaginationQuery,
-	): Resource<Pagination<Message>> {
+	): Resource<RepliesResponse> {
 		const [resource] = createResource(
 			() => ({
 				channel_id: channel_id(),
@@ -915,9 +917,21 @@ export class MessagesService extends BaseService<Message> {
 						}));
 				if (error) throw error;
 
-				this.upsertBulk(data.items as Message[]);
+				const extractMessages = (nodes: RepliesMessage[]): Message[] => {
+					let messages: Message[] = [];
+					for (const node of nodes) {
+						messages.push(node.message);
+						if (node.children) {
+							messages = messages.concat(extractMessages(node.children));
+						}
+					}
+					return messages;
+				};
 
-				return data as Pagination<Message>;
+				const messages = extractMessages((data as RepliesResponse).children);
+				this.upsertBulk(messages);
+
+				return data as RepliesResponse;
 			},
 		);
 		return resource;

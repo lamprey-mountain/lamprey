@@ -14,6 +14,7 @@ import {
 	type Message,
 	type MessageVersion,
 	type RoomMember,
+	RepliesMessage,
 } from "sdk";
 import { useFloating } from "solid-floating-ui";
 import {
@@ -596,30 +597,17 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	);
 
 	const commentTree = createMemo<CommentNode[]>(() => {
-		const items = comments()?.items;
-		if (!items) return [];
+		const children = comments()?.children;
+		if (!children) return [];
 
-		const commentMap = new Map<string, CommentNode>();
-		for (const message of items) {
-			commentMap.set(message.id, { message, children: [] });
-		}
+		const buildNodes = (nodes: RepliesMessage[]): CommentNode[] => {
+			return nodes.map((node) => ({
+				message: node.message,
+				children: node.children ? buildNodes(node.children) : [],
+			}));
+		};
 
-		const rootComments: CommentNode[] = [];
-		for (const node of commentMap.values()) {
-			const msg = node.message;
-			const replyId =
-				msg.latest_version.type === "DefaultMarkdown"
-					? msg.latest_version.reply_id
-					: undefined;
-
-			if (replyId && commentMap.has(replyId)) {
-				commentMap.get(replyId)?.children.push(node);
-			} else {
-				rootComments.push(node);
-			}
-		}
-
-		return rootComments;
+		return buildNodes(children);
 	});
 
 	const collapsed = new ReactiveSet<string>();
@@ -843,7 +831,8 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 				</div>
 				<div style="display:flex">
 					<div style="flex:1">
-						{comments()?.items.length ?? 0} comments
+						{/* FIXME: total comment count */}
+						{comments()?.children.length ?? 0} comments
 						<button type="button" class="button" onClick={collapseAll}>
 							collapse replies
 						</button>

@@ -105,6 +105,9 @@ export type DocumentTagCreate = components["schemas"]["DocumentTagCreate"];
 export type DocumentTagPatch = components["schemas"]["DocumentTagPatch"];
 export type DocumentRevisionId = components["schemas"]["DocumentRevisionId"];
 export type DocumentVersionId = components["schemas"]["DocumentVersionId"];
+export type RepliesChildren = components["schemas"]["RepliesChildren"];
+export type RepliesMessage = components["schemas"]["RepliesMessage"];
+export type RepliesResponse = components["schemas"]["RepliesResponse"];
 export type PaginationResponse<T = unknown> = {
 	items: Array<T>;
 	total: number;
