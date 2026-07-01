@@ -352,6 +352,16 @@
 			color: $fg-400;
 		}
 	}
+
+	&:hover > .content {
+		& > .author {
+			color: $fg-500;
+		}
+
+		& > .markdown {
+			color: $fg-200;
+		}
+	}
 }
 
 .message > .aside {
