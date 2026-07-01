@@ -10,9 +10,11 @@ use common::v1::types::{
     MessageThreadCreated, MessageType, PaginationQuery, Permission, PermissionOverwrite, RoomId,
     SERVER_USER_ID, ThreadMemberPut, User, UserId,
 };
+use common::v2::types::MessageVerId;
 use futures::TryStreamExt;
 use futures::stream::{self, StreamExt};
 use moka::future::Cache;
+use moka::ops::compute::Op as CacheOp;
 use time::OffsetDateTime;
 use tracing::warn;
 use validator::Validate;
@@ -238,6 +240,31 @@ impl ServiceChannels {
             .expect("failed to invalidate");
     }
 
+    pub(super) async fn update_last_message_ids(
+        &self,
+        thread_id: ChannelId,
+        message_id: MessageId,
+        version_id: MessageVerId,
+    ) {
+        self.cache_thread
+            .entry(thread_id)
+            .and_compute_with(|entry| async {
+                match entry {
+                    Some(e) => {
+                        let mut chan = e.into_value();
+                        chan.last_message_id = Some(message_id);
+                        chan.last_version_id = Some(version_id);
+                        CacheOp::Put(chan)
+                    }
+                    None => CacheOp::Nop,
+                }
+            })
+            .await
+            .unwrap();
+    }
+
+    // TODO: fn update_last_pin_timestamp
+
     pub async fn invalidate_user(&self, thread_id: ChannelId, user_id: UserId) {
         self.cache_thread_private
             .invalidate(&(thread_id, user_id))
@@ -447,6 +474,7 @@ impl ServiceChannels {
             if json.bitrate.is_some_and(|b| b > 393216) {
                 return Err(Error::BadStatic("bitrate is too high"));
             }
+            // TODO: move some of this validation to common
             if json.bitrate.is_some() {
                 json.ty.ensure_has_voice()?;
             }

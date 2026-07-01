@@ -1,6 +1,6 @@
 //! crdt types
 
-// TODO: use Bytes
+// TODO: use Binary (or Bytes)
 
 /// a pointer to a client's state at a point in time
 #[derive(Debug, Clone, PartialEq, Eq)]

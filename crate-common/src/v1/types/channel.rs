@@ -127,8 +127,13 @@ pub struct Channel {
 
     pub last_version_id: Option<MessageVerId>,
 
-    /// the id of the last message in this channel, used for read marker handling
+    /// the id of the last message in this channel
+    ///
+    /// used for read marker handling. may be `None` if no message has been sent yet.
+    ///
+    /// this is monotonic and will only ever increase, even when messages are edited/deleted. this means this may not point to a valid/existing message.
     pub last_message_id: Option<MessageId>,
+
     pub message_count: Option<u64>,
     pub root_message_count: Option<u64>,
     pub last_pin_timestamp: Option<Time>,

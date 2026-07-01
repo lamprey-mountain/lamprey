@@ -520,13 +520,20 @@ impl ServiceMessages {
         }))
     }
 
-    // FIXME: make all of these run in one transaction, somehow
     async fn commit<'a>(
         &self,
         mut op: MessageOperation<'a, Prepared>,
     ) -> Result<MessageOperation<'a, Committed>> {
         let author_id = op.author_id();
         let message_id = op.message_id;
+
+        // FIXME: run everything in a transaction
+        // let mut txn = self.state.acquire_data().await?;
+        // txn.media_link_select(media_id).await?;
+        // txn.media_link_insert(media_id, target_id, link_type)
+        //     .await?;
+        // txn.commit().await?;
+
         self.validate_media(&op.stage.all_media_ids, message_id, author_id)
             .await?;
 
@@ -548,6 +555,16 @@ impl ServiceMessages {
         &'a self,
         mut op: MessageOperation<'a, Committed>,
     ) -> Result<MessageOperation<'a, Committed>> {
+        self.state
+            .services()
+            .channels
+            .update_last_message_ids(
+                op.channel.id,
+                op.message_id,
+                op.stage.message.latest_version.version_id,
+            )
+            .await;
+
         self.ensure_thread_unarchived(&mut op).await?;
         self.ensure_thread_membership(&mut op).await?;
         self.spawn_unfurler_tasks(&mut op).await?;
