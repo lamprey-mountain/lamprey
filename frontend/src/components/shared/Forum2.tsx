@@ -49,7 +49,10 @@ import { Markdown } from "@/atoms/Markdown";
 import { Resizable } from "@/atoms/Resizable";
 import { Time } from "@/atoms/Time";
 import { createTooltip } from "@/atoms/Tooltip";
-import { UserDisplayName } from "@/components/features/chat/Message";
+import {
+	AttachmentView,
+	UserDisplayName,
+} from "@/components/features/chat/Message";
 import { Reactions } from "@/components/features/chat/Reactions";
 import { createEditor } from "@/components/features/editor/Editor";
 import { serializeToMarkdown } from "@/components/features/editor/serializer.ts";
@@ -112,45 +115,6 @@ function isUploadingAttachment(att: Attachment): att is Attachment & {
 	local_id: string;
 } {
 	return "status" in att && att.status === "uploading";
-}
-
-function AttachmentView(props: MediaProps) {
-	const b = () => props.media.content_type.split("/")[0];
-	const _ty = () => props.media.content_type.split(";")[0];
-	if (b() === "image") {
-		return (
-			<li class="raw">
-				<ImageView media={props.media} />
-			</li>
-		);
-	} else if (b() === "video") {
-		return (
-			<li class="raw">
-				<VideoView media={props.media} />
-			</li>
-		);
-	} else if (b() === "audio") {
-		return (
-			<li class="raw">
-				<AudioView media={props.media} />
-			</li>
-		);
-	} else if (
-		b() === "text" ||
-		/^application\/json\b/.test(props.media.content_type)
-	) {
-		return (
-			<li class="raw">
-				<TextView media={props.media} />
-			</li>
-		);
-	} else {
-		return (
-			<li>
-				<FileView media={props.media} />
-			</li>
-		);
-	}
 }
 
 const InputReply = (props: { thread: Channel; reply: Message }) => {
@@ -1381,7 +1345,7 @@ const Comment = (props: {
 											>
 												{(att) => (
 													<Show when={att.type === "Media"}>
-														<AttachmentView media={att.media as Media} />
+														<AttachmentView att={att} />
 													</Show>
 												)}
 											</For>
