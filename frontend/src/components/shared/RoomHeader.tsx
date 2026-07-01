@@ -30,15 +30,12 @@ export const RoomHeader = (props: RoomHeaderProps) => {
 		>
 			<b>home</b>
 			<div style="flex:1"></div>
-			<SearchInput room={props.room} />
-			<button
-				type="button"
-				class="button"
-				onClick={toggleMembers}
-				title="Show members"
-			>
-				<Icon src={icMembers} alt="Members" />
-			</button>
+			<div class="right">
+				<SearchInput room={props.room} />
+				<button type="button" onClick={toggleMembers} title="Show members">
+					<Icon src={icMembers} alt="Members" />
+				</button>
+			</div>
 		</header>
 	);
 };
