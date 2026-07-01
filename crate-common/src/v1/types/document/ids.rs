@@ -24,6 +24,33 @@ pub struct DocumentRevisionId {
     pub seq: u64,
 }
 
+/// a resolvable reference to a `DocumentRevisionId`
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(try_from = "String", into = "String")
+)]
+// TODO: use tuple variant syntax instead of struct variant syntax
+pub enum DocumentRevisionRef {
+    /// the current head (latest revision) of a branch
+    ///
+    /// serialized as `branch-id`
+    Branch { branch_id: DocumentBranchId },
+
+    /// a specific revision
+    ///
+    /// serialized as `branch-id@seq`
+    Revision { version_id: DocumentRevisionId },
+
+    /// the revision pointed to by this tag
+    ///
+    /// serialized as `~tag`
+    Tag { tag_id: DocumentTagId },
+}
+
+// ===== DocumentRevisionId impls =====
+
 impl std::fmt::Display for DocumentRevisionId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}@{}", self.branch_id, self.seq)
@@ -58,29 +85,7 @@ impl TryFrom<String> for DocumentRevisionId {
     }
 }
 
-/// a resolvable reference to a `DocumentRevisionId`
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(try_from = "String", into = "String")
-)]
-pub enum DocumentRevisionRef {
-    /// the current head (latest revision) of a branch
-    ///
-    /// serialized as `branch-id`
-    Branch { branch_id: DocumentBranchId },
-
-    /// a specific revision
-    ///
-    /// serialized as `branch-id@seq`
-    Revision { version_id: DocumentRevisionId },
-
-    /// the revision pointed to by this tag
-    ///
-    /// serialized as `~tag`
-    Tag { tag_id: DocumentTagId },
-}
+// ===== DocumentRevisionRef impls =====
 
 impl std::fmt::Display for DocumentRevisionRef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

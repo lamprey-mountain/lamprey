@@ -10,9 +10,15 @@ pub struct DocumentStateVector(pub Vec<u8>);
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DocumentUpdate(pub Vec<u8>);
 
+/// a position in a document. unaffected by changes.
+///
+/// represents a yrs `StickyIndex`
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DocumentPosition(pub Vec<u8>);
+
 #[cfg(feature = "serde")]
 mod serde_impl {
-    use super::{DocumentStateVector, DocumentUpdate};
+    use super::{DocumentPosition, DocumentStateVector, DocumentUpdate};
     use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
     use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 
@@ -77,11 +83,42 @@ mod serde_impl {
             }
         }
     }
+
+    impl Serialize for DocumentPosition {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            if serializer.is_human_readable() {
+                serializer.serialize_str(&BASE64_URL_SAFE_NO_PAD.encode(&self.0))
+            } else {
+                serializer.serialize_bytes(&self.0)
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for DocumentPosition {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            if deserializer.is_human_readable() {
+                let s = String::deserialize(deserializer)?;
+                let bytes = BASE64_URL_SAFE_NO_PAD
+                    .decode(s)
+                    .map_err(de::Error::custom)?;
+                Ok(DocumentPosition(bytes))
+            } else {
+                let bytes = Vec::<u8>::deserialize(deserializer)?;
+                Ok(DocumentPosition(bytes))
+            }
+        }
+    }
 }
 
 #[cfg(feature = "utoipa")]
 mod utoipa_impl {
-    use super::{DocumentStateVector, DocumentUpdate};
+    use super::{DocumentPosition, DocumentStateVector, DocumentUpdate};
     use utoipa::{PartialSchema, ToSchema, openapi::ObjectBuilder};
 
     impl ToSchema for DocumentStateVector {}
@@ -101,6 +138,17 @@ mod utoipa_impl {
             ObjectBuilder::new()
                 .schema_type(utoipa::openapi::schema::Type::String)
                 .description(Some("Base64 encoded update"))
+                .build()
+                .into()
+        }
+    }
+
+    impl ToSchema for DocumentPosition {}
+    impl PartialSchema for DocumentPosition {
+        fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+            ObjectBuilder::new()
+                .schema_type(utoipa::openapi::schema::Type::String)
+                .description(Some("Base64 encoded position"))
                 .build()
                 .into()
         }

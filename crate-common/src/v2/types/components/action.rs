@@ -79,9 +79,6 @@ pub enum Navigate {
 
 impl ButtonAction {
     pub fn is_interactive(&self) -> bool {
-        matches!(
-            self,
-            Self::Interaction { .. } | Self::Submit
-        )
+        matches!(self, Self::Interaction { .. } | Self::Submit)
     }
 }

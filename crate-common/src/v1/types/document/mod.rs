@@ -22,32 +22,32 @@ pub mod crdt;
 pub mod ids;
 pub mod serialized;
 
-pub mod channel {
-    //! channel components
+// pub mod channel {
+//     //! channel components
 
-    pub struct Document;
-    pub struct DocumentArchived;
-    pub struct DocumentPublished;
-    pub struct DocumentPatch; // rename to DocumentUpdate
-    pub struct DocumentPublishedPatch; // Patch -> Update
-    pub struct DocumentArchivedPatch; // Patch -> Update
-    pub struct Wiki;
-    pub struct WikiPatch; // rename to WikiUpdate
-}
+//     pub struct Document;
+//     pub struct DocumentArchived;
+//     pub struct DocumentPublished;
+//     pub struct DocumentPatch; // rename to DocumentUpdate
+//     pub struct DocumentPublishedPatch; // Patch -> Update
+//     pub struct DocumentArchivedPatch; // Patch -> Update
+//     pub struct Wiki;
+//     pub struct WikiPatch; // rename to WikiUpdate
+// }
 
-pub mod wiki {
-    // ...
-}
+// pub mod wiki {
+//     // ...
+// }
 
-mod next {
-    //! todo: write docs for the document system
-    //!
-    //! ## glossary
-    //!
-    //! - **document**: a crdt for collaborative text editing, many documents per channel?
-    //! - **branch**: an isolated context, many branches per document
-    //! - **tag**: similar to a git commit *and* a git tag
-}
+// mod next {
+//     //! todo: write docs for the document system
+//     //!
+//     //! ## glossary
+//     //!
+//     //! - **document**: a crdt for collaborative text editing, many documents per channel?
+//     //! - **branch**: an isolated context, many branches per document
+//     //! - **tag**: similar to a git commit *and* a git tag
+// }
 
 // pub mod branch {}
 // pub mod tag {}

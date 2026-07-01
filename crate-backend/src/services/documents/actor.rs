@@ -193,6 +193,8 @@ impl Message<ApplyUpdate> for DocumentActor {
         let update = Update::decode_v1(&msg.update_bytes)
             .map_err(|_| Error::Internal("Invalid update bytes".to_string()))?;
 
+        // PERF: surely theres a better way than with a mutex?
+        // maybe atomics...?
         let stats = Arc::new(std::sync::Mutex::new((0, 0)));
         let stats_inner = stats.clone();
 

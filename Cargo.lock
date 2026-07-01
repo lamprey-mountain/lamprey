@@ -4226,6 +4226,7 @@ dependencies = [
  "async-trait",
  "axum",
  "bytes",
+ "crc32fast",
  "figment",
  "flate2",
  "http",

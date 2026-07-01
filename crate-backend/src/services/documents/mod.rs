@@ -28,11 +28,13 @@ use crate::services::documents::actor::{
 use crate::services::documents::util::{DOCUMENT_ROOT_NAME, HistoryPaginationSummary};
 use crate::{Error, Result, ServerStateInner};
 
-// mod validate;
 mod actor;
 mod serdoc;
+mod syncer;
 mod util;
+// mod validate;
 
+// TODO: use DocumentId
 pub type EditContextId = (ChannelId, DocumentBranchId);
 
 pub struct ServiceDocuments {
@@ -588,7 +590,6 @@ pub struct DocumentSyncer {
     user_id: Option<UserId>,
 }
 
-// TODO: move to mod syncer;
 impl DocumentSyncer {
     pub async fn set_user_id(&mut self, user_id: Option<UserId>) {
         self.user_id = user_id;

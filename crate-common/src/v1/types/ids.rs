@@ -293,6 +293,7 @@ genid!(AutomodRule, "00000000-0000-0000-0000-0automodrule");
 genid!(CalendarEvent, "00000000-0000-0000-0000-calendarevent");
 genid!(Harvest);
 genid!(SearchDlq); // NOTE: this should probably not be in common as it's a backend specific type
+genid!(Document);
 genid!(DocumentBranch);
 genid!(DocumentTag);
 genid!(Connection);
