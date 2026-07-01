@@ -32,6 +32,47 @@
 			}
 		}
 	}
+
+	// TODO: deduplicate code with chat header
+	& > .right > button {
+		width: 32px;
+		height: 32px;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		cursor: pointer;
+
+		&:active {
+			translate: 0 1px;
+		}
+
+		& > .icon {
+			filter: invert(0.7);
+			width: 18px;
+			height: 18px;
+		}
+
+		& > .icon2 {
+			background: $fg-300;
+			width: 18px;
+			height: 18px;
+		}
+
+		&:hover > .icon {
+			filter: invert(0.95);
+		}
+
+		&:hover > .icon2 {
+			background: $fg-100;
+		}
+	}
+
+	.icon-button {
+		display: grid;
+		place-items: center;
+		height: 24px;
+		width: 24px;
+	}
 }
 
 .document {

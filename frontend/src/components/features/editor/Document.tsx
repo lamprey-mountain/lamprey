@@ -16,8 +16,10 @@ import {
 	Show,
 } from "solid-js";
 import { Portal } from "solid-js/web";
+import { useCtx } from "@/app/context";
 import { useApi, useDocumentBranches, useUsers } from "@/api";
 import icDelete from "@/assets/delete.png";
+import icMembers from "@/assets/members.png";
 import icBranchDefault from "@/assets/edit.png";
 import icBranchPrivate from "@/assets/edit.png";
 import icBranchNew from "@/assets/edit.png";
@@ -92,6 +94,7 @@ const DocumentHeader = (
 		editor: () => { view: import("prosemirror-view").EditorView };
 	},
 ) => {
+	const ctx = useCtx();
 	const [doc, update] = useDocument();
 	const [, modalCtl] = useModals();
 	const [ch, setCh] = useChannel()!;
@@ -103,6 +106,17 @@ const DocumentHeader = (
 	const users = useUsers();
 	const api = useApi();
 	const [filterText, setFilterText] = createSignal("");
+
+	const toggleMembers = () => {
+		const c = ctx.preferences();
+		ctx.setPreferences({
+			...c,
+			frontend: {
+				...c.frontend,
+				showMembers: !(c.frontend.showMembers ?? true),
+			},
+		});
+	};
 
 	// Paginated list of branches for this channel
 	const branchList = branches.useList(() => props.channel.id);
@@ -443,6 +457,13 @@ const DocumentHeader = (
 					export
 				</button>
 			</div>
+
+			<div style="flex:1"></div>
+			<menu class="right">
+				<button type="button" onClick={toggleMembers} title="Show members">
+					<Icon src={icMembers} />
+				</button>
+			</menu>
 
 			<Show when={active() === "branches"}>
 				<Portal>
