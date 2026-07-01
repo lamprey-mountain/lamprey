@@ -2941,10 +2941,11 @@ button.link {
 	background: none;
 	padding: 0;
 	color: $fg-300;
+	cursor: pointer;
 
 	&:hover {
 		text-decoration: underline;
-		color: $fg-100;
+		/* color: $fg-100; */
 	}
 }
 

@@ -234,27 +234,6 @@
 }
 
 // TODO: redo
-.message.oneline {
-	grid-template-columns: 48px 1fr max-content;
-
-	.icon.main {
-		filter: invert(0.7);
-		margin-left: 28px;
-		margin-top: 2px;
-	}
-
-	.icon2.main {
-		background: $fg-300;
-		margin-left: 28px;
-		margin-top: 2px;
-	}
-
-	.author {
-		padding: 0;
-	}
-}
-
-// TODO: redo
 .message-dim-content > .content {
 	color: $fg-500;
 }
@@ -419,6 +398,10 @@
 
 .message {
 	display: grid;
+	grid-template-columns: 52px auto;
+	grid-template-rows: auto auto auto auto;
+	grid-template-areas:
+		"reply reply" "aside header" "aside content" "aside accessories";
 	contain: content;
 
 	& .user {
@@ -432,44 +415,103 @@
 			text-decoration: underline;
 		}
 
-		/* &.override-name { */
-		/* color: #9ca9db; */
-		/* } */
+		// TODO: remove?
+		// &.override-name {
+		//   color: #9ca9db;
+		// }
 	}
 
-	& > .reply {
-		display: grid;
-		grid-area: reply;
-		grid-template-columns: subgrid;
+	& .time {
+		color: $fg-500;
+		font-size: 0.7em;
+	}
+}
 
-		& > .spine {
-			width: calc(50% - 8px);
-			height: 50%;
-			align-self: end;
-			justify-self: end;
-			margin: 2px 8px;
-			border-top-left-radius: 4px;
-			border-top: solid $sep-800 2px;
-			border-left: solid $sep-800 2px;
+.message > .reply {
+	grid-area: reply;
+	display: flex;
+	height: 1em;
+	align-items: center;
+	margin-bottom: 4px;
+
+	& > .spine {
+		width: 24px;
+		height: 50%;
+		align-self: end;
+		margin-left: 24px;
+		margin-right: 8px;
+		border-top-left-radius: 4px;
+		border-top: solid $sep-800 2px;
+		border-left: solid $sep-800 2px;
+	}
+
+	& > .avatar {
+		height: 16px;
+		width: 16px;
+		margin-right: 4px;
+		border-radius: 6px;
+		filter: brightness(0.8);
+	}
+
+	& > .content {
+		padding-right: 4em;
+		font-size: 0.9em;
+		@include truncate;
+
+		& > .author {
+			padding-right: 4px;
+			color: $fg-600;
 		}
 
-		& > .content {
-			padding-right: 4em;
-			@include truncate;
-
-			& > .author {
-				padding-right: 4px;
-			}
-
-			& > .markdown {
-				display: inline;
-			}
+		& > .markdown {
+			display: inline;
+			color: $fg-400;
 		}
 	}
+}
+
+.message > .aside {
+	grid-area: aside;
+	display: flex;
+	flex-direction: column;
+	padding-top: 4px;
+
+	& > .avatar {
+		display: none;
+		cursor: pointer;
+		height: 36px;
+		width: 36px;
+		margin-left: 8px;
+	}
+
+	& > .time {
+		visibility: hidden;
+		align-self: center;
+		@include truncate;
+	}
+
+	& > .thread-spine {
+		flex: 1;
+		margin-left: 24px;
+		margin-right: 4px;
+		margin-top: 8px;
+		margin-bottom: 24px;
+		border-bottom: solid $sep-500 2px;
+		border-left: solid $sep-500 2px;
+		border-bottom-left-radius: 4px;
+	}
+}
+
+.message > .content {
+	grid-area: content;
+	display: flex;
+	flex-direction: column;
+	align-items: start;
+	padding-right: 8px;
 
 	& > .header {
-		grid-area: header;
 		display: none;
+		font-size: 1em;
 		height: 1.25em;
 		align-items: end;
 
@@ -487,8 +529,6 @@
 		}
 
 		& > .time {
-			color: $fg-500;
-			font-size: 0.7em;
 			margin-left: 4px;
 			margin-bottom: 2px;
 
@@ -498,187 +538,146 @@
 		}
 	}
 
-	& > .aside {
-		grid-area: aside;
-		flex-direction: column;
-		padding-top: 4px;
-		display: flex;
+	& > .body {
+		overflow: hidden;
+		max-width: 60ch;
 
-		& > .avatar {
-			display: none;
-			cursor: pointer;
-			height: 36px;
-			width: 36px;
-			margin-left: 8px;
-		}
-
-		& > .time {
+		// TODO: more specific selector
+		& .edited {
 			color: $fg-500;
-			font-size: 0.7em;
-			visibility: hidden;
-			align-self: center;
-			@include truncate;
+			font-size: 0.8rem;
+			cursor: pointer;
 		}
 	}
+}
 
-	& > .content {
-		grid-area: content;
-		padding-right: 8px;
-		display: flex;
-		flex-direction: column;
-		align-items: start;
+.message > .accessories {
+	grid-area: accessories;
+	display: flex;
+	flex-direction: column;
+	align-items: start;
+	padding-right: 8px;
+	max-width: 60ch;
+}
 
-		& > .body {
-			overflow: hidden;
-			max-width: 60ch;
-		}
+/* TODO: add .local class to messages */
+.message.local > .inner > .content > .body {
+	color: $fg-500;
+}
 
-		/* & .edited { */
-		/* color: $fg-500; */
-		/* font-size: 0.8rem; */
-		/* cursor: pointer; */
-		/* } */
+.message:hover {
+	background-color: oklch(var(--color-bg1) / 0.3);
 
-		& > .components {
-			max-width: 60ch;
-		}
+	& > .aside > .time {
+		visibility: visible;
 	}
 
-	& > .time {
-		grid-area: time;
-		color: $fg-500;
-		font-size: 0.7em;
-
-		&.full {
+	& > .content > .header {
+		& > .time.onlytime {
 			display: none;
 		}
-	}
-
-	/* TODO: add .local class to messages */
-	&.local > .content > .body {
-		color: $fg-500;
-	}
-
-	&:hover {
-		background-color: oklch(var(--color-bg1) / 0.3);
-
-		& > .aside > .time {
-			visibility: visible;
-		}
-
-		& > .header > .time.onlytime {
-			display: none;
-		}
-
-		& > .header > .time.full {
+		& > .time.full {
 			display: block;
 		}
 	}
 }
 
-.message {
-	/* & .author { */
-	/* text-align: right; */
-	/* padding: 0 8px; */
-	/* display: inline-flex; */
-	/* align-items: center; */
-	/* } */
+.message.oneline {
+	& > .aside {
+		padding-top: 0;
+	}
 
-	/* & > .content { */
-	/* padding-right: 8px; */
-	/* display: flex; */
-	/* flex-direction: column; */
-	/* align-items: start; */
-	/* min-width: 0; */
-	/* } */
+	& > .aside > .icon {
+		filter: invert(0.7);
+		margin-left: 28px;
+		margin-top: 2px;
+	}
+
+	& > .aside > .icon2 {
+		background: $fg-300;
+		margin-left: 28px;
+		margin-top: 2px;
+	}
+
+	& > .content {
+		flex-direction: row;
+		align-items: end;
+		white-space: nowrap;
+
+		& > .time {
+			margin-left: 4px;
+			margin-bottom: 2px;
+		}
+
+		& > .time.full {
+			display: none;
+		}
+	}
+
+	&:hover > .content {
+		& > .time.onlytime {
+			display: none;
+		}
+
+		& > .time.full {
+			display: block;
+		}
+	}
 }
 
 #root[data-message-style="cozy"] .message {
-	grid-template-columns: 52px auto;
-	grid-template-rows: auto auto auto;
-	grid-template-areas: "reply reply" "aside header" "aside content";
-
-	& > .time {
-		display: none;
-	}
-
-	/* & > .avatar-wrap { */
-	/* display: flex; */
-	/* flex-direction: column; */
-	/* padding-top: 4px; */
-	/* margin: initial; */
-
-	/* & > .thread-spine { */
-	/* flex: 1; */
-	/* margin-left: 24px; */
-	/* margin-right: 4px; */
-	/* margin-top: 8px; */
-	/* margin-bottom: 24px; */
-	/* border-bottom: solid $sep-500 2px; */
-	/* border-left: solid $sep-500 2px; */
-	/* border-bottom-left-radius: 4px; */
-	/* } */
-	/* } */
-
 	&.separate {
 		margin-top: 8px;
 		padding: 4px 0;
 
-		& > .header {
+		& > .aside {
+			& > .avatar {
+				display: block;
+			}
+
+			& > .time {
+				display: none;
+			}
+		}
+
+		& > .content > .header {
 			display: flex;
-		}
-
-		& > .aside > .avatar {
-			display: block;
-		}
-
-		& > .aside > .time {
-			display: none;
 		}
 	}
 }
 
-#root[data-message-style="compact"] .message {
-	grid-template-columns: 2em 128px 1fr max-content;
-	grid-template-rows: auto auto;
-	grid-template-areas: ". reply reply reply" "aside header content time";
+#root[data-message-style="compact"] .message:not(.oneline) {
+	& > .reply {
+		margin-left: 32px;
+		margin-bottom: 0;
+	}
 
 	& > .content {
-		grid-area: content;
+		display: inline;
+		text-indent: -2em;
+		margin-left: 2em;
+
+		& > .header {
+			display: inline;
+			margin-right: 4px;
+
+			& > .time {
+				display: none;
+			}
+		}
 
 		& > .body {
-			text-indent: 2em;
-			margin-left: -2em;
+			display: inline;
+
+			// HACK: make the first markdown paragraph also display inline
+			& > p:first-child {
+				display: inline;
+			}
 		}
 	}
 
-	& > .header {
-		display: flex;
-		justify-content: end;
-
-		& > .time {
-			display: none;
-		}
-
-		& > .author {
-			z-index: 1;
-			padding-right: 8px;
-			@include truncate;
-		}
-	}
-
-	& > .aside {
-		z-index: 2;
-		display: flex;
-		grid-area: aside;
-
-		& > .avatar {
-			display: none;
-		}
-
-		& > .time {
-			/* align-self: stretch; */
-		}
+	&.separate > .aside > .time {
+		visibility: visible;
 	}
 }
 

@@ -114,7 +114,7 @@ export const TimelineItem = (props: {
 				<li class="timeline-header">
 					<header>
 						<Show when={false}>
-							{/* TODO: add channel icon? */}
+							{/* TODO: add channel icon? i need icons for threads */}
 							<div style="display:flex;align-items:center;gap:4px;">
 								<div style="background:red;border-radius:50%;display:grid;place-items:center;height:32px;width:32px;">
 									<ChannelIcon

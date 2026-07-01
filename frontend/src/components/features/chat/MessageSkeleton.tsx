@@ -1,6 +1,8 @@
 import { For, Show } from "solid-js";
 import { useCtx } from "@/app/context";
 
+// TODO: make this use the new Message html structure
+
 export const MessageSkeleton = () => {
 	const ctx = useCtx();
 	const messageStyle = ctx.preferences().frontend.message_style || "cozy";

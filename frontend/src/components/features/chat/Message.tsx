@@ -66,6 +66,7 @@ import {
 import { openThread } from "@/utils/channel";
 import { Reactions } from "./Reactions.tsx";
 import { useMessageToolbar } from "./message-toolbar-context.tsx";
+import { Avatar2 } from "@/avatar/UserAvatar.tsx";
 
 export type MessageProps = {
 	message: MessageT;
@@ -374,8 +375,6 @@ function SystemMessage(
 			data-message-id={props.message.id}
 			classList={{
 				separate: props.separate,
-				notseparate: !props.separate,
-				"toolbar-visible": props.toolbarVisible,
 			}}
 			onClick={props.handleClick}
 			onMouseDown={(e) => {
@@ -392,9 +391,24 @@ function SystemMessage(
 				// FIXME: dont clear if toolbar needs to exist for interaction
 			}}
 		>
-			<img class="icon main" src={props.icon} />
-			<div class="content">{props.content}</div>
-			<Time date={props.date} animGroup="message-ts" />
+			<aside class="aside">
+				<img class="icon" src={props.icon} />
+			</aside>
+			<div class="content">
+				{props.content}
+				<Time
+					date={props.date}
+					animGroup="message-ts"
+					class="onlytime"
+					format="time"
+				/>
+				<Time
+					date={props.date}
+					animGroup="message-ts"
+					class="full"
+					format="full"
+				/>
+			</div>
 		</article>
 	);
 }
@@ -405,8 +419,9 @@ export function ReplyView(props: {
 	source_id: string;
 	room_id?: string;
 }) {
-	const messagesService = useMessages();
-	const reply = messagesService.use(
+	const messages = useMessages();
+	const users = useUsers();
+	const reply = messages.use(
 		() => props.channel_id,
 		() => props.reply_id,
 	);
@@ -433,9 +448,14 @@ export function ReplyView(props: {
 		ch.timeline.jumpToMessage(props.reply_id, true, true);
 	};
 
+	const author = users.use(() => reply()?.author_id);
+
 	return (
 		<div class="reply" onClick={scrollToReply}>
 			<div class="spine"></div>
+			<Show when={true && author()} fallback={<div class="avatar"></div>}>
+				{(a) => <Avatar animate={false} user={a()} />}
+			</Show>
 			<div class="content">
 				<Show when={!reply.loading} fallback="loading...">
 					<Show when={reply()}>
@@ -776,50 +796,51 @@ function DefaultMessage(
 				)}
 			</Show>
 
-			<header class="header">
-				<Show when={flume()}>
-					<div class="flume-spinner">
-						<Icon src={icGear} color={colors.fg600} />
-					</div>
-				</Show>
-				<UserDisplayName
-					user_id={props.message.author_id}
-					room_id={props.room_id}
-					thread_id={props.message.channel_id}
-					onClick
-					class="author"
-				/>
-				<Time
-					date={props.date}
-					animGroup="message-ts"
-					class="onlytime"
-					format="time"
-				/>
-				<Time
-					date={props.date}
-					animGroup="message-ts"
-					class="full"
-					format="full"
-				/>
-			</header>
-
 			<aside class="aside">
 				<Avatar user={props.user} animate={props.hovered} />
+				<Time date={props.date} animGroup="message-ts" format="time" />
 				<Show when={props.message.thread}>
 					<div class="thread-spine"></div>
 				</Show>
-				<Time date={props.date} animGroup="message-ts" format="time" />
 			</aside>
 
 			<div class="content">
-				{/* markdown content */}
+				<h3 class="header">
+					<Show when={flume()}>
+						<div class="flume-spinner">
+							<Icon src={icGear} color={colors.fg600} />
+						</div>
+					</Show>
+					<UserDisplayName
+						user_id={props.message.author_id}
+						room_id={props.room_id}
+						thread_id={props.message.channel_id}
+						onClick
+						class="author"
+					/>
+					<Time
+						date={props.date}
+						animGroup="message-ts"
+						class="onlytime"
+						format="time"
+					/>
+					<Time
+						date={props.date}
+						animGroup="message-ts"
+						class="full"
+						format="full"
+					/>
+				</h3>
+
 				<Show
 					when={!props.isEditing}
 					fallback={<MessageEditor message={props.message} />}
 				>
 					<MessageTextMarkdown message={props.message} />
 				</Show>
+			</div>
 
+			<div class="accessories">
 				{/* attachments */}
 				<Show when={version()?.attachments?.length}>
 					<ul class="attachments">
