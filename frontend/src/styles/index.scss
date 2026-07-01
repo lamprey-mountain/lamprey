@@ -744,11 +744,18 @@ em {
 
 		&:hover > .inner,
 		&:focus > .inner {
+			color: $fg-100;
 			background-color: #fff2;
 		}
 
 		&.color-danger {
 			color: $color-red;
+
+			&:hover > .inner,
+			&:focus > .inner {
+				color: $fg-100;
+				background: oklch(var(--color-red) / 0.7);
+			}
 		}
 
 		&.selected {
