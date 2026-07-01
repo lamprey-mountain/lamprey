@@ -34,8 +34,10 @@ const OVERSCAN = 20;
 type TimelineTask =
 	| { type: "SET_ANCHOR"; anchor: MessageListAnchor }
 	| { type: "CALLBACK"; fn: () => void }
-	// | { type: "SCROLL" }
-	| { type: "HIGHLIGHT" };
+	| { type: "HIGHLIGHT" }
+	| { type: "SCROLL_TOP"; smooth?: boolean }
+	| { type: "SCROLL_BOTTOM"; smooth?: boolean }
+	| { type: "SCROLL_MESSAGE"; message_id: string; smooth?: boolean };
 
 export const Timeline = (props: ChatProps) => {
 	const messagesService = useMessages();
@@ -53,12 +55,37 @@ export const Timeline = (props: ChatProps) => {
 		}
 	};
 
+	let scrollEl = null as HTMLDivElement | null;
+	const virtualizer = createVirtualizer({
+		get count() {
+			return timeline.items.length;
+		},
+		anchorTo: "end",
+		getScrollElement: () => scrollEl,
+		estimateSize: () => 80, // TODO: more accurate size estimation
+		overscan: OVERSCAN,
+	});
+
 	const queue = new Queue(async (task: TimelineTask) => {
 		log.debug("execute task", task);
 		switch (task.type) {
 			case "SET_ANCHOR": {
 				updateTimeline("anchor", task.anchor);
 				await fetchMessages(task.anchor);
+
+				// update timeline
+				const m = timeline.messages;
+				const rendered = m?.items
+					? renderTimeline({
+							items: m.items,
+							has_after: m.has_forward,
+							has_before: m.has_backwards,
+							read_marker_id: timeline.last_read_message_id ?? null,
+						})
+					: [];
+				log.debug("update timeline", rendered);
+				updateTimeline("items", reconcile(rendered));
+				await new Promise<void>((r) => queueMicrotask(r));
 				break;
 			}
 			case "CALLBACK": {
@@ -69,11 +96,49 @@ export const Timeline = (props: ChatProps) => {
 				// TODO
 				break;
 			}
+			case "SCROLL_TOP": {
+				virtualizer.scrollToOffset(0, {
+					behavior: task.smooth ? "smooth" : "auto",
+				});
+				break;
+			}
+			case "SCROLL_BOTTOM": {
+				virtualizer.scrollToEnd({
+					behavior: task.smooth ? "smooth" : "auto",
+				});
+				break;
+			}
+			case "SCROLL_MESSAGE": {
+				const idx = timeline.items.findIndex(
+					(x) => x.type === "message" && x.message.id === task.message_id,
+				);
+				if (idx !== -1) {
+					virtualizer.scrollToIndex(idx, {
+						align: "center",
+						behavior: task.smooth ? "smooth" : "auto",
+					});
+				} else {
+					log.warn("couldn't find message for SCROLL_MESSAGE", task);
+				}
+				break;
+			}
 		}
 	});
 
 	// fetch initial messages
-	queue.push({ type: "SET_ANCHOR", anchor: timeline.anchor });
+	const init = () => {
+		const a = timeline.anchor;
+		const scroll: TimelineTask =
+			a.type === "context"
+				? { type: "SCROLL_MESSAGE", message_id: a.message_id }
+				: a.type === "backwards"
+					? { type: "SCROLL_BOTTOM" }
+					: { type: "SCROLL_TOP" };
+
+		queue.push({ type: "SET_ANCHOR", anchor: timeline.anchor }, scroll);
+	};
+
+	init();
 
 	// reactively refetch messages whenever a channel's message version is bumped
 	// TODO: merge into queue handler
@@ -89,32 +154,7 @@ export const Timeline = (props: ChatProps) => {
 		),
 	);
 
-	// reactively update timeline when messages are received
 	// FIXME: rerender when channelState.read_marker_id updates
-	createEffect(() => {
-		const m = timeline.messages;
-		const rendered = m?.items
-			? renderTimeline({
-					items: m.items,
-					has_after: m.has_forward,
-					has_before: m.has_backwards,
-					read_marker_id: timeline.last_read_message_id ?? null,
-				})
-			: [];
-		log.debug("update timeline", rendered);
-		updateTimeline("items", reconcile(rendered));
-	});
-
-	let scrollEl = null as HTMLDivElement | null;
-	const virtualizer = createVirtualizer({
-		get count() {
-			return timeline.items.length;
-		},
-		anchorTo: "end",
-		getScrollElement: () => scrollEl,
-		estimateSize: () => 80, // TODO: more accurate size estimation
-		overscan: OVERSCAN,
-	});
 
 	timeline.commands.on("scrollBy", (data) => {
 		const newOffset = (virtualizer.scrollOffset ?? 0) + data.px;
@@ -127,12 +167,8 @@ export const Timeline = (props: ChatProps) => {
 		queue.push(
 			{ type: "SET_ANCHOR", anchor: { type: "backwards", limit: 50 } },
 			{
-				type: "CALLBACK",
-				fn: () => {
-					virtualizer.scrollToEnd({
-						behavior: data.smooth ? "smooth" : "auto",
-					});
-				},
+				type: "SCROLL_BOTTOM",
+				smooth: data.smooth,
 			},
 		);
 	});
@@ -141,12 +177,8 @@ export const Timeline = (props: ChatProps) => {
 		queue.push(
 			{ type: "SET_ANCHOR", anchor: { type: "forwards", limit: 50 } },
 			{
-				type: "CALLBACK",
-				fn: () => {
-					virtualizer.scrollToOffset(0, {
-						behavior: data.smooth ? "smooth" : "auto",
-					});
-				},
+				type: "SCROLL_TOP",
+				smooth: data.smooth,
 			},
 		);
 	});
@@ -162,20 +194,9 @@ export const Timeline = (props: ChatProps) => {
 				},
 			},
 			{
-				type: "CALLBACK",
-				fn: () => {
-					const idx = timeline.items.findIndex(
-						(x) => x.type === "message" && x.message.id === data.message_id,
-					);
-					if (idx !== -1) {
-						virtualizer.scrollToIndex(idx, {
-							align: "center",
-							behavior: data.smooth ? "smooth" : "auto",
-						});
-					} else {
-						log.warn("couldn't find message after scrolling", data);
-					}
-				},
+				type: "SCROLL_MESSAGE",
+				message_id: data.message_id,
+				smooth: data.smooth,
 			},
 		);
 	});
