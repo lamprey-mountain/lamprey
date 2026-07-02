@@ -526,9 +526,10 @@ impl ServiceChannels {
                     "threads must have a parent channel to have tags",
                 ))?;
 
-                // FIXME: tags_available is deprecated, fetch from db?
-                let forum_channel = self.get(parent_id, None).await?;
-                let available_tags = forum_channel.tags_available.unwrap_or_default();
+                let available_tags = data.tag_get_many(parent_id, tags).await?;
+                if available_tags.len() != tags.len() {
+                    return Err(Error::BadStatic("invalid tag(s) for this forum"));
+                }
 
                 let available_tags_map: HashMap<_, _> =
                     available_tags.iter().map(|t| (t.id, t)).collect();
@@ -1043,8 +1044,10 @@ impl ServiceChannels {
                 .parent_id
                 .ok_or(Error::BadStatic("thread has no parent forum"))?;
 
-            let forum_channel = self.get(forum_id, None).await?;
-            let available_tags = forum_channel.tags_available.unwrap_or_default();
+            let available_tags = data.tag_get_many(forum_id, tags).await?;
+            if available_tags.len() != tags.len() {
+                return Err(Error::BadStatic("invalid tag(s) for this forum"));
+            }
 
             let available_tag_ids: HashSet<_> = available_tags.iter().map(|t| t.id).collect();
 

@@ -266,6 +266,7 @@ pub trait DataTag {
     async fn tag_update(&mut self, tag_id: TagId, patch: TagPatch) -> Result<Tag>;
     async fn tag_delete(&mut self, tag_id: TagId) -> Result<()>;
     async fn tag_get(&mut self, tag_id: TagId) -> Result<Tag>;
+    async fn tag_get_many(&mut self, channel_id: ChannelId, tag_ids: &[TagId]) -> Result<Vec<Tag>>;
     async fn tag_get_forum_id(&mut self, tag_id: TagId) -> Result<ChannelId>;
     async fn tag_search(
         &mut self,

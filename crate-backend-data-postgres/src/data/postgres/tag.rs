@@ -161,6 +161,28 @@ impl DataTag for Postgres {
         Ok(tag.into())
     }
 
+    async fn tag_get_many(&mut self, channel_id: ChannelId, tag_ids: &[TagId]) -> Result<Vec<Tag>> {
+        let mut conn = self.acquire().await?;
+        let ids: Vec<Uuid> = tag_ids.iter().map(|id| **id).collect();
+        let tags = query_as!(
+            DbTag,
+            r#"
+            SELECT
+                t.id, t.channel_id, t.name, t.description, t.color, t.is_archived, t.is_restricted, t.is_spoiler,
+                (SELECT count(*) FROM channel_tag ct JOIN channel c ON ct.channel_id = c.id WHERE ct.tag_id = t.id AND c.archived_at IS NULL) as "active_thread_count!",
+                (SELECT count(*) FROM channel_tag WHERE tag_id = t.id) as "total_thread_count!"
+            FROM tag t
+            WHERE t.channel_id = $1 AND t.id = ANY($2)
+            "#,
+            *channel_id,
+            &ids
+        )
+        .fetch_all(conn.ext())
+        .await?;
+
+        Ok(tags.into_iter().map(Into::into).collect())
+    }
+
     async fn tag_get_forum_id(&mut self, tag_id: TagId) -> Result<ChannelId> {
         let mut conn = self.acquire().await?;
         let forum_id = sqlx::query_scalar!("SELECT channel_id FROM tag WHERE id = $1", *tag_id)
