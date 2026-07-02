@@ -7,7 +7,6 @@ import {
 	createTimelineController,
 	TimelineController,
 	TimelineState,
-	TimelineStore,
 } from "@/components/features/chat/timeline-context";
 
 export type ChannelSearch = {
@@ -37,7 +36,7 @@ export type ChannelState = {
 	reply_id?: string;
 	search?: ChannelSearch;
 	timeline: TimelineController;
-	timelineStore?: TimelineStore;
+	timelineState?: TimelineState;
 
 	// TODO: merge these into sidebar: Sidebar
 	pinned_view: boolean;

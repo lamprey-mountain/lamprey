@@ -57,61 +57,60 @@ export const ChatMain = (props: ChatProps) => {
 
 	const uploads = useUploads();
 
-	// PERF: see if i can avoid using <Show keyed>?
+	// FIXME: don't use <Show keyed>
 
 	return (
 		<MessageToolbarProvider>
-			<Show when={props.channel} keyed>
-				{(chan) => (
-					<TimelineProvider channel={chan}>
-						<div
-							class="chat"
-							classList={{ "has-typing": !!getTyping().length }}
-							data-channel-id={props.channel.id}
-							onClick={(e) => {
-								console.log(e.target.closest(".avatar[data-user-id]"));
-								// TODO: open user view
-							}}
-							onKeyDown={(e) => {
-								if (e.key === "Escape") {
-									jumpToEnd();
-								} else if (e.key === "PageDown") {
-									channelState.timeline.scrollBy(
-										globalThis.innerHeight * 0.8,
-										true,
-									);
-								} else if (e.key === "PageUp") {
-									channelState.timeline.scrollBy(
-										-globalThis.innerHeight * 0.8,
-										true,
-									);
-								}
-							}}
-							onDragEnter={(e) => {
-								e.preventDefault();
-								dragCounter++;
-								setDragging(true);
-							}}
-							onDragOver={(e) => {
-								e.preventDefault();
-								setDragging(true);
-							}}
-							onDragLeave={(e) => {
-								e.preventDefault();
-								dragCounter--;
-								if (dragCounter === 0) setDragging(false);
-							}}
-							onDrop={(e) => {
-								e.preventDefault();
-								dragCounter = 0;
-								setDragging(false);
-								for (const file of Array.from(e.dataTransfer?.files ?? [])) {
-									const local_id = uuidv7();
-									uploads.init(local_id, props.channel.id, file);
-								}
-							}}
-						>
-							{/*
+			<Show when={props.channel.id} keyed>
+				<TimelineProvider channel={props.channel}>
+					<div
+						class="chat"
+						classList={{ "has-typing": !!getTyping().length }}
+						data-channel-id={props.channel.id}
+						onClick={(e) => {
+							// console.log(e.target.closest(".avatar[data-user-id]"));
+							// TODO: open user view
+						}}
+						onKeyDown={(e) => {
+							if (e.key === "Escape") {
+								jumpToEnd();
+							} else if (e.key === "PageDown") {
+								channelState.timeline.scrollBy(
+									globalThis.innerHeight * 0.8,
+									true,
+								);
+							} else if (e.key === "PageUp") {
+								channelState.timeline.scrollBy(
+									-globalThis.innerHeight * 0.8,
+									true,
+								);
+							}
+						}}
+						onDragEnter={(e) => {
+							e.preventDefault();
+							dragCounter++;
+							setDragging(true);
+						}}
+						onDragOver={(e) => {
+							e.preventDefault();
+							setDragging(true);
+						}}
+						onDragLeave={(e) => {
+							e.preventDefault();
+							dragCounter--;
+							if (dragCounter === 0) setDragging(false);
+						}}
+						onDrop={(e) => {
+							e.preventDefault();
+							dragCounter = 0;
+							setDragging(false);
+							for (const file of Array.from(e.dataTransfer?.files ?? [])) {
+								const local_id = uuidv7();
+								uploads.init(local_id, props.channel.id, file);
+							}
+						}}
+					>
+						{/*
 							// TODO: impl timeline controls
 							// TODO: show controls when new messages are received while not at the end of timeline
 							<Show
@@ -139,18 +138,17 @@ export const ChatMain = (props: ChatProps) => {
 								</div>
 							</Show>
 							*/}
-							<Timeline channel={chan} />
-							<Input channel={props.channel} />
-							<Portal>
-								<Show when={dragging()}>
-									<div class="dnd-upload-message">
-										<div class="inner">drop to upload</div>
-									</div>
-								</Show>
-							</Portal>
-						</div>
-					</TimelineProvider>
-				)}
+						<Timeline channel={props.channel} />
+						<Input channel={props.channel} />
+						<Portal>
+							<Show when={dragging()}>
+								<div class="dnd-upload-message">
+									<div class="inner">drop to upload</div>
+								</div>
+							</Show>
+						</Portal>
+					</div>
+				</TimelineProvider>
 			</Show>
 		</MessageToolbarProvider>
 	);

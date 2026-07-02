@@ -17,105 +17,6 @@
 	}
 }
 
-// TODO: merge into .message.skeleton
-.skeleton-message {
-	pointer-events: none;
-	display: grid;
-
-	& .skeleton-avatar,
-	& .skeleton-name,
-	& .skeleton-time,
-	& .skeleton-time-compact,
-	& .skeleton-line,
-	& .skeleton-attachment {
-		background: linear-gradient(
-			90deg,
-			$bg-400 0%,
-			oklch(var(--color-bg4) / 0.85) 50%,
-			$bg-400 100%
-		);
-		background-size: 200% 100%;
-		animation: skeleton-loading 1s infinite linear;
-		border-radius: 4px;
-	}
-
-	& .skeleton-avatar {
-		height: 64px;
-		width: 64px;
-	}
-
-	& .skeleton-name {
-		height: 14px;
-		width: 120px;
-		display: inline-block;
-	}
-
-	& .skeleton-time {
-		height: 10px;
-		width: 60px;
-		margin-left: 4px;
-		display: inline-block;
-	}
-
-	& .skeleton-time-compact {
-		height: 10px;
-		width: 60px;
-		position: absolute;
-		right: 8px;
-		top: 8px;
-	}
-
-	& .skeleton-line {
-		height: 12px;
-		margin-right: 4px;
-		margin-top: 2px;
-		display: inline-block;
-
-		&:last-child {
-			width: 70%;
-		}
-	}
-
-	& .skeleton-attachment {
-		margin-top: 4px;
-		height: 200px;
-		width: 300px;
-		border-radius: 4px;
-	}
-
-	// compact mode
-	&:not(.withavatar) {
-		grid-template-columns: 128px 1fr max-content;
-
-		& > .author-wrap {
-			text-align: right;
-			margin-right: 8px;
-
-			& > .author {
-				position: sticky;
-				top: 4px;
-			}
-		}
-	}
-}
-
-// TODO: merge into .message.skeleton
-.skeleton-message-list {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	display: flex;
-	flex-direction: column;
-
-	& > .message {
-		padding: 4px 8px;
-
-		&:hover {
-			background-color: transparent;
-		}
-	}
-}
-
 // TODO: redo
 .message-dim-content > .content {
 	color: $fg-500;
@@ -176,8 +77,9 @@
 }
 
 .timeline {
+	/* contain: strict; */ // PERF: maybe this works?
 	overflow-y: auto;
-	overflow-anchor: none;
+	overflow-anchor: none; // NOTE: maybe this actually makes stuff jankier?
 	width: 100%;
 	height: 100%;
 
@@ -191,6 +93,11 @@
 			left: 0;
 			width: 100%;
 
+			& > li > .spacer {
+				max-height: 600px;
+				overflow: hidden;
+			}
+
 			& > .spacer.mini {
 				min-height: 3.5rem;
 
@@ -203,30 +110,33 @@
 }
 
 .timeline-item {
-	overflow-anchor: none;
+	/* overflow-anchor: none; */ // useless?
 
 	&:hover > .message {
 		background-color: oklch(var(--color-bg1) / 0.3);
 	}
 
-	&.selected > .message {
-		box-shadow: 4px 0 0 -1px inset #67dc82;
-		background-color: #67dc8222;
-	}
+	& > li {
+		&.selected > .message {
+			box-shadow: 4px 0 0 -1px inset #67dc82;
+			background-color: #67dc8222;
+		}
 
-	&.reply-target {
-		background-color: oklch(var(--color-blue) / 0.3);
-		box-shadow: 4px 0 0 -1px inset oklch(var(--color-blue));
-	}
+		&.reply-target {
+			background-color: oklch(var(--color-blue) / 0.3);
+			box-shadow: 4px 0 0 -1px inset oklch(var(--color-blue));
+		}
 
-	&.context > .message {
-		box-shadow: 4px 0 0 -1px inset oklch(var(--color-highlight));
-		background-color: oklch(var(--color-highlight) / 0.15);
-	}
+		// NOTE: currently unused style
+		/* &.context > .message { */
+		/* box-shadow: 4px 0 0 -1px inset oklch(var(--color-highlight)); */
+		/* background-color: oklch(var(--color-highlight) / 0.15); */
+		/* } */
 
-	&.mentioned > .message {
-		box-shadow: 4px 0 0 -1px inset $link-500;
-		background-color: oklch(var(--color-link-500) / 0.1);
+		&.mentioned > .message {
+			box-shadow: 4px 0 0 -1px inset $link-500;
+			background-color: oklch(var(--color-link-500) / 0.1);
+		}
 	}
 }
 
@@ -454,8 +364,13 @@
 	max-width: 60ch;
 }
 
-/* TODO: add .local class to messages */
-.message.local > .inner > .content > .body {
+// TODO: add .local class to messages
+.message.local > .content > .body {
+	color: $fg-500;
+}
+
+// TODO: deprecate and remove
+.message > .content > .body.local {
 	color: $fg-500;
 }
 
@@ -586,10 +501,9 @@
 }
 
 .message.skeleton {
-	// TODO: copy .skeleton-message styles here
-	pointer-events: none;
+	/* pointer-events: none; */
 
-	& > .text {
+	& .ghost {
 		background: linear-gradient(
 			90deg,
 			$bg-400 0%,
@@ -599,6 +513,15 @@
 		background-size: 200% 100%;
 		animation: skeleton-loading 1s infinite linear;
 		border-radius: 4px;
+	}
+
+	& .text {
 		display: inline-block;
+		height: 1em;
+		margin-right: 4px;
+	}
+
+	& .content {
+		gap: 6px;
 	}
 }

@@ -1,7 +1,9 @@
+type QueueState = "idle" | "active" | "pending";
+
 export class Queue<T> {
 	private tasks: T[] = [];
-	private active = false;
 	private abortCtl = new AbortController();
+	private state: QueueState = "idle";
 
 	constructor(
 		private handler: (
@@ -12,7 +14,8 @@ export class Queue<T> {
 
 	push(...tasks: T[]) {
 		this.tasks.push(...tasks);
-		this.drain();
+		this.state = "pending";
+		queueMicrotask(() => this.drain());
 	}
 
 	cancel(reason?: string) {
@@ -21,8 +24,8 @@ export class Queue<T> {
 	}
 
 	async drain() {
-		if (this.active) return;
-		this.active = true;
+		if (this.state === "active") return;
+		this.state = "active";
 		this.abortCtl = new AbortController();
 		const s = this.abortCtl.signal;
 
@@ -32,6 +35,10 @@ export class Queue<T> {
 			await this.handler(next, s);
 		}
 
-		this.active = false;
+		this.state = "idle";
+	}
+
+	get active() {
+		return this.state !== "idle";
 	}
 }

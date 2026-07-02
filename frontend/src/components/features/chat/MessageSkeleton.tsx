@@ -1,16 +1,21 @@
 import { For, Show } from "solid-js";
 import { useCtx } from "@/app/context";
 
-// TODO: make this use the new Message html structure
-
+// TODO: add messageGroupLengths, make MessageSkeletons pass `separate` prop/class
 export const MessageSkeleton = () => {
 	const ctx = useCtx();
-	const messageStyle = ctx.preferences().frontend.message_style || "cozy";
-	const isCozy = messageStyle === "cozy";
+	const messageStyle = () => ctx.preferences().frontend.message_style || "cozy";
 
-	const hasAvatar = isCozy;
-	const hasAttachment = Math.random() > 0.7;
-	const contentLines = Array.from(
+	// TODO: make this reactive
+	const isCozy = messageStyle() === "cozy";
+
+	const attachment =
+		Math.random() > 0.7
+			? { width: Math.random() * 200 + 100, height: Math.random() * 200 + 100 }
+			: null;
+	const authorWordLength = Math.random() * 40 + 10;
+
+	const bodyWordLengths = Array.from(
 		{
 			length: Math.floor(Math.random() * (isCozy ? 8 : 5) + (isCozy ? 4 : 3)),
 		},
@@ -18,37 +23,43 @@ export const MessageSkeleton = () => {
 	);
 
 	return (
-		<li class="message skeleton-message" classList={{ withavatar: hasAvatar }}>
-			<Show when={hasAvatar}>
-				<div class="avatar-wrap">
-					<div class="avatar skeleton-avatar"></div>
-				</div>
-				<div class="author">
-					<div class="skeleton-name"></div>
-					<div class="skeleton-time"></div>
-				</div>
-			</Show>
-			<Show when={!hasAvatar}>
-				<div class="author-wrap">
-					<div class="author sticky">
-						<div class="skeleton-name"></div>
-					</div>
-				</div>
-				<div class="skeleton-time-compact"></div>
-			</Show>
+		<article
+			class="message skeleton"
+			role="presentation"
+			classList={{ separate: Math.random() > 0.7 }}
+		>
+			<aside class="aside">
+				<div class="avatar ghost"></div>
+			</aside>
+
 			<div class="content">
+				<h3 class="header">
+					<div
+						class="text ghost author"
+						style={`width:${authorWordLength * 3}px`}
+					></div>
+				</h3>
+
 				<div class="body">
-					<For each={contentLines}>
-						{(w) => <div class="skeleton-line" style={`width:${w}%`}></div>}
+					<For each={bodyWordLengths}>
+						{(w) => <div class="text ghost" style={`width:${w * 3}px`}></div>}
 					</For>
 				</div>
-				<Show when={hasAttachment}>
-					<ul class="attachments">
-						<li class="skeleton-attachment raw"></li>
-					</ul>
+			</div>
+
+			<div class="accessories">
+				<Show when={attachment}>
+					{(a) => (
+						<ul class="attachments">
+							<li
+								class="attachment raw ghost"
+								style={`height:${a().height}px;width:${a().width}px`}
+							></li>
+						</ul>
+					)}
 				</Show>
 			</div>
-		</li>
+		</article>
 	);
 };
 

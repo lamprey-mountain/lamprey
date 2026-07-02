@@ -2,13 +2,19 @@ import {
 	createGlobalEmitter,
 	GlobalEmitter,
 } from "@solid-primitives/event-bus";
-import { createContext, useContext, ParentProps } from "solid-js";
-import { createStore, SetStoreFunction } from "solid-js/store";
+import {
+	createContext,
+	useContext,
+	ParentProps,
+	Signal,
+	createSignal,
+} from "solid-js";
 import { MessageListAnchor } from "@/api/services/MessagesService";
 import { MessageRange } from "@/api/services/MessagesService";
-import { TimelineItemT } from "./Messages";
 import { useChannel } from "@/contexts/mod";
 import { ChannelT } from "@/types";
+import { TimelineItemT2 } from "./util";
+import { unwrap } from "solid-js/store";
 
 export type TimelineController = {
 	jumpToBottom(smooth?: boolean): void;
@@ -44,24 +50,23 @@ export type TimelineCommands = {
 	ackMessage: { message_id: string };
 };
 
+// TODO: make items/itemsSignal less wonky
 export type TimelineState = {
 	messages: MessageRange | null;
 	anchor: MessageListAnchor;
-	loading: boolean;
+	loading: boolean; // NOTE: unnecessary with queue system?
 	highlight: string | null;
-	scroll_pos: number;
-	has_forward: boolean;
-	items: TimelineItemT[];
-	last_read_message_id?: string;
+	scrollTop: number;
+	items: TimelineItemT2[];
+	itemsSignal: Signal<TimelineItemT2[]>;
+	readMarkerId: string | null;
 
 	controller: TimelineController;
 	events: GlobalEmitter<TimelineEvents>;
 	commands: GlobalEmitter<TimelineCommands>;
 };
 
-export type TimelineStore = [TimelineState, SetStoreFunction<TimelineState>];
-
-export const TimelineContext = createContext<TimelineStore>();
+export const TimelineContext = createContext<TimelineState>();
 
 export type TimelineProviderProps = ParentProps & {
 	channel: ChannelT;
@@ -69,9 +74,9 @@ export type TimelineProviderProps = ParentProps & {
 
 export const TimelineProvider = (props: TimelineProviderProps) => {
 	const [chanState, updateChanState] = useChannel();
-	let store = chanState.timelineStore;
+	let state = unwrap(chanState.timelineState);
 
-	if (!store) {
+	if (!state) {
 		const getInitialAnchor = (): MessageListAnchor => {
 			const readMarker = props.channel.last_read_id;
 			const hasReadMarker =
@@ -83,31 +88,37 @@ export const TimelineProvider = (props: TimelineProviderProps) => {
 			}
 		};
 
-		store = createStore<TimelineState>({
+		const itemsSignal = createSignal([
+			{ type: "skeletons", key: "skeletons-top" },
+		] as TimelineItemT2[]);
+
+		state = {
 			messages: null,
 			loading: false,
 			highlight: null,
-			scroll_pos: 0,
-			has_forward: false,
+			scrollTop: 0,
 			controller: chanState.timeline,
-			items: [],
+			get items() {
+				return itemsSignal[0]();
+			},
+			itemsSignal,
 			anchor: getInitialAnchor(),
-			last_read_message_id: props.channel.last_read_id ?? undefined,
+			readMarkerId: props.channel.last_read_id ?? null,
 			events: chanState.timeline.events,
 			commands: chanState.timeline.commands,
-		});
+		};
 
-		updateChanState("timelineStore", store);
+		updateChanState("timelineState", state);
 	}
 
 	return (
-		<TimelineContext.Provider value={store}>
+		<TimelineContext.Provider value={state}>
 			{props.children}
 		</TimelineContext.Provider>
 	);
 };
 
-export const useTimeline = (): TimelineStore => {
+export const useTimeline = (): TimelineState => {
 	const ctx = useContext(TimelineContext);
 	if (!ctx) {
 		throw new Error(

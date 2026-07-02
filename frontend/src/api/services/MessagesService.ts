@@ -23,8 +23,6 @@ import { deepEqual } from "@/utils/deepEqual";
 import { logger } from "@/utils/logger";
 import { BaseService } from "../core/Service";
 
-const _MAX_MESSAGES_PER_RANGE = 500;
-
 export type MessageListAnchor =
 	| { type: "backwards"; message_id?: string; limit: number }
 	| { type: "forwards"; message_id?: string; limit: number }

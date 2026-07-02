@@ -175,8 +175,8 @@ export function createReadTrackingProvider(
 		}
 
 		const cc = channel_contexts.get(channel_id);
-		const timelineState = cc?.[0].timelineStore?.[0];
-		const previous_read_id = timelineState?.last_read_message_id;
+		const timelineState = cc?.[0].timelineState;
+		const previous_read_id = timelineState?.readMarkerId;
 
 		// optimistically update, rollback on failure
 		if (also_local && cc) {
