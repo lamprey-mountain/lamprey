@@ -327,5 +327,35 @@ impl Display for ServerReq {
     }
 }
 
+impl From<UserId> for UserIdReq {
+    fn from(id: UserId) -> Self {
+        Self::UserId(id)
+    }
+}
+
+impl From<MediaId> for MediaIdReq {
+    fn from(id: MediaId) -> Self {
+        Self::MediaId(id)
+    }
+}
+
+impl From<ApplicationId> for ApplicationIdReq {
+    fn from(id: ApplicationId) -> Self {
+        Self::ApplicationId(id)
+    }
+}
+
+impl From<SessionId> for SessionIdReq {
+    fn from(id: SessionId) -> Self {
+        Self::SessionId(id)
+    }
+}
+
+impl From<MessageId> for InteractionMessageReq {
+    fn from(id: MessageId) -> Self {
+        Self::MessageId(id)
+    }
+}
+
 // TODO: add a utility to serialize bytes as either unpadded urlsafe base64 (json) or raw binary (msgpack)
 // struct Binary(Vec<u8>);
