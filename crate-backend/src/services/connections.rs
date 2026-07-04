@@ -1,4 +1,4 @@
-use common::v1::types::{ConnectionId, SessionToken, SyncParams, SyncResume, presence::Presence};
+use common::v1::types::{ConnectionId, SessionToken, SyncResume, presence::Presence};
 use dashmap::DashMap;
 
 use crate::{
@@ -28,7 +28,9 @@ impl ServiceConnections {
         }
     }
 
-    /// spawn or resume a connection.
+    /// create/spawn a new connection.
+    ///
+    /// does not handle resumes.
     pub async fn accept(&self, hello: Hello) -> Result<ConnectionHandle> {
         let session = self
             .globals
@@ -37,16 +39,9 @@ impl ServiceConnections {
             .get_by_token(hello.token)
             .await?;
 
-        if let Some(resume) = hello.resume {
-            // get existing connection (handle)
-            // update transport
-            // update seq (rewind)
-            todo!()
-        } else {
-            let handle = Connection2::create(self.globals.clone(), session);
-            self.connections.insert(handle.id(), handle.clone());
-            Ok(handle)
-        }
+        let handle = Connection2::create(self.globals.clone(), session);
+        self.connections.insert(handle.id(), handle.clone());
+        Ok(handle)
     }
 
     /// get a connection actor handle from its connection id

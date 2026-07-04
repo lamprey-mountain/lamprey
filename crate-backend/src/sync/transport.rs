@@ -14,8 +14,8 @@ use crate::sync::WsMessage;
 
 /// how this connection is sending messages to and receiving from the client
 #[async_trait]
-pub trait Transport: Send + Sync + 'static {
-    fn split(self) -> (Box<dyn TransportSink>, TransportStream);
+pub trait Transport: Send + 'static {
+    fn split(self: Box<Self>) -> (Box<dyn TransportSink>, TransportStream);
 }
 
 pub type AnyTransport = Box<dyn Transport>;
@@ -246,7 +246,7 @@ impl WebsocketReceiver {
 }
 
 impl Transport for WebsocketTransport {
-    fn split(self) -> (Box<dyn TransportSink>, TransportStream) {
+    fn split(self: Box<Self>) -> (Box<dyn TransportSink>, TransportStream) {
         let (sink, stream) = (self.sink, self.stream);
         let (compressor, decompressor) = match self.compression {
             Some(Compression::Deflate {
@@ -271,5 +271,22 @@ impl Transport for WebsocketTransport {
         };
 
         (sink, receiver.into_stream())
+    }
+}
+
+pub struct WrapperTransport {
+    sink: Box<dyn TransportSink>,
+    stream: TransportStream,
+}
+
+impl WrapperTransport {
+    pub fn new(sink: Box<dyn TransportSink>, stream: TransportStream) -> Self {
+        Self { sink, stream }
+    }
+}
+
+impl Transport for WrapperTransport {
+    fn split(self: Box<Self>) -> (Box<dyn TransportSink>, TransportStream) {
+        (self.sink, self.stream)
     }
 }

@@ -1,15 +1,23 @@
 //! work in progress redesign of the sync system
 
+use crate::error::{Error, Result};
+use crate::state::messaging::Broadcast;
 use crate::sync::connection_queue::ConnectionQueue;
+use crate::sync::permissions::AuthCheck;
 use crate::sync::subscriptions::ConnectionSubscriptions;
 use crate::sync::transport::{
     AnyTransport, Transport, TransportEvent, TransportSink, TransportStream, WebsocketTransport,
 };
-use crate::sync::util::Timeout;
-use crate::sync::util::{ConnectionState, MAX_QUEUE_LEN};
+use crate::sync::util::{ConnectionState, HEARTBEAT_TIME, MAX_QUEUE_LEN, Timeout};
+use crate::sync::{ConnectionErrorSeverity, severity};
 use crate::{ServerState, prelude::*};
 use common::v1::types::{
-    MessageClient, MessageEnvelope, MessagePayload, MessageSync, Session, SyncParams,
+    ChannelId, DocumentBranchId, MessageClient, MessageEnvelope, MessagePayload, MessageSync,
+    Permission, Session, SyncParams, SyncSubscribeDocument, SyncSubscribeMemberList,
+    SyncSubscribeScript, SyncSubscription, UserId,
+    document::DocumentUpdate,
+    presence::Presence,
+    voice::{VoiceStateUpdate, messages::SignallingCommand},
 };
 use common::v2::types::{ConnectionId, SessionId};
 use futures_util::StreamExt;
@@ -42,8 +50,8 @@ pub struct ConnectionHandle {
 // TODO: rename to ConnectionCommand
 /// a command for controlling a connection actor
 pub enum Command {
-    /// attach a transport to this connection
-    Attach(Box<dyn Transport>),
+    /// attach a transport to this connection and rewind to a seq
+    Attach(Box<dyn Transport>, u64),
 
     /// shutdown this connection
     Shutdown,
@@ -56,6 +64,7 @@ pub enum Event {
     Detached,
 }
 
+// TODO: if something requires a user_id, send an error for guests but do not disconnect them
 impl Connection2 {
     pub fn create(globals: Globals, session: Session) -> ConnectionHandle {
         let id = ConnectionId::new();
@@ -87,6 +96,14 @@ impl Connection2 {
 
     async fn spawn(mut self) {
         let mut sushi = self.globals.messaging().subscribe().await.unwrap();
+
+        // TODO: port handle_hello here:
+        // send Ready
+        // send Ambient
+        // send typing states
+        // send voice states
+        // send flumes
+        // send document presence
 
         loop {
             // transport_futures event
@@ -135,25 +152,20 @@ impl Connection2 {
 
                 // poll sushi
                 Some(msg) = sushi.next() => {
-                    // TODO: queue sushi message
-                    // NOTE: the commented out code below won't work, msg is a Broadcast not MessageSync
-                    // if let Some(t) = &mut self.transport {
-                    //     if let Err(err) = self.queue_message(Box::new(msg.message), msg.nonce, &mut t.send).await {
-                    //         debug!("failed to queue sushi message: {err}");
-                    //     }
-                    // }
+                    if let Broadcast::Sync(sync) = msg {
+                        if let Err(err) = self.queue_message(Box::new(sync.message), sync.nonce).await {
+                            error!("failed to queue sushi message: {err}");
+                        }
+                    }
                 }
 
                 // poll subscriptions
                 sub_res = self.subscriptions.poll() => {
                     match sub_res {
                         Ok(msg) => {
-                            // TODO: queue subscription message
-                            // if let Some(t) = &mut self.transport {
-                            //     if let Err(err) = self.queue_message(Box::new(msg), None, &mut t.send).await {
-                            //         error!("failed to queue subscription message: {err}");
-                            //     }
-                            // }
+                            if let Err(err) = self.queue_message(Box::new(msg), None).await {
+                                error!("failed to queue subscription message: {err}");
+                            }
                         }
                         Err(err) => {
                             error!("subscription poll error: {err}");
@@ -171,6 +183,12 @@ impl Connection2 {
                     }
                 }
             }
+
+            if let Some(t) = &mut self.transport {
+                if let Err(err) = self.queue.drain(&mut *t.send, self.id).await {
+                    error!("failed to drain messages: {err}");
+                }
+            }
         }
     }
 
@@ -178,14 +196,41 @@ impl Connection2 {
     async fn handle_client(&mut self, event: TransportEvent) -> Result<()> {
         match event {
             TransportEvent::Message(msg) => {
-                let Some(t) = &mut self.transport else {
-                    unreachable!("how did we receive a client event without an active transport?")
-                };
+                match self.handle_message_client_inner(msg).await {
+                    Ok(_) => {}
+                    Err(err) => {
+                        let t = self.transport.as_mut().ok_or_else(|| {
+                            Error::BadStatic("transport lost during error handling")
+                        })?;
 
-                // TODO
-                // self.conn
-                //     .handle_message_client(msg, &mut *t.send, &mut t.timeout)
-                //     .await
+                        let code = match &err {
+                            Error::SyncError(c) => Some(c.clone()),
+                            _ => None,
+                        };
+                        t.send
+                            .send(MessageEnvelope {
+                                payload: MessagePayload::Error {
+                                    error: err.to_string(),
+                                    code,
+                                },
+                            })
+                            .await?;
+
+                        let sev = severity(&err);
+                        if matches!(
+                            sev,
+                            ConnectionErrorSeverity::Reconnect | ConnectionErrorSeverity::Fatal
+                        ) {
+                            t.send
+                                .send(MessageEnvelope {
+                                    payload: MessagePayload::Reconnect {
+                                        can_resume: sev == ConnectionErrorSeverity::Reconnect,
+                                    },
+                                })
+                                .await?;
+                        }
+                    }
+                }
                 Ok(())
             }
             TransportEvent::Closed(clean) => self.handle_close(clean).await,
@@ -219,19 +264,344 @@ impl Connection2 {
     async fn handle_close(&mut self, clean: bool) -> Result<()> {
         if clean {
             // set presence to offline
-            // clear document presence
+            if let Some(user_id) = self.session.user_id() {
+                let srv = self.globals.services();
+                if let Err(err) = srv.presence.set(user_id, Presence::offline()).await {
+                    warn!("failed to set user {user_id} as offline: {err}");
+                }
+            }
+
+            // clean up subscriptions
+            // NOTE: does this clear document presence?
+            if let Some(user_id) = self.session.user_id() {
+                self.subscriptions.disconnect(user_id).await;
+            }
         }
 
-        // self.conn.disconnect();
-        // debug!("dehydrating syncer: {}", conn.get_id());
-        // do something with s.services.connections
+        // TODO: timer to invalidate connection after some amount of time
 
-        // TODO: implement
+        self.transport = None;
+        Ok(())
+    }
+
+    async fn handle_message_client_inner(&mut self, msg: MessageClient) -> Result<()> {
+        let (send, timeout) = {
+            let t = self.transport.as_mut().ok_or_else(|| {
+                Error::BadStatic("how did we receive a client event without an active transport?")
+            })?;
+            (&mut *t.send, &mut t.timeout)
+        };
+
+        trace!("{:#?}", msg);
+        match msg {
+            MessageClient::Hello { .. } => return Err(Error::BadStatic("already authenticated")),
+            MessageClient::Presence { presence } => {
+                let srv = self.globals.services();
+                let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
+                let user = srv.users.get(user_id, None).await?;
+                user.ensure_unsuspended()?;
+                srv.presence.set(user_id, presence).await?;
+            }
+            // FIXME: allow guests to Pong
+            MessageClient::Pong => {
+                let srv = self.globals.services();
+                let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
+                srv.presence.ping(user_id).await?;
+                *timeout = Timeout::Ping(tokio::time::Instant::now() + HEARTBEAT_TIME);
+            }
+            MessageClient::MemberListSubscribe {
+                room_id,
+                thread_id,
+                ranges,
+            } => {
+                let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
+
+                let member_lists = if room_id.is_some() || thread_id.is_some() {
+                    vec![SyncSubscribeMemberList {
+                        room_id,
+                        channel_id: thread_id,
+                        ranges,
+                    }]
+                } else {
+                    vec![]
+                };
+
+                self.subscriptions
+                    .set_subscription(
+                        SyncSubscription {
+                            member_lists: Some(member_lists),
+                            documents: None,
+                            scripts: None,
+                        },
+                        user_id,
+                    )
+                    .await?;
+            }
+            MessageClient::VoiceConnect { voice_state, nonce } => {
+                self.handle_voice_connect(voice_state, nonce).await?
+            }
+            MessageClient::VoiceDispatch {
+                channel_id,
+                nonce,
+                command,
+            } => {
+                self.handle_voice_dispatch(channel_id, nonce, command)
+                    .await?
+            }
+            MessageClient::DocumentSubscribe {
+                channel_id,
+                branch_id,
+                state_vector,
+            } => {
+                let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
+
+                self.subscriptions
+                    .set_subscription(
+                        SyncSubscription {
+                            documents: Some(vec![SyncSubscribeDocument {
+                                channel_id,
+                                branch_id,
+                                state_vector,
+                            }]),
+                            member_lists: None,
+                            scripts: None,
+                        },
+                        user_id,
+                    )
+                    .await?;
+            }
+            MessageClient::DocumentEdit {
+                channel_id,
+                branch_id,
+                update,
+            } => {
+                self.handle_document_edit(channel_id, branch_id, update)
+                    .await?
+            }
+            MessageClient::DocumentPresence {
+                channel_id,
+                branch_id,
+                cursor_head,
+                cursor_tail,
+            } => {
+                self.handle_document_presence(channel_id, branch_id, cursor_head, cursor_tail)
+                    .await?
+            }
+            MessageClient::ScriptSubscribe {
+                channel_id,
+                script_id,
+            } => {
+                let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
+
+                self.subscriptions
+                    .set_subscription(
+                        SyncSubscription {
+                            scripts: Some(vec![SyncSubscribeScript {
+                                channel_id,
+                                script_id,
+                            }]),
+                            documents: None,
+                            member_lists: None,
+                        },
+                        user_id,
+                    )
+                    .await?;
+            }
+            MessageClient::Subscribe(subscribe) => self.handle_subscription(subscribe).await?,
+        };
+
+        Ok(())
+    }
+
+    async fn handle_document_presence(
+        &mut self,
+        channel_id: ChannelId,
+        branch_id: DocumentBranchId,
+        cursor_head: String,
+        cursor_tail: Option<String>,
+    ) -> Result<()> {
+        let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
+
+        let srv = self.globals.services();
+        let perms = srv.perms.for_channel(user_id, channel_id).await?;
+        perms.ensure(Permission::ChannelView)?;
+
+        if !self
+            .subscriptions
+            .is_document_subscribed(channel_id, branch_id)
+        {
+            return Err(Error::BadStatic("not subscribed to this document"));
+        }
+
+        srv.documents
+            .broadcast_presence(
+                (channel_id, branch_id),
+                user_id,
+                Some(self.id),
+                cursor_head,
+                cursor_tail,
+            )
+            .await?;
+        Ok(())
+    }
+
+    async fn handle_subscription(&mut self, subscribe: SyncSubscription) -> Result<()> {
+        let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
+
+        self.subscriptions
+            .set_subscription(subscribe, user_id)
+            .await?;
+
+        Ok(())
+    }
+
+    async fn handle_voice_connect(
+        &mut self,
+        vs: VoiceStateUpdate,
+        nonce: Option<String>,
+    ) -> Result<()> {
+        let srv = self.globals.services();
+        srv.voice
+            .handle_voice_connect(self.session.clone(), self.id, vs, nonce)
+            .await?;
+
+        Ok(())
+    }
+
+    async fn handle_voice_dispatch(
+        &mut self,
+        channel_id: ChannelId,
+        nonce: Option<String>,
+        command: SignallingCommand,
+    ) -> Result<()> {
+        let srv = self.globals.services();
+        srv.voice
+            .handle_voice_dispatch(self.session.clone(), channel_id, nonce, command)
+            .await?;
+
+        Ok(())
+    }
+
+    async fn handle_document_edit(
+        &mut self,
+        channel_id: ChannelId,
+        branch_id: DocumentBranchId,
+        update: DocumentUpdate,
+    ) -> Result<()> {
+        let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
+        let srv = self.globals.services();
+        let perms = srv.perms.for_channel(user_id, channel_id).await?;
+        perms.ensure(Permission::ChannelView)?;
+        perms.ensure(Permission::DocumentEdit)?;
+
+        if !self
+            .subscriptions
+            .is_document_subscribed(channel_id, branch_id)
+        {
+            return Err(Error::BadStatic("not subscribed to this document"));
+        }
+
+        srv.documents
+            .apply_update((channel_id, branch_id), user_id, Some(self.id), &update.0)
+            .await?;
+
         Ok(())
     }
 
     async fn handle_command(&mut self, command: Command) -> Result<()> {
-        todo!()
+        match command {
+            Command::Attach(transport, seq) => {
+                let (send, recv) = transport.split();
+                self.transport = Some(ConnectionTransport {
+                    send,
+                    recv,
+                    timeout: Timeout::for_ping(),
+                });
+                self.queue.rewind(seq)?;
+            }
+            Command::Shutdown => {
+                if let Some(mut t) = self.transport.take() {
+                    let _ = t.send.close().await;
+                }
+
+                // TODO: invalidate/remove this connection
+            }
+        }
+
+        Ok(())
+    }
+
+    #[tracing::instrument(level = "debug", skip(self), fields(id = %self.id))]
+    pub async fn queue_message(
+        &mut self,
+        msg: Box<MessageSync>,
+        nonce: Option<String>,
+    ) -> Result<()> {
+        let srv = self.globals.services();
+        let auth_check = AuthCheck::for_message(&msg);
+        let should_send = srv
+            .perms
+            .auth_check(&auth_check, &self.session, self.id)
+            .await?;
+
+        if should_send {
+            let msg = match *msg {
+                MessageSync::ChannelCreate { channel } => MessageSync::ChannelCreate {
+                    channel: Box::new(srv.channels.get(channel.id, self.session.user_id()).await?),
+                },
+                MessageSync::ChannelUpdate { channel } => MessageSync::ChannelUpdate {
+                    channel: Box::new(srv.channels.get(channel.id, self.session.user_id()).await?),
+                },
+                // FIXME: dont fetch from db for ephemeral messages
+                MessageSync::MessageCreate { message } => MessageSync::MessageCreate {
+                    message: srv
+                        .messages
+                        .get(message.channel_id, message.id, self.session.user_id())
+                        .await?,
+                },
+                MessageSync::MessageUpdate { message } => MessageSync::MessageUpdate {
+                    message: srv
+                        .messages
+                        .get(message.channel_id, message.id, self.session.user_id())
+                        .await?,
+                },
+                MessageSync::VoiceState {
+                    user_id,
+                    mut state,
+                    mut old_state,
+                } => {
+                    // strip session_id for voice states that aren't ours
+                    let is_ours = self.session.user_id() == Some(user_id);
+                    if !is_ours {
+                        if let Some(s) = &mut state {
+                            s.session_id = None;
+                        }
+
+                        if let Some(s) = &mut old_state {
+                            s.session_id = None;
+                        }
+                    }
+
+                    // if we don't have view perms in the new thread, treat it like a disconnect
+                    if let Some(s) = &state {
+                        let perms = srv.perms.for_channel(user_id, s.channel_id).await?;
+                        if !perms.has(Permission::ChannelView) {
+                            state = None;
+                        }
+                    }
+
+                    MessageSync::VoiceState {
+                        user_id,
+                        state,
+                        old_state,
+                    }
+                }
+                m => m,
+            };
+            self.queue.push_sync(msg, nonce);
+        }
+
+        Ok(())
     }
 }
 
@@ -240,18 +610,18 @@ impl ConnectionHandle {
         self.id
     }
 
-    pub fn session_id(&self) -> SessionId {
-        todo!()
+    pub fn session_id(&self, session: &Session) -> SessionId {
+        session.id
     }
 
-    /// attach a transport to this connection
-    pub fn attach(&self, transport: Box<dyn Transport>) {
-        todo!()
+    /// attach a transport to this connection and rewind
+    pub fn attach(&self, transport: Box<dyn Transport>, seq: u64) {
+        let _ = self.tx.try_send(Command::Attach(transport, seq));
     }
 
     /// shutdown this connection
     pub fn shutdown(&self) {
-        todo!()
+        let _ = self.tx.try_send(Command::Shutdown);
     }
 
     // /// stream events from this connection?
