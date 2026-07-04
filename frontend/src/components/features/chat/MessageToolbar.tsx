@@ -47,7 +47,7 @@ export const MessageToolbar = (props: { message: MessageT }) => {
 	};
 
 	const closeReactionPicker = (e: MouseEvent) => {
-		const popoutEl = document.querySelector(".popout");
+		const popoutEl = document.querySelector(".emoji-picker");
 
 		if (
 			reactionButtonRef &&
