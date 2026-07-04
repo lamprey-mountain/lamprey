@@ -97,13 +97,11 @@ impl Connection2 {
     async fn spawn(mut self) {
         let mut sushi = self.globals.messaging().subscribe().await.unwrap();
 
-        // TODO: port handle_hello here:
-        // send Ready
-        // send Ambient
-        // send typing states
-        // send voice states
-        // send flumes
-        // send document presence
+        // init sync
+        if let Err(err) = self.send_ready_state().await {
+            error!("failed to init sync: {err}");
+            return;
+        }
 
         loop {
             // transport_futures event
@@ -285,7 +283,7 @@ impl Connection2 {
     }
 
     async fn handle_message_client_inner(&mut self, msg: MessageClient) -> Result<()> {
-        let (send, timeout) = {
+        let (_send, timeout) = {
             let t = self.transport.as_mut().ok_or_else(|| {
                 Error::BadStatic("how did we receive a client event without an active transport?")
             })?;
@@ -504,6 +502,108 @@ impl Connection2 {
         srv.documents
             .apply_update((channel_id, branch_id), user_id, Some(self.id), &update.0)
             .await?;
+
+        Ok(())
+    }
+
+    async fn send_ready_state(&mut self) -> Result<()> {
+        let srv = self.globals.services();
+        let user_id = self.session.user_id();
+
+        let user = if let Some(uid) = user_id {
+            let mut user = srv.users.get(uid, Some(uid)).await?;
+            if !user.is_suspended() {
+                user.presence = srv.presence.get(uid);
+            }
+            Some(user)
+        } else {
+            None
+        };
+
+        let application = if let Some(application_id) = self.session.app_id {
+            let mut d = self.globals.begin_read().await?;
+            Some(Box::new(d.application_get(application_id).await?))
+        } else if let Some(uid) = user_id {
+            let mut d = self.globals.begin_read().await?;
+            d.application_get((*uid).into()).await.ok().map(Box::new)
+        } else {
+            None
+        };
+
+        let ready = MessagePayload::Ready {
+            user: user.map(Box::new),
+            application: application.clone(),
+            session: self.session.clone(),
+            conn: self.id,
+            seq: 0,
+        };
+
+        self.queue.push(MessageEnvelope { payload: ready });
+
+        if let Some(uid) = user_id {
+            // Ambient
+            let ambient = srv.cache.generate_ambient_message(uid).await?;
+            self.queue.push_sync(ambient, None);
+
+            // Typing
+            let typing_states = srv.channels.typing_list();
+            for (channel_id, typing_user_id, until) in typing_states {
+                if let Ok(perms) = srv.perms.for_channel(uid, channel_id).await {
+                    if perms.has(Permission::ChannelView) {
+                        self.queue.push_sync(
+                            MessageSync::ChannelTyping {
+                                channel_id,
+                                user_id: typing_user_id,
+                                until: until.into(),
+                            },
+                            None,
+                        );
+                    }
+                }
+            }
+
+            // Voice
+            let voice_states = srv.voice.state_list();
+            for voice_state in voice_states {
+                let vs = voice_state.inner();
+                if let Ok(perms) = srv.perms.for_channel(uid, vs.channel_id).await {
+                    let is_ours = self.session.user_id() == Some(vs.user_id);
+                    if perms.has(Permission::ChannelView) || is_ours {
+                        let mut vs = vs.to_owned();
+                        if !is_ours {
+                            vs.session_id = None;
+                        }
+                        self.queue.push_sync(
+                            MessageSync::VoiceState {
+                                user_id: vs.user_id,
+                                state: Some(vs),
+                                old_state: None,
+                            },
+                            None,
+                        );
+                    }
+                }
+            }
+
+            // Flumes
+            // NOTE: in the future, you will be required to subscribe to receive flumes
+            for entry in &srv.messages.flumes {
+                let flume = entry.value();
+                if let Ok(perms) = srv.perms.for_channel3(Some(uid), flume.channel_id).await {
+                    if perms.visible {
+                        let delta = srv.messages.flume_initial(flume).await?;
+                        self.queue.push_sync(
+                            MessageSync::FlumeDelta {
+                                channel_id: flume.channel_id,
+                                message_id: *entry.key(),
+                                delta,
+                            },
+                            None,
+                        );
+                    }
+                }
+            }
+        }
 
         Ok(())
     }
