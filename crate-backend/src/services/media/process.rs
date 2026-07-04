@@ -459,6 +459,7 @@ impl MediaPipeline {
 
 impl ServiceMedia {
     /// Run the media processing pipeine for an `Upload`
+    #[tracing::instrument(skip(self, upload), fields(media_id = %upload.media_id()))]
     pub(super) async fn process_media(&self, upload: Upload) -> Result<()> {
         let writer = upload.writer;
         let mut pipe =

@@ -6,6 +6,6 @@ pub mod data;
 pub mod documents;
 pub mod federation;
 pub mod health;
+pub mod media;
 pub mod permission;
 pub mod search;
-pub mod media;

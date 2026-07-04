@@ -4,6 +4,7 @@ use std::time::Instant;
 
 use async_tempfile::TempFile;
 use common::v1::types::{Mime, SessionId, UserId};
+use common::v2::types::MediaId;
 use common::v2::types::media::MediaMetadata;
 use futures::StreamExt;
 use tokio::io::{AsyncWriteExt, BufWriter};
@@ -14,6 +15,7 @@ use crate::routes::util::multipart::MultipartFile;
 use crate::services::media::ServiceMedia;
 use crate::services::media::util::{Import, MediaItem, MediaItemWriter};
 use crate::{ServerStateInner, prelude::*};
+use tracing::instrument;
 
 // TODO: remove created media after 5 minutes, reset timer after any update
 // TODO: remove uploaded media after 5 minutes
@@ -40,6 +42,10 @@ pub struct Upload {
 }
 
 impl Upload {
+    pub fn media_id(&self) -> MediaId {
+        self.writer.reader().media().id
+    }
+
     pub async fn write(&mut self, bytes: &[u8]) -> Result<()> {
         let len = bytes.len() as u64;
         if self.current_size + len > self.expected_size() {
@@ -79,6 +85,7 @@ impl Upload {
 
 impl ServiceMedia {
     /// import media from uploaded bytes
+    #[instrument(skip(self, import), fields(media_id = %import.media_id))]
     pub async fn import_from_upload(&self, import: Import) -> Result<MediaItem> {
         // TODO: return error if expected_size (import.max_size) is too big
         let media_id = import.media_id;
@@ -119,6 +126,7 @@ impl ServiceMedia {
     }
 
     /// import media from these bytes
+    #[instrument(skip(self, import, bytes))]
     pub async fn import_from_bytes(&self, import: Import, bytes: Bytes) -> Result<MediaItem> {
         let item = self.import_from_upload(import).await?;
         let media_id = item.media().id;
@@ -134,6 +142,7 @@ impl ServiceMedia {
     }
 
     /// import media from a multipart request's file
+    #[instrument(skip(self, import, file))]
     pub async fn import_from_multipart(
         &self,
         import: Import,
@@ -145,6 +154,7 @@ impl ServiceMedia {
     }
 
     /// import media from this url
+    #[instrument(skip(self, import, url), fields(url = %url))]
     pub async fn import_from_url(&self, import: Import, url: &Url) -> Result<MediaItem> {
         let server_max_size = self.state.config.media.max_size;
         let max_size = import.max_size;
@@ -165,6 +175,7 @@ impl ServiceMedia {
     }
 
     /// import media from this reqwest response
+    #[instrument(skip(self, import, res))]
     pub async fn import_from_response(
         &self,
         import: Import,
