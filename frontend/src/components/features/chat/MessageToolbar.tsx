@@ -10,14 +10,7 @@ import { icEdit, icMore, icReactionAdd, icReply } from "@/utils/icons";
 import { autoUpdate, offset, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { createEffect, createSignal, onCleanup, Show } from "solid-js";
-import { ReactionKey } from "ts-sdk";
-
-const areReactionKeysEqual = (a: ReactionKey, b: ReactionKey): boolean => {
-	if (a.type !== b.type) return false;
-	if (a.type === "Text" && b.type === "Text") return a.content === b.content;
-	if (a.type === "Custom" && b.type === "Custom") return a.id === b.id;
-	return false;
-};
+import { areReactionKeysEqual } from "@/api/services/ReactionsService.ts";
 
 export const MessageToolbar = (props: { message: MessageT }) => {
 	const api2 = useApi();

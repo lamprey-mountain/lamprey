@@ -25,20 +25,6 @@ export const Reactions = (props: ReactionsProps) => {
 		return "";
 	};
 
-	const _areKeysEqual = (a: ReactionKey, b: ReactionKey): boolean => {
-		if (a.type !== b.type) return false;
-		if (a.type === "Text") {
-			return a.content === (b as ReactionKey & { type: "Text" }).content;
-		}
-		if (a.type === "Custom") {
-			return (
-				(a as ReactionKey & { type: "Custom" }).id ===
-				(b as ReactionKey & { type: "Custom" }).id
-			);
-		}
-		return false;
-	};
-
 	const handleClick = (key: ReactionKey, self: boolean) => {
 		const param = reactionKeyToParam(key);
 		if (self) {

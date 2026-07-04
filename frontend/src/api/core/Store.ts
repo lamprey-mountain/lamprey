@@ -418,6 +418,13 @@ export class RootStore {
 		} else if (msg.type === "MessageDelete") {
 			this.flumes.handleDelete(msg.message_id);
 			this.messages.handleMessageDelete(msg.channel_id, msg.message_id);
+		} else if (
+			msg.type === "ReactionCreate" ||
+			msg.type === "ReactionDelete" ||
+			msg.type === "ReactionDeleteKey" ||
+			msg.type === "ReactionDeleteAll"
+		) {
+			this.reactions.handleSync(msg);
 		} else if (msg.type === "PreferencesGlobal") {
 			const session = this.session();
 			const sessionUserId =

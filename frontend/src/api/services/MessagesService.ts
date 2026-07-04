@@ -79,7 +79,7 @@ export class MessagesService extends BaseService<Message> {
 		return c;
 	}
 
-	private bumpVersion(channel_id: string) {
+	_bumpVersion(channel_id: string) {
 		this._versions.set(channel_id, (this._versions.get(channel_id) ?? 0) + 1);
 	}
 
@@ -551,7 +551,7 @@ export class MessagesService extends BaseService<Message> {
 				}
 			}
 
-			this.bumpVersion(m.channel_id);
+			this._bumpVersion(m.channel_id);
 		});
 	}
 
@@ -565,7 +565,7 @@ export class MessagesService extends BaseService<Message> {
 						ranges.replace(range, range.mergeMessages([m]));
 					}
 				}
-				this.bumpVersion(m.channel_id);
+				this._bumpVersion(m.channel_id);
 			}
 		});
 	}
@@ -586,7 +586,7 @@ export class MessagesService extends BaseService<Message> {
 						);
 					}
 				}
-				this.bumpVersion(channel_id);
+				this._bumpVersion(channel_id);
 			}
 		});
 	}
@@ -623,7 +623,7 @@ export class MessagesService extends BaseService<Message> {
 					ranges.live,
 					ranges.live.mergeMessageWithNonce(local, id),
 				);
-				this.bumpVersion(channel_id);
+				this._bumpVersion(channel_id);
 			}
 		});
 
