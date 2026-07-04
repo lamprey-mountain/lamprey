@@ -211,4 +211,18 @@ impl Globals {
     pub fn blobs(&self) -> &opendal::Operator {
         &self.inner.blobs
     }
+
+    // TEMP: compat
+    pub fn temp_to_server_state_inner(&self) -> ServerStateInner {
+        ServerStateInner {
+            tokio: TokioHandle::current(),
+            config: (*self.inner.config).clone(),
+            database: self.inner.database_compat.clone(),
+            services: self.services.clone(),
+            blobs: self.inner.blobs.clone(),
+            jetstream: None,
+            messaging: self.inner.messaging.clone(),
+            globals: self.clone(),
+        }
+    }
 }

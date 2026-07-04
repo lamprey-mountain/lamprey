@@ -1,6 +1,5 @@
 use common::v1::types::SERVER_ROOM_ID;
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
@@ -10,16 +9,16 @@ use common::v1::types::{
     sync::SyncSubscription,
 };
 
-use crate::ServerState;
 use crate::error::{Error, Result};
 use crate::services::member_lists::util::MemberListTarget;
+use crate::state::Globals;
 
 /// manager for all the subscriptions for a connection
 pub struct ConnectionSubscriptions {
-    s: Arc<ServerState>,
+    globals: Globals,
     conn_id: ConnectionId,
 
-    // multiplexe all events into a single stream
+    // multiplex all events into a single stream
     event_tx: mpsc::UnboundedSender<Result<MessageSync>>,
     event_rx: mpsc::UnboundedReceiver<Result<MessageSync>>,
 
@@ -29,10 +28,10 @@ pub struct ConnectionSubscriptions {
 }
 
 impl ConnectionSubscriptions {
-    pub fn new(s: Arc<ServerState>, conn_id: ConnectionId) -> Self {
+    pub fn new(globals: Globals, conn_id: ConnectionId) -> Self {
         let (event_tx, event_rx) = mpsc::unbounded_channel();
         Self {
-            s,
+            globals,
             conn_id,
             event_tx,
             event_rx,
@@ -51,7 +50,7 @@ impl ConnectionSubscriptions {
     }
 
     pub async fn disconnect(&mut self, user_id: UserId) {
-        let srv = self.s.services();
+        let srv = self.globals.services();
 
         for (key, _) in self.documents.iter() {
             let _ = srv
@@ -80,7 +79,7 @@ impl ConnectionSubscriptions {
         subscription: SyncSubscription,
         user_id: UserId,
     ) -> Result<()> {
-        let srv = self.s.services();
+        let srv = self.globals.services();
 
         // document subscriptions
         if let Some(docs) = subscription.documents {
@@ -95,8 +94,9 @@ impl ConnectionSubscriptions {
                     perms.ensure(Permission::ChannelView)?;
 
                     let branch = self
-                        .s
-                        .data()
+                        .globals
+                        .begin_read()
+                        .await?
                         .document_branch_get(doc.channel_id, doc.branch_id)
                         .await;
                     match branch {
@@ -303,4 +303,67 @@ impl Drop for ConnectionSubscriptions {
             handle.abort();
         }
     }
+}
+
+#[cfg(any())]
+mod next {
+    /// manager for all the subscriptions for a connection
+    pub struct ConnectionSubscriptions2 {
+        // // multiplex all events into a single stream
+        // event_tx: mpsc::UnboundedSender<Result<MessageSync>>,
+        // event_rx: mpsc::UnboundedReceiver<Result<MessageSync>>,
+
+        // documents: HashMap<(ChannelId, DocumentBranchId), JoinHandle<()>>,
+        // scripts: HashMap<(ChannelId, RedexId), JoinHandle<()>>,
+        // member_lists: HashMap<String, (JoinHandle<()>, Vec<(u64, u64)>)>, // store ranges to detect when ranges are updated
+    }
+
+    pub trait Syncer {
+        // fn set_subscription(&mut self, subscription: SyncSubscription);
+        fn poll(&mut self) -> impl Future<Output = Result<MessageSync>> + Send;
+    }
+
+    // pub trait ServiceFoo {
+    //     fn create(&self, connection_id: ConnectionId, user_id: Option<UserId>) -> Syncer;
+    // }
+
+    // pub fn create_syncer(&self, conn_id: uuid::Uuid) -> syncer::MemberListSyncer {
+    // pub trait Syncer {
+    //     pub async fn set_user_id(&mut self, user_id: Option<UserId>) {
+    //     pub async fn poll(&mut self) -> Result<MessageSync> {
+
+    //     // member list
+    //     pub async fn set_query( &mut self, target: MemberListTarget, ranges: &[(u64, u64)], ) -> Result<()> {
+    //     pub async fn clear_query(&mut self) {
+    //     pub async fn subscribe(&mut self, key1: MemberListKey1, ranges: Vec<(u64, u64)>) -> Result<()> {
+    //     pub async fn unsubscribe(&mut self, key1: MemberListKey1) -> Result<()> {
+
+    // // document
+    //     pub async fn set_context_id( &self, context_id: EditContextId, state_vector: Option<DocumentStateVector>, ) -> Result<()> {
+    //     pub fn is_subscribed(&self, context_id: &EditContextId) -> bool {
+    //     pub async fn handle_disconnect(&self, user_id: UserId) -> Result<()> {
+
+    //    // script
+    //     pub async fn set_context_id(&self, channel_id: ChannelId, script_id: RedexId) -> Result<()> {
+    //     pub fn is_subscribed(&self, channel_id: &ChannelId, script_id: &RedexId) -> bool {
+    // }
+
+    // unsure if i can impl these if i make ConnectionSubscriptions2 minimal
+    // impl ConnectionSubscriptions2 {
+    //     pub async fn disconnect(&mut self) {
+    //         todo!()
+    //     }
+    //
+    //     pub async fn set_subscription(
+    //         &mut self,
+    //         subscription: SyncSubscription,
+    //         user_id: UserId,
+    //     ) -> Result<()> {
+    //         todo!()
+    //     }
+    //
+    //     pub async fn poll(&mut self) -> Result<MessageSync> {
+    //         todo!()
+    //     }
+    // }
 }

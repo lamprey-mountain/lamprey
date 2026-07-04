@@ -32,4 +32,6 @@ pub(crate) mod prelude {
     pub use lamprey_backend_core::prelude::*;
 
     pub type CoreResult<T, E> = ::core::result::Result<T, E>;
+
+    pub use futures_util::StreamExt;
 }

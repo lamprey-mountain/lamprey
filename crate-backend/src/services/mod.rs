@@ -138,16 +138,7 @@ pub struct Services {
 
 impl Services {
     pub fn new(globals: Globals) -> Self {
-        let state_old = Arc::new(ServerStateInner {
-            tokio: tokio::runtime::Handle::current(),
-            config: (*globals.config()).clone(),
-            database: globals.temp_database_compat(),
-            services: globals.temp_services_raw(),
-            blobs: globals.blobs().clone(),
-            jetstream: None,
-            messaging: globals.messaging().clone(),
-            globals: globals.clone(),
-        });
+        let state_old = Arc::new(globals.temp_to_server_state_inner());
 
         Self {
             admin: ServiceAdmin::new(globals.clone()),
@@ -157,7 +148,7 @@ impl Services {
             calendar: ServiceCalendar::new(state_old.clone()),
             channels: ServiceChannels::new(state_old.clone()),
             config: ServiceConfig::new(globals.clone()),
-            connections: ServiceConnections::new(state_old.clone()),
+            connections: ServiceConnections::new(globals.clone()),
             documents: ServiceDocuments::new(state_old.clone()),
             email: ServiceEmail::new(state_old.clone()),
             embed: ServiceEmbed::new(state_old.clone()),

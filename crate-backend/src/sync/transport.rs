@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use async_trait::async_trait;
 use axum::extract::ws::WebSocket;
-use common::v1::types::{MessageClient, MessageEnvelope, SyncFormat};
+use common::v1::types::{MessageClient, MessageEnvelope, SyncFormat, SyncParams};
 use flate2::{Compress, Decompress, FlushCompress, FlushDecompress};
 use futures::{
     SinkExt, StreamExt,
@@ -64,9 +64,9 @@ pub enum Compression {
 }
 
 impl WebsocketTransport {
-    pub fn new(ws: WebSocket, format: SyncFormat, use_deflate: bool) -> Self {
+    pub fn new(ws: WebSocket, params: SyncParams) -> Self {
         let (sink, stream) = ws.split();
-        let compression = if use_deflate {
+        let compression = if params.compression.is_some() {
             Some(Compression::Deflate {
                 compressor: Compress::new(flate2::Compression::default(), true),
                 decompressor: Decompress::new(true),
@@ -79,7 +79,7 @@ impl WebsocketTransport {
         Self {
             sink,
             stream,
-            format,
+            format: params.format,
             compression,
             inbox: VecDeque::new(),
         }

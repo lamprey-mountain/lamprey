@@ -7,7 +7,9 @@ use crate::{Result, ServerStateInner};
 
 pub struct ServiceSessions {
     state: Arc<ServerStateInner>,
+    // TODO: Arc<Session>
     cache_sessions: Cache<SessionId, Session>,
+    // TODO: Arc<Session>
     // is it worth duplicating Sessions here? maybe
     cache_tokens: Cache<SessionToken, Session>,
 }

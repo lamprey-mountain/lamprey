@@ -212,6 +212,7 @@ impl Messaging {
     }
 
     /// subscribe to everything
+    // TODO: don't make async, don't return result?
     pub async fn subscribe(&self) -> Result<BoxStream<Broadcast>> {
         match &*self.transport {
             Transport::Memory { sushi, sushi_sfu }

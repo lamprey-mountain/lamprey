@@ -12,6 +12,7 @@ pub const CLOSE_TIME: Duration = Duration::from_secs(10);
 /// the maximum number of events to retain in the queue before killing the connection
 pub const MAX_QUEUE_LEN: usize = 256;
 
+// TODO: remove
 /// where this connection is in the handshake
 #[derive(Debug, Clone)]
 pub enum ConnectionState {
@@ -25,9 +26,12 @@ pub enum ConnectionState {
     Disconnected { session: Session },
 }
 
-/// utility to calculate deadlines
+/// utility to calculate deadlines for connection health checks.
 pub enum Timeout {
+    /// when the server will next send a `Ping`
     Ping(Instant),
+
+    /// the client must respond with a `Pong` before this deadline, otherwise the connection will be closed.
     Close(Instant),
 }
 
