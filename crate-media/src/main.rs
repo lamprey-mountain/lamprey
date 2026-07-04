@@ -9,7 +9,7 @@ use tracing::info;
 async fn main() -> anyhow::Result<()> {
     let config: Config = Figment::new()
         .merge(Toml::file("cdn.toml"))
-        .merge(Env::raw())
+        .merge(Env::raw().only(&["RUST_LOG"]))
         .extract()?;
 
     info!("starting cdn with config: {:#?}", config);
