@@ -435,6 +435,18 @@ impl RoomActor {
                     }
                 }
             }
+            MessageSync::EmojiCreate { emoji } => {
+                if emoji.room_id() != Some(self.room_id) {
+                    return Ok(());
+                }
+                snapshot_data.room.emoji_count += 1;
+            }
+            MessageSync::EmojiDelete { room_id, .. } => {
+                if *room_id != self.room_id {
+                    return Ok(());
+                }
+                snapshot_data.room.emoji_count = snapshot_data.room.emoji_count.saturating_sub(1);
+            }
             MessageSync::RoomMemberCreate { member, user } => {
                 if member.room_id != self.room_id {
                     return Ok(());

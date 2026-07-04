@@ -119,3 +119,13 @@ pub struct EmojiCustomPatch {
 pub struct EmojiSearchQuery {
     pub query: String,
 }
+
+impl EmojiCustom {
+    /// get the id of the room this custom emoji is in, if known
+    pub fn room_id(&self) -> Option<RoomId> {
+        match &self.owner {
+            Some(EmojiOwner::Room { room_id }) => Some(*room_id),
+            _ => None,
+        }
+    }
+}
