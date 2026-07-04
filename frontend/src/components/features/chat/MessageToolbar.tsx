@@ -12,19 +12,25 @@ import { useFloating } from "solid-floating-ui";
 import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import { ReactionKey } from "ts-sdk";
 
+const areReactionKeysEqual = (a: ReactionKey, b: ReactionKey): boolean => {
+	if (a.type !== b.type) return false;
+	if (a.type === "Text" && b.type === "Text") return a.content === b.content;
+	if (a.type === "Custom" && b.type === "Custom") return a.id === b.id;
+	return false;
+};
+
 export const MessageToolbar = (props: { message: MessageT }) => {
 	const api2 = useApi();
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
+	const { setLocked } = useMessageToolbar();
 	const [ch, chUpdate] = useOptionalChannel();
-	const [showReactionPicker, setShowReactionPicker] = createSignal(false);
 	let reactionButtonRef: HTMLButtonElement | undefined;
 
-	const areReactionKeysEqual = (a: ReactionKey, b: ReactionKey): boolean => {
-		if (a.type !== b.type) return false;
-		if (a.type === "Text" && b.type === "Text") return a.content === b.content;
-		if (a.type === "Custom" && b.type === "Custom") return a.id === b.id;
-		return false;
+	const isReactionPickerOpen = () => {
+		const p = ctx.popout();
+		return p && p.id === "emoji" && p.ref === reactionButtonRef;
+		// return p && p.id === "emoji";
 	};
 
 	const addReaction = (emoji: string) => {
@@ -40,51 +46,21 @@ export const MessageToolbar = (props: { message: MessageT }) => {
 		}
 	};
 
-	createEffect(() => {
-		if (showReactionPicker()) {
-			ctx.setPopout({
-				id: "emoji",
-				ref: reactionButtonRef,
-				placement: "left-start",
-				props: {
-					selected: (emoji: string | null, keepOpen: boolean) => {
-						if (emoji) {
-							addReaction(emoji);
-						}
-						if (!keepOpen) setShowReactionPicker(false);
-					},
-				},
-			});
-		} else {
-			const popout = ctx.popout();
-			if (
-				popout &&
-				"id" in popout &&
-				popout.id === "emoji" &&
-				popout.ref === reactionButtonRef
-			) {
-				ctx.setPopout(null);
-			}
-		}
-	});
-
-	const closePicker = (e: MouseEvent) => {
+	const closeReactionPicker = (e: MouseEvent) => {
 		const popoutEl = document.querySelector(".popout");
+
 		if (
 			reactionButtonRef &&
 			!reactionButtonRef.contains(e.target as Node) &&
 			(!popoutEl || !popoutEl.contains(e.target as Node))
 		) {
-			setShowReactionPicker(false);
+			setLocked(false);
+			ctx.setPopout(null);
 		}
 	};
 
-	createEffect(() => {
-		if (showReactionPicker()) {
-			document.addEventListener("click", closePicker);
-		}
-		onCleanup(() => document.removeEventListener("click", closePicker));
-	});
+	document.addEventListener("click", closeReactionPicker);
+	onCleanup(() => document.removeEventListener("click", closeReactionPicker));
 
 	const currentUser = useCurrentUser();
 	const isOwnMessage = () => {
@@ -101,7 +77,28 @@ export const MessageToolbar = (props: { message: MessageT }) => {
 
 	const handleAddReaction = (e: MouseEvent) => {
 		e.stopPropagation();
-		setShowReactionPicker(!showReactionPicker());
+		if (isReactionPickerOpen()) {
+			setLocked(false);
+			ctx.setPopout(null);
+		} else {
+			setLocked(true);
+			ctx.setPopout({
+				id: "emoji",
+				ref: reactionButtonRef,
+				placement: "left-start",
+				props: {
+					selected: (emoji: string | null, keepOpen: boolean) => {
+						if (emoji) {
+							addReaction(emoji);
+						}
+						if (!keepOpen) {
+							setLocked(false);
+							ctx.setPopout(null);
+						}
+					},
+				},
+			});
+		}
 	};
 
 	const handleReply = () => {
@@ -181,7 +178,7 @@ export const MessageToolbar = (props: { message: MessageT }) => {
 };
 
 export const MessageToolbarMount = () => {
-	const { target, setTarget } = useMessageToolbar();
+	const { target, setTarget, setContainerRef } = useMessageToolbar();
 	const [tipEl, setTipEl] = createSignal<HTMLDivElement>();
 
 	const pos = useFloating(() => target()?.element ?? null, tipEl, {
@@ -191,17 +188,13 @@ export const MessageToolbarMount = () => {
 		middleware: [shift({ padding: 8 }), offset({ mainAxis: -8 })],
 	});
 
-	const handleClick = (_e: MouseEvent) => {
-		if (target()) {
-			setTarget(null);
-		}
+	const handleClick = (e: MouseEvent) => {
+		if (e.target && tipEl()?.contains(e.target as HTMLElement)) return;
+		if (target()) setTarget(null);
 	};
 
-	// TODO: make part of useGlobalEventHandlers.ts
 	createEffect(() => {
-		if (target()) {
-			document.addEventListener("click", handleClick);
-		}
+		if (target()) document.addEventListener("click", handleClick);
 		onCleanup(() => document.removeEventListener("click", handleClick));
 	});
 
@@ -209,12 +202,22 @@ export const MessageToolbarMount = () => {
 		<Show when={target()}>
 			{(t) => (
 				<div
-					ref={setTipEl}
+					ref={(el) => {
+						setTipEl(el);
+						setContainerRef(el);
+					}}
 					style={{
 						position: pos.strategy,
 						top: `${pos.y ?? 0}px`,
 						left: `${pos.x ?? 0}px`,
 						"z-index": 1000,
+					}}
+					onMouseLeave={(e) => {
+						const related = e.relatedTarget;
+						const msgEl = t().element;
+						// don't clear if moving back onto the message that owns this toolbar
+						if (related instanceof Node && msgEl?.contains(related)) return;
+						setTarget(null);
 					}}
 				>
 					<MessageToolbar message={t().message} />

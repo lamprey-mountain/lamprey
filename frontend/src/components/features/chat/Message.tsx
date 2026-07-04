@@ -385,10 +385,17 @@ function SystemMessage(
 				props.setHovered(true);
 				toolbar.setTarget({ message: props.message, element: e.currentTarget });
 			}}
-			onMouseLeave={() => {
+			onMouseLeave={(e) => {
 				props.setHovered(false);
+				const toolbarEl = toolbar.containerRef();
+				if (
+					toolbarEl &&
+					e.relatedTarget instanceof Node &&
+					toolbarEl.contains(e.relatedTarget)
+				) {
+					return;
+				}
 				toolbar.setTarget(null);
-				// FIXME: dont clear if toolbar needs to exist for interaction
 			}}
 		>
 			<aside class="aside">
@@ -779,10 +786,17 @@ function DefaultMessage(
 				props.setHovered(true);
 				toolbar.setTarget({ message: props.message, element: e.currentTarget });
 			}}
-			onMouseLeave={() => {
+			onMouseLeave={(e) => {
 				props.setHovered(false);
+				const toolbarEl = toolbar.containerRef();
+				if (
+					toolbarEl &&
+					e.relatedTarget instanceof Node &&
+					toolbarEl.contains(e.relatedTarget)
+				) {
+					return;
+				}
 				toolbar.setTarget(null);
-				// FIXME: dont clear if toolbar needs to exist for interaction
 			}}
 		>
 			<Show when={version()?.reply_id}>

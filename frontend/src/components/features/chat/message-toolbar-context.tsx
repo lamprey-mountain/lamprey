@@ -9,16 +9,32 @@ export type MessageToolbarTarget = {
 export type MessageToolbarContextValue = {
 	target: () => MessageToolbarTarget | null;
 	setTarget: (target: MessageToolbarTarget | null) => void;
+	containerRef: () => HTMLElement | undefined;
+	setContainerRef: (el: HTMLElement | undefined) => void;
+	locked: () => boolean;
+	setLocked: (locked: boolean) => void;
 };
 
 const MessageToolbarContext = createContext<MessageToolbarContextValue>();
 
 export const MessageToolbarProvider = (props: { children: JSX.Element }) => {
 	const [target, setTarget] = createSignal<MessageToolbarTarget | null>(null);
+	const [containerRef, setContainerRef] = createSignal<HTMLElement>();
+	const [locked, setLocked] = createSignal(false);
 
+	const setTargetLocked = (t: MessageToolbarTarget | null) => {
+		if (locked()) return;
+		setTarget(t);
+	};
+
+	// NOTE: maybe use a store here
 	const value = {
 		target,
-		setTarget,
+		setTarget: setTargetLocked,
+		containerRef,
+		setContainerRef,
+		locked,
+		setLocked,
 	};
 
 	return (
