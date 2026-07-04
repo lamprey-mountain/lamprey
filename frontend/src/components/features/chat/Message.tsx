@@ -148,6 +148,7 @@ function MessageTextMarkdown(props: { message: MessageT }) {
 			channel_id={props.message.channel_id}
 			class="body"
 			classList={{ local: props.message.is_local, "emoji-only": isEmojiOnly() }}
+			kindaInline
 		>
 			<Show when={props.message.id !== props.message.latest_version.version_id}>
 				<span class="edited" onClick={viewHistory}>

@@ -480,22 +480,23 @@ function MentionToken(props: MentionTokenProps) {
 
 // --- Exported Component ---
 
-export const Markdown = (
-	props: ParentProps<{
-		content: string;
-		channel_id?: string;
-		inline?: boolean;
-		class?: string;
-		classList?: { [k: string]: boolean | undefined };
-		ref?: HTMLElement | ((el: HTMLElement) => void);
-	}>,
-) => {
+type MarkdownProps = {
+	content: string;
+	channel_id?: string;
+	inline?: boolean;
+	kindaInline?: boolean;
+	class?: string;
+	classList?: { [k: string]: boolean | undefined };
+	ref?: HTMLElement | ((el: HTMLElement) => void);
+};
+
+export const Markdown = (props: ParentProps<MarkdownProps>) => {
 	const channels2 = useChannels();
 	const channel = channels2.use(() => props.channel_id);
 
 	const tokens = createMemo(() => {
 		const t = md.lexer(props.content);
-		if (props.inline) {
+		if (props.inline || props.kindaInline) {
 			if (t.length === 1 && t[0].type === "paragraph") {
 				return (t[0] as Tokens.Paragraph).tokens;
 			}

@@ -350,9 +350,10 @@
 
 		// TODO: more specific selector
 		& .edited {
-			color: $fg-500;
-			font-size: 0.8rem;
+			color: $fg-600;
+			font-size: 0.7rem;
 			cursor: pointer;
+			margin-left: 4px;
 		}
 	}
 }
