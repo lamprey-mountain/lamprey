@@ -2365,6 +2365,8 @@ table {
 		display: flex;
 		align-items: center;
 		gap: 6px;
+		max-width: 3em;
+		@include truncate;
 	}
 
 	.reaction.self {
