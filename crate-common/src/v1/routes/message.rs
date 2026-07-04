@@ -184,11 +184,11 @@ pub mod message_delete {
     tags = ["message"],
     scopes = [Full],
     permissions = [ChannelView],
-    response(OK, body = PaginationResponse<Message>, description = "success"),
+    response(OK, body = PaginationResponse<MessageVersion>, description = "success"),
 )]
 pub mod message_version_list {
     use crate::v1::types::{
-        ChannelId, Message, MessageId, MessageVerId, PaginationQuery, PaginationResponse,
+        ChannelId, MessageId, MessageVerId, MessageVersion, PaginationQuery, PaginationResponse,
     };
 
     pub struct Request {
@@ -204,7 +204,7 @@ pub mod message_version_list {
 
     pub struct Response {
         #[json]
-        pub versions: PaginationResponse<Message>,
+        pub versions: PaginationResponse<MessageVersion>,
     }
 }
 
