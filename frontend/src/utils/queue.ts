@@ -14,8 +14,11 @@ export class Queue<T> {
 
 	push(...tasks: T[]) {
 		this.tasks.push(...tasks);
-		this.state = "pending";
-		queueMicrotask(() => this.drain());
+
+		if (this.state === "idle") {
+			this.state = "pending";
+			queueMicrotask(() => this.drain());
+		}
 	}
 
 	cancel(reason?: string) {

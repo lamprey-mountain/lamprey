@@ -50,7 +50,6 @@ export type TimelineCommands = {
 	ackMessage: { message_id: string };
 };
 
-// TODO: make items/itemsSignal less wonky
 export type TimelineState = {
 	messages: MessageRange | null;
 	anchor: MessageListAnchor;
@@ -58,7 +57,6 @@ export type TimelineState = {
 	highlight: string | null;
 	scrollTop: number;
 	items: TimelineItemT2[];
-	itemsSignal: Signal<TimelineItemT2[]>;
 	readMarkerId: string | null;
 
 	controller: TimelineController;
@@ -88,20 +86,13 @@ export const TimelineProvider = (props: TimelineProviderProps) => {
 			}
 		};
 
-		const itemsSignal = createSignal([
-			{ type: "skeletons", key: "skeletons-top" },
-		] as TimelineItemT2[]);
-
 		state = {
 			messages: null,
 			loading: false,
 			highlight: null,
 			scrollTop: 0,
 			controller: chanState.timeline,
-			get items() {
-				return itemsSignal[0]();
-			},
-			itemsSignal,
+			items: [{ type: "skeletons", key: "skeletons-top" }],
 			anchor: getInitialAnchor(),
 			readMarkerId: props.channel.last_read_id ?? null,
 			events: chanState.timeline.events,

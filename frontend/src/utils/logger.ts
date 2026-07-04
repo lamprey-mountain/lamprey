@@ -155,5 +155,6 @@ logger.config("api/audit_log", { color: colors.orange });
 logger.config("api/rooms", { color: colors.orange });
 logger.config("idb", { color: colors.yellow });
 logger.config("timeline", { color: colors.red });
+logger.config("timeline/virtualizer", { color: colors.red });
 logger.config("member_list", { color: colors.red });
 logger.config("permissions", { color: colors.green });

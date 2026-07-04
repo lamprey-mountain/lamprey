@@ -109,3 +109,16 @@ export function renderTimeline2(
 
 	return out;
 }
+
+export interface VirtualItem {
+	index: number;
+	item: TimelineItemT2;
+	offset: number;
+	size: number;
+}
+
+export interface VirtualizerLayout {
+	sizes: Float64Array;
+	offsets: Float64Array;
+	totalSize: number;
+}
