@@ -118,6 +118,8 @@ export function useChatClient(config: Config) {
 	const [threadsView, setThreadsView] = createSignal<ThreadsViewData | null>(
 		null,
 	);
+	const [headerThreadsButtonRef, setHeaderThreadsButtonRef] =
+		createSignal<HTMLElement | null>(null);
 
 	const slashCommands = new SlashCommands();
 	registerDefaultSlashCommands(slashCommands);
@@ -140,6 +142,8 @@ export function useChatClient(config: Config) {
 		setPopout,
 		threadsView,
 		setThreadsView,
+		headerThreadsButtonRef,
+		setHeaderThreadsButtonRef,
 		uploads: new ReactiveMap(),
 		recentChannels,
 		setRecentChannels,

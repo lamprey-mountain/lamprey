@@ -1250,7 +1250,7 @@ function SystemMessageThreadCreated(props: SystemMessageProps) {
 			class="link"
 			onClick={(e) => {
 				e.stopPropagation();
-				const ref = e.currentTarget;
+				const ref = ctx.headerThreadsButtonRef() ?? e.currentTarget;
 				queueMicrotask(() => {
 					ctx.setThreadsView({
 						channel_id: props.message.channel_id,

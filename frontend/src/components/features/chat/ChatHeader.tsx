@@ -235,6 +235,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 						>
 							<button
 								type="button"
+								ref={(el) => ctx.setHeaderThreadsButtonRef(el)}
 								onClick={(e) => {
 									if (!ctx.threadsView()) {
 										const ref = e.currentTarget;

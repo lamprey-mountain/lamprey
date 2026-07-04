@@ -91,6 +91,8 @@ export type ChatCtx = {
 
 	threadsView: Accessor<ThreadsViewData | null>;
 	setThreadsView: Setter<ThreadsViewData | null>;
+	headerThreadsButtonRef: Accessor<HTMLElement | null>;
+	setHeaderThreadsButtonRef: Setter<HTMLElement | null>;
 	uploads: ReactiveMap<string, Upload>;
 	recentChannels: Accessor<Array<string>>;
 	setRecentChannels: Setter<Array<string>>;
