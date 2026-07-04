@@ -49,6 +49,7 @@ export const Timeline = (props: ChatProps) => {
 
 	const [scrollEl, setScrollEl] = createSignal(null as HTMLDivElement | null);
 
+	// TODO: store this in `timeline` (timeline context)
 	const virt = createTimelineVirtualizer({
 		scrollEl,
 		channel: props.channel,
@@ -86,6 +87,7 @@ export const Timeline = (props: ChatProps) => {
 				// maybe overflow-anchor can keep stuff stable
 				// maybe i'd need to disable overflow-anchor during SET_ANCHOR
 				// scrollEl()?.scrollBy({ top: -delta, behavior: "instant" });
+				// TODO: if an element resizes below the current viewport, don't call scrollBy()
 			});
 
 			queue.push({
@@ -133,35 +135,9 @@ export const Timeline = (props: ChatProps) => {
 		Math.max(50, Math.ceil(globalThis.innerHeight / 20) * 3);
 	const calculatePaginateLen = () => Math.floor(calculateSliceLen() / 3);
 
-	// debounce/throttle handleScroll to only recalculate once per
-	// requestAnimationFrame, since theres no point in doing more calculations that the
-	// browser cant render
-	let ticking = false;
-	const handleScroll = () => {
-		const el = scrollEl();
-		if (!el) return;
-
-		timeline.scrollTop = el.scrollTop;
-
-		if (!ticking) {
-			requestAnimationFrame(() => {
-				if (el) {
-					virt.refreshVisibleRows();
-				}
-				ticking = false;
-			});
-			ticking = true;
-		}
-	};
-
-	// handle pagination on scrollend event. IntersectionObserver wouldn't help
-	// performance here. using it would prevent forcing a reflow, but after scrollend
-	// everything is already laid out.
-	// TODO: fetch before scroll end so stuff starts loading before user hits a wall
-	// maybe do use IntersectionObserver anyways, not for perf but as an impl detail?
-	const handleScrollEnd = () => {
-		hl.reset();
-		if (queue.active) return;
+	// handle pagination on scroll
+	// return true if pagination was triggered
+	const attemptPagination = () => {
 		const el = scrollEl();
 		if (!el) return;
 
@@ -182,8 +158,7 @@ export const Timeline = (props: ChatProps) => {
 					message_id: msgs.items[idx]?.id,
 				};
 				queue.push({ type: "SET_ANCHOR", anchor });
-			} else {
-				timeline.events.emit("scrollTop");
+				return true;
 			}
 		} else if (atBottom) {
 			if (msgs.has_forward) {
@@ -195,13 +170,60 @@ export const Timeline = (props: ChatProps) => {
 					message_id: msgs.items[idx]?.id,
 				};
 				queue.push({ type: "SET_ANCHOR", anchor });
-			} else {
-				timeline.events.emit("scrollBottom");
+				return true;
 			}
 		}
 
+		return false;
+	};
+
+	// debounce/throttle handleScroll to only recalculate once per
+	// requestAnimationFrame, since theres no point in doing more calculations that the
+	// browser cant render
+	let redrawRequested = false;
+	const handleScroll = () => {
+		const el = scrollEl();
+		if (!el) return;
+
 		timeline.scrollTop = el.scrollTop;
+
+		if (!queue.active) {
+			attemptPagination();
+		}
+
+		if (!redrawRequested) {
+			requestAnimationFrame(() => {
+				virt.refreshVisibleRows();
+				redrawRequested = false;
+			});
+			redrawRequested = true;
+		}
+	};
+
+	// handle terminal events on scrollend event.
+	const handleScrollEnd = () => {
+		hl.reset();
+
+		const el = scrollEl();
+		if (!el) return;
 		timeline.events.emit("scrollPosition", el.scrollTop);
+
+		const msgs = timeline.messages;
+		if (!msgs) return;
+
+		const atTop = el.scrollTop < PAGINATE_THRESHOLD;
+		const atBottom =
+			el.scrollHeight - el.scrollTop - el.clientHeight < PAGINATE_THRESHOLD;
+
+		if (atTop) {
+			if (!msgs.has_backwards) {
+				timeline.events.emit("scrollTop");
+			}
+		} else if (atBottom) {
+			if (!msgs.has_forward) {
+				timeline.events.emit("scrollBottom");
+			}
+		}
 	};
 
 	// ===== handle commands =====
