@@ -1,8 +1,8 @@
 //! websocket sync
 
 use common::v1::types::{
-    ChannelId, ConnectionId, SessionToken, SyncSubscribeDocument, SyncSubscribeMemberList,
-    SyncSubscribeScript, SyncSubscription,
+    ChannelId, ConnectionId, MessagePayload, SessionToken, SyncSubscribeDocument,
+    SyncSubscribeMemberList, SyncSubscribeScript, SyncSubscription,
     document::DocumentUpdate,
     sync::{SyncParams, SyncResume},
     voice::VoiceStateUpdate,
@@ -78,6 +78,50 @@ impl Connection {
 
     #[tracing::instrument(level = "debug", skip(self, transport, timeout), fields(id = self.get_id().to_string()))]
     pub async fn handle_message_client(
+        &mut self,
+        msg: MessageClient,
+        transport: &mut dyn TransportSink,
+        timeout: &mut Timeout,
+    ) -> Result<()> {
+        match self
+            .handle_message_client_inner(msg, transport, timeout)
+            .await
+        {
+            Ok(_) => {}
+            Err(err) => {
+                let code = match &err {
+                    Error::SyncError(c) => Some(c),
+                    _ => None,
+                };
+                transport
+                    .send(MessageEnvelope {
+                        payload: MessagePayload::Error {
+                            error: err.to_string(),
+                            code: code.cloned(),
+                        },
+                    })
+                    .await?;
+
+                let severity = severity(&err);
+                if matches!(
+                    severity,
+                    ConnectionErrorSeverity::Reconnect | ConnectionErrorSeverity::Fatal
+                ) {
+                    transport
+                        .send(MessageEnvelope {
+                            payload: MessagePayload::Reconnect {
+                                can_resume: severity == ConnectionErrorSeverity::Reconnect,
+                            },
+                        })
+                        .await?;
+                }
+            }
+        };
+
+        Ok(())
+    }
+
+    pub async fn handle_message_client_inner(
         &mut self,
         msg: MessageClient,
         transport: &mut dyn TransportSink,
@@ -312,7 +356,7 @@ impl Connection {
                         debug!("session id matches, resuming");
                         conn.rewind(r.seq)?;
                         conn.queue.push(MessageEnvelope {
-                            payload: types::MessagePayload::Resumed,
+                            payload: MessagePayload::Resumed,
                         });
                         std::mem::swap(self, &mut conn);
                         tracing::debug!("rehydrating syncer: {}", self.get_id());
@@ -320,6 +364,7 @@ impl Connection {
                     }
                 }
             }
+            // Error::SyncError(SyncErrorCode::);
             return Err(Error::BadStatic("bad or expired reconnection info"));
         }
 
@@ -354,7 +399,7 @@ impl Connection {
             None
         };
 
-        let ready = types::MessagePayload::Ready {
+        let ready = MessagePayload::Ready {
             user: user.map(Box::new),
             application: application.clone(),
             session: session.clone(),
@@ -722,3 +767,36 @@ impl Connection {
         self.state.session().and_then(|s| s.user_id())
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConnectionErrorSeverity {
+    /// client is fine to continue running
+    Notice,
+
+    /// client needs to reconnect
+    Reconnect,
+
+    /// client needs to start a new connection from scratch
+    Fatal,
+    // separate "can't reconnect at all" severity for stuff like eg. logouts?
+}
+
+fn severity(err: &Error) -> ConnectionErrorSeverity {
+    use ConnectionErrorSeverity::*;
+    match err {
+        Error::SyncError(c) => match c {
+            SyncErrorCode::InvalidSeq => Reconnect,
+            SyncErrorCode::Timeout => Reconnect,
+            SyncErrorCode::Unauthorized => Notice,
+            SyncErrorCode::Unauthenticated => Notice,
+            SyncErrorCode::AlreadyAuthenticated => Notice,
+            SyncErrorCode::AuthFailure => Fatal,
+            SyncErrorCode::InvalidData => Fatal,
+        },
+
+        // TODO: correct severities for more errors
+        _ => Fatal,
+    }
+}
+
+// TODO: create `mod actor`, move routes/sync.rs logic there
