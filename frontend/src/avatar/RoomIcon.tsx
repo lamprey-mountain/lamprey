@@ -1,6 +1,6 @@
 import type { Room } from "sdk";
 import { createResource, Show, type VoidProps } from "solid-js";
-import { generateRoomIcon, pfpsLoaded } from "@/lib/pfp";
+import { generateRoomIcon, roomLayersLoaded } from "@/lib/pfp";
 import { getThumbFromId } from "@/media/util";
 
 export const RoomIcon = (
@@ -14,7 +14,7 @@ export const RoomIcon = (
 	const circPad = 6;
 
 	const [pfp] = createResource(
-		() => [props.room?.id, pfpsLoaded()],
+		() => [props.room?.id, roomLayersLoaded()],
 		async ([roomId, loaded]) => {
 			if (!roomId || !loaded) return "";
 			return generateRoomIcon(roomId as string);
