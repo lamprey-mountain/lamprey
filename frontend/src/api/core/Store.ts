@@ -324,6 +324,24 @@ export class RootStore {
 		} else if (msg.type === "UserCreate" || msg.type === "UserUpdate") {
 			this.users.upsert(msg.user);
 			this.memberLists.updateUser(msg.user);
+
+			const session = this.session();
+			if (
+				session &&
+				session.status !== "Unauthorized" &&
+				session.user_id === msg.user.id
+			) {
+				const currentSelf = this.users.cache.get("@self");
+				const userWithRelationship: UserWithRelationship = {
+					...msg.user,
+					relationship: currentSelf?.relationship ?? {
+						note: null,
+						relation: null,
+						petname: null,
+					},
+				};
+				this.users.cache.set("@self", userWithRelationship);
+			}
 		} else if (msg.type === "PresenceUpdate") {
 			const { user_id, presence } = msg;
 			const user = this.users.get(user_id);
