@@ -1,8 +1,8 @@
 import { ReactiveMap } from "@solid-primitives/map";
 import { createVirtualizer } from "@tanstack/solid-virtual";
 import type { MemberListGroup, RoomMember, User } from "sdk";
-import { createMemo, createSignal, For } from "solid-js";
-import { useRoles, useRoomMembers, useThreadMembers, useUsers } from "@/api";
+import { createMemo, createSignal, For, Show } from "solid-js";
+import { useRoles, useRoomMembers, useUsers } from "@/api";
 import type { MemberListItem } from "@/api/services/MemberListService";
 import { AvatarWithStatus } from "@/components/shared/User";
 import { useMemberListContext } from "@/contexts/memberlist.tsx";
@@ -25,7 +25,6 @@ type MemberListProps =
 export const MemberList = (props: MemberListProps) => {
 	const roles2 = useRoles();
 	const roomMembers2 = useRoomMembers();
-	const _threadMembers2 = useThreadMembers();
 	const users2 = useUsers();
 	const memberLists = useMemberListContext();
 	const list = () => memberLists.get(props.id);
@@ -209,7 +208,16 @@ export const MemberList = (props: MemberListProps) => {
 											>
 												<AvatarWithStatus user={user()} animate={hovered()} />
 												<span class="text">
-													<span class="name">{name()}</span>
+													<div class="name">{name()}</div>
+													<Show
+														when={
+															user()?.presence.activities.find(
+																(a) => a.type === "Custom",
+															)?.text
+														}
+													>
+														{(t) => <div class="status-message">{t()}</div>}
+													</Show>
 												</span>
 											</button>
 										);

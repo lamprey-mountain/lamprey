@@ -47,6 +47,7 @@
 			padding: 2px 4px;
 			flex: 1;
 			overflow: hidden;
+			gap: 2px;
 
 			& > .name {
 				@include truncate;
@@ -55,9 +56,8 @@
 
 			& > .status-message {
 				@include truncate;
-				line-height: 1;
-				font-size: 0.9em;
-				color: $fg-400;
+				font-size: 0.8em;
+				color: $fg-600;
 			}
 		}
 
