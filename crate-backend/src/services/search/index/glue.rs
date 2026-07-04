@@ -6,6 +6,7 @@ use tantivy::schema::{
     OwnedValue,
     document::{DeserializeError, DocumentDeserialize, DocumentDeserializer},
 };
+use time::OffsetDateTime;
 
 use crate::services::search::util::SCHEMA;
 
@@ -305,9 +306,12 @@ impl TryFrom<TantivyChannelPartial> for TantivyChannel {
                 .id
                 .ok_or_else(|| Error::Internal("missing id".to_string()))?,
             archived_at: value.archived_at,
+            // TODO: maybe handle missing created_at better?
+            // i have no idea why some channels don't have created_at, i should probably debug that
+            // though TantivyChannel.created_at isnt really used anyways? its only used in tantivy for sorting?
             created_at: value
                 .created_at
-                .ok_or_else(|| Error::Internal("missing created_at".to_string()))?,
+                .unwrap_or_else(|| Time::from(OffsetDateTime::UNIX_EPOCH)),
         })
     }
 }
