@@ -194,89 +194,106 @@ export const AppShell: Component<ParentProps> = (props) => {
 
 	const cursorStats = ctx.cursorStats;
 
+	// HACK: set class/data-message-style for both root and overlay (for modals)
 	return (
-		<div
-			id="root"
-			class="precedence-hack"
-			classList={{
-				"underline-links": ctx.preferences().frontend.underline_links === "yes",
-			}}
-			data-message-style={
-				ctx.preferences().frontend.message_style === "compact"
-					? "compact"
-					: "cozy"
-			}
-		>
-			<Show when={cursorStats()}>
-				{(stats) => (
-					<div
-						class="cursor-tooltip"
-						style={{
-							position: "fixed",
-							top: `${stats().y + 16}px`,
-							left: `${stats().x + 16}px`,
-							"z-index": 10000,
-							background: "oklch(var(--color-bg2) / 0.9)",
-							color: "oklch(var(--color-fg1))",
-							border: "1px solid oklch(var(--color-sep-300))",
-							padding: "4px 8px",
-							"border-radius": "4px",
-							"pointer-events": "none",
-							"font-size": "12px",
-							"white-space": "nowrap",
-							"backdrop-filter": "blur(4px)",
-						}}
-					>
-						{stats().label}
-					</div>
-				)}
-			</Show>
-			{props.children}
-			<OverlayProvider />
-			<div style="visibility:hidden">
-				<For each={[...(voice.vc.streams.values() ?? [])]}>
-					{(stream) => {
-						let ref: HTMLAudioElement | HTMLVideoElement | undefined;
-						createEffect(() => {
-							if (ref) ref.srcObject = stream.media;
-						});
+		<>
+			<div
+				id="root"
+				class="root precedence-hack"
+				classList={{
+					"underline-links":
+						ctx.preferences().frontend.underline_links === "yes",
+				}}
+				data-message-style={
+					ctx.preferences().frontend.message_style === "compact"
+						? "compact"
+						: "cozy"
+				}
+			>
+				<Show when={cursorStats()}>
+					{(stats) => (
+						<div
+							class="cursor-tooltip"
+							style={{
+								position: "fixed",
+								top: `${stats().y + 16}px`,
+								left: `${stats().x + 16}px`,
+								"z-index": 10000,
+								background: "oklch(var(--color-bg2) / 0.9)",
+								color: "oklch(var(--color-fg1))",
+								border: "1px solid oklch(var(--color-sep-300))",
+								padding: "4px 8px",
+								"border-radius": "4px",
+								"pointer-events": "none",
+								"font-size": "12px",
+								"white-space": "nowrap",
+								"backdrop-filter": "blur(4px)",
+							}}
+						>
+							{stats().label}
+						</div>
+					)}
+				</Show>
+				{props.children}
+				<OverlayProvider />
+				<div style="visibility:hidden">
+					<For each={[...(voice.vc.streams.values() ?? [])]}>
+						{(stream) => {
+							let ref: HTMLAudioElement | HTMLVideoElement | undefined;
+							createEffect(() => {
+								if (ref) ref.srcObject = stream.media;
+							});
 
-						const hasVideo = () => stream.media.getVideoTracks().length > 0;
+							const hasVideo = () => stream.media.getVideoTracks().length > 0;
 
-						return (
-							<Show
-								when={hasVideo()}
-								fallback={
-									<audio
+							return (
+								<Show
+									when={hasVideo()}
+									fallback={
+										<audio
+											autoplay
+											ref={ref as HTMLAudioElement}
+											muted={
+												voice.deafened ||
+												voice.preferences.get(stream.user_id)?.mute === true
+											}
+										/>
+									}
+								>
+									<video
 										autoplay
-										ref={ref as HTMLAudioElement}
+										playsinline
+										ref={ref as HTMLVideoElement}
 										muted={
 											voice.deafened ||
 											voice.preferences.get(stream.user_id)?.mute === true
 										}
 									/>
-								}
-							>
-								<video
-									autoplay
-									playsinline
-									ref={ref as HTMLVideoElement}
-									muted={
-										voice.deafened ||
-										voice.preferences.get(stream.user_id)?.mute === true
-									}
-								/>
-							</Show>
-						);
-					}}
-				</For>
-			</div>
-			<Show when={state() !== "ready"}>
-				<div style="position:fixed;top:8px;left:8px;background:#111;padding:8px;border:solid #222 1px;">
-					{state()}
+								</Show>
+							);
+						}}
+					</For>
 				</div>
-			</Show>
-		</div>
+				<Show when={state() !== "ready"}>
+					<div style="position:fixed;top:8px;left:8px;background:#111;padding:8px;border:solid #222 1px;">
+						{state()}
+					</div>
+				</Show>
+			</div>
+			<div
+				id="overlay"
+				class="root"
+				classList={{
+					"underline-links":
+						ctx.preferences().frontend.underline_links === "yes",
+				}}
+				data-message-style={
+					ctx.preferences().frontend.message_style === "compact"
+						? "compact"
+						: "cozy"
+				}
+			></div>
+		</>
 	);
 };
 

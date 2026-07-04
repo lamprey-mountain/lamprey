@@ -1,18 +1,33 @@
 import { diffChars } from "diff";
 import type { Message, MessageVersion } from "sdk";
-import { createResource, For } from "solid-js";
-import { useApi } from "@/api";
+import { createMemo, createResource, For, Show } from "solid-js";
+import { useApi, useMessages } from "@/api";
 import { MessageView } from "@/components/features/chat/Message";
 import { Modal } from "./mod";
+import { MessageToolbarProvider } from "@/components/features/chat/message-toolbar-context";
+import {
+	DEL_END,
+	DEL_START,
+	INS_END,
+	INS_START,
+	PUA_REGEX,
+} from "@/utils/diff";
 
 export const ModalMessageEdits = (props: {
-	thread_id: string;
+	channel_id: string;
 	message_id: string;
 }) => {
-	// FIXME: pagination
+	// TODO: pagination
+	// TODO: move to messages service
 	const api2 = useApi();
+	const messages = useMessages();
+	const message = messages.use(
+		() => props.channel_id,
+		() => props.message_id,
+	);
+
 	const [edits] = createResource(
-		{ channel_id: props.thread_id, message_id: props.message_id },
+		{ channel_id: props.channel_id, message_id: props.message_id },
 		async (path) => {
 			const { data } = await api2.client.http.GET(
 				"/api/v1/channel/{channel_id}/message/{message_id}/version",
@@ -27,56 +42,68 @@ export const ModalMessageEdits = (props: {
 		},
 	);
 
-	diffChars;
+	// FIXME: incorrect openapi type
+	const versions = () => (edits()?.items ?? []) as unknown as MessageVersion[];
 
 	return (
 		<Modal>
 			<h3 style="margin: -8px 6px">edit history</h3>
-			<ul class="edit-history">
-				<For each={edits()?.items ?? []} fallback={"loading"}>
-					{(i, x) => {
-						const prev = edits()?.items[x() - 1];
-						if (prev) {
-							const prevVersion = prev.latest_version;
-							const currVersion = i.latest_version;
-							const prevContent =
-								prevVersion.type === "DefaultMarkdown"
-									? (prevVersion.content ?? "")
-									: "";
-							const currContent =
-								currVersion.type === "DefaultMarkdown"
-									? (currVersion.content ?? "")
-									: "";
-							const pages = diffChars(prevContent, currContent);
-							const content = pages
-								.map((i) => {
-									if (i.added) return `<ins>${i.value}</ins>`;
-									if (i.removed) return `<del>${i.value}</del>`;
-									return i.value;
-								})
-								.join("");
-							const messageWithContent: Message = {
-								...i,
-								latest_version: {
-									...currVersion,
-									content,
-								} as MessageVersion,
-							};
-							return (
-								<li>
-									<MessageView message={messageWithContent} separate />
-								</li>
-							);
-						} else {
-							return (
-								<li>
-									<MessageView message={i} separate />
-								</li>
-							);
-						}
-					}}
-				</For>
-			</ul>
+			<Show when={message()}>
+				{(message) => (
+					<MessageToolbarProvider>
+						<ul class="edit-history">
+							<For each={versions()} fallback={"loading"}>
+								{(version, idx) => {
+									const prev = versions()[idx() - 1];
+
+									const m = createMemo((): Message => {
+										if (prev) {
+											const prevContent =
+												prev.type === "DefaultMarkdown"
+													? (prev.content ?? "")
+													: "";
+											const versionContent =
+												version.type === "DefaultMarkdown"
+													? (version.content ?? "")
+													: "";
+
+											const changes = diffChars(prevContent, versionContent);
+											const content = changes
+												.map((i) => {
+													const safeValue = i.value.replace(PUA_REGEX, "");
+													if (i.added)
+														return `${INS_START}${safeValue}${INS_END}`;
+													if (i.removed)
+														return `${DEL_START}${safeValue}${DEL_END}`;
+													return safeValue;
+												})
+												.join("");
+											return {
+												...message(),
+												latest_version: {
+													...version,
+													content,
+												} as MessageVersion,
+											};
+										} else {
+											return {
+												...message(),
+												latest_version: version as MessageVersion,
+											};
+										}
+									});
+
+									return (
+										<li>
+											<MessageView message={m()} separate diff />
+										</li>
+									);
+								}}
+							</For>
+						</ul>
+					</MessageToolbarProvider>
+				)}
+			</Show>
 		</Modal>
 	);
 };

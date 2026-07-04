@@ -71,6 +71,7 @@ import { Avatar2 } from "@/avatar/UserAvatar.tsx";
 export type MessageProps = {
 	message: MessageT;
 	separate?: boolean;
+	diff?: boolean;
 };
 
 // TODO: move elsewhere
@@ -124,7 +125,7 @@ export function UserDisplayName(props: {
 	);
 }
 
-function MessageTextMarkdown(props: { message: MessageT }) {
+function MessageTextMarkdown(props: { message: MessageT; diff?: boolean }) {
 	const [, modalctl] = useModals();
 	const viewHistory = () => {
 		modalctl.open({
@@ -149,6 +150,7 @@ function MessageTextMarkdown(props: { message: MessageT }) {
 			class="body"
 			classList={{ local: props.message.is_local, "emoji-only": isEmojiOnly() }}
 			kindaInline
+			allowDiffFormatting={props.diff}
 		>
 			<Show when={props.message.id !== props.message.latest_version.version_id}>
 				<span class="edited" onClick={viewHistory}>
@@ -648,6 +650,9 @@ export function MessageView(props: MessageProps) {
 		get message() {
 			return props.message;
 		},
+		get diff() {
+			return props.diff;
+		},
 		get date() {
 			return date();
 		},
@@ -738,6 +743,7 @@ function DefaultMessage(
 		isEditing: boolean;
 		channels2: ReturnType<typeof useChannels>;
 		ctx: ReturnType<typeof useCtx>;
+		diff?: boolean;
 	},
 ) {
 	const flumes = useFlumes();
@@ -851,7 +857,7 @@ function DefaultMessage(
 					when={!props.isEditing}
 					fallback={<MessageEditor message={props.message} />}
 				>
-					<MessageTextMarkdown message={props.message} />
+					<MessageTextMarkdown message={props.message} diff={props.diff} />
 				</Show>
 			</div>
 

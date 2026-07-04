@@ -447,7 +447,7 @@
 	}
 }
 
-#root[data-message-style="cozy"] .message {
+.root[data-message-style="cozy"] .message {
 	&.separate {
 		margin-top: 8px;
 		padding: 4px 0;
@@ -468,7 +468,7 @@
 	}
 }
 
-#root[data-message-style="compact"] .message:not(.oneline) {
+.root[data-message-style="compact"] .message:not(.oneline) {
 	& > .reply {
 		margin-left: 32px;
 		margin-bottom: 0;

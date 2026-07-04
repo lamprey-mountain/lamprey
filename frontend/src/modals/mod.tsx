@@ -197,7 +197,7 @@ export function getModal(modal: ModalType) {
 	if (isMessageEdits(modal)) {
 		return (
 			<ModalMessageEdits
-				thread_id={modal.channel_id}
+				channel_id={modal.channel_id}
 				message_id={modal.message_id}
 			/>
 		);

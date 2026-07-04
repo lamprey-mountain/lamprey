@@ -26,7 +26,10 @@ import { Dynamic } from "solid-js/web";
 
 // --- Context ---
 
-const MarkdownContext = createContext<{ channel?: Channel }>();
+const MarkdownContext = createContext<{
+	channel?: Channel;
+	allowDiffTags?: boolean;
+}>();
 
 // --- Components ---
 
@@ -219,13 +222,25 @@ function CodeBlock(props: { text: string; lang?: string }) {
 }
 
 function TwemojiText(props: { text: string }) {
+	const ctx = useContext(MarkdownContext);
+
 	const escape = (html: string) => {
-		return html
+		let escaped = html
 			.replace(/&/g, "&amp;")
 			.replace(/</g, "&lt;")
 			.replace(/>/g, "&gt;")
 			.replace(/"/g, "&quot;")
 			.replace(/'/g, "&#39;");
+
+		if (ctx?.allowDiffTags) {
+			escaped = escaped
+				.replace(/\uE000/g, "<ins>")
+				.replace(/\uE001/g, "</ins>")
+				.replace(/\uE002/g, "<del>")
+				.replace(/\uE003/g, "</del>");
+		}
+
+		return escaped;
 	};
 
 	const html = createMemo(() => getTwemoji(escape(props.text)));
@@ -480,13 +495,14 @@ function MentionToken(props: MentionTokenProps) {
 
 // --- Exported Component ---
 
-type MarkdownProps = {
+export type MarkdownProps = {
 	content: string;
 	channel_id?: string;
 	inline?: boolean;
 	kindaInline?: boolean;
 	class?: string;
 	classList?: { [k: string]: boolean | undefined };
+	allowDiffFormatting?: boolean;
 	ref?: HTMLElement | ((el: HTMLElement) => void);
 };
 
@@ -505,7 +521,9 @@ export const Markdown = (props: ParentProps<MarkdownProps>) => {
 	});
 
 	return (
-		<MarkdownContext.Provider value={{ channel: channel() }}>
+		<MarkdownContext.Provider
+			value={{ channel: channel(), allowDiffTags: props.allowDiffFormatting }}
+		>
 			<Dynamic
 				component={props.inline ? "span" : "div"}
 				class={`markdown ${props.class ?? ""}`}
