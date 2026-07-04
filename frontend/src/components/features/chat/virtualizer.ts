@@ -102,7 +102,7 @@ export const createTimelineVirtualizer = (
 	const getSize = (item: TimelineItemT2) => {
 		let s = measurements.get(item.key);
 
-		if (!s) {
+		if (s === undefined) {
 			s = estimateSize(item);
 			measurements.set(item.key, s);
 		}
@@ -158,6 +158,7 @@ export const createTimelineVirtualizer = (
 				item: items[i],
 				offset: offsets[i],
 				size: sizes[i],
+				key: items[i].key,
 			});
 		}
 
@@ -248,11 +249,21 @@ export const createTimelineVirtualizer = (
 				break;
 			}
 			case "RESIZE": {
-				// TODO: move scroll stabilization logic here?
+				// wait for layout but before paint
+				// await new Promise((r) => requestAnimationFrame(r));
+
+				scrollEl()?.scrollBy({ top: task.delta, behavior: "instant" });
+
 				cachedLayout = calculateLayout();
 				cachedRange = calculateRange();
 				setTotalSize(cachedLayout.totalSize);
 				setVisibleRows(reconcile(cachedRange, { key: "key" }));
+
+				// TODO: if an element resizes below the current viewport, don't call scrollBy()
+
+				// maybe overflow-anchor can keep stuff stable
+				// maybe i'd need to disable overflow-anchor during SET_ANCHOR
+
 				break;
 			}
 			case "HIGHLIGHT": {

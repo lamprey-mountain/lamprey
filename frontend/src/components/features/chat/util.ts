@@ -115,6 +115,7 @@ export interface VirtualItem {
 	item: TimelineItemT2;
 	offset: number;
 	size: number;
+	key: string;
 }
 
 export interface VirtualizerLayout {

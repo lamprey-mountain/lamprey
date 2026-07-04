@@ -15,7 +15,6 @@ import {
 	Match,
 	createSignal,
 	createMemo,
-	onMount,
 } from "solid-js";
 import { ChatProps } from "./Chat";
 import { highlight, TimelineItemT2 } from "./util";
@@ -36,13 +35,6 @@ import {
 } from "./virtualizer";
 
 const log = logger.for("timeline");
-
-// FIXME: flash of empty/blank timeline when paginating
-
-// FIXME: deduplicate SET_ANCHOR tasks
-// this happens when sending a message (_versions bump, js scroll event)
-// then after the remote echo is received this happens again
-// maybe it would be better to make duplicate SET_ANCHORs a no-op
 
 export const Timeline = (props: ChatProps) => {
 	const messages = useMessages();
@@ -78,19 +70,6 @@ export const Timeline = (props: ChatProps) => {
 		}
 
 		if (delta !== 0) {
-			// TODO: move scrollBy into RESIZE task handler?
-			scrollEl()?.scrollBy({ top: delta, behavior: "instant" });
-
-			// runs before the browser paints
-			requestAnimationFrame(() => {
-				// TODO: update scroll position, visible items, virtual item offsets
-				// handle elements being resized above the viewport and below the viewport
-				// maybe overflow-anchor can keep stuff stable
-				// maybe i'd need to disable overflow-anchor during SET_ANCHOR
-				// scrollEl()?.scrollBy({ top: -delta, behavior: "instant" });
-				// TODO: if an element resizes below the current viewport, don't call scrollBy()
-			});
-
 			queue.push({
 				type: "RESIZE",
 				delta,
@@ -99,12 +78,14 @@ export const Timeline = (props: ChatProps) => {
 	});
 
 	// refetch messages whenever a channel's message version is bumped
+	// PERF: MessagesService.handleMessageCreate() is called when MessagesService.send() completes AND when MessageCreate is received. i should deduplicate these events.
+	// PERF: ChannelsService.ack seems to retrigger this too for some reason?
 	createEffect(
 		on(
 			() => messages._versions.get(props.channel.id),
-			() => {
-				console.log("AAA messages._versions bumped", queue.active);
+			(vNew, vOld) => {
 				if (queue.active) return;
+				if (vNew === vOld) return;
 
 				// update anchor to rerender
 				queue.push({ type: "SET_ANCHOR", anchor: timeline.anchor });
@@ -227,8 +208,6 @@ export const Timeline = (props: ChatProps) => {
 		}
 	};
 
-	// ===== handle commands =====
-
 	// TODO: queue.push SCROLL_BY
 	timeline.commands.on("scrollBy", (data) => {
 		scrollEl()?.scrollBy({
@@ -244,17 +223,9 @@ export const Timeline = (props: ChatProps) => {
 
 		if (!timeline.messages?.contains(data.message_id)) return;
 
-		// TODO: rerender timeline (in a queue task?)
-		// const m = timeline.messages;
-		// if (m) {
-		// 	const rendered = renderTimeline({
-		// 		items: m.items,
-		// 		has_after: m.has_forward,
-		// 		has_before: m.has_backwards,
-		// 		read_marker_id: data.message_id,
-		// 	});
-		// 	updateTimeline("items", reconcile(rendered));
-		// }
+		// update anchor to rerender
+		// NOTE: maybe i should have a dedicated RERENDER task (with option to skip message fetch?)
+		queue.push({ type: "SET_ANCHOR", anchor: timeline.anchor });
 	});
 
 	timeline.commands.listen((e) => {
@@ -264,8 +235,6 @@ export const Timeline = (props: ChatProps) => {
 	timeline.events.listen((e) => {
 		log.debug("event", e.name, e.details ?? "(null)");
 	});
-
-	// ===== other stuff =====
 
 	// fetch initial messages
 	const init = () => {
@@ -323,6 +292,7 @@ export const Timeline = (props: ChatProps) => {
 								class="timeline-item"
 								data-index={row().index}
 								data-key={row().item.key}
+								data-size={row().size}
 								style={{
 									transform: `translateY(${row().offset}px)`,
 								}}
