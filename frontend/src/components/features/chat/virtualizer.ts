@@ -113,6 +113,9 @@ export const createTimelineVirtualizer = (
 	let cachedLayout: VirtualizerLayout;
 	let cachedRange: Array<VirtualItem>;
 
+	// PERF: cache calculateLayout and calculateRange more aggressively
+	// solidjs makes fine grained deps easy, but im not sure if i can use solid here? at least for something where timing is this critical.
+
 	const calculateLayout = (): VirtualizerLayout => {
 		const items = timeline.items;
 
@@ -224,7 +227,7 @@ export const createTimelineVirtualizer = (
 				cachedLayout = calculateLayout();
 				cachedRange = calculateRange();
 				setTotalSize(cachedLayout.totalSize);
-				setVisibleRows(reconcile(cachedRange, { key: "key" }));
+				setVisibleRows(reconcile(cachedRange, { key: "key", merge: true }));
 
 				// wait for solidjs to update dom
 				await new Promise<void>((r) => queueMicrotask(r));
@@ -257,7 +260,7 @@ export const createTimelineVirtualizer = (
 				cachedLayout = calculateLayout();
 				cachedRange = calculateRange();
 				setTotalSize(cachedLayout.totalSize);
-				setVisibleRows(reconcile(cachedRange, { key: "key" }));
+				setVisibleRows(reconcile(cachedRange, { key: "key", merge: true }));
 
 				// TODO: if an element resizes below the current viewport, don't call scrollBy()
 
@@ -322,8 +325,9 @@ export const createTimelineVirtualizer = (
 		accessVisibleRows: () => visibleRows,
 		measurements,
 		refreshVisibleRows: () => {
+			// PERF: skip updating visible rows if cachedRange didn't change
 			cachedRange = calculateRange();
-			setVisibleRows(reconcile(cachedRange, { key: "key" }));
+			setVisibleRows(reconcile(cachedRange, { key: "key", merge: true }));
 		},
 	};
 };

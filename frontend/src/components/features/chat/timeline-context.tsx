@@ -2,13 +2,7 @@ import {
 	createGlobalEmitter,
 	GlobalEmitter,
 } from "@solid-primitives/event-bus";
-import {
-	createContext,
-	useContext,
-	ParentProps,
-	Signal,
-	createSignal,
-} from "solid-js";
+import { createContext, useContext, ParentProps } from "solid-js";
 import { MessageListAnchor } from "@/api/services/MessagesService";
 import { MessageRange } from "@/api/services/MessagesService";
 import { useChannel } from "@/contexts/mod";
