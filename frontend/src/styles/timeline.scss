@@ -77,9 +77,8 @@
 }
 
 .timeline {
-	/* contain: strict; */ // PERF: maybe this works?
+	contain: strict;
 	overflow-y: auto;
-	overflow-anchor: none; // NOTE: maybe this actually makes stuff jankier?
 	width: 100%;
 	height: 100%;
 
@@ -92,6 +91,9 @@
 			top: 0;
 			left: 0;
 			width: 100%;
+			contain: content;
+			/* content-visibility: auto; */ // NOTE: useless since i already virtualize?
+			will-change: transform;
 
 			& > li > .spacer {
 				max-height: 600px;
@@ -511,7 +513,8 @@
 			$bg-400 100%
 		);
 		background-size: 200% 100%;
-		animation: skeleton-loading 1s infinite linear;
+		// NOTE: this is pretty bad for performance
+		/* animation: skeleton-loading 1s infinite linear; */
 		border-radius: 4px;
 	}
 

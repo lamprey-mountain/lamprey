@@ -15,6 +15,7 @@ import {
 	Match,
 	createSignal,
 	createMemo,
+	onMount,
 } from "solid-js";
 import { ChatProps } from "./Chat";
 import { highlight, TimelineItemT2 } from "./util";
@@ -338,7 +339,8 @@ export const Timeline = (props: ChatProps) => {
 	);
 };
 
-// TODO: function that listens for timeline commands and maps them to tasks
+// listen for timeline commands and map them to tasks
+// TODO: handle the rest of the commands
 function forwardCommands(virt: TimelineVirtualizer) {
 	const timeline = useTimeline();
 
