@@ -57,8 +57,11 @@ async fn thumb_response(
         }
 
         let ext = if animate { "webp" } else { "avif" };
-        let suffix = if animate { "" } else { "_static" };
-        let thumb_path = format!("/media/{media_id}/thumb/{size}x{size}{suffix}.{ext}");
+        let thumb_path = if animate {
+            s.media_paths.thumb(media_id, size, ext)
+        } else {
+            s.media_paths.thumb_static(media_id, size, ext)
+        };
 
         if s.blobs.exists(&thumb_path).await? {
             let meta = s.blobs.stat(&thumb_path).await?;
@@ -96,11 +99,11 @@ async fn thumb_response(
         let thumb_data = s
             .pending_thumbnails
             .try_get_with((media_id, size, size, animate), async move {
-                let poster_path = format!("/media/{media_id}/poster");
+                let poster_path = s.media_paths.poster(media_id);
                 let source_path = if s.blobs.exists(&poster_path).await? {
                     poster_path
                 } else if probably_can_thumbnail(&m) {
-                    format!("/media/{media_id}/file")
+                    s.media_paths.file(media_id)
                 } else {
                     return Err(Error::NotFound);
                 };
@@ -198,7 +201,7 @@ async fn thumb_response(
             .await;
         }
 
-        let poster_path = format!("/media/{media_id}/poster");
+        let poster_path = s.media_paths.poster(media_id);
 
         if s.blobs.exists(&poster_path).await? {
             let meta = s.blobs.stat(&poster_path).await?;

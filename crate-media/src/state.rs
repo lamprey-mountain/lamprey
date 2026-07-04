@@ -4,7 +4,10 @@ use common::{
     v1::types::{EmojiId, MediaId, MessageSync},
     v2::types::media::{Media, MediaStatus},
 };
-use lamprey_backend_core::config::{ConfigBlobs, ConfigMedia};
+use lamprey_backend_core::{
+    config::{ConfigBlobs, ConfigMedia},
+    types::media::MediaPaths,
+};
 use moka::future::Cache;
 use opendal::{Operator, layers::LoggingLayer};
 use sqlx::{PgPool, postgres::PgPoolOptions};
@@ -17,6 +20,7 @@ pub struct AppState {
     pub(crate) blobs: Operator,
     pub(crate) nats: Option<async_nats::Client>,
     pub(crate) config: Arc<Config>,
+    pub(crate) media_paths: Arc<MediaPaths>,
 
     // NOTE: be careful about allowing emoji/media editing! i'd need to invalidate these caches
     pub(crate) cache_emoji: Cache<EmojiId, MediaId>,
@@ -90,6 +94,7 @@ impl AppState {
             pending_thumbnails: Cache::new(0),
             pending_gifv: Cache::new(100),
             sushi_tx,
+            media_paths: Arc::new(MediaPaths::new("media/")),
         })
     }
 

@@ -8,3 +8,4 @@ pub mod federation;
 pub mod health;
 pub mod permission;
 pub mod search;
+pub mod media;

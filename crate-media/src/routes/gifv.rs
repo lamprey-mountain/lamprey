@@ -50,7 +50,7 @@ async fn gifv_response(
         ));
     }
 
-    let gifv_path = format!("/media/{media_id}/gifv");
+    let gifv_path = s.media_paths.gifv(media_id);
 
     if s.blobs.exists(&gifv_path).await? {
         let meta = s.blobs.stat(&gifv_path).await?;
@@ -86,7 +86,7 @@ async fn gifv_response(
     let temp_file = s
         .pending_gifv
         .try_get_with(media_id, async {
-            let source_path = format!("/media/{media_id}/file");
+            let source_path = s.media_paths.file(media_id);
             let temp_in = TempFile::new().await?;
             let temp_out = TempFile::new().await?;
             let reader = s.blobs.reader(&source_path).await?;

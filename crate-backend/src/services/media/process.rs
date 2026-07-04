@@ -14,6 +14,7 @@ use common::{
 };
 use futures::stream::FuturesUnordered;
 use image::ImageReader;
+use lamprey_backend_core::types::media::MediaPaths;
 use mediatype::MediaTypeBuf;
 use sha2::{Digest, Sha512_256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
@@ -27,7 +28,7 @@ use crate::{
         ServiceMedia, ffmpeg,
         ffprobe::{self, MediaType},
         import::Upload,
-        util::{Import, MediaItemState, MediaPaths},
+        util::{Import, MediaItemState},
     },
 };
 
