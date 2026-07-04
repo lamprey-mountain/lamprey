@@ -1,3 +1,4 @@
+use common::v1::types::error::ErrorCode;
 use im::HashMap as ImMap;
 use kameo::prelude::{Actor, ActorRef, Context, Message, Spawn, WeakActorRef};
 use std::collections::HashMap;
@@ -27,6 +28,7 @@ pub struct RoomActor {
     snapshot_tx: watch::Sender<Arc<RoomSnapshot>>,
     member_lists: HashMap<MemberListKey, MemberList>,
     last_active: Instant,
+    span: tracing::Span,
 }
 
 impl Actor for RoomActor {
@@ -41,8 +43,9 @@ impl Actor for RoomActor {
         (room_id, state, snapshot_tx): Self::Args,
         actor_ref: ActorRef<Self>,
     ) -> std::result::Result<Self, Self::Error> {
-        let snapshot = Arc::new(RoomSnapshot::Loading);
+        let span = tracing::info_span!("room actor");
 
+        let snapshot = Arc::new(RoomSnapshot::Loading);
         let mut actor = Self {
             state: state.clone(),
             room_id,
@@ -50,33 +53,41 @@ impl Actor for RoomActor {
             snapshot_tx,
             member_lists: HashMap::new(),
             last_active: Instant::now(),
+            span: span.clone(),
         };
 
-        // Spawn background task to clean up idle member lists
         let cleanup_ref = actor_ref.clone();
-        tokio::spawn(async move {
-            loop {
-                tokio::time::sleep(Duration::from_secs(60)).await;
-                if cleanup_ref.tell(CleanupIdleLists).await.is_err() {
-                    break;
+        let cleanup_span = span.clone();
+        tokio::spawn(
+            async move {
+                loop {
+                    tokio::time::sleep(Duration::from_secs(60)).await;
+                    if cleanup_ref.tell(CleanupIdleLists).await.is_err() {
+                        break;
+                    }
                 }
             }
-        });
+            .instrument(cleanup_span),
+        );
 
-        // Load initial state
-        if let Err(e) = actor.load_initial_state().await {
-            if let Error::ApiError(ae) = &e {
-                if ae.code == common::v1::types::error::ErrorCode::UnknownRoom {
-                    actor.snapshot = Arc::new(RoomSnapshot::NotFound);
-                    let _ = actor.snapshot_tx.send(Arc::clone(&actor.snapshot));
-                    return Ok(actor);
+        async {
+            // Load initial state
+            if let Err(e) = actor.load_initial_state().await {
+                if let Error::ApiError(ae) = &e {
+                    if ae.code == ErrorCode::UnknownRoom {
+                        actor.snapshot = Arc::new(RoomSnapshot::NotFound);
+                        let _ = actor.snapshot_tx.send(Arc::clone(&actor.snapshot));
+                        return Ok(actor);
+                    }
                 }
+                return Err(e);
             }
-            return Err(e);
+
+            let _ = actor.snapshot_tx.send(Arc::clone(&actor.snapshot));
+            Ok(actor)
         }
-
-        let _ = actor.snapshot_tx.send(Arc::clone(&actor.snapshot));
-        Ok(actor)
+        .instrument(span)
+        .await
     }
 
     async fn on_stop(
@@ -576,8 +587,13 @@ impl Message<GetSnapshot> for RoomActor {
         _msg: GetSnapshot,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        self.last_active = Instant::now();
-        Ok(Arc::clone(&self.snapshot))
+        let span = tracing::info_span!(parent: &self.span, "GetSnapshot");
+        async {
+            self.last_active = Instant::now();
+            Ok(Arc::clone(&self.snapshot))
+        }
+        .instrument(span)
+        .await
     }
 }
 
@@ -589,12 +605,17 @@ impl Message<EnsureMembers> for RoomActor {
         _msg: EnsureMembers,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        self.last_active = Instant::now();
-        if self.snapshot.is_without_members() {
-            self.load_members().await?;
-            let _ = self.snapshot_tx.send(Arc::clone(&self.snapshot));
+        let span = tracing::info_span!(parent: &self.span, "EnsureMembers");
+        async {
+            self.last_active = Instant::now();
+            if self.snapshot.is_without_members() {
+                self.load_members().await?;
+                let _ = self.snapshot_tx.send(Arc::clone(&self.snapshot));
+            }
+            Ok(())
         }
-        Ok(())
+        .instrument(span)
+        .await
     }
 }
 
@@ -606,8 +627,13 @@ impl Message<SyncMessage> for RoomActor {
         msg: SyncMessage,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        self.last_active = Instant::now();
-        self.handle_sync(msg.sync)
+        let span = tracing::info_span!(parent: &self.span, "SyncMessage");
+        async {
+            self.last_active = Instant::now();
+            self.handle_sync(msg.sync)
+        }
+        .instrument(span)
+        .await
     }
 }
 
@@ -619,12 +645,17 @@ impl Message<MemberListCommandMsg> for RoomActor {
         msg: MemberListCommandMsg,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        self.last_active = Instant::now();
-        if let Some(list) = self.member_lists.get_mut(&msg.key) {
-            Ok(list.handle_command(msg.cmd, &self.snapshot).await)
-        } else {
-            Ok(None)
+        let span = tracing::info_span!(parent: &self.span, "MemberListCommandMsg");
+        async {
+            self.last_active = Instant::now();
+            if let Some(list) = self.member_lists.get_mut(&msg.key) {
+                Ok(list.handle_command(msg.cmd, &self.snapshot).await)
+            } else {
+                Ok(None)
+            }
         }
+        .instrument(span)
+        .await
     }
 }
 
