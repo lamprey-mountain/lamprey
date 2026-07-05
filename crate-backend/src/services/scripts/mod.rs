@@ -96,14 +96,13 @@ impl ServiceScripts {
                 let source = std::str::from_utf8(&bytes)?;
                 self.engine
                     .load_js(redex_id, redex_version_id, "strobbery", source)
-                    .await
-                    .unwrap()
+                    .await?
             }
-            RedexFormat::Webassembly => self
-                .engine
-                .load_wasm(redex_id, redex_version_id, "strobbery", &bytes)
-                .await
-                .unwrap(),
+            RedexFormat::Webassembly => {
+                self.engine
+                    .load_wasm(redex_id, redex_version_id, "strobbery", &bytes)
+                    .await?
+            }
         };
         Ok(loaded)
     }

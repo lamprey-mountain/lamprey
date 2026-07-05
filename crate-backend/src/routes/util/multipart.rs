@@ -29,6 +29,7 @@ pub enum MultipartFieldName {
 #[derive(Debug)]
 pub struct MultipartFile {
     pub filename: Option<String>,
+    // TODO: maybe try using this as a hint? for media processing? (look into potential security issues with this though)
     pub content_type: Option<String>,
     pub data: Bytes,
 }

@@ -216,10 +216,12 @@ impl MediaPipeline {
             return Ok(None);
         }
 
-        let meta = self
-            .get_ffprobe_metadata()
-            .await?
-            .expect("TODO: better error handling");
+        let meta = match self.get_ffprobe_metadata().await {
+            Ok(Some(meta)) => meta,
+            Ok(None) => return Ok(None),
+            Err(err) => return Err(err),
+        };
+
         let path = self.file.file_path();
         let bytes = if let Some(thumb) = meta.get_thumb_stream() {
             if thumb.codec_type == MediaType::Attachment {
