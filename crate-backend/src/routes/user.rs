@@ -366,7 +366,7 @@ async fn guest_create(
     srv.sessions.invalidate(session.id).await;
     let updated_session = srv.sessions.get(session.id).await?;
     s.broadcast(MessageSync::SessionCreate {
-        session: updated_session.clone(),
+        session: (*updated_session).clone(),
     })?;
 
     let entry = AuditLogEntry {

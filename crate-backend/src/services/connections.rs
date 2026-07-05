@@ -39,7 +39,7 @@ impl ServiceConnections {
             .get_by_token(hello.token)
             .await?;
 
-        let handle = Connection2::create(self.globals.clone(), session);
+        let handle = Connection2::create(self.globals.clone(), (*session).clone());
         self.connections.insert(handle.id(), handle.clone());
         Ok(handle)
     }

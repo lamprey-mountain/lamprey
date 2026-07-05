@@ -94,8 +94,8 @@ async fn auth_oauth_redirect(
                             status: AuditLogEntryStatus::Success,
                             started_at: Time::now_utc(),
                             ended_at: Time::now_utc(),
-                            ip_addr: session.imprint.ip_addr,
-                            user_agent: session.imprint.user_agent,
+                            ip_addr: session.imprint.ip_addr.clone(),
+                            user_agent: session.imprint.user_agent.clone(),
                             application_id: session.app_id,
                         };
                         data.audit_logs_room_append(entry.clone()).await?;
@@ -143,8 +143,8 @@ async fn auth_oauth_redirect(
                             status: AuditLogEntryStatus::Success,
                             started_at: Time::now_utc(),
                             ended_at: Time::now_utc(),
-                            ip_addr: session.imprint.ip_addr,
-                            user_agent: session.imprint.user_agent,
+                            ip_addr: session.imprint.ip_addr.clone(),
+                            user_agent: session.imprint.user_agent.clone(),
                             application_id: session.app_id,
                         };
                         data.audit_logs_room_append(entry.clone()).await?;
@@ -165,7 +165,7 @@ async fn auth_oauth_redirect(
             srv.sessions.invalidate(session_id).await;
             let session = srv.sessions.get(session_id).await?;
             s.broadcast(MessageSync::SessionCreate {
-                session: session.clone(),
+                session: (*session).clone(),
             })?;
             let entry = AuditLogEntry {
                 id: AuditLogEntryId::new(),
@@ -226,8 +226,8 @@ async fn auth_oauth_redirect(
                             status: AuditLogEntryStatus::Success,
                             started_at: Time::now_utc(),
                             ended_at: Time::now_utc(),
-                            ip_addr: session.imprint.ip_addr,
-                            user_agent: session.imprint.user_agent,
+                            ip_addr: session.imprint.ip_addr.clone(),
+                            user_agent: session.imprint.user_agent.clone(),
                             application_id: session.app_id,
                         };
                         data.audit_logs_room_append(entry.clone()).await?;
@@ -275,8 +275,8 @@ async fn auth_oauth_redirect(
                             status: AuditLogEntryStatus::Success,
                             started_at: Time::now_utc(),
                             ended_at: Time::now_utc(),
-                            ip_addr: session.imprint.ip_addr,
-                            user_agent: session.imprint.user_agent,
+                            ip_addr: session.imprint.ip_addr.clone(),
+                            user_agent: session.imprint.user_agent.clone(),
                             application_id: session.app_id,
                         };
                         data.audit_logs_room_append(entry.clone()).await?;
@@ -297,7 +297,7 @@ async fn auth_oauth_redirect(
             srv.sessions.invalidate(session_id).await;
             let session = srv.sessions.get(session_id).await?;
             s.broadcast(MessageSync::SessionCreate {
-                session: session.clone(),
+                session: (*session).clone(),
             })?;
             let entry = AuditLogEntry {
                 id: AuditLogEntryId::new(),
@@ -833,7 +833,7 @@ async fn auth_email_complete(
     srv.sessions.invalidate(session.id).await;
     let session = srv.sessions.get(session.id).await?;
     s.broadcast(MessageSync::SessionCreate {
-        session: session.clone(),
+        session: (*session).clone(),
     })?;
 
     match purpose {
@@ -843,7 +843,7 @@ async fn auth_email_complete(
             let al = Auth {
                 user: user.clone(),
                 real_user: None,
-                session: session.clone(),
+                session: (*session).clone(),
                 scopes: auth.scopes().clone(),
                 reason: auth.reason.clone(),
                 audit_log_slot: auth.audit_log_slot.clone(),
@@ -862,7 +862,7 @@ async fn auth_email_complete(
             let al = Auth {
                 user: user.clone(),
                 real_user: None,
-                session: session.clone(),
+                session: (*session).clone(),
                 scopes: auth.scopes().clone(),
                 reason: auth.reason.clone(),
                 audit_log_slot: auth.audit_log_slot.clone(),

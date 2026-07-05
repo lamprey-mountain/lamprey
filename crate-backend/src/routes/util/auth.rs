@@ -35,6 +35,7 @@ impl fmt::Debug for Auth4 {
     }
 }
 
+// TODO: use Arc<Session>
 #[derive(Debug, Clone)]
 pub enum Identity {
     /// a user's session
@@ -355,7 +356,7 @@ impl Auth4 {
                         identity: Identity::Puppet {
                             puppet: acting_user,
                             puppeteer: real_user,
-                            session,
+                            session: (*session).to_owned(),
                             scopes,
                         },
                         reason,
@@ -365,7 +366,7 @@ impl Auth4 {
                     return Ok(Auth4 {
                         identity: Identity::User {
                             user: acting_user,
-                            session,
+                            session: (*session).to_owned(),
                             scopes,
                         },
                         reason,
@@ -380,7 +381,10 @@ impl Auth4 {
                 };
 
                 return Ok(Auth4 {
-                    identity: Identity::Guest { session, scopes },
+                    identity: Identity::Guest {
+                        session: (*session).to_owned(),
+                        scopes,
+                    },
                     reason,
                     audit_txn_slot,
                 });

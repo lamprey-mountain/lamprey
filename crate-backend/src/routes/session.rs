@@ -117,7 +117,7 @@ pub async fn session_update(
     srv.sessions.invalidate(target_session_id).await;
     let target_session_new = srv.sessions.get(target_session_id).await?;
     s.broadcast(MessageSync::SessionUpdate {
-        session: target_session_new.clone(),
+        session: (*target_session_new).clone(),
     })?;
     if let Some(uid) = target_session_new.user_id() {
         let al = auth.audit_log(uid.into_inner().into());

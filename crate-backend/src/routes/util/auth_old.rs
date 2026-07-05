@@ -739,7 +739,7 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
         Ok(AuthRelaxed2 {
             user,
             real_user,
-            session,
+            session: (*session).to_owned(),
             scopes,
             reason: reason.0,
             audit_log_slot,

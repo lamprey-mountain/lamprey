@@ -1,17 +1,15 @@
 use std::sync::Arc;
 
 use common::v1::types::{Session, SessionId, SessionToken, UserId};
+use futures::{FutureExt, TryFutureExt};
 use moka::future::Cache;
 
 use crate::{Result, ServerStateInner};
 
 pub struct ServiceSessions {
     state: Arc<ServerStateInner>,
-    // TODO: Arc<Session>
-    cache_sessions: Cache<SessionId, Session>,
-    // TODO: Arc<Session>
-    // is it worth duplicating Sessions here? maybe
-    cache_tokens: Cache<SessionToken, Session>,
+    cache_sessions: Cache<SessionId, Arc<Session>>,
+    cache_tokens: Cache<SessionToken, Arc<Session>>,
 }
 
 impl ServiceSessions {
@@ -29,26 +27,35 @@ impl ServiceSessions {
         }
     }
 
-    pub async fn get(&self, session_id: SessionId) -> Result<Session> {
+    pub async fn get(&self, session_id: SessionId) -> Result<Arc<Session>> {
         // FIXME: investigate why getting the cache manually prevents a hang???
         if let Some(session) = self.cache_sessions.get(&session_id).await {
             return Ok(session);
         }
 
         self.cache_sessions
-            .try_get_with(session_id, self.state.data().session_get(session_id))
+            .try_get_with(
+                session_id,
+                self.state.data().session_get(session_id).map_ok(Arc::new),
+            )
             .await
             .map_err(|err| err.fake_clone())
     }
 
-    pub async fn get_by_token(&self, token: SessionToken) -> Result<Session> {
+    pub async fn get_by_token(&self, token: SessionToken) -> Result<Arc<Session>> {
         // if let Some(session) = self.cache_tokens.get(&token).await {
         //     return Ok(session);
         // }
 
         let s = self
             .cache_tokens
-            .try_get_with(token.clone(), self.state.data().session_get_by_token(token))
+            .try_get_with(
+                token.clone(),
+                self.state
+                    .data()
+                    .session_get_by_token(token)
+                    .map_ok(Arc::new),
+            )
             .await
             .map_err(|err| err.fake_clone())?;
         // self.cache_sessions.insert(s.id, s.clone()).await;
