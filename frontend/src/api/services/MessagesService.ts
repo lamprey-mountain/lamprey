@@ -22,7 +22,7 @@ import { uuidv7 } from "uuidv7";
 import { deepEqual } from "@/utils/deepEqual";
 import { logger } from "@/utils/logger";
 import { BaseService } from "../core/Service";
-import { MessageRange, MessageRanges } from "sdk";
+import { MessageRange, MessageRanges, sortMessagesById } from "sdk";
 export { MessageRange, MessageRanges } from "sdk";
 
 export type MessageListAnchor =

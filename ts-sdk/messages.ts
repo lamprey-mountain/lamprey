@@ -1,7 +1,7 @@
 import type { Message } from "./types";
 
 /** sort messages and return a new message range */
-function sortMessagesById(msgs: Message[]): Message[] {
+export function sortMessagesById(msgs: Message[]): Message[] {
 	return [...msgs].sort((a, b) => (a.id < b.id ? -1 : 1));
 }
 
