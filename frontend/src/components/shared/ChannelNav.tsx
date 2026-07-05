@@ -165,7 +165,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					(c.type === "Document" &&
 						c.parent_id &&
 						channels2.cache.get(c.parent_id)?.type === "Wiki")) &&
-				!c.archived_at &&
+				(!c.archived_at || c.id === params.channel_id) &&
 				canViewChannel(c),
 		);
 		const channels = allChannels.filter(
@@ -968,10 +968,13 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 	const isDm = () =>
 		props.channel.type === "Dm" || props.channel.type === "Gdm";
 
+	const params = useParams();
+
 	return (
 		<A
 			href={`/channel/${props.channel.id}`}
 			class="menu-channel channel-link"
+			classList={{ active: props.channel.id === params.channel_id }}
 			data-unread={
 				CHANNEL_TYPES_HAS_UNREAD.has(props.channel.type) &&
 				props.channel.last_read_id !== props.channel.last_message_id
