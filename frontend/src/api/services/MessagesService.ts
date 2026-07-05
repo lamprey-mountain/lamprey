@@ -49,6 +49,23 @@ export class MessagesService extends BaseService<Message> {
 		return item.id;
 	}
 
+	upsert(item: Message) {
+		if (item.thread) {
+			this.store.channels.upsert(item.thread);
+		}
+		super.upsert(item);
+	}
+
+	upsertBulk(items: Message[]) {
+		for (const item of items) {
+			if (item.thread) {
+				// PERF: collect threads, call upsertBulk on channels service
+				this.store.channels.upsert(item.thread);
+			}
+		}
+		super.upsertBulk(items);
+	}
+
 	// TEMP: make this public for backwards compatibility
 	// TODO: make this private
 	public _ranges = new Map<string, MessageRanges>();
