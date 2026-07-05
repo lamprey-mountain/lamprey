@@ -279,25 +279,32 @@ impl ServiceMessages {
         &self,
         user_id: Option<UserId>,
         messages: &[Message],
-    ) -> Result<HashMap<ChannelId, Channel>> {
+    ) -> Result<HashMap<MessageId, Channel>> {
         let mut threads_map = HashMap::new();
 
         let srv = self.state.services();
         let mut thread_futs: FuturesUnordered<_> = messages
             .iter()
-            .map(|m| {
-                let srv2 = Arc::clone(&srv);
-                let cid: ChannelId = (*m.id).into();
-                async move {
-                    let thread = srv2.channels.get(cid, user_id).await;
-                    (cid, thread)
-                }
+            .filter_map(|m| {
+                let thread_id = match &m.latest_version.message_type {
+                    MessageType::ThreadCreated(t) => t.thread_id,
+                    _ => Some((*m.id).into()),
+                };
+
+                thread_id.map(|cid| {
+                    let srv2 = Arc::clone(&srv);
+                    let mid = m.id;
+                    async move {
+                        let thread = srv2.channels.get(cid, user_id).await;
+                        (mid, thread)
+                    }
+                })
             })
             .collect();
 
-        while let Some((id, thread_result)) = thread_futs.next().await {
+        while let Some((mid, thread_result)) = thread_futs.next().await {
             if let Ok(thread) = thread_result {
-                threads_map.insert(id, thread);
+                threads_map.insert(mid, thread);
             }
         }
 
@@ -422,7 +429,7 @@ impl ServiceMessages {
                 message.latest_version.mentions = m.clone();
             }
             let thread_channel_id: ChannelId = (*message.id).into();
-            if let Some(t) = threads_data.get(&thread_channel_id) {
+            if let Some(t) = threads_data.get(&message.id) {
                 message.thread = Some(Box::new(t.clone()));
             }
             if let Some(r) = reactions_data.get(&message.id) {
