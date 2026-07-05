@@ -1,4 +1,7 @@
-use common::v1::types::{ConnectionId, SessionToken, SyncResume, presence::Presence};
+use common::v1::types::{
+    ConnectionId, SessionToken, SyncResume,
+    presence::{Presence, Status},
+};
 use dashmap::DashMap;
 
 use crate::{
@@ -32,12 +35,19 @@ impl ServiceConnections {
     ///
     /// does not handle resumes.
     pub async fn accept(&self, hello: Hello) -> Result<ConnectionHandle> {
-        let session = self
-            .globals
-            .services()
-            .sessions
-            .get_by_token(hello.token)
-            .await?;
+        let srv = self.globals.services();
+        let session = srv.sessions.get_by_token(hello.token).await?;
+
+        if let (presence, Some(user_id)) = (hello.presence, session.user_id()) {
+            let mut user = srv.users.get(user_id, Some(user_id)).await?;
+            if !user.is_suspended() {
+                let presence = presence.unwrap_or(Presence {
+                    status: Status::Online,
+                    activities: vec![],
+                });
+                srv.presence.set(user_id, presence).await?;
+            }
+        }
 
         let handle = Connection2::create(self.globals.clone(), (*session).clone());
         self.connections.insert(handle.id(), handle.clone());
