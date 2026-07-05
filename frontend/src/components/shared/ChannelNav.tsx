@@ -45,6 +45,7 @@ const CHANNEL_TYPES_HAS_UNREAD = new Set<ChannelType>([
 	"Announcement",
 ]);
 
+// TODO: move last viewed channel into a context
 function getLastViewedChannel(roomId: string): string | null {
 	const key = `last_channel_${roomId}`;
 	return localStorage.getItem(key);

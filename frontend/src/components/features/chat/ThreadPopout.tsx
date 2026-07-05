@@ -1,10 +1,19 @@
 import { useNavigate } from "@solidjs/router";
 import type { Channel } from "sdk";
-import { createMemo, createSignal, For, onMount, Show } from "solid-js";
+import {
+	createMemo,
+	createResource,
+	createSignal,
+	For,
+	onMount,
+	Show,
+} from "solid-js";
 import { useChannels, useThreads } from "@/api";
 import { useCtx } from "@/app/context";
 import { ChannelIcon } from "@/components/shared/User";
 import { useModals } from "@/contexts/modal.tsx";
+import { go } from "fuzzysort";
+import { debounce } from "@solid-primitives/scheduled";
 
 export const ThreadPopout = (props: { channel_id: string }) => {
 	const threads2 = useThreads();
@@ -12,6 +21,52 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 	const ctx = useCtx();
 	const navigate = useNavigate();
 	const [search, setSearch] = createSignal("");
+	const [debouncedSearch, setDebouncedSearch] = createSignal("");
+
+	const debouncedSetSearch = debounce(
+		(value: string) => setDebouncedSearch(value),
+		300,
+	);
+
+	const [searchResults] = createResource(debouncedSearch, async (query) => {
+		if (!query.trim()) return [];
+		try {
+			// TODO: prevent search query injection
+			// its not a *big* problem right now, but can lead to confusing errors i suppose
+			const tantivyQuery = `+(${query}) +channel_id:${props.channel_id} +subtype: IN [ThreadPublic ThreadPrivate ThreadForum2]`;
+			const res = await ctx.client.http.POST("/api/v1/search/channels", {
+				body: {
+					query: tantivyQuery,
+					limit: 50,
+					offset: 0,
+				},
+			});
+			return res.data?.channels ?? [];
+		} catch (e) {
+			console.error("Search failed", e);
+			return [];
+		}
+	});
+
+	const onSearchInput = (value: string) => {
+		setSearch(value);
+		debouncedSetSearch(value);
+	};
+
+	const onKeyDown = (e: KeyboardEvent) => {
+		if (e.key === "Enter") {
+			debouncedSetSearch.clear();
+			setDebouncedSearch(search());
+		} else if (e.key === "Escape") {
+			if (search().length > 0) {
+				setSearch("");
+				setDebouncedSearch("");
+				e.stopPropagation();
+			} else {
+				ctx.setThreadsView(null);
+			}
+		}
+	};
 
 	const activeThreads = threads2.useListForChannel(() => props.channel_id);
 	const archivedThreads = threads2.useListArchivedForChannel(
@@ -19,6 +74,28 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 	);
 
 	const sortedThreads = createMemo(() => {
+		if (search().length > 0) {
+			const joined: Channel[] = [];
+			const notJoined: Channel[] = [];
+			const archived: Channel[] = [];
+
+			for (const t of searchResults() ?? []) {
+				if (t.archived_at) {
+					archived.push(t);
+				} else if (t.thread_member) {
+					joined.push(t);
+				} else {
+					notJoined.push(t);
+				}
+			}
+
+			return {
+				joined,
+				notJoined,
+				archived,
+			};
+		}
+
 		const activeList = activeThreads()?.state.ids ?? [];
 		const archivedList = archivedThreads()?.state.ids ?? [];
 
@@ -27,17 +104,32 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 			.filter((t): t is Channel => t !== undefined);
 		const archived = archivedList
 			.map((id) => channels2.cache.get(id))
-			.filter((t): t is Channel => t !== undefined);
+			.filter(
+				(t): t is Channel =>
+					t !== undefined &&
+					t.archived_at !== undefined &&
+					t.archived_at !== null,
+			);
 
-		const query = search().toLowerCase();
-		const filter = (t: Channel) => t.name.toLowerCase().includes(query);
-
+		const query = search();
 		const joined: Channel[] = [];
 		const notJoined: Channel[] = [];
 
-		for (const t of active) {
-			// FIXME: populate thread_member for joined threads
-			if (filter(t)) {
+		if (query) {
+			const filteredActive = go(query, active, {
+				key: "name",
+				threshold: -10000,
+			}).map((r) => r.obj);
+
+			for (const t of filteredActive) {
+				if (t.thread_member) {
+					joined.push(t);
+				} else {
+					notJoined.push(t);
+				}
+			}
+		} else {
+			for (const t of active) {
 				if (t.thread_member) {
 					joined.push(t);
 				} else {
@@ -46,16 +138,14 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 			}
 		}
 
-		const filteredArchived = archived.filter(filter);
-
 		return {
 			joined,
 			notJoined,
-			archived: filteredArchived,
+			archived,
 		};
 	});
-
-	const isLoading = () => activeThreads.loading || archivedThreads.loading;
+	const isLoading = () =>
+		activeThreads.loading || archivedThreads.loading || searchResults.loading;
 	const isEmpty = () =>
 		!isLoading() &&
 		sortedThreads().joined.length === 0 &&
@@ -106,7 +196,8 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 					type="search"
 					placeholder="Search threads..."
 					value={search()}
-					onInput={(e) => setSearch(e.currentTarget.value)}
+					onInput={(e) => onSearchInput(e.currentTarget.value)}
+					onKeyDown={onKeyDown}
 					class="search-pad"
 				/>
 				<button type="button" class="primary button" onClick={onCreateThread}>
