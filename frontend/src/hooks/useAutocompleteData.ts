@@ -263,13 +263,14 @@ export const useAutocompleteData = () => {
 				}),
 			);
 		} else if (type === "emoji") {
-			// Normalize emoji for search - custom emoji use 'name', unicode use 'label'
+			// Normalize emoji for search
 			const normalizedEmoji = allEmoji().map((e) => ({
 				...e,
 				searchLabel: "label" in e ? e.label : e.name,
+				id: "hexcode" in e ? e.hexcode : e.id,
 			}));
 			const results = go(query, normalizedEmoji, {
-				keys: ["searchLabel", "shortcodes"],
+				keys: ["searchLabel"],
 				limit: 10,
 				all: true,
 			});
@@ -278,7 +279,7 @@ export const useAutocompleteData = () => {
 					obj: {
 						type: "emoji" as const,
 						id: r.obj.id,
-						name: "name" in r.obj ? r.obj.name : "",
+						name: "name" in r.obj ? r.obj.name : r.obj.label,
 						char: "char" in r.obj ? r.obj.char : undefined,
 					},
 					score: r.score,

@@ -5,6 +5,16 @@ import {
 	type TokenizerThis,
 } from "marked";
 
+// import init, { Parser } from "@lamprey/markdown";
+// init().then((a) => {
+// 	console.log("LOADED MARKDOWN!!!", a);
+// 	const parser = new Parser();
+// 	const parsed = parser.parse("hello **world**");
+// 	console.log("markdown ast", parsed.ast());
+// 	console.log("markdown plain", parsed.to_plain());
+// 	console.log("markdown html", parsed.to_html());
+// });
+
 type MentionToken = Token & {
 	mention_type: "user" | "role" | "channel" | "emoji";
 	id: string;

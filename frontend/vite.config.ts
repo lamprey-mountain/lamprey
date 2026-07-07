@@ -102,4 +102,7 @@ export default defineConfig({
 			},
 		},
 	},
+	optimizeDeps: {
+		exclude: ["@lamprey/emoji", "@lamprey/markdown"],
+	},
 });

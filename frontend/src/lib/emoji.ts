@@ -1,73 +1,54 @@
 import type { ReactionKey } from "sdk";
-import { createResource } from "solid-js";
+import { createResource, createMemo } from "solid-js";
 import twemoji from "twemoji";
 import { getEmojiUrl } from "@/media/util";
+import {
+	emojiUrl,
+	getLangUrl,
+	getEmojiHex,
+	getEmojiString,
+	CoreFile,
+	LabelsFile,
+} from "@lamprey/emoji";
+export { getEmojiHex, getEmojiString };
 
 export type EmojiData = {
 	char: string;
 	label: string;
-	id: string;
-	shortcodes: string[];
 	hexcode: string;
 	order: number;
 	group: number;
+	shortcodes: string[];
 };
 
-type RawEmoji = {
-	unicode: string;
-	label: string;
-	hexcode: string;
-	order: number;
-	group?: number;
-};
+export const [rawEmojiResource] = createResource(async () => {
+	const data: CoreFile = await fetch(emojiUrl).then((r) => r.json());
+	return data;
+});
 
-const fetchEmojiData = async (): Promise<EmojiData[]> => {
-	const [
-		{ default: emojis },
-		{ default: shortJoypixels },
-		{ default: shortEmojibase },
-	] = await Promise.all([
-		import("emojibase-data/en/compact.json"),
-		import("emojibase-data/en/shortcodes/joypixels.json"),
-		import("emojibase-data/en/shortcodes/emojibase.json"),
-	]);
+export const [emojiLabels] = createResource(async () => {
+	const data: LabelsFile = await fetch(getLangUrl("en")!).then((r) => r.json());
+	return data;
+});
 
-	const joy = shortJoypixels as Record<string, string | string[]>;
-	const base = shortEmojibase as Record<string, string | string[]>;
+export const emojiResource = createMemo((): EmojiData[] => {
+	const data = rawEmojiResource();
+	const labels = emojiLabels();
+	if (!data || !labels) return [];
 
-	const getShortcodes = (hex: string): string[] => {
-		const codes1 = joy[hex];
-		const codes2 = base[hex];
-		const all = new Set<string>();
-
-		[codes1, codes2].forEach((c) => {
-			if (!c) return;
-			if (Array.isArray(c)) c.forEach((s) => all.add(s));
-			else all.add(c);
-		});
-
-		return Array.from(all);
-	};
-
-	return (emojis as RawEmoji[]).map((e) => ({
-		char: e.unicode,
-		label: e.label,
-		// Canonical ID for usage in search/lookup
-		id: `unicode:${e.label.replace(/ /g, "_")}`,
-		shortcodes: getShortcodes(e.hexcode),
-		hexcode: e.hexcode,
-		order: e.order,
-		group: e.group ?? 8,
-	}));
-};
-
-export const [emojiResource] = createResource(fetchEmojiData);
-
-export const getEmojiByShortcode = (code: string): EmojiData | null => {
-	const data = emojiResource();
-	if (!data) return null;
-	return data.find((e) => e.shortcodes.includes(code)) ?? null;
-};
+	return data.emoji.map((e) => {
+		// PERF: make labels.shortcodes a Map, use .get()
+		const shortcodes = labels.shortcodes.find((s) => s.u === e.u);
+		return {
+			char: getEmojiString(e.u),
+			label: shortcodes?.s[0] ?? e.u, // Fallback to hexcode
+			hexcode: e.u,
+			order: e.o,
+			group: e.g ?? 8,
+			shortcodes: shortcodes?.s ?? [],
+		};
+	});
+});
 
 /**
  * Parse a unicode emoji string into twemoji HTML.
@@ -111,10 +92,3 @@ export const renderReactionKey = (key: ReactionKey): string => {
 	}
 	return "";
 };
-
-export function getEmojiHex(emojiStr: string): string {
-	return [...emojiStr]
-		.map((char) => char.codePointAt(0)!.toString(16))
-		.filter((hex) => hex !== "fe0f") // Strip the variation selector-16 (VS16)
-		.join("-");
-}

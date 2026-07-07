@@ -2,20 +2,27 @@ import fuzzysort from "fuzzysort";
 import type { Room } from "sdk";
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { useEmoji, useRooms } from "@/api";
-import icEmojiActivities from "@/assets/emoji-activities.png";
-import icEmojiFaces from "@/assets/emoji-faces.png";
-import icEmojiFlags from "@/assets/emoji-flags.png";
-import icEmojiFood from "@/assets/emoji-food.png";
-import icEmojiNature from "@/assets/emoji-nature.png";
-import icEmojiObjects from "@/assets/emoji-objects.png";
-import icEmojiPeople from "@/assets/emoji-people.png";
-import icEmojiPlaces from "@/assets/emoji-places.png";
-import icEmojiSymbols from "@/assets/emoji-symbols.png";
 import { Icon } from "@/atoms/Icon";
 import { RoomIcon } from "@/components/shared/User";
-import { type EmojiData, emojiResource, getTwemoji } from "@/lib/emoji";
+import {
+	type EmojiData,
+	emojiResource,
+	getTwemoji,
+	rawEmojiResource,
+} from "@/lib/emoji";
 import { getThumbFromId } from "@/media/util";
 import { Search } from "./Search";
+import {
+	icEmojiActivities,
+	icEmojiFaces,
+	icEmojiFlags,
+	icEmojiFood,
+	icEmojiNature,
+	icEmojiObjects,
+	icEmojiPeople,
+	icEmojiPlaces,
+	icEmojiSymbols,
+} from "@/utils/icons";
 
 type UnifiedEmoji = {
 	type: "standard" | "custom";
@@ -36,15 +43,16 @@ type EmojiGroup = {
 	room?: Room;
 	emojis: UnifiedEmoji[];
 };
-
 const parseEmoji = (): EmojiGroup[] => {
 	const emojis = emojiResource();
-	if (!emojis) return [];
+	if (!emojis.length) return [];
 
 	const groups: EmojiData[][] = [[], [], [], [], [], [], [], [], [], []];
 	for (const emoji of emojis) {
+		// group 2 only has modifiers (eg. for skin tone)
 		if (emoji.group === 2) continue;
-		groups[emoji.group ?? 8].push(emoji);
+
+		groups[emoji.group].push(emoji);
 	}
 	return groups
 		.map((groupEmojis, i) => ({
@@ -85,6 +93,7 @@ const getGroupIcon = (id: number) => {
 	}
 };
 
+// TODO: use emojiLabels().groups
 const getGroupName = (id: number) => {
 	switch (id) {
 		case 0:
@@ -302,7 +311,7 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 				</For>
 				<Show
 					when={
-						!emojiResource.loading &&
+						!rawEmojiResource.loading &&
 						filtered().every((i) => i.emojis.length === 0)
 					}
 				>

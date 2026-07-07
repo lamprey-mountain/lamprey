@@ -1,7 +1,7 @@
 import { createEffect, createSignal, onCleanup } from "solid-js";
 import { useCtx } from "@/app/context";
-import { getEmojiHex, getTwemoji } from "@/lib/emoji";
 import { UnicodeEmoji } from "./UnicodeEmoji";
+import { getEmojiHex } from "@/lib/emoji";
 
 type EmojiButtonProps = {
 	picked: (emoji: string, keepOpen: boolean) => void;
