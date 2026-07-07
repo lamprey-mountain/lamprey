@@ -17,6 +17,7 @@ export const Icon = (props: VoidProps<IconProps>) => {
 			aria-label={props.alt}
 			style={{
 				"mask-image": `url(${props.src})`,
+				// TODO: deprecate and remove props.color/--icon-color
 				"--icon-color":
 					props.color === null
 						? undefined
