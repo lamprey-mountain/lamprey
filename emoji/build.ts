@@ -30,12 +30,18 @@ async function processLanguage(lang: string): Promise<LabelsFile> {
 
 	const shortcodesMap = new Map<string, Set<string>>();
 
-	function addShortcodes(hex: string, s: string[]) {
+	function addShortcodes(hex: string, s: string | string[]) {
 		if (!shortcodesMap.has(hex)) {
 			shortcodesMap.set(hex, new Set());
 		}
-		for (const code of s) {
-			shortcodesMap.get(hex)!.add(code);
+
+		const m = shortcodesMap.get(hex)!;
+		if (Array.isArray(s)) {
+			for (const code of s) {
+				m.add(code);
+			}
+		} else {
+			m.add(s);
 		}
 	}
 
@@ -54,15 +60,15 @@ async function processLanguage(lang: string): Promise<LabelsFile> {
 	}
 
 	for (const [code, codes] of Object.entries(cldr)) {
-		addShortcodes(code.toUpperCase(), codes as string[]);
+		addShortcodes(code.toUpperCase(), codes as string | string[]);
 	}
 
 	for (const [code, codes] of Object.entries(cldrNative)) {
-		addShortcodes(code.toUpperCase(), codes as string[]);
+		addShortcodes(code.toUpperCase(), codes as string | string[]);
 	}
 
 	for (const [code, codes] of Object.entries(joypixels)) {
-		addShortcodes(code.toUpperCase(), codes as string[]);
+		addShortcodes(code.toUpperCase(), codes as string | string[]);
 	}
 
 	const shortcodes: Shortcodes[] = [];
