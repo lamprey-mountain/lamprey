@@ -7,9 +7,10 @@ import { RoomIcon } from "@/components/shared/User";
 import {
 	type EmojiData,
 	emojiResource,
-	getTwemoji,
+	getEmojiHex,
 	rawEmojiResource,
 } from "@/lib/emoji";
+import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { getThumbFromId } from "@/media/util";
 import { Search } from "./Search";
 import {
@@ -254,7 +255,6 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 				<div
 					style="font-size: 24px; height: 28px; width: 28px; margin-left: 8px; cursor: pointer"
 					hidden
-					innerHTML={getTwemoji("")}
 				></div>
 			</header>
 			<div class="categories">
@@ -294,15 +294,16 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 													);
 												}
 											}}
-											innerHTML={
-												emoji.type === "standard"
-													? getTwemoji(emoji.unicode!)
-													: `<img src="${getThumbFromId(
-															emoji.media_id!,
-															64,
-														)}" class="custom-emoji" />`
-											}
-										></div>
+										>
+											{emoji.type === "standard" ? (
+												<UnicodeEmoji hex={getEmojiHex(emoji.unicode!)} />
+											) : (
+												<img
+													src={getThumbFromId(emoji.media_id!, 64)}
+													class="custom-emoji"
+												/>
+											)}
+										</div>
 									)}
 								</For>
 							</div>
@@ -324,16 +325,14 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 				<Show when={hover()}>
 					{(h) => (
 						<>
-							<div
-								innerHTML={
-									h().type === "standard"
-										? getTwemoji(h().unicode!)
-										: `<img src="${getThumbFromId(
-												h().media_id!,
-												64,
-											)}" class="custom-emoji" />`
-								}
-							></div>
+							{h().type === "standard" ? (
+								<UnicodeEmoji hex={getEmojiHex(h().unicode!)} />
+							) : (
+								<img
+									src={getThumbFromId(h().media_id!, 64)}
+									class="custom-emoji"
+								/>
+							)}
 							<b>:{shortcode()}:</b>
 							{/* <span style="color: var(--fg-dim)">{h().tags?.join(", ")}</span> */}
 						</>

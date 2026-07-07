@@ -4,7 +4,8 @@ import { Avatar } from "@/components/shared/User";
 import type { AutocompleteItem } from "@/contexts/autocomplete";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useAutocompleteData } from "@/hooks/useAutocompleteData";
-import { getTwemoji } from "@/lib/emoji";
+import { getEmojiHex } from "@/lib/emoji";
+import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { getEmojiUrl } from "@/media/util";
 
 function isEmojiWithChar(
@@ -89,7 +90,7 @@ export const Autocomplete = () => {
 											AutocompleteItem,
 											{ type: "emoji" }
 										> & { char: string };
-										return <span innerHTML={getTwemoji(emoji.char)}></span>;
+										return <UnicodeEmoji hex={getEmojiHex(emoji.char)} />;
 									})()}
 								</Match>
 								<Match

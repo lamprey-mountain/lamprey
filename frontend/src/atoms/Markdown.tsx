@@ -14,10 +14,11 @@ import {
 } from "solid-js";
 import { useChannels, useRoles, useRoomMembers, useUsers } from "@/api";
 import { useUserPopout } from "@/contexts/mod";
-import { getTwemoji } from "@/lib/emoji";
+import { getEmojiHex } from "@/lib/emoji";
 import { flags } from "@/lib/flags";
 import { Parser, loaded } from "@/lib/markdown";
 import { getEmojiUrl } from "@/media/util";
+import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { Dynamic } from "solid-js/web";
 import {
 	MentionData,
@@ -445,7 +446,7 @@ function RenderInline(props: { inline: SerializedInline }) {
 				)}
 			</Match>
 			<Match when={props.inline.type === "UnicodeEmoji" && props.inline}>
-				{(i) => <TwemojiText text={i().content} />}
+				{(i) => <UnicodeEmoji hex={getEmojiHex(i().content)} />}
 			</Match>
 		</Switch>
 	);

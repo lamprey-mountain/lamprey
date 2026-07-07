@@ -1,7 +1,8 @@
 import type { Node } from "prosemirror-model";
 import { getOwner, runWithOwner, type VoidComponent } from "solid-js";
 import { render } from "solid-js/web";
-import { getTwemojiUrl } from "@/lib/emoji";
+import { getEmojiHex } from "@/lib/emoji";
+import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { getEmojiUrl } from "@/media/util.tsx";
 
 export const createNodeViews = () => {
@@ -92,18 +93,7 @@ export const createEditorNodeViews = () => {
 		emojiUnicode: nv(
 			(n) => ({ char: n.attrs.char }),
 			(props) => {
-				const emojiSrc = getTwemojiUrl(props.char);
-				if (emojiSrc) {
-					return (
-						<img
-							src={emojiSrc}
-							alt={props.char}
-							title={props.char}
-							class="emoji"
-						/>
-					);
-				}
-				return <span>{props.char}</span>;
+				return <UnicodeEmoji hex={getEmojiHex(props.char)} />;
 			},
 		),
 	});
