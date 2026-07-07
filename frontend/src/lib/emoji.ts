@@ -30,6 +30,12 @@ export const [emojiLabels] = createResource(async () => {
 	return data;
 });
 
+export const emojiDimensions = createMemo(() => {
+	const data = rawEmojiResource();
+	if (!data) return { cols: 1, rows: 1 };
+	return { cols: data.cols || 1, rows: data.rows || 1 };
+});
+
 export const emojiResource = createMemo((): Map<string, EmojiData> => {
 	const data = rawEmojiResource();
 	const labels = emojiLabels();

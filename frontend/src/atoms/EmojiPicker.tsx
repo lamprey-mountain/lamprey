@@ -177,6 +177,7 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 		return [...custom, ...standard];
 	});
 
+	// TODO: convert this to createMemo
 	const [shortcode] = createResource(hover, async (h) => {
 		if (!h) return "";
 		if (h.type === "custom") return h.label;
@@ -184,7 +185,7 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 		// Get first shortcode from emojiResource data
 		const emojis = emojiResource();
 		if (!emojis) return "";
-		const emoji = emojis.get(h.unicode);
+		const emoji = emojis.get(h.hexcode?.toUpperCase()!);
 		return emoji?.shortcodes?.[0] ?? h.label;
 	});
 
@@ -300,7 +301,7 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 											data-emoji-hex={emoji.hexcode}
 										>
 											{emoji.type === "standard" ? (
-												<UnicodeEmoji hex={getEmojiHex(emoji.unicode!)} />
+												<UnicodeEmoji hex={emoji.hexcode!.toUpperCase()} />
 											) : (
 												<img
 													src={getThumbFromId(emoji.media_id!, 64)}

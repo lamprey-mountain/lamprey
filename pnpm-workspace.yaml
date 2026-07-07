@@ -9,5 +9,5 @@ allowBuilds:
   esbuild: set this to true or false
   msgpackr-extract: set this to true or false
 minimumReleaseAgeExclude:
-  - '@lamprey/emoji@0.1.2'
+  - '@lamprey/emoji@0.1.2 || 0.1.3'
   - '@lamprey/markdown@0.1.1'
