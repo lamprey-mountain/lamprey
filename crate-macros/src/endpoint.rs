@@ -628,6 +628,12 @@ fn build_extract_response_fn(
     args: &EndpointArgs,
     response_struct: &ItemStruct,
 ) -> syn::Result<TokenStream> {
+    let fields = extract_fields(response_struct)?;
+    let header_fields: Vec<_> = fields
+        .iter()
+        .filter(|f| matches!(f.kind, FieldKind::Header(_)))
+        .collect();
+
     let status_check = if !args.responses.is_empty() {
         let codes: Vec<_> = args.responses.iter().map(|r| &r.status).collect();
         quote! {
@@ -644,64 +650,85 @@ fn build_extract_response_fn(
         }
     };
 
-    let has_json = extract_fields(response_struct)?
-        .iter()
-        .any(|f| matches!(f.kind, FieldKind::Json));
-
-    if has_json {
-        let json_field = extract_fields(response_struct)?
-            .into_iter()
-            .find(|f| matches!(f.kind, FieldKind::Json))
-            .unwrap();
-        let ident = &json_field.ident;
-        let ty = &json_field.ty;
-
-        Ok(quote! {
-            pub fn extract_response(
-                resp: ::http::Response<::bytes::Bytes>,
-            ) -> Result<Response, ::http::Response<::bytes::Bytes>> {
-                let status = resp.status();
-                #status_check
-                let (_parts, body) = resp.into_parts();
-                let #ident: #ty = ::serde_json::from_slice(&body)
-                    .map_err(|e| {
-                        ::http::Response::builder()
-                            .status(::http::StatusCode::INTERNAL_SERVER_ERROR)
-                            .body(::bytes::Bytes::from(format!("failed to parse response json: {}", e)))
-                            .unwrap()
-                    })?;
-                Ok(Response { #ident })
-            }
-        })
+    let header_extraction = if header_fields.is_empty() {
+        quote! {}
     } else {
-        // Check if Response has any fields
-        let all_fields = extract_fields(response_struct)?;
-        if all_fields.is_empty() {
-            Ok(quote! {
-                pub fn extract_response(
-                    resp: ::http::Response<::bytes::Bytes>,
-                ) -> Result<Response, ::http::Response<::bytes::Bytes>> {
-                    let status = resp.status();
-                    #status_check
-                    Ok(Response {})
+        let stmts: Vec<_> = header_fields
+            .iter()
+            .map(|f| {
+                let ident = &f.ident;
+                let ty = &f.ty;
+                let header_name = match &f.kind {
+                    FieldKind::Header(Some(n)) => n.clone(),
+                    _ => ident.to_string().replace('_', "-"),
+                };
+                let is_option = matches!(ty, syn::Type::Path(tp) if tp.path.segments.last().map(|s| s.ident == "Option").unwrap_or(false));
+                if is_option {
+                    quote! {
+                        let #ident: #ty = parts
+                            .headers
+                            .get(#header_name)
+                            .and_then(|v| v.to_str().ok())
+                            .and_then(|v| v.parse().ok());
+                    }
+                } else {
+                    quote! {
+                        let #ident: #ty = parts
+                            .headers
+                            .get(#header_name)
+                            .and_then(|v| v.to_str().ok())
+                            .and_then(|v| v.parse().ok())
+                            .ok_or_else(|| {
+                                ::http::Response::builder()
+                                    .status(::http::StatusCode::INTERNAL_SERVER_ERROR)
+                                    .body(::bytes::Bytes::from(
+                                        format!("missing or invalid header: {}", #header_name)
+                                    ))
+                                    .unwrap()
+                            })?;
+                    }
                 }
             })
-        } else {
-            // Non-json fields would need header extraction etc.
-            // For now, just check status and return empty
-            Ok(quote! {
-                pub fn extract_response(
-                    resp: ::http::Response<::bytes::Bytes>,
-                ) -> Result<Response, ::http::Response<::bytes::Bytes>> {
-                    let status = resp.status();
-                    #status_check
-                    let (parts, _body) = resp.into_parts();
-                    // TODO: extract headers if needed
-                    Ok(Response {})
-                }
+            .collect();
+        quote! { #(#stmts)* }
+    };
+
+    let json_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Json));
+    let json_extraction = if let Some(f) = json_field {
+        let ident = &f.ident;
+        let ty = &f.ty;
+        quote! {
+            let #ident: #ty = ::serde_json::from_slice(&body)
+                .map_err(|e| {
+                    ::http::Response::builder()
+                        .status(::http::StatusCode::INTERNAL_SERVER_ERROR)
+                        .body(::bytes::Bytes::from(format!("failed to parse response json: {}", e)))
+                        .unwrap()
+                })?;
+        }
+    } else {
+        quote! {}
+    };
+
+    let field_idents: Vec<_> = fields.iter().map(|f| &f.ident).collect();
+
+    Ok(quote! {
+        pub fn extract_response(
+            resp: ::http::Response<::bytes::Bytes>,
+        ) -> Result<Response, ::http::Response<::bytes::Bytes>> {
+            let status = resp.status();
+            #status_check
+
+            let (parts, body) = resp.into_parts();
+
+            #header_extraction
+            #json_extraction
+
+            Ok(Response {
+                #(#field_idents,)*
             })
         }
-    }
+    })
 }
 
 // ---------------------------------------------------------------------------
