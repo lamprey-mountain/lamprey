@@ -46,6 +46,9 @@ export interface CoreEmoji {
 
 	/** Emoji group */
 	g?: number;
+
+	/** Emoji order. What position in the group this emoji appears in. */
+	o: number;
 }
 
 /** json file format for localized emoji data for a language */

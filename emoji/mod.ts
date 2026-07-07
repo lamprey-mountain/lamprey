@@ -34,3 +34,11 @@ export function getEmojiHex(emojiStr: string): string {
 		.filter((hex) => hex !== "fe0f") // Strip the variation selector-16 (VS16)
 		.join("-");
 }
+
+/** get the emoji string from an emoji hex code */
+export function getEmojiString(hex: string): string {
+	return hex
+		.split("-")
+		.map((h) => String.fromCodePoint(parseInt(h, 16)))
+		.join("");
+}

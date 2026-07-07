@@ -1,6 +1,6 @@
 import {
+	CoreEmoji,
 	LANGUAGES,
-	type CoreFile,
 	type LabelsFile,
 	type Shortcodes,
 } from "./shared.ts";
@@ -106,24 +106,31 @@ async function processSpritesheet(outputDir: string) {
 	const emojiBaseData = await loadJson("emojibase-data/en/data.json");
 
 	const hexToGroup = new Map<string, number | undefined>();
+	const hexToOrder = new Map<string, number | undefined>();
 	for (const e of emojiBaseData) {
 		hexToGroup.set(e.hexcode.toUpperCase(), e.group);
+		hexToOrder.set(e.hexcode.toUpperCase(), e.order);
 		if (e.skins) {
 			for (const s of e.skins) {
 				hexToGroup.set(s.hexcode.toUpperCase(), s.group);
+				hexToOrder.set(s.hexcode.toUpperCase(), s.order);
 			}
 		}
 	}
 
-	const coreEmoji = emojiData.map((e: any) => ({
-		u: e.u.toUpperCase(),
-		x: e.x,
-		y: e.y,
+	const coreEmoji = emojiData.map(
+		(e: any) =>
+			({
+				u: e.u.toUpperCase(),
+				x: e.x,
+				y: e.y,
 
-		// the only emoji that don't have a group are regional indicators
-		// i'll put them in group 8 (symbols) because why not i guess
-		g: hexToGroup.get(e.u.toUpperCase()) ?? 8,
-	}));
+				// the only emoji that don't have a group are regional indicators
+				// i'll put them in group 8 (symbols) because why not i guess
+				g: hexToGroup.get(e.u.toUpperCase()) ?? 8,
+				o: hexToOrder.get(e.u.toUpperCase()) ?? 0,
+			}) as CoreEmoji,
+	);
 
 	await Deno.writeTextFile(
 		`${outputDir}/emoji.json`,
