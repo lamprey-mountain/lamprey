@@ -1,8 +1,15 @@
 import type { EditorState } from "prosemirror-state";
 import type { Channel } from "sdk";
 import { createUpload } from "sdk";
-import { createSignal, For, onMount, Show, type VoidProps } from "solid-js";
-import { useApi, useChannels } from "@/api";
+import {
+	createResource,
+	createSignal,
+	For,
+	onMount,
+	Show,
+	type VoidProps,
+} from "solid-js";
+import { useApi, useChannels, useTags } from "@/api";
 import { useCtx } from "@/app/context";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { DurationInput, type DurationPreset } from "@/atoms/DurationInput.tsx";
@@ -38,7 +45,6 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 	const ctx = useCtx();
 	const api2 = useApi();
 	const channels2 = useChannels();
-	const [, modalctl] = useModals();
 	const [editingNsfw, setEditingNsfw] = createSignal(props.channel.nsfw);
 	const [editingName, setEditingName] = createSignal(props.channel.name);
 	const [_editingDescription, _setEditingDescription] = createSignal(
@@ -353,44 +359,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				</CheckboxOption>
 			</div>
 			<Show when={props.channel.type === "Forum"}>
-				<div class="tags">
-					<h3 class="dim">Tags</h3>
-					<div class="tag-list">
-						<For each={props.channel.tags_available!}>
-							{(tag) => (
-								<div
-									class="tag-item"
-									style={{
-										background: tag.color as string | undefined,
-										opacity: tag.archived ? 0.6 : 1,
-									}}
-									onClick={() => {
-										modalctl.open({
-											type: "tag_editor",
-											forumChannelId: props.channel.id,
-											tag: tag,
-										});
-									}}
-								>
-									<span class="tag-name">{tag.name}</span>
-									<span class="tag-count">{tag.active_thread_count}</span>
-								</div>
-							)}
-						</For>
-					</div>
-					<button
-						type="button"
-						class="secondary small"
-						onClick={() => {
-							modalctl.open({
-								type: "tag_editor",
-								forumChannelId: props.channel.id,
-							});
-						}}
-					>
-						Add New Tag
-					</button>
-				</div>
+				<ForumTags channel={props.channel} />
 			</Show>
 			{/* TODO: add/remove tags from thread channels */}
 			{/* TODO: archive all threads in this channel (text, forum) */}
@@ -398,3 +367,58 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		</div>
 	);
 }
+
+const ForumTags = (props: { channel: Channel }) => {
+	const [, modalctl] = useModals();
+	const tagsService = useTags();
+
+	// TODO: pagination
+	const [channelTags] = createResource(
+		() => props.channel.id,
+		async (cid) => {
+			const page = await tagsService.list(cid);
+			return page.items;
+		},
+	);
+
+	return (
+		<div class="tags">
+			<h3 class="dim">Tags</h3>
+			<div class="tag-list">
+				<For each={channelTags()}>
+					{(tag) => (
+						<div
+							class="tag-item"
+							style={{
+								background: tag.color as string | undefined,
+								opacity: tag.archived ? 0.6 : 1,
+							}}
+							onClick={() => {
+								modalctl.open({
+									type: "tag_editor",
+									forumChannelId: props.channel.id,
+									tag: tag,
+								});
+							}}
+						>
+							<span class="tag-name">{tag.name}</span>
+							<span class="tag-count">{tag.active_thread_count}</span>
+						</div>
+					)}
+				</For>
+			</div>
+			<button
+				type="button"
+				class="secondary small"
+				onClick={() => {
+					modalctl.open({
+						type: "tag_editor",
+						forumChannelId: props.channel.id,
+					});
+				}}
+			>
+				Add New Tag
+			</button>
+		</div>
+	);
+};
