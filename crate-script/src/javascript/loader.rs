@@ -54,7 +54,7 @@ impl ModuleLoader {
 impl rquickjs::loader::Resolver for ModuleResolver {
     fn resolve<'js>(
         &mut self,
-        ctx: &rquickjs::prelude::Ctx<'js>,
+        _ctx: &rquickjs::prelude::Ctx<'js>,
         base: &str,
         name: &str,
         attributes: Option<rquickjs::loader::ImportAttributes<'js>>,

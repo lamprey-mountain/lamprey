@@ -92,9 +92,6 @@ pub trait ExecutionHandle: Send + Sync {
     /// get associated eval for this execution
     fn eval(&self) -> &Eval;
 
-    /// get associated eval id for this execution
-    fn eval_id(&self) -> EvalId;
-
     /// stop script execution
     fn stop(&self);
 
@@ -115,6 +112,8 @@ pub trait ExecutionHandle: Send + Sync {
 
     // HACK: get cloning to work
     fn clone_box(&self) -> Box<dyn ExecutionHandle>;
+    // ???
+    // fn clone(self: &Box<Self>) -> Box<dyn ExecutionHandle>;
 }
 
 impl Clone for Box<dyn ExecutionHandle> {

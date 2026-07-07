@@ -17,7 +17,7 @@ use common::v1::types::{
 };
 use cpu_time::ProcessTime;
 use dashmap::DashMap;
-use rquickjs::{Ctx, FromJs, async_with};
+use rquickjs::{Ctx, Exception, FromJs, async_with};
 use tokio::sync::broadcast;
 use tracing::error;
 
@@ -121,14 +121,14 @@ impl JsManager {
 
         // TODO: try to reuse cache
         let context = rquickjs::AsyncContext::full(&rt).await?;
-        let bytecode = async_with!(context => |ctx| {
-            let module = rquickjs::Module::declare(ctx.clone(), module_name, module_source)?;
-            let opts = rquickjs::WriteOptions::default();
-            let bytes = module.write(opts)?;
-
-            rquickjs::Result::Ok(bytes)
-        })
-        .await?;
+        let bytecode = context
+            .with(|ctx: Ctx<'_>| {
+                let module = rquickjs::Module::declare(ctx.clone(), module_name, module_source)?;
+                let opts = rquickjs::WriteOptions::default();
+                let bytes = module.write(opts)?;
+                rquickjs::Result::Ok(bytes)
+            })
+            .await?;
 
         let script = Arc::new(JsCompiledScript {
             redex_id: script_id,
@@ -202,8 +202,13 @@ impl Executor for JsExecutor {
         let script = Arc::clone(&self.script);
 
         tokio::spawn(async move {
+            // rt.set_host_promise_rejection_tracker(tracker);
+            // rt.set_promise_hook(Some(Box::new(|_ctx, _hook_type, _promise, _parent| {
+            //     // TODO
+            // })));
+
             // keep runtime alive during execution
-            let _rt_guard = rt;
+            let _rt_guard = rt.clone();
             let events_sender_clone = events_sender.clone();
 
             let res = async_with!(context => |ctx| {
@@ -227,6 +232,33 @@ impl Executor for JsExecutor {
                 }
             })
             .await;
+
+            loop {
+                match rt.execute_pending_job().await {
+                    Ok(true) => {}
+                    Ok(false) => break,
+                    Err(err) => {
+                        let _err = err
+                            .0
+                            .with(|ctx| {
+                                let err = ctx
+                                    .catch()
+                                    .into_object()
+                                    .and_then(Exception::from_object)
+                                    .map(Error::from_exception);
+                                match err {
+                                    Some(err) => return err,
+                                    None => todo!("handle None error?"),
+                                };
+                            })
+                            .await;
+                        return;
+                        // return Err(err);
+                        // TODO: do something better with the error?
+                        // return Err(Error::Rquickjs(...))
+                    }
+                }
+            }
 
             if let Err(err) = res {
                 error!("eval runtime error: {:?}", err);
@@ -427,10 +459,6 @@ async fn exec_inner<'js>(
 impl ExecutionHandle for JsExecutionHandle {
     fn eval(&self) -> &Eval {
         &*self.run
-    }
-
-    fn eval_id(&self) -> EvalId {
-        self.run.id
     }
 
     fn stop(&self) {

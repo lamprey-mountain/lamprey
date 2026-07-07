@@ -205,10 +205,6 @@ impl ExecutionHandle for WasmHandle {
         &*self.run
     }
 
-    fn eval_id(&self) -> EvalId {
-        self.run.id
-    }
-
     fn stop(&self) {
         todo!()
     }
