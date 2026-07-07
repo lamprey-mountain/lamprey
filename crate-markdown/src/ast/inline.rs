@@ -69,16 +69,16 @@ pub enum Inline {
 /// any emoji node
 #[derive(Debug)]
 pub enum Emoji {
-    CustomEmoji(CustomEmoji),
-    UnicodeEmoji(UnicodeEmoji),
+    Custom(CustomEmoji),
+    Unicode(UnicodeEmoji),
 }
 
 impl Emoji {
     pub fn cast(token: SyntaxToken) -> Option<Self> {
         if let Some(e) = CustomEmoji::cast(token.clone()) {
-            Some(Self::CustomEmoji(e))
+            Some(Self::Custom(e))
         } else if let Some(e) = UnicodeEmoji::cast(token) {
-            Some(Self::UnicodeEmoji(e))
+            Some(Self::Unicode(e))
         } else {
             None
         }
@@ -86,8 +86,8 @@ impl Emoji {
 
     pub fn syntax(&self) -> SyntaxElement {
         match self {
-            Self::CustomEmoji(e) => SyntaxElement::Token(e.syntax().clone()),
-            Self::UnicodeEmoji(e) => SyntaxElement::Token(e.syntax().clone()),
+            Self::Custom(e) => SyntaxElement::Token(e.syntax().clone()),
+            Self::Unicode(e) => SyntaxElement::Token(e.syntax().clone()),
         }
     }
 }

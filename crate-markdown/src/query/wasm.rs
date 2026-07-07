@@ -97,15 +97,15 @@ impl Parsed {
             .iter_emoji()
             .map(|e| {
                 let kind = match &e {
-                    Emoji::CustomEmoji(e) => EmojiDtoKind::Custom(e.parse()),
-                    Emoji::UnicodeEmoji(_e) => EmojiDtoKind::Unicode,
+                    Emoji::Custom(e) => EmojiDtoKind::Custom(e.parse()),
+                    Emoji::Unicode(_e) => EmojiDtoKind::Unicode,
                 };
 
                 let span = e.syntax().text_range().into();
 
                 let text = match &e {
-                    Emoji::CustomEmoji(e) => e.text(),
-                    Emoji::UnicodeEmoji(e) => e.text(),
+                    Emoji::Custom(e) => e.text(),
+                    Emoji::Unicode(e) => e.text(),
                 };
 
                 EmojiDto { text, kind, span }

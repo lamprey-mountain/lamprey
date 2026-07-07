@@ -1,7 +1,10 @@
 use crate::types::MentionsIds;
 use common::v1::types::{EmojiId, ParseMentions};
 use lamprey_markdown::{
-    Parser, ast::inline::{Emoji, MentionData}, query::QueryableExt, transform::StripEmoji,
+    Parser,
+    ast::inline::{Emoji, MentionData},
+    query::QueryableExt,
+    transform::StripEmoji,
 };
 use url::Url;
 
