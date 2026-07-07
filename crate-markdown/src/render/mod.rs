@@ -22,16 +22,19 @@ pub trait Renderer {
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 impl Parsed {
     /// render to html
+    #[cfg_attr(feature = "wasm", wasm_bindgen(js_name = "toHTML"))]
     pub fn to_html(&self) -> String {
         HtmlRenderer.render(self.tree())
     }
 
     /// render to markdown (identity)
+    #[cfg_attr(feature = "wasm", wasm_bindgen(js_name = "toMarkdown"))]
     pub fn to_markdown(&self) -> String {
         MarkdownRenderer.render(self.tree())
     }
 
     /// render to plaintext, stripping any formatting
+    #[cfg_attr(feature = "wasm", wasm_bindgen(js_name = "toPlain"))]
     pub fn to_plain(&self) -> String {
         (PlaintextRenderer {}).render(self.tree())
     }
