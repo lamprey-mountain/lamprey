@@ -43,7 +43,7 @@
 				function render() {
 					const markdown = input.value;
 					const parsed = parser.parse(markdown);
-					output.innerText = parsed.to_html();
+					output.innerText = parsed.toHTML();
 				}
 
 				input.addEventListener("input", render);
