@@ -1,4 +1,4 @@
-import type { ReactionKey } from "sdk";
+import type { ReactionKey as ReactionKeyT } from "sdk";
 import {
 	createEffect,
 	createResource,
@@ -10,7 +10,7 @@ import {
 } from "solid-js";
 import { useApi, useMessages, useUsers } from "@/api";
 import { Avatar } from "@/components/shared/User";
-import { renderReactionKey } from "@/lib/emoji";
+import { ReactionKey } from "@/components/features/chat/Reactions";
 import { Modal } from "./mod";
 
 interface ModalReactionsProps {
@@ -18,7 +18,7 @@ interface ModalReactionsProps {
 	message_id: string;
 }
 
-const reactionKeyToParam = (key: ReactionKey): string => {
+const reactionKeyToParam = (key: ReactionKeyT): string => {
 	if (key.type === "Text") {
 		return `t:${key.content}`;
 	} else if (key.type === "Custom") {
@@ -38,7 +38,7 @@ export const ModalReactions = (props: ModalReactionsProps) => {
 
 	const reactions = () => message()?.reactions ?? [];
 	const [selectedReaction, setSelectedReaction] =
-		createSignal<ReactionKey | null>(null);
+		createSignal<ReactionKeyT | null>(null);
 
 	createEffect(() => {
 		const r = reactions();
@@ -118,10 +118,7 @@ export const ModalReactions = (props: ModalReactionsProps) => {
 									onClick={() => setSelectedReaction(key)}
 									data-selected={selectedReaction() === key}
 								>
-									<div
-										style="display:contents"
-										innerHTML={renderReactionKey(key)}
-									/>
+									<ReactionKey key={key} />
 									<div>{reaction.count}</div>
 								</button>
 							);

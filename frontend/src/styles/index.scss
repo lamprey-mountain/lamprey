@@ -3281,10 +3281,11 @@ input[type="color"] {
 			align-items: center;
 
 			border: none;
+			border-radius: 2px;
 			background: none;
 
 			&:hover,
-			&[data-selected] {
+			&[data-selected="true"] {
 				background: #fff2;
 			}
 		}

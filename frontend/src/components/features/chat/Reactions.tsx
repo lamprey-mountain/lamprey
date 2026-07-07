@@ -1,10 +1,19 @@
-import type { Message, ReactionKey } from "sdk";
-import { createEffect, createSignal, For, on, onCleanup } from "solid-js";
+import type { Message, ReactionKey as ReactionKeyT } from "sdk";
+import {
+	createEffect,
+	createSignal,
+	For,
+	on,
+	onCleanup,
+	VoidProps,
+} from "solid-js";
 import { useReactions } from "@/api";
 import { useCtx } from "@/app/context";
 import icReactionAdd from "@/assets/reaction-add.png";
 import { createTooltip } from "@/atoms/Tooltip.tsx";
-import { renderReactionKey } from "@/lib/emoji";
+import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
+import { getEmojiHex } from "@/lib/emoji";
+import { getEmojiUrl } from "@/media/util";
 
 type ReactionsProps = {
 	message: Message;
@@ -16,16 +25,16 @@ export const Reactions = (props: ReactionsProps) => {
 	const [showPicker, setShowPicker] = createSignal(false);
 	let addEl: HTMLDivElement | undefined;
 
-	const reactionKeyToParam = (key: ReactionKey): string => {
+	const reactionKeyToParam = (key: ReactionKeyT): string => {
 		if (key.type === "Text") {
 			return `t:${key.content}`;
 		} else if (key.type === "Custom") {
-			return `c:${(key as ReactionKey & { type: "Custom" }).id}`;
+			return `c:${(key as ReactionKeyT & { type: "Custom" }).id}`;
 		}
 		return "";
 	};
 
-	const handleClick = (key: ReactionKey, self: boolean) => {
+	const handleClick = (key: ReactionKeyT, self: boolean) => {
 		const param = reactionKeyToParam(key);
 		if (self) {
 			reactions2.remove(props.message.channel_id, props.message.id, param);
@@ -110,7 +119,7 @@ export const Reactions = (props: ReactionsProps) => {
 							classList={{ self: reaction.self }}
 							onClick={() => handleClick(reaction.key, !!reaction.self)}
 						>
-							<div class="key" innerHTML={renderReactionKey(reaction.key)} />
+							<ReactionKey key={reaction.key} />
 							<div class="count">{reaction.count}</div>
 						</div>
 					);
@@ -127,6 +136,23 @@ export const Reactions = (props: ReactionsProps) => {
 					src={icReactionAdd}
 				/>
 			</button>
+		</div>
+	);
+};
+
+export const ReactionKey = (props: VoidProps<{ key: ReactionKeyT }>) => {
+	// TODO: use switch/match
+	return (
+		<div class="key">
+			{props.key.type === "Text" && props.key.content ? (
+				<UnicodeEmoji hex={getEmojiHex(props.key.content)} />
+			) : props.key.type === "Custom" && props.key.media_id ? (
+				<img
+					src={getEmojiUrl(props.key.media_id)}
+					class="custom-emoji"
+					alt={props.key.name ?? ""}
+				/>
+			) : null}
 		</div>
 	);
 };

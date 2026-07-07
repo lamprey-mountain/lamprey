@@ -241,7 +241,7 @@ function CodeBlock(props: { text: string; lang?: string | null }) {
 	);
 }
 
-function TwemojiText(props: { text: string }) {
+function Text(props: { text: string }) {
 	const ctx = useContext(MarkdownContext);
 
 	const escape = (html: string) => {
@@ -263,7 +263,7 @@ function TwemojiText(props: { text: string }) {
 		return escaped;
 	};
 
-	const html = createMemo(() => getTwemoji(escape(props.text)));
+	const html = createMemo(() => escape(props.text));
 
 	return <span innerHTML={html()} />;
 }
@@ -321,40 +321,38 @@ function RenderBlock(props: { block: SerializedBlock }) {
 			</Match>
 			<Match when={props.block.type === "Table" && props.block}>
 				{(b) => (
-					<div style={{ "overflow-x": "auto" }}>
-						<table>
-							<thead>
-								<tr>
-									<For each={b().header}>
-										{(cell) => (
-											<th>
-												<For each={cell}>
-													{(inline) => <RenderInline inline={inline} />}
-												</For>
-											</th>
-										)}
-									</For>
-								</tr>
-							</thead>
-							<tbody>
-								<For each={b().rows}>
-									{(row) => (
-										<tr>
-											<For each={row}>
-												{(cell) => (
-													<td>
-														<For each={cell}>
-															{(inline) => <RenderInline inline={inline} />}
-														</For>
-													</td>
-												)}
+					<table>
+						<thead>
+							<tr>
+								<For each={b().header}>
+									{(cell) => (
+										<th>
+											<For each={cell}>
+												{(inline) => <RenderInline inline={inline} />}
 											</For>
-										</tr>
+										</th>
 									)}
 								</For>
-							</tbody>
-						</table>
-					</div>
+							</tr>
+						</thead>
+						<tbody>
+							<For each={b().rows}>
+								{(row) => (
+									<tr>
+										<For each={row}>
+											{(cell) => (
+												<td>
+													<For each={cell}>
+														{(inline) => <RenderInline inline={inline} />}
+													</For>
+												</td>
+											)}
+										</For>
+									</tr>
+								)}
+							</For>
+						</tbody>
+					</table>
 				)}
 			</Match>
 		</Switch>
@@ -420,7 +418,7 @@ function RenderInline(props: { inline: SerializedInline }) {
 				)}
 			</Match>
 			<Match when={props.inline.type === "Text" && props.inline}>
-				{(i) => <TwemojiText text={i().content} />}
+				{(i) => <Text text={i().content} />}
 			</Match>
 			<Match when={props.inline.type === "Mention" && props.inline}>
 				{(i) => (
