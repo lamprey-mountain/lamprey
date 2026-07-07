@@ -28,7 +28,7 @@ import {
 	MenuProvider,
 	UserPopoutProvider,
 } from "@/contexts/mod.tsx";
-import { ModalsProvider } from "@/contexts/modal";
+import { ModalsProvider, useModals } from "@/contexts/modal";
 import { OverlayProvider } from "@/contexts/overlay.tsx";
 import { ReadTrackingProvider } from "@/contexts/read-tracking.tsx";
 import { SlashCommandsProvider } from "@/contexts/slash-commands.tsx";
@@ -190,6 +190,7 @@ export const AppShell: Component<ParentProps> = (props) => {
 	const ctx = useCtx();
 	const [voice] = useVoice();
 	const state = from(ctx.client.state);
+	const [modals] = useModals();
 
 	useFavicon();
 	useGlobalEventHandlers();
@@ -211,6 +212,7 @@ export const AppShell: Component<ParentProps> = (props) => {
 						? "compact"
 						: "cozy"
 				}
+				inert={modals.length > 0}
 			>
 				<Show when={cursorStats()}>
 					{(stats) => (
