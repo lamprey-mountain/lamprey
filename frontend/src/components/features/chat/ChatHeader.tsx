@@ -111,15 +111,23 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 		setTimeout(() => inputRef.focus());
 	};
 
-	// TODO: show new channel name with class=".local" while waiting for the patch request to go through
-	// const [isSaving, setIsSaving] = createSignal(false);
+	const [isSaving, setIsSaving] = createSignal(false);
 
-	const saveName = () => {
+	const saveName = async () => {
 		const newName = editingName()?.trim();
 		if (newName && newName !== name()) {
-			channels2.update(props.channel.id, { name: newName });
+			setIsSaving(true);
+			try {
+				await channels2.update(props.channel.id, { name: newName });
+			} finally {
+				queueMicrotask(() => {
+					setIsSaving(false);
+					setEditingName(undefined);
+				});
+			}
+		} else {
+			setEditingName(undefined);
 		}
-		setEditingName(undefined);
 	};
 
 	const cancelEditingName = () => {
@@ -191,6 +199,9 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 				<Switch>
 					<Match when={isSelecting()}>
 						<h3 class="name-text">{selected().length} message(s) selected</h3>
+					</Match>
+					<Match when={isSaving()}>
+						<h3 class="name-text local">{editingName()}</h3>
 					</Match>
 					<Match when={editingName() !== undefined}>
 						<input

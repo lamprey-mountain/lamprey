@@ -3770,8 +3770,12 @@ button.round {
 		border-radius: 2px;
 		transition: all 0.2s;
 
-		& > h3 {
+		& > .name-text {
 			font-size: 1em;
+
+			&.local {
+				color: $fg-600;
+			}
 		}
 
 		&.editable {
@@ -3795,19 +3799,6 @@ button.round {
 			background: none;
 			border: none;
 			padding: 0;
-		}
-	}
-
-	& > .name-edit {
-		padding: 2px 4px;
-		border-radius: 2px;
-		font: inherit;
-		color: $fg-200;
-		/* flex: 0 1 auto; */
-		/* width: auto; */
-
-		&:focus {
-			outline: none;
 		}
 	}
 
