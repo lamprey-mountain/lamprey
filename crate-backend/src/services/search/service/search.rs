@@ -22,7 +22,7 @@ use crate::services::search::index::searcher::{
     TantivySearchMessages, TantivySearchRooms, TantivySearchUsers,
 };
 use crate::services::search::util::visibility::{
-    ChannelVisibility, SearchAuditLogVisibility, SearchChannelsVisibility, SearchMediaVisibility,
+    SearchAuditLogVisibility, SearchChannelsVisibility, SearchMediaVisibility,
     SearchMessagesVisibility, SearchRoomsVisibility,
 };
 
@@ -35,14 +35,7 @@ impl ServiceSearch {
         let srv = self.state.services();
         let vis = srv.channels.list_user_room_channels(auth_user_id).await?;
         trace!(count = vis.len(), "visible channels");
-        let visibility = SearchMessagesVisibility::Filtered(
-            vis.into_iter()
-                .map(|(id, can_view_private_threads)| ChannelVisibility {
-                    id,
-                    can_view_private_threads,
-                })
-                .collect(),
-        );
+        let visibility = SearchMessagesVisibility::Filtered(vis);
         self.search_messages_inner(auth_user_id, visibility, req)
             .await
     }

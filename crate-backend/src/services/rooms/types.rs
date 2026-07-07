@@ -7,11 +7,13 @@ use tokio::sync::watch;
 use uuid::Uuid;
 
 use common::v1::types::{
-    Channel, ChannelId, MessageSync, PermissionOverwriteType, Role, RoleId, Room, RoomFeature,
-    RoomId, RoomMember, ThreadMember, User, UserId,
+    Channel, ChannelId, MessageSync, Permission, PermissionOverwriteType, Role, RoleId, Room,
+    RoomFeature, RoomId, RoomMember, ThreadMember, User, UserId,
 };
+use lamprey_backend_core::types::search::ChannelVisibility;
 
 use crate::routes::util::Auth;
+use crate::services::cache::PermissionsCalculator;
 use crate::types::PermissionBits;
 use crate::{Error, Result};
 
@@ -223,5 +225,36 @@ impl RoomSnapshot {
         } else {
             Err(Error::BadStatic("room not loaded yet"))
         }
+    }
+
+    pub fn channel_visibilities(self: Arc<Self>, user_id: UserId) -> Vec<ChannelVisibility> {
+        let Some(data) = self.get_data() else {
+            return vec![];
+        };
+
+        let calc = PermissionsCalculator {
+            room_id: data.room.id,
+            owner_id: data.room.owner_id,
+            public: data.room.public,
+            room: Arc::clone(&self),
+        };
+
+        data.channels
+            .values()
+            .filter_map(|chan| {
+                let perms = calc
+                    .query2(Some(user_id), Some(&chan.inner))
+                    .expect("room has data");
+
+                let Ok(perms) = perms.ensure_view() else {
+                    return None;
+                };
+
+                Some(ChannelVisibility {
+                    id: chan.inner.id,
+                    can_view_private_threads: perms.has(Permission::ThreadManage),
+                })
+            })
+            .collect()
     }
 }

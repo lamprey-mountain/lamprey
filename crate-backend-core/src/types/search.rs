@@ -86,6 +86,18 @@ pub enum Doctype {
     // Broadcasts, // member_count(sorting)
 }
 
+/// visibility settings for a single channel
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChannelVisibility {
+    /// the id of the channel
+    pub id: ChannelId,
+
+    /// whether to include private threads
+    ///
+    /// should be set to true if the `ThreadsManage` permission is enabled
+    pub can_view_private_threads: bool,
+}
+
 impl Doctype {
     /// get this document type as a string
     pub fn as_str(&self) -> &str {

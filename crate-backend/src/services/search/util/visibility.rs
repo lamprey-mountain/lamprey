@@ -1,4 +1,5 @@
 use common::v1::types::{ChannelId, RoomId, UserId};
+use lamprey_backend_core::types::search::ChannelVisibility;
 use tantivy::{
     Term,
     query::{AllQuery, BooleanQuery, Query, TermQuery, TermSetQuery},
@@ -21,18 +22,6 @@ pub enum SearchMessagesVisibility {
 
     /// only messages in these filtered channels
     Filtered(Vec<ChannelVisibility>),
-}
-
-/// visibility settings for a single channel
-#[derive(Debug, Clone)]
-pub struct ChannelVisibility {
-    /// the id of the channel
-    pub id: ChannelId,
-
-    /// whether to include private threads
-    ///
-    /// should be set to true if the `ThreadsManage` permission is enabled
-    pub can_view_private_threads: bool,
 }
 
 /// what channels to include in the search

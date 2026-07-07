@@ -17,8 +17,8 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
     AuditLogEntryStatus, AuditLogEntryType, ChannelId, ChannelType, MessageSync, MessageType,
-    RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, ThreadMemberPut,
-    UserId,
+    PaginationQuery, RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch,
+    ThreadMemberPut, UserId,
 };
 use dashmap::{DashMap, DashSet};
 use moka::future::Cache;
@@ -113,6 +113,44 @@ impl ServiceRooms {
 
             Ok(snapshot)
         })
+    }
+
+    /// load all channels a user is in
+    pub async fn load_all_for_user(&self, user_id: UserId) -> Vec<Result<Arc<RoomSnapshot>>> {
+        let mut room_ids: Vec<RoomId> = self
+            .user_rooms
+            .get(&user_id)
+            .map(|rooms| rooms.iter().map(|id| *id).collect())
+            .unwrap_or_default();
+
+        // supplement cache with database to ensure completeness
+        if let Ok(rooms) = self
+            .state
+            .data()
+            .room_list(
+                user_id,
+                PaginationQuery {
+                    from: None,
+                    to: None,
+                    dir: None,
+                    limit: Some(1024),
+                },
+                false,
+            )
+            .await
+        {
+            for room in rooms.items {
+                if !room_ids.contains(&room.id) {
+                    room_ids.push(room.id);
+                }
+            }
+        }
+
+        let mut out = vec![];
+        for room_id in room_ids {
+            out.push(self.load_room(room_id, false).await);
+        }
+        out
     }
 
     /// mark a room as unavailable

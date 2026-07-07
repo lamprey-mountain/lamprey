@@ -1,5 +1,7 @@
 //! permission calculator
 
+// TODO: move this logic to rooms service
+
 use std::sync::Arc;
 
 use common::v1::types::util::Time;

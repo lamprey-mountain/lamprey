@@ -7,12 +7,12 @@ use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType,
     MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageId, MessageSync,
-    MessageThreadCreated, MessageType, PaginationQuery, Permission, PermissionOverwrite, RoomId,
-    SERVER_USER_ID, ThreadMemberPut, User, UserId,
+    MessageThreadCreated, MessageType, Permission, PermissionOverwrite, RoomId, SERVER_USER_ID,
+    ThreadMemberPut, User, UserId,
 };
 use common::v2::types::MessageVerId;
 use futures::TryStreamExt;
-use futures::stream::{self, StreamExt};
+use futures::stream::StreamExt;
 use moka::future::Cache;
 use moka::ops::compute::Op as CacheOp;
 use time::OffsetDateTime;
@@ -23,6 +23,7 @@ use crate::ServerStateInner;
 use crate::error::{Error, Result};
 use crate::routes::util::auth::Auth4;
 use crate::types::{DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCreate};
+use lamprey_backend_core::types::search::ChannelVisibility;
 
 // TODO: split caches more
 // have a cache for public data, per-user data, member counts, etc
@@ -1407,54 +1408,14 @@ impl ServiceChannels {
     }
 
     /// get all channels a user can see that are in rooms, along with whether the user has the ThreadManage permission. does not include dm channels
-    pub async fn list_user_room_channels(&self, user_id: UserId) -> Result<Vec<(ChannelId, bool)>> {
-        let rooms = self
-            .state
-            .data()
-            .room_list(
-                user_id,
-                PaginationQuery {
-                    from: None,
-                    to: None,
-                    dir: None,
-                    limit: Some(1024),
-                },
-                false,
-            )
-            .await?;
-
-        let out: Vec<(ChannelId, bool)> = stream::iter(rooms.items)
-            .map(|room| self.list_user_room_channels_single(user_id, room.id))
-            .buffer_unordered(10)
-            .try_collect::<Vec<Vec<(ChannelId, bool)>>>()
-            .await?
-            .into_iter()
-            .flatten()
-            .collect();
-
-        Ok(out)
-    }
-
-    /// like list_user_room_channels, but only for a single room
-    pub async fn list_user_room_channels_single(
-        &self,
-        user_id: UserId,
-        room_id: RoomId,
-    ) -> Result<Vec<(ChannelId, bool)>> {
-        let perms_calc = self
-            .state
-            .services()
-            .cache
-            .permissions(room_id, true)
-            .await?;
+    pub async fn list_user_room_channels(&self, user_id: UserId) -> Result<Vec<ChannelVisibility>> {
+        let room_snapshots = self.state.services().rooms.load_all_for_user(user_id).await;
         let mut out = vec![];
 
-        for ch in perms_calc.room.get_data().unwrap().channels.values() {
-            if let Ok(p) = perms_calc.query(user_id, Some(&ch.inner)) {
-                if p.has(Permission::ChannelView) {
-                    out.push((ch.inner.id, p.has(Permission::ThreadManage)));
-                }
-            }
+        for snapshot_res in room_snapshots {
+            let snapshot = snapshot_res?;
+            let vis = snapshot.channel_visibilities(user_id);
+            out.extend(vis);
         }
 
         Ok(out)
