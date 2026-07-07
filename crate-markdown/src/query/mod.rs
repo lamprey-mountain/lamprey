@@ -5,6 +5,9 @@ use crate::query::decorations::DecorationGenerator;
 
 mod decorations;
 
+#[cfg(feature = "wasm")]
+mod wasm;
+
 pub use decorations::{Decoration, DecorationKind};
 
 pub trait Queryable {
@@ -18,7 +21,6 @@ impl Queryable for Ref<Tree> {
     }
 }
 
-// TODO: wasm support
 pub trait QueryableExt: Queryable {
     /// iterate over all links
     fn iter_links(&self) -> impl Iterator<Item = Link> {

@@ -49,6 +49,8 @@ impl Parser {
     }
 
     /// parse some markdown with config
+    // TODO: make this parse(markdown: string, config?: ParserConfig) in js
+    #[cfg_attr(feature = "wasm", wasm_bindgen(js_name = "parseWithConfig"))]
     pub fn parse_with_config(&self, markdown: &str, config: ParserConfig) -> Parsed {
         let source = Source::new(markdown);
         let mut cache = NodeCache::default();
@@ -61,10 +63,16 @@ impl Parser {
             source,
         }
     }
+
+    /// create an empty `Parsed`
+    #[cfg_attr(feature = "wasm", wasm_bindgen)]
+    pub fn empty(&self) -> Parsed {
+        self.parse_with_config("", ParserConfig::default())
+    }
 }
 
 impl Parsed {
-    /// get the syntax tree
+    /// get a reference to the syntax tree
     pub fn tree(&self) -> &Tree {
         &self.tree
     }

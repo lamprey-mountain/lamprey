@@ -2,6 +2,7 @@ use crate::prelude::*;
 
 /// a decoration that can be applied to the markdown source
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Decoration {
     pub span: Span,
     pub kind: DecorationKind,

@@ -29,6 +29,7 @@ pub struct CustomEmoji(SyntaxToken);
 pub struct UnicodeEmoji(SyntaxToken);
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct CustomEmojiData {
     pub animated: bool,
     pub name: String,
