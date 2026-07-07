@@ -277,7 +277,7 @@
           ];
 
           pnpmWorkspaces = [ "@lamprey/emoji" ];
-          pnpmDepsHash = "sha256-WTapMDwk8fOJGIPyCM7tqgyQaRNpMTMrzoEqXP2JijA=";
+          pnpmDepsHash = "sha256-VFWd8W7Jt4sKnUV/nWUwU/gceuydLRSDrNIKUrkgJLw=";
           pnpmDeps = pkgs.fetchPnpmDeps {
             inherit (finalAttrs) src pname version pnpmWorkspaces;
             fetcherVersion = 3;
