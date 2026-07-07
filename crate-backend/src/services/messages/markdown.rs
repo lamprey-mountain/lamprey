@@ -1,7 +1,7 @@
 use crate::types::MentionsIds;
 use common::v1::types::{EmojiId, ParseMentions};
 use lamprey_markdown::{
-    Parser, ast::inline::MentionData, query::QueryableExt, transform::StripEmoji,
+    Parser, ast::inline::{Emoji, MentionData}, query::QueryableExt, transform::StripEmoji,
 };
 use url::Url;
 
@@ -25,7 +25,9 @@ pub fn parse(content: &str, options: &ParseMentions) -> MentionsIds {
     }
 
     for emoji in parsed.tree().iter_emoji() {
-        emojis.push(emoji.parse().id.into());
+        if let Emoji::Custom(e) = emoji {
+            emojis.push(e.parse().id.into());
+        }
     }
 
     let users = if let Some(allowed_users) = &options.users {
