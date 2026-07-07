@@ -60,13 +60,15 @@ const parseEmoji = (): EmojiGroup[] => {
 			id: i,
 			name: getGroupName(i) || "Unknown",
 			icon: getGroupIcon(i),
-			emojis: groupEmojis.map((e) => ({
-				type: "standard" as const,
-				label: e.label,
-				unicode: e.char,
-				hexcode: e.hexcode,
-				order: e.order,
-			})),
+			emojis: groupEmojis
+				.map((e) => ({
+					type: "standard" as const,
+					label: e.label,
+					unicode: e.char,
+					hexcode: e.hexcode,
+					order: e.order,
+				}))
+				.sort((a, b) => a.order - b.order),
 		}))
 		.filter((g) => g.name !== "Unknown");
 };
@@ -295,6 +297,7 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 													);
 												}
 											}}
+											data-emoji-hex={emoji.hexcode}
 										>
 											{emoji.type === "standard" ? (
 												<UnicodeEmoji hex={getEmojiHex(emoji.unicode!)} />
