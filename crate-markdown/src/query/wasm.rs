@@ -1,5 +1,5 @@
 use crate::{
-    ast::inline::{CustomEmoji, CustomEmojiData, MentionData, UnicodeEmoji},
+    ast::inline::{CustomEmoji, CustomEmojiData, Emoji, MentionData, UnicodeEmoji},
     parser::Parsed,
     prelude::*,
     query::{Decoration, QueryableExt},
@@ -95,25 +95,20 @@ impl Parsed {
         let emoji: Vec<EmojiDto> = self
             .tree()
             .iter_emoji()
-            .filter_map(|e| {
-                let (kind, text, span) = if let Some(custom) = CustomEmoji::cast(e.syntax().clone())
-                {
-                    (
-                        EmojiDtoKind::Custom(custom.parse()),
-                        custom.text(),
-                        custom.syntax().text_range().into(),
-                    )
-                } else if let Some(unicode) = UnicodeEmoji::cast(e.syntax().clone()) {
-                    (
-                        EmojiDtoKind::Unicode,
-                        unicode.text(),
-                        unicode.syntax().text_range().into(),
-                    )
-                } else {
-                    // NOTE: is this unreachable?
-                    return None;
+            .map(|e| {
+                let kind = match &e {
+                    Emoji::CustomEmoji(e) => EmojiDtoKind::Custom(e.parse()),
+                    Emoji::UnicodeEmoji(_e) => EmojiDtoKind::Unicode,
                 };
-                Some(EmojiDto { text, kind, span })
+
+                let span = e.syntax().text_range().into();
+
+                let text = match &e {
+                    Emoji::CustomEmoji(e) => e.text(),
+                    Emoji::UnicodeEmoji(e) => e.text(),
+                };
+
+                EmojiDto { text, kind, span }
             })
             .collect();
         serde_wasm_bindgen::to_value(&emoji).map_err(|e| JsValue::from_str(&e.to_string()))

@@ -66,6 +66,32 @@ pub enum Inline {
     UnicodeEmoji(UnicodeEmoji),
 }
 
+/// any emoji node
+#[derive(Debug)]
+pub enum Emoji {
+    CustomEmoji(CustomEmoji),
+    UnicodeEmoji(UnicodeEmoji),
+}
+
+impl Emoji {
+    pub fn cast(token: SyntaxToken) -> Option<Self> {
+        if let Some(e) = CustomEmoji::cast(token.clone()) {
+            Some(Self::CustomEmoji(e))
+        } else if let Some(e) = UnicodeEmoji::cast(token) {
+            Some(Self::UnicodeEmoji(e))
+        } else {
+            None
+        }
+    }
+
+    pub fn syntax(&self) -> SyntaxElement {
+        match self {
+            Self::CustomEmoji(e) => SyntaxElement::Token(e.syntax().clone()),
+            Self::UnicodeEmoji(e) => SyntaxElement::Token(e.syntax().clone()),
+        }
+    }
+}
+
 impl Inline {
     pub fn cast(el: SyntaxElement) -> Option<Self> {
         match el {

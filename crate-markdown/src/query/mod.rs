@@ -1,5 +1,5 @@
 use crate::ast::block::Header;
-use crate::ast::inline::{CustomEmoji, Link, Mention};
+use crate::ast::inline::{CustomEmoji, Emoji, Link, Mention};
 use crate::prelude::*;
 use crate::query::decorations::DecorationGenerator;
 
@@ -35,11 +35,10 @@ pub trait QueryableExt: Queryable {
     }
 
     /// iterate over all emoji
-    // TODO: iterate over unicode emoji too
-    fn iter_emoji(&self) -> impl Iterator<Item = CustomEmoji> {
+    fn iter_emoji(&self) -> impl Iterator<Item = Emoji> {
         self.get_root()
             .descendants_with_tokens()
-            .filter_map(|element| element.into_token().and_then(CustomEmoji::cast))
+            .filter_map(|element| element.into_token().and_then(Emoji::cast))
     }
 
     /// iterate over all headers
