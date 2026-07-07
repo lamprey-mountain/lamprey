@@ -1,7 +1,7 @@
 import type { Node, Schema } from "prosemirror-model";
 import { Plugin, PluginKey } from "prosemirror-state";
 import type { EditorView } from "prosemirror-view";
-import { EMOJI_TEST } from "@/lib/markdown/emoji-constants";
+import { EMOJI_TEST } from "@/lib/markdown/emoji";
 
 export { EMOJI_TEST };
 export const emojiPluginKey = new PluginKey("emoji");

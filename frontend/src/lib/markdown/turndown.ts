@@ -1,7 +1,8 @@
+// utilities for converting html into markdown
 // some gfm stuff is vendored because the npm package doesn't have types
 
 import TurndownService from "turndown";
-import { EMOJI_TEST } from "./emoji-constants";
+import { EMOJI_TEST } from "./emoji";
 
 const highlightRegExp =
 	/\b(?:language|lang|source|highlight(?:-source|-lang)?)-([a-z0-9_+-]+)\b/i;

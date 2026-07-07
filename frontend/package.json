@@ -20,7 +20,7 @@
 		"@codemirror/view": "^6.42.1",
 		"@floating-ui/dom": "^1.7.6",
 		"@lamprey/emoji": "^0.1.2",
-		"@lamprey/markdown": "jsr:^0.1.0",
+		"@lamprey/markdown": "^0.1.1",
 		"@lezer/highlight": "^1.2.3",
 		"@solid-primitives/autofocus": "^0.1.4",
 		"@solid-primitives/event-bus": "^1.1.3",

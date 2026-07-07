@@ -54,8 +54,8 @@ importers:
         specifier: ^0.1.2
         version: 0.1.2
       '@lamprey/markdown':
-        specifier: jsr:^0.1.0
-        version: '@jsr/lamprey__markdown@0.1.0'
+        specifier: ^0.1.1
+        version: 0.1.1
       '@lezer/highlight':
         specifier: ^1.2.3
         version: 1.2.3
@@ -606,11 +606,11 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@jsr/lamprey__markdown@0.1.0':
-    resolution: {integrity: sha512-wtm0SmNoBdZ/oLdY7MQBQnwetg+OHGeD98nJYWCLLM/oqN7VUOGGzoYF30tFQY8qq0wzdbS2pct7xhaguxqQ2g==, tarball: https://npm.jsr.io/~/11/@jsr/lamprey__markdown/0.1.0.tgz}
-
   '@lamprey/emoji@0.1.2':
     resolution: {integrity: sha512-r1beUWjgwOUdCAYDOKQwz68PL8TJBspY21iasPKIs2fnxFHwBKSF3906emmgyx2jPOP1P0Od8gusECiSzJRxRw==}
+
+  '@lamprey/markdown@0.1.1':
+    resolution: {integrity: sha512-MEjSRvhQe9IBPFE1auYiprh9L0qk67sOjYb2hYD5DUzxpTHH+aDpWGT7lZTr3GK+KcvwEhg0Lb4kuQ/HquEX9A==}
 
   '@lezer/common@0.15.12':
     resolution: {integrity: sha512-edfwCxNLnzq5pBA/yaIhwJ3U3Kz8VAUOTRg0hhxaizaI1N+qxV7EXDv/kLCkLeq2RzSFvxexlaj5Mzfn2kY0Ig==}
@@ -2500,9 +2500,9 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@jsr/lamprey__markdown@0.1.0': {}
-
   '@lamprey/emoji@0.1.2': {}
+
+  '@lamprey/markdown@0.1.1': {}
 
   '@lezer/common@0.15.12': {}
 

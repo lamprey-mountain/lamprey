@@ -1,5 +1,4 @@
 import { useNavigate } from "@solidjs/router";
-import type { Token, Tokens } from "marked";
 import type { Channel } from "sdk";
 import {
 	createContext,
@@ -17,12 +16,15 @@ import { useChannels, useRoles, useRoomMembers, useUsers } from "@/api";
 import { useUserPopout } from "@/contexts/mod";
 import { getTwemoji } from "@/lib/emoji";
 import { flags } from "@/lib/flags";
-import { md } from "@/lib/markdown";
+import { Parser, loaded } from "@/lib/markdown";
 import { getEmojiUrl } from "@/media/util";
 import { Dynamic } from "solid-js/web";
-
-// TODO: avoid unnecessary tags/nesting
-// eg. <span class="markdown "><span>yo</span></span>
+import {
+	MentionData,
+	SerializedBlock,
+	SerializedDocument,
+	SerializedInline,
+} from "@/lib/markdown/ast";
 
 // --- Context ---
 
@@ -99,6 +101,21 @@ function ChannelMention(props: { id: string }) {
 	);
 }
 
+function EveryoneMention() {
+	return (
+		<span
+			class="mention mention-everyone"
+			onClick={(e) => {
+				e.stopPropagation();
+				e.preventDefault();
+				// TODO: do something on click?
+			}}
+		>
+			@everyone
+		</span>
+	);
+}
+
 function CustomEmoji(props: { id: string; name: string; animated?: boolean }) {
 	return (
 		<img
@@ -110,7 +127,7 @@ function CustomEmoji(props: { id: string; name: string; animated?: boolean }) {
 	);
 }
 
-function Spoiler(props: { tokens: Token[] }) {
+function Spoiler(props: { children: SerializedInline[] }) {
 	const [shown, setShown] = createSignal(false);
 	return (
 		<span
@@ -122,12 +139,14 @@ function Spoiler(props: { tokens: Token[] }) {
 				setShown(!shown());
 			}}
 		>
-			<RenderTokens tokens={props.tokens} />
+			<For each={props.children}>
+				{(child) => <RenderInline inline={child} />}
+			</For>
 		</span>
 	);
 }
 
-function CodeBlock(props: { text: string; lang?: string }) {
+function CodeBlock(props: { text: string; lang?: string | null }) {
 	let ref!: HTMLElement;
 
 	const [copied, setCopied] = createSignal(false);
@@ -248,246 +267,185 @@ function TwemojiText(props: { text: string }) {
 	return <span innerHTML={html()} />;
 }
 
-// --- Renderer ---
+// --- Renderers ---
 
-function RenderTokens(props: { tokens?: Token[] }) {
-	return (
-		<For each={props.tokens}>{(token) => <TokenView token={token} />}</For>
-	);
-}
-
-function TokenView(props: { token: Token }) {
+function RenderBlock(props: { block: SerializedBlock }) {
 	return (
 		<Switch>
-			<Match when={props.token.type === "paragraph"}>
-				<p>
-					<RenderTokens tokens={(props.token as Tokens.Paragraph).tokens} />
-				</p>
-			</Match>
-			<Match when={props.token.type === "text"}>
-				<Show
-					when={(props.token as Tokens.Text).tokens}
-					fallback={<TwemojiText text={(props.token as Tokens.Text).text} />}
-				>
-					<RenderTokens tokens={(props.token as Tokens.Text).tokens} />
-				</Show>
-			</Match>
-			<Match when={props.token.type === "blockquote"}>
-				<blockquote>
-					<RenderTokens tokens={(props.token as Tokens.Blockquote).tokens} />
-				</blockquote>
-			</Match>
-			<Match when={props.token.type === "code"}>
-				<CodeBlock
-					text={(props.token as Tokens.Code).text}
-					lang={(props.token as Tokens.Code).lang}
-				/>
-			</Match>
-			<Match when={props.token.type === "list"}>
-				<Show
-					when={(props.token as Tokens.List).ordered}
-					fallback={
-						<ul>
-							<For each={(props.token as Tokens.List).items}>
-								{(item) => (
-									<li>
-										<RenderTokens tokens={item.tokens} />
-									</li>
-								)}
-							</For>
-						</ul>
-					}
-				>
-					<ol start={(props.token as Tokens.List).start || 1}>
-						<For each={(props.token as Tokens.List).items}>
-							{(item) => (
-								<li>
-									<RenderTokens tokens={item.tokens} />
-								</li>
-							)}
+			<Match when={props.block.type === "Header" && props.block}>
+				{(b) => (
+					<Dynamic component={`h${b().level}`}>
+						<For each={b().children}>
+							{(child) => <RenderInline inline={child} />}
 						</For>
-					</ol>
-				</Show>
+					</Dynamic>
+				)}
 			</Match>
-			<Match when={props.token.type === "heading"}>
-				<DynamicHeading
-					depth={(props.token as Tokens.Heading).depth}
-					tokens={(props.token as Tokens.Heading).tokens}
-				/>
-			</Match>
-			<Match when={props.token.type === "strong"}>
-				<strong>
-					<RenderTokens tokens={(props.token as Tokens.Strong).tokens} />
-				</strong>
-			</Match>
-			<Match when={props.token.type === "em"}>
-				<em>
-					<RenderTokens tokens={(props.token as Tokens.Em).tokens} />
-				</em>
-			</Match>
-			<Match when={props.token.type === "del"}>
-				<del>
-					<RenderTokens tokens={(props.token as Tokens.Del).tokens} />
-				</del>
-			</Match>
-			<Match when={props.token.type === "codespan"}>
-				<code>{(props.token as Tokens.Codespan).text}</code>
-			</Match>
-			<Match when={props.token.type === "link"}>
-				<a
-					href={(props.token as Tokens.Link).href}
-					title={(props.token as Tokens.Link).title ?? undefined}
-					target="_blank"
-					rel="noopener noreferrer"
-				>
-					<RenderTokens tokens={(props.token as Tokens.Link).tokens} />
-				</a>
-			</Match>
-			<Match when={props.token.type === "image"}>
-				<img
-					src={(props.token as Tokens.Image).href}
-					alt={(props.token as Tokens.Image).text}
-					title={(props.token as Tokens.Image).title ?? undefined}
-				/>
-			</Match>
-			<Match when={props.token.type === "br"}>
-				<br />
-			</Match>
-			<Match when={props.token.type === "hr"}>
-				<hr />
-			</Match>
-			<Match when={props.token.type === "table"}>
-				<TableView token={props.token as Tokens.Table} />
-			</Match>
-			<Match when={props.token.type === "html"}>
-				<TwemojiText text={(props.token as Tokens.HTML).text} />
-			</Match>
-
-			{/* Custom Extensions */}
-			<Match when={props.token.type === "spoiler"}>
-				<Spoiler tokens={(props.token as any).tokens} />
-			</Match>
-			<Match when={props.token.type === "mention"}>
-				<MentionToken token={props.token as any} />
-			</Match>
-		</Switch>
-	);
-}
-
-function TableView(props: { token: Tokens.Table }) {
-	const { header, rows, align } = props.token;
-
-	// NOTE: `align` array may be shorter than column count;
-	// `align[index]` safely returns undefined for missing entries.
-	const getAlign = (index: number): "left" | "center" | "right" | undefined => {
-		const a = align[index];
-		return a === "center" || a === "right" || a === "left" ? a : undefined;
-	};
-
-	return (
-		<div style={{ "overflow-x": "auto" }}>
-			<table>
-				<thead>
-					<tr>
-						<For each={header}>
-							{(cell, index) => {
-								const a = getAlign(index());
-								return (
-									<th style={a ? { "text-align": a } : undefined}>
-										<RenderTokens tokens={cell.tokens} />
-									</th>
-								);
-							}}
+			<Match when={props.block.type === "Paragraph" && props.block}>
+				{(b) => (
+					<p>
+						<For each={b().children}>
+							{(child) => <RenderInline inline={child} />}
 						</For>
-					</tr>
-				</thead>
-				<tbody>
-					<For each={rows}>
-						{(row) => (
-							<tr>
-								<For each={row}>
-									{(cell, index) => {
-										const a = getAlign(index());
-										return (
-											<td style={a ? { "text-align": a } : undefined}>
-												<RenderTokens tokens={cell.tokens} />
-											</td>
-										);
-									}}
+					</p>
+				)}
+			</Match>
+			<Match when={props.block.type === "Blockquote" && props.block}>
+				{(b) => (
+					<blockquote>
+						<For each={b().children}>
+							{(child) => <RenderBlock block={child} />}
+						</For>
+					</blockquote>
+				)}
+			</Match>
+			<Match when={props.block.type === "Codeblock" && props.block}>
+				{(b) => <CodeBlock text={b().content} lang={b().language} />}
+			</Match>
+			<Match when={props.block.type === "List" && props.block}>
+				{(b) => (
+					<ul>
+						<For each={b().items}>{(item) => <RenderBlock block={item} />}</For>
+					</ul>
+				)}
+			</Match>
+			<Match when={props.block.type === "ListItem" && props.block}>
+				{(b) => (
+					<li>
+						<For each={b().content}>
+							{(child) => <RenderBlock block={child} />}
+						</For>
+					</li>
+				)}
+			</Match>
+			<Match when={props.block.type === "Table" && props.block}>
+				{(b) => (
+					<div style={{ "overflow-x": "auto" }}>
+						<table>
+							<thead>
+								<tr>
+									<For each={b().header}>
+										{(cell) => (
+											<th>
+												<For each={cell}>
+													{(inline) => <RenderInline inline={inline} />}
+												</For>
+											</th>
+										)}
+									</For>
+								</tr>
+							</thead>
+							<tbody>
+								<For each={b().rows}>
+									{(row) => (
+										<tr>
+											<For each={row}>
+												{(cell) => (
+													<td>
+														<For each={cell}>
+															{(inline) => <RenderInline inline={inline} />}
+														</For>
+													</td>
+												)}
+											</For>
+										</tr>
+									)}
 								</For>
-							</tr>
-						)}
-					</For>
-				</tbody>
-			</table>
-		</div>
-	);
-}
-
-function DynamicHeading(props: { depth: number; tokens: Token[] }) {
-	return (
-		<Switch>
-			<Match when={props.depth === 1}>
-				<h1>
-					<RenderTokens tokens={props.tokens} />
-				</h1>
-			</Match>
-			<Match when={props.depth === 2}>
-				<h2>
-					<RenderTokens tokens={props.tokens} />
-				</h2>
-			</Match>
-			<Match when={props.depth === 3}>
-				<h3>
-					<RenderTokens tokens={props.tokens} />
-				</h3>
-			</Match>
-			<Match when={props.depth === 4}>
-				<h4>
-					<RenderTokens tokens={props.tokens} />
-				</h4>
-			</Match>
-			<Match when={props.depth === 5}>
-				<h5>
-					<RenderTokens tokens={props.tokens} />
-				</h5>
-			</Match>
-			<Match when={props.depth === 6}>
-				<h6>
-					<RenderTokens tokens={props.tokens} />
-				</h6>
+							</tbody>
+						</table>
+					</div>
+				)}
 			</Match>
 		</Switch>
 	);
 }
 
-type MentionTokenProps = {
-	token: {
-		mention_type: "user" | "role" | "channel" | "emoji";
-		id: string;
-		name?: string;
-		animated?: boolean;
-	};
+const matchMention = <T extends MentionData["type"]>(
+	m: MentionData,
+	t: T,
+): (MentionData & { type: T }) | null => {
+	return m.type === t ? (m as MentionData & { type: T }) : null;
 };
 
-function MentionToken(props: MentionTokenProps) {
+function RenderInline(props: { inline: SerializedInline }) {
 	return (
 		<Switch>
-			<Match when={props.token.mention_type === "user"}>
-				<UserMention id={props.token.id} />
+			<Match when={props.inline.type === "Strong" && props.inline}>
+				{(i) => (
+					<strong>
+						<For each={i().children}>
+							{(child) => <RenderInline inline={child} />}
+						</For>
+					</strong>
+				)}
 			</Match>
-			<Match when={props.token.mention_type === "role"}>
-				<RoleMention id={props.token.id} />
+			<Match when={props.inline.type === "Emphasis" && props.inline}>
+				{(i) => (
+					<em>
+						<For each={i().children}>
+							{(child) => <RenderInline inline={child} />}
+						</For>
+					</em>
+				)}
 			</Match>
-			<Match when={props.token.mention_type === "channel"}>
-				<ChannelMention id={props.token.id} />
+			<Match when={props.inline.type === "Strikethrough" && props.inline}>
+				{(i) => (
+					<del>
+						<For each={i().children}>
+							{(child) => <RenderInline inline={child} />}
+						</For>
+					</del>
+				)}
 			</Match>
-			<Match when={props.token.mention_type === "emoji"}>
-				<CustomEmoji
-					id={props.token.id}
-					name={props.token.name ?? "emoji"}
-					animated={props.token.animated}
-				/>
+			<Match when={props.inline.type === "Link" && props.inline}>
+				{(i) => (
+					<a href={i().href} target="_blank" rel="noopener noreferrer">
+						<For each={i().children}>
+							{(child) => <RenderInline inline={child} />}
+						</For>
+					</a>
+				)}
+			</Match>
+			<Match when={props.inline.type === "Spoiler" && props.inline}>
+				{(i) => <Spoiler children={i().children} />}
+			</Match>
+			<Match when={props.inline.type === "Code" && props.inline}>
+				{(i) => (
+					<code>
+						<For each={i().children}>
+							{(child) => <RenderInline inline={child} />}
+						</For>
+					</code>
+				)}
+			</Match>
+			<Match when={props.inline.type === "Text" && props.inline}>
+				{(i) => <TwemojiText text={i().content} />}
+			</Match>
+			<Match when={props.inline.type === "Mention" && props.inline}>
+				{(i) => (
+					<Switch>
+						<Match when={matchMention(i().mention, "User")}>
+							{(m) => <UserMention id={m().id} />}
+						</Match>
+						<Match when={matchMention(i().mention, "Role")}>
+							{(m) => <RoleMention id={m().id} />}
+						</Match>
+						<Match when={matchMention(i().mention, "Channel")}>
+							{(m) => <ChannelMention id={m().id} />}
+						</Match>
+						<Match when={matchMention(i().mention, "Everyone")}>
+							{(_) => <EveryoneMention />}
+						</Match>
+					</Switch>
+				)}
+			</Match>
+			<Match when={props.inline.type === "CustomEmoji" && props.inline}>
+				{(i) => (
+					<CustomEmoji id={i().id} name={i().name} animated={i().animated} />
+				)}
+			</Match>
+			<Match when={props.inline.type === "UnicodeEmoji" && props.inline}>
+				{(i) => <TwemojiText text={i().content} />}
 			</Match>
 		</Switch>
 	);
@@ -510,29 +468,38 @@ export const Markdown = (props: ParentProps<MarkdownProps>) => {
 	const channels2 = useChannels();
 	const channel = channels2.use(() => props.channel_id);
 
-	const tokens = createMemo(() => {
-		const t = md.lexer(props.content);
-		if (props.inline || props.kindaInline) {
-			if (t.length === 1 && t[0].type === "paragraph") {
-				return (t[0] as Tokens.Paragraph).tokens;
-			}
-		}
-		return t;
+	const [parser, setParser] = createSignal<Parser>();
+	createEffect(() => {
+		loaded.then(() => {
+			setParser(new Parser());
+		});
 	});
 
+	const ast = createMemo(() => {
+		const p = parser();
+		if (!p) return null;
+		const parsed = p.parse(props.content);
+		return parsed.ast() as SerializedDocument;
+	});
+
+	// TODO: use Suspense here?
 	return (
 		<MarkdownContext.Provider
 			value={{ channel: channel(), allowDiffTags: props.allowDiffFormatting }}
 		>
-			<Dynamic
-				component={props.inline ? "span" : "div"}
-				class={`markdown ${props.class ?? ""}`}
-				classList={props.classList}
-				ref={props.ref as any}
-			>
-				<RenderTokens tokens={tokens()} />
-				{props.children}
-			</Dynamic>
+			<Show when={ast()}>
+				<Dynamic
+					component={props.inline ? "span" : "div"}
+					class={`markdown ${props.class ?? ""}`}
+					classList={props.classList}
+					ref={props.ref as any}
+				>
+					<For each={ast()?.blocks}>
+						{(block) => <RenderBlock block={block} />}
+					</For>
+					{props.children}
+				</Dynamic>
+			</Show>
 		</MarkdownContext.Provider>
 	);
 };
