@@ -2,7 +2,12 @@
 resolver = "3"
 members = [
   "scanner-malware",
-  "crate-*", "kerosene", "kerosene-core",
+  "crate-*",
+  "kerosene",
+  "kerosene-core",
+  "kerosene-rest",
+  "kerosene-sync",
+  "kerosene-services",
 ]
 
 [workspace.package]

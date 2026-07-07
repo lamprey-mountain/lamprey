@@ -11,6 +11,7 @@ impl ErrorCode {
             ErrorCode::InvalidData => StatusCode::BAD_REQUEST,
             ErrorCode::UserSuspended => StatusCode::FORBIDDEN,
             ErrorCode::MissingScopes => StatusCode::FORBIDDEN,
+            ErrorCode::MissingAuth => StatusCode::UNAUTHORIZED,
             ErrorCode::SudoRequired => StatusCode::UNAUTHORIZED,
             ErrorCode::UnknownRoom => StatusCode::NOT_FOUND,
             ErrorCode::UnknownChannel => StatusCode::NOT_FOUND,

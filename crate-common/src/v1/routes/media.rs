@@ -1,4 +1,4 @@
-use lamprey_macros::{endpoint, endpoint_new};
+use lamprey_macros::endpoint;
 
 /// Media create
 #[endpoint(
@@ -18,33 +18,6 @@ pub mod media_create {
     pub struct Response {
         #[json]
         pub media: MediaCreated,
-    }
-}
-
-/// Media create
-#[endpoint_new(
-    post,
-    path = "/media",
-    tags = ["media"],
-    response(CREATED, body = MediaCreated, description = "Media create success"),
-)]
-pub mod media_create_new {
-    use crate::v2::types::media::{MediaCreate, MediaCreated};
-
-    pub struct Request {
-        #[json]
-        pub create: MediaCreate,
-    }
-
-    pub struct Response {
-        #[header]
-        pub upload_offset: Option<u64>,
-
-        #[header]
-        pub content_length: Option<u64>,
-
-        #[json]
-        pub created: MediaCreated,
     }
 }
 
@@ -199,7 +172,7 @@ pub mod media_search {
 ///
 /// Always returns immediately, but will automatically begin processing media in
 /// the background.
-#[endpoint_new(
+#[endpoint(
     patch,
     path = "/internal/media-upload/{media_id}",
     tags = ["media"], // NOTE: maybe tag this as "internal" instead?

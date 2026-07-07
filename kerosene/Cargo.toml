@@ -11,7 +11,9 @@ keywords.workspace = true
 [dependencies]
 axum = "0.8.9"
 figment = { version = "0.10.19", features = ["env", "toml"] }
-kerosene-rest = { package = "lamprey-backend-rest", version = "0.1.1", path = "../crate-backend-rest" }
+kerosene-rest = { version = "0.1.1", path = "../kerosene-rest" }
+kerosene-sync = { version = "0.1.1", path = "../kerosene-sync" }
+kerosene-services = { version = "0.1.1", path = "../kerosene-services" }
 lamprey-backend-core = { version = "0.1.1", path = "../crate-backend-core" }
 opentelemetry = "0.32.0"
 opentelemetry-otlp = "0.32.0"

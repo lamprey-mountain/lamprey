@@ -1,5 +1,5 @@
 [package]
-name = "lamprey-backend-rest"
+name = "kerosene-rest"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -16,7 +16,7 @@ common = { package = "lamprey-common", version = "0.1.0", path = "../crate-commo
 lamprey-macros = { path = "../crate-macros" }
 utoipa = "5.4.0"
 url = "2.5.8"
-lamprey-backend-services = { version = "0.1.1", path = "../crate-backend-services" }
+lamprey-backend-services = { package = "kerosene-services", version = "0.1.1", path = "../kerosene-services" } # TODO: rename imports
 validator = "0.20.0"
 inventory = "0.3.24"
 kerosene-core = { version = "0.1.1", path = "../kerosene-core" }

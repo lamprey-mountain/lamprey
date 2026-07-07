@@ -38,6 +38,14 @@ pub enum ErrorCode {
     #[error("mfa required for this action")]
     MfaRequired,
 
+    // TODO: split this into
+    // - "missing session"
+    // - "missing user"
+    // - "this is a federated endpoint and requires server authentication"
+    /// missing authentication
+    #[error("missing authentication")]
+    MissingAuth,
+
     /// you are missing permissions
     #[error("missing permissions")]
     MissingPermissions,

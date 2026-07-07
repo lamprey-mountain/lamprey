@@ -107,20 +107,31 @@ impl Auth {
 
     /// like `self.user()` but returns an error instead of `None`
     pub fn ensure_user(&self) -> Result<&User> {
-        self.user().ok_or(Error::MissingAuth)
+        self.user()
+            .ok_or_else(|| ApiError::from(ErrorCode::MissingAuth).into())
     }
 
     pub fn ensure_session(&self) -> Result<&Session> {
-        self.session().ok_or(Error::MissingAuth)
+        self.session()
+            .ok_or_else(|| ApiError::from(ErrorCode::MissingAuth).into())
     }
 
     pub fn ensure_origin(&self) -> Result<&Hostname> {
-        self.origin().ok_or(Error::MissingAuth)
+        self.origin()
+            .ok_or_else(|| ApiError::from(ErrorCode::MissingAuth).into())
     }
 
     pub fn ensure_scopes(&self, scopes: &[Scope]) -> Result<()> {
-        let self_scopes = self.scopes().ok_or(Error::MissingAuth)?;
-        self_scopes.ensure_all(scopes).map_err(Into::into)
+        let self_scopes = self
+            .scopes()
+            .ok_or_else(|| ApiError::from(ErrorCode::MissingAuth))?;
+        if let Err(_) = self_scopes.ensure_all(scopes) {
+            // NOTE: i don't actually know if these are *all* the required scopes or not (what if ensure_scopes gets called twice?), but its probably good enough for now
+            let mut api_error = ApiError::from(ErrorCode::MissingScopes);
+            api_error.required_scopes = scopes.to_vec();
+            return Err(api_error.into());
+        }
+        Ok(())
     }
 
     pub fn ensure_sudo(&self) -> Result<()> {
@@ -129,22 +140,20 @@ impl Auth {
             return Ok(());
         }
 
-        let session = self.session().ok_or(Error::MissingAuth)?;
+        let session = self
+            .session()
+            .ok_or_else(|| ApiError::from(ErrorCode::MissingAuth))?;
         match &session.status {
             SessionStatus::Sudo {
                 sudo_expires_at, ..
             } => {
-                if *sudo_expires_at < Time::now_utc() {
-                    Err(Error::ApiError(ApiError::from_code(
-                        ErrorCode::SudoSessionExpired,
-                    )))
+                if sudo_expires_at < &Time::now_utc() {
+                    Err(ApiError::from_code(ErrorCode::SudoSessionExpired).into())
                 } else {
                     Ok(())
                 }
             }
-            _ => Err(Error::ApiError(ApiError::from_code(
-                ErrorCode::SudoRequired,
-            ))),
+            _ => Err(ApiError::from_code(ErrorCode::SudoRequired).into()),
         }
     }
 }

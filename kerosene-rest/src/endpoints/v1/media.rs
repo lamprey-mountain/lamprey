@@ -10,10 +10,10 @@ use common::{
 use crate::prelude::*;
 
 #[axum::debug_handler]
-#[handler(routes::media_create_new)]
+#[handler(routes::media_create)]
 async fn create(
-    req: Req<routes::media_create_new::Endpoint>,
-) -> Result<routes::media_create_new::Response> {
+    req: Req<routes::media_create::Endpoint>,
+) -> Result<routes::media_create::Response> {
     let user = req.auth.ensure_user()?;
     user.ensure_unsuspended()?;
     req.auth.ensure_scopes(&[Scope::Full])?;
@@ -42,7 +42,7 @@ async fn create(
                 upload_url,
             };
 
-            Ok(routes::media_create_new::Response {
+            Ok(routes::media_create::Response {
                 created,
                 upload_offset: Some(0),
                 content_length: *size,
@@ -63,7 +63,7 @@ async fn create(
                 media_id,
                 upload_url: None,
             };
-            Ok(routes::media_create_new::Response {
+            Ok(routes::media_create::Response {
                 created,
                 upload_offset: None,
                 content_length: *size,

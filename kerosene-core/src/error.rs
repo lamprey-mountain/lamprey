@@ -1,7 +1,7 @@
 use axum::{Json, response::IntoResponse};
 use http::StatusCode;
 
-pub use lamprey::v1::types::error::{ApiError, ApiResult};
+pub use lamprey::v1::types::error::{ApiError, ApiResult, ErrorCode};
 
 /// any internal server error
 #[derive(thiserror::Error, Debug)]

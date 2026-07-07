@@ -4093,8 +4093,10 @@ version = "0.1.1"
 dependencies = [
  "axum",
  "figment",
+ "kerosene-rest",
+ "kerosene-services",
+ "kerosene-sync",
  "lamprey-backend-core",
- "lamprey-backend-rest",
  "opentelemetry 0.32.0",
  "opentelemetry-otlp 0.32.0",
  "tokio",
@@ -4111,6 +4113,57 @@ dependencies = [
  "lamprey-backend-core",
  "lamprey-common",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "kerosene-rest"
+version = "0.1.1"
+dependencies = [
+ "axum",
+ "inventory",
+ "kerosene-core",
+ "kerosene-services",
+ "lamprey-backend-core",
+ "lamprey-common",
+ "lamprey-macros",
+ "serde",
+ "tower-http",
+ "tracing",
+ "url",
+ "utoipa",
+ "validator",
+ "vergen-gix",
+]
+
+[[package]]
+name = "kerosene-services"
+version = "0.1.1"
+dependencies = [
+ "bytes",
+ "jsonwebtoken",
+ "lamprey-backend-core",
+ "lamprey-backend-data-postgres",
+ "lamprey-common",
+ "lamprey-macros",
+ "opendal",
+ "reqwest 0.13.4",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "kerosene-sync"
+version = "0.1.1"
+dependencies = [
+ "axum",
+ "lamprey-backend-core",
+ "lamprey-common",
+ "lamprey-macros",
+ "tokio",
+ "tracing",
+ "yrs",
 ]
 
 [[package]]
@@ -4279,57 +4332,6 @@ dependencies = [
  "tokio",
  "tracing",
  "uuid",
-]
-
-[[package]]
-name = "lamprey-backend-rest"
-version = "0.1.1"
-dependencies = [
- "axum",
- "inventory",
- "kerosene-core",
- "lamprey-backend-core",
- "lamprey-backend-services",
- "lamprey-common",
- "lamprey-macros",
- "serde",
- "tower-http",
- "tracing",
- "url",
- "utoipa",
- "validator",
- "vergen-gix",
-]
-
-[[package]]
-name = "lamprey-backend-services"
-version = "0.1.1"
-dependencies = [
- "bytes",
- "jsonwebtoken",
- "lamprey-backend-core",
- "lamprey-backend-data-postgres",
- "lamprey-common",
- "lamprey-macros",
- "opendal",
- "reqwest 0.13.4",
- "tokio",
- "tracing",
- "url",
- "uuid",
-]
-
-[[package]]
-name = "lamprey-backend-sync"
-version = "0.1.1"
-dependencies = [
- "axum",
- "lamprey-backend-core",
- "lamprey-common",
- "lamprey-macros",
- "tokio",
- "tracing",
- "yrs",
 ]
 
 [[package]]

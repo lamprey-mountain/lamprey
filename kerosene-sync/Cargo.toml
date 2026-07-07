@@ -1,5 +1,5 @@
 [package]
-name = "lamprey-backend-sync"
+name = "kerosene-sync"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

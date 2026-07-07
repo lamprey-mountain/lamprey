@@ -1,5 +1,5 @@
 [package]
-name = "lamprey-backend-services"
+name = "kerosene-services"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
