@@ -46,10 +46,10 @@ type EmojiGroup = {
 };
 const parseEmoji = (): EmojiGroup[] => {
 	const emojis = emojiResource();
-	if (!emojis.length) return [];
+	if (!emojis.size) return [];
 
 	const groups: EmojiData[][] = [[], [], [], [], [], [], [], [], [], []];
-	for (const emoji of emojis) {
+	for (const emoji of emojis.values()) {
 		// group 2 only has modifiers (eg. for skin tone)
 		if (emoji.group === 2) continue;
 
@@ -178,10 +178,11 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 	const [shortcode] = createResource(hover, async (h) => {
 		if (!h) return "";
 		if (h.type === "custom") return h.label;
+		if (!h.unicode) return "";
 		// Get first shortcode from emojiResource data
 		const emojis = emojiResource();
 		if (!emojis) return "";
-		const emoji = emojis.find((e) => e.char === h.unicode);
+		const emoji = emojis.get(h.unicode);
 		return emoji?.shortcodes?.[0] ?? h.label;
 	});
 

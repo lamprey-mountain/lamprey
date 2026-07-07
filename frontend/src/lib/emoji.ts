@@ -16,6 +16,8 @@ export type EmojiData = {
 	order: number;
 	group: number;
 	shortcodes: string[];
+	spritesheetX: number;
+	spritesheetY: number;
 };
 
 export const [rawEmojiResource] = createResource(async () => {
@@ -28,21 +30,26 @@ export const [emojiLabels] = createResource(async () => {
 	return data;
 });
 
-export const emojiResource = createMemo((): EmojiData[] => {
+export const emojiResource = createMemo((): Map<string, EmojiData> => {
 	const data = rawEmojiResource();
 	const labels = emojiLabels();
-	if (!data || !labels) return [];
+	const emoji = new Map();
+	if (!data || !labels) return emoji;
 
-	return data.emoji.map((e) => {
+	for (const e of data.emoji) {
 		// PERF: make labels.shortcodes a Map, use .get()
 		const shortcodes = labels.shortcodes.find((s) => s.u === e.u);
-		return {
+		emoji.set(e.u, {
 			char: getEmojiString(e.u),
 			label: shortcodes?.s[0] ?? e.u, // Fallback to hexcode
 			hexcode: e.u,
 			order: e.o,
 			group: e.g ?? 8,
 			shortcodes: shortcodes?.s ?? [],
-		};
-	});
+			spritesheetX: e.x,
+			spritesheetY: e.y,
+		});
+	}
+
+	return emoji;
 });

@@ -1,29 +1,27 @@
-import { sheetPngUrl, type CoreEmoji } from "@lamprey/emoji";
-import { rawEmojiResource } from "@/lib/emoji";
+import { sheetPngUrl } from "@lamprey/emoji";
+import { emojiResource } from "@/lib/emoji";
 import { createMemo, type VoidProps, Show } from "solid-js";
-
-function getCoords(hex: string, emojiData: CoreEmoji[]) {
-	// PERF: make this a map
-	const emoji = emojiData.find((e) => e.u === hex.toUpperCase());
-	return emoji ? { x: emoji.x, y: emoji.y } : null;
-}
 
 export type UnicodeEmojiProps = {
 	hex: string;
 };
 
 export const UnicodeEmoji = (props: VoidProps<UnicodeEmojiProps>) => {
-	const data = rawEmojiResource();
+	const data = emojiResource();
 
 	const coords = createMemo(() => {
 		if (!data) return null;
-		return getCoords(props.hex, data.emoji);
+		const emoji = data.get(props.hex.toUpperCase());
+		return emoji ? { x: emoji.spritesheetX, y: emoji.spritesheetY } : null;
 	});
 
 	const dimensions = createMemo(() => {
 		if (!data) return { COLS: 1, ROWS: 1 };
-		const COLS = Math.max(...data.emoji.map((e) => e.x)) + 1;
-		const ROWS = Math.max(...data.emoji.map((e) => e.y)) + 1;
+		// PERF: surely there's a better way to do this
+		// TODO: probably calculate spritesheet width/height in emoji build script?
+		// CoreFile.{height, width}
+		const COLS = Math.max(...[...data.values()].map((e) => e.spritesheetX)) + 1;
+		const ROWS = Math.max(...[...data.values()].map((e) => e.spritesheetY)) + 1;
 		return { COLS, ROWS };
 	});
 

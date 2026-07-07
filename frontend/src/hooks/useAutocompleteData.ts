@@ -155,7 +155,7 @@ export const useAutocompleteData = () => {
 			}
 			const unicodeEmoji = emojiResource();
 			if (unicodeEmoji) {
-				combined.push(...unicodeEmoji);
+				combined.push(...unicodeEmoji.values());
 			}
 			setAllEmoji(combined);
 		} else if (kind.type === "command") {
