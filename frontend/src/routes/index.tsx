@@ -29,7 +29,6 @@ import { Voice, VoiceTray } from "@/components/features/voice/Voice.tsx";
 import { Calendar } from "@/components/shared/Calendar";
 import { Category } from "@/components/shared/Category";
 import { ChannelNav } from "@/components/shared/ChannelNav";
-import { Feed } from "@/components/shared/Feed";
 import { Forum } from "@/components/shared/Forum";
 import {
 	Forum2,
@@ -532,17 +531,6 @@ export const RouteHome = (
 		<>
 			<Title title={t("page.home")} />
 			<Home />
-		</>
-	);
-};
-
-export const RouteFeed = (
-	_props: ParentProps<RouteSectionProps>,
-): JSX.Element => {
-	return (
-		<>
-			<Title title="feed" />
-			<Feed />
 		</>
 	);
 };

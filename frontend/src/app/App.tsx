@@ -44,7 +44,6 @@ import {
 	RouteAuthorize,
 	RouteChannel,
 	RouteChannelSettings,
-	RouteFeed,
 	RouteFriends,
 	RouteHome,
 	RouteInbox,
@@ -73,7 +72,6 @@ const App: Component = () => {
 					path="/channel/:channel_id/script/:script_id"
 					component={RouteChannel}
 				/>
-				<Route path="/feed" component={RouteFeed} />
 				<Route path="/user/:user_id" component={RouteUser} />
 				<Route path="/invite/:code" component={RouteInvite} />
 				<Route path="/thread/:channel_id" component={RouteChannel} />
