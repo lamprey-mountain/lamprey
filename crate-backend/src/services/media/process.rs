@@ -364,7 +364,7 @@ impl MediaPipeline {
 
         let mut buf = BytesMut::with_capacity(1024 * 1024);
         loop {
-            let n = file.read(&mut buf).await?;
+            let n = file.read_buf(&mut buf).await?;
             if n == 0 {
                 break;
             }
