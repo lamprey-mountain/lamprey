@@ -1,5 +1,5 @@
 {
-	"workspace": ["frontend", "ts-sdk", "tests"],
+	"workspace": ["frontend", "ts-sdk", "tests", "emoji"],
 	"fmt": {
 		"useTabs": true,
 		"exclude": ["**/.sqlx", "pnpm-lock.yaml"]

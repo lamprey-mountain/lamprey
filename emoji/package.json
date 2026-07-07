@@ -1,0 +1,14 @@
+{
+	"name": "@lamprey/emoji",
+	"type": "module",
+	"version": "0.1.0",
+	"description": "emoji spritesheets and data",
+	"repository": {
+		"type": "git",
+		"url": "https://git.celery.eu.org/lamprey/lamprey"
+	},
+	"devDependencies": {
+		"emojibase": "^17.0.0",
+		"emojibase-data": "^17.0.0"
+	}
+}
