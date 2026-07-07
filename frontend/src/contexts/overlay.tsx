@@ -253,6 +253,7 @@ export function OverlayProvider(props: ParentProps) {
 		});
 	});
 
+	// TODO: use Switch/Match instead?
 	function getMenu(menu: Menu) {
 		switch (menu.type) {
 			case "room": {

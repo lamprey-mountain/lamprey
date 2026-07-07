@@ -83,7 +83,7 @@ export const ModalRoomCreateOrJoin = (props: ModalRoomCreateOrJoinProps) => {
 							>
 								Cancel
 							</button>
-							<button type="submit" class="primary">
+							<button type="submit" class="button primary">
 								Create Room
 							</button>
 						</div>
@@ -117,7 +117,7 @@ export const ModalRoomCreateOrJoin = (props: ModalRoomCreateOrJoinProps) => {
 							>
 								Cancel
 							</button>
-							<button type="submit" class="primary">
+							<button type="submit" class="button primary">
 								Accept Invite
 							</button>
 						</div>

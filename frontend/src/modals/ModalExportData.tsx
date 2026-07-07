@@ -46,7 +46,7 @@ export const ModalExportData = () => {
 					<button type="button" class="button" onClick={handleCancel}>
 						Cancel
 					</button>
-					<button type="submit" class="primary">
+					<button type="submit" class="button primary">
 						Export
 					</button>
 				</div>

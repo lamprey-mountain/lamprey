@@ -383,7 +383,7 @@ const ModalPrompt = (props: {
 			>
 				<input ref={input} type="text" name="text" />
 				<div class="bottom">
-					<input type="submit" value="done!"></input>{" "}
+					<input type="submit" class="button primary" value="done!"></input>{" "}
 					<button
 						type="button"
 						class="button"

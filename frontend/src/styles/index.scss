@@ -1,5 +1,6 @@
 @use "sass:color";
 
+// base styles and utilities
 @use "./reset.scss";
 @use "./fonts.scss";
 @use "./code.scss";
@@ -7,6 +8,11 @@
 @use "./animation.scss" as *;
 @use "./util.scss" as *;
 
+// design system
+@use "./design.scss";
+@use "./text.scss";
+
+// component/feature based styles
 @use "./timeline.scss";
 @use "./media.scss";
 @use "./inbox.scss";
@@ -53,19 +59,6 @@
 	height: 100vh;
 	background-color: $bg-200;
 	color: $fg-200;
-}
-
-button.button,
-input[type="submit"] {
-	background-color: $bg-300;
-	cursor: pointer;
-	padding: 2px 4px;
-	border: solid $sep-500 1px;
-
-	&:hover,
-	&:focus {
-		background-color: $bg-400;
-	}
 }
 
 .home {
@@ -497,44 +490,6 @@ input[type="submit"] {
 	}
 }
 
-h1 {
-	font-size: 1.5rem;
-}
-
-h2 {
-	font-size: 1.5rem;
-}
-
-h3 {
-	font-size: 1.3rem;
-}
-
-b,
-strong {
-	font-weight: bold;
-}
-
-s {
-	text-decoration: line-through;
-}
-
-li,
-p {
-	white-space: pre-wrap;
-}
-
-pre,
-code {
-	background-color: $bg-200;
-	font-family: var(--font-mono);
-}
-
-pre {
-	overflow-x: auto;
-	padding: 4px;
-	white-space: pre;
-}
-
 .editor .mention,
 .markdown .mention {
 	background: oklch(var(--color-link-300) / 0.2);
@@ -548,83 +503,8 @@ pre {
 	}
 }
 
-.markdown .mention {
-	cursor: pointer;
-}
-
-.markdown .mention:hover {
-	text-decoration: underline;
-}
-
-.markdown .emoji {
-	vertical-align: center;
-}
-
-a {
-	color: $link-500;
-	cursor: pointer;
-	border-radius: 2px;
-
-	&:hover,
-	&:focus {
-		background: #fff2;
-	}
-}
-
-.underline-links a {
-	text-decoration: underline;
-}
-
 .select-all {
 	user-select: all;
-}
-
-em {
-	font-style: italic;
-}
-
-.markdown {
-	white-space: collapse;
-
-	li,
-	p {
-		white-space: pre-wrap;
-	}
-
-	& ul,
-	ol {
-		white-space: normal;
-
-		& ul,
-		ol {
-			margin-left: 1rem;
-		}
-	}
-
-	& li {
-		list-style-position: outside;
-		margin-left: 1rem;
-	}
-
-	& ul > li {
-		list-style-type: disc;
-	}
-
-	& ol > li {
-		list-style-type: numbered;
-	}
-
-	& li > * {
-		display: inline;
-	}
-
-	:is(p, ol, ul) + :is(p, ol, ul) {
-		margin-top: 1em;
-	}
-
-	li + li {
-		margin-top: 4px;
-	}
 }
 
 .channel-topic-clickable {
@@ -733,6 +613,7 @@ em {
 		gap: 6px;
 		justify-content: end;
 
+		// TODO: replace the below with design sysetm in design.scss
 		button,
 		input[type="submit"] {
 			padding: 2px 4px;
@@ -766,6 +647,15 @@ em {
 		pointer-events: auto;
 		padding-bottom: 8px;
 	}
+
+	& button[disabled] {
+		cursor: not-allowed;
+		color: $fg-600;
+
+		&:hover {
+			background: none;
+		}
+	}
 }
 
 .contextmenu menu {
@@ -778,13 +668,12 @@ em {
 	border-radius: 4px;
 	padding: 4px 0;
 
+	// TODO: use classes instead of element names for all styles
 	& button {
-		border: none;
 		padding: 2px 4px;
 		margin: -2px 0;
 		width: 100%;
 		text-align: left;
-		background: none;
 		cursor: pointer;
 		color: $fg-300;
 
@@ -874,13 +763,10 @@ input[type="url"] {
 		button.action {
 			display: block;
 			padding: 4px 8px;
-			background: none;
-			border: none;
 			border-radius: 4px;
 			width: 100%;
-			text-align: left;
-			font: inherit;
 			color: $fg-400;
+			cursor: pointer;
 
 			&:hover,
 			&:focus {
@@ -1117,10 +1003,7 @@ input[type="url"] {
 	max-height: min(30vh, 500px);
 }
 
-summary {
-	cursor: pointer;
-}
-
+// TODO: remove all .icon components/elements, promote .icon2 to .icon
 .icon {
 	height: 1em;
 	width: 1em;
@@ -1253,18 +1136,6 @@ summary {
 		overflow-y: auto;
 	}
 
-	.role-list,
-	.role-edit {
-		& button {
-			background: $bg-200;
-			border: solid $sep-500 1px;
-
-			&:hover {
-				background: $bg-300;
-			}
-		}
-	}
-
 	& .role-list > li {
 		/* border: solid $sep-500 1px; */
 		/* background: $bg-300; */
@@ -1374,10 +1245,6 @@ summary {
 			}
 		}
 
-		& button[disabled] {
-			background: $bg-300;
-		}
-
 		label {
 			display: flex;
 			gap: 2px;
@@ -1401,15 +1268,6 @@ summary {
 		.option {
 			align-items: start;
 			gap: 4px;
-		}
-
-		button.danger {
-			border: solid #e8374f 1px;
-			background: #ba2f42;
-
-			&:hover {
-				background: color.adjust(#ba2f42, $lightness: -10%);
-			}
 		}
 	}
 
@@ -1442,12 +1300,6 @@ summary {
 	}
 }
 
-/* FIXME: text alignment with uuids */
-/* uuids have ascenders (tall glyphs) but no descenders (eg. qgyj) making code containing uuids look unbalanced */
-code {
-	padding: 0px 2px;
-}
-
 .room-settings-audit-log {
 	& > li {
 		border: solid $sep-300 1px;
@@ -1477,15 +1329,6 @@ code {
 
 		& .spacer {
 			flex: 1;
-		}
-
-		& button {
-			background: $bg-200;
-			border: solid $sep-500 1px;
-
-			&:hover {
-				background: $bg-300;
-			}
 		}
 	}
 }
@@ -1632,8 +1475,6 @@ input[type="text"].dropdown {
 	font-size: 0.9em;
 
 	button {
-		background: none;
-		border: none;
 		padding: 0 2px;
 		line-height: 1;
 		font-size: 1.2em;
@@ -1842,22 +1683,6 @@ button[disabled] {
 	}
 }
 
-a:focus-visible {
-	background: $link-500;
-	color: $fg-100;
-}
-
-/* HACK: blockquote markdown parsing */
-blockquote {
-	white-space: normal;
-}
-
-blockquote {
-	border-left: solid $sep-800 3px;
-	margin: 2px 0;
-	padding-left: 8px;
-}
-
 .status-indicator {
 	height: 12px;
 	aspect-ratio: 1/1;
@@ -2037,44 +1862,6 @@ body.resizing {
 	}
 }
 
-table {
-	border: solid $sep-500 1px;
-	width: 100%;
-	border-collapse: collapse;
-
-	// alternating stripes for rows
-	& tr {
-		background: $bg-200;
-
-		&:nth-child(even) {
-			background: $bg-250;
-		}
-	}
-
-	& > thead {
-		// TODO: i would like to have `position: sticky` for table headers, but it doesnt work with virtual scrolling :(
-		border-bottom: solid $sep-300 1px;
-		// looks like the bottom thead border is covering the left/right table borders, unsure how to fix
-
-		& > tr {
-			background: $bg-100;
-		}
-	}
-
-	& td,
-	th {
-		padding: 6px 8px;
-
-		// default text align; is overridden by markdown column alignment syntax
-		text-align: left;
-	}
-
-	& th {
-		color: $fg-500;
-		font-weight: bold;
-	}
-}
-
 .inbox > table {
 	min-width: 500px;
 }
@@ -2148,11 +1935,6 @@ table {
 
 		.controls {
 			display: flex;
-
-			button {
-				background: none;
-				border: none;
-			}
 
 			button .icon {
 				height: 24px;
@@ -2425,17 +2207,6 @@ table {
 	}
 }
 
-ins {
-	color: $color-green;
-	background: oklch(var(--color-green) / 0.1);
-}
-
-del {
-	color: $color-red;
-	background: oklch(var(--color-red) / 0.1);
-	text-decoration: line-through;
-}
-
 .upload-item {
 	background: $bg-300;
 	border-radius: 4px;
@@ -2589,15 +2360,6 @@ del {
 	}
 }
 
-details > summary {
-	list-style-type: disclosure-closed;
-	list-style-position: inside;
-}
-
-details[open] > summary {
-	list-style-type: disclosure-open;
-}
-
 .oauth-authorize {
 	padding: 8px;
 	display: grid;
@@ -2663,29 +2425,6 @@ details[open] > summary {
 
 	&:hover {
 		background: oklch(var(--color-fg6) / 0.2);
-	}
-}
-
-button.primary,
-input[type="submit"].primary {
-	border: solid $link-300 1px;
-	background: $link-300;
-	color: $fg-100;
-
-	&:hover,
-	&:focus-visible {
-		background: $link-200;
-	}
-}
-
-button.destructive {
-	border: solid $color-red 1px;
-	color: $color-red;
-
-	&:hover,
-	&:focus-visible {
-		background: $color-red;
-		color: $bg-200;
 	}
 }
 
@@ -3062,46 +2801,37 @@ button.link {
 	}
 }
 
-.emoji {
-	height: 1em;
-	width: 1em;
-}
-
 .emoji-button {
 	position: relative;
-	margin: -8px 0;
 	height: 32px;
 	width: 32px;
 
-	.button {
-		display: grid;
-		place-items: center;
+	& > .emoji-button-inner {
+		display: flex;
+		justify-content: center;
+		align-items: center;
 		height: 100%;
-		pointer-events: all;
+		width: 100%;
 		cursor: pointer;
-	}
 
-	.button .icon,
-	.button .icon2 {
-		display: contents;
-	}
+		& > .emoji-button-icon {
+			display: contents;
 
-	.button .emoji {
-		transform: none;
-		margin-right: 0;
-		height: 22px;
-		width: 22px;
-		transition: all 0.1s;
-	}
+			& > .emoji {
+				height: 18px;
+				width: 18px;
+				scale: 1;
+				filter: grayscale(1);
+				transition: all 0.5s cubic-bezier(0.17, 0.67, 0.58, 1.26);
+			}
+		}
 
-	.button .emoji {
-		filter: grayscale(1);
-		transition: all 0.2s ease-out;
-	}
-
-	:is(.button:hover, .button.shown) .emoji {
-		filter: grayscale(0);
-		transform: scale(1.1);
+		&:hover, &:focus-visible, &.shown {
+			& > .emoji-button-icon > .emoji {
+				filter: grayscale(0);
+				scale: 1.3;
+			}
+		}
 	}
 }
 
@@ -3235,21 +2965,6 @@ button.link {
 			width: 20px;
 			height: 20px;
 		}
-	}
-}
-
-kbd {
-	display: inline-block;
-	border: solid $sep-400 1px;
-	background: $bg-300;
-	padding: 0 4px;
-	box-shadow: 0 3px $bg-150;
-	border-radius: 2px;
-	/* font-family: var(--font-mono); */
-
-	&:active {
-		transform: translate(0, 2px);
-		box-shadow: 0 1px $bg-100;
 	}
 }
 
@@ -3800,38 +3515,6 @@ input[type="search"].tags-search {
 	}
 }
 
-.contextmenu button[disabled] {
-	cursor: not-allowed;
-	color: $fg-600;
-
-	&:hover {
-		background: none;
-	}
-}
-
-.markdown .spoiler {
-	background-color: $bg-400;
-	color: transparent;
-	border-radius: 3px;
-	padding: 0 2px;
-	cursor: pointer;
-	transition: background-color 0.2s, color 0.2s;
-
-	&.shown {
-		background-color: oklch(var(--color-bg4) / 0.5);
-		color: inherit;
-		cursor: text;
-	}
-
-	& > * {
-		visibility: hidden;
-	}
-
-	&.shown > * {
-		visibility: visible;
-	}
-}
-
 .editor .spoiler-preview {
 	background-color: rgba(255, 255, 255, 0.1);
 	border-radius: 2px;
@@ -4153,33 +3836,6 @@ button.round {
 
 	& > .menu {
 		display: flex;
-
-		& > button {
-			width: 32px;
-			height: 32px;
-			display: flex;
-			justify-content: center;
-			align-items: center;
-			cursor: pointer;
-
-			&:active {
-				translate: 0 1px;
-			}
-
-			& > .icon2 {
-				background: $fg-300;
-				width: 18px;
-				height: 18px;
-			}
-
-			&:hover > .icon2 {
-				background: $fg-100;
-			}
-
-			&.danger:hover > .icon2 {
-				background: $color-red;
-			}
-		}
 	}
 
 	&.selecting {

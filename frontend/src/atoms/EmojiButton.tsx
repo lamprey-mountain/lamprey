@@ -9,7 +9,7 @@ type EmojiButtonProps = {
 export const EmojiButton = (props: EmojiButtonProps) => {
 	const ctx = useCtx();
 	const [show, setShow] = createSignal(false);
-	let wrapperEl: HTMLDivElement | undefined;
+	let wrapperEl: HTMLButtonElement | undefined;
 
 	const emojis = ["😀", "🤨", "🥰", "🥳", "🥹", "😫", "🤬", "🤓", "🤮"];
 	const [emoji, setEmoji] = createSignal(emojis[0]);
@@ -65,14 +65,14 @@ export const EmojiButton = (props: EmojiButtonProps) => {
 
 	return (
 		<div class="emoji-button" onMouseEnter={changeEmoji} onFocus={changeEmoji}>
-			<div
-				class="button"
+			<button
+				class="emoji-button-inner"
 				ref={wrapperEl}
 				onClick={handleClick}
 				classList={{ shown: show() }}
 			>
-				<div class="icon" innerHTML={getTwemoji(emoji())} />
-			</div>
+				<div class="emoji-button-icon" innerHTML={getTwemoji(emoji())} />
+			</button>
 		</div>
 	);
 };

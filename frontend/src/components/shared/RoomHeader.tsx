@@ -29,13 +29,13 @@ export const RoomHeader = (props: RoomHeaderProps) => {
 			data-room-id={props.room.id}
 		>
 			<b>home</b>
-			<div style="flex:1"></div>
-			<div class="right">
-				<SearchInput room={props.room} />
+			<div class="spacer"></div>
+			<SearchInput room={props.room} />
+			<menu class="menu">
 				<button type="button" onClick={toggleMembers} title="Show members">
 					<Icon src={icMembers} alt="Members" />
 				</button>
-			</div>
+			</menu>
 		</header>
 	);
 };

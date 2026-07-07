@@ -248,7 +248,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 					<Show when={canDeleteMessages()}>
 						<button
 							type="button"
-							class="danger"
+							class="button icon-button danger"
 							onClick={deleteSelected}
 							title="delete"
 						>
@@ -258,14 +258,19 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 					<Show when={canRemoveMessages()}>
 						<button
 							type="button"
-							class="danger"
+							class="button icon-button danger"
 							onClick={removeSelected}
 							title="remove"
 						>
 							<Icon src={icRemove} color={null} />
 						</button>
 					</Show>
-					<button type="button" onClick={exitSelectMode} title="cancel">
+					<button
+						type="button"
+						class="button icon-button"
+						onClick={exitSelectMode}
+						title="cancel"
+					>
 						<Icon src={icCancel} color={null} />
 					</button>
 				</menu>
@@ -278,6 +283,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 					>
 						<button
 							type="button"
+							class="button icon-button"
 							onClick={() => {
 								// TODO: calling
 							}}
@@ -295,6 +301,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 					>
 						<button
 							type="button"
+							class="button icon-button"
 							onClick={(e) => {
 								if (!ctx.threadsView()) {
 									const ref = e.currentTarget;
@@ -313,6 +320,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 					</Show>
 					<button
 						type="button"
+						class="button icon-button"
 						onClick={togglePinned}
 						classList={{ active: isShowingPinned() }}
 						title="Show pinned messages"
@@ -321,7 +329,12 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 						<Icon src={icPin} color={null} />
 					</button>
 					<Show when={props.showMembersButton ?? true}>
-						<button type="button" onClick={toggleMembers} title="Show members">
+						<button
+							type="button"
+							class="button icon-button"
+							onClick={toggleMembers}
+							title="Show members"
+						>
 							<Icon src={icMembers} color={null} />
 						</button>
 					</Show>

@@ -1,0 +1,105 @@
+@use "./util.scss" as *;
+
+// TODO: copy design system stuff here
+
+.button {
+	display: block;
+	padding: 2px 4px;
+	cursor: pointer;
+	background-color: $bg-300;
+	border: solid $sep-400 1px;
+	color: $fg-400;
+
+	&:hover,
+	&:focus-visible {
+		color: $fg-100;
+		background-color: $bg-400;
+	}
+
+	&.primary {
+		border-color: oklch(from $link-300 calc(l - 0.10) calc(c - 0.00) h);
+		background-color: oklch(from $link-300 calc(l - 0.15) calc(c - 0.00) h);
+
+		&:hover, &:focus-visible {
+			background-color: oklch(from $link-300 calc(l - 0.10) calc(c - 0.00) h);
+		}
+	}
+
+	&.danger {
+		border-color: oklch(from $color-red calc(l - 0.25) c h);
+		background-color: oklch(from $color-red calc(l - 0.30) calc(c - 0.03) h);
+		background-color: oklch(
+			from oklch(var(--color-red))
+			calc(l - 0.30)
+			calc(c - 0.03)
+			h
+		);
+
+		&:hover,
+		&:focus-visible {
+			background-color: oklch(from $color-red calc(l - 0.35) calc(c - 0.05) h);
+		}
+	}
+
+	&[disabled] {
+		cursor: not-allowed;
+		background-color: oklch(from $bg-400 calc(l - 0.08) c h);
+		color: $fg-600;
+	}
+
+	// NOTE: unsure if this will be kept here
+	&.icon-button {
+		width: 32px;
+		height: 32px;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		background: none;
+		color: none;
+		border: none;
+
+		& > .icon2 {
+			background: $fg-500;
+			width: 18px;
+			height: 18px;
+		}
+
+		&:hover, &:focus-visible {
+			background-color: transparent;
+
+			& > .icon2 {
+				background: $fg-100;
+			}
+
+			&.danger > .icon2 {
+				background-color: $color-red;
+			}
+
+			&.primary > .icon2 {
+				background-color: $link-300;
+			}
+		}
+
+		&:active {
+			translate: 0 1px;
+		}
+	}
+
+	// TODO
+	// &.link {}
+}
+
+// always style via classes, not element names? but attrs are allowed?
+// unsure what the current best practices are
+/* input[type="text"], */
+/* input[type="search"], */
+/* input[type="url"] { */
+/* background-color: $bg-150; */
+/* border: solid 1px $sep-300; */
+/* padding: 2px 4px; */
+/* border-radius: 2px; */
+
+/* &:focus { */
+/* border: solid 1px $link-500; */
+/* } */
+/* } */

@@ -128,7 +128,7 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 					<button type="button" class="button" onClick={modalCtl.close}>
 						Cancel
 					</button>
-					<button type="submit" class="primary" disabled={loading()}>
+					<button type="submit" class="button primary" disabled={loading()}>
 						{loading() ? "Saving..." : props.tag ? "Update" : "Create"}
 					</button>
 				</div>

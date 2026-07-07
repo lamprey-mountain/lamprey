@@ -1,0 +1,269 @@
+@use "./util.scss" as *;
+
+// NOTE: maybe i want to only apply these styles in .text/.markdown?
+
+h1 {
+	font-size: 1.5rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+}
+
+h3 {
+	font-size: 1.3rem;
+}
+
+b,
+strong {
+	font-weight: bold;
+}
+
+s {
+	text-decoration: line-through;
+}
+
+li,
+p {
+	white-space: pre-wrap;
+}
+
+pre,
+code {
+	background-color: $bg-200;
+	font-family: var(--font-mono);
+}
+
+pre {
+	overflow-x: auto;
+	padding: 4px;
+	white-space: pre;
+}
+
+a {
+	color: $link-500;
+	cursor: pointer;
+	border-radius: 2px;
+
+	&:hover,
+	&:focus-visible {
+		/* background: #fff2; */
+		text-decoration: underline;
+	}
+}
+
+.underline-links a {
+	text-decoration: underline;
+
+	&:hover,
+	&:focus-visible {
+		// TODO: come up with styles for this
+		background: #fff2;
+	}
+}
+
+summary {
+	cursor: pointer;
+}
+
+details > summary {
+	list-style-type: disclosure-closed;
+	list-style-position: inside;
+}
+
+details[open] > summary {
+	list-style-type: disclosure-open;
+}
+
+em {
+	font-style: italic;
+}
+
+/* FIXME: text alignment with uuids */
+/* uuids have ascenders (tall glyphs) but no descenders (eg. qgyj) making code containing uuids look unbalanced */
+code {
+	padding: 0px 2px;
+}
+
+// HACK: blockquote markdown parsing
+// i forget what this means or what this was for?
+blockquote {
+	white-space: normal;
+}
+
+blockquote {
+	border-left: solid $sep-800 3px;
+	margin: 2px 0;
+	padding-left: 8px;
+}
+
+table {
+	border: solid $sep-500 1px;
+	width: 100%;
+	border-collapse: collapse;
+
+	// alternating stripes for rows
+	& tr {
+		background: $bg-200;
+
+		&:nth-child(even) {
+			background: $bg-250;
+		}
+	}
+
+	& > thead {
+		// TODO: i would like to have `position: sticky` for table headers, but it doesnt work with virtual scrolling :(
+		border-bottom: solid $sep-300 1px;
+		// looks like the bottom thead border is covering the left/right table borders, unsure how to fix
+
+		& > tr {
+			background: $bg-100;
+		}
+	}
+
+	& td,
+	th {
+		padding: 6px 8px;
+
+		// default text align; is overridden by markdown column alignment syntax
+		// NOTE: maybe i want to inherit text align for rtl?
+		text-align: left;
+	}
+
+	& th {
+		color: $fg-500;
+		font-weight: bold;
+	}
+}
+
+ins {
+	color: $color-green;
+	background: oklch(var(--color-green) / 0.1);
+}
+
+del {
+	color: $color-red;
+	background: oklch(var(--color-red) / 0.1);
+	text-decoration: line-through;
+}
+
+// NOTE: is this a text style?
+.emoji {
+	height: 1em;
+	width: 1em;
+}
+
+/* img.emoji, */
+/* img.custom-emoji { */
+/* height: 1em; */
+/* width: 1em; */
+/* margin: 0 0.05em 0 0.1em; */
+/* vertical-align: -0.1em; */
+/* } */
+
+/* .markdown.emoji-only { */
+/* font-size: 1.5rem !important; */
+/* line-height: 1.5; */
+
+/* & .emoji, */
+/* & img.emoji, */
+/* & img.custom-emoji { */
+/* width: 1.5em !important; */
+/* height: 1.5em !important; */
+/* } */
+/* } */
+
+kbd {
+	display: inline-block;
+	border: solid $sep-400 1px;
+	background: $bg-300;
+	padding: 0 4px;
+	box-shadow: 0 3px $bg-150;
+	border-radius: 2px;
+	/* font-family: var(--font-mono); */
+
+	&:active {
+		transform: translate(0, 2px);
+		box-shadow: 0 1px $bg-100;
+	}
+}
+
+// NOTE: should some of these styles be lifted out of .markdown?
+.markdown {
+	white-space: collapse;
+
+	.mention {
+		cursor: pointer;
+
+		&:hover {
+			text-decoration: underline;
+		}
+	}
+
+	.emoji {
+		vertical-align: center;
+	}
+
+	li,
+	p {
+		white-space: pre-wrap;
+	}
+
+	& ul,
+	ol {
+		white-space: normal;
+
+		& ul,
+		ol {
+			margin-left: 1rem;
+		}
+	}
+
+	& li {
+		list-style-position: outside;
+		margin-left: 1rem;
+	}
+
+	& ul > li {
+		list-style-type: disc;
+	}
+
+	& ol > li {
+		list-style-type: numbered;
+	}
+
+	& li > * {
+		display: inline;
+	}
+
+	:is(p, ol, ul) + :is(p, ol, ul) {
+		margin-top: 1em;
+	}
+
+	li + li {
+		margin-top: 4px;
+	}
+
+	.spoiler {
+		background-color: $bg-400;
+		color: transparent;
+		border-radius: 3px;
+		padding: 0 2px;
+		cursor: pointer;
+		transition: background-color 0.2s, color 0.2s;
+
+		&.shown {
+			background-color: oklch(var(--color-bg4) / 0.5);
+			color: inherit;
+			cursor: text;
+		}
+
+		& > * {
+			visibility: hidden;
+		}
+
+		&.shown > * {
+			visibility: visible;
+		}
+	}
+}

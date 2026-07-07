@@ -122,7 +122,7 @@ export const Home = () => {
 								/>
 							</label>
 							<br />
-							<input class="submit-btn" type="submit" value="login" />
+							<input class="button submit-btn" type="submit" value="login" />
 						</form>
 					</section>
 					<section class="social-wrapper">

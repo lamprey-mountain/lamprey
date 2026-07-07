@@ -142,15 +142,19 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 					<Show when={isOrderDirty()}>
 						<div style="display: flex; gap: 8px; align-items: center; margin-left: auto">
 							<span>order changed</span>
-							<button type="button" class="big" onClick={cancelOrder}>
+							<button type="button" class="button big" onClick={cancelOrder}>
 								cancel
 							</button>
-							<button type="button" class="big primary" onClick={saveOrder}>
+							<button
+								type="button"
+								class="button big primary"
+								onClick={saveOrder}
+							>
 								save
 							</button>
 						</div>
 					</Show>
-					<button type="button" class="big primary" onClick={createRole}>
+					<button type="button" class="button big primary" onClick={createRole}>
 						create role
 					</button>
 				</header>
@@ -489,7 +493,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 				</button>
 				<button
 					type="button"
-					class="danger"
+					class="button danger"
 					onClick={deleteRole(props.edit.role.id!)}
 				>
 					delete role

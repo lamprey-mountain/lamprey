@@ -327,7 +327,11 @@ export const ModalResetPassword = () => {
 						</label>
 						<br />
 						<br />
-						<input class="submit-btn" type="submit" value={"set password"} />
+						<input
+							class="button submit-btn"
+							type="submit"
+							value={"set password"}
+						/>
 					</form>
 				</section>
 			</div>

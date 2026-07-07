@@ -13,7 +13,14 @@ ol {
 	list-style: none;
 }
 
-button {
+button,
+input,
+select,
+textarea {
 	font: inherit;
 	color: inherit;
+	letter-spacing: inherit;
+	border: none;
+	background: none;
+	text-align: inherit;
 }

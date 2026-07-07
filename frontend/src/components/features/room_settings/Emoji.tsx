@@ -69,7 +69,7 @@ export function Emoji(props: VoidProps<{ room: RoomT }>) {
 					<input name="file" type="file" />
 				</label>
 				<br />
-				<input value="create" type="submit" />
+				<input value="create" type="submit" class="button" />
 			</form>
 			<ul>
 				<For each={emoji()?.state.ids ?? []}>

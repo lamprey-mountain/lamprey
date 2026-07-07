@@ -87,7 +87,7 @@ export const ModalLink = (props: ModalLinkProps) => {
 					/>
 				</div>
 				<div class="bottom">
-					<input class="primary" type="submit" value="Insert" />{" "}
+					<input class="primary" type="button submit" value="Insert" />{" "}
 					<button
 						type="button"
 						class="button"

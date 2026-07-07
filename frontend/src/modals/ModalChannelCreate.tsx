@@ -132,7 +132,7 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 					<button type="button" class="button" onClick={handleCancel}>
 						Cancel
 					</button>
-					<button type="submit" class="primary">
+					<button type="submit" class="button primary">
 						Create Channel
 					</button>
 				</div>

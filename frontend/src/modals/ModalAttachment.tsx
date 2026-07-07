@@ -165,7 +165,7 @@ export const ModalAttachment = (props: ModalAttachmentProps) => {
 					<button type="button" class="button" onClick={() => modalCtl.close()}>
 						cancel
 					</button>
-					<button type="submit" class="primary">
+					<button type="submit" class="button primary">
 						save
 					</button>
 				</div>
