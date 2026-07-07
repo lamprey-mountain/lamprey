@@ -255,7 +255,13 @@ export const createTimelineVirtualizer = (
 				// wait for layout but before paint
 				// await new Promise((r) => requestAnimationFrame(r));
 
-				scrollEl()?.scrollBy({ top: task.delta, behavior: "instant" });
+				const el = scrollEl();
+				if (!el) return;
+
+				el.scrollBy({ top: task.delta, behavior: "instant" });
+
+				const isStuck =
+					el.scrollHeight - el.scrollTop - el.clientHeight < STICKY_THRESHOLD;
 
 				cachedLayout = calculateLayout();
 				cachedRange = calculateRange();
@@ -266,6 +272,10 @@ export const createTimelineVirtualizer = (
 
 				// maybe overflow-anchor can keep stuff stable
 				// maybe i'd need to disable overflow-anchor during SET_ANCHOR
+
+				if (isStuck) {
+					el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
+				}
 
 				break;
 			}

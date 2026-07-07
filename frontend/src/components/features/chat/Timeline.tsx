@@ -15,6 +15,7 @@ import {
 	Match,
 	createSignal,
 	createMemo,
+	onMount,
 } from "solid-js";
 import { ChatProps } from "./Chat";
 import { highlight, TimelineItemT2 } from "./util";
@@ -52,9 +53,15 @@ export const Timeline = (props: ChatProps) => {
 	const queue = virt.queue;
 
 	const ro = new ResizeObserver((entries) => {
+		let scrollElResized = false;
 		let delta = 0;
 
 		for (const entry of entries) {
+			if (entry.target === scrollEl()) {
+				scrollElResized = true;
+				continue;
+			}
+
 			const key = (entry.target as HTMLElement).dataset.key;
 			if (!key) continue;
 
@@ -69,13 +76,21 @@ export const Timeline = (props: ChatProps) => {
 			}
 		}
 
-		if (delta !== 0) {
+		if (delta !== 0 || scrollElResized) {
 			queue.push({
 				type: "RESIZE",
 				delta,
 			});
 		}
 	});
+
+	onMount(() => {
+		const el = scrollEl();
+		if (!el) return;
+		ro.observe(el);
+	});
+
+	onCleanup(() => ro.disconnect());
 
 	// refetch messages whenever a channel's message version is bumped
 	// PERF: MessagesService.handleMessageCreate() is called when MessagesService.send() completes AND when MessageCreate is received. i should deduplicate these events.
