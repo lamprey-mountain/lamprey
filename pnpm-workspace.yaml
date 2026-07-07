@@ -2,3 +2,12 @@ packages:
   - frontend
   - ts-sdk
   - emoji
+allowBuilds:
+  '@biomejs/biome': set this to true or false
+  '@parcel/watcher': set this to true or false
+  es5-ext: set this to true or false
+  esbuild: set this to true or false
+  msgpackr-extract: set this to true or false
+minimumReleaseAgeExclude:
+  - '@lamprey/emoji@0.1.2'
+  - '@lamprey/markdown@0.1.1'
