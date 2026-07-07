@@ -4015,36 +4015,15 @@ button.round {
 	width: 24px;
 }
 
-// TODO: redo .chat-header styles
 .chat-header {
 	display: flex;
 	justify-content: space-between;
+	align-items: center;
 
-	& > .left,
-	& > .right {
-		display: flex;
-		align-items: center;
-	}
-
-	& > .right {
-		justify-content: end;
-	}
-
-	& > .left,
-	& > .right {
-		& > .icon,
-		& > .icon2,
-		& > .avatar {
-			margin-right: 4px;
-		}
-
-		& > .icon {
-			filter: invert(0.7);
-		}
-
-		& > .icon2 {
-			background: $fg-300;
-		}
+	& > .channel-icon {
+		height: 16px;
+		width: 16px;
+		margin-right: 8px;
 
 		& > .avatar {
 			height: 32px;
@@ -4052,87 +4031,112 @@ button.round {
 		}
 	}
 
-	& > .right > button {
-		border: none;
-		background: none;
-		width: 32px;
-		height: 32px;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		cursor: pointer;
-
-		&:active {
-			translate: 0 1px;
-		}
-
-		& > .icon {
-			filter: invert(0.7);
-			width: 18px;
-			height: 18px;
-		}
-
-		& > .icon2 {
-			background: $fg-300;
-			width: 18px;
-			height: 18px;
-		}
-
-		&:hover > .icon {
-			filter: invert(0.95);
-		}
-
-		&:hover > .icon2 {
-			background: $fg-100;
-		}
-	}
-
-	& .channel-name-display {
-		transition: all 0.2s;
-		border: solid 1px $bg-200;
+	& > .name {
 		padding: 2px 4px;
+		/* font-weight: 700; */
+		border: solid 1px $bg-200;
 		border-radius: 2px;
-		margin: 0 -2px;
+		transition: all 0.2s;
 
-		&:hover {
-			color: $fg-100;
+		& > h3 {
+			font-size: 1em;
+		}
+
+		&.editable {
+			cursor: text;
+
+			&:hover, &:focus {
+				color: $fg-100;
+				background-color: $bg-150;
+				border: solid 1px $sep-500;
+			}
+		}
+
+		&.editing:focus-within {
 			background-color: $bg-150;
-			border: solid 1px $sep-500;
+			border: solid 1px $link-500;
+		}
+
+		& > .name-input {
+			field-sizing: content;
+			min-width: 128px;
+			background: none;
+			border: none;
+			padding: 0;
 		}
 	}
 
-	& .channel-name-input {
-		background-color: $bg-150;
-		border: solid 1px $sep-300;
+	& > .name-edit {
 		padding: 2px 4px;
 		border-radius: 2px;
 		font: inherit;
 		color: $fg-200;
-		min-width: 100px;
+		/* flex: 0 1 auto; */
+		/* width: auto; */
 
 		&:focus {
-			border: solid 1px $link-500;
 			outline: none;
 		}
 	}
 
-	& .channel-topic-clickable {
-		overflow: hidden;
-		text-overflow: ellipsis;
-		flex: 1;
-		margin-right: 24px;
-		max-height: 1.5em;
-		line-height: 1;
+	& > .topic {
+		display: flex;
+		flex: 1 1 0%;
+		margin-right: 8px;
+		cursor: pointer;
+		color: $fg-400;
+		@include truncate;
+
+		&:hover {
+			color: $fg-100;
+		}
 
 		& > * {
-			overflow: hidden;
-			text-overflow: ellipsis;
-			white-space: nowrap;
+			@include truncate;
+		}
+
+		// shrink the spacer so that topic can expand
+		& ~ .spacer {
+			flex: 0 1 auto;
 		}
 	}
 
-	&.select-mode-header {
+	& > .spacer {
+		flex: 1;
+	}
+
+	& > .menu {
+		display: flex;
+
+		& > button {
+			width: 32px;
+			height: 32px;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			cursor: pointer;
+
+			&:active {
+				translate: 0 1px;
+			}
+
+			& > .icon2 {
+				background: $fg-300;
+				width: 18px;
+				height: 18px;
+			}
+
+			&:hover > .icon2 {
+				background: $fg-100;
+			}
+
+			&.danger:hover > .icon2 {
+				background: $color-red;
+			}
+		}
+	}
+
+	&.selecting {
 		background-color: $bg-400;
-		gap: 8px;
 	}
 }

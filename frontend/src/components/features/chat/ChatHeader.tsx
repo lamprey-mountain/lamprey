@@ -6,6 +6,9 @@ import icCall from "@/assets/call.png";
 import icMembers from "@/assets/members.png";
 import icPin from "@/assets/pin.png";
 import icThreads from "@/assets/threads.png";
+import icCancel from "@/assets/x.png";
+import icDelete from "@/assets/delete.png";
+import icRemove from "@/assets/emoji-symbols.png"; // TEMP: get a better icon
 import { Icon } from "@/atoms/Icon";
 import { SearchInput } from "@/components/features/search/SearchInput";
 import { ChannelIcon } from "@/components/shared/User";
@@ -34,7 +37,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 	let inputRef!: HTMLInputElement;
 
 	const selected = () => channelState.selectedMessages;
-	const inSelectMode = () => channelState.selectMode;
+	const isSelecting = () => channelState.selectMode;
 
 	const { has: hasPermission } = usePermissions(
 		() => currentUser()?.id as string | undefined,
@@ -43,8 +46,21 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 	);
 	const canManageChannel = () => hasPermission("ChannelManage");
 
-	const canDelete = () => hasPermission("MessageDelete");
-	const canRemove = () => hasPermission("MessageRemove");
+	const isThread = () =>
+		props.channel.type === "ThreadPublic" ||
+		props.channel.type === "ThreadPrivate" ||
+		props.channel.type === "ThreadForum2";
+
+	const canEditChannelName = () => {
+		if (!isThread()) return hasPermission("ChannelManage");
+		// TODO: can edit if current user created the thread and thread isn't locked
+		// TODO: can edit if current user has ThreadEdit and thread isn't locked
+		// TODO: can edit if current user has ThreadManage
+		return hasPermission("ThreadManage");
+	};
+
+	const canDeleteMessages = () => hasPermission("MessageDelete");
+	const canRemoveMessages = () => hasPermission("MessageRemove");
 
 	const exitSelectMode = () => {
 		setChannelState("selectMode", false);
@@ -140,158 +156,174 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 		props.channel.type === "Broadcast";
 
 	return (
-		<Show
-			when={inSelectMode()}
-			fallback={
-				<header
-					class="chat-header"
-					onMouseEnter={() => setHovered(true)}
-					onMouseLeave={() => setHovered(false)}
-				>
-					<div class="left">
-						<ChannelIcon channel={props.channel} animate={hovered()} />
-						<Show
-							when={editingName() !== undefined}
-							fallback={
-								<b
-									class="channel-name-display"
-									onClick={startEditingName}
-									title={
-										canManageChannel()
-											? "Click to edit channel name"
-											: undefined
-									}
-									style={canManageChannel() ? "cursor:pointer" : undefined}
-								>
-									{name()}
-								</b>
+		<header
+			class="chat-header"
+			classList={{
+				selecting: isSelecting(),
+				deleted: !!props.channel.deleted_at,
+			}}
+			onMouseEnter={() => setHovered(true)}
+			onMouseLeave={() => setHovered(false)}
+		>
+			<div class="channel-icon">
+				<ChannelIcon channel={props.channel} animate={hovered()} />
+			</div>
+
+			<div
+				class="name"
+				classList={{
+					editable: !isSelecting() && canEditChannelName(),
+					editing: editingName() !== undefined,
+				}}
+				tabindex="0"
+			>
+				<Switch>
+					<Match when={isSelecting()}>
+						<h3 class="name-text">{selected().length} message(s) selected</h3>
+					</Match>
+					<Match when={editingName() !== undefined}>
+						<input
+							ref={inputRef}
+							class="name-input"
+							type="text"
+							value={editingName()}
+							onInput={(e) => setEditingName(e.currentTarget.value)}
+							onBlur={saveName}
+							onKeyDown={handleKeyDown}
+						/>
+					</Match>
+					<Match when={true}>
+						<h3
+							class="name-text"
+							onClick={startEditingName}
+							// TODO: start editing when enter key pressed
+							title={
+								canManageChannel() ? "Click to edit channel name" : undefined
 							}
 						>
-							<input
-								ref={inputRef}
-								class="channel-name-input"
-								type="text"
-								value={editingName()}
-								onInput={(e) => setEditingName(e.currentTarget.value)}
-								onBlur={saveName}
-								onKeyDown={handleKeyDown}
-							/>
-						</Show>
-						<Show when={props.channel.description}>
-							<span class="dim" style="white-space:pre;font-size:1em">
-								{"  -  "}
-							</span>
-							<span
-								class="markdown channel-topic-clickable"
-								innerHTML={md(props.channel.description ?? "") as string}
-								onClick={() => {
-									if (props.channel.description) {
-										modalctl.open({
-											type: "channel_topic",
-											channel_id: props.channel.id,
-										});
-									}
-								}}
-								onContextMenu={(e) => {
-									e.preventDefault();
-									queueMicrotask(() => {
-										setMenu({
-											x: e.clientX,
-											y: e.clientY,
-											type: "topic",
-											channel_id: props.channel.id,
-										});
-									});
-								}}
-								title="click to view topic"
-							></span>
-						</Show>
-						<Switch>
-							<Match when={props.channel.deleted_at}>{" (removed)"}</Match>
-							<Match when={props.channel.archived_at}>{" (archived)"}</Match>
-						</Switch>
-					</div>
-					<div class="right">
-						<SearchInput channel={props.channel} />
-						<Show
-							when={props.channel.type === "Dm" || props.channel.type === "Gdm"}
-						>
-							<button
-								type="button"
-								onClick={() => {
-									// TODO: calling
-								}}
-								title="Start call"
-							>
-								<Icon src={icCall} />
-							</button>
-						</Show>
-						<Show
-							when={
-								props.channel.type === "Text" ||
-								props.channel.type === "Announcement" ||
-								props.channel.type === "Gdm"
-							}
-						>
-							<button
-								type="button"
-								ref={(el) => ctx.setHeaderThreadsButtonRef(el)}
-								onClick={(e) => {
-									if (!ctx.threadsView()) {
-										const ref = e.currentTarget;
-										setTimeout(() => {
-											ctx.setThreadsView({
-												channel_id: props.channel.id,
-												ref,
-											});
-										});
-									}
-								}}
-								title="Threads"
-							>
-								<Icon src={icThreads} />
-							</button>
-						</Show>
+							{name()}
+						</h3>
+					</Match>
+				</Switch>
+			</div>
+
+			<Show when={props.channel.description}>
+				{/*<span class="dim" style="white-space:pre;font-size:1em">*/}
+				<div>{"  -  "}</div>
+				<div
+					class="topic"
+					innerHTML={md(props.channel.description ?? "") as string}
+					onClick={() => {
+						// TODO: extract into function
+						if (props.channel.description) {
+							modalctl.open({
+								type: "channel_topic",
+								channel_id: props.channel.id,
+							});
+						}
+					}}
+					onContextMenu={(e) => {
+						// TODO: extract into function
+						e.preventDefault();
+						queueMicrotask(() => {
+							setMenu({
+								x: e.clientX,
+								y: e.clientY,
+								type: "topic",
+								channel_id: props.channel.id,
+							});
+						});
+					}}
+					title="click to view topic"
+				></div>
+			</Show>
+			<div class="spacer"></div>
+			{/* TODO: tooltips */}
+			<Show when={isSelecting()}>
+				<menu class="menu">
+					{/* TODO: forwarding selected messages */}
+					<Show when={canDeleteMessages()}>
 						<button
 							type="button"
-							onClick={togglePinned}
-							classList={{ active: isShowingPinned() }}
-							title="Show pinned messages"
-							style={!hasPins() ? "display:none" : undefined}
+							class="danger"
+							onClick={deleteSelected}
+							title="delete"
 						>
-							<Icon src={icPin} />
+							<Icon src={icDelete} color={null} />
 						</button>
-						<Show when={props.showMembersButton ?? true}>
-							<button
-								type="button"
-								onClick={toggleMembers}
-								title="Show members"
-							>
-								<Icon src={icMembers} />
-							</button>
-						</Show>
-					</div>
-				</header>
-			}
-		>
-			<header class="chat-header select-mode-header" style="display:flex">
-				<ChannelIcon channel={props.channel} />
-				<span>{selected().length} selected</span>
-				<div style="flex:1"></div>
-				<Show when={canDelete()}>
-					<button type="button" class="button" onClick={deleteSelected}>
-						Delete
+					</Show>
+					<Show when={canRemoveMessages()}>
+						<button
+							type="button"
+							class="danger"
+							onClick={removeSelected}
+							title="remove"
+						>
+							<Icon src={icRemove} color={null} />
+						</button>
+					</Show>
+					<button type="button" onClick={exitSelectMode} title="cancel">
+						<Icon src={icCancel} color={null} />
 					</button>
-				</Show>
-				<Show when={canRemove()}>
-					<button type="button" class="button" onClick={removeSelected}>
-						Remove
+				</menu>
+			</Show>
+			<Show when={!isSelecting()}>
+				<SearchInput channel={props.channel} />
+				<menu class="menu">
+					<Show
+						when={props.channel.type === "Dm" || props.channel.type === "Gdm"}
+					>
+						<button
+							type="button"
+							onClick={() => {
+								// TODO: calling
+							}}
+							title="Start call"
+						>
+							<Icon src={icCall} color={null} />
+						</button>
+					</Show>
+					<Show
+						when={
+							props.channel.type === "Text" ||
+							props.channel.type === "Announcement" ||
+							props.channel.type === "Gdm"
+						}
+					>
+						<button
+							type="button"
+							onClick={(e) => {
+								if (!ctx.threadsView()) {
+									const ref = e.currentTarget;
+									setTimeout(() => {
+										ctx.setThreadsView({
+											channel_id: props.channel.id,
+											ref,
+										});
+									});
+								}
+							}}
+							title="Threads"
+						>
+							<Icon src={icThreads} color={null} />
+						</button>
+					</Show>
+					<button
+						type="button"
+						onClick={togglePinned}
+						classList={{ active: isShowingPinned() }}
+						title="Show pinned messages"
+						style={{ display: hasPins() ? undefined : "none" }}
+					>
+						<Icon src={icPin} color={null} />
 					</button>
-				</Show>
-				<button type="button" class="button" onClick={exitSelectMode}>
-					Cancel
-				</button>
-			</header>
-		</Show>
+					<Show when={props.showMembersButton ?? true}>
+						<button type="button" onClick={toggleMembers} title="Show members">
+							<Icon src={icMembers} color={null} />
+						</button>
+					</Show>
+				</menu>
+			</Show>
+		</header>
 	);
 };
