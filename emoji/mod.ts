@@ -2,20 +2,29 @@ import { LANGUAGES } from "./shared.ts";
 export { LANGUAGES } from "./shared.ts";
 export type * from "./shared.ts";
 
-export const emojiUrl = new URL("./generated/emoji.json", import.meta.url).href;
+export const emojiUrl: string = new URL(
+	"./generated/emoji.json",
+	import.meta.url,
+).href;
 
-export const getLangUrl = (lang: string) => {
+export const getLangUrl = (lang: string): string | null => {
 	if (LANGUAGES.includes(lang))
 		return new URL(`./generated/lang-${lang}.json`, import.meta.url).href;
 	return null;
 };
 
-export const sheetWebpUrl = new URL("./generated/sheet.webp", import.meta.url)
-	.href;
-export const sheetAvifUrl = new URL("./generated/sheet.avif", import.meta.url)
-	.href;
-export const sheetPngUrl = new URL("./generated/sheet.png", import.meta.url)
-	.href;
+export const sheetWebpUrl: string = new URL(
+	"./generated/sheet.webp",
+	import.meta.url,
+).href;
+export const sheetAvifUrl: string = new URL(
+	"./generated/sheet.avif",
+	import.meta.url,
+).href;
+export const sheetPngUrl: string = new URL(
+	"./generated/sheet.png",
+	import.meta.url,
+).href;
 
 /** get the hex code from an emoji string */
 export function getEmojiHex(emojiStr: string): string {
