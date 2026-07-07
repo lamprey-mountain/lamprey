@@ -23,16 +23,16 @@ pub trait Renderer {
 impl Parsed {
     /// render to html
     pub fn to_html(&self) -> String {
-        HtmlRenderer.render(self.tree_clone())
+        HtmlRenderer.render(self.tree())
     }
 
     /// render to markdown (identity)
     pub fn to_markdown(&self) -> String {
-        MarkdownRenderer.render(self.tree_clone())
+        MarkdownRenderer.render(self.tree())
     }
 
     /// render to plaintext, stripping any formatting
     pub fn to_plain(&self) -> String {
-        (PlaintextRenderer {}).render(self.tree_clone())
+        (PlaintextRenderer {}).render(self.tree())
     }
 }

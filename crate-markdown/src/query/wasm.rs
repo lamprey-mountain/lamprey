@@ -53,7 +53,7 @@ impl Parsed {
             _ => None,
         };
 
-        let decos: Vec<Decoration> = self.tree_clone().iter_decorations(span).collect();
+        let decos: Vec<Decoration> = self.tree().iter_decorations(span).collect();
 
         serde_wasm_bindgen::to_value(&decos).map_err(|e| JsValue::from_str(&e.to_string()))
     }
@@ -61,7 +61,7 @@ impl Parsed {
     #[wasm_bindgen(js_name = "links")]
     pub fn js_links(&self) -> Result<JsValue, JsValue> {
         let links: Vec<LinkDto> = self
-            .tree_clone()
+            .tree()
             .iter_links()
             .map(|l| LinkDto {
                 href: l.href(),
@@ -79,7 +79,7 @@ impl Parsed {
     #[wasm_bindgen(js_name = "mentions")]
     pub fn js_mentions(&self) -> Result<JsValue, JsValue> {
         let mentions: Vec<MentionDto> = self
-            .tree_clone()
+            .tree()
             .iter_mentions()
             .map(|m| MentionDto {
                 text: m.text(),
@@ -93,7 +93,7 @@ impl Parsed {
     #[wasm_bindgen(js_name = "emoji")]
     pub fn js_emoji(&self) -> Result<JsValue, JsValue> {
         let emoji: Vec<EmojiDto> = self
-            .tree_clone()
+            .tree()
             .iter_emoji()
             .filter_map(|e| {
                 let (kind, text, span) = if let Some(custom) = CustomEmoji::cast(e.syntax().clone())
@@ -122,7 +122,7 @@ impl Parsed {
     #[wasm_bindgen(js_name = "headers")]
     pub fn js_headers(&self) -> Result<JsValue, JsValue> {
         let headers: Vec<HeaderDto> = self
-            .tree_clone()
+            .tree()
             .iter_headers()
             .map(|h| HeaderDto {
                 level: h.level(),
@@ -138,6 +138,6 @@ impl Parsed {
 
     #[wasm_bindgen(js_name = "onlyEmoji")]
     pub fn js_only_emoji(&self) -> Option<u32> {
-        self.tree_clone().only_emoji()
+        self.tree().only_emoji()
     }
 }

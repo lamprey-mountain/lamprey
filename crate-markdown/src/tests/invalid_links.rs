@@ -10,7 +10,7 @@ fn test_link_panic() {
     let parser = Parser::new();
     let parsed = parser.parse(source);
 
-    let doc = Document::cast(parsed.tree().root().clone()).unwrap();
+    let doc = Document::cast(parsed.tree_ref().root().clone()).unwrap();
     for block in doc.children() {
         if let Block::Paragraph(p) = block {
             for inline in p.children() {
@@ -28,7 +28,7 @@ fn test_incomplete_link_panic() {
     let parser = Parser::new();
     let parsed = parser.parse(source);
 
-    let doc = Document::cast(parsed.tree().root().clone()).unwrap();
+    let doc = Document::cast(parsed.tree_ref().root().clone()).unwrap();
     for block in doc.children() {
         if let Block::Paragraph(p) = block {
             for inline in p.children() {
@@ -46,7 +46,7 @@ fn test_empty_link_panic() {
     let parser = Parser::new();
     let parsed = parser.parse(source);
 
-    let doc = Document::cast(parsed.tree().root().clone()).unwrap();
+    let doc = Document::cast(parsed.tree_ref().root().clone()).unwrap();
     for block in doc.children() {
         if let Block::Paragraph(p) = block {
             for inline in p.children() {

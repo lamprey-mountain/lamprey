@@ -15,7 +15,7 @@ pub fn parse(content: &str, options: &ParseMentions) -> MentionsIds {
     let mut emojis = Vec::new();
     let mut everyone = false;
 
-    for mention in parsed.tree_clone().iter_mentions() {
+    for mention in parsed.tree().iter_mentions() {
         match mention.parse() {
             MentionData::User(u) => users.push(u),
             MentionData::Role(r) => roles.push(r),
@@ -24,7 +24,7 @@ pub fn parse(content: &str, options: &ParseMentions) -> MentionsIds {
         }
     }
 
-    for emoji in parsed.tree_clone().iter_emoji() {
+    for emoji in parsed.tree().iter_emoji() {
         emojis.push(emoji.parse().id.into());
     }
 
@@ -72,7 +72,7 @@ pub fn extract_links(content: &str) -> Vec<Url> {
     let parser = Parser::new();
     let parsed = parser.parse(content);
     parsed
-        .tree_clone()
+        .tree()
         .iter_links()
         .filter_map(|link| Url::parse(&link.href()).ok())
         .collect()

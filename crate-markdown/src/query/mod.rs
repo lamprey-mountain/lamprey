@@ -35,6 +35,7 @@ pub trait QueryableExt: Queryable {
     }
 
     /// iterate over all emoji
+    // TODO: iterate over unicode emoji too
     fn iter_emoji(&self) -> impl Iterator<Item = CustomEmoji> {
         self.get_root()
             .descendants_with_tokens()

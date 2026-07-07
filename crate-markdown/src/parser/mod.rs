@@ -73,12 +73,12 @@ impl Parser {
 
 impl Parsed {
     /// get a reference to the syntax tree
-    pub fn tree(&self) -> &Tree {
+    pub fn tree_ref(&self) -> &Tree {
         &self.tree
     }
 
-    /// get a cloned ref to the syntax tree
-    pub fn tree_clone(&self) -> Ref<Tree> {
+    /// get a cloned `Ref` to the syntax tree
+    pub fn tree(&self) -> Ref<Tree> {
         Ref::clone(&self.tree)
     }
 
