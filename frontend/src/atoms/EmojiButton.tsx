@@ -1,6 +1,7 @@
 import { createEffect, createSignal, onCleanup } from "solid-js";
 import { useCtx } from "@/app/context";
-import { getTwemoji } from "@/lib/emoji";
+import { getEmojiHex, getTwemoji } from "@/lib/emoji";
+import { UnicodeEmoji } from "./UnicodeEmoji";
 
 type EmojiButtonProps = {
 	picked: (emoji: string, keepOpen: boolean) => void;
@@ -71,7 +72,9 @@ export const EmojiButton = (props: EmojiButtonProps) => {
 				onClick={handleClick}
 				classList={{ shown: show() }}
 			>
-				<div class="emoji-button-icon" innerHTML={getTwemoji(emoji())} />
+				<div class="emoji-button-icon">
+					<UnicodeEmoji hex={getEmojiHex(emoji())} />
+				</div>
 			</button>
 		</div>
 	);

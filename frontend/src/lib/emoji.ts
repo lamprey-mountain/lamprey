@@ -111,3 +111,10 @@ export const renderReactionKey = (key: ReactionKey): string => {
 	}
 	return "";
 };
+
+export function getEmojiHex(emojiStr: string): string {
+	return [...emojiStr]
+		.map((char) => char.codePointAt(0)!.toString(16))
+		.filter((hex) => hex !== "fe0f") // Strip the variation selector-16 (VS16)
+		.join("-");
+}

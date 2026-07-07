@@ -2822,14 +2822,17 @@ button.link {
 				width: 18px;
 				scale: 1;
 				filter: grayscale(1);
-				transition: all 0.5s cubic-bezier(0.17, 0.67, 0.58, 1.26);
+				// TODO(?): extract all easing functions into consts
+				transition:
+					scale 0.2s cubic-bezier(0.14, 0.98, 0.63, 1.58),
+					filter 0.2s cubic-bezier(0.14, 0.98, 0.63, 1.58);
 			}
 		}
 
 		&:hover, &:focus-visible, &.shown {
 			& > .emoji-button-icon > .emoji {
 				filter: grayscale(0);
-				scale: 1.3;
+				scale: 1.2;
 			}
 		}
 	}

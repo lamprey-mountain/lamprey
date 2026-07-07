@@ -4,6 +4,10 @@ import { createMemo, type VoidProps } from "solid-js";
 
 const EMOJI_SIZE = 64;
 
+// get the total number of rows/cols in the spritesheet
+const COLS = Math.max(...emojiData.map((e) => e.x)) + 1;
+const ROWS = Math.max(...emojiData.map((e) => e.y)) + 1;
+
 function getCoords(hex: string) {
 	const emoji = emojiData.find((e) => e.u === hex.toUpperCase());
 	return emoji ? { x: emoji.x, y: emoji.y } : null;
@@ -18,12 +22,11 @@ export const UnicodeEmoji = (props: VoidProps<UnicodeEmojiProps>) => {
 
 	return (
 		<div
-			class="emoji-sprite"
+			class="emoji emoji-sprite"
 			style={{
 				"background-image": `url(${sheetUrl})`,
-				"background-position": `${-coords().x * (EMOJI_SIZE + 2) - 1}px ${-coords().y * (EMOJI_SIZE + 2) - 1}px`,
-				height: `${EMOJI_SIZE}px`,
-				width: `${EMOJI_SIZE}px`,
+				"background-size": `${COLS * 100}% ${ROWS * 100}%`,
+				"background-position": `${(coords().x / (COLS - 1)) * 100}% ${(coords().y / (ROWS - 1)) * 100}%`,
 			}}
 		/>
 	);
