@@ -212,16 +212,6 @@
           };
 
           buildPhase = ''
-            cat > tsconfig.paths.json <<EOF
-            {
-              "compilerOptions": {
-                "paths": {
-                  "@/*": ["frontend/src/*"]
-                }
-              }
-            }
-            EOF
-
             cd frontend
             pnpm run build
             mv dist $out
@@ -452,17 +442,6 @@
             PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
             PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = "${pkgs.chromium}/bin/chromium";
           };
-          shellHook = ''
-            cat > tsconfig.paths.json <<EOF
-            {
-              "compilerOptions": {
-                "paths": {
-                  "@/*": ["frontend/src/*"]
-                }
-              }
-            }
-            EOF
-          '';
         };
       });
 }

@@ -1,5 +1,4 @@
 {
-	"extends": ["./tsconfig.paths.json"],
 	"compilerOptions": {
 		// features
 		"lib": ["ES2023", "DOM", "DOM.Iterable", "ESNext.Intl"],
@@ -27,7 +26,11 @@
 		"noUncheckedSideEffectImports": true,
 		// "noPropertyAccessFromIndexSignature": true
 
-		"baseUrl": "."
+		"baseUrl": ".",
+
+    "paths": {
+      "@/*": ["frontend/src/*"]
+    },
 	},
 	"include": [
 		"frontend",
