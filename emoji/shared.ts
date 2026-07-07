@@ -32,6 +32,8 @@ export interface SkinToneMessage {
 /** json file format for spritesheet mappings */
 export interface CoreFile {
 	emoji: CoreEmoji[];
+	cols: number;
+	rows: number;
 }
 
 export interface CoreEmoji {

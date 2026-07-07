@@ -138,9 +138,12 @@ async function processSpritesheet(outputDir: string) {
 			}) as CoreEmoji,
 	);
 
+	const COLS = Math.max(...emojiData.map((e: any) => e.x)) + 1;
+	const ROWS = Math.max(...emojiData.map((e: any) => e.y)) + 1;
+
 	await Deno.writeTextFile(
 		`${outputDir}/emoji.json`,
-		JSON.stringify({ emoji: coreEmoji }),
+		JSON.stringify({ emoji: coreEmoji, cols: COLS, rows: ROWS }),
 	);
 }
 
