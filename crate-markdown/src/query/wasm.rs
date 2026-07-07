@@ -1,5 +1,5 @@
 use crate::{
-    ast::inline::{CustomEmoji, CustomEmojiData, Emoji, MentionData, UnicodeEmoji},
+    ast::inline::{CustomEmojiData, Emoji, MentionData},
     parser::Parsed,
     prelude::*,
     query::{Decoration, QueryableExt},

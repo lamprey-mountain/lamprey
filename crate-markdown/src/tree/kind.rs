@@ -117,14 +117,6 @@ pub enum TextKind {
     HeaderHashes,
 }
 
-/// the kind of an error node
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[repr(u8)]
-pub enum ErrorKind {
-    /// missing a closing paren
-    Closing,
-}
-
 impl BlockKind {
     pub fn is_header(&self) -> bool {
         matches!(

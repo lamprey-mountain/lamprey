@@ -20,7 +20,7 @@ pub(crate) mod prelude {
     pub use crate::query::Queryable;
     pub use crate::render::Renderer;
     pub use crate::tree::Tree;
-    pub use crate::tree::kind::{BlockKind, ErrorKind, InlineKind, NodeKind, TextKind};
+    pub use crate::tree::kind::{BlockKind, InlineKind, NodeKind, TextKind};
     pub use crate::tree::node::{GreenNode, SyntaxElement, SyntaxNode, SyntaxToken};
     pub use crate::util::Span;
 
@@ -34,12 +34,6 @@ pub(crate) mod prelude {
 
     #[cfg(feature = "parallel")]
     pub type Ref<T> = std::sync::Arc<T>;
-
-    #[cfg(not(feature = "parallel"))]
-    pub type Weak<T> = std::rc::Weak<T>;
-
-    #[cfg(feature = "parallel")]
-    pub type Weak<T> = std::sync::Weak<T>;
 
     /// the type of a string's length
     pub type Len = u16;
