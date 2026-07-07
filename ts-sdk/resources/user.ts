@@ -1,5 +1,5 @@
-import type { api } from "ts-sdk";
-import type { Uuid } from "ts-sdk/core/uuid";
+import type { api } from "../index";
+import type { Uuid } from "../core/uuid";
 
 export type ApiUser = api["User"];
 

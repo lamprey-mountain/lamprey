@@ -1,4 +1,4 @@
-import { Emitter } from "ts-sdk/core/events";
+import { Emitter } from "../core/events";
 
 export class Media {
 	// fetch()

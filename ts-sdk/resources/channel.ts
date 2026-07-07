@@ -1,4 +1,4 @@
-import type { api } from "ts-sdk";
+import type { api } from "../index";
 import type { MessagesManager } from "./message";
 import type { Room } from "./room";
 

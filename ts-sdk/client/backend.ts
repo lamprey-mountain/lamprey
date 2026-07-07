@@ -5,7 +5,7 @@ import {
 	type MessageClient,
 	type MessageEnvelope,
 	type paths,
-} from "ts-sdk";
+} from "../index.ts";
 import type { ClientOptions } from "./client";
 import { Syncer } from "./syncer";
 
@@ -122,8 +122,6 @@ export abstract class Backend extends Emitter<BackendEvents> {
 
 	abstract send(msg: MessageClient): void;
 }
-
-export { SharedBackend } from "./shared-worker/client.ts";
 
 // TODO: move to another file?
 export class DirectBackend extends Backend {

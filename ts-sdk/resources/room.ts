@@ -1,7 +1,7 @@
-import type { api, Lamprey } from "ts-sdk";
-import { defineResource } from "ts-sdk/core/resource";
+import type { api, Lamprey } from "../index";
+import { defineResource } from "../core/resource";
 import { Manager } from "./mod";
-import { ClientBackend } from "ts-sdk/core/private";
+import { ClientBackend } from "../core/private";
 
 export type ApiRoom = api["Room"];
 

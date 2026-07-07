@@ -1,8 +1,8 @@
-import { Emitter } from "ts-sdk/core/events";
-import { RoomManager } from "ts-sdk/resources/room";
-import type { MessageSync } from "ts-sdk/types";
+import { Emitter } from "../core/events";
+import { RoomManager } from "../resources/room";
+import type { MessageSync } from "../types";
 import { type Backend, DirectBackend } from "./backend";
-import { ClientBackend } from "ts-sdk/core/private";
+import { ClientBackend } from "../core/private";
 
 export type ClientOptions = {
 	apiUrl: string;
