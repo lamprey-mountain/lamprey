@@ -44,7 +44,6 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 		() => props.channel.room_id as string | undefined,
 		() => props.channel.id,
 	);
-	const canManageChannel = () => hasPermission("ChannelManage");
 
 	const isThread = () =>
 		props.channel.type === "ThreadPublic" ||
@@ -107,10 +106,13 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 	};
 
 	const startEditingName = () => {
-		if (!canManageChannel()) return;
+		if (!canEditChannelName()) return;
 		setEditingName(name());
 		setTimeout(() => inputRef.focus());
 	};
+
+	// TODO: show new channel name with class=".local" while waiting for the patch request to go through
+	// const [isSaving, setIsSaving] = createSignal(false);
 
 	const saveName = () => {
 		const newName = editingName()?.trim();
@@ -127,6 +129,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 	const handleKeyDown = (e: KeyboardEvent) => {
 		if (e.key === "Enter") {
 			e.preventDefault();
+			e.stopPropagation();
 			saveName();
 		} else if (e.key === "Escape") {
 			cancelEditingName();
@@ -176,6 +179,14 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 					editing: editingName() !== undefined,
 				}}
 				tabindex="0"
+				onClick={startEditingName}
+				onKeyDown={(e) => {
+					if (e.key === "Enter") {
+						e.preventDefault();
+						startEditingName();
+					}
+				}}
+				title={canEditChannelName() ? "Click to edit channel name" : undefined}
 			>
 				<Switch>
 					<Match when={isSelecting()}>
@@ -184,6 +195,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 					<Match when={editingName() !== undefined}>
 						<input
 							ref={inputRef}
+							placeholder="awesome-channel"
 							class="name-input"
 							type="text"
 							value={editingName()}
@@ -193,16 +205,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 						/>
 					</Match>
 					<Match when={true}>
-						<h3
-							class="name-text"
-							onClick={startEditingName}
-							// TODO: start editing when enter key pressed
-							title={
-								canManageChannel() ? "Click to edit channel name" : undefined
-							}
-						>
-							{name()}
-						</h3>
+						<h3 class="name-text">{name()}</h3>
 					</Match>
 				</Switch>
 			</div>
