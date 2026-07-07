@@ -1,11 +1,35 @@
-import type { GroupMessage, SkinToneMessage } from "emojibase";
-export type {
-	GroupMessage,
-	SkinToneMessage,
-	GroupKey,
-	SkinToneKey,
-} from "emojibase";
+// types vendored from emojibase
+export type GroupKey =
+	| "activities"
+	| "animals-nature"
+	| "component"
+	| "flags"
+	| "food-drink"
+	| "objects"
+	| "people-body"
+	| "smileys-emotion"
+	| "symbols"
+	| "travel-places";
 
+export type SkinToneKey =
+	| "dark"
+	| "light"
+	| "medium-dark"
+	| "medium-light"
+	| "medium";
+
+export interface GroupMessage {
+	key: GroupKey;
+	message: string;
+	order: number;
+}
+
+export interface SkinToneMessage {
+	key: SkinToneKey;
+	message: string;
+}
+
+/** json file format for spritesheet mappings */
 export interface CoreFile {
 	emoji: CoreEmoji[];
 }
