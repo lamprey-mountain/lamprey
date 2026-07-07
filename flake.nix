@@ -203,7 +203,6 @@
 
           VITE_GIT_SHA = self.rev or self.dirtyRev or "unknown";
           VITE_GIT_DIRTY = if (self ? rev) then "false" else "true";
-          TWEMOJI_SPRITESHEETS = "${twemoji-spritesheets}";
 
           pnpmDepsHash = "sha256-EXWlEKBJVTfPBm51j3NsVJqmrFWzXH+OuFfol0nf7FY=";
           pnpmDeps = pkgs.fetchPnpmDeps {
@@ -217,9 +216,7 @@
             {
               "compilerOptions": {
                 "paths": {
-                  "@/*": ["frontend/src/*"],
-                  "@twemoji-spritesheets": ["${twemoji-spritesheets}"],
-                  "@twemoji-spritesheets/*": ["${twemoji-spritesheets}/*"]
+                  "@/*": ["frontend/src/*"]
                 }
               }
             }
@@ -242,8 +239,8 @@
 
         python-env = pkgs.python3.withPackages python-deps;
 
-        twemoji-spritesheets = pkgs.stdenv.mkDerivation rec {
-          pname = "twemoji-spritesheets";
+        emoji-spritesheets = pkgs.stdenv.mkDerivation rec {
+          pname = "emoji-spritesheets";
           version = "16.0.0";
 
           emojiJson = pkgs.fetchurl {
@@ -256,20 +253,15 @@
             hash = "sha256-OCNZhGRxmtfLOnuhRTe3hSyKMj4Ys598pPqbHpjpzGg=";
           };
 
-          nativeBuildInputs = with pkgs; [
-            jq
-            libwebp
-            libavif
-            imagemagick
-          ];
+          nativeBuildInputs = with pkgs; [ jq libwebp libavif imagemagick ];
 
           dontUnpack = true;
 
           buildPhase = ''
             mkdir -p $out
 
-            # strip json
-            jq -c '[.[] | {u: .unified, x: .sheet_x, y: .sheet_y, s: .short_name}]' "$emojiJson" > "$out/data.json"
+            # filter json
+            jq -c '[.[] | {u: .unified, x: .sheet_x, y: .sheet_y}]' "${emojiJson}" > "$out/data.json"
 
             # optimize -> webp
             cwebp -q 75 -m 6 ${emojiSheet} -o $out/sheet.webp
@@ -281,9 +273,41 @@
             magick ${emojiSheet} -colors 256 -quality 90 $out/sheet.png
           '';
         };
+
+        emoji = pkgs.stdenv.mkDerivation (finalAttrs: rec {
+          pname = "emoji";
+          version = "0.1.0";
+
+          src = ./.;
+
+          nativeBuildInputs = with pkgs; [
+            pnpm
+            pnpmConfigHook
+            deno
+          ];
+
+          pnpmWorkspaces = [ "@lamprey/emoji" ];
+          pnpmDepsHash = "sha256-WTapMDwk8fOJGIPyCM7tqgyQaRNpMTMrzoEqXP2JijA=";
+          pnpmDeps = pkgs.fetchPnpmDeps {
+            inherit (finalAttrs) src pname version pnpmWorkspaces;
+            fetcherVersion = 3;
+            hash = pnpmDepsHash;
+          };
+
+          buildPhase = ''
+            cd emoji
+            export SPRITESHEET_PATH=${emoji-spritesheets}
+            deno run -A build.ts
+          '';
+
+          installPhase = ''
+            mkdir -p $out
+            cp -r generated mod.ts shared.ts package.json jsr.json readme.md $out/
+          '';
+        });
       in {
         packages = rec {
-          inherit backend bridge voice media frontend scanner-malware wasm-markdown twemoji-spritesheets agent-sandbox spawn-sandbox;
+          inherit backend bridge voice media frontend scanner-malware wasm-markdown emoji emoji-spritesheets agent-sandbox spawn-sandbox;
 
           scanner-nsfw = pkgs.writeShellApplication {
             name = "run-scanner-nsfw";
@@ -427,16 +451,13 @@
           env = {
             PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
             PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = "${pkgs.chromium}/bin/chromium";
-            TWEMOJI_SPRITESHEETS = "${twemoji-spritesheets}";
           };
           shellHook = ''
             cat > tsconfig.paths.json <<EOF
             {
               "compilerOptions": {
                 "paths": {
-                  "@/*": ["frontend/src/*"],
-                  "@twemoji-spritesheets": ["${twemoji-spritesheets}"],
-                  "@twemoji-spritesheets/*": ["${twemoji-spritesheets}/*"]
+                  "@/*": ["frontend/src/*"]
                 }
               }
             }

@@ -84,56 +84,26 @@ async function processLabels(outputDir: string) {
 			`${outputDir}/lang-${lang}.json`,
 			JSON.stringify(data),
 		);
-	}
-}
-
-async function checkCommand(cmd: string) {
-	try {
-		const process = new Deno.Command("which", {
-			args: [cmd],
-			stdout: "null",
-			stderr: "null",
-		});
-		const { success } = await process.output();
-		if (!success) {
-			console.warn("command `%s` not found. are you using `nix develop`?", cmd);
-		}
-		return success;
-	} catch {
-		console.warn("command `%s` not found. are you using `nix develop`?", cmd);
-		return false;
-	}
-}
-
-async function runCommand(cmd: string, args: string[]) {
-	const process = new Deno.Command(cmd, { args });
-	const { success, stderr } = await process.output();
-	if (!success) {
-		throw new Error(
-			`Command \`${cmd} ${args.join(" ")}\` failed: ${new TextDecoder().decode(stderr)}`,
-		);
+		console.log("processed labels for language `%s`", lang);
 	}
 }
 
 async function processSpritesheet(outputDir: string) {
-	const EMOJI_DATA_VERSION = "16.0.0";
-	const SPRITESHEET_JSON_URL = `https://raw.githubusercontent.com/iamcal/emoji-data/v${EMOJI_DATA_VERSION}/emoji.json`;
-	const SPRITESHEET_IMAGE_URL = `https://raw.githubusercontent.com/iamcal/emoji-data/v${EMOJI_DATA_VERSION}/sheets-indexed-256/sheet_twitter_64_indexed_256.png`;
+	const spritesheetDir = Deno.env.get("SPRITESHEET_PATH");
 
-	const emojiSheet = `${outputDir}/sheet.png`;
+	if (!spritesheetDir) {
+		throw new Error("SPRITESHEET_PATH not set");
+	}
 
-	const [imageResponse, jsonResponse, emojiBaseData] = await Promise.all([
-		fetch(SPRITESHEET_IMAGE_URL),
-		fetch(SPRITESHEET_JSON_URL),
-		loadJson("emojibase-data/en/data.json"),
-	]);
+	const files = ["sheet.png", "sheet.webp", "sheet.avif"];
+	for (const file of files) {
+		await Deno.copyFile(`${spritesheetDir}/${file}`, `${outputDir}/${file}`);
+	}
 
-	const [buffer, emojiData] = await Promise.all([
-		imageResponse.arrayBuffer(),
-		jsonResponse.json(),
-	]);
-
-	await Deno.writeFile(emojiSheet, new Uint8Array(buffer));
+	const emojiData = JSON.parse(
+		await Deno.readTextFile(`${spritesheetDir}/data.json`),
+	);
+	const emojiBaseData = await loadJson("emojibase-data/en/data.json");
 
 	const hexToGroup = new Map<string, number | undefined>();
 	for (const e of emojiBaseData) {
@@ -145,69 +115,20 @@ async function processSpritesheet(outputDir: string) {
 		}
 	}
 
-	const coreEmoji = emojiData
-		.map((e: any) => ({
-			u: e.unified.toUpperCase(),
-			x: e.sheet_x,
-			y: e.sheet_y,
-			g: hexToGroup.get(e.unified.toUpperCase()),
-		}))
-		.filter((e: any) => e.g !== undefined);
+	const coreEmoji = emojiData.map((e: any) => ({
+		u: e.u.toUpperCase(),
+		x: e.x,
+		y: e.y,
+
+		// the only emoji that don't have a group are regional indicators
+		// i'll put them in group 8 (symbols) because why not i guess
+		g: hexToGroup.get(e.u.toUpperCase()) ?? 8,
+	}));
 
 	await Deno.writeTextFile(
 		`${outputDir}/emoji.json`,
 		JSON.stringify({ emoji: coreEmoji }),
 	);
-
-	const [hasCwebp, hasAvifenc, hasMagick] = await Promise.all([
-		checkCommand("cwebp"),
-		checkCommand("avifenc"),
-		checkCommand("magick"),
-	]);
-
-	const tasks = [];
-
-	if (hasCwebp) {
-		tasks.push(
-			runCommand("cwebp", [
-				"-q",
-				"75",
-				"-m",
-				"6",
-				emojiSheet,
-				"-o",
-				`${outputDir}/sheet.webp`,
-			]),
-		);
-	}
-
-	if (hasAvifenc) {
-		tasks.push(
-			runCommand("avifenc", [
-				"--jobs",
-				"all",
-				"--speed",
-				"6",
-				emojiSheet,
-				`${outputDir}/sheet.avif`,
-			]),
-		);
-	}
-
-	if (hasMagick) {
-		tasks.push(
-			runCommand("magick", [
-				emojiSheet,
-				"-colors",
-				"256",
-				"-quality",
-				"90",
-				`${outputDir}/sheet.png`,
-			]),
-		);
-	}
-
-	await Promise.all(tasks);
 }
 
 async function main() {

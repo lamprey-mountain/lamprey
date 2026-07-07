@@ -16,8 +16,6 @@ const readEnv = (v: string) => {
 	}
 };
 
-const TWEMOJI_SPRITESHEETS = readEnv("TWEMOJI_SPRITESHEETS");
-
 function getGitCommit() {
 	if (process.env.VITE_GIT_SHA) {
 		return process.env.VITE_GIT_SHA;
@@ -45,7 +43,6 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
-			"@twemoji-spritesheets": path.resolve(__dirname, TWEMOJI_SPRITESHEETS),
 		},
 	},
 	define: {
@@ -80,10 +77,7 @@ export default defineConfig({
 			usePolling: true,
 		},
 		fs: {
-			allow: [
-				searchForWorkspaceRoot(process.cwd()),
-				path.resolve(TWEMOJI_SPRITESHEETS),
-			],
+			allow: [searchForWorkspaceRoot(process.cwd())],
 		},
 	},
 	build: {

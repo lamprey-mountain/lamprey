@@ -1,4 +1,6 @@
 import { LANGUAGES } from "./shared.ts";
+export { LANGUAGES } from "./shared.ts";
+export type * from "./shared.ts";
 
 export const emojiUrl = new URL("./generated/emoji.json", import.meta.url).href;
 
@@ -14,10 +16,6 @@ export const sheetAvifUrl = new URL("./generated/sheet.avif", import.meta.url)
 	.href;
 export const sheetPngUrl = new URL("./generated/sheet.png", import.meta.url)
 	.href;
-
-// async function loadEmoji() {
-//   const { default } = await import("./generated/data.json");
-// }
 
 /** get the hex code from an emoji string */
 export function getEmojiHex(emojiStr: string): string {
