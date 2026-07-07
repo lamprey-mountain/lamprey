@@ -506,6 +506,9 @@ export class MessagesService extends BaseService<Message> {
 							data.has_after,
 						);
 						ranges.ranges.add(range);
+						if (!range.has_forward) {
+							ranges.live = range;
+						}
 					});
 				}
 			} else {
@@ -522,6 +525,9 @@ export class MessagesService extends BaseService<Message> {
 						data.has_after,
 					);
 					ranges.ranges.add(range);
+					if (!range.has_forward) {
+						ranges.live = range;
+					}
 				});
 			}
 		}
