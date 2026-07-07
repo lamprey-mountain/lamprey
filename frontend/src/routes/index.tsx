@@ -64,6 +64,7 @@ import {
 import { flags } from "@/lib/flags";
 import type { RoomT } from "@/types";
 import type { ChannelSearch } from "@/types/chat";
+import { UserSettings } from "@/components/features/user_settings";
 
 export { RouteAuthorize } from "@/components/shared/Oauth";
 
@@ -72,49 +73,25 @@ const Title = (props: { title?: string }) => {
 	return undefined;
 };
 
-type LayoutDefaultProps = {
-	title?: string;
-	children?: JSX.Element;
-	showChannelNav?: boolean;
-	channelNavRoomId?: string;
-	showVoiceTray?: boolean;
-	showMembers?: boolean;
-	memberComponent?: JSX.Element;
-	showMembersWidth?: number;
-};
-
-export const LayoutDefault = (props: LayoutDefaultProps) => {
-	const { t } = useCtx();
+export const AppLayoutMain = (props: ParentProps<RouteSectionProps>) => {
+	const channels = useChannels();
+	const channel = channels.use(() => props.params.channel_id);
+	const roomId = () => props.params.room_id ?? channel()?.room_id ?? undefined;
 
 	return (
 		<>
-			<Title title={props.title ?? t("loading")} />
 			<RoomNav />
-			<Show when={props.showChannelNav !== false}>
-				<Resizable
-					storageKey="channel-nav-width"
-					side="left"
-					initialWidth={256}
-					minWidth={180}
-					maxWidth={500}
-				>
-					<ChannelNav room_id={props.channelNavRoomId} />
-				</Resizable>
-			</Show>
+			<Resizable
+				storageKey="channel-nav-width"
+				side="left"
+				initialWidth={256}
+				minWidth={180}
+				maxWidth={500}
+			>
+				<ChannelNav room_id={roomId()} />
+			</Resizable>
 			{props.children}
-			<Show when={props.showMembers}>
-				<Resizable
-					storageKey="room-members-width"
-					initialWidth={props.showMembersWidth ?? 198}
-					minWidth={180}
-					maxWidth={500}
-				>
-					{props.memberComponent}
-				</Resizable>
-			</Show>
-			<Show when={props.showVoiceTray !== false}>
-				<VoiceTray />
-			</Show>
+			<VoiceTray />
 		</>
 	);
 };
@@ -175,18 +152,12 @@ export const RouteRoom = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 	return (
 		<Show when={roomCtx} fallback={<div>Loading room...</div>}>
 			<RoomContext.Provider value={roomCtx!}>
-				<LayoutDefault
-					title={room() ? room()?.name : t("loading")}
-					showChannelNav={true}
-					channelNavRoomId={p.params.room_id}
-					showVoiceTray={true}
-				>
-					<Show when={room()}>
-						<RoomHeader room={room()!} />
-						<RoomHome room={room()!} />
-						<RoomSidebar room={room()!} />
-					</Show>
-				</LayoutDefault>
+				<Title title={room() ? room()?.name : t("loading")} />
+				<Show when={room()}>
+					<RoomHeader room={room()!} />
+					<RoomHome room={room()!} />
+					<RoomSidebar room={room()!} />
+				</Show>
 			</RoomContext.Provider>
 		</Show>
 	);
@@ -480,76 +451,70 @@ export const RouteChannel = (
 					{(dc) => (
 						<ChannelContext.Provider value={cc()}>
 							<DocumentContext.Provider value={dc()}>
-								<LayoutDefault
-									title={title()}
-									showChannelNav={true}
-									channelNavRoomId={channel()?.room_id ?? undefined}
-									showVoiceTray={true}
-								>
-									<Show when={channel()}>
-										{(ch) => (
-											<>
-												<Switch>
-													<Match when={ch().type === "Voice"}>
-														<Voice channel={ch()} />
-													</Match>
-													<Match
-														when={
-															ch().type === "Text" ||
-															ch().type === "Dm" ||
-															ch().type === "Gdm" ||
-															ch().type === "Announcement" ||
-															ch().type === "ThreadPublic" ||
-															ch().type === "ThreadPrivate"
-														}
-													>
-														<ChatHeader channel={ch()} />
-														<ChatMain channel={ch()} />
-													</Match>
-													<Match when={ch().type === "Document"}>
-														<Document
-															channel={ch()}
-															selectedSeq={selectedSeq()}
-															onSelectChangeset={setSelectedSeq}
-															hoverSeq={hoverSeq()}
-															onHoverChangeset={setHoverSeq}
-														/>
-													</Match>
-													<Match when={ch().type === "Wiki"}>
-														<Wiki channel={ch()} />
-													</Match>
-													<Match when={ch().type === "Forum"}>
-														<ChatHeader channel={ch()} />
-														<Forum channel={ch()} />
-													</Match>
-													<Match when={ch().type === "Forum2"}>
-														<ChatHeader channel={ch()} />
-														<Forum2 channel={ch()} />
-													</Match>
-													<Match when={ch().type === "ThreadForum2"}>
-														<ChatHeader channel={ch()} />
-														<Forum2ThreadPage channel={ch()} />
-													</Match>
-													<Match when={ch().type === "Calendar"}>
-														<Calendar channel={ch()} />
-													</Match>
-													<Match when={ch().type === "Scripts"}>
-														<Scripts channel={ch()} />
-													</Match>
-													<Match when={ch().type === "Category"}>
-														<Category channel={ch()} />
-													</Match>
-												</Switch>
-												<ChannelSidebar
-													channel={ch()}
-													selectedSeq={selectedSeq()}
-													onSelectChangeset={setSelectedSeq}
-													onHoverChangeset={setHoverSeq}
-												/>
-											</>
-										)}
-									</Show>
-								</LayoutDefault>
+								<Title title={title()} />
+								<Show when={channel()}>
+									{(ch) => (
+										<>
+											<Switch>
+												<Match when={ch().type === "Voice"}>
+													<Voice channel={ch()} />
+												</Match>
+												<Match
+													when={
+														ch().type === "Text" ||
+														ch().type === "Dm" ||
+														ch().type === "Gdm" ||
+														ch().type === "Announcement" ||
+														ch().type === "ThreadPublic" ||
+														ch().type === "ThreadPrivate"
+													}
+												>
+													<ChatHeader channel={ch()} />
+													<ChatMain channel={ch()} />
+												</Match>
+												<Match when={ch().type === "Document"}>
+													<Document
+														channel={ch()}
+														selectedSeq={selectedSeq()}
+														onSelectChangeset={setSelectedSeq}
+														hoverSeq={hoverSeq()}
+														onHoverChangeset={setHoverSeq}
+													/>
+												</Match>
+												<Match when={ch().type === "Wiki"}>
+													<Wiki channel={ch()} />
+												</Match>
+												<Match when={ch().type === "Forum"}>
+													<ChatHeader channel={ch()} />
+													<Forum channel={ch()} />
+												</Match>
+												<Match when={ch().type === "Forum2"}>
+													<ChatHeader channel={ch()} />
+													<Forum2 channel={ch()} />
+												</Match>
+												<Match when={ch().type === "ThreadForum2"}>
+													<ChatHeader channel={ch()} />
+													<Forum2ThreadPage channel={ch()} />
+												</Match>
+												<Match when={ch().type === "Calendar"}>
+													<Calendar channel={ch()} />
+												</Match>
+												<Match when={ch().type === "Scripts"}>
+													<Scripts channel={ch()} />
+												</Match>
+												<Match when={ch().type === "Category"}>
+													<Category channel={ch()} />
+												</Match>
+											</Switch>
+											<ChannelSidebar
+												channel={ch()}
+												selectedSeq={selectedSeq()}
+												onSelectChangeset={setSelectedSeq}
+												onHoverChangeset={setHoverSeq}
+											/>
+										</>
+									)}
+								</Show>
 							</DocumentContext.Provider>
 						</ChannelContext.Provider>
 					)}
@@ -564,13 +529,10 @@ export const RouteHome = (
 ): JSX.Element => {
 	const { t } = useCtx();
 	return (
-		<LayoutDefault
-			title={t("page.home")}
-			showChannelNav={true}
-			showVoiceTray={true}
-		>
+		<>
+			<Title title={t("page.home")} />
 			<Home />
-		</LayoutDefault>
+		</>
 	);
 };
 
@@ -578,22 +540,17 @@ export const RouteFeed = (
 	_props: ParentProps<RouteSectionProps>,
 ): JSX.Element => {
 	return (
-		<LayoutDefault title="feed" showChannelNav={false} showVoiceTray={true}>
+		<>
+			<Title title="feed" />
 			<Feed />
-		</LayoutDefault>
+		</>
 	);
 };
 
 export const RouteInvite = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 	return (
 		<Show when={p.params.code}>
-			<LayoutDefault
-				showChannelNav={true}
-				channelNavRoomId={p.params.room_id}
-				showVoiceTray={true}
-			>
-				<RouteInviteInner code={p.params.code!} />
-			</LayoutDefault>
+			<RouteInviteInner code={p.params.code!} />
 		</Show>
 	);
 };
@@ -603,40 +560,33 @@ export const RouteUser = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 	const user = api2.users.use(() => p.params.user_id!);
 
 	return (
-		<LayoutDefault
-			title={user()?.name ?? "loading..."}
-			showChannelNav={true}
-			channelNavRoomId={p.params.room_id ?? ""}
-			showVoiceTray={true}
-		>
+		<>
+			<Title title={user()?.name ?? "loading..."} />
 			<header class="chat-header">
 				<b>{user()?.name}</b>
 			</header>
 			<Show when={user()}>
 				<UserProfile user={user()!} />
 			</Show>
-		</LayoutDefault>
+		</>
 	);
 };
 
 export function RouteInbox(p: RouteSectionProps): JSX.Element {
 	return (
-		<LayoutDefault
-			title="inbox"
-			showChannelNav={true}
-			channelNavRoomId={p.params.room_id}
-			showVoiceTray={false}
-		>
+		<>
+			<Title title="inbox" />
 			<Inbox />
-		</LayoutDefault>
+		</>
 	);
 }
 
 export function RouteFriends(): JSX.Element {
 	return (
-		<LayoutDefault title="friends" showChannelNav={true} showVoiceTray={true}>
+		<>
+			<Title title="friends" />
 			<Friends />
-		</LayoutDefault>
+		</>
 	);
 }
 
@@ -644,8 +594,25 @@ export function RouteNotFound(): JSX.Element {
 	const { t } = useCtx();
 
 	return (
-		<LayoutDefault title="not found" showChannelNav={true} showVoiceTray={true}>
+		<>
+			<Title title="not found" />
 			<div style="padding:8px">{t("not_found")}</div>
-		</LayoutDefault>
+		</>
+	);
+}
+
+export function RouteSettings(p: RouteSectionProps): JSX.Element {
+	const { t } = useCtx();
+	const user = useCurrentUser();
+	createEffect(() => {
+		console.log(user());
+	});
+	return (
+		<>
+			<Title title={user() ? t("page.settings_user") : t("loading")} />
+			<Show when={user()}>
+				{(u) => <UserSettings user={u()} page={p.params.page ?? ""} />}
+			</Show>
+		</>
 	);
 }

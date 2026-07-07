@@ -40,6 +40,7 @@ import { useGlobalEventHandlers } from "@/hooks/useGlobalEventHandlers.ts";
 import { ConfigProvider, useConfig } from "@/lib/config";
 import { flags } from "@/lib/flags";
 import {
+	AppLayoutMain,
 	RouteAuthorize,
 	RouteChannel,
 	RouteChannelSettings,
@@ -51,17 +52,37 @@ import {
 	RouteNotFound,
 	RouteRoom,
 	RouteRoomSettings,
+	RouteSettings,
 	RouteUser,
 } from "@/routes";
 
 const App: Component = () => {
 	return (
 		<Router root={AppBootstrap}>
-			<Route path="/" component={RouteHome} />
-			<Route path="/inbox" component={RouteInbox} />
-			<Route path="/friends" component={RouteFriends} />
+			<Route path="/" component={AppLayoutMain}>
+				<Route path="/" component={RouteHome} />
+				<Route path="/inbox" component={RouteInbox} />
+				<Route path="/friends" component={RouteFriends} />
+				<Route path="/room/:room_id" component={RouteRoom} />
+				<Route path="/channel/:channel_id" component={RouteChannel} />
+				<Route
+					path="/channel/:channel_id/message/:message_id"
+					component={RouteChannel}
+				/>
+				<Route
+					path="/channel/:channel_id/script/:script_id"
+					component={RouteChannel}
+				/>
+				<Route path="/feed" component={RouteFeed} />
+				<Route path="/user/:user_id" component={RouteUser} />
+				<Route path="/invite/:code" component={RouteInvite} />
+				<Route path="/thread/:channel_id" component={RouteChannel} />
+				<Route
+					path="/thread/:channel_id/message/:message_id"
+					component={RouteChannel}
+				/>
+			</Route>
 			<Route path="/settings/:page?" component={RouteSettings} />
-			<Route path="/room/:room_id" component={RouteRoom} />
 			<Route
 				path="/room/:room_id/settings/:page?"
 				component={RouteRoomSettings}
@@ -70,29 +91,12 @@ const App: Component = () => {
 				path="/channel/:channel_id/settings/:page?"
 				component={RouteChannelSettings}
 			/>
-			<Route path="/channel/:channel_id" component={RouteChannel} />
-			<Route
-				path="/channel/:channel_id/message/:message_id"
-				component={RouteChannel}
-			/>
-			<Route
-				path="/channel/:channel_id/script/:script_id"
-				component={RouteChannel}
-			/>
 			<Route
 				path="/thread/:channel_id/settings/:page?"
 				component={RouteChannelSettings}
 			/>
-			<Route path="/thread/:channel_id" component={RouteChannel} />
-			<Route
-				path="/thread/:channel_id/message/:message_id"
-				component={RouteChannel}
-			/>
 			<Route path="/debug" component={Debug} />
-			<Route path="/feed" component={RouteFeed} />
-			<Route path="/invite/:code" component={RouteInvite} />
 			<Route path="/verify-email" component={RouteVerifyEmail} />
-			<Route path="/user/:user_id" component={RouteUser} />
 			<Route path="/authorize" component={RouteAuthorize} />
 			<Route path="*404" component={RouteNotFound} />
 		</Router>
@@ -296,29 +300,5 @@ export const AppShell: Component<ParentProps> = (props) => {
 		</>
 	);
 };
-
-const Title = (props: { title?: string }) => {
-	createEffect(() => {
-		document.title = props.title ?? "";
-	});
-	return undefined;
-};
-
-// TODO: move to routes
-function RouteSettings(p: RouteSectionProps): JSX.Element {
-	const { t } = useCtx();
-	const user = useCurrentUser();
-	createEffect(() => {
-		console.log(user());
-	});
-	return (
-		<>
-			<Title title={user() ? t("page.settings_user") : t("loading")} />
-			<Show when={user()}>
-				{(u) => <UserSettings user={u()} page={p.params.page ?? ""} />}
-			</Show>
-		</>
-	);
-}
 
 export default App;
