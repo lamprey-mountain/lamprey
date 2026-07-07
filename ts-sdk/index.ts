@@ -1,18 +1,24 @@
-import { UUID } from "uuidv7";
-
 export * from "./client.ts";
-export type { paths } from "./schema.d.ts";
-export * as types from "./types.ts";
-export * from "./types.ts";
-export * from "./upload.ts";
 export * from "./messages.ts";
+export type { paths } from "./schema.d.ts";
+export * as types from "./types.ts"; // TODO: deprecate/remove?
+export * from "./types.ts"; // TODO: deprecate/remove?
+export * from "./upload.ts";
 
-export function getTimestampFromUUID(uuid: string): Date {
-	const bytes = UUID.parse(uuid).bytes;
-	const timestamp = bytes
-		.slice(0, 6)
-		.reduce((acc: number, e: number) => acc * 256 + e, 0);
-	return new Date(timestamp);
-}
+// raw api types
+import type { components } from "./schema.d.ts";
+export type api = components["schemas"];
 
-export const SERVER_ROOM_ID = "00000000-0000-7000-0000-736572766572";
+// core types used everywhere in the sdk
+export { Emitter } from "./core/events.ts";
+export {
+	bytesToUuid,
+	getTimestampFromUUID,
+	isUuid,
+	SERVER_ROOM_ID,
+	uuidToBytes,
+} from "./core/uuid.ts";
+
+// api v2
+export { Lamprey } from "./client/client.ts";
+import "./client/shared-worker/client.ts";

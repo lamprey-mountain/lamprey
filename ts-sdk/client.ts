@@ -1,6 +1,8 @@
-import { pack, Unpackr, unpack } from "msgpackr";
+import { pack, unpack } from "msgpackr";
 import type * as oapi from "openapi-fetch";
 import createFetch from "openapi-fetch";
+import { JsonStream } from "./lib/json-stream.ts";
+import { MsgpackStream } from "./lib/msgpack-stream.ts";
 import { createObservable, type Observer } from "./observable.ts";
 import type { paths } from "./schema.d.ts";
 import type { MessageEnvelope, MessageReady, MessageSync } from "./types.ts";
@@ -246,8 +248,8 @@ export function createClient(opts: ClientOptions): Client {
 	};
 }
 
-export const UUID_MIN = "00000000-0000-0000-0000-000000000000";
-export const UUID_MAX = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+// TEMP: reexport
+export { UUID_MAX, UUID_MIN } from "./core/uuid.ts";
 
 function createDecompressor(
 	format: "json" | "msgpack",
@@ -272,117 +274,4 @@ function createDecompressor(
 	})();
 
 	return stream.writable.getWriter();
-}
-
-export class MsgpackStream extends TransformStream<Uint8Array, unknown> {
-	constructor() {
-		const unpacker = new Unpackr({
-			mapsAsObjects: true,
-		});
-
-		let buffer = new Uint8Array(0);
-
-		super({
-			transform(chunk, controller) {
-				const combined = new Uint8Array(buffer.length + chunk.length);
-				combined.set(buffer);
-				combined.set(chunk, buffer.length);
-				buffer = combined;
-
-				let consumedUntil = 0;
-
-				try {
-					unpacker.unpackMultiple(buffer, (value, _start, end) => {
-						controller.enqueue(value);
-						if (end !== undefined) {
-							consumedUntil = end;
-						} else console.warn("no end!");
-					});
-
-					buffer = buffer.slice(consumedUntil);
-				} catch (_e) {
-					// if it throws, we have a partial message
-					if (consumedUntil > 0) {
-						buffer = buffer.slice(consumedUntil);
-					}
-				}
-			},
-			flush() {
-				buffer = new Uint8Array(0);
-			},
-		});
-	}
-}
-
-export class JsonStream extends TransformStream<Uint8Array, unknown> {
-	constructor() {
-		const decoder = new TextDecoder();
-		let buffer = "";
-
-		super({
-			transform(chunk, controller) {
-				buffer += decoder.decode(chunk, { stream: true });
-
-				while (true) {
-					const endIdx = findJsonEnd(buffer);
-					if (endIdx === -1) break;
-
-					const raw = buffer.slice(0, endIdx);
-					try {
-						const obj = JSON.parse(raw);
-						controller.enqueue(obj);
-					} catch (e) {
-						console.error("Failed to parse JSON segment:", e);
-					}
-
-					buffer = buffer.slice(endIdx).trimStart();
-				}
-			},
-			flush(controller) {
-				const final = decoder.decode();
-				if (final.trim()) {
-					try {
-						controller.enqueue(JSON.parse(final));
-					} catch {}
-				}
-			},
-		});
-	}
-}
-
-/**
- * Finds the end of the first complete JSON object in a string.
- * Returns -1 if the object is incomplete.
- */
-function findJsonEnd(str: string): number {
-	let braces = 0;
-	let inString = false;
-	let escaped = false;
-	let started = false;
-
-	for (let i = 0; i < str.length; i++) {
-		const char = str[i];
-		if (escaped) {
-			escaped = false;
-			continue;
-		}
-		if (char === "\\") {
-			escaped = true;
-			continue;
-		}
-		if (char === '"') {
-			inString = !inString;
-			continue;
-		}
-		if (inString) continue;
-
-		if (char === "{") {
-			braces++;
-			started = true;
-		} else if (char === "}") {
-			braces--;
-			if (started && braces === 0) return i + 1;
-		}
-	}
-	return -1;
 }

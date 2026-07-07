@@ -201,6 +201,9 @@ importers:
 
   ts-sdk:
     dependencies:
+      idb:
+        specifier: ^8.0.3
+        version: 8.0.3
       msgpackr:
         specifier: ^1.11.9
         version: 1.11.9

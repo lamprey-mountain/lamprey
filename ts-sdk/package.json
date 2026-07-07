@@ -13,6 +13,7 @@
 		"typescript": "^5.7.3"
 	},
 	"dependencies": {
+		"idb": "^8.0.3",
 		"msgpackr": "^1.11.9",
 		"openapi-fetch": "^0.13.4",
 		"uuidv7": "^1.0.2"
