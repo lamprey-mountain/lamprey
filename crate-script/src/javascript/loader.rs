@@ -54,11 +54,12 @@ impl ModuleLoader {
 impl rquickjs::loader::Resolver for ModuleResolver {
     fn resolve<'js>(
         &mut self,
-        _ctx: &rquickjs::Ctx<'js>,
+        ctx: &rquickjs::prelude::Ctx<'js>,
         base: &str,
         name: &str,
+        attributes: Option<rquickjs::loader::ImportAttributes<'js>>,
     ) -> rquickjs::Result<String> {
-        dbg!(base, name);
+        dbg!(base, name, attributes);
         Ok(name.to_string())
     }
 }
@@ -66,9 +67,10 @@ impl rquickjs::loader::Resolver for ModuleResolver {
 impl rquickjs::loader::Loader for ModuleLoader {
     fn load<'js>(
         &mut self,
-        ctx: &rquickjs::Ctx<'js>,
+        ctx: &rquickjs::prelude::Ctx<'js>,
         name: &str,
-    ) -> rquickjs::Result<rquickjs::Module<'js, rquickjs::module::Declared>> {
+        _attributes: Option<rquickjs::loader::ImportAttributes<'js>>,
+    ) -> rquickjs::Result<Module<'js, rquickjs::module::Declared>> {
         let resolved: ModuleRef = name
             .parse()
             .map_err(|_| rquickjs::Error::new_loading(name))?;

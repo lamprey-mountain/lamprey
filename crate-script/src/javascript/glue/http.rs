@@ -442,13 +442,13 @@ impl Headers {
             .iter()
             .map(|(name, value)| vec![name.to_string(), value.to_str().unwrap_or("").to_string()])
             .collect();
-        Ok(Iterable(entries).into_js(&ctx)?)
+        Ok(Iterable::from(entries).into_js(&ctx)?)
     }
 
     /// iterate over all header keys
     fn keys<'js>(&self, ctx: Ctx<'js>) -> JsResult<rquickjs::Value<'js>> {
         let keys: Vec<String> = self.headers.keys().map(|k| k.to_string()).collect();
-        Ok(Iterable(keys).into_js(&ctx)?)
+        Ok(Iterable::from(keys).into_js(&ctx)?)
     }
 
     /// iterate over all header values
@@ -459,7 +459,7 @@ impl Headers {
             .filter_map(|v| v.to_str().ok())
             .map(String::from)
             .collect();
-        Ok(Iterable(values).into_js(&ctx)?)
+        Ok(Iterable::from(values).into_js(&ctx)?)
     }
 
     /// call a function for each header
