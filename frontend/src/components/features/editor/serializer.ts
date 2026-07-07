@@ -5,19 +5,29 @@ import type { Node } from "prosemirror-model";
  * converting mention nodes back to their <@uuid> syntax.
  */
 export function serializeToMarkdown(doc: Node): string {
+	console.log("DOC", doc);
 	let result = "";
 
 	doc.forEach((blockNode) => {
-		blockNode.forEach((node) => {
-			result += serializeNode(node);
-		});
+		result += serializeBlock(blockNode);
 		result += "\n";
 	});
 
 	return result.trim();
 }
 
-function serializeNode(node: Node): string {
+function serializeBlock(node: Node): string {
+	switch (node.type.name) {
+		case "blockquote": {
+			return "> " + node.children.map((n) => serializeInline(n)).join("");
+		}
+		default: {
+			return node.children.map((n) => serializeInline(n)).join("");
+		}
+	}
+}
+
+function serializeInline(node: Node): string {
 	if (node.isText) {
 		return node.text || "";
 	}
