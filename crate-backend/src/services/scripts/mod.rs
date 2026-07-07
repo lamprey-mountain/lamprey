@@ -3,23 +3,22 @@ use common::v1::types::redex::{
 };
 use common::v1::types::util::Time;
 use common::v1::types::{
-    ChannelId, ConnectionId, EvalId, MediaId, MessageSync, RedexId, RedexVerId, UserId,
+    ChannelId, ConnectionId, EvalId, MediaId, MessageSync, RedexId, RedexVerId,
 };
 use dashmap::DashMap;
 use lamprey_script::engine::{AnyExecutionHandle, ExecutionEvent, ScriptExtracted};
 use lamprey_script::{Engine, Executor, Limits};
-use std::collections::VecDeque;
 use std::sync::Arc;
 use tokio::sync::broadcast;
-use tokio::sync::broadcast::error::RecvError;
-use tracing::{error, warn};
 
-use crate::error::Result;
-use crate::{Error, ServerStateInner};
+use crate::prelude::*;
+use crate::services::scripts::sync::ScriptSyncer;
+
+mod sync;
 
 /// the service that manages all scripts
 pub struct ServiceScripts {
-    state: Arc<ServerStateInner>,
+    globals: Globals,
 
     engine: Engine,
     handles: DashMap<EvalId, AnyExecutionHandle>,
@@ -29,9 +28,9 @@ pub struct ServiceScripts {
 }
 
 impl ServiceScripts {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(globals: Globals) -> Self {
         Self {
-            state,
+            globals,
             engine: Engine::new(Limits::strict()).unwrap(),
             handles: DashMap::new(),
             script_event_txs: DashMap::new(),
@@ -46,22 +45,23 @@ impl ServiceScripts {
 
         // broadcast to the room as well
         let chan = self
-            .state
+            .globals
             .services()
             .channels
             .get(channel_id, None)
             .await
             .ok();
         if let Some(room_id) = chan.and_then(|c| c.room_id) {
-            let _ = self.state.broadcast_room2(room_id, msg).await;
+            let _ = self.globals.messaging().broadcast_room(room_id, msg).await;
         }
     }
 
     /// get the redex version id for a redex
     pub async fn get_redex_version_id(&self, redex_id: RedexId) -> Result<RedexVerId> {
         let script = self
-            .state
-            .data()
+            .globals
+            .begin_read()
+            .await?
             .script_get(redex_id)
             .await?
             .ok_or(Error::BadStatic("script not found"))?;
@@ -89,7 +89,7 @@ impl ServiceScripts {
         media_id: MediaId,
         format: RedexFormat,
     ) -> Result<Box<dyn Executor>> {
-        let item = self.state.services().media.get(media_id).await?;
+        let item = self.globals.services().media.get(media_id).await?;
         let bytes = item.download_bytes().await?;
         let loaded = match format {
             RedexFormat::Javascript => {
@@ -112,8 +112,7 @@ impl ServiceScripts {
     pub async fn create_script(&self, script: Redex) -> Result<()> {
         let inputs = self.process(script.clone(), None).await?;
         let extracted_metadata = inputs.metadata;
-
-        let mut data = self.state.data();
+        let mut data = self.globals.begin().await?;
 
         // persist the script to the database
         data.script_create(&script).await?;
@@ -153,6 +152,8 @@ impl ServiceScripts {
             .await;
         }
 
+        data.commit().await?;
+
         Ok(())
     }
 
@@ -163,7 +164,7 @@ impl ServiceScripts {
         let ver_metadata = ver.metadata.clone();
         let inputs = self.process(script.clone(), Some(ver)).await?;
 
-        let mut data = self.state.data();
+        let mut data = self.globals.begin().await?;
 
         // store the extracted inputs as cached_inputs on the new version
         let inputs_json = serde_json::to_value(&inputs.inputs).ok();
@@ -199,12 +200,14 @@ impl ServiceScripts {
             .await;
         }
 
+        data.commit().await?;
+
         Ok(())
     }
 
     /// create a new script syncer for a session
     pub fn create_syncer(&self, conn_id: ConnectionId) -> ScriptSyncer {
-        ScriptSyncer::new(Arc::clone(&self.state), conn_id)
+        ScriptSyncer::new(self.globals.clone(), conn_id)
     }
 
     /// load a redex
@@ -212,8 +215,8 @@ impl ServiceScripts {
         // TODO: check if script is already loaded first
         // self.engine.get_js(&script_id);
 
-        let srv = self.state.services();
-        let mut data = self.state.data();
+        let srv = self.globals.services();
+        let mut data = self.globals.begin_read().await?;
 
         let script = data
             .script_get(redex_id)
@@ -301,8 +304,10 @@ impl ServiceScripts {
             status: EvalStatus::Creating,
             input: input.clone().into(),
         };
-        let mut data = self.state.data();
+        let mut data = self.globals.begin().await?;
         data.script_run_create(&run).await?;
+        data.commit().await?;
+
         self.broadcast(
             channel_id,
             MessageSync::ScriptRunCreate {
@@ -316,15 +321,17 @@ impl ServiceScripts {
         self.handles.insert(eval_id, handle.clone());
         let caller_handle = handle.clone();
         let mut event_handle = handle; // move the original receiver so we don't miss any messages
-        let state = self.state.clone();
+        let state = self.globals.clone();
 
         // handle execution events, propagate them to api sync events
         tokio::spawn(async move {
             while let Ok(event) = event_handle.poll().await {
                 match &*event {
                     ExecutionEvent::Log(entry) => {
-                        let mut data = state.data();
-                        let _ = data.script_log_insert(eval_id, entry).await;
+                        if let Ok(mut data) = state.begin().await {
+                            let _ = data.script_log_insert(eval_id, entry).await;
+                            let _ = data.commit().await;
+                        }
                         state
                             .services()
                             .scripts
@@ -339,8 +346,10 @@ impl ServiceScripts {
                             .await;
                     }
                     ExecutionEvent::Status(status) => {
-                        let mut data = state.data();
-                        let _ = data.script_run_update_status(eval_id, status.clone()).await;
+                        if let Ok(mut data) = state.begin().await {
+                            let _ = data.script_run_update_status(eval_id, status.clone()).await;
+                            let _ = data.commit().await;
+                        }
 
                         let run_info = event_handle.eval();
                         let stopped_at = if matches!(
@@ -398,10 +407,11 @@ impl ServiceScripts {
         let handle = self.handles.get(&run_id).ok_or(Error::NotFound)?;
         handle.stop();
 
-        let mut data = self.state.data();
+        let mut data = self.globals.begin().await?;
         let _ = data
             .script_run_update_status(run_id, EvalStatus::Stopped)
             .await;
+        data.commit().await?;
 
         self.broadcast(
             channel_id,
@@ -413,141 +423,5 @@ impl ServiceScripts {
         .await;
 
         Ok(())
-    }
-}
-
-// copied from document syncer, probably need to review this code
-/// Handles script synchronization for a single client connection.
-///
-/// This struct manages the lifecycle of script subscriptions for a connection,
-/// including subscribing/unsubscribing to script channels, broadcasting log
-/// lines and metrics, and tracking run events.
-pub struct ScriptSyncer {
-    /// Reference to the server state for accessing services
-    s: Arc<ServerStateInner>,
-
-    /// Sends subscription requests to switch to a different script.
-    /// When a client subscribes to a new script, the (channel_id, script_id) tuple is
-    /// sent through this channel.
-    query_tx: tokio::sync::watch::Sender<Option<(ChannelId, RedexId)>>,
-
-    /// Receives subscription requests from `query_tx`. The poll() loop monitors
-    /// this receiver for changes. When a new query arrives, it sets up a
-    /// subscription to the requested script and moves the subscription to `current_rx`.
-    query_rx: tokio::sync::watch::Receiver<Option<(ChannelId, RedexId)>>,
-
-    /// The active script subscription. Contains the current (channel_id, script_id) tuple
-    /// and a broadcast receiver for receiving script events (logs, metrics, runs).
-    current_rx: Option<((ChannelId, RedexId), broadcast::Receiver<MessageSync>)>,
-
-    /// The connection ID associated with this syncer, used to filter out
-    /// self-originated events.
-    conn_id: ConnectionId,
-
-    /// Queue of pending sync messages to be sent to the client.
-    pending_sync: VecDeque<MessageSync>,
-
-    /// The user ID of the authenticated user.
-    user_id: Option<UserId>,
-}
-
-impl ScriptSyncer {
-    /// create a new syncer
-    pub(super) fn new(s: Arc<ServerStateInner>, conn_id: ConnectionId) -> Self {
-        let (query_tx, query_rx) = tokio::sync::watch::channel(None);
-        Self {
-            s,
-            query_tx,
-            query_rx,
-            current_rx: None,
-            conn_id,
-            pending_sync: VecDeque::new(),
-            user_id: None,
-        }
-    }
-
-    pub async fn set_user_id(&mut self, user_id: Option<UserId>) {
-        self.user_id = user_id;
-    }
-
-    /// Set the script to subscribe to.
-    pub async fn set_context_id(&self, channel_id: ChannelId, script_id: RedexId) -> Result<()> {
-        self.query_tx
-            .send(Some((channel_id, script_id)))
-            .map_err(|_| Error::Internal("query channel closed".to_string()))?;
-        Ok(())
-    }
-
-    /// Check if client is actively subscribed to a script.
-    pub fn is_subscribed(&self, channel_id: &ChannelId, script_id: &RedexId) -> bool {
-        self.current_rx
-            .as_ref()
-            .map(|((current_channel, current_script), _)| {
-                current_channel == channel_id && current_script == script_id
-            })
-            .unwrap_or(false)
-    }
-
-    pub async fn poll(&mut self) -> Result<MessageSync> {
-        loop {
-            if let Some(msg) = self.pending_sync.pop_front() {
-                return Ok(msg);
-            }
-
-            if self.query_rx.has_changed().unwrap_or(false) {
-                let _ = self.query_rx.borrow_and_update();
-                let query = self.query_rx.borrow().clone();
-
-                match query {
-                    Some((channel_id, script_id)) => {
-                        let rx = self
-                            .s
-                            .services()
-                            .scripts
-                            .subscribe_channel(channel_id)
-                            .await?;
-                        self.current_rx = Some(((channel_id, script_id), rx));
-
-                        return Ok(MessageSync::ScriptSubscribed {
-                            channel_id,
-                            redex_id: script_id,
-                            connection_id: self.conn_id,
-                        });
-                    }
-                    None => {
-                        self.current_rx = None;
-                        continue;
-                    }
-                }
-            }
-
-            if let Some(((_channel_id, _script_id), rx)) = &mut self.current_rx {
-                tokio::select! {
-                    res = rx.recv() => {
-                        match res {
-                            Ok(msg) => {
-                                return Ok(msg);
-                            }
-                            Err(RecvError::Closed) => {
-                                error!("sender died, unsubscribind");
-                                self.current_rx = None;
-                                continue;
-                            }
-                            Err(RecvError::Lagged(n)) => {
-                                warn!("receiver lagged and skipped {n} messages");
-                                continue;
-                            }
-                        }
-                    }
-                    _ = self.query_rx.changed() => continue,
-                }
-            } else {
-                self.query_rx
-                    .changed()
-                    .await
-                    .map_err(|_| Error::Internal("query channel closed".to_string()))?;
-                continue;
-            }
-        }
     }
 }

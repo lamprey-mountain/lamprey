@@ -163,7 +163,7 @@ impl Services {
             member_lists: ServiceMemberLists::new(state_old.clone()),
             messages: ServiceMessages::new(state_old.clone()),
             notifications: ServiceNotifications::new(globals.clone()),
-            scripts: ServiceScripts::new(state_old.clone()),
+            scripts: ServiceScripts::new(globals.clone()),
             oauth: ServiceOauth::new(state_old.clone()),
             perms: ServicePermissions::new(state_old.clone()),
             presence: ServicePresence::new(state_old.clone()),
