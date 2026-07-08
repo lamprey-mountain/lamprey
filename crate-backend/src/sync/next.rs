@@ -300,11 +300,11 @@ impl Connection2 {
                 user.ensure_unsuspended()?;
                 srv.presence.set(user_id, presence).await?;
             }
-            // FIXME: allow guests to Pong
             MessageClient::Pong => {
                 let srv = self.globals.services();
-                let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
-                srv.presence.ping(user_id).await?;
+                if let Some(user_id) = self.session.user_id() {
+                    srv.presence.ping(user_id).await?;
+                }
                 *timeout = Timeout::Ping(tokio::time::Instant::now() + HEARTBEAT_TIME);
             }
             MessageClient::MemberListSubscribe {
