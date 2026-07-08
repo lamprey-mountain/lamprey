@@ -39,7 +39,7 @@ impl ServiceConnections {
         let session = srv.sessions.get_by_token(hello.token).await?;
 
         if let (presence, Some(user_id)) = (hello.presence, session.user_id()) {
-            let mut user = srv.users.get(user_id, Some(user_id)).await?;
+            let user = srv.users.get(user_id, Some(user_id)).await?;
             if !user.is_suspended() {
                 let presence = presence.unwrap_or(Presence {
                     status: Status::Online,

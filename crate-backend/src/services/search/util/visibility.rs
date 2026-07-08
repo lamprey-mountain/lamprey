@@ -1,4 +1,4 @@
-use common::v1::types::{ChannelId, RoomId, UserId};
+use common::v1::types::{RoomId, UserId};
 use lamprey_backend_core::types::search::ChannelVisibility;
 use tantivy::{
     Term,

@@ -463,42 +463,6 @@ struct CheckHealthResponse {
     ok: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-struct CheckDoctorResponse {
-    ok: bool,
-    issues: Vec<DoctorIssue>,
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-struct DoctorIssue {
-    /// whats the name of this check
-    name: String,
-
-    /// how bad is it
-    severity: DoctorSeverity,
-
-    /// what's wrong
-    message: String,
-
-    /// why its a problem
-    detail: Option<String>,
-
-    /// how to fix it
-    suggestion: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-enum DoctorSeverity {
-    /// not a problem but still worth knowing
-    Info,
-
-    /// this is something you should fix when you have time
-    Warning,
-
-    /// this is something you should fix NOW
-    Critical,
-}
-
 /// Check health
 ///
 /// is this server alive?

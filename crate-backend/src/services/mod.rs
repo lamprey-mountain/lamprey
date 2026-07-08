@@ -48,7 +48,6 @@ use users::ServiceUsers;
 use webhook::ServiceWebhooks;
 
 use crate::{
-    ServerStateInner,
     prelude::*,
     services::{
         admin::ServiceAdmin, audit_logs::ServiceAuditLogs, automod::ServiceAutomod,

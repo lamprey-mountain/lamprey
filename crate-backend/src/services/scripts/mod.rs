@@ -8,7 +8,6 @@ use common::v1::types::{
 use dashmap::DashMap;
 use lamprey_script::engine::{AnyExecutionHandle, ExecutionEvent, ScriptExtracted};
 use lamprey_script::{Engine, Executor, Limits};
-use std::sync::Arc;
 use tokio::sync::broadcast;
 
 use crate::prelude::*;

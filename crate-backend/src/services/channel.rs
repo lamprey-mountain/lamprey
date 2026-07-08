@@ -11,8 +11,6 @@ use common::v1::types::{
     ThreadMemberPut, User, UserId,
 };
 use common::v2::types::MessageVerId;
-use futures::TryStreamExt;
-use futures::stream::StreamExt;
 use moka::future::Cache;
 use moka::ops::compute::Op as CacheOp;
 use time::OffsetDateTime;
