@@ -1,20 +1,16 @@
-//! work in progress redesign of the sync system
-
 use crate::error::{Error, Result};
+use crate::prelude::*;
 use crate::state::messaging::Broadcast;
-use crate::sync::connection_queue::ConnectionQueue;
 use crate::sync::permissions::AuthCheck;
+use crate::sync::queue::ConnectionQueue;
 use crate::sync::subscriptions::ConnectionSubscriptions;
-use crate::sync::transport::{
-    AnyTransport, Transport, TransportEvent, TransportSink, TransportStream, WebsocketTransport,
-};
-use crate::sync::util::{ConnectionState, HEARTBEAT_TIME, MAX_QUEUE_LEN, Timeout};
+use crate::sync::transport::{Transport, TransportEvent, TransportSink, TransportStream};
+use crate::sync::util::{HEARTBEAT_TIME, MAX_QUEUE_LEN, Timeout};
 use crate::sync::{ConnectionErrorSeverity, severity};
-use crate::{ServerState, prelude::*};
 use common::v1::types::{
     ChannelId, DocumentBranchId, MessageClient, MessageEnvelope, MessagePayload, MessageSync,
-    Permission, Session, SyncParams, SyncSubscribeDocument, SyncSubscribeMemberList,
-    SyncSubscribeScript, SyncSubscription, UserId,
+    Permission, Session, SyncSubscribeDocument, SyncSubscribeMemberList, SyncSubscribeScript,
+    SyncSubscription,
     document::DocumentUpdate,
     presence::Presence,
     voice::{VoiceStateUpdate, messages::SignallingCommand},
@@ -22,7 +18,7 @@ use common::v1::types::{
 use common::v2::types::{ConnectionId, SessionId};
 use futures_util::StreamExt;
 use tokio::sync::mpsc;
-use tracing::{Instrument, debug, error, trace, warn};
+use tracing::{Instrument, error, trace, warn};
 
 /// an authenticated connection
 pub struct Connection2 {
