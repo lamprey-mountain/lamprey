@@ -14,3 +14,6 @@ pub use limits::Limits;
 
 // TODO: automatically put runs to sleep to save memory
 // TODO: automatically awaken runs when triggered
+
+#[cfg(test)]
+mod tests;
