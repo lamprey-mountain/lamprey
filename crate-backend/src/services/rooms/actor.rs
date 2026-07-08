@@ -291,7 +291,7 @@ impl RoomActor {
         Ok(())
     }
 
-    fn handle_sync(&mut self, event: MessageSync) -> Result<()> {
+    async fn handle_sync(&mut self, event: MessageSync) -> Result<()> {
         let mut snapshot_data = match self.snapshot.as_ref() {
             RoomSnapshot::Ready(data) | RoomSnapshot::WithoutMembers(data) => data.as_ref().clone(),
             _ => return Ok(()),
@@ -584,6 +584,11 @@ impl RoomActor {
             _ => {}
         }
 
+        for list in self.member_lists.values_mut() {
+            list.handle_sync(event.clone(), Arc::clone(&self.snapshot))
+                .await;
+        }
+
         self.snapshot = Arc::new(RoomSnapshot::Ready(Arc::new(snapshot_data)));
         let _ = self.snapshot_tx.send(Arc::clone(&self.snapshot));
 
@@ -642,7 +647,7 @@ impl Message<SyncMessage> for RoomActor {
         let span = tracing::info_span!(parent: &self.span, "SyncMessage");
         async {
             self.last_active = Instant::now();
-            self.handle_sync(msg.sync)
+            self.handle_sync(msg.sync).await
         }
         .instrument(span)
         .await
