@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use crate::{ServerStateInner, error::Result};
+use crate::{error::Result, server::globals::Globals};
 use common::v1::types::{
     HarvestId, RoomId, UserId,
     error::{ApiError, ErrorCode},
@@ -11,19 +11,20 @@ use tokio::sync::Semaphore;
 use tracing::{error, warn};
 
 /// the maximum number of harvest jobs that can be running simultaneously
+// TODO: make this configurable
 const MAX_HARVEST_JOBS: usize = 2;
 
 pub struct ServiceHarvest {
-    state: Arc<ServerStateInner>,
+    globals: Globals,
 }
 
 impl ServiceHarvest {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
-        Self { state }
+    pub fn new(globals: Globals) -> Self {
+        Self { globals }
     }
 
     pub(super) fn start_background_tasks(&self) {
-        let state = Arc::clone(&self.state);
+        let globals = self.globals.clone();
         tokio::spawn(async move {
             let semaphore = Arc::new(Semaphore::new(MAX_HARVEST_JOBS));
 
@@ -36,7 +37,7 @@ impl ServiceHarvest {
                     }
                 };
 
-                let mut db = match state.acquire_data().await {
+                let mut txn = match globals.begin().await {
                     Ok(db) => db,
                     Err(e) => {
                         error!("failed to acquire data for harvest loop: {:?}", e);
@@ -46,18 +47,19 @@ impl ServiceHarvest {
                     }
                 };
 
-                match db.harvest_claim().await {
+                match txn.harvest_claim().await {
                     Ok(Some(harvest)) => {
-                        drop(db);
-                        let state2 = Arc::clone(&state);
+                        let _ = txn.commit().await;
+                        let globals2 = globals.clone();
                         tokio::spawn(async move {
-                            if let Err(e) = state2.services().harvest.generate(harvest).await {
+                            if let Err(e) = globals2.services().harvest.generate(harvest).await {
                                 error!("failed to generate harvest: {:?}", e);
                             }
                             drop(permit);
                         });
                     }
                     Ok(None) => {
+                        let _ = txn.rollback().await;
                         drop(permit);
                         tokio::time::sleep(Duration::from_secs(5)).await;
                     }
@@ -78,9 +80,9 @@ impl ServiceHarvest {
         harvest_options: &HarvestCreateRoom,
         requester_id: UserId,
     ) -> Result<Harvest> {
-        let mut db = self.state.acquire_data().await?;
+        let mut txn = self.globals.begin().await?;
 
-        let harvest_id = if let Some(existing) = db.harvest_get_room(room_id).await? {
+        let harvest_id = if let Some(existing) = txn.harvest_get_room(room_id).await? {
             existing.id
         } else {
             HarvestId::new()
@@ -96,7 +98,8 @@ impl ServiceHarvest {
                 create: harvest_options.clone(),
             },
         };
-        db.harvest_put(&harvest).await?;
+        txn.harvest_put(&harvest).await?;
+        txn.commit().await?;
 
         Ok(harvest)
     }
@@ -108,9 +111,9 @@ impl ServiceHarvest {
         harvest_options: &HarvestCreateUser,
         requester_id: UserId,
     ) -> Result<Harvest> {
-        let mut db = self.state.acquire_data().await?;
+        let mut txn = self.globals.begin().await?;
 
-        let harvest_id = if let Some(existing) = db.harvest_get_user(user_id).await? {
+        let harvest_id = if let Some(existing) = txn.harvest_get_user(user_id).await? {
             existing.id
         } else {
             HarvestId::new()
@@ -126,7 +129,8 @@ impl ServiceHarvest {
                 create: harvest_options.clone(),
             },
         };
-        db.harvest_put(&harvest).await?;
+        txn.harvest_put(&harvest).await?;
+        txn.commit().await?;
 
         Ok(harvest)
     }
@@ -146,7 +150,7 @@ impl ServiceHarvest {
 
     /// get a harvest
     pub async fn get(&self, harvest_id: HarvestId) -> Result<Harvest> {
-        let mut db = self.state.acquire_data().await?;
+        let mut db = self.globals.begin_read().await?;
         let harvest = db
             .harvest_get(harvest_id)
             .await?
@@ -156,7 +160,7 @@ impl ServiceHarvest {
 
     /// get latest harvest for a user
     pub async fn get_user(&self, user_id: UserId) -> Result<Harvest> {
-        let mut db = self.state.acquire_data().await?;
+        let mut db = self.globals.begin_read().await?;
         let harvest = db
             .harvest_get_user(user_id)
             .await?
@@ -166,7 +170,7 @@ impl ServiceHarvest {
 
     /// get latest harvest for a room
     pub async fn get_room(&self, room_id: RoomId) -> Result<Harvest> {
-        let mut db = self.state.acquire_data().await?;
+        let mut db = self.globals.begin_read().await?;
         let harvest = db
             .harvest_get_room(room_id)
             .await?

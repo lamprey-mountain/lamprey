@@ -154,7 +154,7 @@ impl Services {
             embed: ServiceEmbed::new(state_old.clone()),
             emoji: ServiceEmoji::new(state_old.clone()),
             federation: ServiceFederation::new(state_old.clone()),
-            harvest: ServiceHarvest::new(state_old.clone()),
+            harvest: ServiceHarvest::new(globals.clone()),
             health: ServiceHealth::new(globals.clone()),
             http: ServiceHttp::new(state_old.clone()),
             interactions: ServiceInteractions::new(state_old.clone()),
