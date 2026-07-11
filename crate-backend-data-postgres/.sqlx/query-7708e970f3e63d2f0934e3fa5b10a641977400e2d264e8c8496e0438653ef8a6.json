@@ -22,7 +22,8 @@
                 "ChannelIcon",
                 "RoomBanner",
                 "Script",
-                "ScriptVersion"
+                "ScriptVersion",
+                "Document"
               ]
             }
           }
