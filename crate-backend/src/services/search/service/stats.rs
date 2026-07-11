@@ -69,7 +69,7 @@ impl ServiceSearch {
 
         let top_docs = TopDocs::with_limit(1)
             .order_by_fast_field::<tantivy::DateTime>("created_at", tantivy::Order::Desc);
-        let docs: Vec<(tantivy::DateTime, tantivy::DocAddress)> =
+        let docs: Vec<(Option<tantivy::DateTime>, tantivy::DocAddress)> =
             searcher.search(&query_msg, &top_docs).await?;
 
         let last_indexed_message_id = if let Some((_, doc_addr)) = docs.first() {
