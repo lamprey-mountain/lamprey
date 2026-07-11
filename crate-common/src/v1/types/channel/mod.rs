@@ -10,7 +10,6 @@ use validator::Validate;
 use crate::v1::types::error::{ApiError, ErrorCode};
 use crate::v1::types::federation::Remote;
 use crate::v1::types::preferences::PreferencesChannel;
-use crate::v1::types::tag::Tag;
 use crate::v1::types::util::Time;
 use crate::v1::types::{ChannelVerId, PermissionOverwrite, util::Diff};
 use crate::v1::types::{
@@ -25,6 +24,8 @@ use super::ChannelId;
 use super::calendar::{Calendar, CalendarPatch};
 use super::document::{Document, DocumentPatch, Wiki, WikiPatch};
 use super::{RoomId, UserId};
+
+pub mod components;
 
 /// A channel
 #[derive(Debug, Clone)]
@@ -204,6 +205,9 @@ pub struct Channel {
     pub slowmode_message_expire_at: Option<Time>,
 
     pub remote: Option<Remote<ChannelId>>,
+    // TODO: add fields for forum channels
+    // pub sorting: Option<ForumSorting>,
+    // pub default_layout: Option<ForumLayout>,
 }
 
 #[cfg(feature = "serde")]

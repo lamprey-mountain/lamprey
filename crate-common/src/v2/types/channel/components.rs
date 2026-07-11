@@ -8,7 +8,12 @@ use utoipa::ToSchema;
 use validator::Validate;
 
 use crate::{
-    v1::types::{Locked, PermissionOverwrite, ThreadMember, User, misc::Time, tag::TagMinimal},
+    v1::types::{
+        Locked, PermissionOverwrite, ThreadMember, User,
+        channel::components::{ForumLayout, ForumSorting},
+        misc::Time,
+        tag::TagMinimal,
+    },
     v2::types::{ChannelId, MediaId, MessageId},
 };
 
@@ -75,59 +80,6 @@ pub struct ChannelThreaded {
 
     pub sorting: ForumSorting,
     pub default_layout: ForumLayout,
-}
-
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct ForumSorting {
-    pub reactions: Vec<DefaultForumReaction>,
-    pub default_sort: ForumSort,
-}
-
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct DefaultForumReactions {
-    pub reaction: ReactionKeyField,
-
-    /// how to weight this reaction for scoring
-    #[cfg_attr(feature = "serde", serde(default))]
-    pub weight: f64,
-}
-
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct ForumSort {
-    /// what order to return posts in
-    #[cfg_attr(feature = "serde", serde(default))]
-    pub order: Order,
-
-    /// only include posts younger than this time
-    ///
-    /// in milliseconds
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    pub time: Option<u64>,
-
-    #[cfg_attr(feature = "serde", serde(flatten))]
-    pub kind: ChannelSearchOrderField,
-}
-
-/// how to display posts in a forum
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum ForumLayout {
-    /// display posts as a list of cards
-    #[default]
-    Card,
-
-    /// display posts as a compact list
-    Compact,
-
-    /// display posts as an image gallery
-    Gallery,
 }
 
 /// a channel that is a thread
