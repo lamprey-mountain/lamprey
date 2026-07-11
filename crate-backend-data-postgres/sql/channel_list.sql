@@ -6,7 +6,6 @@ SELECT
     (SELECT coalesce(COUNT(*), 0) FROM message WHERE channel_id = t.id AND deleted_at IS NULL) AS "message_count!",
     coalesce((SELECT json_agg(json_build_object('id', actor_id, 'type', type, 'allow', allow, 'deny', deny)) FROM permission_overwrite WHERE target_id = t.id), '[]'::json) as "permission_overwrites!",
     (SELECT json_agg(tag_id) FROM channel_tag WHERE channel_id = t.id) as tags,
-    (SELECT json_agg(tag.*) FROM tag WHERE channel_id = t.id) as tags_available,
     (SELECT coalesce(COUNT(*), 0) FROM channel_tag WHERE channel_id = t.id) AS "tag_count!",
     (SELECT row_to_json(cd.*) FROM channel_document cd WHERE cd.channel_id = t.id) as document,
     (SELECT row_to_json(cw.*) FROM channel_wiki cw WHERE cw.channel_id = t.id) as wiki,
@@ -17,11 +16,6 @@ LEFT JOIN (
     FROM channel_tag
     GROUP BY channel_id
 ) tags ON tags.channel_id = t.id
-LEFT JOIN (
-    SELECT channel_id, json_agg(tag.*) as json
-    FROM tag
-    GROUP BY channel_id
-) tags_available ON tags_available.channel_id = t.id
 WHERE t.room_id = $1
   AND t.deleted_at IS NULL
   AND t.archived_at IS NULL

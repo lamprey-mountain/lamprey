@@ -6,7 +6,6 @@ SELECT
     (SELECT coalesce(COUNT(*), 0) FROM message WHERE channel_id = t.id AND deleted_at IS NULL) AS "message_count!",
     '[]'::json as "permission_overwrites!",
     (SELECT json_agg(tag_id) FROM channel_tag WHERE channel_id = t.id) as tags,
-    NULL::json as tags_available,
     (SELECT coalesce(COUNT(*), 0) FROM channel_tag WHERE channel_id = t.id) AS "tag_count!",
     (SELECT row_to_json(cd.*) FROM channel_document cd WHERE cd.channel_id = t.id) as document,
     (SELECT row_to_json(cw.*) FROM channel_wiki cw WHERE cw.channel_id = t.id) as wiki,

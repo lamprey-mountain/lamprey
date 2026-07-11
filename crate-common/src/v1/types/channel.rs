@@ -81,13 +81,6 @@ pub struct Channel {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
     pub tags: Option<Vec<TagId>>,
 
-    /// the tags that are available in this forum. exists on Forum channels only.
-    // NOTE: if i want to have unlimited tags, i'd have to remove this
-    // TODO: remove
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
-    #[deprecated]
-    pub tags_available: Option<Vec<Tag>>,
-
     // TODO: rename to removed_at
     pub deleted_at: Option<Time>,
     pub archived_at: Option<Time>,
@@ -245,9 +238,6 @@ impl Serialize for Channel {
             tags: Option<&'a [TagId]>,
 
             #[serde(skip_serializing_if = "Option::is_none")]
-            tags_available: Option<&'a [Tag]>,
-
-            #[serde(skip_serializing_if = "Option::is_none")]
             deleted_at: Option<Time>,
             #[serde(skip_serializing_if = "Option::is_none")]
             archived_at: Option<Time>,
@@ -360,11 +350,6 @@ impl Serialize for Channel {
             },
             tags: if self.ty.is_taggable() {
                 Some(self.tags.as_deref().unwrap_or(&[]))
-            } else {
-                None
-            },
-            tags_available: if self.ty.has_tags() {
-                self.tags_available.as_deref()
             } else {
                 None
             },
