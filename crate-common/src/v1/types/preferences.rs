@@ -18,6 +18,8 @@ use crate::v1::types::{
     notifications::preferences::{NotifsChannel, NotifsGlobal, NotifsRoom},
 };
 
+pub mod room_sidebar;
+
 /// preferences for a user
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -37,6 +39,9 @@ pub struct PreferencesGlobal {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct PreferencesGlobalFrontend {
+    /// room navigation sidebar
+    pub room_sidebar: room_sidebar::Sidebar,
+
     /// extra implementation defined config
     #[cfg_attr(feature = "serde", serde(flatten))]
     pub extra: HashMap<String, serde_json::Value>,

@@ -36,9 +36,10 @@ export type RoomNavItem =
 			// Omitting view-specific properties for now
 	  };
 
-/*
-TODO: room nav views
+// TODO: use types defined in crate-common/src/v1/types/preferences/room_sidebar.rs
+// TODO: impl views
 
+/*
 type RoomNavToplevelItem = RoomNavItem & {
 	type: "folder",
 	name: string,

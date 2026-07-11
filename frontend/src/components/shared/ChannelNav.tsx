@@ -97,6 +97,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	});
 
 	// track collapsed categories
+	// TODO: persist in user preferences
 	const [collapsedCategories, setCollapsedCategories] = createSignal<
 		Set<string>
 	>(new Set());
