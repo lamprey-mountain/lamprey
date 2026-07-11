@@ -80,18 +80,22 @@ export const AppLayoutMain = (props: ParentProps<RouteSectionProps>) => {
 
 	return (
 		<>
-			<RoomNav />
 			<Resizable
-				storageKey="channel-nav-width"
+				storageKey="nav-tray-width"
 				side="left"
-				initialWidth={256}
-				minWidth={180}
-				maxWidth={500}
+				// 64px room nav + 256 channel nav
+				initialWidth={320}
+				// TODO: don't have magic numbers
+				minWidth={244}
+				maxWidth={564}
 			>
-				<ChannelNav room_id={roomId()} />
+				<div class="nav-tray">
+					<RoomNav />
+					<ChannelNav room_id={roomId()} />
+					<UserTray />
+				</div>
 			</Resizable>
 			{props.children}
-			<UserTray />
 		</>
 	);
 };

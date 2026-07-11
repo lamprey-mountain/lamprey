@@ -50,15 +50,24 @@
 #root {
 	display: grid;
 	grid-template-areas:
-		"room-nav channel-nav header header"
-		"room-nav channel-nav main   sidebar"
-		"tray     tray        main   sidebar"
-		"footer   footer      footer footer";
-	grid-template-rows: auto 1fr auto auto;
-	grid-template-columns: auto auto 1fr auto;
+		"nav-tray header header"
+		"nav-tray main   sidebar"
+		"footer   footer footer";
+	grid-template-rows: auto 1fr auto;
+	grid-template-columns: auto 1fr auto;
 	height: 100vh;
 	background-color: $bg-200;
 	color: $fg-200;
+}
+
+.nav-tray {
+	width: 100%;
+	display: grid;
+	grid-template-areas:
+		"room-nav channel-nav"
+		"tray     tray       ";
+	grid-template-rows: auto 1fr;
+	grid-template-columns: auto 1fr;
 }
 
 .home {
@@ -1737,7 +1746,7 @@ body.resizing {
 	}
 
 	&[data-side="left"] {
-		grid-area: channel-nav;
+		grid-area: nav-tray;
 		border-right: solid $sep-300 1px;
 
 		.resize-handle {
@@ -2046,7 +2055,6 @@ body.resizing {
 
 .user-tray {
 	border-top: solid $bg-300 1px;
-	border-right: solid $bg-300 1px;
 	grid-area: tray;
 
 	& > .row {
