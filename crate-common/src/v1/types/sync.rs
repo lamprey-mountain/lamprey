@@ -28,7 +28,7 @@ use crate::v1::types::{
     voice::Call,
     webhook::Webhook,
 };
-use crate::v1::types::{EvalId, InteractionId, Message, RedexId, RedexVerId};
+use crate::v1::types::{ChannelReorderItem, EvalId, InteractionId, Message, RedexId, RedexVerId};
 use crate::v2::types::media::Media;
 
 use super::{
@@ -393,6 +393,11 @@ pub enum MessageSync {
 
     ChannelUpdate {
         channel: Box<Channel>,
+    },
+
+    ChannelReorder {
+        room_id: RoomId,
+        channels: Vec<ChannelReorderItem>,
     },
 
     // TODO: add

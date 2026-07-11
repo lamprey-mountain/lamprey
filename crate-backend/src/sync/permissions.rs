@@ -64,6 +64,7 @@ impl AuthCheck {
             MessageSync::RoomDelete { room_id } => AuthCheck::Room(*room_id),
             MessageSync::ChannelCreate { channel } => AuthCheck::Channel(channel.id),
             MessageSync::ChannelUpdate { channel } => AuthCheck::Channel(channel.id),
+            MessageSync::ChannelReorder { room_id, .. } => AuthCheck::Room(*room_id),
             MessageSync::MessageCreate { message } => {
                 if message.ephemeral {
                     let mut checks = vec![];

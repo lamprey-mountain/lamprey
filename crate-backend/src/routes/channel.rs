@@ -11,8 +11,8 @@ use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
 use common::v1::types::{
-    AuditLogEntryType, ChannelType, RelationshipType, RoomCreate, RoomMemberOrigin, RoomType,
-    SERVER_ROOM_ID, ThreadMemberPut,
+    AuditLogEntryType, ChannelReorderItem, ChannelType, RelationshipType, RoomCreate,
+    RoomMemberOrigin, RoomType, SERVER_ROOM_ID, ThreadMemberPut,
 };
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
@@ -364,29 +364,39 @@ async fn channel_reorder(
     data.channel_reorder(req.reorder.clone()).await?;
     data.room_template_mark_dirty(req.room_id).await?;
 
+    let mut changed_channels = Vec::new();
     for chan in &req.reorder.channels {
         srv.channels.invalidate(chan.id).await;
         let chan_old = channels_old.get(&chan.id);
         let chan = srv.channels.get(chan.id, None).await?;
-        if let Some(thread_old) = chan_old {
-            if chan.parent_id == thread_old.parent_id && chan.position == thread_old.position {
+        if let Some(chan_old) = chan_old {
+            if chan.parent_id == chan_old.parent_id && chan.position == chan_old.position {
                 continue;
             }
         }
+        changed_channels.push(ChannelReorderItem {
+            id: chan.id,
+            parent_id: Some(chan.parent_id),
+            position: Some(chan.position),
+        });
+    }
+
+    if !changed_channels.is_empty() {
         s.broadcast_room(
             req.room_id,
             user.id,
-            MessageSync::ChannelUpdate {
-                channel: Box::new(chan),
+            MessageSync::ChannelReorder {
+                room_id: req.room_id,
+                channels: changed_channels.clone(),
             },
         )
         .await?;
-    }
 
-    let ty = AuditLogEntryType::ChannelReorder {
-        channels: req.reorder.channels,
-    };
-    auth.begin_audit_log(req.room_id, ty).await?.success();
+        let ty = AuditLogEntryType::ChannelReorder {
+            channels: changed_channels,
+        };
+        auth.begin_audit_log(req.room_id, ty).await?.success();
+    }
 
     Ok(StatusCode::NO_CONTENT)
 }
