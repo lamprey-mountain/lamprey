@@ -17,6 +17,7 @@ import { Icon } from "@/atoms/Icon";
 import { useMenu } from "@/contexts/mod";
 import { flags } from "@/lib/flags";
 import { RoomIcon } from "./User";
+import { useRoomDnd } from "@/hooks/useRoomDnd";
 
 export type RoomNavItem =
 	| {
@@ -86,6 +87,7 @@ export const RoomNav = () => {
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
 	const rooms = createMemo(() => [...rooms2.cache.values()]);
+	const dnd = useRoomDnd();
 
 	const getRoomMentionCount = (roomId: string) => {
 		let totalMentions = 0;

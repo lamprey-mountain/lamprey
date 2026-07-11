@@ -19,15 +19,22 @@
 }
 
 @mixin drop-target-styles {
-	&[data-drag-mode="before"]::before {
+	&[data-dnd-placement="before"]::before {
 		@include drag-indicator-line("top");
 	}
-	&[data-drag-mode="after"]::after {
+	&[data-dnd-placement="after"]::after {
 		@include drag-indicator-line("bottom");
 	}
-	&[data-drag-mode="inside"] {
+	&[data-dnd-placement="inside-thread"] {
 		background: oklch(var(--color-link-500) / 0.2);
 		border: solid $link-500 1px;
+	}
+	&[data-dnd-placement="inside-voice"] {
+		background: oklch(var(--color-green) / 0.2);
+		border: solid $color-green 1px;
+	}
+	&[data-dnd-placement="inside-category"]::after {
+		@include drag-indicator-line("bottom");
 	}
 }
 
@@ -119,11 +126,6 @@
 		padding: 0 8px;
 
 		@include drop-target-styles;
-
-		&[data-voice-target="true"] {
-			background: oklch(var(--color-green) / 0.2);
-			border: solid $color-green 1px;
-		}
 
 		&.dm .avatar {
 			margin: -4px;

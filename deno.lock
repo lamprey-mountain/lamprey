@@ -193,6 +193,8 @@
             "npm:@codemirror/state@^6.6.0",
             "npm:@codemirror/view@^6.42.1",
             "npm:@floating-ui/dom@^1.7.6",
+            "npm:@lamprey/emoji@~0.1.3",
+            "npm:@lamprey/markdown@~0.1.1",
             "npm:@lezer/highlight@^1.2.3",
             "npm:@playwright/test@^1.58.2",
             "npm:@solid-primitives/autofocus@~0.1.4",
