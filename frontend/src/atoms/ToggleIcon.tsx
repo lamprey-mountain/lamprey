@@ -1,11 +1,19 @@
-export const ToggleIcon = (props: { checked: boolean; src: string }) => {
+export type ToggleIconProps = {
+	src: string;
+	alt?: string;
+	color?: string | null;
+	checked?: boolean;
+};
+
+export const ToggleIcon = (props: ToggleIconProps) => {
 	return (
 		<svg
 			aria-hidden="true"
 			viewBox={`0 0 64 64`}
 			role="img"
-			class="icon strike"
+			class="toggle-icon"
 			aria-checked={props.checked}
+			aria-label={props.alt}
 		>
 			<defs>
 				<mask id="strike">
@@ -20,8 +28,17 @@ export const ToggleIcon = (props: { checked: boolean; src: string }) => {
 					/>
 				</mask>
 			</defs>
-			<image href={props.src} />
-			<line class="line" x1="8" y1="8" x2="56" y2="56" stroke-width="8" />
+			<g class="icon-wrap">
+				<rect
+					height="64"
+					width="64"
+					class="icon-background"
+					style={{
+						"mask-image": `url(${props.src})`,
+					}}
+				/>
+			</g>
+			<line class="line" x1="8" y1="8" x2="56" y2="56" />
 		</svg>
 	);
 };

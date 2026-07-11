@@ -33,7 +33,7 @@
 		/* Exclude secondary components from serving as a snap point to prevent scrolling layout breaks */
 		& > .resizable-sidebar[data-side="left"],
 		& > footer,
-		& > .voice-tray {
+		& > .user-tray {
 			scroll-snap-align: none;
 		}
 

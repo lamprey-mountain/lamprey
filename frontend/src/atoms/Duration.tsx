@@ -1,21 +1,31 @@
 import { Show, type VoidProps } from "solid-js";
 
-export const Duration = (props: VoidProps<{ ms: number }>) => {
-	const hours = () => Math.floor(props.ms / (1000 * 60 * 60));
-	const mins = () =>
-		(Math.floor(props.ms / (1000 * 60)) % 60).toString().padStart(2, "0");
-	const secs = () =>
-		(Math.floor(props.ms / 1000) % 60).toString().padStart(2, "0");
+const hours = (ms: number) => Math.floor(ms / (1000 * 60 * 60));
+const mins = (ms: number) =>
+	(Math.floor(ms / (1000 * 60)) % 60).toString().padStart(2, "0");
+const secs = (ms: number) =>
+	(Math.floor(ms / 1000) % 60).toString().padStart(2, "0");
 
+export const Duration = (props: VoidProps<{ ms: number | null }>) => {
 	return (
 		<span class="dim">
-			<Show when={hours()}>
-				{hours()}
-				<span class="">:</span>
+			<Show when={props.ms} fallback="--:--">
+				{(ms) => (
+					<>
+						<Show when={hours(ms())}>
+							{(hr) => (
+								<>
+									{hr()}
+									<span class="">:</span>
+								</>
+							)}
+						</Show>
+						{mins(ms())}
+						<span class="">:</span>
+						{secs(ms())}
+					</>
+				)}
 			</Show>
-			{mins()}
-			<span class="">:</span>
-			{secs()}
 		</span>
 	);
 };

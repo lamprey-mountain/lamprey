@@ -25,7 +25,7 @@ import { Document } from "@/components/features/editor/Document.tsx";
 import { DocumentHistory } from "@/components/features/editor/DocumentHistory.tsx";
 import { RoomSettings } from "@/components/features/room_settings/RoomSettings";
 import { Scripts } from "@/components/features/scripts/Scripts";
-import { Voice, VoiceTray } from "@/components/features/voice/Voice.tsx";
+import { Voice } from "@/components/features/voice/Voice.tsx";
 import { Calendar } from "@/components/shared/Calendar";
 import { Category } from "@/components/shared/Category";
 import { ChannelNav } from "@/components/shared/ChannelNav";
@@ -64,6 +64,7 @@ import { flags } from "@/lib/flags";
 import type { RoomT } from "@/types";
 import type { ChannelSearch } from "@/types/chat";
 import { UserSettings } from "@/components/features/user_settings";
+import { UserTray } from "@/components/shared/UserTray";
 
 export { RouteAuthorize } from "@/components/shared/Oauth";
 
@@ -90,7 +91,7 @@ export const AppLayoutMain = (props: ParentProps<RouteSectionProps>) => {
 				<ChannelNav room_id={roomId()} />
 			</Resizable>
 			{props.children}
-			<VoiceTray />
+			<UserTray />
 		</>
 	);
 };

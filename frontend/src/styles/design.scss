@@ -65,6 +65,7 @@
 		}
 
 		&:hover, &:focus-visible {
+			// TODO: refactor to make compatible with .icon2, .toggle-icon? or make .icon2/Icon component wrap icons in svg so that `fill` works on everything?
 			background-color: transparent;
 
 			& > .icon2 {
@@ -77,6 +78,14 @@
 
 			&.primary > .icon2 {
 				background-color: $link-300;
+			}
+
+			& > .toggle-icon .icon-background {
+				fill: $fg-100;
+			}
+
+			&.danger > .toggle-icon .icon-background {
+				fill: $color-red;
 			}
 		}
 

@@ -20,3 +20,18 @@ export { default as icEmojiObjects } from "@/assets/emoji-objects.png";
 export { default as icEmojiPeople } from "@/assets/emoji-people.png";
 export { default as icEmojiPlaces } from "@/assets/emoji-places.png";
 export { default as icEmojiSymbols } from "@/assets/emoji-symbols.png";
+
+export { default as icCamera } from "@/assets/camera.png";
+export { default as icExit } from "@/assets/exit.png";
+export { default as icHeadphones } from "@/assets/headphones.png";
+export { default as icMic } from "@/assets/mic.png";
+export { default as icMusic } from "@/assets/music.png";
+export { default as icScreenshare } from "@/assets/screenshare.png";
+export { default as icSettings } from "@/assets/settings.png";
+
+import { default as icX1 } from "@/assets/x-1.png";
+import { default as icX2 } from "@/assets/x-2.png";
+import { default as icX3 } from "@/assets/x-3.png";
+import { default as icX4 } from "@/assets/x-4.png";
+import { default as icX } from "@/assets/x.png";
+export { icX, icX1, icX2, icX3, icX4, icX as icCancel };
