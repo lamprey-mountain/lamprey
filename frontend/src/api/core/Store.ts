@@ -321,6 +321,19 @@ export class RootStore {
 					}
 				}
 			}
+		} else if (msg.type === "ChannelReorder") {
+			const updated = [];
+			for (const item of msg.channels) {
+				const channel = this.channels.cache.get(item.id);
+				if (channel) {
+					updated.push({
+						...channel,
+						parent_id: item.parent_id,
+						position: item.position,
+					});
+				}
+			}
+			this.channels.upsertBulk(updated);
 		} else if (msg.type === "UserCreate" || msg.type === "UserUpdate") {
 			this.users.upsert(msg.user);
 			this.memberLists.updateUser(msg.user);
