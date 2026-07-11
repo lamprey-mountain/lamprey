@@ -5,7 +5,7 @@ use std::time::Duration;
 use common::v1::types::presence::Status;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
-    AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType,
+    AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, Message,
     MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageId, MessageSync,
     MessageThreadCreated, MessageType, Permission, PermissionOverwrite, RoomId, SERVER_USER_ID,
     ThreadMemberPut, User, UserId,
@@ -1470,6 +1470,52 @@ impl ServiceChannels {
         overwrites.reverse();
         Ok(overwrites)
     }
+}
+
+pub fn calculate_hotness(_channel: &Channel, _first_message: &Message) -> f64 {
+    // TODO
+    0.0
+}
+
+#[cfg(any())]
+pub fn _calculate_hotness(channel: &Channel, first_message: &Message) -> f64 {
+    let gravity: f64 = 1.8;
+    let dampening: f64 = 0.8;
+    let freshness: f64 = 2.0;
+
+    // per-reaction-key weight, defaults to 0.0 if not configured
+    let weights: HashMap<ReactionKey, f64> = channel
+        .threaded
+        .as_ref()
+        .map(|t| {
+            t.sorting
+                .reactions
+                .iter()
+                .map(|r| (r.key.clone(), r.score as f64))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let points: f64 = first_message
+        .reactions
+        .0
+        .iter()
+        .filter_map(|r| weights.get(&r.key).map(|w| w * r.count as f64))
+        .sum();
+
+    let sign = points.partial_cmp(&0.0).map_or(0.0, |o| match o {
+        std::cmp::Ordering::Greater => 1.0,
+        std::cmp::Ordering::Less => -1.0,
+        std::cmp::Ordering::Equal => 0.0,
+    });
+
+    let points_dampened = points.abs().max(1.0).powf(dampening) * sign;
+
+    let age_hours = (Time::now_utc() - first_message.created_at) / Duration::from_hours(1);
+
+    let score = points_dampened / (age_hours + freshness).powf(gravity);
+
+    score
 }
 
 #[cfg(any())]

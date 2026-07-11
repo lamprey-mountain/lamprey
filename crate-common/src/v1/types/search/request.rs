@@ -7,7 +7,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-use crate::v1::types::search::Order;
+use crate::v1::types::{reaction::ReactionKeyField, search::Order};
 
 // TODO: make query not an Option?
 
@@ -81,7 +81,7 @@ pub struct ChannelSearchRequest {
     pub inner: SearchRequest,
 
     /// field to sort by
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[cfg_attr(feature = "serde", serde(default, flatten))]
     pub sort_field: ChannelSearchOrderField,
 
     /// whether to include nsfw channels
@@ -89,8 +89,12 @@ pub struct ChannelSearchRequest {
 }
 
 /// which field to order channel search results by
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(tag = "field")
+)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum ChannelSearchOrderField {
     /// sort by creation time
@@ -111,6 +115,12 @@ pub enum ChannelSearchOrderField {
 
     /// sort by channel id
     Id,
+
+    /// sort by score
+    Score,
+
+    /// sort by number of reactions
+    Reactions { reaction: ReactionKeyField },
 }
 
 /// room search request

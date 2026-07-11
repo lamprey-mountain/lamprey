@@ -21,6 +21,7 @@ use tantivy::{DateTime as TantivyDT, TantivyDocument};
 // use common::v1::types::voice::Call;
 // use lamprey_backend_core::types::analytics::AnalyticsEvent;
 
+use crate::services::channel::calculate_hotness;
 use crate::services::search::schema::{Doctype, UnifiedSchema};
 use crate::{Error, Result};
 
@@ -273,7 +274,11 @@ impl UnifiedSchema {
     }
 
     /// transform a channel to a tantivy document
-    pub fn transform_channel(&self, channel: &Channel) -> Result<TantivyDocument> {
+    pub fn transform_channel(
+        &self,
+        channel: &Channel,
+        first_message: Option<&Message>,
+    ) -> Result<TantivyDocument> {
         let mut doc = TantivyDocument::new();
         doc.add_text(self.id, channel.id.to_string());
         doc.add_text(self.doctype, Doctype::Channel);
@@ -337,6 +342,16 @@ impl UnifiedSchema {
             .map(|u| u.id.to_string().into())
             .collect();
         meta_fast.insert("recipients".to_string(), OwnedValue::Array(recipients));
+
+        if let Some(m) = first_message {
+            for r in &m.reactions.0 {
+                let key = r.key.to_key_str().replace(r"\", r"\\").replace(r".", r"\.");
+                meta_fast.insert(format!("reactions.{key}"), OwnedValue::U64(r.count));
+            }
+
+            let hotness = calculate_hotness(channel, m);
+            meta_fast.insert("hotness".to_string(), OwnedValue::F64(hotness));
+        }
 
         doc.add_object(self.metadata_fast, meta_fast);
 

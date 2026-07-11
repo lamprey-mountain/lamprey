@@ -1,4 +1,5 @@
 use lamprey_backend_core::types::search::Doctype;
+use opentelemetry::trace::FutureExt;
 use tantivy::{
     DocAddress,
     collector::{Count, TopDocs},
@@ -245,6 +246,9 @@ impl ContentSearcher {
                     count as u64,
                 )
             }
+            // (ChannelSearchOrderField::Score, ord) => todo!()
+            // (ChannelSearchOrderField::Reactions { reaction }, ord) => todo!(),
+            _ => todo!(),
         };
 
         let mut items = Vec::with_capacity(items_raw.len());

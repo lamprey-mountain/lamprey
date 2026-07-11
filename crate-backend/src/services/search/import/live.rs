@@ -88,8 +88,9 @@ impl LiveEtl {
     }
 
     async fn index_channel(&self, channel: Channel) -> Result<()> {
+        let first_message = self.srv().messages.get_first(channel.id, None).await.ok();
         let term = Term::from_field_text(SCHEMA.id, &channel.id.to_string());
-        let doc = SCHEMA.transform_channel(&channel)?;
+        let doc = SCHEMA.transform_channel(&channel, first_message.as_ref())?;
         self.index.update_document(term, doc).await?;
         Ok(())
     }

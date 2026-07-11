@@ -49,6 +49,56 @@ impl ServiceMessages {
         }
     }
 
+    /// get the first message in a channel
+    pub async fn get_first(
+        &self,
+        thread_id: ChannelId,
+        user_id: Option<UserId>,
+    ) -> Result<Message> {
+        let pagination = PaginationQuery {
+            from: None,
+            to: None,
+            dir: Some(PaginationDirection::F),
+            limit: Some(1),
+        };
+
+        let mut res = self
+            .state
+            .data()
+            .message_list(thread_id, pagination)
+            .await?;
+
+        let mut message = res.items.pop().ok_or(Error::NotFound)?;
+
+        self.populate_all(thread_id, user_id, std::slice::from_mut(&mut message))
+            .await?;
+
+        Ok(message)
+    }
+
+    /// get the last message in a channel
+    pub async fn get_last(&self, thread_id: ChannelId, user_id: Option<UserId>) -> Result<Message> {
+        let pagination = PaginationQuery {
+            from: None,
+            to: None,
+            dir: Some(PaginationDirection::B),
+            limit: Some(1),
+        };
+
+        let mut res = self
+            .state
+            .data()
+            .message_list(thread_id, pagination)
+            .await?;
+
+        let mut message = res.items.pop().ok_or(Error::NotFound)?;
+
+        self.populate_all(thread_id, user_id, std::slice::from_mut(&mut message))
+            .await?;
+
+        Ok(message)
+    }
+
     pub async fn get(
         &self,
         thread_id: ChannelId,

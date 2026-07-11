@@ -362,7 +362,9 @@ impl BackfillEtlInner {
 
             let mut batch = Vec::with_capacity(res.items.len());
             for channel in &res.items {
-                match SCHEMA.transform_channel(channel) {
+                let srv = self.s.services();
+                let first_message = srv.messages.get_first(channel.id, None).await.ok();
+                match SCHEMA.transform_channel(channel, first_message.as_ref()) {
                     Ok(doc) => {
                         let term = Term::from_field_text(SCHEMA.id, &channel.id.to_string());
                         batch.push((term, doc));

@@ -43,18 +43,45 @@ pub struct UnifiedSchema {
     pub subtype: schema::Field, // text(STRING | FAST | STORED)
 
     // date fields
+    /// when this item was created
     pub created_at: schema::Field,
+
+    /// when this item was last updated
+    ///
+    /// only updates when the item itself updates. eg. for channels, this does not update when sending a message.
     pub updated_at: schema::Field,
-    pub archived_at: schema::Field, // is ended_at for audit log entry
+
+    /// when this item was archived
+    ///
+    /// for audit log entries, this is the `ended_at` field
+    pub archived_at: schema::Field,
     pub deleted_at: schema::Field,
     pub removed_at: schema::Field,
-    pub activity_at: schema::Field, // used for last activity sorting
+
+    /// the last activity of this channel
+    ///
+    /// used for sorting by `Activity`
+    pub activity_at: schema::Field,
 
     // id fields
+    /// the id of the user who created this
+    ///
+    /// - for users, this is the `author_id` field
+    /// - for rooms, this is the `owner_id` field
+    /// - for channels, this is the `owner_id` field
     pub author_id: schema::Field,
+
+    /// the channel this item is in
+    ///
+    /// for channels, this is the parent id
     pub channel_id: schema::Field,
+
+    /// for messages, the channel's parent channel id
     pub parent_channel_id: schema::Field,
+
+    /// the room this item is in
     pub room_id: schema::Field,
+
     pub tag_id: schema::Field,
     pub branch_id: schema::Field, // document history
 

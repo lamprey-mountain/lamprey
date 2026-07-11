@@ -76,13 +76,26 @@ pub enum ReactionKeyParam {
     Custom(EmojiId),
 }
 
+/// deserializes as a `ReactionKeyParam`, serializes as a `ReactionKey`
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum ReactionKeyField {
+    Param(ReactionKeyParam),
+    Key(ReactionKey),
+}
+
+impl ReactionKeyField {
+    // pub fn a(&self) {}
+}
+
 #[cfg(feature = "utoipa")]
 mod u {
     use utoipa::{PartialSchema, ToSchema};
 
-    use super::ReactionKeyParam;
+    use super::{ReactionKeyField, ReactionKeyParam};
 
     impl ToSchema for ReactionKeyParam {}
+
+    impl ToSchema for ReactionKeyField {}
 
     impl PartialSchema for ReactionKeyParam {
         fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
@@ -95,15 +108,21 @@ mod u {
                 .into()
         }
     }
+
+    impl PartialSchema for ReactionKeyField {
+        fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+            ReactionKeyParam::schema()
+        }
+    }
 }
 
 #[cfg(feature = "serde")]
 mod s {
     use std::str::FromStr;
 
-    use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
+    use serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser};
 
-    use super::ReactionKeyParam;
+    use super::{ReactionKey, ReactionKeyField, ReactionKeyParam};
 
     impl Serialize for ReactionKeyParam {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -122,6 +141,29 @@ mod s {
             let s = String::deserialize(deserializer)?;
             ReactionKeyParam::from_str(&s)
                 .map_err(|_| de::Error::custom("invalid reaction key param format"))
+        }
+    }
+
+    impl Serialize for ReactionKeyField {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            match self {
+                ReactionKeyField::Key(key) => key.serialize(serializer),
+                ReactionKeyField::Param(_) => Err(ser::Error::custom(
+                    "ReactionKeyField::Param cannot be serialized",
+                )),
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for ReactionKeyField {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            ReactionKeyParam::deserialize(deserializer).map(ReactionKeyField::Param)
         }
     }
 }
