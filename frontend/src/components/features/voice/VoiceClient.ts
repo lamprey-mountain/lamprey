@@ -57,6 +57,7 @@ export class VoiceClient {
 
 	private makingOffer = false;
 	private settingRemoteAnswer = false;
+	private channelId: string | null = null;
 
 	public getRtc() {
 		return this.rtc;
@@ -168,6 +169,7 @@ export class VoiceClient {
 	}
 
 	public connect(channelId: string): void {
+		this.channelId = channelId;
 		this.init();
 
 		const existing = this.api.voiceState;
@@ -208,7 +210,8 @@ export class VoiceClient {
 	}
 
 	public disconnect(): void {
-		const channelId = this.api.voiceState?.channel_id;
+		const channelId = this.channelId;
+		this.channelId = null;
 		this.setConnectionState("disconnected");
 		this.rtc?.close();
 		this.rtc = null;
@@ -217,7 +220,7 @@ export class VoiceClient {
 		this.streams.clear();
 		this.queue = [];
 
-		if (!channelId) return; // TODO: how do i handle this?
+		if (!channelId) return;
 		this.send({
 			type: "VoiceDispatch",
 			channel_id: channelId,
@@ -234,19 +237,14 @@ export class VoiceClient {
 
 	/** send a signalling command to the server */
 	private sendSignalling(command: SignallingCommand): void {
-		const currentUser = this.api.users.cache.get("@self");
-		const user_id = currentUser?.id;
-		if (!user_id) return;
-
-		const voiceState = this.api.voiceState;
-		if (!voiceState?.channel_id) {
-			log.warn("signal", "no voice state channel_id for signalling send", null);
+		if (!this.channelId) {
+			log.warn("signal", "no channelId for signalling send", null);
 			return;
 		}
 
 		this.send({
 			type: "VoiceDispatch",
-			channel_id: voiceState.channel_id,
+			channel_id: this.channelId,
 			command,
 		});
 	}
@@ -268,7 +266,7 @@ export class VoiceClient {
 
 	private async negotiate(): Promise<void> {
 		if (!this.rtc) return;
-		log.info("signal", "negotiation needed");
+		log.info("signal", "negotiation needed", "");
 		try {
 			this.makingOffer = true;
 			const offer = await this.rtc.createOffer();
