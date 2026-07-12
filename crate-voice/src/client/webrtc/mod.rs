@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use common::v1::types::voice::messages::{PeerEvent, SignallingCommand, SignallingEvent};
 use common::v1::types::voice::{KeyframeRequestKind, VoiceState};
 use str0m::Rtc;
+use tracing::debug;
 
 use crate::client::webrtc::mapping::Mapping;
 use crate::prelude::*;
@@ -35,8 +36,15 @@ pub struct Webrtc {
 // }
 
 impl Webrtc {
-    pub fn new(rtc: Rtc) -> Self {
-        todo!()
+    pub fn new(rtc: Rtc, vs: SfuVoiceState) -> Self {
+        Self {
+            vs,
+            rtc,
+            signalling: Signalling::new(),
+            datachannels: Datachannels::new(),
+            mapping: Mapping::new(),
+            events: VecDeque::new(),
+        }
     }
 
     // /// get a track id from this peer's local mid
@@ -51,30 +59,44 @@ impl Webrtc {
     /// request a keyframe to be generated
     pub fn request_keyframe(
         &mut self,
-        track: TrackSlot,
-        rid: Option<SRid>,
-        kind: KeyframeRequestKind,
+        _track: TrackSlot,
+        _rid: Option<SRid>,
+        _kind: KeyframeRequestKind,
     ) -> Result<()> {
         // Err(Error::TrackDoesntExist);
-        todo!()
+        debug!("Keyframe requested");
+        Ok(())
     }
 
     /// handle a signalling command
-    pub fn handle_signalling(&mut self, cmd: SignallingCommand) {
+    pub fn handle_signalling(&mut self, _cmd: SignallingCommand) {
         // self.events.push_back(PeerEvent::Signalling(SignallingEvent::Connected { sfu_id: () }));
         // self.events.drain(..);
-        todo!()
+        debug!("Handling signalling command");
     }
 
     /// get permissions for this peer
     ///
     /// resolves from voice state and room permissions
     pub fn permissions(&self) -> Permissions {
-        todo!()
+        let p = &self.vs.permissions;
+        let vs = &self.vs.inner;
+
+        // TODO: impl ServerVoiceState { fn permissions(&self) -> Permissions {...}}
+
+        Permissions {
+            video: p.video(),
+            audio: p.speak() && !vs.muted(),
+            deaf: vs.deafened(),
+        }
     }
 
     pub fn voice_state(&self) -> Option<&VoiceState> {
-        todo!()
+        Some(&self.vs.inner)
+    }
+
+    pub fn accepts(&self, input: &SInput) -> bool {
+        self.rtc.accepts(input)
     }
 
     // TODO

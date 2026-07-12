@@ -6,11 +6,15 @@ pub struct Datachannels {
 }
 
 impl Datachannels {
+    pub fn new() -> Self {
+        Self { speaking: None }
+    }
+
     /// get the datachannel for speaking/voice activity messages
     ///
     /// users send `Speaking` to sfus. sfus send `SpeakingWithUserId` to each other and users.
     pub fn speaking(&self) -> Option<SChannelId> {
-        todo!()
+        self.speaking
     }
 
     pub fn handle(&mut self, event: SEvent, rtc: &mut Rtc) {

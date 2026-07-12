@@ -129,7 +129,7 @@ impl BackendHandle {
             .map_err(|e| Error::Channel(format!("Failed to queue event: {e}")))
     }
 
-    pub fn subscribe(&self) -> impl Stream<Item = SfuCommand> {
+    pub fn subscribe(&self) -> impl Stream<Item = SfuCommand> + 'static {
         BroadcastStream::new(self.command_broadcast.subscribe())
             .filter_map(|r| async move { r.ok() })
     }

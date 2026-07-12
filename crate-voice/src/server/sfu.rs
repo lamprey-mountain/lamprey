@@ -1,17 +1,23 @@
 use std::collections::HashMap;
 
 use crate::{
-    mesh::{Mesh, MeshHandle},
     backend::{BackendConnection, BackendHandle},
+    mesh::{Mesh, MeshHandle},
     prelude::*,
-    server::shard::ShardHandle,
+    server::shard::{Shard, ShardHandle},
+    util::SfuVoiceState,
 };
 use common::{
-    v1::types::voice::{internal::SfuChannel, messages::SfuCommand},
+    v1::types::voice::{
+        internal::{SfuChannel, SfuPermissions},
+        messages::SfuCommand,
+    },
     v2::types::ChannelId,
 };
+use futures::StreamExt;
 use lamprey_backend_core::config::{Config, ConfigVoice};
 use tokio::task::JoinSet;
+use tracing::{debug, error, info, warn};
 
 /// main entry point for the server
 pub struct Sfu {
@@ -29,17 +35,9 @@ pub struct Sfu {
 /// a single voice call known by this sfu
 ///
 /// contains routing data and logic for local and remote cascading
-// TODO: implement
 pub struct Call {
-    // how should i lay out this struct?
-    // inner: Arc<RwLock<CallInner>>,
-    // inner: ArcSwap<CallInner>, // arc-swap crate
-    // channel_id: ChannelId,
     channel: SfuChannel,
-    // channel: Box<SfuChannel>,
-    // channel: ArcSwap<SfuChannel>,
-    // channel: Cache<SfuChannel>, // with arc swap
-    // router: Router,
+    shard: ShardHandle,
 }
 
 pub struct SfuHandle {
@@ -76,25 +74,73 @@ impl Sfu {
     async fn run(mut self) {
         let num_shards = self.config.workers.unwrap_or_else(|| num_cpus::get() as u8);
 
+        info!("Spawning {} shards", num_shards);
         for _ in 0..num_shards {
-            let handle = self.spawn_shard();
-            self.shards.push(handle);
+            if let Err(e) = self.spawn_shard().await {
+                error!("Failed to spawn shard: {}", e);
+            }
         }
 
-        // TODO
+        let backend = self.backend.clone();
+        let mut commands = Box::pin(backend.subscribe());
+
+        loop {
+            tokio::select! {
+                Some(cmd) = commands.next() => {
+                    self.handle_command(cmd).await;
+                }
+                Some(res) = self.shard_tasks.join_next() => {
+                    match res {
+                        Ok(Err(e)) => error!("Shard task failed: {}", e),
+                        Ok(Ok(())) => warn!("Shard task exited unexpectedly"),
+                        Err(e) => error!("Shard task panicked: {}", e),
+                    }
+                    // TODO: try to respawn shard
+                }
+            }
+        }
     }
 
     async fn handle_command(&mut self, cmd: SfuCommand) {
-        todo!()
+        debug!("Received SfuCommand: {:?}", cmd);
+        match cmd {
+            SfuCommand::Init { sfu_id } => {
+                debug!(?sfu_id, "sfu init");
+            }
+            SfuCommand::CreatePeer { state, permissions } => {
+                // TODO: find which shard should handle this peer
+
+                // TEMP: get first shard for now
+                let shard = match self.shards.first() {
+                    Some(s) => s.clone(),
+                    None => {
+                        error!("No shards available to handle CreatePeer");
+                        return;
+                    }
+                };
+
+                shard.create_peer(SfuVoiceState {
+                    inner: state,
+                    permissions,
+                });
+            }
+            // TODO: handle more commands
+            _ => {
+                warn!("Unhandled SfuCommand");
+            }
+        }
     }
 
-    fn spawn_shard(&mut self) -> ShardHandle {
+    async fn spawn_shard(&mut self) -> Result<()> {
+        let (shard, handle) = Shard::new(self.backend.clone()).await?;
+
         self.shard_tasks.spawn(async move {
-            // TODO
+            shard.run().await;
             Ok(())
         });
 
-        todo!()
+        self.shards.push(handle);
+        Ok(())
     }
 }
 

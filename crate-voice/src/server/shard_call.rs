@@ -11,7 +11,7 @@ use common::{
     v2::types::ChannelId,
 };
 use slotmap::SlotMap;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::util::SfuVoiceState;
 
@@ -35,12 +35,18 @@ pub struct ShardCall {
 impl ShardCall {
     /// create a new peer  connected to this call
     pub fn create_peer(&mut self, s: SfuVoiceState) {
-        todo!()
+        debug!("Creating peer for user: {:?}", s.inner.user_id);
+        // let rtc = str0m::Rtc::builder().build();
+        // let peer = Webrtc::new(rtc);
+        // self.peers.insert(peer);
     }
 
     /// a signalling command from a peer
     pub fn handle_signalling(&mut self, peer: PeerSlot, cmd: SignallingCommand) {
-        todo!()
+        // TODO: sfu_old has special handling for Subscribe, Offer, Answer. do i need this?
+        if let Some(p) = self.peers.get_mut(peer) {
+            p.handle_signalling(cmd);
+        }
     }
 
     /// request a keyframe to be generated
@@ -56,28 +62,34 @@ impl ShardCall {
 
     /// handle str0m input for a peer
     pub fn handle_input(&mut self, peer: PeerSlot, input: SInput) {
-        // warn!("str0m Rtc Input handling error: {:?}", e);
-        todo!()
+        if let Some(p) = self.peers.get_mut(peer) {
+            if !p.accepts(&input) {
+                warn!("Input not accepted by RTC");
+            }
+            // p.rtc.handle_input(input).unwrap();
+        }
     }
 
     /// get rtc output events
-    pub fn drain(&mut self) -> () {
+    pub fn drain(&mut self) -> Vec<str0m::net::Transmit> {
+        let mut transmits = Vec::new();
         for p in self.peers.values_mut() {
             while let Ok(output) = p.poll_output() {
                 match output {
                     SOutput::Transmit(t) => {
-                        // TODO: let the parent Shard handle these
-                        todo!()
+                        transmits.push(t);
                     }
-                    // SOutput::Event(event) => self.handle_peer_event(p, event), // "cannot borrow self mutably more than once"
-                    SOutput::Event(event) => todo!(),
-                    SOutput::Timeout(instant) => todo!(),
+                    SOutput::Event(event) => {
+                        // TODO: Handle event
+                        debug!("RTC event: {:?}", event);
+                    }
+                    SOutput::Timeout(instant) => {
+                        // TODO: Handle timeout
+                    }
                 }
             }
         }
-
-        // transmits, min timeout
-        todo!("what do i return here?")
+        transmits
     }
 
     fn handle_peer_event(&mut self, peer: &mut Webrtc, event: SEvent) {

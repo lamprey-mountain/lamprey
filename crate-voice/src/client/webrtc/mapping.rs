@@ -15,6 +15,10 @@ pub struct Mapping {
 }
 
 impl Mapping {
+    pub fn new() -> Self {
+        Self {}
+    }
+
     // /// get a track slot from this peer's local mid
     // pub fn lookup_track(&self, mid: SMid) -> Option<TrackSlot> {
     //     todo!()
