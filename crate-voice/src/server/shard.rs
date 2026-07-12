@@ -1,7 +1,11 @@
-use std::{collections::HashMap, net::SocketAddr};
+use std::{collections::HashMap, net::SocketAddr, time::Instant};
 
 use bytes::{Bytes, BytesMut};
+use common::v1::types::voice::messages::SignallingCommand;
+use common::v1::types::voice::{Mid, Rid};
+use common::v2::types::{ChannelId, UserId};
 use slotmap::SlotMap;
+use str0m::{Candidate, RtcConfig};
 use tokio::{net::UdpSocket, sync::mpsc};
 use tracing::{debug, warn};
 
@@ -25,7 +29,9 @@ pub struct Shard {
 
     /// map of ufrags to peers (before ice nomination)
     ufrags: HashMap<String, (CallSlot, PeerSlot)>,
-    // TODO: map channel id -> call slot
+
+    /// map channel id -> call slot
+    channels: HashMap<ChannelId, CallSlot>,
 }
 
 #[derive(Clone)]
@@ -36,18 +42,21 @@ pub struct ShardHandle {
 pub enum ShardCommand {
     /// create a new peer
     CreatePeer(SfuVoiceState),
-    // /// a signalling command that the user sent
-    // Signalling {
-    //     user_id: UserId,
-    //     inner: SignallingCommand,
-    // },
 
-    // GenerateKeyframe {
-    //     user_id: UserId,
-    //     mid: Mid,
-    //     rid: Option<Rid>,
-    //     kind: KeyframeRequestKind,
-    // },
+    /// a signalling command that the user sent
+    Signalling {
+        channel_id: ChannelId,
+        user_id: UserId,
+        inner: SignallingCommand,
+    },
+
+    GenerateKeyframe {
+        channel_id: ChannelId,
+        user_id: UserId,
+        mid: Mid,
+        rid: Option<Rid>,
+        kind: SKeyframeRequestKind,
+    },
 }
 
 // enum ShardEvent {
@@ -55,9 +64,6 @@ pub enum ShardCommand {
 // }
 
 impl Shard {
-    // one shared udp socket (per shard or per core?)
-    // "demux via ICE ufrag in STUN binding requests"
-
     pub async fn new(backend: BackendHandle) -> Result<(Self, ShardHandle)> {
         let (control_tx, control_rx) = mpsc::channel(100);
 
@@ -72,6 +78,7 @@ impl Shard {
             calls: SlotMap::with_key(),
             addrs: HashMap::new(),
             ufrags: HashMap::new(),
+            channels: HashMap::new(),
         };
 
         let handle = ShardHandle { control_tx };
@@ -86,7 +93,17 @@ impl Shard {
         loop {
             // cleanup dead peers
             // process sdp renegotiation
+
             // drain events/send stuff to peers
+            let global_timeout = self.drain_calls().await;
+
+            let timeout_future = async {
+                if let Some((_, _, t)) = global_timeout {
+                    tokio::time::sleep_until(t.into()).await;
+                } else {
+                    std::future::pending().await
+                }
+            };
 
             tokio::select! {
                 // TODO: warn if local_addr is None
@@ -106,26 +123,45 @@ impl Shard {
                     self.handle_command(cmd);
                 }
 
-                // _ = sleep_future => {
-                //     self.drive_timers().await;
-                // }
-            }
-
-            // drain events/send stuff to peers
-            for call in self.calls.values_mut() {
-                let transmits = call.drain();
-                for t in transmits {
-                    let res = if t.destination.is_ipv4() {
-                        self.sock_v4.send_to(&t.contents, t.destination).await
-                    } else {
-                        self.sock_v6.send_to(&t.contents, t.destination).await
-                    };
-                    if let Err(e) = res {
-                        warn!("Failed to send UDP packet: {:?}", e);
+                _ = timeout_future => {
+                    if let Some((call_slot, peer_slot, _)) = global_timeout {
+                        if let Some(call) = self.calls.get_mut(call_slot) {
+                            call.handle_timeout(peer_slot);
+                        }
                     }
                 }
             }
         }
+    }
+
+    // TODO: use proper type for return type (instead of tuple)
+    async fn drain_calls(&mut self) -> Option<(CallSlot, PeerSlot, Instant)> {
+        let mut global_timeout: Option<(CallSlot, PeerSlot, Instant)> = None;
+        for (call_slot, call) in self.calls.iter_mut() {
+            let (transmits, timeout) = call.drain();
+
+            if let Some((peer_slot, t)) = timeout {
+                if let Some((_, _, min)) = global_timeout {
+                    if t < min {
+                        global_timeout = Some((call_slot, peer_slot, t));
+                    }
+                } else {
+                    global_timeout = Some((call_slot, peer_slot, t));
+                }
+            }
+
+            for t in transmits {
+                let res = if t.destination.is_ipv4() {
+                    self.sock_v4.send_to(&t.contents, t.destination).await
+                } else {
+                    self.sock_v6.send_to(&t.contents, t.destination).await
+                };
+                if let Err(e) = res {
+                    warn!("Failed to send UDP packet: {:?}", e);
+                }
+            }
+        }
+        global_timeout
     }
 
     /// handle a udp packet from `dst` to `src` with data `data`
@@ -175,13 +211,59 @@ impl Shard {
     fn handle_command(&mut self, cmd: ShardCommand) {
         match cmd {
             ShardCommand::CreatePeer(state) => {
-                // TODO: get or create ShardCall
-                debug!(
-                    "Handling CreatePeer for channel: {:?}",
-                    state.inner.channel_id
-                );
-                // self.calls...
-                todo!();
+                let channel_id = state.inner.channel_id;
+                let call_slot = *self
+                    .channels
+                    .entry(channel_id)
+                    .or_insert_with(|| self.calls.insert(ShardCall::new(channel_id)));
+                let Some(call) = self.calls.get_mut(call_slot) else {
+                    // TODO: warn
+                    return;
+                };
+
+                let mut rtc = RtcConfig::new().set_ice_lite(true).build(Instant::now());
+
+                if let Ok(addr) = self.sock_v4.local_addr() {
+                    if let Ok(c) = Candidate::host(addr, "udp") {
+                        rtc.add_local_candidate(c);
+                    }
+                }
+
+                if let Ok(addr) = self.sock_v6.local_addr() {
+                    if let Ok(c) = Candidate::host(addr, "udp") {
+                        rtc.add_local_candidate(c);
+                    }
+                }
+
+                let local_ufrag = rtc.direct_api().local_ice_credentials().ufrag.to_string();
+                let peer_slot = call.create_peer(state, rtc);
+                self.ufrags.insert(local_ufrag, (call_slot, peer_slot));
+            }
+            ShardCommand::Signalling {
+                channel_id,
+                user_id,
+                inner,
+            } => {
+                let Some(&call_slot) = self.channels.get(&channel_id) else {
+                    return;
+                };
+                if let Some(call) = self.calls.get_mut(call_slot) {
+                    call.handle_signalling_by_user(user_id, inner);
+                }
+            }
+            ShardCommand::GenerateKeyframe {
+                channel_id,
+                user_id,
+                mid,
+                rid,
+                kind,
+            } => {
+                let Some(&call_slot) = self.channels.get(&channel_id) else {
+                    return;
+                };
+                if let Some(call) = self.calls.get_mut(call_slot) {
+                    call.generate_keyframe(user_id, mid, rid, kind);
+                }
             }
         }
     }
@@ -193,13 +275,35 @@ impl ShardHandle {
         let _ = self.control_tx.try_send(ShardCommand::CreatePeer(s));
     }
 
-    // pub fn generate_keyframe(&self, ...) {
-    //     todo!()
-    // }
+    pub fn generate_keyframe(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        mid: Mid,
+        rid: Option<Rid>,
+        kind: SKeyframeRequestKind,
+    ) {
+        let _ = self.control_tx.try_send(ShardCommand::GenerateKeyframe {
+            channel_id,
+            user_id,
+            mid,
+            rid,
+            kind,
+        });
+    }
 
-    // pub fn handle_signalling(&self, ...) {
-    //     todo!()
-    // }
+    pub fn handle_signalling(
+        &self,
+        channel_id: ChannelId,
+        user_id: UserId,
+        inner: SignallingCommand,
+    ) {
+        let _ = self.control_tx.try_send(ShardCommand::Signalling {
+            channel_id,
+            user_id,
+            inner,
+        });
+    }
 
     // pub fn handle_remote_inbound(&self, ...) { todo!() }
     // pub fn handle_remote_outbound(&self, ...) { todo!() }

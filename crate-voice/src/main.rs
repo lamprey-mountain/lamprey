@@ -46,7 +46,10 @@ async fn main() -> Result<()> {
     //     process::exit(1);
     // }
 
-    let _ = Sfu::serve(config).await;
+    let _handle = Sfu::serve(config).await;
+
+    // TODO: proper shutdown handling
+    futures::future::pending::<()>().await;
 
     Ok(())
 }

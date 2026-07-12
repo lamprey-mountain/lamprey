@@ -33,7 +33,7 @@ impl TrackState {
 /// info about a track that the sfu is receiving
 // formerly called Track
 pub struct Inbound {
-    // pub publisher: PeerSlot,
+    pub publisher: PeerSlot,
     pub kind: MediaKind,
     pub key: TrackKey,
     pub layers: Vec<TrackLayer>,
@@ -43,7 +43,7 @@ pub struct Inbound {
 /// info about a track that the sfu is forwarding to a peer
 // formerly called Sink
 pub struct Outbound {
-    // pub subscriber: PeerSlot,
+    pub subscriber: PeerSlot,
     pub source: TrackSlot,
     pub state: TrackState,
 }

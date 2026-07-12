@@ -1,7 +1,7 @@
-pub mod mesh;
 pub mod backend;
 pub mod client;
 pub mod error;
+pub mod mesh;
 pub mod server;
 pub mod util;
 
@@ -20,7 +20,7 @@ pub(crate) mod prelude {
     pub use std::sync::Arc;
 
     pub use str0m::channel::ChannelId as SChannelId;
-    pub use str0m::media::{Mid as SMid, Rid as SRid};
+    pub use str0m::media::{KeyframeRequestKind as SKeyframeRequestKind, Mid as SMid, Rid as SRid};
     pub use str0m::{Event as SEvent, Input as SInput, Output as SOutput};
 }
 

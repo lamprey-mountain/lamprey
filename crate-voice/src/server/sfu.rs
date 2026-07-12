@@ -8,11 +8,8 @@ use crate::{
     util::SfuVoiceState,
 };
 use common::{
-    v1::types::voice::{
-        internal::{SfuChannel, SfuPermissions},
-        messages::SfuCommand,
-    },
-    v2::types::ChannelId,
+    v1::types::voice::{internal::SfuPermissions, messages::SfuCommand},
+    v2::types::{ChannelId, UserId},
 };
 use futures::StreamExt;
 use lamprey_backend_core::config::{Config, ConfigVoice};
@@ -26,8 +23,7 @@ pub struct Sfu {
     shards: Vec<ShardHandle>,
     shard_tasks: JoinSet<Result<()>>,
     calls: HashMap<ChannelId, Call>,
-    // TODO: add
-    // user_to_channel: HashMap<UserId, ChannelId>,
+    user_to_channel: HashMap<UserId, ChannelId>,
     config_full: Box<Config>,
     config: Box<ConfigVoice>,
 }
@@ -36,7 +32,6 @@ pub struct Sfu {
 ///
 /// contains routing data and logic for local and remote cascading
 pub struct Call {
-    channel: SfuChannel,
     shard: ShardHandle,
 }
 
@@ -58,6 +53,7 @@ impl Sfu {
             shards: Vec::new(),
             shard_tasks: JoinSet::new(),
             calls: HashMap::new(),
+            user_to_channel: HashMap::new(),
             config_full: Box::new(config),
             config: Box::new(voice_config),
         };
@@ -108,21 +104,62 @@ impl Sfu {
                 debug!(?sfu_id, "sfu init");
             }
             SfuCommand::CreatePeer { state, permissions } => {
-                // TODO: find which shard should handle this peer
+                let channel_id = state.channel_id;
+                let user_id = state.user_id;
 
-                // TEMP: get first shard for now
-                let shard = match self.shards.first() {
-                    Some(s) => s.clone(),
+                let shard = match self.calls.get(&channel_id) {
+                    Some(call) => call.shard.clone(),
                     None => {
-                        error!("No shards available to handle CreatePeer");
-                        return;
+                        // TODO: select shard based on load
+                        // TODO: shut down `ShardCall`s when idle
+                        // TODO: update user_to_channel based on voice state, disconnect
+                        let shard = match self.shards.first() {
+                            Some(s) => s.clone(),
+                            None => {
+                                error!("No shards available to handle CreatePeer");
+                                return;
+                            }
+                        };
+                        self.calls.insert(
+                            channel_id,
+                            Call {
+                                shard: shard.clone(),
+                            },
+                        );
+                        shard
                     }
                 };
+
+                self.user_to_channel.insert(user_id, channel_id);
 
                 shard.create_peer(SfuVoiceState {
                     inner: state,
                     permissions,
                 });
+            }
+            SfuCommand::Signalling {
+                user_id,
+                channel_id,
+                inner,
+            } => {
+                if let Some(call) = self.calls.get(&channel_id) {
+                    call.shard.handle_signalling(channel_id, user_id, inner);
+                } else {
+                    warn!("Received signalling for unknown channel {:?}", channel_id);
+                }
+            }
+            SfuCommand::GenerateKeyframe {
+                mid,
+                rid,
+                kind,
+                user_id,
+            } => {
+                if let Some(channel_id) = self.user_to_channel.get(&user_id).copied() {
+                    if let Some(call) = self.calls.get(&channel_id) {
+                        call.shard
+                            .generate_keyframe(channel_id, user_id, mid, rid, kind.into());
+                    }
+                }
             }
             // TODO: handle more commands
             _ => {
