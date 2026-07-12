@@ -6,8 +6,9 @@ use tantivy::{
 };
 
 use common::v1::types::search::{
-    AuditLogSearchRequest, ChannelSearchOrderField, ChannelSearchRequest, MediaSearchRequest,
-    MessageSearchOrderField, MessageSearchRequest, RoomSearchRequest, UserSearchRequest,
+    AuditLogSearchOrderField, AuditLogSearchRequest, ChannelSearchOrderField, ChannelSearchRequest,
+    MediaSearchOrderField, MediaSearchRequest, MessageSearchOrderField, MessageSearchRequest,
+    RoomSearchOrderField, RoomSearchRequest, UserSearchOrderField, UserSearchRequest,
 };
 
 use crate::services::search::util::SCHEMA;
@@ -238,7 +239,11 @@ impl ContentSearcher {
                     count as u64,
                 )
             }
-            (ChannelSearchOrderField::Id, ord) => {
+            // TODO: impl sort by Score
+            // TODO: impl sort by Reactions
+            (ChannelSearchOrderField::Id, ord)
+            | (ChannelSearchOrderField::Score, ord)
+            | (ChannelSearchOrderField::Reactions { .. }, ord) => {
                 let top_docs = TopDocs::with_limit(limit)
                     .and_offset(cursor)
                     .order_by_string_fast_field("id", ord.tantivy());
@@ -249,9 +254,6 @@ impl ContentSearcher {
                     count as u64,
                 )
             }
-            // (ChannelSearchOrderField::Score, ord) => todo!()
-            // (ChannelSearchOrderField::Reactions { reaction }, ord) => todo!(),
-            _ => todo!(),
         };
 
         let mut items = Vec::with_capacity(items_raw.len());
@@ -287,13 +289,56 @@ impl ContentSearcher {
         let limit = msg.req.inner.limit as usize;
         let cursor = msg.req.inner.offset as usize;
 
-        // TODO: handle requested sorting/order
-        let top_docs = TopDocs::with_limit(limit)
-            .and_offset(cursor)
-            .order_by_score();
-        let (docs, count): (Vec<(Score, DocAddress)>, usize) =
-            self.searcher.search(&query, &(top_docs, Count)).await?;
-        let items_raw: Vec<DocAddress> = docs.into_iter().map(|(_, addr)| addr).collect();
+        let (items_raw, count): (Vec<_>, _) = match msg.req.sort_field {
+            RoomSearchOrderField::Members => {
+                // FIXME: order by member count
+                let top_docs = TopDocs::with_limit(limit)
+                    .and_offset(cursor)
+                    .order_by_score();
+                let (docs, count): (Vec<(Score, DocAddress)>, usize) =
+                    self.searcher.search(&query, &(top_docs, Count)).await?;
+                (
+                    docs.into_iter().map(|(_, addr)| addr).collect(),
+                    count as u64,
+                )
+            }
+            RoomSearchOrderField::Created => {
+                let top_docs = TopDocs::with_limit(limit)
+                    .and_offset(cursor)
+                    .order_by_fast_field::<tantivy::DateTime>(
+                        "created_at",
+                        msg.req.inner.sort_order.tantivy(),
+                    );
+                let (docs, count): (Vec<(Option<tantivy::DateTime>, DocAddress)>, usize) =
+                    self.searcher.search(&query, &(top_docs, Count)).await?;
+                (
+                    docs.into_iter().map(|(_, addr)| addr).collect(),
+                    count as u64,
+                )
+            }
+            RoomSearchOrderField::Name => {
+                let top_docs = TopDocs::with_limit(limit)
+                    .and_offset(cursor)
+                    .order_by_string_fast_field("name", msg.req.inner.sort_order.tantivy());
+                let (docs, count): (Vec<(Option<String>, DocAddress)>, usize) =
+                    self.searcher.search(&query, &(top_docs, Count)).await?;
+                (
+                    docs.into_iter().map(|(_, addr)| addr).collect(),
+                    count as u64,
+                )
+            }
+            RoomSearchOrderField::Id => {
+                let top_docs = TopDocs::with_limit(limit)
+                    .and_offset(cursor)
+                    .order_by_string_fast_field("id", msg.req.inner.sort_order.tantivy());
+                let (docs, count): (Vec<(Option<String>, DocAddress)>, usize) =
+                    self.searcher.search(&query, &(top_docs, Count)).await?;
+                (
+                    docs.into_iter().map(|(_, addr)| addr).collect(),
+                    count as u64,
+                )
+            }
+        };
 
         let mut items = Vec::with_capacity(items_raw.len());
         for doc_address in items_raw {
@@ -328,13 +373,59 @@ impl ContentSearcher {
         let limit = msg.req.inner.limit as usize;
         let cursor = msg.req.inner.offset as usize;
 
-        // TODO: handle requested sorting/order
-        let top_docs = TopDocs::with_limit(limit)
-            .and_offset(cursor)
-            .order_by_score();
-        let (docs, count): (Vec<(Score, DocAddress)>, usize) =
-            self.searcher.search(&query, &(top_docs, Count)).await?;
-        let items_raw: Vec<DocAddress> = docs.into_iter().map(|(_, addr)| addr).collect();
+        let (items_raw, count): (Vec<_>, _) = match msg.req.sort_field {
+            UserSearchOrderField::Name => {
+                let top_docs = TopDocs::with_limit(limit)
+                    .and_offset(cursor)
+                    .order_by_string_fast_field("name", msg.req.inner.sort_order.tantivy());
+                let (docs, count): (Vec<(Option<String>, DocAddress)>, usize) =
+                    self.searcher.search(&query, &(top_docs, Count)).await?;
+                (
+                    docs.into_iter().map(|(_, addr)| addr).collect(),
+                    count as u64,
+                )
+            }
+            // TODO: either merge created/registered or actually impl?
+            UserSearchOrderField::Created => {
+                let top_docs = TopDocs::with_limit(limit)
+                    .and_offset(cursor)
+                    .order_by_fast_field::<tantivy::DateTime>(
+                        "created_at",
+                        msg.req.inner.sort_order.tantivy(),
+                    );
+                let (docs, count): (Vec<(Option<tantivy::DateTime>, DocAddress)>, usize) =
+                    self.searcher.search(&query, &(top_docs, Count)).await?;
+                (
+                    docs.into_iter().map(|(_, addr)| addr).collect(),
+                    count as u64,
+                )
+            }
+            UserSearchOrderField::Registered => {
+                let top_docs = TopDocs::with_limit(limit)
+                    .and_offset(cursor)
+                    .order_by_fast_field::<tantivy::DateTime>(
+                        "created_at",
+                        msg.req.inner.sort_order.tantivy(),
+                    );
+                let (docs, count): (Vec<(Option<tantivy::DateTime>, DocAddress)>, usize) =
+                    self.searcher.search(&query, &(top_docs, Count)).await?;
+                (
+                    docs.into_iter().map(|(_, addr)| addr).collect(),
+                    count as u64,
+                )
+            }
+            UserSearchOrderField::Id => {
+                let top_docs = TopDocs::with_limit(limit)
+                    .and_offset(cursor)
+                    .order_by_string_fast_field("id", msg.req.inner.sort_order.tantivy());
+                let (docs, count): (Vec<(Option<String>, DocAddress)>, usize) =
+                    self.searcher.search(&query, &(top_docs, Count)).await?;
+                (
+                    docs.into_iter().map(|(_, addr)| addr).collect(),
+                    count as u64,
+                )
+            }
+        };
 
         let mut items = Vec::with_capacity(items_raw.len());
         for doc_address in items_raw {
@@ -373,13 +464,45 @@ impl ContentSearcher {
         let limit = msg.req.inner.limit as usize;
         let cursor = msg.req.inner.offset as usize;
 
-        // TODO: handle requested sorting/order
-        let top_docs = TopDocs::with_limit(limit)
-            .and_offset(cursor)
-            .order_by_score();
-        let (docs, count): (Vec<(Score, DocAddress)>, usize) =
-            self.searcher.search(&query, &(top_docs, Count)).await?;
-        let items_raw: Vec<DocAddress> = docs.into_iter().map(|(_, addr)| addr).collect();
+        let (items_raw, count): (Vec<_>, _) = match msg.req.sort_field {
+            MediaSearchOrderField::Created => {
+                let top_docs = TopDocs::with_limit(limit)
+                    .and_offset(cursor)
+                    .order_by_fast_field::<tantivy::DateTime>(
+                        "created_at",
+                        msg.req.inner.sort_order.tantivy(),
+                    );
+                let (docs, count): (Vec<(Option<tantivy::DateTime>, DocAddress)>, usize) =
+                    self.searcher.search(&query, &(top_docs, Count)).await?;
+                (
+                    docs.into_iter().map(|(_, addr)| addr).collect(),
+                    count as u64,
+                )
+            }
+            MediaSearchOrderField::Name => {
+                // FIXME: order by json filename
+                let top_docs = TopDocs::with_limit(limit)
+                    .and_offset(cursor)
+                    .order_by_string_fast_field("name", msg.req.inner.sort_order.tantivy());
+                let (docs, count): (Vec<(Option<String>, DocAddress)>, usize) =
+                    self.searcher.search(&query, &(top_docs, Count)).await?;
+                (
+                    docs.into_iter().map(|(_, addr)| addr).collect(),
+                    count as u64,
+                )
+            }
+            MediaSearchOrderField::Id => {
+                let top_docs = TopDocs::with_limit(limit)
+                    .and_offset(cursor)
+                    .order_by_string_fast_field("id", msg.req.inner.sort_order.tantivy());
+                let (docs, count): (Vec<(Option<String>, DocAddress)>, usize) =
+                    self.searcher.search(&query, &(top_docs, Count)).await?;
+                (
+                    docs.into_iter().map(|(_, addr)| addr).collect(),
+                    count as u64,
+                )
+            }
+        };
 
         let mut items = Vec::with_capacity(items_raw.len());
         for doc_address in items_raw {
@@ -418,13 +541,22 @@ impl ContentSearcher {
         let limit = msg.req.inner.limit as usize;
         let cursor = msg.req.inner.offset as usize;
 
-        // TODO: handle requested sorting/order
-        let top_docs = TopDocs::with_limit(limit)
-            .and_offset(cursor)
-            .order_by_score();
-        let (docs, count): (Vec<(Score, DocAddress)>, usize) =
-            self.searcher.search(&query, &(top_docs, Count)).await?;
-        let items_raw: Vec<DocAddress> = docs.into_iter().map(|(_, addr)| addr).collect();
+        let (items_raw, count): (Vec<_>, _) = match msg.req.sort_field {
+            AuditLogSearchOrderField::Created => {
+                let top_docs = TopDocs::with_limit(limit)
+                    .and_offset(cursor)
+                    .order_by_fast_field::<tantivy::DateTime>(
+                        "created_at",
+                        msg.req.inner.sort_order.tantivy(),
+                    );
+                let (docs, count): (Vec<(Option<tantivy::DateTime>, DocAddress)>, usize) =
+                    self.searcher.search(&query, &(top_docs, Count)).await?;
+                (
+                    docs.into_iter().map(|(_, addr)| addr).collect(),
+                    count as u64,
+                )
+            }
+        };
 
         let mut items = Vec::with_capacity(items_raw.len());
         for doc_address in items_raw {

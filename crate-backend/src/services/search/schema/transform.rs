@@ -231,6 +231,7 @@ impl UnifiedSchema {
         meta_fast.insert("bot".to_string(), user.bot.into());
         meta_fast.insert("system".to_string(), user.system.into());
         meta_fast.insert("suspended".to_string(), user.is_suspended().into());
+        // TODO: insert registered_at into meta_fast, make created_at the actual creation date
 
         doc.add_object(self.metadata_fast, meta_fast);
 
