@@ -66,7 +66,7 @@
 	grid-template-areas:
 		"room-nav channel-nav"
 		"tray     tray       ";
-	grid-template-rows: auto 1fr;
+	grid-template-rows: 1fr auto;
 	grid-template-columns: auto 1fr;
 }
 
@@ -1735,6 +1735,7 @@ body.resizing {
 	position: relative;
 	display: flex;
 	width: var(--width);
+	overflow: hidden;
 
 	&[data-side="right"] {
 		grid-area: sidebar;
