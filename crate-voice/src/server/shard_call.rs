@@ -1,4 +1,7 @@
-use std::time::Instant;
+use std::{
+    collections::{HashMap, HashSet},
+    time::Instant,
+};
 
 use crate::{
     client::webrtc::{
@@ -11,7 +14,7 @@ use crate::{
 use common::{
     v1::types::voice::{
         MediaKind, Mid, Rid, SessionDescription, TrackKey, TrackMetadata,
-        messages::SignallingCommand,
+        messages::{SignallingCommand, SignallingEvent},
     },
     v2::types::{ChannelId, UserId},
 };
@@ -29,7 +32,7 @@ pub struct ShardCall {
     // channel: Box<SfuChannel>,
     /// peers connected to this call
     peers: SlotMap<PeerSlot, Webrtc>,
-    users: std::collections::HashMap<UserId, PeerSlot>,
+    users: HashMap<UserId, PeerSlot>,
     // /// tracks available in this call
     // tracks: SlotMap<TrackSlot, Track>,
 
@@ -43,7 +46,7 @@ impl ShardCall {
         Self {
             channel_id,
             peers: SlotMap::with_key(),
-            users: std::collections::HashMap::new(),
+            users: HashMap::new(),
             inbound: SlotMap::with_key(),
             outbound: SlotMap::with_key(),
         }
@@ -60,23 +63,193 @@ impl ShardCall {
     }
 
     /// a signalling command from a peer
-    pub fn handle_signalling(&mut self, peer: PeerSlot, cmd: SignallingCommand) {
-        // TODO: sfu_old has special handling for Subscribe, Offer, Answer. do i need this?
+    pub fn handle_signalling(
+        &mut self,
+        peer: PeerSlot,
+        cmd: SignallingCommand,
+    ) -> Vec<SignallingEvent> {
+        let mut events = Vec::new();
         if let Some(p) = self.peers.get_mut(peer) {
             match cmd {
                 SignallingCommand::Disconnect => p.disconnect(),
                 SignallingCommand::VoiceState { state } => p.update_voice_state(state),
-                SignallingCommand::Offer { sdp, tracks: _ } => p.handle_offer(sdp),
-                SignallingCommand::Answer { sdp } => p.handle_answer(sdp),
+                SignallingCommand::Offer { sdp, tracks } => {
+                    match p.handle_offer(sdp) {
+                        Ok(answer) => {
+                            events.push(SignallingEvent::Answer { sdp: answer });
+
+                            // process incoming tracks
+                            let mut incoming_mids = HashSet::new();
+                            let mut implicit_tracks = Vec::new();
+
+                            for track in tracks {
+                                let mid: SMid = track.mid.into();
+                                incoming_mids.insert(mid);
+
+                                // check if we already have this inbound track
+                                let existing_track_id = self.inbound.iter().find_map(|(id, t)| {
+                                    if t.publisher == peer && t.state.mid() == Some(mid) {
+                                        Some(id)
+                                    } else {
+                                        None
+                                    }
+                                });
+
+                                if let Some(track_id) = existing_track_id {
+                                    let t = &mut self.inbound[track_id];
+                                    t.kind = track.kind;
+                                    t.key = track.key.clone();
+                                    t.layers = track.layers.clone();
+                                    t.state = TrackState::Open(mid);
+                                } else {
+                                    let track_id = self.inbound.insert(Inbound {
+                                        publisher: peer,
+                                        kind: track.kind,
+                                        key: track.key.clone(),
+                                        layers: track.layers.clone(),
+                                        state: TrackState::Open(mid),
+                                    });
+
+                                    p.mapping_mut().mid_to_track.insert(mid, track_id);
+                                    p.mapping_mut().track_to_mid.insert(track_id, mid);
+
+                                    if self.inbound[track_id].is_implicit() {
+                                        implicit_tracks.push(track_id);
+                                    }
+                                }
+                            }
+
+                            // find tracks that are no longer referenced
+                            let mut dead_tracks = Vec::new();
+                            for (track_id, t) in self.inbound.iter() {
+                                if t.publisher == peer {
+                                    if let Some(mid) = t.state.mid() {
+                                        if !incoming_mids.contains(&mid) {
+                                            dead_tracks.push((track_id, mid));
+                                        }
+                                    }
+                                }
+                            }
+
+                            // remove dead tracks
+                            for (track_id, mid) in dead_tracks {
+                                self.inbound.remove(track_id);
+                                p.mapping_mut().mid_to_track.remove(&mid);
+                                p.mapping_mut().track_to_mid.remove(&track_id);
+
+                                // the peer is no longer publishing these tracks
+                                // remove associated outbound subscriptions
+                                let mut dead_outbound = Vec::new();
+                                for (out_id, out) in self.outbound.iter() {
+                                    if out.source == track_id {
+                                        dead_outbound.push(out_id);
+                                    }
+                                }
+                                for out_id in dead_outbound {
+                                    self.outbound.remove(out_id);
+                                }
+                            }
+
+                            // subscribe other peers to implicit tracks
+                            for track_id in implicit_tracks {
+                                let target_peers: Vec<_> =
+                                    self.peers.keys().filter(|&k| k != peer).collect();
+                                for target_peer in target_peers {
+                                    self.outbound.insert(Outbound {
+                                        subscriber: target_peer,
+                                        source: track_id,
+                                        state: TrackState::Pending,
+                                    });
+                                }
+                            }
+
+                            // TODO: broadcast a Tracks event to everyone in the channel
+                        }
+                        Err(e) => {
+                            warn!("Failed to handle offer: {:?}", e);
+                        }
+                    }
+                }
+                SignallingCommand::Answer { sdp } => {
+                    p.handle_answer(sdp);
+
+                    // TODO: update inbound tracks
+
+                    // update outbound tracks
+                    let mut outbound_to_remove = Vec::new();
+                    for (track_id, out) in self
+                        .outbound
+                        .iter_mut()
+                        .filter(|(_, o)| o.subscriber == peer)
+                    {
+                        match out.state {
+                            TrackState::Negotiating(mid) => out.state = TrackState::Open(mid),
+                            TrackState::Closing(_) => {
+                                outbound_to_remove.push(track_id);
+                            }
+                            _ => {}
+                        }
+                    }
+
+                    // TODO: remove based on outbound_to_remove
+                }
                 SignallingCommand::Candidate { candidate } => p.handle_candidate(candidate),
-                SignallingCommand::Subscribe { subs: _ } => {}
+                SignallingCommand::Subscribe { subs } => {
+                    let mut requested_tracks = HashSet::new();
+                    for s in subs {
+                        if let Some(&publisher_pid) = self.users.get(&s.user_id) {
+                            if let Some(track_id) = self.peers[publisher_pid]
+                                .mapping()
+                                .lookup_track(s.mid.into())
+                            {
+                                requested_tracks.insert(track_id);
+                            }
+                        }
+                    }
+
+                    // find existing subscriptions
+                    let mut current_subs = Vec::new();
+                    for (out_id, out) in self.outbound.iter() {
+                        if out.subscriber == peer {
+                            current_subs.push((out.source, out_id));
+                        }
+                    }
+
+                    // mark missing as closing
+                    for (tid, sid) in current_subs {
+                        if !requested_tracks.contains(&tid) {
+                            if let Some(out) = self.outbound.get_mut(sid) {
+                                if let Some(mid) = out.state.mid() {
+                                    out.state = TrackState::Closing(mid);
+                                }
+                            }
+                        }
+                        requested_tracks.remove(&tid);
+                    }
+
+                    // add new subscriptions
+                    for tid in requested_tracks {
+                        self.outbound.insert(Outbound {
+                            subscriber: peer,
+                            source: tid,
+                            state: TrackState::Pending,
+                        });
+                    }
+                }
             }
         }
+        events
     }
 
-    pub fn handle_signalling_by_user(&mut self, user_id: UserId, cmd: SignallingCommand) {
+    pub fn handle_signalling_by_user(
+        &mut self,
+        user_id: UserId,
+        cmd: SignallingCommand,
+    ) -> Vec<SignallingEvent> {
         if let Some(&peer) = self.users.get(&user_id) {
-            self.handle_signalling(peer, cmd);
+            self.handle_signalling(peer, cmd)
+        } else {
+            Vec::new()
         }
     }
 
@@ -255,7 +428,15 @@ impl ShardCall {
         }
     }
 
-    // fn process_sdp_negotiations(&mut self) {}
+    pub fn process_sdp_negotiations(&mut self) -> Vec<(UserId, SignallingEvent)> {
+        // 1. collect pending/closing tracks
+        // 2. create a new sdp change
+        // 3. changes.add_media() for pending tracks
+        // 4. changes.stop_media() for closing tracks
+        // 5. offer = negotiate_if_needed(changes)
+        // 6. collect tracks for SignallingEvent::Offer
+        // 7. send offer to user
 
-    // fn route_media(&mut self, publisher: Peer, media: str0m::media::MediaData) {}
+        todo!()
+    }
 }

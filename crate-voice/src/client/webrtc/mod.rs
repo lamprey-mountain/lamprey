@@ -28,7 +28,6 @@ pub struct Webrtc {
     signalling: Signalling,
     datachannels: Datachannels,
     mapping: Mapping,
-    events: VecDeque<PeerEvent>,
 }
 
 // TODO: figure out how big webrtc is
@@ -45,7 +44,6 @@ impl Webrtc {
             signalling: Signalling::new(),
             datachannels: Datachannels::new(),
             mapping: Mapping::new(),
-            events: VecDeque::new(),
         }
     }
 
@@ -91,18 +89,9 @@ impl Webrtc {
         self.rtc.disconnect();
     }
 
-    pub fn handle_offer(&mut self, sdp: SessionDescription) {
-        match self.signalling.handle_offer(&mut self.rtc, sdp) {
-            Ok(answer) => {
-                self.events
-                    .push_back(PeerEvent::Signalling(SignallingEvent::Answer {
-                        sdp: SessionDescription(answer.to_sdp_string()),
-                    }));
-            }
-            Err(e) => {
-                debug!("Failed to handle offer: {:?}", e);
-            }
-        }
+    pub fn handle_offer(&mut self, sdp: SessionDescription) -> Result<SessionDescription> {
+        let answer = self.signalling.handle_offer(&mut self.rtc, sdp)?;
+        Ok(SessionDescription(answer.to_sdp_string()))
     }
 
     pub fn handle_answer(&mut self, sdp: SessionDescription) {
@@ -115,7 +104,41 @@ impl Webrtc {
         debug!("ignoring candidate: {:?}", candidate);
     }
 
-    // pub fn drain_events(&mut self) -> ... {}
+    /// get a mutable sdp api handle to stage media changes
+    pub fn sdp_api(&mut self) -> str0m::change::SdpApi<'_> {
+        self.rtc.sdp_api()
+    }
+
+    /// send an sdp offer if we have tracks that haven't been negotiated yet
+    pub fn negotiate_if_needed(
+        &mut self,
+        change: str0m::change::SdpApi,
+    ) -> Result<Option<SessionDescription>> {
+        if let Some(offer) = self.signalling.negotiate_if_needed(change)? {
+            Ok(Some(SessionDescription(offer.to_sdp_string())))
+        } else {
+            Ok(None)
+        }
+    }
+
+    // NOTE: this may be required for mutability reasons
+    // /// Apply sdp changes via a closure, then send an offer if anything changed.
+    // ///
+    // /// The closure receives a mutable `SdpApi` and should call `add_media`/`stop_media` on it.
+    // /// Combines the `sdp_api()` + `negotiate_if_needed()` pair into one call so that
+    // /// `self.rtc` and `self.signalling` can be split-borrowed within this single method body.
+    // pub fn negotiate_changes<F>(&mut self, f: F) -> Result<Option<SessionDescription>>
+    // where
+    //     F: FnOnce(&mut str0m::change::SdpApi),
+    // {
+    //     let mut changes = self.rtc.sdp_api();
+    //     f(&mut changes);
+    //     if let Some(offer) = self.signalling.negotiate_if_needed(changes)? {
+    //         Ok(Some(SessionDescription(offer.to_sdp_string())))
+    //     } else {
+    //         Ok(None)
+    //     }
+    // }
 
     /// get permissions for this peer
     ///

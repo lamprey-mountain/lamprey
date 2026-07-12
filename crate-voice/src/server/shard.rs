@@ -1,7 +1,7 @@
 use std::{collections::HashMap, net::SocketAddr, time::Instant};
 
 use bytes::{Bytes, BytesMut};
-use common::v1::types::voice::messages::SignallingCommand;
+use common::v1::types::voice::messages::{SfuEvent, SignallingCommand};
 use common::v1::types::voice::{Mid, Rid};
 use common::v2::types::{ChannelId, UserId};
 use slotmap::SlotMap;
@@ -90,12 +90,13 @@ impl Shard {
         let mut buf_v4 = BytesMut::with_capacity(2000);
         let mut buf_v6 = BytesMut::with_capacity(2000);
 
+        // TODO: clean up dead peers
         loop {
-            // cleanup dead peers
-            // process sdp renegotiation
-
-            // drain events/send stuff to peers
+            // drain rtc output (transmits + events) for all calls
             let global_timeout = self.drain_calls().await;
+
+            // run sdp renegotiation and dispatch resulting offers/answers back to clients
+            self.process_all_negotiations();
 
             let timeout_future = async {
                 if let Some((_, _, t)) = global_timeout {
@@ -129,6 +130,28 @@ impl Shard {
                             call.handle_timeout(peer_slot);
                         }
                     }
+                }
+            }
+        }
+    }
+
+    fn process_all_negotiations(&mut self) {
+        for (call_slot, call) in self.calls.iter_mut() {
+            // PERF: add fn channel_id() to ShardCall
+            let channel_id = *self
+                .channels
+                .iter()
+                .find_map(|(ch, &slot)| if slot == call_slot { Some(ch) } else { None })
+                .unwrap();
+
+            let events = call.process_sdp_negotiations();
+            for (user_id, signalling_event) in events {
+                if let Err(e) = self.backend.send(SfuEvent::VoiceDispatch {
+                    user_id,
+                    channel_id,
+                    payload: Box::new(signalling_event),
+                }) {
+                    warn!("Failed to dispatch renegotiation event: {:?}", e);
                 }
             }
         }
@@ -248,7 +271,16 @@ impl Shard {
                     return;
                 };
                 if let Some(call) = self.calls.get_mut(call_slot) {
-                    call.handle_signalling_by_user(user_id, inner);
+                    let events = call.handle_signalling_by_user(user_id, inner);
+                    for signalling_event in events {
+                        if let Err(e) = self.backend.send(SfuEvent::VoiceDispatch {
+                            user_id,
+                            channel_id,
+                            payload: Box::new(signalling_event),
+                        }) {
+                            warn!("Failed to dispatch signalling event: {:?}", e);
+                        }
+                    }
                 }
             }
             ShardCommand::GenerateKeyframe {
