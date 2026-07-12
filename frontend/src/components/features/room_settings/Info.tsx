@@ -69,7 +69,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		roomId: () => props.room.id,
 		toolbar,
 		autocomplete,
-		initialContent: props.room.description as string | undefined,
+		initialContent: () => props.room.description ?? "",
 	});
 
 	onMount(() => {

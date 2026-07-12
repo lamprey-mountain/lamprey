@@ -184,7 +184,7 @@ function MessageEditor(props: { message: MessageT }) {
 		roomId: () => props.message.room_id ?? "",
 		toolbar,
 		autocomplete,
-		initialContent: draft(),
+		initialContent: () => draft(),
 		initialSelection: ch.editingMessage?.selection,
 		keymap: {
 			ArrowUp: (state) => {

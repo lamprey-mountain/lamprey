@@ -29,6 +29,7 @@ import { createMarkdownHighlightPlugin } from "./markdown-highlight-plugin.ts";
 import {
 	createEditor as createBaseEditor,
 	createPlaceholderPlugin,
+	type EditorViewProps,
 } from "./mod.tsx";
 import { createEditorNodeViews } from "./node-views.tsx";
 import { schema } from "./schema.ts";
@@ -42,22 +43,30 @@ export const getIsApplyingFormat = () => isApplyingFormat;
 
 export { schema };
 
-type EditorProps = {
-	initialContent?: string;
+export type EditorProps = {
+	initialContent?: () => string;
 	keymap?: { [key: string]: Command };
 	initialSelection?: "start" | "end";
 	mentionRenderer?: (node: HTMLElement, userId: string) => void;
 	mentionChannelRenderer?: (node: HTMLElement, channelId: string) => void;
+
+	channelId: () => string;
+	roomId?: () => string;
+	toolbar?: FormattingToolbarContextT;
+	autocomplete?: AutocompleteContext;
 };
 
-export const createEditor = (
-	opts: EditorProps & {
-		channelId: () => string;
-		roomId?: () => string;
-		toolbar?: FormattingToolbarContextT;
-		autocomplete?: AutocompleteContext;
-	},
-) => {
+export type Editor = {
+	schema: typeof schema;
+	setState: (state?: EditorState) => void;
+	state: () => EditorState | undefined;
+	focus: () => void;
+	view: any;
+	View: (props: EditorViewProps) => any;
+	createState: () => EditorState;
+};
+
+export const createEditor = (opts: EditorProps): Editor => {
 	const toolbarPlugin = createToolbarPlugin(opts.toolbar!);
 	const autocompletePlugin = createAutocompletePlugin(
 		opts.autocomplete!,
@@ -70,7 +79,7 @@ export const createEditor = (
 		let doc;
 		if (opts.initialContent) {
 			const div = document.createElement("div");
-			div.innerHTML = md.parser(md.lexer(opts.initialContent));
+			div.innerHTML = md.parser(md.lexer(opts.initialContent()));
 			doc = DOMParser.fromSchema(schema).parse(div);
 		}
 
@@ -131,6 +140,8 @@ export const createEditor = (
 
 	return {
 		...editor,
+		createState,
+		state: () => editor.view?.state,
 		View: (props: Parameters<typeof editor.View>[0]) => {
 			return <editor.View {...props} />;
 		},

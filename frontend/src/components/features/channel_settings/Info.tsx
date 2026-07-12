@@ -2,9 +2,8 @@ import { createStore } from "solid-js/store";
 import type { EditorState } from "prosemirror-state";
 import type { Channel } from "sdk";
 import { createUpload } from "sdk";
-import { createSignal, For, onMount, Show, type VoidProps } from "solid-js";
+import { createSignal, onMount, Show, type VoidProps } from "solid-js";
 import { useApi, useChannels } from "@/api";
-import { useCtx } from "@/app/context";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { DurationInput, type DurationPreset } from "@/atoms/DurationInput.tsx";
 import { Checkbox } from "@/atoms/icons";
@@ -57,11 +56,11 @@ const toDraft = (c: Channel): Draft => ({
 });
 
 export function Info(props: VoidProps<{ channel: Channel }>) {
-	const ctx = useCtx();
 	const api = useApi();
 	const channels = useChannels();
 	const [draft, setDraft] = createStore(toDraft(props.channel));
-	const [editorState, setEditorState] = createSignal<EditorState | null>(null);
+	const [description, setDescription] = createSignal<string | null>(null);
+	const [saving, setSaving] = createSignal(false);
 
 	let iconInputEl!: HTMLInputElement;
 
@@ -73,13 +72,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		roomId: () => props.channel.room_id ?? "",
 		toolbar,
 		autocomplete,
-		initialContent: props.channel.description as string | undefined,
-	});
-
-	onMount(() => {
-		if (editorState()) {
-			editor.setState(editorState() as any);
-		}
+		initialContent: () => props.channel.description ?? "",
 	});
 
 	const isGdm = () => props.channel.type === "Gdm";
@@ -121,32 +114,27 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 
 	const isDirty = () =>
 		JSON.stringify(draft) !== JSON.stringify(toDraft(props.channel)) ||
-		getDescriptionFromState() !== (props.channel.description ?? "");
+		description() !== (props.channel.description ?? "");
 
-	const getDescriptionFromState = () => {
-		if (!editorState()) return "";
-		const text = editorState()?.doc.textContent;
-		return text;
-	};
-
-	const save = () => {
-		const description = getDescriptionFromState();
-		ctx.client.http.PATCH("/api/v1/channel/{channel_id}", {
-			params: { path: { channel_id: props.channel.id } },
-			body: {
-				name: draft.name,
-				description,
-				nsfw: draft.nsfw,
-				slowmode_message: draft.slowmodeMessage,
-				slowmode_thread: draft.slowmodeThread,
-				default_slowmode_message: draft.defaultSlowmodeMessage,
-				...(hasVoice() && {
-					user_limit: draft.userLimit === 0 ? null : draft.userLimit,
-					bitrate: draft.bitrate,
-				}),
-				...(isGdm() && { icon: draft.icon }),
-			},
+	const save = async () => {
+		setSaving(true);
+		const updated = await channels.update(props.channel.id, {
+			name: draft.name,
+			description: description() || null,
+			nsfw: draft.nsfw,
+			slowmode_message: draft.slowmodeMessage,
+			slowmode_thread: draft.slowmodeThread,
+			default_slowmode_message: draft.defaultSlowmodeMessage,
+			...(hasVoice() && {
+				user_limit: draft.userLimit === 0 ? null : draft.userLimit,
+				bitrate: draft.bitrate,
+			}),
+			...(isGdm() && { icon: draft.icon }),
 		});
+		setSaving(false);
+		// TODO: reset draft once saved
+		// TODO: reset draft if its not dirty and channel is updated
+		// TODO: disable inputs while saving draft
 	};
 
 	const _toggleArchived = () => {
@@ -167,13 +155,31 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 
 	const reset = () => {
 		setDraft(toDraft(props.channel));
-		setEditorState(
-			(editor as any).createEditorState({
-				doc: editor.schema.nodes.doc.create(
-					null,
-					editor.schema.text(props.channel.description as string),
-				),
-			}),
+		const s = editor.createState();
+		editor.setState(s);
+		setDescription(s.doc.textContent);
+	};
+
+	const hasThreadSlowmode = () => {
+		return (
+			props.channel.type === "Forum" ||
+			props.channel.type === "Forum2" ||
+			props.channel.type === "Ticket" ||
+			props.channel.type === "Announcement" ||
+			props.channel.type === "Wiki" ||
+			props.channel.type === "Text"
+		);
+		// TODO: (props.channel.type === "Document" || props.channel.parent.type !== "Wiki")
+	};
+
+	const hasTextSlowmode = () => {
+		return (
+			props.channel.type === "ThreadPublic" ||
+			props.channel.type === "ThreadPrivate" ||
+			props.channel.type === "ThreadForum2" ||
+			props.channel.type === "Voice" ||
+			props.channel.type === "Announcement" ||
+			props.channel.type === "Text"
 		);
 	};
 
@@ -227,7 +233,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 					<label class="description">
 						<h3 class="dim">description</h3>
 						<editor.View
-							onChange={(state) => setEditorState(state)}
+							onChange={(state) => setDescription(state.doc.textContent)}
 							channelId={props.channel.id}
 							submitOnEnter={false}
 							autofocus={false}
@@ -235,34 +241,33 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 					</label>
 				</div>
 			</div>
-			<label>
-				<h3 class="dim">slowmode (messages)</h3>
-				<DurationInput
-					value={draft.slowmodeMessage}
-					onInput={(d) =>
-						setDraft("slowmodeMessage", typeof d === "number" ? d : null)
-					}
-					presets={slowmodePresets}
-					placeholder="disabled"
-				/>
-			</label>
-			<label>
-				<h3 class="dim">slowmode (threads)</h3>
-				<DurationInput
-					value={draft.slowmodeThread}
-					onInput={(d) =>
-						setDraft("slowmodeThread", typeof d === "number" ? d : null)
-					}
-					presets={slowmodePresets}
-					placeholder="disabled"
-				/>
-			</label>
-			<Show
-				when={
-					channels.cache.get(props.channel.id)?.type === "Forum" ||
-					channels.cache.get(props.channel.id)?.type === "Text"
-				}
-			>
+			<Show when={hasTextSlowmode()}>
+				<label>
+					<h3 class="dim">slowmode (messages)</h3>
+					<DurationInput
+						value={draft.slowmodeMessage}
+						onInput={(d) =>
+							setDraft("slowmodeMessage", typeof d === "number" ? d : null)
+						}
+						presets={slowmodePresets}
+						placeholder="disabled"
+					/>
+				</label>
+			</Show>
+			<Show when={hasThreadSlowmode()}>
+				<label>
+					<h3 class="dim">slowmode (threads)</h3>
+					<DurationInput
+						value={draft.slowmodeThread}
+						onInput={(d) =>
+							setDraft("slowmodeThread", typeof d === "number" ? d : null)
+						}
+						presets={slowmodePresets}
+						placeholder="disabled"
+					/>
+				</label>
+			</Show>
+			<Show when={hasThreadSlowmode()}>
 				<label>
 					<h3 class="dim">slowmode (messages default for threads)</h3>
 					<DurationInput
@@ -346,7 +351,12 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 			</div>
 			{/* TODO: add/remove tags from thread channels */}
 			{/* TODO: archive all threads in this channel (text, forum) */}
-			<Savebar show={isDirty()} onCancel={reset} onSave={save} />
+			<Savebar
+				show={isDirty()}
+				saving={saving()}
+				onCancel={reset}
+				onSave={save}
+			/>
 		</div>
 	);
 }

@@ -33,7 +33,7 @@ export const Forum2CreateForm = (props: {
 		roomId: () => props.channel.room_id ?? "",
 		toolbar,
 		autocomplete,
-		initialContent: "",
+		initialContent: () => "",
 	});
 
 	function handleUpload(file: File) {

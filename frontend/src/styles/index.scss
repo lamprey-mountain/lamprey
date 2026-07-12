@@ -811,7 +811,7 @@ input[type="url"] {
 	}
 
 	& > main {
-	position: relative;
+		position: relative;
 		overflow-y: auto;
 
 		&.padded {
@@ -2498,6 +2498,15 @@ button.big {
 		translate: 0 0;
 	}
 
+	&.saving .button.save::after {
+		content: "";
+		animation: dots infinite 800ms;
+	}
+
+	&.disabled > .inner .button.save {
+		background-color: oklch(from $color-green calc(l - 0.08) c h);
+	}
+
 	& > .inner {
 		display: flex;
 		background: $bg-100;
@@ -2518,7 +2527,7 @@ button.big {
 
 			&.save {
 				background: $color-green;
-				color: $bg-300;
+				color: $bg-100;
 			}
 		}
 	}
@@ -3142,6 +3151,7 @@ button.link {
 	& > .channel-profile {
 		display: flex;
 		gap: 8px;
+		margin-bottom: 8px;
 
 		& > .name-description {
 			flex: 1;

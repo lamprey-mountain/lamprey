@@ -599,7 +599,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		roomId: () => props.channel.room_id ?? "",
 		toolbar,
 		autocomplete,
-		initialContent: (() => {
+		initialContent: () => {
 			const draft = localStorage.getItem(storageKey());
 			if (!draft) return "";
 			try {
@@ -608,7 +608,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 			} catch {
 				return draft;
 			}
-		})(),
+		},
 	});
 
 	const onChange = (state: EditorState) => {
@@ -968,7 +968,7 @@ function CommentEditor(props: { message: Message; channel: Channel }) {
 		roomId: () => props.message.room_id!,
 		toolbar,
 		autocomplete,
-		initialContent: draft(),
+		initialContent: () => draft(),
 		initialSelection: "end",
 	});
 
