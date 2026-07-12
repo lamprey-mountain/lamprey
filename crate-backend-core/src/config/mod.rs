@@ -332,6 +332,11 @@ pub struct ConfigVoice {
     /// defaults to a random port
     #[serde(default)]
     pub quic_port: u16,
+
+    /// the udp port that the builtin stun server should listen on
+    ///
+    /// defaults to being disabled
+    pub stun_port: Option<u16>,
 }
 
 impl Default for ConfigScripts {

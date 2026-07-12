@@ -11,21 +11,23 @@ use common::{
 use slotmap::{SlotMap, new_key_type};
 
 pub mod permissions;
-pub mod signalling;
 pub mod simulcast;
+pub mod stun;
 
 new_key_type! {
     /// slotmap key for a webrtc peer
-    pub struct PeerId;
+    pub struct PeerSlot;
 
     /// slotmap key for a track
     ///
     /// mids are local to each peer, `TrackId`s are shared
-    pub struct TrackId;
+    pub struct TrackSlot;
 
-    pub struct SinkId;
+    pub struct SinkSlot;
+    pub struct CallSlot;
 }
 
+// TODO: remove
 /// the current state of a webrtc track
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TrackState {
@@ -54,7 +56,7 @@ impl TrackState {
 }
 
 pub struct Track {
-    pub publisher: PeerId,
+    pub publisher: PeerSlot,
     pub kind: MediaKind,
     pub key: TrackKey,
     pub layers: Vec<TrackLayer>,
@@ -65,8 +67,8 @@ pub struct Track {
 }
 
 pub struct Sink {
-    pub subscriber: PeerId,
-    pub source: TrackId,
+    pub subscriber: PeerSlot,
+    pub source: TrackSlot,
     pub state: TrackState,
 }
 
@@ -95,16 +97,16 @@ impl Track {
 // TODO: use this for routing media
 #[derive(Default)]
 pub struct Router {
-    pub links: HashMap<TrackId, HashSet<SinkId>>,
-    pub subscriptions: HashMap<(PeerId, TrackId), SinkId>,
+    pub links: HashMap<TrackSlot, HashSet<SinkSlot>>,
+    pub subscriptions: HashMap<(PeerSlot, TrackSlot), SinkSlot>,
 }
 
 impl Router {
     pub fn subscribe(
         &mut self,
-        subscriber: PeerId,
-        source: TrackId,
-        sinks: &mut SlotMap<SinkId, Sink>,
+        subscriber: PeerSlot,
+        source: TrackSlot,
+        sinks: &mut SlotMap<SinkSlot, Sink>,
     ) {
         if self.subscriptions.contains_key(&(subscriber, source)) {
             return;

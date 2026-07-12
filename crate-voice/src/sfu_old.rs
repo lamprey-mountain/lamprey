@@ -24,7 +24,7 @@ use tracing::{debug, warn};
 
 use crate::{
     backend::{BackendConnection, BackendHandle},
-    peer::{Peer, PeerKind},
+    peer_old::{Peer, PeerKind},
     util::{PeerId, Router, SfuVoiceState, Sink, SinkId, Track, TrackId, TrackState},
 };
 

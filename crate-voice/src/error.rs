@@ -11,6 +11,9 @@ pub enum Error {
     #[error("the `Have` message is only sent by the server")]
     HaveServerOnly,
 
+    #[error("quinn connection: {0}")]
+    QuinnConnection(#[from] quinn::ConnectionError),
+
     #[error("{0}")]
     Rustls(#[from] rustls::Error),
 
@@ -31,6 +34,9 @@ pub enum Error {
 
     #[error("rtc error: {0}")]
     Rtc(#[from] str0m::RtcError),
+
+    #[error("io error: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 pub type Result<T> = ::core::result::Result<T, Error>;

@@ -13,7 +13,7 @@ use tracing::warn;
 
 use crate::{
     prelude::*,
-    util::{SfuVoiceState, SinkId, TrackId, permissions::Permissions, signalling::Signalling},
+    util::{SfuVoiceState, permissions::Permissions},
 };
 
 /// a webrtc connection
@@ -23,9 +23,9 @@ pub struct Peer {
     pub rtc: Rtc,
     pub signalling: Signalling,
 
-    pub mid_to_track: HashMap<SMid, TrackId>,
-    pub track_to_mid: HashMap<TrackId, SMid>,
-    pub mid_to_sink: HashMap<SMid, SinkId>,
+    pub mid_to_track: HashMap<SMid, TrackSlot>,
+    pub track_to_mid: HashMap<TrackSlot, SMid>,
+    pub mid_to_sink: HashMap<SMid, SinkSlot>,
 
     /// datachannel for speaking/voice activity messages
     ///
@@ -84,11 +84,11 @@ impl Peer {
     }
 
     /// get a track id from this peer's local mid
-    pub fn lookup_track(&self, mid: SMid) -> Option<TrackId> {
+    pub fn lookup_track(&self, mid: SMid) -> Option<TrackSlot> {
         self.mid_to_track.get(&mid).copied()
     }
 
-    pub fn write_media(&mut self, track_id: TrackId, media: &str0m::media::MediaData) {
+    pub fn write_media(&mut self, track_id: TrackSlot, media: &str0m::media::MediaData) {
         let Some(mid) = self.track_to_mid.get(&track_id) else {
             return;
         };
@@ -104,7 +104,7 @@ impl Peer {
 
     pub fn request_keyframe(
         &mut self,
-        track_id: TrackId,
+        track_id: TrackSlot,
         rid: Option<SRid>,
         kind: KeyframeRequestKind,
     ) {

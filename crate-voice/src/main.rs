@@ -3,7 +3,7 @@ use std::str::FromStr;
 use anyhow::Result;
 use figment::providers::{Env, Format, Toml};
 use lamprey_backend_core::config::Config;
-use lamprey_voice::sfu::Sfu;
+use lamprey_voice::Sfu;
 use tracing::subscriber;
 use tracing_subscriber::EnvFilter;
 
