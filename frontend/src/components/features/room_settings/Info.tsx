@@ -14,7 +14,6 @@ import { useModals } from "@/contexts/modal";
 import type { RoomT } from "@/types";
 
 export function Info(props: VoidProps<{ room: RoomT }>) {
-	const _ctx = useCtx();
 	const [, modalCtl] = useModals();
 
 	let avatarInputEl!: HTMLInputElement;
@@ -125,63 +124,60 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 	};
 
 	return (
-		<>
+		<div class="room-settings-info">
 			<h2>info</h2>
-			<div class="dim">name</div>
-			<input
-				value={editingName()}
-				type="text"
-				onInput={(e) => setEditingName(e.target.value)}
-			/>
-			<br />
-			<br />
-			<div class="dim">description</div>
-			<editor.View
-				onChange={(state) => setEditorState(state)}
-				placeholder="room description..."
-				submitOnEnter={false}
-				autofocus={false}
-			/>
-			<br />
-			<br />
-			<Savebar show={isDirty()} onCancel={reset} onSave={save} />
-			<div>
-				<div class="avatar-uploader" onClick={openAvatarPicker}>
-					<div class="avatar-inner">
-						<RoomIcon room={props.room} />
-						<div class="overlay">upload avatar</div>
-					</div>
-					<Show when={roomIcon()}>
-						<button
-							type="button"
-							class="remove"
-							onClick={(e) => {
-								e.stopPropagation();
-								removeAvatar();
+			<div class="room-profile">
+				<label class="room-icon">
+					<h3 class="dim">icon</h3>
+					<div class="avatar-uploader" onClick={openAvatarPicker}>
+						<div class="avatar-inner">
+							<RoomIcon room={props.room} />
+							<div class="overlay">upload avatar</div>
+						</div>
+						<Show when={roomIcon()}>
+							<button
+								type="button"
+								class="remove"
+								onClick={(e) => {
+									e.stopPropagation();
+									removeAvatar();
+								}}
+							>
+								remove
+							</button>
+						</Show>
+						<input
+							style="display:none"
+							ref={avatarInputEl}
+							type="file"
+							onInput={(e) => {
+								const f = e.target.files?.[0];
+								if (f) setAvatarFile(f);
 							}}
-						>
-							remove
-						</button>
-					</Show>
-					<input
-						style="display:none"
-						ref={avatarInputEl}
-						type="file"
-						onInput={(e) => {
-							const f = e.target.files?.[0];
-							if (f) setAvatarFile(f);
-						}}
-					/>
+						/>
+					</div>
+				</label>
+				<div class="name-description">
+					<label class="name">
+						<h3 class="dim">name</h3>
+						<input
+							value={editingName()}
+							type="text"
+							class="name-input"
+							onInput={(e) => setEditingName(e.target.value)}
+						/>
+					</label>
+					<label class="description">
+						<h3 class="dim">description</h3>
+						<editor.View
+							onChange={(state) => setEditorState(state)}
+							placeholder="room description..."
+							submitOnEnter={false}
+							autofocus={false}
+						/>
+					</label>
 				</div>
 			</div>
-			<ul style="list-style: disc inside">
-				<li>
-					room id: <code class="select-all">{props.room.id}</code>
-				</li>
-				<li>
-					owner id: <code class="select-all">{props.room.owner_id}</code>
-				</li>
-			</ul>
 			<br />
 			<CheckboxOption
 				id={`room-${props.room.id}-public`}
@@ -193,9 +189,12 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 					checked={editingPublic()}
 					seed={`room-${props.room.id}-public`}
 				/>
-				<span>Make this room public (anyone can join and view)</span>
+				<div>
+					<div>Make this room public</div>
+					<div class="dim">anyone can join and view</div>
+				</div>
 			</CheckboxOption>
-			<br />
-		</>
+			<Savebar show={isDirty()} onCancel={reset} onSave={save} />
+		</div>
 	);
 }
