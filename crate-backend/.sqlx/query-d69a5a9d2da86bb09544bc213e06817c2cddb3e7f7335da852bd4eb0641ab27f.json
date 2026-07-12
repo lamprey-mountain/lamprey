@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select code, used_at from totp_recovery where user_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "code",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "used_at",
+        "type_info": "Timestamp"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "d69a5a9d2da86bb09544bc213e06817c2cddb3e7f7335da852bd4eb0641ab27f"
+}

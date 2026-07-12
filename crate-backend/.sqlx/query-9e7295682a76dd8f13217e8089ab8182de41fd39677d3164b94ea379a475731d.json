@@ -1,0 +1,260 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        \tSELECT\n            \tr.id,\n            \tr.description,\n            \tr.is_mentionable,\n            \tr.allow as \"allow: _\",\n            \tr.deny as \"deny: _\",\n            \tr.version_id,\n            \tr.room_id,\n            \tr.is_self_applicable,\n            \tr.name,\n                coalesce(rm.count, 0) as \"member_count!\",\n                r.position,\n                r.hoist,\n                r.sticky\n            FROM role r\n            LEFT JOIN (\n                SELECT role_id, count(*) as count\n                FROM role_member\n                GROUP BY role_id\n            ) rm ON rm.role_id = r.id\n        \tWHERE r.room_id = $1\n        \tORDER BY r.id DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "is_mentionable",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "allow: _",
+        "type_info": {
+          "Custom": {
+            "name": "permission[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission",
+                  "kind": {
+                    "Enum": [
+                      "Admin",
+                      "ApplicationCreate",
+                      "ApplicationManage",
+                      "IntegrationsManage",
+                      "IntegrationsBridge",
+                      "EmojiManage",
+                      "EmojiUseExternal",
+                      "InviteCreate",
+                      "InviteManage",
+                      "MemberBan",
+                      "MemberKick",
+                      "MemberNickname",
+                      "MemberNicknameManage",
+                      "MemberTimeout",
+                      "MessageAttachments",
+                      "MessageCreate",
+                      "MessageCreateThread",
+                      "MessageDelete",
+                      "MessageEmbeds",
+                      "MessageMassMention",
+                      "MessageMove",
+                      "MessagePin",
+                      "MessageRemove",
+                      "ReactionAdd",
+                      "ReactionManage",
+                      "RoleApply",
+                      "RoleManage",
+                      "RoomEdit",
+                      "RoomManage",
+                      "ServerMaintenance",
+                      "ServerMetrics",
+                      "ServerOversee",
+                      "ChannelSlowmodeBypass",
+                      "ChannelEdit",
+                      "ChannelManage",
+                      "ThreadCreatePrivate",
+                      "ThreadCreatePublic",
+                      "ThreadManage",
+                      "ThreadEdit",
+                      "ChannelView",
+                      "AuditLogView",
+                      "AnalyticsView",
+                      "VoiceDeafen",
+                      "VoiceMove",
+                      "VoiceMute",
+                      "VoicePriority",
+                      "VoiceSpeak",
+                      "VoiceVideo",
+                      "VoiceVad",
+                      "VoiceRequest",
+                      "VoiceBroadcast",
+                      "CalendarEventCreate",
+                      "CalendarEventRsvp",
+                      "CalendarEventManage",
+                      "DocumentCreate",
+                      "DocumentEdit",
+                      "DocumentComment",
+                      "RoomCreate",
+                      "UserManage",
+                      "UserManageSelf",
+                      "UserProfileSelf",
+                      "DmCreate",
+                      "FriendCreate",
+                      "RoomJoin",
+                      "CallUpdate",
+                      "RoomJoinForce",
+                      "ScriptManage",
+                      "ScriptInspect"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "deny: _",
+        "type_info": {
+          "Custom": {
+            "name": "permission[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission",
+                  "kind": {
+                    "Enum": [
+                      "Admin",
+                      "ApplicationCreate",
+                      "ApplicationManage",
+                      "IntegrationsManage",
+                      "IntegrationsBridge",
+                      "EmojiManage",
+                      "EmojiUseExternal",
+                      "InviteCreate",
+                      "InviteManage",
+                      "MemberBan",
+                      "MemberKick",
+                      "MemberNickname",
+                      "MemberNicknameManage",
+                      "MemberTimeout",
+                      "MessageAttachments",
+                      "MessageCreate",
+                      "MessageCreateThread",
+                      "MessageDelete",
+                      "MessageEmbeds",
+                      "MessageMassMention",
+                      "MessageMove",
+                      "MessagePin",
+                      "MessageRemove",
+                      "ReactionAdd",
+                      "ReactionManage",
+                      "RoleApply",
+                      "RoleManage",
+                      "RoomEdit",
+                      "RoomManage",
+                      "ServerMaintenance",
+                      "ServerMetrics",
+                      "ServerOversee",
+                      "ChannelSlowmodeBypass",
+                      "ChannelEdit",
+                      "ChannelManage",
+                      "ThreadCreatePrivate",
+                      "ThreadCreatePublic",
+                      "ThreadManage",
+                      "ThreadEdit",
+                      "ChannelView",
+                      "AuditLogView",
+                      "AnalyticsView",
+                      "VoiceDeafen",
+                      "VoiceMove",
+                      "VoiceMute",
+                      "VoicePriority",
+                      "VoiceSpeak",
+                      "VoiceVideo",
+                      "VoiceVad",
+                      "VoiceRequest",
+                      "VoiceBroadcast",
+                      "CalendarEventCreate",
+                      "CalendarEventRsvp",
+                      "CalendarEventManage",
+                      "DocumentCreate",
+                      "DocumentEdit",
+                      "DocumentComment",
+                      "RoomCreate",
+                      "UserManage",
+                      "UserManageSelf",
+                      "UserProfileSelf",
+                      "DmCreate",
+                      "FriendCreate",
+                      "RoomJoin",
+                      "CallUpdate",
+                      "RoomJoinForce",
+                      "ScriptManage",
+                      "ScriptInspect"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "version_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "is_self_applicable",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "member_count!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 10,
+        "name": "position",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "hoist",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 12,
+        "name": "sticky",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9e7295682a76dd8f13217e8089ab8182de41fd39677d3164b94ea379a475731d"
+}

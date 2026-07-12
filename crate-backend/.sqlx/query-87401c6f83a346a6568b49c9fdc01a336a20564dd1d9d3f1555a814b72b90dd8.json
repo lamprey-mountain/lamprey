@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO channel_wiki (\n                channel_id, allow_indexing, page_index, page_notfound\n            )\n            VALUES ($1, $2, $3, $4)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "87401c6f83a346a6568b49c9fdc01a336a20564dd1d9d3f1555a814b72b90dd8"
+}

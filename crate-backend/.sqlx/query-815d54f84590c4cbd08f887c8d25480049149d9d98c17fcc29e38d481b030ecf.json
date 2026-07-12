@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE email_queue\n            SET status = 'failed', retries = retries + 1, last_attempt_at = NOW(), error_message = $1\n            WHERE id = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "815d54f84590c4cbd08f887c8d25480049149d9d98c17fcc29e38d481b030ecf"
+}

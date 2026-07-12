@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO channel_calendar (\n                channel_id, color, default_timezone\n            )\n            VALUES ($1, $2, $3)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "91522359ef0c9e1af3305872807b13fd6e718afc6319f51f26b342ae2bf7499d"
+}

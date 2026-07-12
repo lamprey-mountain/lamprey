@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO harvest (id, target_id, queued_at, data)\n            VALUES ($1, $2, $3, $4)\n            ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, queued_at = EXCLUDED.queued_at\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Timestamp",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8962afe148ab2434aef8116741bab6fc3f0f231973bbfba07bbf65afcacb7b0b"
+}

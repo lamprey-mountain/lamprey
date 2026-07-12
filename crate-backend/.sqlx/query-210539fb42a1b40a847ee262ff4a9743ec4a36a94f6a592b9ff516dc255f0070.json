@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select config from usr where id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "config",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "210539fb42a1b40a847ee262ff4a9743ec4a36a94f6a592b9ff516dc255f0070"
+}
