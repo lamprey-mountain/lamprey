@@ -118,6 +118,8 @@ export const createTimelineVirtualizer = (
 
 	const calculateLayout = (): VirtualizerLayout => {
 		const items = timeline.items;
+		const el = options.scrollEl();
+		const containerHeight = el ? el.clientHeight : 0;
 
 		// calculate sizes and offsets
 		const sizes = new Float64Array(items.length);
@@ -130,7 +132,16 @@ export const createTimelineVirtualizer = (
 			totalSize += s;
 		}
 
-		return { sizes, offsets, totalSize };
+		let finalTotalSize = totalSize;
+		if (totalSize < containerHeight) {
+			const offset = containerHeight - totalSize;
+			for (let i = 0; i < offsets.length; i++) {
+				offsets[i] += offset;
+			}
+			finalTotalSize = containerHeight;
+		}
+
+		return { sizes, offsets, totalSize: finalTotalSize };
 	};
 
 	const calculateRange = (): Array<VirtualItem> => {
