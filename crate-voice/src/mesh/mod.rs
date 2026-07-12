@@ -1,19 +1,15 @@
-use std::{net::SocketAddr, time::Duration};
+use std::net::SocketAddr;
 
-use common::v1::types::{
-    SfuId,
-    voice::messages::{BackboneDispatch, BackboneDispatchEnvelope},
-};
+use common::v1::types::SfuId;
 use dashmap::DashMap;
 use lamprey_backend_core::config::Config;
-use quinn::{Connection, ConnectionError, RecvStream, SendStream, default_runtime};
+use quinn::{ConnectionError, default_runtime};
 use tokio::{sync::mpsc, task::JoinSet};
 use tracing::{debug, error, info};
 
-use crate::backbone::remote::RemoteHandle;
-use crate::backbone::stream::BackboneStream;
+use crate::mesh::remote::RemoteHandle;
+use crate::mesh::stream::MeshStream;
 use crate::prelude::*;
-use crate::server::shard::ShardHandle;
 
 // TODO: use postcard to serialize/deserialize datagrams and stream data
 // postcard::from_bytes(&[1, 2, 3])
@@ -23,22 +19,22 @@ mod remote;
 mod stream;
 
 #[derive(Clone)]
-pub struct BackboneHandle {
-    shared: Arc<BackboneShared>,
-    event_tx: mpsc::UnboundedSender<BackboneEvent>,
+pub struct MeshHandle {
+    shared: Arc<MeshShared>,
+    event_tx: mpsc::UnboundedSender<MeshEvent>,
 }
 
 /// manages QUIC connections to other SFUs
-pub struct Backbone {
-    shared: Arc<BackboneShared>,
+pub struct Mesh {
+    shared: Arc<MeshShared>,
     endpoint: quinn::Endpoint,
     client_tasks: JoinSet<Result<()>>,
-    // event_tx: mpsc::UnboundedSender<BackboneEvent>,
-    // event_rx: mpsc::UnboundedReceiver<BackboneEvent>
+    // event_tx: mpsc::UnboundedSender<MeshEvent>,
+    // event_rx: mpsc::UnboundedReceiver<MeshEvent>
 }
 
 /// internal shared state
-struct BackboneShared {
+struct MeshShared {
     /// active QUIC connections indexed by remote SFU id
     remotes: DashMap<SfuId, RemoteHandle>,
 
@@ -47,27 +43,27 @@ struct BackboneShared {
 }
 
 #[derive(Debug)]
-pub enum BackboneEvent {
+pub enum MeshEvent {
     // TODO
     // /// a reliable dispatch was received from a remote SFU
     // Dispatch {
     //     sfu_id: SfuId,
     //     nonce: Option<String>,
-    //     dispatch: BackboneDispatch,
+    //     dispatch: MeshDispatch,
     // },
 
     // /// an unreliable datagram was received from a remote SFU
-    // Datagram(BackboneDatagram),
-    /// a backbone connection was established
+    // Datagram(MeshDatagram),
+    /// a mesh connection was established
     Connected { sfu_id: SfuId },
 
-    /// a backbone connection was closed
+    /// a mesh connection was closed
     Closed { sfu_id: SfuId },
 }
 
-impl Backbone {
-    /// create a new backbone listener and return a handle
-    pub async fn spawn(config: &Config) -> Result<BackboneHandle> {
+impl Mesh {
+    /// create a new mesh listener and return a handle
+    pub async fn spawn(config: &Config) -> Result<MeshHandle> {
         let subject_alt_names = vec!["lamprey-sfu".to_string()];
         let cert = rcgen::generate_simple_self_signed(subject_alt_names).unwrap();
         let key = rustls::pki_types::PrivateKeyDer::Pkcs8(cert.signing_key.serialize_der().into());
@@ -106,21 +102,21 @@ impl Backbone {
             default_runtime().unwrap(),
         )?;
 
-        info!("Backbone listening on {}", endpoint.local_addr()?);
+        info!("Mesh listening on {}", endpoint.local_addr()?);
 
-        let shared = Arc::new(BackboneShared {
+        let shared = Arc::new(MeshShared {
             remotes: DashMap::new(),
             pending_tokens: DashMap::new(),
         });
 
         let (event_tx, event_rx) = mpsc::unbounded_channel();
-        let me = Backbone {
+        let me = Mesh {
             shared: shared.clone(),
             endpoint,
             client_tasks: JoinSet::new(),
         };
 
-        let handle = BackboneHandle { shared, event_tx };
+        let handle = MeshHandle { shared, event_tx };
 
         tokio::spawn(me.run());
 
@@ -150,7 +146,7 @@ impl Backbone {
 
         self.client_tasks.spawn(async move {
             let conn = incoming.await?;
-            debug!("new backbone connection from {}", conn.remote_address());
+            debug!("new mesh connection from {}", conn.remote_address());
 
             loop {
                 let (send, recv) = match conn.accept_bi().await {
@@ -165,7 +161,7 @@ impl Backbone {
                     },
                 };
 
-                let stream = BackboneStream::new(send, recv)
+                let stream = MeshStream::new(send, recv)
                     .accept()
                     .await
                     .expect("TODO: better error handling");
@@ -190,7 +186,7 @@ impl Backbone {
     }
 }
 
-impl BackboneHandle {
+impl MeshHandle {
     /// initiate an outbound connection to a remote SFU
     pub async fn connect(
         &self,
@@ -211,7 +207,7 @@ impl BackboneHandle {
         todo!()
     }
 
-    pub fn subscribe(&self) -> impl Stream<Item = BackboneEvent> {
+    pub fn subscribe(&self) -> impl Stream<Item = MeshEvent> {
         // TODO
         futures_util::stream::empty().boxed()
     }

@@ -1,5 +1,4 @@
-// TODO: rename `backbone` to something else
-pub mod backbone;
+pub mod mesh;
 pub mod backend;
 pub mod client;
 pub mod error;

@@ -157,20 +157,20 @@ struct Group {
 struct Frame<'a>(&'a [u8]);
 
 /// a wrapper to parse a stream
-pub struct BackboneStream<T> {
+pub struct MeshStream<T> {
     send: quinn::SendStream,
     recv: quinn::RecvStream,
     _t: PhantomData<T>,
 }
 
 pub enum AcceptedStream {
-    Subscribe(BackboneStream<Subscribe>),
-    Probe(BackboneStream<Probe>),
-    Hello(BackboneStream<Hello>),
-    Goodbye(BackboneStream<Goodbye>),
+    Subscribe(MeshStream<Subscribe>),
+    Probe(MeshStream<Probe>),
+    Hello(MeshStream<Hello>),
+    Goodbye(MeshStream<Goodbye>),
 }
 
-impl<T> BackboneStream<T> {
+impl<T> MeshStream<T> {
     // pub fn new(recv: ()) -> Self {
     //     todo!()
     // }
@@ -178,7 +178,7 @@ impl<T> BackboneStream<T> {
     // fn parse(&mut self, data: &[u8]) {}
 }
 
-impl BackboneStream<Blank> {
+impl MeshStream<Blank> {
     pub fn new(send: quinn::SendStream, recv: quinn::RecvStream) -> Self {
         Self {
             send,
@@ -196,22 +196,22 @@ impl BackboneStream<Blank> {
         // TODO: impl Header::from_byte() -> Option<Self>
         // maybe use serde/postcard directly?
         match header_buf[0] {
-            0x01 => Ok(AcceptedStream::Hello(BackboneStream {
+            0x01 => Ok(AcceptedStream::Hello(MeshStream {
                 send: self.send,
                 recv: self.recv,
                 _t: PhantomData,
             })),
-            0x03 => Ok(AcceptedStream::Subscribe(BackboneStream {
+            0x03 => Ok(AcceptedStream::Subscribe(MeshStream {
                 send: self.send,
                 recv: self.recv,
                 _t: PhantomData,
             })),
-            0x05 => Ok(AcceptedStream::Probe(BackboneStream {
+            0x05 => Ok(AcceptedStream::Probe(MeshStream {
                 send: self.send,
                 recv: self.recv,
                 _t: PhantomData,
             })),
-            0x06 => Ok(AcceptedStream::Goodbye(BackboneStream {
+            0x06 => Ok(AcceptedStream::Goodbye(MeshStream {
                 send: self.send,
                 recv: self.recv,
                 _t: PhantomData,
@@ -223,7 +223,7 @@ impl BackboneStream<Blank> {
     }
 }
 
-impl BackboneStream<Subscribe> {
+impl MeshStream<Subscribe> {
     // these need `send`
     // pub fn configure(&self, subscription: ()) {
     //     todo!()

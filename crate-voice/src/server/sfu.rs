@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    backbone::{Backbone, BackboneHandle},
+    mesh::{Mesh, MeshHandle},
     backend::{BackendConnection, BackendHandle},
     prelude::*,
     server::shard::ShardHandle,
@@ -16,7 +16,7 @@ use tokio::task::JoinSet;
 /// main entry point for the server
 pub struct Sfu {
     backend: BackendHandle,
-    backbone: BackboneHandle,
+    mesh: MeshHandle,
     shards: Vec<ShardHandle>,
     shard_tasks: JoinSet<Result<()>>,
     calls: HashMap<ChannelId, Call>,
@@ -52,11 +52,11 @@ impl Sfu {
 
         // PERF: init in parallel
         let backend = BackendConnection::connect(config.clone()).await?;
-        let backbone = Backbone::spawn(&config).await?;
+        let mesh = Mesh::spawn(&config).await?;
 
         let me = Sfu {
             backend,
-            backbone,
+            mesh,
             shards: Vec::new(),
             shard_tasks: JoinSet::new(),
             calls: HashMap::new(),
