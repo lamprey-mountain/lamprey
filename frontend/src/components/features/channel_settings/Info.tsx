@@ -1,15 +1,9 @@
+import { createStore } from "solid-js/store";
 import type { EditorState } from "prosemirror-state";
 import type { Channel } from "sdk";
 import { createUpload } from "sdk";
-import {
-	createResource,
-	createSignal,
-	For,
-	onMount,
-	Show,
-	type VoidProps,
-} from "solid-js";
-import { useApi, useChannels, useTags } from "@/api";
+import { createSignal, For, onMount, Show, type VoidProps } from "solid-js";
+import { useApi, useChannels } from "@/api";
 import { useCtx } from "@/app/context";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { DurationInput, type DurationPreset } from "@/atoms/DurationInput.tsx";
@@ -19,7 +13,6 @@ import { createEditor } from "@/components/features/editor/Editor.tsx";
 import { ChannelIconGdm } from "@/components/shared/User";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
-import { useModals } from "@/contexts/modal";
 
 const slowmodePresets: DurationPreset[] = [
 	{ label: "disabled", seconds: null as any },
@@ -41,30 +34,33 @@ const slowmodePresets: DurationPreset[] = [
 	{ label: "24 hours", seconds: 86400 },
 ];
 
+type Draft = {
+	name: string;
+	nsfw: boolean;
+	slowmodeMessage: number | null;
+	slowmodeThread: number | null;
+	defaultSlowmodeMessage: number | null;
+	userLimit: number;
+	bitrate: number;
+	icon: string | null;
+};
+
+const toDraft = (c: Channel): Draft => ({
+	name: c.name,
+	nsfw: c.nsfw ?? false,
+	slowmodeMessage: c.slowmode_message ?? null,
+	slowmodeThread: c.slowmode_thread ?? null,
+	defaultSlowmodeMessage: c.default_slowmode_message ?? null,
+	userLimit: c.user_limit ?? 0,
+	bitrate: c.bitrate ?? 65535,
+	icon: c.icon ?? null,
+});
+
 export function Info(props: VoidProps<{ channel: Channel }>) {
 	const ctx = useCtx();
-	const api2 = useApi();
-	const channels2 = useChannels();
-	const [editingNsfw, setEditingNsfw] = createSignal(props.channel.nsfw);
-	const [editingName, setEditingName] = createSignal(props.channel.name);
-	const [_editingDescription, _setEditingDescription] = createSignal(
-		props.channel.description,
-	);
-	const [editingSlowmodeMessage, setEditingSlowmodeMessage] = createSignal(
-		props.channel.slowmode_message,
-	);
-	const [editingSlowmodeThread, setEditingSlowmodeThread] = createSignal(
-		props.channel.slowmode_thread,
-	);
-	const [editingDefaultSlowmodeMessage, setEditingDefaultSlowmodeMessage] =
-		createSignal(props.channel.default_slowmode_message);
-	const [editingUserLimit, setEditingUserLimit] = createSignal(
-		props.channel.user_limit ?? 0,
-	);
-	const [editingBitrate, setEditingBitrate] = createSignal(
-		props.channel.bitrate ?? 65535,
-	);
-	const [editingIcon, setEditingIcon] = createSignal(props.channel.icon);
+	const api = useApi();
+	const channels = useChannels();
+	const [draft, setDraft] = createStore(toDraft(props.channel));
 	const [editorState, setEditorState] = createSignal<EditorState | null>(null);
 
 	let iconInputEl!: HTMLInputElement;
@@ -90,11 +86,11 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 
 	const setIconFile = async (f: File) => {
 		await createUpload({
-			client: api2.client,
+			client: api.client,
 			file: f,
 			onComplete(media) {
-				setEditingIcon(media.id);
-				api2.client.http.PATCH("/api/v1/channel/{channel_id}", {
+				setDraft("icon", media.id);
+				api.client.http.PATCH("/api/v1/channel/{channel_id}", {
 					params: { path: { channel_id: props.channel.id } },
 					body: { icon: media.id },
 				});
@@ -107,8 +103,8 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 	};
 
 	const removeIcon = async () => {
-		setEditingIcon(null);
-		await api2.client.http.PATCH("/api/v1/channel/{channel_id}", {
+		setDraft("icon", null);
+		await api.client.http.PATCH("/api/v1/channel/{channel_id}", {
 			params: { path: { channel_id: props.channel.id } },
 			body: { icon: null },
 		});
@@ -119,22 +115,13 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 	};
 
 	const hasVoice = () => {
-		const type = channels2.cache.get(props.channel.id)?.type;
+		const type = channels.cache.get(props.channel.id)?.type;
 		return type === "Voice" || type === "Broadcast";
 	};
 
 	const isDirty = () =>
-		editingName() !== props.channel.name ||
-		getDescriptionFromState() !== props.channel.description ||
-		editingNsfw() !== props.channel.nsfw ||
-		editingSlowmodeMessage() !== props.channel.slowmode_message ||
-		editingSlowmodeThread() !== props.channel.slowmode_thread ||
-		editingDefaultSlowmodeMessage() !==
-			props.channel.default_slowmode_message ||
-		(hasVoice() &&
-			(editingUserLimit() !== (props.channel.user_limit ?? 0) ||
-				editingBitrate() !== (props.channel.bitrate ?? 65535))) ||
-		(isGdm() && editingIcon() !== props.channel.icon);
+		JSON.stringify(draft) !== JSON.stringify(toDraft(props.channel)) ||
+		getDescriptionFromState() !== (props.channel.description ?? "");
 
 	const getDescriptionFromState = () => {
 		if (!editorState()) return "";
@@ -147,46 +134,39 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		ctx.client.http.PATCH("/api/v1/channel/{channel_id}", {
 			params: { path: { channel_id: props.channel.id } },
 			body: {
-				name: editingName(),
+				name: draft.name,
 				description,
-				nsfw: editingNsfw(),
-				slowmode_message: editingSlowmodeMessage(),
-				slowmode_thread: editingSlowmodeThread(),
-				default_slowmode_message: editingDefaultSlowmodeMessage(),
+				nsfw: draft.nsfw,
+				slowmode_message: draft.slowmodeMessage,
+				slowmode_thread: draft.slowmodeThread,
+				default_slowmode_message: draft.defaultSlowmodeMessage,
 				...(hasVoice() && {
-					user_limit: editingUserLimit() === 0 ? null : editingUserLimit(),
-					bitrate: editingBitrate(),
+					user_limit: draft.userLimit === 0 ? null : draft.userLimit,
+					bitrate: draft.bitrate,
 				}),
-				...(isGdm() && { icon: editingIcon() }),
+				...(isGdm() && { icon: draft.icon }),
 			},
 		});
 	};
 
 	const _toggleArchived = () => {
 		if (props.channel.archived_at) {
-			channels2.unarchive(props.channel.id);
+			channels.unarchive(props.channel.id);
 		} else {
-			channels2.archive(props.channel.id);
+			channels.archive(props.channel.id);
 		}
 	};
 
 	const _toggleLocked = () => {
 		if (props.channel.locked) {
-			channels2.unlock(props.channel.id);
+			channels.unlock(props.channel.id);
 		} else {
-			channels2.lock(props.channel.id);
+			channels.lock(props.channel.id);
 		}
 	};
 
 	const reset = () => {
-		setEditingName(props.channel.name);
-		setEditingNsfw(props.channel.nsfw);
-		setEditingSlowmodeMessage(props.channel.slowmode_message);
-		setEditingSlowmodeThread(props.channel.slowmode_thread);
-		setEditingDefaultSlowmodeMessage(props.channel.default_slowmode_message);
-		setEditingUserLimit(props.channel.user_limit ?? 0);
-		setEditingBitrate(props.channel.bitrate ?? 65535);
-		setEditingIcon(props.channel.icon);
+		setDraft(toDraft(props.channel));
 		setEditorState(
 			(editor as any).createEditorState({
 				doc: editor.schema.nodes.doc.create(
@@ -198,105 +178,109 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 	};
 
 	return (
-		<div>
+		<div class="channel-settings-info">
 			<h2>info</h2>
-			<div class="dim">name</div>
-			<input
-				value={editingName()}
-				type="text"
-				onInput={(e) => setEditingName(e.target.value)}
-			/>
-			<br />
-			<br />
-			<div class="dim">description</div>
-			<editor.View
-				onChange={(state) => setEditorState(state)}
-				channelId={props.channel.id}
-				submitOnEnter={false}
-				autofocus={false}
-			/>
-			<br />
-			<br />
-			<Show when={isGdm()}>
-				<div>
-					<div class="dim">icon</div>
-					<div class="avatar-uploader" onClick={openIconPicker}>
-						<div class="avatar-inner">
-							<ChannelIconGdm id={props.channel.id} icon={editingIcon()} />
-							<div class="overlay">upload icon</div>
-						</div>
-						<Show when={editingIcon()}>
-							<button
-								type="button"
-								class="remove"
-								onClick={(e) => {
-									e.stopPropagation();
-									removeIcon();
+			<div class="channel-profile">
+				<Show when={isGdm()}>
+					<label class="channel-icon">
+						<h3 class="dim">icon</h3>
+						<div class="avatar-uploader" onClick={openIconPicker}>
+							<div class="avatar-inner">
+								<ChannelIconGdm id={props.channel.id} icon={draft.icon} />
+								<div class="overlay">upload icon</div>
+							</div>
+							<Show when={draft.icon}>
+								{/* TODO: keyboard a11y (tabindex, style, onKeydown/press)*/}
+								<button
+									type="button"
+									class="remove"
+									onClick={(e) => {
+										e.stopPropagation();
+										removeIcon();
+									}}
+								>
+									remove
+								</button>
+							</Show>
+							<input
+								style="display:none"
+								ref={iconInputEl}
+								type="file"
+								onInput={(e) => {
+									const f = e.target.files?.[0];
+									if (f) setIconFile(f);
 								}}
-							>
-								remove
-							</button>
-						</Show>
+							/>
+						</div>
+					</label>
+				</Show>
+				<div class="name-description">
+					<label class="name">
+						<h3 class="dim">name</h3>
 						<input
-							style="display:none"
-							ref={iconInputEl}
-							type="file"
-							onInput={(e) => {
-								const f = e.target.files?.[0];
-								if (f) setIconFile(f);
-							}}
+							value={draft.name}
+							type="text"
+							class="name-input"
+							onInput={(e) => setDraft("name", e.target.value)}
 						/>
-					</div>
+					</label>
+					<label class="description">
+						<h3 class="dim">description</h3>
+						<editor.View
+							onChange={(state) => setEditorState(state)}
+							channelId={props.channel.id}
+							submitOnEnter={false}
+							autofocus={false}
+						/>
+					</label>
 				</div>
-				<br />
-				<br />
-			</Show>
-			<div>
-				channel id: <code class="select-all">{props.channel.id}</code>
 			</div>
-			<div>
-				<div class="dim">slowmode (messages)</div>
+			<label>
+				<h3 class="dim">slowmode (messages)</h3>
 				<DurationInput
-					value={editingSlowmodeMessage()}
+					value={draft.slowmodeMessage}
 					onInput={(d) =>
-						setEditingSlowmodeMessage(typeof d === "number" ? d : null)
+						setDraft("slowmodeMessage", typeof d === "number" ? d : null)
 					}
 					presets={slowmodePresets}
 					placeholder="disabled"
 				/>
-			</div>
-			<div>
-				<div class="dim">slowmode (threads)</div>
+			</label>
+			<label>
+				<h3 class="dim">slowmode (threads)</h3>
 				<DurationInput
-					value={editingSlowmodeThread()}
+					value={draft.slowmodeThread}
 					onInput={(d) =>
-						setEditingSlowmodeThread(typeof d === "number" ? d : null)
+						setDraft("slowmodeThread", typeof d === "number" ? d : null)
 					}
 					presets={slowmodePresets}
 					placeholder="disabled"
 				/>
-			</div>
+			</label>
 			<Show
 				when={
-					channels2.cache.get(props.channel.id)?.type === "Forum" ||
-					channels2.cache.get(props.channel.id)?.type === "Text"
+					channels.cache.get(props.channel.id)?.type === "Forum" ||
+					channels.cache.get(props.channel.id)?.type === "Text"
 				}
 			>
-				<div>
-					<div class="dim">slowmode (messages default for threads)</div>
+				<label>
+					<h3 class="dim">slowmode (messages default for threads)</h3>
 					<DurationInput
-						value={editingDefaultSlowmodeMessage()}
+						value={draft.defaultSlowmodeMessage}
 						onInput={(d) =>
-							setEditingDefaultSlowmodeMessage(typeof d === "number" ? d : null)
+							setDraft(
+								"defaultSlowmodeMessage",
+								typeof d === "number" ? d : null,
+							)
 						}
 						presets={slowmodePresets}
 						placeholder="disabled"
 					/>
-				</div>
+				</label>
 			</Show>
 			<Show when={hasVoice()}>
-				<div style="margin-top: 8px">
-					<div class="dim">user limit</div>
+				<label style="margin-top: 8px; display: block">
+					<h3 class="dim">user limit</h3>
 					<div
 						class="slider-container"
 						style="display: flex; align-items: center; gap: 8px; margin: 8px 0; margin-top: 0"
@@ -305,19 +289,19 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 							type="range"
 							min="0"
 							max="100"
-							value={editingUserLimit()}
+							value={draft.userLimit}
 							onInput={(e) =>
-								setEditingUserLimit(Number(e.currentTarget.value))
+								setDraft("userLimit", Number(e.currentTarget.value))
 							}
 							style="flex: 1;"
 						/>
 						<span style="min-width: 60px; text-align: right;">
-							{editingUserLimit() === 0 ? "Unlimited" : editingUserLimit()}
+							{draft.userLimit === 0 ? "Unlimited" : draft.userLimit}
 						</span>
 					</div>
-				</div>
-				<div style="margin-top: 8px">
-					<div class="dim">bitrate</div>
+				</label>
+				<label style="margin-top: 8px; display: block">
+					<h3 class="dim">bitrate</h3>
 					<div
 						class="slider-container"
 						style="display: flex; align-items: center; gap: 8px; margin: 8px 0; margin-top: 0"
@@ -327,8 +311,10 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 							min="0"
 							max="96000"
 							step="1000"
-							value={editingBitrate()}
-							onInput={(e) => setEditingBitrate(Number(e.currentTarget.value))}
+							value={draft.bitrate}
+							onInput={(e) =>
+								setDraft("bitrate", Number(e.currentTarget.value))
+							}
 							style="flex: 1;"
 							list="bitrate-detents"
 						/>
@@ -336,20 +322,20 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 							<option value="64000" label="64k" />
 						</datalist>
 						<span style="min-width: 60px; text-align: right;">
-							{Math.round(editingBitrate() / 1000)}k
+							{Math.round(draft.bitrate / 1000)}k
 						</span>
 					</div>
-				</div>
+				</label>
 			</Show>
 			<div>
 				<CheckboxOption
 					id={`channel-${props.channel.id}-nsfw`}
-					checked={editingNsfw() ?? false}
-					onChange={setEditingNsfw}
+					checked={draft.nsfw ?? false}
+					onChange={(v) => setDraft("nsfw", v)}
 					seed={`channel-${props.channel.id}-nsfw`}
 				>
 					<Checkbox
-						checked={editingNsfw() ?? false}
+						checked={draft.nsfw ?? false}
 						seed={`channel-${props.channel.id}-nsfw`}
 					/>
 					<div>
@@ -358,67 +344,9 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 					</div>
 				</CheckboxOption>
 			</div>
-			<Show when={props.channel.type === "Forum"}>
-				<ForumTags channel={props.channel} />
-			</Show>
 			{/* TODO: add/remove tags from thread channels */}
 			{/* TODO: archive all threads in this channel (text, forum) */}
 			<Savebar show={isDirty()} onCancel={reset} onSave={save} />
 		</div>
 	);
 }
-
-const ForumTags = (props: { channel: Channel }) => {
-	const [, modalctl] = useModals();
-	const tagsService = useTags();
-
-	// TODO: pagination
-	const [channelTags] = createResource(
-		() => props.channel.id,
-		async (cid) => {
-			const page = await tagsService.list(cid);
-			return page.items;
-		},
-	);
-
-	return (
-		<div class="tags">
-			<h3 class="dim">Tags</h3>
-			<div class="tag-list">
-				<For each={channelTags()}>
-					{(tag) => (
-						<div
-							class="tag-item"
-							style={{
-								background: tag.color as string | undefined,
-								opacity: tag.archived ? 0.6 : 1,
-							}}
-							onClick={() => {
-								modalctl.open({
-									type: "tag_editor",
-									forumChannelId: props.channel.id,
-									tag: tag,
-								});
-							}}
-						>
-							<span class="tag-name">{tag.name}</span>
-							<span class="tag-count">{tag.active_thread_count}</span>
-						</div>
-					)}
-				</For>
-			</div>
-			<button
-				type="button"
-				class="secondary small"
-				onClick={() => {
-					modalctl.open({
-						type: "tag_editor",
-						forumChannelId: props.channel.id,
-					});
-				}}
-			>
-				Add New Tag
-			</button>
-		</div>
-	);
-};

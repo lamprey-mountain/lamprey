@@ -1,7 +1,9 @@
-import { type ParentProps, Show, createSignal, onCleanup } from "solid-js";
+import { type ParentProps, createSignal, onCleanup } from "solid-js";
 
 export interface SavebarProps {
 	show: boolean;
+	// TODO: add
+	// disabled: boolean;
 	onCancel: () => void;
 	onSave: () => void | Promise<void>;
 	warningText?: string;
@@ -21,10 +23,13 @@ export function Savebar(props: ParentProps<SavebarProps>) {
 	onCleanup(() => ro.disconnect());
 
 	return (
-		<Show when={props.show}>
+		<>
 			<div class="savebar-sizer" ref={(el) => ro.observe(el)}></div>
 			<div
 				class="savebar"
+				classList={{
+					show: props.show,
+				}}
 				style={{
 					width: `${width()}px`,
 				}}
@@ -41,6 +46,6 @@ export function Savebar(props: ParentProps<SavebarProps>) {
 					</button>
 				</div>
 			</div>
-		</Show>
+		</>
 	);
 }

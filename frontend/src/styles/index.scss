@@ -811,12 +811,13 @@ input[type="url"] {
 	}
 
 	& > main {
+	position: relative;
+		overflow-y: auto;
+
 		&.padded {
 			padding: 0.5rem;
 			padding-right: calc(100% - 60ch);
 		}
-
-		overflow-y: auto;
 	}
 
 	& button.spaced {
@@ -2484,6 +2485,18 @@ button.big {
 	bottom: 0;
 	padding-bottom: 8px;
 	background-image: linear-gradient(to top, $bg-200 25%, transparent);
+	opacity: 0;
+	pointer-events: none;
+	translate: 0 12px;
+	transition:
+		opacity 200ms cubic-bezier(0.14, 0.98, 0.43, 1.55),
+		translate 200ms cubic-bezier(0.14, 0.98, 0.43, 1.55);
+
+	&.show {
+		opacity: 1;
+		pointer-events: auto;
+		translate: 0 0;
+	}
 
 	& > .inner {
 		display: flex;
@@ -3125,6 +3138,32 @@ button.link {
 	}
 }
 
+.channel-settings-info {
+	& > .channel-profile {
+		display: flex;
+		gap: 8px;
+
+		& > .name-description {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+
+			& > .name > .name-input {
+				width: 100%;
+			}
+
+			& > .description {}
+		}
+
+		& > .channel-icon {
+			& > .dim {
+				margin: 0 4px;
+			}
+		}
+	}
+}
+
 .channel-settings-permissions {
 	display: flex;
 	height: 100%;
@@ -3521,10 +3560,14 @@ input[type="color"] {
 		pointer-events: none;
 		position: absolute;
 		background: #111a;
-		top: 0;
-		left: 0;
-		height: 100%;
-		width: 100%;
+
+		// HACK: resize overlay to be size of avatar
+		top: 2px;
+		left: 2px;
+		height: calc(100% - 4px);
+		width: calc(100% - 4px);
+		border-radius: 2px;
+
 		display: grid;
 		place-items: center;
 		text-align: center;
