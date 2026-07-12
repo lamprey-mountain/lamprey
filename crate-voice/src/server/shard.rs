@@ -7,6 +7,8 @@ use common::v2::types::{ChannelId, UserId};
 use slotmap::SlotMap;
 use str0m::{Candidate, RtcConfig};
 use tokio::{net::UdpSocket, sync::mpsc};
+use tokio_stream::StreamExt;
+use tokio_util::time::{DelayQueue, delay_queue::Key};
 use tracing::{debug, warn};
 
 use crate::prelude::*;
@@ -32,6 +34,9 @@ pub struct Shard {
 
     /// map channel id -> call slot
     channels: HashMap<ChannelId, CallSlot>,
+
+    timeout_queue: DelayQueue<(CallSlot, PeerSlot)>,
+    timeout_keys: HashMap<(CallSlot, PeerSlot), Key>,
 }
 
 #[derive(Clone)]
@@ -79,6 +84,8 @@ impl Shard {
             addrs: HashMap::new(),
             ufrags: HashMap::new(),
             channels: HashMap::new(),
+            timeout_queue: DelayQueue::new(),
+            timeout_keys: HashMap::new(),
         };
 
         let handle = ShardHandle { control_tx };
@@ -93,18 +100,10 @@ impl Shard {
         // TODO: clean up dead peers
         loop {
             // drain rtc output (transmits + events) for all calls
-            let global_timeout = self.drain_calls().await;
+            self.drain_calls().await;
 
             // run sdp renegotiation and dispatch resulting offers/answers back to clients
             self.process_all_negotiations();
-
-            let timeout_future = async {
-                if let Some((_, _, t)) = global_timeout {
-                    tokio::time::sleep_until(t.into()).await;
-                } else {
-                    std::future::pending().await
-                }
-            };
 
             tokio::select! {
                 // TODO: warn if local_addr is None
@@ -124,11 +123,12 @@ impl Shard {
                     self.handle_command(cmd);
                 }
 
-                _ = timeout_future => {
-                    if let Some((call_slot, peer_slot, _)) = global_timeout {
-                        if let Some(call) = self.calls.get_mut(call_slot) {
-                            call.handle_timeout(peer_slot);
-                        }
+                Some(expired) = self.timeout_queue.next() => {
+                    let (call_slot, peer_slot) = expired.into_inner();
+                    self.timeout_keys.remove(&(call_slot, peer_slot));
+                    if let Some(call) = self.calls.get_mut(call_slot) {
+                        call.unpause(peer_slot);
+                        call.handle_timeout(peer_slot);
                     }
                 }
             }
@@ -157,20 +157,15 @@ impl Shard {
         }
     }
 
-    // TODO: use proper type for return type (instead of tuple)
-    async fn drain_calls(&mut self) -> Option<(CallSlot, PeerSlot, Instant)> {
-        let mut global_timeout: Option<(CallSlot, PeerSlot, Instant)> = None;
+    async fn drain_calls(&mut self) {
         for (call_slot, call) in self.calls.iter_mut() {
-            let (transmits, timeout) = call.drain();
+            let (transmits, timeouts) = call.drain();
 
-            if let Some((peer_slot, t)) = timeout {
-                if let Some((_, _, min)) = global_timeout {
-                    if t < min {
-                        global_timeout = Some((call_slot, peer_slot, t));
-                    }
-                } else {
-                    global_timeout = Some((call_slot, peer_slot, t));
-                }
+            for (peer_slot, t) in timeouts {
+                let key = self
+                    .timeout_queue
+                    .insert_at((call_slot, peer_slot), t.into());
+                self.timeout_keys.insert((call_slot, peer_slot), key);
             }
 
             for t in transmits {
@@ -184,7 +179,6 @@ impl Shard {
                 }
             }
         }
-        global_timeout
     }
 
     /// handle a udp packet from `dst` to `src` with data `data`
@@ -217,13 +211,20 @@ impl Shard {
             None
         };
 
-        let Some((call, peer)) = peer_loc else {
+        let Some((call_id, peer_slot)) = peer_loc else {
             // TODO: warn/debug/trace log for unresolvable packets?
             return;
         };
 
-        if let Some(call) = self.calls.get_mut(call) {
-            call.handle_input(peer, input);
+        self.cancel_timeout(call_id, peer_slot);
+        if let Some(call) = self.calls.get_mut(call_id) {
+            call.handle_input(peer_slot, input);
+        }
+    }
+
+    fn cancel_timeout(&mut self, call_slot: CallSlot, peer_slot: PeerSlot) {
+        if let Some(key) = self.timeout_keys.remove(&(call_slot, peer_slot)) {
+            self.timeout_queue.remove(&key);
         }
     }
 

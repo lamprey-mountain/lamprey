@@ -188,6 +188,7 @@ impl Call {
 impl SfuHandle {
     /// cleanly shutdown this sfu
     pub async fn shutdown(self) -> Result<()> {
+        // probably use CancellationToken
         todo!()
     }
 

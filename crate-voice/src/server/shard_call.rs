@@ -39,6 +39,7 @@ pub struct ShardCall {
     // TODO: split TrackSlot into InboundSlot and OutboundSlot?
     inbound: SlotMap<TrackSlot, Inbound>,   // formerly `tracks`
     outbound: SlotMap<TrackSlot, Outbound>, // formerly `sinks`
+    paused: HashSet<PeerSlot>,
 }
 
 impl ShardCall {
@@ -49,6 +50,7 @@ impl ShardCall {
             users: HashMap::new(),
             inbound: SlotMap::with_key(),
             outbound: SlotMap::with_key(),
+            paused: HashSet::new(),
         }
     }
 
@@ -272,6 +274,7 @@ impl ShardCall {
 
     /// handle str0m input for a peer
     pub fn handle_input(&mut self, peer: PeerSlot, input: SInput) {
+        self.unpause(peer);
         if let Some(p) = self.peers.get_mut(peer) {
             if let Err(e) = p.handle_input(input) {
                 warn!("Input error: {:?}", e);
@@ -281,13 +284,17 @@ impl ShardCall {
 
     /// get rtc output events
     // TODO: use proper type for return type (instead of tuple)
-    pub fn drain(&mut self) -> (Vec<str0m::net::Transmit>, Option<(PeerSlot, Instant)>) {
+    pub fn drain(&mut self) -> (Vec<str0m::net::Transmit>, Vec<(PeerSlot, Instant)>) {
         // PERF: reuse `Vec`s
         let mut transmits = Vec::new();
         let mut events = Vec::new();
-        let mut min_timeout: Option<(PeerSlot, Instant)> = None;
+        let mut timeouts = Vec::new();
 
         for (peer_id, p) in self.peers.iter_mut() {
+            if self.paused.contains(&peer_id) {
+                continue;
+            }
+
             while let Ok(output) = p.poll_output() {
                 match output {
                     SOutput::Transmit(t) => {
@@ -297,13 +304,8 @@ impl ShardCall {
                         events.push((peer_id, event));
                     }
                     SOutput::Timeout(instant) => {
-                        if let Some((_, min)) = min_timeout {
-                            if instant < min {
-                                min_timeout = Some((peer_id, instant));
-                            }
-                        } else {
-                            min_timeout = Some((peer_id, instant));
-                        }
+                        self.paused.insert(peer_id);
+                        timeouts.push((peer_id, instant));
                         break;
                     }
                 }
@@ -314,7 +316,11 @@ impl ShardCall {
             self.handle_peer_event(peer, event);
         }
 
-        (transmits, min_timeout)
+        (transmits, timeouts)
+    }
+
+    pub fn unpause(&mut self, peer_slot: PeerSlot) {
+        self.paused.remove(&peer_slot);
     }
 
     pub fn handle_timeout(&mut self, peer: PeerSlot) {

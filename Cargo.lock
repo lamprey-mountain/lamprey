@@ -4830,6 +4830,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-tungstenite 0.27.0",
+ "tokio-util",
  "tracing",
  "tracing-subscriber",
  "url",
@@ -8962,6 +8963,7 @@ dependencies = [
  "futures-io",
  "futures-sink",
  "pin-project-lite",
+ "slab",
  "tokio",
 ]
 
