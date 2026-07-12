@@ -2475,33 +2475,38 @@ button.big {
 	/* border-radius: 4px; */
 }
 
+.savebar-sizer {
+	height: 64px;
+}
+
 .savebar {
-	display: flex;
-	position: sticky;
-	bottom: 8px;
+	position: absolute;
+	bottom: 0;
+	padding-bottom: 8px;
+	background-image: linear-gradient(to top, $bg-200 25%, transparent);
 
 	& > .inner {
+		display: flex;
 		background: $bg-100;
 		border-radius: 4px;
-		display: flex;
-		flex: 1;
 		padding: 8px;
-		gap: 8px;
+		display: flex;
 		align-items: center;
+		gap: 8px;
 		border-radius: 4px;
 
 		& .warning {
 			flex: 1;
 		}
 
-		& .save {
-			background: $color-green;
-			color: $bg-300;
-		}
-
-		& button {
+		& .button {
 			padding: 4px 8px;
 			border-radius: 4px;
+
+			&.save {
+				background: $color-green;
+				color: $bg-300;
+			}
 		}
 	}
 }
