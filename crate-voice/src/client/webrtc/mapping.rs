@@ -7,22 +7,30 @@ use std::collections::HashMap;
 /// eg. `Mid`s to `TrackSlot`s
 #[derive(Debug, Clone, Default)]
 pub struct Mapping {
-    // mid_to_track: HashMap<SMid, TrackId>,
-    // track_to_mid: HashMap<TrackId, SMid>,
-    // mid_to_sink: HashMap<SMid, SinkId>,
-
-    // inbound_map: HashMap<SMid, TrackSlot>,
-    // inbound_map_reverse: HashMap<TrackSlot, SMid>,
-    // outbound_map: HashMap<SMid, TrackSlot>,
-    // /// get outbound
-    // pub outbound_to_mid: HashMap<TrackSlot, SMid>,
-    pub track_to_mid: HashMap<TrackSlot, SMid>,
-    pub mid_to_track: HashMap<SMid, TrackSlot>,
+    track_to_mid: HashMap<TrackSlot, SMid>,
+    mid_to_track: HashMap<SMid, TrackSlot>,
 }
 
 impl Mapping {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn insert(&mut self, mid: SMid, track: TrackSlot) {
+        self.mid_to_track.insert(mid, track);
+        self.track_to_mid.insert(track, mid);
+    }
+
+    pub fn remove_by_mid(&mut self, mid: SMid) {
+        if let Some(track) = self.mid_to_track.remove(&mid) {
+            self.track_to_mid.remove(&track);
+        }
+    }
+
+    pub fn remove_by_track(&mut self, track: TrackSlot) {
+        if let Some(mid) = self.track_to_mid.remove(&track) {
+            self.mid_to_track.remove(&mid);
+        }
     }
 
     pub fn lookup_mid(&self, track: TrackSlot) -> Option<SMid> {

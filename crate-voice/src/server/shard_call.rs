@@ -110,8 +110,7 @@ impl ShardCall {
                                         state: TrackState::Open(mid),
                                     });
 
-                                    p.mapping_mut().mid_to_track.insert(mid, track_id);
-                                    p.mapping_mut().track_to_mid.insert(track_id, mid);
+                                    p.mapping_mut().insert(mid, track_id);
 
                                     if self.inbound[track_id].is_implicit() {
                                         implicit_tracks.push(track_id);
@@ -134,8 +133,7 @@ impl ShardCall {
                             // remove dead tracks
                             for (track_id, mid) in dead_tracks {
                                 self.inbound.remove(track_id);
-                                p.mapping_mut().mid_to_track.remove(&mid);
-                                p.mapping_mut().track_to_mid.remove(&track_id);
+                                p.mapping_mut().remove_by_mid(mid);
 
                                 // the peer is no longer publishing these tracks
                                 // remove associated outbound subscriptions
