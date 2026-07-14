@@ -162,18 +162,10 @@ export const useAutocompleteData = () => {
 			const slashCommands = useSlashCommands();
 			const allCommands = slashCommands.getAll();
 			const channel = channels2.cache.get(kind.channelId);
+			if (!channel) return;
 
 			const filteredCommands = allCommands.filter((cmd) => {
-				if (cmd.canUse) {
-					return cmd.canUse(
-						api2,
-						channels2,
-						channel?.room_id ?? undefined,
-						channel!,
-						store,
-					);
-				}
-				return true;
+				return cmd.canUse(api2, channel);
 			});
 
 			setAllCommands(filteredCommands);

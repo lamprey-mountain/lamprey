@@ -9,9 +9,9 @@ const CurrentUserContext =
 	createContext<() => UserWithRelationship | undefined>();
 
 export const CurrentUserProvider = (props: { children: JSX.Element }) => {
-	const users2 = useUsers();
+	const users = useUsers();
 	const currentUser = createMemo(() => {
-		const user = users2.cache.get("@self");
+		const user = users.cache.get("@self");
 		currentUserLog.debug("currentUser memo", {
 			found: !!user,
 			user_id: user?.id,

@@ -26,14 +26,14 @@ import type {
 	Popout,
 	ThreadsViewData,
 } from "@/app/context";
-import { SlashCommands } from "@/contexts/slash-commands";
 import type en from "@/i18n/en.tsx";
-import { registerDefaultSlashCommands } from "@/lib/commands/default";
+import { registerDefaultSlashCommands } from "@/lib/commands/builtin.ts";
 import type { Config } from "@/lib/config";
 import { flags } from "@/lib/flags";
 import { type ApiDB, migrations } from "@/lib/sync/db";
 import { colors, logger } from "@/utils/logger";
 import { useMouseTracking } from "./useMouseTracking.ts";
+import { SlashCommands } from "@/lib/commands/registry.ts";
 
 export function useChatClient(config: Config) {
 	const events = createEmitter<{
@@ -122,7 +122,6 @@ export function useChatClient(config: Config) {
 		createSignal<HTMLElement | null>(null);
 
 	const slashCommands = new SlashCommands();
-	registerDefaultSlashCommands(slashCommands);
 
 	const [recentChannels, setRecentChannels] = createSignal([] as string[]);
 
@@ -189,6 +188,8 @@ export function useChatClient(config: Config) {
 	});
 
 	(store as any).ctx = ctx;
+
+	registerDefaultSlashCommands(ctx, store, slashCommands);
 
 	return { client, ctx, store };
 }
