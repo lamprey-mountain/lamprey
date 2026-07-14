@@ -23,23 +23,3 @@ pub(crate) mod prelude {
     pub use str0m::media::{KeyframeRequestKind as SKeyframeRequestKind, Mid as SMid, Rid as SRid};
     pub use str0m::{Event as SEvent, Input as SInput, Output as SOutput};
 }
-
-// TODO: investigate using io_uring
-// use tokio_uring::fs::File;
-//
-// tokio_uring::start(async {
-//     // Open a file
-//     let file = File::open("hello.txt").await?;
-//
-//     let buf = vec![0; 4096];
-//     // Read some data, the buffer is passed by ownership and
-//     // submitted to the kernel. When the operation completes,
-//     // we get the buffer back.
-//     let (res, buf) = file.read_at(buf, 0).await;
-//     let n = res?;
-//
-//     // Display the contents
-//     println!("{:?}", &buf[..n]);
-//
-//     Ok(())
-// })

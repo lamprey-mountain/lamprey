@@ -47,6 +47,10 @@ impl Webrtc {
         }
     }
 
+    pub fn handle_event(&mut self, event: &SEvent) {
+        self.datachannels.handle(event, &mut self.rtc);
+    }
+
     pub fn write_media(&mut self, track: TrackSlot, media: &str0m::media::MediaData) {
         let Some(mid) = self.mapping.lookup_mid(track) else {
             return;

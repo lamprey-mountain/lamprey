@@ -330,11 +330,13 @@ impl ShardCall {
         }
     }
 
-    fn handle_peer_event(&mut self, peer: PeerSlot, event: SEvent) {
-        let Some(peer) = self.peers.get_mut(peer) else {
+    fn handle_peer_event(&mut self, peer_slot: PeerSlot, event: SEvent) {
+        let Some(peer) = self.peers.get_mut(peer_slot) else {
             // warn, this should only be called with existing peers
             return;
         };
+
+        peer.handle_event(&event);
 
         match event {
             SEvent::Connected => {
