@@ -78,6 +78,66 @@
 	height: 100%;
 	width: 100%;
 
+	& > .header {
+		position: absolute;
+		top: 0;
+		width: 100%;
+		background-image: linear-gradient(
+			to bottom,
+			oklch(var(--color-bg1) / 0.6) 50%,
+			transparent
+		);
+
+		& > .info {
+			padding: 4px;
+
+			& > a {
+				display: block;
+				@include truncate;
+			}
+		}
+	}
+
+	& > .footer {
+		position: absolute;
+		bottom: 0;
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		background: oklch(var(--color-bg3) / 0.5);
+
+		& > .progress {
+			/* position: absolute; */
+			border: solid $bg-300 1px;
+		}
+
+		& > .controls {
+			display: flex;
+			align-items: center;
+			padding-bottom: 4px;
+
+			& > .spacer {
+				flex: 1;
+			}
+
+			& > .button {
+				padding: 0;
+				height: 24px;
+				width: 24px;
+			}
+
+			& > .time {
+				font-size: 0.8rem;
+				font-family: var(--font-mono);
+				margin: 0 4px;
+
+				&.preview > .progress {
+					color: $link-500;
+				}
+			}
+		}
+	}
+
 	& > video {
 		display: block;
 		max-height: 100%;
@@ -138,65 +198,12 @@
 	text-shadow: 1px 1px 2px #111f;
 }
 
-.video > .footer {
+.audio > .progress {
 	position: absolute;
-	bottom: 0;
-	width: 100%;
-	display: grid;
-	grid-template-columns: 1fr;
-	grid-template-rows: 1fr auto auto auto;
-	grid-template-areas: "." "progress" "info" "controls";
-	background: oklch(var(--color-bg3) / 0.5);
-
-	& > .progress {
-		position: absolute;
-		grid-area: progress;
-		border: solid $bg-300 1px;
-	}
-
-	& > .info {
-		grid-area: info;
-		padding: 4px;
-
-		& > a {
-			display: block;
-			@include truncate;
-		}
-	}
-
-	& > .controls {
-		grid-area: controls;
-		display: flex;
-		padding: 4px;
-
-		& > button {
-			background: $bg-200;
-			display: grid;
-			place-items: center;
-
-			&:hover {
-				background: $bg-100;
-			}
-		}
-
-		& > .space {
-			flex: 1;
-		}
-
-		& > .time {
-			font-size: 0.9rem;
-			font-family: var(--font-mono);
-
-			&.preview > .progress {
-				color: $link-500;
-			}
-		}
-	}
 }
 
 .audio > .progress,
 .video > .footer > .progress {
-	position: absolute;
 	grid-area: progress;
 	height: 8px;
 	width: 100%;

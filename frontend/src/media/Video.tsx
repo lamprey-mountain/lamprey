@@ -1,5 +1,6 @@
 import {
 	createEffect,
+	createMemo,
 	createSignal,
 	For,
 	onCleanup,
@@ -56,8 +57,6 @@ export const VideoView = (props: MediaProps) => {
 
 	let video!: HTMLVideoElement;
 	let wrapperEl!: HTMLDivElement;
-	let _topEl!: HTMLDivElement;
-	// const [wrapperEl]!: HTMLDivElement;
 
 	const volumeTooltip = createTooltip({
 		placement: "top-start",
@@ -137,9 +136,13 @@ export const VideoView = (props: MediaProps) => {
 	const fullScreenDblClick = (e: MouseEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
-		console.log(e, wrapperEl);
-		wrapperEl.requestFullscreen();
-		setFullscreen(true);
+		if (fullscreen()) {
+			document.exitFullscreen();
+			setFullscreen(false);
+		} else {
+			wrapperEl.requestFullscreen();
+			setFullscreen(true);
+		}
 	};
 
 	const handleScrubWheel = (e: WheelEvent) => {
@@ -188,7 +191,7 @@ export const VideoView = (props: MediaProps) => {
 			? `${(progressPreview()! / duration()) * 100}%`
 			: undefined;
 
-	const ty = () => props.media.content_type.split(";")[0];
+	const ty = createMemo(() => props.media.content_type.split(";")[0]);
 
 	const getVolumeIcon = () => {
 		if (muted()) return iconVolumeMute;
@@ -214,7 +217,7 @@ export const VideoView = (props: MediaProps) => {
 
 	const handleFullscreenChange = () => {
 		setFullscreen(document.fullscreenElement === wrapperEl);
-		console.log("update");
+		// PERF: clean this up
 		volumeTooltip.update();
 		requestAnimationFrame(() => {
 			volumeTooltip.update();
@@ -269,10 +272,88 @@ export const VideoView = (props: MediaProps) => {
 		wrapperEl.removeEventListener("fullscreenchange", handleFullscreenChange);
 	});
 
+	const handleKeydown = (e: KeyboardEvent) => {
+		switch (e.code) {
+			case "ArrowLeft": {
+				e.preventDefault();
+				video.currentTime = Math.max(video.currentTime - 5, 0);
+				break;
+			}
+			case "ArrowRight": {
+				e.preventDefault();
+				video.currentTime = Math.min(video.currentTime + 5, duration());
+				break;
+			}
+			case "ArrowUp": {
+				e.preventDefault();
+				setVolume(Math.min(volume() + 0.05, 1));
+				break;
+			}
+			case "ArrowDown": {
+				e.preventDefault();
+				setVolume(Math.max(volume() - 0.05, 0));
+				break;
+			}
+			case "Space": {
+				e.preventDefault();
+				togglePlayPause();
+				break;
+			}
+			case "KeyF": {
+				toggleFullscreen();
+				break;
+			}
+			case "KeyM": {
+				toggleMute();
+				break;
+			}
+			case "Comma": {
+				video.currentTime = Math.max(video.currentTime - 0.05, 0);
+				break;
+			}
+			case "Period": {
+				video.currentTime = Math.min(video.currentTime + 0.05, duration());
+				break;
+			}
+			case "Home": {
+				e.preventDefault();
+				video.currentTime = 0;
+				break;
+			}
+			case "End": {
+				e.preventDefault();
+				video.currentTime = duration();
+				break;
+			}
+		}
+	};
+
 	return (
 		<Resize height={height()} width={width()}>
-			<div class="video" ref={wrapperEl!}>
+			{/* TODO: use <article></article> */}
+			<div
+				class="video"
+				ref={wrapperEl!}
+				onKeyDown={handleKeydown}
+				tabIndex={0}
+			>
 				<Loader loaded={loadingState() !== "empty"} />
+				<header class="header">
+					<div class="info">
+						<a
+							download={props.media.filename}
+							title={props.media.filename}
+							href={getUrl(props.media)}
+							// TODO: tooltip "download"
+						>
+							{props.media.filename}
+						</a>
+						<div class="dim">
+							{ty()} - {formatBytes(props.media.size)}
+							<Show when={loadingState() === "stalled"}> - loading</Show>
+						</div>
+					</div>
+				</header>
 				<video
 					ref={video!}
 					src={getUrl(props.media)}
@@ -280,6 +361,7 @@ export const VideoView = (props: MediaProps) => {
 					onClick={togglePlayPause}
 					onDblClick={fullScreenDblClick}
 				/>
+				{/* TODO: use <footer></footer> */}
 				<div class="footer">
 					<svg
 						aria-hidden="true"
@@ -310,23 +392,11 @@ export const VideoView = (props: MediaProps) => {
 						<rect class="current" width={progressWidth()} />
 						<rect class="preview" width={progressPreviewWidth()} fill="#fff3" />
 					</svg>
-					<div class="info">
-						<a
-							download={props.media.filename}
-							title={props.media.filename}
-							href={getUrl(props.media)}
-						>
-							{props.media.filename}
-						</a>
-						<div class="dim">
-							{ty()} - {formatBytes(props.media.size)}
-							<Show when={loadingState() === "stalled"}> - loading</Show>
-						</div>
-					</div>
 					<div class="controls">
+						{/* TODO: use <menu></menu> */}
 						<button
 							type="button"
-							class="button"
+							class="button icon-button"
 							onClick={togglePlayPause}
 							title={playing() ? "pause" : "play"}
 						>
@@ -335,29 +405,6 @@ export const VideoView = (props: MediaProps) => {
 								alt={playing() ? "pause" : "play"}
 							/>
 						</button>
-						<button
-							type="button"
-							class="button"
-							onClick={toggleMute}
-							title={getVolumeText()}
-							onWheel={handleVolumeWheel}
-							// @ts-expect-error - use:vtc is a directive
-							use:vtc
-						>
-							<Icon src={getVolumeIcon()} alt={getVolumeText()} />
-						</button>
-						<button
-							type="button"
-							class="button"
-							onClick={toggleFullscreen}
-							title={fullscreen() ? "exit fullscreen" : "enter fullscreen"}
-						>
-							<Icon
-								src={fullscreen() ? iconFullscreent : iconFullscreen}
-								alt=""
-							/>
-						</button>
-						<div class="space"></div>
 						<div
 							class="time"
 							classList={{ preview: progressPreview() !== null }}
@@ -370,6 +417,29 @@ export const VideoView = (props: MediaProps) => {
 							</span>{" "}
 							/ <span class="duration">{formatTime(duration())}</span>
 						</div>
+						<div class="spacer"></div>
+						<button
+							type="button"
+							class="button icon-button"
+							onClick={toggleMute}
+							title={getVolumeText()}
+							onWheel={handleVolumeWheel}
+							// @ts-expect-error - use:vtc is a directive
+							use:vtc
+						>
+							<Icon src={getVolumeIcon()} alt={getVolumeText()} />
+						</button>
+						<button
+							type="button"
+							class="button icon-button"
+							onClick={toggleFullscreen}
+							title={fullscreen() ? "exit fullscreen" : "enter fullscreen"}
+						>
+							<Icon
+								src={fullscreen() ? iconFullscreent : iconFullscreen}
+								alt=""
+							/>
+						</button>
 					</div>
 				</div>
 			</div>

@@ -137,6 +137,7 @@ export const Resize = (props: ParentProps<ResizeProps>) => {
 	);
 };
 
+// TODO: redo media loader animation
 export const Loader = (props: VoidProps<LoaderProps>) => {
 	return (
 		<div
