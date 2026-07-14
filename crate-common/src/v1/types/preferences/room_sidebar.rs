@@ -61,7 +61,6 @@ pub struct View {
     pub id: Uuid,
     pub name: String,
     // TODO: validate lengths
-    pub items: Vec<Item>,
     pub uncategorized_channels: Vec<ViewChannel>,
     pub categories: Vec<ViewCategory>,
 }
