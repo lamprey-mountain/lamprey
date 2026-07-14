@@ -5,7 +5,12 @@ import { JsonStream } from "./lib/json-stream.ts";
 import { MsgpackStream } from "./lib/msgpack-stream.ts";
 import { createObservable, type Observer } from "./observable.ts";
 import type { paths } from "./schema.d.ts";
-import type { MessageEnvelope, MessageReady, MessageSync } from "./types.ts";
+import type {
+	MessageClient,
+	MessageEnvelope,
+	MessageReady,
+	MessageSync,
+} from "./types.ts";
 
 export * from "./observable.ts";
 
@@ -45,7 +50,7 @@ export type Client = {
 	getWebsocket: () => WebSocket;
 
 	/** Send a message to the sync server, queueing if not connected */
-	send: (data: unknown) => void;
+	send: (data: MessageClient) => void;
 
 	/** Subscribe to sync events */
 	onSync: (

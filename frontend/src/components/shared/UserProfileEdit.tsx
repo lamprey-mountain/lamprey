@@ -4,24 +4,18 @@ import { useMenu } from "@/contexts/menu";
 import { usePermissions } from "@/hooks/usePermissions";
 import { md } from "@/lib/markdown";
 import { getThumbFromId } from "@/media/util";
-import { Copyable } from "@/utils/general";
 import { useNavigate } from "@solidjs/router";
-import {
-	createSignal,
-	createEffect,
-	onCleanup,
-	Show,
-	Switch,
-	Match,
-	For,
-} from "solid-js";
-import type { Channel, PreferencesUser } from "ts-sdk";
+import { createSignal, createEffect, onCleanup, Show, For } from "solid-js";
+import { createStore } from "solid-js/store";
+import type { PresenceActivity, UserStatus } from "ts-sdk";
 import { AvatarWithStatus, UserProps, EditRoles } from "./User";
 import { Icon } from "@/atoms/Icon";
 import { icCheck, icCopy, icEdit } from "@/utils/icons";
 import { useUserPopout } from "@/contexts/user-popout";
 import { getStatusPath } from "@/avatar/UserAvatar";
 import { debounce } from "@solid-primitives/scheduled";
+import { autoUpdate, computePosition, offset, shift } from "@floating-ui/dom";
+import { useModals } from "@/contexts/modal";
 
 // TODO: open user profile in room
 
@@ -30,6 +24,7 @@ export function UserProfileEdit(props: UserProps) {
 	const { setMenu } = useMenu();
 	const nav = useNavigate();
 	const { setUserView } = useUserPopout();
+	const [, modalctl] = useModals();
 
 	const currentUser = useCurrentUser();
 	const self_id = () => currentUser()?.id;
@@ -49,66 +44,12 @@ export function UserProfileEdit(props: UserProps) {
 		return name;
 	}
 
-	const openUserMenu = (e: MouseEvent) => {
-		queueMicrotask(() => {
-			setMenu({
-				type: "user",
-				user_id: props.user.id,
-				room_id: props.room_member?.room_id,
-				x: e.clientX,
-				y: e.clientY,
-				admin: false,
-			});
-		});
-	};
-
-	const preferences = () => props.user.preferences;
-	const [note, setNote] = createSignal("");
-	createEffect(() => {
-		setNote((preferences()?.frontend?.note as string) || "");
-	});
-
-	let timeout: NodeJS.Timeout;
-	const handleNoteInput = (e: Event) => {
-		const newNote = (e.target as HTMLTextAreaElement).value;
-		setNote(newNote);
-		clearTimeout(timeout);
-		timeout = setTimeout(() => {
-			saveNote(newNote);
-		}, 500);
-	};
-
-	const saveNote = (noteToSave: string) => {
-		const currentConfig = preferences() ?? {
-			frontend: {},
-			voice: { mute: false, volume: 1.0 },
-		};
-		const { note, ...restFrontend } = currentConfig.frontend ?? {};
-
-		const newConfig: PreferencesUser = {
-			...currentConfig,
-			frontend: {
-				...restFrontend,
-				...(noteToSave ? { note: noteToSave } : {}),
-			},
-		};
-
-		api.client.http.PUT("/api/v1/preferences/user/{user_id}", {
-			params: { path: { user_id: props.user.id } },
-			body: newConfig,
-		});
-	};
-
 	const room_member = () => props.room_member;
 
 	const [editRoles, setEditRoles] = createSignal<{ x: number; y: number }>();
 	const editRolesClear = () => setEditRoles();
 	document.addEventListener("click", editRolesClear);
 	onCleanup(() => document.removeEventListener("click", editRolesClear));
-
-	const setStatus = () => {
-		// TODO
-	};
 
 	const editProfile = () => {
 		nav("/settings");
@@ -123,6 +64,108 @@ export function UserProfileEdit(props: UserProps) {
 		navigator.clipboard.writeText(props.user.id);
 		setCopied(true);
 		clearCopied();
+	};
+
+	const [statusMenuVisible, setStatusMenuVisible] = createSignal(false);
+	const [statusPersistent, setStatusPersistent] = createSignal(false);
+	const [statusMenuRef, setStatusMenuRef] = createSignal<HTMLElement>();
+	const [statusMenuPosition, setStatusMenuPosition] = createStore({
+		x: 0,
+		y: 0,
+		strategy: "absolute" as const,
+	});
+	let statusButtonRef: HTMLButtonElement | undefined;
+
+	createEffect(() => {
+		const button = statusButtonRef;
+		const menu = statusMenuRef();
+		if (!button || !menu || !statusMenuVisible()) return;
+
+		const cleanup = autoUpdate(button, menu, () => {
+			computePosition(button, menu, {
+				placement: "right-start",
+				middleware: [
+					offset(8),
+					shift({ mainAxis: true, crossAxis: true, padding: 8 }),
+				],
+			}).then(({ x, y, strategy }) => {
+				// TODO: handle this better?
+				if (strategy !== "absolute") {
+					console.warn("non absolute strategy");
+					return;
+				}
+
+				setStatusMenuPosition({ x, y, strategy });
+			});
+		});
+		onCleanup(cleanup);
+	});
+
+	const debouncedHide = debounce(() => setStatusMenuVisible(false), 100);
+
+	const hideStatusMenu = () => {
+		if (statusPersistent()) return;
+		debouncedHide();
+	};
+
+	const showStatusMenu = () => {
+		if (statusPersistent()) return;
+		debouncedHide.clear();
+		setStatusMenuVisible(true);
+	};
+
+	const showStatusMenuPersistent = (e: MouseEvent) => {
+		e.stopImmediatePropagation();
+		debouncedHide.clear();
+		setStatusPersistent(true);
+		setStatusMenuVisible(true);
+	};
+
+	const closeStatusMenu = () => {
+		debouncedHide.clear();
+		setStatusPersistent(false);
+		setStatusMenuVisible(false);
+	};
+
+	document.addEventListener("click", closeStatusMenu);
+	onCleanup(() => document.removeEventListener("click", closeStatusMenu));
+
+	const setPresenceText = (text: string) => {
+		// inside modalctl.prompt, props.user is undefined
+		const user = api.users.get("@self")!;
+
+		const old = user.presence;
+		const activities: PresenceActivity[] = [...old.activities];
+
+		const idx = activities.findIndex((i) => i.type === "Custom");
+		if (idx !== -1) activities.splice(idx, 1);
+		activities.push({ type: "Custom", text });
+
+		api.client.send({
+			type: "Presence",
+			presence: {
+				status: old.status,
+				activities,
+			},
+		});
+	};
+
+	const openPresenceTextPrompt = () => {
+		setUserView(null);
+		modalctl.prompt("status message?", (text) => {
+			if (!text) return;
+			setPresenceText(text);
+		});
+	};
+
+	const setPresenceStatus = (status: UserStatus) => {
+		api.client.send({
+			type: "Presence",
+			presence: {
+				status,
+				activities: [...props.user.presence.activities],
+			},
+		});
 	};
 
 	return (
@@ -204,21 +247,16 @@ export function UserProfileEdit(props: UserProps) {
 					</Show>
 
 					<menu class="menu">
-						{/* TODO: show status selection menu on hover */}
-						<button class="button" onClick={() => {}}>
-							<svg
-								aria-hidden="true"
-								role="img"
-								class="status-indicator"
-								data-user-id={props.user.id}
-								data-status={props.user.presence.status}
-								viewBox="52 52 24 24"
-							>
-								<path
-									class="indicator"
-									d={getStatusPath(props.user.presence.status)}
-								/>
-							</svg>
+						<button
+							class="button"
+							ref={statusButtonRef}
+							onClick={showStatusMenuPersistent}
+							onFocus={showStatusMenu}
+							onBlur={hideStatusMenu}
+							onMouseEnter={showStatusMenu}
+							onMouseLeave={hideStatusMenu}
+						>
+							<Status status={props.user.presence.status} />
 							set status
 						</button>
 						<button class="button" onClick={editProfile}>
@@ -249,7 +287,66 @@ export function UserProfileEdit(props: UserProps) {
 						</Show>
 					)}
 				</Show>
+				<Show when={statusMenuVisible()}>
+					<menu
+						ref={setStatusMenuRef}
+						class="status-menu"
+						style={{
+							position: statusMenuPosition.strategy,
+							left: `${statusMenuPosition.x}px`,
+							top: `${statusMenuPosition.y}px`,
+							"z-index": 1000,
+						}}
+						onClick={(e) => e.stopPropagation()}
+						onMouseEnter={showStatusMenu}
+						onMouseLeave={hideStatusMenu}
+					>
+						<button class="button" onClick={[setPresenceStatus, "Online"]}>
+							<div class="inner">
+								<Status status="Online" /> Online
+							</div>
+						</button>
+						<button class="button" onClick={[setPresenceStatus, "Away"]}>
+							<div class="inner">
+								<Status status="Away" /> Away
+							</div>
+						</button>
+						<button class="button" onClick={[setPresenceStatus, "Busy"]}>
+							<div class="inner">
+								<Status status="Busy" /> Busy
+							</div>
+						</button>
+						<button class="button" onClick={[setPresenceStatus, "Available"]}>
+							<div class="inner">
+								<Status status="Available" /> Available
+							</div>
+						</button>
+						<button class="button" onClick={[setPresenceStatus, "Offline"]}>
+							<div class="inner">
+								<Status status="Offline" /> Offline
+							</div>
+						</button>
+						<hr />
+						<button class="button" onClick={openPresenceTextPrompt}>
+							<div class="inner">Set status message...</div>
+						</button>
+					</menu>
+				</Show>
 			</div>
 		</div>
 	);
 }
+
+const Status = (props: { status: UserStatus }) => {
+	return (
+		<svg
+			aria-hidden="true"
+			role="img"
+			class="status-indicator"
+			data-status={props.status}
+			viewBox="52 52 24 24"
+		>
+			<path class="indicator" d={getStatusPath(props.status)} />
+		</svg>
+	);
+};
