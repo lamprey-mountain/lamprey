@@ -67,6 +67,7 @@ import { openThread } from "@/utils/channel";
 import { Reactions } from "./Reactions.tsx";
 import { useMessageToolbar } from "./message-toolbar-context.tsx";
 import { Avatar2 } from "@/avatar/UserAvatar.tsx";
+import { icChannelMove, icSword } from "@/utils/icons.ts";
 
 export type MessageProps = {
 	message: MessageT;
@@ -721,6 +722,12 @@ export function MessageView(props: MessageProps) {
 			<Match when={props.message.latest_version.type === "ThreadCreated"}>
 				<SystemMessageThreadCreated {...systemProps} />
 			</Match>
+			<Match when={props.message.latest_version.type === "AutomodExecution"}>
+				<SystemMessageAutomodExecution {...systemProps} />
+			</Match>
+			<Match when={props.message.latest_version.type === "ChannelMoved"}>
+				<SystemMessageChannelMoved {...systemProps} />
+			</Match>
 			<Match when={props.message.latest_version.type === "DefaultMarkdown"}>
 				<DefaultMessage
 					{...systemProps}
@@ -1235,7 +1242,7 @@ function SystemMessageThreadCreated(props: SystemMessageProps) {
 				onClick={(e) => {
 					e.stopPropagation();
 					if (threadId()) {
-						navigate(`/thread/${threadId()}`);
+						navigate(`/channel/${threadId()}`);
 					}
 				}}
 			>
@@ -1285,6 +1292,94 @@ function SystemMessageThreadCreated(props: SystemMessageProps) {
 						</span>,
 						link,
 						viewAll,
+					)}
+				</div>
+			}
+		/>
+	);
+}
+
+function SystemMessageChannelMoved(props: SystemMessageProps) {
+	const { t } = useCtx();
+	const navigate = useNavigate();
+	const channels = useChannels();
+
+	const m = () =>
+		props.message.latest_version as MessageVersionT & { type: "ChannelMoved" };
+	const oldChan = channels.use(() => m().parent_id_old ?? undefined);
+
+	return (
+		<SystemMessage
+			{...props}
+			icon={icChannelMove}
+			class="message-dim-content"
+			content={
+				<div
+					class="body markdown"
+					classList={{ local: props.message.is_local }}
+				>
+					{/* @ts-ignore */}
+					{t(
+						"message_content.channel_moved",
+						<span class="author">
+							<UserDisplayName
+								user_id={props.message.author_id}
+								room_id={props.room_id}
+								onClick
+							/>
+						</span>,
+						<button
+							type="button"
+							class="link"
+							onClick={(e) => {
+								e.stopPropagation();
+								const oldId = m().parent_id_old;
+								if (oldId) {
+									navigate(`/channel/${oldId}`);
+								}
+							}}
+						>
+							<Show when={oldChan()} fallback={<em>unknown channel</em>}>
+								{(c) => c().name}
+							</Show>
+						</button>,
+					)}
+				</div>
+			}
+		/>
+	);
+}
+
+// TODO: better component for automod executions
+function SystemMessageAutomodExecution(props: SystemMessageProps) {
+	const { t } = useCtx();
+
+	// const m = () => props.message.latest_version as MessageVersionT & { type: "AutomodExecution" };
+	// m().actions;
+	// m().flagged_message_id;
+	// m().matches;
+	// m().rules;
+
+	return (
+		<SystemMessage
+			{...props}
+			icon={icSword}
+			class="message-dim-content"
+			content={
+				<div
+					class="body markdown"
+					classList={{ local: props.message.is_local }}
+				>
+					{/* @ts-ignore */}
+					{t(
+						"message_content.automod_execution",
+						<span class="author">
+							<UserDisplayName
+								user_id={props.message.author_id}
+								room_id={props.room_id}
+								onClick
+							/>
+						</span>,
 					)}
 				</div>
 			}

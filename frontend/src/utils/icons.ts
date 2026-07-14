@@ -43,3 +43,5 @@ import { default as icCheck4 } from "@/assets/check-4.png";
 export { icCheck1 as icCheck, icCheck1, icCheck2, icCheck3, icCheck4 };
 
 export { default as icCopy } from "@/assets/copy.png";
+export { default as icSword } from "@/assets/sword.png";
+export { default as icChannelMove } from "@/assets/channel-move.png";

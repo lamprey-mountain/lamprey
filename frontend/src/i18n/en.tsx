@@ -592,17 +592,17 @@ export default {
 			author,
 			" mentioned this channel from another channel",
 		],
-		channel_moved: (author: JSX.Element): JSX.Element[] => [
-			author,
-			" moved this thread",
-		],
+		channel_moved: (
+			author: JSX.Element,
+			origin: JSX.Element,
+		): JSX.Element[] => [author, " moved this thread from ", origin],
 		channel_icon: (author: JSX.Element): JSX.Element[] => [
 			author,
 			" changed the channel icon",
 		],
 		automod_execution: (author: JSX.Element): JSX.Element[] => [
+			"automod action triggered by ",
 			author,
-			" automod action triggered",
 		],
 	},
 	audit_log: {
