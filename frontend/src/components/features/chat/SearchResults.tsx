@@ -7,6 +7,8 @@ import { useRoom } from "@/contexts/room";
 import type { ChannelSearch } from "@/types/chat";
 import { MessageView } from "./Message";
 import { Dropdown } from "@/atoms/Dropdown";
+import { MessageToolbarMount } from "./MessageToolbar";
+import { MessageToolbarProvider } from "./message-toolbar-context";
 
 export const SearchResults = (props: {
 	channel?: Channel;
@@ -37,63 +39,66 @@ export const SearchResults = (props: {
 
 	return (
 		<aside class="search-results">
-			<header>
-				<Show when={!props.search.loading} fallback={<>Searching...</>}>
-					{props.search.results?.approximate_total ?? 0} results
-				</Show>
-				<div style="flex:1"></div>
-				<Dropdown
-					required
-					selected={props.search.sort ?? "newest"}
-					options={[
-						{ item: "newest", label: "Newest" },
-						{ item: "oldest", label: "Oldest" },
-						{ item: "relevancy", label: "Relevancy" },
-					]}
-					enableWheel={false}
-					onSelect={(item) => {
-						if (item) {
-							if (props.channel && channelCtx[1]) {
-								channelCtx[1]("search", "sort", item);
-							} else if (props.room && roomCtx) {
-								roomCtx[1]("search", "sort", item);
+			<MessageToolbarProvider>
+				<header>
+					<Show when={!props.search.loading} fallback={<>Searching...</>}>
+						{props.search.results?.approximate_total ?? 0} results
+					</Show>
+					<div style="flex:1"></div>
+					<Dropdown
+						required
+						selected={props.search.sort ?? "newest"}
+						options={[
+							{ item: "newest", label: "Newest" },
+							{ item: "oldest", label: "Oldest" },
+							{ item: "relevancy", label: "Relevancy" },
+						]}
+						enableWheel={false}
+						onSelect={(item) => {
+							if (item) {
+								if (props.channel && channelCtx[1]) {
+									channelCtx[1]("search", "sort", item);
+								} else if (props.room && roomCtx) {
+									roomCtx[1]("search", "sort", item);
+								}
 							}
-						}
-					}}
-				/>
-				<button
-					type="button"
-					class="button"
-					onClick={() => {
-						const id = searchId();
-						if (id) {
-							clearSearch();
-						}
-					}}
-				>
-					Clear
-				</button>
-			</header>
-			<Show when={!props.search.loading}>
-				<ul>
-					<For each={props.search.results?.messages}>
-						{(message, index) => {
-							const prev = () => {
-								const i = index();
-								if (i > 0) return props.search.results?.messages[i - 1];
-								return undefined;
-							};
-							return (
-								<SearchResultItem
-									message={message}
-									prevMessage={prev()}
-									onResultClick={onResultClick}
-								/>
-							);
 						}}
-					</For>
-				</ul>
-			</Show>
+					/>
+					<button
+						type="button"
+						class="button"
+						onClick={() => {
+							const id = searchId();
+							if (id) {
+								clearSearch();
+							}
+						}}
+					>
+						Clear
+					</button>
+				</header>
+				<Show when={!props.search.loading}>
+					<ul>
+						<For each={props.search.results?.messages}>
+							{(message, index) => {
+								const prev = () => {
+									const i = index();
+									if (i > 0) return props.search.results?.messages[i - 1];
+									return undefined;
+								};
+								return (
+									<SearchResultItem
+										message={message}
+										prevMessage={prev()}
+										onResultClick={onResultClick}
+									/>
+								);
+							}}
+						</For>
+					</ul>
+				</Show>
+				<MessageToolbarMount />
+			</MessageToolbarProvider>
 		</aside>
 	);
 };
