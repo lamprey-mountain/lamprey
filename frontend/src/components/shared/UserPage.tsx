@@ -5,12 +5,10 @@ import {
 	createSignal,
 	For,
 	Match,
-	on,
 	Show,
 	Switch,
 } from "solid-js";
 import { useApi } from "@/api";
-import { UserProfile } from "./UserProfile";
 import { getThumbFromId } from "@/media/util";
 import { AvatarWithStatus } from "@/avatar/UserAvatar";
 import { Copyable } from "@/utils/general";
@@ -19,6 +17,7 @@ import { useNavigate } from "@solidjs/router";
 import { ChannelT } from "@/types";
 import { Markdown } from "@/atoms/Markdown";
 import { Icon } from "@/atoms/Icon";
+import { createTooltip } from "@/atoms/Tooltip";
 import {
 	icDm,
 	icFriendAdd,
@@ -135,6 +134,16 @@ export function UserPage(props: { user: UserWithRelationship }) {
 	const toolbar = useFormattingToolbar();
 	const autocomplete = useAutocomplete();
 
+	const friendTooltip = createTooltip({
+		tip: () => {
+			const rel = props.user.relationship?.relation;
+			if (rel === "Friend" || rel === "Outgoing") return "Remove Friend";
+			return "Add Friend";
+		},
+	});
+	const dmTooltip = createTooltip({ tip: () => "Send Message" });
+	const menuTooltip = createTooltip({ tip: () => "More Options" });
+
 	const noteEditor = createEditor({
 		channelId: () => props.user.id,
 		autocomplete,
@@ -164,13 +173,13 @@ export function UserPage(props: { user: UserWithRelationship }) {
 			</header>
 
 			<menu class="actions">
-				{/* TODO: add tooltips */}
 				<Switch>
 					<Match when={props.user.relationship?.relation === "Friend"}>
 						<button
 							type="button"
 							class="button icon-button"
 							onClick={removeFriend}
+							ref={friendTooltip.content}
 						>
 							<Icon src={icFriendReject} />
 						</button>
@@ -180,6 +189,7 @@ export function UserPage(props: { user: UserWithRelationship }) {
 							type="button"
 							class="button icon-button"
 							onClick={removeFriend}
+							ref={friendTooltip.content}
 						>
 							<Icon src={icFriendReject} />
 						</button>
@@ -189,6 +199,7 @@ export function UserPage(props: { user: UserWithRelationship }) {
 							type="button"
 							class="button icon-button"
 							onClick={sendFriendRequest}
+							ref={friendTooltip.content}
 						>
 							<Icon src={icFriendAdd} />
 						</button>
@@ -198,15 +209,26 @@ export function UserPage(props: { user: UserWithRelationship }) {
 							type="button"
 							class="button icon-button"
 							onClick={sendFriendRequest}
+							ref={friendTooltip.content}
 						>
 							<Icon src={icFriendAdd} />
 						</button>
 					</Match>
 				</Switch>
-				<button type="button" class="button icon-button" onClick={openDm}>
+				<button
+					type="button"
+					class="button icon-button"
+					onClick={openDm}
+					ref={dmTooltip.content}
+				>
 					<Icon src={icDm} />
 				</button>
-				<button type="button" class="button icon-button" onClick={openUserMenu}>
+				<button
+					type="button"
+					class="button icon-button"
+					onClick={openUserMenu}
+					ref={menuTooltip.content}
+				>
 					<Icon src={icMenu} />
 				</button>
 			</menu>

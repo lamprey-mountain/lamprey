@@ -18,6 +18,7 @@ import { useMenu } from "@/contexts/menu.tsx";
 import { useModals } from "@/contexts/modal.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
 import { md } from "@/lib/markdown";
+import { createTooltip } from "@/atoms/Tooltip";
 
 type ChatHeaderProps = {
 	channel: Channel;
@@ -35,6 +36,18 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 	const currentUser = useCurrentUser();
 	const [editingName, setEditingName] = createSignal<string | undefined>();
 	let inputRef!: HTMLInputElement;
+
+	const nameTooltip = createTooltip({
+		tip: () => (canEditChannelName() ? "Click to edit channel name" : ""),
+	});
+	const topicTooltip = createTooltip({ tip: () => "Click to view topic" });
+	const deleteTooltip = createTooltip({ tip: () => "Delete" });
+	const removeTooltip = createTooltip({ tip: () => "Remove" });
+	const cancelTooltip = createTooltip({ tip: () => "Cancel" });
+	const callTooltip = createTooltip({ tip: () => "Start call" });
+	const threadsTooltip = createTooltip({ tip: () => "Threads" });
+	const pinnedTooltip = createTooltip({ tip: () => "Show pinned messages" });
+	const membersTooltip = createTooltip({ tip: () => "Show members" });
 
 	const selected = () => channelState.selectedMessages;
 	const isSelecting = () => channelState.selectMode;
@@ -194,7 +207,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 						startEditingName();
 					}
 				}}
-				title={canEditChannelName() ? "Click to edit channel name" : undefined}
+				ref={nameTooltip.content}
 			>
 				<Switch>
 					<Match when={isSelecting()}>
@@ -248,7 +261,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 							});
 						});
 					}}
-					title="click to view topic"
+					ref={topicTooltip.content}
 				></div>
 			</Show>
 			<div class="spacer"></div>
@@ -261,7 +274,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 							type="button"
 							class="button icon-button danger"
 							onClick={deleteSelected}
-							title="delete"
+							ref={deleteTooltip.content}
 						>
 							<Icon src={icDelete} color={null} />
 						</button>
@@ -271,7 +284,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 							type="button"
 							class="button icon-button danger"
 							onClick={removeSelected}
-							title="remove"
+							ref={removeTooltip.content}
 						>
 							<Icon src={icRemove} color={null} />
 						</button>
@@ -280,7 +293,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 						type="button"
 						class="button icon-button"
 						onClick={exitSelectMode}
-						title="cancel"
+						ref={cancelTooltip.content}
 					>
 						<Icon src={icCancel} color={null} />
 					</button>
@@ -298,7 +311,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 							onClick={() => {
 								// TODO: calling
 							}}
-							title="Start call"
+							ref={callTooltip.content}
 						>
 							<Icon src={icCall} color={null} />
 						</button>
@@ -324,7 +337,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 									});
 								}
 							}}
-							title="Threads"
+							ref={threadsTooltip.content}
 						>
 							<Icon src={icThreads} color={null} />
 						</button>
@@ -334,7 +347,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 						class="button icon-button"
 						onClick={togglePinned}
 						classList={{ active: isShowingPinned() }}
-						title="Show pinned messages"
+						ref={pinnedTooltip.content}
 						style={{ display: hasPins() ? undefined : "none" }}
 					>
 						<Icon src={icPin} color={null} />
@@ -344,7 +357,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 							type="button"
 							class="button icon-button"
 							onClick={toggleMembers}
-							title="Show members"
+							ref={membersTooltip.content}
 						>
 							<Icon src={icMembers} color={null} />
 						</button>

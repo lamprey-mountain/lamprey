@@ -12,6 +12,7 @@ import {
 } from "solid-js";
 import { useApi, useChannels, useRooms } from "@/api";
 import { createPopup } from "@/app/popup";
+import { createTooltip } from "@/atoms/Tooltip";
 import {
 	icCamera,
 	icCancel,
@@ -31,7 +32,6 @@ import { useVoice } from "../features/voice/context";
 import { VoiceDebug } from "../features/voice/VoiceDebug";
 import { ChannelT, UserT } from "@/types";
 
-// TODO: add tooltips for icon buttons
 // TODO: move voice parts to a separate component(?)
 
 export const UserTray = () => {
@@ -75,9 +75,24 @@ export const UserTray = () => {
 
 	const voiceDuration = useVoiceDuration();
 	const [voiceChannel, setVoiceChannel] = createSignal(null as ChannelT | null);
-	// FIXME: make .use() reactive with undefined
-	// const voiceChannel = channels.use(() => voice.joinedChannelId ?? undefined);
-	const voiceRoom = rooms.use(() => voiceChannel()?.room_id ?? undefined);
+
+	const stopScreenshareTooltip = createTooltip({
+		tip: () => "Stop Screenshare",
+	});
+	const toggleCameraTooltip = createTooltip({
+		tip: () => (voice.camera ? "Disable camera" : "Enable camera"),
+	});
+	const toggleScreenshareTooltip = createTooltip({
+		tip: () => (voice.screensharing ? "Stop Screenshare" : "Start Screenshare"),
+	});
+	const disconnectTooltip = createTooltip({ tip: () => "Disconnect" });
+	const toggleMicTooltip = createTooltip({
+		tip: () => (voice.muted ? "Unmute" : "Mute"),
+	});
+	const toggleDeafenedTooltip = createTooltip({
+		tip: () => (voice.deafened ? "Undeafen" : "Deafen"),
+	});
+	const settingsTooltip = createTooltip({ tip: () => "User Settings" });
 
 	// FIXME: don't automatically reconnect when doing voiceActions.disconnect while navigated to /channel/{voice_channel_id}
 	createEffect(() => {
@@ -88,6 +103,8 @@ export const UserTray = () => {
 			setVoiceChannel(null);
 		}
 	});
+
+	const voiceRoom = rooms.use(() => voiceChannel()?.id);
 
 	return (
 		<div class="user-tray">
@@ -103,7 +120,7 @@ export const UserTray = () => {
 								<button
 									type="button"
 									class="button icon-button"
-									data-tooltip="stop screenshare"
+									ref={stopScreenshareTooltip.content}
 									onClick={() => voiceActions.stopScreenshare()}
 								>
 									<Icon src={icCancel} />
@@ -155,25 +172,26 @@ export const UserTray = () => {
 								<button
 									type="button"
 									class="button icon-button"
-									data-tooltip="toggle camera"
+									ref={toggleCameraTooltip.content}
 									onClick={() => voiceActions.toggleCamera()}
 								>
-									<ToggleIcon checked={!voice.camera} src={icCamera} />
+									<ToggleIcon enabled={!voice.camera} src={icCamera} />
 								</button>
 								<button
 									type="button"
 									class="button icon-button"
-									data-tooltip="toggle screenshare"
+									ref={toggleScreenshareTooltip.content}
 									onClick={() => voiceActions.toggleScreenshare()}
 								>
 									<ToggleIcon
-										checked={voice.screensharing}
+										enabled={voice.screensharing}
 										src={icScreenshare}
 									/>
 								</button>
 								<button
 									type="button"
 									class="button icon-button"
+									ref={disconnectTooltip.content}
 									onClick={voiceActions.disconnect}
 								>
 									<Icon src={icExit} />
@@ -205,20 +223,23 @@ export const UserTray = () => {
 					<button
 						type="button"
 						class="button icon-button"
+						ref={toggleMicTooltip.content}
 						onClick={() => voiceActions.toggleMicrophone()}
 					>
-						<ToggleIcon checked={!voice.muted} src={icMic} />
+						<ToggleIcon enabled={!voice.muted} src={icMic} />
 					</button>
 					<button
 						type="button"
 						class="button icon-button"
+						ref={toggleDeafenedTooltip.content}
 						onClick={() => voiceActions.toggleDeafened()}
 					>
-						<ToggleIcon checked={!voice.deafened} src={icHeadphones} />
+						<ToggleIcon enabled={!voice.deafened} src={icHeadphones} />
 					</button>
 					<button
 						type="button"
 						class="button icon-button"
+						ref={settingsTooltip.content}
 						onClick={() => nav("/settings")}
 					>
 						<Icon src={icSettings} />

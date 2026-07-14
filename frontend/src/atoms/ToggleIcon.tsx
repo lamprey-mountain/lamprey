@@ -2,7 +2,7 @@ export type ToggleIconProps = {
 	src: string;
 	alt?: string;
 	color?: string | null;
-	checked?: boolean;
+	enabled?: boolean;
 };
 
 export const ToggleIcon = (props: ToggleIconProps) => {
@@ -12,7 +12,7 @@ export const ToggleIcon = (props: ToggleIconProps) => {
 			viewBox={`0 0 64 64`}
 			role="img"
 			class="toggle-icon"
-			aria-checked={props.checked}
+			aria-checked={props.enabled}
 			aria-label={props.alt}
 		>
 			<defs>

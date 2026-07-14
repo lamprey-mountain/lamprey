@@ -222,32 +222,32 @@ export const Voice = (p: { channel: Channel }) => {
 						class="button"
 						onClick={() => actions.toggleDeafened()}
 					>
-						<ToggleIcon checked={!voice.deafened} src={iconHeadphones} />
+						<ToggleIcon enabled={!voice.deafened} src={iconHeadphones} />
 					</button>
 					<button
 						type="button"
 						class="button"
 						onClick={() => actions.toggleCamera()}
 					>
-						<ToggleIcon checked={voice.camera} src={iconCamera} />
+						<ToggleIcon enabled={voice.camera} src={iconCamera} />
 					</button>
 					<button
 						type="button"
 						class="button"
 						onClick={() => actions.toggleMicrophone()}
 					>
-						<ToggleIcon checked={!voice.muted} src={iconMic} />
+						<ToggleIcon enabled={!voice.muted} src={iconMic} />
 					</button>
 					<button
 						type="button"
 						class="button"
 						onClick={actions.toggleScreenshare}
 					>
-						<ToggleIcon checked={voice.screensharing} src={iconScreenshare} />
+						<ToggleIcon enabled={voice.screensharing} src={iconScreenshare} />
 					</button>
 					<Show when={flags.has("voice_music")}>
 						<button type="button" class="button" onClick={actions.playMusic}>
-							<ToggleIcon checked={voice.musicing} src={iconMusic} />
+							<ToggleIcon enabled={voice.musicing} src={iconMusic} />
 						</button>
 					</Show>
 					<button type="button" class="disconnect" onClick={actions.disconnect}>
@@ -368,7 +368,7 @@ export const VoiceTray = () => {
 								data-tooltip="toggle camera"
 								onClick={actions.toggleCam}
 							>
-								<ToggleIcon checked={!voice.cameraHidden} src={iconCamera} />
+								<ToggleIcon enabled={!voice.cameraHidden} src={iconCamera} />
 							</button>
 							<button
 								type="button"
@@ -377,7 +377,7 @@ export const VoiceTray = () => {
 								onClick={actions.toggleScreen}
 							>
 								<ToggleIcon
-									checked={voice.screenshareEnabled}
+									enabled={voice.screenshareEnabled}
 									src={iconScreenshare}
 								/>
 							</button>
@@ -397,10 +397,10 @@ export const VoiceTray = () => {
 					</Show>
 				</div>
 				<button type="button" class="button" onClick={actions.toggleMic}>
-					<ToggleIcon checked={!voice.muted} src={iconMic} />
+					<ToggleIcon enabled={!voice.muted} src={iconMic} />
 				</button>
 				<button type="button" class="button" onClick={actions.toggleDeafened}>
-					<ToggleIcon checked={!voice.deafened} src={iconHeadphones} />
+					<ToggleIcon enabled={!voice.deafened} src={iconHeadphones} />
 				</button>
 				<button type="button" class="button" onClick={() => nav("/settings")}>
 					<Icon src={iconSettings} />

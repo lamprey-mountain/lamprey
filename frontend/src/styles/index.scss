@@ -848,6 +848,7 @@ input[type="url"] {
 		max-width: 500px;
 		min-width: 100px;
 		min-height: 1rem;
+		text-align: center;
 	}
 
 	&.interactive {
@@ -1667,6 +1668,7 @@ input[type="range"] {
 .range {
 	display: grid;
 	grid-template-areas: "input input" "text dim";
+	text-align: left;
 
 	& > input {
 		grid-area: input;
@@ -2212,6 +2214,17 @@ body.resizing {
 		}
 
 		& .voice-status {
+			cursor: pointer;
+
+			&:focus-visible, &:hover {
+				text-decoration: underline;
+				text-decoration-color: $fg-600;
+			}
+
+			&:active {
+				translate: 0 1px;
+			}
+
 			& > .status {
 				font-weight: bold;
 

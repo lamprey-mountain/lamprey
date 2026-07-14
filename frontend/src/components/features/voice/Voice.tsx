@@ -240,28 +240,28 @@ export const Voice = (p: { channel: Channel }) => {
 						class="button icon-button"
 						onClick={() => actions.toggleDeafened()}
 					>
-						<ToggleIcon checked={!voice.deafened} src={icHeadphones} />
+						<ToggleIcon enabled={!voice.deafened} src={icHeadphones} />
 					</button>
 					<button
 						type="button"
 						class="button icon-button"
 						onClick={() => actions.toggleCamera()}
 					>
-						<ToggleIcon checked={voice.camera} src={icCamera} />
+						<ToggleIcon enabled={voice.camera} src={icCamera} />
 					</button>
 					<button
 						type="button"
 						class="button icon-button"
 						onClick={() => actions.toggleMicrophone()}
 					>
-						<ToggleIcon checked={!voice.muted} src={icMic} />
+						<ToggleIcon enabled={!voice.muted} src={icMic} />
 					</button>
 					<button
 						type="button"
 						class="button icon-button"
 						onClick={actions.toggleScreenshare}
 					>
-						<ToggleIcon checked={voice.screensharing} src={icScreenshare} />
+						<ToggleIcon enabled={voice.screensharing} src={icScreenshare} />
 					</button>
 					<Show when={flags.has("voice_music")}>
 						<button
@@ -269,7 +269,7 @@ export const Voice = (p: { channel: Channel }) => {
 							class="button icon-button"
 							onClick={actions.playMusic}
 						>
-							<ToggleIcon checked={voice.musicing} src={icMusic} />
+							<ToggleIcon enabled={voice.musicing} src={icMusic} />
 						</button>
 					</Show>
 					<button
