@@ -37,7 +37,6 @@ impl Server {
 
     pub async fn init(state: ServerState) -> Self {
         let state = Arc::new(state);
-        state.services.start_background_tasks().await;
         let router = serve::create_router(Arc::clone(&state));
         Self { state, router }
     }
