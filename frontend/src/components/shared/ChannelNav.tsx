@@ -411,6 +411,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 												<ItemChannel
 													channel={channel}
 													room_id={props.room_id}
+													icon
 												/>
 												<Show
 													when={(channel as ChannelWithThreads).threads?.length}
@@ -436,6 +437,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 																	<ItemChannel
 																		channel={chan}
 																		room_id={props.room_id}
+																		icon={false}
 																	/>
 																</li>
 															)}
@@ -500,7 +502,11 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	);
 };
 
-export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
+export const ItemChannel = (props: {
+	channel: Channel;
+	room_id?: string;
+	icon: boolean;
+}) => {
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
 	const user = useCurrentUser();
@@ -579,7 +585,9 @@ export const ItemChannel = (props: { channel: Channel; room_id?: string }) => {
 			onMouseEnter={() => setHovered(true)}
 			onMouseLeave={() => setHovered(false)}
 		>
-			<ChannelIcon channel={props.channel} animate={hovered()} />
+			<Show when={props.icon}>
+				<ChannelIcon channel={props.channel} animate={hovered()} />
+			</Show>
 
 			<div class="channel-details">
 				<span class="channel-name">{name()}</span>

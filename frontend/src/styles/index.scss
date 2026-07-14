@@ -3615,11 +3615,14 @@ input[type="color"] {
 	}
 
 	.thread-item {
+		display: flex;
+		align-items: center;
 		border: solid $sep-300 1px;
 		background: $bg-200;
 		padding: 8px;
 		cursor: pointer;
 		margin-top: 8px;
+		gap: 8px;
 
 		&:hover {
 			background: $bg-300;

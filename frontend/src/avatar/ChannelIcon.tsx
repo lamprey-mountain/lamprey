@@ -1,4 +1,4 @@
-import type { Channel } from "sdk";
+import type { Channel, ChannelType } from "sdk";
 import { createMemo, Match, Show, Switch } from "solid-js";
 import icChanCalendar1 from "@/assets/channel-calendar-1.png";
 import icChanDocument1 from "@/assets/channel-document-1.png";
@@ -12,6 +12,9 @@ import icChanText4 from "@/assets/channel-text-4.png";
 import icChanVoice1 from "@/assets/channel-voice-1.png";
 import icChanVoice2 from "@/assets/channel-voice-2.png";
 import icChanWiki1 from "@/assets/channel-wiki-1.png";
+import icChanThreadPublic from "@/assets/channel-thread.png";
+import icChanThreadPrivate from "@/assets/channel-thread-private.png";
+import icChanForum2 from "@/assets/channel-forum2.png";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { getColor } from "@/lib/colors";
 import { cyrb53, LCG } from "@/lib/rng";
@@ -33,6 +36,13 @@ export const ChannelIcon = (props: {
 				return rnd([icChanVoice1, icChanVoice2]);
 			case "Forum":
 				return rnd([icChanForum1]);
+			case "Forum2":
+				return rnd([icChanForum2]);
+			case "ThreadPublic":
+			case "ThreadForum2":
+				return rnd([icChanThreadPublic]);
+			case "ThreadPrivate":
+				return rnd([icChanThreadPrivate]);
 			case "Calendar":
 				return rnd([icChanCalendar1]);
 			case "Document":
@@ -68,15 +78,21 @@ export const ChannelIcon = (props: {
 				/>
 			</Match>
 			<Match
-				when={[
-					"Text",
-					"Voice",
-					"Forum",
-					"Calendar",
-					"Document",
-					"Wiki",
-					"Scripts",
-				].includes(props.channel.type)}
+				when={(
+					[
+						"Text",
+						"Voice",
+						"Forum",
+						"Calendar",
+						"Document",
+						"Wiki",
+						"Scripts",
+						"ThreadPublic",
+						"ThreadPrivate",
+						"ThreadForum2",
+						"Forum2",
+					] as ChannelType[]
+				).includes(props.channel.type)}
 			>
 				<svg
 					aria-hidden="true"
