@@ -7,6 +7,7 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
+import { debounce } from "@solid-primitives/scheduled";
 import { useCtx } from "@/app/context";
 import {
 	icFullscreen,
@@ -85,42 +86,34 @@ export const VideoView = (props: MediaProps) => {
 	// biome-ignore
 	const vtc = volumeTooltip.content;
 
-	onMount(() => {
-		video.ondurationchange = () => setDuration(video.duration);
-		video.ontimeupdate = () => setProgress(video.currentTime);
-		video.onratechange = () => setPlaybackRate(video.playbackRate);
-		video.onvolumechange = () => setVolume(video.volume);
+	function createOverlayFlash(el: () => HTMLElement) {
+		let fadeAnim: Animation | undefined;
 
-		video.onplaying = () => {
-			const cur = ctx.currentMedia();
-			if (cur && cur.media.id !== props.media.id) {
-				cur.element.pause();
-			}
+		const startFadeOut = debounce(() => {
+			fadeAnim = el().animate([{ opacity: 1 }, { opacity: 0 }], {
+				duration: 200,
+				fill: "forwards",
+			});
+		}, 500);
 
-			ctx.setCurrentMedia({ media: props.media, element: video });
-			setHandlers();
-			setPlaying(true);
+		return {
+			trigger: () => {
+				fadeAnim?.cancel();
+				el().style.opacity = "1";
+				startFadeOut();
+			},
+			cancel: () => {
+				fadeAnim?.cancel();
+				el().style.opacity = "1";
+			},
 		};
+	}
 
-		video.onpause = () => setPlaying(false);
-		video.onended = () => setPlaying(false);
+	let overlayPlayPauseEl!: HTMLDivElement;
+	let overlayVolumeEl!: HTMLDivElement;
 
-		video.onloadedmetadata = () => setLoadingState("ready");
-		video.onstalled = () => setLoadingState("stalled");
-		video.onsuspend = () => setLoadingState("stalled");
-		video.onseeking = () => setLoadingState("loading");
-		video.onseeked = () => setLoadingState("ready");
-		video.onprogress = () => setBuffered(parseRanges(video.buffered));
-		video.oncanplaythrough = () => setBuffered(parseRanges(video.buffered));
-		video.onemptied = () => {
-			setLoadingState("empty");
-			setBuffered(parseRanges(video.buffered));
-		};
-		video.oncanplay = () => {
-			setLoadingState("ready");
-			setBuffered(parseRanges(video.buffered));
-		};
-	});
+	const triggerVolume = createOverlayFlash(() => overlayVolumeEl);
+	const triggerPlayPause = createOverlayFlash(() => overlayPlayPauseEl);
 
 	createEffect(() => (video.muted = muted()));
 	createEffect(() => (video.volume = volume()));
@@ -131,9 +124,13 @@ export const VideoView = (props: MediaProps) => {
 		} else {
 			video.play();
 		}
+		triggerPlayPause.trigger();
 	};
 
-	const toggleMute = () => setMuted((m) => !m);
+	const toggleMute = () => {
+		setMuted((m) => !m);
+		triggerVolume.trigger();
+	};
 
 	const fullScreenDblClick = (e: MouseEvent) => {
 		e.preventDefault();
@@ -194,6 +191,9 @@ export const VideoView = (props: MediaProps) => {
 			: undefined;
 
 	const ty = createMemo(() => props.media.content_type.split(";")[0]);
+	const showAlways = createMemo(
+		() => !playing() && (progress() === 0 || progress() >= duration()),
+	);
 
 	const getVolumeIcon = () => {
 		if (muted()) return icVolumeMute;
@@ -289,11 +289,13 @@ export const VideoView = (props: MediaProps) => {
 			case "ArrowUp": {
 				e.preventDefault();
 				setVolume(Math.min(volume() + 0.05, 1));
+				triggerVolume.trigger();
 				break;
 			}
 			case "ArrowDown": {
 				e.preventDefault();
 				setVolume(Math.max(volume() - 0.05, 0));
+				triggerVolume.trigger();
 				break;
 			}
 			case "Space": {
@@ -330,6 +332,10 @@ export const VideoView = (props: MediaProps) => {
 		}
 	};
 
+	createEffect(() => {
+		if (showAlways()) triggerPlayPause.cancel();
+	});
+
 	return (
 		<Resize height={height()} width={width()}>
 			{/* TODO: use <article></article> */}
@@ -362,6 +368,37 @@ export const VideoView = (props: MediaProps) => {
 					preload="metadata"
 					onClick={togglePlayPause}
 					onDblClick={fullScreenDblClick}
+					onDurationChange={() => setDuration(video.duration)}
+					onTimeUpdate={() => setProgress(video.currentTime)}
+					onRateChange={() => setPlaybackRate(video.playbackRate)}
+					onVolumeChange={() => setVolume(video.volume)}
+					onPlaying={() => {
+						const cur = ctx.currentMedia();
+						if (cur && cur.media.id !== props.media.id) {
+							cur.element.pause();
+						}
+
+						ctx.setCurrentMedia({ media: props.media, element: video });
+						setHandlers();
+						setPlaying(true);
+					}}
+					onPause={() => setPlaying(false)}
+					onEnded={() => setPlaying(false)}
+					onLoadedMetadata={() => setLoadingState("ready")}
+					onStalled={() => setLoadingState("stalled")}
+					onSuspend={() => setLoadingState("stalled")}
+					onSeeking={() => setLoadingState("loading")}
+					onSeeked={() => setLoadingState("ready")}
+					onProgress={() => setBuffered(parseRanges(video.buffered))}
+					onCanPlayThrough={() => setBuffered(parseRanges(video.buffered))}
+					onEmptied={() => {
+						setLoadingState("empty");
+						setBuffered(parseRanges(video.buffered));
+					}}
+					onCanPlay={() => {
+						setLoadingState("ready");
+						setBuffered(parseRanges(video.buffered));
+					}}
 				/>
 				{/* TODO: use <footer></footer> */}
 				<div class="footer">
@@ -439,6 +476,18 @@ export const VideoView = (props: MediaProps) => {
 						>
 							<Icon src={fullscreen() ? icFullscreent : icFullscreen} alt="" />
 						</button>
+					</div>
+				</div>
+				<div class="overlay">
+					<div class="layer volume" ref={overlayVolumeEl!}>
+						<Icon src={getVolumeIcon()} alt="" />
+						{muted() ? "muted" : `${Math.round(volume() * 100)}%`}
+					</div>
+					<div class="layer play-pause" ref={overlayPlayPauseEl!}>
+						<Icon
+							src={playing() ? icPause : icPlay}
+							alt={playing() ? "pause" : "play"}
+						/>
 					</div>
 				</div>
 			</div>

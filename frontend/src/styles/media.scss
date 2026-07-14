@@ -1,14 +1,5 @@
 @use "./util.scss" as *;
 
-.media-old {
-	position: relative;
-}
-
-.media-old audio,
-.media-old video {
-	display: block;
-}
-
 .resize {
 	contain: content;
 	max-height: min(var(--height), 320px, round(50vh, 1px));
@@ -77,6 +68,7 @@
 .video {
 	height: 100%;
 	width: 100%;
+	cursor: pointer;
 
 	& > .header {
 		position: absolute;
@@ -107,7 +99,6 @@
 		background: oklch(var(--color-bg3) / 0.5);
 
 		& > .progress {
-			/* position: absolute; */
 			border: solid $bg-300 1px;
 		}
 
@@ -130,10 +121,57 @@
 				font-size: 0.8rem;
 				font-family: var(--font-mono);
 				margin: 0 4px;
+				white-space: nowrap;
+				// letter-spacing: -1px; // HACK: compress text for thin video
+				overflow: hidden;
+				font-variant-numeric: tabular-nums; // NOTE: iosevka doesnt support this, but atkinson hyperlegible does
 
 				&.preview > .progress {
 					color: $link-500;
 				}
+			}
+		}
+	}
+
+	& > .overlay {
+		position: absolute;
+		pointer-events: none;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+
+		& > .layer {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			translate: -50% -50%;
+			opacity: 0;
+		}
+
+		& > .volume {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+			font-size: 1.5rem;
+			color: $fg-400;
+			background: #111a;
+			padding: 4px 8px;
+			border-radius: 4px;
+		}
+
+		& > .play-pause {
+			display: grid;
+			place-items: center;
+			height: 48px;
+			width: 48px;
+			border-radius: 50%;
+			background: #1118;
+
+			& > .icon2 {
+				height: 24px;
+				width: 24px;
+				background: $fg-300;
 			}
 		}
 	}
@@ -153,6 +191,13 @@
 		width: 100%;
 	}
 }
+
+// TODO: hide .time if video is not wide enough
+// @container video (width < 192px) {
+// 	.video .time {
+// 		display: none;
+// 	}
+// }
 
 .media-loader {
 	padding: 8px;
