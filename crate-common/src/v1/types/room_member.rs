@@ -1,3 +1,4 @@
+use lamprey_macros::record;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -18,18 +19,18 @@ use crate::v1::types::{
 #[cfg(feature = "serde")]
 use crate::v1::types::util::some_option;
 
+// TODO: move to utils
 fn bool_true() -> bool {
     true
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+// TODO: don't derive Eq
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct RoomMember {
     pub user_id: UserId,
     pub room_id: RoomId,
-
+    // TODO: split out everything below into RoomMemberInfo? (or some better name)
     /// When this member joined the room
     pub joined_at: Time,
 

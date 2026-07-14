@@ -5,7 +5,7 @@ use axum::extract::State;
 use axum::response::IntoResponse;
 use common::v1::routes;
 use common::v1::types::Permission;
-use common::v1::types::thread::ThreadListRoom;
+use common::v1::types::thread::ThreadList;
 use common::v1::types::{
     AuditLogEntryType, ChannelId, ChannelType, Mentions, MentionsUser, MessageMember, MessageSync,
     MessageType, RelationshipType, SERVER_ROOM_ID,
@@ -471,7 +471,15 @@ async fn thread_list_room(
         .get_many(&filtered_thread_ids, Some(user.id))
         .await?;
 
-    Ok(Json(ThreadListRoom { threads }))
+    Ok(Json(ThreadList {
+        threads,
+        total: threads.len(),
+        cursor: None,
+
+        // TODO: impl
+        room_members: vec![],
+        users: vec![],
+    }))
 }
 
 /// Thread activity

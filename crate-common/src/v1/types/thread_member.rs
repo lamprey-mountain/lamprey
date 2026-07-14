@@ -1,22 +1,12 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
-
-#[cfg(feature = "validator")]
-use validator::Validate;
+use lamprey_macros::record;
 
 use crate::v1::types::util::{Diff, Time};
 use crate::v1::types::{RoomMember, User, UserId};
 
 use super::ChannelId;
 
-// NOTE: maybe i could merge the room_member and thread_member types?
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct ThreadMember {
     pub thread_id: ChannelId,
     pub user_id: UserId,
@@ -25,26 +15,39 @@ pub struct ThreadMember {
     pub joined_at: Time,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
+pub struct ThreadMemberMinimal {
+    pub user_id: UserId,
+
+    /// When this member joined the thread
+    pub joined_at: Time,
+}
+
+impl From<ThreadMember> for ThreadMemberMinimal {
+    fn from(value: ThreadMember) -> Self {
+        Self {
+            user_id: value.user_id,
+            joined_at: value.joined_at,
+        }
+    }
+}
+
+#[record]
+#[derive(Default, PartialEq, Eq)]
 pub struct ThreadMemberPut {
     // remove?
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Diff)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq, Diff)]
 pub struct ThreadMemberPatch {
     // remove?
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams, ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(::utoipa::IntoParams))]
 pub struct ChannelMemberSearch {
     pub query: String,
 
@@ -52,9 +55,7 @@ pub struct ChannelMemberSearch {
     pub limit: Option<u16>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ChannelMemberSearchResponse {
     /// the resulting users
     pub users: Vec<User>,

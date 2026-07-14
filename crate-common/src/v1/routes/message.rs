@@ -74,10 +74,10 @@ pub mod message_context {
     tags = ["message", "badge.public"],
     scopes = [Full],
     permissions = [ChannelView],
-    response(OK, body = PaginationResponse<Message>, description = "List thread messages success"),
+    response(OK, body = MessageList, description = "List thread messages success"),
 )]
 pub mod message_list {
-    use crate::v1::types::{ChannelId, Message, MessageId, PaginationQuery, PaginationResponse};
+    use crate::v1::types::{ChannelId, MessageId, MessageList, PaginationQuery};
 
     pub struct Request {
         #[path]
@@ -89,7 +89,7 @@ pub mod message_list {
 
     pub struct Response {
         #[json]
-        pub messages: PaginationResponse<Message>,
+        pub body: MessageList,
     }
 }
 
@@ -415,7 +415,7 @@ pub mod message_pins_reorder {
     pub struct Response {}
 }
 
-/// Message reply list
+/// Message reply roots
 #[endpoint(
     get,
     path = "/channel/{channel_id}/reply",
@@ -488,7 +488,9 @@ pub mod message_reply_list {
     response(OK, body = PaginationResponse<Message>, description = "success"),
 )]
 pub mod message_list_deleted {
-    use crate::v1::types::{ChannelId, Message, MessageId, PaginationQuery, PaginationResponse};
+    use crate::v1::types::{
+        ChannelId, Message, MessageId, MessageList, PaginationQuery, PaginationResponse,
+    };
 
     pub struct Request {
         #[path]
@@ -500,7 +502,7 @@ pub mod message_list_deleted {
 
     pub struct Response {
         #[json]
-        pub messages: PaginationResponse<Message>,
+        pub messages: MessageList,
     }
 }
 
@@ -513,10 +515,10 @@ pub mod message_list_deleted {
     tags = ["message"],
     scopes = [Full],
     permissions = [MessageRemove],
-    response(OK, body = PaginationResponse<Message>, description = "success"),
+    response(OK, body = MessageList, description = "success"),
 )]
 pub mod message_list_removed {
-    use crate::v1::types::{ChannelId, Message, MessageId, PaginationQuery, PaginationResponse};
+    use crate::v1::types::{ChannelId, MessageId, MessageList, PaginationQuery};
 
     pub struct Request {
         #[path]
@@ -528,7 +530,7 @@ pub mod message_list_removed {
 
     pub struct Response {
         #[json]
-        pub messages: PaginationResponse<Message>,
+        pub messages: MessageList,
     }
 }
 

@@ -1,3 +1,4 @@
+use lamprey_macros::record;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -17,7 +18,10 @@ use crate::v1::types::misc::binary::Binary;
 use crate::v1::types::moderation::Report;
 use crate::v1::types::reaction::ReactionCounts;
 use crate::v1::types::util::{Diff, Time};
-use crate::v1::types::{ApplicationId, AuditLogEntry, Embed, InteractionId, RoleId, UserId};
+use crate::v1::types::{
+    ApplicationId, AuditLogEntry, Embed, InteractionId, RoleId, RoomMember, ThreadMember, User,
+    UserId,
+};
 use crate::v1::types::{ChannelType, EmojiId, MediaId, RoomId};
 
 #[cfg(feature = "serde")]
@@ -404,6 +408,7 @@ pub struct MessagePatch {
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum MessageType {
     /// a basic message, using markdown
+    // TODO: rename to Default?
     DefaultMarkdown(MessageDefaultMarkdown),
 
     /// an encrypted message
@@ -1019,6 +1024,7 @@ pub struct RepliesQuery {
 pub struct RepliesResponse {
     #[cfg_attr(feature = "serde", serde(flatten))]
     pub children: RepliesChildren,
+    // TODO: return users and room/thread members
 }
 
 /// a single message for a replies query
@@ -1089,10 +1095,54 @@ pub struct RatelimitPut {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ContextResponse {
     pub items: Vec<Message>,
+
+    // TODO: maybe remove this?
     pub total: u64,
+
     pub has_after: bool,
     pub has_before: bool,
+    // TODO: maybe impl these?
+    // pub cursor_after: bool,
+    // pub cursor_before: bool,
+    // TODO: add users, etc...
 }
+
+#[record]
+#[derive(Default)]
+pub struct MessageList {
+    pub messages: Vec<Message>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub users: Vec<User>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub room_members: Vec<RoomMember>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub thread_members: Vec<ThreadMember>,
+    // pub has_after: bool,
+    // pub has_before: bool,
+}
+
+// TODO: move elsewhere?
+// TODO: use for message list routes
+// TODO: use for message context route
+// TODO: use for thread list routes
+#[record]
+#[derive(Default, utoipa::IntoParams)]
+pub struct WithMembersQuery {
+    /// whether to include members in response
+    ///
+    /// includes `users`, `room_members`, and `thread_members` fields
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub with_members: bool,
+}
+
+fn is_false(b: &bool) -> bool {
+    !b
+}
+
+// TODO: impl MessageList { fn cursor_before, cursor_after }
 
 impl Diff for MessagePatch {
     type Target = Message;

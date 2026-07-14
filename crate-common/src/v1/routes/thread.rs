@@ -110,10 +110,10 @@ pub mod thread_member_delete {
     path = "/channel/{channel_id}/thread",
     tags = ["thread"],
     permissions = [ChannelView],
-    response(OK, body = PaginationResponse<Channel>, description = "List channel threads success"),
+    response(OK, body = ThreadList, description = "List channel threads success"),
 )]
 pub mod thread_list {
-    use crate::v1::types::{Channel, ChannelId, PaginationQuery, PaginationResponse};
+    use crate::v1::types::{ChannelId, PaginationQuery, thread::ThreadList};
 
     pub struct Request {
         #[path]
@@ -125,7 +125,7 @@ pub mod thread_list {
 
     pub struct Response {
         #[json]
-        pub threads: PaginationResponse<Channel>,
+        pub body: ThreadList,
     }
 }
 
@@ -135,10 +135,10 @@ pub mod thread_list {
     path = "/channel/{channel_id}/thread/archived",
     tags = ["thread"],
     permissions = [ChannelView],
-    response(OK, body = PaginationResponse<Channel>, description = "List archived threads success"),
+    response(OK, body = ThreadList, description = "List archived threads success"),
 )]
 pub mod thread_list_archived {
-    use crate::v1::types::{Channel, ChannelId, PaginationQuery, PaginationResponse};
+    use crate::v1::types::{ChannelId, PaginationQuery, thread::ThreadList};
 
     pub struct Request {
         #[path]
@@ -150,7 +150,7 @@ pub mod thread_list_archived {
 
     pub struct Response {
         #[json]
-        pub threads: PaginationResponse<Channel>,
+        pub body: ThreadList,
     }
 }
 
@@ -160,10 +160,10 @@ pub mod thread_list_archived {
     path = "/channel/{channel_id}/thread/removed",
     tags = ["thread"],
     permissions = [ThreadManage],
-    response(OK, body = PaginationResponse<Channel>, description = "List removed threads success"),
+    response(OK, body = ThreadList, description = "List removed threads success"),
 )]
 pub mod thread_list_removed {
-    use crate::v1::types::{Channel, ChannelId, PaginationQuery, PaginationResponse};
+    use crate::v1::types::{ChannelId, PaginationQuery, thread::ThreadList};
 
     pub struct Request {
         #[path]
@@ -175,7 +175,7 @@ pub mod thread_list_removed {
 
     pub struct Response {
         #[json]
-        pub threads: PaginationResponse<Channel>,
+        pub body: ThreadList,
     }
 }
 
@@ -240,11 +240,11 @@ pub mod thread_create_from_message {
     get,
     path = "/room/{room_id}/thread",
     tags = ["thread"],
-    response(OK, body = ThreadListRoom, description = "List room threads success"),
+    response(OK, body = ThreadList, description = "List room threads success"),
 )]
 pub mod thread_list_room {
     use crate::v1::types::RoomId;
-    use crate::v1::types::thread::ThreadListRoom;
+    use crate::v1::types::thread::ThreadList;
 
     pub struct Request {
         #[path]
@@ -253,7 +253,7 @@ pub mod thread_list_room {
 
     pub struct Response {
         #[json]
-        pub threads: ThreadListRoom,
+        pub content: ThreadList,
     }
 }
 
@@ -263,10 +263,10 @@ pub mod thread_list_room {
     path = "/channel/{channel_id}/activity",
     tags = ["thread"],
     permissions = [ChannelView],
-    response(OK, body = PaginationResponse<Message>, description = "List activity success"),
+    response(OK, body = MessageList, description = "List activity success"),
 )]
 pub mod thread_activity {
-    use crate::v1::types::{ChannelId, Message, MessageId, PaginationQuery, PaginationResponse};
+    use crate::v1::types::{ChannelId, MessageId, MessageList, PaginationQuery};
 
     pub struct Request {
         #[path]
@@ -278,7 +278,7 @@ pub mod thread_activity {
 
     pub struct Response {
         #[json]
-        pub activity: PaginationResponse<Message>,
+        pub body: MessageList,
     }
 }
 
@@ -312,6 +312,8 @@ pub mod channel_member_search {
 /// Thread list atom/rss (TODO)
 ///
 /// Get an atom or rss feed of threads for this channel
+// TODO: implement this
+// TODO: implement a version for all {room,category} threads?
 #[endpoint(
     get,
     path = "/channel/{channel_id}/thread.atom",
@@ -328,5 +330,7 @@ pub mod thread_list_atom {
         pub pagination: PaginationQuery<ChannelId>,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        // TODO: how do i type this?
+    }
 }
