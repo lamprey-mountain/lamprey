@@ -383,7 +383,7 @@ export const TimelineItem2 = (props: {
 	const flumes = useFlumes();
 	const currentUser = useCurrentUser();
 	const room_member = roomMembersService.useMember(
-		() => props.channel.id,
+		() => props.channel.room_id ?? "",
 		() => currentUser()?.id ?? "",
 	);
 
