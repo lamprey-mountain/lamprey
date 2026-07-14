@@ -18,6 +18,8 @@ import {
 	onCleanup,
 	type ParentProps,
 	Show,
+	Switch,
+	Match,
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
@@ -30,7 +32,8 @@ import {
 	PopupEventEditor,
 	useCalendarPopup,
 } from "@/components/shared/Calendar";
-import { UserView } from "@/components/shared/User";
+import { UserProfileEdit } from "@/components/shared/UserProfileEdit.tsx";
+import { UserProfile } from "@/components/shared/UserProfile.tsx";
 import {
 	ChannelMenu,
 	FolderMenu,
@@ -176,12 +179,22 @@ export function OverlayProvider(props: ParentProps) {
 		const floating = userViewRef();
 		if (!reference || !floating) return;
 		const cleanup = autoUpdate(reference, floating, () => {
+			const v = userView();
 			computePosition(reference, floating, {
 				middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
 				placement:
-					userView()?.source === "message" ? "right-start" : "left-start",
+					v?.source === "message"
+						? "right-start"
+						: v?.source === "user-tray"
+							? "top-start"
+							: "left-start",
 			}).then(({ x, y, strategy }) => {
 				setUserViewFloating({ x, y, strategy });
+				if (v?.source === "user-tray") {
+					floating.style.width = `${reference.getBoundingClientRect().width - 16}px`;
+				} else {
+					floating.style.width = "";
+				}
 			});
 		});
 		onCleanup(cleanup);
@@ -363,11 +376,22 @@ export function OverlayProvider(props: ParentProps) {
 							"z-index": 100,
 						}}
 					>
-						<UserView
-							user={userViewData()?.user()!}
-							room_member={userViewData()?.room_member() ?? undefined}
-							thread_member={userViewData()?.thread_member() ?? undefined}
-						/>
+						<Switch>
+							<Match when={userView()?.source === "user-tray"}>
+								<UserProfileEdit
+									user={userViewData()?.user()!}
+									room_member={userViewData()?.room_member() ?? undefined}
+									thread_member={userViewData()?.thread_member() ?? undefined}
+								/>
+							</Match>
+							<Match when={true}>
+								<UserProfile
+									user={userViewData()?.user()!}
+									room_member={userViewData()?.room_member() ?? undefined}
+									thread_member={userViewData()?.thread_member() ?? undefined}
+								/>
+							</Match>
+						</Switch>
 					</div>
 				</Show>
 				<Show when={ctx.threadsView()}>

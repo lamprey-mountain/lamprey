@@ -46,7 +46,7 @@ export type AvatarProps = {
 	// TODO: pad?: boolean for <Avatar> (but not <AvatarWithStatus>) to disable padding
 };
 
-const getStatusPath = (status: UserStatus) => {
+export const getStatusPath = (status: UserStatus) => {
 	const cx = 64;
 	const cy = 64;
 	const r = 12;

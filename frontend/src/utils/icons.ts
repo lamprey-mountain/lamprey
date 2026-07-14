@@ -35,3 +35,11 @@ import { default as icX3 } from "@/assets/x-3.png";
 import { default as icX4 } from "@/assets/x-4.png";
 import { default as icX } from "@/assets/x.png";
 export { icX, icX1, icX2, icX3, icX4, icX as icCancel };
+
+import { default as icCheck1 } from "@/assets/check-1.png";
+import { default as icCheck2 } from "@/assets/check-2.png";
+import { default as icCheck3 } from "@/assets/check-3.png";
+import { default as icCheck4 } from "@/assets/check-4.png";
+export { icCheck1 as icCheck, icCheck1, icCheck2, icCheck3, icCheck4 };
+
+export { default as icCopy } from "@/assets/copy.png";

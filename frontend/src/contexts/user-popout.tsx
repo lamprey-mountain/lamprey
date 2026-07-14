@@ -12,7 +12,7 @@ export type UserViewData = {
 	room_id?: string;
 	channel_id?: string;
 	ref: HTMLElement;
-	source?: "member-list" | "message";
+	source?: "member-list" | "message" | "user-tray";
 };
 
 export type UserPopoutContextT = {

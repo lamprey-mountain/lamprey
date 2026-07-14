@@ -888,7 +888,7 @@ input[type="url"] {
 	box-shadow: 4px 4px 8px #111f;
 	border: solid $sep-300 1px;
 	border-radius: 4px;
-	overflow: hidden;
+	/* overflow: hidden; */
 	width: 320px;
 	display: block;
 	text-align: left;
@@ -988,6 +988,61 @@ input[type="url"] {
 			&:focus {
 				border: solid 1px $link-500;
 			}
+		}
+	}
+}
+
+.user-profile-edit {
+	padding-bottom: 8px;
+	/* background: linear-gradient(to bottom, transparent calc(100% - 8px), #111d); */
+	background: #111d;
+	border-top-left-radius: 4px;
+	border-top-right-radius: 4px;
+
+	& > .user-profile {
+		width: 100%;
+	}
+
+	& .menu {
+		display: flex;
+		flex-direction: column;
+		border-radius: 4px;
+		border: solid $sep-400 1px;
+		overflow: hidden;
+		background: $bg-300;
+
+		& > .button {
+			display: flex;
+			align-items: center;
+			border: none;
+			padding: 4px 8px;
+			gap: 8px;
+			transition: color 300ms, padding-top 100ms, padding-bottom 100ms;
+
+			&:active {
+				padding-top: 6px;
+				padding-bottom: 2px;
+			}
+
+			& + .button {
+				/* border-top: solid $sep-400 1px; */
+			}
+
+			& > .icon2 {
+				background-color: $fg-400;
+			}
+
+			&.copied {
+				color: $color-green;
+
+				& > .icon2 {
+					background-color: $color-green;
+				}
+			}
+		}
+
+		& .status-indicator {
+			margin: 2px;
 		}
 	}
 }

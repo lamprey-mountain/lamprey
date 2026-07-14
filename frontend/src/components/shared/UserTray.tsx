@@ -26,6 +26,7 @@ import { Icon } from "@/atoms/Icon";
 import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
 import { AvatarWithStatus } from "@/components/shared/User";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useUserPopout } from "@/contexts/mod.tsx";
 import { useVoice } from "../features/voice/context";
 import { VoiceDebug } from "../features/voice/VoiceDebug";
 import { ChannelT, UserT } from "@/types";
@@ -40,9 +41,23 @@ export const UserTray = () => {
 
 	const currentUser = useCurrentUser();
 	const [voice, voiceActions] = useVoice();
+	const { setUserView, userView } = useUserPopout();
 
-	const openUserProfile = () => {
-		// TODO: add popout
+	const openUserProfile = (e: MouseEvent & { currentTarget: HTMLElement }) => {
+		if (userView()) return;
+
+		const u = currentUser();
+		if (u) {
+			setTimeout(() => {
+				const target = e.target as HTMLElement;
+				const ref = target.closest(".user-tray") as HTMLElement;
+				setUserView({
+					user_id: u.id,
+					ref,
+					source: "user-tray",
+				});
+			});
+		}
 	};
 
 	const voiceDebugPopup = createPopup({

@@ -9,6 +9,7 @@
 	background-color: $bg-300;
 	border: solid $sep-400 1px;
 	color: $fg-400;
+	user-select: none;
 
 	&:hover,
 	&:focus-visible {

@@ -42,7 +42,7 @@ import { RouteInviteInner } from "@/components/shared/Invite";
 import { RoomHome, RoomMembers } from "@/components/shared/Room";
 import { RoomHeader } from "@/components/shared/RoomHeader";
 import { RoomNav } from "@/components/shared/RoomNav";
-import { UserProfile } from "@/components/shared/UserProfile";
+import { UserPage } from "@/components/shared/UserPage";
 import { Wiki } from "@/components/shared/Wiki";
 import {
 	ChannelContext,
@@ -559,7 +559,7 @@ export const RouteUser = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 				<b>{user()?.name}</b>
 			</header>
 			<Show when={user()}>
-				<UserProfile user={user()!} />
+				<UserPage user={user()!} />
 			</Show>
 		</>
 	);
