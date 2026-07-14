@@ -19,11 +19,13 @@ export function Profile(props: VoidProps<{ user: User }>) {
 		props.user.description,
 	);
 	const [editingAvatar, setEditingAvatar] = createSignal(props.user.avatar);
+	const [editingBanner, setEditingBanner] = createSignal(props.user.banner);
 
 	const isDirty = () =>
 		editingName() !== props.user.name ||
 		editingDescription() !== props.user.description ||
-		editingAvatar() !== props.user.avatar;
+		editingAvatar() !== props.user.avatar ||
+		editingBanner() !== props.user.banner;
 
 	const save = () => {
 		ctx.client.http.PATCH("/api/v1/user/{user_id}", {
@@ -32,6 +34,7 @@ export function Profile(props: VoidProps<{ user: User }>) {
 				name: editingName(),
 				description: editingDescription(),
 				avatar: editingAvatar(),
+				banner: editingBanner(),
 			},
 		});
 	};
@@ -40,6 +43,7 @@ export function Profile(props: VoidProps<{ user: User }>) {
 		setEditingName(props.user.name);
 		setEditingDescription(props.user.description);
 		setEditingAvatar(props.user.avatar);
+		setEditingBanner(props.user.banner);
 	};
 
 	const setAvatarFile = async (f: File) => {
@@ -60,10 +64,34 @@ export function Profile(props: VoidProps<{ user: User }>) {
 		setEditingAvatar(null);
 	};
 
+	const setBannerFile = async (f: File) => {
+		await createUpload({
+			client: api2.client,
+			file: f,
+			onComplete(media) {
+				setEditingBanner(media.id);
+			},
+			onFail(_error) {},
+			onPause() {},
+			onResume() {},
+			onProgress(_progress) {},
+		});
+	};
+
+	const removeBanner = async () => {
+		setEditingBanner(null);
+	};
+
 	let avatarInputEl!: HTMLInputElement;
 
 	const openAvatarPicker = () => {
 		avatarInputEl?.click();
+	};
+
+	let bannerInputEl!: HTMLInputElement;
+
+	const openBannerPicker = () => {
+		bannerInputEl?.click();
 	};
 
 	const userWithAvatar = () => ({
@@ -126,6 +154,21 @@ export function Profile(props: VoidProps<{ user: User }>) {
 			<div>
 				user id: <Copyable>{props.user.id}</Copyable>
 			</div>
+			<button class="button" onClick={openBannerPicker}>
+				upload banner
+			</button>
+			<button class="button" onClick={removeBanner}>
+				remove banner
+			</button>
+			<input
+				style="display:none"
+				ref={bannerInputEl}
+				type="file"
+				onInput={(e) => {
+					const f = e.target.files?.[0];
+					if (f) setBannerFile(f);
+				}}
+			/>
 			<Savebar show={isDirty()} onCancel={reset} onSave={save} />
 		</div>
 	);

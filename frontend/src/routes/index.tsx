@@ -65,6 +65,8 @@ import type { RoomT } from "@/types";
 import type { ChannelSearch } from "@/types/chat";
 import { UserSettings } from "@/components/features/user_settings";
 import { UserTray } from "@/components/shared/UserTray";
+import { icUser } from "@/utils/icons";
+import { Avatar } from "@/avatar/UserAvatar";
 
 export { RouteAuthorize } from "@/components/shared/Oauth";
 
@@ -555,11 +557,21 @@ export const RouteUser = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 	return (
 		<>
 			<Title title={user()?.name ?? "loading..."} />
-			<header class="chat-header">
-				<b>{user()?.name}</b>
-			</header>
 			<Show when={user()}>
-				<UserPage user={user()!} />
+				{(u) => (
+					<>
+						<header class="chat-header">
+							<div class="channel-icon">
+								<Icon src={icUser} />
+							</div>
+							<div class="name">
+								<h3 class="name-text">{u().name}</h3>
+							</div>
+							<div class="spacer"></div>
+						</header>
+						<UserPage user={u()} />
+					</>
+				)}
 			</Show>
 		</>
 	);

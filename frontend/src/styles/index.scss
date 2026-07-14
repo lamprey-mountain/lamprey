@@ -899,6 +899,7 @@ input[type="url"] {
 
 	.banner {
 		height: 96px;
+		aspect-ratio: 10 / 3;
 		background-color: $bg-150;
 		background-size: cover;
 		background-position: center;
@@ -2955,10 +2956,168 @@ button.link {
 
 .user-profile-page {
 	grid-area: main;
-	padding: 8px;
+	display: grid;
+	grid-template-areas: "banner banner" "header actions" "content aside";
+	grid-template-rows: auto auto 1fr;
+	grid-template-columns: auto auto;
 
-	& > .user-profile {
-		box-shadow: none;
+	& > .banner {
+		grid-area: banner;
+		min-height: 96px;
+		aspect-ratio: 10 / 3;
+		background-color: $bg-150;
+		background-size: cover;
+		background-position: center;
+	}
+
+	& > .header {
+		grid-area: header;
+		display: flex;
+		padding: 0 16px;
+
+		& > .avatar-wrap {
+			background-color: $bg-200;
+			border-radius: 8px;
+			padding: 12px;
+			margin-top: -48px;
+
+			& > .avatar {
+				height: 80px;
+				width: 80px;
+			}
+		}
+
+		& > .name-area {
+			flex: 1;
+			z-index: 1;
+			margin-top: -16px;
+			@include truncate;
+
+			& > .name {
+				display: inline-block;
+				font-size: 1.5rem;
+				font-weight: bold;
+				background-color: $bg-200;
+				border-top-right-radius: 4px;
+				padding: 4px;
+				padding-left: 8px;
+				@include truncate;
+			}
+		}
+	}
+
+	& > .actions {
+		display: flex;
+		width: min-content;
+		margin-top: -16px;
+		border-radius: 8px;
+		background-color: $bg-200;
+		padding: 8px 16px;
+		gap: 8px;
+
+		& > .button {
+			background-color: #aaa1;
+			border-radius: 50%;
+
+			&:hover, &:focus-visible {
+				background-color: #aaa4;
+			}
+		}
+	}
+
+	& > .content {
+		grid-area: content;
+		padding: 0 24px;
+		padding-right: 12px;
+
+		& > .description,
+		& > .note {
+			background-color: $bg-150;
+			border: solid $sep-300 1px;
+			margin-bottom: 12px;
+			margin-top: 4px;
+			border-radius: 4px;
+
+			& > .empty {
+				font-style: italic;
+			}
+		}
+
+		& > .description {
+			padding: 8px;
+			min-height: 80px;
+		}
+
+		& > .note {
+			position: relative;
+
+			&:focus-within {
+				border: solid 1px $link-500;
+			}
+
+			& > h3 {
+				position: absolute;
+				top: -8px;
+			}
+
+			& > .editor {
+				border: none;
+				background-color: transparent;
+
+				& > .ProseMirror {
+					min-height: 80px;
+				}
+			}
+		}
+	}
+
+	& > .aside {
+		grid-area: aside;
+		padding: 0 24px;
+		padding-left: 12px;
+
+		& > .mutual-rooms > .mutual-room > .mutual-room-link {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			border-radius: 4px;
+			height: 32px;
+			line-height: 1;
+
+			& > .avatar {
+				height: 32px;
+				width: 32px;
+				margin: -2px;
+			}
+
+			& > .info {
+				display: flex;
+				flex-direction: column;
+				color: $fg-300;
+
+				& > .nickname {
+					font-size: 0.8rem;
+					color: $fg-400;
+
+					& > .as {
+						color: $fg-600;
+					}
+				}
+			}
+
+			&:hover {
+				text-decoration: none;
+				background-color: #fff1;
+
+				& > .info {
+					color: $fg-100;
+
+					& > .nickname {
+						color: $fg-200;
+					}
+				}
+			}
+		}
 	}
 }
 

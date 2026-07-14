@@ -4,8 +4,10 @@
 export { default as icEdit } from "@/assets/edit.png";
 export { default as icGear } from "@/assets/gear.png";
 export { default as icMemberAdd } from "@/assets/member-add.png";
+export { default as icFriendAdd } from "@/assets/member-add.png";
 export { default as icMemberJoin } from "@/assets/member-join.png";
 export { default as icMemberRemove } from "@/assets/member-remove.png";
+export { default as icFriendReject } from "@/assets/member-remove.png";
 export { default as icMore } from "@/assets/more.png";
 export { default as icPin } from "@/assets/pin.png";
 export { default as icReactionAdd } from "@/assets/reaction-add.png";
@@ -45,3 +47,8 @@ export { icCheck1 as icCheck, icCheck1, icCheck2, icCheck3, icCheck4 };
 export { default as icCopy } from "@/assets/copy.png";
 export { default as icSword } from "@/assets/sword.png";
 export { default as icChannelMove } from "@/assets/channel-move.png";
+import { default as icMembers } from "@/assets/members.png";
+export { icMembers, icMembers as icUser };
+
+export { default as icDm } from "@/assets/dm.png";
+export { default as icMenu } from "@/assets/menu.png";
