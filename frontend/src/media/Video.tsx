@@ -8,15 +8,17 @@ import {
 	Show,
 } from "solid-js";
 import { useCtx } from "@/app/context";
-import iconFullscreen from "@/assets/fullscreen.png";
-import iconFullscreent from "@/assets/fullscreent.png";
-import iconPause from "@/assets/pause.png";
-import iconPlay from "@/assets/play.png";
-import iconVolumeHigh from "@/assets/volume-high.png";
-import iconVolumeLow from "@/assets/volume-low.png";
-import iconVolumeMax from "@/assets/volume-max.png";
-import iconVolumeMedium from "@/assets/volume-medium.png";
-import iconVolumeMute from "@/assets/volume-mute.png";
+import {
+	icFullscreen,
+	icFullscreent,
+	icPause,
+	icPlay,
+	icVolumeHigh,
+	icVolumeLow,
+	icVolumeMax,
+	icVolumeMedium,
+	icVolumeMute,
+} from "@/utils/icons";
 import { Icon } from "@/atoms/Icon";
 import { createTooltip } from "@/atoms/Tooltip.tsx";
 import {
@@ -194,12 +196,12 @@ export const VideoView = (props: MediaProps) => {
 	const ty = createMemo(() => props.media.content_type.split(";")[0]);
 
 	const getVolumeIcon = () => {
-		if (muted()) return iconVolumeMute;
-		if (volume() === 0) return iconVolumeMute;
-		if (volume() < 0.333) return iconVolumeLow;
-		if (volume() < 0.667) return iconVolumeMedium;
-		if (volume() <= 1) return iconVolumeHigh;
-		return iconVolumeMax;
+		if (muted()) return icVolumeMute;
+		if (volume() === 0) return icVolumeMute;
+		if (volume() < 0.333) return icVolumeLow;
+		if (volume() < 0.667) return icVolumeMedium;
+		if (volume() <= 1) return icVolumeHigh;
+		return icVolumeMax;
 	};
 
 	const getVolumeText = () => {
@@ -401,7 +403,7 @@ export const VideoView = (props: MediaProps) => {
 							title={playing() ? "pause" : "play"}
 						>
 							<Icon
-								src={playing() ? iconPause : iconPlay}
+								src={playing() ? icPause : icPlay}
 								alt={playing() ? "pause" : "play"}
 							/>
 						</button>
@@ -435,10 +437,7 @@ export const VideoView = (props: MediaProps) => {
 							onClick={toggleFullscreen}
 							title={fullscreen() ? "exit fullscreen" : "enter fullscreen"}
 						>
-							<Icon
-								src={fullscreen() ? iconFullscreent : iconFullscreen}
-								alt=""
-							/>
+							<Icon src={fullscreen() ? icFullscreent : icFullscreen} alt="" />
 						</button>
 					</div>
 				</div>

@@ -52,3 +52,13 @@ export { icMembers, icMembers as icUser };
 
 export { default as icDm } from "@/assets/dm.png";
 export { default as icMenu } from "@/assets/menu.png";
+
+export { default as icFullscreen } from "@/assets/fullscreen.png";
+export { default as icFullscreent } from "@/assets/fullscreent.png";
+export { default as icPause } from "@/assets/pause.png";
+export { default as icPlay } from "@/assets/play.png";
+export { default as icVolumeHigh } from "@/assets/volume-high.png";
+export { default as icVolumeLow } from "@/assets/volume-low.png";
+export { default as icVolumeMax } from "@/assets/volume-max.png";
+export { default as icVolumeMedium } from "@/assets/volume-medium.png";
+export { default as icVolumeMute } from "@/assets/volume-mute.png";
