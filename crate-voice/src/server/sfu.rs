@@ -175,7 +175,7 @@ impl Sfu {
     }
 
     async fn spawn_shard(&mut self) -> Result<()> {
-        let (shard, handle) = Shard::new(self.backend.clone()).await?;
+        let (shard, handle) = Shard::new(self.backend.clone(), (*self.config).clone()).await?;
 
         self.shard_tasks.spawn(async move {
             shard.run().await;

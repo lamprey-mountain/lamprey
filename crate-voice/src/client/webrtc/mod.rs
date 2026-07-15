@@ -103,7 +103,10 @@ impl Webrtc {
     }
 
     pub fn handle_candidate(&mut self, candidate: IceCandidate) {
-        debug!("ignoring candidate: {:?}", candidate);
+        // NOTE: do not add ice candidates until remote description is fully set
+        // if let Ok(c) = str0m::Candidate::from_sdp_string(&candidate) {
+        //     self.rtc.add_remote_candidate(c);
+        // }
     }
 
     /// get permissions for this peer

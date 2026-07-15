@@ -324,16 +324,17 @@ pub struct ConfigVoice {
     /// the udp port to use for media traffic
     ///
     /// defaults to a random port
+    // TODO: remove
     #[serde(default)]
     pub udp_port: u16,
 
-    /// the quic port to use for cascading traffic
+    /// the quic port to use for cascading traffic (TODO)
     ///
     /// defaults to a random port
     #[serde(default)]
     pub quic_port: u16,
 
-    /// the udp port that the builtin stun server should listen on
+    /// the udp port that the builtin stun server should listen on (TODO)
     ///
     /// defaults to being disabled
     pub stun_port: Option<u16>,

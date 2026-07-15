@@ -1,3 +1,4 @@
+use lamprey_backend_core::config::ConfigVoice;
 use std::{collections::HashMap, net::SocketAddr, time::Instant};
 
 use bytes::{Bytes, BytesMut};
@@ -69,11 +70,20 @@ pub enum ShardCommand {
 // }
 
 impl Shard {
-    pub async fn new(backend: BackendHandle) -> Result<(Self, ShardHandle)> {
+    pub async fn new(backend: BackendHandle, config: ConfigVoice) -> Result<(Self, ShardHandle)> {
         let (control_tx, control_rx) = mpsc::channel(100);
 
-        let sock_v4 = UdpSocket::bind("0.0.0.0:0").await?;
-        let sock_v6 = UdpSocket::bind("[::]:0").await?;
+        let host_v4 = config
+            .host_ipv4
+            .as_deref()
+            .ok_or_else(|| Error::Channel("host_ipv4 missing in config".into()))?;
+        let host_v6 = config
+            .host_ipv6
+            .as_deref()
+            .ok_or_else(|| Error::Channel("host_ipv6 missing in config".into()))?;
+
+        let sock_v4 = UdpSocket::bind(format!("{host_v4}:0")).await?;
+        let sock_v6 = UdpSocket::bind(format!("[{host_v6}]:0")).await?;
 
         let me = Self {
             backend,
@@ -164,7 +174,7 @@ impl Shard {
             for (peer_slot, t) in timeouts {
                 let key = self
                     .timeout_queue
-                    .insert_at((call_slot, peer_slot), t.into());
+                    .insert_at((call_slot, peer_slot), dbg!(t).into());
                 self.timeout_keys.insert((call_slot, peer_slot), key);
             }
 
@@ -183,17 +193,17 @@ impl Shard {
 
     /// handle a udp packet from `dst` to `src` with data `data`
     fn handle_udp(&mut self, dst: SocketAddr, src: SocketAddr, data: Bytes) {
-        let now = std::time::Instant::now();
+        let now = Instant::now();
         let input = SInput::Receive(
             now,
             str0m::net::Receive {
                 proto: str0m::net::Protocol::Udp,
                 source: src,
                 destination: dst,
-                contents: data
-                    .as_ref()
-                    .try_into()
-                    .expect("TODO: better error handling"),
+                contents: match data.as_ref().try_into() {
+                    Ok(c) => c,
+                    Err(_) => return,
+                },
             },
         );
 
