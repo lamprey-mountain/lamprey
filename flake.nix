@@ -126,6 +126,7 @@
               "crate-markdown"
               "crate-unfurl"
               "crate-script"
+              "crate-search"
             ] ++ baseInternalDeps);
             env = {
               VERGEN_GIT_SHA = self.rev or self.dirtyRev;
