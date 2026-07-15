@@ -293,7 +293,7 @@ export class VoiceClient {
 					tracks.push({
 						key: s.key as "user" | "screen",
 						mid: t.mid!,
-						kind: kind === "video" ? "Video" : "Audio",
+						kind: kind as "video" | "audio",
 					});
 				}
 			}
@@ -324,6 +324,7 @@ export class VoiceClient {
 				// send initial Want subscriptions for all streams we know about
 				break;
 			}
+
 			case "Offer": {
 				const readyForOffer =
 					!this.makingOffer &&
@@ -359,6 +360,7 @@ export class VoiceClient {
 
 				break;
 			}
+
 			case "Answer": {
 				if (this.rtc.signalingState !== "have-local-offer") {
 					log.debug(
@@ -380,39 +382,51 @@ export class VoiceClient {
 				}
 				break;
 			}
+
 			case "Candidate": {
 				log.debug("signal", "remote ice candidate", msg.candidate);
 				// TODO: pass sdpMid/sdpMLineIndex/usernameFragment to addIceCandidate
 				await this.rtc.addIceCandidate({ candidate: msg.candidate });
 				break;
 			}
-			case "Have": {
+
+			case "Migrate": {
+				// TODO: handle
+				// create a new RTCPeerConnection, but keep the old one until the new conn is ready to use
+				break;
+			}
+
+			case "Disconnected": {
+				// TODO: handle
+				// shut down rtc connection. maybe set state to errored/failed if the disconnection wasnt intentional?
+				break;
+			}
+
+			case "Tracks": {
 				const selfUser = this.api.users.cache.get("@self");
 				if (msg.user_id === selfUser?.id) {
-					log.debug("signal", "ignoring Have from self");
+					log.debug("signal", "ignoring Tracks from self", msg.tracks);
 					return;
 				}
 
-				log.debug("signal", "got Have from " + msg.user_id, msg.tracks);
+				log.debug("signal", "got Tracks from " + msg.user_id, msg.tracks);
 				for (const track of msg.tracks) {
 					this.processRemoteTrack(track, msg.user_id);
 				}
 				break;
 			}
-			case "Want": {
-				// server is telling us what it wants; currently no-op on client side
-				log.debug("signal", "want", msg.subscriptions);
-				// TODO: implement subscriptions
+
+			case "Subscribe": {
+				log.debug("signal", "got Subscribe", msg.subs);
+				// TODO: handle server-sent subscriptions
 				break;
 			}
-			case "Migrate": {
-				// TODO: this.migrate()
-				break;
-			}
+
 			case "Error": {
 				log.error("signal", "got SignallingEvent::Error", msg);
 				break;
 			}
+
 			default: {
 				log.warn("signal", "unknown voice dispatch", msg);
 			}
@@ -455,7 +469,7 @@ export class VoiceClient {
 	}
 
 	public setSubscriptions(subs: Array<VoiceSubscription>): void {
-		this.sendSignalling({ type: "Want", subscriptions: subs });
+		this.sendSignalling({ type: "Subscribe", subs });
 	}
 
 	public acquireTransceiver(

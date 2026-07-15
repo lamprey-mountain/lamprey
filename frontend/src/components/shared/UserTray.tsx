@@ -137,6 +137,7 @@ export const UserTray = () => {
 									<Switch>
 										<Match
 											when={
+												// TODO: separate these statuses?
 												voice.connectionState === "connecting" ||
 												voice.connectionState === "pending"
 											}
