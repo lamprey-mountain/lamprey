@@ -104,8 +104,8 @@ impl Shard {
     }
 
     pub async fn run(mut self) {
-        let mut buf_v4 = BytesMut::with_capacity(2000);
-        let mut buf_v6 = BytesMut::with_capacity(2000);
+        let mut buf_v4 = [0u8; 2000];
+        let mut buf_v6 = [0u8; 2000];
 
         // TODO: clean up dead peers
         loop {
