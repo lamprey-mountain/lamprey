@@ -354,6 +354,7 @@ impl ServiceCache {
             .get_data()
             .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)))?;
         Ok(PermissionsCalculator {
+            state: Arc::clone(&self.state),
             room_id,
             owner_id: data.room.owner_id,
             public: data.room.public,

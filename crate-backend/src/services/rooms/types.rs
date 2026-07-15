@@ -15,7 +15,7 @@ use lamprey_backend_core::types::search::ChannelVisibility;
 use crate::routes::util::Auth;
 use crate::services::cache::PermissionsCalculator;
 use crate::types::PermissionBits;
-use crate::{Error, Result};
+use crate::{Error, Result, ServerStateInner};
 
 /// a snapshot of a room's state at a point in time.
 #[derive(Debug, Clone)]
@@ -227,12 +227,17 @@ impl RoomSnapshot {
         }
     }
 
-    pub fn channel_visibilities(self: Arc<Self>, user_id: UserId) -> Vec<ChannelVisibility> {
+    pub fn channel_visibilities(
+        self: Arc<Self>,
+        user_id: UserId,
+        state: Arc<ServerStateInner>,
+    ) -> Vec<ChannelVisibility> {
         let Some(data) = self.get_data() else {
             return vec![];
         };
 
         let calc = PermissionsCalculator {
+            state,
             room_id: data.room.id,
             owner_id: data.room.owner_id,
             public: data.room.public,

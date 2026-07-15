@@ -16,6 +16,7 @@ use lamprey_backend_core::types::permission::{
 };
 use tracing::warn;
 
+use crate::ServerStateInner;
 use crate::{
     Error, Result,
     services::rooms::{CachedChannel, RoomSnapshot},
@@ -23,6 +24,7 @@ use crate::{
 
 /// a permission calculator for a room
 pub struct PermissionsCalculator {
+    pub state: Arc<ServerStateInner>,
     pub room_id: RoomId,
     pub owner_id: Option<UserId>,
     pub public: bool,
@@ -57,6 +59,7 @@ impl PermissionsCalculator {
 
             let mut bits = PermissionBits::default();
             let mut channel_locked = false;
+            let mut visible = self.public;
 
             // use default perms (everyone role)
             let everyone_role_id: RoleId = self.room_id.into_inner().into();
@@ -75,6 +78,11 @@ impl PermissionsCalculator {
                         cached_channel,
                         None,
                     );
+
+                    // lurkers can't be thread members
+                    if cached_channel.inner.ty == ChannelType::ThreadPrivate {
+                        visible = false;
+                    }
                 }
             }
 
@@ -93,7 +101,7 @@ impl PermissionsCalculator {
             }
 
             let perms = Permissions2 {
-                visible: self.public,
+                visible,
                 context,
                 bits,
                 metadata: Permissions2Metadata {
@@ -178,6 +186,30 @@ impl PermissionsCalculator {
                         cached_channel,
                         member,
                     );
+
+                    // private thread logic
+                    if cached_channel.inner.ty == ChannelType::ThreadPrivate {
+                        if !bits.has(Permission::ThreadManage) {
+                            let thread = data.threads.get(&channel.id);
+                            let is_member = if let Some(thread) = thread {
+                                thread.members.contains_key(&user_id)
+                            } else {
+                                // TODO: fetch thread from db
+                                // self.state.acquire_data().await?;
+                                false
+                            };
+
+                            if !is_member {
+                                return Ok(self.build_permissions2(
+                                    PermissionBits::default(),
+                                    rank,
+                                    Some(channel),
+                                    channel_locked,
+                                    MemberState::Lurker,
+                                ));
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -1412,7 +1412,7 @@ impl ServiceChannels {
 
         for snapshot_res in room_snapshots {
             let snapshot = snapshot_res?;
-            let vis = snapshot.channel_visibilities(user_id);
+            let vis = snapshot.channel_visibilities(user_id, self.state.clone());
             out.extend(vis);
         }
 

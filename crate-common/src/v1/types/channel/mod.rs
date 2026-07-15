@@ -483,7 +483,16 @@ pub enum ChannelType {
     /// a thread visible to anyone who can see the channel
     ThreadPublic,
 
-    /// a thread that is only visible to thread members
+    /// a thread with restricted visibility
+    ///
+    /// ## visibility
+    ///
+    /// private threads are visible to
+    ///
+    /// - thread members
+    /// - users with the `ThreadManage` permission
+    ///
+    /// for everyone else, private threads do not appear at all
     ThreadPrivate,
 
     /// a thread used in forums, behaving identically to ThreadPublic

@@ -134,6 +134,7 @@ impl MemberList {
             let users_map: HashMap<_, _> = users.into_iter().map(|u| (u.id, u)).collect();
 
             let perms_calc = PermissionsCalculator {
+                state: Arc::clone(&self.s),
                 room_id: data.room.id,
                 owner_id: data.room.owner_id,
                 public: data.room.public,
@@ -467,6 +468,7 @@ impl MemberList {
 
         if let Some(_room_id) = self.key.room_id() {
             let perms_calc = PermissionsCalculator {
+                state: Arc::clone(&self.s),
                 room_id: data.room.id,
                 owner_id: data.room.owner_id,
                 public: data.room.public,

@@ -471,9 +471,11 @@ async fn thread_list_room(
         .get_many(&filtered_thread_ids, Some(user.id))
         .await?;
 
+    let total = threads.len() as u64;
+
     Ok(Json(ThreadList {
         threads,
-        total: threads.len(),
+        total,
         cursor: None,
 
         // TODO: impl
