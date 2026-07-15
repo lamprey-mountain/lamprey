@@ -1,4 +1,4 @@
-use common::v1::types::voice::{MediaKind, TrackKey, TrackLayer};
+use common::v1::types::voice::{MediaKind, TrackKey, TrackLayer, TrackMetadata};
 
 use crate::prelude::*;
 
@@ -53,5 +53,17 @@ impl Inbound {
     // NOTE: im not sure if this is a good idea or not. this feels like it could retrospectively be a strange edge case.
     pub fn is_implicit(&self) -> bool {
         self.kind == MediaKind::Audio && self.key == TrackKey::User
+    }
+
+    /// returns the metadata for this track
+    pub fn metadata(&self) -> TrackMetadata {
+        // TODO: have actual track ids instead of keying by (mid, user_id) (and sometimes (kind, key)) (?)
+        TrackMetadata {
+            mid: self.state.mid().unwrap().into(),
+            kind: self.kind,
+            key: self.key.clone(),
+            layers: self.layers.clone(),
+            whisper: None,
+        }
     }
 }

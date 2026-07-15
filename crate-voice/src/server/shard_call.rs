@@ -187,13 +187,7 @@ impl ShardCall {
                                 .inbound
                                 .values()
                                 .filter(|t| t.publisher == peer)
-                                .map(|t| TrackMetadata {
-                                    mid: t.state.mid().unwrap().into(),
-                                    kind: t.kind,
-                                    key: t.key.clone(),
-                                    layers: t.layers.clone(),
-                                    whisper: None,
-                                })
+                                .map(|t| t.metadata())
                                 .collect();
 
                             for peer_slot in self.peers.keys() {
@@ -341,11 +335,18 @@ impl ShardCall {
 
     /// get rtc output events
     // TODO: use proper type for return type (instead of tuple)
-    pub fn drain(&mut self) -> (Vec<str0m::net::Transmit>, Vec<(PeerSlot, Instant)>) {
+    pub fn drain(
+        &mut self,
+    ) -> (
+        Vec<str0m::net::Transmit>,
+        Vec<(PeerSlot, Instant)>,
+        Vec<(PeerSlot, SignallingEvent)>,
+    ) {
         // PERF: reuse `Vec`s
         let mut transmits = Vec::new();
         let mut events = Vec::new();
         let mut timeouts = Vec::new();
+        let mut signalling_events = Vec::new();
 
         for (peer_id, p) in self.peers.iter_mut() {
             if self.paused.contains(&peer_id) {
@@ -370,10 +371,14 @@ impl ShardCall {
         }
 
         for (peer, event) in events {
-            self.handle_peer_event(peer, event);
+            signalling_events.extend(
+                self.handle_peer_event(peer, event)
+                    .into_iter()
+                    .map(|e| (peer, e)),
+            );
         }
 
-        (transmits, timeouts)
+        (transmits, timeouts, signalling_events)
     }
 
     pub fn unpause(&mut self, peer_slot: PeerSlot) {
@@ -387,10 +392,11 @@ impl ShardCall {
         }
     }
 
-    fn handle_peer_event(&mut self, peer_slot: PeerSlot, event: SEvent) {
+    fn handle_peer_event(&mut self, peer_slot: PeerSlot, event: SEvent) -> Vec<SignallingEvent> {
+        let mut events = Vec::new();
         let Some(peer) = self.peers.get_mut(peer_slot) else {
             // warn, this should only be called with existing peers
-            return;
+            return events;
         };
 
         peer.handle_event(&event);
@@ -398,6 +404,18 @@ impl ShardCall {
         match event {
             SEvent::Connected => {
                 debug!(channel_id = ?self.channel_id, "Peer connected");
+
+                // Broadcast tracks of all users to the newly connected peer
+                let tracks_by_user: HashMap<UserId, Vec<TrackMetadata>> =
+                    self.inbound.values().fold(HashMap::new(), |mut acc, t| {
+                        let user_id = self.peers[t.publisher].user_id();
+                        acc.entry(user_id).or_default().push(t.metadata());
+                        acc
+                    });
+
+                for (user_id, tracks) in tracks_by_user {
+                    events.push(SignallingEvent::Tracks { user_id, tracks });
+                }
             }
 
             // media events
@@ -414,13 +432,13 @@ impl ShardCall {
                 debug!(channel_id = ?self.channel_id, mid = ?media.mid, "Media data");
                 let mid = media.mid.into();
                 let Some(track_id) = peer.mapping().lookup_track(mid) else {
-                    return;
+                    return events;
                 };
 
                 let (kind, key) = if let Some(inbound) = self.inbound.get(track_id) {
                     (inbound.kind, inbound.key.clone())
                 } else {
-                    return;
+                    return events;
                 };
 
                 // permission checks
@@ -430,7 +448,7 @@ impl ShardCall {
                     _ => perms.video,
                 };
                 if !can_send {
-                    return;
+                    return events;
                 }
 
                 // get subscribers
@@ -459,15 +477,15 @@ impl ShardCall {
                 let mid = keyframe_request.mid.into();
 
                 let Some(outbound_track_id) = peer.mapping().lookup_track(mid) else {
-                    return;
+                    return events;
                 };
                 let Some(outbound) = self.outbound.get(outbound_track_id) else {
-                    return;
+                    return events;
                 };
                 let inbound_track_id = outbound.source;
 
                 let Some(inbound) = self.inbound.get(inbound_track_id) else {
-                    return;
+                    return events;
                 };
                 let publisher_id = inbound.publisher;
 
@@ -495,6 +513,8 @@ impl ShardCall {
 
             _ => {}
         }
+
+        events
     }
 
     /// create a sdp offer for any local track changes on this sfu
@@ -545,14 +565,7 @@ impl ShardCall {
                         // TODO: handle outbound with state Closing
 
                         tracks.push(TrackMetadataWithUserId {
-                            inner: TrackMetadata {
-                                // TODO: have actual track ids instead of keying by (mid, user_id) (and sometimes (kind, key)) (?)
-                                mid: t.state.mid().unwrap().into(),
-                                kind: t.kind,
-                                key: t.key.clone(),
-                                layers: t.layers.clone(),
-                                whisper: None,
-                            },
+                            inner: t.metadata(),
                             user_id: self.peers[t.publisher].user_id(),
                         });
                     }

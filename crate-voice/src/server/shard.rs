@@ -185,7 +185,7 @@ impl Shard {
 
     async fn drain_calls(&mut self) {
         for (call_slot, call) in self.calls.iter_mut() {
-            let (transmits, timeouts) = call.drain();
+            let (transmits, timeouts, signalling_events) = call.drain();
 
             for (peer_slot, t) in timeouts {
                 let key = self
@@ -202,6 +202,24 @@ impl Shard {
                 };
                 if let Err(e) = res {
                     warn!("Failed to send UDP packet: {:?}", e);
+                }
+            }
+
+            for (peer_slot, event) in signalling_events {
+                let user_id = call.peer_user_id(peer_slot);
+                // PERF: add fn channel_id() to ShardCall
+                let channel_id = *self
+                    .channels
+                    .iter()
+                    .find_map(|(ch, &slot)| if slot == call_slot { Some(ch) } else { None })
+                    .unwrap();
+
+                if let Err(e) = self.backend.send(SfuEvent::VoiceDispatch {
+                    user_id,
+                    channel_id,
+                    payload: Box::new(event),
+                }) {
+                    warn!("Failed to dispatch signalling event: {:?}", e);
                 }
             }
         }
