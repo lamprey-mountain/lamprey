@@ -4,15 +4,28 @@ import type { FormattingToolbarContextT } from "@/contexts/formatting-toolbar";
 export const toolbarKey = new PluginKey("toolbar");
 
 export function createToolbarPlugin(tb: FormattingToolbarContextT): Plugin {
+	let mouseSelection = false;
 	return new Plugin({
 		key: toolbarKey,
+		props: {
+			handleDOMEvents: {
+				mousedown: () => {
+					mouseSelection = true;
+					return false;
+				},
+				keydown: () => {
+					mouseSelection = false;
+					return false;
+				},
+			},
+		},
 		view(_editorView) {
 			return {
 				update(view, prevState) {
 					if (!view.state.selection.eq(prevState.selection)) {
 						const { state } = view;
 						const { empty, from, to } = state.selection;
-						if (empty || from === to) {
+						if (empty || from === to || !mouseSelection) {
 							tb.hideToolbar();
 							return;
 						}
