@@ -4,6 +4,9 @@ import {
 	offset,
 	type Placement,
 	shift,
+	arrow,
+	Middleware,
+	Padding,
 } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import {
@@ -15,6 +18,8 @@ import {
 	onMount,
 	Show,
 	type ValidComponent,
+	Accessor,
+	Ref,
 } from "solid-js";
 import { Portal, render } from "solid-js/web";
 
@@ -31,6 +36,8 @@ type TooltipProps = {
 
 	// https://floating-ui.com/docs/detectoverflow#altboundary
 	altBoundary?: boolean;
+
+	arrow?: boolean;
 };
 
 type TooltipAnimState = {
@@ -121,15 +128,40 @@ export function tooltip(
 		if (!isHovered) hideTip();
 	}
 
+	let arrowEl!: HTMLElement;
+
+	function middleware(props: TooltipProps) {
+		const m = [shift({ padding: padding() })];
+
+		// HACK: make volume slider work properly
+		if (props.placement === "top-start") {
+			m.push(offset({ mainAxis: -8 }));
+		} else {
+			m.push(offset({ mainAxis: 8 }));
+		}
+
+		m.push(flip());
+
+		if (props.arrow ?? true) {
+			m.push(solidArrow({ element: () => arrowEl, padding: 4 }));
+		}
+		return m;
+	}
+
 	const pos = useFloating(contentEl, tipEl, {
 		whileElementsMounted: autoUpdate,
 		strategy: "fixed",
 		placement: props.placement,
-		// HACK: make volume slider work properly
-		middleware:
-			props.placement === "top-start"
-				? [shift({ padding: padding() }), offset({ mainAxis: -8 }), flip()]
-				: [shift({ padding: padding() }), offset({ mainAxis: 8 }), flip()],
+		middleware: middleware(props),
+	});
+
+	createEffect(() => {
+		const a = pos.middlewareData.arrow;
+		const el = arrowEl;
+		if (a && el) {
+			el.style.translate = `${Math.round(a.x ?? 0)}px ${Math.round(a.y ?? 0)}px`;
+			el.dataset.placement = pos.placement;
+		}
 	});
 
 	createEffect(() => {
@@ -158,7 +190,7 @@ export function tooltip(
 						ref={setTipEl}
 						style={{
 							position: pos.strategy,
-							translate: `${pos.x}px ${pos.y}px`,
+							translate: `${Math.round(pos.x ?? 0)}px ${Math.round(pos.y ?? 0)}px`,
 							visibility: visible() ? "visible" : "hidden",
 							"--padding": `${padding()}px`,
 						}}
@@ -170,6 +202,9 @@ export function tooltip(
 					>
 						<div class="base"></div>
 						<div class="inner">{tip as any}</div>
+						<Show when={props.arrow ?? true}>
+							<FloatingArrow ref={arrowEl!} />
+						</Show>
 					</div>
 				</Portal>
 			</Show>
@@ -263,6 +298,26 @@ export function createTooltip(props: CreateTooltipProps) {
 		if (!isHovered) hideTip();
 	}
 
+	let arrowEl!: HTMLElement;
+
+	function middleware(props: Omit<TooltipProps, "mount">) {
+		const m = [shift({ padding: padding() })];
+
+		// HACK: make volume slider work properly
+		if (props.placement === "top-start") {
+			m.push(offset({ mainAxis: -8 }));
+		} else {
+			m.push(offset({ mainAxis: 8 }));
+		}
+
+		m.push(flip());
+
+		if (props.arrow ?? true) {
+			m.push(solidArrow({ element: () => arrowEl, padding: 4 }));
+		}
+		return m;
+	}
+
 	const pos = useFloating(
 		contentEl as () => HTMLElement,
 		tipEl as () => HTMLElement,
@@ -270,14 +325,18 @@ export function createTooltip(props: CreateTooltipProps) {
 			whileElementsMounted: autoUpdate,
 			strategy: "fixed",
 			placement: props.placement,
-			// HACK: make volume slider work properly
-			middleware: [
-				shift({ padding: padding(), altBoundary: props.altBoundary }),
-				offset({ mainAxis: props.placement === "top-start" ? -8 : 8 }),
-				flip(),
-			],
+			middleware: middleware(props),
 		},
 	);
+
+	createEffect(() => {
+		const a = pos.middlewareData.arrow;
+		const el = arrowEl;
+		if (a && el) {
+			el.style.translate = `${Math.round(a.x ?? 0)}px ${Math.round(a.y ?? 0)}px`;
+			el.dataset.placement = pos.placement;
+		}
+	});
 
 	// TODO: use onPointerEnter/Leave instead of mouse events?
 	// TODO: make typescript happy
@@ -307,7 +366,7 @@ export function createTooltip(props: CreateTooltipProps) {
 								ref={setTipEl}
 								style={{
 									position: pos.strategy,
-									translate: `${pos.x}px ${pos.y}px`,
+									translate: `${Math.round(pos.x ?? 0)}px ${Math.round(pos.y ?? 0)}px`,
 									visibility: visible() ? "visible" : "hidden",
 									"--padding": `${padding()}px`,
 								}}
@@ -319,6 +378,9 @@ export function createTooltip(props: CreateTooltipProps) {
 							>
 								<div class="base"></div>
 								<div class="inner">{props.tip()}</div>
+								<Show when={props.arrow ?? true}>
+									<FloatingArrow ref={arrowEl!} />
+								</Show>
 							</div>
 						</Portal>
 					</Show>
@@ -345,3 +407,42 @@ export function createTooltip(props: CreateTooltipProps) {
 // 	// if (tipEl) return;
 // 	// tooltip.considerHidingTip()
 // };
+
+const FloatingArrow = (props: { ref: Ref<SVGSVGElement> }) => {
+	return (
+		<svg
+			class="arrow"
+			aria-hidden="true"
+			width="14"
+			height="14"
+			viewBox="0 0 14 14"
+			ref={props.ref}
+		>
+			<path d="M0,-1 H14 L7,7 Z" class="arrow-fill" stroke="none" />
+			<path
+				d="M0,-1 L7,7 L14,-1"
+				class="arrow-stroke"
+				fill="none"
+				stroke-width="1"
+				vector-effect="non-scaling-stroke"
+			/>
+		</svg>
+	);
+};
+
+// from https://github.com/lxsmnsyc/solid-floating-ui/issues/5#issuecomment-1869444380
+const solidArrow = ({
+	element,
+	padding,
+}: {
+	element: Accessor<HTMLElement>;
+	padding: Padding | undefined;
+}): Middleware => ({
+	name: "arrow",
+	fn(...args) {
+		return arrow({
+			element: element(),
+			padding: padding,
+		}).fn(...args);
+	},
+});
