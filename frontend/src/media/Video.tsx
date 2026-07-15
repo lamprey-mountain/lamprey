@@ -57,9 +57,36 @@ export const VideoView = (props: MediaProps) => {
 	const [muted, setMuted] = createSignal(false);
 	const [playbackRate, setPlaybackRate] = createSignal(1);
 	const [fullscreen, setFullscreen] = createSignal(false);
+	const [uiVisible, setUiVisible] = createSignal(true);
 
 	let video!: HTMLVideoElement;
 	let wrapperEl!: HTMLDivElement;
+
+	const hideUi = debounce(() => {
+		if (playing()) {
+			setUiVisible(false);
+		}
+	}, 1500);
+
+	const resetHideUiTimer = () => {
+		setUiVisible(true);
+		hideUi();
+	};
+
+	const keepVisible = (e: Event) => {
+		e.stopPropagation();
+		hideUi.clear();
+		setUiVisible(true);
+	};
+
+	createEffect(() => {
+		if (!playing()) {
+			setUiVisible(true);
+			hideUi.clear();
+		} else {
+			resetHideUiTimer();
+		}
+	});
 
 	const volumeTooltip = createTooltip({
 		placement: "top-start",
@@ -341,12 +368,14 @@ export const VideoView = (props: MediaProps) => {
 			{/* TODO: use <article></article> */}
 			<div
 				class="video"
+				classList={{ "hide-ui": !uiVisible() }}
 				ref={wrapperEl!}
 				onKeyDown={handleKeydown}
+				onMouseMove={resetHideUiTimer}
 				tabIndex={0}
 			>
 				<Loader loaded={loadingState() !== "empty"} />
-				<header class="header">
+				<header class="header" onMouseMove={keepVisible}>
 					<div class="info">
 						<a
 							download={props.media.filename}
@@ -401,7 +430,7 @@ export const VideoView = (props: MediaProps) => {
 					}}
 				/>
 				{/* TODO: use <footer></footer> */}
-				<div class="footer">
+				<div class="footer" onMouseMove={keepVisible}>
 					<svg
 						aria-hidden="true"
 						class="progress"

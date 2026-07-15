@@ -190,6 +190,22 @@
 		height: 100%;
 		width: 100%;
 	}
+
+	& > .header, & > .footer {
+		transition: translate 150ms;
+	}
+
+	&.hide-ui {
+		cursor: none;
+
+		& > .header {
+			translate: 0 -100%;
+		}
+
+		& > .footer {
+			translate: 0 100%;
+		}
+	}
 }
 
 // TODO: hide .time if video is not wide enough
