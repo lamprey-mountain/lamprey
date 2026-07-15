@@ -11,7 +11,6 @@ export * from "./modal.tsx";
 export * from "./slash-commands.tsx";
 export * from "./uploads.tsx";
 export * from "./user-popout.tsx";
-export * from "./voice.tsx";
 
 // // TODO: more contexts
 // export * from "./room.tsx";

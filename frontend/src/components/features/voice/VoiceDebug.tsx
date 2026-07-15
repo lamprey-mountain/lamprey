@@ -1,11 +1,11 @@
-// FIXME: voice.rtc no longer exists
-
 import { ReactiveMap } from "@solid-primitives/map";
 import {
+	createEffect,
 	createMemo,
 	createSignal,
 	For,
 	Match,
+	on,
 	onCleanup,
 	Show,
 	Switch,
@@ -28,17 +28,30 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 	const [remoteSdp, setRemoteSdp] = createSignal<RTCSessionDescription | null>(
 		null,
 	);
+	const [transceivers, setTransceivers] = createSignal<RTCRtpTransceiver[]>(
+		vc.getRtc()?.getTransceivers() ?? [],
+	);
 
-	const updateSdps = () => {
+	const updateDebugInfo = () => {
 		setLocalSdp(vc.getRtc()?.localDescription ?? null);
 		setRemoteSdp(vc.getRtc()?.remoteDescription ?? null);
+		setTransceivers(vc.getRtc()?.getTransceivers() ?? []);
 	};
-	updateSdps();
+	updateDebugInfo();
 
-	// vc.getRtc() might be null initially
-	vc.getRtc()?.addEventListener("connectionstatechange", updateSdps);
-	onCleanup(() =>
-		vc.getRtc()?.removeEventListener("connectionstatechange", updateSdps),
+	createEffect(
+		on(
+			() => (vc.connectionState(), vc.getRtc()),
+			(rtc, old) => {
+				if (!rtc) return;
+				if (rtc === old) return;
+
+				rtc.addEventListener("track", updateDebugInfo);
+				onCleanup(() => {
+					rtc.removeEventListener("track", updateDebugInfo);
+				});
+			},
+		),
 	);
 
 	const voiceStates = createMemo(() => {
@@ -107,7 +120,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 												<b>user_id</b>: <Copyable>{s.user_id}</Copyable>
 											</div>
 											<div>
-												<b>key</b>: {s.key}
+												<b>key</b>: {s.key.toString()}
 											</div>
 											<div>
 												<b>mids:</b> {s.mids.join(", ")}
@@ -117,11 +130,12 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 								}}
 							</For>
 							<br />
-							<h3>{vc.getRtc()?.getTransceivers().length} transceivers</h3>
+							<h3>{transceivers().length} transceivers</h3>
 							<ul style="list-style: inside">
-								<For each={vc.getRtc()?.getTransceivers()}>
+								<For each={transceivers()}>
 									{(t) => (
 										<li>
+											{/* TODO: show (source user id, source mid) and (local mid) separately */}
 											{t.mid} {t.direction}{" "}
 											{t?.sender.track?.kind ?? t?.receiver.track?.kind}
 										</li>

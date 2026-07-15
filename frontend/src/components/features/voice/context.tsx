@@ -270,7 +270,7 @@ async function loadMusic() {
 	await new Promise((res) =>
 		audio.addEventListener("loadedmetadata", res, { once: true }),
 	);
-	// await audio.play();
+	await audio.play();
 	const stream: MediaStream =
 		"captureStream" in audio
 			? (

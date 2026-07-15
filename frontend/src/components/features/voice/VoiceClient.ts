@@ -11,10 +11,10 @@ import type {
 } from "ts-sdk";
 import type { Api } from "@/api";
 import { logger } from "@/utils/logger";
-import { bytesToUuid, uuidToBytes } from "@/utils/uuid";
 import { RTC_CONFIG } from "./util";
+import { Speaking } from "./Speaking";
 
-const log = logger.for("rtc");
+export const log = logger.for("rtc");
 
 /**
  * - pending: needs to connect to sync websocket
@@ -78,9 +78,10 @@ export class VoiceClient {
 
 		// setup event listeners for rtc
 		this.rtc.addEventListener("connectionstatechange", () => {
-			log.debug("signal", "connection state change", this.rtc?.connectionState);
+			if (!this.rtc) return;
+			log.debug("signal", "connection state change", this.rtc.connectionState);
 
-			const state = this.rtc?.connectionState;
+			const state = this.rtc.connectionState;
 			if (state === "connected") {
 				this.setConnectionState("connected");
 			} else if (state === "failed" || state === "closed") {
@@ -92,30 +93,34 @@ export class VoiceClient {
 		});
 
 		this.rtc.addEventListener("iceconnectionstatechange", () => {
+			if (!this.rtc) return;
 			log.debug(
 				"signal",
 				"ice connection state change",
-				this.rtc?.iceConnectionState,
+				this.rtc.iceConnectionState,
 			);
-			if (this.rtc?.iceConnectionState === "failed") {
+			if (this.rtc.iceConnectionState === "failed") {
 				log.warn("signal", "ice failed, restarting ice", null);
 				this.rtc.restartIce();
 			}
 		});
 
 		this.rtc.addEventListener("signalingstatechange", () => {
-			log.debug("signal", "signaling state change", this.rtc?.signalingState);
+			if (!this.rtc) return;
+			log.debug("signal", "signaling state change", this.rtc.signalingState);
 		});
 
 		this.rtc.addEventListener("icegatheringstatechange", () => {
+			if (!this.rtc) return;
 			log.debug(
 				"signal",
 				"ice gathering state change",
-				this.rtc?.iceGatheringState,
+				this.rtc.iceGatheringState,
 			);
 		});
 
 		this.rtc.addEventListener("icecandidate", (e) => {
+			if (!this.rtc) return;
 			if (!e.candidate?.candidate) return;
 			log.debug("signal", "local ice candidate", e.candidate);
 			this.sendSignalling({
@@ -125,14 +130,22 @@ export class VoiceClient {
 		});
 
 		this.rtc.addEventListener("negotiationneeded", () => {
+			if (!this.rtc) return;
 			this.negotiate();
 		});
 
 		this.rtc.addEventListener("track", (e) => {
+			if (!this.rtc) return;
 			const t = e.transceiver;
+			const track = e.track;
 			log.info("rtc", "track", e);
 			if (!t.mid) {
 				log.warn("rtc", "transceiver missing mid");
+				return;
+			}
+
+			if (!track) {
+				log.warn("rtc", "track event received but track is null");
 				return;
 			}
 
@@ -141,10 +154,10 @@ export class VoiceClient {
 			// attach track to a remote stream if we already know the mid
 			for (const [, stream] of this.streams) {
 				if (stream.mids.includes(t.mid)) {
-					stream.media.addTrack(t.receiver.track);
+					stream.media.addTrack(track);
 					log.debug(
 						"rtc",
-						`added track ${t.mid} (${e.track.kind}) to stream ${stream.id}`,
+						`added track ${t.mid} (${track.kind}) to stream ${stream.id}`,
 						stream,
 					);
 					// trigger reactivity
@@ -155,6 +168,7 @@ export class VoiceClient {
 		});
 
 		this.rtc.addEventListener("datachannel", (e) => {
+			if (!this.rtc) return;
 			log.debug("rtc", "datachannel", e.channel.label);
 		});
 
@@ -210,6 +224,8 @@ export class VoiceClient {
 	}
 
 	public disconnect(): void {
+		log.info("rtc", "disconnect", null);
+
 		const channelId = this.channelId;
 		this.channelId = null;
 		this.setConnectionState("disconnected");
@@ -531,69 +547,5 @@ export class VoiceClient {
 		// 1. create new rtc instance
 		// 2. recreate existing transceivers on new rtc instance
 		// 3. close old rtc instance
-	}
-}
-
-export class Speaking {
-	public users = new ReactiveMap<string, { flags: number }>();
-	private timeouts = new Map<string, ReturnType<typeof setTimeout>>();
-	private sc: RTCDataChannel | null = null;
-
-	swapDataChannel(sc: RTCDataChannel) {
-		sc.binaryType = "arraybuffer";
-		sc.addEventListener("close", () => {
-			log.info("speaking", "channel closed", null);
-		});
-
-		sc.addEventListener("error", (e) => {
-			log.error("speaking", "speaking channel error", e);
-		});
-
-		// FIXME: this.sc is never set if open is never set
-		// FIXME: race condition if sc is swapped but then the old sc opens
-		// FIXME: resource leak, sc is never closed when swapped
-		// FIXME: clear sc on error/close
-		// FIXME: clear pending timeouts when sc closes
-		sc.addEventListener("open", () => {
-			log.info("speaking", "channel opened", null);
-			if (this.sc) {
-				log.warn("speaking", "already have a speaking channel", null);
-				// TODO: consider closing the existing channel
-			}
-			this.sc = sc;
-		});
-
-		sc.addEventListener("message", (e) => {
-			const data = new Uint8Array(e.data);
-			// expects 33 bytes (16 bytes source_mid + 1 byte flags + 16 bytes user_id)
-			if (data.length !== 33) {
-				log.warn(
-					"speaking",
-					"invalid binary speaking data length",
-					data.length,
-				);
-				return;
-			}
-			const flags = data[16];
-			const userId = bytesToUuid(data.slice(17, 33));
-
-			log.debug("speaking", "recv speaking", { userId, flags });
-
-			clearTimeout(this.timeouts.get(userId));
-			const timeout = setTimeout(() => {
-				this.users.delete(userId);
-				this.timeouts.delete(userId);
-			}, 10 * 1000);
-			this.timeouts.set(userId, timeout);
-			this.users.set(userId, { flags });
-		});
-	}
-
-	public send(mid: string, flags: number) {
-		log.debug("speaking", "send", { mid, flags });
-		const bytes = new Uint8Array(17);
-		bytes.set(uuidToBytes(mid), 0);
-		bytes[16] = flags;
-		this.sc?.send(bytes);
 	}
 }

@@ -54,6 +54,7 @@ import {
 	RouteSettings,
 	RouteUser,
 } from "@/routes";
+import { VoiceStreams } from "@/components/features/voice/VoiceStreams";
 
 const App: Component = () => {
 	return (
@@ -188,7 +189,6 @@ export const AppProviders: Component<ParentProps<{ resolved: boolean }>> = (
  */
 export const AppShell: Component<ParentProps> = (props) => {
 	const ctx = useCtx();
-	const [voice] = useVoice();
 	const state = from(ctx.client.state);
 	const [modals] = useModals();
 
@@ -240,44 +240,7 @@ export const AppShell: Component<ParentProps> = (props) => {
 				</Show>
 				{props.children}
 				<OverlayProvider />
-				<div style="visibility:hidden">
-					<For each={[...(voice.vc.streams.values() ?? [])]}>
-						{(stream) => {
-							let ref: HTMLAudioElement | HTMLVideoElement | undefined;
-							createEffect(() => {
-								if (ref) ref.srcObject = stream.media;
-							});
-
-							const hasVideo = () => stream.media.getVideoTracks().length > 0;
-
-							return (
-								<Show
-									when={hasVideo()}
-									fallback={
-										<audio
-											autoplay
-											ref={ref as HTMLAudioElement}
-											muted={
-												voice.deafened ||
-												voice.preferences.get(stream.user_id)?.mute === true
-											}
-										/>
-									}
-								>
-									<video
-										autoplay
-										playsinline
-										ref={ref as HTMLVideoElement}
-										muted={
-											voice.deafened ||
-											voice.preferences.get(stream.user_id)?.mute === true
-										}
-									/>
-								</Show>
-							);
-						}}
-					</For>
-				</div>
+				<VoiceStreams />
 				<Show when={state() !== "ready"}>
 					<div style="position:fixed;top:8px;left:8px;background:#111;padding:8px;border:solid #222 1px;">
 						{state()}

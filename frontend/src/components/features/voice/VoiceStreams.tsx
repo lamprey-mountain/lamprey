@@ -1,0 +1,51 @@
+import { createEffect, createSignal, For, Match, Switch } from "solid-js";
+import { useVoice } from "./context";
+
+export const VoiceStreams = () => {
+	const [voice] = useVoice();
+
+	return (
+		<div class="voice-streams">
+			<For each={[...voice.vc.streams.values()]}>
+				{(stream) => {
+					const [ref, setRef] = createSignal(
+						null as HTMLAudioElement | HTMLVideoElement | null,
+					);
+
+					const hasVideo = () => stream.media.getVideoTracks().length > 0;
+
+					createEffect(() => {
+						const r = ref();
+						if (r) r.srcObject = stream.media;
+					});
+
+					return (
+						<Switch>
+							<Match when={hasVideo()}>
+								<audio
+									autoplay
+									ref={setRef}
+									muted={
+										voice.deafened ||
+										voice.preferences.get(stream.user_id)?.mute === true
+									}
+								/>
+							</Match>
+							<Match when={true}>
+								<video
+									autoplay
+									playsinline
+									ref={setRef}
+									muted={
+										voice.deafened ||
+										voice.preferences.get(stream.user_id)?.mute === true
+									}
+								/>
+							</Match>
+						</Switch>
+					);
+				}}
+			</For>
+		</div>
+	);
+};

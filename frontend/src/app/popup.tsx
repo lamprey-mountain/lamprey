@@ -4,6 +4,8 @@ import {
 	type JSX,
 	onCleanup,
 	Show,
+	runWithOwner,
+	getOwner,
 } from "solid-js";
 import {
 	clearDelegatedEvents,
@@ -18,6 +20,7 @@ export const createPopup = (props: {
 	title: () => string;
 	content: () => JSX.Element;
 }) => {
+	const owner = getOwner();
 	const [popup, setPopup] = createSignal<Window | null>(null);
 
 	// sync stylesheets for hot module reloading during dev
@@ -86,7 +89,11 @@ export const createPopup = (props: {
 		View() {
 			return (
 				<Show when={popup()}>
-					{(p) => <Portal mount={p().document.body}>{props.content()}</Portal>}
+					{(p) => (
+						<Portal mount={p().document.body}>
+							{runWithOwner(owner, props.content)}
+						</Portal>
+					)}
 				</Show>
 			);
 		},
