@@ -8,7 +8,7 @@ use crate::{
     util::SfuVoiceState,
 };
 use common::{
-    v1::types::voice::{internal::SfuPermissions, messages::SfuCommand},
+    v1::types::voice::messages::SfuCommand,
     v2::types::{ChannelId, UserId},
 };
 use futures::StreamExt;

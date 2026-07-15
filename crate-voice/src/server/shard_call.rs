@@ -86,7 +86,7 @@ impl ShardCall {
         &mut self,
         peer: PeerSlot,
         cmd: SignallingCommand,
-    ) -> Vec<SignallingEvent> {
+    ) -> Vec<(PeerSlot, SignallingEvent)> {
         let mut events = Vec::new();
         if let Some(p) = self.peers.get_mut(peer) {
             match cmd {
@@ -95,7 +95,9 @@ impl ShardCall {
                 SignallingCommand::Offer { sdp, tracks } => {
                     match p.handle_offer(sdp) {
                         Ok(answer) => {
-                            events.push(SignallingEvent::Answer { sdp: answer });
+                            events.push((peer, SignallingEvent::Answer { sdp: answer }));
+
+                            let publisher_user_id = p.user_id();
 
                             // process incoming tracks
                             let mut incoming_mids = HashSet::new();
@@ -180,7 +182,29 @@ impl ShardCall {
                                 }
                             }
 
-                            // TODO: broadcast a Tracks event to everyone in the channel
+                            // broadcast Tracks events to everyone in the channel
+                            let tracks: Vec<_> = self
+                                .inbound
+                                .values()
+                                .filter(|t| t.publisher == peer)
+                                .map(|t| TrackMetadata {
+                                    mid: t.state.mid().unwrap().into(),
+                                    kind: t.kind,
+                                    key: t.key.clone(),
+                                    layers: t.layers.clone(),
+                                    whisper: None,
+                                })
+                                .collect();
+
+                            for peer_slot in self.peers.keys() {
+                                events.push((
+                                    peer_slot,
+                                    SignallingEvent::Tracks {
+                                        user_id: publisher_user_id,
+                                        tracks: tracks.clone(),
+                                    },
+                                ));
+                            }
                         }
                         Err(e) => {
                             warn!("Failed to handle offer: {:?}", e);
@@ -273,12 +297,17 @@ impl ShardCall {
         &mut self,
         user_id: UserId,
         cmd: SignallingCommand,
-    ) -> Vec<SignallingEvent> {
+    ) -> Vec<(PeerSlot, SignallingEvent)> {
         if let Some(&peer) = self.users.get(&user_id) {
             self.handle_signalling(peer, cmd)
         } else {
             Vec::new()
         }
+    }
+
+    #[inline]
+    pub fn peer_user_id(&self, peer: PeerSlot) -> UserId {
+        self.peers[peer].user_id()
     }
 
     /// request a keyframe to be generated

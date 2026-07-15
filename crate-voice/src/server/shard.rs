@@ -1,7 +1,7 @@
 use lamprey_backend_core::config::ConfigVoice;
 use std::{collections::HashMap, net::SocketAddr, time::Instant};
 
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
 use common::v1::types::voice::messages::{SfuEvent, SignallingCommand};
 use common::v1::types::voice::{Mid, Rid};
 use common::v2::types::{ChannelId, UserId};
@@ -311,9 +311,10 @@ impl Shard {
                 };
                 if let Some(call) = self.calls.get_mut(call_slot) {
                     let events = call.handle_signalling_by_user(user_id, inner);
-                    for signalling_event in events {
+                    for (peer_slot, signalling_event) in events {
+                        let target_user_id = call.peer_user_id(peer_slot);
                         if let Err(e) = self.backend.send(SfuEvent::VoiceDispatch {
-                            user_id,
+                            user_id: target_user_id,
                             channel_id,
                             payload: Box::new(signalling_event),
                         }) {
