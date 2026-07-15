@@ -107,8 +107,9 @@ impl Shard {
         let mut buf_v4 = [0u8; 2000];
         let mut buf_v6 = [0u8; 2000];
 
-        // TODO: clean up dead peers
         loop {
+            self.cleanup_dead_peers();
+
             // drain rtc output (transmits + events) for all calls
             self.drain_calls().await;
 
@@ -141,6 +142,21 @@ impl Shard {
                         call.handle_timeout(peer_slot);
                     }
                 }
+            }
+        }
+    }
+
+    fn cleanup_dead_peers(&mut self) {
+        // PERF: theres probably a better way to do this than iterating over every call every loop
+        for (call_slot, call) in self.calls.iter_mut() {
+            let dead_peers = call.get_dead_peers();
+            for peer_slot in dead_peers {
+                call.remove_peer(peer_slot);
+
+                self.addrs
+                    .retain(|_, (c_slot, p_slot)| *c_slot != call_slot || *p_slot != peer_slot);
+                self.ufrags
+                    .retain(|_, (c_slot, p_slot)| *c_slot != call_slot || *p_slot != peer_slot);
             }
         }
     }

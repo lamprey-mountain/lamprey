@@ -91,6 +91,10 @@ impl Webrtc {
         self.rtc.disconnect();
     }
 
+    pub fn is_alive(&self) -> bool {
+        self.rtc.is_alive()
+    }
+
     pub fn handle_offer(&mut self, sdp: SessionDescription) -> Result<SessionDescription> {
         let answer = self.signalling.handle_offer(&mut self.rtc, sdp)?;
         Ok(SessionDescription(answer.to_sdp_string()))

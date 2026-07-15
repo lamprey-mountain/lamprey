@@ -64,6 +64,23 @@ impl ShardCall {
         slot
     }
 
+    pub fn get_dead_peers(&self) -> Vec<PeerSlot> {
+        self.peers
+            .iter()
+            .filter(|(_, p)| !p.is_alive())
+            .map(|(slot, _)| slot)
+            .collect()
+    }
+
+    pub fn remove_peer(&mut self, peer_slot: PeerSlot) {
+        if let Some(peer) = self.peers.remove(peer_slot) {
+            self.users.remove(&peer.user_id());
+            self.paused.remove(&peer_slot);
+            self.inbound.retain(|_, t| t.publisher != peer_slot);
+            self.outbound.retain(|_, o| o.subscriber != peer_slot);
+        }
+    }
+
     /// a signalling command from a peer
     pub fn handle_signalling(
         &mut self,
