@@ -8,16 +8,12 @@
 		scroll-snap-type: x mandatory;
 		overscroll-behavior-x: none;
 
-		/* 3 panels, each resolving exactly to 100vw widths:
-		   Panel 1: room-nav (72px) + channel-nav (remaining vw) = 100vw
-		   Panel 2: main (100vw)
-		   Panel 3: sidebar (100vw) */
-		grid-template-columns: 72px calc(100vw - 72px) 100vw 100vw;
+		grid-template-columns: 100vw 100vw 100vw;
 		grid-template-areas:
-			"room-nav channel-nav header  header"
-			"room-nav channel-nav main    sidebar"
-			"tray     tray        main    sidebar"
-			"tray     tray        footer  sidebar";
+			"nav-tray header  header"
+			"nav-tray main    sidebar"
+			"nav-tray main    sidebar"
+			"nav-tray footer  footer";
 
 		scrollbar-width: none;
 		&::-webkit-scrollbar {
@@ -31,7 +27,6 @@
 		}
 
 		/* Exclude secondary components from serving as a snap point to prevent scrolling layout breaks */
-		& > .resizable-sidebar[data-side="left"],
 		& > footer,
 		& > .user-tray {
 			scroll-snap-align: none;
