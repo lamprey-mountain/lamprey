@@ -163,12 +163,7 @@ impl Shard {
 
     fn process_all_negotiations(&mut self) {
         for (call_slot, call) in self.calls.iter_mut() {
-            // PERF: add fn channel_id() to ShardCall
-            let channel_id = *self
-                .channels
-                .iter()
-                .find_map(|(ch, &slot)| if slot == call_slot { Some(ch) } else { None })
-                .unwrap();
+            let channel_id = call.channel_id();
 
             let events = call.process_sdp_negotiations();
             for (user_id, signalling_event) in events {
@@ -207,12 +202,7 @@ impl Shard {
 
             for (peer_slot, event) in signalling_events {
                 let user_id = call.peer_user_id(peer_slot);
-                // PERF: add fn channel_id() to ShardCall
-                let channel_id = *self
-                    .channels
-                    .iter()
-                    .find_map(|(ch, &slot)| if slot == call_slot { Some(ch) } else { None })
-                    .unwrap();
+                let channel_id = call.channel_id();
 
                 if let Err(e) = self.backend.send(SfuEvent::VoiceDispatch {
                     user_id,

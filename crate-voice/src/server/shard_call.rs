@@ -54,6 +54,11 @@ impl ShardCall {
         }
     }
 
+    #[inline]
+    pub fn channel_id(&self) -> ChannelId {
+        self.channel_id
+    }
+
     /// create a new peer connected to this call
     pub fn create_peer(&mut self, s: SfuVoiceState, rtc: Rtc) -> PeerSlot {
         let user_id = s.inner.user_id;
