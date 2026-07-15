@@ -99,25 +99,25 @@ pub enum SubscribeCommand {
 /// whether to transmit groups in ascending or descending order
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[repr(u8)]
-enum SubscribeOrder {
+pub enum SubscribeOrder {
     Asc,
     Desc,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct Probe {
+pub struct Probe {
     // bitrate
     // rtt
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct ProbeResponse {
+pub struct ProbeResponse {
     // bitrate
     // rtt
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct Goodbye {
+pub struct Goodbye {
     code: GoodbyeCode,
     // /// where to reconnect
     // ///
@@ -128,7 +128,7 @@ struct Goodbye {
 // impl fn can_reconnect()
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[repr(u8)]
-enum GoodbyeCode {
+pub enum GoodbyeCode {
     /// move to a different voice channel
     Move,
 
@@ -145,7 +145,7 @@ enum GoodbyeCode {
 /// a stream of ordered frames
 ///
 /// sent by the peer in response to a Subscription stream
-struct Group {
+pub struct Group {
     /// corresponding subscribe id for this group
     subscribe_id: SubscribeId,
 
@@ -154,7 +154,7 @@ struct Group {
 }
 
 /// a chunk of bytes in a group
-struct Frame<'a>(&'a [u8]);
+pub struct Frame<'a>(&'a [u8]);
 
 /// a wrapper to parse a stream
 pub struct MeshStream<T> {
