@@ -13,7 +13,8 @@ use crate::{
 
 use common::{
     v1::types::voice::{
-        MediaKind, Mid, Rid, TrackKey, TrackMetadata, TrackMetadataWithUserId,
+        MediaKind, Mid, Rid, Speaking, SpeakingWithUserId, TrackKey, TrackMetadata,
+        TrackMetadataWithUserId,
         messages::{SignallingCommand, SignallingEvent},
     },
     v2::types::{ChannelId, UserId},
@@ -503,7 +504,7 @@ impl ShardCall {
                 }
             }
 
-            // these events are handled inside peer
+            // these two events are handled inside peer
             SEvent::ChannelOpen(channel_id, label) => {
                 debug!(channel_id = ?self.channel_id, dc_id = ?channel_id, label = %label, "Data channel opened");
             }
@@ -513,7 +514,68 @@ impl ShardCall {
 
             SEvent::ChannelData(data) => {
                 debug!(channel_id = ?self.channel_id, dc_id = ?data.id, "Data channel data");
-                // TODO: broadcast speaking data to other users
+
+                // speaking data
+                if self.peers[peer_slot].datachannels().speaking() == Some(data.id) {
+                    let Ok(speaking) = Speaking::from_bytes(&data.data) else {
+                        return events;
+                    };
+
+                    // map the mid from the publisher's perspective to the track id
+                    let Some(track_id) = self.peers[peer_slot]
+                        .mapping()
+                        .lookup_track(speaking.mid.into())
+                    else {
+                        warn!("speaking mid not found for publisher");
+                        return events;
+                    };
+
+                    // only the publisher of a track can send speaking indicators for it
+                    let track = &self.inbound[track_id];
+                    if track.publisher != peer_slot {
+                        return events;
+                    }
+
+                    // enforce publisher permissions
+                    let perms = self.peers[peer_slot].permissions();
+                    let can_send = match (track.kind, &track.key) {
+                        (MediaKind::Audio, TrackKey::User) => perms.audio,
+                        _ => perms.video,
+                    };
+
+                    if !can_send {
+                        return events;
+                    }
+
+                    let user_id = self.peers[peer_slot].user_id();
+
+                    // broadcast to other peers
+                    // PERF: O(n) iteration over every outbound track. maybe i should add back the old Router struct?
+                    for (_, outbound) in &self.outbound {
+                        if outbound.source != track_id {
+                            continue;
+                        }
+
+                        let target_peer = &mut self.peers[outbound.subscriber];
+                        let target_perms = target_peer.permissions();
+
+                        // if target is deafened and track is audio, skip writing speaking indicator
+                        if track.kind == MediaKind::Audio && target_perms.deaf {
+                            continue;
+                        }
+
+                        if let Some(chan) = target_peer.datachannels().speaking() {
+                            if let Some(mut c) = target_peer.rtc_mut().channel(chan) {
+                                let speaking_with_uid = SpeakingWithUserId {
+                                    mid: outbound.state.mid().unwrap().into(),
+                                    flags: speaking.flags,
+                                    user_id,
+                                };
+                                let _ = c.write(true, &speaking_with_uid.to_bytes());
+                            }
+                        }
+                    }
+                }
             }
 
             _ => {}

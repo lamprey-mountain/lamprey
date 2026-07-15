@@ -83,6 +83,18 @@ impl Webrtc {
         Ok(())
     }
 
+    pub fn datachannels(&self) -> &Datachannels {
+        &self.datachannels
+    }
+
+    pub fn rtc(&self) -> &Rtc {
+        &self.rtc
+    }
+
+    pub fn rtc_mut(&mut self) -> &mut Rtc {
+        &mut self.rtc
+    }
+
     pub fn update_voice_state(&mut self, vs: VoiceStateUpdate) {
         self.vs.inner.apply(vs);
     }

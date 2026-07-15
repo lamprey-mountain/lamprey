@@ -17,7 +17,10 @@ new_key_type! {
     /// mids are local to each peer, `TrackId`s are shared
     pub struct TrackSlot;
 
-    pub struct SinkSlot;
+    // TODO: split apart TrackSlot
+    // pub struct InboundSlot;
+    // pub struct OutboundSlot;
+
     pub struct CallSlot;
 }
 
@@ -28,6 +31,7 @@ pub struct SfuVoiceState {
 }
 
 impl SfuVoiceState {
+    // PERF: *maybe* caching this could be helpful? since perm checks will probably end up having to be run for every MediaData event?
     pub fn permissions(&self) -> Permissions {
         Permissions {
             video: self.permissions.video(),
