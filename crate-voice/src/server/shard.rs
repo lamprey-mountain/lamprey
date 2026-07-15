@@ -185,7 +185,7 @@ impl Shard {
             for (peer_slot, t) in timeouts {
                 let key = self
                     .timeout_queue
-                    .insert_at((call_slot, peer_slot), dbg!(t).into());
+                    .insert_at((call_slot, peer_slot), t.into());
                 self.timeout_keys.insert((call_slot, peer_slot), key);
             }
 
