@@ -81,6 +81,38 @@ impl ServiceVoice {
         Ok(handle)
     }
 
+    // TEMP: old code for reference
+    // pub async fn call_create(&self, params: CallCreate) -> Result<()> {
+    //     let channel = self
+    //         .state
+    //         .services()
+    //         .channels
+    //         .get(params.channel_id, None)
+    //         .await?;
+    //
+    //     let room_id = channel.room_id;
+    //     let call = Call {
+    //         room_id,
+    //         channel_id: params.channel_id,
+    //         topic: params.topic,
+    //         created_at: Time::now_utc(),
+    //     };
+    //     self.calls.insert(params.channel_id, call.clone());
+    //
+    //     let _ = self.state.broadcast(MessageSync::CallCreate { call });
+    //
+    //     let has_voice_states = self
+    //         .voice_states
+    //         .iter()
+    //         .any(|s| s.channel_id == params.channel_id);
+    //
+    //     if !has_voice_states {
+    //         self.spawn_call_cleanup(params.channel_id);
+    //     }
+    //
+    //     Ok(())
+    // }
+
     /// delete a call
     ///
     /// by default, this will not delete calls with members still in it. pass `force = true` to disconnect everyone first.
@@ -95,6 +127,18 @@ impl ServiceVoice {
         }
 
         true
+
+        // === old code===
+        // if force {
+        //     let _ = self.disconnect_everyone(channel_id).await;
+        // }
+        // self.calls.remove(&channel_id);
+        //
+        // if let Some((_, handle)) = self.cleanup_tasks.remove(&channel_id) {
+        //     handle.abort();
+        // }
+        //
+        // let _ = self.state.broadcast(MessageSync::CallDelete { channel_id });
     }
 
     /// update a call
@@ -167,6 +211,7 @@ impl ServiceVoice {
 
     /// restart a call's cleanup task timer
     pub fn call_bump(&self, channel_id: ChannelId) {
+        // PERF: maybe `.remove()` instead to avoid cloning?
         if let Some(mut entry) = self.calls.get_mut(&channel_id) {
             let handle = entry.value();
             handle.cleanup_task.abort();
@@ -177,7 +222,7 @@ impl ServiceVoice {
                 call: handle.call.clone(),
                 sfus: handle.sfus.clone(),
                 cleanup_task: new_cleanup_task,
-                voice_states: todo!(),
+                voice_states: handle.voice_states.clone(),
             });
 
             *entry.value_mut() = updated_handle;

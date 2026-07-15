@@ -20,6 +20,8 @@ pub struct VoiceStateHandleInner {
 
 pub type VoiceStateHandle = Arc<VoiceStateHandleInner>;
 
+// yeah, i know the name sucks
+#[derive(Debug, Clone)]
 pub enum VoiceStateState {
     Connecting,
     Connected,
@@ -349,4 +351,31 @@ impl ServiceVoice {
             })
             .collect()
     }
+
+    // pub async fn state_remove(&self, user_id: &UserId) {
+    //     if let Some((_, state)) = self.voice_states.remove(user_id) {
+    //         let channel_id = state.channel_id;
+
+    //         let still_connected: Vec<_> = self
+    //             .voice_states
+    //             .iter()
+    //             .filter(|s| s.channel_id == channel_id)
+    //             .collect();
+
+    //         if still_connected.is_empty() {
+    //             let channel = self.state.services().channels.get(channel_id, None).await;
+    //             if let Ok(channel) = channel {
+    //                 match channel.ty {
+    //                     ChannelType::Voice => {
+    //                         self.calls.remove(&channel_id);
+    //                     }
+    //                     ChannelType::Dm | ChannelType::Gdm | ChannelType::Broadcast => {
+    //                         self.spawn_call_cleanup(channel_id);
+    //                     }
+    //                     _ => {}
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 }

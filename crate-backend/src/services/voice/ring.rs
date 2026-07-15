@@ -1,6 +1,8 @@
-use crate::services::voice::ServiceVoice;
 use crate::Result;
-use common::v1::types::{voice::RingEligibility, ChannelId, UserId};
+use crate::services::voice::ServiceVoice;
+use common::v1::types::{ChannelId, UserId, voice::RingEligibility};
+
+// TODO: implement ringing (for Dm/Gdm channels)
 
 impl ServiceVoice {
     /// check if this channel can be rung

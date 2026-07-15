@@ -1,9 +1,11 @@
 use crate::Result;
-use crate::services::voice::voice_state::VoiceStateHandle;
+use crate::services::voice::voice_state::{
+    VoiceStateHandle, VoiceStateHandleInner, VoiceStateState,
+};
 use crate::services::voice::{ServiceVoice, SfuCommand, SfuStats};
 use axum::extract::ws::WebSocket;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::voice::messages::SfuEvent;
+use common::v1::types::voice::messages::{SfuEvent, SignallingEvent};
 use common::v1::types::{ChannelId, MessageSync, SfuId, UserId};
 use lamprey_backend_core::Error;
 use std::collections::HashMap;
@@ -132,16 +134,18 @@ impl ServiceVoice {
                                 //     .as_ref()
                                 //     .map(|cf| is_clean_close(cf.code.into()))
                                 //     .unwrap_or(true);
-                                // TODO: remove sfu
+                                break;
                             }
                             None => {
-                                // TODO: remove sfu
+                                break;
                             }
                             _ => break,
                         }
                     }
                 }
             }
+
+            state.services().voice.sfu_handle_shutdown(sfu_id).await;
         });
 
         Ok(handle)
@@ -259,10 +263,59 @@ impl ServiceVoice {
     }
 
     /// handle a sfu going away
-    pub fn sfu_handle_shutdown(&self, sfu_id: SfuId) -> Result<()> {
-        // TODO: remove sfu
-        // TODO: migrate users
-        todo!()
+    pub async fn sfu_handle_shutdown(&self, sfu_id: SfuId) {
+        let Some((_, _)) = self.sfus.remove(&sfu_id) else {
+            return;
+        };
+
+        // remove sfu from all calls
+        for call in self.calls.iter() {
+            call.value().sfus.remove(&sfu_id);
+        }
+
+        // migrate all voice states on this sfu
+        let affected_states = self.state_list_by_sfu(sfu_id);
+
+        for handle in affected_states {
+            let channel_id = handle.inner().channel_id;
+            let user_id = handle.inner().user_id;
+
+            let new_sfu = match self.sfu_find_closest(&UserLocation {}) {
+                Ok(sfu) => sfu,
+                Err(_) => {
+                    // TODO: warn! cannot migrate, user will be disconnected
+                    continue;
+                }
+            };
+            let new_sfu_id = new_sfu.id();
+
+            // update the voice state
+            if let Some(call) = self.call_get(channel_id) {
+                // PERF: maybe `.remove()` instead to avoid cloning?
+                if let Some(mut entry) = call.voice_states.get_mut(&user_id) {
+                    let old_handle = entry.value();
+
+                    let new_handle = Arc::new(VoiceStateHandleInner {
+                        inner: old_handle.inner().clone(),
+                        // NOTE: do i always want to reset state here?
+                        // state: VoiceStateState::Connected,
+                        state: old_handle.state.clone(),
+                        sfu_id: new_sfu_id,
+                    });
+
+                    *entry.value_mut() = new_handle;
+
+                    // PERF(?): maybe don't insert new_sfu_id for every voice state?
+                    call.sfus.insert(new_sfu_id);
+                }
+            }
+
+            let _ = self.state.broadcast(MessageSync::VoiceDispatch {
+                user_id,
+                channel_id,
+                payload: SignallingEvent::Migrate { new_sfu_id },
+            });
+        }
     }
 
     // TODO:
