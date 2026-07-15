@@ -56,7 +56,7 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 	const [store, update] = createStore<VoiceProviderState>({
 		vc,
 		joinedChannelId: null,
-		muted: false,
+		muted: true,
 		deafened: false,
 		camera: false,
 		screensharing: false,
@@ -106,6 +106,14 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 			const enabled = enabled_ ?? !mic.track.enabled;
 			mic.track.enabled = enabled;
 
+			// update muted state
+			update("muted", !enabled);
+
+			// connect to vad
+			vad.connect(mic.stream);
+
+			if (vc.connectionState() === "disconnected") return;
+
 			// connect to transceiver
 			const tr = vc.acquireTransceiver("user", "audio");
 			if (tr.currentDirection !== "stopped") {
@@ -114,12 +122,6 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 			} else {
 				voiceLog.warn("microphone transceiver is stopped", tr);
 			}
-
-			// connect to vad
-			vad.connect(mic.stream);
-
-			// update muted state
-			update("muted", !enabled);
 		},
 
 		async toggleCamera(enabled_?: boolean) {
