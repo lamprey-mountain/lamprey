@@ -14,12 +14,15 @@ pub use server::sfu::Sfu;
 
 pub(crate) mod prelude {
     pub use crate::error::{Error, Result};
-    pub use crate::util::{CallSlot, PeerSlot, SinkSlot, TrackSlot};
+    pub use crate::util::{CallSlot, PeerSlot, TrackSlot};
 
-    pub use futures::{Sink, SinkExt, Stream, StreamExt};
+    pub use futures::{SinkExt, Stream, StreamExt};
     pub use std::sync::Arc;
 
     pub use str0m::channel::ChannelId as SChannelId;
-    pub use str0m::media::{KeyframeRequestKind as SKeyframeRequestKind, Mid as SMid, Rid as SRid};
+    pub use str0m::media::{
+        Direction as SDirection, KeyframeRequestKind as SKeyframeRequestKind, Mid as SMid,
+        Rid as SRid,
+    };
     pub use str0m::{Event as SEvent, Input as SInput, Output as SOutput};
 }

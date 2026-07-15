@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     client::webrtc::{
-        Webrtc,
+        PeerChange, Webrtc,
         track::{Inbound, Outbound, TrackState},
     },
     prelude::*,
@@ -13,7 +13,7 @@ use crate::{
 
 use common::{
     v1::types::voice::{
-        MediaKind, Mid, Rid, SessionDescription, TrackKey, TrackMetadata,
+        MediaKind, Mid, Rid, TrackKey, TrackMetadata, TrackMetadataWithUserId,
         messages::{SignallingCommand, SignallingEvent},
     },
     v2::types::{ChannelId, UserId},
@@ -173,7 +173,12 @@ impl ShardCall {
                 SignallingCommand::Answer { sdp } => {
                     p.handle_answer(sdp);
 
-                    // TODO: update inbound tracks
+                    // update inbound tracks
+                    for (_, t) in self.inbound.iter_mut().filter(|(_, t)| t.publisher == peer) {
+                        if let TrackState::Negotiating(mid) = t.state {
+                            t.state = TrackState::Open(mid);
+                        }
+                    }
 
                     // update outbound tracks
                     let mut outbound_to_remove = Vec::new();
@@ -191,7 +196,11 @@ impl ShardCall {
                         }
                     }
 
-                    // TODO: remove based on outbound_to_remove
+                    // remove based on outbound_to_remove
+                    for track_id in outbound_to_remove {
+                        self.outbound.remove(track_id);
+                        p.mapping_mut().remove_by_track(track_id);
+                    }
                 }
                 SignallingCommand::Candidate { candidate } => p.handle_candidate(candidate),
                 SignallingCommand::Subscribe { subs } => {
@@ -342,6 +351,8 @@ impl ShardCall {
             SEvent::Connected => {
                 debug!(channel_id = ?self.channel_id, "Peer connected");
             }
+
+            // media events
             SEvent::MediaAdded(media) => {
                 debug!(channel_id = ?self.channel_id, mid = ?media.mid, "Media added");
                 let mid = media.mid.into();
@@ -395,15 +406,6 @@ impl ShardCall {
                     }
                 }
             }
-            SEvent::ChannelOpen(channel_id, label) => {
-                debug!(channel_id = ?self.channel_id, dc_id = ?channel_id, label = %label, "Data channel opened");
-            }
-            SEvent::ChannelData(data) => {
-                debug!(channel_id = ?self.channel_id, dc_id = ?data.id, "Data channel data");
-            }
-            SEvent::ChannelClose(channel_id) => {
-                debug!(channel_id = ?self.channel_id, dc_id = ?channel_id, "Data channel closed");
-            }
             SEvent::KeyframeRequest(keyframe_request) => {
                 debug!(channel_id = ?self.channel_id, mid = ?keyframe_request.mid, "Keyframe request");
                 let mid = keyframe_request.mid.into();
@@ -430,19 +432,92 @@ impl ShardCall {
                 }
             }
 
+            // these events are handled inside peer
+            SEvent::ChannelOpen(channel_id, label) => {
+                debug!(channel_id = ?self.channel_id, dc_id = ?channel_id, label = %label, "Data channel opened");
+            }
+            SEvent::ChannelClose(channel_id) => {
+                debug!(channel_id = ?self.channel_id, dc_id = ?channel_id, "Data channel closed");
+            }
+
+            SEvent::ChannelData(data) => {
+                debug!(channel_id = ?self.channel_id, dc_id = ?data.id, "Data channel data");
+                // TODO: broadcast speaking data to other users
+            }
+
             _ => {}
         }
     }
 
+    /// create a sdp offer for any local track changes on this sfu
     pub fn process_sdp_negotiations(&mut self) -> Vec<(UserId, SignallingEvent)> {
-        // 1. collect pending/closing tracks
-        // 2. create a new sdp change
-        // 3. changes.add_media() for pending tracks
-        // 4. changes.stop_media() for closing tracks
-        // 5. offer = negotiate_if_needed(changes)
-        // 6. collect tracks for SignallingEvent::Offer
-        // 7. send offer to user
+        // PERF: store a list of dirty tracks and/or peers instead of iterating over every outbound track
 
-        todo!()
+        let mut changes: HashMap<PeerSlot, Vec<PeerChange>> = HashMap::new();
+
+        // only outbound changes need to be handled, inbound is handled during client negotiation
+        for (outbound_slot, outbound) in &self.outbound {
+            match outbound.state {
+                TrackState::Pending => {
+                    let inbound = &self.inbound[outbound.source];
+                    changes
+                        .entry(outbound.subscriber)
+                        .or_default()
+                        .push(PeerChange::Open(outbound_slot, inbound.kind));
+                }
+                TrackState::Closing(mid) => {
+                    changes
+                        .entry(outbound.subscriber)
+                        .or_default()
+                        .push(PeerChange::Close(mid));
+                }
+                _ => {}
+            }
+        }
+
+        let mut events = vec![];
+
+        // apply changes for each peer
+        for (peer_slot, pending) in changes {
+            let peer = &mut self.peers[peer_slot];
+            match peer.apply_outbound_changes(&pending) {
+                Ok(Some((mids, offer))) => {
+                    let user_id = peer.user_id();
+
+                    // update outbound tracks' state to Open
+                    for (slot, mid) in mids {
+                        self.outbound[slot].state = TrackState::Open(mid);
+                    }
+
+                    // collect track metadata for SignallingEvent::Offer
+                    let mut tracks = vec![];
+                    for outbound in self.outbound.values().filter(|o| o.subscriber == peer_slot) {
+                        let t = &self.inbound[outbound.source];
+
+                        // TODO: handle outbound with state Closing
+
+                        tracks.push(TrackMetadataWithUserId {
+                            inner: TrackMetadata {
+                                // TODO: have actual track ids instead of keying by (mid, user_id) (and sometimes (kind, key)) (?)
+                                mid: t.state.mid().unwrap().into(),
+                                kind: t.kind,
+                                key: t.key.clone(),
+                                layers: t.layers.clone(),
+                                whisper: None,
+                            },
+                            user_id: self.peers[t.publisher].user_id(),
+                        });
+                    }
+
+                    events.push((user_id, SignallingEvent::Offer { sdp: offer, tracks }));
+                }
+                Ok(None) => {}
+                Err(_) => todo!("handle error"),
+            }
+        }
+
+        events
     }
 }
+
+// struct ShardCallDrain(Vec<str0m::net::Transmit>, Vec<(PeerSlot, Instant)>)
