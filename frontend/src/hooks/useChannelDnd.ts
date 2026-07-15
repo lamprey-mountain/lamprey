@@ -221,6 +221,7 @@ export const useChannelDnd = () => {
 				const siblings = [...channels.listByRoom(roomId)].filter(
 					(c) => c.parent_id === ct.parent_id,
 				);
+				siblings.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 
 				const fromIndex = siblings.findIndex((c) => c.id === cd.id);
 				if (fromIndex !== -1) siblings.splice(fromIndex, 1);
