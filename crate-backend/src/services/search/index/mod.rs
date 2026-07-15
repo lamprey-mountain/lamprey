@@ -4,6 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use lamprey_search::directory::ObjectDirectory;
 use tantivy::{
     DocAddress, Index, IndexReader, IndexWriter, Searcher, TantivyDocument, Term,
     collector::Collector, query::Query, schema::document::DocumentDeserialize,
@@ -14,9 +15,7 @@ use tracing::error;
 
 use crate::{
     Error, Result, ServerStateInner,
-    services::search::{
-        directory::ObjectDirectory, schema::IndexDefinition, tokenizer::DynamicTokenizer,
-    },
+    services::search::{schema::IndexDefinition, tokenizer::DynamicTokenizer},
 };
 
 pub mod glue;
@@ -175,7 +174,8 @@ impl AsyncIndex {
                 .unwrap_or_else(|| PathBuf::from(format!("/tmp/tantivy/{name_clone}")));
 
             let dir = ObjectDirectory::new(
-                s,
+                s.blobs.clone(),
+                s.tokio.clone(),
                 PathBuf::from(format!("tantivy/{name_clone}")),
                 cache_path,
             );

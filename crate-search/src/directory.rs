@@ -20,8 +20,6 @@ use tokio::runtime::Handle as TokioHandle;
 use tokio::task::JoinSet;
 use tracing::{debug, warn};
 
-use crate::ServerStateInner;
-
 /// block size for chunked caching (1MB)
 const BLOCK_SIZE: usize = 1024 * 1024;
 
@@ -85,11 +83,11 @@ struct ObjectFileWrite {
 }
 
 impl ObjectDirectory {
-    pub fn new(s: Arc<ServerStateInner>, base_path: PathBuf, cache_path: PathBuf) -> Self {
+    pub fn new(blobs: Operator, rt: TokioHandle, base_path: PathBuf, cache_path: PathBuf) -> Self {
         std::fs::create_dir_all(&cache_path).expect("failed to create cache directory");
         Self {
-            blobs: s.blobs.clone(),
-            rt: s.tokio.clone(),
+            blobs,
+            rt,
             base_path,
             cache_path,
             cache_metadata: Arc::new(DashMap::new()),

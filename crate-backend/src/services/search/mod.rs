@@ -8,7 +8,6 @@ use crate::services::search::index::{AsyncIndex, AsyncIndexHandle};
 use crate::services::search::schema::unified::UnifiedIndex;
 use crate::{ServerStateInner, error::Result};
 
-mod directory;
 mod import;
 mod index;
 mod schema;

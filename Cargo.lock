@@ -4274,6 +4274,7 @@ dependencies = [
  "lamprey-macros",
  "lamprey-markdown",
  "lamprey-script",
+ "lamprey-search",
  "lamprey-unfurl",
  "lettre",
  "maxminddb",
@@ -4778,6 +4779,20 @@ dependencies = [
  "url",
  "uuid",
  "yrs",
+]
+
+[[package]]
+name = "lamprey-search"
+version = "0.1.1"
+dependencies = [
+ "bytes",
+ "dashmap 6.1.0",
+ "once_cell",
+ "opendal",
+ "tantivy",
+ "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
