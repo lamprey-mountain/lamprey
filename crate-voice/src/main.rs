@@ -4,8 +4,9 @@ use anyhow::Result;
 use figment::providers::{Env, Format, Toml};
 use lamprey_backend_core::config::Config;
 use lamprey_voice::Sfu;
-use tracing::subscriber;
-use tracing_subscriber::EnvFilter;
+use opentelemetry_otlp::WithExportConfig;
+use tracing::debug;
+use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -16,18 +17,17 @@ async fn main() -> Result<()> {
     let config: Config = figment::Figment::new()
         .merge(Toml::file("config.toml"))
         .merge(Toml::file("sfu.toml"))
-        .merge(Env::raw())
+        .merge(Env::raw().only(&["RUST_LOG"]))
         .extract()?;
 
-    let sub = tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_str(&config.rust_log)?)
-        .finish();
-    subscriber::set_global_default(sub)?;
+    setup_otel(&config)?;
 
-    let _config_voice = config
-        .voice
-        .as_ref()
-        .expect("missing voice field in config; cannot start sfu");
+    debug!("hello, world!");
+
+    // let _config_voice = config
+    //     .voice
+    //     .as_ref()
+    //     .expect("missing voice field in config; cannot start sfu");
 
     // // TODO: validate network interfaces before starting
     // if let Err(e) = util::select_host_address_ipv4(config_voice.host_ipv4.as_deref()) {
@@ -50,6 +50,34 @@ async fn main() -> Result<()> {
 
     // TODO: proper shutdown handling
     futures::future::pending::<()>().await;
+
+    Ok(())
+}
+
+pub fn setup_otel(config: &Config) -> Result<()> {
+    if let Some(endpoint) = &config.otel_trace_endpoint {
+        let exporter = opentelemetry_otlp::SpanExporter::builder()
+            .with_tonic()
+            .with_endpoint(endpoint)
+            .build()?;
+        let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
+            .with_batch_exporter(exporter)
+            .build();
+        use opentelemetry::trace::TracerProvider;
+        let tracer = provider.tracer("lamprey-api");
+        opentelemetry::global::set_tracer_provider(provider);
+        let telemetry_layer = tracing_opentelemetry::layer().with_tracer(tracer);
+        let subscriber = Registry::default()
+            .with(EnvFilter::from_str(&config.rust_log)?)
+            .with(tracing_subscriber::fmt::layer())
+            .with(telemetry_layer);
+        tracing::subscriber::set_global_default(subscriber)?;
+    } else {
+        let subscriber = Registry::default()
+            .with(EnvFilter::from_str(&config.rust_log)?)
+            .with(tracing_subscriber::fmt::layer());
+        tracing::subscriber::set_global_default(subscriber)?;
+    }
 
     Ok(())
 }

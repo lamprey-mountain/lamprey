@@ -4814,6 +4814,9 @@ dependencies = [
  "lamprey-common",
  "lamprey-hakari",
  "num_cpus",
+ "opentelemetry 0.30.0",
+ "opentelemetry-otlp 0.30.0",
+ "opentelemetry_sdk 0.30.0",
  "postcard",
  "quinn",
  "rand 0.10.1",
@@ -4832,6 +4835,7 @@ dependencies = [
  "tokio-tungstenite 0.27.0",
  "tokio-util",
  "tracing",
+ "tracing-opentelemetry",
  "tracing-subscriber",
  "url",
 ]
