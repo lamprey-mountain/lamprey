@@ -204,6 +204,7 @@ impl ShardCall {
                 }
                 SignallingCommand::Candidate { candidate } => p.handle_candidate(candidate),
                 SignallingCommand::Subscribe { subs } => {
+                    debug!(?peer, ?subs, "Handling subscribe command");
                     let mut requested_tracks = HashSet::new();
                     for s in subs {
                         if let Some(&publisher_pid) = self.users.get(&s.user_id) {
@@ -244,6 +245,7 @@ impl ShardCall {
                             state: TrackState::Pending,
                         });
                     }
+                    debug!(?peer, "Processed subscribe command");
                 }
             }
         }

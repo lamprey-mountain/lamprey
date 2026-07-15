@@ -127,7 +127,7 @@ impl Mesh {
         loop {
             tokio::select! {
                 Some(incoming) = self.endpoint.accept() => {
-                    self.handle_incoming(incoming);
+                    self.handle_incoming(incoming).await;
                 }
                 Some(next) = self.client_tasks.join_next() => {
                     match next {

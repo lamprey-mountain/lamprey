@@ -106,10 +106,15 @@ impl Sfu {
             SfuCommand::CreatePeer { state, permissions } => {
                 let channel_id = state.channel_id;
                 let user_id = state.user_id;
+                debug!(?channel_id, ?user_id, "Creating peer");
 
                 let shard = match self.calls.get(&channel_id) {
-                    Some(call) => call.shard.clone(),
+                    Some(call) => {
+                        debug!(?channel_id, "Using existing call shard");
+                        call.shard.clone()
+                    }
                     None => {
+                        debug!(?channel_id, "Creating new call for channel");
                         // TODO: select shard based on load
                         // TODO: shut down `ShardCall`s when idle
                         // TODO: update user_to_channel based on voice state, disconnect
@@ -142,6 +147,7 @@ impl Sfu {
                 channel_id,
                 inner,
             } => {
+                debug!(?user_id, ?channel_id, ?inner, "Received signalling command");
                 if let Some(call) = self.calls.get(&channel_id) {
                     call.shard.handle_signalling(channel_id, user_id, inner);
                 } else {

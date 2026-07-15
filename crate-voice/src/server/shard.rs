@@ -236,12 +236,16 @@ impl Shard {
         match cmd {
             ShardCommand::CreatePeer(state) => {
                 let channel_id = state.inner.channel_id;
+                debug!(?channel_id, ?state.inner.user_id, "Shard: Creating peer");
                 let call_slot = *self
                     .channels
                     .entry(channel_id)
                     .or_insert_with(|| self.calls.insert(ShardCall::new(channel_id)));
                 let Some(call) = self.calls.get_mut(call_slot) else {
-                    // TODO: warn
+                    warn!(
+                        ?channel_id,
+                        "Shard: Failed to get call slot for create peer"
+                    );
                     return;
                 };
 
@@ -262,13 +266,21 @@ impl Shard {
                 let local_ufrag = rtc.direct_api().local_ice_credentials().ufrag.to_string();
                 let peer_slot = call.create_peer(state, rtc);
                 self.ufrags.insert(local_ufrag, (call_slot, peer_slot));
+                debug!(?channel_id, "Shard: Peer created");
             }
             ShardCommand::Signalling {
                 channel_id,
                 user_id,
                 inner,
             } => {
+                debug!(
+                    ?channel_id,
+                    ?user_id,
+                    ?inner,
+                    "Shard: Handling signalling command"
+                );
                 let Some(&call_slot) = self.channels.get(&channel_id) else {
+                    warn!(?channel_id, "Shard: Signalling for unknown channel");
                     return;
                 };
                 if let Some(call) = self.calls.get_mut(call_slot) {
@@ -291,6 +303,7 @@ impl Shard {
                 rid,
                 kind,
             } => {
+                debug!(?channel_id, ?user_id, ?mid, "Shard: Generating keyframe");
                 let Some(&call_slot) = self.channels.get(&channel_id) else {
                     return;
                 };

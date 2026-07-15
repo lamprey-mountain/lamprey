@@ -13,7 +13,7 @@ use tokio_tungstenite::{
     connect_async,
     tungstenite::{client::IntoClientRequest, protocol::Message},
 };
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 
 /// a connection to the api server
 pub struct BackendConnection {
@@ -105,6 +105,7 @@ impl BackendConnection {
                         Message::Text(t) => {
                             match serde_json::from_str::<SfuCommand>(&t) {
                                 Ok(cmd) => {
+                                    trace!("got SfuCommand: {cmd:#?}");
                                     let _ = self.command_broadcast.send(cmd);
                                 }
                                 Err(e) => error!("Failed to deserialize command: {}", e),
