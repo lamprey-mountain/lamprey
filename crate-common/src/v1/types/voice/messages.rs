@@ -13,10 +13,9 @@ use utoipa::ToSchema;
 use crate::v1::types::{
     ChannelId, SfuId, UserId,
     voice::{
-        IceCandidate, KeyframeRequestKind, Mid, Rid, SessionDescription, Speaking,
-        SpeakingWithUserId, Subscription, TrackMetadata, TrackMetadataWithUserId, VoiceErrorCode,
-        VoiceState, VoiceStateUpdate,
-        internal::{SfuChannel, SfuPermissions, SfuStats},
+        IceCandidate, SessionDescription, SfuStats, SubscriptionUpdate, TrackAnnouncement,
+        TrackCreate, TrackId, TrackMapping, VoiceErrorCode, VoiceStateUpdate,
+        internal::{SfuVoiceState, VoiceConfig},
     },
 };
 
@@ -42,10 +41,7 @@ pub enum SfuCommand {
     /// create a new peer
     ///
     /// sends `PeerCreated` when ready
-    CreatePeer {
-        state: VoiceState,
-        permissions: SfuPermissions,
-    },
+    CreatePeer { state: SfuVoiceState },
 
     /// create a new cascading connection
     ///
@@ -78,10 +74,13 @@ pub enum SfuCommand {
         inner: SignallingCommand,
     },
 
-    /// upsert channel
-    Channel { channel: SfuChannel },
+    /// upsert channel config
+    Channel { id: ChannelId, config: VoiceConfig },
 
     /// a remote peer wants a keyframe for this media
+    // FIXME: keyframe generation between sfus
+    // (this command specifically may not be needed)
+    #[cfg(any())]
     GenerateKeyframe {
         /// the track to generate a keyframe for
         mid: Mid,
@@ -177,7 +176,7 @@ pub enum SignallingCommand {
     /// a sdp offer
     Offer {
         sdp: SessionDescription,
-        tracks: Vec<TrackMetadata>,
+        tracks: Vec<TrackCreate>,
     },
 
     /// a sdp answer
@@ -186,13 +185,8 @@ pub enum SignallingCommand {
     /// an ice candidate
     Candidate { candidate: IceCandidate },
 
-    /// request additional tracks
-    ///
-    /// - all audio from key `user` is sent by default
-    /// - all video and audio from other sources require a subscription
-    /// - sent by server and client
-    /// - replaces the previous subscription
-    Subscribe { subs: Vec<Subscription> },
+    /// update subscribed tracks
+    Subscribe(SubscriptionUpdate),
 }
 
 /// an event sent from the backend to the peer's sync connection
@@ -214,7 +208,7 @@ pub enum SignallingEvent {
     /// a sdp offer
     Offer {
         sdp: SessionDescription,
-        tracks: Vec<TrackMetadataWithUserId>,
+        tracks: Vec<TrackMapping>,
     },
 
     /// a sdp answer
@@ -223,19 +217,15 @@ pub enum SignallingEvent {
     /// an ice candidate
     Candidate { candidate: IceCandidate },
 
-    /// update (replace) available tracks for a user
+    /// update available tracks for a user
     Tracks {
         user_id: UserId,
-        tracks: Vec<TrackMetadata>,
+        added: Vec<TrackAnnouncement>,
+        removed: Vec<TrackId>,
     },
 
-    /// request additional tracks
-    ///
-    /// - all audio from key `user` is sent by default
-    /// - all video and audio from other sources require a subscription
-    /// - sent by server and client
-    /// - replaces the previous subscription
-    Subscribe { subs: Vec<Subscription> },
+    /// update subscribed tracks
+    Subscribe(SubscriptionUpdate),
 
     /// migrate to a new sfu
     ///
@@ -250,168 +240,4 @@ pub enum SignallingEvent {
         /// what exactly went wrong
         code: VoiceErrorCode,
     },
-    // /// please send a thumbnail for the current stream
-    // WantThumbnail,
-    // /// a user connected to the call
-    // Connected { user_id: UserId },
-
-    // /// a user disconnected to the call
-    // Disconnected { user_id: UserId },
-
-    // /// response to Subscribe
-    // Subscribed {
-    //     voice: Vec<UserId>,
-    //     camera: Vec<UserId>,
-    //     livestream: Vec<UserId>,
-    // },
 }
-
-/// a message from one sfu host to another
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum BackboneDispatch {
-    /// acknowledge a dispatch
-    Ack,
-
-    /// sent by client on connect
-    Hello {
-        /// auth token
-        token: String,
-    },
-
-    /// cleanly disconnect
-    Disconnect,
-
-    /// a peer needs a keyframe to render
-    Keyframe {
-        /// the id of the user the track is from
-        user_id: UserId,
-
-        /// the track to generate a keyframe for
-        mid: Mid,
-
-        /// the rid to generate a keyframe for
-        rid: Option<Rid>,
-
-        /// the kind of the keyframe that should be generated
-        kind: KeyframeRequestKind,
-    },
-
-    // TODO: use this instead of {Track,Subscription}{Create,Remove}
-    // Signalling(SignallingCommand),
-    /// sender sfu has these tracks
-    TrackCreate {
-        channel_id: ChannelId,
-        tracks: Vec<TrackMetadataWithUserId>,
-    },
-
-    /// sender sfu no longer has these tracks
-    TrackRemove {
-        channel_id: ChannelId,
-        tracks: Vec<(Mid, UserId)>,
-    },
-
-    /// sender sfu wants these tracks
-    SubscriptionCreate {
-        channel_id: ChannelId,
-        subscriptions: Vec<(Subscription, UserId)>,
-    },
-
-    /// sender sfu no longer wants these tracks
-    SubscriptionRemove {
-        channel_id: ChannelId,
-        subscriptions: Vec<(Mid, UserId)>,
-    },
-}
-
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct BackboneDispatchEnvelope {
-    pub nonce: Option<String>,
-    pub dispatch: BackboneDispatch,
-}
-
-// TODO: remove?
-// /// a datagram sent between sfu hosts
-// #[derive(Debug, Clone)]
-// pub enum BackboneDatagram {
-//     Media(MediaData),
-//     Speaking(SpeakingWithUserId),
-// }
-
-// #[derive(Debug, thiserror::Error)]
-// pub enum BackboneDatagramDeserializeError {
-//     /// payload is empty
-//     #[error("payload is empty")]
-//     EmptyPayload,
-
-//     /// payload unexpectedly ended
-//     #[error("payload unexpectedly ended")]
-//     UnexpectedEof,
-
-//     /// unknown payload type
-//     #[error("unknown payload type: {0}")]
-//     UnknownPayloadType(u8),
-// }
-
-// impl BackboneDatagram {
-//     /// serialize this datagram to bytes
-//     pub fn to_bytes(&self) -> Bytes {
-//         let mut buf = Vec::new();
-//         use bytes::BufMut;
-//         match self {
-//             BackboneDatagram::Media(m) => {
-//                 buf.put_u8(0);
-//                 buf.put_slice(&m.to_bytes());
-//             }
-//             BackboneDatagram::Speaking(s) => {
-//                 buf.put_u8(1);
-//                 buf.put_slice(s.user_id.as_bytes());
-//                 buf.put_slice(&s.mid.0);
-//                 buf.put_u8(s.flags.0);
-//             }
-//         }
-//         buf.into()
-//     }
-
-//     /// deserialize this datagram from bytes
-//     pub fn from_bytes(bytes: &[u8]) -> Result<Self, BackboneDatagramDeserializeError> {
-//         if bytes.is_empty() {
-//             return Err(BackboneDatagramDeserializeError::EmptyPayload);
-//         }
-//         let tag = bytes[0];
-//         let payload = &bytes[1..];
-//         match tag {
-//             0 => {
-//                 let m = MediaData::from_bytes(payload)
-//                     .map_err(|_| BackboneDatagramDeserializeError::UnexpectedEof)?;
-//                 Ok(BackboneDatagram::Media(m))
-//             }
-//             1 => {
-//                 use bytes::Buf;
-//                 let mut buf = payload;
-//                 if buf.remaining() < 16 + 16 + 1 {
-//                     return Err(BackboneDatagramDeserializeError::UnexpectedEof);
-//                 }
-//                 let mut peer_bytes = [0u8; 16];
-//                 buf.copy_to_slice(&mut peer_bytes);
-//                 let user_id = UserId::from(Uuid::from_bytes(peer_bytes));
-
-//                 let mut mid_bytes = [0u8; 16];
-//                 buf.copy_to_slice(&mut mid_bytes);
-//                 let source_mid = Mid(mid_bytes);
-
-//                 let flags = SpeakingFlags(buf.get_u8());
-
-//                 Ok(BackboneDatagram::Speaking(SpeakingWithUserId {
-//                     user_id,
-//                     mid: source_mid,
-//                     flags,
-//                 }))
-//             }
-//             _ => Err(BackboneDatagramDeserializeError::UnknownPayloadType(tag)),
-//         }
-//     }
-// }

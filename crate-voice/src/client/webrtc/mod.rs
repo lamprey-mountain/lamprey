@@ -96,7 +96,7 @@ impl Webrtc {
     }
 
     pub fn update_voice_state(&mut self, vs: VoiceStateUpdate) {
-        self.vs.inner.apply(vs);
+        self.vs.inner.apply_update(vs);
     }
 
     pub fn disconnect(&mut self) {

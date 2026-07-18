@@ -10,11 +10,9 @@ use utoipa::ToSchema;
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum VoiceErrorCode {
-    /// unknown track
+    /// unknown mid
+    ///
+    /// there isn't any track that exists with this mid
     #[error("unknown mid")]
     UnknownMid,
-
-    /// unknown rid
-    #[error("unknown rid")]
-    UnknownRid,
 }

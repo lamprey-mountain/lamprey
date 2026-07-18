@@ -174,6 +174,10 @@ pub enum Permission {
     /// use voice activity detection
     VoiceVad,
 
+    /// whisper to other people
+    #[cfg(any())] // TODO: add
+    VoiceWhisper,
+
     /// can request to speak in broadcast channels
     VoiceRequest,
 

@@ -83,6 +83,7 @@ pub enum MessageClient {
     VoiceConnect {
         voice_state: VoiceStateUpdate,
         nonce: Option<String>,
+        // TODO: protocol: VoiceProtocol?
     },
 
     /// dispatch a command to a voice connection

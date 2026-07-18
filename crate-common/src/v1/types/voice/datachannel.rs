@@ -9,7 +9,11 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    v1::types::{Mime, UserId, misc::hashes::Hashes, voice::Mid},
+    v1::types::{
+        Mime, UserId,
+        misc::hashes::Hashes,
+        voice::{Mid, Speaking},
+    },
     v2::types::media::MediaMetadata,
 };
 
@@ -43,74 +47,11 @@ pub enum DatachannelProtocol {
 // TODO: rename to DatachannelDatagram
 #[derive(Debug, Clone)]
 pub enum Datachannel {
-    Speaking(SpeakingDatagram),
+    Speaking(Speaking),
     Position(PositionDatagram),
     Sendfile(SendfileDatagram),
     Application(ApplicationDatagram),
     // Control(ControlDatagram),
-}
-
-/// speaking datagram
-///
-/// ## binary
-///
-/// - 16 byte mid
-/// - 16 byte user id
-/// - 1 byte flags
-#[derive(Debug, Clone, PartialEq, Eq)]
-// TODO: use binary for serde
-// #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct SpeakingDatagram {
-    pub mid: Mid,
-    pub user_id: UserId,
-    pub flags: SpeakingFlags,
-}
-
-// TODO: merge into SpeakingDatagram
-/// a message sent from the peer to indicate that they're speaking (among other things)
-///
-/// ## binary
-///
-/// - 16 byte mid
-/// - 1 byte flags
-// could be fun to add other filters? like lowpass, reverb, etc (can be done client side)
-#[derive(Debug, Clone)]
-// TODO: use binary for serde
-// #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct Speaking {
-    pub mid: Mid,
-    pub flags: SpeakingFlags,
-}
-
-// TODO: merge into SpeakingDatagram
-/// a message sent to the client to indicate that someone is speaking
-///
-/// ## binary
-///
-/// - 16 byte mid
-/// - 16 byte user id
-/// - 1 byte flags
-#[derive(Debug, Clone)]
-// TODO: use binary for serde
-// #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct SpeakingWithUserId {
-    pub mid: Mid,
-    pub user_id: UserId,
-    pub flags: SpeakingFlags,
-}
-
-/// a speaking datachannel message from a sfu
-///
-/// ## binary
-///
-/// - 16 byte mid
-/// - 16 user id
-/// - 1 byte flags
-#[derive(Debug, Clone)]
-pub struct SpeakingDatagramResponse {
-    pub mid: Mid,
-    pub user_id: UserId,
-    pub flags: SpeakingFlags,
 }
 
 /// an audio position datagram
@@ -443,112 +384,21 @@ pub enum ControlDispatch {
     // TODO: managing datachannels?
 }
 
-bitflags! {
-    /// Flags for speaking
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-    pub struct SpeakingFlags: u8 {
-        /// whether to send audio
-        const AUDIO = 1 << 0;
-
-        /// whether a speaking indicator should be sent
-        const INDICATOR = 1 << 1;
-
-        /// whether to use priority speaker
-        const PRIORITY = 1 << 2;
-
-        /// whether to broadcast to multiple channels
-        const BROADCAST = 1 << 3;
-    }
+mod private {
+    pub trait Sealed {}
 }
 
-impl Speaking {
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(16 + 1);
-        bytes.extend_from_slice(&self.mid.0);
-        bytes.push(self.flags.bits());
-        bytes
-    }
+pub(super) use private::Sealed as DatagramSealed;
 
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, ()> {
-        if bytes.len() != 17 {
-            return Err(());
-        }
-        let mut mid = [0u8; 16];
-        mid.copy_from_slice(&bytes[0..16]);
-        let flags = SpeakingFlags::from_bits_truncate(bytes[16]);
-        Ok(Speaking {
-            mid: Mid(mid),
-            flags,
-        })
-    }
-}
+pub trait Datagram: Sized + private::Sealed {
+    type DecodeError;
+    type EncodeError;
 
-impl SpeakingWithUserId {
-    pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(16 + 1 + 16);
-        bytes.extend_from_slice(&self.mid.0);
-        bytes.extend_from_slice(self.user_id.as_bytes());
-        bytes.push(self.flags.bits());
-        bytes
-    }
+    /// encode this into an output buffer
+    fn encode<B: bytes::BufMut>(&self, buf: &mut B) -> Result<usize, Self::EncodeError>;
 
-    pub fn from_bytes(bytes: &[u8]) -> Result<Self, ()> {
-        if bytes.len() != 33 {
-            return Err(());
-        }
-        let mut mid = [0u8; 16];
-        mid.copy_from_slice(&bytes[0..16]);
-        let mut peer_bytes = [0u8; 16];
-        peer_bytes.copy_from_slice(&bytes[16..32]);
-        Ok(SpeakingWithUserId {
-            mid: Mid(mid),
-            flags: SpeakingFlags::from_bits_truncate(bytes[32]),
-            user_id: UserId::from(Uuid::from_bytes(peer_bytes)),
-        })
-    }
-}
-
-// TODO: serde for all of these
-
-impl SpeakingDatagram {
-    pub fn to_bytes(&self) -> Vec<u8> {
-        todo!()
-    }
-
-    pub fn from_bytes(_bytes: &[u8]) -> Result<Self, ()> {
-        todo!()
-    }
-}
-
-impl PositionDatagram {
-    pub fn to_bytes(&self) -> Vec<u8> {
-        todo!()
-    }
-
-    pub fn from_bytes(_bytes: &[u8]) -> Result<Self, ()> {
-        todo!()
-    }
-}
-
-impl SendfileDatagram {
-    pub fn to_bytes(&self) -> Vec<u8> {
-        todo!()
-    }
-
-    pub fn from_bytes(_bytes: &[u8]) -> Result<Self, ()> {
-        todo!()
-    }
-}
-
-impl ApplicationDatagram {
-    pub fn to_bytes(&self) -> Vec<u8> {
-        todo!()
-    }
-
-    pub fn from_bytes(_bytes: &[u8]) -> Result<Self, ()> {
-        todo!()
-    }
+    /// decode this from a buffer
+    fn decode<B: bytes::Buf>(buf: &mut B) -> Result<Self, Self::DecodeError>;
 }
 
 impl Datachannel {
