@@ -13,17 +13,16 @@ use crate::{
 
 use common::{
     v1::types::voice::{
-        MediaKind, Mid, Rid, Speaking, SpeakingWithUserId, TrackKey, TrackMetadata,
-        TrackMetadataWithUserId,
+        MediaKind, TrackAnnouncement, TrackId, TrackKey, TrackMapping,
+        datachannel::{Datagram, SpeakingDatagram},
+        internal::SfuVoiceState,
         messages::{SignallingCommand, SignallingEvent},
     },
     v2::types::{ChannelId, UserId},
 };
-use slotmap::SlotMap;
+use slotmap::{Key, SlotMap};
 use str0m::Rtc;
 use tracing::{debug, warn};
-
-use crate::util::SfuVoiceState;
 
 /// a shard's voice call data
 pub struct ShardCall {
@@ -62,7 +61,7 @@ impl ShardCall {
 
     /// create a new peer connected to this call
     pub fn create_peer(&mut self, s: SfuVoiceState, rtc: Rtc) -> PeerSlot {
-        let user_id = s.inner.user_id;
+        let user_id = s.user_id;
         debug!("Creating peer for user: {:?}", user_id);
         let peer = Webrtc::new(rtc, s);
         let slot = self.peers.insert(peer);
@@ -108,6 +107,7 @@ impl ShardCall {
                             // process incoming tracks
                             let mut incoming_mids = HashSet::new();
                             let mut implicit_tracks = Vec::new();
+                            let mut added_tracks = Vec::new();
 
                             for track in tracks {
                                 let mid: SMid = track.mid.into();
@@ -124,16 +124,16 @@ impl ShardCall {
 
                                 if let Some(track_id) = existing_track_id {
                                     let t = &mut self.inbound[track_id];
-                                    t.kind = track.kind;
-                                    t.key = track.key.clone();
-                                    t.layers = track.layers.clone();
+                                    t.metadata = track.inner.clone();
                                     t.state = TrackState::Open(mid);
+                                    added_tracks.push(TrackAnnouncement {
+                                        inner: track.inner,
+                                        id: TrackId(track_id.data().as_ffi()),
+                                    });
                                 } else {
                                     let track_id = self.inbound.insert(Inbound {
                                         publisher: peer,
-                                        kind: track.kind,
-                                        key: track.key.clone(),
-                                        layers: track.layers.clone(),
+                                        metadata: track.inner.clone(),
                                         state: TrackState::Open(mid),
                                     });
 
@@ -142,16 +142,22 @@ impl ShardCall {
                                     if self.inbound[track_id].is_implicit() {
                                         implicit_tracks.push(track_id);
                                     }
+                                    added_tracks.push(TrackAnnouncement {
+                                        inner: track.inner,
+                                        id: TrackId(track_id.data().as_ffi()),
+                                    });
                                 }
                             }
 
                             // find tracks that are no longer referenced
                             let mut dead_tracks = Vec::new();
+                            let mut removed_tracks = Vec::new();
                             for (track_id, t) in self.inbound.iter() {
                                 if t.publisher == peer {
                                     if let Some(mid) = t.state.mid() {
                                         if !incoming_mids.contains(&mid) {
                                             dead_tracks.push((track_id, mid));
+                                            removed_tracks.push(TrackId(track_id.data().as_ffi()));
                                         }
                                     }
                                 }
@@ -189,19 +195,13 @@ impl ShardCall {
                             }
 
                             // broadcast Tracks events to everyone in the channel
-                            let tracks: Vec<_> = self
-                                .inbound
-                                .values()
-                                .filter(|t| t.publisher == peer)
-                                .map(|t| t.metadata())
-                                .collect();
-
                             for peer_slot in self.peers.keys() {
                                 events.push((
                                     peer_slot,
                                     SignallingEvent::Tracks {
                                         user_id: publisher_user_id,
-                                        tracks: tracks.clone(),
+                                        added: added_tracks.clone(),
+                                        removed: removed_tracks.clone(),
                                     },
                                 ));
                             }
@@ -244,49 +244,53 @@ impl ShardCall {
                     }
                 }
                 SignallingCommand::Candidate { candidate } => p.handle_candidate(candidate),
-                SignallingCommand::Subscribe { subs } => {
-                    debug!(?peer, ?subs, "Handling subscribe command");
-                    let mut requested_tracks = HashSet::new();
-                    for s in subs {
-                        if let Some(&publisher_pid) = self.users.get(&s.user_id) {
-                            if let Some(track_id) = self.peers[publisher_pid]
-                                .mapping()
-                                .lookup_track(s.mid.into())
-                            {
-                                requested_tracks.insert(track_id);
+                SignallingCommand::Subscribe(update) => {
+                    debug!(?peer, ?update, "Handling subscription update");
+
+                    // handle remove
+                    for track_id in update.remove {
+                        let source_slot = TrackSlot::from(slotmap::KeyData::from_ffi(track_id.0));
+
+                        let mut target_outbound = None;
+                        for (out_id, out) in self.outbound.iter() {
+                            if out.subscriber == peer && out.source == source_slot {
+                                target_outbound = Some(out_id);
+                                break;
+                            }
+                        }
+
+                        if let Some(out_id) = target_outbound {
+                            let out = self.outbound.get_mut(out_id).unwrap();
+                            if let Some(mid) = out.state.mid() {
+                                out.state = TrackState::Closing(mid);
+                            } else {
+                                self.outbound.remove(out_id);
                             }
                         }
                     }
 
-                    // find existing subscriptions
-                    let mut current_subs = Vec::new();
-                    for (out_id, out) in self.outbound.iter() {
-                        if out.subscriber == peer {
-                            current_subs.push((out.source, out_id));
-                        }
-                    }
+                    // handle add
+                    for track_id in update.add {
+                        let source_slot = TrackSlot::from(slotmap::KeyData::from_ffi(track_id.0));
 
-                    // mark missing as closing
-                    for (tid, sid) in current_subs {
-                        if !requested_tracks.contains(&tid) {
-                            if let Some(out) = self.outbound.get_mut(sid) {
-                                if let Some(mid) = out.state.mid() {
-                                    out.state = TrackState::Closing(mid);
+                        if self.inbound.contains_key(source_slot) {
+                            let mut exists = false;
+                            for (_, out) in self.outbound.iter() {
+                                if out.subscriber == peer && out.source == source_slot {
+                                    exists = true;
+                                    break;
                                 }
                             }
-                        }
-                        requested_tracks.remove(&tid);
-                    }
 
-                    // add new subscriptions
-                    for tid in requested_tracks {
-                        self.outbound.insert(Outbound {
-                            subscriber: peer,
-                            source: tid,
-                            state: TrackState::Pending,
-                        });
+                            if !exists {
+                                self.outbound.insert(Outbound {
+                                    subscriber: peer,
+                                    source: source_slot,
+                                    state: TrackState::Pending,
+                                });
+                            }
+                        }
                     }
-                    debug!(?peer, "Processed subscribe command");
                 }
             }
         }
@@ -310,24 +314,24 @@ impl ShardCall {
         self.peers[peer].user_id()
     }
 
-    /// request a keyframe to be generated
-    pub fn generate_keyframe(
-        &mut self,
-        user_id: UserId,
-        mid: Mid,
-        rid: Option<Rid>,
-        kind: SKeyframeRequestKind,
-    ) {
-        if let Some(&peer) = self.users.get(&user_id) {
-            if let Some(p) = self.peers.get_mut(peer) {
-                let mid = mid.into();
-                let rid = rid.map(Into::into);
-                if let Some(track) = p.mapping().lookup_track(mid) {
-                    let _ = p.request_keyframe(track, rid, kind);
-                }
-            }
-        }
-    }
+    // /// request a keyframe to be generated
+    // pub fn generate_keyframe(
+    //     &mut self,
+    //     user_id: UserId,
+    //     mid: Mid,
+    //     rid: Option<Rid>,
+    //     kind: SKeyframeRequestKind,
+    // ) {
+    //     if let Some(&peer) = self.users.get(&user_id) {
+    //         if let Some(p) = self.peers.get_mut(peer) {
+    //             let mid = mid.into();
+    //             let rid = rid.map(Into::into);
+    //             if let Some(track) = p.mapping().lookup_track(mid) {
+    //                 let _ = p.request_keyframe(track, rid, kind);
+    //             }
+    //         }
+    //     }
+    // }
 
     /// handle str0m input for a peer
     pub fn handle_input(&mut self, peer: PeerSlot, input: SInput) {
@@ -412,15 +416,24 @@ impl ShardCall {
                 debug!(channel_id = ?self.channel_id, "Peer connected");
 
                 // Broadcast tracks of all users to the newly connected peer
-                let tracks_by_user: HashMap<UserId, Vec<TrackMetadata>> =
-                    self.inbound.values().fold(HashMap::new(), |mut acc, t| {
+                let tracks_by_user: HashMap<UserId, Vec<TrackAnnouncement>> = self
+                    .inbound
+                    .iter()
+                    .fold(HashMap::new(), |mut acc, (track_id, t)| {
                         let user_id = self.peers[t.publisher].user_id();
-                        acc.entry(user_id).or_default().push(t.metadata());
+                        acc.entry(user_id).or_default().push(TrackAnnouncement {
+                            inner: t.metadata().clone(),
+                            id: TrackId(track_id.data().as_ffi()),
+                        });
                         acc
                     });
 
                 for (user_id, tracks) in tracks_by_user {
-                    events.push(SignallingEvent::Tracks { user_id, tracks });
+                    events.push(SignallingEvent::Tracks {
+                        user_id,
+                        added: tracks,
+                        removed: vec![],
+                    });
                 }
             }
 
@@ -442,7 +455,7 @@ impl ShardCall {
                 };
 
                 let (kind, key) = if let Some(inbound) = self.inbound.get(track_id) {
-                    (inbound.kind, inbound.key.clone())
+                    (inbound.kind(), inbound.metadata.key.clone())
                 } else {
                     return events;
                 };
@@ -517,28 +530,22 @@ impl ShardCall {
 
                 // speaking data
                 if self.peers[peer_slot].datachannels().speaking() == Some(data.id) {
-                    let Ok(speaking) = Speaking::from_bytes(&data.data) else {
+                    let Ok(speaking) = SpeakingDatagram::decode(&mut &data.data[..]) else {
                         return events;
                     };
 
-                    // map the mid from the publisher's perspective to the track id
-                    let Some(track_id) = self.peers[peer_slot]
-                        .mapping()
-                        .lookup_track(speaking.mid.into())
-                    else {
-                        warn!("speaking mid not found for publisher");
+                    let track_id = slotmap::KeyData::from_ffi(speaking.track_id.0).into();
+                    let Some(track) = self.inbound.get(track_id) else {
                         return events;
                     };
 
-                    // only the publisher of a track can send speaking indicators for it
-                    let track = &self.inbound[track_id];
                     if track.publisher != peer_slot {
                         return events;
                     }
 
                     // enforce publisher permissions
                     let perms = self.peers[peer_slot].permissions();
-                    let can_send = match (track.kind, &track.key) {
+                    let can_send = match (track.kind(), &track.metadata.key) {
                         (MediaKind::Audio, TrackKey::User) => perms.audio,
                         _ => perms.video,
                     };
@@ -552,26 +559,24 @@ impl ShardCall {
                     // broadcast to other peers
                     // PERF: O(n) iteration over every outbound track. maybe i should add back the old Router struct?
                     for (_, outbound) in &self.outbound {
-                        if outbound.source != track_id {
-                            continue;
-                        }
+                        // FIXME: roughly this
+                        // if outbound.source != track_id {
+                        //     continue;
+                        // }
 
                         let target_peer = &mut self.peers[outbound.subscriber];
                         let target_perms = target_peer.permissions();
 
                         // if target is deafened and track is audio, skip writing speaking indicator
-                        if track.kind == MediaKind::Audio && target_perms.deaf {
+                        if track.kind() == MediaKind::Audio && target_perms.deaf {
                             continue;
                         }
 
                         if let Some(chan) = target_peer.datachannels().speaking() {
                             if let Some(mut c) = target_peer.rtc_mut().channel(chan) {
-                                let speaking_with_uid = SpeakingWithUserId {
-                                    mid: outbound.state.mid().unwrap().into(),
-                                    flags: speaking.flags,
-                                    user_id,
-                                };
-                                let _ = c.write(true, &speaking_with_uid.to_bytes());
+                                let mut buf = Vec::new();
+                                speaking.encode(&mut buf);
+                                let _ = c.write(true, &buf);
                             }
                         }
                     }
@@ -598,7 +603,7 @@ impl ShardCall {
                     changes
                         .entry(outbound.subscriber)
                         .or_default()
-                        .push(PeerChange::Open(outbound_slot, inbound.kind));
+                        .push(PeerChange::Open(outbound_slot, inbound.kind()));
                 }
                 TrackState::Closing(mid) => {
                     changes
@@ -630,11 +635,12 @@ impl ShardCall {
                         let t = &self.inbound[outbound.source];
 
                         // TODO: handle outbound with state Closing
-
-                        tracks.push(TrackMetadataWithUserId {
-                            inner: t.metadata(),
-                            user_id: self.peers[t.publisher].user_id(),
-                        });
+                        if let Some(mid) = outbound.state.mid() {
+                            tracks.push(TrackMapping {
+                                mid: mid.into(),
+                                id: TrackId(outbound.source.data().as_ffi()),
+                            });
+                        }
                     }
 
                     events.push((user_id, SignallingEvent::Offer { sdp: offer, tracks }));

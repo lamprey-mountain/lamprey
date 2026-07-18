@@ -1,13 +1,11 @@
-use common::v1::types::voice::{
-    IceCandidate, MediaKind, SessionDescription, VoiceState, VoiceStateUpdate,
-};
+use common::v1::types::voice::internal::SfuVoiceState;
+use common::v1::types::voice::{IceCandidate, MediaKind, SessionDescription, VoiceStateUpdate};
 use common::v2::types::UserId;
 use str0m::Rtc;
 use tracing::debug;
 
 use crate::client::webrtc::mapping::Mapping;
 use crate::prelude::*;
-use crate::util::SfuVoiceState;
 use crate::{
     client::webrtc::{datachannels::Datachannels, signalling::Signalling},
     util::permissions::Permissions,
@@ -96,7 +94,7 @@ impl Webrtc {
     }
 
     pub fn update_voice_state(&mut self, vs: VoiceStateUpdate) {
-        self.vs.inner.apply_update(vs);
+        self.vs.apply_update(vs);
     }
 
     pub fn disconnect(&mut self) {
@@ -129,15 +127,15 @@ impl Webrtc {
     ///
     /// resolves from voice state and room permissions
     pub fn permissions(&self) -> Permissions {
-        self.vs.permissions()
+        Permissions::from_state(&self.vs)
     }
 
-    pub fn voice_state(&self) -> &VoiceState {
-        &self.vs.inner
+    pub fn voice_state(&self) -> &SfuVoiceState {
+        &self.vs
     }
 
     pub fn user_id(&self) -> UserId {
-        self.vs.inner.user_id
+        self.vs.user_id
     }
 
     pub fn accepts(&self, input: &SInput) -> bool {

@@ -1,9 +1,8 @@
 //! messages between components of the voice system
 
-// TODO: i need some way to be able to update a user's permissions
-
 use std::net::SocketAddr;
 
+use lamprey_macros::record;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -41,7 +40,20 @@ pub enum SfuCommand {
     /// create a new peer
     ///
     /// sends `PeerCreated` when ready
-    CreatePeer { state: SfuVoiceState },
+    CreatePeer {
+        channel_id: ChannelId,
+        state: SfuVoiceState,
+    },
+
+    /// replace a peer's voice state
+    ///
+    /// can be used to update permissions
+    // TODO: add this
+    #[cfg(any())]
+    UpdatePeer {
+        channel_id: ChannelId,
+        state: SfuVoiceState,
+    },
 
     /// create a new cascading connection
     ///
@@ -190,9 +202,8 @@ pub enum SignallingCommand {
 }
 
 /// an event sent from the backend to the peer's sync connection
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum SignallingEvent {
     /// the sfu is ready to accept voice payloads
     Connected {
@@ -220,7 +231,11 @@ pub enum SignallingEvent {
     /// update available tracks for a user
     Tracks {
         user_id: UserId,
+
+        #[serde(skip_serializing_if = "Vec::is_empty")]
         added: Vec<TrackAnnouncement>,
+
+        #[serde(skip_serializing_if = "Vec::is_empty")]
         removed: Vec<TrackId>,
     },
 

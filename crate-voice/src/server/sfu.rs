@@ -5,7 +5,6 @@ use crate::{
     mesh::{Mesh, MeshHandle},
     prelude::*,
     server::shard::{Shard, ShardHandle},
-    util::SfuVoiceState,
 };
 use common::{
     v1::types::voice::messages::SfuCommand,
@@ -103,8 +102,7 @@ impl Sfu {
             SfuCommand::Init { sfu_id } => {
                 debug!(?sfu_id, "sfu init");
             }
-            SfuCommand::CreatePeer { state, permissions } => {
-                let channel_id = state.channel_id;
+            SfuCommand::CreatePeer { channel_id, state } => {
                 let user_id = state.user_id;
                 debug!(?channel_id, ?user_id, "Creating peer");
 
@@ -137,10 +135,7 @@ impl Sfu {
 
                 self.user_to_channel.insert(user_id, channel_id);
 
-                shard.create_peer(SfuVoiceState {
-                    inner: state,
-                    permissions,
-                });
+                shard.create_peer(channel_id, state);
             }
             SfuCommand::Signalling {
                 user_id,
@@ -154,19 +149,19 @@ impl Sfu {
                     warn!("Received signalling for unknown channel {:?}", channel_id);
                 }
             }
-            SfuCommand::GenerateKeyframe {
-                mid,
-                rid,
-                kind,
-                user_id,
-            } => {
-                if let Some(channel_id) = self.user_to_channel.get(&user_id).copied() {
-                    if let Some(call) = self.calls.get(&channel_id) {
-                        call.shard
-                            .generate_keyframe(channel_id, user_id, mid, rid, kind.into());
-                    }
-                }
-            }
+            // SfuCommand::GenerateKeyframe {
+            //     mid,
+            //     rid,
+            //     kind,
+            //     user_id,
+            // } => {
+            //     if let Some(channel_id) = self.user_to_channel.get(&user_id).copied() {
+            //         if let Some(call) = self.calls.get(&channel_id) {
+            //             call.shard
+            //                 .generate_keyframe(channel_id, user_id, mid, rid, kind.into());
+            //         }
+            //     }
+            // }
             // TODO: handle more commands
             _ => {
                 warn!("Unhandled SfuCommand");

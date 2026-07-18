@@ -1,4 +1,4 @@
-use common::v1::types::voice::{MediaKind, TrackKey, TrackLayer, TrackMetadata};
+use common::v1::types::voice::{MediaKind, TrackKey, TrackMetadata2};
 
 use crate::prelude::*;
 
@@ -34,9 +34,7 @@ impl TrackState {
 // formerly called Track
 pub struct Inbound {
     pub publisher: PeerSlot,
-    pub kind: MediaKind,
-    pub key: TrackKey,
-    pub layers: Vec<TrackLayer>,
+    pub metadata: TrackMetadata2,
     pub state: TrackState,
 }
 
@@ -52,18 +50,19 @@ impl Inbound {
     /// whether this track should always be subscribed
     // NOTE: im not sure if this is a good idea or not. this feels like it could retrospectively be a strange edge case.
     pub fn is_implicit(&self) -> bool {
-        self.kind == MediaKind::Audio && self.key == TrackKey::User
+        self.metadata.kind == MediaKind::Audio && self.metadata.key == TrackKey::User
     }
 
     /// returns the metadata for this track
-    pub fn metadata(&self) -> TrackMetadata {
+    #[inline]
+    pub fn metadata(&self) -> &TrackMetadata2 {
         // TODO: have actual track ids instead of keying by (mid, user_id) (and sometimes (kind, key)) (?)
-        TrackMetadata {
-            mid: self.state.mid().unwrap().into(),
-            kind: self.kind,
-            key: self.key.clone(),
-            layers: self.layers.clone(),
-            whisper: None,
-        }
+        &self.metadata
+    }
+
+    /// get the kind of this media track
+    #[inline]
+    pub fn kind(&self) -> MediaKind {
+        self.metadata.kind
     }
 }

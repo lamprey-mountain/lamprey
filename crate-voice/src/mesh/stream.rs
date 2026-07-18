@@ -1,10 +1,7 @@
 //! wire format for streams
 
 use crate::prelude::*;
-use common::{
-    v1::types::voice::{Mid, Rid},
-    v2::types::UserId,
-};
+use common::{v1::types::voice::Mid, v2::types::UserId};
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
@@ -53,8 +50,7 @@ pub struct Subscribe {
     // which track to subscribe to
     pub publisher_id: UserId,
     pub track_id: Mid,
-    pub layer_id: Option<Rid>,
-
+    // pub layer_id: Option<Rid>,
     pub config: SubscribeConfig,
 }
 

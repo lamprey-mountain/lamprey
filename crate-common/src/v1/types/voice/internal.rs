@@ -6,7 +6,11 @@ use lamprey_macros::record;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::v1::types::{ConnectionId, SessionId, UserId, misc::Time, voice::VoiceState};
+use crate::v1::types::{
+    ConnectionId, SessionId, UserId,
+    misc::Time,
+    voice::{VoiceState, VoiceStateUpdate},
+};
 
 /// smaller voice state for sfus
 #[derive(Debug, Clone)]
@@ -24,25 +28,30 @@ bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
     pub struct SfuVoiceFlags: u8 {
-        /// whether the user is mute
-        ///
-        /// doesn't have the `VoiceSpeak` permission, is `mute`d, is `self_mute`d, or is `suppress`ed
+        /// whether the user is muted by a moderator
         const Mute = 1 << 0;
+
+        /// whether the user is deafened by a moderator
+        const Deaf = 1 << 1;
+
+        /// whether the user is suppressed
+        const Suppress = 1 << 2;
+
+        /// whether the user has muted themselves
+        const SelfMute = 1 << 3;
+
+        /// whether the user has deafened themselves
+        const SelfDeaf = 1 << 4;
 
         /// whether the user can send video
         ///
         /// has the `VoiceVideo` permission and isn't `suppress`ed
-        const Video = 1 << 1;
+        const Video = 1 << 5;
 
         /// whether the user can use priority speaker
         ///
         /// has the `VoicePriority` permission and isn't mute
-        const Priority = 1 << 2;
-
-        /// whether the user is deaf
-        ///
-        /// is `mute`d or is `self_mute`d
-        const Deaf = 1 << 3;
+        const Priority = 1 << 6;
     }
 }
 
@@ -72,12 +81,22 @@ pub enum SfuVoiceStateConversionError {
 impl SfuVoiceState {
     #[inline]
     pub fn can_speak(&self) -> bool {
-        !self.flags.contains(SfuVoiceFlags::Mute)
+        !(self.flags.contains(SfuVoiceFlags::Mute)
+            || self.flags.contains(SfuVoiceFlags::SelfMute)
+            || self.flags.contains(SfuVoiceFlags::Suppress))
     }
 
+    /// whether the user represented by this state can enable video or screenshare
+    ///
+    /// this also allows screenshare audio
     #[inline]
     pub fn can_screenshare(&self) -> bool {
         self.flags.contains(SfuVoiceFlags::Video)
+    }
+
+    #[inline]
+    pub fn is_deaf(&self) -> bool {
+        self.flags.contains(SfuVoiceFlags::Deaf) || self.flags.contains(SfuVoiceFlags::SelfDeaf)
     }
 
     #[inline]
@@ -90,17 +109,26 @@ impl SfuVoiceState {
         priority: bool,
     ) -> Result<Self, SfuVoiceStateConversionError> {
         let mut flags = SfuVoiceFlags::empty();
-        if vs.muted() {
+        if vs.mute {
             flags |= SfuVoiceFlags::Mute;
+        }
+        if vs.deaf {
+            flags |= SfuVoiceFlags::Deaf;
+        }
+        if vs.suppress {
+            flags |= SfuVoiceFlags::Suppress;
+        }
+        if vs.self_mute {
+            flags |= SfuVoiceFlags::SelfMute;
+        }
+        if vs.self_deaf {
+            flags |= SfuVoiceFlags::SelfDeaf;
         }
         if vs.self_video && !vs.suppress {
             flags |= SfuVoiceFlags::Video;
         }
         if priority && !vs.muted() {
             flags |= SfuVoiceFlags::Priority;
-        }
-        if vs.deafened() {
-            flags |= SfuVoiceFlags::Deaf;
         }
 
         Ok(Self {
@@ -114,5 +142,25 @@ impl SfuVoiceState {
             joined_at: vs.joined_at,
             flags,
         })
+    }
+
+    pub fn apply_update(&mut self, update: VoiceStateUpdate) {
+        if update.self_mute {
+            self.flags.insert(SfuVoiceFlags::SelfMute);
+        } else {
+            self.flags.remove(SfuVoiceFlags::SelfMute);
+        }
+
+        if update.self_deaf {
+            self.flags.insert(SfuVoiceFlags::SelfDeaf);
+        } else {
+            self.flags.remove(SfuVoiceFlags::SelfDeaf);
+        }
+
+        if update.self_video {
+            self.flags.insert(SfuVoiceFlags::Video);
+        } else {
+            self.flags.remove(SfuVoiceFlags::Video);
+        }
     }
 }

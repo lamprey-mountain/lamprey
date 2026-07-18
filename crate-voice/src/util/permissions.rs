@@ -1,3 +1,5 @@
+use common::v1::types::voice::internal::SfuVoiceState;
+
 /// what a user can do in a voice channel/call
 #[derive(Debug)]
 pub struct Permissions {
@@ -17,6 +19,14 @@ impl Permissions {
             video: true,
             audio: true,
             deaf: false,
+        }
+    }
+
+    pub fn from_state(vs: &SfuVoiceState) -> Self {
+        Self {
+            video: vs.can_screenshare(),
+            audio: vs.can_speak(),
+            deaf: vs.is_deaf(),
         }
     }
 }

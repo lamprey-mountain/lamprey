@@ -1,8 +1,4 @@
-// use crate::prelude::*;
-use common::v1::types::voice::{VoiceState, internal::SfuPermissions};
 use slotmap::new_key_type;
-
-use crate::util::permissions::Permissions;
 
 pub mod permissions;
 pub mod simulcast;
@@ -22,21 +18,4 @@ new_key_type! {
     // pub struct OutboundSlot;
 
     pub struct CallSlot;
-}
-
-/// a voice state with extra info, for the server
-pub struct SfuVoiceState {
-    pub inner: VoiceState,
-    pub permissions: SfuPermissions,
-}
-
-impl SfuVoiceState {
-    // PERF: *maybe* caching this could be helpful? since perm checks will probably end up having to be run for every MediaData event?
-    pub fn permissions(&self) -> Permissions {
-        Permissions {
-            video: self.permissions.video(),
-            audio: self.permissions.speak() && !self.inner.muted(),
-            deaf: self.inner.deafened(),
-        }
-    }
 }

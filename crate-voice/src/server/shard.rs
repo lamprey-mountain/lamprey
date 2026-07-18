@@ -1,9 +1,9 @@
+use common::v1::types::voice::internal::SfuVoiceState;
 use lamprey_backend_core::config::ConfigVoice;
 use std::{collections::HashMap, net::SocketAddr, time::Instant};
 
 use bytes::Bytes;
 use common::v1::types::voice::messages::{SfuEvent, SignallingCommand};
-use common::v1::types::voice::{Mid, Rid};
 use common::v2::types::{ChannelId, UserId};
 use slotmap::SlotMap;
 use str0m::{Candidate, RtcConfig};
@@ -14,7 +14,7 @@ use tracing::{debug, warn};
 
 use crate::prelude::*;
 use crate::util::stun::extract_local_ufrag;
-use crate::{backend::BackendHandle, server::shard_call::ShardCall, util::SfuVoiceState};
+use crate::{backend::BackendHandle, server::shard_call::ShardCall};
 
 // one shard per thread
 pub struct Shard {
@@ -47,7 +47,7 @@ pub struct ShardHandle {
 
 pub enum ShardCommand {
     /// create a new peer
-    CreatePeer(SfuVoiceState),
+    CreatePeer(ChannelId, SfuVoiceState),
 
     /// a signalling command that the user sent
     Signalling {
@@ -55,14 +55,13 @@ pub enum ShardCommand {
         user_id: UserId,
         inner: SignallingCommand,
     },
-
-    GenerateKeyframe {
-        channel_id: ChannelId,
-        user_id: UserId,
-        mid: Mid,
-        rid: Option<Rid>,
-        kind: SKeyframeRequestKind,
-    },
+    // GenerateKeyframe {
+    //     channel_id: ChannelId,
+    //     user_id: UserId,
+    //     mid: Mid,
+    //     rid: Option<Rid>,
+    //     kind: SKeyframeRequestKind,
+    // },
 }
 
 // enum ShardEvent {
@@ -162,7 +161,7 @@ impl Shard {
     }
 
     fn process_all_negotiations(&mut self) {
-        for (call_slot, call) in self.calls.iter_mut() {
+        for (_call_slot, call) in self.calls.iter_mut() {
             let channel_id = call.channel_id();
 
             let events = call.process_sdp_negotiations();
@@ -268,9 +267,8 @@ impl Shard {
     /// handle a shard command
     fn handle_command(&mut self, cmd: ShardCommand) {
         match cmd {
-            ShardCommand::CreatePeer(state) => {
-                let channel_id = state.inner.channel_id;
-                debug!(?channel_id, ?state.inner.user_id, "Shard: Creating peer");
+            ShardCommand::CreatePeer(channel_id, state) => {
+                debug!(?channel_id, ?state.user_id, "Shard: Creating peer");
                 let call_slot = *self
                     .channels
                     .entry(channel_id)
@@ -330,48 +328,49 @@ impl Shard {
                         }
                     }
                 }
-            }
-            ShardCommand::GenerateKeyframe {
-                channel_id,
-                user_id,
-                mid,
-                rid,
-                kind,
-            } => {
-                debug!(?channel_id, ?user_id, ?mid, "Shard: Generating keyframe");
-                let Some(&call_slot) = self.channels.get(&channel_id) else {
-                    return;
-                };
-                if let Some(call) = self.calls.get_mut(call_slot) {
-                    call.generate_keyframe(user_id, mid, rid, kind);
-                }
-            }
+            } // ShardCommand::GenerateKeyframe {
+              //     channel_id,
+              //     user_id,
+              //     mid,
+              //     rid,
+              //     kind,
+              // } => {
+              //     debug!(?channel_id, ?user_id, ?mid, "Shard: Generating keyframe");
+              //     let Some(&call_slot) = self.channels.get(&channel_id) else {
+              //         return;
+              //     };
+              //     if let Some(call) = self.calls.get_mut(call_slot) {
+              //         call.generate_keyframe(user_id, mid, rid, kind);
+              //     }
+              // }
         }
     }
 }
 
 impl ShardHandle {
     // NOTE: maybe i should make this async?
-    pub fn create_peer(&self, s: SfuVoiceState) {
-        let _ = self.control_tx.try_send(ShardCommand::CreatePeer(s));
+    pub fn create_peer(&self, channel_id: ChannelId, s: SfuVoiceState) {
+        let _ = self
+            .control_tx
+            .try_send(ShardCommand::CreatePeer(channel_id, s));
     }
 
-    pub fn generate_keyframe(
-        &self,
-        channel_id: ChannelId,
-        user_id: UserId,
-        mid: Mid,
-        rid: Option<Rid>,
-        kind: SKeyframeRequestKind,
-    ) {
-        let _ = self.control_tx.try_send(ShardCommand::GenerateKeyframe {
-            channel_id,
-            user_id,
-            mid,
-            rid,
-            kind,
-        });
-    }
+    // pub fn generate_keyframe(
+    //     &self,
+    //     channel_id: ChannelId,
+    //     user_id: UserId,
+    //     mid: Mid,
+    //     rid: Option<Rid>,
+    //     kind: SKeyframeRequestKind,
+    // ) {
+    //     let _ = self.control_tx.try_send(ShardCommand::GenerateKeyframe {
+    //         channel_id,
+    //         user_id,
+    //         mid,
+    //         rid,
+    //         kind,
+    //     });
+    // }
 
     pub fn handle_signalling(
         &self,
