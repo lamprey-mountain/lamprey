@@ -159,7 +159,7 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 			const enabled = enabled_ ?? !cam.track.enabled;
 			cam.track.enabled = enabled;
 
-			const tr = vc.acquireTransceiver("screen", "video");
+			const tr = vc.acquireTransceiver("user", "video");
 			if (tr.currentDirection !== "stopped") {
 				await tr.sender.replaceTrack(cam.track);
 				tr.direction = "sendonly";

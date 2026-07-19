@@ -6,9 +6,11 @@ import {
 	Match,
 	on,
 	onCleanup,
+	onMount,
 	Show,
 	Switch,
 } from "solid-js";
+import { debounce } from "@solid-primitives/scheduled";
 import { useApi } from "@/api";
 import { Icon } from "@/atoms/Icon";
 import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
@@ -40,23 +42,17 @@ import { Markdown } from "@/atoms/Markdown.tsx";
 // - option to hide participants without video
 // - option to hide yourself (not your screenshare)
 
-const MemberName = (props: { roomId?: string | null; userId: string }) => {
-	const api = useApi();
-
-	const user = api.users.use(() => props.userId);
-
-	const member = api.room_members.use(() =>
-		props.roomId ? `${props.roomId}:${props.userId}` : undefined,
-	);
-
-	return <>{member()?.override_name || user()?.name || props.userId}</>;
-};
+// FIXME: if self_video becomes false, hide the user stream entirely
 
 export const Voice = (p: { channel: Channel }) => {
 	const api = useApi();
 	const [voice, actions] = useVoice();
 	const [ch, chUpdate] = useChannel()!;
 	const { setMenu } = useMenu();
+	const [fullscreenStream, setFullscreenStream] = createSignal<null | string>(
+		null,
+	);
+	const [uiVisible, setUiVisible] = createSignal(true);
 
 	const deafenedTooltip = createTooltip({
 		tip: () => (voice.deafened ? "Undeafen" : "Deafen"),
@@ -93,9 +89,6 @@ export const Voice = (p: { channel: Channel }) => {
 		}
 		return users;
 	};
-
-	const [focused, setFocused] = createSignal<null | string>(null);
-	const [controls, setControls] = createSignal(true);
 
 	// TODO: use ReactiveSet
 	const [watchedScreenshares, setWatchedScreenshares] = createSignal<
@@ -140,28 +133,29 @@ export const Voice = (p: { channel: Channel }) => {
 		prevSubscribed = new Set(trackIds);
 	});
 
-	// TODO: use @solid-primitives/scheduled
-	let controlsTimeout: NodeJS.Timeout = setTimeout(
-		() => setControls(false),
-		2000,
-	);
+	const hideUi = debounce(() => {
+		setUiVisible(false);
+	}, 1500);
 
-	const showControls = () => {
-		setControls(true);
-		clearTimeout(controlsTimeout);
-		controlsTimeout = setTimeout(() => setControls(false), 2000);
+	const resetUiTimeout = () => {
+		setUiVisible(true);
+		hideUi();
 	};
 
-	const hideControls = () => {
-		setControls(false);
-		clearTimeout(controlsTimeout);
+	const hideUiImmediately = () => {
+		hideUi.clear();
+		setUiVisible(false);
 	};
 
 	onCleanup(() => {
-		clearTimeout(controlsTimeout);
+		hideUi.clear(); // NOTE: is this necessary?
 		if (prevSubscribed.size > 0) {
 			voice.vc.unsubscribeFromTracks([...prevSubscribed]);
 		}
+	});
+
+	onMount(() => {
+		hideUi();
 	});
 
 	const isChatOpen = () => ch.voice_chat_sidebar_open;
@@ -169,184 +163,124 @@ export const Voice = (p: { channel: Channel }) => {
 		chUpdate("voice_chat_sidebar_open", (o) => !o);
 	};
 
-	// TODO: deduplicate jsx
+	const gridView = () =>
+		((p.channel.preferences?.frontend as any)?.grid_view as boolean) ?? false;
+
+	const autoFocusedStreamId = () => {
+		const watched = [...watchedScreenshares()];
+		if (watched.length > 0) return watched[0];
+		const streams = [...(voice.vc.streams.values() ?? [])];
+		if (streams.length > 0) return streams[0].id;
+		return null;
+	};
+
+	const focusedStreamId = () => fullscreenStream() || autoFocusedStreamId();
+
+	const layoutMode = () =>
+		fullscreenStream() ? "fullscreen" : gridView() ? "grid" : "focus";
+
 	// TODO: keep controls/header shown when hovering over controls/header
-	// TODO: hide .status and .live when controls are hidden
-	// TODO: show muted/deafened indicators in .status
+	// TODO: show muted/deafened indicators in .status (always show, even with .hide-ui)
 	// TODO: button to open context menu in bottom right corner of each stream
-	// TODO: group buttons
+	// TODO: group buttons in .controls
 
 	return (
 		<div
-			class="webrtc"
-			classList={{ controls: controls(), "stream-focused": !!focused() }}
-			onMouseMove={showControls}
-			onMouseOut={hideControls}
+			class="voice"
+			classList={{
+				"hide-ui": !uiVisible(),
+			}}
+			onMouseMove={resetUiTimeout}
+			onMouseOut={hideUiImmediately}
 		>
-			<div class="streams">
-				<div class="centered">
-					<Show when={focused()}>
-						{((stream) => {
-							if (!stream) return;
-							let videoRef!: HTMLVideoElement;
-							createEffect(() => {
-								if (videoRef) videoRef.srcObject = stream.media;
-							});
-							if (
-								stream.key === "screen" &&
-								!watchedScreenshares().has(stream.id)
-							) {
-								return (
-									<div
-										class="stream fullscreen placeholder"
-										onClick={() => setFocused(null)}
-									>
-										<div class="live">live</div>
-										<div class="status">
-											<MemberName
-												userId={stream.user_id}
-												roomId={p.channel.room_id}
+			<div class="streams" data-layout={layoutMode()}>
+				<div class="streams-inner">
+					<Show
+						when={layoutMode() === "focus" || layoutMode() === "fullscreen"}
+					>
+						<Show when={focusedStreamId()}>
+							{(streamId) => (
+								<Show when={voice.vc.streams.get(streamId())}>
+									{(s) => (
+										<div class="focused">
+											<Stream
+												stream={{ ...s(), vc: voice.vc }}
+												subscribed={watchedScreenshares().has(s().id)}
+												channelId={p.channel.id}
+												onWatch={(id) => watchStream(id)}
+												onClick={() =>
+													setFullscreenStream((s) =>
+														s === streamId() ? null : streamId(),
+													)
+												}
 											/>
-											{"'s screen"}
 										</div>
-										<button
-											class="button watch"
-											onClick={(e) => {
-												e.stopPropagation();
-												watchStream(stream.id);
-											}}
-										>
-											Watch
-										</button>
-									</div>
-								);
-							}
-							return (
-								<div
-									class="stream"
-									classList={{
-										fullscreen: focused() === stream.id,
-										speaking:
-											((voice.vc.speaking.users.get(stream.user_id)?.flags ??
-												0) &
-												1) ===
-											1,
-									}}
-									onClick={() =>
-										setFocused((s) => (s === stream.id ? null : stream.id))
-									}
-								>
-									<div class="live">live</div>
-									<video autoplay playsinline ref={videoRef!} muted />
-									<div class="status">
-										{
-											<MemberName
-												userId={stream.user_id}
-												roomId={p.channel.room_id}
-											/>
-										}
-									</div>
-								</div>
-							);
-						})(voice.vc.streams.get(focused()!))}
+									)}
+								</Show>
+							)}
+						</Show>
 					</Show>
-					<div class="list">
-						<For each={[...(voice.vc.streams.values() ?? [])]}>
-							{(stream) => {
-								let videoRef!: HTMLVideoElement;
-								createEffect(() => {
-									if (videoRef) videoRef.srcObject = stream.media;
-								});
-
-								if (
-									stream.key === "screen" &&
-									!watchedScreenshares().has(stream.id)
-								) {
+					<Show when={layoutMode() !== "fullscreen"}>
+						<div class="list">
+							<For
+								each={[...(voice.vc.streams.values() ?? [])].filter(
+									(s) => layoutMode() === "grid" || s.id !== focusedStreamId(),
+								)}
+							>
+								{(stream) => (
+									<Stream
+										stream={{ ...stream, vc: voice.vc }}
+										subscribed={watchedScreenshares().has(stream.id)}
+										channelId={p.channel.id}
+										onWatch={(id) => watchStream(id)}
+										onClick={() =>
+											setFullscreenStream((s) =>
+												s === stream.id ? null : stream.id,
+											)
+										}
+									/>
+								)}
+							</For>
+							<For
+								each={getUsersWithoutStreams().filter(
+									(uid) => layoutMode() === "grid" || uid !== focusedStreamId(),
+								)}
+							>
+								{(uid) => {
+									// TODO: merge this with Stream
+									const user = api.users.use(() => uid);
 									return (
 										<div
-											class="stream placeholder"
+											class="stream"
 											style={{
-												display: focused() === stream.id ? "none" : undefined,
-												"flex-direction": "column",
-												gap: "8px",
+												"background-color": getColor(uid),
 											}}
 										>
-											<div class="live">live</div>
-											<div class="status">
-												<MemberName
-													userId={stream.user_id}
-													roomId={p.channel.room_id}
-												/>
-												{"'s screen"}
-											</div>
-											<button
-												class="button watch"
-												onClick={() => {
-													watchStream(stream.id);
-													setFocused(stream.id);
-												}}
-											>
-												Watch
-											</button>
+											<Show when={user()}>
+												{(user) => (
+													<>
+														<Avatar user={user()} />
+														<div class="status">
+															{
+																<MemberName
+																	userId={uid}
+																	roomId={p.channel.room_id}
+																/>
+															}
+														</div>
+													</>
+												)}
+											</Show>
 										</div>
 									);
-								}
-
-								return (
-									<div
-										class="stream"
-										classList={{
-											speaking:
-												((voice.vc.speaking.users.get(stream.user_id)?.flags ??
-													0) &
-													1) ===
-												1,
-										}}
-										style={{
-											display: focused() === stream.id ? "none" : undefined,
-										}}
-										onClick={() =>
-											setFocused((s) => (s === stream.id ? null : stream.id))
-										}
-									>
-										<div class="live">live</div>
-										<video autoplay playsinline ref={videoRef!} muted />
-										<div class="status">
-											{
-												<MemberName
-													userId={stream.user_id}
-													roomId={p.channel.room_id}
-												/>
-											}
-										</div>
-									</div>
-								);
-							}}
-						</For>
-						<For each={getUsersWithoutStreams()}>
-							{(uid) => {
-								const user = api.users.use(() => uid);
-								return (
-									<div
-										class="stream"
-										style={{
-											"background-color": getColor(uid),
-										}}
-									>
-										<Show when={user}>
-											<Avatar user={user()} />
-											<div class="status">
-												{<MemberName userId={uid} roomId={p.channel.room_id} />}
-											</div>
-										</Show>
-									</div>
-								);
-							}}
-						</For>
-					</div>
+								}}
+							</For>
+						</div>
+					</Show>
 				</div>
 			</div>
-			<header class="top">
+			<header class="header">
+				{/* TODO: copy ChatHeader click to edit channel name (among other things) */}
 				<b>{p.channel.name}</b>
 				<Show when={p.channel.description}>
 					{(desc) => (
@@ -378,7 +312,7 @@ export const Voice = (p: { channel: Channel }) => {
 					Chat
 				</button>
 			</header>
-			<div class="bottom">
+			<div class="footer">
 				<div class="controls">
 					<button
 						type="button"
@@ -424,9 +358,9 @@ export const Voice = (p: { channel: Channel }) => {
 					</Show>
 					<Show
 						when={
-							focused() &&
-							voice.vc.streams.get(focused()!)?.key === "screen" &&
-							watchedScreenshares().has(focused()!)
+							focusedStreamId() &&
+							voice.vc.streams.get(focusedStreamId()!)?.key === "screen" &&
+							watchedScreenshares().has(focusedStreamId()!)
 						}
 					>
 						<button
@@ -434,8 +368,8 @@ export const Voice = (p: { channel: Channel }) => {
 							class="button disconnect icon-button"
 							ref={stopWatchingTooltip.content}
 							onClick={() => {
-								unwatchStream(focused()!);
-								setFocused(null);
+								unwatchStream(focusedStreamId()!);
+								setFullscreenStream(null);
 							}}
 						>
 							{/* TODO: use a different icon for this */}
@@ -468,6 +402,77 @@ export const Voice = (p: { channel: Channel }) => {
 					</button>
 				</div>
 			</div>
+		</div>
+	);
+};
+
+const MemberName = (props: { roomId?: string | null; userId: string }) => {
+	const api = useApi();
+
+	const user = api.users.use(() => props.userId);
+
+	const member = api.room_members.use(() =>
+		props.roomId ? `${props.roomId}:${props.userId}` : undefined,
+	);
+
+	return <>{member()?.override_name || user()?.name || props.userId}</>;
+};
+
+const Stream = (props: {
+	stream: any; // TODO: better types
+	subscribed: boolean;
+
+	// TODO: move below into a solidjs context?
+	channelId: string;
+	roomId: string;
+	onWatch: (id: string) => void;
+	onClick: () => void;
+}) => {
+	let videoRef!: HTMLVideoElement;
+
+	createEffect(() => {
+		if (videoRef && props.stream.media) videoRef.srcObject = props.stream.media;
+	});
+
+	const speaking = () =>
+		((props.stream.vc.speaking.users.get(props.stream.user_id)?.flags ?? 0) &
+			1) ===
+		1;
+
+	const screenshare = () => props.stream.key === "screen";
+	const placeholder = () => screenshare() && !props.subscribed;
+
+	return (
+		<div
+			class="stream"
+			classList={{
+				placeholder: placeholder(),
+				speaking: speaking(),
+			}}
+			onClick={props.onClick}
+		>
+			<Show when={screenshare()}>
+				<div class="live">live</div>
+			</Show>
+			<div class="live">live</div>
+			<div class="status">
+				<MemberName userId={props.stream.user_id} roomId={props.roomId} />
+				<Show when={screenshare()}>{"'s screen"}</Show>
+			</div>
+			<Show
+				when={placeholder()}
+				fallback={<video autoplay playsinline ref={videoRef!} muted />}
+			>
+				<button
+					class="button watch"
+					onClick={(e) => {
+						e.stopPropagation();
+						props.onWatch(props.stream.id);
+					}}
+				>
+					Watch
+				</button>
+			</Show>
 		</div>
 	);
 };
