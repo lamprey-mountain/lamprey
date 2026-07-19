@@ -151,14 +151,14 @@ export class VoiceClient {
 		this.rtc.addEventListener("icecandidate", (e) => {
 			if (!this.rtc) return;
 			if (!e.candidate?.candidate) return;
-			return;
 
 			// this isn't really used much, maybe i should remove it...
-			log.debug("signal", "local ice candidate", e.candidate);
-			this.sendSignalling({
-				type: "Candidate",
-				candidate: e.candidate.candidate,
-			});
+			// im unsure if ice lite means that i can skip this or not?
+			// log.debug("signal", "local ice candidate", e.candidate);
+			// this.sendSignalling({
+			// 	type: "Candidate",
+			// 	candidate: e.candidate.candidate,
+			// });
 		});
 
 		this.rtc.addEventListener("negotiationneeded", () => {
