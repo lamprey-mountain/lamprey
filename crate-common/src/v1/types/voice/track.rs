@@ -102,12 +102,15 @@ pub struct SubscriptionUpdate {
     pub remove: Vec<TrackId>,
 }
 
-/// which stream this track is associated with
+/// which stream a track is associated with
 ///
 /// generally there will be one video track and one audio track per stream.
-#[record]
-#[derive(PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(rename_all = "lowercase")
+)]
 // TODO: rename to MediaKey?
 pub enum TrackKey {
     /// media from the user (microphone, camera)
@@ -119,6 +122,31 @@ pub enum TrackKey {
     /// an unknown track type
     #[serde(untagged)]
     Other(String),
+}
+
+#[cfg(feature = "utoipa")]
+mod _u {
+    use utoipa::{
+        PartialSchema, ToSchema,
+        openapi::{RefOr, schema::Schema},
+        schema,
+    };
+
+    use super::*;
+
+    impl ToSchema for TrackKey {}
+
+    impl PartialSchema for TrackKey {
+        fn schema() -> RefOr<Schema> {
+            RefOr::T(Schema::Object(
+                schema!(String)
+                    .title(Some("String"))
+                    .description(Some("which stream a track is associated with"))
+                    .examples(["user", "screen"])
+                    .build(),
+            ))
+        }
+    }
 }
 
 /// the encoding of the track
