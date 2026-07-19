@@ -23,7 +23,7 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
-import { useRoomMembers, useThreadMembers, useUsers } from "@/api";
+import { useRoomMembers, useThreadMembers, useUsers, useChannels } from "@/api";
 import { useCtx } from "@/app/context";
 import { Autocomplete } from "@/atoms/Autocomplete.tsx";
 import { EmojiPicker } from "@/atoms/EmojiPicker.tsx";
@@ -42,6 +42,7 @@ import {
 	RoomMenu,
 	TopicMenu,
 	UserMenu,
+	VoiceMenu,
 } from "@/menus/mod.ts";
 import { getModal } from "@/modals/mod.tsx";
 import { FormattingToolbar } from "./FormattingToolbar.tsx";
@@ -268,12 +269,19 @@ export function OverlayProvider(props: ParentProps) {
 
 	// TODO: use Switch/Match instead?
 	function getMenu(menu: Menu) {
+		const channels = useChannels();
 		switch (menu.type) {
 			case "room": {
 				return <RoomMenu room_id={menu.room_id} />;
 			}
 			case "channel": {
 				return <ChannelMenu channel_id={menu.channel_id} />;
+			}
+			case "voice": {
+				const channel = channels.use(() => menu.channel_id);
+				return (
+					<Show when={channel()}>{(c) => <VoiceMenu channel={c()} />}</Show>
+				);
 			}
 			case "message": {
 				return (

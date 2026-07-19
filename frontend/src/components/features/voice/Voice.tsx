@@ -15,6 +15,7 @@ import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
 import { createTooltip } from "@/atoms/Tooltip";
 import { Avatar, AvatarWithStatus } from "@/components/shared/User";
 import { useChannel } from "@/contexts/channel";
+import { useMenu } from "@/contexts/menu.tsx";
 import { getColor } from "@/lib/colors";
 import { flags } from "@/lib/flags";
 import {
@@ -22,6 +23,7 @@ import {
 	icExit,
 	icHeadphones,
 	icMic,
+	icMore,
 	icMusic,
 	icScreenshare,
 } from "@/utils/icons";
@@ -54,6 +56,7 @@ export const Voice = (p: { channel: Channel }) => {
 	const api = useApi();
 	const [voice, actions] = useVoice();
 	const [ch, chUpdate] = useChannel()!;
+	const { setMenu } = useMenu();
 
 	const deafenedTooltip = createTooltip({
 		tip: () => (voice.deafened ? "Undeafen" : "Deafen"),
@@ -439,6 +442,22 @@ export const Voice = (p: { channel: Channel }) => {
 							<Icon src={icExit} />
 						</button>
 					</Show>
+					<button
+						type="button"
+						class="button icon-button"
+						onClick={(e) => {
+							e.stopPropagation();
+							// TODO: open the context menu above the menu button
+							setMenu({
+								type: "voice",
+								channel_id: p.channel.id,
+								x: e.clientX,
+								y: e.clientY,
+							});
+						}}
+					>
+						<Icon src={icMore} />
+					</button>
 					<button
 						type="button"
 						class="button disconnect icon-button"

@@ -7,3 +7,4 @@ export * from "./PermissionOverwrite.tsx";
 export * from "./Room.tsx";
 export * from "./User.tsx";
 export * from "./UserAdmin.tsx";
+export * from "./Voice.tsx";

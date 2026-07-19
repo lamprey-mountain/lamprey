@@ -28,6 +28,7 @@ export type Menu = {
 	  }
 	| { type: "folder"; folder_id: string }
 	| { type: "topic"; channel_id: string }
+	| { type: "voice"; channel_id: string }
 	| {
 			type: "permission_overwrite";
 			channel_id: string;
