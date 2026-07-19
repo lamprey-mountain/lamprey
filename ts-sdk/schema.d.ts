@@ -13,9 +13,7 @@ export interface paths {
 		};
 		/**
 		 * Oauth autoconfig
-		 * @description
-		 *
-		 *     Retrieve the OpenID Connect discovery document for automatic client configuration.
+		 * @description Retrieve the OpenID Connect discovery document for automatic client configuration.
 		 */
 		get: {
 			parameters: {
@@ -71,8 +69,6 @@ export interface paths {
 		/**
 		 * Ack bulk
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -118,8 +114,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AdminBroadcast</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -185,8 +179,6 @@ export interface paths {
 		/**
 		 * Admin collect garbage
 		 * @description <div class="markdown-alert-permission-required">Admin</div>
-		 *
-		 *
 		 */
 		post: operations["admin_collect_garbage"];
 		delete?: never;
@@ -207,8 +199,6 @@ export interface paths {
 		/**
 		 * Admin purge cache
 		 * @description <div class="markdown-alert-permission-required">Admin</div>
-		 *
-		 *
 		 */
 		post: operations["admin_purge_cache"];
 		delete?: never;
@@ -231,8 +221,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: UserRegistered</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -367,8 +355,6 @@ export interface paths {
 		/**
 		 * Admin search audit logs
 		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 *
-		 *
 		 */
 		post: operations["admin_search_audit_logs"];
 		delete?: never;
@@ -387,8 +373,6 @@ export interface paths {
 		/**
 		 * Admin search DLQ list
 		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 *
-		 *
 		 */
 		get: operations["admin_search_dlq_list"];
 		put?: never;
@@ -412,8 +396,6 @@ export interface paths {
 		/**
 		 * Admin search DLQ delete
 		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 *
-		 *
 		 */
 		delete: operations["admin_search_dlq_delete"];
 		options?: never;
@@ -433,8 +415,6 @@ export interface paths {
 		/**
 		 * Admin search DLQ retry
 		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 *
-		 *
 		 */
 		post: operations["admin_search_dlq_retry"];
 		delete?: never;
@@ -453,8 +433,6 @@ export interface paths {
 		/**
 		 * Admin search stats
 		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 *
-		 *
 		 */
 		get: operations["admin_search_stats"];
 		put?: never;
@@ -479,8 +457,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AdminWhisper</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -523,8 +499,6 @@ export interface paths {
 		/**
 		 * App list
 		 * @description
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -562,8 +536,6 @@ export interface paths {
 		 * App create
 		 * @description <div class="markdown-alert-permission-required">ApplicationCreate</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ApplicationCreate</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -626,8 +598,6 @@ export interface paths {
 		/**
 		 * App get
 		 * @description
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -669,8 +639,6 @@ export interface paths {
 		/**
 		 * App delete
 		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: ApplicationDelete</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -697,8 +665,6 @@ export interface paths {
 		/**
 		 * App patch
 		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: ApplicationUpdate</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -806,8 +772,6 @@ export interface paths {
 		/**
 		 * Puppet ensure
 		 * @description
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -848,9 +812,11 @@ export interface paths {
 							deleted_at?: null | components["schemas"]["Time"];
 							description?: string | null;
 							emails?: components["schemas"]["EmailInfo"][] | null;
-							/** @description whether this user is considered to have mutifactor authentication enabled on their account
+							/**
+							 * @description whether this user is considered to have mutifactor authentication enabled on their account
 							 *
-							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa` */
+							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
+							 */
 							has_mfa?: boolean | null;
 							id: components["schemas"]["Id"];
 							name: string;
@@ -881,9 +847,11 @@ export interface paths {
 							deleted_at?: null | components["schemas"]["Time"];
 							description?: string | null;
 							emails?: components["schemas"]["EmailInfo"][] | null;
-							/** @description whether this user is considered to have mutifactor authentication enabled on their account
+							/**
+							 * @description whether this user is considered to have mutifactor authentication enabled on their account
 							 *
-							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa` */
+							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
+							 */
 							has_mfa?: boolean | null;
 							id: components["schemas"]["Id"];
 							name: string;
@@ -921,8 +889,6 @@ export interface paths {
 		/**
 		 * App rotate oauth secret
 		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: ApplicationUpdate</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -977,8 +943,6 @@ export interface paths {
 		/**
 		 * App create session
 		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: SessionLogin</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -1026,8 +990,6 @@ export interface paths {
 		/**
 		 * Auth captcha challenge
 		 * @description
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -1071,8 +1033,6 @@ export interface paths {
 		/**
 		 * Auth captcha init
 		 * @description
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -1110,8 +1070,6 @@ export interface paths {
 		/**
 		 * Auth captcha submit
 		 * @description
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -1148,9 +1106,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Auth email exec
-		 * @description
-		 *
-		 *     Send a magic link email to login
+		 * @description Send a magic link email to login
 		 */
 		post: {
 			parameters: {
@@ -1189,9 +1145,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Auth email complete
-		 * @description
-		 *
-		 *     Complete email authentication
+		 * @description Complete email authentication
 		 */
 		post: {
 			parameters: {
@@ -1236,9 +1190,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Auth email reset
-		 * @description
-		 *
-		 *     Send a password reset email
+		 * @description Send a password reset email
 		 */
 		post: {
 			parameters: {
@@ -1278,8 +1230,6 @@ export interface paths {
 		/**
 		 * Auth oauth init
 		 * @description
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -1347,8 +1297,6 @@ export interface paths {
 		/**
 		 * Auth oauth redirect
 		 * @description
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -1393,8 +1341,6 @@ export interface paths {
 		 * Auth password set
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -1424,8 +1370,6 @@ export interface paths {
 		 * Auth password exec
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -1512,9 +1456,11 @@ export interface paths {
 						"application/json": {
 							/** @description registered webauthn authenticators */
 							authenticators: components["schemas"]["WebauthnAuthenticator"][];
-							/** @description if there is at least one verified and primary email address
+							/**
+							 * @description if there is at least one verified and primary email address
 							 *
-							 *     this is used for magic links and password resets */
+							 *     this is used for magic links and password resets
+							 */
 							has_email: boolean;
 							/** @description if a password has been set */
 							has_password: boolean;
@@ -1548,8 +1494,6 @@ export interface paths {
 		/**
 		 * Auth sudo delete
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -1654,9 +1598,11 @@ export interface paths {
 						"application/json": {
 							/** @description registered webauthn authenticators */
 							authenticators: components["schemas"]["WebauthnAuthenticator"][];
-							/** @description if there is at least one verified and primary email address
+							/**
+							 * @description if there is at least one verified and primary email address
 							 *
-							 *     this is used for magic links and password resets */
+							 *     this is used for magic links and password resets
+							 */
 							has_email: boolean;
 							/** @description if a password has been set */
 							has_password: boolean;
@@ -1694,9 +1640,11 @@ export interface paths {
 						"application/json": {
 							/** @description registered webauthn authenticators */
 							authenticators: components["schemas"]["WebauthnAuthenticator"][];
-							/** @description if there is at least one verified and primary email address
+							/**
+							 * @description if there is at least one verified and primary email address
 							 *
-							 *     this is used for magic links and password resets */
+							 *     this is used for magic links and password resets
+							 */
 							has_email: boolean;
 							/** @description if a password has been set */
 							has_password: boolean;
@@ -1727,8 +1675,6 @@ export interface paths {
 		 * Auth totp enable
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -1773,8 +1719,6 @@ export interface paths {
 		/**
 		 * Auth totp init
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -1844,9 +1788,11 @@ export interface paths {
 						"application/json": {
 							/** @description registered webauthn authenticators */
 							authenticators: components["schemas"]["WebauthnAuthenticator"][];
-							/** @description if there is at least one verified and primary email address
+							/**
+							 * @description if there is at least one verified and primary email address
 							 *
-							 *     this is used for magic links and password resets */
+							 *     this is used for magic links and password resets
+							 */
 							has_email: boolean;
 							/** @description if a password has been set */
 							has_password: boolean;
@@ -1950,8 +1896,6 @@ export interface paths {
 		 * Auth webauthn delete
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -1977,8 +1921,6 @@ export interface paths {
 		 * Auth webauthn patch
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -2012,8 +1954,6 @@ export interface paths {
 		/**
 		 * Auth webauthn exec
 		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: SessionLogin</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -2052,8 +1992,6 @@ export interface paths {
 		 * Auth webauthn init
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -2136,8 +2074,6 @@ export interface paths {
 		 * Calendar event list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -2187,8 +2123,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">CalendarEventCreate</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarEventCreate</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -2256,8 +2190,6 @@ export interface paths {
 		 * Calendar event get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -2302,8 +2234,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarEventDelete</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -2333,8 +2263,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarEventUpdate</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -2397,8 +2325,6 @@ export interface paths {
 		 * Calendar overwrite list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -2459,8 +2385,6 @@ export interface paths {
 		 * Calendar overwrite get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -2510,8 +2434,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">CalendarEventManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarOverwriteDelete</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -2542,8 +2464,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">CalendarEventManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarOverwriteUpdate</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -2614,8 +2534,6 @@ export interface paths {
 		 * Calendar overwrite RSVP list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -2670,8 +2588,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarRsvpDelete</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -2708,8 +2624,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarRsvpDelete</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -2750,8 +2664,6 @@ export interface paths {
 		 * Calendar event RSVP list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -2803,8 +2715,6 @@ export interface paths {
 		 * Calendar event RSVP get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -2840,8 +2750,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarRsvpDelete</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -2877,8 +2785,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarRsvpDelete</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -3016,8 +2922,10 @@ export interface paths {
 							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
-							/** @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync. */
+							/**
+							 * @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync.
+							 */
 							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
@@ -3080,11 +2988,6 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/**
-							 * @deprecated
-							 * @description the tags that are available in this forum. exists on Forum channels only.
-							 */
-							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
 							type: components["schemas"]["ChannelType"];
@@ -3145,8 +3048,10 @@ export interface paths {
 							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
-							/** @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync. */
+							/**
+							 * @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync.
+							 */
 							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
@@ -3209,11 +3114,6 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/**
-							 * @deprecated
-							 * @description the tags that are available in this forum. exists on Forum channels only.
-							 */
-							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
 							type: components["schemas"]["ChannelType"];
@@ -3249,8 +3149,6 @@ export interface paths {
 		 * Channel get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -3307,8 +3205,10 @@ export interface paths {
 							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
-							/** @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync. */
+							/**
+							 * @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync.
+							 */
 							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
@@ -3371,11 +3271,6 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/**
-							 * @deprecated
-							 * @description the tags that are available in this forum. exists on Forum channels only.
-							 */
-							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
 							type: components["schemas"]["ChannelType"];
@@ -3405,8 +3300,6 @@ export interface paths {
 		 *     <div class="markdown-alert-permission-optional">ThreadEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelUpdate</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -3500,8 +3393,10 @@ export interface paths {
 							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
-							/** @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync. */
+							/**
+							 * @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync.
+							 */
 							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
@@ -3564,11 +3459,6 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/**
-							 * @deprecated
-							 * @description the tags that are available in this forum. exists on Forum channels only.
-							 */
-							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
 							type: components["schemas"]["ChannelType"];
@@ -3629,8 +3519,10 @@ export interface paths {
 							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
-							/** @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync. */
+							/**
+							 * @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync.
+							 */
 							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
@@ -3693,11 +3585,6 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/**
-							 * @deprecated
-							 * @description the tags that are available in this forum. exists on Forum channels only.
-							 */
-							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
 							type: components["schemas"]["ChannelType"];
@@ -3786,8 +3673,6 @@ export interface paths {
 		/**
 		 * Thread activity
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -3812,11 +3697,10 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Message"][];
-							/** Format: int64 */
-							total: number;
+							messages: components["schemas"]["Message"][];
+							room_members?: components["schemas"]["RoomMember"][];
+							thread_members?: components["schemas"]["ThreadMember"][];
+							users?: components["schemas"]["User"][];
 						};
 					};
 				};
@@ -3920,9 +3804,11 @@ export interface paths {
 					"application/json": {
 						/** @description initial components */
 						components: components["schemas"]["Components_Create"];
-						/** @description mentions to parse from initial components
+						/**
+						 * @description mentions to parse from initial components
 						 *
-						 *     note that you can *only* mention on flume create; editing in a mention later will *not* create a notification */
+						 *     note that you can *only* mention on flume create; editing in a mention later will *not* create a notification
+						 */
 						mentions?: components["schemas"]["ParseMentions"];
 						metadata?: null | components["schemas"]["Metadata"];
 						reply_id?: null | components["schemas"]["Id"];
@@ -3943,9 +3829,11 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
-							/** @description whether this message is ephemeral
+							/**
+							 * @description whether this message is ephemeral
 							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+							 */
 							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
@@ -4008,9 +3896,11 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
-							/** @description whether this message is ephemeral
+							/**
+							 * @description whether this message is ephemeral
 							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+							 */
 							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
@@ -4072,11 +3962,13 @@ export interface paths {
 						/** @description delete some components */
 						delete?: components["schemas"]["ComponentId"][];
 						init?: null | components["schemas"]["Components_Canonical"];
-						/** @description replace a component with one or more components
+						/**
+						 * @description replace a component with one or more components
 						 *
 						 *     - replacing a component with children will delete the children
 						 *     - replacing a component with a single component will always work
-						 *     - replacing a component with multiple components will work if the parent has children (Root, Details, Container, Section) */
+						 *     - replacing a component with multiple components will work if the parent has children (Root, Details, Container, Section)
+						 */
 						replace?: components["schemas"]["FlumeReplace"][];
 					};
 				};
@@ -4155,8 +4047,6 @@ export interface paths {
 		 * Invite list channel
 		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -4197,8 +4087,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: InviteCreate</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -4296,9 +4184,11 @@ export interface paths {
 						"application/json": {
 							/** @description a room member for each returned user */
 							room_members: components["schemas"]["RoomMember"][];
-							/** @description a thread member for each returned user
+							/**
+							 * @description a thread member for each returned user
 							 *
-							 *     will only be populated if this is a thread */
+							 *     will only be populated if this is a thread
+							 */
 							thread_members: components["schemas"]["ThreadMember"][];
 							/** @description the resulting users */
 							users: components["schemas"]["User"][];
@@ -4352,11 +4242,10 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Message"][];
-							/** Format: int64 */
-							total: number;
+							messages: components["schemas"]["Message"][];
+							room_members?: components["schemas"]["RoomMember"][];
+							thread_members?: components["schemas"]["ThreadMember"][];
+							users?: components["schemas"]["User"][];
 						};
 					};
 				};
@@ -4416,9 +4305,11 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
-							/** @description whether this message is ephemeral
+							/**
+							 * @description whether this message is ephemeral
 							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+							 */
 							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
@@ -4590,8 +4481,6 @@ export interface paths {
 		 * Message move
 		 * @description <div class="markdown-alert-permission-required">MessageMove</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -4607,9 +4496,11 @@ export interface paths {
 					"application/json": {
 						/** @description which messages to move */
 						message_ids?: components["schemas"]["Id"][];
-						/** @description the channel to move the messages to
+						/**
+						 * @description the channel to move the messages to
 						 *
-						 *     must be in same room (for now...) */
+						 *     must be in same room (for now...)
+						 */
 						target_channel_id: components["schemas"]["Id"];
 					};
 				};
@@ -4667,11 +4558,10 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Message"][];
-							/** Format: int64 */
-							total: number;
+							messages: components["schemas"]["Message"][];
+							room_members?: components["schemas"]["RoomMember"][];
+							thread_members?: components["schemas"]["ThreadMember"][];
+							users?: components["schemas"]["User"][];
 						};
 					};
 				};
@@ -4696,8 +4586,6 @@ export interface paths {
 		 * Message get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -4724,9 +4612,11 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
-							/** @description whether this message is ephemeral
+							/**
+							 * @description whether this message is ephemeral
 							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+							 */
 							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
@@ -4778,8 +4668,6 @@ export interface paths {
 		/**
 		 * Message edit
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -4823,9 +4711,11 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
-							/** @description whether this message is ephemeral
+							/**
+							 * @description whether this message is ephemeral
 							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+							 */
 							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
@@ -5074,8 +4964,6 @@ export interface paths {
 		/**
 		 * Thread create from message
 		 * @description <div class="markdown-alert-permission-required">ThreadCreatePublic</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -5170,8 +5058,10 @@ export interface paths {
 							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
-							/** @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync. */
+							/**
+							 * @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync.
+							 */
 							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
@@ -5234,11 +5124,6 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/**
-							 * @deprecated
-							 * @description the tags that are available in this forum. exists on Forum channels only.
-							 */
-							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
 							type: components["schemas"]["ChannelType"];
@@ -5281,8 +5166,6 @@ export interface paths {
 		 * Message version list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -5310,7 +5193,7 @@ export interface paths {
 						"application/json": {
 							cursor?: string | null;
 							has_more: boolean;
-							items: components["schemas"]["Message"][];
+							items: components["schemas"]["MessageVersion"][];
 							/** Format: int64 */
 							total: number;
 						};
@@ -5337,8 +5220,6 @@ export interface paths {
 		 * Message version get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -5366,9 +5247,11 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
-							/** @description whether this message is ephemeral
+							/**
+							 * @description whether this message is ephemeral
 							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+							 */
 							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
@@ -5391,8 +5274,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-optional">MessageDelete</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessageVersionDelete</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -5522,9 +5403,11 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
-							/** @description whether this message is ephemeral
+							/**
+							 * @description whether this message is ephemeral
 							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+							 */
 							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
@@ -5560,8 +5443,6 @@ export interface paths {
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: PermissionOverwriteCreate</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: PermissionOverwriteUpdate</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -5601,8 +5482,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: PermissionOverwriteDelete</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -5641,8 +5520,6 @@ export interface paths {
 		 * Message pins list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -5687,8 +5564,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessagePinReorder</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -5732,8 +5607,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessagePin</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -5762,8 +5635,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessageUnpin</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -6520,13 +6391,17 @@ export interface paths {
 			requestBody: {
 				content: {
 					"application/json": {
-						/** @description start in the background
+						/**
+						 * @description start in the background
 						 *
-						 *     returns 202 accepted instead of blocking until it can return 200 ok */
+						 *     returns 202 accepted instead of blocking until it can return 200 ok
+						 */
 						async: boolean;
-						/** @description whether only one instance should be running at a time
+						/**
+						 * @description whether only one instance should be running at a time
 						 *
-						 *     will stop other runs of this script if true */
+						 *     will stop other runs of this script if true
+						 */
 						exclusive: boolean;
 						/** @description the id of the input that triggered this run */
 						trigger_id: string;
@@ -6766,8 +6641,6 @@ export interface paths {
 		 *     <div class="markdown-alert-permission-optional">ChannelManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelUpdate</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -6796,8 +6669,6 @@ export interface paths {
 		 *     <div class="markdown-alert-permission-optional">ChannelManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelUpdate</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -6832,11 +6703,9 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Message reply list
+		 * Message reply roots
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -6890,8 +6759,6 @@ export interface paths {
 		 * Message reply list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -6945,15 +6812,15 @@ export interface paths {
 		/**
 		 * Tag list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
 				query?: {
-					/** @description deny, allow, require tag to be archived
+					/**
+					 * @description deny, allow, require tag to be archived
 					 *
-					 *     default: deny */
+					 *     default: deny
+					 */
 					archived?: boolean | null;
 					from?: string;
 					to?: string;
@@ -6991,8 +6858,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: TagCreate</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -7029,9 +6894,11 @@ export interface paths {
 							 * @description total number of threads with this tag (excluding archived threads)
 							 */
 							active_thread_count: number;
-							/** @description whether this tag is archived
+							/**
+							 * @description whether this tag is archived
 							 *
-							 *     archived tags cant be applied to any new threads and won't appear in the tag picker. */
+							 *     archived tags cant be applied to any new threads and won't appear in the tag picker.
+							 */
 							archived: boolean;
 							channel_id: components["schemas"]["Id"];
 							color?: null | components["schemas"]["Color"];
@@ -7068,16 +6935,16 @@ export interface paths {
 		/**
 		 * Tag search
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
 				query: {
 					query: string;
-					/** @description deny, allow, require tag to be archived
+					/**
+					 * @description deny, allow, require tag to be archived
 					 *
-					 *     default: deny */
+					 *     default: deny
+					 */
 					archived?: boolean | null;
 					from?: string;
 					to?: string;
@@ -7127,8 +6994,6 @@ export interface paths {
 		/**
 		 * Tag get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -7154,9 +7019,11 @@ export interface paths {
 							 * @description total number of threads with this tag (excluding archived threads)
 							 */
 							active_thread_count: number;
-							/** @description whether this tag is archived
+							/**
+							 * @description whether this tag is archived
 							 *
-							 *     archived tags cant be applied to any new threads and won't appear in the tag picker. */
+							 *     archived tags cant be applied to any new threads and won't appear in the tag picker.
+							 */
 							archived: boolean;
 							channel_id: components["schemas"]["Id"];
 							color?: null | components["schemas"]["Color"];
@@ -7184,8 +7051,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: TagDelete</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -7217,8 +7082,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: TagUpdate</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -7255,9 +7118,11 @@ export interface paths {
 							 * @description total number of threads with this tag (excluding archived threads)
 							 */
 							active_thread_count: number;
-							/** @description whether this tag is archived
+							/**
+							 * @description whether this tag is archived
 							 *
-							 *     archived tags cant be applied to any new threads and won't appear in the tag picker. */
+							 *     archived tags cant be applied to any new threads and won't appear in the tag picker.
+							 */
 							archived: boolean;
 							channel_id: components["schemas"]["Id"];
 							color?: null | components["schemas"]["Color"];
@@ -7290,8 +7155,6 @@ export interface paths {
 		/**
 		 * Thread list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -7317,10 +7180,13 @@ export interface paths {
 					content: {
 						"application/json": {
 							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Channel"][];
+							/** @description room members for each thread member in preview_members */
+							room_members: components["schemas"]["RoomMember"][];
+							threads: components["schemas"]["Channel"][];
 							/** Format: int64 */
 							total: number;
+							/** @description users for each thread member in preview_members */
+							users: components["schemas"]["User"][];
 						};
 					};
 				};
@@ -7331,8 +7197,6 @@ export interface paths {
 		 * Thread create
 		 * @description <div class="markdown-alert-permission-optional">ThreadCreatePublic</div>
 		 *     <div class="markdown-alert-permission-optional">ThreadCreatePrivate</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -7426,8 +7290,10 @@ export interface paths {
 							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
-							/** @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync. */
+							/**
+							 * @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync.
+							 */
 							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
@@ -7490,11 +7356,6 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/**
-							 * @deprecated
-							 * @description the tags that are available in this forum. exists on Forum channels only.
-							 */
-							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
 							type: components["schemas"]["ChannelType"];
@@ -7528,9 +7389,7 @@ export interface paths {
 		};
 		/**
 		 * Thread list atom/rss (TODO)
-		 * @description
-		 *
-		 *     Get an atom or rss feed of threads for this channel
+		 * @description Get an atom or rss feed of threads for this channel
 		 */
 		get: {
 			parameters: {
@@ -7575,8 +7434,6 @@ export interface paths {
 		/**
 		 * Thread list archived
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -7602,10 +7459,13 @@ export interface paths {
 					content: {
 						"application/json": {
 							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Channel"][];
+							/** @description room members for each thread member in preview_members */
+							room_members: components["schemas"]["RoomMember"][];
+							threads: components["schemas"]["Channel"][];
 							/** Format: int64 */
 							total: number;
+							/** @description users for each thread member in preview_members */
+							users: components["schemas"]["User"][];
 						};
 					};
 				};
@@ -7629,8 +7489,6 @@ export interface paths {
 		/**
 		 * Thread list removed
 		 * @description <div class="markdown-alert-permission-required">ThreadManage</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -7656,10 +7514,13 @@ export interface paths {
 					content: {
 						"application/json": {
 							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Channel"][];
+							/** @description room members for each thread member in preview_members */
+							room_members: components["schemas"]["RoomMember"][];
+							threads: components["schemas"]["Channel"][];
 							/** Format: int64 */
 							total: number;
+							/** @description users for each thread member in preview_members */
+							users: components["schemas"]["User"][];
 						};
 					};
 				};
@@ -7686,8 +7547,6 @@ export interface paths {
 		 * Channel transfer ownership
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelUpdate</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -7748,8 +7607,10 @@ export interface paths {
 							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
-							/** @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync. */
+							/**
+							 * @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync.
+							 */
 							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
@@ -7812,11 +7673,6 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/**
-							 * @deprecated
-							 * @description the tags that are available in this forum. exists on Forum channels only.
-							 */
-							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
 							type: components["schemas"]["ChannelType"];
@@ -7991,8 +7847,6 @@ export interface paths {
 		/**
 		 * Webhook list thread
 		 * @description <div class="markdown-alert-scope-required">full</div>
-		 *
-		 *
 		 */
 		get: operations["webhook_list_channel"];
 		put?: never;
@@ -8000,8 +7854,6 @@ export interface paths {
 		 * Webhook create
 		 * @description <div class="markdown-alert-scope-required">full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: WebhookCreate</div>
-		 *
-		 *
 		 */
 		post: operations["webhook_create"];
 		delete?: never;
@@ -8019,9 +7871,7 @@ export interface paths {
 		};
 		/**
 		 * Get server info
-		 * @description
-		 *
-		 *     in the future, this will become a stable route
+		 * @description in the future, this will become a stable route
 		 */
 		get: operations["debug_info"];
 		put?: never;
@@ -8042,8 +7892,6 @@ export interface paths {
 		/**
 		 * Trigger a panic
 		 * @description
-		 *
-		 *
 		 */
 		get: operations["debug_panic"];
 		put?: never;
@@ -8086,8 +7934,6 @@ export interface paths {
 		/**
 		 * Get server version
 		 * @description
-		 *
-		 *
 		 */
 		get: operations["debug_version"];
 		put?: never;
@@ -8131,15 +7977,15 @@ export interface paths {
 		 * Document branch list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
 				query?: {
-					/** @description only include branches with these states
+					/**
+					 * @description only include branches with these states
 					 *
-					 *     defaults to only Active */
+					 *     defaults to only Active
+					 */
 					state?: components["schemas"]["DocumentBranchState"][];
 					from?: string;
 					to?: string;
@@ -8190,8 +8036,6 @@ export interface paths {
 		 * Document branch get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -8216,18 +8060,22 @@ export interface paths {
 							created_at: components["schemas"]["Time"];
 							/** @description the user who created this branch */
 							creator_id: components["schemas"]["Id"];
-							/** @description Whether this is the default branch.
+							/**
+							 * @description Whether this is the default branch.
 							 *
-							 *     The default branch cannot be deleted and has the same id as the document */
+							 *     The default branch cannot be deleted and has the same id as the document
+							 */
 							default: boolean;
 							document_id: components["schemas"]["Id"];
 							id: components["schemas"]["Id"];
 							/** @description the name of this branch */
 							name?: string | null;
-							parent_id?: null | components["schemas"]["DocumentVersionId"];
-							/** @description Whether this is a private branch.
+							parent_id?: null | components["schemas"]["DocumentRevisionId"];
+							/**
+							 * @description Whether this is a private branch.
 							 *
-							 *     Private branches are only visible to the user who created this branch, similar to draft documents. */
+							 *     Private branches are only visible to the user who created this branch, similar to draft documents.
+							 */
 							private: boolean;
 							/** @description the current state of this branch */
 							state: components["schemas"]["DocumentBranchState"];
@@ -8245,8 +8093,6 @@ export interface paths {
 		 * Document branch update
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -8279,18 +8125,22 @@ export interface paths {
 							created_at: components["schemas"]["Time"];
 							/** @description the user who created this branch */
 							creator_id: components["schemas"]["Id"];
-							/** @description Whether this is the default branch.
+							/**
+							 * @description Whether this is the default branch.
 							 *
-							 *     The default branch cannot be deleted and has the same id as the document */
+							 *     The default branch cannot be deleted and has the same id as the document
+							 */
 							default: boolean;
 							document_id: components["schemas"]["Id"];
 							id: components["schemas"]["Id"];
 							/** @description the name of this branch */
 							name?: string | null;
-							parent_id?: null | components["schemas"]["DocumentVersionId"];
-							/** @description Whether this is a private branch.
+							parent_id?: null | components["schemas"]["DocumentRevisionId"];
+							/**
+							 * @description Whether this is a private branch.
 							 *
-							 *     Private branches are only visible to the user who created this branch, similar to draft documents. */
+							 *     Private branches are only visible to the user who created this branch, similar to draft documents.
+							 */
 							private: boolean;
 							/** @description the current state of this branch */
 							state: components["schemas"]["DocumentBranchState"];
@@ -8314,8 +8164,6 @@ export interface paths {
 		 * Document branch close
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -8340,18 +8188,22 @@ export interface paths {
 							created_at: components["schemas"]["Time"];
 							/** @description the user who created this branch */
 							creator_id: components["schemas"]["Id"];
-							/** @description Whether this is the default branch.
+							/**
+							 * @description Whether this is the default branch.
 							 *
-							 *     The default branch cannot be deleted and has the same id as the document */
+							 *     The default branch cannot be deleted and has the same id as the document
+							 */
 							default: boolean;
 							document_id: components["schemas"]["Id"];
 							id: components["schemas"]["Id"];
 							/** @description the name of this branch */
 							name?: string | null;
-							parent_id?: null | components["schemas"]["DocumentVersionId"];
-							/** @description Whether this is a private branch.
+							parent_id?: null | components["schemas"]["DocumentRevisionId"];
+							/**
+							 * @description Whether this is a private branch.
 							 *
-							 *     Private branches are only visible to the user who created this branch, similar to draft documents. */
+							 *     Private branches are only visible to the user who created this branch, similar to draft documents.
+							 */
 							private: boolean;
 							/** @description the current state of this branch */
 							state: components["schemas"]["DocumentBranchState"];
@@ -8379,7 +8231,7 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *
-		 *
+		 *     Replace a document with serialized content. Creates a new revision.
 		 */
 		put: {
 			parameters: {
@@ -8426,8 +8278,6 @@ export interface paths {
 		 * Document CRDT diff
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -8573,8 +8423,6 @@ export interface paths {
 		 * Document branch merge
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -8622,8 +8470,6 @@ export interface paths {
 		 * Document branch sync
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -8671,8 +8517,6 @@ export interface paths {
 		 * Document branch fork
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -8704,23 +8548,79 @@ export interface paths {
 							created_at: components["schemas"]["Time"];
 							/** @description the user who created this branch */
 							creator_id: components["schemas"]["Id"];
-							/** @description Whether this is the default branch.
+							/**
+							 * @description Whether this is the default branch.
 							 *
-							 *     The default branch cannot be deleted and has the same id as the document */
+							 *     The default branch cannot be deleted and has the same id as the document
+							 */
 							default: boolean;
 							document_id: components["schemas"]["Id"];
 							id: components["schemas"]["Id"];
 							/** @description the name of this branch */
 							name?: string | null;
-							parent_id?: null | components["schemas"]["DocumentVersionId"];
-							/** @description Whether this is a private branch.
+							parent_id?: null | components["schemas"]["DocumentRevisionId"];
+							/**
+							 * @description Whether this is a private branch.
 							 *
-							 *     Private branches are only visible to the user who created this branch, similar to draft documents. */
+							 *     Private branches are only visible to the user who created this branch, similar to draft documents.
+							 */
 							private: boolean;
 							/** @description the current state of this branch */
 							state: components["schemas"]["DocumentBranchState"];
 						};
 					};
+				};
+			};
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/document/{channel_id}/media": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Document media attach
+		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
+		 *     <div class="markdown-alert-scope-required">Full</div>
+		 *
+		 *     Attach a piece of media to a document. This **MUST** be called when uploading media to a document, otherwise the media may be garbage collected.
+		 *
+		 *     Note that the current system is very dumb, and will only garbage collect media when the document is deleted.
+		 *
+		 *     In the future, document-media linking will be maintained automatically as the crdt is edited.
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path: {
+					channel_id: string;
+				};
+				cookie?: never;
+			};
+			requestBody: {
+				content: {
+					"application/json": {
+						media_id: components["schemas"]["Id"];
+					};
+				};
+			};
+			responses: {
+				/** @description successfully linked */
+				204: {
+					headers: {
+						[name: string]: unknown;
+					};
+					content?: never;
 				};
 			};
 		};
@@ -8742,7 +8642,7 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *
-		 *
+		 *     Get serialized document content
 		 */
 		get: {
 			parameters: {
@@ -8788,8 +8688,6 @@ export interface paths {
 		 * Document tag list
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -8833,8 +8731,6 @@ export interface paths {
 		 * Document tag create
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -8850,7 +8746,7 @@ export interface paths {
 					"application/json": {
 						/** @description optional more detailed description */
 						description?: string | null;
-						revision: components["schemas"]["DocumentRevisionId"];
+						revision: components["schemas"]["DocumentRevisionRef"];
 						/** @description one line description */
 						summary: string;
 					};
@@ -8883,8 +8779,6 @@ export interface paths {
 		 * Document tag get
 		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -8930,8 +8824,6 @@ export interface paths {
 		 * Document tag delete
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -8960,8 +8852,6 @@ export interface paths {
 		 * Document tag update
 		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -9127,9 +9017,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Guest create
-		 * @description
-		 *
-		 *     Create a guest account, with limited access to the platform.
+		 * @description Create a guest account, with limited access to the platform.
 		 *
 		 *     - guests can read but not write public rooms, threads, messages, etc
 		 *     - when using an invite, they can act like a standard account in that one specific room/thread
@@ -9165,9 +9053,11 @@ export interface paths {
 							deleted_at?: null | components["schemas"]["Time"];
 							description?: string | null;
 							emails?: components["schemas"]["EmailInfo"][] | null;
-							/** @description whether this user is considered to have mutifactor authentication enabled on their account
+							/**
+							 * @description whether this user is considered to have mutifactor authentication enabled on their account
 							 *
-							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa` */
+							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
+							 */
 							has_mfa?: boolean | null;
 							id: components["schemas"]["Id"];
 							name: string;
@@ -9201,9 +9091,7 @@ export interface paths {
 		};
 		/**
 		 * Check health
-		 * @description
-		 *
-		 *     is this server alive?
+		 * @description is this server alive?
 		 */
 		get: operations["debug_health"];
 		put?: never;
@@ -9383,8 +9271,6 @@ export interface paths {
 		/**
 		 * Inbox mark read
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -9435,8 +9321,6 @@ export interface paths {
 		/**
 		 * Inbox mark unread
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -9487,8 +9371,6 @@ export interface paths {
 		/**
 		 * Interaction create
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -9516,9 +9398,11 @@ export interface paths {
 						"application/json": components["schemas"]["InteractionType"] & {
 							application_id: components["schemas"]["Id"];
 							id: components["schemas"]["Id"];
-							/** @description unique token for responding to this interaction
+							/**
+							 * @description unique token for responding to this interaction
 							 *
-							 *     this exists so you don't need to give your token to an http server for http based interactions. only is set for bots. */
+							 *     this exists so you don't need to give your token to an http server for http based interactions. only is set for bots.
+							 */
 							token?: string | null;
 							/**
 							 * Format: int32
@@ -9547,9 +9431,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Interaction respond
-		 * @description
-		 *
-		 *     Respond to an interaction
+		 * @description Respond to an interaction
 		 */
 		post: {
 			parameters: {
@@ -9652,9 +9534,11 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
-							/** @description whether this message is ephemeral
+							/**
+							 * @description whether this message is ephemeral
 							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+							 */
 							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
@@ -9715,9 +9599,11 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
-							/** @description whether this message is ephemeral
+							/**
+							 * @description whether this message is ephemeral
 							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+							 */
 							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
@@ -9814,9 +9700,11 @@ export interface paths {
 							/** @description when this message was created */
 							created_at: components["schemas"]["Time"];
 							deleted_at?: null | components["schemas"]["Time"];
-							/** @description whether this message is ephemeral
+							/**
+							 * @description whether this message is ephemeral
 							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+							 */
 							ephemeral?: boolean;
 							flume?: null | components["schemas"]["MessageFlume"];
 							id: components["schemas"]["Id"];
@@ -9851,8 +9739,6 @@ export interface paths {
 		/**
 		 * Harvest download
 		 * @description
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -9893,8 +9779,6 @@ export interface paths {
 		/**
 		 * Internal rpc
 		 * @description
-		 *
-		 *
 		 */
 		get: operations["internal_rpc"];
 		put?: never;
@@ -9915,8 +9799,6 @@ export interface paths {
 		/**
 		 * Invite resolve
 		 * @description
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -9955,8 +9837,6 @@ export interface paths {
 		/**
 		 * Invite use
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -9983,8 +9863,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: InviteDelete</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -10013,8 +9891,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: InviteUpdate</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -10083,8 +9959,6 @@ export interface paths {
 		/**
 		 * Media create
 		 * @description
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -10098,9 +9972,11 @@ export interface paths {
 					"application/json": components["schemas"]["MediaCreateSource"] & {
 						/** @description Descriptive alt text, not entirely unlike a caption */
 						alt?: string | null;
-						/** @description Whether to strip sensitive exif info, like location or camera make and model.
+						/**
+						 * @description Whether to strip sensitive exif info, like location or camera make and model.
 						 *
-						 *     Once strip_exif is set to true, cannot be set to false. */
+						 *     Once strip_exif is set to true, cannot be set to false.
+						 */
 						strip_exif?: boolean;
 					};
 				};
@@ -10143,8 +10019,6 @@ export interface paths {
 		/**
 		 * Media search
 		 * @description
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -10204,8 +10078,6 @@ export interface paths {
 		/**
 		 * Media get
 		 * @description
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -10259,9 +10131,11 @@ export interface paths {
 							 */
 							source_url?: string | null;
 							status: components["schemas"]["MediaStatus"];
-							/** @description Whether sensitive exif info has been stripped from this media.
+							/**
+							 * @description Whether sensitive exif info has been stripped from this media.
 							 *
-							 *     Once set to `true`, this cannot be unset. */
+							 *     Once set to `true`, this cannot be unset.
+							 */
 							strip_exif?: boolean;
 							user_id?: null | components["schemas"]["Id"];
 							version_id: components["schemas"]["Id"];
@@ -10275,8 +10149,6 @@ export interface paths {
 		/**
 		 * Media delete
 		 * @description
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -10310,8 +10182,6 @@ export interface paths {
 		/**
 		 * Media patch
 		 * @description
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -10329,10 +10199,12 @@ export interface paths {
 						alt?: string | null;
 						/** @description The filename for this piece of media */
 						filename?: string | null;
-						/** @description Whether to strip sensitive exif info, like location or camera make and model.
+						/**
+						 * @description Whether to strip sensitive exif info, like location or camera make and model.
 						 *
 						 *     This can only be changed if the media status is not `Consumed`. Once
-						 *     strip_exif is set to true, cannot be set to false. */
+						 *     strip_exif is set to true, cannot be set to false.
+						 */
 						strip_exif?: boolean | null;
 					};
 				};
@@ -10379,9 +10251,11 @@ export interface paths {
 							 */
 							source_url?: string | null;
 							status: components["schemas"]["MediaStatus"];
-							/** @description Whether sensitive exif info has been stripped from this media.
+							/**
+							 * @description Whether sensitive exif info has been stripped from this media.
 							 *
-							 *     Once set to `true`, this cannot be unset. */
+							 *     Once set to `true`, this cannot be unset.
+							 */
 							strip_exif?: boolean;
 							user_id?: null | components["schemas"]["Id"];
 							version_id: components["schemas"]["Id"];
@@ -10404,8 +10278,6 @@ export interface paths {
 		/**
 		 * Media clone
 		 * @description
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -10468,9 +10340,11 @@ export interface paths {
 							 */
 							source_url?: string | null;
 							status: components["schemas"]["MediaStatus"];
-							/** @description Whether sensitive exif info has been stripped from this media.
+							/**
+							 * @description Whether sensitive exif info has been stripped from this media.
 							 *
-							 *     Once set to `true`, this cannot be unset. */
+							 *     Once set to `true`, this cannot be unset.
+							 */
 							strip_exif?: boolean;
 							user_id?: null | components["schemas"]["Id"];
 							version_id: components["schemas"]["Id"];
@@ -10496,8 +10370,6 @@ export interface paths {
 		/**
 		 * Media done
 		 * @description
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -10511,9 +10383,11 @@ export interface paths {
 			requestBody: {
 				content: {
 					"application/json": {
-						/** @description Whether to process this media asynchronously.
+						/**
+						 * @description Whether to process this media asynchronously.
 						 *
-						 *     If this is true, return 202 Accepted immediately and send a `MediaProcessed` event when your media is done processing. */
+						 *     If this is true, return 202 Accepted immediately and send a `MediaProcessed` event when your media is done processing.
+						 */
 						async?: boolean;
 					};
 				};
@@ -10560,9 +10434,11 @@ export interface paths {
 							 */
 							source_url?: string | null;
 							status: components["schemas"]["MediaStatus"];
-							/** @description Whether sensitive exif info has been stripped from this media.
+							/**
+							 * @description Whether sensitive exif info has been stripped from this media.
 							 *
-							 *     Once set to `true`, this cannot be unset. */
+							 *     Once set to `true`, this cannot be unset.
+							 */
 							strip_exif?: boolean;
 							user_id?: null | components["schemas"]["Id"];
 							version_id: components["schemas"]["Id"];
@@ -10692,9 +10568,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Oauth introspect
-		 * @description
-		 *
-		 *     Validate an access token and retrieve its associated information and scopes.
+		 * @description Validate an access token and retrieve its associated information and scopes.
 		 */
 		post: {
 			parameters: {
@@ -10723,8 +10597,10 @@ export interface paths {
 							/** Format: int64 */
 							exp?: number | null;
 							scopes: components["schemas"]["Scopes"];
-							/** @description this is specified to be "human readable", but in practice it would be
-							 *     simpler and more useful to return the unique id of the user */
+							/**
+							 * @description this is specified to be "human readable", but in practice it would be
+							 *     simpler and more useful to return the unique id of the user
+							 */
 							username: components["schemas"]["Id"];
 						};
 					};
@@ -10748,9 +10624,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Oauth revoke
-		 * @description
-		 *
-		 *     Invalidate an active access or refresh token, terminating the application's access.
+		 * @description Invalidate an active access or refresh token, terminating the application's access.
 		 */
 		post: {
 			parameters: {
@@ -10793,9 +10667,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Oauth token
-		 * @description
-		 *
-		 *     Exchange an authorization token for an access token.
+		 * @description Exchange an authorization token for an access token.
 		 */
 		post: {
 			parameters: {
@@ -10919,8 +10791,6 @@ export interface paths {
 		/**
 		 * Preferences global get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -10952,8 +10822,6 @@ export interface paths {
 		/**
 		 * Preferences global put
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -11010,8 +10878,6 @@ export interface paths {
 		/**
 		 * Preferences channel get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -11045,8 +10911,6 @@ export interface paths {
 		/**
 		 * Preferences channel put
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -11105,8 +10969,6 @@ export interface paths {
 		/**
 		 * Preferences room get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -11142,8 +11004,6 @@ export interface paths {
 		/**
 		 * Preferences room put
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -11206,8 +11066,6 @@ export interface paths {
 		/**
 		 * Preferences user get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -11241,8 +11099,6 @@ export interface paths {
 		/**
 		 * Preferences user put
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -11301,8 +11157,6 @@ export interface paths {
 		/**
 		 * Public channels list (TODO)
 		 * @description
-		 *
-		 *
 		 */
 		get: operations["public_channels"];
 		put?: never;
@@ -11323,8 +11177,6 @@ export interface paths {
 		/**
 		 * Public rooms list (TODO)
 		 * @description
-		 *
-		 *
 		 */
 		get: operations["public_rooms"];
 		put?: never;
@@ -11514,8 +11366,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoomCreate</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomCreate</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -11619,8 +11469,6 @@ export interface paths {
 		/**
 		 * Room template list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -11657,8 +11505,6 @@ export interface paths {
 		/**
 		 * Room template create
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -11719,8 +11565,6 @@ export interface paths {
 		/**
 		 * Room template get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -11764,8 +11608,6 @@ export interface paths {
 		/**
 		 * Room template delete
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -11792,8 +11634,6 @@ export interface paths {
 		/**
 		 * Room template edit
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -11853,8 +11693,6 @@ export interface paths {
 		/**
 		 * Room template sync
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -11912,8 +11750,6 @@ export interface paths {
 		 * Room search
 		 * @description <div class="markdown-alert-permission-required">RoomManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -11958,8 +11794,6 @@ export interface paths {
 		/**
 		 * Room get
 		 * @description <div class="markdown-alert-scope-required">Rooms</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -12052,8 +11886,6 @@ export interface paths {
 		 * Room delete
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomDelete</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -12082,8 +11914,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomUpdate</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -12240,8 +12070,6 @@ export interface paths {
 		 * Room analytics channels
 		 * @description <div class="markdown-alert-permission-required">AnalyticsView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -12302,8 +12130,6 @@ export interface paths {
 		 * Room analytics invites
 		 * @description <div class="markdown-alert-permission-required">AnalyticsView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -12362,8 +12188,6 @@ export interface paths {
 		 * Room analytics members count
 		 * @description <div class="markdown-alert-permission-required">AnalyticsView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -12420,8 +12244,6 @@ export interface paths {
 		 * Room analytics members join
 		 * @description <div class="markdown-alert-permission-required">AnalyticsView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -12478,8 +12300,6 @@ export interface paths {
 		 * Room analytics members leave
 		 * @description <div class="markdown-alert-permission-required">AnalyticsView</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -12604,8 +12424,6 @@ export interface paths {
 		 * Room audit logs
 		 * @description <div class="markdown-alert-permission-required">AuditLogView</div>
 		 *     <div class="markdown-alert-scope-required">Rooms</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -12618,9 +12436,11 @@ export interface paths {
 					user_id?: components["schemas"]["Id"][];
 					/** @description only return audit log entries with these types */
 					type?: string[];
-					/** @description only return audit log entries with these statuses
+					/**
+					 * @description only return audit log entries with these statuses
 					 *
-					 *     defaults to only `Success` */
+					 *     defaults to only `Success`
+					 */
 					status?: components["schemas"]["AuditLogEntryStatus"][];
 				};
 				header?: never;
@@ -12644,17 +12464,21 @@ export interface paths {
 							cursor?: string | null;
 							/** @description whether there are more audit log events that can be fetched */
 							has_more: boolean;
-							/** @description room members referenced in the audit log entries
+							/**
+							 * @description room members referenced in the audit log entries
 							 *
-							 *     this includes actors (ie. room members who did actions) and targets (ie. room members who were affected by actions) */
+							 *     this includes actors (ie. room members who did actions) and targets (ie. room members who were affected by actions)
+							 */
 							room_members: components["schemas"]["RoomMember"][];
 							/** @description tags referenced in the audit log entries */
 							tags: components["schemas"]["Tag"][];
 							/** @description threads referenced in the audit log entries */
 							threads: components["schemas"]["Channel"][];
-							/** @description users referenced in the audit log entries
+							/**
+							 * @description users referenced in the audit log entries
 							 *
-							 *     this includes actors (ie. users who did actions) and targets (ie. users who were affected by actions) */
+							 *     this includes actors (ie. users who did actions) and targets (ie. users who were affected by actions)
+							 */
 							users: components["schemas"]["User"][];
 							/** @description webhooks referenced in the audit log entries */
 							webhooks: components["schemas"]["Webhook"][];
@@ -12682,8 +12506,6 @@ export interface paths {
 		 * Automod rule list
 		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -12730,8 +12552,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AutomodRuleCreate</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -12804,8 +12624,6 @@ export interface paths {
 		 * Automod rule test
 		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -12834,9 +12652,11 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
-							/** @description deduplicated list of all of the actions that would be taken
+							/**
+							 * @description deduplicated list of all of the actions that would be taken
 							 *
-							 *     eg. if one rule times a user out for 60 seconds and another times out for 120 seconds, there would be one action that times out for 120 seconds */
+							 *     eg. if one rule times a user out for 60 seconds and another times out for 120 seconds, there would be one action that times out for 120 seconds
+							 */
 							actions: components["schemas"]["AutomodAction"][];
 							/** @description the content that was matched */
 							matches: components["schemas"]["AutomodMatches"][];
@@ -12864,8 +12684,6 @@ export interface paths {
 		 * Automod rule get
 		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -12914,8 +12732,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AutomodRuleDelete</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -12945,8 +12761,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AutomodRuleUpdate</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -13015,8 +12829,6 @@ export interface paths {
 		 * Room ban list
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -13072,8 +12884,6 @@ export interface paths {
 		 * Room ban bulk create
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -13120,8 +12930,6 @@ export interface paths {
 		 * Room ban get
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -13159,8 +12967,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberBan</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -13195,8 +13001,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberUnban</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -13234,8 +13038,6 @@ export interface paths {
 		/**
 		 * Room channel list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -13375,8 +13177,10 @@ export interface paths {
 							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
-							/** @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync. */
+							/**
+							 * @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync.
+							 */
 							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
@@ -13439,11 +13243,6 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/**
-							 * @deprecated
-							 * @description the tags that are available in this forum. exists on Forum channels only.
-							 */
-							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
 							type: components["schemas"]["ChannelType"];
@@ -13794,8 +13593,6 @@ export interface paths {
 		/**
 		 * Room feature enable
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -13878,8 +13675,6 @@ export interface paths {
 		/**
 		 * Room feature disable
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -14028,8 +13823,6 @@ export interface paths {
 		 * Invite list room
 		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -14070,8 +13863,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: InviteCreate</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -14143,8 +13934,6 @@ export interface paths {
 		/**
 		 * Room member list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -14197,8 +13986,6 @@ export interface paths {
 		/**
 		 * Room member search
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -14248,8 +14035,6 @@ export interface paths {
 		/**
 		 * Room member search advanced
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -14321,8 +14106,6 @@ export interface paths {
 		/**
 		 * Room member get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -14374,8 +14157,6 @@ export interface paths {
 		 *     <div class="markdown-alert-permission-optional">MemberKick</div>
 		 *     <div class="markdown-alert-permission-optional">RoleApply</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -14446,8 +14227,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-optional">MemberKick</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberKick</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -14485,8 +14264,6 @@ export interface paths {
 		 *     <div class="markdown-alert-permission-optional">MemberNicknameManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberUpdate</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -14567,8 +14344,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">MemberKick</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberPrune</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -14634,8 +14409,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoomManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomQuarantine</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -14718,8 +14491,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoomManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomUnquarantine</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -14876,8 +14647,6 @@ export interface paths {
 		/**
 		 * Role list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -14918,8 +14687,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleCreate</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -14990,8 +14757,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleReorder</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -15032,8 +14797,6 @@ export interface paths {
 		/**
 		 * Role get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -15088,8 +14851,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleDelete</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -15121,8 +14882,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleUpdate</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -15202,8 +14961,6 @@ export interface paths {
 		/**
 		 * Role member list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -15248,8 +15005,6 @@ export interface paths {
 		 * Role member bulk patch
 		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -15296,8 +15051,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoleApply</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleApply</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -15348,8 +15101,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoleApply</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleUnapply</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -15389,8 +15140,6 @@ export interface paths {
 		/**
 		 * Room security set
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -15491,9 +15240,7 @@ export interface paths {
 		};
 		/**
 		 * Thread list room
-		 * @description
-		 *
-		 *     List all active threads in a room
+		 * @description List all active threads in a room
 		 */
 		get: {
 			parameters: {
@@ -15513,8 +15260,14 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
-							/** @description threads in this room */
+							cursor?: string | null;
+							/** @description room members for each thread member in preview_members */
+							room_members: components["schemas"]["RoomMember"][];
 							threads: components["schemas"]["Channel"][];
+							/** Format: int64 */
+							total: number;
+							/** @description users for each thread member in preview_members */
+							users: components["schemas"]["User"][];
 						};
 					};
 				};
@@ -15540,8 +15293,6 @@ export interface paths {
 		/**
 		 * Room transfer ownership
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -15645,8 +15396,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">RoomManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomUndelete</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -15684,8 +15433,6 @@ export interface paths {
 		/**
 		 * Webhook list room
 		 * @description <div class="markdown-alert-scope-required">full</div>
-		 *
-		 *
 		 */
 		get: operations["webhook_list_room"];
 		put?: never;
@@ -15708,8 +15455,6 @@ export interface paths {
 		/**
 		 * Search channels
 		 * @description
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -15720,12 +15465,11 @@ export interface paths {
 			};
 			requestBody: {
 				content: {
-					"application/json": components["schemas"]["SearchRequest"] & {
-						/** @description whether to include nsfw channels */
-						include_nsfw?: boolean | null;
-						/** @description field to sort by */
-						sort_field?: components["schemas"]["ChannelSearchOrderField"];
-					};
+					"application/json": components["schemas"]["SearchRequest"] &
+						components["schemas"]["ChannelSearchOrderField"] & {
+							/** @description whether to include nsfw channels */
+							include_nsfw?: boolean | null;
+						};
 				};
 			};
 			responses: {
@@ -15772,8 +15516,6 @@ export interface paths {
 		/**
 		 * Search messages
 		 * @description
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -15810,10 +15552,12 @@ export interface paths {
 							results: components["schemas"]["Id"][];
 							/** @description room members objects for each author, if they exist */
 							room_members: components["schemas"]["RoomMember"][];
-							/** @description relevant thread member objects
+							/**
+							 * @description relevant thread member objects
 							 *
 							 *     - one for each (message author, thread) tuple
-							 *     - one for each thread the requesting user is a member of */
+							 *     - one for each thread the requesting user is a member of
+							 */
 							thread_members: components["schemas"]["ThreadMember"][];
 							/** @description threads the messages are in */
 							threads: components["schemas"]["Channel"][];
@@ -15847,8 +15591,6 @@ export interface paths {
 		/**
 		 * Search rooms
 		 * @description
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -15906,8 +15648,6 @@ export interface paths {
 		/**
 		 * Server information
 		 * @description
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -15970,8 +15710,6 @@ export interface paths {
 		/**
 		 * Server moderation
 		 * @description
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -16015,8 +15753,6 @@ export interface paths {
 		 * Server voice
 		 * @description <div class="markdown-alert-permission-required">Admin</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -16088,8 +15824,6 @@ export interface paths {
 		 * Invite server list
 		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -16127,8 +15861,6 @@ export interface paths {
 		 * Invite server create
 		 * @description <div class="markdown-alert-permission-optional">InviteCreate</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -16431,9 +16163,11 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
-							/** @description the current epoch the requesting server is on
+							/**
+							 * @description the current epoch the requesting server is on
 							 *
-							 *     is incremented if the sender is too lagged */
+							 *     is incremented if the sender is too lagged
+							 */
 							epoch: components["schemas"]["FederationEpoch"];
 						};
 					};
@@ -16456,8 +16190,6 @@ export interface paths {
 		/**
 		 * Session list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -16494,8 +16226,6 @@ export interface paths {
 		/**
 		 * Session create
 		 * @description
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -16545,8 +16275,6 @@ export interface paths {
 		 * Session delete all
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: SessionDeleteAll</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -16581,8 +16309,6 @@ export interface paths {
 		/**
 		 * Session get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -16623,8 +16349,6 @@ export interface paths {
 		 * Session delete
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: SessionDelete</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -16652,8 +16376,6 @@ export interface paths {
 		 * Session update
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: SessionUpdate</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -16726,8 +16448,6 @@ export interface paths {
 		/**
 		 * Thread member list
 		 * @description
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -16780,8 +16500,6 @@ export interface paths {
 		/**
 		 * Thread member get
 		 * @description
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -16815,8 +16533,6 @@ export interface paths {
 		 * Thread member add
 		 * @description <div class="markdown-alert-permission-optional">MemberKick</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ThreadMemberAdd</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -16862,8 +16578,6 @@ export interface paths {
 		 * Thread member delete
 		 * @description <div class="markdown-alert-permission-optional">MemberKick</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ThreadMemberRemove</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -16903,8 +16617,6 @@ export interface paths {
 		/**
 		 * Unfurler debug
 		 * @description
-		 *
-		 *
 		 */
 		post: operations["unfurler_debug"];
 		delete?: never;
@@ -16925,8 +16637,6 @@ export interface paths {
 		/**
 		 * Unfurl multiple urls
 		 * @description
-		 *
-		 *
 		 */
 		post: operations["unfurler_unfurl"];
 		delete?: never;
@@ -16995,8 +16705,6 @@ export interface paths {
 		/**
 		 * User connection metadata get
 		 * @description
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -17025,8 +16733,6 @@ export interface paths {
 		/**
 		 * User connection metadata put
 		 * @description
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -17253,8 +16959,10 @@ export interface paths {
 							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
-							/** @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync. */
+							/**
+							 * @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync.
+							 */
 							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
@@ -17317,11 +17025,6 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/**
-							 * @deprecated
-							 * @description the tags that are available in this forum. exists on Forum channels only.
-							 */
-							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
 							type: components["schemas"]["ChannelType"];
@@ -17403,8 +17106,10 @@ export interface paths {
 							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
-							/** @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync. */
+							/**
+							 * @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync.
+							 */
 							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
@@ -17467,11 +17172,6 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/**
-							 * @deprecated
-							 * @description the tags that are available in this forum. exists on Forum channels only.
-							 */
-							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
 							type: components["schemas"]["ChannelType"];
@@ -17532,8 +17232,10 @@ export interface paths {
 							last_pin_timestamp?: null | components["schemas"]["Time"];
 							last_read_id?: null | components["schemas"]["Id"];
 							last_version_id?: null | components["schemas"]["Id"];
-							/** @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync. */
+							/**
+							 * @description monotonic sync sequence number, incremented on every action.
+							 *     used for incremental channel sync.
+							 */
 							latest_seq?: components["schemas"]["ChannelSeq"];
 							locked?: null | components["schemas"]["Locked"];
 							/**
@@ -17596,11 +17298,6 @@ export interface paths {
 							tag_count?: number;
 							/** @description tags that are applied to this thread */
 							tags?: components["schemas"]["Id"][] | null;
-							/**
-							 * @deprecated
-							 * @description the tags that are available in this forum. exists on Forum channels only.
-							 */
-							tags_available?: components["schemas"]["Tag"][] | null;
 							thread_member?: null | components["schemas"]["ThreadMember"];
 							/** @description type specific data for this channel */
 							type: components["schemas"]["ChannelType"];
@@ -17808,8 +17505,6 @@ export interface paths {
 		/**
 		 * Harvest get
 		 * @description
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -17849,8 +17544,6 @@ export interface paths {
 		/**
 		 * Harvest create
 		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: HarvestCreate</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -18023,8 +17716,6 @@ export interface paths {
 		/**
 		 * User search
 		 * @description <div class="markdown-alert-permission-required">Admin</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -18048,23 +17739,31 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
-							/** @description whether to only return bots or only return non-bots.
+							/**
+							 * @description whether to only return bots or only return non-bots.
 							 *
-							 *     defaults to allowing both. */
+							 *     defaults to allowing both.
+							 */
 							bot?: boolean | null;
-							/** @description whether to only return deleted users or only return non-deleted users.
+							/**
+							 * @description whether to only return deleted users or only return non-deleted users.
 							 *
-							 *     defaults to only non deleted users. */
+							 *     defaults to only non deleted users.
+							 */
 							deleted?: boolean | null;
-							/** @description whether to only return guests (non registered users) or only return non-guests.
+							/**
+							 * @description whether to only return guests (non registered users) or only return non-guests.
 							 *
-							 *     defaults to allowing both. */
+							 *     defaults to allowing both.
+							 */
 							guests?: boolean | null;
 							/** @description include users who are members of these rooms */
 							member_of_room_id: components["schemas"]["Id"][];
-							/** @description whether to only return puppets or only return non-puppets.
+							/**
+							 * @description whether to only return puppets or only return non-puppets.
 							 *
-							 *     defaults to allowing both. */
+							 *     defaults to allowing both.
+							 */
 							puppet?: boolean | null;
 							/** @description filter by user name, description, and id */
 							query?: string | null;
@@ -18072,9 +17771,11 @@ export interface paths {
 							server_role_id: components["schemas"]["Id"][];
 							sort_field: components["schemas"]["UserSearchSortField"];
 							sort_order: components["schemas"]["Order"];
-							/** @description whether to only return suspended users or only return non-suspended users.
+							/**
+							 * @description whether to only return suspended users or only return non-suspended users.
 							 *
-							 *     defaults to allowing both. */
+							 *     defaults to allowing both.
+							 */
 							suspended?: boolean | null;
 						};
 					};
@@ -18131,8 +17832,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-required">UserManage</div>
 		 *     <div class="markdown-alert-permission-optional">UserManageSelf</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: UserDelete</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -18162,8 +17861,6 @@ export interface paths {
 		 *     <div class="markdown-alert-permission-optional">UserProfileSelf</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: UserUpdate</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -18199,9 +17896,11 @@ export interface paths {
 							deleted_at?: null | components["schemas"]["Time"];
 							description?: string | null;
 							emails?: components["schemas"]["EmailInfo"][] | null;
-							/** @description whether this user is considered to have mutifactor authentication enabled on their account
+							/**
+							 * @description whether this user is considered to have mutifactor authentication enabled on their account
 							 *
-							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa` */
+							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
+							 */
 							has_mfa?: boolean | null;
 							id: components["schemas"]["Id"];
 							name: string;
@@ -18239,8 +17938,6 @@ export interface paths {
 		/**
 		 * User audit logs
 		 * @description
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -18253,9 +17950,11 @@ export interface paths {
 					user_id?: components["schemas"]["Id"][];
 					/** @description only return audit log entries with these types */
 					type?: string[];
-					/** @description only return audit log entries with these statuses
+					/**
+					 * @description only return audit log entries with these statuses
 					 *
-					 *     defaults to only `Success` */
+					 *     defaults to only `Success`
+					 */
 					status?: components["schemas"]["AuditLogEntryStatus"][];
 				};
 				header?: never;
@@ -18279,17 +17978,21 @@ export interface paths {
 							cursor?: string | null;
 							/** @description whether there are more audit log events that can be fetched */
 							has_more: boolean;
-							/** @description room members referenced in the audit log entries
+							/**
+							 * @description room members referenced in the audit log entries
 							 *
-							 *     this includes actors (ie. room members who did actions) and targets (ie. room members who were affected by actions) */
+							 *     this includes actors (ie. room members who did actions) and targets (ie. room members who were affected by actions)
+							 */
 							room_members: components["schemas"]["RoomMember"][];
 							/** @description tags referenced in the audit log entries */
 							tags: components["schemas"]["Tag"][];
 							/** @description threads referenced in the audit log entries */
 							threads: components["schemas"]["Channel"][];
-							/** @description users referenced in the audit log entries
+							/**
+							 * @description users referenced in the audit log entries
 							 *
-							 *     this includes actors (ie. users who did actions) and targets (ie. users who were affected by actions) */
+							 *     this includes actors (ie. users who did actions) and targets (ie. users who were affected by actions)
+							 */
 							users: components["schemas"]["User"][];
 							/** @description webhooks referenced in the audit log entries */
 							webhooks: components["schemas"]["Webhook"][];
@@ -18316,8 +18019,6 @@ export interface paths {
 		/**
 		 * User connection list
 		 * @description
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -18373,8 +18074,6 @@ export interface paths {
 		/**
 		 * User connection delete
 		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: ConnectionDelete</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -18402,8 +18101,6 @@ export interface paths {
 		/**
 		 * User connection update
 		 * @description
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -18504,8 +18201,6 @@ export interface paths {
 		/**
 		 * Email list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -18556,8 +18251,6 @@ export interface paths {
 		 * Email add
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: EmailCreate</div>
-		 *
-		 *
 		 */
 		put: {
 			parameters: {
@@ -18592,8 +18285,6 @@ export interface paths {
 		 * Email delete
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: EmailDelete</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -18622,8 +18313,6 @@ export interface paths {
 		 * Email update
 		 * @description <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: EmailUpdate</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -18638,10 +18327,12 @@ export interface paths {
 			requestBody: {
 				content: {
 					"application/json": {
-						/** @description whether this is the user's primary email address
+						/**
+						 * @description whether this is the user's primary email address
 						 *
 						 *     - there can only be one primary email address
-						 *     - the primary address has EmailTrust::Full */
+						 *     - the primary address has EmailTrust::Full
+						 */
 						is_primary?: boolean | null;
 					};
 				};
@@ -18679,8 +18370,6 @@ export interface paths {
 		/**
 		 * Email verification resend
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -18721,8 +18410,6 @@ export interface paths {
 		/**
 		 * Email verify
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -18762,8 +18449,6 @@ export interface paths {
 		/**
 		 * Invite user list
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -18803,8 +18488,6 @@ export interface paths {
 		 * Invite user create
 		 * @description <div class="markdown-alert-permission-optional">InviteCreate</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -18877,9 +18560,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * User presence set
-		 * @description
-		 *
-		 *     for puppets
+		 * @description for puppets
 		 */
 		post: {
 			parameters: {
@@ -18923,9 +18604,7 @@ export interface paths {
 		};
 		/**
 		 * User rooms list
-		 * @description
-		 *
-		 *     List rooms a user is in. If you are not the user, lists mutual rooms.
+		 * @description List rooms a user is in. If you are not the user, lists mutual rooms.
 		 */
 		get: {
 			parameters: {
@@ -18981,8 +18660,6 @@ export interface paths {
 		 * User suspend
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: UserSuspend</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -19017,9 +18694,11 @@ export interface paths {
 							deleted_at?: null | components["schemas"]["Time"];
 							description?: string | null;
 							emails?: components["schemas"]["EmailInfo"][] | null;
-							/** @description whether this user is considered to have mutifactor authentication enabled on their account
+							/**
+							 * @description whether this user is considered to have mutifactor authentication enabled on their account
 							 *
-							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa` */
+							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
+							 */
 							has_mfa?: boolean | null;
 							id: components["schemas"]["Id"];
 							name: string;
@@ -19042,8 +18721,6 @@ export interface paths {
 		 * User unsuspend
 		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: UserUnsuspend</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -19070,9 +18747,11 @@ export interface paths {
 							deleted_at?: null | components["schemas"]["Time"];
 							description?: string | null;
 							emails?: components["schemas"]["EmailInfo"][] | null;
-							/** @description whether this user is considered to have mutifactor authentication enabled on their account
+							/**
+							 * @description whether this user is considered to have mutifactor authentication enabled on their account
 							 *
-							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa` */
+							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
+							 */
 							has_mfa?: boolean | null;
 							id: components["schemas"]["Id"];
 							name: string;
@@ -19148,8 +18827,6 @@ export interface paths {
 		/**
 		 * Voice call get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -19168,23 +18845,9 @@ export interface paths {
 						[name: string]: unknown;
 					};
 					content: {
-						"application/json": {
-							/**
-							 * Format: int64
-							 * @description how many people are in the audience
-							 *
-							 *     only populated if this is a broadcast channel. in broadcast channels,
-							 *     only voice states for yourself and speakers (ie. users who are not
-							 *     suppressed) are sent.
-							 */
-							audience_count?: number | null;
+						"application/json": components["schemas"]["CallMetadata"] & {
 							channel_id: components["schemas"]["Id"];
-							/** @description when this call was created
-							 *
-							 *     roughly corresponds to the time that the first user joined */
-							created_at: components["schemas"]["Time"];
 							room_id?: null | components["schemas"]["Id"];
-							topic?: string | null;
 						};
 					};
 				};
@@ -19194,8 +18857,6 @@ export interface paths {
 		/**
 		 * Voice call create
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -19209,9 +18870,11 @@ export interface paths {
 			requestBody: {
 				content: {
 					"application/json": {
-						/** @description call topic
+						/**
+						 * @description call topic
 						 *
-						 *     must have VoiceMute permission in target channel to set */
+						 *     must have VoiceMute permission in target channel to set
+						 */
 						topic?: string | null;
 					};
 				};
@@ -19223,23 +18886,9 @@ export interface paths {
 						[name: string]: unknown;
 					};
 					content: {
-						"application/json": {
-							/**
-							 * Format: int64
-							 * @description how many people are in the audience
-							 *
-							 *     only populated if this is a broadcast channel. in broadcast channels,
-							 *     only voice states for yourself and speakers (ie. users who are not
-							 *     suppressed) are sent.
-							 */
-							audience_count?: number | null;
+						"application/json": components["schemas"]["CallMetadata"] & {
 							channel_id: components["schemas"]["Id"];
-							/** @description when this call was created
-							 *
-							 *     roughly corresponds to the time that the first user joined */
-							created_at: components["schemas"]["Time"];
 							room_id?: null | components["schemas"]["Id"];
-							topic?: string | null;
 						};
 					};
 				};
@@ -19248,15 +18897,15 @@ export interface paths {
 		/**
 		 * Voice call delete
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
 				query?: {
-					/** @description if people are still connected to this channel, try to forcibly disconnect them
+					/**
+					 * @description if people are still connected to this channel, try to forcibly disconnect them
 					 *
-					 *     requires VoiceDisconnect permission */
+					 *     requires VoiceDisconnect permission
+					 */
 					force?: boolean;
 				};
 				header?: never;
@@ -19281,8 +18930,6 @@ export interface paths {
 		/**
 		 * Voice call patch
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -19296,9 +18943,11 @@ export interface paths {
 			requestBody: {
 				content: {
 					"application/json": {
-						/** @description the current call topic
+						/**
+						 * @description the current call topic
 						 *
-						 *     only unsuppressed users can change the call topic */
+						 *     only unsuppressed users can change the call topic
+						 */
 						topic?: string | null;
 					};
 				};
@@ -19310,23 +18959,9 @@ export interface paths {
 						[name: string]: unknown;
 					};
 					content: {
-						"application/json": {
-							/**
-							 * Format: int64
-							 * @description how many people are in the audience
-							 *
-							 *     only populated if this is a broadcast channel. in broadcast channels,
-							 *     only voice states for yourself and speakers (ie. users who are not
-							 *     suppressed) are sent.
-							 */
-							audience_count?: number | null;
+						"application/json": components["schemas"]["CallMetadata"] & {
 							channel_id: components["schemas"]["Id"];
-							/** @description when this call was created
-							 *
-							 *     roughly corresponds to the time that the first user joined */
-							created_at: components["schemas"]["Time"];
 							room_id?: null | components["schemas"]["Id"];
-							topic?: string | null;
 						};
 					};
 				};
@@ -19382,8 +19017,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-optional">VoiceMove</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberDisconnectAll</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -19420,8 +19053,6 @@ export interface paths {
 		/**
 		 * Voice state get
 		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		get: {
 			parameters: {
@@ -19452,6 +19083,7 @@ export interface paths {
 							/** @description whether this user is muted by a moderator */
 							mute: boolean;
 							requested_to_speak_at?: null | components["schemas"]["Time"];
+							room_id?: null | components["schemas"]["Id"];
 							screenshare?:
 								| null
 								| components["schemas"]["VoiceStateScreenshare"];
@@ -19478,8 +19110,6 @@ export interface paths {
 		 * @description <div class="markdown-alert-permission-optional">VoiceMove</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberDisconnect</div>
-		 *
-		 *
 		 */
 		delete: {
 			parameters: {
@@ -19511,8 +19141,6 @@ export interface paths {
 		 *     <div class="markdown-alert-permission-optional">VoiceRequest</div>
 		 *     <div class="markdown-alert-permission-optional">VoiceMove</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		patch: {
 			parameters: {
@@ -19533,9 +19161,11 @@ export interface paths {
 						/** @description same as room member mute */
 						mute?: boolean | null;
 						requested_to_speak_at?: null | components["schemas"]["Time"];
-						/** @description allow this user to speak in the current channel
+						/**
+						 * @description allow this user to speak in the current channel
 						 *
-						 *     requires VoiceMute permission */
+						 *     requires VoiceMute permission
+						 */
 						suppress?: boolean | null;
 					};
 				};
@@ -19558,6 +19188,7 @@ export interface paths {
 							/** @description whether this user is muted by a moderator */
 							mute: boolean;
 							requested_to_speak_at?: null | components["schemas"]["Time"];
+							room_id?: null | components["schemas"]["Id"];
 							screenshare?:
 								| null
 								| components["schemas"]["VoiceStateScreenshare"];
@@ -19592,8 +19223,6 @@ export interface paths {
 		 * Voice state move
 		 * @description <div class="markdown-alert-permission-required">VoiceMove</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -19630,6 +19259,7 @@ export interface paths {
 							/** @description whether this user is muted by a moderator */
 							mute: boolean;
 							requested_to_speak_at?: null | components["schemas"]["Time"];
+							room_id?: null | components["schemas"]["Id"];
 							screenshare?:
 								| null
 								| components["schemas"]["VoiceStateScreenshare"];
@@ -19668,8 +19298,6 @@ export interface paths {
 		 * Voice state move bulk
 		 * @description <div class="markdown-alert-permission-required">VoiceMove</div>
 		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *
 		 */
 		post: {
 			parameters: {
@@ -19784,9 +19412,11 @@ export interface paths {
 					};
 					content: {
 						"application/json": {
-							/** @description whether ring endpoints can be used
+							/**
+							 * @description whether ring endpoints can be used
 							 *
-							 *     true in dms and gdms, false otherwise */
+							 *     true in dms and gdms, false otherwise
+							 */
 							ringable: boolean;
 						};
 					};
@@ -19858,8 +19488,6 @@ export interface paths {
 		/**
 		 * Webhook get
 		 * @description <div class="markdown-alert-scope-required">full</div>
-		 *
-		 *
 		 */
 		get: operations["webhook_get"];
 		put?: never;
@@ -19868,8 +19496,6 @@ export interface paths {
 		 * Webhook delete
 		 * @description <div class="markdown-alert-scope-required">full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: WebhookDelete</div>
-		 *
-		 *
 		 */
 		delete: operations["webhook_delete"];
 		options?: never;
@@ -19878,8 +19504,6 @@ export interface paths {
 		 * Webhook update
 		 * @description <div class="markdown-alert-scope-required">full</div>
 		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: WebhookUpdate</div>
-		 *
-		 *
 		 */
 		patch: operations["webhook_update"];
 		trace?: never;
@@ -19894,23 +19518,17 @@ export interface paths {
 		/**
 		 * Webhook get with token
 		 * @description
-		 *
-		 *
 		 */
 		get: operations["webhook_get_with_token"];
 		put?: never;
 		/**
 		 * Webhook execute (TODO)
 		 * @description
-		 *
-		 *
 		 */
 		post: operations["webhook_execute"];
 		/**
 		 * Webhook delete with token
 		 * @description
-		 *
-		 *
 		 */
 		delete: operations["webhook_delete_with_token"];
 		options?: never;
@@ -19918,8 +19536,6 @@ export interface paths {
 		/**
 		 * Webhook update with token
 		 * @description
-		 *
-		 *
 		 */
 		patch: operations["webhook_update_with_token"];
 		trace?: never;
@@ -19936,8 +19552,6 @@ export interface paths {
 		/**
 		 * Webhook execute discord (TODO)
 		 * @description
-		 *
-		 *
 		 */
 		post: operations["webhook_execute_discord"];
 		delete?: never;
@@ -19958,8 +19572,6 @@ export interface paths {
 		/**
 		 * Webhook execute github (TODO)
 		 * @description
-		 *
-		 *
 		 */
 		post: operations["webhook_execute_github"];
 		delete?: never;
@@ -19978,8 +19590,6 @@ export interface paths {
 		/**
 		 * Webhook get message
 		 * @description
-		 *
-		 *
 		 */
 		get: operations["webhook_message_get"];
 		put?: never;
@@ -19987,8 +19597,6 @@ export interface paths {
 		/**
 		 * Webhook delete message
 		 * @description
-		 *
-		 *
 		 */
 		delete: operations["webhook_message_delete"];
 		options?: never;
@@ -19996,8 +19604,6 @@ export interface paths {
 		/**
 		 * Webhook edit message (TODO)
 		 * @description
-		 *
-		 *
 		 */
 		patch: operations["webhook_message_edit"];
 		trace?: never;
@@ -20014,8 +19620,6 @@ export interface paths {
 		/**
 		 * Webhook execute slack (TODO)
 		 * @description
-		 *
-		 *
 		 */
 		post: operations["webhook_execute_slack"];
 		delete?: never;
@@ -20192,9 +19796,11 @@ export interface components {
 			| "Users";
 		/** @enum {string} */
 		Aggregation: "Hourly" | "Daily" | "Weekly" | "Monthly";
-		/** @description a restriction on who can interact with this component
+		/**
+		 * @description a restriction on who can interact with this component
 		 *
-		 *     *any* of the checks must pass (checks are or'd, not anded). if all of the fields are empty, nobody can interact. */
+		 *     *any* of the checks must pass (checks are or'd, not anded). if all of the fields are empty, nobody can interact.
+		 */
 		Allow: {
 			/** @description only these users with these permissions can interact */
 			permissions?: components["schemas"]["Permission"][];
@@ -20322,9 +19928,11 @@ export interface components {
 			ended_at: components["schemas"]["Time"];
 			/** @description Unique id idenfitying this entry */
 			id: components["schemas"]["Id"];
-			/** @description the ip address that this request came from
+			/**
+			 * @description the ip address that this request came from
 			 *
-			 *     will be None if you do not have permission to see sensitive request metadata or if it is not known */
+			 *     will be None if you do not have permission to see sensitive request metadata or if it is not known
+			 */
 			ip_addr?: string | null;
 			/** @description User supplied reason why this happened */
 			reason?: string | null;
@@ -20335,9 +19943,11 @@ export interface components {
 			started_at: components["schemas"]["Time"];
 			/** @description the status of the request */
 			status: components["schemas"]["AuditLogEntryStatus"];
-			/** @description the user agent that this request came from
+			/**
+			 * @description the user agent that this request came from
 			 *
-			 *     will be None if you do not have permission to see sensitive request metadata or if it is not known */
+			 *     will be None if you do not have permission to see sensitive request metadata or if it is not known
+			 */
 			user_agent?: string | null;
 			/** @description User who caused this entry to be created */
 			user_id: components["schemas"]["Id"];
@@ -20998,9 +20608,11 @@ export interface components {
 					type: "CalendarOverwriteDelete";
 			  }
 			| {
-					/** @description someone else's rsvp was deleted
+					/**
+					 * @description someone else's rsvp was deleted
 					 *
-					 *     not emitted when someone deletes their own rsvp */
+					 *     not emitted when someone deletes their own rsvp
+					 */
 					metadata: {
 						event_id: components["schemas"]["Id"];
 						/**
@@ -21362,9 +20974,11 @@ export interface components {
 					type: "TextBuiltin";
 			  }
 			| {
-					/** @description the name of a server defined media scanner
+					/**
+					 * @description the name of a server defined media scanner
 					 *
-					 *     for example, `Nsfw` or `Malware` */
+					 *     for example, `Nsfw` or `Malware`
+					 */
 					scanner: string;
 					/** @enum {string} */
 					type: "MediaScan";
@@ -21433,8 +21047,13 @@ export interface components {
 		};
 		/** @enum {string} */
 		CalendarRsvpStatus: "interested" | "uninterested";
+		/** @description a currently active voice session, with ids */
+		Call: components["schemas"]["CallMetadata"] & {
+			channel_id: components["schemas"]["Id"];
+			room_id?: null | components["schemas"]["Id"];
+		};
 		/** @description a currently active voice session */
-		Call: {
+		CallMetadata: {
 			/**
 			 * Format: int64
 			 * @description how many people are in the audience
@@ -21444,12 +21063,12 @@ export interface components {
 			 *     suppressed) are sent.
 			 */
 			audience_count?: number | null;
-			channel_id: components["schemas"]["Id"];
-			/** @description when this call was created
+			/**
+			 * @description when this call was created
 			 *
-			 *     roughly corresponds to the time that the first user joined */
+			 *     roughly corresponds to the time that the first user joined
+			 */
 			created_at: components["schemas"]["Time"];
-			room_id?: null | components["schemas"]["Id"];
 			topic?: string | null;
 		};
 		Captcha: Record<string, never>;
@@ -21522,8 +21141,10 @@ export interface components {
 			last_pin_timestamp?: null | components["schemas"]["Time"];
 			last_read_id?: null | components["schemas"]["Id"];
 			last_version_id?: null | components["schemas"]["Id"];
-			/** @description monotonic sync sequence number, incremented on every action.
-			 *     used for incremental channel sync. */
+			/**
+			 * @description monotonic sync sequence number, incremented on every action.
+			 *     used for incremental channel sync.
+			 */
 			latest_seq?: components["schemas"]["ChannelSeq"];
 			locked?: null | components["schemas"]["Locked"];
 			/**
@@ -21586,11 +21207,6 @@ export interface components {
 			tag_count?: number;
 			/** @description tags that are applied to this thread */
 			tags?: components["schemas"]["Id"][] | null;
-			/**
-			 * @deprecated
-			 * @description the tags that are available in this forum. exists on Forum channels only.
-			 */
-			tags_available?: components["schemas"]["Tag"][] | null;
 			thread_member?: null | components["schemas"]["ThreadMember"];
 			/** @description type specific data for this channel */
 			type: components["schemas"]["ChannelType"];
@@ -21679,17 +21295,41 @@ export interface components {
 			/** Format: int32 */
 			position?: number | null;
 		};
-		/**
-		 * @description which field to order channel search results by
-		 * @enum {string}
-		 */
+		/** @description which field to order channel search results by */
 		ChannelSearchOrderField:
-			| "Created"
-			| "Relevancy"
-			| "Activity"
-			| "Archived"
-			| "Name"
-			| "Id";
+			| {
+					/** @enum {string} */
+					field: "Created";
+			  }
+			| {
+					/** @enum {string} */
+					field: "Relevancy";
+			  }
+			| {
+					/** @enum {string} */
+					field: "Activity";
+			  }
+			| {
+					/** @enum {string} */
+					field: "Archived";
+			  }
+			| {
+					/** @enum {string} */
+					field: "Name";
+			  }
+			| {
+					/** @enum {string} */
+					field: "Id";
+			  }
+			| {
+					/** @enum {string} */
+					field: "Score";
+			  }
+			| {
+					/** @enum {string} */
+					field: "Reactions";
+					reaction: components["schemas"]["ReactionKeyField"];
+			  };
 		/**
 		 * Format: int64
 		 * @description A monotonic sync token, incremented on every action in a channel.
@@ -21718,16 +21358,23 @@ export interface components {
 			| "DocumentComment"
 			| "Wiki"
 			| "Scripts";
-		/** @description A color string. Supports hex (#rgb, #rrggbb), rgb(), oklch(), or named colors (name-variant:alpha) */
+		/**
+		 * @description A color string. Supports hex (#rgb, #rrggbb), rgb(), oklch(), or named colors (name-variant:alpha)
+		 * @example red-500
+		 * @example #ff0000
+		 * @example oklch(70% 0.1 120)
+		 */
 		Color: string;
 		/** @description a single component in a tree */
 		Component: components["schemas"]["ComponentType_Create"] & {
 			allow?: null | components["schemas"]["Allow"];
 			id: components["schemas"]["Option"];
 		};
-		/** @description A developer-defined identifier for an interactive component.
+		/**
+		 * @description A developer-defined identifier for an interactive component.
 		 *
-		 *     Min 1 char, max 128 chars. */
+		 *     Min 1 char, max 128 chars.
+		 */
 		ComponentCustomId: string;
 		/**
 		 * Format: int32
@@ -21736,9 +21383,11 @@ export interface components {
 		ComponentId: number;
 		/** @description media to display in a component */
 		ComponentMedia_EncryptedMedia: {
-			/** @description description for this media
+			/**
+			 * @description description for this media
 			 *
-			 *     min 1 max 1024 chars */
+			 *     min 1 max 1024 chars
+			 */
 			description?: string | null;
 			/** @description encrypted data for media */
 			media: {
@@ -21757,9 +21406,11 @@ export interface components {
 		};
 		/** @description media to display in a component */
 		ComponentMedia_Media: {
-			/** @description description for this media
+			/**
+			 * @description description for this media
 			 *
-			 *     min 1 max 1024 chars */
+			 *     min 1 max 1024 chars
+			 */
 			description?: string | null;
 			/** @description A piece of media. */
 			media: {
@@ -21797,9 +21448,11 @@ export interface components {
 				 */
 				source_url?: string | null;
 				status: components["schemas"]["MediaStatus"];
-				/** @description Whether sensitive exif info has been stripped from this media.
+				/**
+				 * @description Whether sensitive exif info has been stripped from this media.
 				 *
-				 *     Once set to `true`, this cannot be unset. */
+				 *     Once set to `true`, this cannot be unset.
+				 */
 				strip_exif?: boolean;
 				user_id?: null | components["schemas"]["Id"];
 				version_id: components["schemas"]["Id"];
@@ -21808,9 +21461,11 @@ export interface components {
 		};
 		/** @description media to display in a component */
 		ComponentMedia_MediaReference: {
-			/** @description description for this media
+			/**
+			 * @description description for this media
 			 *
-			 *     min 1 max 1024 chars */
+			 *     min 1 max 1024 chars
+			 */
 			description?: string | null;
 			/** @description A reference to a piece of media to be used. */
 			media:
@@ -21827,7 +21482,8 @@ export interface components {
 				  };
 			spoiler?: boolean;
 		};
-		/** @description components
+		/**
+		 * @description components
 		 *
 		 *     ## layout
 		 *
@@ -21848,7 +21504,8 @@ export interface components {
 		 *
 		 *     ## logic
 		 *
-		 *     - `Reference` move or clone another component */
+		 *     - `Reference` move or clone another component
+		 */
 		ComponentType_Canonical:
 			| {
 					/** @description developer-defined identifier for this component */
@@ -21908,7 +21565,8 @@ export interface components {
 					/** @enum {string} */
 					type: "Gallery";
 			  };
-		/** @description components
+		/**
+		 * @description components
 		 *
 		 *     ## layout
 		 *
@@ -21929,7 +21587,8 @@ export interface components {
 		 *
 		 *     ## logic
 		 *
-		 *     - `Reference` move or clone another component */
+		 *     - `Reference` move or clone another component
+		 */
 		ComponentType_Create:
 			| {
 					/** @description developer-defined identifier for this component */
@@ -21989,7 +21648,8 @@ export interface components {
 					/** @enum {string} */
 					type: "Gallery";
 			  };
-		/** @description components
+		/**
+		 * @description components
 		 *
 		 *     ## layout
 		 *
@@ -22010,7 +21670,8 @@ export interface components {
 		 *
 		 *     ## logic
 		 *
-		 *     - `Reference` move or clone another component */
+		 *     - `Reference` move or clone another component
+		 */
 		ComponentType_Encrypted:
 			| {
 					/** @description developer-defined identifier for this component */
@@ -22141,14 +21802,18 @@ export interface components {
 			/** Format: uuid */
 			id: string;
 		};
-		/** @description channel metadata for a document
+		/**
+		 * @description channel metadata for a document
 		 *
-		 *     these properties only exist for documents in wiki channels */
+		 *     these properties only exist for documents in wiki channels
+		 */
 		Document: {
 			archived?: null | components["schemas"]["DocumentArchived"];
-			/** @description whether this document is a draft
+			/**
+			 * @description whether this document is a draft
 			 *
-			 *     drafts aren't shown publicly, and can only be seen by the user who created it. */
+			 *     drafts aren't shown publicly, and can only be seen by the user who created it.
+			 */
 			draft: boolean;
 			published?: null | components["schemas"]["DocumentPublished"];
 			/** @description custom url path to put this at */
@@ -22170,18 +21835,22 @@ export interface components {
 			created_at: components["schemas"]["Time"];
 			/** @description the user who created this branch */
 			creator_id: components["schemas"]["Id"];
-			/** @description Whether this is the default branch.
+			/**
+			 * @description Whether this is the default branch.
 			 *
-			 *     The default branch cannot be deleted and has the same id as the document */
+			 *     The default branch cannot be deleted and has the same id as the document
+			 */
 			default: boolean;
 			document_id: components["schemas"]["Id"];
 			id: components["schemas"]["Id"];
 			/** @description the name of this branch */
 			name?: string | null;
-			parent_id?: null | components["schemas"]["DocumentVersionId"];
-			/** @description Whether this is a private branch.
+			parent_id?: null | components["schemas"]["DocumentRevisionId"];
+			/**
+			 * @description Whether this is a private branch.
 			 *
-			 *     Private branches are only visible to the user who created this branch, similar to draft documents. */
+			 *     Private branches are only visible to the user who created this branch, similar to draft documents.
+			 */
 			private: boolean;
 			/** @description the current state of this branch */
 			state: components["schemas"]["DocumentBranchState"];
@@ -22191,9 +21860,11 @@ export interface components {
 			private?: boolean;
 		};
 		DocumentBranchListParams: {
-			/** @description only include branches with these states
+			/**
+			 * @description only include branches with these states
 			 *
-			 *     defaults to only Active */
+			 *     defaults to only Active
+			 */
 			state?: components["schemas"]["DocumentBranchState"][];
 		};
 		DocumentBranchMerge: {
@@ -22206,6 +21877,9 @@ export interface components {
 		};
 		/** @enum {string} */
 		DocumentBranchState: "Active" | "Closed" | "Merged";
+		DocumentMediaAttach: {
+			media_id: components["schemas"]["Id"];
+		};
 		DocumentPatch: {
 			archived?: null | components["schemas"]["DocumentArchivedPatch"];
 			draft?: boolean | null;
@@ -22216,23 +21890,35 @@ export interface components {
 		/** @description info about when a document was published */
 		DocumentPublished: {
 			/** @description the revision of the document that was published */
-			revision: components["schemas"]["DocumentRevisionId"];
+			revision: components["schemas"]["DocumentRevisionRef"];
 			/** @description when this document was published */
 			time: components["schemas"]["Time"];
 			/** @description published but doesnt show up in any search results */
 			unlisted?: boolean;
 		};
 		DocumentPublishedPatch: {
-			revision?: null | components["schemas"]["DocumentRevisionId"];
+			revision?: null | components["schemas"]["DocumentRevisionRef"];
 			unlisted?: boolean | null;
 		};
-		/** @description A revision of a document at a point in time.
+		/**
+		 * @description an exact version of a document at a point in time
+		 *
+		 *     serialized as `branch-uuid@seq`
+		 */
+		DocumentRevisionId: {
+			branch_id: components["schemas"]["Id"];
+			/** Format: int64 */
+			seq: number;
+		};
+		/**
+		 * @description A revision of a document at a point in time.
 		 *
 		 *     Serialized as:
 		 *     - `branch-id` for the current head of a branch
 		 *     - `branch-uuid@seq` for a specific revision
-		 *     - `~tag` for a specific tag */
-		DocumentRevisionId: string;
+		 *     - `~tag` for a specific tag
+		 */
+		DocumentRevisionRef: string;
 		/** @description Base64 encoded state vector */
 		DocumentStateVector: string;
 		/** @description a named version */
@@ -22255,7 +21941,7 @@ export interface components {
 		DocumentTagCreate: {
 			/** @description optional more detailed description */
 			description?: string | null;
-			revision: components["schemas"]["DocumentRevisionId"];
+			revision: components["schemas"]["DocumentRevisionRef"];
 			/** @description one line description */
 			summary: string;
 		};
@@ -22267,14 +21953,6 @@ export interface components {
 		};
 		/** @description Base64 encoded update */
 		DocumentUpdate: string;
-		/** @description a version of a document at a point in time
-		 *
-		 *     serialized as `branch-uuid@seq` */
-		DocumentVersionId: {
-			branch_id: components["schemas"]["Id"];
-			/** Format: int64 */
-			seq: number;
-		};
 		Email: Record<string, never>;
 		/**
 		 * Format: email
@@ -22399,13 +22077,17 @@ export interface components {
 		};
 		/** @description request to start a redex run via trigger */
 		EvalCreateManual: {
-			/** @description start in the background
+			/**
+			 * @description start in the background
 			 *
-			 *     returns 202 accepted instead of blocking until it can return 200 ok */
+			 *     returns 202 accepted instead of blocking until it can return 200 ok
+			 */
 			async: boolean;
-			/** @description whether only one instance should be running at a time
+			/**
+			 * @description whether only one instance should be running at a time
 			 *
-			 *     will stop other runs of this script if true */
+			 *     will stop other runs of this script if true
+			 */
 			exclusive: boolean;
 			/** @description the id of the input that triggered this run */
 			trigger_id: string;
@@ -22551,9 +22233,11 @@ export interface components {
 		FlumeCreate: {
 			/** @description initial components */
 			components: components["schemas"]["Components_Create"];
-			/** @description mentions to parse from initial components
+			/**
+			 * @description mentions to parse from initial components
 			 *
-			 *     note that you can *only* mention on flume create; editing in a mention later will *not* create a notification */
+			 *     note that you can *only* mention on flume create; editing in a mention later will *not* create a notification
+			 */
 			mentions?: components["schemas"]["ParseMentions"];
 			metadata?: null | components["schemas"]["Metadata"];
 			reply_id?: null | components["schemas"]["Id"];
@@ -22565,11 +22249,13 @@ export interface components {
 			/** @description delete some components */
 			delete?: components["schemas"]["ComponentId"][];
 			init?: null | components["schemas"]["Components_Canonical"];
-			/** @description replace a component with one or more components
+			/**
+			 * @description replace a component with one or more components
 			 *
 			 *     - replacing a component with children will delete the children
 			 *     - replacing a component with a single component will always work
-			 *     - replacing a component with multiple components will work if the parent has children (Root, Details, Container, Section) */
+			 *     - replacing a component with multiple components will work if the parent has children (Root, Details, Container, Section)
+			 */
 			replace?: components["schemas"]["FlumeReplace"][];
 		};
 		/** @description replace a component with one or more components */
@@ -22584,6 +22270,13 @@ export interface components {
 		 * @enum {string}
 		 */
 		FlumeState: "Live" | "Committed" | "Autocommitted";
+		/** @description an ordered collection of rooms or views */
+		Folder: {
+			/** Format: uuid */
+			id: string;
+			items: components["schemas"]["Item"][];
+			name: string;
+		};
 		Harvest: components["schemas"]["HarvestStatus"] &
 			components["schemas"]["HarvestType"] & {
 				id: components["schemas"]["Id"];
@@ -22597,22 +22290,28 @@ export interface components {
 		 * @enum {string}
 		 */
 		HarvestCancelReason: "CancelledByUser" | "CancelledByAdmin" | "Other";
-		/** @description how to create a harvest
+		/**
+		 * @description how to create a harvest
 		 *
-		 *     including extra data will make the export slower */
+		 *     including extra data will make the export slower
+		 */
 		HarvestCreateRoom: {
 			/** @description include all members in this room */
 			include_members: boolean;
 			/** @description include all messages in this room */
 			include_messages: boolean;
-			/** @description include all individual reactions
+			/**
+			 * @description include all individual reactions
 			 *
-			 *     otherwise only include counts */
+			 *     otherwise only include counts
+			 */
 			include_reactions: boolean;
 		};
-		/** @description how to create a harvest
+		/**
+		 * @description how to create a harvest
 		 *
-		 *     including extra data will make the export slower */
+		 *     including extra data will make the export slower
+		 */
 		HarvestCreateUser: {
 			/** @description include all messages you have sent */
 			include_messages: boolean;
@@ -22715,7 +22414,10 @@ export interface components {
 			 */
 			limit?: number | null;
 		};
-		/** @description A hostname, used to identify a server */
+		/**
+		 * @description A hostname, used to identify a server
+		 * @example example.com
+		 */
 		Hostname: string;
 		HttpRequestSummary: {
 			request_headers: {
@@ -22751,9 +22453,11 @@ export interface components {
 		Interaction: components["schemas"]["InteractionType"] & {
 			application_id: components["schemas"]["Id"];
 			id: components["schemas"]["Id"];
-			/** @description unique token for responding to this interaction
+			/**
+			 * @description unique token for responding to this interaction
 			 *
-			 *     this exists so you don't need to give your token to an http server for http based interactions. only is set for bots. */
+			 *     this exists so you don't need to give your token to an http server for http based interactions. only is set for bots.
+			 */
 			token?: string | null;
 			/**
 			 * Format: int32
@@ -22865,7 +22569,10 @@ export interface components {
 			/** @description where this invite leads */
 			target: components["schemas"]["InviteTarget"];
 		};
-		/** @description a short, unique identifier. knowing the code grants access to the invite's target. */
+		/**
+		 * @description a short, unique identifier. knowing the code grants access to the invite's target.
+		 * @example a1b2c3
+		 */
 		InviteCode: string;
 		/** @description where this invite leads */
 		InviteTarget:
@@ -22927,6 +22634,16 @@ export interface components {
 			 */
 			uses: number;
 		};
+		Item:
+			| {
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Room";
+			  }
+			| (components["schemas"]["View"] & {
+					/** @enum {string} */
+					type: "View";
+			  });
 		License: string;
 		/** @description indicates that a channel is locked */
 		Locked: {
@@ -22988,9 +22705,11 @@ export interface components {
 			 */
 			source_url?: string | null;
 			status: components["schemas"]["MediaStatus"];
-			/** @description Whether sensitive exif info has been stripped from this media.
+			/**
+			 * @description Whether sensitive exif info has been stripped from this media.
 			 *
-			 *     Once set to `true`, this cannot be unset. */
+			 *     Once set to `true`, this cannot be unset.
+			 */
 			strip_exif?: boolean;
 			user_id?: null | components["schemas"]["Id"];
 			version_id: components["schemas"]["Id"];
@@ -22999,9 +22718,11 @@ export interface components {
 		MediaCreate: components["schemas"]["MediaCreateSource"] & {
 			/** @description Descriptive alt text, not entirely unlike a caption */
 			alt?: string | null;
-			/** @description Whether to strip sensitive exif info, like location or camera make and model.
+			/**
+			 * @description Whether to strip sensitive exif info, like location or camera make and model.
 			 *
-			 *     Once strip_exif is set to true, cannot be set to false. */
+			 *     Once strip_exif is set to true, cannot be set to false.
+			 */
 			strip_exif?: boolean;
 		};
 		/** @description What to create this media from */
@@ -23041,10 +22762,12 @@ export interface components {
 		 * @enum {string}
 		 */
 		MediaKind: "video" | "audio";
-		/** @description describes how this piece of media is linked to another resource
+		/**
+		 * @description describes how this piece of media is linked to another resource
 		 *
 		 *     objects can be linked to multiple objects; for example, media linked to
-		 *     `Message`s also have links to each `MessageVersion` they're referenced in. */
+		 *     `Message`s also have links to each `MessageVersion` they're referenced in.
+		 */
 		MediaLinkType:
 			| {
 					channel_id: components["schemas"]["Id"];
@@ -23106,6 +22829,12 @@ export interface components {
 					/** @enum {string} */
 					type: "ScriptVersion";
 					version_id: components["schemas"]["Id"];
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					document_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "Document";
 			  };
 		/** @description Filetype-specific metadata */
 		MediaMetadata:
@@ -23311,9 +23040,11 @@ export interface components {
 			/** @description when this message was created */
 			created_at: components["schemas"]["Time"];
 			deleted_at?: null | components["schemas"]["Time"];
-			/** @description whether this message is ephemeral
+			/**
+			 * @description whether this message is ephemeral
 			 *
-			 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+			 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+			 */
 			ephemeral?: boolean;
 			flume?: null | components["schemas"]["MessageFlume"];
 			id: components["schemas"]["Id"];
@@ -23562,6 +23293,12 @@ export interface components {
 					channel: components["schemas"]["Channel"];
 					/** @enum {string} */
 					type: "ChannelUpdate";
+			  }
+			| {
+					channels: components["schemas"]["ChannelReorderItem"][];
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ChannelReorder";
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
@@ -24196,9 +23933,11 @@ export interface components {
 			  }
 			| {
 					interaction: components["schemas"]["Interaction"];
-					/** @description the nonce
+					/**
+					 * @description the nonce
 					 *
-					 *     taken from the `Ideompotency-Key` header. only sent to the user. */
+					 *     taken from the `Ideompotency-Key` header. only sent to the user.
+					 */
 					nonce?: string | null;
 					/** @enum {string} */
 					type: "InteractionCreate";
@@ -24284,7 +24023,8 @@ export interface components {
 			reply_id?: null | components["schemas"]["Id"];
 			version_id: components["schemas"]["Id"];
 		};
-		/** @description arbitrary key-value metadata used in various places
+		/**
+		 * @description arbitrary key-value metadata used in various places
 		 *
 		 *     ## limits
 		 *
@@ -24297,15 +24037,23 @@ export interface components {
 		 *
 		 *     - included for messages
 		 *     - message metadata included in interactions. only visible to user who sent it (and the owner if its a bot).
-		 *     - included for redex eval log lines */
+		 *     - included for redex eval log lines
+		 */
 		Metadata: {
 			[key: string]: string;
 		};
-		/** @description a unique identifier for a media track (corresponds to a transceiver in webrtc) */
+		/**
+		 * @description a unique identifier for a media track
+		 *
+		 *     mids are local to each client/sfu pair. corresponds to a transceiver in webrtc.
+		 */
 		Mid: string;
 		/**
 		 * Mime
 		 * @description a mime/media type
+		 * @example application/json
+		 * @example image/png
+		 * @example text/plain
 		 */
 		Mime: string;
 		/** @description how long to mute notifications for */
@@ -24524,9 +24272,11 @@ export interface components {
 				/** @description when this message was created */
 				created_at: components["schemas"]["Time"];
 				deleted_at?: null | components["schemas"]["Time"];
-				/** @description whether this message is ephemeral
+				/**
+				 * @description whether this message is ephemeral
 				 *
-				 *     ephemeral messages are only visible to the user who created an interaction and aren't stored */
+				 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+				 */
 				ephemeral?: boolean;
 				flume?: null | components["schemas"]["MessageFlume"];
 				id: components["schemas"]["Id"];
@@ -24703,34 +24453,47 @@ export interface components {
 		};
 		/** @description who can send friend requests */
 		PreferencesGlobalFriends: {
-			/** @description allow everyone to send you a friend request
+			/**
+			 * @description allow everyone to send you a friend request
 			 *
-			 *     overrides everything except pause_until */
+			 *     overrides everything except pause_until
+			 */
 			allow_everyone: boolean;
 			/** @description allow everyone who shares a friend with you send you a friend request */
 			allow_mutual_friend: boolean;
-			/** @description allow everyone who shares a room with you send you a friend request
-			 *     requires the room to have allow_dms set */
+			/**
+			 * @description allow everyone who shares a room with you send you a friend request
+			 *     requires the room to have allow_dms set
+			 */
 			allow_mutual_room: boolean;
 			pause_until?: null | components["schemas"]["Time"];
 		};
 		PreferencesGlobalFrontend: {
+			/** @description room navigation sidebar */
+			room_sidebar: components["schemas"]["Sidebar"];
+		} & {
 			[key: string]: unknown;
 		};
 		/** @description user privacy settings globally */
 		PreferencesGlobalPrivacy: {
-			/** @description default dms config for new rooms
+			/**
+			 * @description default dms config for new rooms
 			 *
-			 *     copied, not inherited */
+			 *     copied, not inherited
+			 */
 			dms: boolean;
-			/** @description default exif config for new rooms
+			/**
+			 * @description default exif config for new rooms
 			 *
-			 *     copied, not inherited */
+			 *     copied, not inherited
+			 */
 			exif: boolean;
 			friends: components["schemas"]["PreferencesGlobalFriends"];
-			/** @description default rpc config for new rooms
+			/**
+			 * @description default rpc config for new rooms
 			 *
-			 *     copied, not inherited */
+			 *     copied, not inherited
+			 */
 			rpc: boolean;
 		};
 		/** @description preferences for a user in a room */
@@ -24746,13 +24509,17 @@ export interface components {
 		};
 		/** @description user privacy settings for a room */
 		PreferencesRoomPrivacy: {
-			/** @description allow dms from room members
+			/**
+			 * @description allow dms from room members
 			 *
-			 *     bots, moderators, and friends can always start dms */
+			 *     bots, moderators, and friends can always start dms
+			 */
 			dms: boolean;
-			/** @description whether to enable exif metadata, including location.
+			/**
+			 * @description whether to enable exif metadata, including location.
 			 *
-			 *     setting to false will strip sensitive exif data */
+			 *     setting to false will strip sensitive exif data
+			 */
 			exif: boolean;
 			/** @description allow friend requests from mutual room members */
 			friends: boolean;
@@ -24820,11 +24587,23 @@ export interface components {
 					/** @enum {string} */
 					type: "Custom";
 			  });
-		/** @description Reaction key used in reaction route params.
+		/**
+		 * @description Reaction key used in reaction route params.
 		 *
 		 *     Serialized as:
 		 *     - `t:{unicode emoji or text}` for emoji and text
-		 *     - `c:{custom emoji id}` for custom emoji */
+		 *     - `c:{custom emoji id}` for custom emoji
+		 * @example t:🤔
+		 */
+		ReactionKeyField: string;
+		/**
+		 * @description Reaction key used in reaction route params.
+		 *
+		 *     Serialized as:
+		 *     - `t:{unicode emoji or text}` for emoji and text
+		 *     - `c:{custom emoji id}` for custom emoji
+		 * @example t:🤔
+		 */
 		ReactionKeyParam: string;
 		ReactionListItem: {
 			created_at: components["schemas"]["Time"];
@@ -24891,11 +24670,13 @@ export interface components {
 			/** @description the id of the user on the origin host */
 			user_id: components["schemas"]["Id"];
 		};
-		/** @description a capability this script requires
+		/**
+		 * @description a capability this script requires
 		 *
 		 *     can also be viewed as an effect that running this script may cause
 		 *
-		 *     logging is considered pure */
+		 *     logging is considered pure
+		 */
 		RedexCapability:
 			| {
 					/** @enum {string} */
@@ -24906,9 +24687,11 @@ export interface components {
 					type: "RunManage";
 			  }
 			| {
-					/** @description the hosts to allow http requests to
+					/**
+					 * @description the hosts to allow http requests to
 					 *
-					 *     if None, allow requests to all hosts */
+					 *     if None, allow requests to all hosts
+					 */
 					allow?: string[] | null;
 					/** @enum {string} */
 					type: "Http";
@@ -24918,9 +24701,11 @@ export interface components {
 					type: "Storage";
 			  }
 			| {
-					/** @description the secrets to allow access to
+					/**
+					 * @description the secrets to allow access to
 					 *
-					 *     if None, allow requests to all secrets */
+					 *     if None, allow requests to all secrets
+					 */
 					allow?: string[] | null;
 					/** @enum {string} */
 					type: "Secrets";
@@ -25067,9 +24852,11 @@ export interface components {
 		};
 		/** @description a reference to a piece of content on a remote server */
 		Remote_Id: {
-			/** @description the epoch that this remote resource was fetched during
+			/**
+			 * @description the epoch that this remote resource was fetched during
 			 *
-			 *     if `item.epoch != server.sync_epoch`, this is stale and should be refetched */
+			 *     if `item.epoch != server.sync_epoch`, this is stale and should be refetched
+			 */
 			epoch: components["schemas"]["FederationEpoch"];
 			/** @description the hostname of the server */
 			hostname: components["schemas"]["Hostname"];
@@ -25136,8 +24923,6 @@ export interface components {
 			| "BanEvasion"
 			| "Underage"
 			| "Other";
-		/** @description a unique identifier for a track layer */
-		Rid: string;
 		Role: {
 			/** @description the permissions to grant for this role */
 			allow: components["schemas"]["Permission"][];
@@ -25188,11 +24973,13 @@ export interface components {
 			position: number;
 			role_id: components["schemas"]["Id"];
 		};
-		/** @description A room is a collection of members and acls in the form of roles. Each room
+		/**
+		 * @description A room is a collection of members and acls in the form of roles. Each room
 		 *     has an audit log to log administrative actions.
 		 *
 		 *     Default rooms, which most people are concerned with, contain threads, emoji,
-		 *     and so on for instant messaging. */
+		 *     and so on for instant messaging.
+		 */
 		Room: {
 			afk_channel_id?: null | components["schemas"]["Id"];
 			/**
@@ -25465,9 +25252,11 @@ export interface components {
 		 * @enum {string}
 		 */
 		SelectPluginReason: "Url" | "Response";
-		/** @description a semantic version string
+		/**
+		 * @description a semantic version string
 		 *
-		 *     matches the format `major.minor.version-extra`. major, minor, and version are numbers, and `-extra` is optional and arbitrary alphanumeric. */
+		 *     matches the format `major.minor.version-extra`. major, minor, and version are numbers, and `-extra` is optional and arbitrary alphanumeric.
+		 */
 		Semver: string;
 		/** @description serialized document */
 		Serdoc: {
@@ -25506,17 +25295,21 @@ export interface components {
 		ServerKey: {
 			/** @description the key algorithm */
 			alg: components["schemas"]["ServerKeyAlgorithm"];
-			/** @description when this key expires
+			/**
+			 * @description when this key expires
 			 *
-			 *     maximum Date + 72h, should be Date + 48h and rotated every 24h */
+			 *     maximum Date + 72h, should be Date + 48h and rotated every 24h
+			 */
 			expires_at: components["schemas"]["Time"];
 			/** @description random data to sign */
 			nonce: components["schemas"]["Binary"];
 			/** @description public key */
 			pubkey: components["schemas"]["Binary"];
-			/** @description the signature
+			/**
+			 * @description the signature
 			 *
-			 *     the bytes that were signed: nonce || pubkey || hostname */
+			 *     the bytes that were signed: nonce || pubkey || hostname
+			 */
 			signature: components["schemas"]["Binary"];
 		};
 		/**
@@ -25584,9 +25377,12 @@ export interface components {
 					sudo_expires_at: components["schemas"]["Time"];
 					user_id: components["schemas"]["Id"];
 			  };
+		/** @example super_secret_session_token */
 		SessionToken: string;
 		/** @enum {string} */
 		SessionType: "User" | "Access";
+		/** @description room navigation sidebar configuration */
+		Sidebar: components["schemas"]["Toplevel"][];
 		/** @description an event sent from the peer's sync connection to the master */
 		SignallingCommand:
 			| {
@@ -25600,7 +25396,7 @@ export interface components {
 			  }
 			| {
 					sdp: components["schemas"]["SessionDescription"];
-					tracks: components["schemas"]["TrackMetadata"][];
+					tracks: components["schemas"]["TrackCreate"][];
 					/** @enum {string} */
 					type: "Offer";
 			  }
@@ -25614,17 +25410,18 @@ export interface components {
 					/** @enum {string} */
 					type: "Candidate";
 			  }
-			| {
-					subs: components["schemas"]["Subscription"][];
+			| (components["schemas"]["SubscriptionUpdate"] & {
 					/** @enum {string} */
 					type: "Subscribe";
-			  };
+			  });
 		/** @description an event sent from the backend to the peer's sync connection */
 		SignallingEvent:
 			| {
-					/** @description the id of the selected sfu
+					/**
+					 * @description the id of the selected sfu
 					 *
-					 *     internal; for debugging. */
+					 *     internal; for debugging.
+					 */
 					sfu_id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "Connected";
@@ -25635,7 +25432,7 @@ export interface components {
 			  }
 			| {
 					sdp: components["schemas"]["SessionDescription"];
-					tracks: components["schemas"]["TrackMetadataWithUserId"][];
+					tracks: components["schemas"]["TrackMapping"][];
 					/** @enum {string} */
 					type: "Offer";
 			  }
@@ -25650,16 +25447,16 @@ export interface components {
 					type: "Candidate";
 			  }
 			| {
-					tracks: components["schemas"]["TrackMetadata"][];
+					added?: components["schemas"]["TrackAnnouncement"][];
+					removed?: components["schemas"]["TrackId"][];
 					/** @enum {string} */
 					type: "Tracks";
 					user_id: components["schemas"]["Id"];
 			  }
-			| {
-					subs: components["schemas"]["Subscription"][];
+			| (components["schemas"]["SubscriptionUpdate"] & {
 					/** @enum {string} */
 					type: "Subscribe";
-			  }
+			  })
 			| {
 					new_sfu_id: components["schemas"]["Id"];
 					/** @enum {string} */
@@ -25675,17 +25472,23 @@ export interface components {
 			  };
 		/** @enum {string} */
 		Status: "Offline" | "Online" | "Away" | "Busy" | "Available";
-		Subscription: {
-			/** @description subscribe to this mid of */
-			mid: components["schemas"]["Mid"];
-			/** @description the layers of the track to subscribe to
-			 *
-			 *     - clients should only subscribe to one layer at a time, but multiple can be subscribed if needed
-			 *     - the server may subscribe to multiple depending on if multiple resolutions are requested
-			 *     - leave empty for audio tracks */
-			rid?: components["schemas"]["Rid"][];
-			/** @description subscribe to this user's track */
-			user_id: components["schemas"]["Id"];
+		/**
+		 * @description an update to the list of subscribed tracks
+		 *
+		 *     required to get user video (camera) and screenshare video/audio.
+		 *
+		 *     ## implicit tracks
+		 *
+		 *     Some tracks are subscribed to automatically. Adding or removing these tracks does nothing. Tracks are implicitly subscribed to if they are:
+		 *
+		 *     - audio tracks from key `user`
+		 *     - whisper tracks (TODO)
+		 */
+		SubscriptionUpdate: {
+			/** @description subscribe to these tracks */
+			add: components["schemas"]["TrackId"][];
+			/** @description unsubscribe from these tracks */
+			remove: components["schemas"]["TrackId"][];
 		};
 		Suspended: {
 			created_at: components["schemas"]["Time"];
@@ -25712,9 +25515,11 @@ export interface components {
 			channel_id: components["schemas"]["Id"];
 			script_id: components["schemas"]["Id"];
 		};
-		/** @description update what the client is subscribed to
+		/**
+		 * @description update what the client is subscribed to
 		 *
-		 *     leaving a field as None will skip updating. set it to an empty vec to clear. */
+		 *     leaving a field as None will skip updating. set it to an empty vec to clear.
+		 */
 		SyncSubscription: {
 			/** @description the documents to subscribe to */
 			documents?: components["schemas"]["SyncSubscribeDocument"][] | null;
@@ -25730,9 +25535,11 @@ export interface components {
 			 * @description total number of threads with this tag (excluding archived threads)
 			 */
 			active_thread_count: number;
-			/** @description whether this tag is archived
+			/**
+			 * @description whether this tag is archived
 			 *
-			 *     archived tags cant be applied to any new threads and won't appear in the tag picker. */
+			 *     archived tags cant be applied to any new threads and won't appear in the tag picker.
+			 */
 			archived: boolean;
 			channel_id: components["schemas"]["Id"];
 			color?: null | components["schemas"]["Color"];
@@ -25785,18 +25592,42 @@ export interface components {
 		Time: string;
 		/** @description a timezone */
 		Timezone: string;
+		Toplevel:
+			| (components["schemas"]["Folder"] & {
+					/** @enum {string} */
+					type: "Folder";
+			  })
+			| (components["schemas"]["Item"] & {
+					/** @enum {string} */
+					type: "Item";
+			  });
 		TotpRecoveryCode: {
 			code: string;
 			used_at?: null | components["schemas"]["Time"];
 		};
+		/** @description an announcement for a track along with its metadata */
+		TrackAnnouncement: components["schemas"]["TrackMetadata2"] & {
+			id: components["schemas"]["TrackId"];
+		};
 		/**
-		 * @description the encoding of the track
-		 * @enum {string}
-		 */
-		TrackEncoding: "Source" | "Full" | "Reduced" | "Thumbnail";
-		/** @description which stream this track is associated with
+		 * @description a mapping from a mid to track metadata
 		 *
-		 *     generally there will be one video track and one audio track per stream. */
+		 *     sent during client offer
+		 */
+		TrackCreate: components["schemas"]["TrackMetadata2"] & {
+			mid: components["schemas"]["Mid"];
+		};
+		/**
+		 * @description a unique identifier for a media track
+		 *
+		 *     `TrackId`s are server assigned and unique inside each active call.
+		 */
+		TrackId: string;
+		/**
+		 * @description which stream this track is associated with
+		 *
+		 *     generally there will be one video track and one audio track per stream.
+		 */
 		TrackKey:
 			| "user"
 			| "screen"
@@ -25804,31 +25635,32 @@ export interface components {
 					/** @description an unknown track type */
 					other: string;
 			  };
-		TrackLayer: {
-			encoding: components["schemas"]["TrackEncoding"];
+		/**
+		 * @description mapping from a track id to local mid
+		 *
+		 *     sent by the server during an offer
+		 */
+		TrackMapping: {
+			id: components["schemas"]["TrackId"];
+			mid: components["schemas"]["Mid"];
 		};
-		/** @description metadata about a track, for offers */
-		TrackMetadata: {
-			/** @description group tracks together into streams; identical to ssrc but easier to manage client side */
+		/** @description the metadata for a track */
+		TrackMetadata2: {
+			/**
+			 * @description key to group tracks together into streams
+			 *
+			 *     more or les identical to ssrc but easier to manage client side
+			 */
 			key: components["schemas"]["TrackKey"];
 			/** @description whether this track is for audio or video */
 			kind: components["schemas"]["MediaKind"];
-			/** @description simulcasting layers, only applicable for video */
-			layers?: components["schemas"]["TrackLayer"][];
-			/** @description unique identifier for this track, local to the user this track is from
-			 *
-			 *     equivalent to transceiver.mid */
-			mid: components["schemas"]["Mid"];
 			whisper?: null | components["schemas"]["TrackWhisper"];
 		};
-		/** @description track metadata. `mid` is the **mapped** media id, ie. the mid used between the final sfu/peer */
-		TrackMetadataWithUserId: components["schemas"]["TrackMetadata"] & {
-			/** @description the source user this track came from */
-			user_id: components["schemas"]["Id"];
-		};
-		/** @description track whispering config
+		/**
+		 * @description track whispering config
 		 *
-		 *     only send media from this track to these users */
+		 *     only send media from this track to these users
+		 */
 		TrackWhisper: {
 			user_ids: components["schemas"]["Id"][];
 		};
@@ -25850,9 +25682,11 @@ export interface components {
 			deleted_at?: null | components["schemas"]["Time"];
 			description?: string | null;
 			emails?: components["schemas"]["EmailInfo"][] | null;
-			/** @description whether this user is considered to have mutifactor authentication enabled on their account
+			/**
+			 * @description whether this user is considered to have mutifactor authentication enabled on their account
 			 *
-			 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa` */
+			 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
+			 */
 			has_mfa?: boolean | null;
 			id: components["schemas"]["Id"];
 			name: string;
@@ -25874,23 +25708,31 @@ export interface components {
 			filter?: null | components["schemas"]["UserListFilter"];
 		};
 		UserSearch: {
-			/** @description whether to only return bots or only return non-bots.
+			/**
+			 * @description whether to only return bots or only return non-bots.
 			 *
-			 *     defaults to allowing both. */
+			 *     defaults to allowing both.
+			 */
 			bot?: boolean | null;
-			/** @description whether to only return deleted users or only return non-deleted users.
+			/**
+			 * @description whether to only return deleted users or only return non-deleted users.
 			 *
-			 *     defaults to only non deleted users. */
+			 *     defaults to only non deleted users.
+			 */
 			deleted?: boolean | null;
-			/** @description whether to only return guests (non registered users) or only return non-guests.
+			/**
+			 * @description whether to only return guests (non registered users) or only return non-guests.
 			 *
-			 *     defaults to allowing both. */
+			 *     defaults to allowing both.
+			 */
 			guests?: boolean | null;
 			/** @description include users who are members of these rooms */
 			member_of_room_id: components["schemas"]["Id"][];
-			/** @description whether to only return puppets or only return non-puppets.
+			/**
+			 * @description whether to only return puppets or only return non-puppets.
 			 *
-			 *     defaults to allowing both. */
+			 *     defaults to allowing both.
+			 */
 			puppet?: boolean | null;
 			/** @description filter by user name, description, and id */
 			query?: string | null;
@@ -25898,9 +25740,11 @@ export interface components {
 			server_role_id: components["schemas"]["Id"][];
 			sort_field: components["schemas"]["UserSearchSortField"];
 			sort_order: components["schemas"]["Order"];
-			/** @description whether to only return suspended users or only return non-suspended users.
+			/**
+			 * @description whether to only return suspended users or only return non-suspended users.
 			 *
-			 *     defaults to allowing both. */
+			 *     defaults to allowing both.
+			 */
 			suspended?: boolean | null;
 		};
 		/** @enum {string} */
@@ -25915,6 +25759,29 @@ export interface components {
 		UserWithRelationship: components["schemas"]["User"] & {
 			relationship: components["schemas"]["Relationship"];
 		};
+		/** @description a fake/virtual room with a custom channel nav */
+		View: {
+			categories: components["schemas"]["ViewCategory"][];
+			/** Format: uuid */
+			id: string;
+			name: string;
+			uncategorized_channels: components["schemas"]["ViewChannel"][];
+		};
+		ViewCategory:
+			| {
+					Inline: components["schemas"]["ViewChannel"];
+			  }
+			| {
+					Custom: {
+						channels: components["schemas"]["ViewChannel"][];
+						name: string;
+					};
+			  };
+		ViewChannel: {
+			id: components["schemas"]["Id"];
+			nickname?: string | null;
+			room_id?: null | components["schemas"]["Id"];
+		};
 		Voice: Record<string, never>;
 		/** @description voice config the local user can set on someone else */
 		VoiceConfig: {
@@ -25927,8 +25794,9 @@ export interface components {
 			volume: number;
 		};
 		/** @enum {string} */
-		VoiceErrorCode: "UnknownMid" | "UnknownRid";
-		/** @description represents a user that is connected to a voice channel
+		VoiceErrorCode: "UnknownMid";
+		/**
+		 * @description represents a user that is connected to a voice channel
 		 *
 		 *     older docs call this a "voice connection"
 		 *
@@ -25936,7 +25804,8 @@ export interface components {
 		 *
 		 *     - Users can only have one voice state per channel
 		 *     - Non-bots can only have one state across all channels in all rooms
-		 *     - Bots can have any number of voice states */
+		 *     - Bots can have any number of voice states
+		 */
 		VoiceState: {
 			/** @description the channel this user is connected to */
 			channel_id: components["schemas"]["Id"];
@@ -25948,6 +25817,7 @@ export interface components {
 			/** @description whether this user is muted by a moderator */
 			mute: boolean;
 			requested_to_speak_at?: null | components["schemas"]["Time"];
+			room_id?: null | components["schemas"]["Id"];
 			screenshare?: null | components["schemas"]["VoiceStateScreenshare"];
 			/** @description whether this user has deafened themselves */
 			self_deaf: boolean;
