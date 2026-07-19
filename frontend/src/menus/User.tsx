@@ -391,22 +391,21 @@ export function UserMenu(props: UserMenuProps) {
 					</Show>
 					<Separator />
 					<Show when={props.user_id !== self_id() && connectedToVoice()}>
-						{/* FIXME: update types to use new voice system */}
 						<li>
 							<label style="display:block;padding:0 8px;padding-top:8px">
 								<div class="dim">volume</div>
 								<input
 									type="range"
 									min="0"
-									max="100"
-									list="volume-detents"
-									value={voice.preferences.get(props.user_id)?.volume ?? 100}
+									max="1"
+									// list="volume-detents"
+									value={voice.preferences.get(props.user_id)?.volume ?? 1}
 									onInput={(e) =>
 										voice.preferences.set(props.user_id, {
 											...(voice.preferences.get(props.user_id) ?? {
 												mute: false,
 												mute_video: false,
-												volume: 100,
+												volume: 1,
 											}),
 											volume: parseFloat(e.target.value),
 										})
@@ -419,7 +418,7 @@ export function UserMenu(props: UserMenuProps) {
 								const c = voice.preferences.get(props.user_id) ?? {
 									mute: false,
 									mute_video: false,
-									volume: 100,
+									volume: 1,
 								};
 								c.mute = !c.mute;
 								voice.preferences.set(props.user_id, { ...c });

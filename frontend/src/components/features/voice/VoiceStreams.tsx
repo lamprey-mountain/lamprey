@@ -17,10 +17,15 @@ export const VoiceStreams = () => {
 					const muted = () =>
 						voice.deafened ||
 						voice.preferences.get(stream.user_id)?.mute === true;
+					const volume = () =>
+						voice.preferences.get(stream.user_id)?.volume ?? 1;
 
 					createEffect(() => {
 						const r = ref();
-						if (r) r.srcObject = stream.media;
+						if (r) {
+							r.srcObject = stream.media;
+							r.volume = volume();
+						}
 					});
 
 					return (
