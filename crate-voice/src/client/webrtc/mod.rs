@@ -2,7 +2,7 @@ use common::v1::types::voice::internal::SfuVoiceState;
 use common::v1::types::voice::{IceCandidate, MediaKind, SessionDescription, VoiceStateUpdate};
 use common::v2::types::UserId;
 use str0m::Rtc;
-use tracing::debug;
+use tracing::{debug, trace};
 
 use crate::client::webrtc::mapping::Mapping;
 use crate::prelude::*;
@@ -49,15 +49,19 @@ impl Webrtc {
 
     pub fn write_media(&mut self, track: TrackSlot, media: &str0m::media::MediaData) {
         let Some(mid) = self.mapping.lookup_mid(track) else {
+            trace!(track = ?track, "Failed to lookup mid");
             return;
         };
 
         let Some(writer) = self.rtc.writer(mid) else {
+            trace!(track = ?track, mid = ?mid, "Failed to get writer");
             return;
         };
 
         if let Some(pt) = writer.match_params(media.params) {
             let _ = writer.write(pt, media.network_time, media.time, Arc::clone(&media.data));
+        } else {
+            trace!(track = ?track, "Failed to match media params");
         }
     }
 

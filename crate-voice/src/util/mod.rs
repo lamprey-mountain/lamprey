@@ -4,6 +4,7 @@ pub mod permissions;
 pub mod simulcast;
 pub mod stun;
 
+// TODO: rename FooSlot -> FooKey
 new_key_type! {
     /// slotmap key for a webrtc peer
     pub struct PeerSlot;

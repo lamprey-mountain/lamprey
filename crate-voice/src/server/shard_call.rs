@@ -22,7 +22,7 @@ use common::{
 };
 use slotmap::{Key, SlotMap};
 use str0m::Rtc;
-use tracing::{debug, warn};
+use tracing::{debug, trace, warn};
 
 /// a shard's voice call data
 pub struct ShardCall {
@@ -40,6 +40,13 @@ pub struct ShardCall {
     inbound: SlotMap<TrackSlot, Inbound>,   // formerly `tracks`
     outbound: SlotMap<TrackSlot, Outbound>, // formerly `sinks`
     paused: HashSet<PeerSlot>,
+    // TODO: add routing information
+    // - inbound tracks by user id
+    // - outbound tracks by inbound track key
+    // - dirty (outbound) tracks and/or peers
+    // - list/set of implicit tracks to autosubscribe to on connect
+
+    // NOTE: should mapping be here or in Webrtc? probably in webrtc
 }
 
 impl ShardCall {
@@ -305,6 +312,7 @@ impl ShardCall {
         if let Some(&peer) = self.users.get(&user_id) {
             self.handle_signalling(peer, cmd)
         } else {
+            // TODO: warn?
             Vec::new()
         }
     }
@@ -350,7 +358,7 @@ impl ShardCall {
     ) -> (
         Vec<str0m::net::Transmit>,
         Vec<(PeerSlot, Instant)>,
-        Vec<(PeerSlot, SignallingEvent)>,
+        Vec<(UserId, SignallingEvent)>,
     ) {
         // PERF: reuse `Vec`s
         let mut transmits = Vec::new();
@@ -381,11 +389,7 @@ impl ShardCall {
         }
 
         for (peer, event) in events {
-            signalling_events.extend(
-                self.handle_peer_event(peer, event)
-                    .into_iter()
-                    .map(|e| (peer, e)),
-            );
+            self.handle_peer_event(peer, event, &mut signalling_events);
         }
 
         (transmits, timeouts, signalling_events)
@@ -402,12 +406,18 @@ impl ShardCall {
         }
     }
 
-    fn handle_peer_event(&mut self, peer_slot: PeerSlot, event: SEvent) -> Vec<SignallingEvent> {
-        let mut events = Vec::new();
+    fn handle_peer_event(
+        &mut self,
+        peer_slot: PeerSlot,
+        event: SEvent,
+        events: &mut Vec<(UserId, SignallingEvent)>,
+    ) {
         let Some(peer) = self.peers.get_mut(peer_slot) else {
             // warn, this should only be called with existing peers
-            return events;
+            return;
         };
+
+        let peer_user_id = peer.user_id();
 
         peer.handle_event(&event);
 
@@ -429,11 +439,53 @@ impl ShardCall {
                     });
 
                 for (user_id, tracks) in tracks_by_user {
-                    events.push(SignallingEvent::Tracks {
-                        user_id,
-                        added: tracks,
-                        removed: vec![],
-                    });
+                    events.push((
+                        peer_user_id,
+                        SignallingEvent::Tracks {
+                            user_id,
+                            added: tracks.clone(),
+                            removed: vec![],
+                        },
+                    ));
+                }
+
+                // Subscribe the new peer to all implicit tracks
+                for (track_id, t) in self.inbound.iter() {
+                    if t.is_implicit() {
+                        self.outbound.insert(Outbound {
+                            subscriber: peer_slot,
+                            source: track_id,
+                            state: TrackState::Pending,
+                        });
+                    }
+                }
+
+                // Broadcast tracks of the newly connected peer to all other users
+                // NOTE: these broadcasts probably aren't necessary? when a user first connects, they don't have any tracks yet?
+                // maybe this can happen if the user sends a signalling offer before connecting? should that be allowed...?
+                let newly_connected_user_id = self.peers[peer_slot].user_id();
+                let mut my_tracks = Vec::new();
+                for (track_id, t) in self.inbound.iter() {
+                    // PERF: don't iterate over every inbound track, maybe have a map of peer -> inbound tracks the peer is sending
+                    if t.publisher == peer_slot {
+                        my_tracks.push(TrackAnnouncement {
+                            inner: t.metadata().clone(),
+                            id: TrackId(track_id.data().as_ffi()),
+                        });
+                    }
+                }
+
+                for target_peer in self.peers.keys() {
+                    if target_peer != peer_slot {
+                        events.push((
+                            self.peer_user_id(target_peer),
+                            SignallingEvent::Tracks {
+                                user_id: newly_connected_user_id,
+                                added: my_tracks.clone(),
+                                removed: vec![],
+                            },
+                        ));
+                    }
                 }
             }
 
@@ -448,16 +500,18 @@ impl ShardCall {
                 }
             }
             SEvent::MediaData(media) => {
-                debug!(channel_id = ?self.channel_id, mid = ?media.mid, "Media data");
+                trace!(channel_id = ?self.channel_id, mid = ?media.mid, "Media data");
                 let mid = media.mid.into();
                 let Some(track_id) = peer.mapping().lookup_track(mid) else {
-                    return events;
+                    trace!("no mapping");
+                    return;
                 };
 
                 let (kind, key) = if let Some(inbound) = self.inbound.get(track_id) {
                     (inbound.kind(), inbound.metadata.key.clone())
                 } else {
-                    return events;
+                    trace!("no inbound");
+                    return;
                 };
 
                 // permission checks
@@ -467,7 +521,8 @@ impl ShardCall {
                     _ => perms.video,
                 };
                 if !can_send {
-                    return events;
+                    trace!(?kind, ?key, "cant send");
+                    return;
                 }
 
                 // get subscribers
@@ -487,6 +542,8 @@ impl ShardCall {
                             continue;
                         }
 
+                        trace!(user_id = ?target.user_id(), "write media");
+
                         target.write_media(outbound_id, &media);
                     }
                 }
@@ -496,15 +553,15 @@ impl ShardCall {
                 let mid = keyframe_request.mid.into();
 
                 let Some(outbound_track_id) = peer.mapping().lookup_track(mid) else {
-                    return events;
+                    return;
                 };
                 let Some(outbound) = self.outbound.get(outbound_track_id) else {
-                    return events;
+                    return;
                 };
                 let inbound_track_id = outbound.source;
 
                 let Some(inbound) = self.inbound.get(inbound_track_id) else {
-                    return events;
+                    return;
                 };
                 let publisher_id = inbound.publisher;
 
@@ -531,16 +588,16 @@ impl ShardCall {
                 // speaking data
                 if self.peers[peer_slot].datachannels().speaking() == Some(data.id) {
                     let Ok(speaking) = SpeakingDatagram::decode(&mut &data.data[..]) else {
-                        return events;
+                        return;
                     };
 
                     let track_id = slotmap::KeyData::from_ffi(speaking.track_id.0).into();
                     let Some(track) = self.inbound.get(track_id) else {
-                        return events;
+                        return;
                     };
 
                     if track.publisher != peer_slot {
-                        return events;
+                        return;
                     }
 
                     // enforce publisher permissions
@@ -551,18 +608,15 @@ impl ShardCall {
                     };
 
                     if !can_send {
-                        return events;
+                        return;
                     }
-
-                    let user_id = self.peers[peer_slot].user_id();
 
                     // broadcast to other peers
                     // PERF: O(n) iteration over every outbound track. maybe i should add back the old Router struct?
                     for (_, outbound) in &self.outbound {
-                        // FIXME: roughly this
-                        // if outbound.source != track_id {
-                        //     continue;
-                        // }
+                        if outbound.source != track_id {
+                            continue;
+                        }
 
                         let target_peer = &mut self.peers[outbound.subscriber];
                         let target_perms = target_peer.permissions();
@@ -585,8 +639,6 @@ impl ShardCall {
 
             _ => {}
         }
-
-        events
     }
 
     /// create a sdp offer for any local track changes on this sfu
@@ -599,6 +651,9 @@ impl ShardCall {
         for (outbound_slot, outbound) in &self.outbound {
             match outbound.state {
                 TrackState::Pending => {
+                    // FIXME: panic when joining/leaving quickly?
+                    // thread 'tokio-rt-worker' (882549) panicked at crate-voice/src/server/shard_call.rs:642:48:
+                    // invalid SlotMap key used
                     let inbound = &self.inbound[outbound.source];
                     changes
                         .entry(outbound.subscriber)
@@ -632,9 +687,8 @@ impl ShardCall {
                     // collect track metadata for SignallingEvent::Offer
                     let mut tracks = vec![];
                     for outbound in self.outbound.values().filter(|o| o.subscriber == peer_slot) {
-                        let t = &self.inbound[outbound.source];
-
                         // TODO: handle outbound with state Closing
+
                         if let Some(mid) = outbound.state.mid() {
                             tracks.push(TrackMapping {
                                 mid: mid.into(),

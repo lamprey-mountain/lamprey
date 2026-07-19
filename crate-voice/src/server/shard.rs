@@ -199,8 +199,7 @@ impl Shard {
                 }
             }
 
-            for (peer_slot, event) in signalling_events {
-                let user_id = call.peer_user_id(peer_slot);
+            for (user_id, event) in signalling_events {
                 let channel_id = call.channel_id();
 
                 if let Err(e) = self.backend.send(SfuEvent::VoiceDispatch {
