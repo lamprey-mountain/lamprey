@@ -176,7 +176,7 @@ export const UserTray = () => {
 									ref={toggleCameraTooltip.content}
 									onClick={() => voiceActions.toggleCamera()}
 								>
-									<ToggleIcon enabled={!voice.camera} src={icCamera} />
+									<ToggleIcon enabled={voice.camera} src={icCamera} />
 								</button>
 								<button
 									type="button"
