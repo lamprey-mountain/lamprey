@@ -874,19 +874,20 @@ input[type="url"] {
 
 		&[data-placement^="bottom"] {
 			rotate: 180deg;
-			transform: translateY(-100%);
+			transform: translateY(100%);
 		}
 
-		&[data-placement^="right"] {
-			rotate: -90deg;
-			left: 0;
-			transform: translateX(-100%);
-		}
-
-		&[data-placement^="left"] {
-			rotate: 90deg;
-			left: 100%;
-		}
+		// TODO: verify that these are correct
+		// &[data-placement^="right"] {
+		// 	rotate: -90deg;
+		// 	left: 0;
+		// 	transform: translateX(-100%);
+		// }
+		//
+		// &[data-placement^="left"] {
+		// 	rotate: 90deg;
+		// 	left: 100%;
+		// }
 	}
 
 	&.interactive {
