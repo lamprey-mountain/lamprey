@@ -431,10 +431,10 @@ export function UserMenu(props: UserMenuProps) {
 						</Item>
 					</Show>
 					<Show when={props.user_id === self_id() && connectedToVoice()}>
-						<Item onClick={voiceActions.toggleMic}>
+						<Item onClick={() => voiceActions.toggleMicrophone()}>
 							{voice.muted ? "unmute" : "mute"}
 						</Item>
-						<Item onClick={voiceActions.toggleDeafened}>
+						<Item onClick={() => voiceActions.toggleDeafened()}>
 							{voice.deafened ? "undeafen" : "deafen"}
 						</Item>
 					</Show>

@@ -13,11 +13,10 @@ import { useApi } from "@/api";
 import { Icon } from "@/atoms/Icon";
 import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
 import { createTooltip } from "@/atoms/Tooltip";
-import { AvatarWithStatus } from "@/components/shared/User";
+import { Avatar, AvatarWithStatus } from "@/components/shared/User";
 import { useChannel } from "@/contexts/channel";
 import { getColor } from "@/lib/colors";
 import { flags } from "@/lib/flags";
-import { md } from "@/lib/markdown";
 import {
 	icCamera,
 	icExit,
@@ -332,7 +331,7 @@ export const Voice = (p: { channel: Channel }) => {
 										}}
 									>
 										<Show when={user}>
-											<AvatarWithStatus user={user()} />
+											<Avatar user={user()} />
 											<div class="status">
 												{<MemberName userId={uid} roomId={p.channel.room_id} />}
 											</div>
@@ -347,14 +346,19 @@ export const Voice = (p: { channel: Channel }) => {
 			<header class="top">
 				<b>{p.channel.name}</b>
 				<Show when={p.channel.description}>
-					<span class="dim" style="white-space:pre;font-size:1em">
-						{"  -  "}
-					</span>
-					{/* TODO: <Show when={}>{desc => <Markdown content={p.channel.description} />}</Show>*/}
-					<span
-						class="markdown"
-						innerHTML={md(p.channel.description ?? "") as string}
-					></span>
+					{(desc) => (
+						<>
+							<span class="dim" style="white-space:pre;font-size:1em">
+								{"  -  "}
+							</span>
+							<Markdown
+								content={desc()}
+								channel_id={p.channel.id}
+								inline={true}
+								class="markdown"
+							/>
+						</>
+					)}
 				</Show>
 				<Switch>
 					<Match when={p.channel.deleted_at}>{" (removed)"}</Match>
