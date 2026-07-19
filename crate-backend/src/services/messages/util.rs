@@ -1,9 +1,12 @@
 use crate::{Error, Result};
+use common::v1::types::{RepliesChildren, RepliesMessage};
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v2::types::MediaId;
+use common::v2::types::{MediaId, MessageId};
 use common::v2::types::media::MediaReference;
+use lamprey_backend_data_postgres::MessageWithCounts;
 use std::collections::HashSet;
 
+/// utility for enforcing deduplication of media
 #[derive(Default)]
 pub struct MediaRegistry {
     pub known: HashSet<MediaId>,
@@ -51,6 +54,63 @@ impl MediaRegistry {
                     dupes.join(", ")
                 ),
             )))
+        }
+    }
+}
+
+/// utility to build a tree from a list of messages
+pub struct TreeBuilder<'a> {
+    messages: &'a [MessageWithCounts],
+    max_depth: u16,
+}
+
+impl<'a> TreeBuilder<'a> {
+    pub fn new(messages: &'a [MessageWithCounts], max_depth: u16) -> Self {
+        Self {
+            messages,
+            max_depth,
+        }
+    }
+
+    pub fn build(&self, parent_id: Option<MessageId>, depth: u16) -> RepliesChildren {
+        let children: Vec<_> = self
+            .messages
+            .iter()
+            .filter(|msg| msg.message.reply_id() == parent_id)
+            .map(|msg| {
+                let (count_direct, count_recursive) = (msg.count_direct, msg.count_recursive);
+
+                let subtree = if depth < self.max_depth {
+                    self.build(Some(msg.message.id), depth + 1)
+                } else {
+                    RepliesChildren {
+                        children: vec![],
+                        count_direct,
+                        count_recursive,
+                        depth: (depth + 1) as u64,
+                        cursor: None,
+                        has_more: false,
+                    }
+                };
+
+                RepliesMessage {
+                    message: msg.message.clone(),
+                    children: RepliesChildren {
+                        count_direct,
+                        count_recursive,
+                        ..subtree
+                    },
+                }
+            })
+            .collect();
+
+        RepliesChildren {
+            count_direct: children.len() as u64,
+            count_recursive: 0,
+            children,
+            depth: depth as u64,
+            cursor: None,
+            has_more: false,
         }
     }
 }

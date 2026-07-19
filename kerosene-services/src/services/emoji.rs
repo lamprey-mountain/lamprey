@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use std::time::Duration;
 
 use common::v1::types::audit_logs::AuditLogEntryType;
@@ -10,17 +9,18 @@ use common::v1::types::{EmojiId, PaginationQuery, PaginationResponse, Permission
 use moka::future::Cache;
 use validator::Validate;
 
-use crate::ServerStateInner;
 use crate::error::Result;
+use crate::globals::messaging::BroadcastSync;
+use crate::prelude::*;
 use crate::routes::util::Auth;
 
 pub struct ServiceEmoji {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     idempotency_keys: Cache<String, EmojiCustom>,
 }
 
 impl ServiceEmoji {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self {
             state,
             idempotency_keys: Cache::builder()
@@ -57,7 +57,7 @@ impl ServiceEmoji {
         nonce: Option<String>,
     ) -> Result<EmojiCustom> {
         json.validate()?;
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
         let perms = srv.perms.for_room(auth.user.id, room_id).await?;
@@ -83,18 +83,27 @@ impl ServiceEmoji {
         })
         .await?;
 
+        data.commit().await?;
+
         let sync_msg = MessageSync::EmojiCreate {
             emoji: emoji.clone(),
         };
+
+        let mut broadcast = BroadcastSync::sync(sync_msg);
+        if let Some(n) = nonce {
+            broadcast = broadcast.with_nonce(n);
+        }
+
         self.state
-            .broadcast_room_with_nonce(room_id, auth.user.id, nonce.as_deref(), sync_msg)
+            .messaging()
+            .broadcast_room(room_id, broadcast)
             .await?;
 
         Ok(emoji)
     }
 
     pub async fn get(&self, emoji_id: EmojiId) -> Result<EmojiCustom> {
-        self.state.data().emoji_get(emoji_id).await
+        self.state.begin_read().await?.emoji_get(emoji_id).await
     }
 
     pub async fn update(
@@ -104,7 +113,7 @@ impl ServiceEmoji {
         auth: &Auth,
         patch: EmojiCustomPatch,
     ) -> Result<EmojiCustom> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
         let perms = srv.perms.for_room(auth.user.id, room_id).await?;
@@ -122,12 +131,15 @@ impl ServiceEmoji {
         })
         .await?;
 
+        data.commit().await?;
+
         if let Some(EmojiOwner::Room { room_id }) = emoji.owner {
             let sync_msg = MessageSync::EmojiUpdate {
                 emoji: emoji.clone(),
             };
             self.state
-                .broadcast_room(room_id, auth.user.id, sync_msg)
+                .messaging()
+                .broadcast_room(room_id, sync_msg)
                 .await?;
         }
 
@@ -135,7 +147,7 @@ impl ServiceEmoji {
     }
 
     pub async fn delete(&self, room_id: RoomId, emoji_id: EmojiId, auth: &Auth) -> Result<()> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let emoji = data.emoji_get(emoji_id).await?;
 
         let perms = self
@@ -159,13 +171,16 @@ impl ServiceEmoji {
         })
         .await?;
 
+        data.commit().await?;
+
         if let Some(EmojiOwner::Room { room_id }) = emoji.owner {
             let sync_msg = MessageSync::EmojiDelete {
                 emoji_id: emoji.id,
                 room_id,
             };
             self.state
-                .broadcast_room(room_id, auth.user.id, sync_msg)
+                .messaging()
+                .broadcast_room(room_id, sync_msg)
                 .await?;
         }
 
@@ -185,7 +200,11 @@ impl ServiceEmoji {
             .for_room(auth.user.id, room_id)
             .await?;
 
-        self.state.data().emoji_list(room_id, pagination).await
+        self.state
+            .begin_read()
+            .await?
+            .emoji_list(room_id, pagination)
+            .await
     }
 
     pub async fn search(
@@ -195,13 +214,14 @@ impl ServiceEmoji {
         pagination: PaginationQuery<EmojiId>,
     ) -> Result<PaginationResponse<EmojiCustom>> {
         self.state
-            .data()
+            .begin_read()
+            .await?
             .emoji_search(auth.user.id, query, pagination)
             .await
     }
 
     pub async fn lookup(&self, emoji_id: EmojiId, auth: &Auth) -> Result<EmojiCustom> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin_read().await?;
         let mut emoji = data.emoji_get(emoji_id).await?;
 
         let original_owner = emoji.owner.clone();

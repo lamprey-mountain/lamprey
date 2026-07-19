@@ -15,8 +15,7 @@ use tokio::io::AsyncWriteExt;
 use tracing::{debug, error};
 
 use crate::{
-    ServerStateInner,
-    error::{Error, Result},
+    prelude::*,
     services::media::util::MediaItemState,
 };
 
@@ -30,13 +29,13 @@ pub use import::Upload;
 pub use util::{Import, MediaItem};
 
 pub struct ServiceMedia {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     cache: Cache<MediaId, MediaItem>,
     uploads: Arc<DashMap<MediaId, Upload>>,
 }
 
 impl ServiceMedia {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self {
             state,
             cache: Cache::new(1000), // TODO: make configurable
@@ -49,8 +48,8 @@ impl ServiceMedia {
             return Ok(item);
         }
 
-        let media = self.state.data().media_select(media_id).await?;
-        let writer = MediaItem::from_media(Arc::clone(&self.state), media);
+        let media = self.state.begin_read().await?.media_select(media_id).await?;
+        let writer = MediaItem::from_media(self.state.clone(), media);
         let item = writer.reader();
         self.cache.insert(media_id, item.clone()).await;
         Ok(item)
@@ -101,7 +100,7 @@ impl ServiceMedia {
 
         let should_strip_exif = patch.strip_exif == Some(true);
 
-        let mut data = self.state.acquire_data().await?;
+        let mut data = self.state.begin().await?;
         data.media_update(media_id, patch).await?;
         data.commit().await?;
 
@@ -134,9 +133,11 @@ impl ServiceMedia {
             return Ok(());
         }
 
-        let links = self.state.data().media_link_select(media_id).await?;
+        let mut data = self.state.begin().await?;
+        let links = data.media_link_select(media_id).await?;
         if links.is_empty() {
-            self.state.data().media_delete(media_id).await?;
+            data.media_delete(media_id).await?;
+            data.commit().await?;
             self.cache.invalidate(&media_id).await;
             Ok(())
         } else {

@@ -216,7 +216,9 @@ impl ServiceCache {
         }
 
         self.preferences_global
-            .try_get_with(user_id, self.state.data().preferences_get(user_id))
+            .try_get_with(user_id, async {
+                self.state.begin_read().await?.preferences_get(user_id).await
+            })
             .await
             .map_err(|err| err.fake_clone())
     }
@@ -237,10 +239,13 @@ impl ServiceCache {
         }
 
         self.preferences_room
-            .try_get_with(
-                (user_id, room_id),
-                self.state.data().preferences_room_get(user_id, room_id),
-            )
+            .try_get_with((user_id, room_id), async {
+                self.state
+                    .begin_read()
+                    .await?
+                    .preferences_room_get(user_id, room_id)
+                    .await
+            })
             .await
             .map_err(|err| err.fake_clone())
     }
@@ -261,12 +266,13 @@ impl ServiceCache {
         }
 
         self.preferences_channel
-            .try_get_with(
-                (user_id, channel_id),
+            .try_get_with((user_id, channel_id), async {
                 self.state
-                    .data()
-                    .preferences_channel_get(user_id, channel_id),
-            )
+                    .begin_read()
+                    .await?
+                    .preferences_channel_get(user_id, channel_id)
+                    .await
+            })
             .await
             .map_err(|err| err.fake_clone())
     }
@@ -285,10 +291,13 @@ impl ServiceCache {
         other_id: UserId,
     ) -> Result<PreferencesUser> {
         self.preferences_user
-            .try_get_with(
-                (user_id, other_id),
-                self.state.data().preferences_user_get(user_id, other_id),
-            )
+            .try_get_with((user_id, other_id), async {
+                self.state
+                    .begin_read()
+                    .await?
+                    .preferences_user_get(user_id, other_id)
+                    .await
+            })
             .await
             .map_err(|err| err.fake_clone())
     }
@@ -305,7 +314,9 @@ impl ServiceCache {
         }
 
         self.emojis
-            .try_get_with(emoji_id, self.state.data().emoji_get(emoji_id))
+            .try_get_with(emoji_id, async {
+                self.state.begin_read().await?.emoji_get(emoji_id).await
+            })
             .await
             .map_err(|err| err.fake_clone())
     }
@@ -328,7 +339,7 @@ impl ServiceCache {
         }
 
         if !missing.is_empty() {
-            let emojis = self.state.data().emoji_get_many(&missing).await?;
+            let emojis = self.state.begin_read().await?.emoji_get_many(&missing).await?;
             for emoji in emojis {
                 self.emojis.insert(emoji.id, emoji.clone()).await;
                 out.push(emoji);
@@ -354,7 +365,7 @@ impl ServiceCache {
             .get_data()
             .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)))?;
         Ok(PermissionsCalculator {
-            state: Arc::clone(&self.state),
+            state: self.state.clone(),
             room_id,
             owner_id: data.room.owner_id,
             public: data.room.public,
@@ -365,7 +376,7 @@ impl ServiceCache {
     /// generate an ambient message for a user containing all their initial state
     // PERF: fetch in parallel
     pub async fn generate_ambient_message(&self, user_id: UserId) -> Result<MessageSync> {
-        let mut data = self.state.data();
+        let data = self.state.begin_read().await?;
 
         let mut room_items = Vec::new();
 
@@ -407,7 +418,8 @@ impl ServiceCache {
                     let snapshot = this.load_room(room.id, true).await?;
                     let member = this
                         .state
-                        .data()
+                        .begin_read()
+                        .await?
                         .room_member_get(room.id, user_id)
                         .await
                         .ok();

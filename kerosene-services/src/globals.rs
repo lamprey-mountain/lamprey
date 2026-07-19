@@ -14,7 +14,7 @@ use sqlx::postgres::PgPoolOptions;
 use tokio::runtime::Handle as TokioHandle;
 use tracing::info;
 
-mod messaging;
+pub mod messaging;
 
 /// owned handle for the server's global state
 #[derive(Clone)]
@@ -161,6 +161,28 @@ impl Globals {
             .check_database()
             .await
             .unwrap_or_default()
+    }
+
+    // TODO: use this?
+    // TODO: what happens if this is called inside another with_data?
+    // let a = self.state.with_data(|txn| async move {txn.reaction_put(user_id, channel_id, message_id, key).await?; Ok(123)}).await?;
+    pub async fn with_data<T, F, Fut>(&self, f: F) -> Result<T>
+    where
+        F: FnOnce(&mut AnyData) -> Fut,
+        Fut: Future<Output = Result<T>>,
+    {
+        let mut txn = self.inner.database.begin().await?;
+        match f(&mut txn).await {
+            Ok(res) => {
+                txn.commit().await?;
+                Ok(res)
+            }
+            Err(err) => {
+                // NOTE: is this redundant?
+                let _ = txn.rollback().await;
+                Err(err)
+            }
+        }
     }
 
     /// begin a database transaction

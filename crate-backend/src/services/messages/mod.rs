@@ -17,12 +17,12 @@ use common::v1::types::misc::Color;
 use common::v1::types::{
     Channel, ChannelId, ContextQuery, ContextResponse, EmbedCreate, EmbedId, Mentions,
     MentionsChannel, MentionsEmoji, MentionsRole, MentionsUser, MessageId, PaginationDirection,
-    PaginationQuery, PaginationResponse, Permission, RepliesChildren, RepliesMessage, RepliesQuery,
-    RoomId, SessionId, User,
+    PaginationQuery, PaginationResponse, Permission, RepliesQuery, RoomId, SessionId, User,
 };
 use common::v1::types::{MediaId, UserId};
 use common::v2::types::embed::{Embed, EmbedType};
 
+use crate::services::messages::util::TreeBuilder;
 use crate::types::{MentionsIds, MessageWithCounts};
 use crate::{Error, Result, ServerStateInner};
 
@@ -730,11 +730,7 @@ impl ServiceMessages {
             });
         }
 
-        let tree = TreeBuilder {
-            messages: &items,
-            max_depth: query.depth,
-        }
-        .build(root_message_id, 0);
+        let tree = TreeBuilder::new(&items, query.depth).build(root_message_id, 0);
 
         Ok(RepliesResponse { children: tree })
     }
@@ -816,61 +812,5 @@ impl ServiceMessages {
             site_name: None,
             site_avatar: None,
         })
-    }
-}
-
-struct TreeBuilder<'a> {
-    messages: &'a [MessageWithCounts],
-    max_depth: u16,
-}
-
-impl<'a> TreeBuilder<'a> {
-    fn new(messages: &'a [MessageWithCounts], max_depth: u16) -> Self {
-        Self {
-            messages,
-            max_depth,
-        }
-    }
-
-    fn build(&self, parent_id: Option<MessageId>, depth: u16) -> RepliesChildren {
-        let children: Vec<_> = self
-            .messages
-            .iter()
-            .filter(|msg| msg.message.reply_id() == parent_id)
-            .map(|msg| {
-                let (count_direct, count_recursive) = (msg.count_direct, msg.count_recursive);
-
-                let subtree = if depth < self.max_depth {
-                    self.build(Some(msg.message.id), depth + 1)
-                } else {
-                    RepliesChildren {
-                        children: vec![],
-                        count_direct,
-                        count_recursive,
-                        depth: (depth + 1) as u64,
-                        cursor: None,
-                        has_more: false,
-                    }
-                };
-
-                RepliesMessage {
-                    message: msg.message.clone(),
-                    children: RepliesChildren {
-                        count_direct,
-                        count_recursive,
-                        ..subtree
-                    },
-                }
-            })
-            .collect();
-
-        RepliesChildren {
-            count_direct: children.len() as u64,
-            count_recursive: 0,
-            children,
-            depth: depth as u64,
-            cursor: None,
-            has_more: false,
-        }
     }
 }

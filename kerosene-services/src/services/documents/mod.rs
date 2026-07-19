@@ -21,12 +21,12 @@ use tracing::{debug, error, warn};
 use yrs::ReadTxn;
 use yrs::{Doc, StateVector, Transact, Update, updates::decoder::Decode};
 
+use crate::prelude::*;
 use crate::services::documents::actor::{
     ApplyUpdate, BroadcastPresence, CheckUnload, DocumentActor, GetDiff, GetSnapshot,
     GetStateVector, PersistAndUnload, PresenceDelete, PresenceGet, SerdocGet, SerdocPut, Subscribe,
 };
 use crate::services::documents::util::{DOCUMENT_ROOT_NAME, HistoryPaginationSummary};
-use crate::{Error, Result, ServerStateInner};
 
 mod actor;
 mod serdoc;
@@ -38,7 +38,7 @@ mod util;
 pub type EditContextId = (ChannelId, DocumentBranchId);
 
 pub struct ServiceDocuments {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     edit_contexts: DashMap<EditContextId, ActorRef<DocumentActor>>,
 }
 
@@ -60,7 +60,7 @@ pub use actor::PendingChange;
 
 // TODO: better error handling (add yrs errors to to crate::Error)
 impl ServiceDocuments {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self {
             state,
             edit_contexts: DashMap::new(),

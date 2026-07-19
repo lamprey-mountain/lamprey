@@ -266,7 +266,7 @@ impl ServiceMessages {
         channel_id: ChannelId,
         json: MessageCreate,
     ) -> Result<Message> {
-        let srv = self.state.services();
+        let srv = self.globals.services();
         let channel = srv.channels.get(channel_id, None).await?;
 
         let op = MessageOperation {
@@ -296,7 +296,7 @@ impl ServiceMessages {
         json: MessageCreate,
         header_timestamp: Option<Time>,
     ) -> Result<Message> {
-        let srv = self.state.services();
+        let srv = self.globals.services();
         let channel = srv.channels.get(channel_id, None).await?;
 
         let op = MessageOperation {
@@ -352,7 +352,7 @@ impl ServiceMessages {
         json: MessagePatch,
         header_timestamp: Option<Time>,
     ) -> Result<(StatusCode, Message)> {
-        let srv = self.state.services();
+        let srv = self.globals.services();
         let user_id = auth.user().map(|u| u.id);
         let channel = srv.channels.get(channel_id, user_id).await?;
 
@@ -382,7 +382,7 @@ impl ServiceMessages {
         webhook_user_id: UserId,
         json: MessageCreate,
     ) -> Result<Message> {
-        let srv = self.state.services();
+        let srv = self.globals.services();
         let channel = srv.channels.get(channel_id, None).await?;
         let user = srv.users.get(webhook_user_id, None).await?;
 
@@ -412,7 +412,7 @@ impl ServiceMessages {
         webhook_user_id: UserId,
         json: MessagePatch,
     ) -> Result<(StatusCode, Message)> {
-        let srv = self.state.services();
+        let srv = self.globals.services();
         let channel = srv.channels.get(channel_id, None).await?;
         let user = srv.users.get(webhook_user_id, None).await?;
 
@@ -555,7 +555,7 @@ impl ServiceMessages {
         &'a self,
         mut op: MessageOperation<'a, Committed>,
     ) -> Result<MessageOperation<'a, Committed>> {
-        self.state
+        self.globals
             .services()
             .channels
             .update_last_message_ids(
@@ -579,7 +579,7 @@ impl ServiceMessages {
             },
         };
 
-        self.state.broadcast_with_nonce(op.nonce.as_deref(), sync)?;
+        self.globals.broadcast_with_nonce(op.nonce.as_deref(), sync)?;
 
         Ok(op)
     }
@@ -617,8 +617,8 @@ impl ServiceMessages {
         has_embeds: bool,
         header_timestamp: Option<Time>,
     ) -> Result<(MessagePermissions, Option<Time>)> {
-        let srv = self.state.services();
-        let mut data = self.state.data();
+        let srv = self.globals.services();
+        let mut data = self.globals.data();
 
         let user = auth.ensure_user()?;
 
@@ -687,7 +687,7 @@ impl ServiceMessages {
     ) -> Result<(MessagePermissions, Option<Time>)> {
         // TODO: always allow ephemeral messages
 
-        let _srv = self.state.services();
+        let _srv = self.globals.services();
 
         // 0. you can only edit your own messages
         // (this *may* change in the future - dubious though)
@@ -759,7 +759,7 @@ impl ServiceMessages {
             return Ok(None);
         };
 
-        let srv = self.state.services();
+        let srv = self.globals.services();
         let automod = srv.automod.load(room_id).await?;
 
         let scan = match &op.kind {
@@ -919,7 +919,7 @@ impl ServiceMessages {
         &self,
         op: &mut MessageOperation<'_, Prepared>,
     ) -> Result<Message> {
-        let mut data = self.state.data();
+        let mut data = self.globals.data();
         let user_id = op.author_id();
 
         let attachment_ids = op.kind.attachment_ids();
@@ -1010,7 +1010,7 @@ impl ServiceMessages {
     ) -> Result<()> {
         all_media_ids.check()?;
 
-        let mut data = self.state.data();
+        let mut data = self.globals.data();
         for &id in &all_media_ids.known {
             // PERF: this should probably be batched
             let media = data.media_select(id).await?;
@@ -1044,7 +1044,7 @@ impl ServiceMessages {
         message_id: MessageId,
         version_id: Uuid,
     ) -> Result<()> {
-        let mut data = self.state.data();
+        let mut data = self.globals.data();
         for &id in &all_media_ids.known {
             // 3. insert media links
             data.media_link_insert(id, message_id.into_inner(), MediaLinkType::Message)
@@ -1062,7 +1062,7 @@ impl ServiceMessages {
         };
 
         if let Some(slowmode_delay) = op.channel.slowmode_message {
-            let mut data = self.state.data();
+            let mut data = self.globals.data();
             let next_message_time =
                 Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
             data.channel_set_message_slowmode_expire_at(op.channel.id, user_id, next_message_time)
@@ -1079,7 +1079,7 @@ impl ServiceMessages {
     ) -> Result<()> {
         // TODO: skip if message is ephemeral
 
-        let srv = self.state.services();
+        let srv = self.globals.services();
 
         // TODO: unarchive thread for system, webhooks
         let AuthProvider::Auth(auth) = &op.auth else {
@@ -1109,8 +1109,8 @@ impl ServiceMessages {
     ) -> Result<()> {
         // TODO: skip if message is ephemeral
 
-        let mut data = self.state.data();
-        let srv = self.state.services();
+        let mut data = self.globals.data();
+        let srv = self.globals.services();
 
         if !op.channel.is_thread() {
             return Ok(());
@@ -1132,7 +1132,7 @@ impl ServiceMessages {
                 added: vec![thread_member],
                 removed: vec![],
             };
-            self.state
+            self.globals
                 .broadcast_channel(thread_id, user_id, msg)
                 .await?;
         }
@@ -1152,7 +1152,7 @@ impl ServiceMessages {
         // PERF: use less cloning
         let message = op.stage.message.clone();
 
-        let s = self.state.clone();
+        let s = self.globals.clone();
         let srv = s.services();
 
         tokio::spawn(async move {
@@ -1182,7 +1182,7 @@ impl ServiceMessages {
         &self,
         op: &mut MessageOperation<'_, Committed>,
     ) -> Result<()> {
-        let srv = self.state.services();
+        let srv = self.globals.services();
         let channel = op.channel.clone();
         let message = op.stage.message.clone();
         tokio::spawn(async move {

@@ -66,7 +66,7 @@ impl ServiceMessages {
         json: FlumeCreate,
         header_timestamp: Option<Time>,
     ) -> Result<(StatusCode, Message)> {
-        let srv = self.state.services();
+        let srv = self.globals.services();
         let user_id = auth.user().map(|u| u.id);
         let channel = srv.channels.get(channel_id, user_id).await?;
         channel.ensure_has_text()?;
@@ -122,7 +122,7 @@ impl ServiceMessages {
                 PrimitiveDateTime::new(now.date(), now.time())
             });
 
-        let mut data = self.state.data();
+        let mut data = self.globals.data();
         let components_inner = components_thin.inner.clone();
         data.message_create(DbMessageCreate {
             id: Some(message_id),
@@ -165,7 +165,7 @@ impl ServiceMessages {
             },
         );
 
-        self.state.broadcast(MessageSync::MessageCreate {
+        self.globals.broadcast(MessageSync::MessageCreate {
             message: message.clone(),
         })?;
 
@@ -222,7 +222,7 @@ impl ServiceMessages {
         flume_ref.expire_handle = self.spawn_autocommit_timer(channel_id, message_id);
 
         // 5. broadcast delta
-        self.state.broadcast(MessageSync::FlumeDelta {
+        self.globals.broadcast(MessageSync::FlumeDelta {
             channel_id,
             message_id,
             delta,
@@ -287,7 +287,7 @@ impl ServiceMessages {
             return self.get(channel_id, message_id, None).await;
         }
 
-        let mut data = self.state.data();
+        let mut data = self.globals.data();
 
         // 1. get the message to get author_id and version_id
         let message = self.get(channel_id, message_id, None).await?;
@@ -336,7 +336,7 @@ impl ServiceMessages {
         let message = self.get(channel_id, message_id, None).await?;
 
         // 5. broadcast
-        self.state.broadcast(MessageSync::MessageUpdate {
+        self.globals.broadcast(MessageSync::MessageUpdate {
             message: message.clone(),
         })?;
 
@@ -366,7 +366,7 @@ impl ServiceMessages {
         channel_id: ChannelId,
         message_id: MessageId,
     ) -> JoinHandle<Result<()>> {
-        let services = self.state.services();
+        let services = self.globals.services();
         tokio::spawn(async move {
             tokio::time::sleep(FLUME_AUTOCOMMIT).await;
 
@@ -405,7 +405,7 @@ impl ServiceMessages {
         let mut media_cache = HashMap::new();
         let mut media_futs = FuturesUnordered::new();
         for media_id in &media_ids {
-            media_futs.push(async { (*media_id, self.state.data().media_select(*media_id).await) });
+            media_futs.push(async { (*media_id, self.globals.data().media_select(*media_id).await) });
         }
         while let Some((media_id, result)) = media_futs.next().await {
             if let Ok(media) = result {

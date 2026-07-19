@@ -16,6 +16,7 @@ use common::v1::types::{
     util::Time,
 };
 use http::request::Parts;
+use lamprey_backend_core::types::auth::Identity;
 
 #[derive(Clone)]
 pub struct Auth4 {
@@ -35,46 +36,7 @@ impl fmt::Debug for Auth4 {
     }
 }
 
-// TODO: use Arc<Session>
-#[derive(Debug, Clone)]
-pub enum Identity {
-    /// a user's session
-    User {
-        user: User,
-        session: Session,
-        scopes: Scopes,
-    },
-
-    /// an oauth application acting on behalf of a user
-    Oauth { user: User, scopes: Scopes },
-
-    /// a bridge application controlling one of their puppets
-    Puppet {
-        puppet: User,
-        puppeteer: User,
-
-        /// the puppeteer's session
-        session: Session,
-
-        // how do these work?
-        scopes: Scopes,
-    },
-
-    /// authenticated via a remote server signature
-    Server {
-        hostname: Hostname,
-
-        /// the user the server is puppetting
-        puppet: Option<User>,
-    },
-
-    /// unauthorized guest session (no user bound yet)
-    Guest { session: Session, scopes: Scopes },
-
-    /// truly public request (no authorization at all)
-    Public,
-}
-
+// TODO: check if deref works here
 impl Auth4 {
     pub fn identity(&self) -> &Identity {
         &self.identity

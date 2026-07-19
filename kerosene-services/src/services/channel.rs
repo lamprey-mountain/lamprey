@@ -14,9 +14,10 @@ use common::v2::types::MessageVerId;
 use moka::future::Cache;
 use moka::ops::compute::Op as CacheOp;
 use time::OffsetDateTime;
-use tracing::warn;
+use tracing::{info, warn};
 use validator::Validate;
 
+use crate::globals::messaging::Broadcast;
 use crate::prelude::*;
 use crate::types::{DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCreate};
 use lamprey_backend_core::types::search::ChannelVisibility;
@@ -65,7 +66,7 @@ impl ServiceChannels {
             return Ok(());
         }
 
-        let mut data = self.state.data();
+        let mut data = self.state.begin_read().await?;
 
         // collect all channel ids for batch fetching
         let channel_ids: Vec<_> = channels.iter().map(|c| c.id).collect();
@@ -138,9 +139,10 @@ impl ServiceChannels {
             let recipients = self
                 .cache_thread_recipients
                 .try_get_with(channel.id, async {
-                    let members = self.state.data().thread_member_list_all(channel.id).await?;
+                    let mut data = self.state.begin_read().await?;
+                    let members = data.thread_member_list_all(channel.id).await?;
                     let user_ids: Vec<_> = members.into_iter().map(|m| m.user_id).collect();
-                    let users = self.state.data().user_get_many(&user_ids).await?;
+                    let users = data.user_get_many(&user_ids).await?;
                     Result::Ok(users)
                 })
                 .await
@@ -154,7 +156,10 @@ impl ServiceChannels {
     pub async fn get(&self, channel_id: ChannelId, user_id: Option<UserId>) -> Result<Channel> {
         let mut thread = self
             .cache_thread
-            .try_get_with(channel_id, self.state.data().channel_get(channel_id))
+            .try_get_with(channel_id, async move {
+                let mut data = self.state.begin_read().await?;
+                data.channel_get(channel_id).await
+            })
             .await
             .map_err(|err| err.fake_clone())?;
 
@@ -166,7 +171,12 @@ impl ServiceChannels {
         self.populate_recipients(std::slice::from_mut(&mut thread))
             .await?;
 
-        let members = self.state.data().thread_member_list_all(channel_id).await?;
+        let members = self
+            .state
+            .begin_read()
+            .await?
+            .thread_member_list_all(channel_id)
+            .await?;
 
         let mut online_count = 0;
         for member in members {
@@ -200,7 +210,8 @@ impl ServiceChannels {
         }
 
         if !missing.is_empty() {
-            let more_channels = self.state.data().channel_get_many(&missing).await?;
+            let mut data = self.state.begin_read().await?;
+            let more_channels = data.channel_get_many(&missing).await?;
             for chan in more_channels {
                 self.cache_thread.insert(chan.id, chan.clone()).await;
                 out.push(chan);
@@ -217,7 +228,8 @@ impl ServiceChannels {
 
         for channel in &mut channels {
             // PERF: n+1 query
-            let members = self.state.data().thread_member_list_all(channel.id).await?;
+            let mut data = self.state.begin_read().await?;
+            let members = data.thread_member_list_all(channel.id).await?;
             let mut online_count = 0;
             for member in members {
                 if self.state.services().presence.get(member.user_id).status != Status::Offline {
@@ -328,7 +340,7 @@ impl ServiceChannels {
                 None
             };
             let srv = self.state.services();
-            let mut data = self.state.data();
+            let mut data = self.state.begin().await?;
             let user = auth.ensure_user()?;
             let perms = if let Some(parent_id) = json.parent_id {
                 srv.perms.for_channel(user.id, parent_id).await?
@@ -471,7 +483,7 @@ impl ServiceChannels {
             };
             if json
                 .bitrate
-                .is_some_and(|b| b > self.state.config.limits.room.max_bitrate as u64)
+                .is_some_and(|b| b > self.state.config().limits.room.max_bitrate as u64)
             {
                 return Err(Error::BadStatic("bitrate is too high"));
             }
@@ -633,27 +645,20 @@ impl ServiceChannels {
                 al.success();
             }
 
+            let broadcast = Broadcast::sync(MessageSync::ChannelCreate {
+                channel: Box::new(channel.clone()),
+            })
+            .with_nonce(nonce.as_deref());
+
             if let Some(room_id) = room_id {
                 self.state
-                    .broadcast_room_with_nonce(
-                        room_id,
-                        user.id,
-                        nonce.as_deref(),
-                        MessageSync::ChannelCreate {
-                            channel: Box::new(channel.clone()),
-                        },
-                    )
+                    .messaging()
+                    .broadcast_room(room_id, broadcast)
                     .await?;
             } else if let Some(parent_id) = json.parent_id {
                 self.state
-                    .broadcast_channel_with_nonce(
-                        parent_id,
-                        user.id,
-                        nonce.as_deref(),
-                        MessageSync::ChannelCreate {
-                            channel: Box::new(channel.clone()),
-                        },
-                    )
+                    .messaging()
+                    .broadcast_channel(parent_id, broadcast)
                     .await?;
             }
 
@@ -688,9 +693,9 @@ impl ServiceChannels {
                         .await?;
 
                     self.state
+                        .messaging()
                         .broadcast_channel(
                             parent_id,
-                            user.id,
                             MessageSync::MessageCreate {
                                 message: system_message,
                             },
@@ -700,9 +705,9 @@ impl ServiceChannels {
             }
 
             self.state
+                .messaging()
                 .broadcast_channel(
                     channel.id,
-                    user.id,
                     MessageSync::ThreadMemberUpsert {
                         room_id: channel.room_id,
                         thread_id: channel.id,
@@ -712,6 +717,7 @@ impl ServiceChannels {
                 )
                 .await?;
 
+            data.commit().await?;
             Ok(channel)
         })
     }
@@ -724,7 +730,7 @@ impl ServiceChannels {
         mut json: ChannelCreate,
     ) -> Result<Channel> {
         let srv = self.state.services();
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let user = auth.ensure_user()?;
 
         let perms = srv.perms.for_channel(user.id, parent_channel_id).await?;
@@ -797,9 +803,9 @@ impl ServiceChannels {
         let channel = srv.channels.get(thread_id, Some(user.id)).await?;
 
         self.state
+            .messaging()
             .broadcast_channel(
                 parent_channel_id,
-                user.id,
                 MessageSync::ChannelCreate {
                     channel: Box::new(channel.clone()),
                 },
@@ -835,9 +841,9 @@ impl ServiceChannels {
                 .get(parent_channel_id, system_message_id, Some(user.id))
                 .await?;
             self.state
+                .messaging()
                 .broadcast_channel(
                     parent_channel_id,
-                    user.id,
                     MessageSync::MessageCreate {
                         message: system_message,
                     },
@@ -863,6 +869,7 @@ impl ServiceChannels {
             al.success();
         }
 
+        data.commit().await?;
         Ok(channel)
     }
 
@@ -989,7 +996,7 @@ impl ServiceChannels {
         }
 
         if patch.bitrate.is_some_and(|b| {
-            b.is_some_and(|b| (b as u32) > self.state.config.limits.room.max_bitrate)
+            b.is_some_and(|b| (b as u32) > self.state.config().limits.room.max_bitrate)
         }) {
             return Err(Error::BadStatic("bitrate is too high"));
         }
@@ -1299,9 +1306,9 @@ impl ServiceChannels {
                 .await?;
             let rename_message = data.message_get(thread_id, rename_message_id).await?;
             self.state
+                .messaging()
                 .broadcast_channel(
                     thread_id,
-                    user.id,
                     MessageSync::MessageCreate {
                         message: rename_message,
                     },
@@ -1333,9 +1340,9 @@ impl ServiceChannels {
                 .await?;
             let icon_message = data.message_get(thread_id, icon_message_id).await?;
             self.state
+                .messaging()
                 .broadcast_channel(
                     thread_id,
-                    user.id,
                     MessageSync::MessageCreate {
                         message: icon_message,
                     },
@@ -1368,9 +1375,9 @@ impl ServiceChannels {
                 .await?;
             let move_message = data.message_get(thread_id, move_message_id).await?;
             self.state
+                .messaging()
                 .broadcast_channel(
                     thread_id,
-                    user.id,
                     MessageSync::MessageCreate {
                         message: move_message,
                     },
@@ -1382,7 +1389,7 @@ impl ServiceChannels {
             channel: Box::new(chan_new.clone()),
         };
         if let Some(room_id) = chan_new.room_id {
-            self.state.broadcast_room(room_id, user.id, msg).await?;
+            self.state.messaging().broadcast_room(room_id, msg).await?;
         }
 
         Ok(chan_new)
@@ -1417,7 +1424,7 @@ impl ServiceChannels {
         Ok(out)
     }
 
-    pub async fn spawn_auto_archive_task(state: Arc<ServerStateInner>) {
+    pub async fn spawn_auto_archive_task(state: Globals) {
         let mut interval = tokio::time::interval(Duration::from_secs(60));
         loop {
             interval.tick().await;
@@ -1427,7 +1434,7 @@ impl ServiceChannels {
             match data.thread_auto_archive().await {
                 Ok(archived_thread_ids) => {
                     if !archived_thread_ids.is_empty() {
-                        tracing::info!("auto-archived {} threads", archived_thread_ids.len());
+                        info!("auto-archived {} threads", archived_thread_ids.len());
 
                         for thread_id in archived_thread_ids {
                             srv.channels.invalidate(thread_id).await;
@@ -1437,15 +1444,14 @@ impl ServiceChannels {
                                     let msg = MessageSync::ChannelUpdate {
                                         channel: Box::new(channel),
                                     };
-                                    let _ =
-                                        state.broadcast_room(room_id, SERVER_USER_ID, msg).await;
+                                    let _ = state.messaging().broadcast_room(room_id, msg).await;
                                 }
                             }
                         }
                     }
                 }
                 Err(e) => {
-                    tracing::warn!("failed to auto-archive threads: {}", e);
+                    warn!("failed to auto-archive threads: {}", e);
                 }
             }
         }
@@ -1514,91 +1520,4 @@ pub fn _calculate_hotness(channel: &Channel, first_message: &Message) -> f64 {
     let score = points_dampened / (age_hours + freshness).powf(gravity);
 
     score
-}
-
-#[cfg(any())]
-mod next {
-    use std::{collections::HashMap, sync::Arc};
-
-    use common::v1::types::{
-        ChannelId, MessageId, MessageVerId, UserId, preferences::PreferencesChannel, util::Time,
-    };
-    use moka::future::Cache;
-
-    use crate::ServerStateInner;
-
-    pub struct ServiceChannels {
-        state: Arc<ServerStateInner>,
-
-        /// private user data
-        cache_private: Cache<(ChannelId, UserId), ChannelPrivate>,
-
-        /// dm and gdm channels
-        // other channel exist in room actors, but dms don't exist in rooms
-        // merge recipients here
-        cache_dms: Cache<ChannelId, Channel>,
-
-        /// typing indicators
-        typing: Cache<(ChannelId, UserId), TypingUser>,
-
-        /// deduplicating channel create requests
-        idempotency_keys: Cache<String, ChannelId>,
-
-        slowmode_expire: Cache<(ChannelId, UserId, SlowmodeKind), Time>,
-    }
-
-    /// channel data for a user
-    #[derive(Debug)]
-    pub struct ChannelPrivate {
-        pub unread_state: Option<AckState>,
-        pub preferences: Option<PreferencesChannel>,
-        pub slowmode_thread_expire_at: Option<Time>,
-        pub slowmode_message_expire_at: Option<Time>,
-        // does thread_member go here?
-    }
-
-    #[derive(Debug)]
-    pub struct AckState {
-        /// if this channel is unread
-        // NOTE: this is separate because i might want to filter ignored/blocked users server side
-        pub unread: bool,
-
-        /// the id of the last message this user has read
-        pub read_marker_id: Option<MessageId>,
-
-        /// the version id of the last message this user has read
-        pub read_marker_version: Option<MessageVerId>,
-
-        /// the total number of mentions for this user in this channel
-        pub mention_count: Option<u64>,
-
-        /// the total number of unread messages for private channels
-        pub unread_count: Option<u64>,
-
-        /// when this user read the pins
-        pub pins_read_at: Option<Time>,
-        // how do unreads work with {calendar,wiki,document}?
-        // calendar events could have their own ack state
-    }
-
-    // add these fields
-    pub struct Channel {
-        /// the id of the last message
-        // TODO: use this instead of last_version_id in ui?
-        pub last_message_id: Option<MessageId>,
-
-        /// when a message was last pinned to this channel
-        pub last_pin_timestamp: Option<Time>,
-        // remove is_unread, last_read_id, mention_count, preferences, slowmode_thread_expire_at, slowmode_message_expire_at
-    }
-
-    pub struct TypingUser {
-        pub expires_at: Time,
-        // maybe later i can have "typing notification kinds", eg. "recording voice message"
-    }
-
-    pub enum SlowmodeKind {
-        Message,
-        Thread,
-    }
 }

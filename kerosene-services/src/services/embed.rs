@@ -10,7 +10,6 @@ use tokio::task::JoinHandle;
 use tracing::{debug, error, info, warn};
 use url::Url;
 
-use crate::ServerStateInner;
 use crate::prelude::*;
 use crate::services::media::Import;
 use crate::types::{DbMessageUpdate, MediaLinkType, MessageRef};
@@ -19,7 +18,7 @@ use crate::types::{DbMessageUpdate, MediaLinkType, MessageRef};
 const MAX_EMBED_AGE: Duration = Duration::from_secs(60 * 5);
 
 pub struct ServiceEmbed {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     unfurler: Arc<Unfurler>,
     cache: Cache<Url, Embed>,
     stop: broadcast::Sender<()>,
@@ -27,7 +26,7 @@ pub struct ServiceEmbed {
 }
 
 impl ServiceEmbed {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         let (tx, _) = broadcast::channel(1);
         let unfurler = Arc::new(
             Unfurler::builder()
@@ -37,7 +36,7 @@ impl ServiceEmbed {
                         .connect_timeout(std::time::Duration::from_secs(5))
                         .user_agent(
                             state
-                                .config
+                                .config()
                                 .user_agent_header_value()
                                 .expect("should always be valid user agent"),
                         )

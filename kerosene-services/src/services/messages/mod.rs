@@ -24,7 +24,7 @@ use common::v1::types::{MediaId, UserId};
 use common::v2::types::embed::{Embed, EmbedType};
 
 use crate::types::{MentionsIds, MessageWithCounts};
-use crate::{Error, Result, ServerStateInner};
+use crate::prelude::*;
 
 pub mod create;
 pub mod flume;
@@ -33,15 +33,15 @@ pub mod markdown;
 pub mod util;
 
 pub struct ServiceMessages {
-    state: Arc<ServerStateInner>,
+    globals: Globals,
     pub flumes: DashMap<MessageId, flume::Flume>,
     pub idempotency_keys: Cache<(SessionId, String), Message>,
 }
 
 impl ServiceMessages {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(globals: Globals) -> Self {
         Self {
-            state,
+            globals,
             flumes: DashMap::new(),
             idempotency_keys: Cache::builder()
                 .time_to_live(Duration::from_secs(300))
@@ -63,8 +63,9 @@ impl ServiceMessages {
         };
 
         let mut res = self
-            .state
-            .data()
+            .globals
+            .begin_read()
+            .await?
             .message_list(thread_id, pagination)
             .await?;
 
@@ -86,8 +87,9 @@ impl ServiceMessages {
         };
 
         let mut res = self
-            .state
-            .data()
+            .globals
+            .begin_read()
+            .await?
             .message_list(thread_id, pagination)
             .await?;
 
@@ -105,7 +107,12 @@ impl ServiceMessages {
         message_id: MessageId,
         user_id: Option<UserId>,
     ) -> Result<Message> {
-        let mut message = self.state.data().message_get(thread_id, message_id).await?;
+        let mut message = self
+            .globals
+            .begin_read()
+            .await?
+            .message_get(thread_id, message_id)
+            .await?;
 
         self.populate_all(thread_id, user_id, std::slice::from_mut(&mut message))
             .await?;
@@ -120,8 +127,9 @@ impl ServiceMessages {
         user_id: Option<UserId>,
     ) -> Result<MessageWithCounts> {
         let mut mwc = self
-            .state
-            .data()
+            .globals
+            .begin_read()
+            .await?
             .message_get_with_counts(thread_id, message_id)
             .await?;
 
@@ -138,8 +146,9 @@ impl ServiceMessages {
         message_ids: &[MessageId],
     ) -> Result<Vec<Message>> {
         let mut messages = self
-            .state
-            .data()
+            .globals
+            .begin_read()
+            .await?
             .message_get_many(channel_id, message_ids)
             .await?;
 
@@ -190,7 +199,7 @@ impl ServiceMessages {
         mentions_ids: MentionsIds,
         room_id: Option<RoomId>,
     ) -> Result<Mentions> {
-        let srv = self.state.services();
+        let srv = self.globals.services();
 
         let mut mentions = Mentions {
             users: vec![],
@@ -271,7 +280,7 @@ impl ServiceMessages {
         allow: bool,
         content: &str,
     ) -> Result<String> {
-        let srv = self.state.services();
+        let srv = self.globals.services();
         let mut allowed_emoji = vec![];
 
         let emoji_ids: Vec<_> = m.emojis.iter().map(|e| e.id).collect();
@@ -297,9 +306,9 @@ impl ServiceMessages {
             return Ok(vec![]);
         }
 
-        let mut data = self.state.data();
+        let mut data = self.globals.begin_read().await?;
         let channel = self
-            .state
+            .globals
             .services()
             .channels
             .get(channel_id, user_id)
@@ -332,7 +341,7 @@ impl ServiceMessages {
     ) -> Result<HashMap<MessageId, Channel>> {
         let mut threads_map = HashMap::new();
 
-        let srv = self.state.services();
+        let srv = self.globals.services();
         let mut thread_futs: FuturesUnordered<_> = messages
             .iter()
             .filter_map(|m| {
@@ -367,7 +376,7 @@ impl ServiceMessages {
         user_id: Option<UserId>,
         messages: &[Message],
     ) -> Result<HashMap<MessageId, ReactionCounts>> {
-        let mut data = self.state.data();
+        let mut data = self.globals.begin_read().await?;
         let message_ids: Vec<MessageId> = messages.iter().map(|m| m.id).collect();
         let reactions = data
             .reaction_fetch_all(
@@ -409,7 +418,7 @@ impl ServiceMessages {
         _user_id: Option<UserId>,
         messages: &[Message],
     ) -> Result<HashMap<MessageId, Components<components::Canonical>>> {
-        let mut data = self.state.data();
+        let mut data = self.globals.begin_read().await?;
         let version_ids: Vec<MessageVerId> = messages
             .iter()
             .map(|m| m.latest_version.version_id)
@@ -478,7 +487,6 @@ impl ServiceMessages {
             if let Some(m) = mentions_data.get(i) {
                 message.latest_version.mentions = m.clone();
             }
-            let thread_channel_id: ChannelId = (*message.id).into();
             if let Some(t) = threads_data.get(&message.id) {
                 message.thread = Some(Box::new(t.clone()));
             }
@@ -513,15 +521,17 @@ impl ServiceMessages {
 
         // Permission check
         let perms = self
-            .state
+            .globals
             .services()
             .perms
             .for_channel(user_id, channel_id)
             .await?;
         perms.ensure(Permission::ChannelView)?;
 
-        let mut data = self.state.data();
-        let mut ancestors = data
+        let mut ancestors = self
+            .globals
+            .begin_read()
+            .await?
             .message_get_ancestors(start_message_id, context)
             .await?;
 
@@ -550,8 +560,9 @@ impl ServiceMessages {
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let res = self
-            .state
-            .data()
+            .globals
+            .begin_read()
+            .await?
             .message_list(channel_id, pagination)
             .await?;
         self.process_message_list(channel_id, user_id, res).await
@@ -564,8 +575,9 @@ impl ServiceMessages {
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let res = self
-            .state
-            .data()
+            .globals
+            .begin_read()
+            .await?
             .message_list_deleted(channel_id, pagination)
             .await?;
         self.process_message_list(channel_id, user_id, res).await
@@ -578,8 +590,9 @@ impl ServiceMessages {
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let res = self
-            .state
-            .data()
+            .globals
+            .begin_read()
+            .await?
             .message_list_removed(channel_id, pagination)
             .await?;
         self.process_message_list(channel_id, user_id, res).await
@@ -592,8 +605,9 @@ impl ServiceMessages {
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let res = self
-            .state
-            .data()
+            .globals
+            .begin_read()
+            .await?
             .message_list_all(channel_id, pagination)
             .await?;
         self.process_message_list(channel_id, user_id, res).await
@@ -606,8 +620,8 @@ impl ServiceMessages {
         user_id: Option<UserId>,
         query: ContextQuery,
     ) -> Result<ContextResponse> {
-        let s = &self.state;
-        let mut data = s.data();
+        let s = &self.globals;
+        let mut data = s.begin_read().await?;
 
         let limit = query.limit.unwrap_or(10);
         if limit > 1024 {
@@ -629,18 +643,16 @@ impl ServiceMessages {
         };
 
         // PERF: fetch in parallel
-        let before_res = data.message_list(channel_id, before_q).await;
-        let after_res = data.message_list(channel_id, after_q).await;
-        let message_res = data.message_get(channel_id, message_id).await;
+        let before_res = data.message_list(channel_id, before_q);
+        let after_res = data.message_list(channel_id, after_q);
+        let message_res = data.message_get(channel_id, message_id);
 
-        let before = before_res?;
-        let after = after_res?;
-        let message = message_res.ok();
+        let (before, after, message) = tokio::try_join!(before_res, after_res, message_res)?;
 
         let mut items: Vec<Message> = before
             .items
             .into_iter()
-            .chain(message)
+            .chain(Some(message))
             .chain(after.items)
             .collect();
 
@@ -661,9 +673,10 @@ impl ServiceMessages {
         _user_id: Option<UserId>,
         pagination: PaginationQuery<MessageVerId>,
     ) -> Result<PaginationResponse<MessageVersion>> {
-        let s = &self.state;
-        let mut data = s.data();
-        let res = data
+        let res = self
+            .globals
+            .begin_read()
+            .await?
             .message_version_list(channel_id, message_id, pagination)
             .await?;
 
@@ -676,9 +689,12 @@ impl ServiceMessages {
         version_id: MessageVerId,
         _user_id: Option<UserId>,
     ) -> Result<MessageVersion> {
-        let s = &self.state;
-        let mut data = s.data();
-        let message = data.message_version_get(channel_id, version_id).await?;
+        let message = self
+            .globals
+            .begin_read()
+            .await?
+            .message_version_get(channel_id, version_id)
+            .await?;
         Ok(message)
     }
 
@@ -698,9 +714,10 @@ impl ServiceMessages {
             _ => vec![],
         };
 
-        let s = &self.state;
-        let mut data = s.data();
-        let res = data
+        let res = self
+            .globals
+            .begin_read()
+            .await?
             .message_replies(
                 channel_id,
                 root_message_id,
@@ -746,8 +763,9 @@ impl ServiceMessages {
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let res = self
-            .state
-            .data()
+            .globals
+            .begin_read()
+            .await?
             .message_pin_list(channel_id, user_id, pagination)
             .await?;
         self.process_message_list(channel_id, Some(user_id), res)
@@ -761,8 +779,9 @@ impl ServiceMessages {
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>> {
         let res = self
-            .state
-            .data()
+            .globals
+            .begin_read()
+            .await?
             .message_list_activity(channel_id, user_id, pagination)
             .await?;
         self.process_message_list(channel_id, Some(user_id), res)
@@ -780,7 +799,7 @@ impl ServiceMessages {
         let Some(media_id) = media_ref.media_id() else {
             return Err(Error::Unimplemented);
         };
-        let media = self.state.data().media_select(media_id).await?;
+        let media = self.globals.begin_read().await?.media_select(media_id).await?;
         if media.user_id != Some(user_id) {
             return Err(Error::MissingPermissions);
         }
