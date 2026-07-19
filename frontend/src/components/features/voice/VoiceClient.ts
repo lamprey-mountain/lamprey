@@ -1,4 +1,4 @@
-import { ReactiveSet } from "@solid-primitives/set";
+import { ReactiveMap } from "@solid-primitives/map";
 import { type Accessor, createSignal, type Setter } from "solid-js";
 import type {
 	MediaKind,
@@ -35,6 +35,9 @@ export type VoiceTransceiver = {
 };
 
 export type VoiceStream = {
+	/** unique stream id formatted as `${user_id}:${key}` */
+	id: string;
+
 	/** user whos publishing this stream */
 	user_id: string;
 
@@ -79,10 +82,13 @@ export class VoiceClient {
 	public localTransceivers: VoiceTransceiver[] = [];
 
 	/** mapping of track id -> track */
-	public tracks = new Map<string, VoiceTrack>();
+	public tracks = new ReactiveMap<string, VoiceTrack>();
 
-	/** array of streams */
-	public streams = new ReactiveSet<VoiceStream>();
+	/** mapping of stream id -> stream */
+	public streams = new ReactiveMap<string, VoiceStream>();
+
+	/** set of subscribed track ids */
+	public subscribedTracks = new Set<string>();
 
 	private makingOffer = false;
 	private settingRemoteAnswer = false;
@@ -207,10 +213,10 @@ export class VoiceClient {
 					transceiver: t,
 				});
 
-				// force trigger reactivity in solid ReactiveSet
-				// NOTE: this may cause a flash as the stream updates, i should find some way to prevent this (maybe with ReactiveMap instead?)
-				this.streams.delete(stream);
-				this.streams.add(stream);
+				// force trigger reactivity in solid ReactiveMap
+				// NOTE: this may cause a flash as the stream updates, i should find some way to prevent this
+				this.streams.delete(stream.id);
+				this.streams.set(stream.id, stream);
 			}
 		});
 
@@ -382,7 +388,7 @@ export class VoiceClient {
 			// remove all streams belonging to this user
 			for (const stream of Array.from(this.streams.values())) {
 				if (stream.user_id === uid) {
-					this.streams.delete(stream);
+					this.streams.delete(stream.id);
 				}
 			}
 			// remove all tracks belonging to this user
@@ -558,21 +564,20 @@ export class VoiceClient {
 	 * Get or create a stream for a given user and key
 	 */
 	public getStream(user_id: string, key: TrackKey): VoiceStream {
-		for (const stream of this.streams.values()) {
-			if (stream.user_id === user_id && stream.key === key) {
-				return stream;
-			}
-		}
+		const streamId = `${user_id}:${key}`;
+		const existing = this.streams.get(streamId);
+		if (existing) return existing;
 
 		const media = new MediaStream();
 		const stream: VoiceStream = {
+			id: streamId,
 			user_id,
 			track_ids: [],
 			key,
 			media,
 		};
-		this.streams.add(stream);
-		log.debug("rtc", `initialized new stream ${user_id}:${key}`, media);
+		this.streams.set(streamId, stream);
+		log.debug("rtc", `initialized new stream ${streamId}`, media);
 		return stream;
 	}
 
@@ -607,6 +612,33 @@ export class VoiceClient {
 		return tr;
 	}
 
-	// TODO: public setSubscriptions(...) {}
+	public subscribeToTracks(trackIds: string[]) {
+		const add = trackIds.filter((id) => !this.subscribedTracks.has(id));
+		if (add.length > 0) {
+			for (const id of add) {
+				this.subscribedTracks.add(id);
+			}
+			this.sendSignalling({
+				type: "Subscribe",
+				add,
+				remove: [],
+			});
+		}
+	}
+
+	public unsubscribeFromTracks(trackIds: string[]) {
+		const remove = trackIds.filter((id) => this.subscribedTracks.has(id));
+		if (remove.length > 0) {
+			for (const id of remove) {
+				this.subscribedTracks.delete(id);
+			}
+			this.sendSignalling({
+				type: "Subscribe",
+				add: [],
+				remove,
+			});
+		}
+	}
+
 	// TODO: public migrate(...) {}
 }

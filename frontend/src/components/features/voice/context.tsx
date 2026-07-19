@@ -94,6 +94,7 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 			([mute, deaf, video]) => {
 				const vs = api.voiceState;
 				if (!vs) return;
+				// FIXME: don't send VoiceState while disconnected (ie. after sending Disconnect)
 				api.client.send({
 					type: "VoiceDispatch",
 					channel_id: vs.channel_id,
@@ -158,7 +159,7 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 			const enabled = enabled_ ?? !cam.track.enabled;
 			cam.track.enabled = enabled;
 
-			const tr = vc.acquireTransceiver("user", "video");
+			const tr = vc.acquireTransceiver("screen", "video");
 			if (tr.currentDirection !== "stopped") {
 				await tr.sender.replaceTrack(cam.track);
 				tr.direction = "sendonly";
@@ -221,7 +222,7 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 			update("deafened", deafened);
 
 			// mute all remote audio tracks
-			for (const s of vc.streams) {
+			for (const s of vc.streams.values()) {
 				for (const track of s.media.getAudioTracks()) {
 					// TODO: check if this actually stops rtc from receiving media or if it burns bandwidth
 					track.enabled = !deafened;

@@ -1,0 +1,210 @@
+@use "./util.scss" as *;
+
+.webrtc {
+	position: relative;
+	grid-area: main;
+	min-height: 0;
+	overflow: hidden;
+	cursor: none;
+
+	&.controls {
+		cursor: default;
+	}
+
+	&.controls .bottom {
+		opacity: 1;
+		/* translate: 0 0; */
+	}
+
+	&.controls .top {
+		opacity: 1;
+	}
+
+	& .bottom:hover {
+		opacity: 1;
+	}
+
+	& .top:hover {
+		opacity: 1;
+	}
+
+	.top {
+		position: absolute;
+		top: 0;
+		background: linear-gradient(to bottom, #000d 50%, transparent);
+		width: 100%;
+		padding: 8px;
+		opacity: 0;
+		text-shadow: #000000 1px 1px 3px;
+		transition: all 0.2s;
+		display: flex;
+	}
+
+	.bottom {
+		position: absolute;
+		bottom: 8px;
+		background: linear-gradient(to top, black 50%, transparent);
+		width: 100%;
+		height: 64px;
+		display: flex;
+		padding: 8px;
+		align-items: center;
+		justify-content: center;
+		/* translate: 0 100%; */
+		opacity: 0;
+		transition: all 0.2s;
+
+		.controls {
+			display: flex;
+			gap: 6px;
+
+			.icon-button {
+				display: flex;
+				justify-content: stretch;
+				align-items: stretch;
+				height: 42px;
+				width: 42px;
+				padding: 10px;
+				border-radius: 50%;
+				background: #fff1;
+
+				& > .toggle-icon,
+				& > .icon2 {
+					height: 100%;
+					width: 100%;
+				}
+
+				&.disconnect {
+					background-color: oklch(from $color-red calc(l - 0.00) c h);
+
+					& > .icon2 {
+						background: $bg-100;
+					}
+				}
+
+				&:hover {
+					background: #fff3;
+
+					&.disconnect {
+						background-color: oklch(from $color-red calc(l + 0.10) c h);
+					}
+				}
+			}
+		}
+	}
+
+	.streams {
+		background: black;
+		height: 100%;
+		overflow-y: auto;
+
+		.centered {
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			height: 100%;
+			padding: 16px;
+			padding-top: 32px;
+			padding-bottom: 64px;
+		}
+
+		.list {
+			display: flex;
+			flex-wrap: wrap;
+			align-content: center;
+			justify-content: center;
+			gap: 8px;
+		}
+	}
+
+	.stream {
+		width: 30%;
+		min-width: 320px;
+		aspect-ratio: 16 / 9;
+		border: solid $sep-500 1px;
+		background: $bg-100;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 8px;
+		position: relative;
+
+		video {
+			display: block;
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
+		}
+
+		.live {
+			position: absolute;
+			top: 8px;
+			left: 8px;
+			background-color: oklch(from $color-red calc(l - 0.20) calc(c - 0.00) h);
+			color: $fg-100;
+			padding: 0 4px;
+			border-radius: 4px;
+			text-transform: uppercase;
+			font-weight: bold;
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity 100ms;
+		}
+
+		&:hover .live {
+			opacity: 1;
+		}
+
+		&.fullscreen {
+			width: 100%;
+		}
+
+		&.speaking {
+			border: solid $color-green 2px;
+		}
+
+		.status {
+			position: absolute;
+			bottom: 4px;
+			left: 4px;
+			background: #000000aa;
+			padding: 4px 8px;
+			border-radius: 4px;
+		}
+
+		.button.watch {
+			padding: 8px;
+			border-radius: 8px;
+		}
+	}
+
+	.stream.fullscreen + .list {
+		min-height: auto;
+		margin-top: 8px;
+
+		& .stream {
+			width: 20%;
+			min-width: 240px;
+		}
+	}
+}
+
+.voice-streams {
+	display: none;
+}
+
+.voice-chat-sidebar {
+	background-color: $bg-150;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	height: 100%;
+	width: 100%;
+
+	.chat {
+		grid-area: auto;
+		flex: 1;
+		min-height: 0;
+		background-color: transparent;
+	}
+}

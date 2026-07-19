@@ -14,6 +14,10 @@ export const VoiceStreams = () => {
 
 					const hasVideo = () => stream.media.getVideoTracks().length > 0;
 
+					const muted = () =>
+						voice.deafened ||
+						voice.preferences.get(stream.user_id)?.mute === true;
+
 					createEffect(() => {
 						const r = ref();
 						if (r) r.srcObject = stream.media;
@@ -22,25 +26,10 @@ export const VoiceStreams = () => {
 					return (
 						<Switch>
 							<Match when={hasVideo()}>
-								<video
-									autoplay
-									playsinline
-									ref={setRef}
-									muted={
-										voice.deafened ||
-										voice.preferences.get(stream.user_id)?.mute === true
-									}
-								/>
+								<video autoplay playsinline ref={setRef} muted={muted()} />
 							</Match>
 							<Match when={true}>
-								<audio
-									autoplay
-									ref={setRef}
-									muted={
-										voice.deafened ||
-										voice.preferences.get(stream.user_id)?.mute === true
-									}
-								/>
+								<audio autoplay ref={setRef} muted={muted()} />
 							</Match>
 						</Switch>
 					);
