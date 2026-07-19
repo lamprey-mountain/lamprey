@@ -13,7 +13,8 @@
 
 	@if $position == "top" {
 		top: -2px;
-	} @else {
+	}
+	@else {
 		bottom: -2px;
 	}
 }
@@ -152,7 +153,8 @@
 		border-radius: 2px;
 
 		// TODO: brighten icons when channel hovered/focused
-		&:hover, &:focus {
+		&:hover,
+		&:focus {
 			background-color: $bg-400;
 			color: $fg-200;
 		}

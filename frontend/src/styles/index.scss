@@ -1108,7 +1108,8 @@ input[type="url"] {
 			border-radius: 2px;
 		}
 
-		&:hover, &:focus {
+		&:hover,
+		&:focus {
 			& > .inner {
 				color: $fg-100;
 				background-color: #fff2;
@@ -2254,7 +2255,8 @@ body.resizing {
 		& .voice-status {
 			cursor: pointer;
 
-			&:focus-visible, &:hover {
+			&:focus-visible,
+			&:hover {
 				text-decoration: underline;
 				text-decoration-color: $fg-600;
 			}
@@ -3074,7 +3076,8 @@ button.link {
 			background-color: #aaa1;
 			border-radius: 50%;
 
-			&:hover, &:focus-visible {
+			&:hover,
+			&:focus-visible {
 				background-color: #aaa4;
 			}
 		}
@@ -3204,7 +3207,9 @@ button.link {
 			}
 		}
 
-		&:hover, &:focus-visible, &.shown {
+		&:hover,
+		&:focus-visible,
+		&.shown {
 			& > .emoji-button-icon > .emoji {
 				filter: grayscale(0);
 				scale: 1.2;
@@ -4218,7 +4223,8 @@ button.round {
 		&.editable {
 			cursor: text;
 
-			&:hover, &:focus {
+			&:hover,
+			&:focus {
 				color: $fg-100;
 				background-color: $bg-150;
 				border: solid 1px $sep-500;

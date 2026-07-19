@@ -191,7 +191,8 @@
 		width: 100%;
 	}
 
-	& > .header, & > .footer {
+	& > .header,
+	& > .footer {
 		transition: translate 150ms;
 	}
 

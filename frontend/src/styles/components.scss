@@ -10,7 +10,8 @@
 	margin-top: calc(var(--text-margin) * -1);
 	margin-bottom: calc(var(--text-margin) * -1);
 
-	.container, .details {
+	.container,
+	.details {
 		border: solid $sep-400 1px;
 		border-radius: 4px;
 		background: $bg-150;
