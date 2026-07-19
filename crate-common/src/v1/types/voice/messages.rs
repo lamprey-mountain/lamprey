@@ -232,10 +232,10 @@ pub enum SignallingEvent {
     Tracks {
         user_id: UserId,
 
-        #[serde(skip_serializing_if = "Vec::is_empty")]
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
         added: Vec<TrackAnnouncement>,
 
-        #[serde(skip_serializing_if = "Vec::is_empty")]
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
         removed: Vec<TrackId>,
     },
 
