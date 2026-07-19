@@ -61,15 +61,8 @@ export function MessageMenu(props: MessageMenuProps) {
 		if (index === -1) return;
 
 		const prev = tl[index - 1];
-		if (prev) {
-			readTracking.ack(props.channel_id, prev.id, true, false);
-		} else {
-			// If no previous message, we mark everything as unread
-			// In our current system, setting it to undefined or a very old ID might work.
-			// Clearing the local marker makes it look unread until next sync.
-			chUpdate?.("read_marker_id", undefined);
-			// We might need an API call to truly clear it on server, but 'ack' usually takes an ID.
-		}
+		const ackId = prev?.id ?? tl[index].id;
+		readTracking.ack(props.channel_id, ackId, true, false);
 	}
 
 	const togglePin = () => {

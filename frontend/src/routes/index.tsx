@@ -423,15 +423,10 @@ export const RouteChannel = (
 		const c = channelCtx();
 		if (!c) return;
 
-		const [, setChannelState] = c;
+		const [channelState, setChannelState] = c;
 
 		if (channel_id && message_id) {
-			setChannelState("anchor", {
-				type: "context",
-				limit: 50,
-				message_id: message_id,
-			});
-			setChannelState("highlight", message_id);
+			channelState.timeline.jumpToMessage(message_id, false, true);
 		}
 		if (channel_id && script_id) {
 			setChannelState("script_id", script_id);

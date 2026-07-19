@@ -68,6 +68,7 @@ import { openThread } from "@/utils/channel";
 import { icChannelMove, icSword } from "@/utils/icons.ts";
 import { useMessageToolbar } from "./message-toolbar-context.tsx";
 import { Reactions } from "./Reactions.tsx";
+import { useReadTracking } from "@/contexts/read-tracking.tsx";
 
 export type MessageProps = {
 	message: MessageT;
@@ -447,7 +448,7 @@ export function ReplyView(props: {
 			(r.latest_version.type === "DefaultMarkdown" &&
 				r.latest_version.content) ||
 			(r.latest_version.type === "DefaultMarkdown" &&
-			r.latest_version.attachments
+				r.latest_version.attachments
 				? `${r.latest_version.attachments.length} attachment(s)`
 				: undefined)
 		);
@@ -546,6 +547,7 @@ export function MessageView(props: MessageProps) {
 	const { menu } = useMenu();
 	const thread = channels.use(() => props.message.channel_id);
 	const [ch, chUpdate] = useOptionalChannel();
+	const readTracking = useReadTracking();
 	let messageArticleRef: HTMLElement | undefined;
 	const [hovered, setHovered] = createSignal(false);
 
@@ -594,11 +596,8 @@ export function MessageView(props: MessageProps) {
 		if (currentIndex === -1) return;
 
 		const prevMessage = messages[currentIndex - 1];
-		if (prevMessage) {
-			chUpdate("read_marker_id", prevMessage.id);
-		} else {
-			chUpdate("read_marker_id", undefined);
-		}
+		const ackId = prevMessage?.id ?? message_id
+		readTracking.ack(props.message.channel_id, ackId, true, false);
 	};
 
 	const handleClick = (e: MouseEvent) => {
@@ -638,8 +637,8 @@ export function MessageView(props: MessageProps) {
 	const date = createMemo(() => {
 		return new Date(
 			props.message.latest_version.created_at ??
-				props.message.created_at ??
-				new Date().toString(),
+			props.message.created_at ??
+			new Date().toString(),
 		);
 	});
 
@@ -1074,8 +1073,7 @@ function SystemMessagePinned(props: SystemMessageProps) {
 								onClick={(e) => {
 									e.stopPropagation();
 									navigate(
-										`/channel/${props.message.channel_id}/message/${
-											version().pinned_message_id
+										`/channel/${props.message.channel_id}/message/${version().pinned_message_id
 										}`,
 									);
 								}}
@@ -1142,27 +1140,27 @@ function SystemMessageCall(props: SystemMessageProps) {
 					{/* @ts-ignore */}
 					{version().ended_at
 						? t(
-								"message_content.call_ended",
-								<span class="author">
-									<UserDisplayName
-										user_id={props.message.author_id}
-										room_id={props.room_id}
-										onClick
-									/>
-								</span>,
-								version().participants.length,
-							)
+							"message_content.call_ended",
+							<span class="author">
+								<UserDisplayName
+									user_id={props.message.author_id}
+									room_id={props.room_id}
+									onClick
+								/>
+							</span>,
+							version().participants.length,
+						)
 						: t(
-								"message_content.call_started",
-								<span class="author">
-									<UserDisplayName
-										user_id={props.message.author_id}
-										room_id={props.room_id}
-										onClick
-									/>
-								</span>,
-								version().participants.length,
-							)}
+							"message_content.call_started",
+							<span class="author">
+								<UserDisplayName
+									user_id={props.message.author_id}
+									room_id={props.room_id}
+									onClick
+								/>
+							</span>,
+							version().participants.length,
+						)}
 				</div>
 			}
 		/>

@@ -10,6 +10,7 @@ import type { Data } from "@/types/chat";
 
 export type ReadTrackingContextT = {
 	// TODO: remove these
+	// only markCategoryRead is being used currently
 	markThreadRead: (
 		thread_id: string,
 		version_id: string,
