@@ -233,8 +233,8 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 			try {
 				const { track } = await loadMusic();
 				// HACK: play music as microphone
-				const tr = vc.acquireTransceiver("music", "audio");
-				// const tr = vc.acquireTransceiver("user", "audio");
+				// const tr = vc.acquireTransceiver("music", "audio");
+				const tr = vc.acquireTransceiver("user", "audio");
 				if (tr.currentDirection !== "stopped") {
 					await tr.sender.replaceTrack(track);
 					tr.direction = "sendonly";
