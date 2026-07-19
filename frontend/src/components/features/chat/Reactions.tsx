@@ -5,7 +5,7 @@ import {
 	For,
 	on,
 	onCleanup,
-	VoidProps,
+	type VoidProps,
 } from "solid-js";
 import { useReactions } from "@/api";
 import { useCtx } from "@/app/context";

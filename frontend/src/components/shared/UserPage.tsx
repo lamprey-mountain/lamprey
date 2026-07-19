@@ -1,3 +1,8 @@
+import { debounce } from "@solid-primitives/scheduled";
+import { useNavigate } from "@solidjs/router";
+import { history, redo, undo } from "prosemirror-history";
+import { keymap } from "prosemirror-keymap";
+import { type EditorState, Plugin } from "prosemirror-state";
 import type { PreferencesUser, UserWithRelationship } from "sdk";
 import {
 	createEffect,
@@ -9,15 +14,16 @@ import {
 	Switch,
 } from "solid-js";
 import { useApi } from "@/api";
-import { getThumbFromId } from "@/media/util";
-import { AvatarWithStatus } from "@/avatar/UserAvatar";
-import { Copyable } from "@/utils/general";
-import { useMenu } from "@/contexts/menu";
-import { useNavigate } from "@solidjs/router";
-import { ChannelT } from "@/types";
-import { Markdown } from "@/atoms/Markdown";
 import { Icon } from "@/atoms/Icon";
+import { Markdown } from "@/atoms/Markdown";
 import { createTooltip } from "@/atoms/Tooltip";
+import { AvatarWithStatus } from "@/avatar/UserAvatar";
+import { useAutocomplete } from "@/contexts/autocomplete";
+import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
+import { useMenu } from "@/contexts/menu";
+import { getThumbFromId } from "@/media/util";
+import type { ChannelT } from "@/types";
+import { Copyable } from "@/utils/general";
 import {
 	icDm,
 	icFriendAdd,
@@ -25,16 +31,9 @@ import {
 	icMemberAdd,
 	icMenu,
 } from "@/utils/icons";
-import { EditorState } from "prosemirror-state";
-import { Plugin } from "prosemirror-state";
-import { schema } from "../features/editor/schema";
-import { history, redo, undo } from "prosemirror-history";
-import { keymap } from "prosemirror-keymap";
-import { syntaxHighlightingPlugin } from "../features/search";
 import { createEditor } from "../features/editor/Editor";
-import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
-import { useAutocomplete } from "@/contexts/autocomplete";
-import { debounce } from "@solid-primitives/scheduled";
+import { schema } from "../features/editor/schema";
+import { syntaxHighlightingPlugin } from "../features/search";
 import { RoomIcon } from "./User";
 
 // TODO: redesign

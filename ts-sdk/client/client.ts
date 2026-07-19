@@ -1,8 +1,8 @@
 import { Emitter } from "../core/events";
+import { ClientBackend } from "../core/private";
 import { RoomManager } from "../resources/room";
 import type { MessageSync } from "../types";
 import { type Backend, DirectBackend } from "./backend";
-import { ClientBackend } from "../core/private";
 
 export type ClientOptions = {
 	apiUrl: string;

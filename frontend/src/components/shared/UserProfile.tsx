@@ -1,3 +1,14 @@
+import { useNavigate } from "@solidjs/router";
+import {
+	createEffect,
+	createSignal,
+	For,
+	Match,
+	onCleanup,
+	Show,
+	Switch,
+} from "solid-js";
+import type { Channel, PreferencesUser } from "ts-sdk";
 import { useApi } from "@/api";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useMenu } from "@/contexts/menu";
@@ -5,18 +16,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { md } from "@/lib/markdown";
 import { getThumbFromId } from "@/media/util";
 import { Copyable } from "@/utils/general";
-import { useNavigate } from "@solidjs/router";
-import {
-	createSignal,
-	createEffect,
-	onCleanup,
-	Show,
-	Switch,
-	Match,
-	For,
-} from "solid-js";
-import type { Channel, PreferencesUser } from "ts-sdk";
-import { AvatarWithStatus, UserProps, EditRoles } from "./User";
+import { AvatarWithStatus, EditRoles, type UserProps } from "./User";
 
 export function UserProfile(props: UserProps) {
 	const api = useApi();

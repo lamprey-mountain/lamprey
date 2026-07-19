@@ -1,6 +1,7 @@
 import { LANGUAGES } from "./shared.ts";
-export { LANGUAGES } from "./shared.ts";
+
 export type * from "./shared.ts";
+export { LANGUAGES } from "./shared.ts";
 
 export const emojiUrl: string = new URL(
 	"./generated/emoji.json",

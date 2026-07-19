@@ -10,6 +10,13 @@ import {
 	Switch,
 } from "solid-js";
 import { useApi } from "@/api";
+import { Icon } from "@/atoms/Icon";
+import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
+import { AvatarWithStatus } from "@/components/shared/User";
+import { useChannel } from "@/contexts/channel";
+import { getColor } from "@/lib/colors";
+import { flags } from "@/lib/flags";
+import { md } from "@/lib/markdown";
 import {
 	icCamera,
 	icExit,
@@ -18,13 +25,6 @@ import {
 	icMusic,
 	icScreenshare,
 } from "@/utils/icons";
-import { Icon } from "@/atoms/Icon";
-import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
-import { AvatarWithStatus } from "@/components/shared/User";
-import { useChannel } from "@/contexts/channel";
-import { getColor } from "@/lib/colors";
-import { flags } from "@/lib/flags";
-import { md } from "@/lib/markdown";
 import { useVoice } from "./context.tsx";
 
 const MemberName = (props: { roomId?: string | null; userId: string }) => {

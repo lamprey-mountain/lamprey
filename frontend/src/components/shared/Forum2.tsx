@@ -10,8 +10,8 @@ import {
 	type Channel,
 	getTimestampFromUUID,
 	type Message,
+	type RepliesMessage,
 	type RoomMember,
-	RepliesMessage,
 } from "sdk";
 import { useFloating } from "solid-floating-ui";
 import {
@@ -41,6 +41,7 @@ import { Dropdown } from "@/atoms/Dropdown";
 import { EmojiButton } from "@/atoms/EmojiButton";
 import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown";
+import { Search } from "@/atoms/Search.tsx";
 import { Time } from "@/atoms/Time";
 import { createTooltip } from "@/atoms/Tooltip";
 import {
@@ -60,16 +61,15 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
 import { md } from "@/lib/markdown";
 import { getMessageOverrideName } from "@/utils/general";
-import { ChannelIcon } from "./User";
-import { Forum2CreateForm } from "./Forum2CreateForm.tsx";
+import { RenderUploadItem } from "../features/chat/Input";
+import { MessageToolbarMount } from "../features/chat/MessageToolbar.tsx";
 import {
 	MessageToolbarProvider,
 	useMessageToolbar,
 } from "../features/chat/message-toolbar-context.tsx";
-import { MessageToolbarMount } from "../features/chat/MessageToolbar.tsx";
-import { RenderUploadItem } from "../features/chat/Input";
 import { highlight } from "../features/chat/util.ts";
-import { Search } from "@/atoms/Search.tsx";
+import { Forum2CreateForm } from "./Forum2CreateForm.tsx";
+import { ChannelIcon } from "./User";
 
 // Type guard for RoomMember with override_name
 function hasOverrideName(

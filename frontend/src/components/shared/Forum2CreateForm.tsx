@@ -1,15 +1,15 @@
-import { For, createSignal, Show } from "solid-js";
-import { type EditorState } from "prosemirror-state";
-import { type Channel } from "sdk";
+import type { EditorState } from "prosemirror-state";
+import type { Channel } from "sdk";
+import { createSignal, For, Show } from "solid-js";
 import { uuidv7 } from "uuidv7";
 import { useChannels } from "@/api";
-import { useUploads } from "@/contexts/uploads";
-import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
-import { useAutocomplete } from "@/contexts/autocomplete";
+import { useCtx } from "@/app/context";
 import { createEditor } from "@/components/features/editor/Editor";
 import { serializeToMarkdown } from "@/components/features/editor/serializer.ts";
+import { useAutocomplete } from "@/contexts/autocomplete";
+import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
+import { useUploads } from "@/contexts/uploads";
 import { RenderUploadItem } from "../features/chat/Input";
-import { useCtx } from "@/app/context";
 
 // FIXME: allow uploading attachments when creating a thread
 export const Forum2CreateForm = (props: {

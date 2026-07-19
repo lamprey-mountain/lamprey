@@ -1,6 +1,6 @@
 import { sheetPngUrl } from "@lamprey/emoji";
-import { emojiResource, emojiDimensions as dims } from "@/lib/emoji";
-import { createMemo, type VoidProps, Show } from "solid-js";
+import { createMemo, Show, type VoidProps } from "solid-js";
+import { emojiDimensions as dims, emojiResource } from "@/lib/emoji";
 
 export type UnicodeEmojiProps = {
 	hex: string;

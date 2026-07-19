@@ -1,25 +1,25 @@
 import {
+	arrow,
 	autoUpdate,
 	flip,
+	type Middleware,
 	offset,
+	type Padding,
 	type Placement,
 	shift,
-	arrow,
-	Middleware,
-	Padding,
 } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import {
+	type Accessor,
 	createEffect,
 	createSignal,
 	type JSX,
 	type JSXElement,
 	onCleanup,
 	onMount,
+	type Ref,
 	Show,
 	type ValidComponent,
-	Accessor,
-	Ref,
 } from "solid-js";
 import { Portal, render } from "solid-js/web";
 

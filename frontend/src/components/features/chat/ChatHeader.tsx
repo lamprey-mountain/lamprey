@@ -3,13 +3,14 @@ import { createSignal, Match, Show, Switch } from "solid-js";
 import { useChannels, useMessages } from "@/api";
 import { useCtx } from "@/app/context";
 import icCall from "@/assets/call.png";
+import icDelete from "@/assets/delete.png";
+import icRemove from "@/assets/emoji-symbols.png"; // TEMP: get a better icon
 import icMembers from "@/assets/members.png";
 import icPin from "@/assets/pin.png";
 import icThreads from "@/assets/threads.png";
 import icCancel from "@/assets/x.png";
-import icDelete from "@/assets/delete.png";
-import icRemove from "@/assets/emoji-symbols.png"; // TEMP: get a better icon
 import { Icon } from "@/atoms/Icon";
+import { createTooltip } from "@/atoms/Tooltip";
 import { SearchInput } from "@/components/features/search/SearchInput";
 import { ChannelIcon } from "@/components/shared/User";
 import { useChannel } from "@/contexts/channel";
@@ -18,7 +19,6 @@ import { useMenu } from "@/contexts/menu.tsx";
 import { useModals } from "@/contexts/modal.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
 import { md } from "@/lib/markdown";
-import { createTooltip } from "@/atoms/Tooltip";
 
 type ChatHeaderProps = {
 	channel: Channel;

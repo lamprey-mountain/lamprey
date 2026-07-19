@@ -1,5 +1,5 @@
-import { createContext, createSignal, type JSX, useContext } from "solid-js";
 import type { Message as MessageT } from "sdk";
+import { createContext, createSignal, type JSX, useContext } from "solid-js";
 
 export type MessageToolbarTarget = {
 	message: MessageT;

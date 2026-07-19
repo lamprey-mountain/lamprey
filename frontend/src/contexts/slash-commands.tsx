@@ -1,5 +1,5 @@
-import { SlashCommands } from "@/lib/commands/registry";
 import { createContext, type ParentProps, useContext } from "solid-js";
+import type { SlashCommands } from "@/lib/commands/registry";
 
 export const SlashCommandsContext = createContext<SlashCommands>();
 export const useSlashCommands = () => useContext(SlashCommandsContext)!;

@@ -17,10 +17,10 @@ import {
 	DEFAULT_PREFERENCES,
 	PreferencesService,
 } from "../services/PreferencesService";
+import { RelationshipsService } from "../services/RelationshipsService";
 import { RolesService } from "../services/RolesService";
 import { RoomMembersService } from "../services/RoomMembersService";
 import { RoomsService } from "../services/RoomsService";
-import { RelationshipsService } from "../services/RelationshipsService";
 import { ScriptLogsService } from "../services/ScriptLogsService";
 import { ScriptRunsService } from "../services/ScriptRunsService";
 import { ScriptsService } from "../services/ScriptsService";

@@ -1,8 +1,8 @@
 import type { Node } from "prosemirror-model";
 import { getOwner, runWithOwner, type VoidComponent } from "solid-js";
 import { render } from "solid-js/web";
-import { getEmojiHex } from "@/lib/emoji";
 import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
+import { getEmojiHex } from "@/lib/emoji";
 import { getEmojiUrl } from "@/media/util.tsx";
 
 export const createNodeViews = () => {

@@ -3,7 +3,7 @@ import { createResource } from "solid-js";
 
 export const loaded = init();
 export const [loadedResource] = createResource(() => loaded);
-export { Parser };
+export { countEmojiOnly } from "./emoji";
 
 export * from "./old";
-export { countEmojiOnly } from "./emoji";
+export { Parser };

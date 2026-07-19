@@ -1,11 +1,11 @@
 import {
 	createEffect,
 	createSignal,
+	getOwner,
 	type JSX,
 	onCleanup,
-	Show,
 	runWithOwner,
-	getOwner,
+	Show,
 } from "solid-js";
 import {
 	clearDelegatedEvents,

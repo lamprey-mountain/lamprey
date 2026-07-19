@@ -13,6 +13,7 @@ import { RootStoreContext } from "@/api";
 import { chatctx, useCtx } from "@/app/context";
 import { UserSettings } from "@/components/features/user_settings/index";
 import { useVoice, VoiceProvider } from "@/components/features/voice/context";
+import { VoiceStreams } from "@/components/features/voice/VoiceStreams";
 import { CalendarPopupProvider } from "@/components/shared/Calendar";
 import { Debug } from "@/components/shared/Debug";
 import { RouteVerifyEmail } from "@/components/shared/VerifyEmail";
@@ -54,7 +55,6 @@ import {
 	RouteSettings,
 	RouteUser,
 } from "@/routes";
-import { VoiceStreams } from "@/components/features/voice/VoiceStreams";
 
 const App: Component = () => {
 	return (

@@ -12,20 +12,20 @@ import {
 	Switch,
 	useContext,
 } from "solid-js";
+import { Dynamic } from "solid-js/web";
 import { useChannels, useRoles, useRoomMembers, useUsers } from "@/api";
+import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { useUserPopout } from "@/contexts/mod";
 import { getEmojiHex } from "@/lib/emoji";
 import { flags } from "@/lib/flags";
-import { Parser, loaded } from "@/lib/markdown";
-import { getEmojiUrl } from "@/media/util";
-import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
-import { Dynamic } from "solid-js/web";
-import {
+import { loaded, Parser } from "@/lib/markdown";
+import type {
 	MentionData,
 	SerializedBlock,
 	SerializedDocument,
 	SerializedInline,
 } from "@/lib/markdown/ast";
+import { getEmojiUrl } from "@/media/util";
 
 // --- Context ---
 

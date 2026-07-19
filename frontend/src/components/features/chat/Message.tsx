@@ -44,6 +44,7 @@ import { Components } from "@/atoms/Components.tsx";
 import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown.tsx";
 import { Time } from "@/atoms/Time";
+import { Avatar2 } from "@/avatar/UserAvatar.tsx";
 import { createEditor } from "@/components/features/editor/Editor.tsx";
 import { serializeToMarkdown } from "@/components/features/editor/serializer.ts";
 import { EmbedView } from "@/components/shared/UrlEmbed";
@@ -64,10 +65,9 @@ import {
 	VideoView,
 } from "@/media/mod.tsx";
 import { openThread } from "@/utils/channel";
-import { Reactions } from "./Reactions.tsx";
-import { useMessageToolbar } from "./message-toolbar-context.tsx";
-import { Avatar2 } from "@/avatar/UserAvatar.tsx";
 import { icChannelMove, icSword } from "@/utils/icons.ts";
+import { useMessageToolbar } from "./message-toolbar-context.tsx";
+import { Reactions } from "./Reactions.tsx";
 
 export type MessageProps = {
 	message: MessageT;

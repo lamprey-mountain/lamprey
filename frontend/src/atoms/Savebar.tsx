@@ -1,4 +1,4 @@
-import { type ParentProps, createSignal, onCleanup } from "solid-js";
+import { createSignal, onCleanup, type ParentProps } from "solid-js";
 
 export interface SavebarProps {
 	show?: boolean;

@@ -1,17 +1,17 @@
-import { MessageListAnchor, useMessages } from "@/api";
+import { type Accessor, createSignal } from "solid-js";
+import { createStore, reconcile } from "solid-js/store";
+import { type MessageListAnchor, useMessages } from "@/api";
+import type { ChannelT } from "@/types";
+import { logger } from "@/utils/logger";
+import { Queue } from "@/utils/queue";
+import { useTimeline } from "./timeline-context";
 import {
 	estimateSize,
 	renderTimeline2,
-	TimelineItemT2,
-	VirtualItem,
-	VirtualizerLayout,
+	type TimelineItemT2,
+	type VirtualItem,
+	type VirtualizerLayout,
 } from "./util";
-import { Queue } from "@/utils/queue";
-import { logger } from "@/utils/logger";
-import { createStore, reconcile } from "solid-js/store";
-import { Accessor, createSignal } from "solid-js";
-import { useTimeline } from "./timeline-context";
-import { ChannelT } from "@/types";
 
 // TODO: finetune these consts
 export const PAGINATE_THRESHOLD = 800; // TODO: calculate dynamically

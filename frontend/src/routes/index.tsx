@@ -15,6 +15,7 @@ import { useCtx } from "@/app/context";
 import icX from "@/assets/x-1.png";
 import { Icon } from "@/atoms/Icon";
 import { Resizable } from "@/atoms/Resizable.tsx";
+import { Avatar } from "@/avatar/UserAvatar";
 import { ChannelSettings } from "@/components/features/channel_settings/index";
 import { ChatMain } from "@/components/features/chat/Chat.tsx";
 import { ChatHeader } from "@/components/features/chat/ChatHeader.tsx";
@@ -25,6 +26,7 @@ import { Document } from "@/components/features/editor/Document.tsx";
 import { DocumentHistory } from "@/components/features/editor/DocumentHistory.tsx";
 import { RoomSettings } from "@/components/features/room_settings/RoomSettings";
 import { Scripts } from "@/components/features/scripts/Scripts";
+import { UserSettings } from "@/components/features/user_settings";
 import { Voice } from "@/components/features/voice/Voice.tsx";
 import { Calendar } from "@/components/shared/Calendar";
 import { Category } from "@/components/shared/Category";
@@ -43,6 +45,7 @@ import { RoomHome, RoomMembers } from "@/components/shared/Room";
 import { RoomHeader } from "@/components/shared/RoomHeader";
 import { RoomNav } from "@/components/shared/RoomNav";
 import { UserPage } from "@/components/shared/UserPage";
+import { UserTray } from "@/components/shared/UserTray";
 import { Wiki } from "@/components/shared/Wiki";
 import {
 	ChannelContext,
@@ -63,10 +66,7 @@ import {
 import { flags } from "@/lib/flags";
 import type { RoomT } from "@/types";
 import type { ChannelSearch } from "@/types/chat";
-import { UserSettings } from "@/components/features/user_settings";
-import { UserTray } from "@/components/shared/UserTray";
 import { icUser } from "@/utils/icons";
-import { Avatar } from "@/avatar/UserAvatar";
 
 export { RouteAuthorize } from "@/components/shared/Oauth";
 

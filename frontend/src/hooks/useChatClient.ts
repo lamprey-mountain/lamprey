@@ -28,12 +28,12 @@ import type {
 } from "@/app/context";
 import type en from "@/i18n/en.tsx";
 import { registerDefaultSlashCommands } from "@/lib/commands/builtin.ts";
+import { SlashCommands } from "@/lib/commands/registry.ts";
 import type { Config } from "@/lib/config";
 import { flags } from "@/lib/flags";
 import { type ApiDB, migrations } from "@/lib/sync/db";
 import { colors, logger } from "@/utils/logger";
 import { useMouseTracking } from "./useMouseTracking.ts";
-import { SlashCommands } from "@/lib/commands/registry.ts";
 
 export function useChatClient(config: Config) {
 	const events = createEmitter<{

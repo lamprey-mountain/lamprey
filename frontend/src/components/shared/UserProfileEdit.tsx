@@ -1,21 +1,21 @@
+import { autoUpdate, computePosition, offset, shift } from "@floating-ui/dom";
+import { debounce } from "@solid-primitives/scheduled";
+import { useNavigate } from "@solidjs/router";
+import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
+import { createStore } from "solid-js/store";
+import type { PresenceActivity, UserStatus } from "ts-sdk";
 import { useApi } from "@/api";
+import { Icon } from "@/atoms/Icon";
+import { getStatusPath } from "@/avatar/UserAvatar";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useMenu } from "@/contexts/menu";
+import { useModals } from "@/contexts/modal";
+import { useUserPopout } from "@/contexts/user-popout";
 import { usePermissions } from "@/hooks/usePermissions";
 import { md } from "@/lib/markdown";
 import { getThumbFromId } from "@/media/util";
-import { useNavigate } from "@solidjs/router";
-import { createSignal, createEffect, onCleanup, Show, For } from "solid-js";
-import { createStore } from "solid-js/store";
-import type { PresenceActivity, UserStatus } from "ts-sdk";
-import { AvatarWithStatus, UserProps, EditRoles } from "./User";
-import { Icon } from "@/atoms/Icon";
 import { icCheck, icCopy, icEdit } from "@/utils/icons";
-import { useUserPopout } from "@/contexts/user-popout";
-import { getStatusPath } from "@/avatar/UserAvatar";
-import { debounce } from "@solid-primitives/scheduled";
-import { autoUpdate, computePosition, offset, shift } from "@floating-ui/dom";
-import { useModals } from "@/contexts/modal";
+import { AvatarWithStatus, EditRoles, type UserProps } from "./User";
 
 // TODO: open user profile in room
 

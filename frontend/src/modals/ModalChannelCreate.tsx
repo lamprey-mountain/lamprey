@@ -2,9 +2,9 @@ import { createSignal, For, onMount } from "solid-js";
 import { RadioDot } from "@/atoms/icons";
 import type { ChannelTypeOption } from "@/contexts/modal";
 import { useModals } from "@/contexts/modal";
+import { autofocus } from "@/lib/autofocus";
 import { flags } from "@/lib/flags";
 import { Modal } from "./mod";
-import { autofocus } from "@/lib/autofocus";
 
 interface ModalChannelCreateProps {
 	room_id: string;

@@ -9,10 +9,10 @@
 		"ignoreUnknown": false,
 		"includes": [
 			"frontend/**",
-			"!frontend/dist/**",
+			"!frontend/dist",
 			"ts-sdk/**",
 			"emoji/**",
-			"!emoji/generated/**"
+			"!emoji/generated"
 		]
 	},
 	"formatter": {

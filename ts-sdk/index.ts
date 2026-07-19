@@ -9,6 +9,8 @@ export * from "./upload.ts";
 import type { components } from "./schema.d.ts";
 export type api = components["schemas"];
 
+// api v2
+export { Lamprey } from "./client/client.ts";
 // core types used everywhere in the sdk
 export { Emitter } from "./core/events.ts";
 export {
@@ -18,7 +20,4 @@ export {
 	SERVER_ROOM_ID,
 	uuidToBytes,
 } from "./core/uuid.ts";
-
-// api v2
-export { Lamprey } from "./client/client.ts";
 import "./client/shared-worker/client.ts";

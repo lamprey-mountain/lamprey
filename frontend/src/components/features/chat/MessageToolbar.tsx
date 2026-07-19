@@ -1,16 +1,16 @@
+import { autoUpdate, offset, shift } from "@floating-ui/dom";
+import { useFloating } from "solid-floating-ui";
+import { createEffect, createSignal, onCleanup, Show } from "solid-js";
 import { useApi } from "@/api";
+import { areReactionKeysEqual } from "@/api/services/ReactionsService.ts";
 import { useCtx } from "@/app/context";
 import { Icon } from "@/atoms/Icon";
 import { useOptionalChannel } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useMenu } from "@/contexts/menu";
-import { useMessageToolbar } from "./message-toolbar-context.tsx";
-import { MessageT } from "@/types";
+import type { MessageT } from "@/types";
 import { icEdit, icMore, icReactionAdd, icReply } from "@/utils/icons";
-import { autoUpdate, offset, shift } from "@floating-ui/dom";
-import { useFloating } from "solid-floating-ui";
-import { createEffect, createSignal, onCleanup, Show } from "solid-js";
-import { areReactionKeysEqual } from "@/api/services/ReactionsService.ts";
+import { useMessageToolbar } from "./message-toolbar-context.tsx";
 
 export const MessageToolbar = (props: { message: MessageT }) => {
 	const api2 = useApi();

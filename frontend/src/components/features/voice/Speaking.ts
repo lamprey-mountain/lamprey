@@ -1,5 +1,5 @@
-import { bytesToUuid, uuidToBytes } from "@/utils/uuid";
 import { ReactiveMap } from "@solid-primitives/map";
+import { bytesToUuid, uuidToBytes } from "@/utils/uuid";
 import { log } from "./VoiceClient";
 
 export class Speaking {

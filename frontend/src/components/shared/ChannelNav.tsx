@@ -24,12 +24,13 @@ import icChevron from "@/assets/chevron.png";
 import icHome from "@/assets/home.png";
 import icInbox from "@/assets/inbox.png";
 import icMemberAdd from "@/assets/member-add.png";
-import icSettings from "@/assets/settings.png";
 import icMembers from "@/assets/members.png";
+import icSettings from "@/assets/settings.png";
 import { Icon } from "@/atoms/Icon";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useDisplay, useMenu } from "@/contexts/mod";
 import { useModals } from "@/contexts/modal";
+import { useChannelDnd } from "@/hooks/useChannelDnd";
 import { usePermissions } from "@/hooks/usePermissions";
 import { colors } from "@/lib/colors";
 import { flags } from "@/lib/flags";
@@ -39,7 +40,6 @@ import {
 } from "@/lib/permissions/calculator";
 import { useVoice } from "../features/voice/context";
 import { Avatar, ChannelIcon } from "./User";
-import { useChannelDnd } from "@/hooks/useChannelDnd";
 
 // TODO: review llm code here because im lazy and dont like implementing drag and drop
 

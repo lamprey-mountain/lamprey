@@ -1,38 +1,38 @@
+import { Key } from "@solid-primitives/keyed";
 import {
+	createEffect,
+	createMemo,
+	createSignal,
+	Match,
+	on,
+	onCleanup,
+	onMount,
+	Show,
+	Switch,
+} from "solid-js";
+import {
+	type MessageListAnchor,
 	useFlumes,
 	useMessages,
 	useRoomMembers,
-	type MessageListAnchor,
 } from "@/api";
 import { useCurrentUser } from "@/contexts/currentUser";
+import { useChannel } from "@/contexts/mod";
+import { md } from "@/lib/markdown";
+import type { ChannelT } from "@/types";
 import { logger } from "@/utils/logger";
-import {
-	createEffect,
-	on,
-	Show,
-	onCleanup,
-	Switch,
-	Match,
-	createSignal,
-	createMemo,
-	onMount,
-} from "solid-js";
-import { ChatProps } from "./Chat";
-import { highlight, TimelineItemT2 } from "./util";
-import { MessageToolbarMount } from "./MessageToolbar";
-import { useTimeline } from "./timeline-context";
-import { ChannelT } from "@/types";
+import type { ChatProps } from "./Chat";
 import { MessageView } from "./Message";
 import { MessageSkeletons } from "./MessageSkeleton";
-import { Key } from "@solid-primitives/keyed";
-import { md } from "@/lib/markdown";
-import { useChannel } from "@/contexts/mod";
+import { MessageToolbarMount } from "./MessageToolbar";
+import { useTimeline } from "./timeline-context";
+import { highlight, type TimelineItemT2 } from "./util";
 import {
 	createTimelineVirtualizer,
 	PAGINATE_THRESHOLD,
 	STICKY_THRESHOLD,
-	TimelineTask,
-	TimelineVirtualizer,
+	type TimelineTask,
+	type TimelineVirtualizer,
 } from "./virtualizer";
 
 const log = logger.for("timeline");

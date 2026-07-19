@@ -1,8 +1,8 @@
-import { createSignal, Switch, Match } from "solid-js";
+import { createSignal, Match, Switch } from "solid-js";
 import { CheckboxOptionWithLabel } from "@/atoms/CheckboxOption";
 import { useModals } from "@/contexts/modal";
-import { Modal } from "./mod";
 import { autofocus } from "@/lib/autofocus";
+import { Modal } from "./mod";
 
 interface ModalRoomCreateOrJoinProps {
 	onCreate: (data: { name: string; public: boolean } | null) => void;

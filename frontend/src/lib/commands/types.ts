@@ -1,5 +1,5 @@
-import { Api } from "@/api";
-import { ChannelT, RoomT } from "@/types";
+import type { Api } from "@/api";
+import type { ChannelT, RoomT } from "@/types";
 
 export type OptionKind = "string" | "user" | "duration";
 

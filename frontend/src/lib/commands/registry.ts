@@ -1,6 +1,6 @@
+import type { ChannelsService, RootStore } from "@/api";
 import type { ChatCtx } from "@/types/chat";
 import type { Command, OptionDef } from "./types";
-import type { ChannelsService, RootStore } from "@/api";
 
 export class SlashCommands {
 	private commands: Command[] = [];

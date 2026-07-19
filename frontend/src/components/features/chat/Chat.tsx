@@ -1,3 +1,4 @@
+import { throttle } from "@solid-primitives/scheduled";
 import type { Channel } from "sdk";
 import { createSignal, Show } from "solid-js";
 import { Portal } from "solid-js/web";
@@ -5,12 +6,11 @@ import { uuidv7 } from "uuidv7";
 import { useApi } from "@/api";
 import { useChannel } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
-import { useUploads } from "@/contexts/uploads.tsx";
 import { useReadTracking } from "@/contexts/read-tracking";
-import { throttle } from "@solid-primitives/scheduled";
+import { useUploads } from "@/contexts/uploads.tsx";
 import { Input } from "./Input.tsx";
-import { Timeline } from "./Timeline.tsx";
 import { MessageToolbarProvider } from "./message-toolbar-context.tsx";
+import { Timeline } from "./Timeline.tsx";
 import { TimelineProvider } from "./timeline-context.tsx";
 
 export type ChatProps = {

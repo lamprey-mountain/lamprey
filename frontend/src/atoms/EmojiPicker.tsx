@@ -3,6 +3,7 @@ import type { Room } from "sdk";
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { useEmoji, useRooms } from "@/api";
 import { Icon } from "@/atoms/Icon";
+import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { RoomIcon } from "@/components/shared/User";
 import {
 	type EmojiData,
@@ -10,9 +11,7 @@ import {
 	getEmojiHex,
 	rawEmojiResource,
 } from "@/lib/emoji";
-import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { getThumbFromId } from "@/media/util";
-import { Search } from "./Search";
 import {
 	icEmojiActivities,
 	icEmojiFaces,
@@ -24,6 +23,7 @@ import {
 	icEmojiPlaces,
 	icEmojiSymbols,
 } from "@/utils/icons";
+import { Search } from "./Search";
 
 type UnifiedEmoji = {
 	type: "standard" | "custom";

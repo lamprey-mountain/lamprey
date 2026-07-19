@@ -1,8 +1,8 @@
-import { ChatCtx } from "@/app/context";
-import { Api } from "@/api";
+import type { Api } from "@/api";
+import type { ChatCtx } from "@/app/context";
 import { command } from "./builder";
-import { SlashCommands } from "./registry";
-import { Command } from "./types";
+import type { SlashCommands } from "./registry";
+import type { Command } from "./types";
 
 export function registerDefaultSlashCommands(
 	ctx: ChatCtx,

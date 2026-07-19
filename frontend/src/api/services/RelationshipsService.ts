@@ -1,10 +1,10 @@
-import { BaseService } from "../core/Service";
-import type { RootStore } from "../core/Store";
-import type { IDBPDatabase } from "idb";
-import type { ApiDB } from "@/lib/sync/db";
 import { ReactiveMap } from "@solid-primitives/map";
+import type { IDBPDatabase } from "idb";
 import type { Relationship } from "sdk";
 import { batch } from "solid-js";
+import type { ApiDB } from "@/lib/sync/db";
+import { BaseService } from "../core/Service";
+import type { RootStore } from "../core/Store";
 
 type UserId = string;
 

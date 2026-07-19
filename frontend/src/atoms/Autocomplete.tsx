@@ -1,11 +1,11 @@
 import { createUniqueId, For, Match, Show, Switch } from "solid-js";
+import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { ChannelIcon } from "@/avatar/ChannelIcon";
 import { Avatar } from "@/components/shared/User";
 import type { AutocompleteItem } from "@/contexts/autocomplete";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useAutocompleteData } from "@/hooks/useAutocompleteData";
 import { getEmojiHex } from "@/lib/emoji";
-import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { getEmojiUrl } from "@/media/util";
 
 function isEmojiWithChar(

@@ -3,7 +3,6 @@ import type { Message, MessageVersion } from "sdk";
 import { createMemo, createResource, For, Show } from "solid-js";
 import { useApi, useMessages } from "@/api";
 import { MessageView } from "@/components/features/chat/Message";
-import { Modal } from "./mod";
 import { MessageToolbarProvider } from "@/components/features/chat/message-toolbar-context";
 import {
 	DEL_END,
@@ -12,6 +11,7 @@ import {
 	INS_START,
 	PUA_REGEX,
 } from "@/utils/diff";
+import { Modal } from "./mod";
 
 export const ModalMessageEdits = (props: {
 	channel_id: string;

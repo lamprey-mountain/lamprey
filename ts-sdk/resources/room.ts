@@ -1,7 +1,7 @@
-import type { api, Lamprey } from "../index";
-import { defineResource } from "../core/resource";
-import { Manager } from "./mod";
 import { ClientBackend } from "../core/private";
+import { defineResource } from "../core/resource";
+import type { api, Lamprey } from "../index";
+import { Manager } from "./mod";
 
 export type ApiRoom = api["Room"];
 

@@ -16,10 +16,9 @@ import {
 	Show,
 } from "solid-js";
 import { Portal } from "solid-js/web";
-import { useCtx } from "@/app/context";
 import { useApi, useDocumentBranches, useUsers } from "@/api";
+import { useCtx } from "@/app/context";
 import icDelete from "@/assets/delete.png";
-import icMembers from "@/assets/members.png";
 import icBranchDefault from "@/assets/edit.png";
 import icBranchPrivate from "@/assets/edit.png";
 import icBranchNew from "@/assets/edit.png";
@@ -34,6 +33,7 @@ import icFormatCode from "@/assets/format-code.png";
 import icFormatItalic from "@/assets/format-italic.png";
 import icFormatStrikethrough from "@/assets/format-strikethrough.png";
 import icFormatUrl from "@/assets/format-url.png";
+import icMembers from "@/assets/members.png";
 import { Icon } from "@/atoms/Icon";
 import { Time, timeAgo } from "@/atoms/Time.tsx";
 import { useAutocomplete } from "@/contexts/autocomplete";

@@ -1,14 +1,16 @@
 import {
 	createGlobalEmitter,
-	GlobalEmitter,
+	type GlobalEmitter,
 } from "@solid-primitives/event-bus";
-import { createContext, useContext, ParentProps } from "solid-js";
-import { MessageListAnchor } from "@/api/services/MessagesService";
-import { MessageRange } from "@/api/services/MessagesService";
-import { useChannel } from "@/contexts/mod";
-import { ChannelT } from "@/types";
-import { TimelineItemT2 } from "./util";
+import { createContext, type ParentProps, useContext } from "solid-js";
 import { unwrap } from "solid-js/store";
+import type {
+	MessageListAnchor,
+	MessageRange,
+} from "@/api/services/MessagesService";
+import { useChannel } from "@/contexts/mod";
+import type { ChannelT } from "@/types";
+import type { TimelineItemT2 } from "./util";
 
 export type TimelineController = {
 	jumpToBottom(smooth?: boolean): void;

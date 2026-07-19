@@ -15,9 +15,9 @@ import icFolder1 from "@/assets/folder-1.png";
 import icHome from "@/assets/home.png";
 import { Icon } from "@/atoms/Icon";
 import { useMenu } from "@/contexts/mod";
+import { useRoomDnd } from "@/hooks/useRoomDnd";
 import { flags } from "@/lib/flags";
 import { RoomIcon } from "./User";
-import { useRoomDnd } from "@/hooks/useRoomDnd";
 
 export type RoomNavItem =
 	| {

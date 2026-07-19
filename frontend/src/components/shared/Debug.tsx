@@ -5,9 +5,9 @@ import { useApi, useMessages } from "@/api";
 import { Dropdown } from "@/atoms/Dropdown.tsx";
 import { MessageView } from "@/components/features/chat/Message.tsx";
 import { EmbedView } from "@/components/shared/UrlEmbed";
+import { useCurrentUser } from "@/contexts/currentUser";
 import { flags } from "@/lib/flags";
 import { AvatarWithStatus } from "./User";
-import { useCurrentUser } from "@/contexts/currentUser";
 
 // @ts-expect-error
 const packageJson = __VITE_PACKAGE_JSON__;

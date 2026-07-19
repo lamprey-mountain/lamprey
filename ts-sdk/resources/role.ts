@@ -1,5 +1,5 @@
-import type { api } from "../index";
 import type { Uuid } from "../core/uuid";
+import type { api } from "../index";
 
 export type ApiRole = api["Role"];
 

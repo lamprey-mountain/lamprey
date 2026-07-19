@@ -1,3 +1,4 @@
+import { debounce } from "@solid-primitives/scheduled";
 import {
 	createEffect,
 	createMemo,
@@ -7,8 +8,9 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import { debounce } from "@solid-primitives/scheduled";
 import { useCtx } from "@/app/context";
+import { Icon } from "@/atoms/Icon";
+import { createTooltip } from "@/atoms/Tooltip.tsx";
 import {
 	icFullscreen,
 	icFullscreent,
@@ -20,8 +22,6 @@ import {
 	icVolumeMedium,
 	icVolumeMute,
 } from "@/utils/icons";
-import { Icon } from "@/atoms/Icon";
-import { createTooltip } from "@/atoms/Tooltip.tsx";
 import {
 	formatBytes,
 	formatTime,

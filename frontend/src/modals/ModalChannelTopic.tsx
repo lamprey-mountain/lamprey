@@ -1,10 +1,10 @@
 import { useChannels } from "@/api";
+import icClose from "@/assets/x.png"; // TODO: random icons
+import { Icon } from "@/atoms/Icon";
+import { Markdown } from "@/atoms/Markdown";
+import { useModals } from "@/contexts/modal";
 import { md } from "@/lib/markdown";
 import { Modal } from "./mod";
-import { Markdown } from "@/atoms/Markdown";
-import { Icon } from "@/atoms/Icon";
-import icClose from "@/assets/x.png"; // TODO: random icons
-import { useModals } from "@/contexts/modal";
 
 interface ModalChannelTopicProps {
 	channel_id: string;

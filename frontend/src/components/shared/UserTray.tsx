@@ -12,7 +12,14 @@ import {
 } from "solid-js";
 import { useApi, useChannels, useRooms } from "@/api";
 import { createPopup } from "@/app/popup";
+import { Duration } from "@/atoms/Duration.tsx";
+import { Icon } from "@/atoms/Icon";
+import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
 import { createTooltip } from "@/atoms/Tooltip";
+import { AvatarWithStatus } from "@/components/shared/User";
+import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useUserPopout } from "@/contexts/mod.tsx";
+import type { ChannelT, UserT } from "@/types";
 import {
 	icCamera,
 	icCancel,
@@ -22,15 +29,8 @@ import {
 	icScreenshare,
 	icSettings,
 } from "@/utils/icons";
-import { Duration } from "@/atoms/Duration.tsx";
-import { Icon } from "@/atoms/Icon";
-import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
-import { AvatarWithStatus } from "@/components/shared/User";
-import { useCurrentUser } from "@/contexts/currentUser.tsx";
-import { useUserPopout } from "@/contexts/mod.tsx";
 import { useVoice } from "../features/voice/context";
 import { VoiceDebug } from "../features/voice/VoiceDebug";
-import { ChannelT, UserT } from "@/types";
 
 // TODO: move voice parts to a separate component(?)
 

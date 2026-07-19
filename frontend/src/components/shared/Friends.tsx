@@ -8,15 +8,15 @@ import {
 	Switch,
 } from "solid-js";
 import { useApi, useRelationships, useUsers } from "@/api";
-import { AvatarWithStatus } from "./User";
+import icCheck from "@/assets/check-1.png";
+import icDm from "@/assets/dm.png";
+import icMore from "@/assets/more.png";
+import icX from "@/assets/x-1.png";
+import { Icon } from "@/atoms/Icon";
 import { Search } from "@/atoms/Search";
 import { createTooltip } from "@/atoms/Tooltip";
 import { useMenu } from "@/contexts/mod.tsx";
-import icCheck from "@/assets/check-1.png";
-import icX from "@/assets/x-1.png";
-import icDm from "@/assets/dm.png";
-import icMore from "@/assets/more.png";
-import { Icon } from "@/atoms/Icon";
+import { AvatarWithStatus } from "./User";
 
 type FilterType = "all" | "online" | "incoming" | "outgoing";
 

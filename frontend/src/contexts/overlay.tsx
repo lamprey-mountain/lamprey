@@ -15,11 +15,11 @@ import {
 	createMemo,
 	createSignal,
 	For,
+	Match,
 	onCleanup,
 	type ParentProps,
 	Show,
 	Switch,
-	Match,
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
@@ -32,8 +32,8 @@ import {
 	PopupEventEditor,
 	useCalendarPopup,
 } from "@/components/shared/Calendar";
-import { UserProfileEdit } from "@/components/shared/UserProfileEdit.tsx";
 import { UserProfile } from "@/components/shared/UserProfile.tsx";
+import { UserProfileEdit } from "@/components/shared/UserProfileEdit.tsx";
 import {
 	ChannelMenu,
 	FolderMenu,

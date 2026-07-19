@@ -1,12 +1,13 @@
-import { createResource, createMemo } from "solid-js";
 import {
+	type CoreFile,
 	emojiUrl,
-	getLangUrl,
 	getEmojiHex,
 	getEmojiString,
-	CoreFile,
-	LabelsFile,
+	getLangUrl,
+	type LabelsFile,
 } from "@lamprey/emoji";
+import { createMemo, createResource } from "solid-js";
+
 export { getEmojiHex, getEmojiString };
 
 export type EmojiData = {

@@ -2,11 +2,11 @@ import { useNavigate } from "@solidjs/router";
 import type { Channel, Message, Room } from "sdk";
 import { For, Show } from "solid-js";
 import { useChannels } from "@/api";
+import { Dropdown } from "@/atoms/Dropdown";
 import { useOptionalChannel } from "@/contexts/channel";
 import { useRoom } from "@/contexts/room";
 import type { ChannelSearch } from "@/types/chat";
 import { MessageView } from "./Message";
-import { Dropdown } from "@/atoms/Dropdown";
 import { MessageToolbarMount } from "./MessageToolbar";
 import { MessageToolbarProvider } from "./message-toolbar-context";
 

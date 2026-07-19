@@ -1,5 +1,5 @@
-import { MessageRange } from "@/api/services/MessagesService";
-import { MessageT } from "@/types";
+import type { MessageRange } from "@/api/services/MessagesService";
+import type { MessageT } from "@/types";
 import { getMessageOverrideName, getMsgTs } from "@/utils/general";
 
 export function highlight(el: Element) {

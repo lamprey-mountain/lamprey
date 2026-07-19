@@ -1,8 +1,8 @@
-import { createStore } from "solid-js/store";
 import type { EditorState } from "prosemirror-state";
 import type { Channel } from "sdk";
 import { createUpload } from "sdk";
 import { createSignal, onMount, Show, type VoidProps } from "solid-js";
+import { createStore } from "solid-js/store";
 import { useApi, useChannels } from "@/api";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { DurationInput, type DurationPreset } from "@/atoms/DurationInput.tsx";

@@ -1,7 +1,7 @@
-import { ChannelsService, useApi, useChannels } from "@/api";
-import { ChannelT } from "@/types";
-import { logger } from "@/utils/logger";
 import { createEffect, createSignal } from "solid-js";
+import { type ChannelsService, useApi, useChannels } from "@/api";
+import type { ChannelT } from "@/types";
+import { logger } from "@/utils/logger";
 
 const log = logger.for("channel_nav/dnd");
 

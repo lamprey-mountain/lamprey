@@ -2,12 +2,12 @@ import type { EditorState } from "prosemirror-state";
 import type { Message, Pagination } from "sdk";
 import { createContext, useContext } from "solid-js";
 import type { SetStoreFunction, Store } from "solid-js/store";
-import type { Attachment } from "@/types/chat";
 import {
 	createTimelineController,
-	TimelineController,
-	TimelineState,
+	type TimelineController,
+	type TimelineState,
 } from "@/components/features/chat/timeline-context";
+import type { Attachment } from "@/types/chat";
 
 export type ChannelSearch = {
 	query: string;

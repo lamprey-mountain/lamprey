@@ -1,8 +1,8 @@
-import { ChannelT } from "@/types";
-import { ChannelType, Permission } from "ts-sdk";
-import { Args, Command, OptionDef, OptionKind } from "./types";
+import type { ChannelType, Permission } from "ts-sdk";
+import type { Api } from "@/api";
 import { createPermissionChecker } from "@/lib/permissions/calculator";
-import { Api } from "@/api";
+import type { ChannelT } from "@/types";
+import type { Args, Command, OptionDef, OptionKind } from "./types";
 
 export type CommandBuilder<O extends OptionDef[]> = {
 	name(name: string): CommandBuilder<O>;

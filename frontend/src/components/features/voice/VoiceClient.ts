@@ -11,8 +11,8 @@ import type {
 } from "ts-sdk";
 import type { Api } from "@/api";
 import { logger } from "@/utils/logger";
-import { RTC_CONFIG } from "./util";
 import { Speaking } from "./Speaking";
+import { RTC_CONFIG } from "./util";
 
 export const log = logger.for("rtc");
 

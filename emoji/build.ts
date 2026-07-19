@@ -1,10 +1,11 @@
+import { createRequire } from "node:module";
 import {
-	CoreEmoji,
+	type CoreEmoji,
 	LANGUAGES,
 	type LabelsFile,
 	type Shortcodes,
 } from "./shared.ts";
-import { createRequire } from "node:module";
+
 const require = createRequire(import.meta.url);
 
 async function loadJson(path: string): Promise<any> {
