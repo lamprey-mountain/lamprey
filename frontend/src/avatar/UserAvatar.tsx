@@ -174,7 +174,7 @@ export const AvatarWithStatus = (props: VoidProps<AvatarProps>) => {
 	return (
 		<svg
 			aria-hidden="true"
-			class="avatar has-status-indicator"
+			class="avatar status-indicator"
 			data-status={status()}
 			viewBox={`0 0 ${totalSize()} ${totalSize()}`}
 			role="img"

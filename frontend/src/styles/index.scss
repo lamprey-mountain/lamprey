@@ -1082,7 +1082,7 @@ input[type="url"] {
 			}
 		}
 
-		& .has-status-indicator {
+		& .status-indicator {
 			margin: 2px;
 		}
 	}
@@ -1841,8 +1841,11 @@ button[disabled] {
 }
 
 .status-indicator {
-	height: 12px;
 	aspect-ratio: 1/1;
+
+	&.small {
+		height: 12px;
+	}
 
 	& .indicator {
 		fill-rule: evenodd;

@@ -342,7 +342,7 @@ const Status = (props: { status: UserStatus }) => {
 		<svg
 			aria-hidden="true"
 			role="img"
-			class="status-indicator"
+			class="status-indicator small"
 			data-status={props.status}
 			viewBox="52 52 24 24"
 		>
