@@ -397,6 +397,7 @@ export function UserMenu(props: UserMenuProps) {
 									type="range"
 									min="0"
 									max="1"
+									step="any"
 									// list="volume-detents"
 									value={voice.preferences.get(props.user_id)?.volume ?? 1}
 									onInput={(e) =>
