@@ -1,10 +1,9 @@
 use crate::Result;
-use crate::services::voice::voice_state::{
-    VoiceStateHandle, VoiceStateHandleInner, VoiceStateState,
-};
-use crate::services::voice::{ServiceVoice, SfuCommand, SfuStats};
+use crate::services::voice::voice_state::{VoiceStateHandle, VoiceStateHandleInner};
+use crate::services::voice::{ServiceVoice, SfuCommand};
 use axum::extract::ws::WebSocket;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::voice::SfuStats;
 use common::v1::types::voice::messages::{SfuEvent, SignallingEvent};
 use common::v1::types::{ChannelId, MessageSync, SfuId, UserId};
 use lamprey_backend_core::Error;

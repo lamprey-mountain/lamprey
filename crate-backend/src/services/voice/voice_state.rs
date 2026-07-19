@@ -1,4 +1,5 @@
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::voice::internal::SfuVoiceState;
 use common::v1::types::voice::messages::{SfuCommand, SignallingCommand, SignallingEvent};
 use lamprey_backend_core::Error;
 use std::sync::Arc;
@@ -6,7 +7,6 @@ use std::sync::Arc;
 use crate::Result;
 use crate::services::voice::ServiceVoice;
 use common::v1::types::util::Time;
-use common::v1::types::voice::internal::SfuPermissions;
 use common::v1::types::voice::{CallCreate, VoiceState, VoiceStateUpdate};
 use common::v1::types::{
     ChannelId, ChannelType, ConnectionId, MessageSync, Permission, SessionId, SfuId, UserId,
@@ -131,6 +131,7 @@ impl ServiceVoice {
         let state = VoiceState {
             user_id,
             channel_id: update.channel_id,
+            room_id: chan.room_id,
             session_id,
             connection_id,
             joined_at,
@@ -151,20 +152,13 @@ impl ServiceVoice {
         });
         call.voice_states.insert(user_id, Arc::clone(&handle));
 
-        let mut sfu_perms = SfuPermissions::empty();
-        if perms.has(Permission::VoiceSpeak) {
-            sfu_perms |= SfuPermissions::Speak;
-        }
-        if perms.has(Permission::VoiceVideo) {
-            sfu_perms |= SfuPermissions::Video;
-        }
-        if perms.has(Permission::VoicePriority) {
-            sfu_perms |= SfuPermissions::Priority;
-        }
-
         sfu.send(SfuCommand::CreatePeer {
-            state: handle.inner.clone(),
-            permissions: sfu_perms,
+            channel_id: update.channel_id,
+            state: SfuVoiceState::from_api_state(
+                &handle.inner,
+                perms.has(Permission::VoicePriority),
+            )
+            .map_err(|err| Error::Internal(err.to_string()))?,
         });
 
         sfu.send(SfuCommand::Signalling {

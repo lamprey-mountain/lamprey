@@ -3,6 +3,7 @@ use crate::services::voice::ServiceVoice;
 use crate::services::voice::voice_state::VoiceStateHandle;
 use common::v1::types::MessageSync;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::voice::CallMetadata;
 use common::v1::types::{
     ChannelId, SfuId, UserId,
     util::Time,
@@ -21,10 +22,12 @@ pub struct CallHandleInner {
 pub type CallHandle = Arc<CallHandleInner>;
 
 impl CallHandleInner {
+    #[inline]
     pub fn id(&self) -> ChannelId {
         self.call.channel_id
     }
 
+    #[inline]
     pub fn call(&self) -> &Call {
         &self.call
     }
@@ -63,9 +66,11 @@ impl ServiceVoice {
         let call = Call {
             room_id: channel.room_id,
             channel_id: channel_id,
-            topic: params.topic,
-            created_at: Time::now_utc(),
-            audience_count: Some(0),
+            inner: CallMetadata {
+                topic: params.topic,
+                created_at: Time::now_utc(),
+                audience_count: Some(0),
+            },
         };
 
         // 3. insert handle
@@ -149,10 +154,8 @@ impl ServiceVoice {
             .ok_or_else(|| ApiError::from_code(ErrorCode::UnknownVoiceChannel))?;
 
         let handle = entry.value();
-        let new_call = Call {
-            topic: patch.topic.unwrap_or_else(|| handle.call.topic.clone()),
-            ..handle.call.clone()
-        };
+        let mut new_call = handle.call.clone();
+        new_call.apply_patch(patch);
 
         let updated_handle = Arc::new(CallHandleInner {
             call: new_call.clone(),

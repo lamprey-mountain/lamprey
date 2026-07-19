@@ -105,7 +105,7 @@ impl SfuVoiceState {
     }
 
     pub fn from_api_state(
-        vs: VoiceState,
+        vs: &VoiceState,
         priority: bool,
     ) -> Result<Self, SfuVoiceStateConversionError> {
         let mut flags = SfuVoiceFlags::empty();

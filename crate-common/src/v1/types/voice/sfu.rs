@@ -31,6 +31,7 @@ pub struct SfuExternal {
 
 /// statistics for a sfu
 #[record]
+#[derive(Default)]
 pub struct SfuStats {
     /// the number of peers connected to this sfu
     pub peer_count: u64,

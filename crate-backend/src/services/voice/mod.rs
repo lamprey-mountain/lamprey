@@ -1,7 +1,6 @@
 use crate::ServerStateInner;
 use crate::services::voice::calls::CallHandle;
 use crate::services::voice::sfus::SfuHandle;
-use common::v1::types::voice::internal::SfuStats;
 use common::v1::types::voice::messages::SfuCommand;
 use common::v1::types::voice::router::{VoiceRouter, VoiceRouterConfig};
 use common::v1::types::{ChannelId, SfuId};
