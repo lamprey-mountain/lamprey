@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 use common::v1::types::MessageSync;
 use common::v1::types::presence::{Presence, Status};
@@ -7,7 +7,7 @@ use dashmap::DashMap;
 use tokio::task::JoinHandle;
 use tracing::debug;
 
-use crate::{Result, ServerStateInner};
+use crate::prelude::*;
 
 /// when to expire presences from disconnected users
 // currently relies on sync heartbeat time
@@ -15,7 +15,7 @@ use crate::{Result, ServerStateInner};
 const PRESENCE_EXPIRE: Duration = Duration::from_secs(40);
 
 pub struct ServicePresence {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     presences: DashMap<UserId, OnlineState>,
 }
 
@@ -25,7 +25,7 @@ struct OnlineState {
 }
 
 impl ServicePresence {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self {
             state,
             presences: DashMap::new(),
@@ -87,10 +87,13 @@ impl ServicePresence {
                 had.as_ref().map(|h| &h.1.presence)
             );
             if had.is_none_or(|(_, s)| s.presence != Presence::offline()) {
-                s.broadcast(MessageSync::PresenceUpdate {
-                    user_id,
-                    presence: Presence::offline(),
-                })?;
+                let _ = s
+                    .messaging()
+                    .broadcast_global(MessageSync::PresenceUpdate {
+                        user_id,
+                        presence: Presence::offline(),
+                    })
+                    .await;
             }
             Result::Ok(())
         });
@@ -111,10 +114,14 @@ impl ServicePresence {
         let user = srv.users.get(user_id, None).await?;
 
         if old.is_none_or(|s| s.presence != status) && !skip_broadcast {
-            self.state.broadcast(MessageSync::PresenceUpdate {
-                user_id,
-                presence: status.clone(),
-            })?;
+            let _ = self
+                .state
+                .messaging()
+                .broadcast_global(MessageSync::PresenceUpdate {
+                    user_id,
+                    presence: status.clone(),
+                })
+                .await;
         }
 
         Ok(user)

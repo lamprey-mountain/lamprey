@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 use chrono::{DateTime, Timelike};
 use chrono_tz::Tz;
@@ -9,11 +9,10 @@ use common::v1::types::{
 use rrule::{RRule, RRuleSet, RRuleSetIter, Tz as RRuleTz, Unvalidated};
 use time::OffsetDateTime;
 
-use crate::{Error, Result, ServerStateInner};
+use crate::prelude::*;
 
 pub struct ServiceCalendar {
-    #[allow(unused)] // TEMP
-    state: Arc<ServerStateInner>,
+    state: Globals,
 }
 
 /// utility for calculating various things from recurrence rules
@@ -146,7 +145,7 @@ impl Iterator for RecurrenceIterator {
 }
 
 impl ServiceCalendar {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self { state }
     }
 

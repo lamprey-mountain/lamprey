@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 use common::v1::types::{
     AutomodRuleId, Channel, ChannelCreate, ChannelId, ChannelPatch, Mentions, MentionsUser,
@@ -15,11 +15,12 @@ use common::v1::types::{
 use dashmap::DashMap;
 use tracing::{error, warn};
 
+use crate::prelude::*;
 use crate::services::messages::links;
-use crate::{Result, ServerStateInner, types::DbMessageCreate};
+use crate::types::DbMessageCreate;
 
 pub struct ServiceAutomod {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     rulesets: DashMap<RoomId, Arc<AutomodRuleset>>,
 }
 
@@ -650,7 +651,7 @@ impl AutomodRuleset {
 }
 
 impl ServiceAutomod {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self {
             state,
             rulesets: DashMap::new(),
@@ -663,7 +664,12 @@ impl ServiceAutomod {
             return Ok(ruleset.clone());
         }
 
-        let rules = self.state.data().automod_rule_list(room_id).await?;
+        let rules = self
+            .state
+            .begin_read()
+            .await?
+            .automod_rule_list(room_id)
+            .await?;
         let ruleset = Arc::new(AutomodRuleset::new(rules));
         self.rulesets.insert(room_id, ruleset.clone());
         Ok(ruleset)
@@ -690,7 +696,7 @@ impl ServiceAutomod {
         let mut block_message = None;
 
         let srv = self.state.services();
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
 
         let ruleset = self.load(room_id).await?;
         let perms = srv.perms.for_room(user_id, room_id).await?;
@@ -829,6 +835,7 @@ impl ServiceAutomod {
                                 };
                                 if let Err(e) = self
                                     .state
+                                    .messaging()
                                     .broadcast_channel(*alert_channel_id, AUTOMOD_USER_ID, msg)
                                     .await
                                 {

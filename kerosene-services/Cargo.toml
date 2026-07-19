@@ -18,6 +18,8 @@ base32 = "0.5.1"
 base64 = "0.22.1"
 blake3 = { version = "1.8.3", features = ["mmap"] }
 bytes = "1.11.1"
+chrono = "0.4.44"
+chrono-tz = "0.10.4"
 common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common", features = ["utoipa", "validator"] }
 constant_time_eq = "0.4.2"
 csscolorparser = { version = "0.7.2", features = ["lab"] }
@@ -44,6 +46,7 @@ lamprey-markdown = { version = "0.1", path = "../crate-markdown" }
 lamprey-script = { package = "lamprey-script", version = "0.1.0", path = "../crate-script" }
 lamprey-search = { package = "lamprey-search", version = "0.1.0", path = "../crate-search" }
 lamprey-unfurl = { version = "0.1", path = "../crate-unfurl" }
+lettre = { version = "0.11.19", default-features = false, features = ["builder", "pool", "smtp-transport", "tokio1-rustls-tls"] }
 maxminddb = "0.28.1"
 mediatype = { version = "0.20.0", features = ["serde"] }
 moka = { version = "0.12.14", features = ["future"] }

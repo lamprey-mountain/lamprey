@@ -3,7 +3,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::{Error, ServerStateInner, error::Result, types::PaginationQuery};
+use crate::prelude::*;
+
 use common::v1::types::{
     ChannelId, InviteTarget, InviteTargetId, MessageSync, Permission, Room, RoomId, RoomMember,
     SERVER_ROOM_ID, User, UserId,
@@ -12,6 +13,7 @@ use common::v1::types::{
     preferences::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
 };
 use futures::{StreamExt, future::BoxFuture};
+use lamprey_backend_data_postgres::PaginationQuery;
 use moka::future::Cache;
 
 pub mod permissions;
@@ -28,7 +30,7 @@ pub use permissions::PermissionsCalculator;
 /// service for caching all in-memory data used by the server
 #[derive(Clone)]
 pub struct ServiceCache {
-    state: Arc<ServerStateInner>,
+    state: Globals,
 
     // TODO: make not pub?
     pub(crate) users: Cache<UserId, User>,
@@ -43,7 +45,7 @@ pub struct ServiceCache {
 }
 
 impl ServiceCache {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self {
             state,
             users: Cache::builder()
@@ -188,15 +190,13 @@ impl ServiceCache {
 
     /// get a user from the cache, loading from the database if not present
     pub async fn user_get(&self, user_id: UserId) -> Result<User> {
-        // FIXME: this used to hang, and im not sure why try_get_with fixes it. investigate this further.
         if let Some(user) = self.users.get(&user_id).await {
             return Ok(user);
         }
 
-        self.users
-            .try_get_with(user_id, self.state.data().user_get(user_id))
-            .await
-            .map_err(|err| err.fake_clone())
+        let user = self.state.begin_read().await?.user_get(user_id).await?;
+        self.users.insert(user_id, user.clone()).await;
+        Ok(user)
     }
 
     /// invalidate a user in the cache

@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 use common::v1::types::email::EmailAddr;
 use lettre::{
@@ -9,16 +9,16 @@ use lettre::{
 use tokio::time::sleep;
 use tracing::{error, info};
 
-use crate::{Error, Result, ServerStateInner};
+use crate::prelude::*;
 
 pub struct ServiceEmail {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     mailer: AsyncSmtpTransport<Tokio1Executor>,
 }
 
 impl ServiceEmail {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
-        let config = state.config.smtp.clone();
+    pub fn new(state: Globals) -> Self {
+        let config = state.config().smtp.clone();
         let password = config
             .password
             .load()
@@ -34,12 +34,12 @@ impl ServiceEmail {
     }
 
     pub fn start_background_tasks(&self) {
-        let num_workers = self.state.config.email_queue_workers;
+        let num_workers = self.state.config().email_queue_workers;
         info!("Starting {} email queue workers", num_workers);
 
         for i in 0..num_workers {
             info!("Email worker {} started", i);
-            tokio::spawn(Self::worker(Arc::clone(&self.state)));
+            tokio::spawn(Self::worker(self.state.clone()));
         }
     }
 
@@ -50,9 +50,10 @@ impl ServiceEmail {
         plain_text_body: String,
         html_body: Option<String>,
     ) -> Result<()> {
-        let from_addr = self.state.config.smtp.from.clone();
+        let from_addr = self.state.config().smtp.from.clone();
         self.state
-            .data()
+            .begin()
+            .await?
             .email_queue_insert(
                 to.into_inner(),
                 from_addr,
@@ -64,7 +65,7 @@ impl ServiceEmail {
         Ok(())
     }
 
-    async fn worker(state: Arc<ServerStateInner>) {
+    async fn worker(state: Globals) {
         loop {
             let srv = state.services();
             match srv.email.process_email_queue_item().await {
@@ -82,7 +83,7 @@ impl ServiceEmail {
     }
 
     async fn process_email_queue_item(&self) -> Result<bool> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let email_item = data.email_queue_claim().await?;
 
         if let Some(item) = email_item {
@@ -95,7 +96,7 @@ impl ServiceEmail {
             let email = Message::builder()
                 .from(Mailbox::new(
                     Some("system".to_owned()),
-                    self.state.config.smtp.username.parse().unwrap(),
+                    self.state.config().smtp.username.parse().unwrap(),
                 ))
                 .to(Mailbox::new(
                     Some("user".to_owned()),

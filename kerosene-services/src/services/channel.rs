@@ -17,9 +17,7 @@ use time::OffsetDateTime;
 use tracing::warn;
 use validator::Validate;
 
-use crate::ServerStateInner;
-use crate::error::{Error, Result};
-use crate::routes::util::auth::Auth4;
+use crate::prelude::*;
 use crate::types::{DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCreate};
 use lamprey_backend_core::types::search::ChannelVisibility;
 
@@ -27,7 +25,7 @@ use lamprey_backend_core::types::search::ChannelVisibility;
 // have a cache for public data, per-user data, member counts, etc
 // then only invalidate (or directly update) that one part of the cache at a time
 pub struct ServiceChannels {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     cache_thread: Cache<ChannelId, Channel>, // TODO: remove?
     cache_thread_private: Cache<(ChannelId, UserId), DbChannelPrivate>,
     cache_thread_recipients: Cache<ChannelId, Vec<User>>,
@@ -36,7 +34,7 @@ pub struct ServiceChannels {
 }
 
 impl ServiceChannels {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self {
             state,
             cache_thread: Cache::builder()
