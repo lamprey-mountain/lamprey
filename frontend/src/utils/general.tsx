@@ -34,9 +34,12 @@ export function getMessageContent(message: Message | undefined) {
 	return undefined;
 }
 
+// TODO: inline version of copyable that shows "copied!" as tooltip or inline text instead of modal
+
 export const Copyable = (props: { children: string }) => {
 	const [, modalctl] = useModals();
-	const copy = () => {
+	const copy = (e: MouseEvent) => {
+		e.stopPropagation();
 		navigator.clipboard.writeText(props.children);
 		modalctl.alert("copied!");
 	};

@@ -58,7 +58,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 
 	const voiceStates = createMemo(() => {
 		return [...api.voiceStates.values()].filter(
-			(i) => (i as any).thread_id === voice.joinedChannelId,
+			(i) => i.channel_id === voice.joinedChannelId,
 		);
 	});
 
@@ -93,131 +93,184 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 			<main>
 				<Switch>
 					<Match when={tab() === "states"}>
-						<div style="margin: 8px;">
-							<h3>{voiceStates().length} voice states(s)</h3>
-							<br />
-							<For each={voiceStates()}>
-								{(s) => {
-									return (
-										<div style="border: solid #444 1px;padding:4px">
-											<div>
-												<b>user_id</b>: <Copyable>{s.user_id}</Copyable>
-											</div>
-											<pre>{JSON.stringify(s, null, 2)}</pre>
-										</div>
-									);
-								}}
-							</For>
-						</div>
+						<VoiceStatesTab voiceStates={voiceStates()} />
 					</Match>
 					<Match when={tab() === "streams"}>
-						<div style="margin: 8px;">
-							<h3>{vc.streams.size} stream(s)</h3>
-							<br />
-							<For each={[...(vc.streams.values() ?? [])]}>
-								{(s) => {
-									return (
-										<div style="border: solid #444 1px;padding:4px">
-											<div>
-												<b>user_id</b>: <Copyable>{s.user_id}</Copyable>
-											</div>
-											<div>
-												<b>key</b>: {s.key.toString()}
-											</div>
-											<div>
-												<b>track_ids:</b> {s.track_ids.join(", ")}
-											</div>
-										</div>
-									);
-								}}
-							</For>
-							<br />
-							<h3>{transceivers().length} transceivers</h3>
-							<ul style="list-style: inside">
-								<For each={transceivers()}>
-									{(t) => (
-										<li>
-											{/* TODO: show (source user id, source mid) and (local mid) separately */}
-											{t.mid} {t.direction}{" "}
-											{t?.sender.track?.kind ?? t?.receiver.track?.kind}
-										</li>
-									)}
-								</For>
-							</ul>
-							<br />
-							<h3>{tracks().length} tracks</h3>
-							<ul style="list-style: inside">
-								<For each={tracks()}>
-									{(t) => (
-										<li style="margin-bottom: 4px;">
-											<div>
-												<b>id:</b> {t.id ?? "none (local)"}
-											</div>
-											<div>
-												<b>mid:</b> {t.mid ?? "none"}
-											</div>
-											<div>
-												<b>user_id:</b> <Copyable>{t.user_id}</Copyable>
-											</div>
-											<div>
-												<b>key:</b> {String(t.metadata.key)}
-											</div>
-											<div>
-												<b>kind:</b> {t.metadata.kind}
-											</div>
-										</li>
-									)}
-								</For>
-							</ul>
-						</div>
+						<VoiceStreamsTab
+							vc={vc}
+							transceivers={transceivers()}
+							tracks={tracks()}
+						/>
 					</Match>
 					<Match when={tab() === "stats"}>
-						<VoiceStats />
+						<VoiceStatsTab />
 					</Match>
 					<Match when={tab() === "sdp-local"}>
-						<Show when={localSdp()} fallback={"no local sdp?"}>
-							{(s) => (
-								<>
-									<div style="margin: 8px;">
-										<h3>local sdp ({s().type})</h3>
-										<button
-											type="button"
-											class="button"
-											style="margin-left: 8px"
-											onClick={() => navigator.clipboard.writeText(s().sdp)}
-										>
-											copy
-										</button>
-									</div>
-									<VoiceSdp sdp={s().sdp} />
-								</>
-							)}
-						</Show>
+						<VoiceSdpTab sdp={localSdp()} title="local sdp" />
 					</Match>
 					<Match when={tab() === "sdp-remote"}>
-						<Show when={remoteSdp()} fallback={"no remote sdp?"}>
-							{(s) => (
-								<>
-									<div style="margin: 8px;">
-										<h3>remote sdp ({s().type})</h3>
-										<button
-											type="button"
-											class="button"
-											style="margin-left: 8px"
-											onClick={() => navigator.clipboard.writeText(s().sdp)}
-										>
-											copy
-										</button>
-									</div>
-									<VoiceSdp sdp={s().sdp} />
-								</>
-							)}
-						</Show>
+						<VoiceSdpTab sdp={remoteSdp()} title="remote sdp" />
 					</Match>
 				</Switch>
 			</main>
 		</div>
 	);
+};
+
+const VoiceStatesTab = (props: { voiceStates: any[] }) => (
+	<div style="margin: 8px;">
+		<h3 class="dim">{props.voiceStates.length} voice states(s)</h3>
+		<For each={props.voiceStates}>
+			{(s, idx) => (
+				<details class="voice-state" open>
+					<summary>
+						<div>
+							<h3 class="dim">
+								Voice state <span class="light">#{idx()}</span>
+							</h3>
+						</div>
+						<div class="dim">
+							<em>user_id</em>: <Copyable>{s.user_id}</Copyable>
+						</div>
+					</summary>
+					<JsonView json={s} />
+				</details>
+			)}
+		</For>
+	</div>
+);
+
+const VoiceStreamsTab = (props: {
+	vc: any;
+	transceivers: RTCRtpTransceiver[];
+	tracks: any[];
+}) => (
+	// TODO: details/summary for each section (make them collapseable)
+
+	<div class="voice-streams-debug">
+		<section class="section">
+			<h3>{props.vc.streams.size} stream(s)</h3>
+			<ul>
+				<For each={[...(props.vc.streams.values() ?? [])]}>
+					{(s) => (
+						<li class="item">
+							<div>
+								<b>user_id</b>: <Copyable>{s.user_id}</Copyable>
+							</div>
+							<div>
+								<b>key</b>: {s.key.toString()}
+							</div>
+							<div>
+								<b>track_ids:</b> {s.track_ids.join(", ")}
+							</div>
+						</li>
+					)}
+				</For>
+			</ul>
+		</section>
+		<section class="section">
+			<h3>{props.transceivers.length} transceivers</h3>
+			<ul>
+				<For each={props.transceivers}>
+					{(t) => (
+						<li class="item">
+							<div>
+								<b>mid</b>: {t.mid}
+							</div>
+							<div>
+								<b>direction</b>: {t.direction}
+							</div>
+							<div>
+								<b>kind</b>:{" "}
+								{t?.sender.track?.kind ?? t?.receiver.track?.kind ?? "unknown"}
+							</div>
+							<div>
+								<b>muted</b>:{" "}
+								{String(
+									t.sender.track?.muted ?? t.receiver.track?.muted ?? "unknown",
+								)}
+							</div>
+							<div>
+								<b>enabled</b>:{" "}
+								{String(
+									t.sender.track?.enabled ??
+										t.receiver.track?.enabled ??
+										"unknown",
+								)}
+							</div>
+						</li>
+					)}
+				</For>
+			</ul>
+		</section>
+		<section class="section">
+			<h3>{props.tracks.length} tracks</h3>
+			<ul>
+				<For each={props.tracks}>
+					{(t) => (
+						<li class="item">
+							<div>
+								<b>id:</b> {String(t.id ?? "none (local)")}
+							</div>
+							<div>
+								<b>mid:</b> {String(t.mid ?? "none")}
+							</div>
+							<div>
+								<b>user_id:</b> <Copyable>{t.user_id}</Copyable>
+							</div>
+							<div>
+								<b>key:</b> {String(t.metadata.key)}
+							</div>
+							<div>
+								<b>kind:</b> {t.metadata.kind}
+							</div>
+						</li>
+					)}
+				</For>
+			</ul>
+		</section>
+	</div>
+);
+
+const VoiceSdpTab = (props: {
+	sdp: RTCSessionDescription | null;
+	title: string;
+}) => (
+	<Show when={props.sdp} fallback={"no " + props.title + "?"}>
+		{(s) => (
+			<>
+				<div style="margin: 8px;">
+					<h3>
+						{props.title} ({s().type})
+					</h3>
+					<button
+						type="button"
+						class="button"
+						style="margin-left: 8px"
+						onClick={() => navigator.clipboard.writeText(s().sdp)}
+					>
+						copy
+					</button>
+				</div>
+				<VoiceSdp sdp={s().sdp} />
+			</>
+		)}
+	</Show>
+);
+
+const JsonView = (props: { json: any }) => {
+	let ref!: HTMLPreElement;
+
+	createEffect(() => {
+		const jsonString = JSON.stringify(props.json, null, 2);
+		ref.textContent = jsonString;
+
+		import("highlight.js").then(({ default: hljs }) => {
+			hljs.highlightElement(ref);
+		});
+	});
+
+	return <pre ref={ref} class="language-json" />;
 };
 
 export const VoiceSdp = (props: { sdp: string }) => {
@@ -375,7 +428,7 @@ const HighlightIpAddr = (props: { addr: string }) => {
 	);
 };
 
-const VoiceStats = () => {
+const VoiceStatsTab = () => {
 	// critical stats:
 	// - bitrate
 	// - {bytes,packets} {sent,recv,retransmit}
