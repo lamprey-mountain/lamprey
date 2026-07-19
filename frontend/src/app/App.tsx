@@ -189,7 +189,6 @@ export const AppProviders: Component<ParentProps<{ resolved: boolean }>> = (
  */
 export const AppShell: Component<ParentProps> = (props) => {
 	const ctx = useCtx();
-	const state = from(ctx.client.state);
 	const [modals] = useModals();
 
 	useFavicon();
@@ -241,11 +240,6 @@ export const AppShell: Component<ParentProps> = (props) => {
 				{props.children}
 				<OverlayProvider />
 				<VoiceStreams />
-				<Show when={state() !== "ready"}>
-					<div style="position:fixed;top:8px;left:8px;background:#111;padding:8px;border:solid #222 1px;">
-						{state()}
-					</div>
-				</Show>
 			</div>
 			<div
 				id="overlay"

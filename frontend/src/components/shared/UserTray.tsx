@@ -4,6 +4,7 @@ import {
 	createEffect,
 	createSignal,
 	For,
+	from,
 	Match,
 	on,
 	onCleanup,
@@ -31,6 +32,7 @@ import {
 } from "@/utils/icons";
 import { useVoice } from "../features/voice/context";
 import { VoiceDebug } from "../features/voice/VoiceDebug";
+import { useCtx } from "@/app/context";
 
 // TODO: move voice parts to a separate component(?)
 
@@ -106,8 +108,16 @@ export const UserTray = () => {
 
 	const voiceRoom = rooms.use(() => voiceChannel()?.id);
 
+	const ctx = useCtx();
+	const state = from(ctx.client.state);
+
+	// TODO: color .connection-state depending on "stopped" | "connecting" | "connected" | "ready" | undefined
+
 	return (
 		<div class="user-tray">
+			<Show when={state() !== "ready"}>
+				<div class="row connection-state">{state()}</div>
+			</Show>
 			<Show when={voiceChannel()}>
 				{(chan) => (
 					<>

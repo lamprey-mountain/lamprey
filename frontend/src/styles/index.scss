@@ -2305,6 +2305,11 @@ body.resizing {
 			width: 20px;
 		}
 	}
+
+	& > .connection-state {
+		border-bottom: solid $bg-300 1px;
+		padding: 8px;
+	}
 }
 
 .voice-streams {
