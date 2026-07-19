@@ -454,7 +454,6 @@ const Stream = (props: {
 			<Show when={screenshare()}>
 				<div class="live">live</div>
 			</Show>
-			<div class="live">live</div>
 			<div class="status">
 				<MemberName userId={props.stream.user_id} roomId={props.roomId} />
 				<Show when={screenshare()}>{"'s screen"}</Show>
