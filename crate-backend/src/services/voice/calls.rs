@@ -123,27 +123,24 @@ impl ServiceVoice {
     /// by default, this will not delete calls with members still in it. pass `force = true` to disconnect everyone first.
     ///
     /// returns true if this call was deleted
-    pub fn call_delete(&self, channel_id: ChannelId, _force: bool) -> bool {
-        // FIXME: handle force = true (disconnect everyone)
-        // FIXME: handle force = false (don't delete if there are members)
+    pub async fn call_delete(&self, channel_id: ChannelId, force: bool) -> bool {
+        if force {
+            let _ = self.call_disconnect_all(channel_id).await;
+        }
+
+        if let Some(entry) = self.calls.get(&channel_id) {
+            let handle = entry.value();
+            if !handle.voice_states.is_empty() && !force {
+                return false;
+            }
+        }
 
         if let Some((_, handle)) = self.calls.remove(&channel_id) {
             handle.cleanup_task.abort();
+            return true;
         }
 
-        true
-
-        // === old code===
-        // if force {
-        //     let _ = self.disconnect_everyone(channel_id).await;
-        // }
-        // self.calls.remove(&channel_id);
-        //
-        // if let Some((_, handle)) = self.cleanup_tasks.remove(&channel_id) {
-        //     handle.abort();
-        // }
-        //
-        // let _ = self.state.broadcast(MessageSync::CallDelete { channel_id });
+        false
     }
 
     /// update a call
@@ -176,6 +173,7 @@ impl ServiceVoice {
     /// disconnect everyone in a call
     ///
     /// returns number of voice states disconnected
+    // NOTE: maybe don't make this async?
     pub async fn call_disconnect_all(&self, channel_id: ChannelId) -> Result<u64> {
         let srv = self.state.services();
         let states = srv.voice.state_list_by_channel(channel_id);
@@ -239,7 +237,7 @@ impl ServiceVoice {
                 tokio::time::sleep(Duration::from_secs(300)).await;
 
                 // keep looping until there are no voice states
-                if state.services().voice.call_delete(channel_id, false) {
+                if state.services().voice.call_delete(channel_id, false).await {
                     break;
                 }
             }
