@@ -378,13 +378,15 @@ export function UserMenu(props: UserMenuProps) {
 							timeout
 						</Item>
 					</Show>
+					<Show when={hasPermission("MemberKick") && props.thread_id}>
+						<Item onClick={kickThread} color="danger">
+							remove from thread
+						</Item>
+					</Show>
 					<Show
 						when={hasPermission("RoleApply") && props.room_id && hasRoles()}
 					>
 						<RoleSubmenu />
-					</Show>
-					<Show when={hasPermission("MemberKick") && props.thread_id}>
-						<Item onClick={kickThread}>remove from thread</Item>
 					</Show>
 					<Separator />
 					<Show when={props.user_id !== self_id() && connectedToVoice()}>
@@ -435,19 +437,21 @@ export function UserMenu(props: UserMenuProps) {
 						</Item>
 					</Show>
 					<Show when={hasPermission("VoiceMute")}>
-						<Item onClick={mute}>
+						<Item onClick={mute} color="danger">
 							{room_member()?.mute ? "room unmute" : "room mute"}
 						</Item>
 					</Show>
 					<Show when={hasPermission("VoiceDeafen")}>
-						<Item onClick={deafen}>
+						<Item onClick={deafen} color="danger">
 							{room_member()?.deaf ? "room undeafen" : "room deafen"}
 						</Item>
 					</Show>
 					<Show
 						when={hasPermission("VoiceDisconnect" as any) && connectedToVoice()}
 					>
-						<Item onClick={disconnect}>disconnect</Item>
+						<Item onClick={disconnect} color="danger">
+							disconnect
+						</Item>
 					</Show>
 					<Show when={hasPermission("VoiceMove") && connectedToVoice()}>
 						<Item>move to</Item>
