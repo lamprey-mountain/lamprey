@@ -26,7 +26,7 @@ export const RoomIcon = (
 	return (
 		<svg
 			aria-hidden="true"
-			class="avatar status-indicator"
+			class="avatar has-status-indicator"
 			viewBox={`0 0 ${totalSize()} ${totalSize()}`}
 			role="img"
 			style={{ "--pad": `${pad()}px` }}
