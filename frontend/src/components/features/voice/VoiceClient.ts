@@ -1,13 +1,14 @@
-import { ReactiveMap } from "@solid-primitives/map";
+import { ReactiveSet } from "@solid-primitives/set";
 import { type Accessor, createSignal, type Setter } from "solid-js";
 import type {
+	MediaKind,
 	MessageClient,
 	SignallingCommand,
 	SignallingEvent,
+	TrackCreate,
 	TrackKey,
 	TrackMetadata,
 	VoiceState,
-	VoiceSubscription,
 } from "ts-sdk";
 import type { Api } from "@/api";
 import { logger } from "@/utils/logger";
@@ -28,20 +29,39 @@ export type VoiceConnectionState =
 	| "connected"
 	| "disconnected";
 
-type LocalStream = {
-	id: string;
+export type VoiceTransceiver = {
+	key: TrackKey;
+	transceiver: RTCRtpTransceiver;
+};
+
+export type VoiceStream = {
+	/** user whos publishing this stream */
 	user_id: string;
-	transceivers: RTCRtpTransceiver[];
-	key: string;
+
+	/** ids of tracks in this stream, including ones that we aren't subscribed to */
+	track_ids: string[]; // TODO: make this a Set
+
+	key: TrackKey;
 	media: MediaStream;
 };
 
-type RemoteStream = {
-	id: string;
+export type VoiceTrack = {
 	user_id: string;
-	mids: string[];
-	key: TrackKey;
-	media: MediaStream;
+	metadata: TrackMetadata;
+
+	/**
+	 * the id of this track
+	 *
+	 * may be undefined if this track only exists locally.
+	 */
+	id?: string;
+
+	/**
+	 * the local mid of this track
+	 *
+	 * may be undefined if this track isn't subscribed to.
+	 */
+	mid?: string;
 };
 
 /** handles webrtc and signalling */
@@ -51,9 +71,18 @@ export class VoiceClient {
 	public connectionState: Accessor<VoiceConnectionState>;
 	private setConnectionState: Setter<VoiceConnectionState>;
 	public queue: Array<MessageClient> = [];
-	private localStreams: Array<LocalStream> = [];
-	public streams = new ReactiveMap<string, RemoteStream>();
-	private transceivers = new Map<string, RTCRtpTransceiver>();
+
+	/** mapping of mid -> voice transceiver*/
+	private transceivers = new Map<string, VoiceTransceiver>();
+
+	/** array of local transceivers */
+	public localTransceivers: VoiceTransceiver[] = [];
+
+	/** mapping of track id -> track */
+	public tracks = new Map<string, VoiceTrack>();
+
+	/** array of streams */
+	public streams = new ReactiveSet<VoiceStream>();
 
 	private makingOffer = false;
 	private settingRemoteAnswer = false;
@@ -122,6 +151,9 @@ export class VoiceClient {
 		this.rtc.addEventListener("icecandidate", (e) => {
 			if (!this.rtc) return;
 			if (!e.candidate?.candidate) return;
+			return;
+
+			// this isn't really used much, maybe i should remove it...
 			log.debug("signal", "local ice candidate", e.candidate);
 			this.sendSignalling({
 				type: "Candidate",
@@ -137,33 +169,48 @@ export class VoiceClient {
 		this.rtc.addEventListener("track", (e) => {
 			if (!this.rtc) return;
 			const t = e.transceiver;
-			const track = e.track;
+			const rtcTrack = e.track;
 			log.info("rtc", "track", e);
 			if (!t.mid) {
 				log.warn("rtc", "transceiver missing mid");
 				return;
 			}
 
-			if (!track) {
+			if (!rtcTrack) {
 				log.warn("rtc", "track event received but track is null");
 				return;
 			}
 
-			this.transceivers.set(t.mid, t);
+			// lookup the mid this track is associated with
+			const track = [...this.tracks.values()].find((x) => x.mid === t.mid);
+			if (!track) {
+				// the server always sends track mapping in Offer, so we should never receive tracks with mids that aren't registered
+				log.warn("rtc", "received track for unknown mid", t.mid);
+				return;
+			}
 
-			// attach track to a remote stream if we already know the mid
-			for (const [, stream] of this.streams) {
-				if (stream.mids.includes(t.mid)) {
-					stream.media.addTrack(track);
-					log.debug(
-						"rtc",
-						`added track ${t.mid} (${track.kind}) to stream ${stream.id}`,
-						stream,
-					);
-					// trigger reactivity
-					this.streams.set(stream.id, { ...stream });
-					break;
+			if (track.id) {
+				const stream = this.getStream(track.user_id, track.metadata.key);
+				if (!stream.track_ids.includes(track.id)) {
+					stream.track_ids.push(track.id);
 				}
+
+				stream.media.addTrack(rtcTrack);
+				log.debug(
+					"rtc",
+					`added track ${t.mid} (${rtcTrack.kind}) to stream ${stream.user_id}:${stream.key}`,
+					stream,
+				);
+
+				this.transceivers.set(t.mid, {
+					key: track.metadata.key,
+					transceiver: t,
+				});
+
+				// force trigger reactivity in solid ReactiveSet
+				// NOTE: this may cause a flash as the stream updates, i should find some way to prevent this (maybe with ReactiveMap instead?)
+				this.streams.delete(stream);
+				this.streams.add(stream);
 			}
 		});
 
@@ -206,7 +253,8 @@ export class VoiceClient {
 			},
 		});
 
-		// FIXME: update voice state when local state changes
+		// FIXME: also update voice state when local state changes
+		// this probably should be done outside of VoiceClient? ie. context reactively calls client.updateVoiceState or something?
 		// this.send({
 		// 	type: "VoiceDispatch",
 		// 	channel_id: channelId,
@@ -232,7 +280,8 @@ export class VoiceClient {
 		this.rtc?.close();
 		this.rtc = null;
 		this.transceivers.clear();
-		this.localStreams = [];
+		this.localTransceivers = [];
+		this.tracks.clear();
 		this.streams.clear();
 		this.queue = [];
 
@@ -273,7 +322,11 @@ export class VoiceClient {
 		if (this.connectionState() === "pending") return;
 
 		for (const msg of this.queue) {
-			log.info("signal", "send " + msg.type, msg);
+			log.info(
+				"signal",
+				`send ${msg.type}${msg.type === "VoiceDispatch" ? ` (${msg.command.type})` : ""}`,
+				msg,
+			);
 			this.api.client.send(msg);
 		}
 
@@ -299,21 +352,24 @@ export class VoiceClient {
 		}
 	}
 
-	private getTrackMetadata(): TrackMetadata[] {
-		const tracks: TrackMetadata[] = [];
-		for (const s of this.localStreams) {
-			for (const t of s.transceivers) {
-				if (t.direction === "inactive") continue;
-				const kind = t.sender.track?.kind;
-				if (kind) {
-					tracks.push({
-						key: s.key as "user" | "screen",
-						mid: t.mid!,
-						kind: kind as "video" | "audio",
-					});
-				}
+	private getTrackMetadata(): TrackCreate[] {
+		const tracks: TrackCreate[] = [];
+
+		for (const vt of this.localTransceivers) {
+			if (vt.transceiver.direction === "inactive") continue;
+
+			if (vt.transceiver.mid) {
+				this.transceivers.set(vt.transceiver.mid, vt);
+				const kind = vt.transceiver.sender.track?.kind;
+				if (!kind) continue;
+				tracks.push({
+					key: vt.key,
+					mid: vt.transceiver.mid,
+					kind: kind as MediaKind,
+				});
 			}
 		}
+
 		return tracks;
 	}
 
@@ -324,8 +380,16 @@ export class VoiceClient {
 		if (!vs) {
 			log.debug("signal", "clean up tracks from " + uid, null);
 			// remove all streams belonging to this user
-			for (const [key, s] of this.streams) {
-				if (s.user_id === uid) this.streams.delete(key);
+			for (const stream of Array.from(this.streams.values())) {
+				if (stream.user_id === uid) {
+					this.streams.delete(stream);
+				}
+			}
+			// remove all tracks belonging to this user
+			for (const [trackId, track] of Array.from(this.tracks.entries())) {
+				if (track.user_id === uid) {
+					this.tracks.delete(trackId);
+				}
 			}
 		}
 	}
@@ -337,7 +401,7 @@ export class VoiceClient {
 			case "Connected": {
 				this.setConnectionState("connected");
 				this.drainSendQueue();
-				// send initial Want subscriptions for all streams we know about
+				// TODO: send initial subscriptions
 				break;
 			}
 
@@ -354,6 +418,22 @@ export class VoiceClient {
 					return;
 				}
 
+				// process track mapping from the offer
+				// NOTE: how do i handle mappings when ignoring server offer?
+				for (const mapping of msg.tracks) {
+					const track = this.tracks.get(mapping.id);
+					if (track) {
+						track.mid = mapping.mid;
+						this.tracks.set(mapping.id, { ...track, mid: mapping.mid });
+					} else {
+						log.warn(
+							"signal",
+							"offer mapping for unknown track id",
+							mapping.id,
+						);
+					}
+				}
+
 				log.debug("signal", "accept offer; create answer");
 				try {
 					await this.rtc.setRemoteDescription({
@@ -367,11 +447,6 @@ export class VoiceClient {
 					});
 				} catch (err) {
 					log.error("signal", "error while accepting offer", err);
-				}
-
-				// process track metadata from the offer
-				for (const track of msg.tracks) {
-					this.processRemoteTrack(track, track.user_id);
 				}
 
 				break;
@@ -414,27 +489,57 @@ export class VoiceClient {
 
 			case "Disconnected": {
 				// TODO: handle
-				// shut down rtc connection. maybe set state to errored/failed if the disconnection wasnt intentional?
+				// shut down rtc connection. maybe set state to errored/failed if the disconnection wasnt intentional? maybe try to reconnect?
 				break;
 			}
 
 			case "Tracks": {
 				const selfUser = this.api.users.cache.get("@self");
 				if (msg.user_id === selfUser?.id) {
-					log.debug("signal", "ignoring Tracks from self", msg.tracks);
+					log.debug("signal", "ignoring Tracks from self", msg);
 					return;
 				}
 
-				log.debug("signal", "got Tracks from " + msg.user_id, msg.tracks);
-				for (const track of msg.tracks) {
-					this.processRemoteTrack(track, msg.user_id);
+				log.debug("signal", "got Tracks from " + msg.user_id);
+				if (msg.added) {
+					for (const announcement of msg.added) {
+						const trackId = announcement.id;
+						this.tracks.set(trackId, {
+							user_id: msg.user_id,
+							metadata: announcement,
+							id: trackId,
+						});
+
+						const stream = this.getStream(msg.user_id, announcement.key);
+						if (!stream.track_ids.includes(trackId)) {
+							stream.track_ids.push(trackId);
+						}
+					}
 				}
+
+				if (msg.removed) {
+					for (const trackId of msg.removed) {
+						const track = this.tracks.get(trackId);
+						if (track) {
+							const stream = this.getStream(track.user_id, track.metadata.key);
+							stream.track_ids = stream.track_ids.filter(
+								(id) => id !== trackId,
+							);
+							// FIXME: remove track
+							// this.transceivers.get(...)?.transceiver.receiver.track;
+							// stream.media.removeTrack();
+							this.tracks.delete(trackId);
+						}
+					}
+				}
+
 				break;
 			}
 
 			case "Subscribe": {
-				log.debug("signal", "got Subscribe", msg.subs);
+				log.debug("signal", "got Subscribe", msg);
 				// TODO: handle server-sent subscriptions
+				// TODO: advertise tracks but dont send them unless the sfu requests it (this requires updating the signalling protocol)
 				break;
 			}
 
@@ -449,59 +554,39 @@ export class VoiceClient {
 		}
 	}
 
-	/** process a TrackMetadata entry from Have/Offer, building RemoteStream entries */
-	private processRemoteTrack(track: TrackMetadata, uid: string): void {
-		// user_id may come from the Have message; for Offer, tracks belong to the server-indicated peer
-		const streamId = `${uid}:${track.key}`;
-
-		let s = this.streams.get(streamId);
-		if (s) {
-			log.debug("rtc", `reuse stream ${streamId}`, s);
-			if (!s.mids.includes(track.mid)) s.mids.push(track.mid);
-		} else {
-			const media = new MediaStream();
-			log.debug("rtc", `initialized new stream ${streamId}`, media);
-			s = {
-				id: streamId,
-				user_id: uid,
-				mids: [track.mid],
-				key: track.key,
-				media,
-			};
-			this.streams.set(streamId, s);
-		}
-
-		// attach already-arrived transceiver tracks
-		for (const mid of s.mids) {
-			const tn = this.transceivers.get(mid);
-			if (tn) {
-				s.media.addTrack(tn.receiver.track);
-				log.debug("rtc", `(re)added track ${mid} to stream ${streamId}`, null);
+	/**
+	 * Get or create a stream for a given user and key
+	 */
+	public getStream(user_id: string, key: TrackKey): VoiceStream {
+		for (const stream of this.streams.values()) {
+			if (stream.user_id === user_id && stream.key === key) {
+				return stream;
 			}
 		}
 
-		// trigger reactivity
-		this.streams.set(streamId, { ...s });
-	}
-
-	public setSubscriptions(subs: Array<VoiceSubscription>): void {
-		this.sendSignalling({ type: "Subscribe", subs });
+		const media = new MediaStream();
+		const stream: VoiceStream = {
+			user_id,
+			track_ids: [],
+			key,
+			media,
+		};
+		this.streams.add(stream);
+		log.debug("rtc", `initialized new stream ${user_id}:${key}`, media);
+		return stream;
 	}
 
 	public acquireTransceiver(
-		key: string,
-		kind: "audio" | "video",
+		key: TrackKey,
+		kind: MediaKind,
 		encodings?: RTCRtpEncodingParameters[],
 	): RTCRtpTransceiver {
 		if (!this.rtc) throw new Error("RTCPeerConnection not initialized");
 
-		// reuse if we already have a transceiver for this key + kind
-		const stream = this.localStreams.find((s) => s.key === key);
-		if (stream) {
-			const existing = stream.transceivers.find(
-				(t) => t.sender.track?.kind === kind,
-			);
-			if (existing) return existing;
+		for (const vt of this.localTransceivers) {
+			if (vt.key === key && vt.transceiver.sender.track?.kind === kind) {
+				return vt.transceiver;
+			}
 		}
 
 		const tr = this.rtc.addTransceiver(kind, {
@@ -510,42 +595,18 @@ export class VoiceClient {
 		});
 		log.info("rtc", "create transceiver", tr);
 
-		// attach to local stream
-		const ls = this.getLocalStream(key);
-		ls.transceivers.push(tr);
+		this.localTransceivers.push({
+			key,
+			transceiver: tr,
+		});
+
+		if (tr.mid) {
+			this.transceivers.set(tr.mid, { key, transceiver: tr });
+		}
 
 		return tr;
 	}
 
-	public getLocalStream(key: string) {
-		const currentUser = this.api.users.cache.get("@self");
-		const user_id = currentUser?.id;
-		if (!user_id) throw "a"; // TODO: better errors
-
-		const existing = this.localStreams.find(
-			(i) => i.key === key && i.user_id === user_id,
-		);
-		if (existing) {
-			log.debug("rtc", "reuse local stream " + key, existing);
-			return existing;
-		}
-		log.debug("rtc", "create local stream", key);
-		const media = new MediaStream();
-		const s: LocalStream = {
-			id: `${user_id}:${key}`,
-			user_id,
-			transceivers: [],
-			key,
-			media,
-		};
-		this.localStreams.push(s);
-		return s;
-	}
-
-	private migrate() {
-		// TODO: how will this work?
-		// 1. create new rtc instance
-		// 2. recreate existing transceivers on new rtc instance
-		// 3. close old rtc instance
-	}
+	// TODO: public setSubscriptions(...) {}
+	// TODO: public migrate(...) {}
 }

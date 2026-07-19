@@ -1,5 +1,11 @@
 import { ReactiveMap } from "@solid-primitives/map";
-import { createContext, type ParentProps, useContext } from "solid-js";
+import {
+	createContext,
+	type ParentProps,
+	useContext,
+	createEffect,
+	on,
+} from "solid-js";
 import { createStore } from "solid-js/store";
 import { useApi } from "@/api";
 import { logger } from "@/utils/logger";
@@ -81,6 +87,29 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 	api.events.on("ready", () => {
 		vc.drainSendQueue();
 	});
+
+	createEffect(
+		on(
+			() => [store.muted, store.deafened, store.camera] as const,
+			([mute, deaf, video]) => {
+				const vs = api.voiceState;
+				if (!vs) return;
+				api.client.send({
+					type: "VoiceDispatch",
+					channel_id: vs.channel_id,
+					command: {
+						type: "VoiceState",
+						state: {
+							channel_id: vs.channel_id,
+							self_deaf: deaf,
+							self_mute: mute,
+							self_video: video,
+						},
+					},
+				});
+			},
+		),
+	);
 
 	const actions: VoiceActions = {
 		async selectChannel(channelId: string) {
@@ -178,11 +207,10 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 		},
 
 		async stopScreenshare() {
-			const stream = vc.getLocalStream("screen");
-			if (stream) {
-				for (const tr of stream.transceivers) {
-					tr.sender.replaceTrack(null);
-					tr.direction = "inactive";
+			for (const vt of vc.localTransceivers) {
+				if (vt.key === "screen") {
+					vt.transceiver.sender.replaceTrack(null);
+					vt.transceiver.direction = "inactive";
 				}
 			}
 			update("screensharing", false);
@@ -193,7 +221,7 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 			update("deafened", deafened);
 
 			// mute all remote audio tracks
-			for (const [, s] of vc.streams) {
+			for (const s of vc.streams) {
 				for (const track of s.media.getAudioTracks()) {
 					// TODO: check if this actually stops rtc from receiving media or if it burns bandwidth
 					track.enabled = !deafened;
@@ -204,10 +232,13 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 		async playMusic() {
 			try {
 				const { track } = await loadMusic();
+				// HACK: play music as microphone
 				const tr = vc.acquireTransceiver("music", "audio");
+				// const tr = vc.acquireTransceiver("user", "audio");
 				if (tr.currentDirection !== "stopped") {
 					await tr.sender.replaceTrack(track);
 					tr.direction = "sendonly";
+					update("muted", false);
 					update("musicing", true);
 				}
 			} catch (e) {
@@ -270,18 +301,14 @@ async function loadMusic() {
 	await new Promise((res) =>
 		audio.addEventListener("loadedmetadata", res, { once: true }),
 	);
-	audio.muted = true;
+
+	const ctx = new AudioContext();
+	const source = ctx.createMediaElementSource(audio);
+	const dest = ctx.createMediaStreamDestination();
+	source.connect(dest);
+
 	await audio.play();
-	const stream: MediaStream =
-		"captureStream" in audio
-			? (
-					audio as HTMLAudioElement & { captureStream: () => MediaStream }
-				).captureStream()
-			: (
-					audio as HTMLAudioElement & {
-						mozCaptureStream: () => MediaStream;
-					}
-				).mozCaptureStream();
-	const track = stream.getAudioTracks()[0];
-	return { track, stream };
+
+	const track = dest.stream.getAudioTracks()[0];
+	return { track, stream: dest.stream };
 }

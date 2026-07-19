@@ -31,11 +31,13 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 	const [transceivers, setTransceivers] = createSignal<RTCRtpTransceiver[]>(
 		vc.getRtc()?.getTransceivers() ?? [],
 	);
+	const [tracks, setTracks] = createSignal([...vc.tracks.values()]);
 
 	const updateDebugInfo = () => {
 		setLocalSdp(vc.getRtc()?.localDescription ?? null);
 		setRemoteSdp(vc.getRtc()?.remoteDescription ?? null);
 		setTransceivers(vc.getRtc()?.getTransceivers() ?? []);
+		setTracks([...vc.tracks.values()]);
 	};
 	updateDebugInfo();
 
@@ -123,7 +125,7 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 												<b>key</b>: {s.key.toString()}
 											</div>
 											<div>
-												<b>mids:</b> {s.mids.join(", ")}
+												<b>track_ids:</b> {s.track_ids.join(", ")}
 											</div>
 										</div>
 									);
@@ -138,6 +140,31 @@ export const VoiceDebug = (props: { onClose: () => void }) => {
 											{/* TODO: show (source user id, source mid) and (local mid) separately */}
 											{t.mid} {t.direction}{" "}
 											{t?.sender.track?.kind ?? t?.receiver.track?.kind}
+										</li>
+									)}
+								</For>
+							</ul>
+							<br />
+							<h3>{tracks().length} tracks</h3>
+							<ul style="list-style: inside">
+								<For each={tracks()}>
+									{(t) => (
+										<li style="margin-bottom: 4px;">
+											<div>
+												<b>id:</b> {t.id ?? "none (local)"}
+											</div>
+											<div>
+												<b>mid:</b> {t.mid ?? "none"}
+											</div>
+											<div>
+												<b>user_id:</b> <Copyable>{t.user_id}</Copyable>
+											</div>
+											<div>
+												<b>key:</b> {String(t.metadata.key)}
+											</div>
+											<div>
+												<b>kind:</b> {t.metadata.kind}
+											</div>
 										</li>
 									)}
 								</For>

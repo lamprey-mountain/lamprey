@@ -38,6 +38,7 @@ export class DeviceManager {
 		const trackDeviceId = track.getSettings().deviceId;
 		const l = { track, stream, deviceId: trackDeviceId };
 		this.localMic = l;
+		l.track.enabled = false;
 		return l;
 	}
 
@@ -58,6 +59,7 @@ export class DeviceManager {
 		if (!track) throw new Error("todo: better error handling");
 		const trackDeviceId = track.getSettings().deviceId;
 		const l = { track, stream, deviceId: trackDeviceId };
+		l.track.enabled = false;
 		this.localCam = l;
 		return l;
 	}

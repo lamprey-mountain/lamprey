@@ -71,7 +71,6 @@ export type Application = components["schemas"]["Application"] & {
 export type RoomMemberOrigin = components["schemas"]["RoomMemberOrigin"];
 export type MessageSync = components["schemas"]["MessageSync"] | ScriptSync;
 export type MessageClient = components["schemas"]["MessageClient"];
-export type VoiceSubscription = components["schemas"]["Subscription"];
 export type RoomBan = components["schemas"]["RoomBan"] & {
 	/** @description room id (client-side context, not in canonical schema) */
 	room_id?: components["schemas"]["Id"];
@@ -189,7 +188,9 @@ export type MentionsRole = components["schemas"]["MentionsRole"];
 export type MentionsEmoji = components["schemas"]["MentionsEmoji"];
 export type ParseMentions = components["schemas"]["ParseMentions"];
 export type MessageMetadata = components["schemas"]["Metadata"];
+export type MediaKind = components["schemas"]["MediaKind"];
 export type TrackKey = components["schemas"]["TrackKey"];
+// export type TrackKey = "user" | "screen" | string;
 
 // TODO: use openai schema for all of the types below
 
@@ -243,7 +244,11 @@ export type MessageEnvelope =
 
 export type SignallingEvent = components["schemas"]["SignallingEvent"];
 export type SignallingCommand = components["schemas"]["SignallingCommand"];
-export type TrackMetadata = components["schemas"]["TrackMetadata"];
+export type TrackMetadata = components["schemas"]["TrackMetadata2"];
+export type TrackMapping = components["schemas"]["TrackMapping"];
+export type TrackWhisper = components["schemas"]["TrackWhisper"];
+export type TrackAnnouncement = components["schemas"]["TrackAnnouncement"];
+export type TrackCreate = components["schemas"]["TrackCreate"];
 export type VoiceState = components["schemas"]["VoiceState"];
 
 export type InboxListParams = {

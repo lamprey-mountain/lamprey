@@ -22,8 +22,9 @@ export const VoiceStreams = () => {
 					return (
 						<Switch>
 							<Match when={hasVideo()}>
-								<audio
+								<video
 									autoplay
+									playsinline
 									ref={setRef}
 									muted={
 										voice.deafened ||
@@ -32,9 +33,8 @@ export const VoiceStreams = () => {
 								/>
 							</Match>
 							<Match when={true}>
-								<video
+								<audio
 									autoplay
-									playsinline
 									ref={setRef}
 									muted={
 										voice.deafened ||
