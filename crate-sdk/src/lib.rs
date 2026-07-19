@@ -7,7 +7,7 @@ pub mod messages;
 pub mod syncer;
 
 #[cfg(feature = "voice")]
-mod voice;
+pub mod voice; // NOTE: unsure if i should make this a pub mod?
 
 #[cfg(feature = "document")]
 mod document;

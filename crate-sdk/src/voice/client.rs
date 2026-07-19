@@ -3,7 +3,7 @@ use std::{net::SocketAddr, sync::Arc, time::Instant};
 use common::{
     v1::types::voice::{
         VoiceState,
-        datachannel::DatachannelProtocol,
+        datachannel::ProtocolType,
         messages::{SignallingCommand, SignallingEvent},
     },
     v2::types::ChannelId,
@@ -15,65 +15,93 @@ use tracing::{error, info};
 
 use crate::{
     Client,
-    voice::{
-        VoiceError, VoiceEvent,
-        player::{AudioSource, VideoSource},
-        track::{Inbound, OutboundPending},
-    },
+    voice::{VoiceError, VoiceEvent},
 };
 
-pub(crate) struct ConnectionState {
+pub(crate) struct VoiceInner {
     tx: mpsc::Sender<RtcCommand>,
 }
 
 /// a connection to a voice channel
-pub struct Peer {
-    state: Arc<ConnectionState>,
+pub struct Voice {
+    state: Arc<VoiceInner>,
 }
 
-pub struct PeerBuilder<'a> {
+pub struct VoiceBuilder<'a> {
     client: &'a Client,
     channel_id: ChannelId,
     self_mute: bool,
     self_deaf: bool,
 }
 
-impl Peer {
+impl Voice {
+    /// access the track registry
+    pub fn tracks(&self) -> () {
+        todo!()
+    }
+    // fn tracks_mut(&self) -> () {
+    //     todo!()
+    // }
+
+    /// get the current voice state
+    pub fn state(&self) -> &VoiceState {
+        todo!()
+    }
+
     /// get a stream of events
     pub fn events(&self) -> BoxStream<'static, VoiceEvent> {
         futures_util::stream::empty().boxed()
     }
 
-    /// get a stream of incoming tracks
-    pub fn inbound(&self) -> BoxStream<'static, Inbound> {
-        futures_util::stream::empty().boxed()
-    }
+    // /// get a stream of incoming tracks
+    // pub fn inbound(&self) -> BoxStream<'static, Inbound> {
+    //     futures_util::stream::empty().boxed()
+    // }
 
-    /// create a new outgoing audio track
-    pub async fn create_audio<S: AudioSource>(
-        &self,
-        _source: S,
-    ) -> Result<OutboundPending, VoiceError> {
-        todo!()
-    }
+    // /// create a new outgoing audio track
+    // pub async fn create_audio<S: AudioSource>(
+    //     &self,
+    //     _source: S,
+    // ) -> Result<OutboundPending, VoiceError> {
+    //     todo!()
+    // }
 
-    /// create a new outgoing video track
-    pub async fn create_video<S: VideoSource>(
-        &self,
-        _source: S,
-    ) -> Result<OutboundPending, VoiceError> {
-        todo!()
-    }
+    // /// create a new outgoing video track
+    // pub async fn create_video<S: VideoSource>(
+    //     &self,
+    //     _source: S,
+    // ) -> Result<OutboundPending, VoiceError> {
+    //     todo!()
+    // }
 
     /// create a new datachannel
-    pub async fn create_channel(&self, _protocol: DatachannelProtocol) -> Result<(), VoiceError> {
+    pub async fn create_channel(&self, _protocol: ProtocolType) -> Result<(), VoiceError> {
         todo!()
     }
+
+    // /// move to a different channel
+    // ///
+    // /// will attempt to recreate all existing tracks
+    // pub async fn move_channel(&self, _channel_id: ChannelId) -> Result<(), VoiceError> {
+    //     todo!()
+    // }
+
+    // pub async fn set_mute(&self, _mute: bool) -> Result<(), VoiceError> {
+    //     todo!()
+    // }
+
+    // pub async fn set_deaf(&self, _deaf: bool) -> Result<(), VoiceError> {
+    //     todo!()
+    // }
+
+    // pub async fn disconnect(self) -> Result<(), VoiceError> {
+    //     todo!()
+    // }
 }
 
-impl<'a> PeerBuilder<'a> {
+impl<'a> VoiceBuilder<'a> {
     pub fn new(client: &'a Client, channel_id: ChannelId) -> Self {
-        PeerBuilder {
+        VoiceBuilder {
             client,
             channel_id,
             self_mute: false,
@@ -99,7 +127,7 @@ impl<'a> PeerBuilder<'a> {
         self
     }
 
-    pub async fn connect(self) -> Result<Peer, VoiceError> {
+    pub async fn connect(self) -> Result<Voice, VoiceError> {
         // TODO: return better error
         let _channel_id = self.channel_id;
 
@@ -126,40 +154,15 @@ impl<'a> PeerBuilder<'a> {
         // TODO: Use self.client to send signaling packets and initialize WebRTC
 
         let (tx, rx) = mpsc::channel::<RtcCommand>(64);
-        let worker = PeerWorker { rtc, rx, sock };
+        let worker = VoiceActor { rtc, rx, sock };
         tokio::spawn(worker.spawn());
 
-        let state = Arc::new(ConnectionState { tx });
-        Ok(Peer { state })
+        let state = Arc::new(VoiceInner { tx });
+        Ok(Voice { state })
     }
 }
 
-// peer voice state methods
-impl Peer {
-    /// get the current voice state
-    pub fn state(&self) -> &VoiceState {
-        todo!()
-    }
-
-    /// move to a different channel
-    ///
-    /// will attempt to recreate all existing tracks
-    pub async fn move_channel(&self, _channel_id: ChannelId) -> Result<(), VoiceError> {
-        todo!()
-    }
-
-    pub async fn set_mute(&self, _mute: bool) -> Result<(), VoiceError> {
-        todo!()
-    }
-
-    pub async fn set_deaf(&self, _deaf: bool) -> Result<(), VoiceError> {
-        todo!()
-    }
-
-    pub async fn disconnect(self) -> Result<(), VoiceError> {
-        todo!()
-    }
-}
+// TODO: move below into new file?
 
 /// sent to the worker
 pub enum RtcCommand {
@@ -174,7 +177,7 @@ pub enum RtcEvent {
     Signalling(SignallingCommand),
 }
 
-pub struct PeerWorker {
+pub struct VoiceActor {
     rtc: Rtc,
     rx: mpsc::Receiver<RtcCommand>,
     sock: UdpSocket,
@@ -182,7 +185,7 @@ pub struct PeerWorker {
     // tx: Sender<RtcEvent>,
 }
 
-impl PeerWorker {
+impl VoiceActor {
     pub async fn spawn(mut self) {
         loop {
             if let Err(e) = self.step().await {
@@ -272,8 +275,12 @@ impl PeerWorker {
                 SignallingEvent::Offer { sdp, tracks } => todo!(),
                 SignallingEvent::Answer { sdp } => todo!(),
                 SignallingEvent::Candidate { candidate } => todo!(),
-                SignallingEvent::Tracks { user_id, tracks } => todo!(),
-                SignallingEvent::Subscribe { subs } => todo!(),
+                SignallingEvent::Tracks {
+                    user_id,
+                    added,
+                    removed,
+                } => todo!(),
+                SignallingEvent::Subscribe(subs) => todo!(),
                 SignallingEvent::Migrate { new_sfu_id } => todo!(),
                 SignallingEvent::Error { message, code } => todo!(),
             },

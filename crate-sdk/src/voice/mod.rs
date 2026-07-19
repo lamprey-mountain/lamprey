@@ -1,11 +1,12 @@
-use common::{v1::types::voice::SpeakingWithUserId, v2::types::ChannelId};
+use common::v2::types::ChannelId;
 
-use crate::{Client, voice::peer::PeerBuilder};
+use crate::{Client, voice::client::VoiceBuilder};
 
+pub mod client;
 pub mod datachannel;
 pub mod error;
-pub mod peer;
 pub mod player;
+// pub mod player_old; // TODO: remove
 pub mod track;
 
 pub use error::VoiceError;
@@ -14,9 +15,8 @@ pub enum VoiceEvent {
     /// voice connection state changed
     StateChanged(VoiceConnectionStatus),
 
-    /// a user is speaking
-    UserSpeaking(SpeakingWithUserId),
-
+    // /// a user is speaking
+    // UserSpeaking(SpeakingWithUserId),
     /// the voice client has been disconnected
     Disconnected,
 
@@ -46,8 +46,8 @@ pub enum VoiceConnectionStatus {
 
 impl Client {
     /// create a voice connection
-    pub fn voice(&self, channel_id: ChannelId) -> PeerBuilder<'_> {
-        PeerBuilder::new(self, channel_id)
+    pub fn voice(&self, channel_id: ChannelId) -> VoiceBuilder<'_> {
+        VoiceBuilder::new(self, channel_id)
     }
 }
 

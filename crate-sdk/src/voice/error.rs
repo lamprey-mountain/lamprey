@@ -13,6 +13,11 @@ pub enum VoiceError {
     #[error("network error: {0}")]
     Net(#[from] str0m::error::NetError),
 
-    #[error("other unknown error")]
-    Other,
+    #[error("no matching track")]
+    NoMatchingTrack,
+    // #[error("rtc peer is dead")]
+    // Dead,
+
+    // #[error("other unknown error")]
+    // Other,
 }

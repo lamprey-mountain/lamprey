@@ -29,6 +29,7 @@ yrs = { version = "0.25.0", features = ["sync"], optional = true }
 url = "2.5.8"
 tokio-stream = { version = "0.1.18", features = ["sync"] }
 lru = "0.18.0"
+futures = "0.3.33"
 
 [features]
 default = ["voice", "document", "std"]
