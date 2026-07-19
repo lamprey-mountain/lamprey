@@ -89,8 +89,20 @@ impl ShardCall {
             info!(user_id = %peer.user_id(), channel_id = %self.channel_id, "remove peer");
             self.users.remove(&peer.user_id());
             self.paused.remove(&peer_slot);
+
+            // find tracks published by this peer
+            let tracks_to_remove: HashSet<TrackSlot> = self
+                .inbound
+                .iter()
+                .filter(|(_, t)| t.publisher == peer_slot)
+                .map(|(id, _)| id)
+                .collect();
+
             self.inbound.retain(|_, t| t.publisher != peer_slot);
-            self.outbound.retain(|_, o| o.subscriber != peer_slot);
+
+            // remove this peer's subscriptions to other peers' tracks and other peers' subscriptions to this peer's tracks
+            self.outbound
+                .retain(|_, o| o.subscriber != peer_slot && !tracks_to_remove.contains(&o.source));
         } else {
             // TODO: warn
         }
@@ -654,14 +666,14 @@ impl ShardCall {
         for (outbound_slot, outbound) in &self.outbound {
             match outbound.state {
                 TrackState::Pending => {
-                    // FIXME: panic when joining/leaving quickly?
-                    // thread 'tokio-rt-worker' (882549) panicked at crate-voice/src/server/shard_call.rs:642:48:
-                    // invalid SlotMap key used
-                    let inbound = &self.inbound[outbound.source];
-                    changes
-                        .entry(outbound.subscriber)
-                        .or_default()
-                        .push(PeerChange::Open(outbound_slot, inbound.kind()));
+                    if let Some(inbound) = self.inbound.get(outbound.source) {
+                        changes
+                            .entry(outbound.subscriber)
+                            .or_default()
+                            .push(PeerChange::Open(outbound_slot, inbound.kind()));
+                    } else {
+                        warn!(?outbound_slot, ?outbound.source, "Found pending outbound track with missing inbound source");
+                    }
                 }
                 TrackState::Closing(mid) => {
                     changes
