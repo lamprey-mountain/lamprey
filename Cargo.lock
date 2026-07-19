@@ -4194,18 +4194,73 @@ dependencies = [
 name = "kerosene-services"
 version = "0.1.1"
 dependencies = [
+ "async-nats",
+ "async-tempfile",
+ "async-trait",
+ "axum",
+ "axum-extra",
+ "base32",
+ "base64 0.22.1",
+ "blake3",
  "bytes",
+ "constant_time_eq 0.4.2",
+ "csscolorparser",
+ "dashmap 6.1.0",
+ "decancer",
+ "ece",
+ "ed25519-dalek",
+ "flate2",
+ "futures",
+ "futures-util",
+ "headers",
+ "http",
+ "httpdate",
+ "im",
+ "image",
+ "infer",
+ "jsonwebkey",
  "jsonwebtoken",
+ "kameo",
  "lamprey-backend-core",
  "lamprey-backend-data-postgres",
  "lamprey-common",
  "lamprey-macros",
+ "lamprey-markdown",
+ "lamprey-script",
+ "lamprey-search",
+ "lamprey-unfurl",
+ "maxminddb",
+ "mediatype",
+ "moka",
+ "multer",
+ "nanoid 0.4.0",
+ "once_cell",
  "opendal",
- "reqwest 0.13.4",
+ "p256",
+ "pastey 0.2.1",
+ "regex",
+ "reqwest 0.12.28",
+ "rmp-serde",
+ "rrule",
+ "serde",
+ "serde_json",
+ "serde_path_to_error",
+ "sha2",
+ "sqlx",
+ "subtle",
+ "tantivy",
+ "time",
  "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "totp-rs",
+ "tower-http",
  "tracing",
  "url",
+ "utoipa",
  "uuid",
+ "validator",
+ "yrs",
 ]
 
 [[package]]
@@ -7590,9 +7645,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.149"
+version = "1.0.150"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83fc039473c5595ace860d8c4fafa220ff474b3fc6bfdb4293327f1a37e94d86"
+checksum = "e8014e44b4736ed0538adeecded0fce2a272f22dc9578a7eb6b2d9993c74cfb9"
 dependencies = [
  "itoa",
  "memchr",
@@ -9405,9 +9460,9 @@ checksum = "74b08b0c1257381af16a5c3605254d529d3e7e109f3c62befc5d168968192998"
 
 [[package]]
 name = "typenum"
-version = "1.19.0"
+version = "1.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "562d481066bde0658276a35467c4af00bdc6ee726305698a55b86e61d7ad82bb"
+checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 
 [[package]]
 name = "typesize"

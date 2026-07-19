@@ -1,0 +1,265 @@
+//! cached/in memory rooms
+
+use im::HashMap as ImMap;
+use kameo::prelude::ActorRef;
+use std::sync::Arc;
+use tokio::sync::watch;
+use uuid::Uuid;
+
+use common::v1::types::{
+    Channel, ChannelId, MessageSync, Permission, PermissionOverwriteType, Role, RoleId, Room,
+    RoomFeature, RoomId, RoomMember, ThreadMember, User, UserId,
+};
+use lamprey_backend_core::types::search::ChannelVisibility;
+
+use crate::routes::util::Auth;
+use crate::services::cache::PermissionsCalculator;
+use crate::types::PermissionBits;
+use crate::{Error, Result, ServerStateInner};
+
+/// a snapshot of a room's state at a point in time.
+#[derive(Debug, Clone)]
+pub enum RoomSnapshot {
+    /// The room is currently being loaded from the database.
+    Loading,
+
+    /// The room is fully loaded, including the complete member list.
+    Ready(Arc<RoomData>),
+
+    /// The room metadata, roles, and channels are loaded, but the member list is not.
+    /// This is used for large rooms or rooms that haven't been "activated" by a member list request.
+    WithoutMembers(Arc<RoomData>),
+
+    /// The room was not found in the database.
+    NotFound,
+
+    /// The room is currently unavailable (e.g. backlogged).
+    Unavailable(RoomUnavailable),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct RoomUnavailable {
+    pub reason: RoomUnavailableReason,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RoomUnavailableReason {
+    /// too many events were received and the room actor is backlogged
+    Backlogged,
+}
+
+#[derive(Debug, Clone)]
+pub struct RoomData {
+    pub room: Room,
+    pub members: ImMap<UserId, CachedRoomMember>,
+    pub channels: ImMap<ChannelId, CachedChannel>,
+    pub roles: ImMap<RoleId, CachedRole>,
+
+    /// loaded/active threads
+    pub threads: ImMap<ChannelId, CachedThread>,
+}
+
+/// Kameo messages for RoomActor
+pub struct GetSnapshot;
+
+pub struct EnsureMembers;
+
+pub struct SyncMessage {
+    pub sync: MessageSync,
+}
+
+pub struct MemberListCommandMsg {
+    pub key: crate::services::member_lists::util::MemberListKey,
+    pub cmd: crate::services::member_lists::actor::MemberListCommand,
+}
+
+pub struct MemberListSubscribeMsg {
+    pub key: crate::services::member_lists::util::MemberListKey,
+    pub events_tx:
+        tokio::sync::broadcast::Sender<crate::services::member_lists::actor::MemberListEvent>,
+}
+
+/// Internal message to clean up idle member lists
+pub struct CleanupIdleLists;
+
+/// A handle to a room actor.
+/// Contains both the ActorRef for sending commands and a watch receiver for snapshots.
+#[derive(Clone)]
+pub struct RoomHandle {
+    pub room_id: RoomId,
+    pub actor_ref: ActorRef<super::actor::RoomActor>,
+    pub snapshot_rx: watch::Receiver<Arc<RoomSnapshot>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CachedRoomMember {
+    /// the room member
+    pub member: RoomMember,
+
+    /// the user associated with the room member
+    pub user: Arc<User>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CachedThread {
+    /// the thread itself
+    pub thread: Channel,
+
+    /// thread members
+    pub members: ImMap<UserId, ThreadMember>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CachedChannel {
+    /// the channel itself
+    pub inner: Channel,
+
+    /// channel permission overwrites as bitfields
+    pub overwrites: ImMap<Uuid, CachedPermissionOverwrite>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CachedRole {
+    /// the role itself
+    pub inner: Role,
+
+    /// allowed permissions as a bitfield
+    pub allow: PermissionBits,
+
+    /// denied permissions as a bitfield
+    pub deny: PermissionBits,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CachedPermissionOverwrite {
+    /// id of role or user
+    pub id: Uuid,
+
+    /// whether this is for a user or role
+    pub ty: PermissionOverwriteType,
+
+    /// allowed permissions as a bitfield
+    pub allow: PermissionBits,
+
+    /// denied permissions as a bitfield
+    pub deny: PermissionBits,
+}
+
+impl RoomSnapshot {
+    pub fn get_data(&self) -> Option<&Arc<RoomData>> {
+        match self {
+            Self::Ready(data) | Self::WithoutMembers(data) => Some(data),
+            _ => None,
+        }
+    }
+
+    pub fn is_ready(&self) -> bool {
+        matches!(self, Self::Ready(_))
+    }
+
+    pub fn is_not_found(&self) -> bool {
+        matches!(self, Self::NotFound)
+    }
+
+    pub fn is_loading(&self) -> bool {
+        matches!(self, Self::Loading)
+    }
+
+    pub fn is_without_members(&self) -> bool {
+        matches!(self, Self::WithoutMembers(_))
+    }
+
+    pub fn is_unavailable(&self) -> bool {
+        matches!(self, Self::Unavailable(_))
+    }
+
+    pub fn get_member(&self, user_id: &UserId) -> Option<&CachedRoomMember> {
+        self.get_data()?.members.get(user_id)
+    }
+
+    pub fn get_channel(&self, channel_id: &ChannelId) -> Option<&CachedChannel> {
+        self.get_data()?.channels.get(channel_id)
+    }
+
+    pub fn get_role(&self, role_id: &RoleId) -> Option<&CachedRole> {
+        self.get_data()?.roles.get(role_id)
+    }
+
+    pub fn get_roles(&self) -> Option<Vec<Role>> {
+        let data = self.get_data()?;
+        Some(data.roles.values().map(|r| r.inner.clone()).collect())
+    }
+
+    pub fn ensure_sudo_if_needed(&self, auth: &Auth) -> Result<()> {
+        if let Some(data) = self.get_data() {
+            if data.room.security.require_sudo {
+                auth.ensure_sudo()?;
+            }
+
+            Ok(())
+        } else {
+            Err(Error::BadStatic("room not loaded yet"))
+        }
+    }
+
+    pub fn ensure_mfa_if_needed(&self, auth: &Auth) -> Result<()> {
+        if let Some(data) = self.get_data() {
+            if data.room.security.require_mfa {
+                if !auth.user.has_mfa.unwrap_or_default() {
+                    return Err(Error::BadStatic("mfa required for this action"));
+                }
+            }
+            Ok(())
+        } else {
+            Err(Error::BadStatic("room not loaded yet"))
+        }
+    }
+
+    pub fn ensure_feature(&self, feature: &RoomFeature) -> Result<()> {
+        if let Some(data) = self.get_data() {
+            if !data.room.features.0.contains(feature) {
+                return Err(Error::BadStatic("feature not enabled"));
+            }
+
+            Ok(())
+        } else {
+            Err(Error::BadStatic("room not loaded yet"))
+        }
+    }
+
+    pub fn channel_visibilities(
+        self: Arc<Self>,
+        user_id: UserId,
+        state: Arc<ServerStateInner>,
+    ) -> Vec<ChannelVisibility> {
+        let Some(data) = self.get_data() else {
+            return vec![];
+        };
+
+        let calc = PermissionsCalculator {
+            state,
+            room_id: data.room.id,
+            owner_id: data.room.owner_id,
+            public: data.room.public,
+            room: Arc::clone(&self),
+        };
+
+        data.channels
+            .values()
+            .filter_map(|chan| {
+                let perms = calc
+                    .query2(Some(user_id), Some(&chan.inner))
+                    .expect("room has data");
+
+                let Ok(perms) = perms.ensure_view() else {
+                    return None;
+                };
+
+                Some(ChannelVisibility {
+                    id: chan.inner.id,
+                    can_view_private_threads: perms.has(Permission::ThreadManage),
+                })
+            })
+            .collect()
+    }
+}

@@ -1,0 +1,105 @@
+use common::v1::types::{
+    AuditLogEntryId, AuditLogFilter, AuditLogPaginationResponse, PaginationQuery, RoomId,
+    audit_logs::resolve::AuditLogResolve,
+};
+
+use crate::prelude::*;
+
+pub struct ServiceAuditLogs {
+    state: Globals,
+}
+
+impl ServiceAuditLogs {
+    pub fn new(state: Globals) -> Self {
+        Self { state }
+    }
+
+    pub async fn list(
+        &self,
+        room_id: RoomId,
+        paginate: PaginationQuery<AuditLogEntryId>,
+        filter: AuditLogFilter,
+    ) -> Result<AuditLogPaginationResponse> {
+        let mut data = self.state.begin().await?;
+
+        let entries = data
+            .audit_logs_room_fetch(room_id, paginate, filter.clone())
+            .await?;
+
+        let mut resolve = AuditLogResolve::default();
+
+        for entry in &entries.items {
+            resolve.add(entry);
+        }
+
+        let srv = self.state.services();
+        let cached_room = srv.cache.load_room(room_id, false).await.ok();
+
+        let mut threads = Vec::new();
+        let mut missing_threads = Vec::new();
+
+        if let Some(snapshot) = &cached_room {
+            for thread_id in &resolve.threads {
+                if let Some(chan) = snapshot.get_data().unwrap().channels.get(thread_id) {
+                    threads.push(chan.inner.clone());
+                } else if let Some(thread) = snapshot.get_data().unwrap().threads.get(thread_id) {
+                    threads.push(thread.thread.clone());
+                } else {
+                    missing_threads.push(*thread_id);
+                }
+            }
+        } else {
+            // no cached room (e.g., user audit logs), treat all threads as missing
+            missing_threads.extend(resolve.threads.iter().cloned());
+        }
+
+        if !missing_threads.is_empty() {
+            let mut more_threads = srv.channels.get_many(&missing_threads, None).await?;
+            threads.append(&mut more_threads);
+        }
+
+        // NOTE: will this always remove everything?
+        threads.retain(|chan| !chan.is_archived() || chan.is_thread());
+
+        let user_ids: Vec<_> = resolve.users.iter().cloned().collect();
+        let users = srv.users.get_many(&user_ids).await?;
+
+        let mut room_members = Vec::new();
+        if let Some(cached_room) = &cached_room {
+            for user_id in &resolve.users {
+                if let Some(member) = cached_room.get_data().unwrap().members.get(user_id) {
+                    room_members.push(member.member.clone());
+                }
+            }
+        }
+
+        let mut webhooks = Vec::new();
+        for webhook_id in &resolve.webhooks {
+            if let Ok(webhook) = data.webhook_get(*webhook_id).await {
+                webhooks.push(webhook);
+            }
+        }
+
+        // TODO: batch fetch, include channel_id in query to use index
+        let mut tags = Vec::new();
+        for tag_id in &resolve.tags {
+            if let Ok(tag) = data.tag_get(*tag_id).await {
+                tags.push(tag);
+            }
+        }
+
+        // PERF: dont require awaiting for rollback
+        data.rollback().await?;
+
+        Ok(AuditLogPaginationResponse {
+            audit_log_entries: entries.items,
+            threads,
+            users,
+            room_members,
+            webhooks,
+            tags,
+            has_more: entries.has_more,
+            cursor: entries.cursor,
+        })
+    }
+}
