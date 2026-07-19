@@ -1,58 +1,10 @@
 use std::str::FromStr;
 
-use common::{v1::types::ChannelId, v2::types::RoomId};
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-
-/// a request to reindex stuff on the server
-#[derive(Debug, Clone)]
-pub struct Reindex {
-    /// reindex only these types of documents
-    pub doctypes: Vec<Doctype>,
-
-    /// reindex only documents in these rooms
-    ///
-    /// includes the room iself. empty vec means no filter.
-    pub room_ids: Vec<RoomId>,
-
-    /// reindex only documents in these channels
-    ///
-    /// includes the channel iself. empty vec means no filter.
-    pub channel_ids: Vec<ChannelId>,
-}
-
-/// a queue that needs to be reindexed
-#[derive(Debug, Clone)]
-pub struct SearchReindexQueue {
-    pub target: SearchReindexQueueTarget,
-    pub last_item_id: Option<Uuid>,
-}
-
-/// the target of a search reindex queue
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum SearchReindexQueueTarget {
-    /// messages in a channel
-    Messages(ChannelId),
-
-    /// channels on the server
-    Channels,
-
-    /// rooms on the server
-    Rooms,
-
-    /// users on the server
-    Users,
-
-    /// media on the server
-    Media,
-
-    /// audit log entries in a room
-    AuditLogEntries(RoomId),
-}
-
 /// the type of a tantivy document
-// TODO: remove, use crate-search instead
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+// TODO: derive serde?
+// TODO: use strum instead
+// #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Doctype {
     /// document represents a message
     Message,
@@ -85,18 +37,6 @@ pub enum Doctype {
     // RoomTemplate, // usage_count(sorting)
     // Emoji, // animated, usage_count(sorting)
     // Broadcasts, // member_count(sorting)
-}
-
-/// visibility settings for a single channel
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChannelVisibility {
-    /// the id of the channel
-    pub id: ChannelId,
-
-    /// whether to include private threads
-    ///
-    /// should be set to true if the `ThreadsManage` permission is enabled
-    pub can_view_private_threads: bool,
 }
 
 impl Doctype {
@@ -141,22 +81,6 @@ impl FromStr for Doctype {
             "AnalyticsEvent" => Ok(Doctype::AnalyticsEvent),
             "DocumentChange" => Ok(Doctype::DocumentChange),
             _ => Err(()),
-        }
-    }
-}
-
-impl Reindex {
-    /// check if this reindex request is empty (no filters)
-    pub fn is_empty(&self) -> bool {
-        self.doctypes.is_empty() && self.room_ids.is_empty() && self.channel_ids.is_empty()
-    }
-
-    /// create a new [`Reindex`] operation to reindex everything
-    pub fn everything() -> Self {
-        Self {
-            doctypes: vec![],
-            room_ids: vec![],
-            channel_ids: vec![],
         }
     }
 }
