@@ -22,7 +22,7 @@ use common::{
 };
 use slotmap::{Key, SlotMap};
 use str0m::Rtc;
-use tracing::{debug, trace, warn};
+use tracing::{debug, info, trace, warn};
 
 /// a shard's voice call data
 pub struct ShardCall {
@@ -86,10 +86,13 @@ impl ShardCall {
 
     pub fn remove_peer(&mut self, peer_slot: PeerSlot) {
         if let Some(peer) = self.peers.remove(peer_slot) {
+            info!(user_id = %peer.user_id(), channel_id = %self.channel_id, "remove peer");
             self.users.remove(&peer.user_id());
             self.paused.remove(&peer_slot);
             self.inbound.retain(|_, t| t.publisher != peer_slot);
             self.outbound.retain(|_, o| o.subscriber != peer_slot);
+        } else {
+            // TODO: warn
         }
     }
 
