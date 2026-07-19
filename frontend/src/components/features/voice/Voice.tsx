@@ -12,6 +12,7 @@ import {
 import { useApi } from "@/api";
 import { Icon } from "@/atoms/Icon";
 import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
+import { createTooltip } from "@/atoms/Tooltip";
 import { AvatarWithStatus } from "@/components/shared/User";
 import { useChannel } from "@/contexts/channel";
 import { getColor } from "@/lib/colors";
@@ -55,6 +56,27 @@ export const Voice = (p: { channel: Channel }) => {
 	const [voice, actions] = useVoice();
 	const [ch, chUpdate] = useChannel()!;
 
+	const deafenedTooltip = createTooltip({
+		tip: () => (voice.deafened ? "Undeafen" : "Deafen"),
+	});
+	const cameraTooltip = createTooltip({
+		tip: () => (voice.camera ? "Disable camera" : "Enable camera"),
+	});
+	const micTooltip = createTooltip({
+		tip: () => (voice.muted ? "Unmute" : "Mute"),
+	});
+	const screenshareTooltip = createTooltip({
+		tip: () => (voice.screensharing ? "Stop Screenshare" : "Start Screenshare"),
+	});
+	const musicTooltip = createTooltip({
+		tip: () => (voice.musicing ? "Stop Music" : "Play Music"),
+	});
+	const stopWatchingTooltip = createTooltip({
+		tip: () => "Stop Watching",
+	});
+	const disconnectTooltip = createTooltip({
+		tip: () => "Disconnect",
+	});
 
 	const getUsersWithoutStreams = () => {
 		const hasStream = new Set();
@@ -63,10 +85,7 @@ export const Voice = (p: { channel: Channel }) => {
 		}
 		const users = [];
 		for (const state of api.voiceStates.values()) {
-			if (
-				state.channel_id === p.channel.id &&
-				!hasStream.has(state.user_id)
-			) {
+			if (state.channel_id === p.channel.id && !hasStream.has(state.user_id)) {
 				users.push(state.user_id);
 			}
 		}
@@ -357,6 +376,7 @@ export const Voice = (p: { channel: Channel }) => {
 					<button
 						type="button"
 						class="button icon-button"
+						ref={deafenedTooltip.content}
 						onClick={() => actions.toggleDeafened()}
 					>
 						<ToggleIcon enabled={!voice.deafened} src={icHeadphones} />
@@ -364,6 +384,7 @@ export const Voice = (p: { channel: Channel }) => {
 					<button
 						type="button"
 						class="button icon-button"
+						ref={cameraTooltip.content}
 						onClick={() => actions.toggleCamera()}
 					>
 						<ToggleIcon enabled={voice.camera} src={icCamera} />
@@ -371,6 +392,7 @@ export const Voice = (p: { channel: Channel }) => {
 					<button
 						type="button"
 						class="button icon-button"
+						ref={micTooltip.content}
 						onClick={() => actions.toggleMicrophone()}
 					>
 						<ToggleIcon enabled={!voice.muted} src={icMic} />
@@ -378,6 +400,7 @@ export const Voice = (p: { channel: Channel }) => {
 					<button
 						type="button"
 						class="button icon-button"
+						ref={screenshareTooltip.content}
 						onClick={actions.toggleScreenshare}
 					>
 						<ToggleIcon enabled={voice.screensharing} src={icScreenshare} />
@@ -386,6 +409,7 @@ export const Voice = (p: { channel: Channel }) => {
 						<button
 							type="button"
 							class="button icon-button"
+							ref={musicTooltip.content}
 							onClick={actions.playMusic}
 						>
 							<ToggleIcon enabled={voice.musicing} src={icMusic} />
@@ -401,19 +425,20 @@ export const Voice = (p: { channel: Channel }) => {
 						<button
 							type="button"
 							class="button disconnect icon-button"
+							ref={stopWatchingTooltip.content}
 							onClick={() => {
 								unwatchStream(focused()!);
 								setFocused(null);
 							}}
 						>
 							{/* TODO: use a different icon for this */}
-							{/* TODO: add a tooltip "Stop Watching" */}
 							<Icon src={icExit} />
 						</button>
 					</Show>
 					<button
 						type="button"
 						class="button disconnect icon-button"
+						ref={disconnectTooltip.content}
 						onClick={actions.disconnect}
 					>
 						<Icon src={icExit} />
