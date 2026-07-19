@@ -159,17 +159,14 @@ export function UserMenu(props: UserMenuProps) {
 	};
 
 	const disconnect = () => {
-		api2.client.http.DELETE(
-			"/api/v1/voice/{thread_id}/member/{user_id}" as any,
-			{
-				params: {
-					path: {
-						thread_id: (userVoiceStates()[0] as any).thread_id,
-						user_id: props.user_id,
-					},
+		api2.client.http.DELETE("/api/v1/voice/{channel_id}/member/{user_id}", {
+			params: {
+				path: {
+					channel_id: userVoiceStates()[0].channel_id,
+					user_id: props.user_id,
 				},
 			},
-		);
+		});
 	};
 
 	const openDm = () => {
