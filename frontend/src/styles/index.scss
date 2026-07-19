@@ -1526,15 +1526,21 @@ input[type="text"].dropdown {
 
 	.channel-picker-input {
 		position: relative;
-		background: $bg-100;
+		background: $bg-150;
 		border: solid $sep-300 1px;
 		border-radius: 4px;
 		display: flex;
+		width: 100%;
 
 		& > input[type="text"].dropdown {
 			background: none;
 			border: none;
-			padding-left: 24px;
+			padding-left: 28px;
+
+			&.no-channel {
+				color: $fg-400;
+				font-style: italic;
+			}
 		}
 
 		&:focus-within {
@@ -1642,6 +1648,11 @@ input[type="text"].dropdown {
 	& > ul {
 		max-height: inherit;
 		overflow-y: auto;
+	}
+
+	.no-channel {
+		color: $fg-200;
+		font-style: italic;
 	}
 }
 
@@ -3515,6 +3526,23 @@ button.link {
 				margin: 0 4px;
 			}
 		}
+	}
+
+	.afk-settings {
+		display: flex;
+		padding: 8px;
+		gap: 8px;
+
+		& > div {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			align-items: stretch;
+		}
+	}
+
+	.hidden {
+		display: none;
 	}
 }
 

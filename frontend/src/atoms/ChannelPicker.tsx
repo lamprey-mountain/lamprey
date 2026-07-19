@@ -101,6 +101,7 @@ export function createChannelPicker(props: {
 	filter?: (channel: Channel) => boolean;
 	style?: JSX.CSSProperties;
 	class?: string;
+	required?: boolean;
 }) {
 	const [shown, setShown] = createSignal(false);
 	const [inputEl, setInputEl] = createSignal<HTMLInputElement>();
@@ -135,12 +136,20 @@ export function createChannelPicker(props: {
 	const options = createMemo(() => {
 		const channels = props.channels();
 		const filter = props.filter;
-		return channels
+		const required = props.required ?? true;
+		const opts = channels
 			.filter((c) => !filter || filter(c))
 			.map((c) => ({
 				channel: c,
 				label: c.name,
 			}));
+		if (!required) {
+			opts.unshift({
+				channel: null as unknown as Channel,
+				label: "no channel",
+			});
+		}
+		return opts;
 	});
 
 	createEffect(() => {
@@ -236,7 +245,7 @@ export function createChannelPicker(props: {
 		if (!shown()) return;
 		const hovered = selector.getHovered();
 		if (!hovered) return;
-		const itemId = `channel-option-${hovered.channel.id}`;
+		const itemId = `channel-option-${hovered.channel?.id}`;
 		const el = document.getElementById(itemId);
 		if (el) {
 			el.scrollIntoView({ block: "nearest" });
@@ -286,6 +295,9 @@ export function createChannelPicker(props: {
 						<input
 							type="text"
 							class="dropdown"
+							classList={{
+								"no-channel": selected() === null,
+							}}
 							ref={setInputEl}
 							placeholder={props.placeholder ?? "select a channel..."}
 							value={value()}
@@ -356,11 +368,13 @@ export function createChannelPicker(props: {
 										fallback={<li class="no-results">no channels</li>}
 									>
 										{(entry) => {
-											const itemId = `channel-option-${entry.obj.channel.id}`;
+											const itemId = `channel-option-${entry.obj.channel?.id ?? "none"}`;
 											const isHovered = () =>
-												entry.obj.channel.id === hoveredChannel()?.id;
+												(entry.obj.channel?.id ?? null) ===
+												(hoveredChannel()?.id ?? null);
 											const isSelected = () =>
-												entry.obj.channel.id === selectedChannel()?.id;
+												(entry.obj.channel?.id ?? null) ===
+												(selectedChannel()?.id ?? null);
 
 											return (
 												<li
@@ -385,11 +399,18 @@ export function createChannelPicker(props: {
 															gap: "8px",
 														}}
 													>
-														<ChannelIcon
-															channel={entry.obj.channel}
-															style="width: 20px; height: 20px;"
-														/>
-														<span>{entry.obj.label}</span>
+														<Show
+															when={entry.obj.channel}
+															fallback={
+																<span class="no-channel">no channel</span>
+															}
+														>
+															<ChannelIcon
+																channel={entry.obj.channel}
+																style="width: 20px; height: 20px;"
+															/>
+															<span>{entry.obj.label}</span>
+														</Show>
 													</div>
 												</li>
 											);
@@ -413,6 +434,7 @@ export function ChannelPicker(props: {
 	mount?: Element | DocumentFragment | null;
 	placeholder?: string;
 	filter?: (channel: Channel) => boolean;
+	required?: boolean;
 }) {
 	const picker = createChannelPicker({
 		get selected() {
@@ -423,6 +445,7 @@ export function ChannelPicker(props: {
 		mount: props.mount,
 		placeholder: props.placeholder,
 		filter: props.filter,
+		required: props.required,
 	});
 
 	return <picker.View style={props.style} />;

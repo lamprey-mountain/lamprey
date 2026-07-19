@@ -2,7 +2,6 @@ import type { EditorState } from "prosemirror-state";
 import { createUpload } from "sdk";
 import { createSignal, onMount, Show, type VoidProps } from "solid-js";
 import { useApi, useChannels } from "@/api";
-import { useCtx } from "@/app/context";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { Checkbox } from "@/atoms/icons";
 import { Savebar } from "@/atoms/Savebar";
@@ -11,10 +10,16 @@ import { RoomIcon } from "@/components/shared/User";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal";
-import type { RoomT } from "@/types";
+import type { ChannelT, RoomT } from "@/types";
+import { ChannelPicker } from "@/atoms/ChannelPicker";
+import { DurationInput } from "@/atoms/DurationInput";
+
+// TODO: add welcome channel id config
+// TODO: configure or remove room banner
 
 export function Info(props: VoidProps<{ room: RoomT }>) {
 	const [, modalCtl] = useModals();
+	const channels = useChannels();
 
 	let avatarInputEl!: HTMLInputElement;
 
@@ -56,6 +61,15 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		props.room.description,
 	);
 	const [editingPublic, setEditingPublic] = createSignal(props.room.public);
+	const [editingAfkChannel, setEditingAfkChannel] =
+		createSignal<ChannelT | null>(
+			[...channels.cache.values()].find(
+				(c) => c.id === props.room.afk_channel_id,
+			) ?? null,
+		);
+	const [editingAfkTimeout, setEditingAfkTimeout] = createSignal(
+		props.room.afk_channel_timeout / 1000,
+	);
 	const [editorState, setEditorState] = createSignal<EditorState | undefined>(
 		undefined,
 	);
@@ -81,7 +95,9 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 	const isDirty = () =>
 		editingName() !== props.room.name ||
 		getDescriptionFromState() !== props.room.description ||
-		editingPublic() !== props.room.public;
+		editingPublic() !== props.room.public ||
+		(editingAfkChannel()?.id ?? null) !== (props.room.afk_channel_id ?? null) ||
+		editingAfkTimeout() * 1000 !== props.room.afk_channel_timeout;
 
 	const getDescriptionFromState = () => {
 		const state = editorState();
@@ -91,9 +107,17 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 
 	const save = () => {
 		const description = getDescriptionFromState();
-		const body: { name: string; public: boolean; description?: string } = {
+		const body: {
+			name: string;
+			public: boolean;
+			description?: string;
+			afk_channel_id?: string | null;
+			afk_channel_timeout?: number;
+		} = {
 			name: editingName(),
 			public: editingPublic(),
+			afk_channel_id: editingAfkChannel()?.id ?? null,
+			afk_channel_timeout: editingAfkTimeout() * 1000,
 		};
 		if (description.trim() !== "") {
 			body.description = description;
@@ -104,15 +128,16 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		});
 	};
 
-	const channels2 = useChannels();
-	const threads = () =>
-		[...channels2.cache.values()].filter((c) => c.room_id === props.room.id);
+	const roomChannels = () =>
+		[...channels.cache.values()].filter((c) => c.room_id === props.room.id);
+
+	// FIXME: button to archive all threads
 	const _archiveAllThreads = () => {
 		modalCtl.confirm("really archive everything?", (confirmed) => {
 			if (!confirmed) return;
-			console.log(threads());
-			for (const thread of threads()) {
-				channels2.archive(thread.id);
+			console.log(roomChannels());
+			for (const thread of roomChannels()) {
+				channels.archive(thread.id);
 			}
 		});
 	};
@@ -121,6 +146,12 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		setEditingName(props.room.name);
 		setEditingDescription(props.room.description);
 		setEditingPublic(props.room.public);
+		setEditingAfkChannel(
+			[...channels.cache.values()].find(
+				(c) => c.id === props.room.afk_channel_id,
+			) ?? null,
+		);
+		setEditingAfkTimeout(props.room.afk_channel_timeout / 1000);
 	};
 
 	return (
@@ -147,7 +178,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 							</button>
 						</Show>
 						<input
-							style="display:none"
+							class="hidden"
 							ref={avatarInputEl}
 							type="file"
 							onInput={(e) => {
@@ -194,6 +225,34 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 					<div class="dim">anyone can join and view</div>
 				</div>
 			</CheckboxOption>
+			<div class="afk-settings">
+				<div>
+					<h3 class="dim">afk channel</h3>
+					<ChannelPicker
+						selected={editingAfkChannel()}
+						channels={roomChannels}
+						filter={(c) => c.type === "Voice" || c.type === "Broadcast"}
+						onSelect={(channel) => setEditingAfkChannel(channel ?? null)}
+						placeholder="Select a channel..."
+						required={false}
+					/>
+				</div>
+				<div>
+					<h3 class="dim">afk timeout</h3>
+					<DurationInput
+						onInput={(duration) => setEditingAfkTimeout(duration)}
+						placeholder="select a duration..."
+						presets={[
+							{ label: "1 minute", seconds: 60 },
+							{ label: "5 minutes", seconds: 60 * 5 },
+							{ label: "10 minutes", seconds: 60 * 10 },
+							{ label: "15 minutes", seconds: 60 * 15 },
+							{ label: "1 hour", seconds: 60 * 60 },
+						]}
+						value={editingAfkTimeout()}
+					/>
+				</div>
+			</div>
 			<Savebar show={isDirty()} onCancel={reset} onSave={save} />
 		</div>
 	);
