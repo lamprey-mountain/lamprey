@@ -122,17 +122,23 @@ impl ServiceVoice {
                         match msg {
                             Some(Ok(axum::extract::ws::Message::Text(text))) => {
                                 // handle incoming event
-                                if let Ok(event) = serde_json::from_str::<SfuEvent>(&text) {
-                                    if let Err(e) = state.services().voice.sfu_handle_event(sfu_id, event).await {
-                                        error!("Error handling SFU event: {:?}", e);
+                                match serde_json::from_str::<SfuEvent>(&text) {
+                                    Ok(event) => {
+                                        if let Err(e) = state.services().voice.sfu_handle_event(sfu_id, event).await {
+                                            error!("Error handling SFU event: {:?}", e);
+                                        }
+                                    }
+                                    Err(err) => {
+                                        error!("Error deserializing SFU event: {:?}", err);
                                     }
                                 }
                             }
-                            Some(Ok(axum::extract::ws::Message::Close(_frame))) => {
-                                // let clean = frame
-                                //     .as_ref()
-                                //     .map(|cf| is_clean_close(cf.code.into()))
-                                //     .unwrap_or(true);
+                            Some(Ok(axum::extract::ws::Message::Close(frame))) => {
+                                let clean = frame
+                                    .as_ref()
+                                    .map(|cf| is_clean_close(cf.code.into()))
+                                    .unwrap_or(true);
+                                debug!(%sfu_id, %clean, "sfu websocket closed");
                                 break;
                             }
                             None => {
@@ -151,6 +157,8 @@ impl ServiceVoice {
     }
 
     pub(crate) async fn sfu_handle_event(&self, sfu_id: SfuId, event: SfuEvent) -> Result<()> {
+        debug!(?sfu_id, "got sfu event: {event:#?}");
+
         let srv = self.state.services();
 
         match event {
@@ -521,4 +529,11 @@ impl ServiceVoice {
 
         actions
     }
+}
+
+// TODO: deduplicate with crate-backend/src/sync/transport.rs
+/// WebSocket close codes that indicate a clean/normal closure
+fn is_clean_close(code: u16) -> bool {
+    // 1000 = Normal Closure, 1001 = Going Away
+    code == 1000 || code == 1001
 }
