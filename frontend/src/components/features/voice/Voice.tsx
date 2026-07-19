@@ -44,16 +44,6 @@ export const Voice = (p: { channel: Channel }) => {
 	const [voice, actions] = useVoice();
 	const [ch, chUpdate] = useChannel()!;
 
-	// FIXME: this seems to be very janky
-	createEffect(
-		on(
-			() => p.channel.id,
-			(tid) => {
-				if (!voice.joinedChannelId || voice.joinedChannelId !== tid)
-					actions.selectChannel(tid);
-			},
-		),
-	);
 
 	const getUsersWithoutStreams = () => {
 		const hasStream = new Set();
@@ -63,7 +53,7 @@ export const Voice = (p: { channel: Channel }) => {
 		const users = [];
 		for (const state of api.voiceStates.values()) {
 			if (
-				(state as any).thread_id === p.channel.id &&
+				state.channel_id === p.channel.id &&
 				!hasStream.has(state.user_id)
 			) {
 				users.push(state.user_id);

@@ -512,6 +512,7 @@ export const ItemChannel = (props: {
 	const user = useCurrentUser();
 	const currentUserId = () => user()?.id;
 	const [hovered, setHovered] = createSignal(false);
+	const [voice, voiceActions] = useVoice();
 	const { isMobile } = useDisplay();
 
 	const handleClick = (_e: MouseEvent) => {
@@ -528,6 +529,15 @@ export const ItemChannel = (props: {
 					console.warn("could not find chat!");
 				}
 			});
+		}
+
+		if (props.channel.type === "Voice" || props.channel.type === "Broadcast") {
+			if (
+				!voice.joinedChannelId ||
+				voice.joinedChannelId !== props.channel.id
+			) {
+				voiceActions.selectChannel(props.channel.id);
+			}
 		}
 	};
 
