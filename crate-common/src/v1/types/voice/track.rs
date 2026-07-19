@@ -14,11 +14,29 @@ use crate::v1::types::{
 /// a unique identifier for a media track
 ///
 /// `TrackId`s are server assigned and unique inside each active call.
-// TODO: value type u64?
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(value_type = String))]
 pub struct TrackId(pub u64);
+
+#[cfg(feature = "serde")]
+mod _s {
+    use super::*;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    impl Serialize for TrackId {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            serializer.serialize_str(&self.0.to_string())
+        }
+    }
+
+    impl<'de> Deserialize<'de> for TrackId {
+        fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+            let s = String::deserialize(deserializer)?;
+            let id = s.parse::<u64>().map_err(serde::de::Error::custom)?;
+            Ok(TrackId(id))
+        }
+    }
+}
 
 /// the metadata for a track
 // TODO: rename to TrackMetadata
