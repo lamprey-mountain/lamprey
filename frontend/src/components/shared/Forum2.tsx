@@ -188,27 +188,47 @@ export const Forum2 = (props: { channel: Channel }) => {
 
 	// TODO: Implement proper pagination for threads
 
-	const getThreads = () => {
-		const list = getThreadsList()?.();
-		if (!list) return [];
-		const items = list.state.ids
-			.map((id) => channels2.cache.get(id))
-			.filter(
-				(t): t is Channel =>
-					t !== undefined && t.parent_id === props.channel.id,
-			);
-		// sort descending by id
+	const sortThreads = (items: Channel[]) => {
 		return [...items].sort((a, b) => {
 			if (sortBy() === "new") {
 				return a.id < b.id ? 1 : -1;
 			} else if (sortBy() === "activity") {
-				// activity
 				const tA = hasLastVersionId(a) ? a.last_version_id : a.id;
 				const tB = hasLastVersionId(b) ? b.last_version_id : b.id;
 				return tA < tB ? 1 : -1;
 			}
 			return 0;
 		});
+	};
+
+	const getActiveThreads = () => {
+		const list = activeThreads()?.state.ids || [];
+		const items = list
+			.map((id) => channels2.cache.get(id))
+			.filter(
+				(t): t is Channel => t !== undefined && t.parent_id === props.channel.id,
+			);
+		return sortThreads(items);
+	};
+
+	const getArchivedThreads = () => {
+		const list = archivedThreads()?.state.ids || [];
+		const items = list
+			.map((id) => channels2.cache.get(id))
+			.filter(
+				(t): t is Channel => t !== undefined && t.parent_id === props.channel.id,
+			);
+		return sortThreads(items);
+	};
+
+	const getRemovedThreads = () => {
+		const list = removedThreads()?.state.ids || [];
+		const items = list
+			.map((id) => channels2.cache.get(id))
+			.filter(
+				(t): t is Channel => t !== undefined && t.parent_id === props.channel.id,
+			);
+		return sortThreads(items);
 	};
 
 	function createThread() {
@@ -251,7 +271,10 @@ export const Forum2 = (props: { channel: Channel }) => {
 				</Show>
 				<div style="display:flex; align-items:center">
 					<h3 style="font-size:1rem; margin-top:8px;flex:1">
-						{getThreads().length} {threadFilter()} threads
+						{threadFilter() === "active"
+							? getActiveThreads().length
+							: getRemovedThreads().length}{" "}
+						{threadFilter()} threads
 					</h3>
 					{/* TODO: move .sort-view-container into a separate component */}
 					<div class="sort-view-container">
@@ -434,15 +457,51 @@ export const Forum2 = (props: { channel: Channel }) => {
 						</Show>
 					</div>
 				</div>
-				<ul>
-					<For each={getThreads()}>
-						{(thread) => (
-							<li>
-								<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
-							</li>
-						)}
-					</For>
-				</ul>
+				<Show when={threadFilter() === "active"}>
+					<ul>
+						<For each={getActiveThreads()}>
+							{(thread) => (
+								<li>
+									<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
+								</li>
+							)}
+						</For>
+					</ul>
+					<h3 class="dim" style="margin-top:16px;">
+						older threads
+					</h3>
+					<ul>
+						<For each={getArchivedThreads()}>
+							{(thread) => (
+								<li>
+									<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
+								</li>
+							)}
+						</For>
+					</ul>
+				</Show>
+				<Show when={threadFilter() === "archived"}>
+					<ul>
+						<For each={getArchivedThreads()}>
+							{(thread) => (
+								<li>
+									<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
+								</li>
+							)}
+						</For>
+					</ul>
+				</Show>
+				<Show when={threadFilter() === "removed"}>
+					<ul>
+						<For each={getRemovedThreads()}>
+							{(thread) => (
+								<li>
+									<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
+								</li>
+							)}
+						</For>
+					</ul>
+				</Show>
 				<div ref={setBottom}></div>
 			</div>
 		</div>
@@ -839,7 +898,7 @@ const _ThreadLog = (props: {
 	const commentTree = () => props.commentTree;
 
 	return (
-		<div class="aside">
+		<aside class="aside">
 			<h3 class="dim">thread info</h3>
 			<ul>
 				<li>tags: [foo] [bar] [baz]</li>
@@ -861,7 +920,7 @@ const _ThreadLog = (props: {
 				<li>[user] removed [member] from the thread</li>
 				<li>mentioned in [thread]</li>
 			</ul>
-		</div>
+		</aside>
 	);
 };
 
