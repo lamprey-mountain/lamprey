@@ -1,6 +1,6 @@
 import type { VoidProps } from "solid-js";
 import { tick } from "@/hooks/tick";
-import { tooltip } from "./Tooltip";
+import { createTooltip } from "./Tooltip";
 
 export function timeAgo(date: Date): string {
 	const diff = Date.now() - +date;
@@ -70,18 +70,19 @@ type TimeProps = {
 export function Time(props: VoidProps<TimeProps>) {
 	const date = () => ("date" in props ? props.date : new Date(props.ts));
 
-	const wrap = (
-		<time datetime={date().toISOString()} class={`time ${props.class ?? ""}`}>
+	const tooltip = createTooltip({
+		animGroup: props.animGroup,
+		placement: "left-start",
+		tip: () => date().toDateString(),
+	});
+
+	return (
+		<time
+			datetime={date().toISOString()}
+			class={`time ${props.class ?? ""}`}
+			ref={tooltip.content}
+		>
 			{(tick(), formatTime(date(), props.format ?? "relative"))}
 		</time>
-	) as HTMLElement;
-
-	return tooltip(
-		{
-			animGroup: props.animGroup,
-			placement: "left-start",
-		},
-		() => date().toDateString(),
-		wrap,
 	);
 }

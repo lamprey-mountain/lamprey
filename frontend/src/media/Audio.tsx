@@ -16,7 +16,7 @@ import iconVolumeMax from "@/assets/volume-max.png";
 import iconVolumeMedium from "@/assets/volume-medium.png";
 import iconVolumeMute from "@/assets/volume-mute.png";
 import { Icon } from "@/atoms/Icon";
-import { tooltip } from "@/atoms/Tooltip.tsx";
+import { createTooltip } from "@/atoms/Tooltip.tsx";
 import {
 	formatBytes,
 	formatTime,
@@ -202,6 +202,31 @@ export const AudioView = (props: MediaProps) => {
 		}
 	});
 
+	const volumeTooltip = createTooltip({
+		placement: "top-start",
+		interactive: true,
+		doesntRetain: "input[type=range]",
+		tip: () => (
+			<div class="range" onWheel={handleVolumeWheel}>
+				<input
+					type="range"
+					min={0}
+					max={1.5}
+					value={volume()}
+					disabled={muted()}
+					step={0.001}
+					list={volumeDatalistId}
+					onInput={(e) => setVolume(e.target.valueAsNumber)}
+				/>
+				<datalist id={volumeDatalistId}>
+					<option value="1" label="100%"></option>
+				</datalist>
+				<div class="dim">(click to mute)</div>
+				<div class="value">{getVolumeText()}</div>
+			</div>
+		),
+	});
+
 	return (
 		<article class="audio">
 			<svg
@@ -268,43 +293,16 @@ export const AudioView = (props: MediaProps) => {
 						alt={playing() ? "pause" : "play"}
 					/>
 				</button>
-				{tooltip(
-					{
-						placement: "top-start",
-						interactive: true,
-						doesntRetain: "input[type=range]",
-					},
-					(
-						<div class="range" onWheel={handleVolumeWheel}>
-							<input
-								type="range"
-								min={0}
-								max={1.5}
-								value={volume()}
-								disabled={muted()}
-								step={0.001}
-								list={volumeDatalistId}
-								onInput={(e) => setVolume(e.target.valueAsNumber)}
-							/>
-							<datalist id={volumeDatalistId}>
-								<option value="1" label="100%"></option>
-							</datalist>
-							<div class="dim">(click to mute)</div>
-							<div class="value">{getVolumeText()}</div>
-						</div>
-					) as ValidComponent,
-					(
-						<button
-							type="button"
-							class="button"
-							onClick={toggleMute}
-							title={getVolumeText()}
-							onWheel={handleVolumeWheel}
-						>
-							<Icon src={getVolumeIcon()} alt={getVolumeText()} />
-						</button>
-					) as HTMLElement,
-				)}
+				<button
+					type="button"
+					class="button"
+					onClick={toggleMute}
+					title={getVolumeText()}
+					onWheel={handleVolumeWheel}
+					ref={volumeTooltip.content}
+				>
+					<Icon src={getVolumeIcon()} alt={getVolumeText()} />
+				</button>
 				<div class="space"></div>
 				<div
 					class="time"

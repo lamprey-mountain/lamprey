@@ -47,171 +47,6 @@ type TooltipAnimState = {
 
 const tooltipAnimSuppress = new Map<string, TooltipAnimState>();
 
-// TODO: only use one tooltip + event listener instead of per element
-// or, debug performance issues in geneal
-export function tooltip(
-	props: TooltipProps,
-	tip: ValidComponent,
-	wrap: HTMLElement,
-) {
-	const [contentEl, setContentEl] = createSignal<HTMLElement>();
-	const [tipEl, setTipEl] = createSignal<HTMLDivElement>();
-	// const [title, setTitle] = createSignal(getTitle());
-	const [visible, setVisible] = createSignal(false);
-	const [animate, setAnimate] = createSignal(true);
-	let popupRemoveTimeout: NodeJS.Timeout;
-	let isHovered = false;
-	const overlayEl = document.getElementById("overlay")!;
-	const padding = () => 8;
-
-	if (props.animGroup) {
-		const s = tooltipAnimSuppress.get(props.animGroup);
-		if (!s) {
-			tooltipAnimSuppress.set(props.animGroup, {
-				shouldAnim: true,
-				timeout: 0 as unknown as NodeJS.Timeout,
-			});
-		}
-	}
-
-	function getTitle() {
-		return props.tipText ?? (typeof tip === "string" ? tip : "");
-	}
-
-	function showTip() {
-		clearTimeout(popupRemoveTimeout);
-		isHovered = true;
-		if (visible()) return;
-		if (props.animGroup) {
-			const s = tooltipAnimSuppress.get(props.animGroup)!;
-			// console.log(s);
-			setAnimate(s.shouldAnim);
-			s.shouldAnim = false;
-			clearTimeout(s.timeout);
-		}
-		setVisible(true);
-		wrap.title = "";
-	}
-
-	function hideTip() {
-		// TODO: exit animations? might be too much
-		wrap.title = getTitle();
-		setVisible(false);
-		if (props.animGroup) {
-			const s = tooltipAnimSuppress.get(props.animGroup)!;
-			s.timeout = setTimeout(() => {
-				s.shouldAnim = true;
-			}, 500);
-		}
-		isHovered = false;
-	}
-
-	function considerHidingTip() {
-		// FIXME: nested popups/tooltips can cause issues with isHovered
-		// maybe have global set of what is hovered and what is a parent of what
-		isHovered = false;
-		if (!props.interactive) return hideTip();
-		if (
-			props.doesntRetain &&
-			document.activeElement?.matches(props.doesntRetain)
-		)
-			return hideTip();
-		if (tipEl()?.contains(document.activeElement)) return;
-		popupRemoveTimeout = setTimeout(hideTip, 0);
-	}
-
-	function showTipIfInteractive() {
-		if (props.interactive) showTip();
-	}
-
-	function handleFocusOff() {
-		if (!isHovered) hideTip();
-	}
-
-	let arrowEl!: HTMLElement;
-
-	function middleware(props: TooltipProps) {
-		const m = [shift({ padding: padding() })];
-
-		// HACK: make volume slider work properly
-		if (props.placement === "top-start") {
-			m.push(offset({ mainAxis: -8 }));
-		} else {
-			m.push(offset({ mainAxis: 8 }));
-		}
-
-		m.push(flip());
-
-		if (props.arrow ?? true) {
-			m.push(solidArrow({ element: () => arrowEl, padding: 4 }));
-		}
-		return m;
-	}
-
-	const pos = useFloating(contentEl, tipEl, {
-		whileElementsMounted: autoUpdate,
-		strategy: "fixed",
-		placement: props.placement,
-		middleware: middleware(props),
-	});
-
-	createEffect(() => {
-		const a = pos.middlewareData.arrow;
-		const el = arrowEl;
-		if (a && el) {
-			el.style.translate = `${Math.round(a.x ?? 0)}px ${Math.round(a.y ?? 0)}px`;
-			el.dataset.placement = pos.placement;
-		}
-	});
-
-	createEffect(() => {
-		wrap.addEventListener("mouseenter", showTip);
-		wrap.addEventListener("mouseleave", considerHidingTip);
-		onCleanup(() => {
-			wrap.removeEventListener("mouseenter", showTip);
-			wrap.removeEventListener("mouseleave", considerHidingTip);
-		});
-	});
-
-	onMount(() => {
-		setContentEl(wrap);
-	});
-
-	// TODO: use onPointerEnter/Leave instead of mouse events?
-	return (
-		<>
-			{wrap}
-			<Show when={visible()}>
-				<Portal mount={props.mount ?? overlayEl}>
-					<div
-						onMouseEnter={showTipIfInteractive}
-						onMouseLeave={considerHidingTip}
-						onFocusOut={handleFocusOff}
-						ref={setTipEl}
-						style={{
-							position: pos.strategy,
-							translate: `${Math.round(pos.x ?? 0)}px ${Math.round(pos.y ?? 0)}px`,
-							visibility: visible() ? "visible" : "hidden",
-							"--padding": `${padding()}px`,
-						}}
-						class="tooltip"
-						classList={{
-							animate: animate(),
-							interactive: props.interactive,
-						}}
-					>
-						<div class="base"></div>
-						<div class="inner">{tip as any}</div>
-						<Show when={props.arrow ?? true}>
-							<FloatingArrow ref={arrowEl!} />
-						</Show>
-					</div>
-				</Portal>
-			</Show>
-		</>
-	);
-}
-
 type CreateTooltipProps = Omit<TooltipProps, "mount"> & {
 	tip: () => JSXElement;
 	mount?: () => HTMLElement | undefined;
@@ -347,11 +182,15 @@ export function createTooltip(props: CreateTooltipProps) {
 				setContentEl(el);
 				el.addEventListener("mouseenter", showTip);
 				el.addEventListener("mouseleave", considerHidingTip);
+				el.addEventListener("focus", showTip);
+				el.addEventListener("blur", considerHidingTip);
 			});
 
 			onCleanup(() => {
 				el.removeEventListener("mouseenter", showTip);
 				el.removeEventListener("mouseleave", considerHidingTip);
+				el.removeEventListener("focus", showTip);
+				el.removeEventListener("blur", considerHidingTip);
 				setVisible(false);
 			});
 

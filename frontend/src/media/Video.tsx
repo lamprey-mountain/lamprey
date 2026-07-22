@@ -110,8 +110,6 @@ export const VideoView = (props: MediaProps) => {
 			</div>
 		),
 	});
-	// biome-ignore
-	const vtc = volumeTooltip.content;
 
 	function createOverlayFlash(el: () => HTMLElement) {
 		let fadeAnim: Animation | undefined;
@@ -492,8 +490,7 @@ export const VideoView = (props: MediaProps) => {
 							onClick={toggleMute}
 							title={getVolumeText()}
 							onWheel={handleVolumeWheel}
-							// @ts-expect-error - use:vtc is a directive
-							use:vtc
+							ref={volumeTooltip.content}
 						>
 							<Icon src={getVolumeIcon()} alt={getVolumeText()} />
 						</button>
