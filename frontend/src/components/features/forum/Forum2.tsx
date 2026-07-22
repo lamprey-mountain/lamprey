@@ -63,21 +63,22 @@ import { flags } from "@/lib/flags";
 import { md } from "@/lib/markdown";
 import { getMessageOverrideName } from "@/utils/general";
 import { icChevron } from "@/utils/icons.ts";
-import { RenderUploadItem } from "../features/chat/Input";
-import { MessageToolbarMount } from "../features/chat/MessageToolbar.tsx";
+import { RenderUploadItem } from "../chat/Input.tsx";
+import { MessageToolbarMount } from "../chat/MessageToolbar.tsx";
 import {
 	MessageToolbarProvider,
 	useMessageToolbar,
-} from "../features/chat/message-toolbar-context.tsx";
-import { highlight } from "../features/chat/util.ts";
-import { Forum2CreateForm } from "./Forum2CreateForm.tsx";
+} from "../chat/message-toolbar-context.tsx";
+import { highlight } from "../chat/util.ts";
+import { Forum2CreateForm } from "../../shared/Forum2CreateForm.tsx";
 import {
 	type Forum2Sort,
 	Forum2Sorting,
 	type Forum2View,
-} from "./Forum2Sorting.tsx";
+} from "../../shared/Forum2Sorting.tsx";
 import { ThreadCard } from "./ThreadCard.tsx";
-import { ChannelIcon } from "./User";
+import { ChannelIcon } from "../../shared/User.tsx";
+import { useTimeline } from "../chat/timeline-context.tsx";
 
 // Type guard for RoomMember with override_name
 function hasOverrideName(
@@ -235,6 +236,14 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const currentUser = useCurrentUser();
 	const user_id = () => currentUser()?.id;
 	const perms = usePermissions(user_id, room_id, () => undefined);
+
+	// TODO: implement this
+	const timeline = useTimeline();
+	timeline.commands.on("scrollBy", () => {});
+	timeline.commands.on("jumpToBottom", () => {});
+	timeline.commands.on("jumpToTop", () => {});
+	timeline.commands.on("jumpToMessage", () => {});
+	timeline.commands.on("ackMessage", () => {});
 
 	return (
 		<div class="forum2">
@@ -993,21 +1002,21 @@ const Comment = (props: {
 
 	let contentEl!: HTMLElement;
 
-	// FIXME
-	createEffect(() => {
-		const hl = ch.highlight;
-		if (hl === message().id) {
-			// expand parent comments
-			// props.expand(); // TODO: we need a way to expand parents if they are collapsed
-			// for now we just scroll to it
-			const el = contentEl?.closest(".comment");
-			if (el) {
-				el.scrollIntoView({ block: "center" });
-				highlight(el);
-				chUpdate("highlight", undefined);
-			}
-		}
-	});
+	// FIXME: use timeline.commands instead
+	// createEffect(() => {
+	// 	const hl = ch.highlight;
+	// 	if (hl === message().id) {
+	// 		// expand parent comments
+	// 		// props.expand(); // TODO: we need a way to expand parents if they are collapsed
+	// 		// for now we just scroll to it
+	// 		const el = contentEl?.closest(".comment");
+	// 		if (el) {
+	// 			el.scrollIntoView({ block: "center" });
+	// 			highlight(el);
+	// 			chUpdate("highlight", undefined);
+	// 		}
+	// 	}
+	// });
 
 	return (
 		<div

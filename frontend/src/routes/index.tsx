@@ -31,12 +31,12 @@ import { Voice } from "@/components/features/voice/Voice.tsx";
 import { Calendar } from "@/components/shared/Calendar";
 import { Category } from "@/components/shared/Category";
 import { ChannelNav } from "@/components/shared/ChannelNav";
-import { Forum } from "@/components/shared/Forum";
+import { Forum } from "@/components/features/forum/Forum";
 import {
 	Forum2,
 	Forum2Thread,
 	Forum2ThreadPage,
-} from "@/components/shared/Forum2";
+} from "@/components/features/forum/Forum2";
 import { Friends } from "@/components/shared/Friends";
 import { Home } from "@/components/shared/Home";
 import { Inbox } from "@/components/shared/Inbox";
