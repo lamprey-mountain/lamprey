@@ -1260,14 +1260,16 @@ function SystemMessageThreadCreated(props: SystemMessageProps) {
 			type="button"
 			class="link"
 			onClick={(e) => {
-				e.stopPropagation();
-				const ref = ctx.headerThreadsButtonRef() ?? e.currentTarget;
-				queueMicrotask(() => {
-					ctx.setThreadsView({
-						channel_id: props.message.channel_id,
-						ref,
+				if (!ctx.threadsView()) {
+					e.stopPropagation();
+					const ref = ctx.headerThreadsButtonRef() ?? e.currentTarget;
+					queueMicrotask(() => {
+						ctx.setThreadsView({
+							channel_id: props.message.channel_id,
+							ref,
+						});
 					});
-				});
+				}
 			}}
 		>
 			{text}
