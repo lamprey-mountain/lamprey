@@ -10,7 +10,7 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import { useChannels, useThreads } from "@/api";
+import { useChannels, usePreferences, useThreads } from "@/api";
 import { useCtx } from "@/app/context";
 import { ChannelIcon } from "@/components/shared/User";
 import { useModals } from "@/contexts/modal.tsx";
@@ -22,6 +22,9 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 	const navigate = useNavigate();
 	const [search, setSearch] = createSignal("");
 	const [debouncedSearch, setDebouncedSearch] = createSignal("");
+	const prefsService = usePreferences();
+	const prefs = prefsService.useRead();
+	const openInSidebar = () => prefs.frontend.threads_sidebar_text === "yes"; // TODO: use this
 
 	const debouncedSetSearch = debounce(
 		(value: string) => setDebouncedSearch(value),

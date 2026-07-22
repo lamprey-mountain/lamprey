@@ -1,10 +1,9 @@
 import { A, useNavigate } from "@solidjs/router";
 import type { EditorState } from "prosemirror-state";
-import { type Channel, getTimestampFromUUID } from "sdk";
+import { type Channel } from "sdk";
 import { createSignal, For, Show } from "solid-js";
 import { uuidv7 } from "uuidv7";
 import { useChannels, useThreads } from "@/api";
-import { Time } from "@/atoms/Time";
 import { RenderUploadItem } from "@/components/features/chat/Input.tsx";
 import { createEditor } from "@/components/features/editor/Editor.tsx";
 import { useAutocomplete } from "@/contexts/autocomplete";
@@ -16,8 +15,9 @@ import { useUploads } from "@/contexts/uploads.tsx";
 import { useMessageSubmit } from "@/hooks/useMessageSubmit.ts";
 import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
-import { ChannelIcon } from "./User";
 import { Markdown } from "@/atoms/Markdown";
+import { ThreadCard } from "./ThreadCard";
+import { usePreferences } from "@/api";
 
 export const Forum = (props: { channel: Channel }) => {
 	const channels2 = useChannels();
@@ -25,6 +25,8 @@ export const Forum = (props: { channel: Channel }) => {
 	const [, modalctl] = useModals();
 	const room_id = () => props.channel.room_id ?? "";
 	const forum_id = () => props.channel.id;
+	const prefsService = usePreferences();
+	const prefs = prefsService.useRead();
 
 	const [threadFilter, setThreadFilter] = createSignal("active");
 
@@ -84,6 +86,7 @@ export const Forum = (props: { channel: Channel }) => {
 	const user = useCurrentUser();
 	const user_id = () => user()?.id;
 	const perms = usePermissions(user_id, room_id, () => undefined);
+	const openInSidebar = () => prefs.frontend.threads_sidebar_forum === "yes";
 
 	return (
 		<div class="room-home">
@@ -152,7 +155,7 @@ export const Forum = (props: { channel: Channel }) => {
 					<For each={getActiveThreads()}>
 						{(thread) => (
 							<li>
-								<ThreadItem thread={thread} />
+								<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
 							</li>
 						)}
 					</For>
@@ -164,7 +167,7 @@ export const Forum = (props: { channel: Channel }) => {
 					<For each={getArchivedThreads()}>
 						{(thread) => (
 							<li>
-								<ThreadItem thread={thread} />
+								<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
 							</li>
 						)}
 					</For>
@@ -175,7 +178,7 @@ export const Forum = (props: { channel: Channel }) => {
 					<For each={getRemovedThreads()}>
 						{(thread) => (
 							<li>
-								<ThreadItem thread={thread} />
+								<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
 							</li>
 						)}
 					</For>
@@ -183,53 +186,6 @@ export const Forum = (props: { channel: Channel }) => {
 			</Show>
 			<div ref={setBottom}></div>
 		</div>
-	);
-};
-
-const ThreadItem = (props: { thread: Channel }) => {
-	const nav = useNavigate();
-	return (
-		<article
-			class="thread menu-thread thread-card"
-			data-thread-id={props.thread.id}
-		>
-			<header>
-				<button
-					type="button"
-					class="top"
-					onClick={() => nav(`/thread/${props.thread.id}`)}
-					onKeyDown={(e) =>
-						e.key === "Enter" && nav(`/thread/${props.thread.id}`)
-					}
-				>
-					<ChannelIcon channel={props.thread} />
-					<div class="spacer">{props.thread.name}</div>
-					<div class="time">
-						Created <Time date={getTimestampFromUUID(props.thread.id)} />
-					</div>
-				</button>
-				<button
-					type="button"
-					class="bottom"
-					onClick={() => nav(`/thread/${props.thread.id}`)}
-					onKeyDown={(e) =>
-						e.key === "Enter" && nav(`/thread/${props.thread.id}`)
-					}
-				>
-					<div class="dim">
-						{props.thread.message_count} message(s) &bull; last msg{" "}
-						<Time
-							date={getTimestampFromUUID(
-								props.thread.last_version_id ?? props.thread.id,
-							)}
-						/>
-					</div>
-					<Show when={props.thread.description}>
-						{(desc) => <Markdown content={desc()} class="description" />}
-					</Show>
-				</button>
-			</header>
-		</article>
 	);
 };
 

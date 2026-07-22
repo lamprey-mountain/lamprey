@@ -31,6 +31,7 @@ import {
 	useApi,
 	useChannels,
 	useMessages,
+	usePreferences,
 	useRoomMembers,
 	useThreads,
 	useUsers,
@@ -70,6 +71,7 @@ import {
 import { highlight } from "../features/chat/util.ts";
 import { Forum2CreateForm } from "./Forum2CreateForm.tsx";
 import { ChannelIcon } from "./User";
+import { ThreadCard } from "./ThreadCard.tsx";
 
 // Type guard for RoomMember with override_name
 function hasOverrideName(
@@ -134,6 +136,9 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const [, modalctl] = useModals();
 	const room_id = () => props.channel.room_id ?? "";
 	const forum_id = () => props.channel.id;
+	const prefsService = usePreferences();
+	const prefs = prefsService.useRead();
+	const openInSidebar = () => prefs.frontend.threads_sidebar_forum === "yes";
 
 	const [threadFilter, setThreadFilter] = createSignal("active");
 	const [sortBy, setSortBy] = createSignal<
@@ -433,47 +438,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 					<For each={getThreads()}>
 						{(thread) => (
 							<li>
-								<article
-									class="thread menu-thread thread-card"
-									data-thread-id={thread.id}
-								>
-									<header
-										onClick={() =>
-											chUpdate("thread_chat_sidebar_thread_id", thread.id)
-										}
-									>
-										<div class="top">
-											<ChannelIcon channel={thread} />
-											<div class="spacer">{thread.name}</div>
-											<div class="time">
-												Created <Time date={getTimestampFromUUID(thread.id)} />
-											</div>
-										</div>
-										<div
-											class="bottom"
-											onClick={() =>
-												chUpdate("thread_chat_sidebar_thread_id", thread.id)
-											}
-										>
-											<div class="dim">
-												{thread.message_count} message(s) &bull; last msg{" "}
-												<Time
-													date={getTimestampFromUUID(
-														hasLastVersionId(thread)
-															? thread.last_version_id
-															: thread.id,
-													)}
-												/>
-											</div>
-											<Show when={thread.description}>
-												<div
-													class="description markdown"
-													innerHTML={md(thread.description ?? "") as string}
-												></div>
-											</Show>
-										</div>
-									</header>
-								</article>
+								<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
 							</li>
 						)}
 					</For>
