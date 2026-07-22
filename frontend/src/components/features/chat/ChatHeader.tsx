@@ -326,6 +326,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 						<button
 							type="button"
 							class="button icon-button"
+							classList={{ active: ctx.threadsView() !== null }}
 							onClick={(e) => {
 								if (!ctx.threadsView()) {
 									const ref = e.currentTarget;
@@ -337,7 +338,10 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 									});
 								}
 							}}
-							ref={threadsTooltip.content}
+							ref={(el) => {
+								threadsTooltip.content(el);
+								ctx.setHeaderThreadsButtonRef(el);
+							}}
 						>
 							<Icon src={icThreads} color={null} />
 						</button>

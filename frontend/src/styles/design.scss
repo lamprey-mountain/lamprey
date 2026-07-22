@@ -12,7 +12,8 @@
 	user-select: none;
 
 	&:hover,
-	&:focus-visible {
+	&:focus-visible,
+	&.active {
 		color: $fg-100;
 		background-color: $bg-400;
 	}
@@ -22,7 +23,8 @@
 		background-color: oklch(from $link-300 calc(l - 0.15) calc(c - 0.00) h);
 
 		&:hover,
-		&:focus-visible {
+		&:focus-visible,
+		&.active {
 			background-color: oklch(from $link-300 calc(l - 0.10) calc(c - 0.00) h);
 		}
 	}
@@ -38,7 +40,8 @@
 		);
 
 		&:hover,
-		&:focus-visible {
+		&:focus-visible,
+		&.active {
 			background-color: oklch(from $color-red calc(l - 0.35) calc(c - 0.05) h);
 		}
 	}
@@ -67,7 +70,8 @@
 		}
 
 		&:hover,
-		&:focus-visible {
+		&:focus-visible,
+		&.active {
 			// TODO: refactor to make compatible with .icon2, .toggle-icon? or make .icon2/Icon component wrap icons in svg so that `fill` works on everything?
 			background-color: transparent;
 
