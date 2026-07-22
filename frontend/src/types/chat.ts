@@ -98,6 +98,8 @@ export type ChatCtx = {
 	setRecentChannels: Setter<Array<string>>;
 	currentMedia: Accessor<MediaCtx | null>;
 	setCurrentMedia: Setter<MediaCtx | null>;
+	// TODO: move into separate context/hook
+	// TODO: use store
 	preferences: Accessor<Preferences>;
 	setPreferences: Setter<Preferences>;
 	scrollToChatList: (pos: number) => void;

@@ -143,18 +143,18 @@
 			top: 14px;
 		}
 
-			// TODO: brighten icons when channel hovered/focused
+		// TODO: brighten icons when channel hovered/focused
 		&:focus-visible > .channel-link,
 		& > .channel-link:hover {
-				background-color: $bg-400;
-				color: $fg-200;
+			background-color: $bg-400;
+			color: $fg-200;
 
-				.mentions {
-					display: none;
-				}
+			.mentions {
+				display: none;
+			}
 
-				.channel-actions {
-					display: flex;
+			.channel-actions {
+				display: flex;
 			}
 		}
 	}
@@ -370,37 +370,24 @@
 	overflow: auto;
 	padding-top: 4px;
 	background-color: $bg-100;
+	scrollbar-width: none;
 
 	& > .room-list {
 		display: flex;
 		flex-direction: column;
-		align-items: center;
 		width: 100%;
+		gap: 8px;
+		padding: 4px 0;
 	}
 
-	.room-item,
-	.home-item {
-		min-height: 48px;
+	.item {
 		width: 100%;
-		margin-top: 4px;
-		border-radius: 4px;
 		display: flex;
-		overflow: hidden;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
 		position: relative;
-		transition: border 0.1s ease;
-
-		&.drag-over {
-			border-top: solid $link-500 4px;
-		}
-
-		&.drag-over-after {
-			border-bottom: solid $link-500 4px;
-		}
-
-		&.folder-preview {
-			background: oklch(var(--color-link-500) / 0.2);
-			border: solid $link-500 2px;
-		}
+		cursor: pointer;
 
 		&.unread::before {
 			content: "";
@@ -413,122 +400,142 @@
 			background: $fg-400;
 			border-radius: 50%;
 			z-index: 1;
+			transition: translate 100ms;
 		}
 
 		&.dragging {
 			opacity: 0.5;
 		}
 
-		& .avatar {
+		&:hover,
+		&:focus-visible {
+			// TODO: styling
+			/* background: green; */
+
+			.withbg {
+				background: green;
+			}
+		}
+	}
+
+	.tile {
+		height: 42px;
+		width: 42px;
+		border-radius: 4px;
+		display: grid;
+		place-items: center;
+
+		.avatar {
 			height: 42px;
 			width: 42px;
-			background: none;
-		}
-
-		& svg.avatar {
 			// svgs have spacing for the mention indicator
 			transform: scale(1.125);
 		}
 
-		& a {
-			margin: 0 8px;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			width: 64px;
+		.icon2 {
+			background: $fg-200;
+
+			// shrink icon instead of adding padding
+			height: 32px;
+			width: 32px;
+		}
+
+		&.withbg {
+			background: $bg-300;
+		}
+
+		a {
+			display: contents;
 		}
 	}
 
-	.home-item .icon,
-	.folder-header .icon {
-		height: 32px;
-		width: 32px;
-		filter: invert(0.6);
-	}
-
-	.home-item .icon2,
-	.folder-header .icon2 {
-		height: 32px;
-		width: 32px;
-		background: $fg-200;
-	}
-
-	.home-item > a {
+	.folder {
 		background: $bg-200;
-	}
-
-	.folder-header {
-		height: 48px;
-		width: 48px;
 		border-radius: 4px;
-		background: #2a2a2a;
-		cursor: pointer;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 100%;
-
-		&:hover {
-			background: $bg-150;
-		}
-	}
-
-	.room-folder {
-		margin: 0 -2px;
-		margin-top: 4px;
 		padding: 2px;
-		background: $bg-400;
-		border-radius: 4px;
-		position: relative;
-		transition: background 0.1s ease, border 0.1s ease;
+		margin: 0 6px;
 
-		&.drag-over {
-			border-top: solid $link-500 4px;
+		.item {
+			margin: 0 -8px;
+			width: unset;
 		}
 
-		&.drag-over-after {
-			border-bottom: solid $link-500 4px;
+		.folder-item {
+			margin: 4px -8px;
 		}
 
-		&.drag-over-inside {
+		&.target {
 			background: oklch(var(--color-link-500) / 0.2);
 			outline: solid $link-500 2px;
 		}
 
-		&.preview {
-			background: oklch(var(--color-link-500) / 0.2);
-			outline: solid $link-500 2px;
-		}
-
-		&.unread.collapsed::before {
-			content: "";
-			position: absolute;
-			left: -4px;
-			top: 24px;
-			translate: 0 -50%;
-			height: 8px;
-			width: 8px;
-			background-color: $fg-100;
-			border-radius: 50%;
-			z-index: 1;
-		}
-
-		&.collapsed {
-			background: none;
+		&.open .folder-item.unread::before {
+			// a bit more than -4px to prevent any glitches
+			translate: -6px -50%;
 		}
 	}
 
-	.mention-count {
-		fill: oklch(54.03% 0.1759 13.16);
-	}
-
-	.drop-target-end {
+	.folder-items {
+		display: flex;
+		flex-direction: column;
 		width: 100%;
-		transition: background 0.1s ease;
-
-		&.drag-over {
-			background: oklch(var(--color-link-500) / 0.1);
-			border-top: solid $link-500 2px;
-		}
+		gap: 8px;
+		padding: 4px 0;
 	}
+
+	/* .room-item, */
+	/* .home-item { */
+	/* border-radius: 4px; */
+	/* overflow: hidden; */
+	/* transition: border 0.1s ease; */
+
+	/* &.drag-over { */
+	/* border-top: solid $link-500 4px; */
+	/* } */
+
+	/* &.drag-over-after { */
+	/* border-bottom: solid $link-500 4px; */
+	/* } */
+
+	/* &.folder-preview { */
+	/* background: oklch(var(--color-link-500) / 0.2); */
+	/* border: solid $link-500 2px; */
+	/* } */
+	/* } */
+
+	/* .home-item > a { */
+	/* background: $bg-200; */
+	/* } */
+
+	/* &:hover { */
+	/* background: $bg-150; */
+	/* } */
+
+	/* .room-folder { */
+	/* margin: 0 -2px; */
+	/* margin-top: 4px; */
+	/* padding: 2px; */
+	/* background: $bg-400; */
+	/* border-radius: 4px; */
+	/* position: relative; */
+	/* transition: background 0.1s ease, border 0.1s ease; */
+
+	/* &.drag-over { */
+	/* border-top: solid $link-500 4px; */
+	/* } */
+
+	/* &.drag-over-after { */
+	/* border-bottom: solid $link-500 4px; */
+	/* } */
+
+	/* &.drag-over-inside { */
+	/* background: oklch(var(--color-link-500) / 0.2); */
+	/* outline: solid $link-500 2px; */
+	/* } */
+
+	/* &.preview { */
+	/* background: oklch(var(--color-link-500) / 0.2); */
+	/* outline: solid $link-500 2px; */
+	/* } */
+	/* } */
 }

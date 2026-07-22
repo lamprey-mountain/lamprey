@@ -17,70 +17,12 @@ import { Icon } from "@/atoms/Icon";
 import { useMenu } from "@/contexts/mod";
 import { useRoomDnd } from "@/hooks/useRoomDnd";
 import { flags } from "@/lib/flags";
+import type {
+	RoomNavConfig,
+	RoomNavItem,
+	RoomNavMappedItem,
+} from "@/types/room-nav";
 import { RoomIcon } from "./User";
-
-export type RoomNavItem =
-	| {
-			type: "room";
-			room_id: string;
-	  }
-	| {
-			type: "folder";
-			id: string;
-			name: string;
-			items: { type: "room"; room_id: string }[];
-	  }
-	| {
-			type: "view";
-			name: string;
-			// Omitting view-specific properties for now
-	  };
-
-// TODO: use types defined in crate-common/src/v1/types/preferences/room_sidebar.rs
-// TODO: impl views
-
-/*
-type RoomNavToplevelItem = RoomNavItem & {
-	type: "folder",
-	name: string,
-	items: RoomNavItem[],
-}
-
-type RoomNavItem = {
-	type: "room",
-	room_id: string,
-} | {
-	type: "view",
-	name: "string",
-	uncategorized_channels: Array<ViewChannel>;
-	categories: Array<ViewCategory>;
-}
-
-// either a local category for this view or a category from a room
-type ViewCategory =
-	| {
-		name: string;
-		channels: Array<Channel>;
-	}
-	| {
-		id: string;
-		room_id: string;
-		nickname?: string;
-	};
-
-type ViewChannel = {
-	id: string;
-	room_id?: string;
-	nickname?: string;
-};
-*/
-
-type RoomNavMappedItem =
-	| Room
-	| { type: "folder"; id: string; name: string; items: Room[] }
-	| { type: "view"; name: string };
-
-type RoomNavConfig = Array<RoomNavItem>;
 
 export const RoomNav = () => {
 	const rooms2 = useRooms();
@@ -88,7 +30,6 @@ export const RoomNav = () => {
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
 	const rooms = createMemo(() => [...rooms2.cache.values()]);
-	const dnd = useRoomDnd();
 
 	const getRoomMentionCount = (roomId: string) => {
 		let totalMentions = 0;
@@ -117,26 +58,13 @@ export const RoomNav = () => {
 		return folder.items.some((room) => getRoomUnread(room.id));
 	};
 
+	// TODO: render folder mention count
 	const _getFolderMentionCount = (folder: { items: Room[] }) => {
 		return folder.items.reduce(
 			(acc, room) => acc + getRoomMentionCount(room.id),
 			0,
 		);
 	};
-
-	const [dragging, setDragging] = createSignal<{
-		id: string;
-		type: "room" | "folder";
-	} | null>(null);
-	const [target, setTarget] = createSignal<{
-		id: string;
-		position: "before" | "after" | "inside";
-	} | null>(null);
-	const [collapsedFolders, setCollapsedFolders] = createSignal(
-		new Set<string>(),
-	);
-	const [folderPreview, setFolderPreview] = createSignal<string | null>(null);
-	let folderTimer: number | undefined;
 
 	const getConfig = (): RoomNavConfig => {
 		const config = ctx.preferences().frontend.roomNav as RoomNavConfig;
@@ -145,191 +73,6 @@ export const RoomNav = () => {
 		}
 		return [];
 	};
-
-	const reorderedItems = createMemo(() => {
-		const config = getConfig();
-		const roomsList = rooms();
-		const roomMap = new Map(roomsList.map((r) => [r.id, r]));
-
-		const orderedIds = new Set<string>();
-
-		// Migration for old configs
-		for (const item of config) {
-			if (item.type === "folder" && !item.id) {
-				item.id = crypto.randomUUID();
-			}
-		}
-
-		const mappedConfig: (
-			| Room
-			| { type: "folder"; id: string; name: string; items: Room[] }
-			| { type: "view"; name: string }
-		)[] = [];
-
-		for (const item of config) {
-			if (item.type === "room") {
-				const room = roomMap.get(item.room_id);
-				if (room) {
-					mappedConfig.push(room);
-					orderedIds.add(room.id);
-				}
-			} else if (item.type === "folder") {
-				const folderItems = item.items
-					.map((i) => {
-						const room = roomMap.get(i.room_id);
-						if (room) {
-							orderedIds.add(room.id);
-							return room;
-						}
-						return null;
-					})
-					.filter((r): r is Room => !!r);
-
-				if (folderItems.length > 0) {
-					mappedConfig.push({
-						type: "folder",
-						id: item.id,
-						name: item.name,
-						items: folderItems,
-					});
-				}
-			} else if (item.type === "view") {
-				mappedConfig.push(item);
-			}
-		}
-
-		const unordered = roomsList.filter((r) => !orderedIds.has(r.id));
-		return [...unordered, ...mappedConfig];
-	});
-
-	const previewedItems = createMemo(() => {
-		const fromId = dragging()?.id;
-		const toId = target()?.id;
-		const position = target()?.position;
-		const items = reorderedItems();
-		const creatingFolder = folderPreview();
-
-		if (!fromId) return items;
-
-		const newItems = items.map((item) => {
-			if (item.type === "folder") {
-				return { ...item, items: [...item.items] };
-			}
-			return { ...item };
-		});
-
-		const findItem = (id: string, list: RoomNavMappedItem[]) => {
-			for (let i = 0; i < list.length; i++) {
-				const item = list[i];
-				const itemId =
-					item.type === "folder"
-						? item.id
-						: item.type === "view"
-							? `view-${item.name}`
-							: item.id;
-				if (itemId === id) {
-					return { item, index: i, parent: null, parentList: list };
-				}
-				if (item.type === "folder") {
-					for (let j = 0; j < item.items.length; j++) {
-						if (item.items[j].id === id) {
-							return {
-								item: item.items[j],
-								index: j,
-								parent: item,
-								parentList: item.items,
-							};
-						}
-					}
-				}
-			}
-			return null;
-		};
-
-		if (
-			creatingFolder &&
-			toId === creatingFolder &&
-			fromId !== creatingFolder
-		) {
-			const fromResult = findItem(fromId, newItems);
-			const toResult = findItem(toId, newItems);
-			if (!fromResult || !toResult || fromResult.parent || toResult.parent) {
-				return items;
-			}
-
-			const [fromItem] = fromResult.parentList.splice(fromResult.index, 1);
-			const toIndex = newItems.findIndex((i: RoomNavMappedItem) => {
-				if (i.type === "folder") return i.id === toId;
-				if (i.type === "view") return false; // views can't be folder targets
-				return i.id === toId;
-			});
-			if (toIndex === -1) return items;
-
-			const toItem = newItems[toIndex];
-			if (toItem.type === "view") return items;
-			const folderItem: RoomNavMappedItem = {
-				type: "folder",
-				id: crypto.randomUUID(),
-				name: "New Folder",
-				items: [
-					toItem.type === "folder" ? toItem.items[0] : (toItem as Room),
-					fromItem.type === "folder" ? fromItem.items[0] : (fromItem as Room),
-				].filter(Boolean) as Room[],
-			};
-			newItems[toIndex] = folderItem;
-			return newItems;
-		}
-
-		if (!toId || fromId === toId) return items;
-
-		const from = findItem(fromId, newItems);
-
-		if (toId === "end") {
-			if (!from) return items;
-			const [movedItem] = from.parentList.splice(from.index, 1);
-			newItems.push(movedItem);
-			return newItems.filter(
-				(item: RoomNavMappedItem) =>
-					!(item.type === "folder" && item.items.length === 0),
-			);
-		}
-
-		const to = findItem(toId, newItems);
-
-		if (!from || !to) return items;
-
-		if (
-			from.item.type === "folder" &&
-			(to.parent || to.item.type === "folder")
-		) {
-			return items;
-		}
-
-		const [movedItem] = from.parentList.splice(from.index, 1);
-
-		if (
-			to.item.type === "folder" &&
-			position === "inside" &&
-			movedItem.type !== "view" &&
-			movedItem.type !== "folder"
-		) {
-			to.item.items.push(movedItem as Room);
-		} else if (to.parent) {
-			const insertIndex = to.index + (position === "after" ? 1 : 0);
-			to.parent.items.splice(insertIndex, 0, movedItem as Room);
-		} else {
-			let insertIndex = to.index + (position === "after" ? 1 : 0);
-			if (!from.parent && from.index < to.index) {
-				insertIndex--;
-			}
-			newItems.splice(insertIndex, 0, movedItem);
-		}
-
-		return newItems.filter(
-			(item: RoomNavMappedItem) =>
-				!(item.type === "folder" && item.items.length === 0),
-		);
-	});
 
 	const updateRoomOrder = (newConfig: RoomNavConfig) => {
 		for (const item of newConfig) {
@@ -347,203 +90,17 @@ export const RoomNav = () => {
 		});
 	};
 
-	const handleDragStart = (e: DragEvent, type: "room" | "folder") => {
-		const id = (e.currentTarget as HTMLElement).dataset.id;
-		if (id) setDragging({ id, type });
-		e.stopPropagation();
-	};
-
-	const handleDragOver = (e: DragEvent) => {
-		e.preventDefault();
-		e.stopPropagation();
-		const targetEl = e.currentTarget as HTMLElement;
-		const id = targetEl.dataset.id;
-		const toType = targetEl.dataset.type;
-
-		if (!id || !dragging() || id === dragging()?.id) {
-			clearTimeout(folderTimer);
-			setFolderPreview(null);
-			return;
-		}
-
-		const rect = targetEl.getBoundingClientRect();
-		const relY = e.clientY - rect.top;
-		const threshold = toType === "folder" ? 0.25 : 0.5;
-
-		let position: "before" | "after" | "inside";
-		if (id === "end") {
-			position = "after";
-		} else if (relY < rect.height * threshold) {
-			position = "before";
-		} else if (relY > rect.height * (1 - threshold)) {
-			position = "after";
-		} else {
-			position = "inside";
-		}
-
-		if (target()?.id !== id || target()?.position !== position) {
-			setTarget({ id, position });
-		}
-
-		const fromType = dragging()?.type;
-
-		if (fromType === "room" && toType === "room" && position === "inside") {
-			if (folderPreview() !== id) {
-				clearTimeout(folderTimer);
-				folderTimer = window.setTimeout(() => setFolderPreview(id), 500);
-			}
-		} else {
-			clearTimeout(folderTimer);
-			setFolderPreview(null);
-		}
-	};
-
-	const handleDragLeave = (e: DragEvent) => {
-		e.preventDefault();
-		e.stopPropagation();
-		// Only clear if we're moving outside the element, not into a child
-		const relatedTarget = e.relatedTarget as HTMLElement;
-		if (
-			!e.currentTarget ||
-			!(e.currentTarget as HTMLElement).contains(relatedTarget)
-		) {
-			clearTimeout(folderTimer);
-			setFolderPreview(null);
-		}
-	};
-
-	const handleDrop = (e: DragEvent) => {
-		e.preventDefault();
-		e.stopPropagation();
-		const fromId = dragging()?.id;
-		const toId = target()?.id;
-		const position = target()?.position;
-		const creatingFolder = folderPreview();
-
-		clearTimeout(folderTimer);
-		setFolderPreview(null);
-		setDragging(null);
-		setTarget(null);
-
-		if (!fromId || !toId || fromId === toId) return;
-
-		let config = getConfig();
-		if (config.length === 0) {
-			config = rooms().map((r) => ({
-				type: "room",
-				room_id: r.id,
-			}));
-		}
-
-		if (creatingFolder && fromId !== creatingFolder) {
-			const newConfig: RoomNavConfig = [];
-			let folderCreated = false;
-			for (const item of config) {
-				if (item.type === "room" && item.room_id === fromId) continue;
-				if (item.type === "room" && item.room_id === creatingFolder) {
-					newConfig.push({
-						type: "folder",
-						id: crypto.randomUUID(),
-						name: "New Folder",
-						items: [
-							{ type: "room", room_id: creatingFolder },
-							{ type: "room", room_id: fromId },
-						],
-					});
-					folderCreated = true;
-				} else {
-					newConfig.push(item);
-				}
-			}
-			if (folderCreated) {
-				updateRoomOrder(newConfig);
-				return;
-			}
-		}
-
-		const findItem = (id: string) => {
-			for (let i = 0; i < config.length; i++) {
-				const item = config[i];
-				if (item.type === "room" && item.room_id === id) {
-					return { item, index: i, parent: null };
-				}
-				if (item.type === "folder" && item.id === id) {
-					return { item, index: i, parent: null };
-				}
-				if (item.type === "folder") {
-					for (let j = 0; j < item.items.length; j++) {
-						if (item.items[j].room_id === id) {
-							return { item: item.items[j], index: j, parent: item };
-						}
-					}
-				}
-			}
-			return null;
-		};
-
-		const from = findItem(fromId);
-
-		if (toId === "end") {
-			if (!from) return;
-			const [movedItem] = from.parent
-				? from.parent.items.splice(from.index, 1)
-				: config.splice(from.index, 1);
-			config.push(movedItem);
-			const finalConfig = config.filter(
-				(item) => !(item.type === "folder" && item.items.length === 0),
-			);
-			updateRoomOrder(finalConfig);
-			return;
-		}
-
-		const to = findItem(toId);
-
-		if (!from || !to) return;
-
-		if (
-			from.item.type === "folder" &&
-			(to.parent || to.item.type === "folder")
-		) {
-			return;
-		}
-
-		const [movedItem] = from.parent
-			? from.parent.items.splice(from.index, 1)
-			: config.splice(from.index, 1);
-
-		if (
-			to.item.type === "folder" &&
-			position === "inside" &&
-			movedItem.type === "room"
-		) {
-			to.item.items.push(movedItem);
-		} else if (to.parent) {
-			const insertIndex = to.index + (position === "after" ? 1 : 0);
-			to.parent.items.splice(
-				insertIndex,
-				0,
-				movedItem as { type: "room"; room_id: string },
-			);
-		} else {
-			let insertIndex = to.index + (position === "after" ? 1 : 0);
-			if (!from.parent && from.index < to.index) {
-				insertIndex--;
-			}
-			config.splice(insertIndex, 0, movedItem);
-		}
-
-		const finalConfig = config.filter(
-			(item) => !(item.type === "folder" && item.items.length === 0),
-		);
-
-		updateRoomOrder(finalConfig);
-	};
-
-	onCleanup(() => {
-		clearTimeout(folderTimer);
-		setDragging(null);
-		setTarget(null);
+	const dnd = useRoomDnd({
+		getConfig,
+		setConfig: updateRoomOrder,
+		getDefaultConfig: () =>
+			rooms().map((r) => ({ type: "room", room_id: r.id })),
+		rooms,
 	});
+
+	const [collapsedFolders, setCollapsedFolders] = createSignal(
+		new Set<string>(),
+	);
 
 	const toggleFolder = (id: string) => {
 		setCollapsedFolders((prev) => {
@@ -554,39 +111,32 @@ export const RoomNav = () => {
 		});
 	};
 
-	const RoomItem = (props: { room: Room }) => {
+	const RoomItem = (props: { room: Room; folderId?: string }) => {
 		const mentionCount = () => getRoomMentionCount(props.room.id);
 
 		return (
 			<li
 				draggable="true"
-				class="menu-room room-item"
+				class="item menu-room room-item"
 				data-id={props.room.id}
 				data-room-id={props.room.id}
+				data-folder-id={props.folderId}
 				data-type="room"
-				onDragStart={(e) => handleDragStart(e, "room")}
-				onDragOver={handleDragOver}
-				onDragLeave={handleDragLeave}
-				onDrop={handleDrop}
-				onDragEnd={() => {
-					setDragging(null);
-					setTarget(null);
-					clearTimeout(folderTimer);
-					setFolderPreview(null);
-				}}
+				onDragStart={dnd.handle}
+				onDragOver={dnd.handle}
+				onDragLeave={dnd.handle}
+				onDrop={dnd.handle}
+				onDragEnd={dnd.handle}
 				classList={{
-					dragging: dragging()?.id === props.room.id,
-					"drag-over":
-						target()?.id === props.room.id && target()?.position === "before",
-					"drag-over-after":
-						target()?.id === props.room.id && target()?.position === "after",
-					"folder-preview": folderPreview() === props.room.id,
+					dragging: dnd.dragging()?.id === props.room.id,
 					unread: getRoomUnread(props.room.id),
 				}}
 			>
-				<A draggable="false" href={`/room/${props.room.id}`} class="nav">
-					<RoomIcon room={props.room} mentionCount={mentionCount()} />
-				</A>
+				<div class="tile">
+					<A draggable="false" href={`/room/${props.room.id}`} class="nav">
+						<RoomIcon room={props.room} mentionCount={mentionCount()} />
+					</A>
+				</div>
 			</li>
 		);
 	};
@@ -595,70 +145,66 @@ export const RoomNav = () => {
 		<Show when={flags.has("two_tier_nav")}>
 			<nav id="room-nav">
 				<ul class="room-list">
-					<li class="home-item">
-						<A href="/" end>
-							<Icon src={icHome} alt="home" />
-						</A>
+					<li class="item">
+						<div class="tile withbg">
+							<A href="/" end>
+								<Icon src={icHome} alt="home" />
+							</A>
+						</div>
 					</li>
-					<For each={previewedItems()}>
+					<For each={dnd.previewedItems()}>
 						{(item) => (
 							<Switch>
 								<Match when={item.type === "folder" && item} keyed>
 									{(folder) => (
 										<div
-											class="room-folder"
+											class="folder"
 											data-id={folder.id}
 											data-type="folder"
 											draggable="true"
-											onDragStart={(e) => handleDragStart(e, "folder")}
-											onDragOver={handleDragOver}
-											onDrop={handleDrop}
-											onDragLeave={handleDragLeave}
+											onDragStart={dnd.handle}
+											onDragOver={dnd.handle}
+											onDrop={dnd.handle}
+											onDragLeave={dnd.handle}
+											onDragEnd={dnd.handle}
 											classList={{
-												dragging:
-													!!dragging()?.id && dragging()?.id === folder.id,
-												"drag-over":
-													!!target()?.id &&
-													target()?.id === folder.id &&
-													target()?.position === "before",
-												"drag-over-after":
-													!!target()?.id &&
-													target()?.id === folder.id &&
-													target()?.position === "after",
-												"drag-over-inside":
-													!!target()?.id &&
-													target()?.id === folder.id &&
-													target()?.position === "inside",
-												preview:
-													!!folderPreview() &&
-													folder.items.some(
-														(room) => room.id === folderPreview(),
-													),
+												dragging: dnd.dragging()?.id === folder.id,
+												target: dnd.target()?.folderId === folder.id,
 												collapsed: collapsedFolders().has(folder.id),
+												open: !collapsedFolders().has(folder.id),
 												unread: !!getFolderUnread(folder),
 											}}
 										>
 											<div
-												class="folder-header"
-												onClick={() => toggleFolder(folder.id)}
-												onContextMenu={(e) => {
-													e.preventDefault();
-													queueMicrotask(() => {
-														setMenu({
-															x: e.clientX,
-															y: e.clientY,
-															type: "folder",
-															folder_id: folder.id,
-														});
-													});
+												class="item folder-item"
+												classList={{
+													unread: !!getFolderUnread(folder),
 												}}
 											>
-												<Icon src={icFolder1} alt="folder" />
+												<div
+													class="tile withbg"
+													onClick={() => toggleFolder(folder.id)}
+													onContextMenu={(e) => {
+														e.preventDefault();
+														queueMicrotask(() => {
+															setMenu({
+																x: e.clientX,
+																y: e.clientY,
+																type: "folder",
+																folder_id: folder.id,
+															});
+														});
+													}}
+												>
+													<Icon src={icFolder1} alt="folder" />
+												</div>
 											</div>
 											<Show when={!collapsedFolders().has(folder.id)}>
-												<ul>
+												<ul class="folder-items">
 													<For each={folder.items}>
-														{(room) => <RoomItem room={room} />}
+														{(room) => (
+															<RoomItem room={room} folderId={folder.id} />
+														)}
 													</For>
 												</ul>
 											</Show>
@@ -668,7 +214,7 @@ export const RoomNav = () => {
 								<Match when={item.type === "view"}>
 									{(view: { name: string }) => (
 										<li
-											class="menu-room"
+											class="item menu-room"
 											data-id={`view-${view.name}`}
 											data-type="view"
 										>
@@ -678,8 +224,8 @@ export const RoomNav = () => {
 										</li>
 									)}
 								</Match>
-								<Match when={"id" in item} keyed>
-									<RoomItem room={item as Room} />
+								<Match when={item.type === "room" && item} keyed>
+									{(roomItem) => <RoomItem room={roomItem.room} />}
 								</Match>
 							</Switch>
 						)}
@@ -688,11 +234,8 @@ export const RoomNav = () => {
 						class="drop-target-end"
 						data-id="end"
 						data-type="root"
-						onDragOver={handleDragOver}
-						onDrop={handleDrop}
-						classList={{
-							"drag-over": target()?.id === "end",
-						}}
+						onDragOver={dnd.handle}
+						onDrop={dnd.handle}
 						style={{ height: "40px", "margin-top": "auto" }}
 					/>
 				</ul>
