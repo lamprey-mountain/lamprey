@@ -12,6 +12,7 @@ import {
 	Switch,
 } from "solid-js";
 import { useApi, useChannels, useRooms } from "@/api";
+import { useCtx } from "@/app/context";
 import { createPopup } from "@/app/popup";
 import { Duration } from "@/atoms/Duration.tsx";
 import { Icon } from "@/atoms/Icon";
@@ -32,7 +33,6 @@ import {
 } from "@/utils/icons";
 import { useVoice } from "../features/voice/context";
 import { VoiceDebug } from "../features/voice/VoiceDebug";
-import { useCtx } from "@/app/context";
 
 // TODO: move voice parts to a separate component(?)
 

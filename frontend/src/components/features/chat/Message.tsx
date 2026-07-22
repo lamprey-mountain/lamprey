@@ -55,6 +55,7 @@ import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useMenu, useUserPopout } from "@/contexts/mod.tsx";
 import { useModals } from "@/contexts/modal";
+import { useReadTracking } from "@/contexts/read-tracking.tsx";
 import { colors } from "@/lib/colors.ts";
 import { countEmojiOnly } from "@/lib/markdown";
 import {
@@ -68,7 +69,6 @@ import { openThread } from "@/utils/channel";
 import { icChannelMove, icSword } from "@/utils/icons.ts";
 import { useMessageToolbar } from "./message-toolbar-context.tsx";
 import { Reactions } from "./Reactions.tsx";
-import { useReadTracking } from "@/contexts/read-tracking.tsx";
 
 export type MessageProps = {
 	message: MessageT;

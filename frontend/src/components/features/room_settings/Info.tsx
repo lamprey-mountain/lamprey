@@ -2,7 +2,9 @@ import type { EditorState } from "prosemirror-state";
 import { createUpload } from "sdk";
 import { createSignal, onMount, Show, type VoidProps } from "solid-js";
 import { useApi, useChannels } from "@/api";
+import { ChannelPicker } from "@/atoms/ChannelPicker";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
+import { DurationInput } from "@/atoms/DurationInput";
 import { Checkbox } from "@/atoms/icons";
 import { Savebar } from "@/atoms/Savebar";
 import { createEditor } from "@/components/features/editor/Editor.tsx";
@@ -11,8 +13,6 @@ import { useAutocomplete } from "@/contexts/autocomplete";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal";
 import type { ChannelT, RoomT } from "@/types";
-import { ChannelPicker } from "@/atoms/ChannelPicker";
-import { DurationInput } from "@/atoms/DurationInput";
 
 // TODO: add welcome channel id config
 // TODO: configure or remove room banner

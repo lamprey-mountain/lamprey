@@ -23,7 +23,7 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
-import { useRoomMembers, useThreadMembers, useUsers, useChannels } from "@/api";
+import { useChannels, useRoomMembers, useThreadMembers, useUsers } from "@/api";
 import { useCtx } from "@/app/context";
 import { Autocomplete } from "@/atoms/Autocomplete.tsx";
 import { EmojiPicker } from "@/atoms/EmojiPicker.tsx";

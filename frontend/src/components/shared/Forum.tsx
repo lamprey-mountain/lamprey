@@ -1,9 +1,10 @@
 import { A, useNavigate } from "@solidjs/router";
 import type { EditorState } from "prosemirror-state";
-import { type Channel } from "sdk";
+import type { Channel } from "sdk";
 import { createSignal, For, Show } from "solid-js";
 import { uuidv7 } from "uuidv7";
-import { useChannels, useThreads } from "@/api";
+import { useChannels, usePreferences, useThreads } from "@/api";
+import { Markdown } from "@/atoms/Markdown";
 import { RenderUploadItem } from "@/components/features/chat/Input.tsx";
 import { createEditor } from "@/components/features/editor/Editor.tsx";
 import { useAutocomplete } from "@/contexts/autocomplete";
@@ -15,9 +16,7 @@ import { useUploads } from "@/contexts/uploads.tsx";
 import { useMessageSubmit } from "@/hooks/useMessageSubmit.ts";
 import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
-import { Markdown } from "@/atoms/Markdown";
 import { ThreadCard } from "./ThreadCard";
-import { usePreferences } from "@/api";
 
 export const Forum = (props: { channel: Channel }) => {
 	const channels2 = useChannels();

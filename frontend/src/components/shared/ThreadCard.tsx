@@ -1,12 +1,12 @@
+import { useNavigate } from "@solidjs/router";
+import { getTimestampFromUUID } from "sdk";
+import { Show } from "solid-js";
+import { useCtx } from "@/app/context";
 import { Markdown } from "@/atoms/Markdown";
 import { Time } from "@/atoms/Time";
 import { ChannelIcon } from "@/avatar/ChannelIcon";
-import { ChannelT } from "@/types";
-import { useNavigate } from "@solidjs/router";
-import { Show } from "solid-js";
-import { getTimestampFromUUID } from "sdk";
 import { useChannel } from "@/contexts/mod";
-import { useCtx } from "@/app/context";
+import type { ChannelT } from "@/types";
 
 export type ThreadCardProps = {
 	thread: ChannelT;

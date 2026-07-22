@@ -1,3 +1,4 @@
+import { debounce } from "@solid-primitives/scheduled";
 import type { Channel } from "sdk";
 import {
 	createEffect,
@@ -10,9 +11,9 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { debounce } from "@solid-primitives/scheduled";
 import { useApi } from "@/api";
 import { Icon } from "@/atoms/Icon";
+import { Markdown } from "@/atoms/Markdown.tsx";
 import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
 import { createTooltip } from "@/atoms/Tooltip";
 import { Avatar, AvatarWithStatus } from "@/components/shared/User";
@@ -30,7 +31,6 @@ import {
 	icScreenshare,
 } from "@/utils/icons";
 import { useVoice } from "./context.tsx";
-import { Markdown } from "@/atoms/Markdown.tsx";
 
 // TODO:
 // - views:
