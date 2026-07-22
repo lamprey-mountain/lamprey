@@ -45,6 +45,9 @@ export const ThreadCard = (props: ThreadCardProps) => {
 				</header>
 				<div class="bottom">
 					<div class="dim">
+						<Show when={!!props.thread.deleted_at}>
+							<span class="removed">removed</span> &bull;{" "}
+						</Show>
 						{props.thread.message_count} message(s) &bull; last msg{" "}
 						<Time
 							date={getTimestampFromUUID(

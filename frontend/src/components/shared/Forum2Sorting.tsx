@@ -20,6 +20,9 @@ export type Forum2SortingProps = {
 	view: Forum2View;
 	onSort(sorting: Forum2Sort): void;
 	onView(view: Forum2View): void;
+	showRemoved: boolean;
+	onToggleRemoved(show: boolean): void;
+	canManage: boolean;
 };
 
 type Option = {
@@ -82,19 +85,18 @@ export const Forum2Sorting = (props: Forum2SortingProps) => {
 						</button>
 					)}
 				</For>
-				<Show when={false}>
-					{/* TODO: move show removed option here */}
+				<Show when={props.canManage}>
 					<br />
 					<h3 class="dim header">other</h3>
 					<button
 						type="button"
 						class="button menu-item"
-						classList={{ selected: false }}
+						classList={{ selected: props.showRemoved }}
 						onClick={() => {
-							// TODO
+							props.onToggleRemoved(!props.showRemoved);
 						}}
 					>
-						<Icon src={getCheckIcon("show-removed")} />
+						<Icon src={icCheck} />
 						Show removed threads
 					</button>
 				</Show>

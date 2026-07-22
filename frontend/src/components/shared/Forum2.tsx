@@ -136,19 +136,17 @@ const InputReply = (props: { thread: Channel; reply: Message }) => {
 };
 
 export const Forum2 = (props: { channel: Channel }) => {
-	const ctx = useCtx();
 	const channels2 = useChannels();
 	const threads2 = useThreads();
-	const [, modalctl] = useModals();
 	const room_id = () => props.channel.room_id ?? "";
 	const forum_id = () => props.channel.id;
 	const prefsService = usePreferences();
 	const prefs = prefsService.useRead();
 	const openInSidebar = () => prefs.frontend.threads_sidebar_forum === "yes";
 
-	const [threadFilter, setThreadFilter] = createSignal("active");
 	const [sortBy, setSortBy] = createSignal<Forum2Sort>("new");
 	const [viewAs, setViewAs] = createSignal<Forum2View>("list");
+	const [showRemoved, setShowRemoved] = createSignal(false);
 	const [menuOpen, setMenuOpen] = createSignal(false);
 	const [referenceEl, setReferenceEl] = createSignal<HTMLElement>();
 	const [floatingEl, setFloatingEl] = createSignal<HTMLElement>();
@@ -182,14 +180,6 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const archivedThreads = threads2.useListArchivedForChannel(forum_id);
 	const removedThreads = threads2.useListRemovedForChannel(forum_id);
 
-	const getThreadsList = () => {
-		const filter = threadFilter();
-		if (filter === "active") return activeThreads;
-		if (filter === "archived") return archivedThreads;
-		if (filter === "removed") return removedThreads;
-		return activeThreads;
-	};
-
 	// TODO: Implement proper pagination for threads
 
 	const sortThreads = (items: Channel[]) => {
@@ -205,38 +195,35 @@ export const Forum2 = (props: { channel: Channel }) => {
 		});
 	};
 
-	const getActiveThreads = () => {
-		const list = activeThreads()?.state.ids || [];
-		const items = list
+	const unorderedThreads = createMemo(() => {
+		const allIds = new Set([
+			...(activeThreads()?.state.ids ?? []),
+			...(archivedThreads()?.state.ids ?? []),
+			...(showRemoved() ? (removedThreads()?.state.ids ?? []) : []),
+		]);
+		const threads = [...allIds]
 			.map((id) => channels2.cache.get(id))
 			.filter(
 				(t): t is Channel =>
 					t !== undefined && t.parent_id === props.channel.id,
 			);
-		return sortThreads(items);
-	};
+		return sortThreads(threads);
+	});
 
-	const getArchivedThreads = () => {
-		const list = archivedThreads()?.state.ids || [];
-		const items = list
-			.map((id) => channels2.cache.get(id))
-			.filter(
-				(t): t is Channel =>
-					t !== undefined && t.parent_id === props.channel.id,
-			);
-		return sortThreads(items);
-	};
-
-	const getRemovedThreads = () => {
-		const list = removedThreads()?.state.ids || [];
-		const items = list
-			.map((id) => channels2.cache.get(id))
-			.filter(
-				(t): t is Channel =>
-					t !== undefined && t.parent_id === props.channel.id,
-			);
-		return sortThreads(items);
-	};
+	const threads = createMemo(() => {
+		const all = unorderedThreads();
+		return all.reduce(
+			(acc, t) => {
+				if (t.archived_at) {
+					acc.archived.push(t);
+				} else {
+					acc.active.push(t);
+				}
+				return acc;
+			},
+			{ active: [] as Channel[], archived: [] as Channel[] },
+		);
+	});
 
 	function createThread() {
 		setShowCreateForm(true);
@@ -244,7 +231,6 @@ export const Forum2 = (props: { channel: Channel }) => {
 
 	const [_bottom, setBottom] = createSignal<Element | undefined>();
 	const [showCreateForm, setShowCreateForm] = createSignal(false);
-	const [_ch, chUpdate] = useChannel();
 
 	const currentUser = useCurrentUser();
 	const user_id = () => currentUser()?.id;
@@ -278,10 +264,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 				</Show>
 				<div style="display:flex; align-items:center">
 					<h3 style="font-size:1rem; margin-top:8px;flex:1">
-						{threadFilter() === "active"
-							? getActiveThreads().length
-							: getRemovedThreads().length}{" "}
-						{threadFilter()} threads
+						{activeThreads()?.state.ids.length ?? "loading"} threads
 					</h3>
 					<div class="sort-view-container">
 						<button
@@ -317,85 +300,42 @@ export const Forum2 = (props: { channel: Channel }) => {
 											setViewAs(v);
 											setMenuOpen(false);
 										}}
+										showRemoved={showRemoved()}
+										onToggleRemoved={(s) => {
+											setShowRemoved(s);
+											setMenuOpen(false);
+										}}
+										canManage={perms.has("ThreadManage")}
 									/>
 								</div>
 							</Show>
 						</Portal>
 					</div>
-					<div class="filters">
-						<button
-							type="button"
-							class="button"
-							classList={{ selected: threadFilter() === "active" }}
-							onClick={[setThreadFilter, "active"]}
-						>
-							active
-						</button>
-						<button
-							type="button"
-							class="button"
-							classList={{ selected: threadFilter() === "archived" }}
-							onClick={[setThreadFilter, "archived"]}
-						>
-							archived
-						</button>
-						<Show when={perms.has("ThreadManage")}>
-							<button
-								type="button"
-								class="button"
-								classList={{ selected: threadFilter() === "removed" }}
-								onClick={[setThreadFilter, "removed"]}
-							>
-								removed
-							</button>
-						</Show>
-					</div>
 				</div>
-				<Show when={threadFilter() === "active"}>
-					<ul>
-						<For each={getActiveThreads()}>
-							{(thread) => (
-								<li>
-									<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
-								</li>
-							)}
-						</For>
-					</ul>
-					<h3 class="dim" style="margin-top:16px;">
-						older threads
-					</h3>
-					<ul>
-						<For each={getArchivedThreads()}>
-							{(thread) => (
-								<li>
-									<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
-								</li>
-							)}
-						</For>
-					</ul>
-				</Show>
-				<Show when={threadFilter() === "archived"}>
-					<ul>
-						<For each={getArchivedThreads()}>
-							{(thread) => (
-								<li>
-									<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
-								</li>
-							)}
-						</For>
-					</ul>
-				</Show>
-				<Show when={threadFilter() === "removed"}>
-					<ul>
-						<For each={getRemovedThreads()}>
-							{(thread) => (
-								<li>
-									<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
-								</li>
-							)}
-						</For>
-					</ul>
-				</Show>
+
+				<ul>
+					<For each={threads().active}>
+						{(thread) => (
+							<li>
+								<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
+							</li>
+						)}
+					</For>
+				</ul>
+
+				<h3 class="dim" style="margin-top:16px;">
+					older threads
+				</h3>
+				<ul>
+					<For each={threads().archived}>
+						{(thread) => (
+							<li>
+								<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
+							</li>
+						)}
+					</For>
+				</ul>
+
 				<div ref={setBottom}></div>
 			</div>
 		</div>
@@ -1053,6 +993,7 @@ const Comment = (props: {
 
 	let contentEl!: HTMLElement;
 
+	// FIXME
 	createEffect(() => {
 		const hl = ch.highlight;
 		if (hl === message().id) {
