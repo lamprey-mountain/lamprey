@@ -72,6 +72,7 @@ export class ThreadsService extends BaseService<Channel> {
 			);
 
 			this.upsertBulk(data.items);
+			this.store.channels.upsertBulk(data.items);
 
 			const newIds = data.items.map((thread) => thread.id);
 			list.appendPage(newIds, data.has_more, data.items.at(-1)?.id);
