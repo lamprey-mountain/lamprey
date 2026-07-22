@@ -8,10 +8,6 @@ import {
 	For,
 	Show,
 } from "solid-js";
-
-type ChannelWithThreads = Channel & { threads?: Channel[] };
-
-import type { DOMElement } from "solid-js/jsx-runtime";
 import {
 	useApi,
 	useChannels,
@@ -31,6 +27,10 @@ import { useCurrentUser } from "@/contexts/currentUser";
 import { useDisplay, useMenu } from "@/contexts/mod";
 import { useModals } from "@/contexts/modal";
 import { useChannelDnd } from "@/hooks/useChannelDnd";
+import {
+	type NavItem,
+	useChannelNavKeybinds,
+} from "@/hooks/useChannelNavKeybinds";
 import { usePermissions } from "@/hooks/usePermissions";
 import { colors } from "@/lib/colors";
 import { flags } from "@/lib/flags";
@@ -41,7 +41,7 @@ import {
 import { useVoice } from "../features/voice/context";
 import { Avatar, ChannelIcon } from "./User";
 
-// TODO: review llm code here because im lazy and dont like implementing drag and drop
+type ChannelWithThreads = Channel & { threads?: Channel[] };
 
 const CHANNEL_TYPES_HAS_UNREAD = new Set<ChannelType>([
 	"Text",
@@ -136,9 +136,9 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	};
 
 	const categories = createMemo<
-		Array<{ category: Channel | null; channels: Array<Channel> }>
+		Array<{ category: Channel | null; channels: Array<ChannelWithThreads> }>
 	>(() => {
-		const allChannelsMap = new Map<string, Channel>();
+		const allChannelsMap = new Map<string, ChannelWithThreads>();
 
 		for (const c of channels2.listByRoom(props.room_id ?? null)) {
 			if (!c.deleted_at) {
@@ -273,8 +273,101 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		});
 	};
 
+	const navItems = createMemo(() => {
+		const items: NavItem[] = [];
+
+		if (props.room_id) {
+			items.push({
+				id: "home",
+				type: "channel",
+				categoryId: null,
+				channelId: "home",
+			});
+		} else {
+			items.push({
+				id: "home",
+				type: "channel",
+				categoryId: null,
+				channelId: "home",
+			});
+			if (flags.has("inbox"))
+				items.push({
+					id: "inbox",
+					type: "channel",
+					categoryId: null,
+					channelId: "inbox",
+				});
+			if (flags.has("friends"))
+				items.push({
+					id: "friends",
+					type: "channel",
+					categoryId: null,
+					channelId: "friends",
+				});
+		}
+
+		for (const { category: cat, channels } of categories()) {
+			const catId = cat ? cat.id : null;
+			if (cat) {
+				items.push({
+					id: cat.id,
+					type: "category",
+					categoryId: catId,
+					channelId: null,
+				});
+			}
+			if (!cat || !collapsedCategories().has(cat.id)) {
+				for (const channel of channels) {
+					items.push({
+						id: channel.id,
+						type: "channel",
+						categoryId: catId,
+						channelId: channel.id,
+						hasThreads: !!channel.threads?.length,
+					});
+					if (channel.threads?.length) {
+						for (const thread of channel.threads) {
+							items.push({
+								id: thread.id,
+								type: "thread",
+								categoryId: catId,
+								channelId: channel.id,
+							});
+						}
+					}
+				}
+			}
+		}
+		return items;
+	});
+
+	const keybinds = useChannelNavKeybinds({
+		items: navItems,
+		categories: categories,
+		selectedId: () => params.channel_id ?? "home",
+		onToggleCategory: (id) => {
+			setCollapsedCategories((prev) => {
+				const newSet = new Set(prev);
+				if (newSet.has(id)) {
+					newSet.delete(id);
+				} else {
+					newSet.add(id);
+				}
+				return newSet;
+			});
+		},
+		onSelectChannel: () => {},
+	});
+
+	const isFocused = (id: string) => {
+		const focused = keybinds.focusedId();
+		if (focused !== null) return focused === id;
+		const selected = params.channel_id ?? "home";
+		return selected === id;
+	};
+
 	return (
-		<nav id="channel-nav">
+		<nav id="channel-nav" ref={keybinds.container}>
 			<Show when={flags.has("nav_header")}>
 				<button
 					id="room-name-btn"
@@ -300,12 +393,17 @@ export const ChannelNav = (props: { room_id?: string }) => {
 			</Show>
 
 			<ul class="channel-list">
-				<li class="channel-item">
+				<li
+					class="channel-item"
+					data-nav-id="home"
+					tabIndex={isFocused("home") ? 0 : -1}
+				>
 					<A
 						href={props.room_id ? `/room/${props.room_id}` : "/"}
 						class="channel-link"
 						draggable={false}
 						end
+						tabIndex={-1}
 					>
 						<Icon src={icHome} color={colors.fg500} /> home
 					</A>
@@ -313,16 +411,36 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 				<Show when={!props.room_id}>
 					<Show when={flags.has("inbox")}>
-						<li class="channel-item">
-							<A href="/inbox" class="channel-link" draggable={false} end>
+						<li
+							class="channel-item"
+							data-nav-id="inbox"
+							tabIndex={isFocused("inbox") ? 0 : -1}
+						>
+							<A
+								href="/inbox"
+								class="channel-link"
+								draggable={false}
+								end
+								tabIndex={-1}
+							>
 								<Icon src={icInbox} color={colors.fg500} /> inbox
 							</A>
 						</li>
 					</Show>
 
 					<Show when={flags.has("friends")}>
-						<li class="channel-item">
-							<A href="/friends" class="channel-link" draggable={false} end>
+						<li
+							class="channel-item"
+							data-nav-id="friends"
+							tabIndex={isFocused("friends") ? 0 : -1}
+						>
+							<A
+								href="/friends"
+								class="channel-link"
+								draggable={false}
+								end
+								tabIndex={-1}
+							>
 								<Icon src={icMembers} color={colors.fg500} /> friends
 							</A>
 						</li>
@@ -343,6 +461,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 										}}
 										data-dnd-placement={dnd.placement(cat().id)}
 										data-channel-id={cat().id}
+										data-nav-id={cat().id}
+										tabIndex={isFocused(cat().id) ? 0 : -1}
 										draggable="true"
 										onDragStart={dnd.handle}
 										onDragOver={dnd.handle}
@@ -402,6 +522,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 												}}
 												data-dnd-placement={dnd.placement(channel.id)}
 												data-channel-id={channel.id}
+												data-nav-id={channel.id}
+												tabIndex={isFocused(channel.id) ? 0 : -1}
 												draggable="true"
 												onDragStart={dnd.handle}
 												onDragOver={dnd.handle}
@@ -413,15 +535,15 @@ export const ChannelNav = (props: { room_id?: string }) => {
 													room_id={props.room_id}
 													icon
 												/>
-												<Show
-													when={(channel as ChannelWithThreads).threads?.length}
-												>
+												<Show when={channel.threads?.length}>
 													<ul class="thread-list">
-														<For each={(channel as ChannelWithThreads).threads}>
+														<For each={channel.threads}>
 															{(chan: Channel) => (
 																<li
 																	class="channel-item"
 																	data-channel-id={chan.id}
+																	data-nav-id={chan.id}
+																	tabIndex={isFocused(chan.id) ? 0 : -1}
 																	draggable={true}
 																	onDragStart={dnd.handle}
 																	onDragOver={dnd.handle}
@@ -594,6 +716,7 @@ export const ItemChannel = (props: {
 			onClick={handleClick}
 			onMouseEnter={() => setHovered(true)}
 			onMouseLeave={() => setHovered(false)}
+			tabIndex={-1} // TODO: move tab index here?
 		>
 			<Show when={props.icon}>
 				<ChannelIcon channel={props.channel} animate={hovered()} />

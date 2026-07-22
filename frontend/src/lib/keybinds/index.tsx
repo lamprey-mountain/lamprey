@@ -15,7 +15,7 @@ export function createKeybinds(
 			const keys = version
 				.trim()
 				.split(" ")
-				.map((i) => i.split("-"));
+				.map((i) => i.split("-").map((j) => (j === "Space" ? " " : j)));
 			const chord = [];
 			for (const key of keys) {
 				const lastKey = key[key.length - 1];
