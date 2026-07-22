@@ -16,13 +16,12 @@ import { useUploads } from "@/contexts/uploads.tsx";
 import { useMessageSubmit } from "@/hooks/useMessageSubmit.ts";
 import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
-import { md } from "@/lib/markdown";
 import { ChannelIcon } from "./User";
+import { Markdown } from "@/atoms/Markdown";
 
 export const Forum = (props: { channel: Channel }) => {
 	const channels2 = useChannels();
 	const threads2 = useThreads();
-	const nav = useNavigate();
 	const [, modalctl] = useModals();
 	const room_id = () => props.channel.room_id ?? "";
 	const forum_id = () => props.channel.id;
@@ -34,29 +33,41 @@ export const Forum = (props: { channel: Channel }) => {
 	const archivedThreads = threads2.useListArchivedForChannel(forum_id);
 	const removedThreads = threads2.useListRemovedForChannel(forum_id);
 
-	const getThreadsList = () => {
-		const filter = threadFilter();
-		if (filter === "active") return activeThreads;
-		if (filter === "archived") return archivedThreads;
-		if (filter === "removed") return removedThreads;
-		return activeThreads;
-	};
-
 	const [_bottom, setBottom] = createSignal<Element | undefined>();
 
 	// TODO: Implement proper pagination for threads
 
-	const getThreads = () => {
-		const list = getThreadsList()?.();
-		if (!list) return [];
-		const items = list.state.ids
+	const getActiveThreads = () => {
+		const list = activeThreads()?.state.ids || [];
+		return list
 			.map((id) => channels2.cache.get(id))
 			.filter(
 				(t): t is Channel =>
 					t !== undefined && t.parent_id === props.channel.id,
-			);
-		// sort descending by id
-		return [...items].sort((a, b) => (a.id < b.id ? 1 : -1));
+			)
+			.sort((a, b) => (a.id < b.id ? 1 : -1));
+	};
+
+	const getArchivedThreads = () => {
+		const list = archivedThreads()?.state.ids || [];
+		return list
+			.map((id) => channels2.cache.get(id))
+			.filter(
+				(t): t is Channel =>
+					t !== undefined && t.parent_id === props.channel.id,
+			)
+			.sort((a, b) => (a.id < b.id ? 1 : -1));
+	};
+
+	const getRemovedThreads = () => {
+		const list = removedThreads()?.state.ids || [];
+		return list
+			.map((id) => channels2.cache.get(id))
+			.filter(
+				(t): t is Channel =>
+					t !== undefined && t.parent_id === props.channel.id,
+			)
+			.sort((a, b) => (a.id < b.id ? 1 : -1));
 	};
 
 	function createThread(room_id: string) {
@@ -65,6 +76,7 @@ export const Forum = (props: { channel: Channel }) => {
 			channels2.create(room_id, {
 				name,
 				parent_id: props.channel.id,
+				type: "ThreadPublic",
 			});
 		});
 	}
@@ -78,10 +90,9 @@ export const Forum = (props: { channel: Channel }) => {
 			<div style="display:flex">
 				<div style="flex:1">
 					<h2>{props.channel.name}</h2>
-					<p
-						class="markdown"
-						innerHTML={md(props.channel.description ?? "") as string}
-					></p>
+					<Show when={props.channel.description}>
+						{(desc) => <Markdown content={desc()} />}
+					</Show>
 				</div>
 				<div style="display:flex;flex-direction:column;gap:4px">
 					<A
@@ -99,26 +110,21 @@ export const Forum = (props: { channel: Channel }) => {
 			</Show>
 			<div style="display:flex; align-items:center">
 				<h3 style="font-size:1rem; margin-top:8px;flex:1">
-					{getThreads().length} {threadFilter()} threads
+					{threadFilter() === "active"
+						? getActiveThreads().length
+						: getRemovedThreads().length}{" "}
+					{threadFilter()} threads
 				</h3>
-				<div class="thread-filter">
-					<button
-						type="button"
-						class="button"
-						classList={{ selected: threadFilter() === "active" }}
-						onClick={[setThreadFilter, "active"]}
-					>
-						active
-					</button>
-					<button
-						type="button"
-						class="button"
-						classList={{ selected: threadFilter() === "archived" }}
-						onClick={[setThreadFilter, "archived"]}
-					>
-						archived
-					</button>
-					<Show when={perms.has("ThreadManage")}>
+				<Show when={perms.has("ThreadManage")}>
+					<div class="thread-filter">
+						<button
+							type="button"
+							class="button"
+							classList={{ selected: threadFilter() === "active" }}
+							onClick={[setThreadFilter, "active"]}
+						>
+							active
+						</button>
 						<button
 							type="button"
 							class="button"
@@ -127,8 +133,8 @@ export const Forum = (props: { channel: Channel }) => {
 						>
 							removed
 						</button>
-					</Show>
-				</div>
+					</div>
+				</Show>
 				<button
 					type="button"
 					class="button primary"
@@ -141,60 +147,89 @@ export const Forum = (props: { channel: Channel }) => {
 					create thread
 				</button>
 			</div>
-			<ul>
-				<For each={getThreads()}>
-					{(thread) => (
-						<li>
-							<article
-								class="thread menu-thread thread-card"
-								data-thread-id={thread.id}
-							>
-								<header>
-									<button
-										type="button"
-										class="top"
-										onClick={() => nav(`/thread/${thread.id}`)}
-										onKeyDown={(e) =>
-											e.key === "Enter" && nav(`/thread/${thread.id}`)
-										}
-									>
-										<ChannelIcon channel={thread} />
-										<div class="spacer">{thread.name}</div>
-										<div class="time">
-											Created <Time date={getTimestampFromUUID(thread.id)} />
-										</div>
-									</button>
-									<button
-										type="button"
-										class="bottom"
-										onClick={() => nav(`/thread/${thread.id}`)}
-										onKeyDown={(e) =>
-											e.key === "Enter" && nav(`/thread/${thread.id}`)
-										}
-									>
-										<div class="dim">
-											{thread.message_count} message(s) &bull; last msg{" "}
-											<Time
-												date={getTimestampFromUUID(
-													thread.last_version_id ?? thread.id,
-												)}
-											/>
-										</div>
-										<Show when={thread.description}>
-											<div
-												class="description markdown"
-												innerHTML={md(thread.description ?? "") as string}
-											></div>
-										</Show>
-									</button>
-								</header>
-							</article>
-						</li>
-					)}
-				</For>
-			</ul>
+			<Show when={threadFilter() === "active"}>
+				<ul>
+					<For each={getActiveThreads()}>
+						{(thread) => (
+							<li>
+								<ThreadItem thread={thread} />
+							</li>
+						)}
+					</For>
+				</ul>
+				<h3 class="dim" style="margin-top:16px;">
+					older threads
+				</h3>
+				<ul>
+					<For each={getArchivedThreads()}>
+						{(thread) => (
+							<li>
+								<ThreadItem thread={thread} />
+							</li>
+						)}
+					</For>
+				</ul>
+			</Show>
+			<Show when={threadFilter() === "removed"}>
+				<ul>
+					<For each={getRemovedThreads()}>
+						{(thread) => (
+							<li>
+								<ThreadItem thread={thread} />
+							</li>
+						)}
+					</For>
+				</ul>
+			</Show>
 			<div ref={setBottom}></div>
 		</div>
+	);
+};
+
+const ThreadItem = (props: { thread: Channel }) => {
+	const nav = useNavigate();
+	return (
+		<article
+			class="thread menu-thread thread-card"
+			data-thread-id={props.thread.id}
+		>
+			<header>
+				<button
+					type="button"
+					class="top"
+					onClick={() => nav(`/thread/${props.thread.id}`)}
+					onKeyDown={(e) =>
+						e.key === "Enter" && nav(`/thread/${props.thread.id}`)
+					}
+				>
+					<ChannelIcon channel={props.thread} />
+					<div class="spacer">{props.thread.name}</div>
+					<div class="time">
+						Created <Time date={getTimestampFromUUID(props.thread.id)} />
+					</div>
+				</button>
+				<button
+					type="button"
+					class="bottom"
+					onClick={() => nav(`/thread/${props.thread.id}`)}
+					onKeyDown={(e) =>
+						e.key === "Enter" && nav(`/thread/${props.thread.id}`)
+					}
+				>
+					<div class="dim">
+						{props.thread.message_count} message(s) &bull; last msg{" "}
+						<Time
+							date={getTimestampFromUUID(
+								props.thread.last_version_id ?? props.thread.id,
+							)}
+						/>
+					</div>
+					<Show when={props.thread.description}>
+						{(desc) => <Markdown content={desc()} class="description" />}
+					</Show>
+				</button>
+			</header>
+		</article>
 	);
 };
 

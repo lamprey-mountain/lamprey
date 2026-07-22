@@ -175,8 +175,7 @@
 	}
 
 	&:hover {
-		// TODO: don't darken as much
-		background-color: $bg-200;
+		background-color: oklch(from $bg-300 calc(l + 0.02) c h);
 	}
 }
 
