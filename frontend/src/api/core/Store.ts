@@ -300,9 +300,17 @@ export class RootStore {
 			this.rooms.delete(msg.room_id);
 		} else if (msg.type === "ChannelCreate" || msg.type === "ChannelUpdate") {
 			if ("channel" in msg) {
-				this.channels.upsert(msg.channel);
-
 				const channel = msg.channel as Channel & { parent_id?: string };
+				this.channels.upsert(channel);
+
+				if (
+					channel.type === "ThreadPublic" ||
+					channel.type === "ThreadPrivate" ||
+					channel.type === "ThreadForum2"
+				) {
+					this.threads.handleThreadUpdate(channel);
+				}
+
 				if (channel.parent_id) {
 					const messageRanges = this.messages._ranges.get(channel.parent_id);
 					if (messageRanges) {

@@ -175,6 +175,68 @@ export class ThreadsService extends BaseService<Channel> {
 		);
 	}
 
+	handleThreadUpdate(thread: Channel) {
+		const lists: {
+			type: ThreadListType;
+			room_id: string | null;
+			channel_id: string | null;
+			shouldInclude: boolean;
+		}[] = [
+			{
+				type: "room",
+				room_id: thread.room_id ?? null,
+				channel_id: null,
+				shouldInclude: !thread.archived_at && !thread.deleted_at,
+			},
+			{
+				type: "room_archived",
+				room_id: thread.room_id ?? null,
+				channel_id: null,
+				shouldInclude: !!thread.archived_at,
+			},
+			{
+				type: "room_removed",
+				room_id: thread.room_id ?? null,
+				channel_id: null,
+				shouldInclude: !!thread.deleted_at,
+			},
+			{
+				type: "channel",
+				room_id: null,
+				channel_id: thread.parent_id ?? null,
+				shouldInclude: !thread.archived_at && !thread.deleted_at,
+			},
+			{
+				type: "channel_archived",
+				room_id: null,
+				channel_id: thread.parent_id ?? null,
+				shouldInclude: !!thread.archived_at,
+			},
+			{
+				type: "channel_removed",
+				room_id: null,
+				channel_id: thread.parent_id ?? null,
+				shouldInclude: !!thread.deleted_at,
+			},
+		];
+
+		for (const listInfo of lists) {
+			const id = listInfo.room_id ?? listInfo.channel_id;
+			if (!id) continue;
+
+			const map = this.getListMap(listInfo.type);
+			const list = map.get(id);
+
+			if (list) {
+				if (listInfo.shouldInclude) {
+					list.prependId(thread.id);
+				} else {
+					list.removeId(thread.id);
+				}
+			}
+		}
+	}
+
 	clear() {
 		super.clear();
 		for (const listMap of this._roomLists.values()) {
