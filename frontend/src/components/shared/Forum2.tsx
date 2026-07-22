@@ -62,6 +62,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
 import { md } from "@/lib/markdown";
 import { getMessageOverrideName } from "@/utils/general";
+import { icChevron } from "@/utils/icons.ts";
 import { RenderUploadItem } from "../features/chat/Input";
 import { MessageToolbarMount } from "../features/chat/MessageToolbar.tsx";
 import {
@@ -70,8 +71,13 @@ import {
 } from "../features/chat/message-toolbar-context.tsx";
 import { highlight } from "../features/chat/util.ts";
 import { Forum2CreateForm } from "./Forum2CreateForm.tsx";
-import { ChannelIcon } from "./User";
+import {
+	type Forum2Sort,
+	Forum2Sorting,
+	type Forum2View,
+} from "./Forum2Sorting.tsx";
 import { ThreadCard } from "./ThreadCard.tsx";
+import { ChannelIcon } from "./User";
 
 // Type guard for RoomMember with override_name
 function hasOverrideName(
@@ -141,10 +147,8 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const openInSidebar = () => prefs.frontend.threads_sidebar_forum === "yes";
 
 	const [threadFilter, setThreadFilter] = createSignal("active");
-	const [sortBy, setSortBy] = createSignal<
-		"new" | "activity" | "reactions:+1" | "random" | "hot" | "hot2"
-	>("new");
-	const [viewAs, setViewAs] = createSignal<"list" | "gallery">("list");
+	const [sortBy, setSortBy] = createSignal<Forum2Sort>("new");
+	const [viewAs, setViewAs] = createSignal<Forum2View>("list");
 	const [menuOpen, setMenuOpen] = createSignal(false);
 	const [referenceEl, setReferenceEl] = createSignal<HTMLElement>();
 	const [floatingEl, setFloatingEl] = createSignal<HTMLElement>();
@@ -206,7 +210,8 @@ export const Forum2 = (props: { channel: Channel }) => {
 		const items = list
 			.map((id) => channels2.cache.get(id))
 			.filter(
-				(t): t is Channel => t !== undefined && t.parent_id === props.channel.id,
+				(t): t is Channel =>
+					t !== undefined && t.parent_id === props.channel.id,
 			);
 		return sortThreads(items);
 	};
@@ -216,7 +221,8 @@ export const Forum2 = (props: { channel: Channel }) => {
 		const items = list
 			.map((id) => channels2.cache.get(id))
 			.filter(
-				(t): t is Channel => t !== undefined && t.parent_id === props.channel.id,
+				(t): t is Channel =>
+					t !== undefined && t.parent_id === props.channel.id,
 			);
 		return sortThreads(items);
 	};
@@ -226,7 +232,8 @@ export const Forum2 = (props: { channel: Channel }) => {
 		const items = list
 			.map((id) => channels2.cache.get(id))
 			.filter(
-				(t): t is Channel => t !== undefined && t.parent_id === props.channel.id,
+				(t): t is Channel =>
+					t !== undefined && t.parent_id === props.channel.id,
 			);
 		return sortThreads(items);
 	};
@@ -276,32 +283,16 @@ export const Forum2 = (props: { channel: Channel }) => {
 							: getRemovedThreads().length}{" "}
 						{threadFilter()} threads
 					</h3>
-					{/* TODO: move .sort-view-container into a separate component */}
 					<div class="sort-view-container">
 						<button
 							type="button"
-							class="button secondary sort-view-button"
+							class="button sort-view-button"
 							ref={setReferenceEl}
 							onClick={() => setMenuOpen(!menuOpen())}
 							classList={{ selected: menuOpen() }}
 						>
 							<span>sort and view</span>
-							<svg
-								aria-hidden="true"
-								width="10"
-								height="6"
-								viewBox="0 0 10 6"
-								fill="none"
-								xmlns="http://www.w3.org/2000/svg"
-							>
-								<path
-									d="M1 1L5 5L9 1"
-									stroke="currentColor"
-									stroke-width="1.5"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-							</svg>
+							<Icon src={icChevron} />
 						</button>
 						<Portal>
 							<Show when={menuOpen()}>
@@ -315,115 +306,18 @@ export const Forum2 = (props: { channel: Channel }) => {
 										"z-index": 1000,
 									}}
 								>
-									<menu>
-										<div class="subtext header">sort by</div>
-										<button
-											type="button"
-											class="button menu-item"
-											onClick={() => {
-												setSortBy("new");
-												setMenuOpen(false);
-											}}
-										>
-											Newest threads first
-											<Show when={sortBy() === "new"}>
-												<span>✓</span>
-											</Show>
-										</button>
-										<button
-											type="button"
-											class="button menu-item"
-											onClick={() => {
-												setSortBy("activity");
-												setMenuOpen(false);
-											}}
-										>
-											Recently active threads
-											<Show when={sortBy() === "activity"}>
-												<span>✓</span>
-											</Show>
-										</button>
-										<button
-											type="button"
-											class="button menu-item"
-											onClick={() => {
-												setSortBy("reactions:+1");
-												setMenuOpen(false);
-											}}
-										>
-											Expected to be helpful
-											<Show when={sortBy() === "reactions:+1"}>
-												<span>✓</span>
-											</Show>
-										</button>
-										<button
-											type="button"
-											class="button menu-item"
-											onClick={() => {
-												setSortBy("random");
-												setMenuOpen(false);
-											}}
-										>
-											Random ordering
-											<Show when={sortBy() === "random"}>
-												<span>✓</span>
-											</Show>
-										</button>
-										<button
-											type="button"
-											class="button menu-item"
-											onClick={() => {
-												setSortBy("hot");
-												setMenuOpen(false);
-											}}
-										>
-											Hot
-											<Show when={sortBy() === "hot"}>
-												<span>✓</span>
-											</Show>
-										</button>
-										<button
-											type="button"
-											class="button menu-item"
-											onClick={() => {
-												setSortBy("hot2");
-												setMenuOpen(false);
-											}}
-										>
-											Hot 2
-											<Show when={sortBy() === "hot2"}>
-												<span>✓</span>
-											</Show>
-										</button>
-										<hr />
-										<div class="subtext header">view as</div>
-										<button
-											type="button"
-											class="button menu-item"
-											onClick={() => {
-												setViewAs("list");
-												setMenuOpen(false);
-											}}
-										>
-											List
-											<Show when={viewAs() === "list"}>
-												<span>✓</span>
-											</Show>
-										</button>
-										<button
-											type="button"
-											class="button menu-item"
-											onClick={() => {
-												setViewAs("gallery");
-												setMenuOpen(false);
-											}}
-										>
-											Gallery
-											<Show when={viewAs() === "gallery"}>
-												<span>✓</span>
-											</Show>
-										</button>
-									</menu>
+									<Forum2Sorting
+										sorting={sortBy()}
+										view={viewAs()}
+										onSort={(s) => {
+											setSortBy(s);
+											setMenuOpen(false);
+										}}
+										onView={(v) => {
+											setViewAs(v);
+											setMenuOpen(false);
+										}}
+									/>
 								</div>
 							</Show>
 						</Portal>

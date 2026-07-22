@@ -21,10 +21,19 @@
 				border-radius: 4px;
 				display: flex;
 				align-items: center;
-				gap: 4px;
+				gap: 8px;
+
+				& .icon2 {
+					rotate: 90deg;
+					/* transition: rotate 200ms; */
+				}
 
 				&.selected {
-					background: $bg-200;
+					background-color: $bg-400;
+
+					& .icon2 {
+						rotate: 270deg;
+					}
 				}
 			}
 		}
@@ -191,46 +200,54 @@
 	}
 }
 
-.sort-view-menu {
-	menu {
-		background-color: $bg-300;
-		border: solid 1px $sep-500;
-		box-shadow: 2px 2px 8px $bg-100;
-		min-width: 128px;
-		padding: 4px 0;
-	}
+.forum2-sorting {
+	display: flex;
+	background-color: $bg-300;
+	border: solid 1px $sep-500;
+	box-shadow: 2px 2px 8px $bg-100;
+	min-width: 128px;
+	padding: 4px;
 
 	.header {
-		color: $fg-500;
-		padding: 2px 4px;
-		font-size: 0.8rem;
-		font-weight: bold;
+		margin: 2px 4px;
+		margin-left: 24px;
+		color: $fg-600;
 	}
 
-	.menu-item {
+	.column {
+		min-width: 128px;
+	}
+
+	.button {
 		display: flex;
-		justify-content: space-between;
+		gap: 4px;
 		align-items: center;
 		padding: 2px 4px;
+		border-radius: 2px;
 		width: 100%;
-		background: none;
 		border: none;
-		color: $fg-200;
-		cursor: pointer;
+		color: $fg-500;
+
+		.icon2 {
+			visibility: hidden;
+		}
 
 		&:hover {
-			background-color: $bg-400;
+			color: $fg-100;
+
+			.icon2 {
+				visibility: visible;
+			}
 		}
 
-		span {
-			color: $link-500;
-		}
-	}
+		&.selected {
+			color: $fg-200;
 
-	hr {
-		margin: 4px 0;
-		height: 1px;
-		background: $sep-500;
+			.icon2 {
+				visibility: visible;
+				background-color: $link-500;
+			}
+		}
 	}
 }
 

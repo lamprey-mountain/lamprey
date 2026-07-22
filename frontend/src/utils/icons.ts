@@ -55,6 +55,7 @@ export { icCheck1 as icCheck, icCheck1, icCheck2, icCheck3, icCheck4 };
 
 import { default as icMembers } from "@/assets/members.png";
 
+export { default as icChevron } from "@/assets/chevron.png";
 export { default as icDm } from "@/assets/dm.png";
 export { default as icFullscreen } from "@/assets/fullscreen.png";
 export { default as icFullscreent } from "@/assets/fullscreent.png";
