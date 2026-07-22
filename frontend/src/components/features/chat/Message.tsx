@@ -1228,26 +1228,31 @@ function SystemMessageThreadCreated(props: SystemMessageProps) {
 	const { t } = useCtx();
 	const navigate = useNavigate();
 	const ctx = useCtx();
+	const channels = useChannels();
 
 	const threadId = () =>
-		(props.message.latest_version as MessageVersionT & { thread_id?: string })
+		(props.message.latest_version as MessageVersionT & { thread_id: string })
 			.thread_id;
+	const thread = channels.use(threadId);
 
-	const link = (text: string) => (
-		<Show when={threadId()} fallback={<span>{text}</span>}>
-			<button
-				type="button"
-				class="link"
-				onClick={(e) => {
-					e.stopPropagation();
-					if (threadId()) {
-						navigate(`/channel/${threadId()}`);
-					}
-				}}
+	const link = () => (
+		<button
+			type="button"
+			class="link"
+			onClick={(e) => {
+				e.stopPropagation();
+				if (threadId()) {
+					navigate(`/channel/${threadId()}`);
+				}
+			}}
+		>
+			<Show
+				when={thread()?.name}
+				fallback={<em class="dim">unknown thread</em>}
 			>
-				{text}
-			</button>
-		</Show>
+				{(name) => name()}
+			</Show>
+		</button>
 	);
 
 	const viewAll = (text: string) => (

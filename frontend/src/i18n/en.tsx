@@ -545,12 +545,12 @@ export default {
 	message_content: {
 		thread_created: (
 			author: JSX.Element,
-			Link: (text: string) => JSX.Element,
+			Link: JSX.Element,
 			ViewAll: (text: string) => JSX.Element,
 		): JSX.Element[] => [
 			author,
-			" created ",
-			Link("a thread"),
+			" created a thread: ",
+			Link,
 			". ",
 			ViewAll("View all threads"),
 		],
