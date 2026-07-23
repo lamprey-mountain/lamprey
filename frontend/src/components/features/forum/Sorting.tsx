@@ -1,5 +1,4 @@
-import { Accessor, createSelector, For, Show } from "solid-js";
-import type { Channel } from "ts-sdk";
+import { createSelector, For, Show } from "solid-js";
 import { Icon } from "@/atoms/Icon";
 import { getCheckIcon } from "@/atoms/icons";
 import { icCheck } from "@/utils/icons";

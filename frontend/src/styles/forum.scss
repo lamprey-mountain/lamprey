@@ -10,7 +10,6 @@
 
 	& > .list {
 		padding: 1rem;
-		background: $bg-150;
 		display: flex;
 		flex-direction: column;
 		overflow-y: auto;
@@ -36,24 +35,6 @@
 					}
 				}
 			}
-		}
-	}
-
-	& > .thread {
-		display: flex;
-		flex: 1;
-
-		& > .aside {
-			width: 256px;
-			background: $bg-150;
-			padding: 8px;
-			overflow-y: auto;
-		}
-
-		& > .main {
-			padding: 1rem;
-			flex: 1;
-			overflow-y: auto;
 		}
 	}
 
@@ -198,6 +179,24 @@
 	.title {
 		font-weight: bold;
 	}
+}
+
+.forum2 > .thread {
+		display: flex;
+		flex: 1;
+
+		/* & > .aside { */
+			/* width: 256px; */
+			/* background: $bg-150; */
+			/* padding: 8px; */
+			/* overflow-y: auto; */
+		/* } */
+
+		& > .main {
+			/* padding: 1rem; */
+			flex: 1;
+			overflow-y: auto;
+		}
 }
 
 .forum2-sorting {

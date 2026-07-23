@@ -60,11 +60,6 @@ import { flags } from "@/lib/flags";
 import { getMessageOverrideName } from "@/utils/general";
 import { icChevron } from "@/utils/icons.ts";
 import { Forum2CreateForm } from "../../shared/Forum2CreateForm.tsx";
-import {
-	type Forum2Sort,
-	Forum2Sorting,
-	type Forum2View,
-} from "../../shared/Forum2Sorting.tsx";
 import { RenderUploadItem } from "../chat/Input.tsx";
 import { MessageToolbarMount } from "../chat/MessageToolbar.tsx";
 import {
@@ -72,6 +67,7 @@ import {
 	useMessageToolbar,
 } from "../chat/message-toolbar-context.tsx";
 import { TimelineProvider, useTimeline } from "../chat/timeline-context.tsx";
+import { type Forum2Sort, Forum2Sorting, type Forum2View } from "./Sorting.tsx";
 import { ThreadCard } from "./ThreadCard.tsx";
 
 // Type guard for RoomMember with override_name
@@ -614,6 +610,10 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		(channel_id) => messagesService.fetchActivity(channel_id),
 	);
 	activity();
+
+	// const firstMessage = messagesService.use(() => props.channel.id, () => props.channel.id);
+	// TODO: render firstMessage
+	// TODO: dont render duplicate thread/post title
 
 	return (
 		<MessageToolbarProvider>
