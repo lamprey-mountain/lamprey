@@ -19,10 +19,10 @@ use validator::Validate;
 
 use crate::routes::util::{Auth, Auth3};
 use crate::routes2;
-use crate::services::search::SearchRoomsVisibility;
 use crate::types::{DbRoomCreate, MediaLinkType, MessageSync, PaginationResponse, Permission};
 use crate::{Error, ServerState, error::Result};
 use common::v1::types::error::{ApiError, ErrorCode};
+use kerosene_services::services::search::SearchRoomsVisibility;
 
 fn build_cache_headers(version_id: &Uuid) -> Result<HeaderMap> {
     let ts: Time = version_id

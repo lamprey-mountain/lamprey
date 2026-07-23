@@ -12,8 +12,8 @@ use tracing::error;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::ServerState;
-use crate::services::connections::Hello;
 use crate::sync::transport::{Transport, TransportEvent, WebsocketTransport, WrapperTransport};
+use kerosene_services::services::connections::Hello;
 
 /// Sync init
 ///

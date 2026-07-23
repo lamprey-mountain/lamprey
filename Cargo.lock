@@ -4332,6 +4332,7 @@ dependencies = [
  "jsonwebkey",
  "jsonwebtoken",
  "kameo",
+ "kerosene-core",
  "kerosene-services",
  "lamprey-backend-core",
  "lamprey-backend-data-postgres",

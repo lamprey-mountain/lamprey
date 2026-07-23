@@ -4,7 +4,6 @@ use common::v1::types::error::SyncErrorCode;
 
 pub mod error;
 pub mod next; // TODO: rename?
-pub mod permissions; // TODO: lift to lamprey-common
 pub mod queue;
 pub mod subscriptions;
 pub mod transport; // TODO: share with lamprey-sdk (maybe put in common?)

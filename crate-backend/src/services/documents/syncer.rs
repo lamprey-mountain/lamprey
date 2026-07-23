@@ -1,1 +1,0 @@
-// TODO: move DocumentSyncer here

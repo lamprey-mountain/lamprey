@@ -1,7 +1,6 @@
 use crate::error::{Error, Result};
 use crate::prelude::*;
 use crate::state::messaging::Broadcast;
-use crate::sync::permissions::AuthCheck;
 use crate::sync::queue::ConnectionQueue;
 use crate::sync::subscriptions::ConnectionSubscriptions;
 use crate::sync::transport::{Transport, TransportEvent, TransportSink, TransportStream};
@@ -17,6 +16,7 @@ use common::v1::types::{
 };
 use common::v2::types::{ConnectionId, SessionId};
 use futures_util::StreamExt;
+use kerosene_core::compat::authz::AuthCheck;
 use tokio::sync::mpsc;
 use tracing::{Instrument, error, trace, warn};
 

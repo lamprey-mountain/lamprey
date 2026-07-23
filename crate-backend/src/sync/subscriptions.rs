@@ -10,8 +10,8 @@ use common::v1::types::{
 };
 
 use crate::error::{Error, Result};
-use crate::services::member_lists::util::MemberListTarget;
 use crate::state::Globals;
+use kerosene_services::services::member_lists::util::MemberListTarget;
 
 /// manager for all the subscriptions for a connection
 pub struct ConnectionSubscriptions {

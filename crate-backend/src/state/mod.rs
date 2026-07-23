@@ -6,6 +6,7 @@ use axum::extract::FromRef;
 use common::v1::types::MessageSync;
 use common::v1::types::{AuditLogEntry, ChannelId, RoomId, UserId, voice::messages::SfuCommand};
 use futures::{Stream, StreamExt};
+use kerosene_core::config::{Config, ConfigBlobs};
 use lamprey_backend_data_postgres::{
     Postgres,
     data::{AnyData, Database, postgres::PostgresPool},
@@ -16,11 +17,8 @@ use url::Url;
 
 use crate::prelude::*;
 use crate::state::messaging::BroadcastSync;
-use crate::{
-    config::{self, Config},
-    services::Services,
-    state::messaging::{Broadcast, Messaging},
-};
+use crate::state::messaging::{Broadcast, Messaging};
+use kerosene_services::services::Services;
 
 #[cfg(any())]
 mod queue;
@@ -221,10 +219,10 @@ impl ServerStateInner {
     pub fn get_s3_url(&self, path: &str) -> Result<Url> {
         let mut u = Url::parse("s3://")?;
         match &self.config.blobs {
-            config::ConfigBlobs::S3(s3) => {
+            ConfigBlobs::S3(s3) => {
                 u.set_host(Some(&s3.bucket))?;
             }
-            config::ConfigBlobs::Fs(_) => {
+            ConfigBlobs::Fs(_) => {
                 u.set_host(Some("localhost"))?;
             }
         }

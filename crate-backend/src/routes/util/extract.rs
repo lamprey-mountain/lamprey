@@ -7,7 +7,6 @@ use crate::routes::util::audit::{AuditTxnHandle, AuditTxnSlot};
 use crate::routes::util::auth::Auth4;
 use crate::routes::util::headers::{ContentType, HeadersRequest};
 use crate::routes::util::multipart::MultipartCollector;
-use crate::services::media::{Import, MediaItem};
 use axum::extract::{FromRequest, FromRequestParts};
 use bytes::Bytes;
 use common::v1::types::AuditLogEntryType;
@@ -21,6 +20,8 @@ use common::{
     v2::types::media::{Media, MediaReference},
 };
 use futures::stream;
+use kerosene_services::services::media::Import;
+use kerosene_services::services::media::MediaItem;
 use serde::de::DeserializeOwned;
 
 /// extracts **everything**

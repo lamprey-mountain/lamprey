@@ -25,8 +25,8 @@ use validator::Validate;
 use crate::{
     ServerState,
     error::{Error, Result},
-    services::media::Import,
 };
+use kerosene_services::services::media::Import;
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 struct DiscordEmbed {

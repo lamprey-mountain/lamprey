@@ -10,11 +10,12 @@ use axum::{
 use common::v1::types::{UserId, federation::Hostname, util::Time};
 use common::{util::FederationBody, v1::types::headers::HEADER_ORIGIN};
 use http::{HeaderMap, HeaderName, HeaderValue};
+use kerosene_services::services::federation::signing::ValidatedKeyAlgo;
 use serde::de::DeserializeOwned;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::{ServerState, error::Error, services::federation::signing::ValidatedKeyAlgo};
+use crate::{ServerState, error::Error};
 
 pub mod audit;
 pub mod auth;
@@ -99,7 +100,7 @@ pub async fn verify_server_request(
     let mut verified = false;
     for key in &keys {
         let ValidatedKeyAlgo::Ed25519(verifying_key) = &key.alg;
-        if incoming.verify(verifying_key).is_ok() {
+        if incoming.verify(&verifying_key).is_ok() {
             verified = true;
             break;
         }

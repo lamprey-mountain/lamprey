@@ -20,13 +20,13 @@ use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
 use crate::ServerState;
-use crate::services::media::Import;
 use crate::{
     error::{Error, Result},
     routes2,
     services::search::SearchMediaVisibility,
 };
 use common::v1::types::MediaId;
+use kerosene_services::services::media::Import;
 
 use super::util::Auth;
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};

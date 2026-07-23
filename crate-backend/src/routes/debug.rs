@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use crate::services::media::Import;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{Json, extract::State};
@@ -8,6 +7,7 @@ use common::v1::types::SERVER_ROOM_ID;
 use common::v1::types::application::Scope;
 use common::v1::types::{ChannelId, Embed, Permission, RoomId, UserId};
 use common::v2::types::media::{MediaCreate, MediaCreateSource};
+use kerosene_services::services::media::Import;
 use lamprey_unfurl::logging::LogEntry;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -15,7 +15,7 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::ServerState;
-use crate::services::embed::DebugLogSink;
+use kerosene_services::services::embed::DebugLogSink;
 
 use super::util::Auth;
 use crate::error::Result;
