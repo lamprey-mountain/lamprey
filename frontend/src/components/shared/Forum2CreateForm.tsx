@@ -1,3 +1,4 @@
+import { useNavigate } from "@solidjs/router";
 import type { EditorState } from "prosemirror-state";
 import type { Channel } from "sdk";
 import { createSignal, For, Show } from "solid-js";
@@ -17,6 +18,7 @@ export const Forum2CreateForm = (props: {
 	onSuccess: () => void;
 }) => {
 	const channels2 = useChannels();
+	const navigate = useNavigate();
 	const uploads = useUploads();
 	const toolbar = useFormattingToolbar();
 	const autocomplete = useAutocomplete();
@@ -48,14 +50,14 @@ export const Forum2CreateForm = (props: {
 		}
 	}
 
-	function handleFormSubmit() {
+	async function handleFormSubmit() {
 		if (!title().trim()) return;
 		const doc = formEditorState()?.doc;
 		const content = doc ? serializeToMarkdown(doc) : null;
 
 		// TODO: warn if any attachments aren't uploaded yet
 
-		channels2.create(props.channel.room_id ?? "", {
+		const newChannel = await channels2.create(props.channel.room_id ?? "", {
 			name: title(),
 			parent_id: props.channel.id,
 			type: "ThreadForum2",
@@ -71,6 +73,7 @@ export const Forum2CreateForm = (props: {
 			},
 		});
 		props.onSuccess();
+		navigate(`/channel/${newChannel.id}`);
 	}
 
 	function handleEditorSubmit(_s: string) {
