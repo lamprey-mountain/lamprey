@@ -121,8 +121,6 @@ export const Comment = (props: {
 		);
 	};
 
-	let contentEl!: HTMLElement;
-
 	let lineRef: HTMLDivElement | undefined;
 	let childrenListRef: HTMLUListElement | undefined;
 	let loadMoreRef: HTMLDivElement | undefined;

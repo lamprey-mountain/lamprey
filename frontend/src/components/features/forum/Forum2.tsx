@@ -6,7 +6,7 @@ import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { leading, throttle } from "@solid-primitives/scheduled";
 import { ReactiveSet } from "@solid-primitives/set";
 import type { EditorState, Transaction } from "prosemirror-state";
-import type { Channel, Message, RepliesMessage, RoomMember } from "sdk";
+import type { Channel, Message, RepliesMessage } from "sdk";
 import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
@@ -21,16 +21,8 @@ import {
 } from "solid-js";
 import { Portal } from "solid-js/web";
 import { uuidv7 } from "uuidv7";
-import {
-	useChannels,
-	useMessages,
-	usePreferences,
-	useRoomMembers,
-	useThreads,
-	useUsers,
-} from "@/api";
+import { useChannels, useMessages, usePreferences, useThreads } from "@/api";
 import cancelIc from "@/assets/x.png";
-import { Dropdown } from "@/atoms/Dropdown";
 import { EmojiButton } from "@/atoms/EmojiButton";
 import { Icon } from "@/atoms/Icon";
 import { Search } from "@/atoms/Search.tsx";
@@ -49,22 +41,12 @@ import { useUploads } from "@/contexts/uploads";
 import { useMessageSubmit } from "@/hooks/useMessageSubmit";
 import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
-import { getMessageOverrideName } from "@/utils/general";
-import {
-	icCheck,
-	icChevron,
-	icCollapse,
-	icEdit,
-	icExpand,
-	icReply,
-	icSort,
-} from "@/utils/icons.ts";
+import { icChevron, icCollapse, icExpand, icSort } from "@/utils/icons.ts";
 import { Forum2CreateForm } from "../../shared/Forum2CreateForm.tsx";
 import { RenderUploadItem } from "../chat/Input.tsx";
 import { MessageSkeleton } from "../chat/MessageSkeleton.tsx";
 import { MessageToolbarMount } from "../chat/MessageToolbar.tsx";
 import { MessageToolbarProvider } from "../chat/message-toolbar-context.tsx";
-import { TimelineProvider, useTimeline } from "../chat/timeline-context.tsx";
 import { Comment } from "./Comment.tsx";
 import { type CommentSort, CommentSorting } from "./CommentSorting.tsx";
 import { ThreadCard } from "./ThreadCard.tsx";
@@ -73,13 +55,6 @@ import {
 	type Forum2View,
 	ThreadSorting,
 } from "./ThreadSorting.tsx";
-
-// Type guard for RoomMember with override_name
-function hasOverrideName(
-	m: RoomMember | undefined,
-): m is RoomMember & { override_name: string } {
-	return m !== undefined && "override_name" in m;
-}
 
 // Type guard for Channel with last_version_id
 function hasLastVersionId(
@@ -375,7 +350,6 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		return rid ? messagesService.cache.get(rid) : undefined;
 	};
 	const storageKey = () => `editor_draft_${props.channel.id}`;
-	const channelId = createMemo(() => props.channel.id);
 
 	function handleUpload(file: File) {
 		const local_id = uuidv7();
