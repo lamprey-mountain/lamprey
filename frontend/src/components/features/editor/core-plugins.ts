@@ -135,6 +135,11 @@ export function createSubmitPlugin() {
 					return true;
 				};
 
+				// always submit if ctrl is pressed
+				if (event.key === "Enter" && event.ctrlKey) {
+					return submitCommand(view.state, view.dispatch);
+				}
+
 				if (event.key === "Enter" && !event.shiftKey) {
 					// Don't auto-submit inside codeblocks
 					if (isInsideCodeBlock(view.state)) {
@@ -148,10 +153,6 @@ export function createSubmitPlugin() {
 						view.dispatch(view.state.tr.insertText("\n").scrollIntoView());
 						return true;
 					}
-				}
-
-				if (event.key === "Enter" && event.ctrlKey) {
-					return submitCommand(view.state, view.dispatch);
 				}
 
 				return false;
