@@ -405,7 +405,8 @@ impl ServiceMessages {
         let mut media_cache = HashMap::new();
         let mut media_futs = FuturesUnordered::new();
         for media_id in &media_ids {
-            media_futs.push(async { (*media_id, self.globals.data().media_select(*media_id).await) });
+            media_futs
+                .push(async { (*media_id, self.globals.data().media_select(*media_id).await) });
         }
         while let Some((media_id, result)) = media_futs.next().await {
             if let Ok(media) = result {

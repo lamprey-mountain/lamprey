@@ -23,8 +23,8 @@ use common::v1::types::{
 use common::v1::types::{MediaId, UserId};
 use common::v2::types::embed::{Embed, EmbedType};
 
-use crate::types::{MentionsIds, MessageWithCounts};
 use crate::prelude::*;
+use crate::types::{MentionsIds, MessageWithCounts};
 
 pub mod create;
 pub mod flume;
@@ -799,7 +799,12 @@ impl ServiceMessages {
         let Some(media_id) = media_ref.media_id() else {
             return Err(Error::Unimplemented);
         };
-        let media = self.globals.begin_read().await?.media_select(media_id).await?;
+        let media = self
+            .globals
+            .begin_read()
+            .await?
+            .media_select(media_id)
+            .await?;
         if media.user_id != Some(user_id) {
             return Err(Error::MissingPermissions);
         }

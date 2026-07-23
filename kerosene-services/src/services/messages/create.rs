@@ -243,6 +243,7 @@ impl ServiceMessages {
         nonce: Option<String>,
         json: MessageCreate,
         header_timestamp: Option<Time>,
+        message_id: MessageId,
     ) -> Result<Message> {
         if let Some(nonce) = nonce {
             // FIXME: this won't work with federation
@@ -250,12 +251,19 @@ impl ServiceMessages {
             self.idempotency_keys
                 .try_get_with(
                     (session.id, nonce.clone()),
-                    self.create_inner(channel_id, auth, Some(nonce), json, header_timestamp),
+                    self.create_inner(
+                        channel_id,
+                        auth,
+                        Some(nonce),
+                        json,
+                        header_timestamp,
+                        message_id,
+                    ),
                 )
                 .await
                 .map_err(|err| err.fake_clone())
         } else {
-            self.create_inner(channel_id, auth, nonce, json, header_timestamp)
+            self.create_inner(channel_id, auth, nonce, json, header_timestamp, message_id)
                 .await
         }
     }
@@ -295,13 +303,14 @@ impl ServiceMessages {
         nonce: Option<String>,
         json: MessageCreate,
         header_timestamp: Option<Time>,
+        id: MessageId,
     ) -> Result<Message> {
         let srv = self.globals.services();
         let channel = srv.channels.get(channel_id, None).await?;
 
         let op = MessageOperation {
             channel,
-            message_id: MessageId::new(),
+            message_id: id,
             auth: AuthProvider::Auth(auth.clone()),
             kind: MessageOperationKind::MessageCreate(MessageCreateOperation { json }),
             nonce,
@@ -579,7 +588,9 @@ impl ServiceMessages {
             },
         };
 
-        self.globals.broadcast_with_nonce(op.nonce.as_deref(), sync)?;
+        self.globals
+            .messaging()
+            .broadcast_with_nonce(op.nonce.as_deref(), sync)?;
 
         Ok(op)
     }
@@ -618,7 +629,7 @@ impl ServiceMessages {
         header_timestamp: Option<Time>,
     ) -> Result<(MessagePermissions, Option<Time>)> {
         let srv = self.globals.services();
-        let mut data = self.globals.data();
+        let mut txn = self.globals.begin_read().await?;
 
         let user = auth.ensure_user()?;
 
@@ -646,7 +657,7 @@ impl ServiceMessages {
             let owner_id = if let Some(puppet) = &user.puppet {
                 (*puppet.owner_id).into()
             } else if user.bot {
-                let app = data
+                let app = txn
                     .application_get(user.id.into_inner().into())
                     .await
                     .map_err(|_| {
@@ -919,7 +930,7 @@ impl ServiceMessages {
         &self,
         op: &mut MessageOperation<'_, Prepared>,
     ) -> Result<Message> {
-        let mut data = self.globals.data();
+        let mut txn = self.globals.begin().await?;
         let user_id = op.author_id();
 
         let attachment_ids = op.kind.attachment_ids();
@@ -962,7 +973,7 @@ impl ServiceMessages {
         match &op.kind {
             MessageOperationKind::MessageCreate(_) => {
                 // TODO: handle interactions
-                data.message_create(crate::types::DbMessageCreate {
+                txn.message_create(crate::types::DbMessageCreate {
                     id: Some(op.message_id),
                     channel_id: op.channel.id,
                     attachment_ids,
@@ -980,7 +991,7 @@ impl ServiceMessages {
                 .await?;
             }
             MessageOperationKind::MessageEdit(_) => {
-                data.message_update(
+                txn.message_update(
                     op.channel.id,
                     op.message_id,
                     crate::types::DbMessageUpdate {
@@ -996,6 +1007,7 @@ impl ServiceMessages {
                 .await?;
             }
         }
+        txn.commit().await?;
 
         self.get(op.channel.id, op.message_id, None).await
     }
@@ -1010,10 +1022,10 @@ impl ServiceMessages {
     ) -> Result<()> {
         all_media_ids.check()?;
 
-        let mut data = self.globals.data();
+        let mut txn = self.globals.begin_read().await?;
         for &id in &all_media_ids.known {
             // PERF: this should probably be batched
-            let media = data.media_select(id).await?;
+            let media = txn.media_select(id).await?;
 
             // 1. ownership check: user must own the media they are trying to use
             if media.user_id != Some(author_id) {
@@ -1021,7 +1033,7 @@ impl ServiceMessages {
             }
 
             // 2. reuse check: media cannot be linked to a different message
-            let existing = data.media_link_select(id).await?;
+            let existing = txn.media_link_select(id).await?;
             let already_linked_to_this = existing.iter().any(|l| {
                 l.link_type == MediaLinkType::Message && l.target_id == message_id.into_inner()
             });
@@ -1044,14 +1056,15 @@ impl ServiceMessages {
         message_id: MessageId,
         version_id: Uuid,
     ) -> Result<()> {
-        let mut data = self.globals.data();
+        let mut txn = self.globals.begin().await?;
         for &id in &all_media_ids.known {
             // 3. insert media links
-            data.media_link_insert(id, message_id.into_inner(), MediaLinkType::Message)
+            txn.media_link_insert(id, message_id.into_inner(), MediaLinkType::Message)
                 .await?;
-            data.media_link_insert(id, version_id, MediaLinkType::MessageVersion)
+            txn.media_link_insert(id, version_id, MediaLinkType::MessageVersion)
                 .await?;
         }
+        txn.commit().await?;
 
         Ok(())
     }
@@ -1062,11 +1075,12 @@ impl ServiceMessages {
         };
 
         if let Some(slowmode_delay) = op.channel.slowmode_message {
-            let mut data = self.globals.data();
+            let mut txn = self.globals.begin().await?;
             let next_message_time =
                 Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
-            data.channel_set_message_slowmode_expire_at(op.channel.id, user_id, next_message_time)
+            txn.channel_set_message_slowmode_expire_at(op.channel.id, user_id, next_message_time)
                 .await?;
+            txn.commit().await?;
         }
 
         Ok(())
@@ -1109,7 +1123,7 @@ impl ServiceMessages {
     ) -> Result<()> {
         // TODO: skip if message is ephemeral
 
-        let mut data = self.globals.data();
+        let mut txn = self.globals.begin().await?;
         let srv = self.globals.services();
 
         if !op.channel.is_thread() {
@@ -1121,11 +1135,21 @@ impl ServiceMessages {
         };
         let thread_id = op.channel.id;
 
-        if data.thread_member_get(thread_id, user_id).await.is_err() {
-            data.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
+        if txn.thread_member_get(thread_id, user_id).await.is_err() {
+            txn.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
                 .await?;
+
+            // NOTE: i need to commit this to see the update in next get
+            txn.commit().await?;
+
             srv.channels.invalidate(thread_id).await; // NOTE: do i need this? presumably only member count is dirty
-            let thread_member = data.thread_member_get(thread_id, user_id).await?;
+
+            let thread_member = self
+                .globals
+                .begin_read()
+                .await?
+                .thread_member_get(thread_id, user_id)
+                .await?;
             let msg = MessageSync::ThreadMemberUpsert {
                 room_id: op.channel.room_id,
                 thread_id,
@@ -1133,8 +1157,11 @@ impl ServiceMessages {
                 removed: vec![],
             };
             self.globals
-                .broadcast_channel(thread_id, user_id, msg)
+                .messaging()
+                .broadcast_channel(thread_id, msg)
                 .await?;
+        } else {
+            txn.commit().await?;
         }
 
         Ok(())

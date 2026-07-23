@@ -26,9 +26,9 @@ use yrs::{
     updates::decoder::Decode,
 };
 
-use crate::{
-    ServerStateInner,
-    services::documents::{DOCUMENT_ROOT_NAME, DocumentEvent, EditContextId, util::get_update_len},
+use crate::prelude::*;
+use crate::services::documents::{
+    DOCUMENT_ROOT_NAME, DocumentEvent, EditContextId, util::get_update_len,
 };
 
 /// A pending change to be persisted
@@ -51,7 +51,7 @@ pub struct PresenceData {
 #[derive(Actor)]
 pub struct DocumentActor {
     pub(super) context_id: EditContextId,
-    pub(super) state: Arc<ServerStateInner>,
+    pub(super) state: Globals,
 
     /// the live crdt document
     pub(super) doc: Doc,
@@ -149,8 +149,8 @@ impl DocumentActor {
 
     async fn flush(&mut self) -> Result<()> {
         while let Some(change) = self.pending_changes.pop_front() {
-            let mut data = self.state.data();
-            let new_seq = data
+            let mut txn = self.state.begin().await?;
+            let new_seq = txn
                 .document_update(
                     self.context_id,
                     change.author_id,
@@ -159,6 +159,7 @@ impl DocumentActor {
                     change.stat_removed,
                 )
                 .await?;
+            txn.commit().await?;
             self.last_seq = new_seq;
         }
         self.last_flush = Instant::now();
@@ -166,7 +167,7 @@ impl DocumentActor {
     }
 
     async fn snapshot(&mut self) -> Result<()> {
-        let mut data = self.state.data();
+        let mut txn = self.state.begin().await?;
         let snapshot = self
             .doc
             .transact()
@@ -174,8 +175,9 @@ impl DocumentActor {
         let snapshot_id = Uuid::now_v7();
         let seq = self.last_seq;
 
-        data.document_compact(self.context_id, snapshot_id, seq, snapshot)
+        txn.document_compact(self.context_id, snapshot_id, seq, snapshot)
             .await?;
+        txn.commit().await?;
         self.changes_since_last_snapshot = 0;
         self.last_snapshot = Instant::now();
         Ok(())
@@ -531,11 +533,11 @@ impl Message<PersistAndUnload> for DocumentActor {
         _msg: PersistAndUnload,
         _ctx: &mut Context<Self, Self::Reply>,
     ) -> Self::Reply {
-        let mut data = self.state.data();
+        let mut txn = self.state.begin().await?;
 
         // flush changes
         while let Some(change) = self.pending_changes.pop_front() {
-            let new_seq = data
+            let new_seq = txn
                 .document_update(
                     self.context_id,
                     change.author_id,
@@ -556,9 +558,10 @@ impl Message<PersistAndUnload> for DocumentActor {
             let snapshot_id = Uuid::now_v7();
             let seq = self.last_seq;
 
-            data.document_compact(self.context_id, snapshot_id, seq, snapshot)
+            txn.document_compact(self.context_id, snapshot_id, seq, snapshot)
                 .await?;
         }
+        txn.commit().await?;
 
         Ok(())
     }

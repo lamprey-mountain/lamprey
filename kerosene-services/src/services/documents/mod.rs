@@ -110,8 +110,8 @@ impl ServiceDocuments {
         }
 
         debug!(context_id = ?context_id, maybe_author = ?maybe_author, "load document");
-        let mut data = self.state.data();
-        let loaded = data.document_load(context_id).await;
+        let mut txn = self.state.begin().await?;
+        let loaded = txn.document_load(context_id).await;
 
         let actor_ref = match loaded {
             Ok(dehydrated) => {
@@ -128,6 +128,7 @@ impl ServiceDocuments {
                     tx.apply_update(update)?;
                 }
                 drop(tx);
+                txn.commit().await?;
 
                 let (update_tx, _) = broadcast::channel(100);
 
@@ -158,8 +159,8 @@ impl ServiceDocuments {
                         .transact()
                         .encode_state_as_update_v1(&StateVector::default());
 
-                    data.document_create(context_id, author_id, snapshot)
-                        .await?;
+                    txn.document_create(context_id, author_id, snapshot).await?;
+                    txn.commit().await?;
 
                     let (update_tx, _) = broadcast::channel(100);
 
@@ -257,8 +258,12 @@ impl ServiceDocuments {
     }
 
     pub async fn get_content_at_seq(&self, context_id: EditContextId, seq: u64) -> Result<Serdoc> {
-        let mut data = self.state.data();
-        let dehydrated = data.document_load_at_seq(context_id, seq as u32).await?;
+        let dehydrated = self
+            .state
+            .begin_read()
+            .await?
+            .document_load_at_seq(context_id, seq as u32)
+            .await?;
 
         let doc = yrs::Doc::new();
         doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
@@ -417,8 +422,12 @@ impl ServiceDocuments {
         context_id: EditContextId,
         query: HistoryParams,
     ) -> Result<HistoryPaginationSummary> {
-        let mut data = self.state.data();
-        let (updates, tags) = data.document_history(context_id).await?;
+        let (updates, tags) = self
+            .state
+            .begin_read()
+            .await?
+            .document_history(context_id)
+            .await?;
         self.process_history(updates, tags, query)
     }
 
@@ -427,8 +436,7 @@ impl ServiceDocuments {
         wiki_id: ChannelId,
         query: HistoryParams,
     ) -> Result<HistoryPaginationSummary> {
-        let mut data = self.state.data();
-        let (updates, tags) = data.wiki_history(wiki_id).await?;
+        let (updates, tags) = self.state.begin_read().await?.wiki_history(wiki_id).await?;
         self.process_history(updates, tags, query)
     }
 

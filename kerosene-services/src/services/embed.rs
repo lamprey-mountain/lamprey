@@ -67,7 +67,7 @@ impl ServiceEmbed {
             warn!("embed workers already started");
             return;
         }
-        for i in 0..self.state.config.http.max_parallel_jobs {
+        for i in 0..self.state.config().http.max_parallel_jobs {
             let state = self.state.clone();
             let mut stop = self.stop.subscribe();
             workers_guard.push(tokio::spawn(async move {
@@ -104,9 +104,9 @@ impl ServiceEmbed {
         self.cache.invalidate_all();
     }
 
-    async fn worker(state: &Arc<ServerStateInner>) -> Result<()> {
-        let mut data = state.data();
-        let Some(job) = data.url_embed_queue_claim().await? else {
+    async fn worker(state: &Globals) -> Result<()> {
+        let mut txn = state.begin().await?;
+        let Some(job) = txn.url_embed_queue_claim().await? else {
             return Ok(());
         };
 
@@ -129,16 +129,19 @@ impl ServiceEmbed {
         {
             Ok(embed) => embed,
             Err(e_arc) => {
-                if let Err(e) = data.url_embed_queue_finish(job.id, None).await {
+                if let Err(e) = txn.url_embed_queue_finish(job.id, None).await {
                     error!("failed to finish url embed queue job with error: {e:?}");
                 }
+                txn.commit().await?;
                 return Err(e_arc.fake_clone());
             }
         };
 
-        if let Err(e) = data.url_embed_queue_finish(job.id, Some(&embed)).await {
+        if let Err(e) = txn.url_embed_queue_finish(job.id, Some(&embed)).await {
             error!("failed to finish url embed queue job: {e:?}");
         }
+        txn.commit().await?;
+
         if let Err(e) = Self::attach_embed(
             state,
             job.message_ref.map(|v| serde_json::from_value(v).unwrap()),
@@ -175,7 +178,8 @@ impl ServiceEmbed {
         }
 
         self.state
-            .data()
+            .begin()
+            .await?
             .url_embed_queue_insert(message_ref, user_id, url.to_string())
             .await?;
         Ok(())
@@ -247,7 +251,7 @@ impl ServiceEmbed {
     }
 
     async fn attach_embed(
-        state: &Arc<ServerStateInner>,
+        state: &Globals,
         message_ref: Option<MessageRef>,
         user_id: Option<UserId>,
         embed: Embed,
@@ -255,9 +259,9 @@ impl ServiceEmbed {
         let Some(mref) = message_ref else {
             return Ok(());
         };
-        let mut data = state.data();
-        let mut message = data.message_get(mref.thread_id, mref.message_id).await?;
-        let ver = data
+        let mut txn = state.begin().await?;
+        let mut message = txn.message_get(mref.thread_id, mref.message_id).await?;
+        let ver = txn
             .message_version_get(mref.thread_id, mref.version_id)
             .await?;
         message.latest_version = ver;
@@ -278,19 +282,19 @@ impl ServiceEmbed {
                 }
 
                 if let Some(media) = &embed.media {
-                    data.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
+                    txn.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
                         .await?;
                 }
                 if let Some(media) = &embed.thumbnail {
-                    data.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
+                    txn.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
                         .await?;
                 }
                 if let Some(media) = &embed.author_avatar {
-                    data.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
+                    txn.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
                         .await?;
                 }
                 if let Some(media) = &embed.site_avatar {
-                    data.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
+                    txn.media_link_insert(media.id, *mref.version_id, MediaLinkType::Embed)
                         .await?;
                 }
 
@@ -315,7 +319,7 @@ impl ServiceEmbed {
             _ => return Ok(()),
         };
 
-        data.message_update_in_place(
+        txn.message_update_in_place(
             mref.thread_id,
             mref.version_id,
             DbMessageUpdate {
@@ -330,11 +334,14 @@ impl ServiceEmbed {
         )
         .await?;
 
-        let message = data.message_get(mref.thread_id, mref.message_id).await?;
+        let message = txn.message_get(mref.thread_id, mref.message_id).await?;
+        txn.commit().await?;
+
         if message.latest_version.version_id == mref.version_id {
             let uid = user_id.expect("embed queue always has user_id");
             state
-                .broadcast_channel(mref.thread_id, uid, MessageSync::MessageUpdate { message })
+                .messaging()
+                .broadcast_channel(mref.thread_id, MessageSync::MessageUpdate { message })
                 .await?;
         } else {
             info!("not sending update because message is not latest");

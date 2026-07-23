@@ -217,7 +217,11 @@ impl ServiceCache {
 
         self.preferences_global
             .try_get_with(user_id, async {
-                self.state.begin_read().await?.preferences_get(user_id).await
+                self.state
+                    .begin_read()
+                    .await?
+                    .preferences_get(user_id)
+                    .await
             })
             .await
             .map_err(|err| err.fake_clone())
@@ -339,7 +343,12 @@ impl ServiceCache {
         }
 
         if !missing.is_empty() {
-            let emojis = self.state.begin_read().await?.emoji_get_many(&missing).await?;
+            let emojis = self
+                .state
+                .begin_read()
+                .await?
+                .emoji_get_many(&missing)
+                .await?;
             for emoji in emojis {
                 self.emojis.insert(emoji.id, emoji.clone()).await;
                 out.push(emoji);

@@ -14,10 +14,7 @@ use moka::future::Cache;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, error};
 
-use crate::{
-    prelude::*,
-    services::media::util::MediaItemState,
-};
+use crate::{prelude::*, services::media::util::MediaItemState};
 
 mod ffmpeg;
 mod ffprobe;
@@ -48,7 +45,12 @@ impl ServiceMedia {
             return Ok(item);
         }
 
-        let media = self.state.begin_read().await?.media_select(media_id).await?;
+        let media = self
+            .state
+            .begin_read()
+            .await?
+            .media_select(media_id)
+            .await?;
         let writer = MediaItem::from_media(self.state.clone(), media);
         let item = writer.reader();
         self.cache.insert(media_id, item.clone()).await;
