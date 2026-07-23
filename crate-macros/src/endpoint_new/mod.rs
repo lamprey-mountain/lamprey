@@ -39,6 +39,65 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     let meta_fn = build_metadata_fn(&args, &module.module)?;
     let path_item_fn = build_path_item_fn(&args, &req_fields, &resp_fields)?;
 
+    let body_field = req_fields
+        .iter()
+        .find(|f| matches!(f.kind, FieldKind::Json | FieldKind::Form | FieldKind::Body));
+
+    let extract_request_impl = if let Some(f) = body_field {
+        let ty = &f.ty;
+
+        // PERF: don't reencode body!
+        let body_bytes = match f.kind {
+            FieldKind::Json => quote! { ::serde_json::to_vec(&body).unwrap_or_default().into() },
+            FieldKind::Form => {
+                quote! { ::serde_urlencoded::to_string(&body).unwrap_or_default().into_bytes().into() }
+            }
+            FieldKind::Body => quote! { body },
+            _ => unreachable!(),
+        };
+
+        quote! {
+            impl crate::v1::routes::ExtractableRequest for Request {
+                type Body = #ty;
+
+                fn extract(
+                    parts: ::http::request::Parts,
+                    body: Self::Body,
+                ) -> Result<Self, ::http::Response<::bytes::Bytes>> {
+                    let body_bytes = #body_bytes;
+                    let req = ::http::Request::from_parts(parts, body_bytes);
+                    <Self as crate::util::routes::Request>::extract(req)
+                        .map_err(|_| {
+                            ::http::Response::builder()
+                                .status(::http::StatusCode::BAD_REQUEST)
+                                .body(::bytes::Bytes::from("extraction failed"))
+                                .unwrap()
+                        })
+                }
+            }
+        }
+    } else {
+        quote! {
+            impl crate::v1::routes::ExtractableRequest for Request {
+                type Body = ();
+
+                fn extract(
+                    parts: ::http::request::Parts,
+                    _body: Self::Body,
+                ) -> Result<Self, http::Response<::bytes::Bytes>> {
+                    let req = ::http::Request::from_parts(parts, ::bytes::Bytes::new());
+                    <Self as crate::util::routes::Request>::extract(req)
+                        .map_err(|_| {
+                            ::http::Response::builder()
+                                .status(::http::StatusCode::BAD_REQUEST)
+                                .body(::bytes::Bytes::from("extraction failed"))
+                                .unwrap()
+                        })
+                }
+            }
+        }
+    };
+
     // Preserve all original items except Request/Response structs
     let items = module
         .module
@@ -87,6 +146,8 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
                 #encode_response_fn
                 #extract_response_fn
             }
+
+            #extract_request_impl
 
             #(#preserved_items)*
         }

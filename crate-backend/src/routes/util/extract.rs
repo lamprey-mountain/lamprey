@@ -14,7 +14,7 @@ use common::v1::types::AuditLogEntryType;
 use common::{
     util::FederationBody,
     v1::{
-        routes::ExtractableRoute,
+        routes::ExtractableRequest,
         types::RoomId,
         types::error::{ApiError, ErrorCode, ErrorField, ErrorFieldType},
     },
@@ -100,7 +100,7 @@ impl From<ExtractorError> for Error {
 
 impl<Req> FromRequest<Arc<ServerState>> for UniversalExtractor<Req>
 where
-    Req: ExtractableRoute + Send,
+    Req: ExtractableRequest + Send,
     Req::Body: Send,
 {
     type Rejection = Error;

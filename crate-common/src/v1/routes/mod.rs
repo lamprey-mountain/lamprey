@@ -168,7 +168,7 @@ impl From<EndpointMethod> for ::utoipa::openapi::HttpMethod {
 }
 
 /// can extract body separately then extract with explicitly deserialized body later
-pub trait ExtractableRoute: Sized {
+pub trait ExtractableRequest: Sized {
     /// the request body
     type Body: DeserializeOwned;
 

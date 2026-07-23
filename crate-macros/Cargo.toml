@@ -27,3 +27,4 @@ macrotest = "1"
 
 [features]
 use_new_endpoint_macro = []
+default = ["use_new_endpoint_macro"]

@@ -131,7 +131,11 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
         quote! { let #req_ident = __extractor.into_inner(); }
     };
 
+    let ep_type = quote! { #endpoint_mod::Endpoint };
+
     Ok(quote! {
+        use ::common::util::routes::Endpoint as _;
+
         async fn #inner_name(#all_inputs) #fn_output #fn_block
 
         #(#fn_attrs)*
@@ -165,23 +169,23 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
 
         impl ::utoipa::Path for #fn_name_struct {
             fn methods() -> Vec<::utoipa::openapi::HttpMethod> {
-                let meta = #endpoint_mod::metadata();
+                let meta = #ep_type::metadata();
                 vec![meta.method.into()]
             }
 
             fn path() -> String {
-                #endpoint_mod::metadata().path.to_string()
+                #ep_type::metadata().path.to_string()
             }
 
             fn operation() -> ::utoipa::openapi::path::Operation {
-                let meta = #endpoint_mod::metadata();
+                let meta = #ep_type::metadata();
                 let mut op = ::utoipa::openapi::path::OperationBuilder::new()
                     .summary(Some(meta.summary))
                     .description(meta.description);
                 for tag in meta.tags_full {
                     op = op.tag(*tag);
                 }
-                #endpoint_mod::update_operation(op).build()
+                op.build()
             }
         }
     })

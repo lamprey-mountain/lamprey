@@ -110,8 +110,7 @@ pub mod error {
     pub use lamprey_backend_core::error::*;
 }
 
-// TODO: impl enough of these to get them to compile
-// TODO: move some of these to a shared crate
+// TODO: move some of these to a shared crate (either lamprey-common, lamprey-backend-core, or kerosene-core)
 pub mod routes {
     pub mod util {
         pub mod auth {
@@ -190,11 +189,5 @@ pub mod routes {
                 pub data: Bytes,
             }
         }
-    }
-}
-
-pub mod sync {
-    pub mod permissions {
-        // TODO
     }
 }
