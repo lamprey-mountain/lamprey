@@ -1,3 +1,6 @@
+// TODO: remove this in favor of the proc macro?
+// i guess theres no harm in supporting a builder as well
+
 use crate::{
     v1::types::{components::IdAllocator, metadata::Metadata, misc::Color},
     v2::types::components::{

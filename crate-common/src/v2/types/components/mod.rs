@@ -1,5 +1,3 @@
-// alternative flat component layout
-
 pub mod acl;
 pub mod action;
 pub mod builder;
@@ -29,5 +27,5 @@ mod _utoipa {
     // TODO: text or struct for ComponentCreate - maybe can be done with utoipa attrs instead of manual impl?
 }
 
-// #[cfg(test)]
+#[cfg(test)]
 mod tests;

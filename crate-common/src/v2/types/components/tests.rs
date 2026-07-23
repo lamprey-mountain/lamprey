@@ -2,7 +2,6 @@ use crate::v2::types::components::{
     ComponentCustomId, Components, action::ButtonAction, builder::ComponentsBuilder,
     interactive::Label,
 };
-use lamprey_macros::components;
 
 #[test]
 fn test_macro() {

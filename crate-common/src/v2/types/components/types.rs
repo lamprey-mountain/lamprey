@@ -32,11 +32,18 @@ pub struct Components {
     pub items: Vec<Component>,
 
     /// media referenced in the components
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Vec::is_empty")
+    )]
     pub media: Vec<Media>,
 
     /// application-specific metadata
     // NOTE: maybe rename to `variables`?
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Metadata::is_empty"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Metadata::is_empty")
+    )]
     pub metadata: Metadata,
 }
 

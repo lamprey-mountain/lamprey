@@ -200,10 +200,11 @@ pub struct Ratelimit {
 }
 
 impl ApiError {
+    // TODO: pub fn with_message<S: Into<String>>(code: ErrorCode, message: S) -> Self {
     #[inline]
     pub fn with_message(code: ErrorCode, message: String) -> Self {
         Self {
-            message: message,
+            message,
             ..Self::from_code(code)
         }
     }
