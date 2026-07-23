@@ -482,6 +482,11 @@ impl ServiceChannels {
                 ChannelType::DocumentComment => {
                     perms.ensure(Permission::DocumentComment)?;
                 }
+                ChannelType::DocumentBranch => {
+                    return Err(Error::BadStatic(
+                        "can't manually create a document branch thread",
+                    ));
+                }
             };
             if json
                 .bitrate

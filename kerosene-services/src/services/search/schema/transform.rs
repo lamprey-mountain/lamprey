@@ -25,6 +25,8 @@ use crate::services::channel::calculate_hotness;
 use crate::services::search::schema::{Doctype, UnifiedSchema};
 use crate::{Error, Result};
 
+// TODO: use crate-search/src/transform.rs
+
 impl UnifiedSchema {
     pub fn transform_message(
         &self,
@@ -61,23 +63,7 @@ impl UnifiedSchema {
             doc.add_text(self.room_id, room_id.to_string());
         }
 
-        doc.add_text(
-            self.subtype,
-            match &message.latest_version.message_type {
-                MessageType::DefaultMarkdown(..) => "DefaultMarkdown",
-                MessageType::MessagePinned(..) => "MessagePinned",
-                MessageType::MemberAdd(..) => "MemberAdd",
-                MessageType::MemberRemove(..) => "MemberRemove",
-                MessageType::MemberJoin => "MemberJoin",
-                MessageType::Call(..) => "Call",
-                MessageType::ChannelRename(..) => "ChannelRename",
-                MessageType::ChannelPingback(..) => "ChannelPingback",
-                MessageType::ChannelMoved(..) => "ChannelMoved",
-                MessageType::ChannelIcon(..) => "ChannelIcon",
-                MessageType::ThreadCreated(..) => "ThreadCreated",
-                MessageType::AutomodExecution(..) => "AutomodExecution",
-            },
-        );
+        doc.add_text(self.subtype, message.latest_version.message_type.as_str());
 
         let mut meta_fast: BTreeMap<String, OwnedValue> = BTreeMap::new();
         let mut meta_text: BTreeMap<String, OwnedValue> = BTreeMap::new();

@@ -234,6 +234,7 @@ pub struct DocumentBranchMergeResult {
 }
 
 // NOTE: not useful; may be removed later?
+// also, this (git semantics) doesn't even really make sense with crdts to begin with
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -266,6 +267,7 @@ pub struct DocumentTag {
     /// who created this tag
     ///
     /// may be None if the creator doesnt exist
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub creator_id: Option<UserId>,
 
     // use DocumentVersionId here

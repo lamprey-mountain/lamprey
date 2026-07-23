@@ -46,6 +46,10 @@ pub enum DbMessageType {
     ChannelMoved,
     AutomodExecution,
     Call,
+    Nudge,
+    DocumentTag,
+    DocumentEdits,
+    DocumentMerged,
 }
 
 impl From<MessageType> for DbMessageType {
@@ -63,6 +67,10 @@ impl From<MessageType> for DbMessageType {
             MessageType::ChannelPingback(_) => DbMessageType::ChannelPingback,
             MessageType::ChannelMoved(_) => DbMessageType::ChannelMoved,
             MessageType::AutomodExecution(_) => DbMessageType::AutomodExecution,
+            MessageType::Nudge => DbMessageType::Nudge,
+            MessageType::DocumentTag(_) => DbMessageType::DocumentTag,
+            MessageType::DocumentEdits(_) => DbMessageType::DocumentEdits,
+            MessageType::DocumentMerged(_) => DbMessageType::DocumentMerged,
         }
     }
 }
@@ -280,6 +288,7 @@ pub enum DbChannelType {
     Wiki,
     Document,
     DocumentComment,
+    DocumentBranch,
     Scripts,
 }
 
@@ -304,6 +313,7 @@ impl From<DbChannelType> for ChannelType {
             DbChannelType::Wiki => ChannelType::Wiki,
             DbChannelType::Document => ChannelType::Document,
             DbChannelType::DocumentComment => ChannelType::DocumentComment,
+            DbChannelType::DocumentBranch => ChannelType::DocumentBranch,
             DbChannelType::Scripts => ChannelType::Scripts,
         }
     }
@@ -330,6 +340,7 @@ impl From<ChannelType> for DbChannelType {
             ChannelType::Wiki => DbChannelType::Wiki,
             ChannelType::Document => DbChannelType::Document,
             ChannelType::DocumentComment => DbChannelType::DocumentComment,
+            ChannelType::DocumentBranch => DbChannelType::DocumentBranch,
             ChannelType::Scripts => DbChannelType::Scripts,
         }
     }

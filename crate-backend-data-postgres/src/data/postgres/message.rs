@@ -216,6 +216,22 @@ impl From<DbMessageVersion> for MessageVersion {
                         .and_then(|m| serde_json::from_value(m).ok())
                         .expect("invalid data in db"),
                 ),
+                DbMessageType::Nudge => MessageType::Nudge,
+                DbMessageType::DocumentTag => MessageType::DocumentTag(
+                    row.metadata
+                        .and_then(|m| serde_json::from_value(m).ok())
+                        .expect("invalid data in db"),
+                ),
+                DbMessageType::DocumentEdits => MessageType::DocumentEdits(
+                    row.metadata
+                        .and_then(|m| serde_json::from_value(m).ok())
+                        .expect("invalid data in db"),
+                ),
+                DbMessageType::DocumentMerged => MessageType::DocumentMerged(
+                    row.metadata
+                        .and_then(|m| serde_json::from_value(m).ok())
+                        .expect("invalid data in db"),
+                ),
                 ty @ DbMessageType::ThreadUpdate | ty @ DbMessageType::DefaultTagged => {
                     panic!(
                         "{ty:?} messages are deprecated and shouldn't exist in the database anymore"

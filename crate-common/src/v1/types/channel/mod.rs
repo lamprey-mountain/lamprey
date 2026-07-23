@@ -534,7 +534,16 @@ pub enum ChannelType {
     Document,
 
     /// a comment thread in a document
+    ///
+    /// `DocumentComment` channels belong to the `Document` channel, not
+    /// `DocumentBranch`. however, the `ThreadCreate` message will be sent to
+    /// only the branch's thread.
     DocumentComment,
+
+    /// a branch thread in a document
+    ///
+    /// one `DocumentBranch` channel is created for each branch in a document
+    DocumentBranch,
 
     /// a channel that holds documents
     Wiki,
@@ -1093,6 +1102,7 @@ impl ChannelType {
             ChannelType::Ticket => "Ticket",
             ChannelType::Document => "Document",
             ChannelType::DocumentComment => "DocumentComment",
+            ChannelType::DocumentBranch => "DocumentBranch",
             ChannelType::Wiki => "Wiki",
             ChannelType::Scripts => "Scripts",
         }
@@ -1101,7 +1111,10 @@ impl ChannelType {
     pub fn is_thread(&self) -> bool {
         matches!(
             self,
-            ChannelType::ThreadPublic | ChannelType::ThreadPrivate | ChannelType::ThreadForum2
+            ChannelType::ThreadPublic
+                | ChannelType::ThreadPrivate
+                | ChannelType::ThreadForum2
+                | ChannelType::DocumentComment
         )
     }
 
@@ -1120,7 +1133,12 @@ impl ChannelType {
     pub fn has_members(&self) -> bool {
         matches!(
             self,
-            ChannelType::ThreadPublic | ChannelType::ThreadPrivate | ChannelType::Gdm
+            ChannelType::ThreadPublic
+                | ChannelType::ThreadPrivate
+                | ChannelType::ThreadForum2
+                | ChannelType::DocumentComment
+                | ChannelType::DocumentBranch
+                | ChannelType::Gdm
         )
     }
 
@@ -1136,6 +1154,8 @@ impl ChannelType {
                 | ChannelType::Gdm
                 | ChannelType::Voice
                 | ChannelType::Broadcast
+                | ChannelType::DocumentComment
+                | ChannelType::DocumentBranch
         )
     }
 

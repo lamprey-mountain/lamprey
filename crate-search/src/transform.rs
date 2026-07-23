@@ -122,23 +122,7 @@ impl SearchDocument for SearchMessage<'_> {
             doc.add_text(s.room_id, room_id.to_string());
         }
 
-        doc.add_text(
-            s.subtype,
-            match &message.latest_version.message_type {
-                MessageType::DefaultMarkdown(..) => "DefaultMarkdown",
-                MessageType::MessagePinned(..) => "MessagePinned",
-                MessageType::MemberAdd(..) => "MemberAdd",
-                MessageType::MemberRemove(..) => "MemberRemove",
-                MessageType::MemberJoin => "MemberJoin",
-                MessageType::Call(..) => "Call",
-                MessageType::ChannelRename(..) => "ChannelRename",
-                MessageType::ChannelPingback(..) => "ChannelPingback",
-                MessageType::ChannelMoved(..) => "ChannelMoved",
-                MessageType::ChannelIcon(..) => "ChannelIcon",
-                MessageType::ThreadCreated(..) => "ThreadCreated",
-                MessageType::AutomodExecution(..) => "AutomodExecution",
-            },
-        );
+        doc.add_text(s.subtype, message.latest_version.message_type.as_str());
 
         let mut meta_fast: BTreeMap<String, OwnedValue> = BTreeMap::new();
         let mut meta_text: BTreeMap<String, OwnedValue> = BTreeMap::new();
