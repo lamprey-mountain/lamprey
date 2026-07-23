@@ -28,7 +28,7 @@ export function Profile(props: VoidProps<{ user: User }>) {
 
 	const [editingName, setEditingName] = createSignal(props.user.name);
 	const [editingDescription, setEditingDescription] = createSignal(
-		props.user.description,
+		props.user.description ?? "",
 	);
 	const [editingAvatar, setEditingAvatar] = createSignal(props.user.avatar);
 	const [editingBanner, setEditingBanner] = createSignal(props.user.banner);
@@ -43,15 +43,13 @@ export function Profile(props: VoidProps<{ user: User }>) {
 		initialContent: () => editingDescription() ?? "",
 	});
 
-	const [desc, setDesc] = createSignal(props.user.description ?? "");
-
 	const handleDescriptionChange = (state: EditorState) => {
-		setDesc(serializeToMarkdown(state.doc));
+		setEditingDescription(serializeToMarkdown(state.doc));
 	};
 
 	const isDirty = () =>
 		editingName() !== props.user.name ||
-		desc() !== (props.user.description ?? "") ||
+		editingDescription() !== (props.user.description ?? "") ||
 		editingAvatar() !== props.user.avatar ||
 		editingBanner() !== props.user.banner;
 
@@ -60,7 +58,7 @@ export function Profile(props: VoidProps<{ user: User }>) {
 			params: { path: { user_id: "@self" } },
 			body: {
 				name: editingName(),
-				description: desc(),
+				description: editingDescription(),
 				avatar: editingAvatar(),
 				banner: editingBanner(),
 			},
@@ -69,13 +67,11 @@ export function Profile(props: VoidProps<{ user: User }>) {
 
 	const reset = () => {
 		setEditingName(props.user.name);
-		setEditingDescription(props.user.description);
+		setEditingDescription(props.user.description ?? "");
 		setEditingAvatar(props.user.avatar);
 		setEditingBanner(props.user.banner);
-		if (descriptionEditor.view) {
-			const state = descriptionEditor.createState();
-			descriptionEditor.setState(state);
-		}
+		setEditingDescription(props.user.description ?? "");
+		descriptionEditor.setState();
 	};
 
 	const setAvatarFile = async (f: File) => {
