@@ -771,12 +771,26 @@ export class MessagesService extends BaseService<Message> {
 		message_id: () => string | undefined,
 		query?: () => { depth?: number; breadth?: number } & PaginationQuery,
 	): Resource<RepliesResponse> {
-		const [resource] = createResource(
+		const source = createMemo(
 			() => ({
 				channel_id: channel_id(),
 				message_id: message_id(),
 				query: query?.(),
 			}),
+			undefined,
+			{
+				equals: (a, b) => {
+					return (
+						a.channel_id === b.channel_id &&
+						a.message_id === b.message_id &&
+						deepEqual(a.query, b.query)
+					);
+				},
+			},
+		);
+
+		const [resource] = createResource(
+			source,
 			async ({ channel_id, message_id, query }) => {
 				const { data, error } = await (message_id
 					? this.client.http.GET(

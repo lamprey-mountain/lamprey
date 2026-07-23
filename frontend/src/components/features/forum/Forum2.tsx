@@ -355,6 +355,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		return rid ? messagesService.cache.get(rid) : undefined;
 	};
 	const storageKey = () => `editor_draft_${props.channel.id}`;
+	const channelId = createMemo(() => props.channel.id);
 
 	function handleUpload(file: File) {
 		const local_id = uuidv7();
@@ -605,13 +606,13 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 
 	const isEmpty = () => !ch.editor_state?.doc.textContent.trim();
 
-	const [activity] = createResource(
-		() => props.channel.id,
-		(channel_id) => messagesService.fetchActivity(channel_id),
-	);
-	activity();
+	// const [activity] = createResource(
+	// 	() => props.channel.id,
+	// 	(channel_id) => messagesService.fetchActivity(channel_id),
+	// );
+	// activity();
 
-	// const firstMessage = messagesService.use(() => props.channel.id, () => props.channel.id);
+	const firstMessage = messagesService.use(() => props.channel.id, () => props.channel.id);
 	// TODO: render firstMessage
 	// TODO: dont render duplicate thread/post title
 
