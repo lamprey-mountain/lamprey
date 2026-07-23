@@ -366,6 +366,14 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		return selected === id;
 	};
 
+	const isVisible = (chan: ChannelWithThreads) => {
+		const isFocused =
+			chan.id === params.channel_id ||
+			chan.threads?.some((t) => t.id === params.channel_id);
+		const isCollapsed = collapsedCategories().has(chan.parent_id ?? "");
+		return !isCollapsed || isFocused;
+	};
+
 	return (
 		<nav id="channel-nav" ref={keybinds.container}>
 			<Show when={flags.has("nav_header")}>
@@ -498,23 +506,23 @@ export const ChannelNav = (props: { room_id?: string }) => {
 									</div>
 								)}
 							</Show>
-							<Show when={!category || !collapsedCategories().has(category.id)}>
-								<ul class="category-channels">
-									<For
-										each={channels}
-										fallback={
-											<div
-												class="empty-text"
-												style="margin-left: 16px"
-												data-channel-id={category?.id}
-												onDragOver={dnd.handle}
-												onDrop={dnd.handle}
-											>
-												(no channels)
-											</div>
-										}
-									>
-										{(channel) => (
+							<ul class="category-channels">
+								<For
+									each={channels}
+									fallback={
+										<div
+											class="empty-text"
+											style="margin-left: 16px"
+											data-channel-id={category?.id}
+											onDragOver={dnd.handle}
+											onDrop={dnd.handle}
+										>
+											(no channels)
+										</div>
+									}
+								>
+									{(channel) => (
+										<Show when={isVisible(channel)}>
 											<li
 												class="channel-item"
 												classList={{
@@ -611,10 +619,10 @@ export const ChannelNav = (props: { room_id?: string }) => {
 													}}
 												</For>
 											</li>
-										)}
-									</For>
-								</ul>
-							</Show>
+										</Show>
+									)}
+								</For>
+							</ul>
 						</>
 					)}
 				</For>
