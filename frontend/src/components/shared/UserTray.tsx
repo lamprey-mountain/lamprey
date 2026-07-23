@@ -215,7 +215,18 @@ export const UserTray = () => {
 			<div class="row user-row">
 				<Show when={currentUser()}>
 					{(u) => (
-						<div class="current-user" onClick={openUserProfile}>
+						<div
+							class="current-user"
+							onClick={openUserProfile}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									e.preventDefault();
+									openUserProfile(e as any);
+								}
+							}}
+							role="button"
+							tabindex={0}
+						>
 							<AvatarWithStatus user={u()} />
 							<div class="info">
 								<div class="name">

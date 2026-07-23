@@ -2075,7 +2075,8 @@ body.resizing {
 				margin-right: 8px;
 			}
 
-			&:hover {
+			&:hover,
+			&:focus-visible {
 				background: #fff2;
 			}
 		}
@@ -2146,7 +2147,8 @@ body.resizing {
 	& .button.icon-button {
 		border-radius: 4px;
 
-		&:hover {
+		&:hover,
+		&:focus-visible {
 			background: #fff2;
 		}
 
