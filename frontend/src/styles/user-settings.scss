@@ -8,19 +8,99 @@
 		grid-template-areas: "avatar name" "avatar description";
 		gap: 4px;
 
-		.name {
+		& > .name {
 			grid-area: name;
-			font-weight: bold;
-			font-size: 1.2em;
-			cursor: pointer;
+
+			& > .label {
+				margin: 0 4px;
+			}
+
+			& > input {
+				width: 100%;
+				max-width: 320px;
+			}
 		}
 
-		.description {
+		& > .description {
 			grid-area: description;
+			max-width: 320px;
+			margin-top: 8px;
+
+			& > .label {
+				margin: 0 4px;
+			}
+
+			.editor {
+				background: $bg-150;
+				border: solid 1px $sep-300;
+				padding: 2px 4px;
+				border-radius: 2px;
+
+				&:focus-within {
+					border: solid 1px $link-500;
+				}
+			}
 		}
 
-		.avatar-uploader {
+		& > .avatar-uploader {
 			grid-area: avatar;
+		}
+	}
+
+	.banner-uploader {
+		margin-top: 8px;
+
+		.banner-label {
+			margin-bottom: 4px;
+		}
+
+		.remove {
+			display: inline-block;
+			color: $color-red;
+			border: none;
+			background: none;
+			font-size: 0.8rem;
+			padding: 0;
+
+			&:hover {
+				text-decoration: underline;
+			}
+		}
+	}
+
+	.banner {
+		position: relative;
+		height: 96px;
+		aspect-ratio: 10 / 3;
+		background-color: $bg-150;
+		background-size: cover;
+		background-position: center;
+		border-radius: 4px;
+		cursor: pointer;
+		overflow: hidden;
+
+		& > .overlay {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: rgba(0, 0, 0, 0.5);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			opacity: 0;
+			transition: opacity 0.2s;
+		}
+
+		&:hover .overlay {
+			opacity: 1;
+		}
+
+		& > .info {
+			padding: 4px;
+			background: rgba(0, 0, 0, 0.8);
+			display: inline-block;
 		}
 	}
 }

@@ -14,6 +14,7 @@ import { Avatar } from "@/components/shared/User";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal";
+import { getThumbFromId } from "@/media/util";
 import { Copyable } from "@/utils/general";
 import { createEditor } from "../editor/Editor";
 import { serializeToMarkdown } from "../editor/serializer";
@@ -139,17 +140,23 @@ export function Profile(props: VoidProps<{ user: User }>) {
 		preferences: null,
 	});
 
+	// TODO: aria/label for name, description
+	// TODO: description min height 3 lines
+
 	return (
 		<div class="user-settings-info">
 			<h2>profile</h2>
 			<div class="profile">
-				<input
-					class="name"
-					type="text"
-					value={editingName()}
-					onInput={(e) => setEditingName(e.target.value)}
-				/>
+				<div class="name">
+					<h3 class="label dim">name</h3>
+					<input
+						type="text"
+						value={editingName()}
+						onInput={(e) => setEditingName(e.target.value)}
+					/>
+				</div>
 				<div class="description">
+					<h3 class="label dim">description</h3>
 					<descriptionEditor.View
 						placeholder="user description (bio)..."
 						submitOnEnter={false}
@@ -166,7 +173,7 @@ export function Profile(props: VoidProps<{ user: User }>) {
 					<Show when={editingAvatar()}>
 						<button
 							type="button"
-							class="remove"
+							class="button remove"
 							onClick={(e) => {
 								e.stopPropagation();
 								removeAvatar();
@@ -186,24 +193,53 @@ export function Profile(props: VoidProps<{ user: User }>) {
 					/>
 				</div>
 			</div>
+			<div class="banner-uploader">
+				<h3 class="banner-label dim">
+					banner
+					<Show when={editingBanner()} fallback=" (no banner, click to upload)">
+						{" - "}
+						<button class="button remove" onClick={removeBanner}>
+							remove
+						</button>
+					</Show>
+				</h3>
+				<div
+					class="banner"
+					onClick={openBannerPicker}
+					style={{
+						"background-image":
+							(editingBanner() &&
+								`url(${getThumbFromId(editingBanner()!, 640)})`) ||
+							undefined,
+					}}
+				>
+					<Show when={false /* NOTE: possible alternative styling*/}>
+						<div class="info dim">
+							banner
+							<Show when={editingBanner()}>
+								{" - "}
+								<button class="button remove" onClick={removeBanner}>
+									remove
+								</button>
+							</Show>
+						</div>
+					</Show>
+					<div class="overlay">upload banner</div>
+				</div>
+				<input
+					style="display:none"
+					ref={bannerInputEl}
+					type="file"
+					onInput={(e) => {
+						const f = e.target.files?.[0];
+						if (f) setBannerFile(f);
+					}}
+				/>
+			</div>
+			<br />
 			<div>
 				user id: <Copyable>{props.user.id}</Copyable>
 			</div>
-			<button class="button" onClick={openBannerPicker}>
-				upload banner
-			</button>
-			<button class="button" onClick={removeBanner}>
-				remove banner
-			</button>
-			<input
-				style="display:none"
-				ref={bannerInputEl}
-				type="file"
-				onInput={(e) => {
-					const f = e.target.files?.[0];
-					if (f) setBannerFile(f);
-				}}
-			/>
 			<Savebar show={isDirty()} onCancel={reset} onSave={save} />
 		</div>
 	);
