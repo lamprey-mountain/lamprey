@@ -80,6 +80,11 @@ const flagsProd: Flag[] = [
 	"room_member_list",
 	"channel_member_list",
 	"two_tier_nav",
+	"message_search",
+	"nav_header",
+	"auto_redirect_last_channel",
+	"msgpack",
+	"sync_deflate",
 ];
 
 export const flags = new ReactiveSet(
