@@ -1,9 +1,10 @@
+import { useCtx } from "@/app/context";
 import { useCurrentUser } from "@/contexts/currentUser";
 
 // TODO: refactor out duplicated code from here and Message.tsx
 
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
-import { leading, throttle } from "@solid-primitives/scheduled";
+import { debounce, leading, throttle } from "@solid-primitives/scheduled";
 import { ReactiveSet } from "@solid-primitives/set";
 import type { EditorState, Transaction } from "prosemirror-state";
 import type { Channel, Message, RepliesMessage } from "sdk";
@@ -11,6 +12,7 @@ import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
 	createMemo,
+	createResource,
 	createSignal,
 	For,
 	Match,
@@ -92,6 +94,7 @@ const InputReply = (props: { thread: Channel; reply: Message }) => {
 export const Forum2 = (props: { channel: Channel }) => {
 	const channels2 = useChannels();
 	const threads2 = useThreads();
+	const ctx = useCtx();
 	const room_id = () => props.channel.room_id ?? "";
 	const forum_id = () => props.channel.id;
 	const prefsService = usePreferences();
@@ -101,6 +104,32 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const [sortBy, setSortBy] = createSignal<Forum2Sort>("new");
 	const [viewAs, setViewAs] = createSignal<Forum2View>("list");
 	const [showRemoved, setShowRemoved] = createSignal(false);
+	const [searchQuery, setSearchQuery] = createSignal("");
+	const [debouncedSearch, setDebouncedSearch] = createSignal("");
+
+	const debouncedSetSearch = debounce(
+		(value: string) => setDebouncedSearch(value),
+		300,
+	);
+
+	const [searchResults] = createResource(debouncedSearch, async (query) => {
+		if (!query.trim()) return [];
+		try {
+			const tantivyQuery = `+(${query}) +channel_id:${forum_id()} +subtype: IN [ThreadPublic ThreadPrivate ThreadForum2]`;
+			const res = await ctx.client.http.POST("/api/v1/search/channels", {
+				body: {
+					query: tantivyQuery,
+					limit: 50,
+					offset: 0,
+				},
+			});
+			return res.data?.channels ?? [];
+		} catch (e) {
+			console.error("Search failed", e);
+			return [];
+		}
+	});
+
 	const [menuOpen, setMenuOpen] = createSignal(false);
 	const [referenceEl, setReferenceEl] = createSignal<HTMLElement>();
 	const [floatingEl, setFloatingEl] = createSignal<HTMLElement>();
@@ -150,6 +179,12 @@ export const Forum2 = (props: { channel: Channel }) => {
 	};
 
 	const unorderedThreads = createMemo(() => {
+		const query = searchQuery().toLowerCase();
+		if (query.length > 0) {
+			const results = searchResults() ?? [];
+			return sortThreads(results.filter((t) => t.parent_id === forum_id()));
+		}
+
 		const allIds = new Set([
 			...(activeThreads()?.state.ids ?? []),
 			...(archivedThreads()?.state.ids ?? []),
@@ -208,7 +243,14 @@ export const Forum2 = (props: { channel: Channel }) => {
 					<br />
 				</Show>
 				<div class="forum2-header">
-					<Search placeholder="search threads..." />
+					<Search
+						placeholder="search threads..."
+						value={searchQuery}
+						onInput={(s) => {
+							setSearchQuery(s);
+							debouncedSetSearch(s);
+						}}
+					/>
 					<button
 						type="button"
 						class="button primary"
