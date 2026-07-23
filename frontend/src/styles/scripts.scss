@@ -123,17 +123,13 @@
 	gap: 16px;
 	overflow-y: auto;
 
-	header {
-		input {
-			width: 100%;
-			padding: 4px 8px;
-			background-color: $bg-150;
-			border: solid $sep-300 1px;
-			border-radius: 2px;
+	.scripts-header {
+		display: flex;
+		align-items: stretch;
+		gap: 4px;
 
-			&:focus {
-				border-color: $link-500;
-			}
+		& > .search {
+			flex: 1;
 		}
 	}
 

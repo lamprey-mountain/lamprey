@@ -14,6 +14,7 @@ import {
 import type { Channel, Script } from "ts-sdk";
 import { useScriptLogs, useScriptRuns, useScripts } from "@/api";
 import { PaneResizeHandle } from "@/atoms/Resizable";
+import { Search } from "@/atoms/Search";
 import { Time } from "@/atoms/Time";
 import { useChannel } from "@/contexts/channel";
 import { getUrl } from "@/media/util";
@@ -94,13 +95,13 @@ export const Scripts = (props: { channel: Channel }) => {
 					when={s.root}
 					fallback={
 						<div class="script-list">
-							<header>
-								<input
-									type="search"
+							<header class="scripts-header">
+								<Search
 									placeholder="Search scripts..."
-									value={search()}
-									onInput={(e) => setSearch(e.target.value)}
+									value={search}
+									onInput={setSearch}
 								/>
+								<button class="button primary">create</button>
 							</header>
 							<ul>
 								<For each={filteredScripts()}>
