@@ -24,6 +24,12 @@ import { SearchResults } from "@/components/features/chat/SearchResults.tsx";
 import { ThreadMembers } from "@/components/features/chat/Thread.tsx";
 import { Document } from "@/components/features/editor/Document.tsx";
 import { DocumentHistory } from "@/components/features/editor/DocumentHistory.tsx";
+import { Forum } from "@/components/features/forum/Forum";
+import {
+	Forum2,
+	Forum2Thread,
+	Forum2ThreadPage,
+} from "@/components/features/forum/Forum2";
 import { RoomSettings } from "@/components/features/room_settings/RoomSettings";
 import { Scripts } from "@/components/features/scripts/Scripts";
 import { UserSettings } from "@/components/features/user_settings";
@@ -31,12 +37,6 @@ import { Voice } from "@/components/features/voice/Voice.tsx";
 import { Calendar } from "@/components/shared/Calendar";
 import { Category } from "@/components/shared/Category";
 import { ChannelNav } from "@/components/shared/ChannelNav";
-import { Forum } from "@/components/features/forum/Forum";
-import {
-	Forum2,
-	Forum2Thread,
-	Forum2ThreadPage,
-} from "@/components/features/forum/Forum2";
 import { Friends } from "@/components/shared/Friends";
 import { Home } from "@/components/shared/Home";
 import { Inbox } from "@/components/shared/Inbox";

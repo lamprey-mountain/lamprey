@@ -716,6 +716,40 @@ export class MessagesService extends BaseService<Message> {
 		}
 	}
 
+	async fetchActivity(channel_id: string) {
+		const { data, error } = await this.client.http.GET(
+			"/api/v1/channel/{channel_id}/activity",
+			{
+				params: { path: { channel_id } },
+			},
+		);
+		if (error) throw error;
+
+		batch(() => {
+			if (data.users) {
+				// TODO: return users with relationships here?
+				this.store.users.upsertBulk(
+					data.users.map((i) => ({ relationship: {}, ...i })),
+				);
+			}
+			if (data.room_members) {
+				this.store.roomMembers.upsertBulk(data.room_members);
+			}
+			if (data.thread_members) {
+				this.store.threadMembers.upsertBulk(data.thread_members);
+			}
+			if (data.messages) {
+				this.upsertBulk(data.messages);
+			}
+		});
+
+		// TODO: make this reactive
+		// append when an activity message is created (MessageSync::MessageCreate)
+		// also handle other message update/delete/etc
+
+		return data;
+	}
+
 	async deleteBulk(channel_id: string, message_ids: string[]) {
 		await this.client.http.PATCH("/api/v1/channel/{channel_id}/message", {
 			params: { path: { channel_id } },

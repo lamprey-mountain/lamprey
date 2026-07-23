@@ -24,7 +24,6 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
 import { uuidv7 } from "uuidv7";
 import {
@@ -36,7 +35,6 @@ import {
 	useThreads,
 	useUsers,
 } from "@/api";
-import { useCtx } from "@/app/context";
 import cancelIc from "@/assets/x.png";
 import { Dropdown } from "@/atoms/Dropdown";
 import { EmojiButton } from "@/atoms/EmojiButton";
@@ -53,32 +51,28 @@ import { Reactions } from "@/components/features/chat/Reactions";
 import { createEditor } from "@/components/features/editor/Editor";
 import { serializeToMarkdown } from "@/components/features/editor/serializer.ts";
 import { useAutocomplete } from "@/contexts/autocomplete";
-import { createInitialChannelState, useChannel } from "@/contexts/channel";
+import { useChannel } from "@/contexts/channel";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
-import { useModals } from "@/contexts/modal";
 import { useUploads } from "@/contexts/uploads";
 import { useMessageSubmit } from "@/hooks/useMessageSubmit";
 import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
-import { md } from "@/lib/markdown";
 import { getMessageOverrideName } from "@/utils/general";
 import { icChevron } from "@/utils/icons.ts";
-import { RenderUploadItem } from "../chat/Input.tsx";
-import { MessageToolbarMount } from "../chat/MessageToolbar.tsx";
-import {
-	MessageToolbarProvider,
-	useMessageToolbar,
-} from "../chat/message-toolbar-context.tsx";
-import { highlight } from "../chat/util.ts";
 import { Forum2CreateForm } from "../../shared/Forum2CreateForm.tsx";
 import {
 	type Forum2Sort,
 	Forum2Sorting,
 	type Forum2View,
 } from "../../shared/Forum2Sorting.tsx";
+import { RenderUploadItem } from "../chat/Input.tsx";
+import { MessageToolbarMount } from "../chat/MessageToolbar.tsx";
+import {
+	MessageToolbarProvider,
+	useMessageToolbar,
+} from "../chat/message-toolbar-context.tsx";
+import { TimelineProvider, useTimeline } from "../chat/timeline-context.tsx";
 import { ThreadCard } from "./ThreadCard.tsx";
-import { ChannelIcon } from "../../shared/User.tsx";
-import { useTimeline } from "../chat/timeline-context.tsx";
 
 // Type guard for RoomMember with override_name
 function hasOverrideName(
@@ -238,12 +232,13 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const perms = usePermissions(user_id, room_id, () => undefined);
 
 	// TODO: implement this
-	const timeline = useTimeline();
-	timeline.commands.on("scrollBy", () => {});
-	timeline.commands.on("jumpToBottom", () => {});
-	timeline.commands.on("jumpToTop", () => {});
-	timeline.commands.on("jumpToMessage", () => {});
-	timeline.commands.on("ackMessage", () => {});
+	// const timeline = useTimeline();
+	// timeline.commands.on("scrollBy", () => { });
+	// timeline.commands.on("jumpToBottom", () => { });
+	// timeline.commands.on("jumpToTop", () => { });
+	// timeline.commands.on("jumpToMessage", () => { });
+	// timeline.commands.on("ackMessage", () => { });
+	// <TimelineProvider channel={...}></TimelineProvider>
 
 	return (
 		<div class="forum2">
@@ -614,6 +609,12 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 
 	const isEmpty = () => !ch.editor_state?.doc.textContent.trim();
 
+	const [activity] = createResource(
+		() => props.channel.id,
+		(channel_id) => messagesService.fetchActivity(channel_id),
+	);
+	activity();
+
 	return (
 		<MessageToolbarProvider>
 			<div class="thread forum2">
@@ -732,11 +733,13 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	);
 };
 
-// TODO: implement
-const _ThreadLog = (props: {
+type ThreadActivityProps = {
 	comments: { items: Array<{ id: string }> } | undefined;
 	commentTree: Array<unknown>;
-}) => {
+};
+
+// TODO: implement
+const ThreadActivity = (props: ThreadActivityProps) => {
 	const comments = () => props.comments;
 	const commentTree = () => props.commentTree;
 
