@@ -3,21 +3,19 @@ import type { Channel } from "sdk";
 import { createSignal, For, Show } from "solid-js";
 import { uuidv7 } from "uuidv7";
 import { useChannels } from "@/api";
-import { useCtx } from "@/app/context";
 import { createEditor } from "@/components/features/editor/Editor";
 import { serializeToMarkdown } from "@/components/features/editor/serializer.ts";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
+import { useChannel } from "@/contexts/mod";
 import { useUploads } from "@/contexts/uploads";
 import { RenderUploadItem } from "../features/chat/Input";
 
-// FIXME: allow uploading attachments when creating a thread
 export const Forum2CreateForm = (props: {
 	channel: Channel;
 	onCancel: () => void;
 	onSuccess: () => void;
 }) => {
-	const ctx = useCtx();
 	const channels2 = useChannels();
 	const uploads = useUploads();
 	const toolbar = useFormattingToolbar();
@@ -25,26 +23,23 @@ export const Forum2CreateForm = (props: {
 
 	const [title, setTitle] = createSignal("");
 	const [formEditorState, setFormEditorState] = createSignal<EditorState>();
-	const [attachments, setAttachments] = createSignal<string[]>([]);
-	const attachmentMap = () => ctx.uploads;
+	const [ch] = useChannel();
 
 	const formEditor = createEditor({
 		channelId: () => props.channel.id,
 		roomId: () => props.channel.room_id ?? "",
 		toolbar,
 		autocomplete,
+		// TODO: save drafts
 		initialContent: () => "",
 	});
 
 	function handleUpload(file: File) {
 		const local_id = uuidv7();
 		uploads.init(local_id, props.channel.id, file);
-		setAttachments((prev) => [...prev, local_id]);
 	}
 
 	function uploadFile(e: InputEvent) {
-		alert("uploading files here is currently broken :(");
-		return;
 		const target = e.target as HTMLInputElement | null;
 		if (!target?.files) return;
 		const files = Array.from(target.files);
@@ -55,23 +50,32 @@ export const Forum2CreateForm = (props: {
 
 	function handleFormSubmit() {
 		if (!title().trim()) return;
-		const content = serializeToMarkdown(
-			formEditorState()?.doc ?? formEditor.schema.create(null),
-		);
+		const doc = formEditorState()?.doc;
+		const content = doc ? serializeToMarkdown(doc) : null;
+
+		// TODO: warn if any attachments aren't uploaded yet
+
 		channels2.create(props.channel.room_id ?? "", {
 			name: title(),
 			parent_id: props.channel.id,
 			type: "ThreadForum2",
 			starter_message: {
 				content,
-				// attachments: attachments().map((id) => ({
-				// 	type: "Local",
-				// 	local_id: id,
-				// })),
-				mentions: {},
+				attachments: ch.attachments
+					.filter((att) => att.status === "uploaded")
+					.map((att) => ({
+						type: "Media",
+						media_id: att.media.id,
+						spoiler: att.spoiler,
+					})),
 			},
 		});
 		props.onSuccess();
+	}
+
+	function handleEditorSubmit(_s: string) {
+		handleFormSubmit();
+		return true;
 	}
 
 	return (
@@ -84,27 +88,28 @@ export const Forum2CreateForm = (props: {
 				onInput={(e) => setTitle(e.target.value)}
 			/>
 			<formEditor.View
-				onSubmit={handleFormSubmit}
+				onSubmit={handleEditorSubmit}
 				onChange={setFormEditorState}
 				onUpload={handleUpload}
 				placeholder="message content..."
 				channelId={props.channel.id}
 				submitOnEnter={false}
 			/>
-			<div class="attachments" style="margin: 8px 0;">
-				<ul>
-					<For each={attachments()}>
-						{(local_id) => {
-							const att = attachmentMap().get(local_id);
-							return (
-								<Show when={att}>
-									<RenderUploadItem thread_id={props.channel.id} att={att!} />
-								</Show>
-							);
-						}}
-					</For>
-				</ul>
-			</div>
+			<Show when={ch.attachments.length > 0}>
+				<div class="attachments" style="margin: 8px 0;">
+					<header>
+						{ch.attachments.length}{" "}
+						{ch.attachments.length === 1 ? "attachment" : "attachments"}
+					</header>
+					<ul>
+						<For each={ch.attachments}>
+							{(att) => (
+								<RenderUploadItem thread_id={props.channel.id} att={att} />
+							)}
+						</For>
+					</ul>
+				</div>
+			</Show>
 			<div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
 				<label class="upload button">
 					upload file

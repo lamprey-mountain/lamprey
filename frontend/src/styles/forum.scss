@@ -238,6 +238,10 @@
 			background-color: $bg-400;
 		}
 	}
+
+	& > .attachments {
+		width: max-content;
+	}
 }
 
 .comment-sorting-option {
@@ -314,15 +318,15 @@
 	}
 
 	& > .comment-wrap2 {
-	& > .comment {
-		margin-left: var(--offset);
+		& > .comment {
+			margin-left: var(--offset);
 			background: none;
-	}
+		}
 
-	&:hover, &:focus-visible {
-	background-color: oklch(var(--color-bg1) / 0.3);
-	}
-
+		&:hover,
+		&:focus-visible {
+			background-color: oklch(var(--color-bg1) / 0.3);
+		}
 	}
 
 	&.toplevel {
@@ -343,7 +347,8 @@
 		margin-left: calc(var(--offset) + 52px);
 		cursor: pointer;
 
-		&:hover, &:focus-visible {
+		&:hover,
+		&:focus-visible {
 			color: $fg-100;
 		}
 	}
