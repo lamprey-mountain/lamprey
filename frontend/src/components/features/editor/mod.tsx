@@ -217,7 +217,6 @@ export const createEditor = (opts: EditorOptions) => {
 				<div
 					class="editor"
 					classList={{ disabled: props.disabled ?? false }}
-					tabindex={0}
 					ref={editorRef!}
 					role="textbox"
 					aria-label="chat input"
