@@ -621,7 +621,14 @@ impl ServiceChannels {
             if let Some(starter_message) = json.starter_message {
                 if json.ty.is_thread() {
                     srv.messages
-                        .create(channel_id, auth, None, starter_message, None)
+                        .create(
+                            channel_id,
+                            auth,
+                            None,
+                            starter_message,
+                            None,
+                            (*channel_id).into(),
+                        )
                         .await?;
                 } else {
                     // FIXME: don't return an error after already creating the channel!

@@ -10,6 +10,7 @@ use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Time;
 use common::v1::types::{AuditLogEntryType, MessagePin, MessageType, ThreadMemberPut};
+use common::v2::types::MessageId;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
@@ -50,6 +51,7 @@ async fn message_create(
             req.body.idempotency_key,
             req.body.message,
             header_timestamp,
+            MessageId::new(),
         )
         .await?;
 

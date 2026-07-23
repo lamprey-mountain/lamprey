@@ -243,6 +243,7 @@ impl ServiceMessages {
         nonce: Option<String>,
         json: MessageCreate,
         header_timestamp: Option<Time>,
+        message_id: MessageId,
     ) -> Result<Message> {
         if let Some(nonce) = nonce {
             // FIXME: this won't work with federation
@@ -250,12 +251,19 @@ impl ServiceMessages {
             self.idempotency_keys
                 .try_get_with(
                     (session.id, nonce.clone()),
-                    self.create_inner(channel_id, auth, Some(nonce), json, header_timestamp),
+                    self.create_inner(
+                        channel_id,
+                        auth,
+                        Some(nonce),
+                        json,
+                        header_timestamp,
+                        message_id,
+                    ),
                 )
                 .await
                 .map_err(|err| err.fake_clone())
         } else {
-            self.create_inner(channel_id, auth, nonce, json, header_timestamp)
+            self.create_inner(channel_id, auth, nonce, json, header_timestamp, message_id)
                 .await
         }
     }
@@ -295,13 +303,14 @@ impl ServiceMessages {
         nonce: Option<String>,
         json: MessageCreate,
         header_timestamp: Option<Time>,
+        id: MessageId,
     ) -> Result<Message> {
         let srv = self.state.services();
         let channel = srv.channels.get(channel_id, None).await?;
 
         let op = MessageOperation {
             channel,
-            message_id: MessageId::new(),
+            message_id: id,
             auth: AuthProvider::Auth(auth.clone()),
             kind: MessageOperationKind::MessageCreate(MessageCreateOperation { json }),
             nonce,

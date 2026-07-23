@@ -7,6 +7,7 @@ use axum::response::IntoResponse;
 use common::v1::types::application::Scope;
 use common::v1::types::misc::InteractionMessageReq;
 use common::v1::{routes, types::Permission};
+use common::v2::types::MessageId;
 use lamprey_macros::handler;
 use tracing::warn;
 use utoipa_axum::router::OpenApiRouter;
@@ -105,7 +106,14 @@ async fn interaction_message_create(
 
     let message = srv
         .messages
-        .create(channel_id, &auth, req.idempotency_key, req.message, None)
+        .create(
+            channel_id,
+            &auth,
+            req.idempotency_key,
+            req.message,
+            None,
+            MessageId::new(),
+        )
         .await?;
 
     Ok((StatusCode::CREATED, Json(message)))
