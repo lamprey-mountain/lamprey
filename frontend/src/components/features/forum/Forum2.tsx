@@ -6,18 +6,11 @@ import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { leading, throttle } from "@solid-primitives/scheduled";
 import { ReactiveSet } from "@solid-primitives/set";
 import type { EditorState, Transaction } from "prosemirror-state";
-import {
-	type Channel,
-	getTimestampFromUUID,
-	type Message,
-	type RepliesMessage,
-	type RoomMember,
-} from "sdk";
+import type { Channel, Message, RepliesMessage, RoomMember } from "sdk";
 import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
 	createMemo,
-	createResource,
 	createSignal,
 	For,
 	Match,
@@ -29,7 +22,6 @@ import {
 import { Portal } from "solid-js/web";
 import { uuidv7 } from "uuidv7";
 import {
-	useApi,
 	useChannels,
 	useMessages,
 	usePreferences,
@@ -41,12 +33,9 @@ import cancelIc from "@/assets/x.png";
 import { Dropdown } from "@/atoms/Dropdown";
 import { EmojiButton } from "@/atoms/EmojiButton";
 import { Icon } from "@/atoms/Icon";
-import { Markdown } from "@/atoms/Markdown";
 import { Search } from "@/atoms/Search.tsx";
-import { Time } from "@/atoms/Time";
 import { createTooltip } from "@/atoms/Tooltip";
 import {
-	AttachmentView,
 	MessageView,
 	UserDisplayName,
 } from "@/components/features/chat/Message";
@@ -72,12 +61,11 @@ import {
 } from "@/utils/icons.ts";
 import { Forum2CreateForm } from "../../shared/Forum2CreateForm.tsx";
 import { RenderUploadItem } from "../chat/Input.tsx";
+import { MessageSkeleton } from "../chat/MessageSkeleton.tsx";
 import { MessageToolbarMount } from "../chat/MessageToolbar.tsx";
-import {
-	MessageToolbarProvider,
-	useMessageToolbar,
-} from "../chat/message-toolbar-context.tsx";
+import { MessageToolbarProvider } from "../chat/message-toolbar-context.tsx";
 import { TimelineProvider, useTimeline } from "../chat/timeline-context.tsx";
+import { Comment } from "./Comment.tsx";
 import { type CommentSort, CommentSorting } from "./CommentSorting.tsx";
 import { ThreadCard } from "./ThreadCard.tsx";
 import {
@@ -101,25 +89,8 @@ function hasLastVersionId(
 }
 
 const InputReply = (props: { thread: Channel; reply: Message }) => {
-	const users2 = useUsers();
-	const roomMembers2 = useRoomMembers();
 	const tip = createTooltip({ tip: () => "remove reply" });
 	const [_ch, chUpdate] = useChannel();
-	const getName = (user_id: string) => {
-		const user = users2.use(() => user_id);
-		const room_id = props.thread.room_id;
-		if (!room_id) {
-			return user()?.name;
-		}
-		const member = roomMembers2.use(() => `${room_id}:${user_id}`);
-
-		const m = member();
-		return (hasOverrideName(m) && m.override_name) ?? user()?.name;
-	};
-
-	const getNameNullable = (user_id?: string) => {
-		if (user_id) return getName(user_id);
-	};
 
 	return (
 		<div class="reply">
@@ -133,10 +104,11 @@ const InputReply = (props: { thread: Channel; reply: Message }) => {
 			</button>
 			<div class="info">
 				replying to{" "}
-				<b>
-					{getMessageOverrideName(props.reply) ??
-						getNameNullable(props.reply?.author_id)}
-				</b>
+				<UserDisplayName
+					user_id={props.reply.author_id}
+					room_id={props.thread.room_id ?? undefined}
+					thread_id={props.thread.id}
+				/>
 			</div>
 		</div>
 	);
@@ -438,10 +410,12 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		if (!children) return [];
 
 		const buildNodes = (nodes: RepliesMessage[]): CommentNode[] => {
-			return nodes.filter(i => i.message.id !== i.message.channel_id).map((node) => ({
-				message: node.message,
-				children: node.children ? buildNodes(node.children) : [],
-			}));
+			return nodes
+				.filter((i) => i.message.id !== i.message.channel_id)
+				.map((node) => ({
+					message: node.message,
+					children: node.children ? buildNodes(node.children) : [],
+				}));
 		};
 
 		return buildNodes(children);
@@ -645,8 +619,9 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 					mins === 0
 						? `slowmode set to ${secs}s`
 						: `slowmode set to ${mins}m${secs.toString().padStart(2, "0")}s`;
-				return `slowmode set to ${time}${bypassSlowmode() ? " (bypassed)" : ""
-					}`;
+				return `slowmode set to ${time}${
+					bypassSlowmode() ? " (bypassed)" : ""
+				}`;
 			} else return "no slowmode";
 		}
 		const seconds = Math.ceil(remainingMs / 1000);
@@ -657,7 +632,12 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 
 	const isEmpty = () => !ch.editor_state?.doc.textContent.trim();
 
-// TODO: button to view activity in sidebar
+	// TODO: more menu buttons
+	// - copy link
+	// - join/unfollow
+	// - view
+	// - jump to top
+
 	// const [activity] = createResource(
 	// 	() => props.channel.id,
 	// 	(channel_id) => messagesService.fetchActivity(channel_id),
@@ -677,11 +657,20 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 						<h2 class="title">{props.channel.name}</h2>
 						<Switch>
 							{/* TODO: better rendering for loading/error/not found */}
-							<Match when={firstMessage.loading}>loading</Match>
+							<Match when={firstMessage.loading}>
+								<MessageSkeleton />
+							</Match>
 							<Match when={firstMessage.error}>error</Match>
 							<Match when={firstMessage()}>
 								{(m) => (
-									<MessageView message={{ ...m(), thread: null }} separate />
+									<>
+										<MessageView
+											message={{ ...m(), thread: null, reactions: [] }}
+											separate
+										/>
+										<br />
+										<Reactions message={m()} />
+									</>
 								)}
 							</Match>
 							<Match when={!firstMessage.loading && !firstMessage()}>
@@ -891,7 +880,7 @@ export const Forum2Comments = (props: {
 	);
 };
 
-function CommentEditor(props: { message: Message; channel: Channel }) {
+export function CommentEditor(props: { message: Message; channel: Channel }) {
 	const messagesService = useMessages();
 	const [ch, chUpdate] = useChannel();
 	const toolbar = useFormattingToolbar();
@@ -1003,253 +992,6 @@ function CommentEditor(props: { message: Message; channel: Channel }) {
 	);
 }
 
-const Comment = (props: {
-	collapsed: ReactiveSet<string>;
-	channel: Channel;
-	node: CommentNode;
-	depth: number;
-}) => {
-	const message = () => props.node.message;
-	const children = () => props.node.children;
-	const api2 = useApi();
-	const [ch, chUpdate] = useChannel();
-	const toolbar = useMessageToolbar();
-
-	const collapsed = () => props.collapsed.has(message().id);
-	const isEditing = () => ch.editingMessage?.message_id === message().id;
-	const isSelected = () => ch.selectedMessages?.includes(message().id) ?? false;
-	const isReplyTarget = () => ch.reply_id === message().id;
-	const inSelectMode = () => ch.selectMode ?? false;
-
-	const currentUser = useCurrentUser();
-	const isOwnMessage = () => {
-		return currentUser()?.id === message().author_id;
-	};
-
-	const _canEditMessage = () => {
-		const msg = message();
-		return (
-			msg.latest_version.type === "DefaultMarkdown" &&
-			!msg.is_local &&
-			isOwnMessage()
-		);
-	};
-
-	const handleClick = (e: MouseEvent) => {
-		if (!inSelectMode() || !chUpdate) return;
-		e.preventDefault();
-		e.stopPropagation();
-
-		const message_id = message().id;
-		const selected = ch.selectedMessages;
-
-		if (e.shiftKey && selected.length > 0) {
-			// TODO: range selection for comments
-			if (selected.includes(message_id)) {
-				chUpdate(
-					"selectedMessages",
-					selected.filter((id) => id !== message_id),
-				);
-			} else {
-				chUpdate("selectedMessages", [...selected, message_id]);
-			}
-		} else {
-			if (selected.includes(message_id)) {
-				chUpdate(
-					"selectedMessages",
-					selected.filter((id) => id !== message_id),
-				);
-			} else {
-				chUpdate("selectedMessages", [...selected, message_id]);
-			}
-		}
-	};
-
-	const [summary] = createResource(
-		() => {
-			const v = message().latest_version;
-			if (v.type === "DefaultMarkdown" && v.content) {
-				return {
-					content: v.content,
-					channel_id: message().channel_id,
-					mentions: v.mentions,
-				};
-			}
-			return null;
-		},
-		async (data) => {
-			if (!data) return "(no content)";
-			return await api2.stripMarkdownAndResolveMentions(
-				data.content,
-				data.channel_id,
-				data.mentions,
-			);
-		},
-	);
-
-	const countAllChildren = (node: CommentNode): number => {
-		return (
-			node.children.length +
-			node.children.reduce((sum, child) => sum + countAllChildren(child), 0)
-		);
-	};
-
-	let contentEl!: HTMLElement;
-
-	// FIXME: use timeline.commands instead
-	// createEffect(() => {
-	// 	const hl = ch.highlight;
-	// 	if (hl === message().id) {
-	// 		// expand parent comments
-	// 		// props.expand(); // TODO: we need a way to expand parents if they are collapsed
-	// 		// for now we just scroll to it
-	// 		const el = contentEl?.closest(".comment");
-	// 		if (el) {
-	// 			el.scrollIntoView({ block: "center" });
-	// 			highlight(el);
-	// 			chUpdate("highlight", undefined);
-	// 		}
-	// 	}
-	// });
-
-	return (
-		<div
-			class="comment menu-message"
-			data-message-id={message().id}
-			classList={{
-				collapsed: collapsed(),
-				selected: isSelected(),
-				"reply-target": isReplyTarget(),
-				selectable: inSelectMode(),
-			}}
-			style={{
-				"--depth": props.depth,
-				"--is-darker": props.depth % 2 === 1 ? 1 : 0,
-			}}
-			onClick={handleClick}
-			onMouseEnter={(e) => {
-				toolbar.setTarget({ message: message(), element: e.currentTarget });
-			}}
-			onMouseLeave={(e) => {
-				const toolbarEl = toolbar.containerRef();
-				if (
-					toolbarEl &&
-					e.relatedTarget instanceof Node &&
-					toolbarEl.contains(e.relatedTarget)
-				) {
-					return;
-				}
-				toolbar.setTarget(null);
-			}}
-		>
-			<div class="inner">
-				<header>
-					<button
-						type="button"
-						class="collapse"
-						onClick={() =>
-							collapsed()
-								? props.collapsed.delete(message().id)
-								: props.collapsed.add(message().id)
-						}
-					>
-						{collapsed() ? "+" : "-"}
-					</button>
-					<Show when={collapsed()}>
-						<span class="childCount dim">[{countAllChildren(props.node)}]</span>
-					</Show>
-					<Show when={props.channel}>
-						<UserDisplayName
-							user_id={props.node.message.author_id}
-							room_id={props.channel.room_id ?? undefined}
-							thread_id={props.node.message.channel_id}
-							onClick
-						/>
-					</Show>
-					<Time date={getTimestampFromUUID(message().id)} />
-					<Show when={collapsed()}>
-						<div class="summary">{summary() ?? "..."}</div>
-					</Show>
-				</header>
-				<Show when={!collapsed()}>
-					<Show
-						when={!isEditing()}
-						fallback={
-							<CommentEditor message={message()} channel={props.channel} />
-						}
-					>
-						{(() => {
-							const msg = message();
-							const version = msg.latest_version;
-							const content =
-								version.type === "DefaultMarkdown"
-									? (version.content ?? "")
-									: "";
-							return (
-								<Markdown
-									content={content}
-									channel_id={msg.channel_id}
-									class="content"
-									ref={contentEl}
-								/>
-							);
-						})()}
-						<div style="padding: 0 8px">
-							{(() => {
-								const version = message().latest_version;
-								return (
-									<Show
-										when={
-											version.type === "DefaultMarkdown" &&
-											version.attachments?.length
-										}
-									>
-										<ul class="attachments">
-											<For
-												each={
-													version.type === "DefaultMarkdown"
-														? version.attachments
-														: []
-												}
-											>
-												{(att) => (
-													<Show when={att.type === "Media"}>
-														<AttachmentView att={att} />
-													</Show>
-												)}
-											</For>
-										</ul>
-									</Show>
-								);
-							})()}
-						</div>
-
-						<Show when={message().reactions?.length}>
-							<Reactions message={message()} />
-						</Show>
-					</Show>
-				</Show>
-			</div>
-			<Show when={!collapsed() && children().length > 0}>
-				<ul class="children">
-					<For each={children()}>
-						{(child) => (
-							<li>
-								<Comment
-									collapsed={props.collapsed}
-									channel={props.channel}
-									node={child}
-									depth={props.depth + 1}
-								/>
-							</li>
-						)}
-					</For>
-				</ul>
-			</Show>
-		</div>
-	);
-};
-
 // TODO: name colors
 // <div class="author">
 //   {#await author}
@@ -1273,11 +1015,7 @@ const Comment = (props: {
 export const Forum2ThreadPage = (props: { channel: Channel }) => {
 	return (
 		<div class="forum2">
-			<div class="thread">
-				<div class="main">
-					<Forum2Thread channel={props.channel} />
-				</div>
-			</div>
+			<Forum2Thread channel={props.channel} />
 		</div>
 	);
 };

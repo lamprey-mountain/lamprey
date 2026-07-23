@@ -39,141 +39,7 @@
 	}
 
 	.comments {
-		padding: 8px;
-
-		& .time {
-			color: $fg-500;
-			/* font-size: 0.7em; */
-			font-size: 0.8em;
-		}
-
-		.comment {
-			position: relative;
-			border-left: solid $sep-500 1px;
-			margin-bottom: -1px;
-
-			& .comment {
-				margin-left: 24px;
-			}
-
-			&.selectable {
-				cursor: pointer;
-			}
-		}
-
-		.toplevel {
-			margin-top: 16px;
-		}
-
-		.comment > .inner {
-			/* // &.fromop { */
-			/* //   // TODO: find a good color */
-			/* //   // making the border thicker doesn't look right */
-			/* //   border-left: solid var(--borders) 1px; */
-			/* // } */
-
-			background: rgba(0, 0, 0, calc(var(--is-darker) * 0.1));
-			/* border-radius: 4px; */
-
-			/* &.replied { */
-			/* border-left: solid var(--color-accent) 1px; */
-			/* } */
-
-			& > header {
-				display: flex;
-				gap: 8px;
-				/* background: $bg-150; */
-				white-space: nowrap;
-				align-items: center;
-
-				& > .collapse {
-					min-width: 24px;
-					border: solid $sep-500 1px;
-					border-left: none;
-					display: flex;
-					justify-content: center;
-					background: $bg-200;
-					font-family: var(--font-mono);
-
-					&:hover {
-						background: $bg-300;
-						text-decoration: none;
-					}
-				}
-
-				& > .childCount {
-					font-size: 1rem;
-				}
-
-				/* & > .author > .green { */
-				/* color: #77c57d; */
-				/* } */
-
-				& > time {
-					color: var(--fg-dimmed);
-				}
-
-				& > .summary {
-					color: $fg-400;
-					font-style: italic;
-					overflow: hidden;
-					text-overflow: ellipsis;
-
-					&::before {
-						content: "-";
-						margin-right: 8px;
-					}
-				}
-			}
-
-			&.collapsed > header {
-				background: none;
-			}
-
-			& > .content {
-				padding: 8px;
-			}
-
-			& > menu {
-				display: flex;
-				gap: 8px;
-				padding: 0 8px;
-				padding-bottom: 12px;
-
-				& > button {
-					background: none;
-					border: none;
-					padding: 0;
-					font-size: 0.9rem;
-					color: $fg-400;
-				}
-			}
-
-			& > .children {
-				list-style: none;
-				margin-top: 8px;
-			}
-		}
-
-		& .comment.reply-target > .inner {
-			box-shadow: 4px 0 0 -1px inset #cc1856;
-			background-color: #cc185622;
-
-			& .comment > .inner {
-				box-shadow: none;
-				background-color: rgba(0, 0, 0, calc(var(--is-darker) * 0.1));
-			}
-		}
-
-		& .comment.selected > .inner {
-			box-shadow: 4px 0 0 -1px inset #67dc82;
-			background-color: #67dc8222;
-
-			& .comment > .inner {
-				box-shadow: none;
-				background-color: rgba(0, 0, 0, calc(var(--is-darker) * 0.1));
-			}
-		}
+		padding: 8px 0;
 	}
 
 	.title {
@@ -200,6 +66,7 @@
 .forum2 > .thread {
 	display: flex;
 	flex: 1;
+	min-height: 0;
 
 	/* & > .aside { */
 	/* width: 256px; */
@@ -212,6 +79,7 @@
 		/* padding: 1rem; */
 		flex: 1;
 		overflow-y: auto;
+		min-height: 0;
 	}
 }
 
@@ -382,8 +250,14 @@
 
 .forum2-post-menu {
 	display: flex;
-	padding: 8px;
+	padding: 4px 8px;
 	background: $bg-100;
+	position: sticky;
+	top: 0;
+	z-index: 1;
+
+	/* // TODO: only show when stuck? */
+	/* box-shadow: 2px 2px 8px $bg-100; */
 
 	& > .left {
 		display: flex;
@@ -402,5 +276,160 @@
 				background: #fff1;
 			}
 		}
+	}
+}
+
+.forum2 .comment-wrap {
+	position: relative;
+	--offset: calc(36px * var(--depth));
+
+	& > .line {
+		position: absolute;
+		border-left: solid $sep-500 2px;
+		border-bottom: solid $sep-500 2px;
+		border-bottom-left-radius: 8px;
+		z-index: 1;
+
+		&.top {
+			height: 20px;
+			width: 18px;
+			left: calc(var(--offset) - 12px);
+			top: 2px;
+		}
+
+		&.side {
+			left: calc(var(--offset) + 24px);
+			top: 42px;
+			width: 20px;
+
+			// TODO: come up with a less hackier way of doing this?
+			&.connects-to-reply {
+				width: 0;
+			}
+		}
+	}
+
+	& > .children {
+		margin-top: 0;
+	}
+
+	& > .comment-wrap2 {
+	& > .comment {
+		margin-left: var(--offset);
+			background: none;
+	}
+
+	&:hover, &:focus-visible {
+	background-color: oklch(var(--color-bg1) / 0.3);
+	}
+
+	}
+
+	&.toplevel {
+		margin-top: 16px;
+
+		& > .line.top {
+			display: none;
+		}
+	}
+
+	&.from-op {
+		/* // TODO: find a good color */
+		/* // making the border thicker doesn't look right */
+		/* border-left: solid var(--borders) 1px; */
+	}
+
+	& > .more {
+		margin-left: calc(var(--offset) + 52px);
+		cursor: pointer;
+
+		&:hover, &:focus-visible {
+			color: $fg-100;
+		}
+	}
+
+	&.reply-target > .comment-wrap2 {
+		box-shadow: 4px 0 0 -1px inset #cc1856;
+		background-color: #cc185622;
+	}
+
+	&.selected > .comment-wrap2 {
+		box-shadow: 4px 0 0 -1px inset #67dc82;
+		background-color: #67dc8222;
+	}
+}
+
+// TODO: .local class for comments
+/* .forum2 .comment { */
+/* & > header { */
+
+/* & > .collapse { */
+/* min-width: 24px; */
+/* border: solid $sep-500 1px; */
+/* border-left: none; */
+/* display: flex; */
+/* justify-content: center; */
+/* background: $bg-200; */
+/* font-family: var(--font-mono); */
+
+/* &:hover { */
+/* background: $bg-300; */
+/* text-decoration: none; */
+/* } */
+/* } */
+
+/* & > .childCount { */
+/* font-size: 1rem; */
+/* } */
+
+/* & > .author > .green { */
+/* color: #77c57d; */
+/* } */
+
+/* & > time { */
+/* color: var(--fg-dimmed); */
+/* } */
+
+/* & > .summary { */
+/* color: $fg-400; */
+/* font-style: italic; */
+/* overflow: hidden; */
+/* text-overflow: ellipsis; */
+
+/* &::before { */
+/* content: "-"; */
+/* margin-right: 8px; */
+/* } */
+/* } */
+/* } */
+
+/* &.collapsed > header { */
+/* background: none; */
+/* } */
+
+/* & > .content { */
+/* padding: 8px; */
+/* } */
+
+/* & > menu { */
+/* display: flex; */
+/* gap: 8px; */
+/* padding: 0 8px; */
+/* padding-bottom: 12px; */
+
+/* & > button { */
+/* background: none; */
+/* border: none; */
+/* padding: 0; */
+/* font-size: 0.9rem; */
+/* color: $fg-400; */
+/* } */
+/* } */
+/* } */
+/* } */
+
+.root[data-message-style="cozy"] .message.comment {
+	&.separate {
+		margin-top: 0;
 	}
 }

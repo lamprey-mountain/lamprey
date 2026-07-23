@@ -127,7 +127,10 @@ export function UserDisplayName(props: {
 	);
 }
 
-function MessageTextMarkdown(props: { message: MessageT; diff?: boolean }) {
+export function MessageTextMarkdown(props: {
+	message: MessageT;
+	diff?: boolean;
+}) {
 	const [, modalctl] = useModals();
 	const viewHistory = () => {
 		modalctl.open({

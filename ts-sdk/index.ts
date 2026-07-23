@@ -20,4 +20,5 @@ export {
 	SERVER_ROOM_ID,
 	uuidToBytes,
 } from "./core/uuid.ts";
+
 import "./client/shared-worker/client.ts";
