@@ -179,29 +179,45 @@
 	.title {
 		font-weight: bold;
 	}
+
+	.comment-sort-button {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+
+		& .icon2 {
+			rotate: 90deg;
+		}
+
+		&.selected {
+			& .icon2 {
+				rotate: 270deg;
+			}
+		}
+	}
 }
 
 .forum2 > .thread {
-		display: flex;
+	display: flex;
+	flex: 1;
+
+	/* & > .aside { */
+	/* width: 256px; */
+	/* background: $bg-150; */
+	/* padding: 8px; */
+	/* overflow-y: auto; */
+	/* } */
+
+	& > .main {
+		/* padding: 1rem; */
 		flex: 1;
-
-		/* & > .aside { */
-			/* width: 256px; */
-			/* background: $bg-150; */
-			/* padding: 8px; */
-			/* overflow-y: auto; */
-		/* } */
-
-		& > .main {
-			/* padding: 1rem; */
-			flex: 1;
-			overflow-y: auto;
-		}
+		overflow-y: auto;
+	}
 }
 
 .forum2-sorting {
 	display: flex;
-	background-color: $bg-300;
+	background-color: $bg-150;
 	border: solid 1px $sep-500;
 	box-shadow: 2px 2px 8px $bg-100;
 	min-width: 128px;
@@ -226,13 +242,16 @@
 		width: 100%;
 		border: none;
 		color: $fg-500;
+		background: none;
 
 		.icon2 {
 			visibility: hidden;
 		}
 
-		&:hover {
+		&:hover,
+		&:focus-visible {
 			color: $fg-100;
+			background: #fff1;
 
 			.icon2 {
 				visibility: visible;
@@ -246,6 +265,14 @@
 				visibility: visible;
 				background-color: $link-500;
 			}
+		}
+	}
+
+	&.forum2-comment-sorting .button {
+		align-items: start;
+
+		.icon2 {
+			margin-top: 2px;
 		}
 	}
 }
@@ -341,6 +368,39 @@
 		&:hover,
 		&:focus {
 			background-color: $bg-400;
+		}
+	}
+}
+
+.comment-sorting-option {
+	display: flex;
+	gap: 8px;
+	.icon2 {
+		margin-top: 2px;
+	}
+}
+
+.forum2-post-menu {
+	display: flex;
+	padding: 8px;
+	background: $bg-100;
+
+	& > .left {
+		display: flex;
+		flex: 1;
+		align-items: center;
+	}
+
+	& > .right {
+		display: flex;
+
+		& .icon-button {
+			border-radius: 4px;
+
+			&:hover,
+			&:focus-visible {
+				background: #fff1;
+			}
 		}
 	}
 }

@@ -1,4 +1,4 @@
-import { autoUpdate, flip, offset } from "@floating-ui/dom";
+import { autoUpdate, flip, offset, type Placement } from "@floating-ui/dom";
 import { go } from "fuzzysort";
 import { useFloating } from "solid-floating-ui";
 import {
@@ -94,6 +94,7 @@ export function createDropdown<T>(props: {
 	mount?: Element | DocumentFragment | null;
 	placeholder?: string;
 	enableWheel?: boolean;
+	placement?: Placement;
 }) {
 	const [shown, setShown] = createSignal(false);
 	const [inputEl, setInputEl] = createSignal<HTMLInputElement>();
@@ -105,7 +106,7 @@ export function createDropdown<T>(props: {
 	const position = useFloating(containerEl, dropdownEl, {
 		whileElementsMounted: autoUpdate,
 		middleware: [offset({ mainAxis: -1 }), flip()],
-		placement: "bottom",
+		placement: props.placement ?? "bottom",
 	});
 
 	const selector = createSelect<T>();
@@ -349,6 +350,7 @@ export function MultiDropdown<T>(
 		style?: string;
 		placeholder?: string;
 		mount?: Element | DocumentFragment | null;
+		placement?: Placement;
 	}>,
 ) {
 	const [shown, setShown] = createSignal(false);
@@ -359,7 +361,7 @@ export function MultiDropdown<T>(
 	const position = useFloating(containerEl, dropdownEl, {
 		whileElementsMounted: autoUpdate,
 		middleware: [offset({ mainAxis: -1 }), flip()],
-		placement: "bottom",
+		placement: props.placement ?? "bottom",
 	});
 
 	const selector = createSelect<T>();
@@ -532,19 +534,20 @@ export function MultiDropdown<T>(
 	);
 }
 
-export function Dropdown<T>(
-	props: VoidProps<{
-		selected?: T;
-		required?: boolean;
-		onSelect?: (item: T | null) => void;
-		options: Array<DropdownItem<T>>;
-		style?: string;
-		mount?: Element | DocumentFragment | null;
-		ignoreMissingLabel?: boolean;
-		placeholder?: string;
-		enableWheel?: boolean;
-	}>,
-) {
+export type DropdownProps<T> = {
+	selected?: T;
+	required?: boolean;
+	onSelect?: (item: T | null) => void;
+	options: Array<DropdownItem<T>>;
+	style?: string;
+	mount?: Element | DocumentFragment | null;
+	ignoreMissingLabel?: boolean;
+	placeholder?: string;
+	enableWheel?: boolean;
+	placement?: Placement;
+};
+
+export function Dropdown<T>(props: VoidProps<DropdownProps<T>>) {
 	const dropdown = createDropdown<T>({
 		get selected() {
 			return props.selected;
@@ -556,6 +559,7 @@ export function Dropdown<T>(
 		ignoreMissingLabel: props.ignoreMissingLabel,
 		placeholder: props.placeholder,
 		enableWheel: props.enableWheel,
+		placement: props.placement,
 	});
 
 	return <dropdown.View style={props.style} />;

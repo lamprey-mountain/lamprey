@@ -20,9 +20,11 @@ import {
 	createResource,
 	createSignal,
 	For,
+	Match,
 	onCleanup,
 	onMount,
 	Show,
+	Switch,
 } from "solid-js";
 import { Portal } from "solid-js/web";
 import { uuidv7 } from "uuidv7";
@@ -45,6 +47,7 @@ import { Time } from "@/atoms/Time";
 import { createTooltip } from "@/atoms/Tooltip";
 import {
 	AttachmentView,
+	MessageView,
 	UserDisplayName,
 } from "@/components/features/chat/Message";
 import { Reactions } from "@/components/features/chat/Reactions";
@@ -58,7 +61,15 @@ import { useMessageSubmit } from "@/hooks/useMessageSubmit";
 import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
 import { getMessageOverrideName } from "@/utils/general";
-import { icChevron } from "@/utils/icons.ts";
+import {
+	icCheck,
+	icChevron,
+	icCollapse,
+	icEdit,
+	icExpand,
+	icReply,
+	icSort,
+} from "@/utils/icons.ts";
 import { Forum2CreateForm } from "../../shared/Forum2CreateForm.tsx";
 import { RenderUploadItem } from "../chat/Input.tsx";
 import { MessageToolbarMount } from "../chat/MessageToolbar.tsx";
@@ -67,8 +78,13 @@ import {
 	useMessageToolbar,
 } from "../chat/message-toolbar-context.tsx";
 import { TimelineProvider, useTimeline } from "../chat/timeline-context.tsx";
-import { type Forum2Sort, Forum2Sorting, type Forum2View } from "./Sorting.tsx";
+import { type CommentSort, CommentSorting } from "./CommentSorting.tsx";
 import { ThreadCard } from "./ThreadCard.tsx";
+import {
+	type Forum2Sort,
+	type Forum2View,
+	ThreadSorting,
+} from "./ThreadSorting.tsx";
 
 // Type guard for RoomMember with override_name
 function hasOverrideName(
@@ -289,7 +305,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 										"z-index": 1000,
 									}}
 								>
-									<Forum2Sorting
+									<ThreadSorting
 										sorting={sortBy()}
 										view={viewAs()}
 										onSort={(s) => {
@@ -345,7 +361,39 @@ export const Forum2 = (props: { channel: Channel }) => {
 export const Forum2Thread = (props: { channel: Channel }) => {
 	const channels2 = useChannels();
 	const messagesService = useMessages();
+	const [commentSortBy, setCommentSortBy] = createSignal<CommentSort>("new");
 	const [ch, chUpdate] = useChannel();
+	const [commentMenuOpen, setCommentMenuOpen] = createSignal(false);
+	const [commentReferenceEl, setCommentReferenceEl] =
+		createSignal<HTMLElement>();
+	const [commentFloatingEl, setCommentFloatingEl] = createSignal<HTMLElement>();
+	const commentPosition = useFloating(commentReferenceEl, commentFloatingEl, {
+		whileElementsMounted: autoUpdate,
+		middleware: [offset(5), flip(), shift()],
+		placement: "bottom-end",
+	});
+
+	const clickOutsideComment = (e: MouseEvent) => {
+		if (
+			commentMenuOpen() &&
+			commentReferenceEl() &&
+			!commentReferenceEl()?.contains(e.target as Node) &&
+			commentFloatingEl() &&
+			!commentFloatingEl()?.contains(e.target as Node)
+		) {
+			setCommentMenuOpen(false);
+		}
+	};
+
+	createEffect(() => {
+		if (commentMenuOpen()) {
+			document.addEventListener("mousedown", clickOutsideComment);
+			onCleanup(() =>
+				document.removeEventListener("mousedown", clickOutsideComment),
+			);
+		}
+	});
+
 	const submit = useMessageSubmit(() => props.channel.id);
 	const uploads = useUploads();
 	const currentUser = useCurrentUser();
@@ -390,7 +438,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		if (!children) return [];
 
 		const buildNodes = (nodes: RepliesMessage[]): CommentNode[] => {
-			return nodes.map((node) => ({
+			return nodes.filter(i => i.message.id !== i.message.channel_id).map((node) => ({
 				message: node.message,
 				children: node.children ? buildNodes(node.children) : [],
 			}));
@@ -398,6 +446,10 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 
 		return buildNodes(children);
 	});
+
+	const collapseTooltip = createTooltip({ tip: () => "Collapse Replies" });
+	const expandTooltip = createTooltip({ tip: () => "Expand All" });
+	const sortTooltip = createTooltip({ tip: () => "Sort Comments" });
 
 	const collapsed = new ReactiveSet<string>();
 
@@ -593,9 +645,8 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 					mins === 0
 						? `slowmode set to ${secs}s`
 						: `slowmode set to ${mins}m${secs.toString().padStart(2, "0")}s`;
-				return `slowmode set to ${time}${
-					bypassSlowmode() ? " (bypassed)" : ""
-				}`;
+				return `slowmode set to ${time}${bypassSlowmode() ? " (bypassed)" : ""
+					}`;
 			} else return "no slowmode";
 		}
 		const seconds = Math.ceil(remainingMs / 1000);
@@ -606,15 +657,17 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 
 	const isEmpty = () => !ch.editor_state?.doc.textContent.trim();
 
+// TODO: button to view activity in sidebar
 	// const [activity] = createResource(
 	// 	() => props.channel.id,
 	// 	(channel_id) => messagesService.fetchActivity(channel_id),
 	// );
 	// activity();
 
-	const firstMessage = messagesService.use(() => props.channel.id, () => props.channel.id);
-	// TODO: render firstMessage
-	// TODO: dont render duplicate thread/post title
+	const firstMessage = messagesService.use(
+		() => props.channel.id,
+		() => props.channel.id,
+	);
 
 	return (
 		<MessageToolbarProvider>
@@ -622,42 +675,79 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 				<div class="main">
 					<header class="header">
 						<h2 class="title">{props.channel.name}</h2>
+						<Switch>
+							{/* TODO: better rendering for loading/error/not found */}
+							<Match when={firstMessage.loading}>loading</Match>
+							<Match when={firstMessage.error}>error</Match>
+							<Match when={firstMessage()}>
+								{(m) => (
+									<MessageView message={{ ...m(), thread: null }} separate />
+								)}
+							</Match>
+							<Match when={!firstMessage.loading && !firstMessage()}>
+								not found
+							</Match>
+						</Switch>
 					</header>
-					<div style="display:flex; padding:8px">
-						<div style="flex:1">
+					<menu class="forum2-post-menu">
+						<div class="left">
 							{/* FIXME: total comment count */}
-							{comments()?.children.length ?? 0} comments
-							<button type="button" class="button" onClick={collapseAll}>
-								collapse replies
-							</button>
-							<button type="button" class="button" onClick={expandAll}>
-								expand all
-							</button>
-						</div>
-						<div style="display:none">
-							<div>
-								order by{" "}
-								<Dropdown
-									options={[
-										{ item: "new", label: "newest comments first" },
-										{ item: "old", label: "oldest comments first" },
-										{
-											item: "activity",
-											label: "recently active comment threads",
-										},
-										{ item: "reactions:+1", label: "most +1 reactions" },
-										{ item: "random", label: "random ordering" },
-										{ item: "hot", label: "mystery algorithm 1" },
-										{ item: "hot2", label: "mystery algorithm 2" },
-										// NOTE: hacker news algorithm
-										//   score = points / ((time + 2) ** gravity)
-										//   time = how old the post is in hours(?)
-										//   gravity = 1.8
-									]}
-								/>
+							<div style="margin-right:8px;flex:1">
+								{comments()?.children.length ?? 0} comments
 							</div>
 						</div>
-					</div>
+						<div class="right">
+							<button
+								type="button"
+								class="button icon-button"
+								ref={collapseTooltip.content}
+								onClick={collapseAll}
+							>
+								<Icon src={icCollapse} />
+							</button>
+							<button
+								type="button"
+								class="button icon-button"
+								ref={expandTooltip.content}
+								onClick={expandAll}
+							>
+								<Icon src={icExpand} />
+							</button>
+							<button
+								type="button"
+								class="button icon-button"
+								ref={(el) => {
+									setCommentReferenceEl(el);
+									sortTooltip.content(el);
+								}}
+								onClick={() => setCommentMenuOpen(!commentMenuOpen())}
+								classList={{ selected: commentMenuOpen() }}
+							>
+								<Icon src={icSort} />
+							</button>
+						</div>
+						<Portal>
+							<Show when={commentMenuOpen()}>
+								<div
+									ref={setCommentFloatingEl}
+									style={{
+										position: commentPosition.strategy,
+										top: `${commentPosition.y ?? 0}px`,
+										left: `${commentPosition.x ?? 0}px`,
+										"z-index": 1000,
+									}}
+								>
+									<CommentSorting
+										sorting={commentSortBy()}
+										onSort={(s) => {
+											setCommentSortBy(s);
+											setCommentMenuOpen(false);
+										}}
+									/>
+								</div>
+							</Show>
+						</Portal>
+					</menu>
 					<Forum2Comments
 						channel={props.channel}
 						commentTree={commentTree()}
@@ -718,7 +808,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 							<menu>
 								<button
 									type="button"
-									class="big primary"
+									class="button big"
 									onClick={send}
 									disabled={locked() || isEmpty()}
 								>
@@ -1040,7 +1130,15 @@ const Comment = (props: {
 			onMouseEnter={(e) => {
 				toolbar.setTarget({ message: message(), element: e.currentTarget });
 			}}
-			onMouseLeave={() => {
+			onMouseLeave={(e) => {
+				const toolbarEl = toolbar.containerRef();
+				if (
+					toolbarEl &&
+					e.relatedTarget instanceof Node &&
+					toolbarEl.contains(e.relatedTarget)
+				) {
+					return;
+				}
 				toolbar.setTarget(null);
 			}}
 		>

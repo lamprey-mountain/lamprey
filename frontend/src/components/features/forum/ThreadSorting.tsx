@@ -43,7 +43,7 @@ const views: Array<Option> = [
 	{ id: "gallery", label: "Gallery" },
 ];
 
-export const Forum2Sorting = (props: Forum2SortingProps) => {
+export const ThreadSorting = (props: Forum2SortingProps) => {
 	const isSortSelected = createSelector(() => props.sorting);
 	const isViewSelected = createSelector(() => props.view);
 

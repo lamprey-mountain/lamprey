@@ -56,12 +56,15 @@ export { icCheck1 as icCheck, icCheck1, icCheck2, icCheck3, icCheck4 };
 import { default as icMembers } from "@/assets/members.png";
 
 export { default as icChevron } from "@/assets/chevron.png";
+export { default as icCollapse } from "@/assets/collapse.png";
 export { default as icDm } from "@/assets/dm.png";
+export { default as icExpand } from "@/assets/expand.png";
 export { default as icFullscreen } from "@/assets/fullscreen.png";
 export { default as icFullscreent } from "@/assets/fullscreent.png";
 export { default as icMenu } from "@/assets/menu.png";
 export { default as icPause } from "@/assets/pause.png";
 export { default as icPlay } from "@/assets/play.png";
+export { default as icSort } from "@/assets/sort.png";
 export { default as icVolumeHigh } from "@/assets/volume-high.png";
 export { default as icVolumeLow } from "@/assets/volume-low.png";
 export { default as icVolumeMax } from "@/assets/volume-max.png";
