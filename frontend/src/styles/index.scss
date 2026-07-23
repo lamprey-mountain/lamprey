@@ -2018,7 +2018,7 @@ body.resizing {
 	grid-area: header;
 	background: $bg-200;
 	box-shadow: 0 2px 8px $bg-100;
-	border-bottom: solid $sep-500 1px;
+	border-bottom: solid $sep-300 1px;
 	padding: 8px;
 	@include truncate;
 }
