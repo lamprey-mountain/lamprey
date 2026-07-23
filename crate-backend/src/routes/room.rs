@@ -13,10 +13,12 @@ use common::v1::types::util::Changes;
 use common::v1::types::{AuditLogEntryType, RoomType, SERVER_ROOM_ID};
 use http::header::{HeaderMap, HeaderName, HeaderValue};
 use lamprey_macros::handler;
+use tracing::debug;
 use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::routes::util::auth::Auth4;
 use crate::routes::util::{Auth, Auth3};
 use crate::routes2;
 use crate::types::{DbRoomCreate, MediaLinkType, MessageSync, PaginationResponse, Permission};
@@ -62,25 +64,27 @@ fn check_cache(if_none_match: &Option<String>, version_id: &Uuid) -> Result<()> 
 /// Room create
 #[handler(routes::room_create)]
 async fn room_create(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::room_create::Request,
 ) -> Result<impl IntoResponse> {
-    tracing::debug!("room_create for user: {:?}", auth.user.id);
-    auth.user.ensure_unsuspended()?;
+    let user = auth.ensure_user()?;
+    user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
+    debug!("room_create for user: {:?}", user.id);
+
     req.room.validate()?;
 
     let srv = s.services();
     let perms = srv
         .perms
-        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .for_room3(Some(user.id), SERVER_ROOM_ID)
         .await?
         .ensure_view()?
         .needs(Permission::RoomCreate)
         .check()?;
 
-    tracing::debug!("server perms for {}: {:?}", auth.user.id, perms);
+    debug!("server perms for {}: {:?}", user.id, perms);
 
     let icon = req.room.icon;
     if let Some(media_id) = icon {
@@ -98,7 +102,7 @@ async fn room_create(
     };
     let room = srv
         .rooms
-        .create(req.room, &auth, extra, req.idempotency_key)
+        .create(req.room, &auth.into(), extra, req.idempotency_key)
         .await?;
     if let Some(media_id) = icon {
         let mut data = s.data();
@@ -193,21 +197,18 @@ async fn room_search(
 /// Room edit
 #[handler(routes::room_edit)]
 async fn room_edit(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::room_edit::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    let user = auth.ensure_user()?;
+    user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     req.patch.validate()?;
 
     let srv = s.services();
 
-    let room = s
-        .services()
-        .rooms
-        .get(req.room_id, Some(auth.user.id))
-        .await?;
+    let room = s.services().rooms.get(req.room_id, Some(user.id)).await?;
 
     let changes_room_metadata = req.patch.name.as_ref().is_some_and(|p| p != &room.name)
         || req
@@ -241,7 +242,7 @@ async fn room_edit(
 
     let mut perms = srv
         .perms
-        .for_room3(Some(auth.user.id), req.room_id)
+        .for_room3(Some(user.id), req.room_id)
         .await?
         .ensure_view()?;
 
@@ -257,7 +258,7 @@ async fn room_edit(
 
     if room.security.require_mfa {
         let mut data = s.data();
-        let totp = data.auth_totp_get(auth.user.id).await?;
+        let totp = data.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
             return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
@@ -271,12 +272,12 @@ async fn room_edit(
         }
     }
 
-    let user_id = auth.user.id;
+    let user_id = user.id;
 
     let room = s
         .services()
         .rooms
-        .update(req.room_id, auth, req.patch.clone())
+        .update(req.room_id, auth.into(), req.patch.clone())
         .await?;
 
     if let Some(maybe_media_id) = req.patch.icon {

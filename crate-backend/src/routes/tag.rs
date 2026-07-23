@@ -15,22 +15,25 @@ use validator::Validate;
 
 use crate::error::Result;
 use crate::routes::util::Auth;
+use crate::routes::util::auth::Auth4;
 use crate::{ServerState, routes2};
 
 /// Tag create
 #[handler(routes::tag_create)]
 async fn tag_create(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::tag_create::Request,
 ) -> Result<impl IntoResponse> {
+    let user = auth.ensure_user()?;
+    user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    auth.user.ensure_unsuspended()?;
+
     req.tag.validate()?;
 
     let srv = s.services();
     srv.perms
-        .for_channel3(Some(auth.user.id), req.channel_id)
+        .for_channel3(Some(user.id), req.channel_id)
         .await?
         .ensure_view()?
         .needs(Permission::ChannelEdit)
@@ -38,7 +41,7 @@ async fn tag_create(
 
     let tag = srv
         .tag
-        .create(req.channel_id, &auth, req.tag, req.idempotency_key)
+        .create(req.channel_id, &auth.into(), req.tag, req.idempotency_key)
         .await?;
 
     Ok((StatusCode::CREATED, Json(tag)))

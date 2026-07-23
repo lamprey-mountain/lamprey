@@ -13,6 +13,7 @@ use validator::Validate;
 
 use crate::ServerState;
 use crate::routes::util::Auth;
+use crate::routes::util::auth::Auth4;
 use crate::routes2;
 use utoipa_axum::router::OpenApiRouter;
 
@@ -21,18 +22,20 @@ use crate::error::Result;
 /// Role create
 #[handler(routes::role_create)]
 async fn role_create(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::role_create::Request,
 ) -> Result<impl IntoResponse> {
+    let user = auth.ensure_user()?;
+    user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
-    auth.user.ensure_unsuspended()?;
+
     req.role.validate()?;
 
     let srv = s.services();
     let role = srv
         .role
-        .create(req.room_id, &auth, req.role, req.idempotency_key)
+        .create(req.room_id, &auth.into(), req.role, req.idempotency_key)
         .await?;
 
     Ok((StatusCode::CREATED, Json(role)))

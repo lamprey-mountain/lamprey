@@ -59,7 +59,7 @@ async fn channel_create_room(
     let channel = s
         .services()
         .channels
-        .create_channel(&auth, Some(req.room_id), json, req.idempotency_key)
+        .create_channel(&auth.into(), Some(req.room_id), json, req.idempotency_key)
         .await?;
     Ok((StatusCode::CREATED, Json(channel)))
 }
@@ -428,7 +428,7 @@ async fn channel_update(
 
     let chan = srv
         .channels
-        .update(&auth, req.channel_id, req.patch.clone())
+        .update(&auth.into(), req.channel_id, req.patch.clone())
         .await?;
 
     if let Some(icon) = req.patch.icon {
@@ -706,22 +706,24 @@ async fn channel_typing(
 /// Channel upgrade
 #[handler(routes::channel_upgrade)]
 async fn channel_upgrade(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::channel_upgrade::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    let user = auth.ensure_user()?;
+    user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
+
     let srv = s.services();
     let mut data = s.data();
 
-    let chan = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
+    let chan = srv.channels.get(req.channel_id, Some(user.id)).await?;
 
     if chan.ty != ChannelType::Gdm {
         return Err(ApiError::from_code(ErrorCode::OnlyGdmCanUpgrade).into());
     }
 
-    if chan.owner_id != Some(auth.user.id) {
+    if chan.owner_id != Some(user.id) {
         return Err(ApiError::from_code(ErrorCode::NotThreadOwner).into());
     }
 
@@ -739,7 +741,7 @@ async fn channel_upgrade(
                 banner: None,
                 public: Some(false),
             },
-            &auth,
+            &auth.clone().into(),
             DbRoomCreate {
                 id: None,
                 ty: RoomType::Default,
@@ -797,7 +799,7 @@ async fn channel_upgrade(
     }
 
     srv.channels.invalidate(req.channel_id).await;
-    let upgraded_thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
+    let upgraded_thread = srv.channels.get(req.channel_id, Some(user.id)).await?;
 
     s.broadcast(MessageSync::ChannelUpdate {
         channel: Box::new(upgraded_thread),
@@ -808,7 +810,7 @@ async fn channel_upgrade(
         let user = srv.users.get(member.user_id, None).await?;
         s.broadcast_room(
             room.id,
-            auth.user.id,
+            user.id,
             MessageSync::RoomMemberCreate {
                 member: room_member,
                 user,
@@ -817,16 +819,19 @@ async fn channel_upgrade(
         .await?;
     }
 
-    let al = auth.audit_log(room.id);
-    al.commit_success(AuditLogEntryType::ChannelUpdate {
-        channel_id: req.channel_id,
-        channel_type: ChannelType::Text,
-        changes: Changes::new()
-            .change("type", &chan.ty, &ChannelType::Text)
-            .change("room_id", &chan.room_id, &Some(room.id))
-            .build(),
-    })
-    .await?;
+    auth.begin_audit_log(
+        room.id,
+        AuditLogEntryType::ChannelUpdate {
+            channel_id: req.channel_id,
+            channel_type: ChannelType::Text,
+            changes: Changes::new()
+                .change("type", &chan.ty, &ChannelType::Text)
+                .change("room_id", &chan.room_id, &Some(room.id))
+                .build(),
+        },
+    )
+    .await?
+    .success();
 
     Ok(Json(room))
 }
@@ -845,6 +850,7 @@ async fn channel_transfer_ownership(
     let srv = s.services();
     let target_user_id = req.owner_id;
     let user = auth.ensure_user()?;
+    let user_id = user.id;
 
     s.data()
         .thread_member_get(req.channel_id, target_user_id)
@@ -862,7 +868,7 @@ async fn channel_transfer_ownership(
     let thread = srv
         .channels
         .update(
-            &auth,
+            &auth.into(),
             req.channel_id,
             ChannelPatch {
                 owner_id: Some(Some(target_user_id)),
@@ -874,7 +880,7 @@ async fn channel_transfer_ownership(
     let msg = MessageSync::ChannelUpdate {
         channel: Box::new(thread.clone()),
     };
-    s.broadcast_channel(req.channel_id, user.id, msg).await?;
+    s.broadcast_channel(req.channel_id, user_id, msg).await?;
     Ok(Json(thread))
 }
 

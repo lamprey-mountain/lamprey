@@ -31,6 +31,7 @@ async fn message_create(
 ) -> Result<impl IntoResponse> {
     let user = req.auth.ensure_user()?;
     user.ensure_unsuspended()?;
+    let user_id = user.id;
     req.auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
@@ -47,7 +48,7 @@ async fn message_create(
         .messages
         .create(
             req.body.channel_id,
-            &req.auth,
+            &req.auth.into(),
             req.body.idempotency_key,
             req.body.message,
             header_timestamp,
@@ -58,7 +59,7 @@ async fn message_create(
     // automatically ack the channel for the user who sent the message
     let mut data = s.data();
     data.unread_ack_bulk(
-        user.id,
+        user_id,
         &[AckBulkItem {
             ty: AckType::Message {
                 channel_id: req.body.channel_id,
@@ -71,7 +72,7 @@ async fn message_create(
     data.commit().await?;
 
     srv.channels
-        .invalidate_user(req.body.channel_id, user.id)
+        .invalidate_user(req.body.channel_id, user_id)
         .await;
 
     // Ok(routes::message_create::Response {
@@ -181,7 +182,7 @@ async fn message_edit(
         .edit(
             req.channel_id,
             req.message_id,
-            &auth,
+            &auth.into(),
             req.patch,
             header_timestamp,
         )

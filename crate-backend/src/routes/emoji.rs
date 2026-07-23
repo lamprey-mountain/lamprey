@@ -14,6 +14,7 @@ use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
 use crate::error::Result;
+use crate::routes::util::auth::Auth4;
 use crate::{ServerState, routes2};
 
 use super::util::{Auth, Auth3};
@@ -21,17 +22,19 @@ use super::util::{Auth, Auth3};
 /// Emoji create
 #[handler(routes::emoji_create)]
 async fn emoji_create(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::emoji_create::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    let user = auth.ensure_user()?;
+    user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
+
     req.emoji.validate()?;
 
     let srv = s.services();
     srv.perms
-        .for_room3(Some(auth.user.id), req.room_id)
+        .for_room3(Some(user.id), req.room_id)
         .await?
         .ensure_view()?
         .needs(Permission::EmojiManage)
@@ -39,7 +42,7 @@ async fn emoji_create(
 
     let emoji = srv
         .emoji
-        .create(req.room_id, &auth, req.emoji, req.idempotency_key)
+        .create(req.room_id, &auth.into(), req.emoji, req.idempotency_key)
         .await?;
 
     Ok(Json(emoji))

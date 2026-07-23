@@ -80,6 +80,3 @@ utoipa = { version = "5.4.0", features = ["axum_extras", "url", "uuid"] }
 uuid = "1.23.3"
 validator = "0.20.0"
 yrs = { version = "0.25.0", features = ["sync"] }
-
-[features]
-connections = []

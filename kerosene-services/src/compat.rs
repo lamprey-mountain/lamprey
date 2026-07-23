@@ -125,12 +125,17 @@ pub mod routes {
             };
             use lamprey_backend_core::types::auth::Identity;
 
+            // TEMP: shim to get services working
             #[derive(Clone)]
             pub struct Auth4 {
                 identity: Identity,
             }
 
             impl Auth4 {
+                pub fn temp_wrap(identity: Identity) -> Self {
+                    Self { identity }
+                }
+
                 pub fn identity(&self) -> &Identity {
                     &self.identity
                 }

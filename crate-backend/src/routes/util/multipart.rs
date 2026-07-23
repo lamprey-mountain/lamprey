@@ -4,6 +4,7 @@ use std::str::FromStr;
 
 use crate::prelude::*;
 use crate::routes::util::extract::{ExtractorError, parse_json, parse_msgpack};
+use kerosene_services::compat::routes::util::multipart::MultipartFile;
 use multer::Multipart;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
@@ -23,15 +24,6 @@ pub enum MultipartFieldName {
     ///
     /// parsed as json and merged into payload
     Field(String),
-}
-
-/// a file uploaded via multipart/form-data
-#[derive(Debug)]
-pub struct MultipartFile {
-    pub filename: Option<String>,
-    // TODO: maybe try using this as a hint? for media processing? (look into potential security issues with this though)
-    pub content_type: Option<String>,
-    pub data: Bytes,
 }
 
 pub type MultipartFiles = HashMap<u64, MultipartFile>;

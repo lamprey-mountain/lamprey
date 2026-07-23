@@ -35,7 +35,7 @@ async fn flume_create(
         .messages
         .flume_create(
             req.channel_id,
-            &auth,
+            &auth.into(),
             req.idempotency_key,
             req.flume,
             header_timestamp,
@@ -57,7 +57,7 @@ async fn flume_ping(
 
     s.services()
         .messages
-        .flume_ping(req.channel_id, req.message_id, &auth)
+        .flume_ping(req.channel_id, req.message_id, &auth.into())
         .await?;
 
     Ok(StatusCode::NO_CONTENT)
@@ -95,7 +95,7 @@ async fn flume_delta(
     let status = s
         .services()
         .messages
-        .flume_update(req.channel_id, req.message_id, &auth, req.delta)
+        .flume_update(req.channel_id, req.message_id, &auth.into(), req.delta)
         .await?;
 
     Ok(status)

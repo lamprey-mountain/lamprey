@@ -235,7 +235,9 @@ async fn voice_state_disconnect(
             }
             perms.check()?;
 
-            srv.voice.state_destroy(req.channel_id, state.user_id)?;
+            srv.voice
+                .state_destroy(req.channel_id, state.user_id)
+                .await?;
 
             if let Some(room_id) = chan.room_id {
                 let al = auth.audit_log(room_id);
@@ -516,7 +518,11 @@ async fn voice_call_patch(
         .needs(Permission::CallUpdate)
         .check()?;
 
-    let call_handle = s.services().voice.call_update(req.channel_id, req.call)?;
+    let call_handle = s
+        .services()
+        .voice
+        .call_update(req.channel_id, req.call)
+        .await?;
     Ok((StatusCode::OK, Json(call_handle.call().clone())))
 }
 

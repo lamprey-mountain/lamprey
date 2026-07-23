@@ -23,7 +23,6 @@
 use cache::ServiceCache;
 use channel::ServiceChannels;
 use config::ServiceConfig;
-#[cfg(feature = "connections")]
 use connections::ServiceConnections;
 use email::ServiceEmail;
 use embed::ServiceEmbed;
@@ -64,7 +63,6 @@ pub mod cache;
 pub mod calendar;
 pub mod channel;
 pub mod config;
-#[cfg(feature = "connections")]
 pub mod connections;
 pub mod documents;
 pub mod email;
@@ -103,7 +101,6 @@ pub struct Services {
     pub calendar: ServiceCalendar,
     pub channels: ServiceChannels,
     pub config: ServiceConfig,
-    #[cfg(feature = "connections")]
     pub connections: ServiceConnections,
     pub documents: ServiceDocuments,
     pub email: ServiceEmail,
@@ -146,7 +143,6 @@ impl Services {
             calendar: ServiceCalendar::new(globals.clone()),
             channels: ServiceChannels::new(globals.clone()),
             config: ServiceConfig::new(globals.clone()),
-            #[cfg(feature = "connections")]
             connections: ServiceConnections::new(globals.clone()),
             documents: ServiceDocuments::new(globals.clone()),
             email: ServiceEmail::new(globals.clone()),

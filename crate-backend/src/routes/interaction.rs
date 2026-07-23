@@ -108,7 +108,7 @@ async fn interaction_message_create(
         .messages
         .create(
             channel_id,
-            &auth,
+            &auth.into(),
             req.idempotency_key,
             req.message,
             None,

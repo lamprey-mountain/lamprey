@@ -1,15 +1,12 @@
-// FIXME: implement
-
 use common::v1::types::{
     ConnectionId, SessionToken, SyncResume,
     presence::{Presence, Status},
 };
 use dashmap::DashMap;
 
-use crate::{
-    prelude::*,
-    sync::next::{Connection2, ConnectionHandle},
-};
+use crate::prelude::*;
+
+type ConnectionHandle = ();
 
 // TODO(#997): limit number of connections per user, clean up old/unused entries
 pub struct ServiceConnections {
@@ -51,9 +48,11 @@ impl ServiceConnections {
             }
         }
 
-        let handle = Connection2::create(self.globals.clone(), (*session).clone());
-        self.connections.insert(handle.id(), handle.clone());
-        Ok(handle)
+        todo!()
+
+        // let handle = Connection2::create(self.globals.clone(), (*session).clone());
+        // self.connections.insert(handle.id(), handle.clone());
+        // Ok(handle)
     }
 
     /// get a connection actor handle from its connection id

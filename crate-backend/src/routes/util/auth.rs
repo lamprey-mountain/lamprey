@@ -396,3 +396,9 @@ impl FromRequestParts<Arc<ServerState>> for Auth4 {
         Self::calculate(parts, s).await
     }
 }
+
+impl From<Auth4> for kerosene_services::compat::routes::util::auth::Auth4 {
+    fn from(value: Auth4) -> Self {
+        Self::temp_wrap(value.identity)
+    }
+}
