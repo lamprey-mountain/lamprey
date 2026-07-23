@@ -1,3 +1,4 @@
+import { throttle } from "@solid-primitives/scheduled";
 import { useNavigate } from "@solidjs/router";
 import type { Channel, NotifsChannel } from "sdk";
 import {
@@ -11,6 +12,7 @@ import {
 import { useApi, useChannels, useTags, useThreadMembers } from "@/api";
 import { useCtx } from "@/app/context";
 import { Checkbox } from "@/atoms/icons";
+import { Search } from "@/atoms/Search.tsx";
 import { timeAgo } from "@/atoms/Time.tsx";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useModals } from "@/contexts/modal";
@@ -48,7 +50,10 @@ export function ChannelMenu(props: { channel_id: string }) {
 		channel()?.type === "ThreadPrivate" ||
 		channel()?.type === "ThreadForum2";
 
-	const self_channel_member = threadMembers2.use(() => props.channel_id);
+	const self_channel_member = threadMembers2.useMember(
+		() => props.channel_id,
+		self_id,
+	);
 	const copyId = () => navigator.clipboard.writeText(props.channel_id);
 	const markRead = async () => {
 		const c = channels2.cache.get(props.channel_id);
@@ -151,11 +156,23 @@ export function ChannelMenu(props: { channel_id: string }) {
 		},
 	);
 
-	const [tagSearchQuery, setTagSearchQuery] = createSignal("");
+	// TODO: maybe extract search throttling into a hook?
+	const [searchQuery, setSearchQuery] = createSignal("");
+	const [throttledQuery, setThrottledQuery] = createSignal("");
+
+	const updateThrottled = throttle((val: string) => {
+		setThrottledQuery(val);
+	}, 500);
+
+	const onSearchInput = (val: string) => {
+		setSearchQuery(val);
+		updateThrottled(val);
+	};
+
 	const [tagsSearchResource] = createResource(
 		() => ({
 			forumId: tagsResource.state === "ready" ? parentChan()?.id : null,
-			query: tagSearchQuery(),
+			query: throttledQuery(),
 		}),
 		async ({ forumId, query }) => {
 			if (!forumId) return [];
@@ -163,7 +180,6 @@ export function ChannelMenu(props: { channel_id: string }) {
 				return tagsResource.latest ?? [];
 			}
 			try {
-				// FIXME: throttle
 				const result = await tags2.search(forumId, query, false);
 				return result.items;
 			} catch (e) {
@@ -174,7 +190,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 	);
 
 	const displayedTags = () => {
-		if (tagSearchQuery().trim()) {
+		if (searchQuery().trim()) {
 			return tagsSearchResource.latest ?? [];
 		}
 		return tagsResource.latest ?? [];
@@ -183,7 +199,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 	const canApplyRestrictedTags = () =>
 		hasPermission("ThreadEdit") || hasPermission("ThreadManage");
 
-	let tagSearchInputRef: HTMLInputElement | undefined;
+	let tagSearchEl!: HTMLInputElement;
 
 	return (
 		<Menu>
@@ -221,46 +237,46 @@ export function ChannelMenu(props: { channel_id: string }) {
 					channel() &&
 					isThread() &&
 					(parentChan()?.type === "Forum" || parentChan()?.type === "Forum2")
+					// TODO: only show when tag_count > 0
 				}
 			>
-				<Submenu content={"tags"} onOpen={() => tagSearchInputRef?.focus()}>
-					<div class="tags">
-						<input
-							ref={tagSearchInputRef}
-							class="tags-search"
-							type="search"
+				<Submenu content={"tags"} onOpen={() => tagSearchEl.focus()}>
+					<div class="channel-menu-tags" onClick={(e) => e.stopPropagation()}>
+						<Search
+							ref={tagSearchEl}
+							value={searchQuery}
+							onInput={onSearchInput}
 							placeholder="search tags..."
-							value={tagSearchQuery()}
-							onInput={(e) => setTagSearchQuery(e.currentTarget.value)}
-							onClick={(e) => e.stopPropagation()}
 						/>
 						<Show when={tagsResource.loading}>
 							<div>loading tags...</div>
 						</Show>
 						<For each={displayedTags()}>
 							{(tag) => {
-								const isRestricted = tag.restricted ?? false;
-								const isDisabled = isRestricted && !canApplyRestrictedTags();
-								const isChecked = channel()?.tags?.includes(tag.id) ?? false;
+								const isRestricted = () => tag.restricted ?? false;
+								const isDisabled = () =>
+									isRestricted() && !canApplyRestrictedTags();
+								const isChecked = () =>
+									channel()?.tags?.includes(tag.id) ?? false;
+								// TODO: optimistic ui
 								return (
 									<Item
-										disabled={isDisabled}
-										onClick={(e) => {
-											e.stopPropagation();
-											if (!isDisabled) {
+										disabled={isDisabled()}
+										onClick={() => {
+											if (!isDisabled()) {
 												toggleTag(tag.id);
 											}
 										}}
 									>
 										<div style="display: flex; align-items: start; gap: 8px">
 											<Checkbox
-												checked={isChecked}
+												checked={isChecked()}
 												seed={`menu-channel-${props.channel_id}-tag-${tag.id}`}
 											/>
 											<div style="margin: 2px 0">
-												<div classList={{ has: isChecked }}>
+												<div classList={{ has: isChecked() }}>
 													{tag.name}
-													{isRestricted && (
+													{isRestricted() && (
 														<span
 															class="dim"
 															style="margin-left: 4px; font-size: 0.8em;"

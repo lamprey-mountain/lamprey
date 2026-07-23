@@ -3418,8 +3418,12 @@ button.link {
 	}
 }
 
-.tags {
-	margin-top: 16px;
+.channel-menu-tags {
+	& > .search {
+		margin: 8px;
+		margin-top: 2px;
+		background: $bg-100;
+	}
 }
 
 .slider {
