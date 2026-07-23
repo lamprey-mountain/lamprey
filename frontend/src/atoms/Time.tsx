@@ -10,34 +10,52 @@ export function timeAgo(date: Date): string {
 		numeric: "auto",
 	});
 
+	const MS_MINUTE = 1000 * 60;
+	const MS_HOUR = MS_MINUTE * 60;
+	const MS_DAY = MS_HOUR * 24;
+	const MS_WEEK = MS_DAY * 7;
+	const MS_MONTH = MS_DAY * 30;
+
 	if (diff < 0) {
-		if (diff > -1000 * 60) {
+		const absDiff = Math.abs(diff);
+		if (absDiff < MS_MINUTE) {
 			return "now";
 		}
-		if (diff > -1000 * 60 * 60) {
-			return fmt.format(-Math.round(diff / (1000 * 60)), "minute");
+		if (absDiff < MS_HOUR) {
+			return fmt.format(Math.round(absDiff / MS_MINUTE), "minute");
 		}
-		if (diff > -1000 * 60 * 60 * 24) {
-			return fmt.format(-Math.round(diff / (1000 * 60 * 60)), "hour");
+		if (absDiff < MS_DAY) {
+			return fmt.format(Math.round(absDiff / MS_HOUR), "hour");
 		}
-		if (diff > -1000 * 60 * 60 * 24 * 3000) {
-			return fmt.format(-Math.round(diff / (1000 * 60 * 60 * 24)), "day");
+		if (absDiff < MS_WEEK) {
+			return fmt.format(Math.round(absDiff / MS_DAY), "day");
+		}
+		if (absDiff < MS_MONTH) {
+			return fmt.format(Math.round(absDiff / MS_WEEK), "week");
+		}
+		if (absDiff < MS_DAY * 365) {
+			return fmt.format(Math.round(absDiff / MS_MONTH), "month");
 		}
 
 		return "far later";
 	}
 
-	if (diff < 1000 * 60) return "now"; // FIXME: i18n
-	if (diff < 1000 * 60 * 60) {
-		return fmt.format(-Math.round(diff / (1000 * 60)), "minute");
+	if (diff < MS_MINUTE) return "now";
+	if (diff < MS_HOUR) {
+		return fmt.format(-Math.round(diff / MS_MINUTE), "minute");
 	}
-	if (diff < 1000 * 60 * 60 * 24) {
-		return fmt.format(-Math.round(diff / (1000 * 60 * 60)), "hour");
+	if (diff < MS_DAY) {
+		return fmt.format(-Math.round(diff / MS_HOUR), "hour");
 	}
-	if (diff < 1000 * 60 * 60 * 24 * 3000) {
-		return fmt.format(-Math.round(diff / (1000 * 60 * 60 * 24)), "day");
+	if (diff < MS_WEEK) {
+		return fmt.format(-Math.round(diff / MS_DAY), "day");
 	}
-	// if (diff < 1000 * 60 * 60 * 24 * 365) return fmt.format(Math.round(diff / (1000 * 60 * 60 * 24)), "month");
+	if (diff < MS_MONTH) {
+		return fmt.format(-Math.round(diff / MS_WEEK), "week");
+	}
+	if (diff < MS_DAY * 365) {
+		return fmt.format(-Math.round(diff / MS_MONTH), "month");
+	}
 	return "long ago"; // fixme: i18n
 }
 
