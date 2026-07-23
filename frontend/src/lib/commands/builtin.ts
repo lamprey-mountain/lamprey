@@ -4,6 +4,8 @@ import { command } from "./builder";
 import type { SlashCommands } from "./registry";
 import type { Command } from "./types";
 
+const SHRUG = "¯\\\\_(ツ)_/¯";
+
 export function registerDefaultSlashCommands(
 	ctx: ChatCtx,
 	api: Api,
@@ -50,7 +52,7 @@ function messageCommands(_ctx: ChatCtx, api: Api): Command[] {
 			.requires((b) => b.permission("MessageCreate"))
 			.executes(async (ctx) => {
 				const message = ctx.args.message;
-				const fullMessage = message ? `${message} ¯\\_(ツ)_/¯` : "¯\\_(ツ)_/¯";
+				const fullMessage = message ? `${message} ${SHRUG}` : SHRUG;
 				await api.client.http.POST("/api/v1/channel/{channel_id}/message", {
 					params: { path: { channel_id: ctx.channel.id } },
 					body: { content: fullMessage },
