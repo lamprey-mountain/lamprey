@@ -375,7 +375,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	};
 
 	return (
-		<nav id="channel-nav" ref={keybinds.container}>
+		<nav id="channel-nav" ref={keybinds.container} tabindex="-1">
 			<Show when={flags.has("nav_header")}>
 				<button
 					id="room-name-btn"

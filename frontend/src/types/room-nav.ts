@@ -14,12 +14,13 @@ export type RoomNavItem =
 	| {
 			type: "view";
 			name: string;
+			id: string;
 			// TODO: views
 	  };
 
 export type RoomNavMappedItem =
 	| { type: "room"; room: Room }
 	| { type: "folder"; id: string; name: string; items: Room[] }
-	| { type: "view"; name: string };
+	| { type: "view"; name: string; id: string };
 
 export type RoomNavConfig = RoomNavItem[];

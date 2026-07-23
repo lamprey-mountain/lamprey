@@ -1,11 +1,11 @@
-import { A } from "@solidjs/router";
+import { A, useParams } from "@solidjs/router";
 import type { Room } from "sdk";
 import {
 	createMemo,
+	createSelector,
 	createSignal,
 	For,
 	Match,
-	onCleanup,
 	Show,
 	Switch,
 } from "solid-js";
@@ -16,12 +16,12 @@ import icHome from "@/assets/home.png";
 import { Icon } from "@/atoms/Icon";
 import { useMenu } from "@/contexts/mod";
 import { useRoomDnd } from "@/hooks/useRoomDnd";
+import {
+	type RoomNavFocusItem,
+	useRoomNavKeybinds,
+} from "@/hooks/useRoomNavKeybinds";
 import { flags } from "@/lib/flags";
-import type {
-	RoomNavConfig,
-	RoomNavItem,
-	RoomNavMappedItem,
-} from "@/types/room-nav";
+import type { RoomNavConfig } from "@/types/room-nav";
 import { RoomIcon } from "./User";
 
 export const RoomNav = () => {
@@ -111,6 +111,45 @@ export const RoomNav = () => {
 		});
 	};
 
+	const params = useParams();
+
+	const navItems = createMemo(() => {
+		const items: RoomNavFocusItem[] = [];
+		items.push({ id: "home", type: "home", folderId: null });
+
+		for (const item of dnd.previewedItems()) {
+			if (item.type === "folder" && item.id) {
+				items.push({ id: item.id, type: "folder", folderId: null });
+				if (!collapsedFolders().has(item.id)) {
+					for (const room of item.items) {
+						items.push({ id: room.id, type: "room", folderId: item.id });
+					}
+				}
+			} else if (item.type === "view" && item.name) {
+				items.push({ id: item.id, type: "view", folderId: null });
+			} else if (item.type === "room" && item.room) {
+				items.push({ id: item.room.id, type: "room", folderId: null });
+			}
+		}
+
+		return items;
+	});
+
+	const keybinds = useRoomNavKeybinds({
+		items: navItems,
+		selectedId: () => params.room_id ?? "home",
+		onToggleFolder: toggleFolder,
+	});
+
+	const isFocused = (id: string) => {
+		const focused = keybinds.focusedId();
+		if (focused !== null) return focused === id;
+		const selected = params.room_id ?? "home";
+		return selected === id;
+	};
+
+	const isSelected = createSelector(() => params.room_id ?? "home");
+
 	const RoomItem = (props: { room: Room; folderId?: string }) => {
 		const mentionCount = () => getRoomMentionCount(props.room.id);
 
@@ -122,6 +161,8 @@ export const RoomNav = () => {
 				data-room-id={props.room.id}
 				data-folder-id={props.folderId}
 				data-type="room"
+				data-nav-id={props.room.id}
+				tabIndex={isFocused(props.room.id) ? 0 : -1}
 				onDragStart={dnd.handle}
 				onDragOver={dnd.handle}
 				onDragLeave={dnd.handle}
@@ -130,10 +171,16 @@ export const RoomNav = () => {
 				classList={{
 					dragging: dnd.dragging()?.id === props.room.id,
 					unread: getRoomUnread(props.room.id),
+					selected: isSelected(props.room.id),
 				}}
 			>
 				<div class="tile">
-					<A draggable="false" href={`/room/${props.room.id}`} class="nav">
+					<A
+						draggable="false"
+						href={`/room/${props.room.id}`}
+						class="nav"
+						tabIndex={-1}
+					>
 						<RoomIcon room={props.room} mentionCount={mentionCount()} />
 					</A>
 				</div>
@@ -143,11 +190,16 @@ export const RoomNav = () => {
 
 	return (
 		<Show when={flags.has("two_tier_nav")}>
-			<nav id="room-nav">
+			<nav id="room-nav" ref={keybinds.container} tabindex="-1">
 				<ul class="room-list">
-					<li class="item">
-						<div class="tile withbg">
-							<A href="/" end>
+					<li
+						class="item room-item"
+						classList={{ selected: isSelected("home") }}
+						data-nav-id="home"
+						tabIndex={isFocused("home") ? 0 : -1}
+					>
+						<div class="tile with-background">
+							<A href="/" end tabIndex={-1}>
 								<Icon src={icHome} alt="home" />
 							</A>
 						</div>
@@ -171,7 +223,6 @@ export const RoomNav = () => {
 												dragging: dnd.dragging()?.id === folder.id,
 												target: dnd.target()?.folderId === folder.id,
 												collapsed: collapsedFolders().has(folder.id),
-												open: !collapsedFolders().has(folder.id),
 												unread: !!getFolderUnread(folder),
 											}}
 										>
@@ -180,9 +231,11 @@ export const RoomNav = () => {
 												classList={{
 													unread: !!getFolderUnread(folder),
 												}}
+												data-nav-id={folder.id}
+												tabIndex={isFocused(folder.id) ? 0 : -1}
 											>
 												<div
-													class="tile withbg"
+													class="tile with-background"
 													onClick={() => toggleFolder(folder.id)}
 													onContextMenu={(e) => {
 														e.preventDefault();
@@ -217,8 +270,11 @@ export const RoomNav = () => {
 											class="item menu-room"
 											data-id={`view-${view.name}`}
 											data-type="view"
+											data-nav-id={`view-${view.name}`}
+											tabIndex={isFocused(`view-${view.name}`) ? 0 : -1}
+											// isSelected
 										>
-											<A href="#" class="nav">
+											<A href="#" class="nav" tabIndex={-1}>
 												<div class="avatar">{view.name?.substring?.(0, 2)}</div>
 											</A>
 										</li>
