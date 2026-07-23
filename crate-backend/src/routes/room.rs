@@ -293,8 +293,6 @@ async fn room_edit(
         }
     }
 
-    let msg = MessageSync::RoomUpdate { room: room.clone() };
-    s.broadcast_room(req.room_id, user_id, msg).await?;
     Ok(Json(room))
 }
 
