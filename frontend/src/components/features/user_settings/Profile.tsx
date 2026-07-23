@@ -1,11 +1,22 @@
+import type { EditorState } from "prosemirror-state";
 import { createUpload, type User } from "sdk";
-import { createSignal, Show, type VoidProps } from "solid-js";
+import {
+	createMemo,
+	createSignal,
+	onMount,
+	Show,
+	type VoidProps,
+} from "solid-js";
 import { useApi } from "@/api";
 import { useCtx } from "@/app/context";
 import { Savebar } from "@/atoms/Savebar";
 import { Avatar } from "@/components/shared/User";
+import { useAutocomplete } from "@/contexts/autocomplete";
+import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal";
 import { Copyable } from "@/utils/general";
+import { createEditor } from "../editor/Editor";
+import { serializeToMarkdown } from "../editor/serializer";
 
 // TODO(#753): allow uploading banner
 
@@ -21,18 +32,34 @@ export function Profile(props: VoidProps<{ user: User }>) {
 	const [editingAvatar, setEditingAvatar] = createSignal(props.user.avatar);
 	const [editingBanner, setEditingBanner] = createSignal(props.user.banner);
 
+	const toolbar = useFormattingToolbar();
+	const autocomplete = useAutocomplete();
+
+	const descriptionEditor = createEditor({
+		channelId: () => props.user.id,
+		autocomplete,
+		toolbar,
+		initialContent: () => editingDescription() ?? "",
+	});
+
+	const [desc, setDesc] = createSignal(props.user.description ?? "");
+
+	const handleDescriptionChange = (state: EditorState) => {
+		setDesc(serializeToMarkdown(state.doc));
+	};
+
 	const isDirty = () =>
 		editingName() !== props.user.name ||
-		editingDescription() !== props.user.description ||
+		desc() !== (props.user.description ?? "") ||
 		editingAvatar() !== props.user.avatar ||
 		editingBanner() !== props.user.banner;
 
-	const save = () => {
-		ctx.client.http.PATCH("/api/v1/user/{user_id}", {
+	const save = async () => {
+		await ctx.client.http.PATCH("/api/v1/user/{user_id}", {
 			params: { path: { user_id: "@self" } },
 			body: {
 				name: editingName(),
-				description: editingDescription(),
+				description: desc(),
 				avatar: editingAvatar(),
 				banner: editingBanner(),
 			},
@@ -44,6 +71,10 @@ export function Profile(props: VoidProps<{ user: User }>) {
 		setEditingDescription(props.user.description);
 		setEditingAvatar(props.user.avatar);
 		setEditingBanner(props.user.banner);
+		if (descriptionEditor.view) {
+			const state = descriptionEditor.createState();
+			descriptionEditor.setState(state);
+		}
 	};
 
 	const setAvatarFile = async (f: File) => {
@@ -111,18 +142,22 @@ export function Profile(props: VoidProps<{ user: User }>) {
 	return (
 		<div class="user-settings-info">
 			<h2>profile</h2>
-			<div class="box profile">
+			<div class="profile">
 				<input
 					class="name"
 					type="text"
 					value={editingName()}
 					onInput={(e) => setEditingName(e.target.value)}
 				/>
-				<textarea
-					class="description"
-					value={editingDescription() ?? ""}
-					onInput={(e) => setEditingDescription(e.target.value)}
-				/>
+				<div class="description">
+					<descriptionEditor.View
+						placeholder="user description (bio)..."
+						submitOnEnter={false}
+						onChange={handleDescriptionChange}
+						channelId={props.user.id}
+						autofocus={false}
+					/>
+				</div>
 				<div class="avatar-uploader" onClick={openAvatarPicker}>
 					<div class="avatar-inner">
 						<Avatar user={userWithAvatar()} />
