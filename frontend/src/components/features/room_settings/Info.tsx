@@ -67,6 +67,12 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 				(c) => c.id === props.room.afk_channel_id,
 			) ?? null,
 		);
+	const [editingWelcomeChannel, setEditingWelcomeChannel] =
+		createSignal<ChannelT | null>(
+			[...channels.cache.values()].find(
+				(c) => c.id === props.room.welcome_channel_id,
+			) ?? null,
+		);
 	const [editingAfkTimeout, setEditingAfkTimeout] = createSignal(
 		props.room.afk_channel_timeout / 1000,
 	);
@@ -97,6 +103,8 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		getDescriptionFromState() !== props.room.description ||
 		editingPublic() !== props.room.public ||
 		(editingAfkChannel()?.id ?? null) !== (props.room.afk_channel_id ?? null) ||
+		(editingWelcomeChannel()?.id ?? null) !==
+			(props.room.welcome_channel_id ?? null) ||
 		editingAfkTimeout() * 1000 !== props.room.afk_channel_timeout;
 
 	const getDescriptionFromState = () => {
@@ -112,11 +120,13 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 			public: boolean;
 			description?: string;
 			afk_channel_id?: string | null;
+			welcome_channel_id?: string | null;
 			afk_channel_timeout?: number;
 		} = {
 			name: editingName(),
 			public: editingPublic(),
 			afk_channel_id: editingAfkChannel()?.id ?? null,
+			welcome_channel_id: editingWelcomeChannel()?.id ?? null,
 			afk_channel_timeout: editingAfkTimeout() * 1000,
 		};
 		if (description.trim() !== "") {
@@ -149,6 +159,11 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		setEditingAfkChannel(
 			[...channels.cache.values()].find(
 				(c) => c.id === props.room.afk_channel_id,
+			) ?? null,
+		);
+		setEditingWelcomeChannel(
+			[...channels.cache.values()].find(
+				(c) => c.id === props.room.welcome_channel_id,
 			) ?? null,
 		);
 		setEditingAfkTimeout(props.room.afk_channel_timeout / 1000);
@@ -225,6 +240,20 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 					<div class="dim">anyone can join and view</div>
 				</div>
 			</CheckboxOption>
+			<div class="afk-settings">
+				<div>
+					<h3 class="dim">welcome channel</h3>
+					{/* TODO: description? maybe as another column? <p class="dim">this is where user join messages will be sent</p> */}
+					<ChannelPicker
+						selected={editingWelcomeChannel()}
+						channels={roomChannels}
+						filter={(c) => c.type === "Text"}
+						onSelect={(channel) => setEditingWelcomeChannel(channel ?? null)}
+						placeholder="Select a channel..."
+						required={false}
+					/>
+				</div>
+			</div>
 			<div class="afk-settings">
 				<div>
 					<h3 class="dim">afk channel</h3>
