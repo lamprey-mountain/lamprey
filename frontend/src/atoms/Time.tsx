@@ -1,4 +1,5 @@
 import type { VoidProps } from "solid-js";
+import { usePreferences } from "@/api";
 import { tick } from "@/hooks/tick";
 import { createTooltip } from "./Tooltip";
 
@@ -40,11 +41,18 @@ export function timeAgo(date: Date): string {
 	return "long ago"; // fixme: i18n
 }
 
-export function formatTime(date: Date, format: TimeFormat): string {
+export function formatTime(
+	date: Date,
+	format: TimeFormat,
+	timeFormatPref?: string,
+): string {
 	// TODO: proper i18n support
 
-	// TODO: read from user preferences
-	const TWENTYFOUR_HOUR = true;
+	const TWENTYFOUR_HOUR =
+		timeFormatPref === "24h" ||
+		(timeFormatPref !== "12h" &&
+			new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions()
+				.hourCycle === "h24");
 
 	switch (format) {
 		case "relative":
@@ -52,9 +60,10 @@ export function formatTime(date: Date, format: TimeFormat): string {
 		case "time":
 			return `${TWENTYFOUR_HOUR ? date.getHours() : date.getHours() % 12 || 12}:${date.getMinutes().toString().padStart(2, "0")}`;
 		case "full":
-			return new Intl.DateTimeFormat("en", {
+			return new Intl.DateTimeFormat(undefined, {
 				dateStyle: "medium",
 				timeStyle: "medium",
+				hour12: !TWENTYFOUR_HOUR,
 			}).format(date);
 	}
 }
@@ -68,6 +77,9 @@ type TimeProps = {
 } & ({ ts: number } | { date: Date });
 
 export function Time(props: VoidProps<TimeProps>) {
+	const preferences = usePreferences();
+	const prefs = preferences.useRead();
+
 	const date = () => ("date" in props ? props.date : new Date(props.ts));
 
 	const tooltip = createTooltip({
@@ -82,7 +94,14 @@ export function Time(props: VoidProps<TimeProps>) {
 			class={`time ${props.class ?? ""}`}
 			ref={tooltip.content}
 		>
-			{(tick(), formatTime(date(), props.format ?? "relative"))}
+			{
+				(tick(),
+				formatTime(
+					date(),
+					props.format ?? "relative",
+					prefs.frontend.time_format,
+				))
+			}
 		</time>
 	);
 }

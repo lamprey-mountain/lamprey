@@ -12,6 +12,11 @@ export default {
 	},
 	user_settings: {
 		theme: "Theme",
+		language: "Language",
+		date_format: "Date format",
+		date_format_auto: "Auto",
+		time_format: "Time format",
+		time_format_auto: "Auto",
 		appearance: "Appearance",
 		underline_links: "Always underline links",
 		show_send_button: "Show send message button",

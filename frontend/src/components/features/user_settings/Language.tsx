@@ -1,4 +1,5 @@
 import { createSignal, createUniqueId, For } from "solid-js";
+import { useCtx } from "@/app/context";
 import { Dropdown } from "@/atoms/Dropdown";
 import { RadioDot } from "@/atoms/icons";
 
@@ -11,15 +12,31 @@ const langs = [
 export function Language() {
 	const [selectedLang, setSelectedLang] = createSignal("en-US");
 	const radioId = createUniqueId();
+	const ctx = useCtx();
+	const { t } = ctx;
 
 	return (
 		<div class="user-settings-lang">
-			<h2>language</h2>
+			<h2>{t("user_settings.language")}</h2>
 			<br />
 			<div style="display:flex">
-				<div style="flex: 1">Date format</div>
+				<div style="flex: 1">{t("user_settings.date_format")}</div>
 				<Dropdown
+					selected={ctx.preferences().frontend.date_format || "auto"}
+					onSelect={(value) => {
+						if (value) {
+							const c = ctx.preferences();
+							ctx.setPreferences({
+								...c,
+								frontend: {
+									...c.frontend,
+									date_format: value,
+								},
+							});
+						}
+					}}
 					options={[
+						{ label: t("user_settings.date_format_auto"), item: "auto" },
 						{ label: "dd/mm/yyyy", item: "standard" },
 						{ label: "mm/dd/yyyy", item: "american" },
 						{ label: "yyyy-mm-dd", item: "iso" },
@@ -28,10 +45,23 @@ export function Language() {
 			</div>
 			<br />
 			<div style="display:flex">
-				<div style="flex: 1">Time format</div>
+				<div style="flex: 1">{t("user_settings.time_format")}</div>
 				<Dropdown
+					selected={ctx.preferences().frontend.time_format || "auto"}
+					onSelect={(value) => {
+						if (value) {
+							const c = ctx.preferences();
+							ctx.setPreferences({
+								...c,
+								frontend: {
+									...c.frontend,
+									time_format: value,
+								},
+							});
+						}
+					}}
 					options={[
-						{ label: "auto", item: "auto" },
+						{ label: t("user_settings.time_format_auto"), item: "auto" },
 						{ label: "12h", item: "12h" },
 						{ label: "24h", item: "24h" },
 					]}
