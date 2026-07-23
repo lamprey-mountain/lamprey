@@ -1,19 +1,17 @@
-use std::sync::Arc;
-
 use common::v1::types::{Session, SessionId, SessionToken, UserId};
 use futures::TryFutureExt;
 use moka::future::Cache;
 
-use crate::{Result, ServerStateInner};
+use crate::prelude::*;
 
 pub struct ServiceSessions {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     cache_sessions: Cache<SessionId, Arc<Session>>,
     cache_tokens: Cache<SessionToken, Arc<Session>>,
 }
 
 impl ServiceSessions {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self {
             state,
             cache_sessions: Cache::builder()
@@ -34,10 +32,11 @@ impl ServiceSessions {
         }
 
         self.cache_sessions
-            .try_get_with(
-                session_id,
-                self.state.data().session_get(session_id).map_ok(Arc::new),
-            )
+            .try_get_with(session_id, async {
+                let mut data = self.state.begin_read().await?;
+                let session = data.session_get(session_id).await?;
+                Result::Ok(Arc::new(session))
+            })
             .await
             .map_err(|err| err.fake_clone())
     }
@@ -49,13 +48,11 @@ impl ServiceSessions {
 
         let s = self
             .cache_tokens
-            .try_get_with(
-                token.clone(),
-                self.state
-                    .data()
-                    .session_get_by_token(token)
-                    .map_ok(Arc::new),
-            )
+            .try_get_with(token.clone(), async {
+                let mut data = self.state.begin_read().await?;
+                let session = data.session_get_by_token(token).await?;
+                Result::Ok(Arc::new(session))
+            })
             .await
             .map_err(|err| err.fake_clone())?;
         // self.cache_sessions.insert(s.id, s.clone()).await;

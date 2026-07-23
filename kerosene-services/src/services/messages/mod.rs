@@ -643,11 +643,14 @@ impl ServiceMessages {
         };
 
         // PERF: fetch in parallel
-        let before_res = data.message_list(channel_id, before_q);
-        let after_res = data.message_list(channel_id, after_q);
-        let message_res = data.message_get(channel_id, message_id);
+        // let before_res = data.message_list(channel_id, before_q);
+        // let after_res = data.message_list(channel_id, after_q);
+        // let message_res = data.message_get(channel_id, message_id);
+        // let (before, after, message) = tokio::try_join!(before_res, after_res, message_res)?;
 
-        let (before, after, message) = tokio::try_join!(before_res, after_res, message_res)?;
+        let before = data.message_list(channel_id, before_q).await?;
+        let after = data.message_list(channel_id, after_q).await?;
+        let message = data.message_get(channel_id, message_id).await?;
 
         let mut items: Vec<Message> = before
             .items

@@ -55,7 +55,7 @@ impl ServiceSearch {
         visibility: SearchMessagesVisibility,
         req: MessageSearchRequest,
     ) -> Result<MessageSearch> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin_read().await?;
         let srv = self.state.services();
 
         let offset = req.inner.offset;
@@ -204,7 +204,7 @@ impl ServiceSearch {
         req: ChannelSearchRequest,
     ) -> Result<ChannelSearch> {
         let srv = self.state.services();
-        let mut data = self.state.data();
+        let mut data = self.state.begin_read().await?;
         let index = self.get_index().await?;
         let searcher = index.searcher().await?;
         let cs = ContentSearcher::new(searcher);
@@ -380,7 +380,7 @@ impl ServiceSearch {
         // fetch entries from database
         // PERF: batch fetch audit logs
         let mut entries = Vec::new();
-        let mut data = self.state.data();
+        let mut data = self.state.begin_read().await?;
         for item in &raw_result.items {
             if let Ok(entry) = data.audit_logs_get(item.id).await {
                 entries.push(entry);

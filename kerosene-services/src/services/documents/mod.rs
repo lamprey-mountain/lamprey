@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use common::v1::types::components::ComponentCreate;
@@ -568,7 +567,7 @@ impl ServiceDocuments {
 /// and tracking presence information.
 pub struct DocumentSyncer {
     /// Reference to the server state for accessing document services
-    s: Arc<ServerStateInner>,
+    s: Globals,
 
     /// Sends subscription requests to switch to a different document context.
     /// When a client subscribes to a new document, the desired context ID and

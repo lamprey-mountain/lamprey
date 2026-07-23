@@ -1,10 +1,7 @@
 // TODO: port to https://docs.rs/oauth2/latest/oauth2/
 // TODO: make more generic
 
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 use common::v1::types::SessionId;
 use common::v1::types::error::{ApiError, ErrorCode};
@@ -14,10 +11,7 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 use uuid::Uuid;
 
-use crate::{
-    ServerStateInner,
-    error::{Error, Result},
-};
+use crate::prelude::*;
 
 // TODO: move these structs to common?
 
@@ -101,12 +95,12 @@ impl OauthState {
 }
 
 pub struct ServiceOauth {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     oauth_states: Arc<DashMap<Uuid, OauthState>>,
 }
 
 impl ServiceOauth {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         let s = Self {
             state,
             oauth_states: Arc::new(DashMap::new()),
@@ -126,7 +120,7 @@ impl ServiceOauth {
     pub fn create_url(&self, provider: &str, session_id: SessionId) -> Result<Url> {
         let p = self
             .state
-            .config
+            .config()
             .oauth_provider
             .get(provider)
             .ok_or(Error::ApiError(ApiError::from_code(
@@ -137,7 +131,7 @@ impl ServiceOauth {
             .insert(state, OauthState::new(provider.to_string(), session_id));
         let redirect_uri: Url = self
             .state
-            .config
+            .config()
             .api_url
             .join(&format!("/api/v1/auth/oauth/{}/redirect", provider))?;
         let url = Url::parse_with_params(
@@ -169,7 +163,7 @@ impl ServiceOauth {
         let client = reqwest::Client::new();
         let p = self
             .state
-            .config
+            .config()
             .oauth_provider
             .get(&s.provider)
             .ok_or(Error::ApiError(ApiError::from_code(
@@ -177,7 +171,7 @@ impl ServiceOauth {
             )))?;
         let redirect_uri: Url = self
             .state
-            .config
+            .config()
             .api_url
             .join(&format!("/api/v1/auth/oauth/{}/redirect", s.provider))?;
 
@@ -185,7 +179,7 @@ impl ServiceOauth {
             "discord" => HeaderValue::from_static(
                 "User-Agent: DiscordBot (https://git.celery.eu.org/lamprey/lamprey, v0.1.0)",
             ),
-            _ => self.state.config.user_agent_header_value()?,
+            _ => self.state.config().user_agent_header_value()?,
         };
 
         let (use_basic_auth, body) = match s.provider.as_str() {
@@ -231,7 +225,7 @@ impl ServiceOauth {
     pub async fn revoke_token(&self, provider: &str, token: String) -> Result<()> {
         let p = self
             .state
-            .config
+            .config()
             .oauth_provider
             .get(provider)
             .ok_or(Error::ApiError(ApiError::from_code(
@@ -256,7 +250,7 @@ impl ServiceOauth {
         let client = reqwest::Client::new();
         let res: DiscordAuth = client
             .get("https://discord.com/api/v10/oauth2/@me")
-            .header("User-Agent", self.state.config.user_agent_header_value()?)
+            .header("User-Agent", self.state.config().user_agent_header_value()?)
             .bearer_auth(token)
             .send()
             .await?
@@ -272,7 +266,7 @@ impl ServiceOauth {
             .get("https://api.github.com/user")
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
-            .header("User-Agent", self.state.config.user_agent_header_value()?)
+            .header("User-Agent", self.state.config().user_agent_header_value()?)
             .bearer_auth(token)
             .send()
             .await?

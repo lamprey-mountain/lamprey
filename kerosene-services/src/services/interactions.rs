@@ -16,7 +16,7 @@ use lamprey_backend_core::Error;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
-use crate::{Result, ServerStateInner};
+use crate::{Result, prelude::*};
 
 /// how long applications have to respond to an interaction
 const INTERACTION_LIFETIME: Duration = Duration::from_secs(30);
@@ -28,7 +28,7 @@ const INTERACTION_FOLLOWUP_LIFETIME: Duration = Duration::from_secs(60 * 15);
 const INTERACTION_FOLLOWUP_LIMIT: usize = 10;
 
 pub struct ServiceInteractions {
-    state: Arc<ServerStateInner>,
+    state: Globals,
 
     // TODO: support multiple server instances
     // maybe use nats jetstream or redis or whatever for this
@@ -84,7 +84,7 @@ impl InteractionEntry {
 }
 
 impl ServiceInteractions {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self {
             state,
             interactions: DashMap::new(),
@@ -126,7 +126,7 @@ impl ServiceInteractions {
                         .await?;
                     let user = srv.users.get(user_id, Some(user_id)).await?;
                     let room_member = if let Some(room_id) = room.as_ref().map(|r| r.id) {
-                        let mut data = srv.state.begin_read().await?;
+                        let mut data = self.state.begin_read().await?;
                         Some(data.room_member_get(room_id, user_id).await?)
                     } else {
                         None
@@ -159,7 +159,7 @@ impl ServiceInteractions {
         };
 
         // TODO: insert interaction into db
-        // let mut data = self.state.acquire_data().await?;
+        // let mut data = self.state.begin().await?;
         // data.interaction_create(&inter).await?;
         // data.commit().await?;
 
@@ -167,17 +167,21 @@ impl ServiceInteractions {
         // TODO: trait DataInteractionMessage { ... }
         // TODO: clean up old interactions from db
 
-        self.state.broadcast(MessageSync::InteractionCreate {
-            interaction: Box::new(inter.clone()),
-            user_id: user_id,
-            nonce: nonce.clone(),
-        })?;
+        self.state
+            .messaging()
+            .broadcast_global(MessageSync::InteractionCreate {
+                interaction: Box::new(inter.clone()),
+                user_id: user_id,
+                nonce: nonce.clone(),
+            })
+            .await?;
 
         let id_copy = id;
         let expire_handle = tokio::spawn(async move {
             tokio::time::sleep(INTERACTION_LIFETIME).await;
             srv.interactions
-                .fail(id_copy, InteractionErrorCode::Timeout)?;
+                .fail(id_copy, InteractionErrorCode::Timeout)
+                .await?;
             Result::Ok(())
         });
 
@@ -325,11 +329,14 @@ impl ServiceInteractions {
         };
 
         let nonce = entry.nonce.clone();
-        self.state.broadcast(MessageSync::InteractionSuccess {
-            user_id: interaction_user_id,
-            interaction_id: entry.interaction.id,
-            nonce,
-        })?;
+        self.state
+            .messaging()
+            .broadcast_global(MessageSync::InteractionSuccess {
+                user_id: interaction_user_id,
+                interaction_id: entry.interaction.id,
+                nonce,
+            })
+            .await?;
 
         let id_copy = id;
         let expire_handle = tokio::spawn(async move {
@@ -358,7 +365,7 @@ impl ServiceInteractions {
         Ok(resp)
     }
 
-    fn fail(&self, id: InteractionId, error_code: InteractionErrorCode) -> Result<()> {
+    async fn fail(&self, id: InteractionId, error_code: InteractionErrorCode) -> Result<()> {
         let Some(i) = self.remove(id) else {
             // probably already responded
             return Ok(());
@@ -370,12 +377,15 @@ impl ServiceInteractions {
             InteractionType::Unfurl { user, .. } => user.id,
         };
 
-        self.state.broadcast(MessageSync::InteractionFailure {
-            user_id: interaction_user_id,
-            interaction_id: i.interaction.id,
-            nonce: i.nonce.clone(),
-            error_code,
-        })?;
+        self.state
+            .messaging()
+            .broadcast_global(MessageSync::InteractionFailure {
+                user_id: interaction_user_id,
+                interaction_id: i.interaction.id,
+                nonce: i.nonce.clone(),
+                error_code,
+            })
+            .await?;
 
         Ok(())
     }

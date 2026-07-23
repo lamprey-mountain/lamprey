@@ -1,29 +1,29 @@
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 // use common::util::routes::{Endpoint, Request};
 use reqwest::{Client, Response};
 use url::Url;
 
 use crate::{
-    ServerStateInner,
     error::{Error, Result},
+    prelude::*,
 };
 
 pub struct ServiceHttp {
     // TEMP: make client public
     pub(crate) client: Client,
-    state: Arc<ServerStateInner>,
+    state: Globals,
 }
 
 impl ServiceHttp {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         let client = Client::builder()
             .timeout(Duration::from_secs(15))
             .connect_timeout(Duration::from_secs(5))
             .redirect(reqwest::redirect::Policy::limited(10))
             .user_agent(
                 state
-                    .config
+                    .config()
                     .user_agent_header_value()
                     .expect("should always be valid user agent"),
             )
@@ -38,7 +38,7 @@ impl ServiceHttp {
         let res = self.client.get(url).send().await?;
 
         if let Some(addr) = res.remote_addr() {
-            for denied in &self.state.config.http.deny {
+            for denied in &self.state.config().http.deny {
                 if denied.contains(&addr.ip()) {
                     return Err(Error::BadStatic("url blacklisted"));
                 }

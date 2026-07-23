@@ -110,16 +110,91 @@ pub mod error {
     pub use lamprey_backend_core::error::*;
 }
 
-// FIXME: ServerStateInner doesn't exist here
-// FIXME: ServerState doesn't exist here
-// FIXME: routes doesn't exist here
-// FIXME: Auth4 doesn't exist here
-
+// TODO: impl enough of these to get them to compile
+// TODO: move some of these to a shared crate
 pub mod routes {
     pub mod util {
         pub mod auth {
-            // TODO: make this work
-            pub struct Auth4;
+            use crate::prelude::*;
+            use common::{
+                v1::types::{
+                    Session, User,
+                    federation::Hostname,
+                    oauth::{Scope, Scopes},
+                },
+                v2::types::UserId,
+            };
+            use lamprey_backend_core::types::auth::Identity;
+
+            #[derive(Clone)]
+            pub struct Auth4 {
+                identity: Identity,
+            }
+
+            impl Auth4 {
+                pub fn identity(&self) -> &Identity {
+                    &self.identity
+                }
+
+                pub fn user(&self) -> Option<&User> {
+                    self.identity.user()
+                }
+
+                pub fn user_id(&self) -> Option<UserId> {
+                    self.identity.user_id()
+                }
+
+                pub fn session(&self) -> Option<&Session> {
+                    self.identity.session()
+                }
+
+                pub fn scopes(&self) -> Option<&Scopes> {
+                    self.identity.scopes()
+                }
+
+                pub fn origin(&self) -> Option<&Hostname> {
+                    self.identity.origin()
+                }
+
+                pub fn ensure_user(&self) -> Result<&User> {
+                    self.identity.ensure_user()
+                }
+
+                pub fn ensure_session(&self) -> Result<&Session> {
+                    self.identity.ensure_session()
+                }
+
+                pub fn ensure_origin(&self) -> Result<&Hostname> {
+                    self.identity.ensure_origin()
+                }
+
+                pub fn ensure_scopes(&self, scopes: &[Scope]) -> Result<()> {
+                    self.identity.ensure_scopes(scopes)
+                }
+
+                pub fn ensure_sudo(&self) -> Result<()> {
+                    self.identity.ensure_sudo()
+                }
+            }
         }
+
+        pub mod multipart {
+            use bytes::Bytes;
+
+            /// a file uploaded via multipart/form-data
+            #[derive(Debug)]
+            pub struct MultipartFile {
+                pub filename: Option<String>,
+                // TODO: maybe try using this as a hint? for media processing? (look into potential security issues with this though)
+                pub content_type: Option<String>,
+                pub data: Bytes,
+            }
+        }
+    }
+}
+
+pub mod sync {
+    pub mod permissions {
+        // TODO
     }
 }

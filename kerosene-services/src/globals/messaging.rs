@@ -9,6 +9,7 @@ use tracing::error;
 
 type BoxStream<T> = std::pin::Pin<Box<dyn Stream<Item = T> + Send>>;
 
+// PERF: use Arc or similar to deduplicate data/avoid cloning
 /// a message that can be broadcast
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Broadcast {
@@ -38,6 +39,13 @@ impl BroadcastSync {
     pub fn with_nonce(self, s: String) -> Self {
         Self {
             nonce: Some(s),
+            ..self
+        }
+    }
+
+    pub fn with_option_nonce<S: Into<String>>(self, s: Option<S>) -> Self {
+        Self {
+            nonce: s.map(Into::into),
             ..self
         }
     }

@@ -122,9 +122,9 @@ impl ServiceMessages {
                 PrimitiveDateTime::new(now.date(), now.time())
             });
 
-        let mut data = self.globals.data();
+        let mut txn = self.globals.begin().await?;
         let components_inner = components_thin.inner.clone();
-        data.message_create(DbMessageCreate {
+        txn.message_create(DbMessageCreate {
             id: Some(message_id),
             channel_id,
             attachment_ids: vec![],
@@ -140,6 +140,7 @@ impl ServiceMessages {
             ephemeral: false,
         })
         .await?;
+        txn.commit().await?;
 
         // 4. validate media ownership
         self.validate_media(&all_media_ids, message_id, user_id)
@@ -165,9 +166,12 @@ impl ServiceMessages {
             },
         );
 
-        self.globals.broadcast(MessageSync::MessageCreate {
-            message: message.clone(),
-        })?;
+        self.globals
+            .messaging()
+            .broadcast_global(MessageSync::MessageCreate {
+                message: message.clone(),
+            })
+            .await?;
 
         debug!(message_id = %message_id, "flume created");
         Ok((StatusCode::CREATED, message))
@@ -222,11 +226,14 @@ impl ServiceMessages {
         flume_ref.expire_handle = self.spawn_autocommit_timer(channel_id, message_id);
 
         // 5. broadcast delta
-        self.globals.broadcast(MessageSync::FlumeDelta {
-            channel_id,
-            message_id,
-            delta,
-        })?;
+        self.globals
+            .messaging()
+            .broadcast_global(MessageSync::FlumeDelta {
+                channel_id,
+                message_id,
+                delta,
+            })
+            .await?;
 
         Ok(StatusCode::NO_CONTENT)
     }
@@ -287,7 +294,7 @@ impl ServiceMessages {
             return self.get(channel_id, message_id, None).await;
         }
 
-        let mut data = self.globals.data();
+        let mut txn = self.globals.begin().await?;
 
         // 1. get the message to get author_id and version_id
         let message = self.get(channel_id, message_id, None).await?;
@@ -296,7 +303,7 @@ impl ServiceMessages {
 
         // 2. update message.flume state
         let flume_json = serde_json::to_value(MessageFlume { state: new_state })?;
-        data.message_flume_update(message_id, flume_json).await?;
+        txn.message_flume_update(message_id, flume_json).await?;
 
         // 3. update version in place with accumulated components
         let content = match &message.latest_version.message_type {
@@ -317,7 +324,7 @@ impl ServiceMessages {
             components: Components::default(),
         });
 
-        data.message_update_in_place(
+        txn.message_update_in_place(
             channel_id,
             version_id,
             crate::types::DbMessageUpdate {
@@ -335,10 +342,15 @@ impl ServiceMessages {
         // 4. get updated message
         let message = self.get(channel_id, message_id, None).await?;
 
+        txn.commit().await?;
+
         // 5. broadcast
-        self.globals.broadcast(MessageSync::MessageUpdate {
-            message: message.clone(),
-        })?;
+        self.globals
+            .messaging()
+            .broadcast_global(MessageSync::MessageUpdate {
+                message: message.clone(),
+            })
+            .await?;
 
         Ok(message)
     }
@@ -405,8 +417,13 @@ impl ServiceMessages {
         let mut media_cache = HashMap::new();
         let mut media_futs = FuturesUnordered::new();
         for media_id in &media_ids {
-            media_futs
-                .push(async { (*media_id, self.globals.data().media_select(*media_id).await) });
+            media_futs.push(async {
+                let data_res = self.globals.begin_read().await;
+                match data_res {
+                    Ok(mut data) => (*media_id, data.media_select(*media_id).await),
+                    Err(e) => (*media_id, Err(e)),
+                }
+            });
         }
         while let Some((media_id, result)) = media_futs.next().await {
             if let Ok(media) = result {

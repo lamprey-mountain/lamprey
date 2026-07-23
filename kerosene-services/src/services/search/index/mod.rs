@@ -14,7 +14,7 @@ use tokio::sync::{mpsc, oneshot};
 use tracing::error;
 
 use crate::{
-    Error, Result, ServerStateInner,
+    prelude::*,
     services::search::{schema::IndexDefinition, tokenizer::DynamicTokenizer},
 };
 
@@ -156,17 +156,14 @@ impl AsyncIndexHandle {
 }
 
 impl AsyncIndex {
-    pub async fn open<T: IndexDefinition>(
-        s: Arc<ServerStateInner>,
-        def: T,
-    ) -> Result<AsyncIndexHandle> {
+    pub async fn open<T: IndexDefinition>(s: Globals, def: T) -> Result<AsyncIndexHandle> {
         let name_clone = def.name();
         let schema = def.schema().to_owned();
-        let config = s.config.search.clone();
+        let config = s.config().search.clone();
 
         let (index, writer, reader) = tokio::task::spawn_blocking(move || {
             let cache_path = s
-                .config
+                .config()
                 .search
                 .cache_dir
                 .clone()
@@ -174,8 +171,8 @@ impl AsyncIndex {
                 .unwrap_or_else(|| PathBuf::from(format!("/tmp/tantivy/{name_clone}")));
 
             let dir = ObjectDirectory::new(
-                s.blobs.clone(),
-                s.tokio.clone(),
+                s.blobs().clone(),
+                tokio::runtime::Handle::current(),
                 PathBuf::from(format!("tantivy/{name_clone}")),
                 cache_path,
             );

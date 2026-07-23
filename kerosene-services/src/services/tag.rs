@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use std::time::Duration;
 
 use common::v1::types::audit_logs::AuditLogEntryType;
@@ -10,17 +9,16 @@ use common::v1::types::{ChannelId, PaginationQuery, PaginationResponse, Permissi
 use moka::future::Cache;
 use validator::Validate;
 
-use crate::error::Result;
-use crate::routes::util::Auth;
-use crate::{Error, ServerStateInner};
+use crate::compat::routes::util::auth::Auth4 as Auth;
+use crate::prelude::*;
 
 pub struct ServiceTags {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     idempotency_keys: Cache<String, Tag>,
 }
 
 impl ServiceTags {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self {
             state,
             idempotency_keys: Cache::builder()
@@ -57,13 +55,14 @@ impl ServiceTags {
         nonce: Option<String>,
     ) -> Result<Tag> {
         create.validate()?;
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let perms = srv.perms.for_channel(user_id, channel_id).await?;
         perms.ensure(Permission::ChannelEdit)?;
 
-        let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+        let channel = srv.channels.get(channel_id, Some(user_id)).await?;
         if !channel.ty.has_tags() {
             return Err(ApiError::from_code(ErrorCode::ChannelDoesNotSupportTags).into());
         }
@@ -71,30 +70,33 @@ impl ServiceTags {
         let tag = data.tag_create(channel_id, create.clone()).await?;
 
         if let Some(room_id) = channel.room_id {
-            let al = auth.audit_log(room_id);
-            al.commit_success(AuditLogEntryType::TagCreate {
-                channel_id,
-                tag_id: tag.id,
-                changes: Changes::new()
-                    .add("name", &tag.name)
-                    .add("description", &tag.description)
-                    .add("color", &tag.color)
-                    .add("restricted", &tag.restricted)
-                    .build(),
-            })
-            .await?;
+            // FIXME: audit log
+            let _ = auth;
+            // let al = auth.audit_log(room_id);
+            // al.commit_success(AuditLogEntryType::TagCreate {
+            //     channel_id,
+            //     tag_id: tag.id,
+            //     changes: Changes::new()
+            //         .add("name", &tag.name)
+            //         .add("description", &tag.description)
+            //         .add("color", &tag.color)
+            //         .add("restricted", &tag.restricted)
+            //         .build(),
+            // })
+            // .await?;
         }
 
         let sync_msg = MessageSync::TagCreate { tag: tag.clone() };
         self.state
-            .broadcast_channel_with_nonce(channel_id, auth.user.id, nonce.as_deref(), sync_msg)
+            .messaging()
+            .broadcast_channel(channel_id, sync_msg)
             .await?;
 
         Ok(tag)
     }
 
     pub async fn get(&self, tag_id: TagId) -> Result<Tag> {
-        self.state.data().tag_get(tag_id).await
+        self.state.begin_read().await?.tag_get(tag_id).await
     }
 
     pub async fn update(
@@ -104,10 +106,11 @@ impl ServiceTags {
         auth: &Auth,
         patch: TagPatch,
     ) -> Result<Tag> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let perms = srv.perms.for_channel(user_id, channel_id).await?;
         perms.ensure(Permission::ChannelEdit)?;
 
         let tag_channel_id = data.tag_get_forum_id(tag_id).await?;
@@ -118,26 +121,29 @@ impl ServiceTags {
         let tag_old = data.tag_get(tag_id).await?;
         let tag = data.tag_update(tag_id, patch).await?;
 
-        let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+        let channel = srv.channels.get(channel_id, Some(user_id)).await?;
         if let Some(room_id) = channel.room_id {
-            let al = auth.audit_log(room_id);
-            al.commit_success(AuditLogEntryType::TagUpdate {
-                channel_id,
-                tag_id,
-                changes: Changes::new()
-                    .change("name", &tag_old.name, &tag.name)
-                    .change("description", &tag_old.description, &tag.description)
-                    .change("color", &tag_old.color, &tag.color)
-                    .change("archived", &tag_old.archived, &tag.archived)
-                    .change("restricted", &tag_old.restricted, &tag.restricted)
-                    .build(),
-            })
-            .await?;
+            // FIXME: audit log
+            let _ = auth;
+            // let al = auth.audit_log(room_id);
+            // al.commit_success(AuditLogEntryType::TagUpdate {
+            //     channel_id,
+            //     tag_id,
+            //     changes: Changes::new()
+            //         .change("name", &tag_old.name, &tag.name)
+            //         .change("description", &tag_old.description, &tag.description)
+            //         .change("color", &tag_old.color, &tag.color)
+            //         .change("archived", &tag_old.archived, &tag.archived)
+            //         .change("restricted", &tag_old.restricted, &tag.restricted)
+            //         .build(),
+            // })
+            // .await?;
         }
 
         let sync_msg = MessageSync::TagUpdate { tag: tag.clone() };
         self.state
-            .broadcast_channel(channel_id, auth.user.id, sync_msg)
+            .messaging()
+            .broadcast_channel(channel_id, sync_msg)
             .await?;
 
         Ok(tag)
@@ -150,10 +156,11 @@ impl ServiceTags {
         auth: &Auth,
         force: bool,
     ) -> Result<()> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let perms = srv.perms.for_channel(user_id, channel_id).await?;
         perms.ensure(Permission::ChannelEdit)?;
 
         let tag_channel_id = data.tag_get_forum_id(tag_id).await?;
@@ -167,32 +174,36 @@ impl ServiceTags {
             return Err(Error::Conflict);
         }
 
-        let channel = srv.channels.get(channel_id, Some(auth.user.id)).await?;
+        let channel = srv.channels.get(channel_id, Some(user_id)).await?;
         data.tag_delete(tag_id).await?;
 
         if let Some(room_id) = channel.room_id {
-            let al = auth.audit_log(room_id);
-            al.commit_success(AuditLogEntryType::TagDelete {
-                channel_id,
-                tag_id,
-                changes: Changes::new()
-                    .remove("name", &tag.name)
-                    .remove("description", &tag.description)
-                    .remove("color", &tag.color)
-                    .remove("restricted", &tag.restricted)
-                    .build(),
-            })
-            .await?;
+            // FIXME: audit log
+            let _ = auth;
+            // let al = auth.audit_log(room_id);
+            // al.commit_success(AuditLogEntryType::TagDelete {
+            //     channel_id,
+            //     tag_id,
+            //     changes: Changes::new()
+            //         .remove("name", &tag.name)
+            //         .remove("description", &tag.description)
+            //         .remove("color", &tag.color)
+            //         .remove("restricted", &tag.restricted)
+            //         .build(),
+            // })
+            // .await?;
         }
 
         let sync_msg = MessageSync::TagDelete { channel_id, tag_id };
         self.state
-            .broadcast_channel(channel_id, auth.user.id, sync_msg)
+            .messaging()
+            .broadcast_channel(channel_id, sync_msg)
             .await?;
 
         Ok(())
     }
 
+    // NOTE: should i use tantivy for this?
     pub async fn search(
         &self,
         channel_id: ChannelId,
@@ -201,11 +212,12 @@ impl ServiceTags {
         archived: Option<bool>,
         pagination: PaginationQuery<TagId>,
     ) -> Result<PaginationResponse<Tag>> {
+        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
         let perms = self
             .state
             .services()
             .perms
-            .for_channel(auth.user.id, channel_id)
+            .for_channel(user_id, channel_id)
             .await?;
         perms.ensure(Permission::ChannelView)?;
 
@@ -213,14 +225,15 @@ impl ServiceTags {
             .state
             .services()
             .channels
-            .get(channel_id, Some(auth.user.id))
+            .get(channel_id, Some(user_id))
             .await?;
         if !channel.ty.has_tags() {
             return Err(ApiError::from_code(ErrorCode::ChannelDoesNotSupportTags).into());
         }
 
         self.state
-            .data()
+            .begin_read()
+            .await?
             .tag_search(channel_id, query, archived, pagination)
             .await
     }
@@ -232,11 +245,12 @@ impl ServiceTags {
         archived: Option<bool>,
         pagination: PaginationQuery<TagId>,
     ) -> Result<PaginationResponse<Tag>> {
+        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
         let perms = self
             .state
             .services()
             .perms
-            .for_channel(auth.user.id, channel_id)
+            .for_channel(user_id, channel_id)
             .await?;
         perms.ensure(Permission::ChannelView)?;
 
@@ -244,14 +258,15 @@ impl ServiceTags {
             .state
             .services()
             .channels
-            .get(channel_id, Some(auth.user.id))
+            .get(channel_id, Some(user_id))
             .await?;
         if !channel.ty.has_tags() {
             return Err(ApiError::from_code(ErrorCode::ChannelDoesNotSupportTags).into());
         }
 
         self.state
-            .data()
+            .begin_read()
+            .await?
             .tag_list(channel_id, archived, pagination)
             .await
     }

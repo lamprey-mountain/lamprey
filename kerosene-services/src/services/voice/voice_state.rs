@@ -84,12 +84,14 @@ impl ServiceVoice {
                 .iter()
                 .find(|s| s.inner().channel_id == update.channel_id)
             {
-                self.state_destroy(state.inner().channel_id, user_id)?;
+                self.state_destroy(state.inner().channel_id, user_id)
+                    .await?;
             }
         } else {
             // remove all existing voice states
             for state in old_states {
-                self.state_destroy(state.inner().channel_id, user_id)?;
+                self.state_destroy(state.inner().channel_id, user_id)
+                    .await?;
             }
         }
 
@@ -164,14 +166,22 @@ impl ServiceVoice {
         sfu.send(SfuCommand::Signalling {
             user_id,
             channel_id: update.channel_id,
-            inner: SignallingCommand::VoiceState { state: update },
+            inner: SignallingCommand::VoiceState {
+                state: update.clone(),
+            },
         });
 
-        self.state.broadcast(MessageSync::VoiceState {
-            user_id,
-            state: Some(handle.inner.clone()),
-            old_state: None,
-        })?;
+        self.state
+            .messaging()
+            .broadcast_channel(
+                update.channel_id,
+                MessageSync::VoiceState {
+                    user_id,
+                    state: Some(handle.inner.clone()),
+                    old_state: None,
+                },
+            )
+            .await?;
 
         Ok(handle)
     }
@@ -201,7 +211,7 @@ impl ServiceVoice {
             let old_channel_id = new_inner.channel_id;
             let user_id = handle.inner.user_id;
 
-            self.state_destroy(old_channel_id, user_id)?;
+            self.state_destroy(old_channel_id, user_id).await?;
 
             let new_state = self
                 .state_create(
@@ -234,11 +244,17 @@ impl ServiceVoice {
         }
 
         // broadcast sync
-        self.state.broadcast(MessageSync::VoiceState {
-            user_id: new_handle.inner.user_id,
-            state: Some(new_handle.inner.clone()),
-            old_state: Some(old_state),
-        })?;
+        self.state
+            .messaging()
+            .broadcast_channel(
+                new_handle.inner.channel_id,
+                MessageSync::VoiceState {
+                    user_id: new_handle.inner.user_id,
+                    state: Some(new_handle.inner.clone()),
+                    old_state: Some(old_state),
+                },
+            )
+            .await?;
 
         // TODO: if nobody is connected to the old channel anymore, spawn timeout task to clean up the call?
 
@@ -246,7 +262,7 @@ impl ServiceVoice {
     }
 
     /// destroy (disconnect) a voice state
-    pub fn state_destroy(&self, channel_id: ChannelId, user_id: UserId) -> Result<()> {
+    pub async fn state_destroy(&self, channel_id: ChannelId, user_id: UserId) -> Result<()> {
         let call = self
             .call_get(channel_id)
             .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownCall)))?;
@@ -265,16 +281,28 @@ impl ServiceVoice {
         }
 
         // broadcast removal
-        self.state.broadcast(MessageSync::VoiceDispatch {
-            user_id: handle.inner.user_id,
-            channel_id,
-            payload: SignallingEvent::Disconnected,
-        })?;
-        self.state.broadcast(MessageSync::VoiceState {
-            user_id: handle.inner.user_id,
-            state: None,
-            old_state: Some(handle.inner.clone()),
-        })?;
+        self.state
+            .messaging()
+            .broadcast_channel(
+                channel_id,
+                MessageSync::VoiceDispatch {
+                    user_id: handle.inner.user_id,
+                    channel_id,
+                    payload: SignallingEvent::Disconnected,
+                },
+            )
+            .await?;
+        self.state
+            .messaging()
+            .broadcast_channel(
+                channel_id,
+                MessageSync::VoiceState {
+                    user_id: handle.inner.user_id,
+                    state: None,
+                    old_state: Some(handle.inner.clone()),
+                },
+            )
+            .await?;
 
         // TODO: if nobody is connected anymore, spawn timeout task to clean up the call?
 

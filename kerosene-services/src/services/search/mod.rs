@@ -1,12 +1,11 @@
-use std::sync::Arc;
-
 use tokio::sync::OnceCell;
 use tracing::error;
 
+use crate::error::Result;
+use crate::prelude::*;
 use crate::services::search::import::IndexEtl;
 use crate::services::search::index::{AsyncIndex, AsyncIndexHandle};
 use crate::services::search::schema::unified::UnifiedIndex;
-use crate::{ServerStateInner, error::Result};
 
 mod import;
 mod index;
@@ -18,12 +17,12 @@ mod util;
 pub use util::visibility::{SearchMediaVisibility, SearchRoomsVisibility};
 
 pub struct ServiceSearch {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     index: OnceCell<AsyncIndexHandle>,
 }
 
 impl ServiceSearch {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self {
             state,
             index: OnceCell::new(),
@@ -31,12 +30,12 @@ impl ServiceSearch {
     }
 
     async fn get_index(&self) -> Result<AsyncIndexHandle> {
-        let s = Arc::clone(&self.state);
+        let s = self.state.clone();
 
         self.index
             .get_or_try_init(|| async {
                 let def = UnifiedIndex::default();
-                let index = AsyncIndex::open(Arc::clone(&s), def).await?;
+                let index = AsyncIndex::open(s.clone(), def).await?;
                 IndexEtl::start(s, index.clone()).await?;
                 Ok(index)
             })

@@ -836,7 +836,7 @@ impl ServiceAutomod {
                                 if let Err(e) = self
                                     .state
                                     .messaging()
-                                    .broadcast_channel(*alert_channel_id, AUTOMOD_USER_ID, msg)
+                                    .broadcast_channel(*alert_channel_id, msg)
                                     .await
                                 {
                                     error!("Failed to broadcast automod alert: {}", e);

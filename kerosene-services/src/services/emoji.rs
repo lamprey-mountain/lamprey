@@ -9,10 +9,9 @@ use common::v1::types::{EmojiId, PaginationQuery, PaginationResponse, Permission
 use moka::future::Cache;
 use validator::Validate;
 
-use crate::error::Result;
-use crate::globals::messaging::BroadcastSync;
+use crate::globals::messaging::Broadcast;
 use crate::prelude::*;
-use crate::routes::util::Auth;
+use crate::routes::util::auth::Auth4 as Auth;
 
 pub struct ServiceEmoji {
     state: Globals,
@@ -60,7 +59,10 @@ impl ServiceEmoji {
         let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+        let user_id = auth
+            .user_id()
+            .ok_or_else(|| ApiError::from_code(ErrorCode::MissingAuth))?;
+        let perms = srv.perms.for_room(user_id, room_id).await?;
         perms.ensure(Permission::EmojiManage)?;
 
         let media = data.media_select(json.media_id).await?;
@@ -68,20 +70,19 @@ impl ServiceEmoji {
             return Err(ApiError::from_code(ErrorCode::MediaNotAnImage).into());
         }
 
-        let emoji = data
-            .emoji_create(auth.user.id, room_id, json.clone())
-            .await?;
+        let emoji = data.emoji_create(user_id, room_id, json.clone()).await?;
 
         let changes = Changes::new()
             .add("name", &json.name)
             .add("animated", &json.animated)
             .add("media_id", &json.media_id);
 
-        let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::EmojiCreate {
-            changes: changes.build(),
-        })
-        .await?;
+        // FIXME: audit log
+        // let al = auth.audit_log(room_id);
+        // al.commit_success(AuditLogEntryType::EmojiCreate {
+        //     changes: changes.build(),
+        // })
+        // .await?;
 
         data.commit().await?;
 
@@ -89,7 +90,7 @@ impl ServiceEmoji {
             emoji: emoji.clone(),
         };
 
-        let mut broadcast = BroadcastSync::sync(sync_msg);
+        let mut broadcast = Broadcast::sync(sync_msg);
         if let Some(n) = nonce {
             broadcast = broadcast.with_nonce(n);
         }
@@ -116,20 +117,24 @@ impl ServiceEmoji {
         let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+        let user_id = auth
+            .user_id()
+            .ok_or_else(|| ApiError::from_code(ErrorCode::MissingAuth))?;
+        let perms = srv.perms.for_room(user_id, room_id).await?;
         perms.ensure(Permission::EmojiManage)?;
 
         let emoji_before = data.emoji_get(emoji_id).await?;
         data.emoji_update(emoji_id, patch).await?;
         let emoji = data.emoji_get(emoji_id).await?;
 
-        let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::EmojiUpdate {
-            changes: Changes::new()
-                .change("name", &emoji_before.name, &emoji.name)
-                .build(),
-        })
-        .await?;
+        // FIXME: audit log
+        // let al = auth.audit_log(room_id);
+        // al.commit_success(AuditLogEntryType::EmojiUpdate {
+        //     changes: Changes::new()
+        //         .change("name", &emoji_before.name, &emoji.name)
+        //         .build(),
+        // })
+        // .await?;
 
         data.commit().await?;
 
@@ -150,26 +155,30 @@ impl ServiceEmoji {
         let mut data = self.state.begin().await?;
         let emoji = data.emoji_get(emoji_id).await?;
 
+        let user_id = auth
+            .user_id()
+            .ok_or_else(|| ApiError::from_code(ErrorCode::MissingAuth))?;
         let perms = self
             .state
             .services()
             .perms
-            .for_room(auth.user.id, room_id)
+            .for_room(user_id, room_id)
             .await?;
         perms.ensure(Permission::EmojiManage)?;
 
         data.emoji_delete(emoji_id).await?;
 
-        let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::EmojiDelete {
-            emoji_id,
-            changes: Changes::new()
-                .remove("name", &emoji.name)
-                .remove("animated", &emoji.animated)
-                .remove("media_id", &emoji.media_id)
-                .build(),
-        })
-        .await?;
+        // FIXME: audit log
+        // let al = auth.audit_log(room_id);
+        // al.commit_success(AuditLogEntryType::EmojiDelete {
+        //     emoji_id,
+        //     changes: Changes::new()
+        //         .remove("name", &emoji.name)
+        //         .remove("animated", &emoji.animated)
+        //         .remove("media_id", &emoji.media_id)
+        //         .build(),
+        // })
+        // .await?;
 
         data.commit().await?;
 
@@ -193,11 +202,14 @@ impl ServiceEmoji {
         auth: &Auth,
         pagination: PaginationQuery<EmojiId>,
     ) -> Result<PaginationResponse<EmojiCustom>> {
+        let user_id = auth
+            .user_id()
+            .ok_or_else(|| ApiError::from_code(ErrorCode::MissingAuth))?;
         let _perms = self
             .state
             .services()
             .perms
-            .for_room(auth.user.id, room_id)
+            .for_room(user_id, room_id)
             .await?;
 
         self.state
@@ -213,10 +225,13 @@ impl ServiceEmoji {
         query: String,
         pagination: PaginationQuery<EmojiId>,
     ) -> Result<PaginationResponse<EmojiCustom>> {
+        let user_id = auth
+            .user_id()
+            .ok_or_else(|| ApiError::from_code(ErrorCode::MissingAuth))?;
         self.state
             .begin_read()
             .await?
-            .emoji_search(auth.user.id, query, pagination)
+            .emoji_search(user_id, query, pagination)
             .await
     }
 
@@ -224,6 +239,9 @@ impl ServiceEmoji {
         let mut data = self.state.begin_read().await?;
         let mut emoji = data.emoji_get(emoji_id).await?;
 
+        let user_id = auth
+            .user_id()
+            .ok_or_else(|| ApiError::from_code(ErrorCode::MissingAuth))?;
         let original_owner = emoji.owner.clone();
         let original_creator_id = emoji.creator_id;
 
@@ -232,13 +250,13 @@ impl ServiceEmoji {
 
         match original_owner {
             Some(EmojiOwner::Room { room_id }) => {
-                if data.room_member_get(room_id, auth.user.id).await.is_ok() {
+                if data.room_member_get(room_id, user_id).await.is_ok() {
                     emoji.owner = original_owner;
                     emoji.creator_id = original_creator_id;
                 }
             }
             Some(EmojiOwner::User) => {
-                if original_creator_id == Some(auth.user.id) {
+                if original_creator_id == Some(user_id) {
                     emoji.owner = original_owner;
                     emoji.creator_id = original_creator_id;
                 }

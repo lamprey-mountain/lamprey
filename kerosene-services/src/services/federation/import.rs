@@ -39,7 +39,7 @@ impl ServiceFederation {
         };
         user.remote = Some(remote.clone());
 
-        let mut txn = self.state.acquire_data().await?;
+        let mut txn = self.state.begin().await?;
         let srv = self.state.services();
         let existing = txn.user_get_remote(&remote).await.ok();
 
@@ -60,7 +60,7 @@ impl ServiceFederation {
 
             // commit so that the media service sees the user
             txn.commit().await?;
-            txn = self.state.acquire_data().await?;
+            txn = self.state.begin().await?;
         }
 
         let mut patch = UserPatch {
@@ -239,7 +239,7 @@ impl ServiceFederation {
             .ok_or_else(|| Error::BadStatic("no local signing keys"))?;
 
         let req = OutgoingRequest {
-            origin: &self.state.config.hostname2()?,
+            origin: &self.state.config().hostname2()?,
             host: &remote.hostname,
             method: "GET",
             path: url.path(),

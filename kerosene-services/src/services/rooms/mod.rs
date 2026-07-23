@@ -13,6 +13,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::consts::IDLE_TIMEOUT_ROOM;
+use crate::globals::messaging::Broadcast;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Diff};
 use common::v1::types::{
@@ -24,17 +25,16 @@ use dashmap::{DashMap, DashSet};
 use moka::future::Cache;
 use validator::Validate;
 
+use crate::compat::routes::util::auth::Auth4 as Auth;
 use crate::consts::MAX_LOADED_ROOMS;
-use crate::error::Result;
-use crate::routes::util::Auth;
+use crate::prelude::*;
 use crate::services::room_template::builtin;
 use crate::types::{DbMessageCreate, DbRoomCreate, MediaLinkType};
-use crate::{Error, ServerStateInner};
 
 use futures::future::BoxFuture;
 
 pub struct ServiceRooms {
-    state: Arc<ServerStateInner>,
+    globals: Globals,
     idempotency_keys: Cache<String, Room>,
     pub(crate) actors: Cache<RoomId, RoomHandle>,
     /// Keep an in-memory map of UserId -> Set of RoomIds for fast fan-out of presence/user updates
@@ -42,9 +42,9 @@ pub struct ServiceRooms {
 }
 
 impl ServiceRooms {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(globals: Globals) -> Self {
         Self {
-            state,
+            globals,
             idempotency_keys: Cache::builder()
                 .time_to_live(Duration::from_secs(300))
                 .build(),
@@ -72,7 +72,7 @@ impl ServiceRooms {
             let handle = self
                 .actors
                 .try_get_with(room_id, async {
-                    Ok::<RoomHandle, Error>(RoomActor::spawn_room(room_id, self.state.clone()))
+                    Ok::<RoomHandle, Error>(RoomActor::spawn_room(room_id, self.globals.clone()))
                 })
                 .await
                 .map_err(|e| e.fake_clone())?;
@@ -124,24 +124,24 @@ impl ServiceRooms {
             .unwrap_or_default();
 
         // supplement cache with database to ensure completeness
-        if let Ok(rooms) = self
-            .state
-            .data()
-            .room_list(
-                user_id,
-                PaginationQuery {
-                    from: None,
-                    to: None,
-                    dir: None,
-                    limit: Some(1024),
-                },
-                false,
-            )
-            .await
-        {
-            for room in rooms.items {
-                if !room_ids.contains(&room.id) {
-                    room_ids.push(room.id);
+        if let Ok(mut data) = self.globals.begin_read().await {
+            if let Ok(rooms) = data
+                .room_list(
+                    user_id,
+                    PaginationQuery {
+                        from: None,
+                        to: None,
+                        dir: None,
+                        limit: Some(1024),
+                    },
+                    false,
+                )
+                .await
+            {
+                for room in rooms.items {
+                    if !room_ids.contains(&room.id) {
+                        room_ids.push(room.id);
+                    }
                 }
             }
         }
@@ -180,11 +180,8 @@ impl ServiceRooms {
 
         if let Some(user_id) = user_id {
             // PERF: cache
-            let preferences = self
-                .state
-                .data()
-                .preferences_room_get(user_id, room_id)
-                .await?;
+            let mut data = self.globals.begin_read().await?;
+            let preferences = data.preferences_room_get(user_id, room_id).await?;
             room.preferences = Some(preferences);
         }
 
@@ -216,7 +213,8 @@ impl ServiceRooms {
     }
 
     pub async fn reload(&self, room_id: RoomId) -> Result<()> {
-        let room = self.state.data().room_get(room_id).await?;
+        let mut data = self.globals.begin_read().await?;
+        let room = data.room_get(room_id).await?;
         self.update_cache(room).await;
         Ok(())
     }
@@ -271,8 +269,9 @@ impl ServiceRooms {
 
     /// reload a member from the database and update the cache
     pub async fn reload_member(&self, room_id: RoomId, user_id: UserId) -> Result<()> {
-        let member = self.state.data().room_member_get(room_id, user_id).await?;
-        let user = self.state.services().users.get(user_id, None).await?;
+        let mut data = self.globals.begin_read().await?;
+        let member = data.room_member_get(room_id, user_id).await?;
+        let user = self.globals.services().users.get(user_id, None).await?;
         let _ = self
             .try_send_sync(room_id, MessageSync::RoomMemberUpdate { member, user })
             .await;
@@ -288,7 +287,8 @@ impl ServiceRooms {
 
     /// reload a role from the database and update the cache
     pub async fn reload_role(&self, room_id: RoomId, role_id: RoleId) -> Result<()> {
-        let role = self.state.data().role_select(room_id, role_id).await?;
+        let mut data = self.globals.begin_read().await?;
+        let role = data.role_select(room_id, role_id).await?;
         let _ = self
             .try_send_sync(room_id, MessageSync::RoleUpdate { role })
             .await;
@@ -304,7 +304,8 @@ impl ServiceRooms {
 
     /// reload a channel from the database and update the cache
     pub async fn reload_channel(&self, room_id: RoomId, channel_id: ChannelId) -> Result<()> {
-        let channel = self.state.data().channel_get(channel_id).await?;
+        let mut data = self.globals.begin_read().await?;
+        let channel = data.channel_get(channel_id).await?;
         let _ = self
             .try_send_sync(
                 room_id,
@@ -331,11 +332,8 @@ impl ServiceRooms {
         thread_id: ChannelId,
         user_id: UserId,
     ) -> Result<()> {
-        let member = self
-            .state
-            .data()
-            .thread_member_get(thread_id, user_id)
-            .await?;
+        let mut data = self.globals.begin_read().await?;
+        let member = data.thread_member_get(thread_id, user_id).await?;
         let _ = self
             .try_send_sync(
                 room_id,
@@ -371,31 +369,34 @@ impl ServiceRooms {
     }
 
     pub async fn update(&self, room_id: RoomId, auth: Auth, patch: RoomPatch) -> Result<Room> {
-        let al = auth.audit_log(room_id);
-        let mut data = self.state.data();
-        let srv = self.state.services();
-        let user_id = auth.user.id;
-        let start = data.room_get(room_id).await?;
+        // FIXME: audit log
+        // let al = auth.audit_log(room_id);
+        let mut txn = self.globals.begin().await?;
+        let srv = self.globals.services();
+        let user_id = auth
+            .user_id()
+            .ok_or(ApiError::from(ErrorCode::MissingAuth))?;
+        let start = txn.room_get(room_id).await?;
         if !patch.changes(&start) {
             return Ok(start);
         }
 
         if let Some(icon) = &patch.icon {
             if start.icon.is_some() {
-                data.media_link_delete_all(*room_id).await?;
+                txn.media_link_delete_all(*room_id).await?;
             }
             if let Some(media_id) = icon {
-                data.media_link_insert(*media_id, *room_id, MediaLinkType::RoomIcon)
+                txn.media_link_insert(*media_id, *room_id, MediaLinkType::RoomIcon)
                     .await?;
             }
         }
 
         if let Some(banner) = &patch.banner {
             if start.banner.is_some() {
-                data.media_link_delete_all(*room_id).await?;
+                txn.media_link_delete_all(*room_id).await?;
             }
             if let Some(media_id) = banner {
-                data.media_link_insert(*media_id, *room_id, MediaLinkType::RoomBanner)
+                txn.media_link_insert(*media_id, *room_id, MediaLinkType::RoomBanner)
                     .await?;
             }
         }
@@ -407,11 +408,12 @@ impl ServiceRooms {
             }
         }
 
-        data.room_update(room_id, patch).await?;
-        data.room_template_mark_dirty(room_id).await?;
+        txn.room_update(room_id, patch).await?;
+        txn.room_template_mark_dirty(room_id).await?;
 
-        let updated_room = data.room_get(room_id).await?;
-        self.state
+        let updated_room = txn.room_get(room_id).await?;
+        txn.commit().await?;
+        self.globals
             .services()
             .rooms
             .update_cache(updated_room.clone())
@@ -420,17 +422,18 @@ impl ServiceRooms {
         let mut end = updated_room;
         if let Some(user_id) = Some(user_id) {
             let preferences = self
-                .state
-                .data()
+                .globals
+                .begin_read()
+                .await?
                 .preferences_room_get(user_id, room_id)
                 .await?;
             end.preferences = Some(preferences);
         }
 
         let snapshot = self.load_room(room_id, false).await?;
-        let data = snapshot.get_data().unwrap();
-        end.online_count = data.room.online_count;
-        end.member_count = data.room.member_count;
+        let snap = snapshot.get_data().unwrap();
+        end.online_count = snap.room.online_count;
+        end.member_count = snap.room.member_count;
 
         let changes = Changes::new()
             .change("name", &start.name, &end.name)
@@ -456,18 +459,16 @@ impl ServiceRooms {
             )
             .build();
 
-        al.commit(
-            AuditLogEntryStatus::Success,
-            AuditLogEntryType::RoomUpdate { changes },
-        )
-        .await?;
+        // FIXME: audit log
+        // al.commit(
+        //     AuditLogEntryStatus::Success,
+        //     AuditLogEntryType::RoomUpdate { changes },
+        // )
+        // .await?;
 
-        self.state
-            .broadcast_room(
-                room_id,
-                user_id,
-                MessageSync::RoomUpdate { room: end.clone() },
-            )
+        self.globals
+            .messaging()
+            .broadcast_room(room_id, MessageSync::RoomUpdate { room: end.clone() })
             .await?;
 
         Ok(end)
@@ -484,13 +485,27 @@ impl ServiceRooms {
             self.idempotency_keys
                 .try_get_with(
                     n.clone(),
-                    self.create_inner(create, auth.user.id, Some(auth), extra, nonce.clone()),
+                    self.create_inner(
+                        create,
+                        auth.user_id()
+                            .ok_or(ApiError::from(ErrorCode::MissingAuth))?,
+                        Some(auth),
+                        extra,
+                        nonce.clone(),
+                    ),
                 )
                 .await
                 .map_err(|err| err.fake_clone())
         } else {
-            self.create_inner(create, auth.user.id, Some(auth), extra, nonce)
-                .await
+            self.create_inner(
+                create,
+                auth.user_id()
+                    .ok_or(ApiError::from(ErrorCode::MissingAuth))?,
+                Some(auth),
+                extra,
+                nonce,
+            )
+            .await
         }
     }
 
@@ -512,8 +527,8 @@ impl ServiceRooms {
         nonce: Option<String>,
     ) -> Result<Room> {
         create.validate()?;
-        let mut data = self.state.data();
-        let srv = self.state.services();
+        let mut data = self.globals.begin().await?;
+        let srv = self.globals.services();
         let welcome_channel_id = extra.welcome_channel_id;
         let mut room = data.room_create(create.clone(), extra).await?;
         let room_id = room.id;
@@ -528,7 +543,7 @@ impl ServiceRooms {
         data.room_set_owner(room_id, creator_id).await?;
         room.owner_id = Some(creator_id);
 
-        self.state
+        self.globals
             .services()
             .perms
             .invalidate_room(creator_id, room_id)
@@ -553,24 +568,29 @@ impl ServiceRooms {
         // reload room to get updated welcome_channel_id and other stuff set by apply_to_room
         let mut room = data.room_get(room_id).await?;
         room.owner_id = Some(creator_id);
+        data.commit().await?;
 
-        self.state.broadcast_with_nonce(
-            nonce.as_deref(),
-            MessageSync::RoomCreate { room: room.clone() },
-        )?;
+        let broadcast = Broadcast::sync(MessageSync::RoomCreate { room: room.clone() })
+            .with_option_nonce(nonce);
+
+        self.globals
+            .messaging()
+            .broadcast_room(room_id, broadcast)
+            .await?;
 
         if let Some((roles, channels)) = template_items {
             for role in roles {
-                self.state
-                    .broadcast_room(room_id, creator_id, MessageSync::RoleCreate { role })
+                self.globals
+                    .messaging()
+                    .broadcast_room(room_id, MessageSync::RoleCreate { role })
                     .await?;
             }
 
             for channel in channels {
-                self.state
+                self.globals
+                    .messaging()
                     .broadcast_room(
                         room_id,
-                        creator_id,
                         MessageSync::ChannelCreate {
                             channel: Box::new(channel),
                         },
@@ -579,19 +599,20 @@ impl ServiceRooms {
             }
         }
 
-        if let Some(auth) = auth {
-            let al = auth.audit_log(room_id);
-            al.commit_success(AuditLogEntryType::RoomCreate {
-                changes: Changes::new()
-                    .add("name", &room.name)
-                    .add("description", &room.description)
-                    .add("icon", &room.icon)
-                    .add("banner", &room.banner)
-                    .add("public", &room.public)
-                    .add("welcome_channel_id", &room.welcome_channel_id)
-                    .build(),
-            })
-            .await?;
+        if let Some(_auth) = auth {
+            // FIXME: audit log
+            // let al = auth.audit_log(room_id);
+            // al.commit_success(AuditLogEntryType::RoomCreate {
+            //     changes: Changes::new()
+            //         .add("name", &room.name)
+            //         .add("description", &room.description)
+            //         .add("icon", &room.icon)
+            //         .add("banner", &room.banner)
+            //         .add("public", &room.public)
+            //         .add("welcome_channel_id", &room.welcome_channel_id)
+            //         .build(),
+            // })
+            // .await?;
         }
 
         if room.welcome_channel_id.is_some() {
@@ -606,7 +627,7 @@ impl ServiceRooms {
         let room = self.get(room_id, None).await?;
 
         if let Some(wti) = room.welcome_channel_id {
-            let mut data = self.state.data();
+            let mut data = self.globals.begin().await?;
             let welcome_message_id = data
                 .message_create(DbMessageCreate {
                     id: None,
@@ -626,28 +647,33 @@ impl ServiceRooms {
                 .await?;
             let welcome_message = data.message_get(wti, welcome_message_id).await?;
 
-            self.state
+            let mut thread_member = None;
+            let tm = data.thread_member_get(wti, user_id).await;
+            if tm.is_err() {
+                data.thread_member_put(wti, user_id, ThreadMemberPut::default())
+                    .await?;
+                thread_member = Some(data.thread_member_get(wti, user_id).await?);
+            }
+            data.commit().await?;
+
+            self.globals
+                .messaging()
                 .broadcast_channel(
                     wti,
-                    user_id,
                     MessageSync::MessageCreate {
                         message: welcome_message,
                     },
                 )
                 .await?;
 
-            let tm = data.thread_member_get(wti, user_id).await;
-            if tm.is_err() {
-                data.thread_member_put(wti, user_id, ThreadMemberPut::default())
-                    .await?;
-                let thread_member = data.thread_member_get(wti, user_id).await?;
+            if let Some(tm) = thread_member {
                 let msg = MessageSync::ThreadMemberUpsert {
                     room_id: Some(room_id),
                     thread_id: wti,
-                    added: vec![thread_member],
+                    added: vec![tm],
                     removed: vec![],
                 };
-                self.state.broadcast_channel(wti, user_id, msg).await?;
+                self.globals.messaging().broadcast_channel(wti, msg).await?;
             }
         }
 
@@ -660,7 +686,7 @@ impl ServiceRooms {
             return Ok(());
         }
 
-        let mut data = self.state.data();
+        let mut data = self.globals.begin_read().await?;
 
         // collect all room ids for batch fetching
         let room_ids: Vec<_> = rooms.iter().map(|r| r.id).collect();

@@ -25,7 +25,7 @@ impl ServiceRoomAnalytics {
     pub fn spawn_snapshot_task(&self) {
         let this = self.clone();
         tokio::spawn(async move {
-            if let Ok(reader) = this.state.begin_read().await {
+            if let Ok(mut reader) = this.state.begin_read().await {
                 if let Ok(Some(last)) = reader.room_analytics_get_last_snapshot_ts().await {
                     let last_utc = last.assume_utc();
                     let now = OffsetDateTime::now_utc();

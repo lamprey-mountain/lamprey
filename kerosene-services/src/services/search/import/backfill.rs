@@ -10,10 +10,8 @@ use tokio::task::JoinSet;
 use tracing::error;
 use uuid::Uuid;
 
-use crate::{
-    ServerStateInner,
-    services::search::{index::AsyncIndexHandle, util::SCHEMA},
-};
+use crate::prelude::*;
+use crate::services::search::{index::AsyncIndexHandle, util::SCHEMA};
 
 #[derive(Clone)]
 pub struct BackfillEtl {
@@ -21,13 +19,13 @@ pub struct BackfillEtl {
 }
 
 pub struct BackfillEtlInner {
-    s: Arc<ServerStateInner>,
+    s: Globals,
     index: AsyncIndexHandle,
     active: DashSet<SearchReindexQueueTarget>,
 }
 
 impl BackfillEtl {
-    pub fn new(s: Arc<ServerStateInner>, index: AsyncIndexHandle) -> Self {
+    pub fn new(s: Globals, index: AsyncIndexHandle) -> Self {
         BackfillEtl {
             inner: Arc::new(BackfillEtlInner {
                 s,
@@ -52,13 +50,19 @@ impl BackfillEtl {
             }
 
             // (re)start workers
-            let concurrency_limit = self.inner.s.config.search.import_concurrency as i32;
+            let concurrency_limit = self.inner.s.config().search.import_concurrency as i32;
             let available_slots = concurrency_limit.saturating_sub(workers.len() as i32) as u32;
             if available_slots == 0 {
                 continue;
             }
 
-            let mut data = self.inner.s.data();
+            let mut data = match self.inner.s.begin_read().await {
+                Ok(d) => d,
+                Err(e) => {
+                    error!("Failed to begin read: {e}");
+                    continue;
+                }
+            };
             let queues = match data.search_reindex_queue_poll(available_slots).await {
                 Ok(q) => q,
                 Err(e) => {
@@ -74,6 +78,7 @@ impl BackfillEtl {
     }
 }
 
+// TODO: deduplicate code, improve error handling
 impl BackfillEtlInner {
     async fn spawn_worker(self: Arc<Self>, queue: SearchReindexQueue) {
         if !self.active.insert(queue.target.clone()) {
@@ -89,16 +94,23 @@ impl BackfillEtlInner {
             SearchReindexQueueTarget::AuditLogEntries(id) => self.spawn_audit_logs(*id).await,
         }
 
-        let mut data = self.s.data();
-        if let Err(e) = data.search_reindex_queue_delete(queue.target.clone()).await {
-            error!("Failed to delete reindex queue entry: {e}");
+        if let Ok(mut data) = self.s.begin().await {
+            if let Err(e) = data.search_reindex_queue_delete(queue.target.clone()).await {
+                error!("Failed to delete reindex queue entry: {e}");
+            }
         }
 
         self.active.remove(&queue.target);
     }
 
     async fn spawn_audit_logs(&self, room_id: RoomId) {
-        let mut data = self.s.data();
+        let mut data = match self.s.begin_read().await {
+            Ok(d) => d,
+            Err(err) => {
+                error!("failed to begin read: {err}");
+                return;
+            }
+        };
         let mut last_id: Option<Uuid> = None;
 
         loop {
@@ -160,7 +172,13 @@ impl BackfillEtlInner {
     }
 
     async fn spawn_users(&self) {
-        let mut data = self.s.data();
+        let mut data = match self.s.begin_read().await {
+            Ok(d) => d,
+            Err(err) => {
+                error!("failed to begin read: {err}");
+                return;
+            }
+        };
         let mut last_id: Option<UserId> = None;
 
         loop {
@@ -219,7 +237,13 @@ impl BackfillEtlInner {
     }
 
     async fn spawn_media(&self) {
-        let mut data = self.s.data();
+        let mut data = match self.s.begin_read().await {
+            Ok(d) => d,
+            Err(err) => {
+                error!("failed to begin read: {err}");
+                return;
+            }
+        };
         let mut last_version_id: Option<MediaVerId> = None;
 
         loop {
@@ -336,7 +360,13 @@ impl BackfillEtlInner {
     }
 
     async fn spawn_channels(&self) {
-        let mut data = self.s.data();
+        let mut data = match self.s.begin_read().await {
+            Ok(d) => d,
+            Err(err) => {
+                error!("failed to begin read: {err}");
+                return;
+            }
+        };
         let mut last_id: Option<ChannelId> = None;
 
         loop {
@@ -395,7 +425,13 @@ impl BackfillEtlInner {
     }
 
     async fn spawn_rooms(&self) {
-        let mut data = self.s.data();
+        let mut data = match self.s.begin_read().await {
+            Ok(d) => d,
+            Err(err) => {
+                error!("failed to begin read: {err}");
+                return;
+            }
+        };
         let mut last_id: Option<RoomId> = None;
 
         loop {

@@ -9,16 +9,14 @@ use tokio::sync::broadcast;
 use uuid::Uuid;
 
 use crate::consts::IDLE_TIMEOUT_MEMBER_LIST;
+use crate::prelude::*;
 use crate::services::cache::permissions::PermissionsCalculator;
+use crate::services::member_lists::util::{MemberGroupInfo, MemberKey, MemberListKey};
 use crate::services::rooms::{RoomData, RoomSnapshot};
-use crate::{
-    Result, ServerStateInner,
-    services::member_lists::util::{MemberGroupInfo, MemberKey, MemberListKey},
-};
 
 /// member list state machine, now owned by RoomActor
 pub struct MemberList {
-    pub(super) s: Arc<ServerStateInner>,
+    pub(super) s: Globals,
     pub(super) key: MemberListKey,
 
     /// ordered map of members for range queries and position tracking
@@ -53,7 +51,7 @@ pub enum MemberListEvent {
 
 impl MemberList {
     pub fn new(
-        s: Arc<ServerStateInner>,
+        s: Globals,
         key: MemberListKey,
         events_tx: broadcast::Sender<MemberListEvent>,
     ) -> Self {
@@ -113,7 +111,12 @@ impl MemberList {
 
         if let Some(_room_id) = room_id {
             let thread_members = if let MemberListKey::RoomThread(_, _, channel_id) = &self.key {
-                let list = self.s.data().thread_member_list_all(*channel_id).await?;
+                let list = self
+                    .s
+                    .begin_read()
+                    .await?
+                    .thread_member_list_all(*channel_id)
+                    .await?;
                 Some(
                     list.into_iter()
                         .map(|m| (m.user_id, m))
@@ -134,7 +137,7 @@ impl MemberList {
             let users_map: HashMap<_, _> = users.into_iter().map(|u| (u.id, u)).collect();
 
             let perms_calc = PermissionsCalculator {
-                state: Arc::clone(&self.s),
+                state: self.s.clone(),
                 room_id: data.room.id,
                 owner_id: data.room.owner_id,
                 public: data.room.public,
@@ -302,7 +305,10 @@ impl MemberList {
 
         match cmd {
             MemberListCommand::GetInitialRanges { ranges, conn_id: _ } => {
-                let ops = self.get_initial_ranges(&ranges, data).await;
+                let ops = self
+                    .get_initial_ranges(&ranges, data)
+                    .await
+                    .unwrap_or_default();
                 return Some(MessageSync::MemberListSync {
                     user_id: UserId::new(), // dummy
 
@@ -338,13 +344,14 @@ impl MemberList {
                 if self.key.room_id() == Some(member.room_id) {
                     let mut users_map = HashMap::new();
                     users_map.insert(user.id, user);
-                    self.recalculate_member(
-                        member.user_id,
-                        &member,
-                        &users_map,
-                        Arc::clone(&snapshot),
-                    )
-                    .await;
+                    let _ = self
+                        .recalculate_member(
+                            member.user_id,
+                            &member,
+                            &users_map,
+                            Arc::clone(&snapshot),
+                        )
+                        .await;
                 }
             }
             MessageSync::RoomMemberDelete { room_id, user_id } => {
@@ -371,13 +378,14 @@ impl MemberList {
                                     let mut users_map = HashMap::new();
                                     users_map.insert(user.id, user);
                                     if let Some(rm) = data.members.get(&member.user_id) {
-                                        self.recalculate_member(
-                                            member.user_id,
-                                            &rm.member,
-                                            &users_map,
-                                            Arc::clone(&snapshot),
-                                        )
-                                        .await;
+                                        let _ = self
+                                            .recalculate_member(
+                                                member.user_id,
+                                                &rm.member,
+                                                &users_map,
+                                                Arc::clone(&snapshot),
+                                            )
+                                            .await;
                                     }
                                 }
                             }
@@ -399,13 +407,14 @@ impl MemberList {
                             if let Some(member) = data.members.get(&user_id) {
                                 let mut users_map = HashMap::new();
                                 users_map.insert(user_id, user);
-                                self.recalculate_member(
-                                    user_id,
-                                    &member.member,
-                                    &users_map,
-                                    Arc::clone(&snapshot),
-                                )
-                                .await;
+                                let _ = self
+                                    .recalculate_member(
+                                        user_id,
+                                        &member.member,
+                                        &users_map,
+                                        Arc::clone(&snapshot),
+                                    )
+                                    .await;
                             }
                         }
                     }
@@ -419,13 +428,14 @@ impl MemberList {
                             if let Some(member) = data.members.get(&user_id) {
                                 let mut users_map = HashMap::new();
                                 users_map.insert(user_id, user.clone());
-                                self.recalculate_member(
-                                    user_id,
-                                    &member.member,
-                                    &users_map,
-                                    Arc::clone(&snapshot),
-                                )
-                                .await;
+                                let _ = self
+                                    .recalculate_member(
+                                        user_id,
+                                        &member.member,
+                                        &users_map,
+                                        Arc::clone(&snapshot),
+                                    )
+                                    .await;
                             }
                         }
                     }
@@ -461,14 +471,14 @@ impl MemberList {
         member: &RoomMember,
         users_map: &HashMap<UserId, User>,
         snapshot: Arc<RoomSnapshot>,
-    ) {
+    ) -> Result<()> {
         let Some(data) = snapshot.get_data() else {
-            return;
+            return Ok(());
         };
 
         if let Some(_room_id) = self.key.room_id() {
             let perms_calc = PermissionsCalculator {
-                state: Arc::clone(&self.s),
+                state: self.s.clone(),
                 room_id: data.room.id,
                 owner_id: data.room.owner_id,
                 public: data.room.public,
@@ -483,7 +493,7 @@ impl MemberList {
 
                 // If the member key hasn't changed, no need to emit delete+insert no-op
                 if Some(&new_key) == old_key.as_ref() {
-                    return;
+                    return Ok(());
                 }
 
                 let mut ops = Vec::new();
@@ -507,7 +517,8 @@ impl MemberList {
                 if let MemberListKey::RoomThread(_, _, channel_id) = &self.key {
                     thread_member = self
                         .s
-                        .data()
+                        .begin_read()
+                        .await?
                         .thread_member_get(*channel_id, user_id)
                         .await
                         .ok();
@@ -526,6 +537,7 @@ impl MemberList {
                 self.remove_member(user_id);
             }
         }
+        Ok(())
     }
 
     pub fn remove_member(&mut self, user_id: UserId) {
@@ -560,7 +572,7 @@ impl MemberList {
         &self,
         ranges: &[(u64, u64)],
         data: &RoomData,
-    ) -> Vec<MemberListOp> {
+    ) -> Result<Vec<MemberListOp>> {
         let srv = self.s.services();
 
         let mut ops = Vec::new();
@@ -595,7 +607,13 @@ impl MemberList {
                     }
                 }
                 if let MemberListKey::RoomThread(_, _, channel_id) = &self.key {
-                    if let Ok(m) = self.s.data().thread_member_get(*channel_id, *user_id).await {
+                    if let Ok(m) = self
+                        .s
+                        .begin_read()
+                        .await?
+                        .thread_member_get(*channel_id, *user_id)
+                        .await
+                    {
                         thread_members.push(m);
                     }
                 }
@@ -617,6 +635,7 @@ impl MemberList {
                 users: Some(users),
             });
         }
-        ops
+
+        Ok(ops)
     }
 }

@@ -1,23 +1,21 @@
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::sync::Arc;
 
 use common::v1::types::{ChannelId, MemberListOp, MessageSync, RoomId, UserId};
 use tokio_stream::{StreamExt, StreamMap, StreamNotifyClose, wrappers::BroadcastStream};
 use uuid::Uuid;
 
-use crate::{
-    Error, ServerStateInner,
-    error::Result,
-    services::member_lists::{
+use crate::prelude::*;
+use crate::services::{
+    member_lists::{
         actor::{MemberListCommand, MemberListEvent},
         util::{MemberListKey, MemberListKey1, MemberListTarget},
     },
-    services::rooms::MemberListCommandMsg,
+    rooms::MemberListCommandMsg,
 };
 
 /// Syncer for member list events
 pub struct MemberListSyncer {
-    pub(super) s: Arc<ServerStateInner>,
+    pub(super) s: Globals,
     pub(super) conn_id: Uuid,
     pub(super) outbox: VecDeque<MessageSync>,
     pub(super) subscriptions: HashMap<MemberListKey, HashSet<MemberListKey1>>,
@@ -32,7 +30,7 @@ pub struct MemberListSyncer {
 
 impl MemberListSyncer {
     /// Create a new member list syncer
-    pub(super) fn new(s: Arc<ServerStateInner>, conn_id: Uuid) -> Self {
+    pub(super) fn new(s: Globals, conn_id: Uuid) -> Self {
         Self {
             s,
             conn_id,

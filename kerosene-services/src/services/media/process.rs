@@ -22,13 +22,12 @@ use tokio_stream::StreamExt;
 use tracing::{Instrument, Level, debug, span, trace};
 
 use crate::{
-    ServerStateInner,
     prelude::*,
     services::media::{
         ServiceMedia, ffmpeg,
         ffprobe::{self, MediaType},
         import::Upload,
-        util::{Import, MediaItemState},
+        util::{Import, MediaItemState, get_s3_url},
     },
 };
 
@@ -36,7 +35,7 @@ use crate::{
 const IMMUTABLE: &'static str = "public, max-age=604800, immutable, stale-while-revalidate=86400";
 
 struct MediaPipeline {
-    s: Arc<ServerStateInner>,
+    s: Globals,
     import: Import,
     file: TempFile,
     paths: MediaPaths,
@@ -65,7 +64,7 @@ struct Poster {
 // }
 
 impl MediaPipeline {
-    fn from_upload(s: Arc<ServerStateInner>, import: Import, file: TempFile) -> Self {
+    fn from_upload(s: Globals, import: Import, file: TempFile) -> Self {
         let paths = MediaPaths::new("media/");
         Self {
             s,
@@ -245,9 +244,7 @@ impl MediaPipeline {
         };
 
         let bytes = Bytes::from(bytes);
-        let url = self
-            .s
-            .get_s3_url(&self.paths.poster(self.import.media_id))?;
+        let url = get_s3_url(self.s.config(), &self.paths.poster(self.import.media_id))?;
 
         let span_probe = span!(Level::DEBUG, "probe thumbnail image mime");
         let mime = async {
@@ -267,7 +264,7 @@ impl MediaPipeline {
         async {
             let mut w = self
                 .s
-                .blobs
+                .blobs()
                 .writer_with(url.path())
                 .cache_control(IMMUTABLE)
                 .content_type(mime.as_str())
@@ -353,10 +350,11 @@ impl MediaPipeline {
         let mut file = self.file.open_ro().await?;
         let mime = self.sniff_mime().await?;
 
-        let url = self.s.get_s3_url(&self.paths.file(self.import.media_id))?;
+        let url = get_s3_url(self.s.config(), &self.paths.file(self.import.media_id))?;
+
         let mut w = self
             .s
-            .blobs
+            .blobs()
             .writer_with(url.path())
             .cache_control(IMMUTABLE)
             .content_type(mime.as_str())
@@ -376,7 +374,7 @@ impl MediaPipeline {
 
     /// Scan media with all configured scanners in parallel.
     async fn scan_media(&self) -> Result<Vec<MediaScan>> {
-        let scanners = &self.s.config.media.scanners;
+        let scanners = &self.s.config().media.scanners;
         if scanners.is_empty() {
             return Ok(vec![]);
         }
@@ -465,7 +463,7 @@ impl ServiceMedia {
     pub(super) async fn process_media(&self, upload: Upload) -> Result<()> {
         let writer = upload.writer;
         let mut pipe =
-            MediaPipeline::from_upload(Arc::clone(&self.state), upload.import, upload.temp_file);
+            MediaPipeline::from_upload(self.state.clone(), upload.import, upload.temp_file);
 
         writer.set_state(MediaItemState::Processing {
             import: pipe.import.clone(),
@@ -493,16 +491,18 @@ impl ServiceMedia {
         media.has_thumbnail = has_thumbnail;
         media.size = pipe.file.metadata().await?.len();
 
-        let mut data = self.state.acquire_data().await?;
-        data.media_replace(media.clone()).await?;
-        data.commit().await?;
+        let mut txn = self.state.begin().await?;
+        txn.media_replace(media.clone()).await?;
+        txn.commit().await?;
 
         writer.set_media(Arc::new(media.clone()));
         writer.set_ready();
 
         if let Some(session_id) = upload.session_id {
             self.state
-                .broadcast(MessageSync::MediaProcessed { media, session_id })?;
+                .messaging()
+                .broadcast_global(MessageSync::MediaProcessed { media, session_id })
+                .await?;
         }
 
         Ok(())

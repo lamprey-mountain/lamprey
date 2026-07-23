@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use common::v1::types::defaults::{ADMIN_ROOM, EVERYONE_TRUSTED, EVERYONE_UNTRUSTED, MODERATOR};
 use common::v1::types::error::{ApiError, ErrorCode};
@@ -12,9 +11,10 @@ use common::v1::types::{PaginationQuery, PaginationResponse};
 use common::v1::types::{RoomId, RoomPatch, UserId, channel::ChannelCreate, role::RoleCreate};
 use uuid::Uuid;
 
+use crate::Error;
 use crate::error::Result;
+use crate::prelude::*;
 use crate::types::{DbChannelCreate, DbChannelType, DbRoleCreate, DbRoomTemplate};
-use crate::{Error, ServerStateInner};
 
 pub mod builtin {
     use super::*;
@@ -99,11 +99,11 @@ pub mod builtin {
 }
 
 pub struct ServiceRoomTemplates {
-    state: Arc<ServerStateInner>,
+    state: Globals,
 }
 
 impl ServiceRoomTemplates {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self { state }
     }
 
@@ -139,11 +139,11 @@ impl ServiceRoomTemplates {
         let snapshot = self.generate_room_snapshot(create.room_id).await?;
         let snapshot_json = serde_json::to_value(snapshot)?;
 
-        let db = self
-            .state
-            .data()
+        let mut data = self.state.begin().await?;
+        let db = data
             .room_template_create(creator_id, snapshot_json, create)
             .await?;
+        data.commit().await?;
 
         self.hydrate(db).await
     }
@@ -154,11 +154,8 @@ impl ServiceRoomTemplates {
         user_id: UserId,
         pagination: PaginationQuery<RoomTemplateCode>,
     ) -> Result<PaginationResponse<RoomTemplate>> {
-        let res = self
-            .state
-            .data()
-            .room_template_list(user_id, pagination)
-            .await?;
+        let mut data = self.state.begin_read().await?;
+        let res = data.room_template_list(user_id, pagination).await?;
 
         let mut items = Vec::with_capacity(res.items.len());
         for item in res.items {
@@ -175,7 +172,8 @@ impl ServiceRoomTemplates {
 
     /// Get a room template by code
     pub async fn get(&self, code: RoomTemplateCode) -> Result<RoomTemplate> {
-        let db = self.state.data().room_template_get(code).await?;
+        let mut data = self.state.begin_read().await?;
+        let db = data.room_template_get(code).await?;
         self.hydrate(db).await
     }
 
@@ -185,18 +183,24 @@ impl ServiceRoomTemplates {
         code: RoomTemplateCode,
         patch: RoomTemplatePatch,
     ) -> Result<RoomTemplate> {
-        let db = self.state.data().room_template_update(code, patch).await?;
+        let mut data = self.state.begin().await?;
+        let db = data.room_template_update(code, patch).await?;
+        data.commit().await?;
+
         self.hydrate(db).await
     }
 
     /// Delete a room template
     pub async fn delete(&self, code: RoomTemplateCode) -> Result<()> {
-        self.state.data().room_template_delete(code).await
+        let mut data = self.state.begin().await?;
+        data.room_template_delete(code).await?;
+        data.commit().await
     }
 
     /// Sync a room template with its source room
     pub async fn sync(&self, code: RoomTemplateCode) -> Result<RoomTemplate> {
-        let template = self.state.data().room_template_get(code.clone()).await?;
+        let mut data = self.state.begin().await?;
+        let template = data.room_template_get(code.clone()).await?;
         let source_room_id =
             template
                 .source_room_id
@@ -207,11 +211,10 @@ impl ServiceRoomTemplates {
         let snapshot = self.generate_room_snapshot(source_room_id.into()).await?;
         let snapshot_json = serde_json::to_value(snapshot)?;
 
-        let db = self
-            .state
-            .data()
+        let db = data
             .room_template_update_snapshot(code, snapshot_json)
             .await?;
+        data.commit().await?;
 
         self.hydrate(db).await
     }
@@ -222,7 +225,7 @@ impl ServiceRoomTemplates {
         creator_id: UserId,
         snapshot: RoomTemplateSnapshot,
     ) -> Result<(Vec<Role>, Vec<Channel>)> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let mut role_map = HashMap::new();
         let mut channel_map = HashMap::new();
         let mut created_roles = Vec::new();
@@ -348,6 +351,7 @@ impl ServiceRoomTemplates {
             }
         }
 
+        data.commit().await?;
         Ok((created_roles, created_channels))
     }
 

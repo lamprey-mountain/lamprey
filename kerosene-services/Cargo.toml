@@ -39,6 +39,7 @@ infer = "0.19.0"
 jsonwebkey = { version = "0.4.0", features = ["generate"] }
 jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
 kameo = "0.19.2"
+kerosene-core = { version = "0.1.1", path = "../kerosene-core" }
 lamprey-backend-core = { path = "../crate-backend-core" }
 lamprey-backend-data-postgres = { version = "0.1.1", path = "../crate-backend-data-postgres" }
 lamprey-macros = { version = "0.1.1", path = "../crate-macros", features = ["use_new_endpoint_macro"] }
@@ -79,3 +80,6 @@ utoipa = { version = "5.4.0", features = ["axum_extras", "url", "uuid"] }
 uuid = "1.23.3"
 validator = "0.20.0"
 yrs = { version = "0.25.0", features = ["sync"] }
+
+[features]
+connections = []

@@ -2,8 +2,6 @@
 
 // TODO: move this logic to rooms service
 
-use std::sync::Arc;
-
 use common::v1::types::util::Time;
 use common::v1::types::{
     Channel, ChannelType, Permission, PermissionOverwriteType, RoleId, RoomId, RoomMember,
@@ -16,15 +14,12 @@ use lamprey_backend_core::types::permission::{
 };
 use tracing::warn;
 
-use crate::ServerStateInner;
-use crate::{
-    Error, Result,
-    services::rooms::{CachedChannel, RoomSnapshot},
-};
+use crate::prelude::*;
+use crate::services::rooms::{CachedChannel, RoomSnapshot};
 
 /// a permission calculator for a room
 pub struct PermissionsCalculator {
-    pub state: Arc<ServerStateInner>,
+    pub state: Globals,
     pub room_id: RoomId,
     pub owner_id: Option<UserId>,
     pub public: bool,

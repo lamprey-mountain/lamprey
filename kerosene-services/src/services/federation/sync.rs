@@ -4,9 +4,9 @@ use std::sync::Arc;
 use crate::error::Result;
 use crate::services::federation::ServiceFederation;
 use crate::services::rooms::RoomData;
-use crate::sync::permissions::AuthCheck;
 use common::v1::types::federation::{Hostname, ServerSyncRequest};
 use common::v1::types::{ChannelId, MessageSync, RoomId, UserId};
+use kerosene_core::compat::authz::AuthCheck;
 
 impl ServiceFederation {
     /// handle a sync from a remote server

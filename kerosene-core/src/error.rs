@@ -4,6 +4,8 @@ use http::StatusCode;
 pub use lamprey::v1::types::error::{ApiError, ApiResult, ErrorCode};
 
 /// any internal server error
+// TODO: add more variants (if needed?)
+// the current error type is extremely large, i might not need every variant but some of them do seem important
 #[derive(thiserror::Error, Debug)]
 pub enum ServerError {
     /// an internal error has occured

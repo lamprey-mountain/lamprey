@@ -1,3 +1,5 @@
+// FIXME: implement
+
 use common::v1::types::{
     ConnectionId, SessionToken, SyncResume,
     presence::{Presence, Status},

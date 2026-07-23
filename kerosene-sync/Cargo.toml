@@ -7,10 +7,16 @@ description.workspace = true
 license.workspace = true
 
 [dependencies]
+async-trait = "0.1.89"
 axum = { version = "0.8.1", features = ["ws"] }
-yrs = { version = "0.25.0", features = ["sync"] }
+flate2 = "1.1.9"
+futures = "0.3.32"
+futures-util = "0.3.32"
+kerosene-core = { version = "0.1.1", path = "../kerosene-core" }
+lamprey = { package = "lamprey-common", version = "0.1.0", path = "../crate-common", features = ["utoipa", "validator"] }
+lamprey-backend-core = { path = "../crate-backend-core" }
+lamprey-macros = { path = "../crate-macros" }
+thiserror = "2.0.18"
 tokio = { version = "1.42.0", features = ["rt", "macros"] }
 tracing = "0.1.41"
-lamprey-backend-core = { path = "../crate-backend-core" }
-common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common", features = ["utoipa", "validator"] }
-lamprey-macros = { path = "../crate-macros" }
+yrs = { version = "0.25.0", features = ["sync"] }

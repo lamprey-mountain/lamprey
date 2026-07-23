@@ -1,5 +1,4 @@
 use std::str::FromStr;
-use std::sync::Arc;
 use std::time::Instant;
 
 use async_tempfile::TempFile;
@@ -11,10 +10,10 @@ use tokio::io::{AsyncWriteExt, BufWriter};
 use tokio::task::JoinHandle;
 use url::Url;
 
+use crate::prelude::*;
 use crate::routes::util::multipart::MultipartFile;
 use crate::services::media::ServiceMedia;
 use crate::services::media::util::{Import, MediaItem, MediaItemWriter};
-use crate::{ServerStateInner, prelude::*};
 use tracing::instrument;
 
 // TODO: remove created media after 5 minutes, reset timer after any update
@@ -31,7 +30,7 @@ pub struct Upload {
     pub session_id: Option<SessionId>,
 
     pub writer: MediaItemWriter,
-    pub s: Arc<ServerStateInner>,
+    pub s: Globals,
     pub temp_file: TempFile,
     pub temp_writer: BufWriter<TempFile>,
     pub current_size: u64,
@@ -75,7 +74,9 @@ impl Upload {
 
     /// the client provided file size for this media
     pub fn expected_size(&self) -> u64 {
-        self.import.max_size.unwrap_or(self.s.config.media.max_size)
+        self.import
+            .max_size
+            .unwrap_or(self.s.config().media.max_size)
     }
 
     pub fn expects_more(&self) -> bool {
@@ -95,7 +96,7 @@ impl ServiceMedia {
             Mime::from_str("application/octet-stream").unwrap(),
             MediaMetadata::File,
         );
-        let writer = MediaItem::from_media(Arc::clone(&self.state), media);
+        let writer = MediaItem::from_media(self.state.clone(), media);
         let item = writer.reader();
 
         let temp_file = TempFile::new().await.expect("failed to create temp file!");
@@ -120,7 +121,9 @@ impl ServiceMedia {
 
         // insert initial media record into DB
         let media = item.media();
-        self.state.data().media_insert((*media).clone()).await?;
+        let mut txn = self.state.begin().await?;
+        txn.media_insert((*media).clone()).await?;
+        txn.commit().await?;
 
         Ok(item)
     }
@@ -156,13 +159,13 @@ impl ServiceMedia {
     /// import media from this url
     #[instrument(skip(self, import, url), fields(url = %url))]
     pub async fn import_from_url(&self, import: Import, url: &Url) -> Result<MediaItem> {
-        let server_max_size = self.state.config.media.max_size;
+        let server_max_size = self.state.config().media.max_size;
         let max_size = import.max_size;
         match max_size {
             Some(max) if max > server_max_size => return Err(Error::TooBig),
             _ => {}
         }
-
+        // ...
         let srv = self.state.services();
         let res = srv.http.get(url.clone()).await?;
         match (max_size, res.content_length()) {

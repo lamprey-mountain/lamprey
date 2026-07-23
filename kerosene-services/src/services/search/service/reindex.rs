@@ -9,7 +9,7 @@ impl ServiceSearch {
     /// reindex some content
     pub async fn reindex(&self, reindex: Reindex) -> Result<()> {
         let index = self.get_index().await?;
-        let mut data = self.state.data();
+        let mut data = self.state.begin_read().await?;
 
         // 1. Delete terms based on filters
         for doctype in &reindex.doctypes {

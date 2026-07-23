@@ -6,21 +6,17 @@ use tantivy::Term;
 use tokio_stream::StreamExt;
 use tracing::{error, info};
 
-use crate::{
-    Result, ServerStateInner,
-    services::{
-        Services,
-        search::{index::AsyncIndexHandle, util::SCHEMA},
-    },
-};
+use crate::globals::messaging::Broadcast;
+use crate::prelude::*;
+use crate::services::search::{index::AsyncIndexHandle, util::SCHEMA};
 
 pub struct LiveEtl {
-    s: Arc<ServerStateInner>,
+    s: Globals,
     index: AsyncIndexHandle,
 }
 
 impl LiveEtl {
-    pub fn new(s: Arc<ServerStateInner>, index: AsyncIndexHandle) -> Self {
+    pub fn new(s: Globals, index: AsyncIndexHandle) -> Self {
         Self { s, index }
     }
 
@@ -30,12 +26,14 @@ impl LiveEtl {
 
     pub async fn spawn(self) {
         loop {
-            match self.s.subscribe_sushi().await {
+            match self.s.messaging().subscribe().await {
                 Ok(mut stream) => {
                     info!("Search ingestion: connected to live stream");
                     while let Some(broadcast) = stream.next().await {
-                        if let Err(err) = self.handle_sync(broadcast.message).await {
-                            error!("error while handling search index sync: {err}");
+                        if let Broadcast::Sync(sync) = broadcast {
+                            if let Err(err) = self.handle_sync(sync.message).await {
+                                error!("error while handling search index sync: {err}");
+                            }
                         }
                     }
                 }

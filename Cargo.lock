@@ -4223,6 +4223,7 @@ dependencies = [
  "jsonwebkey",
  "jsonwebtoken",
  "kameo",
+ "kerosene-core",
  "lamprey-backend-core",
  "lamprey-backend-data-postgres",
  "lamprey-common",
@@ -4270,10 +4271,16 @@ dependencies = [
 name = "kerosene-sync"
 version = "0.1.1"
 dependencies = [
+ "async-trait",
  "axum",
+ "flate2",
+ "futures",
+ "futures-util",
+ "kerosene-core",
  "lamprey-backend-core",
  "lamprey-common",
  "lamprey-macros",
+ "thiserror 2.0.18",
  "tokio",
  "tracing",
  "yrs",
@@ -4325,6 +4332,7 @@ dependencies = [
  "jsonwebkey",
  "jsonwebtoken",
  "kameo",
+ "kerosene-services",
  "lamprey-backend-core",
  "lamprey-backend-data-postgres",
  "lamprey-common",

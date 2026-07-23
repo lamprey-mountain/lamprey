@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use std::time::Duration;
 
 use common::v1::types::audit_logs::AuditLogEntryType;
@@ -12,17 +11,16 @@ use common::v1::types::{
 use moka::future::Cache;
 use validator::Validate;
 
-use crate::ServerStateInner;
-use crate::error::Result;
-use crate::routes::util::Auth;
+use crate::compat::routes::util::auth::Auth4 as Auth;
+use crate::prelude::*;
 
 pub struct ServiceWebhooks {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     idempotency_keys: Cache<String, Webhook>,
 }
 
 impl ServiceWebhooks {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self {
             state,
             idempotency_keys: Cache::builder()
@@ -59,10 +57,11 @@ impl ServiceWebhooks {
         nonce: Option<String>,
     ) -> Result<Webhook> {
         json.validate()?;
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let perms = srv.perms.for_channel(auth.user.id, channel_id).await?;
+        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let perms = srv.perms.for_channel(user_id, channel_id).await?;
         let chan = srv.channels.get(channel_id, None).await?;
         let room_id = chan
             .room_id
@@ -73,31 +72,34 @@ impl ServiceWebhooks {
         chan.ensure_has_text()?;
 
         let webhook = data
-            .webhook_create(channel_id, auth.user.id, json.clone())
+            .webhook_create(channel_id, user_id, json.clone())
             .await?;
 
-        let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::WebhookCreate {
-            webhook_id: webhook.id,
-            changes: Changes::new()
-                .add("name", &webhook.name)
-                .add("channel_id", &webhook.channel_id)
-                .build(),
-        })
-        .await?;
+        // FIXME: audit log
+        let _ = auth;
+        // let al = auth.audit_log(room_id);
+        // al.commit_success(AuditLogEntryType::WebhookCreate {
+        //     webhook_id: webhook.id,
+        //     changes: Changes::new()
+        //         .add("name", &webhook.name)
+        //         .add("channel_id", &webhook.channel_id)
+        //         .build(),
+        // })
+        // .await?;
 
         let sync_msg = MessageSync::WebhookCreate {
             webhook: webhook.clone(),
         };
         self.state
-            .broadcast_room_with_nonce(room_id, auth.user.id, nonce.as_deref(), sync_msg)
+            .messaging()
+            .broadcast_room(room_id, sync_msg)
             .await?;
 
         Ok(webhook)
     }
 
     pub async fn get(&self, webhook_id: WebhookId) -> Result<Webhook> {
-        self.state.data().webhook_get(webhook_id).await
+        self.state.begin_read().await?.webhook_get(webhook_id).await
     }
 
     pub async fn update(
@@ -106,87 +108,76 @@ impl ServiceWebhooks {
         auth: &Auth,
         json: WebhookUpdate,
     ) -> Result<Webhook> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let webhook = data.webhook_get(webhook_id).await?;
 
-        let chan = self
-            .state
-            .services()
-            .channels
-            .get(webhook.channel_id, None)
-            .await?;
+        let srv = self.state.services();
+        let chan = srv.channels.get(webhook.channel_id, None).await?;
         let room_id = chan
             .room_id
             .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
 
-        let perms = self
-            .state
-            .services()
-            .perms
-            .for_channel(auth.user.id, webhook.channel_id)
-            .await?;
+        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let perms = srv.perms.for_channel(user_id, webhook.channel_id).await?;
         perms.ensure(Permission::IntegrationsManage)?;
 
         let webhook_before = webhook.clone();
         let webhook = data.webhook_update(webhook_id, json).await?;
 
-        let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::WebhookUpdate {
-            webhook_id,
-            changes: Changes::new()
-                .change("name", &webhook_before.name, &webhook.name)
-                .change(
-                    "channel_id",
-                    &webhook_before.channel_id,
-                    &webhook.channel_id,
-                )
-                .build(),
-        })
-        .await?;
+        // FIXME: audit log
+        let _ = auth;
+        // let al = auth.audit_log(room_id);
+        // al.commit_success(AuditLogEntryType::WebhookUpdate {
+        //     webhook_id,
+        //     changes: Changes::new()
+        //         .change("name", &webhook_before.name, &webhook.name)
+        //         .change(
+        //             "channel_id",
+        //             &webhook_before.channel_id,
+        //             &webhook.channel_id,
+        //         )
+        //         .build(),
+        // })
+        // .await?;
 
         let sync_msg = MessageSync::WebhookUpdate {
             webhook: webhook.clone(),
         };
         self.state
-            .broadcast_room(room_id, auth.user.id, sync_msg)
+            .messaging()
+            .broadcast_room(room_id, sync_msg)
             .await?;
 
         Ok(webhook)
     }
 
     pub async fn delete(&self, webhook_id: WebhookId, auth: &Auth) -> Result<()> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let webhook = data.webhook_get(webhook_id).await?;
 
-        let chan = self
-            .state
-            .services()
-            .channels
-            .get(webhook.channel_id, None)
-            .await?;
+        let srv = self.state.services();
+        let chan = srv.channels.get(webhook.channel_id, None).await?;
         let room_id = chan
             .room_id
             .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
 
-        let perms = self
-            .state
-            .services()
-            .perms
-            .for_channel(auth.user.id, webhook.channel_id)
-            .await?;
+        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let perms = srv.perms.for_channel(user_id, webhook.channel_id).await?;
         perms.ensure(Permission::IntegrationsManage)?;
 
         data.webhook_delete(webhook_id).await?;
 
-        let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::WebhookDelete {
-            webhook_id,
-            changes: Changes::new()
-                .remove("name", &webhook.name)
-                .remove("channel_id", &webhook.channel_id)
-                .build(),
-        })
-        .await?;
+        // FIXME: audit log
+        let _ = auth;
+        // let al = auth.audit_log(room_id);
+        // al.commit_success(AuditLogEntryType::WebhookDelete {
+        //     webhook_id,
+        //     changes: Changes::new()
+        //         .remove("name", &webhook.name)
+        //         .remove("channel_id", &webhook.channel_id)
+        //         .build(),
+        // })
+        // .await?;
 
         let sync_msg = MessageSync::WebhookDelete {
             channel_id: webhook.channel_id,
@@ -194,7 +185,8 @@ impl ServiceWebhooks {
             room_id: Some(room_id),
         };
         self.state
-            .broadcast_room(room_id, auth.user.id, sync_msg)
+            .messaging()
+            .broadcast_room(room_id, sync_msg)
             .await?;
 
         Ok(())
@@ -206,7 +198,8 @@ impl ServiceWebhooks {
         pagination: PaginationQuery<WebhookId>,
     ) -> Result<PaginationResponse<Webhook>> {
         self.state
-            .data()
+            .begin_read()
+            .await?
             .webhook_list_channel(channel_id, pagination)
             .await
     }
@@ -217,7 +210,8 @@ impl ServiceWebhooks {
         pagination: PaginationQuery<WebhookId>,
     ) -> Result<PaginationResponse<Webhook>> {
         self.state
-            .data()
+            .begin_read()
+            .await?
             .webhook_list_room(room_id, pagination)
             .await
     }

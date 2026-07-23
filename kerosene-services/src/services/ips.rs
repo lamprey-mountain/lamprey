@@ -1,20 +1,19 @@
-use std::{net::IpAddr, sync::Arc};
+use std::net::IpAddr;
 
 use common::v1::types::federation::ip_addr::{IpLocation, IpMetadata};
-use lamprey_backend_core::Result;
 
-use crate::ServerStateInner;
+use crate::prelude::*;
 
 /// ip address service
 pub struct ServiceIps {
-    _state: Arc<ServerStateInner>,
+    _globals: Globals,
     reader: Option<maxminddb::Reader<Vec<u8>>>,
 }
 
 impl ServiceIps {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(globals: Globals) -> Self {
         let get_reader = || {
-            let path = state.config.mmdb_path.as_deref()?;
+            let path = globals.config().mmdb_path.as_deref()?;
             let reader = maxminddb::Reader::open_readfile(path).ok()?;
             Some(reader)
         };
@@ -22,7 +21,7 @@ impl ServiceIps {
         let reader = get_reader();
 
         Self {
-            _state: state,
+            _globals: globals,
             reader,
         }
     }

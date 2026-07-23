@@ -20,6 +20,13 @@
 // - fn start_background_tasks() body
 // - fn shutdown() body
 
+// use kerosene_services::services::;
+
+// async fn init() {
+//     // sets up services for you
+//     let globals = kerosene_services::globals::Globals::init_from_config(config).await?;
+// }
+
 use std::sync::Arc;
 
 use cache::ServiceCache;

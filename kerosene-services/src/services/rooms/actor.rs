@@ -15,14 +15,15 @@ use super::{
     EnsureMembers, GetSnapshot, MemberListCommandMsg, MemberListSubscribeMsg, RoomData, RoomHandle,
     RoomSnapshot, SyncMessage,
 };
+use crate::prelude::*;
 use crate::services::member_lists::actor::MemberList;
 use crate::services::member_lists::util::MemberListKey;
 use crate::types::PermissionBits;
-use crate::{Error, Result, ServerStateInner};
+use crate::{Error, Result};
 
 /// The internal state of a room actor.
 pub struct RoomActor {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     room_id: RoomId,
     snapshot: Arc<RoomSnapshot>,
     snapshot_tx: watch::Sender<Arc<RoomSnapshot>>,
@@ -32,11 +33,7 @@ pub struct RoomActor {
 }
 
 impl Actor for RoomActor {
-    type Args = (
-        RoomId,
-        Arc<ServerStateInner>,
-        watch::Sender<Arc<RoomSnapshot>>,
-    );
+    type Args = (RoomId, Globals, watch::Sender<Arc<RoomSnapshot>>);
     type Error = Error;
 
     async fn on_start(
@@ -47,7 +44,7 @@ impl Actor for RoomActor {
 
         let snapshot = Arc::new(RoomSnapshot::Loading);
         let mut actor = Self {
-            state: state.clone(),
+            state,
             room_id,
             snapshot,
             snapshot_tx,
@@ -107,9 +104,9 @@ impl Actor for RoomActor {
 }
 
 impl RoomActor {
-    pub fn spawn_room(room_id: RoomId, state: Arc<ServerStateInner>) -> RoomHandle {
+    pub fn spawn_room(room_id: RoomId, state: Globals) -> RoomHandle {
         let (snapshot_tx, snapshot_rx) = watch::channel(Arc::new(RoomSnapshot::Loading));
-        let actor_ref = RoomActor::spawn((room_id, state.clone(), snapshot_tx));
+        let actor_ref = RoomActor::spawn((room_id, state, snapshot_tx));
         RoomHandle {
             room_id,
             actor_ref,
@@ -118,7 +115,7 @@ impl RoomActor {
     }
 
     async fn load_initial_state(&mut self) -> Result<()> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin_read().await?;
         let srv = self.state.services();
 
         let root_span = tracing::info_span!("room_load", room_id = ?self.room_id);
@@ -251,7 +248,7 @@ impl RoomActor {
 
     /// Load members for a room that is in WithoutMembers state.
     async fn load_members(&mut self) -> Result<()> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin_read().await?;
         let srv = self.state.services();
 
         let current_data = match self.snapshot.as_ref() {

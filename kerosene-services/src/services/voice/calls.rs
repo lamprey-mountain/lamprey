@@ -144,7 +144,7 @@ impl ServiceVoice {
     }
 
     /// update a call
-    pub fn call_update(&self, channel_id: ChannelId, patch: CallPatch) -> Result<CallHandle> {
+    pub async fn call_update(&self, channel_id: ChannelId, patch: CallPatch) -> Result<CallHandle> {
         let mut entry = self
             .calls
             .get_mut(&channel_id)
@@ -163,9 +163,10 @@ impl ServiceVoice {
 
         *entry.value_mut() = Arc::clone(&updated_handle);
 
-        let _ = self
-            .state
-            .broadcast(MessageSync::CallUpdate { call: new_call });
+        self.state
+            .messaging()
+            .broadcast_channel(channel_id, MessageSync::CallUpdate { call: new_call })
+            .await?;
 
         Ok(updated_handle)
     }
@@ -181,7 +182,7 @@ impl ServiceVoice {
 
         for handle in states {
             let user_id = handle.inner().user_id;
-            srv.voice.state_destroy(channel_id, user_id)?;
+            srv.voice.state_destroy(channel_id, user_id).await?;
         }
 
         Ok(count)
@@ -202,7 +203,7 @@ impl ServiceVoice {
         for handle in states {
             if handle.inner().channel_id == channel_id {
                 let user_id = handle.inner().user_id;
-                srv.voice.state_destroy(channel_id, user_id)?;
+                srv.voice.state_destroy(channel_id, user_id).await?;
                 count += 1;
             }
         }

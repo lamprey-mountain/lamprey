@@ -12,10 +12,10 @@ use common::v1::types::{
 };
 use lamprey_backend_core::types::search::ChannelVisibility;
 
-use crate::routes::util::Auth;
+use crate::compat::routes::util::auth::Auth4 as Auth;
+use crate::prelude::*;
 use crate::services::cache::PermissionsCalculator;
 use crate::types::PermissionBits;
-use crate::{Error, Result, ServerStateInner};
 
 /// a snapshot of a room's state at a point in time.
 #[derive(Debug, Clone)]
@@ -205,7 +205,11 @@ impl RoomSnapshot {
     pub fn ensure_mfa_if_needed(&self, auth: &Auth) -> Result<()> {
         if let Some(data) = self.get_data() {
             if data.room.security.require_mfa {
-                if !auth.user.has_mfa.unwrap_or_default() {
+                if !auth
+                    .user()
+                    .map(|u| u.has_mfa.unwrap_or_default())
+                    .unwrap_or_default()
+                {
                     return Err(Error::BadStatic("mfa required for this action"));
                 }
             }
@@ -230,7 +234,7 @@ impl RoomSnapshot {
     pub fn channel_visibilities(
         self: Arc<Self>,
         user_id: UserId,
-        state: Arc<ServerStateInner>,
+        state: Globals,
     ) -> Vec<ChannelVisibility> {
         let Some(data) = self.get_data() else {
             return vec![];

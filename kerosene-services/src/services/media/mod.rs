@@ -23,7 +23,7 @@ mod process;
 mod util;
 
 pub use import::Upload;
-pub use util::{Import, MediaItem};
+pub use util::{Import, MediaItem, get_s3_url};
 
 pub struct ServiceMedia {
     state: Globals,
@@ -163,7 +163,7 @@ impl ServiceMedia {
             up.temp_writer.flush().await?;
 
             let item = up.writer.reader();
-            let state = Arc::clone(&self.state);
+            let state = self.state.clone();
             tokio::spawn(async move {
                 let srv = state.services();
                 if let Err(e) = srv.media.process_media(up).await {

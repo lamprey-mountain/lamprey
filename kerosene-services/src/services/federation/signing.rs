@@ -87,9 +87,8 @@ impl ValidatedKey {
 impl ServiceFederation {
     /// load local signing keys from config
     pub async fn load_local_keys(&self) -> Result<()> {
-        let config = self
-            .state
-            .data()
+        let mut txn = self.state.begin_read().await?;
+        let config = txn
             .config_get()
             .await?
             .ok_or_else(|| Error::Internal("internal config not initialized".to_string()))?;
@@ -128,13 +127,15 @@ impl ServiceFederation {
             local_keys.push(new_key);
 
             // TODO: use admin or something as the sole reader/writer for internal config
-            let mut config =
-                self.state.data().config_get().await?.ok_or_else(|| {
-                    Error::Internal("internal config not initialized".to_string())
-                })?;
+            let mut txn = self.state.begin().await?;
+            let mut config = txn
+                .config_get()
+                .await?
+                .ok_or_else(|| Error::Internal("internal config not initialized".to_string()))?;
 
             config.federation_keys = local_keys.iter().map(to_internal).collect();
-            self.state.data().config_put(config).await?;
+            txn.config_put(config).await?;
+            txn.commit().await?;
         }
 
         Ok(())

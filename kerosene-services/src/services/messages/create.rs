@@ -16,6 +16,7 @@ use tracing::error;
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::globals::messaging::Broadcast;
 use crate::routes::util::auth::Auth4;
 use crate::services::messages::util::MediaRegistry;
 use crate::services::messages::{links, markdown};
@@ -588,9 +589,12 @@ impl ServiceMessages {
             },
         };
 
+        let broadcast = Broadcast::sync(sync).with_option_nonce(op.nonce.as_deref());
+
         self.globals
             .messaging()
-            .broadcast_with_nonce(op.nonce.as_deref(), sync)?;
+            .broadcast_channel(op.channel.id, broadcast)
+            .await?;
 
         Ok(op)
     }

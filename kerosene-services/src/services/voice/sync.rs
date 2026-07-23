@@ -40,7 +40,7 @@ impl ServiceVoice {
 
         match command {
             SignallingCommand::Disconnect => {
-                self.state_destroy(channel_id, user_id)?;
+                self.state_destroy(channel_id, user_id).await?;
             }
             SignallingCommand::VoiceState { state } => {
                 self.state_update(user_id, state).await?;

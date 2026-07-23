@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use std::sync::Arc;
 use std::time::Duration;
 
 use common::v1::types::audit_logs::AuditLogEntryType;
@@ -13,18 +12,17 @@ use common::v1::types::{
 use moka::future::Cache;
 use validator::Validate;
 
-use crate::ServerStateInner;
-use crate::error::{Error, Result};
-use crate::routes::util::Auth;
+use crate::compat::routes::util::auth::Auth4 as Auth;
+use crate::prelude::*;
 use crate::types::DbRoleCreate;
 
 pub struct ServiceRoles {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     idempotency_keys: Cache<String, Role>,
 }
 
 impl ServiceRoles {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self {
             state,
             idempotency_keys: Cache::builder()
@@ -61,16 +59,17 @@ impl ServiceRoles {
         nonce: Option<String>,
     ) -> Result<Role> {
         json.validate()?;
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let room = srv.rooms.get(room_id, Some(user_id)).await?;
 
         if room.security.require_sudo {
             auth.ensure_sudo()?;
         }
         if room.security.require_mfa {
-            let user = srv.users.get(auth.user.id, None).await?;
+            let user = srv.users.get(user_id, None).await?;
             let totp = data.auth_totp_get(user.id).await?;
             if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
                 return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
@@ -84,7 +83,7 @@ impl ServiceRoles {
             return Err(ApiError::from_code(ErrorCode::PermissionConflict).into());
         }
 
-        let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+        let perms = srv.perms.for_room(user_id, room_id).await?;
         perms.ensure(Permission::RoleManage)?;
 
         for p in &json.allow {
@@ -92,8 +91,8 @@ impl ServiceRoles {
         }
 
         let room = srv.rooms.get(room_id, None).await?;
-        let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;
-        if rank == 0 && room.owner_id != Some(auth.user.id) {
+        let rank = srv.perms.get_user_rank(room_id, user_id).await?;
+        if rank == 0 && room.owner_id != Some(user_id) {
             return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
         }
 
@@ -128,14 +127,14 @@ impl ServiceRoles {
             .add("sticky", &role.sticky)
             .build();
 
-        let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::RoleCreate { changes })
-            .await?;
+        // FIXME: audit log
+        let _ = auth;
+        // let al = auth.audit_log(room_id);
+        // al.commit_success(AuditLogEntryType::RoleCreate { changes })
+        //     .await?;
 
         let msg = MessageSync::RoleCreate { role: role.clone() };
-        self.state
-            .broadcast_room_with_nonce(room_id, auth.user.id, nonce.as_deref(), msg)
-            .await?;
+        self.state.messaging().broadcast_room(room_id, msg).await?;
 
         srv.perms.invalidate_user_ranks(room_id);
 
@@ -143,7 +142,12 @@ impl ServiceRoles {
     }
 
     pub async fn get(&self, room_id: RoomId, role_id: RoleId) -> Result<Role> {
-        let roles = self.state.data().role_get_many(room_id, &[role_id]).await?;
+        let roles = self
+            .state
+            .begin_read()
+            .await?
+            .role_get_many(room_id, &[role_id])
+            .await?;
         roles
             .into_iter()
             .next()
@@ -157,23 +161,24 @@ impl ServiceRoles {
         auth: &Auth,
         json: RolePatch,
     ) -> Result<Role> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let room = srv.rooms.get(room_id, Some(user_id)).await?;
 
         if room.security.require_sudo {
             auth.ensure_sudo()?;
         }
         if room.security.require_mfa {
-            let user = srv.users.get(auth.user.id, None).await?;
+            let user = srv.users.get(user_id, None).await?;
             let totp = data.auth_totp_get(user.id).await?;
             if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
                 return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
             }
         }
 
-        let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+        let perms = srv.perms.for_room(user_id, room_id).await?;
         perms.ensure(Permission::RoleManage)?;
 
         let role_before = data.role_get_many(room_id, &[role_id]).await?;
@@ -208,14 +213,14 @@ impl ServiceRoles {
             .change("sticky", &role_before.sticky, &role.sticky)
             .build();
 
-        let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::RoleUpdate { changes })
-            .await?;
+        // FIXME: audit log
+        let _ = auth;
+        // let al = auth.audit_log(room_id);
+        // al.commit_success(AuditLogEntryType::RoleUpdate { changes })
+        //     .await?;
 
         let msg = MessageSync::RoleUpdate { role: role.clone() };
-        self.state
-            .broadcast_room(room_id, auth.user.id, msg)
-            .await?;
+        self.state.messaging().broadcast_room(room_id, msg).await?;
 
         srv.perms.invalidate_user_ranks(room_id);
 
@@ -223,23 +228,24 @@ impl ServiceRoles {
     }
 
     pub async fn delete(&self, room_id: RoomId, role_id: RoleId, auth: &Auth) -> Result<()> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let room = srv.rooms.get(room_id, Some(auth.user.id)).await?;
+        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let room = srv.rooms.get(room_id, Some(user_id)).await?;
 
         if room.security.require_sudo {
             auth.ensure_sudo()?;
         }
         if room.security.require_mfa {
-            let user = srv.users.get(auth.user.id, None).await?;
+            let user = srv.users.get(user_id, None).await?;
             let totp = data.auth_totp_get(user.id).await?;
             if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
                 return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
             }
         }
 
-        let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+        let perms = srv.perms.for_room(user_id, room_id).await?;
         perms.ensure(Permission::RoleManage)?;
 
         let roles = data.role_get_many(room_id, &[role_id]).await?;
@@ -258,14 +264,14 @@ impl ServiceRoles {
             .remove("deny", &role.deny)
             .build();
 
-        let al = auth.audit_log(room_id);
-        al.commit_success(AuditLogEntryType::RoleDelete { role_id, changes })
-            .await?;
+        // FIXME: audit log
+        let _ = auth;
+        // let al = auth.audit_log(room_id);
+        // al.commit_success(AuditLogEntryType::RoleDelete { role_id, changes })
+        //     .await?;
 
         let msg = MessageSync::RoleDelete { room_id, role_id };
-        self.state
-            .broadcast_room(room_id, auth.user.id, msg)
-            .await?;
+        self.state.messaging().broadcast_room(room_id, msg).await?;
 
         srv.perms.invalidate_user_ranks(room_id);
 
@@ -273,10 +279,11 @@ impl ServiceRoles {
     }
 
     pub async fn reorder(&self, room_id: RoomId, auth: &Auth, reorder: RoleReorder) -> Result<()> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let perms = srv.perms.for_room(user_id, room_id).await?;
         perms.ensure(Permission::RoleManage)?;
 
         data.role_reorder(room_id, reorder).await?;
@@ -294,10 +301,11 @@ impl ServiceRoles {
         remove_user_ids: &[UserId],
         auth: &Auth,
     ) -> Result<()> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let perms = srv.perms.for_room(auth.user.id, room_id).await?;
+        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let perms = srv.perms.for_room(user_id, room_id).await?;
         perms.ensure(Permission::RoleManage)?;
 
         data.role_member_bulk_edit(room_id, role_id, apply_user_ids, remove_user_ids)
@@ -326,7 +334,8 @@ impl ServiceRoles {
         pagination: PaginationQuery<UserId>,
     ) -> Result<PaginationResponse<RoomMember>> {
         self.state
-            .data()
+            .begin_read()
+            .await?
             .role_member_list(role_id, pagination)
             .await
     }

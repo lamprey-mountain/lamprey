@@ -1,18 +1,14 @@
 //! Service for managing member lists
 
-use std::sync::Arc;
-
 use tokio::sync::broadcast;
 
-use crate::services::rooms::{MemberListCommandMsg, MemberListSubscribeMsg, RoomActor, RoomHandle};
-use crate::{
-    Result, ServerStateInner,
-    services::member_lists::{
-        actor::{MemberListCommand, MemberListEvent},
-        util::{MemberListKey, MemberListKey1},
-        visibility::MemberListVisibility,
-    },
+use crate::prelude::*;
+use crate::services::member_lists::{
+    actor::{MemberListCommand, MemberListEvent},
+    util::{MemberListKey, MemberListKey1},
+    visibility::MemberListVisibility,
 };
+use crate::services::rooms::{MemberListCommandMsg, MemberListSubscribeMsg, RoomActor, RoomHandle};
 
 pub mod actor;
 pub mod syncer;
@@ -21,12 +17,12 @@ pub mod visibility;
 
 /// Service for managing member lists
 pub struct ServiceMemberLists {
-    s: Arc<ServerStateInner>,
+    s: Globals,
 }
 
 impl ServiceMemberLists {
     /// Create a new member lists service
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self { s: state }
     }
 

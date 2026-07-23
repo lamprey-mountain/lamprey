@@ -1,5 +1,4 @@
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 use std::time::Duration;
 
 use common::v1::types::presence::Status;
@@ -7,18 +6,19 @@ use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, Message,
     MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageId, MessageSync,
-    MessageThreadCreated, MessageType, Permission, PermissionOverwrite, RoomId, SERVER_USER_ID,
-    ThreadMemberPut, User, UserId,
+    MessageThreadCreated, MessageType, Permission, PermissionOverwrite, RoomId, ThreadMemberPut,
+    User, UserId,
 };
 use common::v2::types::MessageVerId;
 use moka::future::Cache;
 use moka::ops::compute::Op as CacheOp;
 use time::OffsetDateTime;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 use validator::Validate;
 
 use crate::globals::messaging::Broadcast;
 use crate::prelude::*;
+use crate::routes::util::auth::Auth4;
 use crate::types::{DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCreate};
 use lamprey_backend_core::types::search::ChannelVisibility;
 
@@ -320,25 +320,27 @@ impl ServiceChannels {
             json.validate()?;
             // TODO(al2): use this when creating a channel
             let channel_id = ChannelId::new();
-            let al = if let Some(room_id) = room_id {
-                let ty = AuditLogEntryType::ChannelCreate {
-                    channel_id,
-                    channel_type: json.ty,
-                    changes: Changes::new()
-                        .add("name", &json.name)
-                        .add("description", &json.description)
-                        .add("nsfw", &json.nsfw)
-                        .add("user_limit", &json.user_limit)
-                        .add("bitrate", &json.bitrate)
-                        .add("type", &json.ty)
-                        .add("parent_id", &json.parent_id)
-                        .add("url", &json.url)
-                        .build(),
-                };
-                auth.begin_audit_log(room_id, ty).await.ok()
-            } else {
-                None
-            };
+            // FIXME: audit log
+            // let al = if let Some(room_id) = room_id {
+            //     let ty = AuditLogEntryType::ChannelCreate {
+            //         channel_id,
+            //         channel_type: json.ty,
+            //         changes: Changes::new()
+            //             .add("name", &json.name)
+            //             .add("description", &json.description)
+            //             .add("nsfw", &json.nsfw)
+            //             .add("user_limit", &json.user_limit)
+            //             .add("bitrate", &json.bitrate)
+            //             .add("type", &json.ty)
+            //             .add("parent_id", &json.parent_id)
+            //             .add("url", &json.url)
+            //             .build(),
+            //     };
+            //     auth.begin_audit_log(room_id, ty).await.ok()
+            //     None
+            // } else {
+            //     None
+            // };
             let srv = self.state.services();
             let mut data = self.state.begin().await?;
             let user = auth.ensure_user()?;
@@ -648,14 +650,14 @@ impl ServiceChannels {
                 }
             }
 
-            if let Some(al) = al {
-                al.success();
-            }
+            // if let Some(al) = al {
+            //     al.success();
+            // }
 
             let broadcast = Broadcast::sync(MessageSync::ChannelCreate {
                 channel: Box::new(channel.clone()),
             })
-            .with_nonce(nonce.as_deref());
+            .with_option_nonce(nonce);
 
             if let Some(room_id) = room_id {
                 self.state
@@ -872,8 +874,9 @@ impl ServiceChannels {
                     .add("parent_id", &channel.parent_id)
                     .build(),
             };
-            let al = auth.begin_audit_log(room_id, ty).await?;
-            al.success();
+            // FIXME: audit log
+            // let al = auth.begin_audit_log(room_id, ty).await?;
+            // al.success();
         }
 
         data.commit().await?;
@@ -895,7 +898,7 @@ impl ServiceChannels {
             .for_channel(user.id, thread_id)
             .await?;
         perms.ensure(Permission::ChannelView)?;
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         let srv = self.state.services();
         let chan_old = srv.channels.get(thread_id, None).await?;
         if chan_old.is_archived() {
@@ -1285,7 +1288,8 @@ impl ServiceChannels {
                     )
                     .build(),
             };
-            auth.begin_audit_log(room_id, ty).await?.success();
+            // FIXME: audit log
+            // auth.begin_audit_log(room_id, ty).await?.success();
         }
 
         if chan_old.name != chan_new.name {
@@ -1399,6 +1403,7 @@ impl ServiceChannels {
             self.state.messaging().broadcast_room(room_id, msg).await?;
         }
 
+        data.commit().await?;
         Ok(chan_new)
     }
 
@@ -1435,7 +1440,13 @@ impl ServiceChannels {
         let mut interval = tokio::time::interval(Duration::from_secs(60));
         loop {
             interval.tick().await;
-            let mut data = state.data();
+            let mut data = match state.begin().await {
+                Ok(d) => d,
+                Err(e) => {
+                    error!("Failed to begin transaction for auto-archive: {:?}", e);
+                    continue;
+                }
+            };
             let srv = state.services();
 
             match data.thread_auto_archive().await {

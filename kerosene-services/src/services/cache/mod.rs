@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::prelude::*;
+use crate::{globals::messaging::Broadcast, prelude::*};
 
 use common::v1::types::{
     ChannelId, InviteTarget, InviteTargetId, MessageSync, Permission, Room, RoomId, RoomMember,
@@ -91,9 +91,11 @@ impl ServiceCache {
     pub fn start_background_tasks(&self) {
         let this = self.clone();
         tokio::spawn(async move {
-            let mut rx = this.state.subscribe_sushi().await.unwrap();
+            let mut rx = this.state.messaging().subscribe().await.unwrap();
             while let Some(msg) = rx.next().await {
-                this.handle_sync(&msg.message).await;
+                if let Broadcast::Sync(sync) = msg {
+                    this.handle_sync(&sync.message).await;
+                }
             }
         });
 
@@ -385,7 +387,7 @@ impl ServiceCache {
     /// generate an ambient message for a user containing all their initial state
     // PERF: fetch in parallel
     pub async fn generate_ambient_message(&self, user_id: UserId) -> Result<MessageSync> {
-        let data = self.state.begin_read().await?;
+        let mut data = self.state.begin_read().await?;
 
         let mut room_items = Vec::new();
 

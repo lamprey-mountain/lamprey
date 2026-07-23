@@ -107,7 +107,7 @@ impl ServiceVoice {
 
         self.sfus.insert(sfu_id, Arc::clone(&handle));
 
-        let state = Arc::clone(&self.state);
+        let state = self.state.clone();
         tokio::spawn(async move {
             loop {
                 tokio::select! {
@@ -167,11 +167,17 @@ impl ServiceVoice {
                 channel_id,
                 payload,
             } => {
-                self.state.broadcast(MessageSync::VoiceDispatch {
-                    user_id,
-                    channel_id,
-                    payload: *payload,
-                })?;
+                self.state
+                    .messaging()
+                    .broadcast_channel(
+                        channel_id,
+                        MessageSync::VoiceDispatch {
+                            user_id,
+                            channel_id,
+                            payload: *payload,
+                        },
+                    )
+                    .await?;
             }
             SfuEvent::VoiceState {
                 user_id,
@@ -183,17 +189,23 @@ impl ServiceVoice {
                 srv.voice.state_update(user_id, update).await?;
                 let state = srv.voice.state_get(new_channel_id, user_id).unwrap();
 
-                self.state.broadcast(MessageSync::VoiceState {
-                    user_id,
-                    state: Some(state.inner().clone()),
-                    old_state: old_state.map(|h| h.inner().clone()),
-                })?;
+                self.state
+                    .messaging()
+                    .broadcast_channel(
+                        new_channel_id,
+                        MessageSync::VoiceState {
+                            user_id,
+                            state: Some(state.inner().clone()),
+                            old_state: old_state.map(|h| h.inner().clone()),
+                        },
+                    )
+                    .await?;
             }
             SfuEvent::PeerDisconnect {
                 user_id,
                 channel_id,
             } => {
-                srv.voice.state_destroy(channel_id, user_id)?;
+                srv.voice.state_destroy(channel_id, user_id).await?;
             }
             SfuEvent::Latency { target_sfu, rtt } => {
                 let mut router = self.router.write().await;
@@ -317,11 +329,18 @@ impl ServiceVoice {
                 }
             }
 
-            let _ = self.state.broadcast(MessageSync::VoiceDispatch {
-                user_id,
-                channel_id,
-                payload: SignallingEvent::Migrate { new_sfu_id },
-            });
+            let _ = self
+                .state
+                .messaging()
+                .broadcast_channel(
+                    channel_id,
+                    MessageSync::VoiceDispatch {
+                        user_id,
+                        channel_id,
+                        payload: SignallingEvent::Migrate { new_sfu_id },
+                    },
+                )
+                .await;
         }
     }
 

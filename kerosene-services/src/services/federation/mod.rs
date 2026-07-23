@@ -1,6 +1,6 @@
 #![allow(unused)] // TEMP: suppress warnings here for now
 
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 use common::v1::types::federation::Hostname;
 use common::v1::types::federation::signing::ServerKeySecret;
@@ -8,7 +8,7 @@ use moka::future::Cache;
 use tokio::sync::RwLock;
 use tracing::error;
 
-use crate::ServerStateInner;
+use crate::prelude::*;
 use crate::services::federation::signing::ValidatedKey;
 
 pub mod import;
@@ -26,11 +26,11 @@ pub struct ServerInfo {
 pub struct ServiceFederation {
     cache: Cache<Hostname, ServerInfo>,
     local_keys: RwLock<Vec<ServerKeySecret>>,
-    state: Arc<ServerStateInner>,
+    state: Globals,
 }
 
 impl ServiceFederation {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         let cache: Cache<Hostname, ServerInfo> = Cache::builder()
             .time_to_live(Duration::from_secs(3600))
             .time_to_idle(Duration::from_secs(1800))
@@ -46,7 +46,7 @@ impl ServiceFederation {
 
     /// start background tasks for key rotation
     pub fn start_background_tasks(&self) {
-        let state = Arc::clone(&self.state);
+        let state = self.state.clone();
         tokio::spawn(async move {
             let srv = state.services();
 

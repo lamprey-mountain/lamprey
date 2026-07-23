@@ -1,4 +1,6 @@
+use lamprey_backend_core::config::{Config, ConfigBlobs};
 use std::sync::Arc;
+use url::Url;
 
 use async_tempfile::TempFile;
 use common::v1::types::federation::Remote;
@@ -9,8 +11,22 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::{OnceCell, watch};
 use tokio_util::compat::FuturesAsyncReadCompatExt;
 
+use crate::prelude::*;
 use crate::routes::util::multipart::MultipartFile;
-use crate::{ServerStateInner, prelude::*};
+
+pub fn get_s3_url(config: &Config, path: &str) -> Result<Url> {
+    let mut u = Url::parse("s3://")?;
+    match &config.blobs {
+        ConfigBlobs::S3(s3) => {
+            u.set_host(Some(&s3.bucket))?;
+        }
+        ConfigBlobs::Fs(_) => {
+            u.set_host(Some("localhost"))?;
+        }
+    }
+    u.set_path(path);
+    Ok(u)
+}
 
 // TODO: remove created media after 5 minutes, reset timer after any update
 // TODO: remove uploaded media after 5 minutes
@@ -34,7 +50,7 @@ pub struct MediaItemWriter {
 }
 
 pub struct MediaItemInner {
-    s: Arc<ServerStateInner>,
+    s: Globals,
     media: watch::Receiver<Arc<Media>>,
     state: watch::Receiver<MediaItemState>,
     bytes: OnceCell<Bytes>,
@@ -84,7 +100,7 @@ impl From<MediaItemState> for MediaStatus {
 
 impl MediaItem {
     /// create a new `MediaItem` from `Media`
-    pub fn from_media(s: Arc<ServerStateInner>, media: Media) -> MediaItemWriter {
+    pub fn from_media(s: Globals, media: Media) -> MediaItemWriter {
         let state = match media.status {
             MediaStatus::Transferring => MediaItemState::Transferring {
                 import: Import::from(media.clone()),
@@ -150,11 +166,8 @@ impl MediaItem {
 
                 // fetch from cdn
                 let media = self.media();
-                let url = self
-                    .inner
-                    .s
-                    .get_s3_url(&format!("media/{}/file", media.id))?;
-                let data = self.inner.s.blobs.read(url.path()).await?;
+                let url = get_s3_url(self.inner.s.config(), &format!("media/{}/file", media.id))?;
+                let data = self.inner.s.blobs().read(url.path()).await?;
                 Result::Ok(data.to_bytes())
             })
             .await
@@ -178,11 +191,8 @@ impl MediaItem {
 
                 // fetch from cdn
                 let media = self.media();
-                let url = self
-                    .inner
-                    .s
-                    .get_s3_url(&format!("media/{}/file", media.id))?;
-                let reader = self.inner.s.blobs.reader_with(url.path()).await?;
+                let url = get_s3_url(self.inner.s.config(), &format!("media/{}/file", media.id))?;
+                let reader = self.inner.s.blobs().reader_with(url.path()).await?;
                 let mut reader = reader.into_futures_async_read(0..).await?.compat();
                 tokio::io::copy(&mut reader, &mut writer).await?;
                 writer.flush().await?;

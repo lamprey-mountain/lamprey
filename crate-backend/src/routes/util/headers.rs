@@ -46,6 +46,7 @@ pub struct HeadersResponse {
 }
 
 /// parsed content type header
+// TODO: maybe support application/x-www-form-urlencoded as well?
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ContentType {
     /// json body

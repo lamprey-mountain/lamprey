@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
-use crate::routes::util::signing::OutgoingRequest;
 use crate::services::federation::signing::{ValidatedKey, ValidatedKeyAlgo};
 use crate::services::federation::{ServerInfo, ServiceFederation};
+use common::v1::types::federation::signing::OutgoingRequest;
 use common::v1::types::federation::{Hostname, ServerKeys, ServerPingResponse, WellKnown};
 use common::v1::types::util::Time;
 use ed25519_dalek::VerifyingKey;
@@ -24,7 +24,7 @@ impl ServiceFederation {
             .ok_or_else(|| Error::BadStatic("no local signing keys"))?;
 
         let req = OutgoingRequest {
-            origin: &self.state.config.hostname2()?,
+            origin: &self.state.config().hostname2()?,
             host: &hostname,
             method: "POST",
             path: ping_url.path(),
@@ -64,7 +64,7 @@ impl ServiceFederation {
             .ok_or_else(|| Error::BadStatic("no local signing keys"))?;
 
         let req = OutgoingRequest {
-            origin: &self.state.config.hostname2()?,
+            origin: &self.state.config().hostname2()?,
             host: &hostname,
             method: "POST",
             path: connect_url.path(),

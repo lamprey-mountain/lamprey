@@ -1,26 +1,24 @@
-use std::sync::Arc;
-
 use common::v1::types::federation::Remote;
 use common::v1::types::{Channel, Permission, ThreadMemberPut};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
 use tracing::debug;
 
+use crate::prelude::*;
 use crate::services::users::util::DmKey;
 use crate::types::{DbChannelCreate, DbChannelType};
-use crate::{Result, ServerStateInner};
 
 mod affinity;
 mod util;
 
 pub struct ServiceUsers {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     dm_lock: DashMap<(UserId, UserId), ()>,
 }
 
 // TODO: make services federation aware?
 impl ServiceUsers {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         Self {
             state,
             dm_lock: DashMap::new(),
@@ -44,7 +42,8 @@ impl ServiceUsers {
             let is_admin = perms.is_ok_and(|p| p.has(Permission::Admin));
 
             if viewer_id == user_id || is_admin {
-                usr.emails = Some(self.state.data().user_email_list(user_id).await?);
+                let mut data = self.state.begin_read().await?;
+                usr.emails = Some(data.user_email_list(user_id).await?);
             }
         }
 
@@ -74,7 +73,8 @@ impl ServiceUsers {
         }
 
         if !missing.is_empty() {
-            let mut users = self.state.data().user_get_many(&missing).await?;
+            let mut data = self.state.begin_read().await?;
+            let mut users = data.user_get_many(&missing).await?;
             for user in &mut users {
                 user.presence = srv.presence.get(user.id);
                 srv.cache.users.insert(user.id, user.clone()).await;
@@ -105,19 +105,20 @@ impl ServiceUsers {
         locked: bool,
     ) -> Result<(Channel, bool)> {
         let (user_id, other_id) = DmKey::new(user_id, other_id)?.get_users();
-        let mut data = self.state.acquire_data().await?;
+        let mut txn = self.state.begin().await?;
         let srv = self.state.services();
         let _lock = self.dm_lock.entry((user_id, other_id)).or_default();
-        if let Some(thread_id) = data.dm_get(user_id, other_id).await? {
+        if let Some(thread_id) = txn.dm_get(user_id, other_id).await? {
             debug!("dm thread id {thread_id}");
             let chan = srv.channels.get(thread_id, Some(user_id)).await?;
-            data.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
+            txn.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
                 .await?;
-            data.thread_member_put(thread_id, other_id, ThreadMemberPut::default())
+            txn.thread_member_put(thread_id, other_id, ThreadMemberPut::default())
                 .await?;
+            txn.commit().await?;
             return Ok((chan, false));
         }
-        let thread_id = data
+        let thread_id = txn
             .channel_create(DbChannelCreate {
                 room_id: None,
                 creator_id: user_id,
@@ -141,12 +142,12 @@ impl ServiceUsers {
                 tags: None,
             })
             .await?;
-        data.dm_put(user_id, other_id, thread_id).await?;
-        data.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
+        txn.dm_put(user_id, other_id, thread_id).await?;
+        txn.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
             .await?;
-        data.thread_member_put(thread_id, other_id, ThreadMemberPut::default())
+        txn.thread_member_put(thread_id, other_id, ThreadMemberPut::default())
             .await?;
-        data.commit().await?;
+        txn.commit().await?;
         let chan = srv.channels.get(thread_id, Some(user_id)).await?;
         Ok((chan, true))
     }

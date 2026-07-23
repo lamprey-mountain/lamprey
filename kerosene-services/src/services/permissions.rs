@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use common::v1::types::defaults::EVERYONE_TRUSTED;
 use common::v1::types::util::Time;
 use common::v1::types::{
@@ -7,6 +5,7 @@ use common::v1::types::{
     UserId,
 };
 use dashmap::DashMap;
+use kerosene_core::compat::authz::AuthCheck;
 use lamprey_backend_core::types::permission::{
     CheckVisibility, MemberState, PermissionBits, Permissions, Permissions2, Permissions2Metadata,
     PermissionsFlags, ResourceContext,
@@ -15,9 +14,7 @@ use moka::future::Cache;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
-use crate::ServerStateInner;
-use crate::error::Result;
-use crate::sync::permissions::AuthCheck;
+use crate::prelude::*;
 
 // TODO(#995): remove much of this code?
 // the permission cache can take up a lot of memory and is unnecessary since i can recalculate when needed, thanks to the new cache system
@@ -25,13 +22,13 @@ use crate::sync::permissions::AuthCheck;
 // cache_is_mutual *might* be better in ServiceUsers, and mutual could have more data
 
 pub struct ServicePermissions {
-    state: Arc<ServerStateInner>,
+    state: Globals,
     cache_is_mutual: Cache<(UserId, UserId), bool>,
     timeout_tasks: DashMap<(UserId, RoomId), JoinHandle<()>>,
 }
 
 impl ServicePermissions {
-    pub fn new(state: Arc<ServerStateInner>) -> Self {
+    pub fn new(state: Globals) -> Self {
         // not sure what the best way to configure these caches are
         // (userid, roomid) seems a bit inefficient, maybe caching roles would be better
         Self {
@@ -123,7 +120,7 @@ impl ServicePermissions {
 
             // load slowmode fields
             if let Some(uid) = user_id {
-                let mut data = self.state.data();
+                let mut data = self.state.begin_read().await?;
 
                 if let Some(expire_at) = data
                     .channel_get_message_slowmode_expire_at(channel_id, uid)
@@ -247,7 +244,7 @@ impl ServicePermissions {
             return Ok(true);
         }
         let (a, b) = if a < b { (a, b) } else { (b, a) };
-        let mut data = self.state.data();
+        let mut data = self.state.begin_read().await?;
         self.cache_is_mutual
             .try_get_with((a, b), data.permission_is_mutual(a, b))
             .await
@@ -268,9 +265,10 @@ impl ServicePermissions {
         allow: Vec<Permission>,
         deny: Vec<Permission>,
     ) -> Result<()> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         data.permission_overwrite_upsert(thread_id.into(), overwrite_id, ty, allow, deny)
             .await?;
+        data.commit().await?;
 
         // Invalidate caches
         self.invalidate_thread_all(thread_id).await;
@@ -282,9 +280,10 @@ impl ServicePermissions {
         thread_id: ChannelId,
         overwrite_id: Uuid,
     ) -> Result<()> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin().await?;
         data.permission_overwrite_delete(thread_id, overwrite_id)
             .await?;
+        data.commit().await?;
 
         // Invalidate caches
         self.invalidate_thread_all(thread_id).await;
@@ -318,7 +317,7 @@ impl ServicePermissions {
     /// for public room joining
     // TODO: move to permissions cache
     pub async fn default_for_room(&self, room_id: RoomId) -> Result<Permissions> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin_read().await?;
 
         let everyone_role_id = room_id.into_inner().into();
         let role = data.role_select(room_id, everyone_role_id).await?;
@@ -338,7 +337,7 @@ impl ServicePermissions {
         &self,
         room_id: RoomId,
     ) -> Result<Permissions2<CheckVisibility>> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin_read().await?;
 
         let everyone_role_id = room_id.into_inner().into();
         let role = data.role_select(room_id, everyone_role_id).await?;
@@ -364,7 +363,7 @@ impl ServicePermissions {
         source_user_id: UserId,
         target_user_id: UserId,
     ) -> Result<bool> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin_read().await?;
         data.permission_allows_dm_from_user(source_user_id, target_user_id)
             .await
     }
@@ -375,7 +374,7 @@ impl ServicePermissions {
         source_user_id: UserId,
         target_user_id: UserId,
     ) -> Result<bool> {
-        let mut data = self.state.data();
+        let mut data = self.state.begin_read().await?;
         data.permission_allows_friend_request_from_user(source_user_id, target_user_id)
             .await
     }
