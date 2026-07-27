@@ -60,8 +60,9 @@ left join dm on dm.channel_id = channel.id
 left join message_count on message_count.channel_id = channel.id
 left join member_count on member_count.channel_id = channel.id
 left join permission_overwrites on permission_overwrites.target_id = channel.id
-where (dm.user_a_id = $1 or dm.user_b_id = $1 or dm.user_a_id is null)
+left join thread_member tm on channel.id = tm.channel_id and tm.user_id = $1
+where ((channel.type = 'Dm' and (dm.user_a_id = $1 or dm.user_b_id = $1))
+    or (channel.type = 'Gdm' and tm.user_id is not null and tm.membership = 'Join'))
   and channel.last_version_id > $2 and channel.last_version_id < $3
-  and (channel.type = 'Dm' or channel.type = 'Gdm')
 order by (CASE WHEN $4 = 'f' THEN channel.last_version_id END), channel.last_version_id DESC
 LIMIT $5
