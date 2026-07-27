@@ -107,6 +107,7 @@ impl ServiceEmbed {
     async fn worker(state: &Globals) -> Result<()> {
         let mut txn = state.begin().await?;
         let Some(job) = txn.url_embed_queue_claim().await? else {
+            txn.rollback().await?;
             return Ok(());
         };
 
