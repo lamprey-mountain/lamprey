@@ -13,6 +13,8 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # TODO: common refuses to compile without a random mishmash of features, i should clean up that code
+anyhow = { version = "1.0.102", optional = true }
+clap = { version = "4.6.1", features = ["derive"], optional = true }
 lamprey-common = { path = "../crate-common", optional = true, default-features = false, features = ["validator", "serde", "utoipa", "ptr_box", "feat_interaction_reaction" ] }
 logos = "0.16.1"
 rowan = "0.16.1"
@@ -30,3 +32,9 @@ parallel = []
 serde = ["dep:serde"]
 default = ["dep:lamprey-common", "wasm", "serde"]
 wasm = ["dep:wasm-bindgen", "serde", "dep:serde-wasm-bindgen"]
+bin = ["dep:clap", "dep:anyhow"]
+
+[[bin]]
+name = "lmd"
+path = "src/bin/main.rs"
+required-features = ["bin"]
