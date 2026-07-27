@@ -48,7 +48,7 @@ pub struct ApiError {
     )]
     pub required_permissions_server: Vec<Permission>,
 
-    /// required oauth scopes
+    /// missing oauth scopes that are required
     #[cfg_attr(
         feature = "serde",
         serde(default, skip_serializing_if = "Vec::is_empty")

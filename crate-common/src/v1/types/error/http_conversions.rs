@@ -173,6 +173,9 @@ impl ErrorCode {
             ErrorCode::ScriptError => StatusCode::BAD_REQUEST,
             ErrorCode::RoomTypeNoChannels => StatusCode::BAD_REQUEST,
             ErrorCode::InteractionNotAllowed => StatusCode::FORBIDDEN,
+
+            // "payload too large" is specifically for the request body, so "bad request" is used instead
+            ErrorCode::MediaTooBig => StatusCode::BAD_REQUEST,
         }
     }
 }

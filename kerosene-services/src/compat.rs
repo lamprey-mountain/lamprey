@@ -123,6 +123,7 @@ pub mod routes {
                 },
                 v2::types::UserId,
             };
+            use kerosene_core::error::ApiResult;
             use lamprey_backend_core::types::auth::Identity;
 
             // TEMP: shim to get services working
@@ -160,23 +161,23 @@ pub mod routes {
                     self.identity.origin()
                 }
 
-                pub fn ensure_user(&self) -> Result<&User> {
+                pub fn ensure_user(&self) -> ApiResult<&User> {
                     self.identity.ensure_user()
                 }
 
-                pub fn ensure_session(&self) -> Result<&Session> {
+                pub fn ensure_session(&self) -> ApiResult<&Session> {
                     self.identity.ensure_session()
                 }
 
-                pub fn ensure_origin(&self) -> Result<&Hostname> {
+                pub fn ensure_origin(&self) -> ApiResult<&Hostname> {
                     self.identity.ensure_origin()
                 }
 
-                pub fn ensure_scopes(&self, scopes: &[Scope]) -> Result<()> {
+                pub fn ensure_scopes(&self, scopes: &[Scope]) -> ApiResult<()> {
                     self.identity.ensure_scopes(scopes)
                 }
 
-                pub fn ensure_sudo(&self) -> Result<()> {
+                pub fn ensure_sudo(&self) -> ApiResult<()> {
                     self.identity.ensure_sudo()
                 }
             }

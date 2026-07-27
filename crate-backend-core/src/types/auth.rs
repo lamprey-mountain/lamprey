@@ -1,7 +1,7 @@
 use common::{
     v1::types::{
         Session, SessionStatus, User,
-        error::{ApiError, ErrorCode},
+        error::{ApiError, ApiResult, ErrorCode},
         federation::Hostname,
         oauth::{Scope, Scopes},
         util::Time,
@@ -101,45 +101,132 @@ impl Identity {
     }
 
     /// like `self.user()` but returns an error instead of `None`
-    pub fn ensure_user(&self) -> Result<&User> {
-        self.user().ok_or(Error::MissingAuth)
+    pub fn ensure_user(&self) -> ApiResult<&User> {
+        self.user().ok_or_else(|| {
+            ApiError::with_message(ErrorCode::MissingAuth, "endpoint requires a user".into())
+        })
     }
 
-    pub fn ensure_session(&self) -> Result<&Session> {
-        self.session().ok_or(Error::MissingAuth)
+    pub fn ensure_session(&self) -> ApiResult<&Session> {
+        self.session().ok_or_else(|| {
+            ApiError::with_message(ErrorCode::MissingAuth, "endpoint requires a session".into())
+        })
     }
 
-    pub fn ensure_origin(&self) -> Result<&Hostname> {
-        self.origin().ok_or(Error::MissingAuth)
+    pub fn ensure_origin(&self) -> ApiResult<&Hostname> {
+        self.origin().ok_or_else(|| {
+            ApiError::with_message(ErrorCode::MissingAuth, "endpoint requires a origin".into())
+        })
     }
 
-    pub fn ensure_scopes(&self, scopes: &[Scope]) -> Result<()> {
-        let self_scopes = self.scopes().ok_or(Error::MissingAuth)?;
-        self_scopes.ensure_all(scopes).map_err(Into::into)
+    pub fn ensure_scopes(&self, scopes: &[Scope]) -> ApiResult<()> {
+        let self_scopes = self.scopes().ok_or_else(|| ApiError {
+            required_scopes: scopes.to_vec(),
+            ..ApiError::from_code(ErrorCode::MissingScopes)
+        })?;
+        self_scopes.ensure_all(scopes)
     }
 
-    pub fn ensure_sudo(&self) -> Result<()> {
+    pub fn ensure_sudo(&self) -> ApiResult<()> {
         // servers are always sudo
         if let Identity::Server { .. } = &self {
             return Ok(());
         }
 
-        let session = self.session().ok_or(Error::MissingAuth)?;
+        let session = self.ensure_session()?;
         match &session.status {
             SessionStatus::Sudo {
                 sudo_expires_at, ..
             } => {
                 if *sudo_expires_at < Time::now_utc() {
-                    Err(Error::ApiError(ApiError::from_code(
-                        ErrorCode::SudoSessionExpired,
-                    )))
+                    Err(ApiError::from_code(ErrorCode::SudoSessionExpired))
                 } else {
                     Ok(())
                 }
             }
-            _ => Err(Error::ApiError(ApiError::from_code(
-                ErrorCode::SudoRequired,
-            ))),
+            _ => Err(ApiError::from_code(ErrorCode::SudoRequired)),
+        }
+    }
+}
+
+#[cfg(any())]
+mod arst {
+    // impl Auth4 {
+    //     pub async fn audit_log(
+    //         &mut self,
+    //         room_id: RoomId,
+    //         ty: AuditLogEntryType,
+    //     ) -> Result<AuditTxnHandle> {
+    //         todo!()
+    //     }
+    // }
+
+    // pub struct AuditTxnHandle<'req> {
+    //     pub(super) slot: AuditTxnSlot,
+    //     _phantom: PhantomData<&'req ()>,
+    // }
+
+    impl Auth4 {
+        /// begin an audit log transaction
+        #[must_use = "must call commit() to save a successful audit log entry"]
+        pub async fn begin_audit_log(
+            &self,
+            room_id: RoomId,
+            ty: AuditLogEntryType,
+        ) -> Result<AuditTxnHandle> {
+            todo!()
+        }
+    }
+
+    /// a handle to an [`AuditTxn`]
+    pub struct AuditTxnHandle {
+        pub(super) slot: AuditTxnSlot,
+    }
+
+    impl AuditTxnHandle {
+        fn set_status(&mut self, status: AuditLogEntryStatus) {
+            todo!()
+            // let mut txn = self
+            //     .slot
+            //     .try_lock()
+            //     .expect("AuditTxnSlot lock should not be contended during set_status");
+            // if let AuditTxnState::Created(ctx) = &mut txn.as_mut().unwrap().state {
+            //     ctx.status = Some(status);
+            // }
+        }
+
+        /// mark this audit log transaction as successful
+        pub fn success(mut self) {
+            self.set_status(AuditLogEntryStatus::Success);
+        }
+
+        pub fn unauthorized(mut self) {
+            self.set_status(AuditLogEntryStatus::Unauthorized);
+        }
+
+        /// mark this audit log transaction as failed
+        pub fn failed(mut self) {
+            self.set_status(AuditLogEntryStatus::Failed);
+        }
+    }
+
+    // /// authentication and authorization
+    // pub struct ReqState {
+    //     identity: Identity,
+    //     audit_log: AuditLogFoo,
+    // }
+
+    // impl AuditLogFoo {
+    //     pub fn set_room_id(&mut self);
+    //     pub fn set_entry_type(&mut self);
+    //     pub fn set_status(&mut self);
+    // }
+
+    mod next {
+        pub struct AuditLoggerState;
+
+        impl AuditLoggerState {
+            //
         }
     }
 }

@@ -32,11 +32,6 @@ mod util;
 
 /// create an axum router for the api
 pub fn create_router_api(_globals: Globals) -> Router {
-    todo!()
-}
-
-/// create an axum router for metrics
-pub fn create_router_metrics(globals: Globals) -> Router {
     let state = Arc::new(globals.to_server_state());
     let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest("/api", routes::routes(state.clone()).fallback(api_fallback))
@@ -68,6 +63,16 @@ pub fn create_router_metrics(globals: Globals) -> Router {
         .layer(util::cors())
         .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
         .layer(TraceLayer::new_for_http())
+        // .layer(
+        //     TraceLayer::new_for_http().make_span_with(|req: &Request<_>| {
+        //         let request_id = req
+        //             .headers()
+        //             .get("x-request-id")
+        //             .and_then(|v| v.to_str().ok())
+        //             .unwrap_or("unknown");
+        //         tracing::info_span!("http_request", %request_id, method = %req.method(), uri = %req.uri())
+        //     }),
+        // )
         .layer(middleware::from_fn_with_state(
             state.clone(),
             routes::util::audit_log_middleware,
@@ -76,6 +81,12 @@ pub fn create_router_metrics(globals: Globals) -> Router {
         .layer(PropagateHeaderLayer::new(HeaderName::from_static(
             "x-trace-id",
         )))
+    // .layer(SetRequestIdLayer)
+}
+
+/// create an axum router for metrics
+pub fn create_router_metrics(globals: Globals) -> Router {
+    todo!()
 }
 
 /// create an axum router for the media server

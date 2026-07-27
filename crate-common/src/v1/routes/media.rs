@@ -18,6 +18,12 @@ pub mod media_create {
     pub struct Response {
         #[json]
         pub media: MediaCreated,
+
+        #[header]
+        pub upload_offset: u64,
+
+        #[header]
+        pub content_length: u64,
     }
 }
 

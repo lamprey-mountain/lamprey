@@ -132,11 +132,9 @@ impl Connection {
                 sub_res = self.subscriptions.poll() => {
                     match sub_res {
                         Ok(msg) => {
-                            // TODO: Need queue_message implementation
-                            // if let Err(err) = self.queue_message(Box::new(msg), None).await {
-                            //     error!("failed to queue subscription message: {err}");
-                            // }
-                            self.queue.push_sync(msg, None);
+                            if let Err(err) = self.queue_message(Box::new(msg), None).await {
+                                error!("failed to queue subscription message: {err}");
+                            }
                         }
                         Err(err) => {
                             error!("subscription poll error: {err}");
@@ -192,6 +190,7 @@ impl Connection {
                 match self.handle_message_client_inner(msg).await {
                     Ok(_) => {}
                     Err(err) => {
+                        // TODO: potentially report error to client
                         error!("Error handling message: {:?}", err);
                     }
                 }
@@ -211,7 +210,7 @@ impl Connection {
 
         trace!("{:#?}", msg);
         match msg {
-            MessageClient::Hello { .. } => return Err(Error::BadStatic("already authenticated")),
+            MessageClient::Hello(_) => return Err(Error::BadStatic("already authenticated")),
             MessageClient::Presence { presence } => {
                 let srv = self.globals.services();
                 let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;

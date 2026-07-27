@@ -747,4 +747,8 @@ pub enum ErrorCode {
     /// interaction not allowed
     #[error("interaction not allowed")]
     InteractionNotAllowed,
+
+    /// media is too big
+    #[error("media is too big")]
+    MediaTooBig,
 }

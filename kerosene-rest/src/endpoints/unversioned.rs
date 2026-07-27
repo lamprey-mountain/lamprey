@@ -8,8 +8,8 @@ async fn well_known(
 ) -> Result<routes::well_known::Response> {
     Ok(routes::well_known::Response {
         info: WellKnown {
-            api_url: req.globals.config().api_url.clone(),
-            cdn_url: req.globals.config().cdn_url.clone(),
+            api_url: req.globals().config().api_url.clone(),
+            cdn_url: req.globals().config().cdn_url.clone(),
         },
     })
 }

@@ -1,21 +1,21 @@
-use std::sync::Arc;
-
 use crate::prelude::*;
 
 use axum::extract::FromRequest;
 use common::util::routes::Endpoint;
+use kerosene_core::types::auth::Identity;
 use lamprey_backend_services::services::Services;
-
-use crate::util::Auth;
 
 /// the current state for a request
 ///
 /// can be used as an axum extractor
 pub struct Req<E: Endpoint> {
-    pub auth: Auth,
-    pub body: E::Request,
+    inner: E::Request,
 
-    pub globals: Globals,
+    /// a handle to global state
+    globals: Globals,
+
+    /// the identity of who is making this request
+    identity: Identity,
 
     /// resolved media
     media: (),
@@ -38,8 +38,24 @@ where
 }
 
 impl<E: Endpoint> Req<E> {
+    #[inline]
+    pub fn globals(&self) -> Globals {
+        self.globals.clone()
+    }
+
+    #[inline]
     pub fn services(&self) -> Arc<Services> {
-        todo!()
+        self.globals.services()
+    }
+
+    #[inline]
+    pub fn identity(&self) -> &Identity {
+        &self.identity
+    }
+
+    #[inline]
+    pub fn inner(&self) -> &E::Request {
+        &self.inner
     }
 
     // pub fn get_media(&self, media_ref: &MediaReference) -> &Media {

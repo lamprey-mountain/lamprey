@@ -579,6 +579,15 @@ impl MediaReference {
     }
 }
 
+impl MediaCreate {
+    pub fn size(&self) -> Option<u64> {
+        match self.source {
+            MediaCreateSource::Download { size, .. } => size,
+            MediaCreateSource::Upload { size, .. } => size,
+        }
+    }
+}
+
 impl Media {
     /// create a new errored media
     pub fn errored(id: MediaId, version_id: MediaVerId, reason: MediaErrorReason) -> Self {

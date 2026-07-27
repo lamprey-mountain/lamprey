@@ -1,11 +1,11 @@
 use axum::routing::MethodFilter;
 use common::util::routes::Method;
 
-pub mod auth;
+// pub mod auth;
 pub mod request;
 pub mod routes;
 
-pub use auth::Auth;
+// pub use auth::Auth;
 pub use request::Req;
 pub use routes::Routes;
 
