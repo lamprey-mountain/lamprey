@@ -208,7 +208,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 			<Show when={channel()}>
 				{(c) => <ChannelNotificationMenu channel={c()} />}
 			</Show>
-			<Show when={hasPermission("InviteCreate")}>
+			<Show when={hasPermission("InviteCreate") && channel()?.type !== "Dm"}>
 				<Item
 					onClick={() =>
 						modalCtl.open({
@@ -226,12 +226,24 @@ export function ChannelMenu(props: { channel_id: string }) {
 				</Item>
 			</Show>
 			<Separator />
-			<Submenu content={"edit"} onClick={settings("")}>
-				<Item onClick={settings("")}>info</Item>
-				<Item onClick={settings("/permissions")}>permissions</Item>
-				<Item onClick={settings("/invites")}>invites</Item>
-				<Item onClick={settings("/webhooks")}>webhooks</Item>
-			</Submenu>
+			<Show when={channel()?.type !== "Dm"}>
+				<Submenu content={"edit"} onClick={settings("")}>
+					{/* TODO: what permissions should be required to see the info and permissions items? */}
+					{/* TODO: hide edit menu if no children are visible*/}
+					<Item onClick={settings("")}>info</Item>
+					<Item onClick={settings("/permissions")}>permissions</Item>
+					<Show
+						when={
+							hasPermission("InviteCreate") || hasPermission("InviteManage")
+						}
+					>
+						<Item onClick={settings("/invites")}>invites</Item>
+					</Show>
+					<Show when={hasPermission("IntegrationsManage")}>
+						<Item onClick={settings("/webhooks")}>webhooks</Item>
+					</Show>
+				</Submenu>
+			</Show>
 			<Show
 				when={
 					channel() &&
