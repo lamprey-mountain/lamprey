@@ -1,7 +1,7 @@
 import type { Channel, Room, User } from "sdk";
 import { getColor } from "@/lib/colors";
 import { getThumbFromId } from "@/media/util";
-import { generatePfp } from "./pfp.ts";
+import { generatePfp, generateRoomIcon } from "./pfp.ts";
 
 export const generateNotificationIcon = async (author: User, room?: Room) => {
 	const c = new OffscreenCanvas(256, 256);
@@ -96,6 +96,8 @@ export const generateFavicon = async (
 			case "room":
 				if (icon.room.icon) {
 					iconUrl = getThumbFromId(icon.room.icon, size);
+				} else {
+					iconUrl = await generateRoomIcon(icon.room.id);
 				}
 				break;
 			case "channel":

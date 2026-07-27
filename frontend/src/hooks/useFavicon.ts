@@ -3,6 +3,7 @@ import { createEffect, createMemo, onCleanup } from "solid-js";
 import { useApi, useChannels } from "@/api";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { generateFavicon } from "@/lib/drawing";
+import { roomLayersLoaded } from "@/lib/pfp";
 
 export function useFavicon() {
 	const _api2 = useApi();
@@ -53,6 +54,7 @@ export function useFavicon() {
 	createEffect(() => {
 		const mentions = totalMentions();
 		const data = faviconData();
+		const layers = roomLayersLoaded();
 		let oldUrl: string | null = null;
 
 		(async () => {
