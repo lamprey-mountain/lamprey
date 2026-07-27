@@ -43,6 +43,12 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
         .iter()
         .find(|f| matches!(f.kind, FieldKind::Json | FieldKind::Form | FieldKind::Body));
 
+    let route_tag = if args.tags.iter().any(|t| t.value() == "cdn") {
+        "cdn"
+    } else {
+        "api"
+    };
+
     let extract_request_impl = if let Some(f) = body_field {
         let ty = &f.ty;
 
@@ -150,6 +156,12 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
             #extract_request_impl
 
             #(#preserved_items)*
+
+            impl Endpoint {
+                pub const fn route_tag() -> &'static str {
+                    #route_tag
+                }
+            }
         }
     };
 
