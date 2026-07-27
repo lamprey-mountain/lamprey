@@ -49,9 +49,6 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 	const doc = useDocument();
 	const [, modalCtl] = useModals();
 	const [ch, setCh] = useChannel()!;
-	const [active, setActive] = createSignal<
-		"branches" | "merge" | "export" | "insert" | null
-	>(null);
 
 	const branches = useDocumentBranches();
 	const users = useUsers();
@@ -117,7 +114,6 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 				private: false,
 			});
 			update("branchId", branch.id);
-			setActive(null);
 		} catch (e) {
 			console.error("Failed to create new branch:", e);
 		}
@@ -131,7 +127,6 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 				private: true,
 			});
 			update("branchId", branch.id);
-			setActive(null);
 		} catch (e) {
 			console.error("Failed to create new private branch:", e);
 		}
@@ -176,7 +171,6 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 		if (!view) return;
 		const filename = generateFilename(props.channel.name, "md");
 		exportAsMarkdown(view, filename);
-		setActive(null);
 	};
 
 	const handleExportHtml = () => {
@@ -185,14 +179,12 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 		if (!view) return;
 		const filename = generateFilename(props.channel.name, "html");
 		exportAsHtml(view, filename, props.channel.name);
-		setActive(null);
 	};
 
 	const handleMergeFull = async () => {
 		try {
 			await api.documents.merge(props.channel.id, doc.branchId);
 			update("branchId", defaultBranchId());
-			setActive(null);
 		} catch (e) {
 			console.error("Failed to merge branch:", e);
 		}
@@ -209,7 +201,6 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 				});
 			}
 		});
-		setActive(null);
 	};
 
 	const handleDeleteBranch = () => {
@@ -232,13 +223,11 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 				}
 			},
 		);
-		setActive(null);
 	};
 
 	const handleSyncBranch = async () => {
 		try {
 			await api.documentBranches.sync(props.channel.id, doc.branchId);
-			setActive(null);
 		} catch (e) {
 			console.error("Failed to sync branch:", e);
 		}
@@ -251,74 +240,267 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 		"refactor/intro",
 	];
 
-	// TODO: extract buttons into component
-	const [branchBtn, setBranchBtn] = createSignal<HTMLElement>();
-	const [branchMenu, setBranchMenu] = createSignal<HTMLElement>();
-	const branchPos = useFloating(branchBtn, branchMenu, {
-		whileElementsMounted: autoUpdate,
-		placement: "bottom-start",
-		middleware: [offset(4), flip(), shift()],
-	});
-
-	const [mergeBtn, setMergeBtn] = createSignal<HTMLElement>();
-	const [mergeMenu, setMergeMenu] = createSignal<HTMLElement>();
-	const mergePos = useFloating(mergeBtn, mergeMenu, {
-		whileElementsMounted: autoUpdate,
-		placement: "bottom-start",
-		middleware: [offset(4), flip(), shift()],
-	});
-
-	const [exportBtn, setExportBtn] = createSignal<HTMLElement>();
-	const [exportMenu, setExportMenu] = createSignal<HTMLElement>();
-	const exportPos = useFloating(exportBtn, exportMenu, {
-		whileElementsMounted: autoUpdate,
-		placement: "bottom-start",
-		middleware: [offset(4), flip(), shift()],
-	});
-
-	const [insertBtn, setInsertBtn] = createSignal<HTMLElement>();
-	const [insertMenu, setInsertMenu] = createSignal<HTMLElement>();
-	const insertPos = useFloating(insertBtn, insertMenu, {
-		whileElementsMounted: autoUpdate,
-		placement: "bottom-start",
-		middleware: [offset(4), flip(), shift()],
-	});
-
-	onMount(() => {
-		const close = () => setActive(null);
-		window.addEventListener("click", close);
-		onCleanup(() => window.removeEventListener("click", close));
-	});
-
 	return (
 		<header class="document-header">
 			<div class="menu-group">
-				<button
-					type="button"
-					class="button"
-					ref={setBranchBtn}
-					onClick={(e) => {
-						e.stopPropagation();
-						setActive(active() === "branches" ? null : "branches");
-					}}
-					classList={{ active: active() === "branches" }}
+				<MenubarItem
+					button={
+						currentBranch()?.name ||
+						(currentBranch()?.default ? "main" : "unnamed")
+					}
 				>
-					{currentBranch()?.name ||
-						(currentBranch()?.default ? "main" : "unnamed")}
-				</button>
+					{(close) => (
+						<menu
+							class="branch-menu document-menu"
+							onClick={(e) => e.stopPropagation()}
+						>
+							<input
+								type="text"
+								placeholder="filter branches..."
+								style="margin:4px 8px;padding:2px 4px;border-radius:2px"
+								ref={(el) => queueMicrotask(() => el.focus())}
+								onInput={(e) => setFilterText(e.currentTarget.value)}
+							/>
+							<ul>
+								{/* Default branch */}
+								<li
+									class="default"
+									classList={{ selected: doc.branchId === defaultBranchId() }}
+									onClick={() => {
+										update("branchId", defaultBranchId());
+										close();
+									}}
+								>
+									<button type="button" class="button">
+										<Icon src={icBranchDefault} />
+										<div class="info">
+											<div>default</div>
+											<div class="dim">the main/master/default branch</div>
+										</div>
+									</button>
+								</li>
+								<For each={filteredBranches()}>
+									{(branch) => {
+										const creator = users.cache.get(branch.creator_id);
+										// TODO: use data attributes
+										const stateColor =
+											branch.state === "Active"
+												? "color: $color-green"
+												: branch.state === "Closed"
+													? "color: $color-warn"
+													: "color: $color-fg-500";
+										return (
+											<li classList={{ private: branch.private }}>
+												<button
+													type="button"
+													class="button"
+													onClick={() => {
+														update("branchId", branch.id);
+														close();
+													}}
+													classList={{ selected: doc.branchId === branch.id }}
+												>
+													<Icon
+														src={branch.private ? icBranchPrivate : icBranch}
+													/>
+													<div class="info">
+														<div>
+															{branch.name || "unnamed"}
+															{branch.private && (
+																<span class="dim"> (private)</span>
+															)}
+														</div>
+														<div class="dim" style={stateColor}>
+															{branch.state.toLowerCase()}
+															{creator && (
+																<>
+																	{" "}
+																	· created by{" "}
+																	<b>
+																		{creator.relationship.petname ||
+																			creator.name}
+																	</b>
+																</>
+															)}
+															{branch.created_at && (
+																<> · {timeAgo(new Date(branch.created_at))}</>
+															)}
+														</div>
+													</div>
+												</button>
+											</li>
+										);
+									}}
+								</For>
+								<li class="separator"></li>
+								<li class="new">
+									<button
+										type="button"
+										class="button"
+										onClick={() => {
+											handleNewBranch();
+											close();
+										}}
+									>
+										<Icon src={icBranchNew} />
+										<div class="info">
+											<div>new</div>
+											<div class="dim">create a new branch</div>
+										</div>
+									</button>
+								</li>
+								<li class="new">
+									<button type="button" class="button">
+										<Icon src={icBranchFork} />
+										<div class="info">
+											<div>new from changes</div>
+											<div class="dim">
+												create a new branch from existing changes
+											</div>
+										</div>
+									</button>
+								</li>
+								<li class="new">
+									<button
+										type="button"
+										class="button"
+										onClick={() => {
+											handleNewPrivateBranch();
+											close();
+										}}
+									>
+										<Icon src={icBranchFork} />
+										<div class="info">
+											<div>new private</div>
+											<div class="dim">
+												create a new private branch only visible to you
+											</div>
+										</div>
+									</button>
+								</li>
+							</ul>
+						</menu>
+					)}
+				</MenubarItem>
 				<Show when={currentBranch()?.parent_id}>
-					<button
-						type="button"
-						class="button"
-						ref={setMergeBtn}
-						onClick={(e) => {
-							e.stopPropagation();
-							setActive(active() === "merge" ? null : "merge");
-						}}
-						classList={{ active: active() === "merge" }}
-					>
-						branch
-					</button>
+					<MenubarItem button="branch">
+						{(close) => (
+							<menu
+								class="branch-action-menu document-menu"
+								onClick={(e) => e.stopPropagation()}
+							>
+								<ul>
+									<li>
+										<button
+											type="button"
+											class="button"
+											onClick={() => {
+												handleRenameBranch();
+												close();
+											}}
+										>
+											<Icon src={icRename} />
+											<div class="info">
+												<div>rename</div>
+												<div class="dim">change the name of this branch</div>
+											</div>
+										</button>
+									</li>
+									<li>
+										<button
+											type="button"
+											class="button"
+											onClick={() => {
+												handleSyncBranch();
+												close();
+											}}
+										>
+											<Icon src={icSync} />
+											<div class="info">
+												<div>sync</div>
+												<div class="dim">pull changes from parent</div>
+											</div>
+										</button>
+									</li>
+									<li>
+										<button
+											type="button"
+											class="button"
+											onClick={() => {
+												handleMergeFull();
+												close();
+											}}
+										>
+											<Icon src={icMergeFull} />
+											<div class="info">
+												<div>merge</div>
+												<div class="dim">fully merge all changes</div>
+											</div>
+										</button>
+									</li>
+									<li>
+										<button type="button" class="button">
+											<Icon src={icMergeCherrypick} />
+											<div class="info">
+												<div>cherry pick</div>
+												<div class="dim">merge specific changes</div>
+											</div>
+										</button>
+									</li>
+									<li>
+										<button
+											type="button"
+											class="button"
+											onClick={() => {
+												handleDeleteBranch();
+												close();
+											}}
+										>
+											<Icon src={icDelete} />
+											<div class="info">
+												<div style="color: $color-warn">delete</div>
+												<div class="dim">permanently remove this branch</div>
+											</div>
+										</button>
+									</li>
+									<li class="separator"></li>
+									<li
+										class="header"
+										style="padding: 4px 12px; font-weight: bold; font-size: 0.8em; opacity: 0.7"
+									>
+										suggested renames
+									</li>
+									<For each={suggestedRenames}>
+										{(name) => (
+											<li>
+												<button
+													type="button"
+													class="button"
+													onClick={() => {
+														const branch = currentBranch();
+														if (branch) {
+															api.documentBranches.update(
+																props.channel.id,
+																branch.id,
+																{
+																	name,
+																},
+															);
+														}
+														close();
+													}}
+												>
+													<div class="info">
+														<div>{name}</div>
+													</div>
+												</button>
+											</li>
+										)}
+									</For>
+								</ul>
+							</menu>
+						)}
+					</MenubarItem>
 				</Show>
 				<button
 					type="button"
@@ -382,296 +564,61 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 				>
 					<Icon src={icFormatUrl} />
 				</button>
-				<button
-					type="button"
-					class="button"
-					ref={setInsertBtn}
-					onClick={(e) => {
-						e.stopPropagation();
-						setActive(active() === "insert" ? null : "insert");
-					}}
-					classList={{ active: active() === "insert" }}
-				>
-					insert
-				</button>
+				<MenubarItem button="insert">
+					{(close) => (
+						<ul>
+							<li>
+								<button type="button" class="button" onClick={close}>
+									<div class="info">
+										<div>media</div>
+										<div class="dim">insert images, videos, and audio</div>
+									</div>
+								</button>
+							</li>
+							<li>
+								<button type="button" class="button" onClick={close}>
+									<div class="info">
+										<div>table</div>
+										<div class="dim">insert tables with rows and columns</div>
+									</div>
+								</button>
+							</li>
+							<li>
+								<button type="button" class="button" onClick={close}>
+									<div class="info">
+										<div>code</div>
+										<div class="dim">
+											insert code blocks with syntax highlighting
+										</div>
+									</div>
+								</button>
+							</li>
+							<li>
+								<button type="button" class="button" onClick={close}>
+									<div class="info">
+										<div>symbols</div>
+										<div class="dim">insert special characters and symbols</div>
+									</div>
+								</button>
+							</li>
+							<li>
+								<button type="button" class="button" onClick={close}>
+									<div class="info">
+										<div>time</div>
+										<div class="dim">insert current date and time</div>
+									</div>
+								</button>
+							</li>
+						</ul>
+					)}
+				</MenubarItem>
 			</div>
 			<div class="menu-group">
-				<button
-					type="button"
-					class="button"
-					ref={setExportBtn}
-					onClick={(e) => {
-						e.stopPropagation();
-						setActive(active() === "export" ? null : "export");
-					}}
-					classList={{ active: active() === "export" }}
-				>
-					export
-				</button>
-			</div>
-
-			<div style="flex:1"></div>
-			<menu class="right">
-				<button type="button" onClick={toggleMembers} title="Show members">
-					<Icon src={icMembers} />
-				</button>
-			</menu>
-
-			<Show when={active() === "branches"}>
-				<Portal>
-					<menu
-						class="branch-menu document-menu"
-						ref={setBranchMenu}
-						style={{
-							position: branchPos.strategy,
-							top: `${branchPos.y ?? 0}px`,
-							left: `${branchPos.x ?? 0}px`,
-							"z-index": 100,
-						}}
-						onClick={(e) => e.stopPropagation()}
-					>
-						<input
-							type="text"
-							placeholder="filter branches..."
-							style="margin:4px 8px;padding:2px 4px;border-radius:2px"
-							ref={(el) => queueMicrotask(() => el.focus())}
-							onInput={(e) => setFilterText(e.currentTarget.value)}
-						/>
-						<ul>
-							{/* Default branch */}
-							<li
-								class="default"
-								classList={{ selected: doc.branchId === defaultBranchId() }}
-								onClick={() => {
-									update("branchId", defaultBranchId());
-									setActive(null);
-								}}
-							>
-								<button type="button" class="button">
-									<Icon src={icBranchDefault} />
-									<div class="info">
-										<div>default</div>
-										<div class="dim">the main/master/default branch</div>
-									</div>
-								</button>
-							</li>
-							<For each={filteredBranches()}>
-								{(branch) => {
-									const creator = users.cache.get(branch.creator_id);
-									// TODO: use data attributes
-									const stateColor =
-										branch.state === "Active"
-											? "color: $color-green"
-											: branch.state === "Closed"
-												? "color: $color-warn"
-												: "color: $color-fg-500";
-									return (
-										<li classList={{ private: branch.private }}>
-											<button
-												type="button"
-												class="button"
-												onClick={() => {
-													update("branchId", branch.id);
-													setActive(null);
-												}}
-												classList={{ selected: doc.branchId === branch.id }}
-											>
-												<Icon
-													src={branch.private ? icBranchPrivate : icBranch}
-												/>
-												<div class="info">
-													<div>
-														{branch.name || "unnamed"}
-														{branch.private && (
-															<span class="dim"> (private)</span>
-														)}
-													</div>
-													<div class="dim" style={stateColor}>
-														{branch.state.toLowerCase()}
-														{creator && (
-															<>
-																{" "}
-																· created by{" "}
-																<b>
-																	{creator.relationship.petname || creator.name}
-																</b>
-															</>
-														)}
-														{branch.created_at && (
-															<> · {timeAgo(new Date(branch.created_at))}</>
-														)}
-													</div>
-												</div>
-											</button>
-										</li>
-									);
-								}}
-							</For>
-							<li class="separator"></li>
-							<li class="new">
-								<button type="button" class="button" onClick={handleNewBranch}>
-									<Icon src={icBranchNew} />
-									<div class="info">
-										<div>new</div>
-										<div class="dim">create a new branch</div>
-									</div>
-								</button>
-							</li>
-							<li class="new">
-								<button type="button" class="button">
-									<Icon src={icBranchFork} />
-									<div class="info">
-										<div>new from changes</div>
-										<div class="dim">
-											create a new branch from existing changes
-										</div>
-									</div>
-								</button>
-							</li>
-							<li class="new">
-								<button
-									type="button"
-									class="button"
-									onClick={handleNewPrivateBranch}
-								>
-									<Icon src={icBranchFork} />
-									<div class="info">
-										<div>new private</div>
-										<div class="dim">
-											create a new private branch only visible to you
-										</div>
-									</div>
-								</button>
-							</li>
-						</ul>
-					</menu>
-				</Portal>
-			</Show>
-			<Show when={active() === "merge"}>
-				<Portal>
-					<menu
-						class="branch-action-menu document-menu"
-						ref={setMergeMenu}
-						style={{
-							position: mergePos.strategy,
-							top: `${mergePos.y ?? 0}px`,
-							left: `${mergePos.x ?? 0}px`,
-							"z-index": 100,
-						}}
-						onClick={(e) => e.stopPropagation()}
-					>
+				<MenubarItem button="export">
+					{(close) => (
 						<ul>
 							<li>
-								<button
-									type="button"
-									class="button"
-									onClick={handleRenameBranch}
-								>
-									<Icon src={icRename} />
-									<div class="info">
-										<div>rename</div>
-										<div class="dim">change the name of this branch</div>
-									</div>
-								</button>
-							</li>
-							<li>
-								<button type="button" class="button" onClick={handleSyncBranch}>
-									<Icon src={icSync} />
-									<div class="info">
-										<div>sync</div>
-										<div class="dim">pull changes from parent</div>
-									</div>
-								</button>
-							</li>
-							<li>
-								<button type="button" class="button" onClick={handleMergeFull}>
-									<Icon src={icMergeFull} />
-									<div class="info">
-										<div>merge</div>
-										<div class="dim">fully merge all changes</div>
-									</div>
-								</button>
-							</li>
-							<li>
-								<button type="button" class="button">
-									<Icon src={icMergeCherrypick} />
-									<div class="info">
-										<div>cherry pick</div>
-										<div class="dim">merge specific changes</div>
-									</div>
-								</button>
-							</li>
-							<li>
-								<button
-									type="button"
-									class="button"
-									onClick={handleDeleteBranch}
-								>
-									<Icon src={icDelete} />
-									<div class="info">
-										<div style="color: $color-warn">delete</div>
-										<div class="dim">permanently remove this branch</div>
-									</div>
-								</button>
-							</li>
-							<li class="separator"></li>
-							<li
-								class="header"
-								style="padding: 4px 12px; font-weight: bold; font-size: 0.8em; opacity: 0.7"
-							>
-								suggested renames
-							</li>
-							<For each={suggestedRenames}>
-								{(name) => (
-									<li>
-										<button
-											type="button"
-											class="button"
-											onClick={() => {
-												const branch = currentBranch();
-												if (branch) {
-													api.documentBranches.update(
-														props.channel.id,
-														branch.id,
-														{
-															name,
-														},
-													);
-												}
-												setActive(null);
-											}}
-										>
-											<div class="info">
-												<div>{name}</div>
-											</div>
-										</button>
-									</li>
-								)}
-							</For>
-						</ul>
-					</menu>
-				</Portal>
-			</Show>
-			<Show when={active() === "export"}>
-				<Portal>
-					<menu
-						class="export-menu document-menu"
-						ref={setExportMenu}
-						style={{
-							position: exportPos.strategy,
-							top: `${exportPos.y ?? 0}px`,
-							left: `${exportPos.x ?? 0}px`,
-							"z-index": 100,
-						}}
-						onClick={(e) => e.stopPropagation()}
-					>
-						<ul>
-							<li>
-								<button
-									type="button"
-									class="button"
-									onClick={() => setActive(null)}
-								>
+								<button type="button" class="button" onClick={close}>
 									<div class="info">
 										<div>{false ? "open in new tab" : "publish document"}</div>
 									</div>
@@ -679,7 +626,14 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 							</li>
 							<li class="separator"></li>
 							<li>
-								<button type="button" class="button" onClick={handleExportHtml}>
+								<button
+									type="button"
+									class="button"
+									onClick={() => {
+										handleExportHtml();
+										close();
+									}}
+								>
 									<div class="info">
 										<div>download as html</div>
 										<div class="dim">single file .html file</div>
@@ -690,7 +644,10 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 								<button
 									type="button"
 									class="button"
-									onClick={handleExportMarkdown}
+									onClick={() => {
+										handleExportMarkdown();
+										close();
+									}}
 								>
 									<div class="info">
 										<div>download as markdown</div>
@@ -698,109 +655,52 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 								</button>
 							</li>
 						</ul>
-					</menu>
-				</Portal>
-			</Show>
-			<Show when={active() === "insert"}>
-				<Portal>
-					<menu
-						class="insert-menu document-menu"
-						ref={setInsertMenu}
-						style={{
-							position: insertPos.strategy,
-							top: `${insertPos.y ?? 0}px`,
-							left: `${insertPos.x ?? 0}px`,
-							"z-index": 100,
-						}}
-						onClick={(e) => e.stopPropagation()}
-					>
-						<ul>
-							<li>
-								<button
-									type="button"
-									class="button"
-									onClick={() => setActive(null)}
-								>
-									<div class="info">
-										<div>media</div>
-										<div class="dim">insert images, videos, and audio</div>
-									</div>
-								</button>
-							</li>
-							<li>
-								<button
-									type="button"
-									class="button"
-									onClick={() => setActive(null)}
-								>
-									<div class="info">
-										<div>table</div>
-										<div class="dim">insert tables with rows and columns</div>
-									</div>
-								</button>
-							</li>
-							<li>
-								<button
-									type="button"
-									class="button"
-									onClick={() => setActive(null)}
-								>
-									<div class="info">
-										<div>code</div>
-										<div class="dim">
-											insert code blocks with syntax highlighting
-										</div>
-									</div>
-								</button>
-							</li>
-							<li>
-								<button
-									type="button"
-									class="button"
-									onClick={() => setActive(null)}
-								>
-									<div class="info">
-										<div>symbols</div>
-										<div class="dim">insert special characters and symbols</div>
-									</div>
-								</button>
-							</li>
-							<li>
-								<button
-									type="button"
-									class="button"
-									onClick={() => setActive(null)}
-								>
-									<div class="info">
-										<div>time</div>
-										<div class="dim">insert current date and time</div>
-									</div>
-								</button>
-							</li>
-						</ul>
-					</menu>
-				</Portal>
-			</Show>
+					)}
+				</MenubarItem>
+			</div>
+
+			<div style="flex:1"></div>
+			<menu class="right">
+				<button type="button" onClick={toggleMembers} title="Show members">
+					<Icon src={icMembers} />
+				</button>
+			</menu>
 		</header>
 	);
 };
 
 type MenubarItemProps = {
 	button: JSX.Element;
+	children: (close: () => void) => JSX.Element;
 };
 
-const MenubarItem = (props: ParentProps<MenubarItemProps>) => {
+const MenubarItem = (props: MenubarItemProps) => {
+	const [buttonRef, setButtonRef] = createSignal<HTMLElement>();
+	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
 	const [open, setOpen] = createSignal(false);
 
-	// TODO: close menu when clicking outside
+	const pos = useFloating(buttonRef, menuRef, {
+		whileElementsMounted: autoUpdate,
+		placement: "bottom-start",
+		middleware: [offset(4), flip(), shift()],
+	});
+
+	onMount(() => {
+		const close = () => setOpen(false);
+		window.addEventListener("click", close);
+		onCleanup(() => window.removeEventListener("click", close));
+	});
 
 	return (
 		<>
 			<button
 				type="button"
 				class="button"
-				// ref={setExportBtn}
-				onClick={[setOpen, true]}
+				ref={setButtonRef}
+				onClick={(e) => {
+					e.stopPropagation();
+					setOpen(!open());
+				}}
 				classList={{ active: open() }}
 			>
 				{props.button}
@@ -808,18 +708,17 @@ const MenubarItem = (props: ParentProps<MenubarItemProps>) => {
 			<Show when={open()}>
 				<Portal>
 					<menu
-						// TODO: implement this
 						class="document-menu"
-						// ref={setExportMenu}
-						// style={{
-						// 	position: exportPos.strategy,
-						// 	top: `${exportPos.y ?? 0}px`,
-						// 	left: `${exportPos.x ?? 0}px`,
-						// 	"z-index": 100,
-						// }}
+						ref={setMenuRef}
+						style={{
+							position: pos.strategy,
+							top: `${pos.y ?? 0}px`,
+							left: `${pos.x ?? 0}px`,
+							"z-index": 100,
+						}}
 						onClick={(e) => e.stopPropagation()}
 					>
-						{props.children}
+						{props.children(() => setOpen(false))}
 					</menu>
 				</Portal>
 			</Show>
