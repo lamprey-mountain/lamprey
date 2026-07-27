@@ -83,17 +83,22 @@ export const DocumentEditor = (props: DocumentEditorProps) => {
 		});
 	});
 
-	// FIXME: resubscribe to document
-	// unsubscribe then resubscribe?
+	// HACK: unsubscribe from ALL documents, then resubscribe to force the server to resend Document data
 	// if i try to send DocumentSubscribe but im already subscribed the server wont do anything
-
-	// TODO: make sure this works
 	// PERF: reuse ydocs instead of resubscribing from scratch every time
 	api.client.send({
-		type: "DocumentSubscribe",
-		channel_id: props.channelId,
-		branch_id: props.branchId,
-		state_vector: base64UrlEncode(Y.encodeStateVector(ydoc)),
+		type: "Subscribe",
+		documents: [],
+	});
+	api.client.send({
+		type: "Subscribe",
+		documents: [
+			{
+				channel_id: props.channelId,
+				branch_id: props.branchId,
+				state_vector: base64UrlEncode(Y.encodeStateVector(ydoc)),
+			},
+		],
 	});
 
 	api.events.on("sync", ([sync]) => {

@@ -14,13 +14,15 @@ export function serdocToDoc(serdoc: Serdoc) {
 	if (htmlParts.length === 0) {
 		htmlParts.push("<p></p>");
 	}
-	// FIXME: potential xss
+	// FIXME: potential xss vector
+	// will be fixed when i switch to serdocToDoc2
 	const div = document.createElement("div");
 	div.innerHTML = htmlParts.join("");
 	return DOMParser.fromSchema(schema).parse(div);
 }
 
 // TODO: alternative fn that doesn't require DOMParser?
+// backend sends serdoc text content as xml instead of markdown currently, will switch when that's fixed
 export function serdocToDoc2(serdoc: Serdoc): PMNode {
 	const nodes = serdoc.components.flatMap(componentToNodes);
 	return schema.node("doc", null, nodes);
