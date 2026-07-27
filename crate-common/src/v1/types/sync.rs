@@ -49,29 +49,22 @@ mod member_lists;
 
 pub use member_lists::{MemberListGroup, MemberListGroupId, MemberListOp, SyncSubscribeMemberList};
 
+use lamprey_macros::record;
+
+#[record]
+pub struct MessageHello {
+    pub token: SessionToken,
+    pub presence: Option<Presence>,
+    pub resume: Option<SyncResume>,
+}
+
 // TODO: include nonce/seq for MessageClient too, so theres some way to associate an error response to a request
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum MessageClient {
     /// initial message
-    Hello {
-        token: SessionToken,
-        presence: Option<Presence>,
-        // TODO: add
-        // properties: ConnectionProperties,
-        // TODO: remove
-        #[cfg_attr(feature = "serde", serde(flatten))]
-        resume: Option<SyncResume>,
-    },
-
-    #[cfg(any())]
-    Resume {
-        token: SessionToken,
-
-        #[cfg_attr(feature = "serde", serde(flatten))]
-        resume: Option<SyncResume>,
-    },
+    Hello(MessageHello),
 
     /// set presence
     Presence { presence: Presence },

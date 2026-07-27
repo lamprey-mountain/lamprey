@@ -1,16 +1,22 @@
 //! websocket sync
 
-pub mod connection;
 pub mod error;
 pub mod permissions;
 pub mod queue;
-pub mod subscriptions;
-pub mod transport; // TODO: share with lamprey-sdk (maybe put in common?)
+pub mod transport;
 pub mod util;
 
-// pub(crate) mod prelude {
-//     pub use errors, etc
-//     type WsMessage = axum::extract::ws::Message;
-// }
+// TODO: remove these?
+// pub mod connection_old;
+// pub mod subscriptions_old;
 
-// TODO: create `mod actor`, move routes/sync.rs logic there(?)
+// TODO: implement these?
+pub mod actor;
+pub mod connection;
+pub mod handshake;
+pub mod subscriptions;
+
+pub(crate) mod prelude {
+    pub use lamprey_backend_core::prelude::{Error, Result};
+    pub type WsMessage = axum::extract::ws::Message;
+}

@@ -1,10 +1,10 @@
 use std::collections::VecDeque;
 
-use common::v1::types::{ConnectionId, MessageEnvelope, MessagePayload, MessageSync};
+use lamprey::v1::types::{ConnectionId, MessageEnvelope, MessagePayload, MessageSync};
 use tracing::{debug, trace};
 
-use crate::error::{Error, Result};
-use crate::sync::transport::TransportSink;
+use crate::prelude::*;
+use crate::transport::TransportSink;
 
 #[derive(Debug)]
 pub struct ConnectionQueue {

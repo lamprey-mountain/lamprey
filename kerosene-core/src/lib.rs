@@ -34,3 +34,5 @@ pub mod prelude {
     // TODO: use more types in prelude?
     // pub use lamprey::v1::types::{UserId, RoomId, MediaId};
 }
+
+pub mod observability;

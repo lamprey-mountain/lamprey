@@ -6,14 +6,13 @@ use axum::extract::ws::WebSocket;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
 use axum::routing::any;
-use common::v1::types::{MessageClient, MessageEnvelope, MessagePayload, SyncParams};
+use common::v1::types::{MessageClient, MessageEnvelope, MessageHello, MessagePayload, SyncParams};
 use futures_util::StreamExt;
+use kerosene_sync::transport::{Transport, TransportEvent, WebsocketTransport, WrapperTransport};
 use tracing::error;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::ServerState;
-use crate::sync::transport::{Transport, TransportEvent, WebsocketTransport, WrapperTransport};
-use kerosene_services::services::connections::Hello;
 
 /// Sync init
 ///
@@ -35,6 +34,7 @@ async fn sync(
     upgrade.on_upgrade(move |ws| worker(s, params, ws))
 }
 
+// TODO: move to kerosene-services or kerosene-sync
 #[tracing::instrument(skip(s, ws))]
 async fn worker(s: Arc<ServerState>, params: SyncParams, ws: WebSocket) {
     // PERF: requiring boxing is probably fine but technically slower than it could be
@@ -47,11 +47,11 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, ws: WebSocket) {
         // outer result: tokio timeout
         // option: client not sending any more messages
         // inner result: transport errors
-        Ok(Some(Ok(TransportEvent::Message(MessageClient::Hello {
+        Ok(Some(Ok(TransportEvent::Message(MessageClient::Hello(MessageHello {
             token,
             resume,
             presence,
-        })))) => {
+        }))))) => {
             let srv = s.services();
 
             let seq = if let Some(resume) = &resume {
@@ -86,7 +86,7 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, ws: WebSocket) {
             } else {
                 match srv
                     .connections
-                    .accept(Hello {
+                    .accept(MessageHello {
                         token,
                         resume,
                         presence,

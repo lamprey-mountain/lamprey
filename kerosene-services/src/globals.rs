@@ -11,7 +11,6 @@ use lamprey_backend_data_postgres::data::postgres::PostgresPool;
 use lamprey_backend_data_postgres::data::{AnyData, Database};
 use opendal::layers::LoggingLayer;
 use sqlx::postgres::PgPoolOptions;
-use tokio::runtime::Handle as TokioHandle;
 use tracing::info;
 
 pub mod messaging;
@@ -134,9 +133,8 @@ impl Globals {
         inner.blobs.check().await?; // TODO: remove
         srv.start_background_tasks().await;
 
-        // TODO: add these
-        // srv.notifications.init_vapid_keys().await?; -> setup_vapid_keys(&state).await?;
-        // srv.rooms.init_server_rooms().await?;-> setup_server_room(&state).await?;
+        srv.notifications.init_vapid_keys().await?;
+        srv.rooms.init_server_room().await?;
 
         Ok(GlobalsOwned {
             inner,

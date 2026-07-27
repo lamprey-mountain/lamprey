@@ -9,7 +9,7 @@ pub use lamprey_backend_core::Error;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SyncError {
-    // TODO
+    // TODO: more exact errors for sync
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

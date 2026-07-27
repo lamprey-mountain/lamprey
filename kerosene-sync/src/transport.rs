@@ -1,3 +1,5 @@
+// TODO: share this module with lamprey-sdk (maybe put in common?)
+
 use std::collections::VecDeque;
 
 use async_trait::async_trait;
@@ -8,9 +10,8 @@ use futures::{
     stream::{self, BoxStream, SplitSink, SplitStream},
 };
 use lamprey::v1::types::{MessageClient, MessageEnvelope, SyncFormat, SyncParams};
-use lamprey_backend_core::prelude::*;
 
-use crate::sync::WsMessage;
+use crate::prelude::*;
 
 /// how this connection is sending messages to and receiving from the client
 #[async_trait]

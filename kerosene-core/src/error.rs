@@ -10,7 +10,7 @@ pub use lamprey::v1::types::error::{ApiError, ApiResult, ErrorCode};
 pub enum ServerError {
     /// an internal error has occured
     #[error("Internal error: {0}")]
-    Internal(Box<str>),
+    Internal(Box<dyn std::error::Error>),
 
     /// an api error
     #[error("{0}")]
@@ -31,14 +31,15 @@ pub type ServerResult<T> = std::result::Result<T, ServerError>;
 impl ServerError {
     pub fn http_status(&self) -> StatusCode {
         match self {
-            ServerError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            ServerError::Api(e) => e.code.status(),
-            ServerError::Unimplemented => StatusCode::NOT_IMPLEMENTED,
-            ServerError::Unavailable => StatusCode::SERVICE_UNAVAILABLE,
+            Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::Api(e) => e.code.status(),
+            Self::Unimplemented => StatusCode::NOT_IMPLEMENTED,
+            Self::Unavailable => StatusCode::SERVICE_UNAVAILABLE,
         }
     }
 }
 
+// TODO: remove
 impl From<ServerError> for ApiError {
     fn from(value: ServerError) -> Self {
         match value {
@@ -60,5 +61,23 @@ impl IntoResponse for ServerError {
     fn into_response(self) -> axum::response::Response {
         let e: ApiError = self.into();
         (e.code.status(), Json(e)).into_response()
+    }
+}
+
+impl From<opentelemetry_otlp::ExporterBuildError> for ServerError {
+    fn from(value: opentelemetry_otlp::ExporterBuildError) -> Self {
+        ServerError::Internal(Box::new(value))
+    }
+}
+
+impl From<tracing::subscriber::SetGlobalDefaultError> for ServerError {
+    fn from(value: tracing::subscriber::SetGlobalDefaultError) -> Self {
+        ServerError::Internal(Box::new(value))
+    }
+}
+
+impl From<tracing_subscriber::filter::ParseError> for ServerError {
+    fn from(value: tracing_subscriber::filter::ParseError) -> Self {
+        ServerError::Internal(Box::new(value))
     }
 }

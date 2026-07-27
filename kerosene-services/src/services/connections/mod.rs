@@ -1,25 +1,32 @@
 use common::v1::types::{
-    ConnectionId, SessionToken, SyncResume,
+    ConnectionId, MessageHello,
     presence::{Presence, Status},
 };
 use dashmap::DashMap;
 
-use crate::prelude::*;
+use crate::{
+    prelude::*,
+    services::connections::actor::{Connection, ConnectionHandle},
+};
 
-type ConnectionHandle = ();
+mod actor;
+mod subscriptions;
 
 // TODO(#997): limit number of connections per user, clean up old/unused entries
 pub struct ServiceConnections {
     globals: Globals,
     connections: DashMap<ConnectionId, ConnectionHandle>,
+    // TODO: add for supervision
+    // tasks: JoinSet<()>,
+
+    // tasks: tokio::task::JoinSet<(ConnectionId, Result<()>)>,
+    // user_connection_counts: DashMap<UserId, usize>,
 }
 
-// TODO: make common use Hello for MessageClient::Hello
-pub struct Hello {
-    pub token: SessionToken,
-    pub presence: Option<Presence>,
-    pub resume: Option<SyncResume>,
-}
+// pub struct ConnectionResult {
+//     id: ConnectionId,
+//     result: Result<()>,
+// }
 
 // TODO: supervise connection actors/tasks
 impl ServiceConnections {
@@ -33,7 +40,7 @@ impl ServiceConnections {
     /// create/spawn a new connection.
     ///
     /// does not handle resumes.
-    pub async fn accept(&self, hello: Hello) -> Result<ConnectionHandle> {
+    pub async fn accept(&self, hello: MessageHello) -> Result<ConnectionHandle> {
         let srv = self.globals.services();
         let session = srv.sessions.get_by_token(hello.token).await?;
 
@@ -48,11 +55,9 @@ impl ServiceConnections {
             }
         }
 
-        todo!()
-
-        // let handle = Connection2::create(self.globals.clone(), (*session).clone());
-        // self.connections.insert(handle.id(), handle.clone());
-        // Ok(handle)
+        let handle = Connection::create(self.globals.clone(), (*session).clone());
+        self.connections.insert(handle.id(), handle.clone());
+        Ok(handle)
     }
 
     /// get a connection actor handle from its connection id

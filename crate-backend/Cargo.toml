@@ -63,6 +63,7 @@ strum = { version = "0.27.2", features = ["derive"] }
 lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 lamprey-markdown = { version = "0.1", path = "../crate-markdown" }
 kerosene-services = { version = "0.1", path = "../kerosene-services" }
+kerosene-sync = { version = "0.1.1", path = "../kerosene-sync" }
 regex = "1.12.3"
 once_cell = "1.21.3"
 bytes = "1.11.1"

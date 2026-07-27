@@ -10,6 +10,7 @@ use common::{
     v1::types::{RoomCreate, RoomType, util::Time},
     v2::types::{SERVER_ROOM_ID, SERVER_USER_ID},
 };
+use kerosene_services::globals::GlobalsOwned;
 use lamprey_backend_core::{
     Error,
     config::{Config, ListenComponent},
@@ -23,26 +24,27 @@ use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};
 
 /// the api server
 pub struct Server {
-    state: Arc<ServerState>,
+    globals: GlobalsOwned,
     router: axum::Router,
 }
 
 impl Server {
     /// setup a server
     pub async fn init_from_config(config: Config) -> Result<Self> {
-        let state = create_server_state(config).await?;
-        let server = Self::init(state).await;
+        let globals = Globals::init_from_config(config).await?;
+        let server = Self::init(globals).await;
         Ok(server)
     }
 
-    pub async fn init(state: ServerState) -> Self {
-        let state = Arc::new(state);
+    pub async fn init(globals: GlobalsOwned) -> Self {
+        let state = todo!();
         let router = serve::create_router(Arc::clone(&state));
         Self { state, router }
     }
 
     pub fn state(&self) -> Arc<ServerState> {
-        Arc::clone(&self.state)
+        // Arc::clone(&self.state)
+        todo!()
     }
 
     pub async fn serve(&self) -> Result<()> {
@@ -72,120 +74,8 @@ impl Server {
     }
 }
 
-async fn create_server_state(config: Config) -> Result<ServerState> {
-    let globals = Globals::init_from_config(config).await?;
-    let state = globals.temp_to_server_state();
-    state.database.migrate().await?;
-    setup_vapid_keys(&state).await?;
-    setup_server_room(&state).await?;
-    Ok(state)
-}
-
-/// create new vapid keys if they dont exist
-async fn setup_vapid_keys(state: &ServerState) -> Result<()> {
-    let mut txn = state.acquire_data().await?;
-    if txn.config_get().await?.is_none() {
-        info!("initializing internal config");
-        let (keypair, _) = ece::generate_keypair_and_auth_secret()
-            .map_err(|e| Error::Internal(format!("VAPID key generation failed: {}", e)))?;
-        let vapid_public_key = URL_SAFE_NO_PAD.encode(
-            keypair
-                .pub_as_raw()
-                .map_err(|e| Error::Internal(format!("VAPID key encoding failed: {}", e)))?,
-        );
-        let vapid_private_key = URL_SAFE_NO_PAD.encode(
-            keypair
-                .raw_components()
-                .map_err(|e| Error::Internal(format!("VAPID key encoding failed: {}", e)))?
-                .private_key(),
-        );
-
-        let mut jwk = jsonwebkey::JsonWebKey::new(jsonwebkey::Key::generate_p256());
-        jwk.set_algorithm(jsonwebkey::Algorithm::ES256).unwrap();
-        jwk.key_id = Some(nanoid::nanoid!());
-        jwk.key_use = Some(jsonwebkey::KeyUse::Signing);
-
-        txn.config_put(config::ConfigInternal {
-            vapid_private_key,
-            vapid_public_key,
-            oidc_jwk_key: serde_json::to_string(&jwk)?,
-            admin_token: None,
-            federation_keys: vec![],
-        })
-        .await?;
-    }
-    txn.commit().await?;
-
-    Ok(())
-}
-
-/// create the server room if it doesnt exist
-async fn setup_server_room(state: &ServerState) -> Result<()> {
-    let srv = state.services();
-    let mut txn = state.acquire_data().await?;
-    if txn.user_get(SERVER_USER_ID).await.is_err() {
-        txn.user_create(DbUserCreate {
-            id: Some(SERVER_USER_ID),
-            parent_id: None,
-            name: "root".to_string(),
-            description: None,
-            puppet: None,
-            registered_at: Some(Time::now_utc()),
-            system: true,
-            remote: None,
-        })
-        .await?;
-    }
-    if txn.room_get(SERVER_ROOM_ID).await.is_err() {
-        srv.rooms
-            .create_system(
-                RoomCreate {
-                    name: "server".to_string(),
-                    description: None,
-                    icon: None,
-                    banner: None,
-                    public: Some(false),
-                },
-                SERVER_USER_ID,
-                DbRoomCreate {
-                    id: Some(SERVER_ROOM_ID),
-                    ty: RoomType::Server,
-                    welcome_channel_id: None,
-                },
-            )
-            .await?;
-    }
-    txn.commit().await?;
-
-    Ok(())
-}
-
 pub fn setup_otel(config: &Config) -> Result<()> {
-    if let Some(endpoint) = &config.otel_trace_endpoint {
-        let exporter = opentelemetry_otlp::SpanExporter::builder()
-            .with_tonic()
-            .with_endpoint(endpoint)
-            .build()?;
-        let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
-            .with_batch_exporter(exporter)
-            .build();
-        use opentelemetry::trace::TracerProvider;
-        let tracer = provider.tracer("lamprey-api");
-        opentelemetry::global::set_tracer_provider(provider);
-        let telemetry_layer = tracing_opentelemetry::layer().with_tracer(tracer);
-        let subscriber = Registry::default()
-            .with(EnvFilter::from_str(&config.rust_log)?)
-            .with(tracing_subscriber::fmt::layer())
-            .with(telemetry_layer);
-        tracing::subscriber::set_global_default(subscriber)?;
-    } else {
-        let subscriber = Registry::default()
-            .with(EnvFilter::from_str(&config.rust_log)?)
-            .with(tracing_subscriber::fmt::layer());
-        tracing::subscriber::set_global_default(subscriber)?;
-    }
-
-    Ok(())
+    kerosene_core::observability::init(config)
 }
 
 pub async fn gc(state: Arc<ServerState>, targets: &[AdminCollectGarbageTarget]) -> Result<()> {

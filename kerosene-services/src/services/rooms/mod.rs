@@ -1,6 +1,8 @@
 pub mod actor;
 pub mod types;
 
+use common::v2::types::{SERVER_ROOM_ID, SERVER_USER_ID};
+use lamprey_backend_data_postgres::DbUserCreate;
 pub use types::{
     CachedChannel, CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread,
     CleanupIdleLists, EnsureMembers, GetSnapshot, MemberListCommandMsg, MemberListSubscribeMsg,
@@ -15,11 +17,11 @@ use std::time::Duration;
 use crate::consts::IDLE_TIMEOUT_ROOM;
 use crate::globals::messaging::Broadcast;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::util::{Changes, Diff};
+use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     AuditLogEntryStatus, AuditLogEntryType, ChannelId, ChannelType, MessageSync, MessageType,
     PaginationQuery, RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch,
-    ThreadMemberPut, UserId,
+    RoomType, ThreadMemberPut, UserId,
 };
 use dashmap::{DashMap, DashSet};
 use moka::future::Cache;
@@ -60,6 +62,45 @@ impl ServiceRooms {
                 .build(),
             user_rooms: Arc::new(DashMap::new()),
         }
+    }
+
+    /// create the server user and room if it doesnt exist
+    pub async fn init_server_room(&self) -> Result<()> {
+        let mut txn = self.globals.begin().await?;
+        if txn.user_get(SERVER_USER_ID).await.is_err() {
+            txn.user_create(DbUserCreate {
+                id: Some(SERVER_USER_ID),
+                parent_id: None,
+                name: "root".to_string(),
+                description: None,
+                puppet: None,
+                registered_at: Some(Time::now_utc()),
+                system: true,
+                remote: None,
+            })
+            .await?;
+        }
+        if txn.room_get(SERVER_ROOM_ID).await.is_err() {
+            self.create_system(
+                RoomCreate {
+                    name: "server".to_string(),
+                    description: None,
+                    icon: None,
+                    banner: None,
+                    public: Some(false),
+                },
+                SERVER_USER_ID,
+                DbRoomCreate {
+                    id: Some(SERVER_ROOM_ID),
+                    ty: RoomType::Server,
+                    welcome_channel_id: None,
+                },
+            )
+            .await?;
+        }
+        txn.commit().await?;
+
+        Ok(())
     }
 
     /// load a room snapshot, ensuring members are loaded if requested.

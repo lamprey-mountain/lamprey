@@ -1,7 +1,6 @@
 pub mod routes;
 pub mod server;
 pub mod state;
-pub mod sync;
 
 // TODO: remove, merge into mod server
 pub mod serve;

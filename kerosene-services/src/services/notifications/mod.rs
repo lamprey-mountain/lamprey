@@ -1,10 +1,12 @@
 use std::collections::HashSet;
 
+use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use common::v1::types::notifications::Notification;
 use common::v1::types::{Channel, Message, MessageSync, UserId};
 use lamprey_backend_data_postgres::MAX_ROLE_MENTION_MEMBERS;
 use tokio::sync::RwLock;
-use tracing::warn;
+use tracing::{info, warn};
 
 use crate::prelude::*;
 use crate::services::notifications::push::VapidKeys;
@@ -50,6 +52,44 @@ impl ServiceNotifications {
             state,
             vapid_keys: RwLock::new(None),
         }
+    }
+
+    /// create new vapid keys if they dont exist
+    pub async fn init_vapid_keys(&self) -> Result<()> {
+        let mut txn = self.state.begin().await?;
+        if txn.config_get().await?.is_none() {
+            info!("initializing internal config");
+            let (keypair, _) = ece::generate_keypair_and_auth_secret()
+                .map_err(|e| Error::Internal(format!("VAPID key generation failed: {}", e)))?;
+            let vapid_public_key = URL_SAFE_NO_PAD.encode(
+                keypair
+                    .pub_as_raw()
+                    .map_err(|e| Error::Internal(format!("VAPID key encoding failed: {}", e)))?,
+            );
+            let vapid_private_key = URL_SAFE_NO_PAD.encode(
+                keypair
+                    .raw_components()
+                    .map_err(|e| Error::Internal(format!("VAPID key encoding failed: {}", e)))?
+                    .private_key(),
+            );
+
+            let mut jwk = jsonwebkey::JsonWebKey::new(jsonwebkey::Key::generate_p256());
+            jwk.set_algorithm(jsonwebkey::Algorithm::ES256).unwrap();
+            jwk.key_id = Some(nanoid::nanoid!());
+            jwk.key_use = Some(jsonwebkey::KeyUse::Signing);
+
+            txn.config_put(lamprey_backend_core::config::ConfigInternal {
+                vapid_private_key,
+                vapid_public_key,
+                oidc_jwk_key: serde_json::to_string(&jwk)?,
+                admin_token: None,
+                federation_keys: vec![],
+            })
+            .await?;
+        }
+        txn.commit().await?;
+
+        Ok(())
     }
 
     pub fn start_background_tasks(&self) {

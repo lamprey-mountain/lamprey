@@ -12,7 +12,7 @@ pub const CLOSE_TIME: Duration = Duration::from_secs(10);
 /// the maximum number of events to retain in the queue before killing the connection
 pub const MAX_QUEUE_LEN: usize = 256;
 
-// TODO: remove
+// TODO: remove?
 /// where this connection is in the handshake
 #[derive(Debug, Clone)]
 pub enum ConnectionState {
@@ -59,5 +59,27 @@ impl Timeout {
             Timeout::Ping(instant) => *instant,
             Timeout::Close(instant) => *instant,
         }
+    }
+}
+
+/// status of a connection close
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConnectionClose {
+    Clean,
+    Dirty,
+}
+
+impl ConnectionClose {
+    pub fn from_ws_code(code: u16) -> Self {
+        // 1000 = Normal Closure, 1001 = Going Away
+        if code == 1000 || code == 1001 {
+            Self::Clean
+        } else {
+            Self::Dirty
+        }
+    }
+
+    pub fn is_clean(&self) -> bool {
+        self == &Self::Clean
     }
 }

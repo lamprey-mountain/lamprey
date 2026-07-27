@@ -1,5 +1,6 @@
 // TODO: copy SyncParams here
 
+use lamprey_macros::record;
 use url::Url;
 
 #[cfg(feature = "serde")]
@@ -7,9 +8,6 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
 use utoipa::{IntoParams, ToSchema};
-
-#[cfg(feature = "validator")]
-use validator::Validate;
 
 use crate::{
     v1::types::{
@@ -69,23 +67,12 @@ pub struct WebsocketSyncParams {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub enum SyncCommand {
     /// start a new sync connection
-    Identify {
-        token: SessionToken,
-        presence: Option<Presence>,
-        properties: SyncProperties,
-    },
+    Identify(SyncIdentify),
 
     /// connect to an existing connection
     ///
     /// this includes connecting as a shard
-    Resume {
-        token: SessionToken,
-        connection_id: ConnectionId,
-        seq: u64,
-
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-        shard_id: Option<ShardId>,
-    },
+    Resume(SyncResume),
 
     /// cleanly close this stream or sync
     ///
@@ -140,10 +127,28 @@ pub enum SyncCommand {
     Subscribe(SyncSubscriptionsUpdate),
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+pub struct SyncIdentify {
+    pub token: SessionToken,
+    pub presence: Option<Presence>,
+    pub resume: Option<SyncResume>,
+    pub properties: SyncProperties,
+}
+
+#[record]
+pub struct SyncResume {
+    pub token: SessionToken,
+    pub connection_id: ConnectionId,
+
+    /// the sequence number of the last sent event
+    #[serde(default)]
+    pub seq: u64,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shard_id: Option<ShardId>,
+}
+
+#[record]
 pub struct SyncProperties {
     /// a human readable note
     ///

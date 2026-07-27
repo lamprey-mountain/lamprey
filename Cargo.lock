@@ -4167,7 +4167,13 @@ dependencies = [
  "http",
  "lamprey-backend-core",
  "lamprey-common",
+ "opentelemetry 0.30.0",
+ "opentelemetry-otlp 0.30.0",
+ "opentelemetry_sdk 0.30.0",
  "thiserror 2.0.18",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -4224,6 +4230,7 @@ dependencies = [
  "jsonwebtoken",
  "kameo",
  "kerosene-core",
+ "kerosene-sync",
  "lamprey-backend-core",
  "lamprey-backend-data-postgres",
  "lamprey-common",
@@ -4280,6 +4287,8 @@ dependencies = [
  "lamprey-backend-core",
  "lamprey-common",
  "lamprey-macros",
+ "rmp-serde",
+ "serde_json",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
@@ -4334,6 +4343,7 @@ dependencies = [
  "kameo",
  "kerosene-core",
  "kerosene-services",
+ "kerosene-sync",
  "lamprey-backend-core",
  "lamprey-backend-data-postgres",
  "lamprey-common",
