@@ -1,14 +1,18 @@
 use std::{collections::HashSet, ops::Deref};
 
 use crate::{
-    v1::types::{components::IdAllocator, error::ApiResult, flume::FlumeDelta},
+    v1::types::{
+        components::IdAllocator,
+        error::{ApiError, ApiResult, ErrorCode},
+    },
     v2::types::{
         MediaId,
         components::{
             Component, ComponentId,
             action::ButtonAction,
-            types::{ComponentMedia, ComponentType, Components},
+            types::{ComponentType, Components},
         },
+        flume::FlumeDelta,
     },
 };
 
@@ -104,7 +108,31 @@ impl Components {
 
     /// apply a [`FlumeDelta`] to this set of components
     pub fn patch(&mut self, delta: FlumeDelta) -> ApiResult<()> {
-        todo!()
+        // 0. process init (replace entire tree)
+        if let Some(init) = delta.init {
+            self.media = init.media;
+            self.roots = init.roots;
+            self.items = init.items;
+        }
+
+        // 1. process deletes
+        for id in delta.delete {
+            self.delete(id);
+        }
+
+        // 2. process replacements
+        for r in delta.replace {
+            self.replace(r.target, r.components)?;
+        }
+
+        // 3. process appends
+        for a in delta.append {
+            self.append(a.target, a.components)?;
+        }
+
+        // TODO: validate
+
+        Ok(())
     }
 
     /// Append another component to this component tree.
@@ -116,29 +144,242 @@ impl Components {
     /// - any component can be appended to Container and Section
     /// - any component can be appended to Details. it will be appended to `details`, not `summary`.
     pub fn append(&mut self, target_id: ComponentId, other: Components) -> ApiResult<()> {
-        todo!()
+        let mut id_allocator = IdAllocator::new();
+        for c in &self.items {
+            id_allocator.mark_used2(c.id.0)?;
+        }
+
+        let Some(target) = self.items.iter_mut().find(|c| c.id == target_id) else {
+            // TODO: better error?
+            return Err(ApiError::with_message(
+                ErrorCode::NotFound,
+                format!("component {} not found", target_id.0),
+            ));
+        };
+
+        match &mut target.ty {
+            ComponentType::Text { content } => {
+                if let Some(s) = other.as_text() {
+                    content.push_str(s);
+                } else {
+                    return Err(ApiError::with_message(
+                        ErrorCode::InvalidData,
+                        "only Text can be appended to Text".to_owned(),
+                    ));
+                }
+            }
+            ComponentType::Gallery { items } => {
+                for their_id in &other.roots {
+                    if let Some(c) = other.items.iter().find(|c| c.id == *their_id) {
+                        if let ComponentType::Media { items: other_items } = &c.ty {
+                            items.extend(other_items.clone());
+                        } else {
+                            return Err(ApiError::with_message(
+                                ErrorCode::InvalidData,
+                                "only Media can be appended to Gallery".to_owned(),
+                            ));
+                        }
+                    }
+                }
+            }
+            ComponentType::Container { .. }
+            | ComponentType::Section { .. }
+            | ComponentType::Details { .. }
+            | ComponentType::Form { .. }
+            | ComponentType::Row { .. } => {
+                // PERF: don't make this O(quadratic)
+                for their_id in &other.roots {
+                    if let Some(c) = other.get(*their_id) {
+                        let cloned = self.import(c, &mut id_allocator);
+                        let target = self.items.iter_mut().find(|c| c.id == target_id).unwrap();
+                        match &mut target.ty {
+                            ComponentType::Container { components, .. }
+                            | ComponentType::Section { components, .. }
+                            | ComponentType::Details {
+                                details: components,
+                                ..
+                            }
+                            | ComponentType::Form { components, .. }
+                            | ComponentType::Row { components, .. } => {
+                                components.push(cloned.id);
+                            }
+                            _ => unreachable!(),
+                        }
+                    } else {
+                        todo!("error")
+                    }
+                }
+            }
+            _ => {
+                return Err(ApiError::with_message(
+                    ErrorCode::InvalidData,
+                    "cannot append to this component type".to_owned(),
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// import a component from another tree, ensuring ids don't conflict
+    // NOTE: should this be pub?
+    // NOTE: should i store IdAllocator in Components? should i implement a wrapper around Components that includes an id allocator?
+    fn import(&mut self, target: ComponentRef, id_allocator: &mut IdAllocator) -> Component {
+        let new_id = id_allocator.allocate(Some(target.component.id));
+        let mut new_ty = target.component.ty.clone();
+
+        let mut clone_children = |ids: &[ComponentId]| -> Vec<ComponentId> {
+            let mut new_ids = Vec::with_capacity(ids.len());
+            for id in ids {
+                if let Some(child) = target.components.get(*id) {
+                    let cloned = self.import(child, id_allocator);
+                    new_ids.push(cloned.id);
+                } else {
+                    todo!("error handling")
+                }
+            }
+            new_ids
+        };
+
+        match &mut new_ty {
+            ComponentType::Container { components, .. }
+            | ComponentType::Section { components, .. }
+            | ComponentType::Form { components, .. }
+            | ComponentType::Row { components, .. } => {
+                *components = clone_children(&components);
+            }
+            ComponentType::Details {
+                summary, details, ..
+            } => {
+                *summary = clone_children(&summary);
+                *details = clone_children(&details);
+            }
+            _ => {}
+        }
+
+        let cloned = Component {
+            id: new_id,
+            ty: new_ty,
+            allow: target.component.allow.clone(),
+        };
+
+        cloned
     }
 
     /// replace a component with a sequence of new ones
-    pub fn replace(&mut self, target_id: ComponentId, replacements: Vec<Component>) -> bool {
-        todo!()
+    pub fn replace(&mut self, target_id: ComponentId, replacements: Components) -> ApiResult<()> {
+        let mut id_allocator = IdAllocator::new();
+        for c in &self.items {
+            id_allocator.mark_used2(c.id.0)?;
+        }
+
+        let mut replacement_ids = vec![];
+        for their_id in &replacements.roots {
+            if let Some(c) = replacements.get(*their_id) {
+                let cloned = self.import(c, &mut id_allocator);
+                replacement_ids.push(cloned.id);
+            } else {
+                todo!("error")
+            }
+        }
+
+        if self.roots.contains(&target_id) {
+            let pos = self.roots.iter().position(|r| *r == target_id).unwrap();
+            self.roots.splice(pos..pos + 1, replacement_ids);
+            return Ok(());
+        }
+
+        // TODO: add an easier method of getting parent
+        for comp in &mut self.items {
+            let found = match &mut comp.ty {
+                ComponentType::Container { components, .. }
+                | ComponentType::Section { components, .. }
+                | ComponentType::Form { components, .. }
+                | ComponentType::Row { components, .. } => {
+                    if let Some(pos) = components.iter().position(|c| *c == target_id) {
+                        components.splice(pos..pos + 1, replacement_ids.clone());
+                        true
+                    } else {
+                        false
+                    }
+                }
+                ComponentType::Details {
+                    summary, details, ..
+                } => {
+                    if let Some(pos) = summary.iter().position(|c| *c == target_id) {
+                        summary.splice(pos..pos + 1, replacement_ids.clone());
+                        true
+                    } else if let Some(pos) = details.iter().position(|c| *c == target_id) {
+                        details.splice(pos..pos + 1, replacement_ids.clone());
+                        true
+                    } else {
+                        false
+                    }
+                }
+                _ => false,
+            };
+
+            if found {
+                return Ok(());
+            }
+        }
+
+        todo!("target component not found error")
     }
 
-    /// minimize these components
+    /// prune these components
     ///
-    /// - removes any unused components
-    /// - removes any unused media
-    pub fn minimize(self) -> Self {
-        todo!()
+    /// - remove any unused components
+    /// - remove any unused media
+    pub fn prune(&mut self) {
+        self.prune_components();
+        self.prune_media();
     }
 
-    /// Resolve `Reference` components given the previous version of a component tree.
-    pub fn resolve(self, prev: Option<Components>, media: Vec<ComponentMedia>) -> ApiResult<Self> {
-        todo!()
+    /// remove any unused components
+    pub fn prune_components(&mut self) {
+        let mut reachable_ids = HashSet::new();
+        for root in &self.roots {
+            self.collect_reachable_ids(*root, &mut reachable_ids);
+        }
+
+        self.items.retain(|c| reachable_ids.contains(&c.id));
     }
+
+    /// remove any unused media
+    pub fn prune_media(&mut self) {
+        let ids: HashSet<MediaId> = self.referenced_media_ids().into_iter().collect();
+        self.media.retain(|m| ids.contains(&m.id));
+    }
+
+    fn collect_reachable_ids(&self, id: ComponentId, reachable: &mut HashSet<ComponentId>) {
+        if let Some(comp_ref) = self.get(id) {
+            reachable.insert(id);
+            for child in comp_ref.children() {
+                self.collect_reachable_ids(child.id, reachable);
+            }
+        } else {
+            // TODO: error handling?
+        }
+    }
+
+    /// compact these components
+    ///
+    /// - prune these components
+    /// - reallocate component ids to be sequential
+    pub fn compact(mut self) -> Self {
+        self.prune();
+        todo!("realloc component ids")
+    }
+
+    // /// Resolve `Reference` components given the previous version of a component tree.
+    // pub fn resolve(self, prev: Option<Components>, media: Vec<ComponentMedia>) -> ApiResult<Self> {
+    //     todo!()
+    // }
 
     /// Return a vec of all media ids that are referenced in these components.
-    pub fn all_media_ids(&self) -> Vec<MediaId> {
+    // PERF: return an iterator?
+    pub fn referenced_media_ids(&self) -> Vec<MediaId> {
         let mut ids = Vec::new();
         for comp in &self.items {
             match &comp.ty {
@@ -154,32 +395,57 @@ impl Components {
     }
 
     /// Return a vec of media ids that are referenced but not in `media`.
+    // PERF: return an iterator?
     pub fn missing_media_ids(&self) -> Vec<MediaId> {
-        let all = self.all_media_ids();
+        let all = self.referenced_media_ids();
         let existing: HashSet<_> = self.media.iter().map(|m| m.id).collect();
         all.into_iter()
             .filter(|id| !existing.contains(id))
             .collect()
     }
-}
 
-impl Component {
-    /// helper for [`Components::append`]
-    fn append(&mut self, other: Components, id_allocator: &mut IdAllocator) -> ApiResult<()> {
-        todo!()
-    }
+    /// if this component is a single Text component (ie. deserialized from a single string), return the text
+    pub fn as_text(&self) -> Option<&str> {
+        if let Some(id) = self.roots.first() {
+            if self.roots.len() == 1 {
+                let c = self
+                    .items
+                    .iter()
+                    .find(|c| c.id == *id)
+                    .expect("this should be validated");
+                if let ComponentType::Text { content } = &c.ty {
+                    return Some(content.as_str());
+                }
+            }
+        }
 
-    /// clone this component, but replace all ids with new ones
-    fn clone_with_new_ids(&self, id_allocator: &mut IdAllocator) -> ApiResult<Component> {
-        todo!()
+        None
     }
 }
 
 impl<'c> ComponentRef<'c> {
     /// Get an iterator over this component's children
+    // TODO: maybe create a ComponentRefIter struct for this instead of collecting into a vec first
     pub fn children(&self) -> impl Iterator<Item = ComponentRef<'c>> {
-        todo!();
-        vec![].into_iter()
+        match &self.component.ty {
+            ComponentType::Container { components, .. }
+            | ComponentType::Section { components, .. }
+            | ComponentType::Form { components, .. }
+            | ComponentType::Row { components, .. } => components
+                .iter()
+                .map(|id| self.components.get(*id).unwrap())
+                .collect::<Vec<_>>()
+                .into_iter(),
+            ComponentType::Details {
+                summary, details, ..
+            } => summary
+                .iter()
+                .chain(details.iter())
+                .map(|id| self.components.get(*id).unwrap())
+                .collect::<Vec<_>>()
+                .into_iter(),
+            _ => Vec::<ComponentRef<'c>>::new().into_iter(),
+        }
     }
 
     fn fold_all_children<F, B>(&self, init: B, f: F) -> B

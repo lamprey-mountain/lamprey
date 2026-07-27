@@ -2,12 +2,10 @@ pub mod acl;
 pub mod action;
 pub mod builder;
 pub mod impls;
-pub mod interactive;
-pub mod types;
+pub mod interactive; // TODO: merge into types?
+// pub mod tree; // TODO: implement
+pub mod types; // TODO: rename?
 pub mod validate;
-
-#[cfg(any())]
-pub mod cursor;
 
 // TODO: rename?
 pub use crate::v1::types::components::ComponentCustomId;

@@ -1,6 +1,7 @@
 // pub mod channel;
 pub mod components;
 pub mod embed;
+mod flume;
 pub mod links;
 pub mod media;
 pub mod mirror;

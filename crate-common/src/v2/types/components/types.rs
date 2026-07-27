@@ -1,8 +1,4 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::{
     v1::types::{metadata::Metadata, misc::Color},
@@ -21,9 +17,8 @@ use crate::{
 };
 
 /// top-level container for components
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default)]
 pub struct Components {
     /// the ids of top level components
     pub roots: Vec<ComponentId>,
@@ -32,18 +27,12 @@ pub struct Components {
     pub items: Vec<Component>,
 
     /// media referenced in the components
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub media: Vec<Media>,
 
     /// application-specific metadata
     // NOTE: maybe rename to `variables`?
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Metadata::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Metadata::is_empty")]
     pub metadata: Metadata,
 }
 
@@ -51,23 +40,19 @@ pub struct Components {
 // Allow) from the rest of the component?
 
 /// a single component in a tree
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Component {
     pub id: ComponentId,
 
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub ty: ComponentType,
 
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub allow: Option<Allow>,
 }
 
 /// a piece of media used in a component
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ComponentMedia {
     pub media_id: MediaId,
     pub description: Option<String>,
@@ -106,10 +91,12 @@ pub struct ComponentMedia {
 ///
 /// - `Reference` move or clone another component
 /// - `Template` use a template
-// TODO: Show/For logic components? seems a bit advanced though
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// TODO: more components? some seem a bit advanced though
+// - `Root` pseudo component for the component root
+// - `Show` conditionally render some components depending on variables
+// - `For` render a list of components depending on variables
+#[record]
+#[serde(tag = "type")]
 pub enum ComponentType {
     /// a clickable button
     Button {
@@ -215,6 +202,8 @@ pub enum ComponentType {
     /// intended for rows of buttons. cannot hold any component type other than `Button`. maximum of 5 components per row.
     Row { components: Vec<ComponentId> },
 
+    // TODO: determine how these are displayed differently
+    // maybe make Media only hold a single item and Gallery holds multiple?
     /// display media
     ///
     /// min 1 max 20 items
@@ -240,7 +229,7 @@ pub enum ComponentType {
 
     /// reuse a template
     Template {
-        // TODO
+        // TODO: implement this
         // template_id: ComponentTemplateId,
     },
 }

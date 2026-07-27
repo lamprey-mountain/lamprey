@@ -1,6 +1,6 @@
 use crate::v1::types::{
     components::{ComponentId, MAX_COMPONENTS, MAX_DEPTH, MAX_TOTAL_TEXT_LENGTH},
-    error::{ErrorField, ErrorFieldType},
+    error::{ApiError, ApiResult, ErrorCode, ErrorField, ErrorFieldType},
 };
 
 /// Tracks validation state across the component tree.
@@ -115,20 +115,36 @@ impl IdAllocator {
     pub fn new() -> Self {
         Self {
             next_id: 0,
+            // PERF: there might be a better data structure for this?
+            // maybe like bitmaps?
             used: std::collections::HashSet::new(),
         }
     }
 
     /// Mark an ID as used.
+    #[deprecated = "use mark_used2"]
     pub fn mark_used(&mut self, id: u16) {
         self.used.insert(id);
     }
 
-    /// Allocate a new ID or use the requested one.
+    /// Mark an ID as used. Returns an error if the id was already used.
+    pub fn mark_used2(&mut self, id: u16) -> ApiResult<()> {
+        if !self.used.insert(id) {
+            return Err(ApiError::with_message(
+                ErrorCode::InvalidData,
+                format!("id {id} already used"),
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Allocate a new ID or try to use the requested one.
     pub fn allocate(&mut self, requested: Option<ComponentId>) -> ComponentId {
         if let Some(id) = requested {
-            self.mark_used(id.0);
-            return id;
+            if self.used.insert(id.0) {
+                return id;
+            }
         }
 
         while self.used.contains(&self.next_id) {
@@ -141,7 +157,7 @@ impl IdAllocator {
         }
 
         let id = ComponentId(self.next_id);
-        self.mark_used(self.next_id);
+        self.used.insert(self.next_id);
         self.next_id += 1;
         id
     }

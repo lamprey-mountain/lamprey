@@ -303,3 +303,27 @@ impl ComponentType {
         });
     }
 }
+
+// TODO: implement and use this
+#[derive(Debug, Clone)]
+pub struct ComponentsLimits {
+    /// maximum number of components in the root
+    pub components_root: usize,
+
+    /// maximum number of components in a container component (eg. section, container)
+    pub components_container: usize,
+
+    /// maximum number of components in a component tree
+    pub components_total: usize,
+
+    /// maximum length of text for labels (eg. buttons)
+    pub text_label: usize,
+
+    /// maximum length of text for a text component
+    pub text_component: usize,
+
+    /// maximum length of text in a component tree
+    pub text_total: usize,
+
+    pub can_be_interactive: bool,
+}
