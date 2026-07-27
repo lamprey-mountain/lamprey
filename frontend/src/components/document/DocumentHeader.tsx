@@ -674,9 +674,7 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 			<menu class="menu right">
 				<button
 					type="button"
-					onClick={() => {
-						/* TODO */
-					}}
+					onClick={() => doc.setTocOpen(!doc.tocOpen())}
 					ref={tocTooltip.content}
 				>
 					<Icon src={icTableOfContents} />

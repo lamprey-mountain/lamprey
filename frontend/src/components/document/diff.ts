@@ -14,6 +14,7 @@ export function serdocToDoc(serdoc: Serdoc) {
 	if (htmlParts.length === 0) {
 		htmlParts.push("<p></p>");
 	}
+	// FIXME: potential xss
 	const div = document.createElement("div");
 	div.innerHTML = htmlParts.join("");
 	return DOMParser.fromSchema(schema).parse(div);

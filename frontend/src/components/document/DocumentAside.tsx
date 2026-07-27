@@ -1,32 +1,51 @@
 import { For, Show } from "solid-js";
 import { Icon } from "@/atoms/Icon";
+import { useChannel } from "@/contexts/mod";
 import { icChevron } from "@/utils/icons";
 import { useDocument } from "./context";
 
-export const DocumentAside = (props: {}) => {
+export const DocumentAside = () => {
 	const doc = useDocument();
+	const [_chan, updateChan] = useChannel();
 
-	// TODO: button to toggle aside, always hide on small screens, move document-revert to DocumentHistory if aside is hidden
-	const isShown = () => true;
+	const isRevertShown = () => doc.selectedSeq() || doc.hoverSeq();
+	const isTocShown = () => doc.headings().length;
+	const isShown = () => (isRevertShown() || isTocShown()) && doc.tocOpen();
 
-	// TODO: hide document-revert if we aren't currently viewing an older revision
+	// TODO: always hide DocumentAside on small screens
+	// TODO: render document-revert in DocumentHistory if DocumentAside is hidden
 
 	return (
 		<Show when={isShown()}>
 			<aside class="document-aside">
-				<div class="document-revert">
-					{/* TODO: port this from old code: viewing revision, restore, cancel; restore menu */}
-					<h3>Viewing revision</h3>
-					<menu class="actions">
-						<button type="button" class="button link">
-							Cancel
-						</button>
-						<button type="button" class="button secondary">
-							Restore <Icon class="chevron" src={icChevron} />
-						</button>
-					</menu>
-				</div>
-				<Show when={doc.headings().length}>
+				<Show when={isRevertShown()}>
+					<div class="document-revert">
+						<h3>Viewing revision</h3>
+						<menu class="actions">
+							<button
+								type="button"
+								class="button link"
+								onClick={() => {
+									updateChan("history_view", false);
+									doc.setSelectedSeq(null);
+									doc.setHoverSeq(null);
+								}}
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								class="button secondary"
+								onClick={() => {
+									/* TODO: port from old code */
+								}}
+							>
+								Restore <Icon class="chevron" src={icChevron} />
+							</button>
+						</menu>
+					</div>
+				</Show>
+				<Show when={isTocShown()}>
 					<div class="document-toc">
 						<h4 class="dim label">Table of Contents</h4>
 						<ul>
