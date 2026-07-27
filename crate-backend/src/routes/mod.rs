@@ -1,13 +1,10 @@
 //! rest routes
 
-use std::sync::Arc;
-
 use axum::{Json, extract::State, response::IntoResponse};
 use common::v1::types::federation::WellKnown;
-use lamprey_backend_core::Error;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::ServerState;
+use crate::prelude::*;
 
 mod ack;
 mod admin;
@@ -57,7 +54,7 @@ mod webhook;
 pub mod metrics;
 pub mod util;
 
-fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
+fn routes_v1(s: Globals) -> OpenApiRouter<Globals> {
     OpenApiRouter::new()
         .merge(ack::routes())
         .merge(admin::routes())
@@ -106,14 +103,14 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
 }
 
 /// Get well known
-pub async fn well_known(State(s): State<Arc<ServerState>>) -> Result<impl IntoResponse, Error> {
+pub async fn well_known(State(s): State<Globals>) -> Result<impl IntoResponse> {
     Ok(Json(WellKnown {
         api_url: s.config().api_url.clone(),
         cdn_url: s.config().cdn_url.clone(),
     }))
 }
 
-pub fn routes(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
+pub fn routes(s: Globals) -> OpenApiRouter<Globals> {
     // TODO: lamprey_backend_rest::router()
     OpenApiRouter::new().nest("/v1", routes_v1(s))
 }

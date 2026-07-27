@@ -266,8 +266,10 @@ impl Deref for ServerState {
 
 pub use crate::server::globals::{Globals, GlobalsOwned};
 
-impl FromRef<Arc<ServerState>> for Globals {
-    fn from_ref(input: &Arc<ServerState>) -> Self {
-        input.globals.clone()
-    }
-}
+// impl FromRef<Arc<ServerState>> for Globals {
+//     fn from_ref(input: &Arc<ServerState>) -> Self {
+//         input.globals.clone()
+//     }
+// }
+
+// impl FromRef<Globals> for Arc<ServerState> {}

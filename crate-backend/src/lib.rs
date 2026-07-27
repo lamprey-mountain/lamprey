@@ -2,9 +2,6 @@ pub mod routes;
 pub mod server;
 pub mod state;
 
-// TODO: remove, merge into mod server
-pub mod serve;
-
 // TODO: remove, merge logic into lamprey-cli instead?
 pub mod cli;
 
