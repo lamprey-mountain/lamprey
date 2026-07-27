@@ -102,7 +102,7 @@ impl<'builder> Builder<'builder> {
     /// Append a pre-constructed component directly
     pub fn child_component(&mut self, component: Component) -> &mut Self {
         let id = component.id;
-        self.builder.id_alloc.mark_used(id.0);
+        self.builder.id_alloc.mark_used2(id.0).unwrap();
         self.builder.inner.push(component);
         self.children.push(id);
         self

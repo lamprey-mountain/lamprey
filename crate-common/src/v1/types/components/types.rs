@@ -580,6 +580,34 @@ impl<C: ComponentState> Component<C> {
         }
     }
 
+    /// Visit all component IDs in the tree recursively, allowing for fallible closures.
+    pub fn visit_ids_fallible<F, E>(&self, f: &mut F) -> Result<(), E>
+    where
+        F: FnMut(C::Id) -> Result<(), E>,
+    {
+        f(self.id)?;
+        match &self.ty {
+            ComponentType::Container { components, .. }
+            | ComponentType::Section { components, .. } => {
+                for c in components {
+                    c.visit_ids_fallible(f)?;
+                }
+            }
+            ComponentType::Details {
+                summary, details, ..
+            } => {
+                for c in summary {
+                    c.visit_ids_fallible(f)?;
+                }
+                for c in details {
+                    c.visit_ids_fallible(f)?;
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
     /// Extract all media from the component tree.
     pub fn media_ids(&self) -> Vec<MediaId> {
         let mut ids = vec![];

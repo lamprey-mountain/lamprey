@@ -181,4 +181,12 @@ mod tests {
                 .any(|f| f.message.contains("only contain Buttons or LinkButtons"))
         );
     }
+
+    #[test]
+    fn test_id_allocator_mark_used2() {
+        let mut allocator = IdAllocator::new();
+        allocator.mark_used2(1).unwrap();
+        assert!(allocator.mark_used2(1).is_err());
+        allocator.mark_used2(2).unwrap();
+    }
 }

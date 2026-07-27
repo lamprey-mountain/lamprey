@@ -225,7 +225,7 @@ impl Components<Create> {
         // mark ids in old tree as used
         if let Some(prev_tree) = prev {
             for component in &prev_tree.inner {
-                component.visit_ids(&mut |id| id_allocator.mark_used(id.0));
+                component.visit_ids_fallible(&mut |id| id_allocator.mark_used2(id.0))?;
             }
         }
 
@@ -258,7 +258,7 @@ impl Components<Create> {
         // mark ids in old tree as used
         if let Some(prev_tree) = prev {
             for component in &prev_tree.inner {
-                component.visit_ids(&mut |id| id_allocator.mark_used(id.0));
+                component.visit_ids_fallible(&mut |id| id_allocator.mark_used2(id.0))?;
             }
         }
 
@@ -826,7 +826,7 @@ impl Components<Thin> {
     ) -> Result<(), ApiError> {
         let mut id_allocator = IdAllocator::new();
         for c in &self.inner {
-            c.visit_ids(&mut |id| id_allocator.mark_used(id.0));
+            c.visit_ids_fallible(&mut |id| id_allocator.mark_used2(id.0))?;
         }
 
         // 0. process init (replace entire tree)
