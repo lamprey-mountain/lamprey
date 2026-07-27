@@ -231,45 +231,42 @@ export const RoomHome = (props: { room: RoomT }) => {
 											class="thread menu-thread thread-card"
 											data-thread-id={thread.id}
 										>
-											<header>
-												<button
-													type="button"
-													class="top"
-													onClick={() => nav(`/thread/${thread.id}`)}
-													onKeyDown={(e) =>
-														e.key === "Enter" && nav(`/thread/${thread.id}`)
-													}
-												>
-													<ChannelIcon channel={thread} />
-													<div class="spacer">{thread.name}</div>
-													<div class="time">
-														Created{" "}
-														<Time date={getTimestampFromUUID(thread.id)} />
-													</div>
-												</button>
-												<button
-													type="button"
-													class="bottom"
-													onClick={() => nav(`/thread/${thread.id}`)}
-													onKeyDown={(e) =>
-														e.key === "Enter" && nav(`/thread/${thread.id}`)
-													}
-												>
-													<div class="dim">
-														{thread.message_count} message(s) &bull; last msg{" "}
-														<Time
-															date={getTimestampFromUUID(
-																thread.last_version_id ?? thread.id,
-															)}
-														/>
-													</div>
-													<Show when={thread.description}>
-														{(desc) => (
-															<Markdown class="description" content={desc()} />
-														)}
-													</Show>
-												</button>
+											<header
+												class="top"
+												onClick={() => nav(`/thread/${thread.id}`)}
+												onKeyDown={(e) =>
+													e.key === "Enter" && nav(`/thread/${thread.id}`)
+												}
+											>
+												<ChannelIcon channel={thread} />
+												<div class="spacer">{thread.name}</div>
+												<div class="time">
+													Created{" "}
+													<Time date={getTimestampFromUUID(thread.id)} />
+												</div>
 											</header>
+											<button
+												type="button"
+												class="bottom"
+												onClick={() => nav(`/thread/${thread.id}`)}
+												onKeyDown={(e) =>
+													e.key === "Enter" && nav(`/thread/${thread.id}`)
+												}
+											>
+												<div class="dim">
+													{thread.message_count} message(s) &bull; last msg{" "}
+													<Time
+														date={getTimestampFromUUID(
+															thread.last_version_id ?? thread.id,
+														)}
+													/>
+												</div>
+												<Show when={thread.description}>
+													{(desc) => (
+														<Markdown class="description" content={desc()} />
+													)}
+												</Show>
+											</button>
 										</article>
 									</li>
 								)}
