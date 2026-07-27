@@ -7,8 +7,9 @@ use crate::parser::config::ParserConfig;
 use crate::prelude::*;
 use crate::transform::Transform;
 
-mod block;
 pub mod config;
+
+mod block;
 mod inline;
 
 /// a markdown parser

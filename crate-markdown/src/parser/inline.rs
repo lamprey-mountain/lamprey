@@ -286,9 +286,12 @@ impl<'a> ParseContext<'a> {
                 // otherwise try to parse the token as text
                 _ => {
                     let text = self.tokenizer.text(tok.span).to_string();
-                    // FIXME: use correct TextKind instead of always TextKind::Text
-                    self.builder
-                        .token(NodeKind::Text(TextKind::Text).into(), &text);
+                    let kind = match tok.kind {
+                        TokenKind::UnicodeEmoji => TextKind::UnicodeEmoji,
+                        _ => TextKind::Text,
+                        // TODO: handle more `TokenKind`s
+                    };
+                    self.builder.token(NodeKind::Text(kind).into(), &text);
                 }
             }
         }

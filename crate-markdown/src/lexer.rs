@@ -48,6 +48,9 @@ pub enum TokenKind {
     #[regex("`+", |lex| lex.slice().len() as u16)]
     Backticks(u16),
 
+    #[regex(r"[\p{Emoji_Presentation}\u{200d}\u{fe0f}]+", priority = 3)]
+    UnicodeEmoji,
+
     /// uuid pattern, used for mentions and emoji
     #[regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")]
     Uuid,
@@ -61,7 +64,7 @@ pub enum TokenKind {
     Number,
 
     /// any text that didn't match the above
-    #[regex(r"[^ \t\n*\\`<>\[\]\(\)#@:~.\-&|0-9]+")]
+    #[regex(r"[^ \t\n*\\`<>\[\]\(\)#@:~.\-&|0-9][^ \t\n*\\`<>\[\]\(\)#@:~.\-&|]*")]
     Text,
 
     // part of Text?
@@ -98,12 +101,28 @@ impl<'s> Lexer<'s> {
     }
 
     fn next_token(&mut self) -> Option<Token> {
-        self.lexer.next().map(|kind| {
-            let s = self.lexer.span();
-            Token {
-                kind: kind.unwrap_or(TokenKind::Error),
-                span: ((s.start + self.offset) as Len, (s.end + self.offset) as Len).into(),
+        let first = self.lexer.next()?;
+        let mut kind = first.unwrap_or(TokenKind::Error);
+        let mut span = self.lexer.span();
+
+        loop {
+            let mut lookahead = self.lexer.clone();
+            match lookahead.next() {
+                Some(Ok(next_kind)) => match merged_kind(kind, next_kind) {
+                    Some(k) => {
+                        span.end = lookahead.span().end;
+                        self.lexer = lookahead;
+                        kind = k;
+                    }
+                    None => break,
+                },
+                _ => break,
             }
+        }
+
+        Some(Token {
+            kind,
+            span: Span::from(span) + self.offset as Len,
         })
     }
 
@@ -121,6 +140,17 @@ impl<'s> Lexer<'s> {
         } else {
             self.lexer = TokenKind::lexer("");
         }
+    }
+}
+
+/// if two tokens can be merged, returns the kind of the merged token
+fn merged_kind(a: TokenKind, b: TokenKind) -> Option<TokenKind> {
+    match (a, b) {
+        // TODO: correctly merge Text and Whitespace? this seems to be trickier than it looks though
+        // eg. in headers, whitespace between the hashes and text gets trimmed. this doesn't work if i naively allow merging whitespace and text.
+        (TokenKind::Whitespace, TokenKind::Whitespace) => Some(TokenKind::Whitespace),
+        (TokenKind::Text, TokenKind::Text) => Some(TokenKind::Text),
+        _ => None,
     }
 }
 

@@ -1,5 +1,7 @@
 //! various other useful types
 
+use std::ops::Add;
+
 use rowan::TextRange;
 
 use crate::prelude::*;
@@ -38,5 +40,19 @@ impl From<TextRange> for Span {
 impl From<Span> for TextRange {
     fn from(value: Span) -> Self {
         TextRange::new((value.start as u32).into(), (value.end as u32).into())
+    }
+}
+
+impl From<logos::Span> for Span {
+    fn from(value: logos::Span) -> Self {
+        (value.start as Len, value.end as Len).into()
+    }
+}
+
+impl Add<Len> for Span {
+    type Output = Span;
+
+    fn add(self, rhs: Len) -> Self::Output {
+        (self.start + rhs, self.end + rhs).into()
     }
 }
