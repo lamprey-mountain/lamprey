@@ -22,6 +22,8 @@
         agent-sandbox = sandbox.agent-sandbox;
         spawn-sandbox = sandbox.spawn-sandbox;
 
+        workspace-version = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).workspace.package.version;
+
         craneLib = crane.mkLib pkgs;
 
         baseInternalDeps = [ "crate-common" "crate-hakari" "crate-macros" ];
@@ -36,7 +38,8 @@
           (builtins.match ".*\\.wit" path != null) ||
           (builtins.match ".*/package\\.json" path != null) ||
           (builtins.match ".*/jsr\\.json" path != null) ||
-          (builtins.match ".*/docs(/.*)?" path != null);
+          (builtins.match ".*/docs(/.*)?" path != null) ||
+          (builtins.match ".*/README\\.md" path != null);
 
         filterSrcFor = dirs: pkgs.lib.cleanSourceWith {
           src = pkgs.lib.fileset.toSource {
@@ -176,15 +179,20 @@
           CARGO_BUILD_TARGET = "wasm32-unknown-unknown";
           cargoExtraArgs = "-p lamprey-markdown --features wasm";
 
-          nativeBuildInputs = common.nativeBuildInputs ++ [ wasm-bindgen-cli ];
+          nativeBuildInputs = common.nativeBuildInputs ++ [ wasm-bindgen-cli pkgs.jq ];
 
           postBuild = ''
             wasm-bindgen \
               target/wasm32-unknown-unknown/release/lamprey_markdown.wasm \
               --out-dir $TMPDIR/pkg \
               --target web
+
             cp crate-markdown/package.json $TMPDIR/pkg/package.json
             cp crate-markdown/jsr.json $TMPDIR/pkg/jsr.json
+            cp crate-markdown/README.md $TMPDIR/pkg/README.md
+
+            jq --arg ver "${workspace-version}" '.version = $ver' crate-markdown/package.json > $TMPDIR/pkg/package.json
+            jq --arg ver "${workspace-version}" '.version = $ver' crate-markdown/jsr.json > $TMPDIR/pkg/jsr.json
           '';
 
           installPhase = ''
