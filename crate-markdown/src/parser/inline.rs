@@ -151,7 +151,7 @@ impl<'a> ParseContext<'a> {
                     self.builder
                         .start_node(NodeKind::Inline(InlineKind::Autolink).into());
                     self.builder.token(
-                        NodeKind::Text(TextKind::Text).into(),
+                        NodeKind::Text(TextKind::LinkUrl).into(),
                         self.tokenizer.text(tok.span),
                     );
                     self.builder.finish_node();
@@ -266,7 +266,7 @@ impl<'a> ParseContext<'a> {
                                 .token(NodeKind::Text(TextKind::Syntax).into(), "<");
                             let t = self.tokenizer.advance().expect("token exists");
                             self.builder.token(
-                                NodeKind::Text(TextKind::Text).into(),
+                                NodeKind::Text(TextKind::LinkUrl).into(),
                                 self.tokenizer.text(t.span),
                             );
                             self.tokenizer.advance(); // consume >

@@ -46,7 +46,7 @@ pub enum InlineKind {
     Code,
     Emphasis,
     Strong,
-    Link, //
+    Link,
     Strikethrough,
     Spoiler,
     TableHeader,

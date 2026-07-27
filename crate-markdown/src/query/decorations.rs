@@ -14,14 +14,28 @@ pub struct Decoration {
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
 pub enum DecorationKind {
-    // TODO: add doc comments
+    /// markdown syntax
     Syntax,
+
+    /// the language tag for a code block
     CodeLanguage,
+
+    /// emphasized text
     Emphasis,
+
+    /// strong (ie. bolded) text
     Strong,
+
+    /// spoiler
     Spoiler,
+
+    /// a url or link target
     Link,
+
+    /// strikethroughed text
     Strikethrough,
+
+    /// inline code
     Code,
 }
 
@@ -70,9 +84,6 @@ impl DecorationGenerator {
 
 fn node_to_deco_kind(kind: NodeKind) -> Option<DecorationKind> {
     match kind {
-        // only decorate the text inside the node
-        // NodeKind::Inline(InlineKind::Autolink) => Some(DecorationKind::Link),
-        // NodeKind::Inline(InlineKind::Link) => Some(DecorationKind::Link),
         NodeKind::Inline(InlineKind::Code) => Some(DecorationKind::Code),
         NodeKind::Inline(InlineKind::Emphasis) => Some(DecorationKind::Emphasis),
         NodeKind::Inline(InlineKind::Spoiler) => Some(DecorationKind::Spoiler),
@@ -84,10 +95,7 @@ fn node_to_deco_kind(kind: NodeKind) -> Option<DecorationKind> {
         NodeKind::Text(TextKind::HeaderHashes) => Some(DecorationKind::Syntax),
         NodeKind::Text(TextKind::TableAlignment) => Some(DecorationKind::Syntax),
         NodeKind::Text(TextKind::ListPrefix) => Some(DecorationKind::Syntax),
-        // custom elements?
-        NodeKind::Text(TextKind::UnicodeEmoji) => todo!(),
-        NodeKind::Text(TextKind::CustomEmoji) => todo!(),
-        NodeKind::Text(TextKind::Mention) => todo!(),
+        // NOTE: UnicodeEmoji, CustomEmoji, and Mention have special handling
         _ => None,
     }
 }
