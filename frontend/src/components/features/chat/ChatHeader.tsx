@@ -37,9 +37,6 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 	const [editingName, setEditingName] = createSignal<string | undefined>();
 	let inputRef!: HTMLInputElement;
 
-	const nameTooltip = createTooltip({
-		tip: () => (canEditChannelName() ? "Click to edit channel name" : ""),
-	});
 	const topicTooltip = createTooltip({ tip: () => "Click to view topic" });
 	const deleteTooltip = createTooltip({ tip: () => "Delete" });
 	const removeTooltip = createTooltip({ tip: () => "Remove" });
@@ -64,6 +61,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 		props.channel.type === "ThreadForum2";
 
 	const canEditChannelName = () => {
+		if (props.channel.type === "Dm") return false;
 		if (!isThread()) return hasPermission("ChannelManage");
 		// TODO: can edit if current user created the thread and thread isn't locked
 		// TODO: can edit if current user has ThreadEdit and thread isn't locked
@@ -207,7 +205,6 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 						startEditingName();
 					}
 				}}
-				ref={nameTooltip.content}
 			>
 				<Switch>
 					<Match when={isSelecting()}>
