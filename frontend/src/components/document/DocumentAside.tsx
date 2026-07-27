@@ -53,7 +53,6 @@ export const DocumentAside = (props: {}) => {
 								)}
 							</For>
 						</ul>
-						{/* TODO: port this from old code: table of contents */}
 					</div>
 				</Show>
 			</aside>

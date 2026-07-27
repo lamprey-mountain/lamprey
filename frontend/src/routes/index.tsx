@@ -15,6 +15,7 @@ import { useCtx } from "@/app/context";
 import icX from "@/assets/x-1.png";
 import { Icon } from "@/atoms/Icon";
 import { Resizable } from "@/atoms/Resizable.tsx";
+import { DocumentProvider } from "@/components/document/context";
 import { Document } from "@/components/document/Document.tsx";
 import { DocumentHistory } from "@/components/document/DocumentHistory";
 import { Wiki } from "@/components/document/Wiki";
@@ -61,7 +62,6 @@ import { flags } from "@/lib/flags";
 import type { RoomT } from "@/types";
 import type { ChannelSearch } from "@/types/chat";
 import { icUser } from "@/utils/icons";
-import { DocumentProvider } from "@/components/document/context";
 
 export { RouteAuthorize } from "@/components/shared/Oauth";
 
@@ -263,9 +263,7 @@ const ThreadChatSidebar = (props: { thread_id: string }) => {
 	);
 };
 
-const ChannelSidebar = (props: {
-	channel: Channel;
-}) => {
+const ChannelSidebar = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const [ch] = useChannel()!;
 	const search = () => ch.search;
@@ -296,9 +294,7 @@ const ChannelSidebar = (props: {
 			</Match>
 			<Match when={showHistory()}>
 				<Resizable storageKey="document-history-width" initialWidth={320}>
-					<DocumentHistory
-						channel={props.channel}
-					/>
+					<DocumentHistory channel={props.channel} />
 				</Resizable>
 			</Match>
 			<Match when={showVoiceChat()}>
@@ -461,9 +457,7 @@ export const RouteChannel = (
 									</Match>
 								</Switch>
 								<Show when={ch().type !== "Document"}>
-									<ChannelSidebar
-										channel={ch()}
-									/>
+									<ChannelSidebar channel={ch()} />
 								</Show>
 							</>
 						)}

@@ -110,20 +110,22 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 				channelId: props.channel.id,
 			}),
 			() => {
-					loadHistory();
+				loadHistory();
 			},
 		),
 	);
+
+	const close = () => {
+		setCh("history_view", false);
+		doc.setHoverSeq(null);
+		doc.setSelectedSeq(null);
+	};
 
 	return (
 		<div class="document-history">
 			<header class="document-history-header">
 				<h3>History</h3>
-				<button
-					type="button"
-					class="button"
-					onClick={() => setCh("history_view", false)}
-				>
+				<button type="button" class="button" onClick={close}>
 					Close
 				</button>
 			</header>
@@ -135,22 +137,19 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 					<div class="error">{error()}</div>
 				</Show>
 				<Show when={!loading() && !error() && history()}>
-					<div
-						class="history-list"
-						onMouseLeave={() => doc.setHoverSeq(null)}
-					>
+					<div class="history-list" onMouseLeave={() => doc.setHoverSeq(null)}>
 						<For each={history()?.changesets}>
 							{(changeset) => {
-								const isSelected =
+								const isSelected = () =>
 									doc.selectedSeq() !== null &&
 									doc.selectedSeq()!.start_seq === changeset.start_seq &&
 									doc.selectedSeq()!.end_seq === changeset.end_seq;
 								return (
 									<div
 										class="history-item"
-										classList={{ selected: isSelected }}
+										classList={{ selected: isSelected() }}
 										onClick={() => {
-											if (isSelected) {
+											if (isSelected()) {
 												doc.setSelectedSeq(null);
 											} else {
 												doc.setSelectedSeq({

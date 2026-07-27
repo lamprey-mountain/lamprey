@@ -1,24 +1,7 @@
-import type { HistoryPagination, UserWithRelationship } from "sdk";
+import type { HistoryPagination, Serdoc, UserWithRelationship } from "sdk";
 import { BaseService } from "../core/Service";
 
-export type RevisionContent = {
-	data?: {
-		root: {
-			blocks: Array<{
-				Markdown?: {
-					content: string;
-				};
-			}>;
-		};
-	};
-	root?: {
-		blocks: Array<{
-			Markdown?: {
-				content: string;
-			};
-		}>;
-	};
-};
+export type RevisionContent = Serdoc;
 
 export class DocumentsService extends BaseService<RevisionContent> {
 	protected cacheName = "document";

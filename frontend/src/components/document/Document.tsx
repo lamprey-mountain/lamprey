@@ -1,11 +1,11 @@
-import { createMemo, createSignal, onCleanup, Show } from "solid-js";
+import { createMemo, Match, onCleanup, Switch } from "solid-js";
 import { useApi } from "@/api";
 import type { ChannelT } from "@/types";
-import { DocumentProvider, useDocument } from "./context";
+import { useDocument } from "./context";
 import { DocumentAside } from "./DocumentAside";
+import { DocumentDiffView } from "./DocumentDiffView";
 import { DocumentEditor } from "./DocumentEditor";
 import { DocumentHeader } from "./DocumentHeader";
-import type { ChangesetSelection } from "./types";
 
 // TODO: skeleton ui while document loads
 
@@ -17,19 +17,12 @@ export const Document = (props: DocumentProps) => {
 	const api = useApi();
 	const doc = useDocument();
 
-	// TODO: finish implementing
-
-	// TODO: mode: 'edit' | 'diff_preview' | 'diff_readonly'
-
-	// TODO: allow changing branch id
 	const editContext = createMemo(() => {
 		return {
 			channelId: props.channel.id,
 			branchId: doc.branchId(),
 		};
 	});
-
-	// const doc = useDocument();
 
 	onCleanup(() => {
 		// unsubscribe from document
@@ -42,16 +35,25 @@ export const Document = (props: DocumentProps) => {
 		});
 	});
 
-	const disabled = () => false;
-	// const mode = () => ...;
-	const placeholder = () => "empty document";
-	// placeholder={
-	// 	mode() === "edit"
-	// 		? "write something cool..."
-	// 		: mode() === "diff_readonly"
-	// 			? "viewing historical revision (readonly)"
-	// 			: ""
-	// }
+	// TODO: move this into document context?
+	const activeChangeset = createMemo(() => {
+		const hover = doc.hoverSeq();
+		const selected = doc.selectedSeq();
+
+		if (hover && selected) {
+			return {
+				start_seq: Math.min(hover.start_seq, selected.start_seq),
+				end_seq: Math.max(hover.end_seq, selected.end_seq),
+			};
+		}
+		return hover ?? selected;
+	});
+
+	// maybe remove mode()?
+	const mode = createMemo(() => (activeChangeset() ? "diff" : "edit"));
+	const disabled = () => mode() === "diff";
+	const placeholder = () =>
+		mode() === "edit" ? "write something cool..." : "revision has no content";
 
 	// doc.commands.on("selectChangeset", ...);
 	// doc.commands.on("hoverChangeset", ...);
@@ -62,19 +64,27 @@ export const Document = (props: DocumentProps) => {
 			<div class="document-wrapper">
 				<DocumentAside />
 				<main class="document-main">
-					<Show when={editContext()} keyed>
-						{(ctx) => (
-							<DocumentEditor
-								channelId={ctx.channelId}
-								branchId={ctx.branchId}
-								disabled={disabled()}
-								placeholder={placeholder()}
-							/>
-						)}
-					</Show>
-					<Show when={false} keyed>
-						{(ctx) => "TODO: diff view?"}
-					</Show>
+					<Switch>
+						<Match when={activeChangeset()}>
+							{(c) => (
+								<DocumentDiffView
+									channelId={props.channel.id}
+									changeset={c()}
+									placeholder={placeholder()}
+								/>
+							)}
+						</Match>
+						<Match when={editContext()} keyed>
+							{(ctx) => (
+								<DocumentEditor
+									channelId={ctx.channelId}
+									branchId={ctx.branchId}
+									disabled={disabled()}
+									placeholder={placeholder()}
+								/>
+							)}
+						</Match>
+					</Switch>
 				</main>
 			</div>
 		</>

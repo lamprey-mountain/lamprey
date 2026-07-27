@@ -327,26 +327,9 @@ export type LampreyComponentMediaCreate = {
 	spoiler: boolean;
 };
 
-export type LampreyComponent = {
-	id: number;
-} & LampreyComponentType;
-
+export type LampreyComponent = components["schemas"]["Component_Canonical"];
 export type LampreyComponentType =
-	| { type: "Button"; label: string; style: ButtonStyle; custom_id: string }
-	| { type: "LinkButton"; label: string; url: string | null }
-	| { type: "Container"; components: LampreyComponent[]; color: string | null }
-	| { type: "Text"; content: string }
-	// | { type: "Reference"; reference_id: string }
-	| {
-			type: "Details";
-			open: boolean;
-			color: string | null;
-			summary: LampreyComponent[];
-			details: LampreyComponent[];
-	  }
-	| { type: "Section"; color: string | null; components: LampreyComponent[] }
-	| { type: "Media"; items: LampreyComponentMedia[] }
-	| { type: "Gallery"; items: LampreyComponentMedia[] };
+	components["schemas"]["ComponentType_Canonical"];
 
 export type LampreyComponentMedia = {
 	media: Media;
@@ -359,3 +342,4 @@ export type ButtonStyle = "Primary" | "Secondary" | "Danger";
 export type UserStatus = components["schemas"]["Status"];
 export type Presence = components["schemas"]["Presence"];
 export type PresenceActivity = components["schemas"]["Activity"];
+export type Serdoc = { components: LampreyComponent[] };

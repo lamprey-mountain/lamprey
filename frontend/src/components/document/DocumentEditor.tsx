@@ -83,6 +83,10 @@ export const DocumentEditor = (props: DocumentEditorProps) => {
 		});
 	});
 
+	// FIXME: resubscribe to document
+	// unsubscribe then resubscribe?
+	// if i try to send DocumentSubscribe but im already subscribed the server wont do anything
+
 	// TODO: make sure this works
 	// PERF: reuse ydocs instead of resubscribing from scratch every time
 	api.client.send({
