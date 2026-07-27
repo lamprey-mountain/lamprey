@@ -1,0 +1,11 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@lamprey/markdown@0.1.1": "0.1.1"
+  },
+  "jsr": {
+    "@lamprey/markdown@0.1.1": {
+      "integrity": "e1153a10df848670ba4c17aade44df44d584b42752fd8c5fc8ee587dc2fb7797"
+    }
+  }
+}

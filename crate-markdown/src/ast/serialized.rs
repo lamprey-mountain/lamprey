@@ -1,5 +1,7 @@
 //! serialized version of the ast for js
 
+// TODO: include spans?
+
 use serde::{Deserialize, Serialize};
 
 use crate::ast::{
@@ -8,12 +10,14 @@ use crate::ast::{
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
 pub struct SerializedDocument {
     blocks: Vec<SerializedBlock>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
 pub enum SerializedBlock {
     Header {
         level: u8,
@@ -43,6 +47,7 @@ pub enum SerializedBlock {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
 pub enum SerializedInline {
     Strong {
         children: Vec<SerializedInline>,

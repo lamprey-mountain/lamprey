@@ -28,25 +28,29 @@ pub struct CustomEmoji(SyntaxToken);
 #[derive(Debug)]
 pub struct UnicodeEmoji(SyntaxToken);
 
+/// data about a custom emoji
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
 pub struct CustomEmojiData {
     pub animated: bool,
     pub name: String,
+    #[cfg_attr(feature = "wasm", tsify(type = "string"))]
     pub id: Uuid,
 }
 
-/// the kind of a mention
+/// data about a mention
 #[derive(Debug, Clone)]
 #[cfg_attr(
     feature = "serde",
     derive(serde::Serialize, serde::Deserialize),
     serde(tag = "type", content = "id")
 )]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
 pub enum MentionData {
-    User(UserId),
-    Role(RoleId),
-    Channel(ChannelId),
+    User(#[cfg_attr(feature = "wasm", tsify(type = "string"))] UserId),
+    Role(#[cfg_attr(feature = "wasm", tsify(type = "string"))] RoleId),
+    Channel(#[cfg_attr(feature = "wasm", tsify(type = "string"))] ChannelId),
     Everyone,
 }
 

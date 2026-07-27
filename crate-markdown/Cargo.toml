@@ -22,6 +22,7 @@ uuid = { version = "1.22.0", features = ["serde", "v7"] }
 wasm-bindgen = { version = "0.2.117", optional = true }
 serde = { version = "1.0.228", optional = true, features = ["derive"] }
 serde-wasm-bindgen = { version = "0.6.5", optional = true }
+tsify = { version = "0.5.5", optional = true, default-features = false, features = ["js"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 uuid = { version = "1.22.0", features = ["serde", "v7", "js"] }
@@ -31,7 +32,7 @@ getrandom = { version = "0.4", features = ["wasm_js"] }
 parallel = []
 serde = ["dep:serde"]
 default = ["dep:lamprey-common", "wasm", "serde"]
-wasm = ["dep:wasm-bindgen", "serde", "dep:serde-wasm-bindgen"]
+wasm = ["dep:wasm-bindgen", "serde", "dep:serde-wasm-bindgen", "dep:tsify"]
 bin = ["dep:clap", "dep:anyhow"]
 
 [[bin]]

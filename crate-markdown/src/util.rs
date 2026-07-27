@@ -8,8 +8,12 @@ use crate::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
 pub struct Span {
+    #[cfg_attr(feature = "wasm", tsify(type = "number"))]
     pub start: Len,
+
+    #[cfg_attr(feature = "wasm", tsify(type = "number"))]
     pub end: Len,
 }
 

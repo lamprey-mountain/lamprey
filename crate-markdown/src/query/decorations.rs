@@ -1,16 +1,20 @@
 use crate::prelude::*;
 
-/// a decoration that can be applied to the markdown source
+/// a decoration that can be applied to a span
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
 pub struct Decoration {
     pub span: Span,
     pub kind: DecorationKind,
 }
 
+/// what kind of decoration to apply
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
 pub enum DecorationKind {
+    // TODO: add doc comments
     Syntax,
     CodeLanguage,
     Emphasis,

@@ -5,65 +5,73 @@ use crate::{
     query::{Decoration, QueryableExt},
 };
 use serde::Serialize;
+use tsify::Tsify;
 
-#[derive(Serialize)]
-struct LinkDto {
-    href: String,
-    text: Option<String>,
-    span: Span,
+/// Represents a markdown link.
+#[derive(Tsify, Serialize)]
+#[tsify(into_wasm_abi)]
+pub struct LinkItem {
+    pub href: String,
+    pub text: Option<String>,
+    pub span: Span,
 }
 
-#[derive(Serialize)]
-struct MentionDto {
-    text: String,
+/// Represents a markdown mention.
+#[derive(Tsify, Serialize)]
+#[tsify(into_wasm_abi)]
+pub struct MentionItem {
+    pub text: String,
     #[serde(flatten)]
-    data: MentionData,
-    span: Span,
+    pub data: MentionData,
+    pub span: Span,
 }
 
-#[derive(Serialize)]
-struct EmojiDto {
-    text: String,
+/// Represents a markdown emoji.
+#[derive(Tsify, Serialize)]
+#[tsify(into_wasm_abi, hashmap_as_object)]
+pub struct EmojiItem {
+    pub text: String,
     #[serde(flatten)]
-    kind: EmojiDtoKind,
-    span: Span,
+    pub kind: EmojiItemKind,
+    pub span: Span,
 }
 
-#[derive(Serialize)]
+#[derive(Tsify, Serialize)]
 #[serde(tag = "kind")]
-enum EmojiDtoKind {
+#[tsify(into_wasm_abi)]
+pub enum EmojiItemKind {
     Custom(CustomEmojiData),
     Unicode,
 }
 
-#[derive(Serialize)]
-struct HeaderDto {
-    level: u8,
-    text: String,
-    span: Span,
+/// Represents a markdown header.
+#[derive(Tsify, Serialize)]
+#[tsify(into_wasm_abi)]
+pub struct HeaderItem {
+    pub level: u8,
+    pub text: String,
+    pub span: Span,
 }
 
 #[wasm_bindgen]
 impl Parsed {
     /// Get decorations within an optional span range
     #[wasm_bindgen(js_name = "decorations")]
-    pub fn js_decorations(&self, start: Option<Len>, end: Option<Len>) -> Result<JsValue, JsValue> {
+    pub fn js_decorations(&self, start: Option<Len>, end: Option<Len>) -> Vec<Decoration> {
         let span = match (start, end) {
             (Some(s), Some(e)) => Some(Span::from((s, e))),
             _ => None,
         };
 
-        let decos: Vec<Decoration> = self.tree().iter_decorations(span).collect();
-
-        serde_wasm_bindgen::to_value(&decos).map_err(|e| JsValue::from_str(&e.to_string()))
+        self.tree().iter_decorations(span).collect()
     }
 
+    /// Get all links
     #[wasm_bindgen(js_name = "links")]
-    pub fn js_links(&self) -> Result<JsValue, JsValue> {
-        let links: Vec<LinkDto> = self
-            .tree()
+    pub fn js_links(&self) -> Vec<LinkItem> {
+        self.tree()
             .iter_links()
-            .map(|l| LinkDto {
+            .map(|l| LinkItem {
                 href: l.href(),
                 text: Some(
                     l.children()
@@ -72,33 +80,31 @@ impl Parsed {
                 ),
                 span: l.syntax().text_range().into(),
             })
-            .collect();
-        serde_wasm_bindgen::to_value(&links).map_err(|e| JsValue::from_str(&e.to_string()))
+            .collect()
     }
 
+    /// Get all mentions
     #[wasm_bindgen(js_name = "mentions")]
-    pub fn js_mentions(&self) -> Result<JsValue, JsValue> {
-        let mentions: Vec<MentionDto> = self
-            .tree()
+    pub fn js_mentions(&self) -> Vec<MentionItem> {
+        self.tree()
             .iter_mentions()
-            .map(|m| MentionDto {
+            .map(|m| MentionItem {
                 text: m.text(),
                 data: m.parse(),
                 span: m.syntax().text_range().into(),
             })
-            .collect();
-        serde_wasm_bindgen::to_value(&mentions).map_err(|e| JsValue::from_str(&e.to_string()))
+            .collect()
     }
 
+    /// Get all unicode and custom emoji
     #[wasm_bindgen(js_name = "emoji")]
-    pub fn js_emoji(&self) -> Result<JsValue, JsValue> {
-        let emoji: Vec<EmojiDto> = self
-            .tree()
+    pub fn js_emoji(&self) -> Vec<EmojiItem> {
+        self.tree()
             .iter_emoji()
             .map(|e| {
                 let kind = match &e {
-                    Emoji::Custom(e) => EmojiDtoKind::Custom(e.parse()),
-                    Emoji::Unicode(_e) => EmojiDtoKind::Unicode,
+                    Emoji::Custom(e) => EmojiItemKind::Custom(e.parse()),
+                    Emoji::Unicode(_e) => EmojiItemKind::Unicode,
                 };
 
                 let span = e.syntax().text_range().into();
@@ -108,18 +114,17 @@ impl Parsed {
                     Emoji::Unicode(e) => e.text(),
                 };
 
-                EmojiDto { text, kind, span }
+                EmojiItem { text, kind, span }
             })
-            .collect();
-        serde_wasm_bindgen::to_value(&emoji).map_err(|e| JsValue::from_str(&e.to_string()))
+            .collect()
     }
 
+    /// Get all markdown headers
     #[wasm_bindgen(js_name = "headers")]
-    pub fn js_headers(&self) -> Result<JsValue, JsValue> {
-        let headers: Vec<HeaderDto> = self
-            .tree()
+    pub fn js_headers(&self) -> Vec<HeaderItem> {
+        self.tree()
             .iter_headers()
-            .map(|h| HeaderDto {
+            .map(|h| HeaderItem {
                 level: h.level(),
                 text: h
                     .children()
@@ -127,10 +132,10 @@ impl Parsed {
                     .collect::<String>(),
                 span: h.syntax().text_range().into(),
             })
-            .collect();
-        serde_wasm_bindgen::to_value(&headers).map_err(|e| JsValue::from_str(&e.to_string()))
+            .collect()
     }
 
+    /// Check if this only contains emoji. Returns the number of contained emoji, and null otherwise.
     #[wasm_bindgen(js_name = "onlyEmoji")]
     pub fn js_only_emoji(&self) -> Option<u32> {
         self.tree().only_emoji()

@@ -90,6 +90,11 @@ impl Parsed {
         self.tree = Ref::new(ctx.parse_document());
     }
 
+    /// get the length of the underlying source text
+    pub fn source_len(&self) -> Len {
+        self.source.0.len() as Len
+    }
+
     /// Apply a transformation to the parsed document.
     pub fn transform<T: Transform>(&self, transformer: &T) -> Self {
         let new_green = transformer.apply(self.tree.root());
@@ -123,23 +128,27 @@ impl Parsed {
 #[wasm_bindgen]
 impl Parsed {
     /// get the serialized syntax tree
-    #[cfg_attr(feature = "wasm", wasm_bindgen(js_name = "ast"))]
-    pub fn js_ast(&self) -> JsValue {
-        use crate::ast::block::Document;
-        use crate::ast::serialized::SerializedDocument;
-
-        let doc = Document::cast(self.tree.root()).expect("root is document");
-        let ast = SerializedDocument::from_document(doc);
-        serde_wasm_bindgen::to_value(&ast).expect("always serializable")
+    #[wasm_bindgen(js_name = "ast")]
+    #[inline]
+    pub fn js_ast(&self) -> SerializedDocument {
+        self.ast()
     }
 
     /// apply an edit by replacing text
     ///
     /// delete the text between `delete_start`..`delete_end` and insert text `insert`
-    #[cfg_attr(feature = "wasm", wasm_bindgen(js_name = "edit"))]
+    #[wasm_bindgen(js_name = "edit")]
+    #[inline]
     pub fn js_edit(&mut self, delete_start: Len, delete_end: Len, insert: &str) {
         let span = Span::from((delete_start, delete_end));
         self.edit(span, insert);
+    }
+
+    /// the length of the underlying source text
+    #[wasm_bindgen(getter, js_name = "sourceLength")]
+    #[inline]
+    pub fn js_source_len(&self) -> Len {
+        self.source_len()
     }
 }
 
