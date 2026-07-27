@@ -6,6 +6,7 @@ import {
 	createSelector,
 	createSignal,
 	For,
+	Index,
 	Show,
 } from "solid-js";
 import {
@@ -221,6 +222,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 			string | null,
 			Array<Channel & { threads: Channel[] }>
 		>();
+		categoryMap.set(null, []);
+
 		for (const c of channelMap.values()) {
 			if (c.type === "Category") {
 				if (canViewChannel(c)) {
@@ -510,15 +513,43 @@ export const ChannelNav = (props: { room_id?: string }) => {
 								<For
 									each={channels}
 									fallback={
-										<div
-											class="empty-text"
-											style="margin-left: 16px"
-											data-channel-id={category?.id}
-											onDragOver={dnd.handle}
-											onDrop={dnd.handle}
+										<Show
+											when={!props.room_id}
+											fallback={
+												<div
+													class="empty-text"
+													style="margin-left: 16px"
+													data-channel-id={category?.id}
+													onDragOver={dnd.handle}
+													onDrop={dnd.handle}
+												>
+													(no channels)
+												</div>
+											}
 										>
-											(no channels)
-										</div>
+											<Index each={Array(10).fill(0)}>
+												{(_, index) => (
+													<li
+														class="channel-item"
+														style={{
+															"pointer-events": "none",
+															opacity: 1 - index / 10,
+														}}
+													>
+														<div class="channel-link">
+															<div
+																class="skeleton avatar"
+																style="border-radius: 4px"
+															/>
+															<div
+																class="skeleton"
+																style="width: 128px; height: 1em;"
+															/>
+														</div>
+													</li>
+												)}
+											</Index>
+										</Show>
 									}
 								>
 									{(channel) => (

@@ -1,4 +1,5 @@
 @use "./util.scss" as *;
+@use "./animation.scss" as *;
 
 @mixin drag-indicator-line($position) {
 	content: "";
@@ -42,6 +43,19 @@
 	&[data-dnd-placement="inside-category"]::after {
 		@include drag-indicator-line("bottom");
 	}
+}
+
+.skeleton {
+	background: linear-gradient(
+		90deg,
+		$bg-400 0%,
+		oklch(var(--color-bg4) / 0.75) 50%,
+		oklch(var(--color-bg4) / 0.85) 100%,
+	);
+	background-size: 200% 100%;
+	// NOTE: this is pretty bad for performance
+	/* animation: skeleton-loading 1s infinite linear; */
+	border-radius: 4px;
 }
 
 #channel-nav {
