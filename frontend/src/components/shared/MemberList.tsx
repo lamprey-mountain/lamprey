@@ -236,32 +236,37 @@ export const MemberList = (props: MemberListProps) => {
 											return name;
 										}
 
+										// TODO: apply .active after clicking a user, while the user popout is open
+										// probably will only apply it when the user popout is opened from the member list
+
 										return (
 											<button
 												type="button"
 												class="menu-user"
 												data-user-id={item.user.id}
-												classList={{ offline: isOffline() }}
+												classList={{ active: false, offline: isOffline() }}
 												onClick={(e) => handleUserClick(e, user())}
 												onKeyDown={(e) =>
 													handleUserKeyDown(e, user(), room_member())
 												}
-												onMouseEnter={() => setHovered(true)}
-												onMouseLeave={() => setHovered(false)}
+												onMouseEnter={[setHovered, true]}
+												onMouseLeave={[setHovered, false]}
 											>
-												<AvatarWithStatus user={user()} animate={hovered()} />
-												<span class="text">
-													<div class="name">{name()}</div>
-													<Show
-														when={
-															user()?.presence.activities.find(
-																(a) => a.type === "Custom",
-															)?.text
-														}
-													>
-														{(t) => <div class="status-message">{t()}</div>}
-													</Show>
-												</span>
+												<div class="inner">
+													<AvatarWithStatus user={user()} animate={hovered()} />
+													<span class="text">
+														<div class="name">{name()}</div>
+														<Show
+															when={
+																user()?.presence.activities.find(
+																	(a) => a.type === "Custom",
+																)?.text
+															}
+														>
+															{(t) => <div class="status-message">{t()}</div>}
+														</Show>
+													</span>
+												</div>
 											</button>
 										);
 									})()

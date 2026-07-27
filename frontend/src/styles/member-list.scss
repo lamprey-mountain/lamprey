@@ -27,62 +27,66 @@
 	}
 
 	& .menu-user {
-		display: flex;
-		align-items: center;
-		padding: 2px;
 		cursor: pointer;
 		height: 44px;
-		box-sizing: border-box;
-		background: none;
-		border: none;
-		font: inherit;
 		width: 100%;
-		text-align: left;
-		color: inherit;
+		padding: 2px 4px;
+		margin: -2px 0;
 
-		& > .text {
-			grid-area: name;
+		& > .inner {
 			display: flex;
-			flex-direction: column;
-			padding: 2px 4px;
-			flex: 1;
-			overflow: hidden;
-			gap: 2px;
+			align-items: center;
+			padding: 4px 2px;
+			border-radius: 4px;
 
-			& > .name {
-				@include truncate;
-				line-height: 1;
+			& > .text {
+				display: flex;
+				flex-direction: column;
+				padding: 2px 4px;
+				flex: 1;
+				overflow: hidden;
+				gap: 2px;
+
+				& > .name {
+					@include truncate;
+					line-height: 1;
+				}
+
+				& > .status-message {
+					@include truncate;
+					font-size: 0.8em;
+					color: $fg-600;
+				}
 			}
 
-			& > .status-message {
-				@include truncate;
-				font-size: 0.8em;
-				color: $fg-600;
+			& > .avatar {
+				height: 36px;
+				width: 36px;
+				padding: 4px 8px;
+				box-sizing: content-box;
 			}
 		}
 
-		& > .avatar {
-			height: 36px;
-			width: 36px;
-			padding: 4px 8px;
-			box-sizing: content-box;
-		}
-
-		&:hover {
-			background: #fff1;
-
-			& > .text > .name {
-				color: $fg-100;
-			}
-		}
-
-		&.offline {
+		&.offline > .inner {
 			& > .text > .name {
 				color: oklch(var(--color-fg5));
 			}
 
 			& > .avatar {
 				filter: brightness(0.5);
+			}
+		}
+
+		&.active > .inner,
+		&:hover > .inner {
+			background: #fff1;
+
+			& > .text > .name {
+				color: $fg-100;
+			}
+
+			& > .avatar {
+				filter: brightness(1);
 			}
 		}
 	}

@@ -43,6 +43,8 @@ export const MemberListProvider = (props: ParentProps) => {
 			return;
 		}
 
+		// FIXME: member list isnt subscribed to on page load
+		// it should automatically subscribe due to reactivity (when channels.cache.get(id) is populated), but it doesn't
 		const channelIdMatch = location.pathname.match(
 			/\/(channel|thread)\/([^/]+)/,
 		);
