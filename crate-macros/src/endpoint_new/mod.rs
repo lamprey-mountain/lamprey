@@ -185,6 +185,7 @@ fn build_encode_response_fn(
         let ident = &json_field.ident;
         Ok(quote! {
             fn encode(self) -> ::http::Response<::bytes::Bytes> {
+                // TODO: better error?
                 let json = ::serde_json::to_string(&self.#ident)
                     .unwrap_or_else(|e| format!("{{\"error\": \"serialization failed: {}\"}}", e));
                 ::http::Response::builder()
@@ -195,6 +196,12 @@ fn build_encode_response_fn(
             }
         })
     } else {
+        let status_code = if args.responses.first().is_some() {
+            quote! { #status_code }
+        } else {
+            quote! { ::http::StatusCode::NO_CONTENT }
+        };
+
         Ok(quote! {
             fn encode(self) -> ::http::Response<::bytes::Bytes> {
                 ::http::Response::builder()
