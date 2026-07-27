@@ -119,6 +119,7 @@ impl ServiceEmail {
             }
             Ok(true)
         } else {
+            data.rollback().await?;
             Ok(false)
         }
     }
