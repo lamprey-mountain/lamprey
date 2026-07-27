@@ -336,7 +336,8 @@ impl ServiceChannels {
                     .build(),
             };
             auth.set_room_id(room_id);
-            auth.al_push(ty)
+            auth.al_push(ty);
+            // FIXME: don't commit audit log if request failed
         };
 
         let srv = self.state.services();
@@ -472,6 +473,7 @@ impl ServiceChannels {
                     if parent.ty == ChannelType::Wiki {
                         perms.ensure(Permission::DocumentCreate)?;
                     } else {
+                        // TODO: enforce that documents can only be created in rooms (top level), categories, or wikis
                         perms.ensure(Permission::ChannelManage)?;
                     }
                 } else {
@@ -626,8 +628,14 @@ impl ServiceChannels {
 
         data.thread_member_put(channel_id, user.id, ThreadMemberPut {})
             .await?;
-        let thread_member = data.thread_member_get(channel_id, user.id).await?;
+        data.commit().await?;
 
+        let thread_member = self
+            .state
+            .begin_read()
+            .await?
+            .thread_member_get(channel_id, user.id)
+            .await?;
         let channel = srv.channels.get(channel_id, Some(user.id)).await?;
 
         if let Some(starter_message) = json.starter_message {
@@ -670,6 +678,8 @@ impl ServiceChannels {
         // send a ThreadCreated message in the parent channel
         if json.ty.is_thread() {
             if let Some(parent_id) = json.parent_id {
+                // TODO: move this to messages service
+                let mut data = self.state.begin().await?;
                 let system_message_id = data
                     .message_create(DbMessageCreate {
                         id: None,
@@ -691,6 +701,7 @@ impl ServiceChannels {
                         ephemeral: false,
                     })
                     .await?;
+                data.commit().await?;
 
                 let system_message = srv
                     .messages
@@ -722,7 +733,6 @@ impl ServiceChannels {
             )
             .await?;
 
-        data.commit().await?;
         Ok(channel)
     }
 
@@ -803,6 +813,7 @@ impl ServiceChannels {
 
         data.thread_member_put(thread_id, user.id, ThreadMemberPut::default())
             .await?;
+        data.commit().await?;
 
         let channel = srv.channels.get(thread_id, Some(user.id)).await?;
 
@@ -818,6 +829,8 @@ impl ServiceChannels {
 
         let four_hours_ago = time::OffsetDateTime::now_utc() - time::Duration::hours(4);
         if source_message.created_at.into_inner() < four_hours_ago {
+            // TODO: move this to messages service
+            let mut data = self.state.begin().await?;
             let system_message_id = data
                 .message_create(DbMessageCreate {
                     id: None,
@@ -839,6 +852,7 @@ impl ServiceChannels {
                     ephemeral: false,
                 })
                 .await?;
+            data.commit().await?;
 
             let system_message = srv
                 .messages
@@ -873,7 +887,6 @@ impl ServiceChannels {
             auth.al_push(ty);
         }
 
-        data.commit().await?;
         Ok(channel)
     }
 
@@ -1105,6 +1118,8 @@ impl ServiceChannels {
         if let Some(room_id) = chan_old.room_id {
             data.room_template_mark_dirty(room_id).await?;
         }
+        data.commit().await?;
+
         self.invalidate(thread_id).await;
         self.invalidate_user(thread_id, user.id).await;
         let chan_new = self.get(thread_id, Some(user.id)).await?;
@@ -1289,6 +1304,8 @@ impl ServiceChannels {
 
         if chan_old.name != chan_new.name {
             // send thread renamed message to thread
+            // TODO: move this to messages service
+            let mut data = self.state.begin().await?;
             let rename_message_id = data
                 .message_create(DbMessageCreate {
                     id: None,
@@ -1311,6 +1328,7 @@ impl ServiceChannels {
                 })
                 .await?;
             let rename_message = data.message_get(thread_id, rename_message_id).await?;
+            data.commit().await?;
             self.state
                 .messaging()
                 .broadcast_channel(
@@ -1323,6 +1341,9 @@ impl ServiceChannels {
         }
 
         if chan_old.icon != chan_new.icon {
+            // send channel icon changed message
+            // TODO: move this to messages service
+            let mut data = self.state.begin().await?;
             let icon_message_id = data
                 .message_create(DbMessageCreate {
                     id: None,
@@ -1345,6 +1366,7 @@ impl ServiceChannels {
                 })
                 .await?;
             let icon_message = data.message_get(thread_id, icon_message_id).await?;
+            data.commit().await?;
             self.state
                 .messaging()
                 .broadcast_channel(
@@ -1358,6 +1380,8 @@ impl ServiceChannels {
 
         if chan_old.parent_id != chan_new.parent_id {
             // send thread moved message to thread
+            // TODO: move this to messages service
+            let mut data = self.state.begin().await?;
             let move_message_id = data
                 .message_create(DbMessageCreate {
                     id: None,
@@ -1380,6 +1404,7 @@ impl ServiceChannels {
                 })
                 .await?;
             let move_message = data.message_get(thread_id, move_message_id).await?;
+            data.commit().await?;
             self.state
                 .messaging()
                 .broadcast_channel(
@@ -1398,7 +1423,6 @@ impl ServiceChannels {
             self.state.messaging().broadcast_room(room_id, msg).await?;
         }
 
-        data.commit().await?;
         Ok(chan_new)
     }
 
