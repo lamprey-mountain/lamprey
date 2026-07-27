@@ -6,6 +6,7 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::sync::MessageSync;
 use common::v1::types::util::Changes;
 use common::v1::types::{EmojiId, PaginationQuery, PaginationResponse, Permission, RoomId};
+use kerosene_core::types::auth::{Auth5, Auth5Ext};
 use moka::future::Cache;
 use validator::Validate;
 
@@ -28,10 +29,10 @@ impl ServiceEmoji {
         }
     }
 
-    pub async fn create(
+    pub async fn create<A: Auth5>(
         &self,
         room_id: RoomId,
-        auth: &Auth,
+        auth: &mut A,
         json: EmojiCustomCreate,
         nonce: Option<String>,
     ) -> Result<EmojiCustom> {
@@ -48,10 +49,10 @@ impl ServiceEmoji {
         }
     }
 
-    async fn create_inner(
+    async fn create_inner<A: Auth5>(
         &self,
         room_id: RoomId,
-        auth: &Auth,
+        auth: &mut A,
         json: EmojiCustomCreate,
         nonce: Option<String>,
     ) -> Result<EmojiCustom> {
@@ -59,9 +60,8 @@ impl ServiceEmoji {
         let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let user_id = auth
-            .user_id()
-            .ok_or_else(|| ApiError::from_code(ErrorCode::MissingAuth))?;
+        let user = auth.ensure_user()?;
+        let user_id = user.id;
         let perms = srv.perms.for_room(user_id, room_id).await?;
         perms.ensure(Permission::EmojiManage)?;
 
@@ -77,12 +77,10 @@ impl ServiceEmoji {
             .add("animated", &json.animated)
             .add("media_id", &json.media_id);
 
-        // FIXME: audit log
-        // let al = auth.audit_log(room_id);
-        // al.commit_success(AuditLogEntryType::EmojiCreate {
-        //     changes: changes.build(),
-        // })
-        // .await?;
+        auth.set_room_id(room_id);
+        auth.al_push(AuditLogEntryType::EmojiCreate {
+            changes: changes.build(),
+        });
 
         data.commit().await?;
 
@@ -107,19 +105,18 @@ impl ServiceEmoji {
         self.state.begin_read().await?.emoji_get(emoji_id).await
     }
 
-    pub async fn update(
+    pub async fn update<A: Auth5>(
         &self,
         room_id: RoomId,
         emoji_id: EmojiId,
-        auth: &Auth,
+        auth: &mut A,
         patch: EmojiCustomPatch,
     ) -> Result<EmojiCustom> {
         let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let user_id = auth
-            .user_id()
-            .ok_or_else(|| ApiError::from_code(ErrorCode::MissingAuth))?;
+        let user = auth.ensure_user()?;
+        let user_id = user.id;
         let perms = srv.perms.for_room(user_id, room_id).await?;
         perms.ensure(Permission::EmojiManage)?;
 
@@ -127,14 +124,12 @@ impl ServiceEmoji {
         data.emoji_update(emoji_id, patch).await?;
         let emoji = data.emoji_get(emoji_id).await?;
 
-        // FIXME: audit log
-        // let al = auth.audit_log(room_id);
-        // al.commit_success(AuditLogEntryType::EmojiUpdate {
-        //     changes: Changes::new()
-        //         .change("name", &emoji_before.name, &emoji.name)
-        //         .build(),
-        // })
-        // .await?;
+        auth.set_room_id(room_id);
+        auth.al_push(AuditLogEntryType::EmojiUpdate {
+            changes: Changes::new()
+                .change("name", &emoji_before.name, &emoji.name)
+                .build(),
+        });
 
         data.commit().await?;
 
@@ -151,13 +146,17 @@ impl ServiceEmoji {
         Ok(emoji)
     }
 
-    pub async fn delete(&self, room_id: RoomId, emoji_id: EmojiId, auth: &Auth) -> Result<()> {
+    pub async fn delete<A: Auth5>(
+        &self,
+        room_id: RoomId,
+        emoji_id: EmojiId,
+        auth: &mut A,
+    ) -> Result<()> {
         let mut data = self.state.begin().await?;
         let emoji = data.emoji_get(emoji_id).await?;
 
-        let user_id = auth
-            .user_id()
-            .ok_or_else(|| ApiError::from_code(ErrorCode::MissingAuth))?;
+        let user = auth.ensure_user()?;
+        let user_id = user.id;
         let perms = self
             .state
             .services()
@@ -168,17 +167,15 @@ impl ServiceEmoji {
 
         data.emoji_delete(emoji_id).await?;
 
-        // FIXME: audit log
-        // let al = auth.audit_log(room_id);
-        // al.commit_success(AuditLogEntryType::EmojiDelete {
-        //     emoji_id,
-        //     changes: Changes::new()
-        //         .remove("name", &emoji.name)
-        //         .remove("animated", &emoji.animated)
-        //         .remove("media_id", &emoji.media_id)
-        //         .build(),
-        // })
-        // .await?;
+        auth.set_room_id(room_id);
+        auth.al_push(AuditLogEntryType::EmojiDelete {
+            emoji_id,
+            changes: Changes::new()
+                .remove("name", &emoji.name)
+                .remove("animated", &emoji.animated)
+                .remove("media_id", &emoji.media_id)
+                .build(),
+        });
 
         data.commit().await?;
 
@@ -196,15 +193,14 @@ impl ServiceEmoji {
         Ok(())
     }
 
-    pub async fn list(
+    pub async fn list<A: Auth5>(
         &self,
         room_id: RoomId,
-        auth: &Auth,
+        auth: &A,
         pagination: PaginationQuery<EmojiId>,
     ) -> Result<PaginationResponse<EmojiCustom>> {
-        let user_id = auth
-            .user_id()
-            .ok_or_else(|| ApiError::from_code(ErrorCode::MissingAuth))?;
+        let user = auth.ensure_user()?;
+        let user_id = user.id;
         let _perms = self
             .state
             .services()
@@ -219,15 +215,14 @@ impl ServiceEmoji {
             .await
     }
 
-    pub async fn search(
+    pub async fn search<A: Auth5>(
         &self,
-        auth: &Auth,
+        auth: &A,
         query: String,
         pagination: PaginationQuery<EmojiId>,
     ) -> Result<PaginationResponse<EmojiCustom>> {
-        let user_id = auth
-            .user_id()
-            .ok_or_else(|| ApiError::from_code(ErrorCode::MissingAuth))?;
+        let user = auth.ensure_user()?;
+        let user_id = user.id;
         self.state
             .begin_read()
             .await?
@@ -235,13 +230,12 @@ impl ServiceEmoji {
             .await
     }
 
-    pub async fn lookup(&self, emoji_id: EmojiId, auth: &Auth) -> Result<EmojiCustom> {
+    pub async fn lookup<A: Auth5>(&self, emoji_id: EmojiId, auth: &A) -> Result<EmojiCustom> {
         let mut data = self.state.begin_read().await?;
         let mut emoji = data.emoji_get(emoji_id).await?;
 
-        let user_id = auth
-            .user_id()
-            .ok_or_else(|| ApiError::from_code(ErrorCode::MissingAuth))?;
+        let user = auth.ensure_user()?;
+        let user_id = user.id;
         let original_owner = emoji.owner.clone();
         let original_creator_id = emoji.creator_id;
 

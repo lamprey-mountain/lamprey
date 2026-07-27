@@ -21,7 +21,7 @@ use crate::{ServerState, routes2};
 /// Tag create
 #[handler(routes::tag_create)]
 async fn tag_create(
-    auth: Auth4,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::tag_create::Request,
 ) -> Result<impl IntoResponse> {
@@ -41,7 +41,7 @@ async fn tag_create(
 
     let tag = srv
         .tag
-        .create(req.channel_id, &auth.into(), req.tag, req.idempotency_key)
+        .create(req.channel_id, &mut auth, req.tag, req.idempotency_key)
         .await?;
 
     Ok((StatusCode::CREATED, Json(tag)))

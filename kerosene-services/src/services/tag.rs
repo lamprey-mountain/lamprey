@@ -6,6 +6,7 @@ use common::v1::types::sync::MessageSync;
 use common::v1::types::tag::{Tag, TagCreate, TagPatch};
 use common::v1::types::util::Changes;
 use common::v1::types::{ChannelId, PaginationQuery, PaginationResponse, Permission, TagId};
+use kerosene_core::types::auth::{Auth5, Auth5Ext};
 use moka::future::Cache;
 use validator::Validate;
 
@@ -27,10 +28,10 @@ impl ServiceTags {
         }
     }
 
-    pub async fn create(
+    pub async fn create<A: Auth5>(
         &self,
         channel_id: ChannelId,
-        auth: &Auth,
+        auth: &mut A,
         create: TagCreate,
         nonce: Option<String>,
     ) -> Result<Tag> {
@@ -47,10 +48,10 @@ impl ServiceTags {
         }
     }
 
-    async fn create_inner(
+    async fn create_inner<A: Auth5>(
         &self,
         channel_id: ChannelId,
-        auth: &Auth,
+        auth: &mut A,
         create: TagCreate,
         nonce: Option<String>,
     ) -> Result<Tag> {
@@ -58,7 +59,7 @@ impl ServiceTags {
         let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let user_id = auth.identity().user_id().ok_or(Error::UnauthSession)?;
         let perms = srv.perms.for_channel(user_id, channel_id).await?;
         perms.ensure(Permission::ChannelEdit)?;
 
@@ -70,20 +71,17 @@ impl ServiceTags {
         let tag = data.tag_create(channel_id, create.clone()).await?;
 
         if let Some(room_id) = channel.room_id {
-            // FIXME: audit log
-            let _ = auth;
-            // let al = auth.audit_log(room_id);
-            // al.commit_success(AuditLogEntryType::TagCreate {
-            //     channel_id,
-            //     tag_id: tag.id,
-            //     changes: Changes::new()
-            //         .add("name", &tag.name)
-            //         .add("description", &tag.description)
-            //         .add("color", &tag.color)
-            //         .add("restricted", &tag.restricted)
-            //         .build(),
-            // })
-            // .await?;
+            auth.set_room_id(room_id);
+            auth.al_push(AuditLogEntryType::TagCreate {
+                channel_id,
+                tag_id: tag.id,
+                changes: Changes::new()
+                    .add("name", &tag.name)
+                    .add("description", &tag.description)
+                    .add("color", &tag.color)
+                    .add("restricted", &tag.restricted)
+                    .build(),
+            });
         }
 
         let sync_msg = MessageSync::TagCreate { tag: tag.clone() };
@@ -99,17 +97,18 @@ impl ServiceTags {
         self.state.begin_read().await?.tag_get(tag_id).await
     }
 
-    pub async fn update(
+    pub async fn update<A: Auth5>(
         &self,
         channel_id: ChannelId,
         tag_id: TagId,
-        auth: &Auth,
+        auth: &mut A,
         patch: TagPatch,
     ) -> Result<Tag> {
         let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let user = auth.ensure_user()?;
+        let user_id = user.id;
         let perms = srv.perms.for_channel(user_id, channel_id).await?;
         perms.ensure(Permission::ChannelEdit)?;
 
@@ -123,21 +122,18 @@ impl ServiceTags {
 
         let channel = srv.channels.get(channel_id, Some(user_id)).await?;
         if let Some(room_id) = channel.room_id {
-            // FIXME: audit log
-            let _ = auth;
-            // let al = auth.audit_log(room_id);
-            // al.commit_success(AuditLogEntryType::TagUpdate {
-            //     channel_id,
-            //     tag_id,
-            //     changes: Changes::new()
-            //         .change("name", &tag_old.name, &tag.name)
-            //         .change("description", &tag_old.description, &tag.description)
-            //         .change("color", &tag_old.color, &tag.color)
-            //         .change("archived", &tag_old.archived, &tag.archived)
-            //         .change("restricted", &tag_old.restricted, &tag.restricted)
-            //         .build(),
-            // })
-            // .await?;
+            auth.set_room_id(room_id);
+            auth.al_push(AuditLogEntryType::TagUpdate {
+                channel_id,
+                tag_id,
+                changes: Changes::new()
+                    .change("name", &tag_old.name, &tag.name)
+                    .change("description", &tag_old.description, &tag.description)
+                    .change("color", &tag_old.color, &tag.color)
+                    .change("archived", &tag_old.archived, &tag.archived)
+                    .change("restricted", &tag_old.restricted, &tag.restricted)
+                    .build(),
+            });
         }
 
         let sync_msg = MessageSync::TagUpdate { tag: tag.clone() };
@@ -149,17 +145,18 @@ impl ServiceTags {
         Ok(tag)
     }
 
-    pub async fn delete(
+    pub async fn delete<A: Auth5>(
         &self,
         channel_id: ChannelId,
         tag_id: TagId,
-        auth: &Auth,
+        auth: &mut A,
         force: bool,
     ) -> Result<()> {
         let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let user = auth.ensure_user()?;
+        let user_id = user.id;
         let perms = srv.perms.for_channel(user_id, channel_id).await?;
         perms.ensure(Permission::ChannelEdit)?;
 
@@ -178,20 +175,17 @@ impl ServiceTags {
         data.tag_delete(tag_id).await?;
 
         if let Some(room_id) = channel.room_id {
-            // FIXME: audit log
-            let _ = auth;
-            // let al = auth.audit_log(room_id);
-            // al.commit_success(AuditLogEntryType::TagDelete {
-            //     channel_id,
-            //     tag_id,
-            //     changes: Changes::new()
-            //         .remove("name", &tag.name)
-            //         .remove("description", &tag.description)
-            //         .remove("color", &tag.color)
-            //         .remove("restricted", &tag.restricted)
-            //         .build(),
-            // })
-            // .await?;
+            auth.set_room_id(room_id);
+            auth.al_push(AuditLogEntryType::TagDelete {
+                channel_id,
+                tag_id,
+                changes: Changes::new()
+                    .remove("name", &tag.name)
+                    .remove("description", &tag.description)
+                    .remove("color", &tag.color)
+                    .remove("restricted", &tag.restricted)
+                    .build(),
+            });
         }
 
         let sync_msg = MessageSync::TagDelete { channel_id, tag_id };

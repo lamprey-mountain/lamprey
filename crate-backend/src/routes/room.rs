@@ -64,7 +64,7 @@ fn check_cache(if_none_match: &Option<String>, version_id: &Uuid) -> Result<()> 
 /// Room create
 #[handler(routes::room_create)]
 async fn room_create(
-    auth: Auth4,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::room_create::Request,
 ) -> Result<impl IntoResponse> {
@@ -102,7 +102,7 @@ async fn room_create(
     };
     let room = srv
         .rooms
-        .create(req.room, &auth.into(), extra, req.idempotency_key)
+        .create(req.room, &mut auth, extra, req.idempotency_key)
         .await?;
     if let Some(media_id) = icon {
         let mut data = s.data();
@@ -197,7 +197,7 @@ async fn room_search(
 /// Room edit
 #[handler(routes::room_edit)]
 async fn room_edit(
-    auth: Auth4,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::room_edit::Request,
 ) -> Result<impl IntoResponse> {
@@ -277,7 +277,7 @@ async fn room_edit(
     let room = s
         .services()
         .rooms
-        .update(req.room_id, auth.into(), req.patch.clone())
+        .update(req.room_id, &mut auth, req.patch.clone())
         .await?;
 
     if let Some(maybe_media_id) = req.patch.icon {

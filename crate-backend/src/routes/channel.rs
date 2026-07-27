@@ -706,12 +706,13 @@ async fn channel_typing(
 /// Channel upgrade
 #[handler(routes::channel_upgrade)]
 async fn channel_upgrade(
-    auth: Auth4,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::channel_upgrade::Request,
 ) -> Result<impl IntoResponse> {
     let user = auth.ensure_user()?;
     user.ensure_unsuspended()?;
+    let user_id = user.id;
     auth.ensure_scopes(&[Scope::Full])?;
 
     let srv = s.services();
@@ -741,7 +742,7 @@ async fn channel_upgrade(
                 banner: None,
                 public: Some(false),
             },
-            &auth.clone().into(),
+            &mut auth,
             DbRoomCreate {
                 id: None,
                 ty: RoomType::Default,
@@ -799,7 +800,7 @@ async fn channel_upgrade(
     }
 
     srv.channels.invalidate(req.channel_id).await;
-    let upgraded_thread = srv.channels.get(req.channel_id, Some(user.id)).await?;
+    let upgraded_thread = srv.channels.get(req.channel_id, Some(user_id)).await?;
 
     s.broadcast(MessageSync::ChannelUpdate {
         channel: Box::new(upgraded_thread),

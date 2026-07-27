@@ -2,6 +2,7 @@ pub mod actor;
 pub mod types;
 
 use common::v2::types::{SERVER_ROOM_ID, SERVER_USER_ID};
+use kerosene_core::types::auth::{Auth5, Auth5Ext};
 use lamprey_backend_data_postgres::DbUserCreate;
 pub use types::{
     CachedChannel, CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread,
@@ -409,14 +410,16 @@ impl ServiceRooms {
             .await;
     }
 
-    pub async fn update(&self, room_id: RoomId, auth: Auth, patch: RoomPatch) -> Result<Room> {
-        // FIXME: audit log
-        // let al = auth.audit_log(room_id);
+    pub async fn update<A: Auth5>(
+        &self,
+        room_id: RoomId,
+        auth: &mut A,
+        patch: RoomPatch,
+    ) -> Result<Room> {
         let mut txn = self.globals.begin().await?;
         let srv = self.globals.services();
-        let user_id = auth
-            .user_id()
-            .ok_or(ApiError::from(ErrorCode::MissingAuth))?;
+        let user = auth.ensure_user()?;
+        let user_id = user.id;
         let start = txn.room_get(room_id).await?;
         if !patch.changes(&start) {
             return Ok(start);
@@ -461,15 +464,13 @@ impl ServiceRooms {
             .await;
 
         let mut end = updated_room;
-        if let Some(user_id) = Some(user_id) {
-            let preferences = self
-                .globals
-                .begin_read()
-                .await?
-                .preferences_room_get(user_id, room_id)
-                .await?;
-            end.preferences = Some(preferences);
-        }
+        let preferences = self
+            .globals
+            .begin_read()
+            .await?
+            .preferences_room_get(user_id, room_id)
+            .await?;
+        end.preferences = Some(preferences);
 
         let snapshot = self.load_room(room_id, false).await?;
         let snap = snapshot.get_data().unwrap();
@@ -500,12 +501,8 @@ impl ServiceRooms {
             )
             .build();
 
-        // FIXME: audit log
-        // al.commit(
-        //     AuditLogEntryStatus::Success,
-        //     AuditLogEntryType::RoomUpdate { changes },
-        // )
-        // .await?;
+        auth.set_room_id(room_id);
+        auth.al_push(AuditLogEntryType::RoomUpdate { changes });
 
         self.globals
             .messaging()
@@ -515,10 +512,10 @@ impl ServiceRooms {
         Ok(end)
     }
 
-    pub async fn create(
+    pub async fn create<A: Auth5>(
         &self,
         create: RoomCreate,
-        auth: &Auth,
+        auth: &mut A,
         extra: DbRoomCreate,
         nonce: Option<String>,
     ) -> Result<Room> {
@@ -526,27 +523,13 @@ impl ServiceRooms {
             self.idempotency_keys
                 .try_get_with(
                     n.clone(),
-                    self.create_inner(
-                        create,
-                        auth.user_id()
-                            .ok_or(ApiError::from(ErrorCode::MissingAuth))?,
-                        Some(auth),
-                        extra,
-                        nonce.clone(),
-                    ),
+                    self.create_inner(create, auth.ensure_user()?.id, auth, extra, nonce.clone()),
                 )
                 .await
                 .map_err(|err| err.fake_clone())
         } else {
-            self.create_inner(
-                create,
-                auth.user_id()
-                    .ok_or(ApiError::from(ErrorCode::MissingAuth))?,
-                Some(auth),
-                extra,
-                nonce,
-            )
-            .await
+            self.create_inner(create, auth.ensure_user()?.id, auth, extra, nonce)
+                .await
         }
     }
 
@@ -556,14 +539,39 @@ impl ServiceRooms {
         user_id: UserId,
         extra: DbRoomCreate,
     ) -> Result<Room> {
-        self.create_inner(create, user_id, None, extra, None).await
+        self.create_inner_no_auth(create, user_id, extra, None)
+            .await
     }
 
-    async fn create_inner(
+    async fn create_inner<A: Auth5>(
         &self,
         create: RoomCreate,
         creator_id: UserId,
-        auth: Option<&Auth>,
+        auth: &mut A,
+        extra: DbRoomCreate,
+        nonce: Option<String>,
+    ) -> Result<Room> {
+        let room = self
+            .create_inner_no_auth(create, creator_id, extra, nonce)
+            .await?;
+        auth.set_room_id(room.id);
+        auth.al_push(AuditLogEntryType::RoomCreate {
+            changes: Changes::new()
+                .add("name", &room.name)
+                .add("description", &room.description)
+                .add("icon", &room.icon)
+                .add("banner", &room.banner)
+                .add("public", &room.public)
+                .add("welcome_channel_id", &room.welcome_channel_id)
+                .build(),
+        });
+        Ok(room)
+    }
+
+    async fn create_inner_no_auth(
+        &self,
+        create: RoomCreate,
+        creator_id: UserId,
         extra: DbRoomCreate,
         nonce: Option<String>,
     ) -> Result<Room> {
@@ -638,22 +646,6 @@ impl ServiceRooms {
                     )
                     .await?;
             }
-        }
-
-        if let Some(_auth) = auth {
-            // FIXME: audit log
-            // let al = auth.audit_log(room_id);
-            // al.commit_success(AuditLogEntryType::RoomCreate {
-            //     changes: Changes::new()
-            //         .add("name", &room.name)
-            //         .add("description", &room.description)
-            //         .add("icon", &room.icon)
-            //         .add("banner", &room.banner)
-            //         .add("public", &room.public)
-            //         .add("welcome_channel_id", &room.welcome_channel_id)
-            //         .build(),
-            // })
-            // .await?;
         }
 
         if room.welcome_channel_id.is_some() {

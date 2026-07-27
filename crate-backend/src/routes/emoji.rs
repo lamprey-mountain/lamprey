@@ -22,7 +22,7 @@ use super::util::{Auth, Auth3};
 /// Emoji create
 #[handler(routes::emoji_create)]
 async fn emoji_create(
-    auth: Auth4,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::emoji_create::Request,
 ) -> Result<impl IntoResponse> {
@@ -42,7 +42,7 @@ async fn emoji_create(
 
     let emoji = srv
         .emoji
-        .create(req.room_id, &auth.into(), req.emoji, req.idempotency_key)
+        .create(req.room_id, &mut auth, req.emoji, req.idempotency_key)
         .await?;
 
     Ok(Json(emoji))

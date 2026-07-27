@@ -51,7 +51,7 @@ mod slack;
 )]
 async fn webhook_create(
     Path(channel_id): Path<ChannelId>,
-    auth: Auth4,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     HeaderIdempotencyKey(nonce): HeaderIdempotencyKey,
     Json(json): Json<WebhookCreate>,
@@ -63,7 +63,7 @@ async fn webhook_create(
     let srv = s.services();
     let webhook = srv
         .webhook
-        .create(channel_id, &auth.into(), json, nonce)
+        .create(channel_id, &mut auth, json, nonce)
         .await?;
 
     Ok((StatusCode::CREATED, Json(webhook)))
