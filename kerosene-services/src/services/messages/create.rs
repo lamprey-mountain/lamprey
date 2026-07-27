@@ -12,12 +12,12 @@ use common::v1::types::{
 use common::v2::types::media::MediaReference;
 use common::v2::types::{MediaId, SERVER_USER_ID};
 use http::StatusCode;
+use kerosene_core::types::auth::{Auth5, Auth5Ext, Identity};
 use tracing::error;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::globals::messaging::Broadcast;
-use crate::routes::util::auth::Auth4;
 use crate::services::messages::util::MediaRegistry;
 use crate::services::messages::{links, markdown};
 use crate::types::MediaLinkType;
@@ -26,7 +26,7 @@ use crate::{Error, Result, services::messages::ServiceMessages};
 struct MessageOperation<'a, S> {
     channel: Channel,
     message_id: MessageId,
-    auth: AuthProvider,
+    author: Author,
     kind: MessageOperationKind,
     stage: S,
     nonce: Option<String>,
@@ -35,16 +35,16 @@ struct MessageOperation<'a, S> {
     _ph: PhantomData<&'a ()>,
 }
 
-enum AuthProvider {
-    Auth(Auth4),
+pub enum Author {
+    User(Identity),
     Webhook { user: User },
     Server,
 }
 
-impl AuthProvider {
+impl Author {
     pub fn user_id(&self) -> Option<UserId> {
         match self {
-            Self::Auth(a) => a.user().map(|u| u.id),
+            Self::User(i) => i.user().map(|u| u.id),
             Self::Webhook { user } => Some(user.id),
             Self::Server => None,
         }
@@ -115,12 +115,12 @@ struct MessageSanitized {
 
 impl<'a, S> MessageOperation<'a, S> {
     pub fn user_id(&self) -> Option<UserId> {
-        self.auth.user_id()
+        self.author.user_id()
     }
 
     /// get the id of the user who should be credited as the message's author
     pub fn author_id(&self) -> UserId {
-        self.auth.user_id().unwrap_or(SERVER_USER_ID)
+        self.author.user_id().unwrap_or(SERVER_USER_ID)
     }
 
     pub fn transition<NewS, F: FnOnce(S) -> NewS>(
@@ -130,7 +130,7 @@ impl<'a, S> MessageOperation<'a, S> {
         MessageOperation {
             channel: self.channel,
             message_id: self.message_id,
-            auth: self.auth,
+            author: self.author,
             kind: self.kind,
             nonce: self.nonce,
             stage: new_stage(self.stage),
@@ -237,15 +237,17 @@ impl<S> MessageOperation<'_, S> {
 
 impl ServiceMessages {
     /// create a new message
-    pub async fn create(
+    pub async fn create<A: Auth5>(
         &self,
         channel_id: ChannelId,
-        auth: &Auth4,
+        auth: &mut A,
         nonce: Option<String>,
         json: MessageCreate,
         header_timestamp: Option<Time>,
         message_id: MessageId,
     ) -> Result<Message> {
+        auth.ensure_user()?;
+        let author = Author::User(auth.identity().clone());
         if let Some(nonce) = nonce {
             // FIXME: this won't work with federation
             let session = auth.ensure_session()?;
@@ -254,7 +256,7 @@ impl ServiceMessages {
                     (session.id, nonce.clone()),
                     self.create_inner(
                         channel_id,
-                        auth,
+                        author,
                         Some(nonce),
                         json,
                         header_timestamp,
@@ -264,8 +266,15 @@ impl ServiceMessages {
                 .await
                 .map_err(|err| err.fake_clone())
         } else {
-            self.create_inner(channel_id, auth, nonce, json, header_timestamp, message_id)
-                .await
+            self.create_inner(
+                channel_id,
+                author,
+                nonce,
+                json,
+                header_timestamp,
+                message_id,
+            )
+            .await
         }
     }
 
@@ -281,7 +290,7 @@ impl ServiceMessages {
         let op = MessageOperation {
             channel,
             message_id: MessageId::new(),
-            auth: AuthProvider::Server,
+            author: Author::Server,
             kind: MessageOperationKind::MessageCreate(MessageCreateOperation { json }),
             nonce: None,
             stage: New {
@@ -300,7 +309,7 @@ impl ServiceMessages {
     async fn create_inner(
         &self,
         channel_id: ChannelId,
-        auth: &Auth4,
+        author: Author,
         nonce: Option<String>,
         json: MessageCreate,
         header_timestamp: Option<Time>,
@@ -312,7 +321,7 @@ impl ServiceMessages {
         let op = MessageOperation {
             channel,
             message_id: id,
-            auth: AuthProvider::Auth(auth.clone()),
+            author,
             kind: MessageOperationKind::MessageCreate(MessageCreateOperation { json }),
             nonce,
             stage: New { header_timestamp },
@@ -327,15 +336,16 @@ impl ServiceMessages {
     }
 
     /// edit a message
-    pub async fn edit(
+    pub async fn edit<A: Auth5>(
         &self,
         channel_id: ChannelId,
         message_id: MessageId,
-        auth: &Auth4,
+        auth: &mut A,
         json: MessagePatch,
         header_timestamp: Option<Time>,
     ) -> Result<(StatusCode, Message)> {
-        self.edit_inner(channel_id, message_id, auth, json, header_timestamp)
+        let author = Author::User(auth.identity().clone());
+        self.edit_inner(channel_id, message_id, author, json, header_timestamp)
             .await
 
         // TODO: add nonce support for edits
@@ -358,20 +368,19 @@ impl ServiceMessages {
         &self,
         channel_id: ChannelId,
         message_id: MessageId,
-        auth: &Auth4,
+        author: Author,
         json: MessagePatch,
         header_timestamp: Option<Time>,
     ) -> Result<(StatusCode, Message)> {
         let srv = self.globals.services();
-        let user_id = auth.user().map(|u| u.id);
-        let channel = srv.channels.get(channel_id, user_id).await?;
-
+        let user_id = author.user_id();
+        let channel = srv.channels.get(channel_id, None).await?;
         let original = self.get(channel_id, message_id, user_id).await?;
 
         let op = MessageOperation {
             channel,
             message_id,
-            auth: AuthProvider::Auth(auth.clone()),
+            author,
             kind: MessageOperationKind::MessageEdit(MessageEditOperation { json, original }),
             nonce: None,
             stage: New { header_timestamp },
@@ -399,7 +408,7 @@ impl ServiceMessages {
         let op = MessageOperation {
             channel,
             message_id: MessageId::new(),
-            auth: AuthProvider::Webhook { user },
+            author: Author::Webhook { user },
             kind: MessageOperationKind::MessageCreate(MessageCreateOperation { json }),
             nonce: None,
             stage: New {
@@ -437,7 +446,7 @@ impl ServiceMessages {
         let op = MessageOperation {
             channel,
             message_id,
-            auth: AuthProvider::Webhook { user },
+            author: Author::Webhook { user },
             kind: MessageOperationKind::MessageEdit(MessageEditOperation { json, original }),
             nonce: None,
             stage: New {
@@ -626,7 +635,7 @@ impl ServiceMessages {
     /// Returns (allow_external_emoji, generate_embeds, created_at).
     pub(super) async fn validate_session_permissions(
         &self,
-        auth: &Auth4,
+        author: &Author,
         channel: &Channel,
         has_attachments: bool,
         has_embeds: bool,
@@ -635,7 +644,10 @@ impl ServiceMessages {
         let srv = self.globals.services();
         let mut txn = self.globals.begin_read().await?;
 
-        let user = auth.ensure_user()?;
+        let user = match author {
+            Author::User(identity) => identity.ensure_user()?.clone(),
+            _ => return Err(Error::BadStatic("only users can have session permissions")),
+        };
 
         let mut perms = srv
             .perms
@@ -720,8 +732,8 @@ impl ServiceMessages {
             }
         }
 
-        match &op.auth {
-            AuthProvider::Auth(auth) => {
+        match &op.author {
+            Author::User(auth) => {
                 let (has_attachments, has_embeds) = match &op.kind {
                     MessageOperationKind::MessageCreate(o) => {
                         (!o.json.attachments.is_empty(), !o.json.embeds.is_empty())
@@ -732,7 +744,7 @@ impl ServiceMessages {
                     ),
                 };
                 self.validate_session_permissions(
-                    auth,
+                    &op.author,
                     &op.channel,
                     has_attachments,
                     has_embeds,
@@ -740,7 +752,7 @@ impl ServiceMessages {
                 )
                 .await
             }
-            AuthProvider::Webhook { .. } => {
+            Author::Webhook { .. } => {
                 // 1. webhooks bypass permission checks (for now)
                 Ok((
                     MessagePermissions {
@@ -750,7 +762,7 @@ impl ServiceMessages {
                     op.stage.header_timestamp,
                 ))
             }
-            AuthProvider::Server => {
+            Author::Server => {
                 // 2. system messages bypass permission checks
                 Ok((
                     MessagePermissions {
@@ -1100,21 +1112,22 @@ impl ServiceMessages {
         let srv = self.globals.services();
 
         // TODO: unarchive thread for system, webhooks
-        let AuthProvider::Auth(auth) = &op.auth else {
+        let Author::User(auth) = &op.author else {
             return Ok(());
         };
 
         if op.channel.is_archived() {
-            srv.channels
-                .update(
-                    auth,
-                    op.channel.id,
-                    ChannelPatch {
-                        archived: Some(false),
-                        ..Default::default()
-                    },
-                )
-                .await?;
+            // FIXME: unarchive channel
+            // srv.channels
+            //     .update(
+            //         auth,
+            //         op.channel.id,
+            //         ChannelPatch {
+            //             archived: Some(false),
+            //             ..Default::default()
+            //         },
+            //     )
+            //     .await?;
         }
 
         Ok(())

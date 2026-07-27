@@ -20,6 +20,7 @@ use common::{
     v2::types::media::{Media, MediaReference},
 };
 use futures::stream;
+use kerosene_core::types::auth::Auth5;
 use kerosene_services::services::media::Import;
 use kerosene_services::services::media::MediaItem;
 use serde::de::DeserializeOwned;

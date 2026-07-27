@@ -22,7 +22,7 @@ use crate::error::Result;
 /// Role create
 #[handler(routes::role_create)]
 async fn role_create(
-    auth: Auth4,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::role_create::Request,
 ) -> Result<impl IntoResponse> {
@@ -35,7 +35,7 @@ async fn role_create(
     let srv = s.services();
     let role = srv
         .role
-        .create(req.room_id, &auth.into(), req.role, req.idempotency_key)
+        .create(req.room_id, &mut auth, req.role, req.idempotency_key)
         .await?;
 
     Ok((StatusCode::CREATED, Json(role)))
@@ -44,23 +44,25 @@ async fn role_create(
 /// Role update
 #[handler(routes::role_update)]
 async fn role_update(
-    auth: Auth,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::role_update::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    auth.user.ensure_unsuspended()?;
+    let user = auth.ensure_user()?;
+    user.ensure_unsuspended()?;
     req.patch.validate()?;
     let mut d = s.data();
     let srv = s.services();
 
-    let room = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
+    let room = srv.rooms.get(req.room_id, Some(user.id)).await?;
 
+    // TODO: clean up duplicate checks (roles service also checks require sudo/mfa)
     if room.security.require_sudo {
         auth.ensure_sudo()?;
     }
     if room.security.require_mfa {
-        let user = srv.users.get(auth.user.id, None).await?;
+        let user = srv.users.get(user.id, None).await?;
         let totp = d.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
             return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
@@ -69,7 +71,7 @@ async fn role_update(
 
     let mut perms = srv
         .perms
-        .for_room3(Some(auth.user.id), req.room_id)
+        .for_room3(Some(user.id), req.room_id)
         .await?
         .ensure_view()?;
     perms.needs(Permission::RoleManage);
@@ -104,9 +106,9 @@ async fn role_update(
     if !json.changes(&start_role) {
         return Ok(StatusCode::NOT_MODIFIED.into_response());
     }
-    let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
+    let rank = srv.perms.get_user_rank(req.room_id, user.id).await?;
     let room = srv.rooms.get(req.room_id, None).await?;
-    if rank <= start_role.position && room.owner_id != Some(auth.user.id) {
+    if rank <= start_role.position && room.owner_id != Some(user.id) {
         return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
     }
 
@@ -128,55 +130,24 @@ async fn role_update(
     }
     perms.check()?;
 
-    d.role_update(req.room_id, req.role_id, json.clone())
-        .await?;
-    let end_role = d.role_select(req.room_id, req.role_id).await?;
-
-    let changes = Changes::new()
-        .change("name", &start_role.name, &end_role.name)
-        .change(
-            "description",
-            &start_role.description,
-            &end_role.description,
-        )
-        .change("allow", &start_role.allow, &end_role.allow)
-        .change("deny", &start_role.deny, &end_role.deny)
-        .change(
-            "is_self_applicable",
-            &start_role.is_self_applicable,
-            &end_role.is_self_applicable,
-        )
-        .change(
-            "is_mentionable",
-            &start_role.is_mentionable,
-            &end_role.is_mentionable,
-        )
-        .change("hoist", &start_role.hoist, &end_role.hoist)
-        .build();
-
-    let al = auth.audit_log(req.room_id);
-    al.commit_success(AuditLogEntryType::RoleUpdate { changes })
+    let end_role = srv
+        .role
+        .update(req.room_id, req.role_id, &mut auth, json)
         .await?;
 
-    let msg = MessageSync::RoleUpdate {
-        role: end_role.clone(),
-    };
-    if end_role.allow != start_role.allow || end_role.deny != start_role.deny {
-        s.services().perms.invalidate_room_all(req.room_id).await;
-    }
-    s.broadcast_room(req.room_id, auth.user.id, msg).await?;
     Ok(Json(end_role).into_response())
 }
 
 /// Role delete
 #[handler(routes::role_delete)]
 async fn role_delete(
-    auth: Auth,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::role_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    auth.user.ensure_unsuspended()?;
+    let user = auth.ensure_user()?;
+    user.ensure_unsuspended()?;
     if req.room_id.into_inner() == req.role_id.into_inner() {
         return Err(ApiError::from_code(ErrorCode::CannotModifyDefaultRole).into());
     }
@@ -185,11 +156,12 @@ async fn role_delete(
 
     let room = srv.rooms.get(req.room_id, None).await?;
 
+    // TODO: clean up duplicate checks (roles service also checks require sudo/mfa)
     if room.security.require_sudo {
         auth.ensure_sudo()?;
     }
     if room.security.require_mfa {
-        let user = srv.users.get(auth.user.id, None).await?;
+        let user = srv.users.get(user.id, None).await?;
         let totp = d.auth_totp_get(user.id).await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
             return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
@@ -198,43 +170,21 @@ async fn role_delete(
 
     let mut perms = srv
         .perms
-        .for_room3(Some(auth.user.id), req.room_id)
+        .for_room3(Some(user.id), req.room_id)
         .await?
         .ensure_view()?;
     perms.needs(Permission::RoleManage);
     perms.check()?;
 
     let role = d.role_select(req.room_id, req.role_id).await?;
-    let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
+    let rank = srv.perms.get_user_rank(req.room_id, user.id).await?;
     let room = srv.rooms.get(req.room_id, None).await?;
-    if rank <= role.position && room.owner_id != Some(auth.user.id) {
+    if rank <= role.position && room.owner_id != Some(user.id) {
         return Err(ApiError::from_code(ErrorCode::InsufficientRank).into());
     }
     if role.member_count == 0 || req.query.fallback_role_id.is_some() {
-        d.role_delete(req.room_id, req.role_id).await?;
+        srv.role.delete(req.room_id, req.role_id, &mut auth).await?;
 
-        let al = auth.audit_log(req.room_id);
-        al.commit_success(AuditLogEntryType::RoleDelete {
-            role_id: req.role_id,
-            changes: Changes::new()
-                .remove("name", &role.name)
-                .remove("description", &role.description)
-                .remove("allow", &role.allow)
-                .remove("deny", &role.deny)
-                .remove("is_self_applicable", &role.is_self_applicable)
-                .remove("is_mentionable", &role.is_mentionable)
-                .remove("hoist", &role.hoist)
-                .remove("member_count", &role.member_count)
-                .build(),
-        })
-        .await?;
-
-        let msg = MessageSync::RoleDelete {
-            room_id: req.room_id,
-            role_id: req.role_id,
-        };
-        srv.perms.invalidate_room_all(req.room_id).await;
-        s.broadcast_room(req.room_id, auth.user.id, msg).await?;
         Ok(StatusCode::NO_CONTENT)
     } else {
         Ok(StatusCode::CONFLICT)

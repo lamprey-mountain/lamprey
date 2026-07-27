@@ -9,6 +9,7 @@ use common::v1::types::{
     PaginationQuery, PaginationResponse, Permission, Role, RoleCreate, RoleId, RolePatch,
     RoleReorder, RoomId, RoomMember, UserId,
 };
+use kerosene_core::types::auth::{Auth5, Auth5Ext};
 use moka::future::Cache;
 use validator::Validate;
 
@@ -31,10 +32,10 @@ impl ServiceRoles {
         }
     }
 
-    pub async fn create(
+    pub async fn create<A: Auth5>(
         &self,
         room_id: RoomId,
-        auth: &Auth,
+        auth: &mut A,
         json: RoleCreate,
         nonce: Option<String>,
     ) -> Result<Role> {
@@ -42,7 +43,7 @@ impl ServiceRoles {
             self.idempotency_keys
                 .try_get_with(
                     n.clone(),
-                    self.create_inner(room_id, auth, json, nonce.clone()),
+                    Box::pin(self.create_inner(room_id, auth, json, nonce.clone())),
                 )
                 .await
                 .map_err(|err| err.fake_clone())
@@ -51,10 +52,10 @@ impl ServiceRoles {
         }
     }
 
-    async fn create_inner(
+    async fn create_inner<A: Auth5>(
         &self,
         room_id: RoomId,
-        auth: &Auth,
+        auth: &mut A,
         json: RoleCreate,
         nonce: Option<String>,
     ) -> Result<Role> {
@@ -62,7 +63,8 @@ impl ServiceRoles {
         let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let user = auth.ensure_user()?;
+        let user_id = user.id;
         let room = srv.rooms.get(room_id, Some(user_id)).await?;
 
         if room.security.require_sudo {
@@ -127,11 +129,11 @@ impl ServiceRoles {
             .add("sticky", &role.sticky)
             .build();
 
-        // FIXME: audit log
-        let _ = auth;
-        // let al = auth.audit_log(room_id);
-        // al.commit_success(AuditLogEntryType::RoleCreate { changes })
-        //     .await?;
+        auth.set_room_id(room_id);
+        auth.al_push(AuditLogEntryType::RoleCreate {
+            role_id: Some(role.id),
+            changes,
+        });
 
         let msg = MessageSync::RoleCreate { role: role.clone() };
         self.state.messaging().broadcast_room(room_id, msg).await?;
@@ -154,17 +156,18 @@ impl ServiceRoles {
             .ok_or(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRole)))
     }
 
-    pub async fn update(
+    pub async fn update<A: Auth5>(
         &self,
         room_id: RoomId,
         role_id: RoleId,
-        auth: &Auth,
+        auth: &mut A,
         json: RolePatch,
     ) -> Result<Role> {
         let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let user = auth.ensure_user()?;
+        let user_id = user.id;
         let room = srv.rooms.get(room_id, Some(user_id)).await?;
 
         if room.security.require_sudo {
@@ -213,11 +216,11 @@ impl ServiceRoles {
             .change("sticky", &role_before.sticky, &role.sticky)
             .build();
 
-        // FIXME: audit log
-        let _ = auth;
-        // let al = auth.audit_log(room_id);
-        // al.commit_success(AuditLogEntryType::RoleUpdate { changes })
-        //     .await?;
+        auth.set_room_id(room_id);
+        auth.al_push(AuditLogEntryType::RoleUpdate {
+            role_id: Some(role.id),
+            changes,
+        });
 
         let msg = MessageSync::RoleUpdate { role: role.clone() };
         self.state.messaging().broadcast_room(room_id, msg).await?;
@@ -227,11 +230,17 @@ impl ServiceRoles {
         Ok(role)
     }
 
-    pub async fn delete(&self, room_id: RoomId, role_id: RoleId, auth: &Auth) -> Result<()> {
+    pub async fn delete<A: Auth5>(
+        &self,
+        room_id: RoomId,
+        role_id: RoleId,
+        auth: &mut A,
+    ) -> Result<()> {
         let mut data = self.state.begin().await?;
         let srv = self.state.services();
 
-        let user_id = auth.user_id().ok_or(Error::UnauthSession)?;
+        let user = auth.ensure_user()?;
+        let user_id = user.id;
         let room = srv.rooms.get(room_id, Some(user_id)).await?;
 
         if room.security.require_sudo {
@@ -264,11 +273,8 @@ impl ServiceRoles {
             .remove("deny", &role.deny)
             .build();
 
-        // FIXME: audit log
-        let _ = auth;
-        // let al = auth.audit_log(room_id);
-        // al.commit_success(AuditLogEntryType::RoleDelete { role_id, changes })
-        //     .await?;
+        auth.set_room_id(room_id);
+        auth.al_push(AuditLogEntryType::RoleDelete { role_id, changes });
 
         let msg = MessageSync::RoleDelete { room_id, role_id };
         self.state.messaging().broadcast_room(room_id, msg).await?;

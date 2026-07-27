@@ -1,12 +1,12 @@
 use common::{
     v1::types::{
-        Session, SessionStatus, User,
+        AuditLogEntryStatus, AuditLogEntryType, Session, SessionStatus, User,
         error::{ApiError, ApiResult, ErrorCode},
         federation::Hostname,
         oauth::{Scope, Scopes},
         util::Time,
     },
-    v2::types::UserId,
+    v2::types::{RoomId, UserId},
 };
 
 use crate::prelude::*;
@@ -149,84 +149,40 @@ impl Identity {
     }
 }
 
-#[cfg(any())]
-mod arst {
-    // impl Auth4 {
-    //     pub async fn audit_log(
-    //         &mut self,
-    //         room_id: RoomId,
-    //         ty: AuditLogEntryType,
-    //     ) -> Result<AuditTxnHandle> {
-    //         todo!()
-    //     }
-    // }
+/// authentication and authorization state for a request
+pub trait Auth5: Send {
+    fn identity(&self) -> &Identity;
 
-    // pub struct AuditTxnHandle<'req> {
-    //     pub(super) slot: AuditTxnSlot,
-    //     _phantom: PhantomData<&'req ()>,
-    // }
+    /// set the room id for this request, for audit logging
+    fn set_room_id(&mut self, room_id: RoomId);
 
-    impl Auth4 {
-        /// begin an audit log transaction
-        #[must_use = "must call commit() to save a successful audit log entry"]
-        pub async fn begin_audit_log(
-            &self,
-            room_id: RoomId,
-            ty: AuditLogEntryType,
-        ) -> Result<AuditTxnHandle> {
-            todo!()
-        }
+    /// create an audit log entry for this request
+    fn al_push(&mut self, ty: AuditLogEntryType);
+
+    /// set the status to use for audit log entries
+    fn al_status(&mut self, status: AuditLogEntryStatus);
+}
+
+pub trait Auth5Ext: Auth5 {
+    fn ensure_user(&self) -> ApiResult<&User> {
+        self.identity().ensure_user()
     }
 
-    /// a handle to an [`AuditTxn`]
-    pub struct AuditTxnHandle {
-        pub(super) slot: AuditTxnSlot,
+    fn ensure_session(&self) -> ApiResult<&Session> {
+        self.identity().ensure_session()
     }
 
-    impl AuditTxnHandle {
-        fn set_status(&mut self, status: AuditLogEntryStatus) {
-            todo!()
-            // let mut txn = self
-            //     .slot
-            //     .try_lock()
-            //     .expect("AuditTxnSlot lock should not be contended during set_status");
-            // if let AuditTxnState::Created(ctx) = &mut txn.as_mut().unwrap().state {
-            //     ctx.status = Some(status);
-            // }
-        }
-
-        /// mark this audit log transaction as successful
-        pub fn success(mut self) {
-            self.set_status(AuditLogEntryStatus::Success);
-        }
-
-        pub fn unauthorized(mut self) {
-            self.set_status(AuditLogEntryStatus::Unauthorized);
-        }
-
-        /// mark this audit log transaction as failed
-        pub fn failed(mut self) {
-            self.set_status(AuditLogEntryStatus::Failed);
-        }
+    fn ensure_origin(&self) -> ApiResult<&Hostname> {
+        self.identity().ensure_origin()
     }
 
-    // /// authentication and authorization
-    // pub struct ReqState {
-    //     identity: Identity,
-    //     audit_log: AuditLogFoo,
-    // }
+    fn ensure_scopes(&self, scopes: &[Scope]) -> ApiResult<()> {
+        self.identity().ensure_scopes(scopes)
+    }
 
-    // impl AuditLogFoo {
-    //     pub fn set_room_id(&mut self);
-    //     pub fn set_entry_type(&mut self);
-    //     pub fn set_status(&mut self);
-    // }
-
-    mod next {
-        pub struct AuditLoggerState;
-
-        impl AuditLoggerState {
-            //
-        }
+    fn ensure_sudo(&self) -> ApiResult<()> {
+        self.identity().ensure_sudo()
     }
 }
+
+impl<T: Auth5> Auth5Ext for T {}

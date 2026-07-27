@@ -10,6 +10,7 @@ use common::v1::types::{
     User, UserId,
 };
 use common::v2::types::MessageVerId;
+use kerosene_core::types::auth::{Auth5, Auth5Ext};
 use moka::future::Cache;
 use moka::ops::compute::Op as CacheOp;
 use time::OffsetDateTime;
@@ -18,7 +19,6 @@ use validator::Validate;
 
 use crate::globals::messaging::Broadcast;
 use crate::prelude::*;
-use crate::routes::util::auth::Auth4;
 use crate::types::{DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCreate};
 use lamprey_backend_core::types::search::ChannelVisibility;
 
@@ -287,458 +287,448 @@ impl ServiceChannels {
         self.cache_thread_recipients.invalidate_all();
     }
 
-    pub fn create_channel<'a>(
-        &'a self,
-        auth: &'a Auth4,
+    // FIXME: does this need to be pinboxed?
+    pub async fn create_channel<A: Auth5>(
+        &self,
+        auth: &mut A,
         room_id: Option<RoomId>,
         json: ChannelCreate,
         nonce: Option<String>,
-    ) -> futures::future::BoxFuture<'a, Result<Channel>> {
-        Box::pin(async move {
-            if let Some(n) = &nonce {
-                self.idempotency_keys
-                    .try_get_with(
-                        n.clone(),
-                        self.create_channel_inner(auth, room_id, json, nonce.clone()),
-                    )
-                    .await
-                    .map_err(|err| err.fake_clone())
-            } else {
-                self.create_channel_inner(auth, room_id, json, nonce).await
-            }
-        })
+    ) -> Result<Channel> {
+        if let Some(n) = &nonce {
+            self.idempotency_keys
+                .try_get_with(
+                    n.clone(),
+                    Box::pin(self.create_channel_inner(auth, room_id, json, nonce.clone())),
+                )
+                .await
+                .map_err(|err| err.fake_clone())
+        } else {
+            Box::pin(self.create_channel_inner(auth, room_id, json, nonce)).await
+        }
     }
 
-    fn create_channel_inner<'a>(
-        &'a self,
-        auth: &'a Auth4,
+    // WARNING: this fn is too big and needs to be pinboxed to prevent a stack overflow
+    async fn create_channel_inner<A: Auth5>(
+        &self,
+        auth: &mut A,
         room_id: Option<RoomId>,
         json: ChannelCreate,
         nonce: Option<String>,
-    ) -> futures::future::BoxFuture<'a, Result<Channel>> {
-        Box::pin(async move {
-            json.validate()?;
-            // TODO(al2): use this when creating a channel
-            let channel_id = ChannelId::new();
-            // FIXME: audit log
-            // let al = if let Some(room_id) = room_id {
-            //     let ty = AuditLogEntryType::ChannelCreate {
-            //         channel_id,
-            //         channel_type: json.ty,
-            //         changes: Changes::new()
-            //             .add("name", &json.name)
-            //             .add("description", &json.description)
-            //             .add("nsfw", &json.nsfw)
-            //             .add("user_limit", &json.user_limit)
-            //             .add("bitrate", &json.bitrate)
-            //             .add("type", &json.ty)
-            //             .add("parent_id", &json.parent_id)
-            //             .add("url", &json.url)
-            //             .build(),
-            //     };
-            //     auth.begin_audit_log(room_id, ty).await.ok()
-            //     None
-            // } else {
-            //     None
-            // };
-            let srv = self.state.services();
-            let mut data = self.state.begin().await?;
-            let user = auth.ensure_user()?;
-            let perms = if let Some(parent_id) = json.parent_id {
-                srv.perms.for_channel(user.id, parent_id).await?
-            } else if let Some(room_id) = room_id {
-                srv.perms.for_room(user.id, room_id).await?
-            } else {
-                return Err(Error::BadStatic(
-                    "Channel must have a parent or be in a room",
-                ));
-            };
-            perms.ensure(Permission::ChannelView)?;
+    ) -> Result<Channel> {
+        json.validate()?;
+        // TODO(al2): use this when creating a channel
+        let channel_id = ChannelId::new();
 
-            let parent_id_opt = json.parent_id;
-            let parent = if let Some(parent_id) = parent_id_opt {
-                Some(srv.channels.get(parent_id, Some(user.id)).await?)
-            } else {
-                None
+        if let Some(room_id) = room_id {
+            let ty = AuditLogEntryType::ChannelCreate {
+                channel_id,
+                channel_type: json.ty,
+                changes: Changes::new()
+                    .add("name", &json.name)
+                    .add("description", &json.description)
+                    .add("nsfw", &json.nsfw)
+                    .add("user_limit", &json.user_limit)
+                    .add("bitrate", &json.bitrate)
+                    .add("type", &json.ty)
+                    .add("parent_id", &json.parent_id)
+                    .add("url", &json.url)
+                    .build(),
             };
+            auth.set_room_id(room_id);
+            auth.al_push(ty)
+        };
 
-            if !json.ty.can_be_in(parent.as_ref().map(|c| c.ty)) {
-                return Err(Error::BadStatic("invalid parent channel type"));
+        let srv = self.state.services();
+        let mut data = self.state.begin().await?;
+        let user = auth.ensure_user()?;
+        let user_id = user.id;
+        let perms = if let Some(parent_id) = json.parent_id {
+            srv.perms.for_channel(user.id, parent_id).await?
+        } else if let Some(room_id) = room_id {
+            srv.perms.for_room(user.id, room_id).await?
+        } else {
+            return Err(Error::BadStatic(
+                "Channel must have a parent or be in a room",
+            ));
+        };
+        perms.ensure(Permission::ChannelView)?;
+
+        let parent_id_opt = json.parent_id;
+        let parent = if let Some(parent_id) = parent_id_opt {
+            Some(srv.channels.get(parent_id, Some(user.id)).await?)
+        } else {
+            None
+        };
+
+        if !json.ty.can_be_in(parent.as_ref().map(|c| c.ty)) {
+            return Err(Error::BadStatic("invalid parent channel type"));
+        }
+
+        match json.ty {
+            ChannelType::Text
+            | ChannelType::Announcement
+            | ChannelType::Forum
+            | ChannelType::Forum2
+            | ChannelType::Voice
+            | ChannelType::Broadcast
+            | ChannelType::Category
+            | ChannelType::Calendar
+            | ChannelType::Ticket
+            | ChannelType::Info
+            | ChannelType::Wiki
+            | ChannelType::Scripts => {
+                perms.ensure(Permission::ChannelManage)?;
             }
+            ChannelType::ThreadPublic => {
+                perms.ensure(Permission::ThreadCreatePublic)?;
 
-            match json.ty {
-                ChannelType::Text
-                | ChannelType::Announcement
-                | ChannelType::Forum
-                | ChannelType::Forum2
-                | ChannelType::Voice
-                | ChannelType::Broadcast
-                | ChannelType::Category
-                | ChannelType::Calendar
-                | ChannelType::Ticket
-                | ChannelType::Info
-                | ChannelType::Wiki
-                | ChannelType::Scripts => {
-                    perms.ensure(Permission::ChannelManage)?;
-                }
-                ChannelType::ThreadPublic => {
-                    perms.ensure(Permission::ThreadCreatePublic)?;
-
-                    if !perms.can_bypass_slowmode() {
-                        if let Some(parent_id) = parent_id_opt {
-                            if let Some(thread_slowmode_expire_at) = data
-                                .channel_get_thread_slowmode_expire_at(parent_id, user.id)
-                                .await?
-                            {
-                                if thread_slowmode_expire_at > Time::now_utc() {
-                                    return Err(Error::BadStatic("slowmode in effect"));
-                                }
+                if !perms.can_bypass_slowmode() {
+                    if let Some(parent_id) = parent_id_opt {
+                        if let Some(thread_slowmode_expire_at) = data
+                            .channel_get_thread_slowmode_expire_at(parent_id, user.id)
+                            .await?
+                        {
+                            if thread_slowmode_expire_at > Time::now_utc() {
+                                return Err(Error::BadStatic("slowmode in effect"));
                             }
+                        }
 
-                            // parent is checked to be Some above
-                            if let Some(slowmode_delay) = parent.as_ref().unwrap().slowmode_thread {
-                                let next_thread_time = Time::now_utc()
-                                    + std::time::Duration::from_secs(slowmode_delay);
-                                data.channel_set_thread_slowmode_expire_at(
-                                    parent_id,
-                                    user.id,
-                                    next_thread_time,
-                                )
-                                .await?;
-                            }
+                        // parent is checked to be Some above
+                        if let Some(slowmode_delay) = parent.as_ref().unwrap().slowmode_thread {
+                            let next_thread_time =
+                                Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
+                            data.channel_set_thread_slowmode_expire_at(
+                                parent_id,
+                                user.id,
+                                next_thread_time,
+                            )
+                            .await?;
                         }
                     }
                 }
-                ChannelType::ThreadForum2 => {
-                    perms.ensure(Permission::ThreadCreatePublic)?;
+            }
+            ChannelType::ThreadForum2 => {
+                perms.ensure(Permission::ThreadCreatePublic)?;
 
-                    if !perms.can_bypass_slowmode() {
-                        if let Some(parent_id) = parent_id_opt {
-                            if let Some(thread_slowmode_expire_at) = data
-                                .channel_get_thread_slowmode_expire_at(parent_id, user.id)
-                                .await?
-                            {
-                                if thread_slowmode_expire_at > Time::now_utc() {
-                                    return Err(Error::BadStatic("slowmode in effect"));
-                                }
+                if !perms.can_bypass_slowmode() {
+                    if let Some(parent_id) = parent_id_opt {
+                        if let Some(thread_slowmode_expire_at) = data
+                            .channel_get_thread_slowmode_expire_at(parent_id, user.id)
+                            .await?
+                        {
+                            if thread_slowmode_expire_at > Time::now_utc() {
+                                return Err(Error::BadStatic("slowmode in effect"));
                             }
+                        }
 
-                            if let Some(slowmode_delay) = parent.as_ref().unwrap().slowmode_thread {
-                                let next_thread_time = Time::now_utc()
-                                    + std::time::Duration::from_secs(slowmode_delay);
-                                data.channel_set_thread_slowmode_expire_at(
-                                    parent_id,
-                                    user.id,
-                                    next_thread_time,
-                                )
-                                .await?;
-                            }
+                        if let Some(slowmode_delay) = parent.as_ref().unwrap().slowmode_thread {
+                            let next_thread_time =
+                                Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
+                            data.channel_set_thread_slowmode_expire_at(
+                                parent_id,
+                                user.id,
+                                next_thread_time,
+                            )
+                            .await?;
                         }
                     }
                 }
-                ChannelType::ThreadPrivate => {
-                    perms.ensure(Permission::ThreadCreatePrivate)?;
+            }
+            ChannelType::ThreadPrivate => {
+                perms.ensure(Permission::ThreadCreatePrivate)?;
 
-                    if !perms.can_bypass_slowmode() {
-                        if let Some(parent_id) = parent_id_opt {
-                            if let Some(thread_slowmode_expire_at) = data
-                                .channel_get_thread_slowmode_expire_at(parent_id, user.id)
-                                .await?
-                            {
-                                if thread_slowmode_expire_at > Time::now_utc() {
-                                    return Err(Error::BadStatic("slowmode in effect"));
-                                }
+                if !perms.can_bypass_slowmode() {
+                    if let Some(parent_id) = parent_id_opt {
+                        if let Some(thread_slowmode_expire_at) = data
+                            .channel_get_thread_slowmode_expire_at(parent_id, user.id)
+                            .await?
+                        {
+                            if thread_slowmode_expire_at > Time::now_utc() {
+                                return Err(Error::BadStatic("slowmode in effect"));
                             }
+                        }
 
-                            if let Some(slowmode_delay) = parent.as_ref().unwrap().slowmode_thread {
-                                let next_thread_time = Time::now_utc()
-                                    + std::time::Duration::from_secs(slowmode_delay);
-                                data.channel_set_thread_slowmode_expire_at(
-                                    parent_id,
-                                    user.id,
-                                    next_thread_time,
-                                )
-                                .await?;
-                            }
+                        if let Some(slowmode_delay) = parent.as_ref().unwrap().slowmode_thread {
+                            let next_thread_time =
+                                Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
+                            data.channel_set_thread_slowmode_expire_at(
+                                parent_id,
+                                user.id,
+                                next_thread_time,
+                            )
+                            .await?;
                         }
                     }
                 }
-                ChannelType::Dm | ChannelType::Gdm => {
-                    return Err(Error::BadStatic(
-                        "can't create a direct message thread in a room",
-                    ));
-                }
-                ChannelType::Document => {
-                    if let Some(parent) = parent.as_ref() {
-                        if parent.ty == ChannelType::Wiki {
-                            perms.ensure(Permission::DocumentCreate)?;
-                        } else {
-                            perms.ensure(Permission::ChannelManage)?;
-                        }
+            }
+            ChannelType::Dm | ChannelType::Gdm => {
+                return Err(Error::BadStatic(
+                    "can't create a direct message thread in a room",
+                ));
+            }
+            ChannelType::Document => {
+                if let Some(parent) = parent.as_ref() {
+                    if parent.ty == ChannelType::Wiki {
+                        perms.ensure(Permission::DocumentCreate)?;
                     } else {
                         perms.ensure(Permission::ChannelManage)?;
                     }
+                } else {
+                    perms.ensure(Permission::ChannelManage)?;
                 }
-                ChannelType::DocumentComment => {
-                    perms.ensure(Permission::DocumentComment)?;
-                }
-                ChannelType::DocumentBranch => {
-                    return Err(Error::BadStatic(
-                        "can't manually create a document branch thread",
-                    ));
-                }
-            };
-            if json
-                .bitrate
-                .is_some_and(|b| b > self.state.config().limits.room.max_bitrate as u64)
-            {
-                return Err(Error::BadStatic("bitrate is too high"));
             }
-            // TODO: move some of this validation to common
-            if json.bitrate.is_some() {
-                json.ty.ensure_has_voice()?;
+            ChannelType::DocumentComment => {
+                perms.ensure(Permission::DocumentComment)?;
             }
-            if json.user_limit.is_some() {
-                json.ty.ensure_has_voice()?;
-            }
-            if json.icon.is_some() {
-                json.ty.ensure_has_icon()?;
-            }
-            if json.url.is_some() {
-                json.ty.ensure_has_url()?;
-            }
-
-            if json.default_auto_archive_duration.is_some() {
-                json.ty.ensure_has_threads()?;
-            }
-
-            if json.auto_archive_duration.is_some() {
-                json.ty.ensure_is_thread()?;
-            }
-
-            if json.ty == ChannelType::ThreadForum2 && json.starter_message.is_none() {
+            ChannelType::DocumentBranch => {
                 return Err(Error::BadStatic(
-                    "starter_message is required for Forum2 threads",
+                    "can't manually create a document branch thread",
                 ));
             }
+        };
+        if json
+            .bitrate
+            .is_some_and(|b| b > self.state.config().limits.room.max_bitrate as u64)
+        {
+            return Err(Error::BadStatic("bitrate is too high"));
+        }
+        // TODO: move some of this validation to common
+        if json.bitrate.is_some() {
+            json.ty.ensure_has_voice()?;
+        }
+        if json.user_limit.is_some() {
+            json.ty.ensure_has_voice()?;
+        }
+        if json.icon.is_some() {
+            json.ty.ensure_has_icon()?;
+        }
+        if json.url.is_some() {
+            json.ty.ensure_has_url()?;
+        }
 
-            if json.starter_message.is_some() {
-                json.ty.ensure_is_thread()?;
+        if json.default_auto_archive_duration.is_some() {
+            json.ty.ensure_has_threads()?;
+        }
+
+        if json.auto_archive_duration.is_some() {
+            json.ty.ensure_is_thread()?;
+        }
+
+        if json.ty == ChannelType::ThreadForum2 && json.starter_message.is_none() {
+            return Err(Error::BadStatic(
+                "starter_message is required for Forum2 threads",
+            ));
+        }
+
+        if json.starter_message.is_some() {
+            json.ty.ensure_is_thread()?;
+        }
+
+        if let Some(icon) = json.icon {
+            let media = data.media_select(icon).await?;
+            if !media.metadata.is_image() {
+                return Err(Error::BadStatic("media not an image"));
+            }
+        }
+
+        if let Some(tags) = &json.tags {
+            if !json.ty.is_taggable() {
+                return Err(Error::BadStatic("channel type is not taggable"));
             }
 
-            if let Some(icon) = json.icon {
-                let media = data.media_select(icon).await?;
-                if !media.metadata.is_image() {
-                    return Err(Error::BadStatic("media not an image"));
-                }
+            let parent_id = json.parent_id.ok_or(Error::BadStatic(
+                "threads must have a parent channel to have tags",
+            ))?;
+
+            let available_tags = data.tag_get_many(parent_id, tags).await?;
+            if available_tags.len() != tags.len() {
+                return Err(Error::BadStatic("invalid tag(s) for this forum"));
             }
 
-            if let Some(tags) = &json.tags {
-                if !json.ty.is_taggable() {
-                    return Err(Error::BadStatic("channel type is not taggable"));
-                }
+            let available_tags_map: HashMap<_, _> =
+                available_tags.iter().map(|t| (t.id, t)).collect();
 
-                let parent_id = json.parent_id.ok_or(Error::BadStatic(
-                    "threads must have a parent channel to have tags",
-                ))?;
+            // check permissions for each tag
+            for tag_id in tags {
+                let Some(tag) = available_tags_map.get(tag_id) else {
+                    return Err(Error::BadStatic("invalid tag for this forum"));
+                };
 
-                let available_tags = data.tag_get_many(parent_id, tags).await?;
-                if available_tags.len() != tags.len() {
-                    return Err(Error::BadStatic("invalid tag(s) for this forum"));
-                }
-
-                let available_tags_map: HashMap<_, _> =
-                    available_tags.iter().map(|t| (t.id, t)).collect();
-
-                // check permissions for each tag
-                for tag_id in tags {
-                    let Some(tag) = available_tags_map.get(tag_id) else {
-                        return Err(Error::BadStatic("invalid tag for this forum"));
-                    };
-
-                    if tag.restricted {
-                        if !perms.has(Permission::ThreadEdit)
-                            && !perms.has(Permission::ThreadManage)
-                        {
-                            return Err(Error::BadStatic(
-                                "missing permission to apply restricted tag",
-                            ));
-                        }
+                if tag.restricted {
+                    if !perms.has(Permission::ThreadEdit) && !perms.has(Permission::ThreadManage) {
+                        return Err(Error::BadStatic(
+                            "missing permission to apply restricted tag",
+                        ));
                     }
                 }
             }
+        }
 
-            let channel_id = data
-                .channel_create(DbChannelCreate {
-                    room_id: room_id.map(|id| id.into_inner()),
-                    creator_id: user.id,
-                    name: json.name.clone(),
-                    description: json.description.clone(),
-                    ty: match json.ty {
-                        ChannelType::Dm | ChannelType::Gdm => {
-                            // this should be unreachable due to the check above
-                            // TODO: allow creating dm channels?
-                            warn!("unreachable: dm/gdm thread creation in room");
-                            return Err(Error::BadStatic(
-                                "can't create a direct message thread in a room",
-                            ));
-                        }
-                        ty => ty.into(),
-                    },
-                    nsfw: json.nsfw,
-                    bitrate: json.bitrate.map(|b| b as i32),
-                    user_limit: json.user_limit.map(|u| u as i32),
-                    parent_id: json.parent_id.map(|i| *i),
-                    owner_id: None,
-                    icon: json.icon.map(|i| *i),
-                    invitable: json.invitable,
-                    auto_archive_duration: json.auto_archive_duration.map(|d| d as i64),
-                    default_auto_archive_duration: json
-                        .default_auto_archive_duration
-                        .map(|d| d as i64),
-                    slowmode_thread: json.slowmode_thread.map(|d| d as i64),
-                    slowmode_message: json.slowmode_message.map(|d| d as i64),
-                    default_slowmode_message: json.default_slowmode_message.map(|d| d as i64),
-                    tags: json.tags,
-                    url: json.url,
-                    locked: false,
-                })
-                .await?;
-
-            if let Some(room_id) = room_id {
-                data.room_template_mark_dirty(room_id).await?;
-            }
-
-            if let Some(icon) = json.icon {
-                data.media_link_create_exclusive(
-                    icon,
-                    *channel_id,
-                    crate::types::MediaLinkType::ChannelIcon,
-                )
-                .await?;
-            }
-
-            for overwrite in json.permission_overwrites {
-                data.permission_overwrite_upsert(
-                    channel_id,
-                    overwrite.id,
-                    overwrite.ty,
-                    overwrite.allow,
-                    overwrite.deny,
-                )
-                .await?;
-            }
-
-            data.thread_member_put(channel_id, user.id, ThreadMemberPut {})
-                .await?;
-            let thread_member = data.thread_member_get(channel_id, user.id).await?;
-
-            let channel = srv.channels.get(channel_id, Some(user.id)).await?;
-
-            if let Some(starter_message) = json.starter_message {
-                if json.ty.is_thread() {
-                    srv.messages
-                        .create(
-                            channel_id,
-                            auth,
-                            None,
-                            starter_message,
-                            None,
-                            (*channel_id).into(),
-                        )
-                        .await?;
-                } else {
-                    // FIXME: don't return an error after already creating the channel!
-                    return Err(Error::BadStatic(
-                        "starter_message can only be used with thread channels",
-                    ));
-                }
-            }
-
-            // if let Some(al) = al {
-            //     al.success();
-            // }
-
-            let broadcast = Broadcast::sync(MessageSync::ChannelCreate {
-                channel: Box::new(channel.clone()),
+        let channel_id = data
+            .channel_create(DbChannelCreate {
+                room_id: room_id.map(|id| id.into_inner()),
+                creator_id: user.id,
+                name: json.name.clone(),
+                description: json.description.clone(),
+                ty: match json.ty {
+                    ChannelType::Dm | ChannelType::Gdm => {
+                        // this should be unreachable due to the check above
+                        // TODO: allow creating dm channels?
+                        warn!("unreachable: dm/gdm thread creation in room");
+                        return Err(Error::BadStatic(
+                            "can't create a direct message thread in a room",
+                        ));
+                    }
+                    ty => ty.into(),
+                },
+                nsfw: json.nsfw,
+                bitrate: json.bitrate.map(|b| b as i32),
+                user_limit: json.user_limit.map(|u| u as i32),
+                parent_id: json.parent_id.map(|i| *i),
+                owner_id: None,
+                icon: json.icon.map(|i| *i),
+                invitable: json.invitable,
+                auto_archive_duration: json.auto_archive_duration.map(|d| d as i64),
+                default_auto_archive_duration: json.default_auto_archive_duration.map(|d| d as i64),
+                slowmode_thread: json.slowmode_thread.map(|d| d as i64),
+                slowmode_message: json.slowmode_message.map(|d| d as i64),
+                default_slowmode_message: json.default_slowmode_message.map(|d| d as i64),
+                tags: json.tags,
+                url: json.url,
+                locked: false,
             })
-            .with_option_nonce(nonce);
+            .await?;
 
-            if let Some(room_id) = room_id {
-                self.state
-                    .messaging()
-                    .broadcast_room(room_id, broadcast)
-                    .await?;
-            } else if let Some(parent_id) = json.parent_id {
-                self.state
-                    .messaging()
-                    .broadcast_channel(parent_id, broadcast)
-                    .await?;
-            }
+        if let Some(room_id) = room_id {
+            data.room_template_mark_dirty(room_id).await?;
+        }
 
-            // send a ThreadCreated message in the parent channel
+        if let Some(icon) = json.icon {
+            data.media_link_create_exclusive(
+                icon,
+                *channel_id,
+                crate::types::MediaLinkType::ChannelIcon,
+            )
+            .await?;
+        }
+
+        for overwrite in json.permission_overwrites {
+            data.permission_overwrite_upsert(
+                channel_id,
+                overwrite.id,
+                overwrite.ty,
+                overwrite.allow,
+                overwrite.deny,
+            )
+            .await?;
+        }
+
+        data.thread_member_put(channel_id, user.id, ThreadMemberPut {})
+            .await?;
+        let thread_member = data.thread_member_get(channel_id, user.id).await?;
+
+        let channel = srv.channels.get(channel_id, Some(user.id)).await?;
+
+        if let Some(starter_message) = json.starter_message {
             if json.ty.is_thread() {
-                if let Some(parent_id) = json.parent_id {
-                    let system_message_id = data
-                        .message_create(DbMessageCreate {
-                            id: None,
-                            channel_id: parent_id,
-                            attachment_ids: vec![],
-                            author_id: user.id,
-                            embeds: vec![],
-                            components: vec![],
-                            message_type: MessageType::ThreadCreated(MessageThreadCreated {
-                                source_message_id: None,
-                                thread_id: Some(channel.id),
-                            })
-                            .into(),
-                            created_at: None,
-                            removed_at: None,
-                            flume: None,
-                            mentions: Default::default(),
-                            interaction: None,
-                            ephemeral: false,
-                        })
-                        .await?;
-
-                    let system_message = srv
-                        .messages
-                        .get(parent_id, system_message_id, Some(user.id))
-                        .await?;
-
-                    self.state
-                        .messaging()
-                        .broadcast_channel(
-                            parent_id,
-                            MessageSync::MessageCreate {
-                                message: system_message,
-                            },
-                        )
-                        .await?;
-                }
+                srv.messages
+                    .create(
+                        channel_id,
+                        auth,
+                        None,
+                        starter_message,
+                        None,
+                        (*channel_id).into(),
+                    )
+                    .await?;
+            } else {
+                // FIXME: don't return an error after already creating the channel!
+                return Err(Error::BadStatic(
+                    "starter_message can only be used with thread channels",
+                ));
             }
+        }
 
+        let broadcast = Broadcast::sync(MessageSync::ChannelCreate {
+            channel: Box::new(channel.clone()),
+        })
+        .with_option_nonce(nonce);
+
+        if let Some(room_id) = room_id {
             self.state
                 .messaging()
-                .broadcast_channel(
-                    channel.id,
-                    MessageSync::ThreadMemberUpsert {
-                        room_id: channel.room_id,
-                        thread_id: channel.id,
-                        added: vec![thread_member],
-                        removed: vec![],
-                    },
-                )
+                .broadcast_room(room_id, broadcast)
                 .await?;
+        } else if let Some(parent_id) = json.parent_id {
+            self.state
+                .messaging()
+                .broadcast_channel(parent_id, broadcast)
+                .await?;
+        }
 
-            data.commit().await?;
-            Ok(channel)
-        })
+        // send a ThreadCreated message in the parent channel
+        if json.ty.is_thread() {
+            if let Some(parent_id) = json.parent_id {
+                let system_message_id = data
+                    .message_create(DbMessageCreate {
+                        id: None,
+                        channel_id: parent_id,
+                        attachment_ids: vec![],
+                        author_id: user_id,
+                        embeds: vec![],
+                        components: vec![],
+                        message_type: MessageType::ThreadCreated(MessageThreadCreated {
+                            source_message_id: None,
+                            thread_id: Some(channel.id),
+                        })
+                        .into(),
+                        created_at: None,
+                        removed_at: None,
+                        flume: None,
+                        mentions: Default::default(),
+                        interaction: None,
+                        ephemeral: false,
+                    })
+                    .await?;
+
+                let system_message = srv
+                    .messages
+                    .get(parent_id, system_message_id, Some(user_id))
+                    .await?;
+
+                self.state
+                    .messaging()
+                    .broadcast_channel(
+                        parent_id,
+                        MessageSync::MessageCreate {
+                            message: system_message,
+                        },
+                    )
+                    .await?;
+            }
+        }
+
+        self.state
+            .messaging()
+            .broadcast_channel(
+                channel.id,
+                MessageSync::ThreadMemberUpsert {
+                    room_id: channel.room_id,
+                    thread_id: channel.id,
+                    added: vec![thread_member],
+                    removed: vec![],
+                },
+            )
+            .await?;
+
+        data.commit().await?;
+        Ok(channel)
     }
 
-    pub async fn create_thread_from_message(
+    pub async fn create_thread_from_message<A: Auth5>(
         &self,
-        auth: &Auth4,
+        auth: &mut A,
         parent_channel_id: ChannelId,
         source_message_id: MessageId,
         mut json: ChannelCreate,
@@ -879,22 +869,22 @@ impl ServiceChannels {
                     .add("parent_id", &channel.parent_id)
                     .build(),
             };
-            // FIXME: audit log
-            // let al = auth.begin_audit_log(room_id, ty).await?;
-            // al.success();
+            auth.set_room_id(room_id);
+            auth.al_push(ty);
         }
 
         data.commit().await?;
         Ok(channel)
     }
 
-    pub async fn update(
+    pub async fn update<A: Auth5>(
         &self,
-        auth: &Auth4,
+        auth: &mut A,
         thread_id: ChannelId,
         patch: ChannelPatch,
     ) -> Result<Channel> {
         let user = auth.ensure_user()?;
+        let user_id = user.id;
         // check update perms
         let perms = self
             .state
@@ -1293,8 +1283,8 @@ impl ServiceChannels {
                     )
                     .build(),
             };
-            // FIXME: audit log
-            // auth.begin_audit_log(room_id, ty).await?.success();
+            auth.set_room_id(room_id);
+            auth.al_push(ty);
         }
 
         if chan_old.name != chan_new.name {
@@ -1304,7 +1294,7 @@ impl ServiceChannels {
                     id: None,
                     channel_id: thread_id,
                     attachment_ids: vec![],
-                    author_id: user.id,
+                    author_id: user_id,
                     embeds: vec![],
                     components: vec![],
                     message_type: MessageType::ChannelRename(MessageChannelRename {
@@ -1338,7 +1328,7 @@ impl ServiceChannels {
                     id: None,
                     channel_id: thread_id,
                     attachment_ids: vec![],
-                    author_id: user.id,
+                    author_id: user_id,
                     embeds: vec![],
                     components: vec![],
                     message_type: MessageType::ChannelIcon(MessageChannelIcon {
@@ -1373,7 +1363,7 @@ impl ServiceChannels {
                     id: None,
                     channel_id: thread_id,
                     attachment_ids: vec![],
-                    author_id: user.id,
+                    author_id: user_id,
                     embeds: vec![],
                     components: vec![],
                     message_type: MessageType::ChannelMoved(MessageChannelMoved {

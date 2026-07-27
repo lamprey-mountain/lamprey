@@ -31,7 +31,7 @@ mod util;
 // TODO: copy from crate-backend/src/serve/mod.rs
 
 /// create an axum router for the api
-pub fn create_router_api(_globals: Globals) -> Router {
+pub fn create_router_api(globals: Globals) -> Router {
     let state = Arc::new(globals.to_server_state());
     let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest("/api", routes::routes(state.clone()).fallback(api_fallback))

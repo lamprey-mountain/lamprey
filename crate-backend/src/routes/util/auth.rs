@@ -1,12 +1,14 @@
 use core::fmt;
 use std::{sync::Arc, time::Duration};
 
+use crate::routes::util::audit::{AuditTxnContext, AuditTxnSlot, AuditTxnState};
 use crate::{
     ServerState,
     prelude::*,
-    routes::util::{FederationIdentity, audit::AuditTxnSlot, headers::HeadersRequest},
+    routes::util::{FederationIdentity, headers::HeadersRequest},
 };
 use axum::extract::FromRequestParts;
+use common::v1::types::{AuditLogEntryStatus, AuditLogEntryType};
 use common::v1::types::{
     Session, SessionImprint, SessionStatus, SessionToken, SessionType, User, UserId,
     error::{ApiError, ErrorCode},
@@ -15,8 +17,9 @@ use common::v1::types::{
     oauth::{Scope, Scopes},
     util::Time,
 };
+use common::v2::types::RoomId;
 use http::request::Parts;
-use lamprey_backend_core::types::auth::Identity;
+use lamprey_backend_core::types::auth::{Auth5, Identity};
 
 #[derive(Clone)]
 pub struct Auth4 {
@@ -25,6 +28,8 @@ pub struct Auth4 {
     // TEMP: make begin_audit_log work
     pub(super) reason: Option<String>,
     pub(super) audit_txn_slot: AuditTxnSlot,
+    pub(super) room_id: Option<RoomId>,
+    pub(super) ty: Option<AuditLogEntryType>,
 }
 
 // TEMP: AuditTxnSlot is not Debug
@@ -180,6 +185,8 @@ impl Auth4 {
                     },
                     reason,
                     audit_txn_slot,
+                    room_id: None,
+                    ty: None,
                 });
             }
 
@@ -323,6 +330,8 @@ impl Auth4 {
                         },
                         reason,
                         audit_txn_slot,
+                        room_id: None,
+                        ty: None,
                     });
                 } else {
                     return Ok(Auth4 {
@@ -333,6 +342,8 @@ impl Auth4 {
                         },
                         reason,
                         audit_txn_slot,
+                        room_id: None,
+                        ty: None,
                     });
                 }
             } else {
@@ -349,6 +360,8 @@ impl Auth4 {
                     },
                     reason,
                     audit_txn_slot,
+                    room_id: None,
+                    ty: None,
                 });
             }
         }
@@ -377,6 +390,8 @@ impl Auth4 {
                 },
                 reason,
                 audit_txn_slot,
+                room_id: None,
+                ty: None,
             });
         }
 
@@ -385,6 +400,8 @@ impl Auth4 {
             identity: Identity::Public,
             reason,
             audit_txn_slot,
+            room_id: None,
+            ty: None,
         })
     }
 }
@@ -400,5 +417,45 @@ impl FromRequestParts<Arc<ServerState>> for Auth4 {
 impl From<Auth4> for kerosene_services::compat::routes::util::auth::Auth4 {
     fn from(value: Auth4) -> Self {
         Self::temp_wrap(value.identity)
+    }
+}
+
+// FIXME: allow pushing multiple audit log entries
+impl Auth5 for Auth4 {
+    fn identity(&self) -> &Identity {
+        &self.identity
+    }
+
+    fn set_room_id(&mut self, room_id: RoomId) {
+        self.room_id = Some(room_id);
+    }
+
+    fn al_push(&mut self, ty: AuditLogEntryType) {
+        // NOTE: is this even necessary
+        self.ty = Some(ty.clone());
+
+        if let Ok(mut txn) = self.audit_txn_slot.try_lock() {
+            if let Some(txn) = txn.as_mut() {
+                txn.begin(AuditTxnContext {
+                    room_id: self.room_id.expect("TODO: better error handling"),
+                    reason: self.reason.clone(),
+                    // NOTE: do i always want to set status to Success here?
+                    status: Some(AuditLogEntryStatus::Success),
+                    auth: self.clone(),
+                    application_id: self.session().and_then(|s| s.app_id),
+                    ty,
+                });
+            }
+        }
+    }
+
+    fn al_status(&mut self, status: AuditLogEntryStatus) {
+        if let Ok(mut txn) = self.audit_txn_slot.try_lock() {
+            if let Some(txn) = txn.as_mut() {
+                if let AuditTxnState::Created(ctx) = &mut txn.state {
+                    ctx.status = Some(status);
+                }
+            }
+        }
     }
 }

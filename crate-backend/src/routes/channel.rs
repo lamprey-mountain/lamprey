@@ -33,7 +33,7 @@ use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 /// Channel create room
 #[handler(routes::channel_create_room)]
 async fn channel_create_room(
-    auth: Auth4,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::channel_create_room::Request,
 ) -> Result<impl IntoResponse> {
@@ -59,7 +59,7 @@ async fn channel_create_room(
     let channel = s
         .services()
         .channels
-        .create_channel(&auth.into(), Some(req.room_id), json, req.idempotency_key)
+        .create_channel(&mut auth, Some(req.room_id), json, req.idempotency_key)
         .await?;
     Ok((StatusCode::CREATED, Json(channel)))
 }
@@ -404,7 +404,7 @@ async fn channel_reorder(
 /// Channel update
 #[handler(routes::channel_update)]
 async fn channel_update(
-    auth: Auth4,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::channel_update::Request,
 ) -> Result<impl IntoResponse> {
@@ -428,7 +428,7 @@ async fn channel_update(
 
     let chan = srv
         .channels
-        .update(&auth.into(), req.channel_id, req.patch.clone())
+        .update(&mut auth, req.channel_id, req.patch.clone())
         .await?;
 
     if let Some(icon) = req.patch.icon {
@@ -839,7 +839,7 @@ async fn channel_upgrade(
 /// Channel transfer ownership
 #[handler(routes::channel_transfer_ownership)]
 async fn channel_transfer_ownership(
-    auth: Auth4,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::channel_transfer_ownership::Request,
 ) -> Result<impl IntoResponse> {
@@ -868,7 +868,7 @@ async fn channel_transfer_ownership(
     let thread = srv
         .channels
         .update(
-            &auth.into(),
+            &mut auth,
             req.channel_id,
             ChannelPatch {
                 owner_id: Some(Some(target_user_id)),

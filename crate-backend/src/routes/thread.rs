@@ -377,7 +377,7 @@ async fn thread_list_atom(
 /// Thread create
 #[handler(routes::thread_create)]
 async fn thread_create(
-    auth: Auth4,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::thread_create::Request,
 ) -> Result<impl IntoResponse> {
@@ -412,7 +412,7 @@ async fn thread_create(
     let channel = s
         .services()
         .channels
-        .create_channel(&auth.into(), room_id, json, None)
+        .create_channel(&mut auth, room_id, json, None)
         .await?;
 
     Ok(Json(channel))
@@ -421,7 +421,7 @@ async fn thread_create(
 /// Thread create from message
 #[handler(routes::thread_create_from_message)]
 async fn thread_create_from_message(
-    auth: Auth4,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::thread_create_from_message::Request,
 ) -> Result<impl IntoResponse> {
@@ -430,7 +430,7 @@ async fn thread_create_from_message(
     let channel = s
         .services()
         .channels
-        .create_thread_from_message(&auth.into(), req.channel_id, req.message_id, req.thread)
+        .create_thread_from_message(&mut auth, req.channel_id, req.message_id, req.thread)
         .await?;
 
     Ok(Json(channel))

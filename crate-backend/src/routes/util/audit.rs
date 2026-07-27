@@ -23,7 +23,7 @@ pub type AuditTxnSlot = Arc<Mutex<Option<AuditTxn>>>;
 pub struct AuditTxn {
     s: Arc<ServerState>,
     started_at: Time,
-    state: AuditTxnState,
+    pub(super) state: AuditTxnState,
 }
 
 #[derive(Debug, Clone)]

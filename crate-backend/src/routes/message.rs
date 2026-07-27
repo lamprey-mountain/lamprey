@@ -27,7 +27,7 @@ use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 #[handler(routes::message_create)]
 async fn message_create(
     State(s): State<Arc<ServerState>>,
-    req: UniversalExtractor<routes::message_create::Request>,
+    mut req: UniversalExtractor<routes::message_create::Request>,
 ) -> Result<impl IntoResponse> {
     let user = req.auth.ensure_user()?;
     user.ensure_unsuspended()?;
@@ -48,7 +48,7 @@ async fn message_create(
         .messages
         .create(
             req.body.channel_id,
-            &req.auth.into(),
+            &mut req.auth,
             req.body.idempotency_key,
             req.body.message,
             header_timestamp,
@@ -151,7 +151,7 @@ async fn message_get(
 /// Message edit
 #[handler(routes::message_edit)]
 async fn message_edit(
-    auth: Auth4,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::message_edit::Request,
 ) -> Result<impl IntoResponse> {
@@ -182,7 +182,7 @@ async fn message_edit(
         .edit(
             req.channel_id,
             req.message_id,
-            &auth.into(),
+            &mut auth,
             req.patch,
             header_timestamp,
         )

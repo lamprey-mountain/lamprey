@@ -73,7 +73,7 @@ async fn interaction_respond(
 /// Interaction message create
 #[handler(routes::interaction_message_create)]
 async fn interaction_message_create(
-    auth: Auth4,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::interaction_message_create::Request,
 ) -> Result<impl IntoResponse> {
@@ -108,7 +108,7 @@ async fn interaction_message_create(
         .messages
         .create(
             channel_id,
-            &auth.into(),
+            &mut auth,
             req.idempotency_key,
             req.message,
             None,

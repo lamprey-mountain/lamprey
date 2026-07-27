@@ -17,7 +17,7 @@ use crate::{ServerState, error::Result};
 /// Flume create
 #[handler(routes::flume::flume_create)]
 async fn flume_create(
-    auth: Auth4,
+    mut auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::flume::flume_create::Request,
 ) -> Result<impl IntoResponse> {
@@ -35,7 +35,7 @@ async fn flume_create(
         .messages
         .flume_create(
             req.channel_id,
-            &auth.into(),
+            &mut auth,
             req.idempotency_key,
             req.flume,
             header_timestamp,

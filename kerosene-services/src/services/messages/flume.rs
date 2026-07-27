@@ -6,7 +6,9 @@ use common::v2::types::media::MediaReference;
 use dashmap::mapref::one::RefMut;
 use futures::StreamExt;
 use futures::stream::FuturesUnordered;
+use kerosene_core::types::auth::{Auth5, Auth5Ext};
 
+use crate::services::messages::create::Author;
 use crate::services::messages::util::MediaRegistry;
 use crate::{Error, Result, routes::util::auth::Auth4, services::messages::ServiceMessages};
 
@@ -58,23 +60,26 @@ impl ServiceMessages {
     /// flumes allow updating messages in real time
     // TODO: handle nonce
     // TODO: handle header_timestamp
-    pub async fn flume_create(
+    // TODO: allow webhooks to use flumes?
+    pub async fn flume_create<A: Auth5>(
         &self,
         channel_id: ChannelId,
-        auth: &Auth4,
+        auth: &mut A,
         _nonce: Option<String>,
         json: FlumeCreate,
         header_timestamp: Option<Time>,
     ) -> Result<(StatusCode, Message)> {
         let srv = self.globals.services();
-        let user_id = auth.user().map(|u| u.id);
+        auth.ensure_user()?;
+        let author = Author::User(auth.identity().clone());
+        let user_id = author.user_id();
         let channel = srv.channels.get(channel_id, user_id).await?;
         channel.ensure_has_text()?;
 
         // permission checks (reuses validate_session_permissions from create.rs)
         let (_permissions, _created_at) = self
             .validate_session_permissions(
-                auth,
+                &author,
                 &channel,
                 false, // flumes don't support attachments
                 false, // flumes don't support embeds

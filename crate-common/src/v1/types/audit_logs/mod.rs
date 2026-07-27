@@ -134,10 +134,16 @@ pub enum AuditLogEntryType {
     },
 
     RoleCreate {
+        // older entries may not have this field!
+        // this will be made a RoleId instead of Option<RoleId> once older audit log entries are deleted
+        role_id: Option<RoleId>,
         changes: Vec<AuditLogChange>,
     },
 
     RoleUpdate {
+        // older entries may not have this field!
+        // this will be made a RoleId instead of Option<RoleId> once older audit log entries are deleted
+        role_id: Option<RoleId>,
         changes: Vec<AuditLogChange>,
     },
 
