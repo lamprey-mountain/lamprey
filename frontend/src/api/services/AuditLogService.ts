@@ -91,7 +91,9 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 			// Cache audit log entries
 			this.upsertBulk(data.audit_log_entries);
 
-			const newIds = data.audit_log_entries.map((entry) => entry.id);
+			const newIds = data.audit_log_entries
+				.map((entry) => entry.id)
+				.toReversed();
 			list.appendPage(newIds, data.has_more, data.cursor);
 		} catch (e) {
 			log.error(String(e));
