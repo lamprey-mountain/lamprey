@@ -76,6 +76,11 @@ impl PlaintextRenderer {
             Inline::Spoiler(spoiler) => spoiler.children().map(|i| self.render_inline(i)).collect(),
             Inline::Strikethrough(s) => s.children().map(|i| self.render_inline(i)).collect(),
             Inline::Code(code) => code.children().map(|i| self.render_inline(i)).collect(),
+            Inline::Timestamp(timestamp) => {
+                // TODO: render timestamp from rust?
+                let t = timestamp.time();
+                format!("<t:{}>", t)
+            }
             Inline::Text(text) => {
                 // ignore syntax tokens
                 if matches!(text.syntax().kind(), NodeKind::Text(TextKind::Syntax)) {

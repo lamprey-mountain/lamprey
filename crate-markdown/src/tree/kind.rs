@@ -51,6 +51,7 @@ pub enum InlineKind {
     Spoiler,
     TableHeader,
     TableValue,
+    Timestamp,
 
     /// a url that should be automatically converted into a link
     ///
@@ -115,6 +116,12 @@ pub enum TextKind {
     ///
     /// the space after the hashes is `Syntax` rather than `HeaderHashes`
     HeaderHashes,
+
+    /// the unix timestamp
+    TimestampTime,
+
+    /// the style for rendering the timestamp
+    TimestampStyle,
 }
 
 impl BlockKind {

@@ -6,6 +6,8 @@ use rowan::TextRange;
 
 use crate::prelude::*;
 
+pub mod timestamp_style;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]

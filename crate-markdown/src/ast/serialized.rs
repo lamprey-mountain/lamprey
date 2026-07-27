@@ -2,20 +2,23 @@
 
 // TODO: include spans?
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
-use crate::ast::{
-    block::{Block, Document},
-    inline::{Inline, MentionData},
+use crate::{
+    ast::{
+        block::{Block, Document},
+        inline::{Inline, MentionData},
+    },
+    util::timestamp_style::TimestampStyle,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
 pub struct SerializedDocument {
     blocks: Vec<SerializedBlock>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type")]
 #[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
 pub enum SerializedBlock {
@@ -45,7 +48,7 @@ pub enum SerializedBlock {
     },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type")]
 #[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
 pub enum SerializedInline {
@@ -81,6 +84,10 @@ pub enum SerializedInline {
     },
     UnicodeEmoji {
         content: String,
+    },
+    Timestamp {
+        timestamp: i64,
+        style: TimestampStyle,
     },
 }
 
@@ -177,6 +184,10 @@ impl SerializedInline {
                 }
             }
             Inline::UnicodeEmoji(u) => Self::UnicodeEmoji { content: u.text() },
+            Inline::Timestamp(t) => Self::Timestamp {
+                timestamp: t.time(),
+                style: t.style(),
+            },
         }
     }
 }

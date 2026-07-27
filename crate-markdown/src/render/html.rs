@@ -182,6 +182,12 @@ impl HtmlRenderer {
                     .map(|i| self.render_inline(i))
                     .collect::<String>()
             ),
+            Inline::Timestamp(timestamp) => {
+                // TODO: render timestamp from rust?
+                let t = timestamp.time();
+                let style = timestamp.style();
+                format!("<time datetime=\"{}\" data-style=\"{}\"></time>", t, style)
+            }
             // TODO: escape
             Inline::Text(text) => text.text(),
             // TODO: custom html for mentions?

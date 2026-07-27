@@ -273,6 +273,28 @@ impl<'a> ParseContext<'a> {
                             self.builder
                                 .token(NodeKind::Text(TextKind::Syntax).into(), ">");
                             self.builder.finish_node();
+                        } else if self.is_timestamp(&tokens) {
+                            self.builder
+                                .start_node(NodeKind::Inline(InlineKind::Timestamp).into());
+
+                            for t in &tokens {
+                                let s = self.tokenizer.text(t.span);
+                                let k = match t.kind {
+                                    TokenKind::AngleOpen
+                                    | TokenKind::AngleClose
+                                    | TokenKind::Colon => TextKind::Syntax,
+                                    TokenKind::Number => TextKind::TimestampTime,
+                                    TokenKind::Text => TextKind::TimestampStyle,
+                                    _ => unreachable!(),
+                                };
+                                self.builder.token(NodeKind::Text(k).into(), s);
+                            }
+
+                            self.builder.finish_node();
+
+                            for _ in 0..tokens.len() + 1 {
+                                self.tokenizer.advance();
+                            }
                         } else {
                             self.builder
                                 .token(NodeKind::Text(TextKind::Text).into(), "<");
@@ -294,6 +316,25 @@ impl<'a> ParseContext<'a> {
                     self.builder.token(NodeKind::Text(kind).into(), &text);
                 }
             }
+        }
+    }
+
+    // TODO: parse and return tokens instead of only validating
+    fn is_timestamp(&self, tokens: &[Token]) -> bool {
+        match tokens {
+            [t1, t2, t3] => {
+                self.tokenizer.text(t1.span) == "t"
+                    && t2.kind == TokenKind::Colon
+                    && t3.kind == TokenKind::Number
+            }
+            [t1, t2, t3, t4, t5] => {
+                self.tokenizer.text(t1.span) == "t"
+                    && t2.kind == TokenKind::Colon
+                    && t3.kind == TokenKind::Number
+                    && t4.kind == TokenKind::Colon
+                    && t5.kind == TokenKind::Text
+            }
+            _ => false,
         }
     }
 

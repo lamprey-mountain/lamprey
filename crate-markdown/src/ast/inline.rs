@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use crate::util::timestamp_style::TimestampStyle;
 use crate::{ast::impl_ast, tree::node::SyntaxElement};
 use lamprey_common::v2::types::{ChannelId, RoleId, UserId};
 
@@ -23,6 +24,8 @@ pub struct Code(SyntaxNode);
 pub struct Text(SyntaxToken);
 #[derive(Debug)]
 pub struct Mention(SyntaxToken);
+#[derive(Debug)]
+pub struct Timestamp(SyntaxNode);
 #[derive(Debug)]
 pub struct CustomEmoji(SyntaxToken);
 #[derive(Debug)]
@@ -66,6 +69,7 @@ pub enum Inline {
 
     Text(Text),
     Mention(Mention),
+    Timestamp(Timestamp),
     CustomEmoji(CustomEmoji),
     UnicodeEmoji(UnicodeEmoji),
 }
@@ -113,6 +117,8 @@ impl Inline {
                     Spoiler::cast(node).map(Self::Spoiler)
                 } else if Code::can_cast(kind) {
                     Code::cast(node).map(Self::Code)
+                } else if Timestamp::can_cast(kind) {
+                    Timestamp::cast(node).map(Self::Timestamp)
                 } else {
                     None
                 }
@@ -144,6 +150,7 @@ impl Inline {
             Inline::Code(c) => SyntaxElement::Node(c.syntax().clone()),
             Inline::Text(t) => SyntaxElement::Token(t.syntax().clone()),
             Inline::Mention(m) => SyntaxElement::Token(m.syntax().clone()),
+            Inline::Timestamp(t) => SyntaxElement::Node(t.syntax().clone()),
             Inline::CustomEmoji(e) => SyntaxElement::Token(e.syntax().clone()),
             Inline::UnicodeEmoji(e) => SyntaxElement::Token(e.syntax().clone()),
         }
@@ -159,6 +166,7 @@ impl_ast!(
 );
 impl_ast!(Spoiler, NodeKind::Inline(InlineKind::Spoiler));
 impl_ast!(Code, NodeKind::Inline(InlineKind::Code));
+impl_ast!(Timestamp, NodeKind::Inline(InlineKind::Timestamp));
 
 // TODO: consider creating a trait for this? like AstToken or something?
 // or maybe get rid of special handling for tokens/TextKind and make everything use nodes
@@ -325,5 +333,37 @@ impl CustomEmoji {
             name: parts[1].to_string(),
             id: Uuid::parse_str(parts[2]).unwrap_or_default(),
         }
+    }
+}
+
+impl Timestamp {
+    /// get the actual timestamp for this
+    pub fn time(&self) -> i64 {
+        self.0
+            .children_with_tokens()
+            .filter_map(|c: SyntaxElement| {
+                if matches!(c.kind(), NodeKind::Text(TextKind::TimestampTime)) {
+                    c.to_string().parse::<i64>().ok()
+                } else {
+                    None
+                }
+            })
+            .next()
+            .unwrap_or_default()
+    }
+
+    /// get the style of this timestamp
+    pub fn style(&self) -> TimestampStyle {
+        self.0
+            .children_with_tokens()
+            .filter_map(|c: SyntaxElement| {
+                if matches!(c.kind(), NodeKind::Text(TextKind::TimestampStyle)) {
+                    c.to_string().parse::<TimestampStyle>().ok()
+                } else {
+                    None
+                }
+            })
+            .next()
+            .unwrap_or_default()
     }
 }
