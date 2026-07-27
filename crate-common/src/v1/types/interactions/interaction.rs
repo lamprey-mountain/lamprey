@@ -186,7 +186,7 @@ impl InteractionType {
     }
 
     /// get the id of the message that this interaction was created from
-    fn source_message_id(&self) -> Option<MessageId> {
+    pub fn source_message_id(&self) -> Option<MessageId> {
         match self {
             Self::Button { message, .. } => Some(message.id),
             Self::Ping => None,

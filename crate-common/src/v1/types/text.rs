@@ -25,8 +25,13 @@ impl From<String> for Language {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct Text(String);
 
+// TODO: use Markdown instead of String to indicate what strings will be rendered as markdown?
+// pub struct Markdown(String);
+// pub struct MarkdownInline(String);
+// pub struct MarkdownFull(String);
+
 impl Text {
-    pub fn new(s: String) -> Self {
+    pub fn new(_s: String) -> Self {
         todo!()
     }
 

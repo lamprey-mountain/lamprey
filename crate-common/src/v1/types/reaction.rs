@@ -122,7 +122,7 @@ mod s {
 
     use serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser};
 
-    use super::{ReactionKey, ReactionKeyField, ReactionKeyParam};
+    use super::{ReactionKeyField, ReactionKeyParam};
 
     impl Serialize for ReactionKeyParam {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

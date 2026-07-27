@@ -1,14 +1,5 @@
 use lamprey_macros::record;
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
-
-#[cfg(feature = "validator")]
-use validator::Validate;
-
 use crate::v1::types::{
     reaction::ReactionKeyField,
     search::{ChannelSearchOrderField, Order},
