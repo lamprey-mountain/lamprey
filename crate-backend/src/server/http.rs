@@ -37,14 +37,12 @@ pub fn create_router_api(_globals: Globals) -> Router {
 
 /// create an axum router for metrics
 pub fn create_router_metrics(globals: Globals) -> Router {
+    let state = Arc::new(globals.to_server_state());
     let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
-        .nest(
-            "/api",
-            routes::routes(globals.clone()).fallback(api_fallback),
-        )
+        .nest("/api", routes::routes(state.clone()).fallback(api_fallback))
         .route("/metrics", get(routes::metrics::get_metrics))
         .route("/.well-known/lamprey-mountain", get(routes::well_known))
-        .with_state(globals.clone())
+        .with_state(state.clone())
         .split_for_parts();
 
     let router = router
@@ -60,11 +58,9 @@ pub fn create_router_metrics(globals: Globals) -> Router {
     let router = router
         .route(
             "/invite/{code}",
-            get(frontend::invite_meta_handler).with_state(globals.clone()),
+            get(frontend::invite_meta_handler).with_state(state.clone()),
         )
-        .fallback_service(
-            axum::routing::get(frontend::frontend_handler).with_state(globals.clone()),
-        );
+        .fallback_service(axum::routing::get(frontend::frontend_handler).with_state(state.clone()));
 
     router
         .layer(middleware::from_fn_with_state(globals.clone(), script_http))
@@ -73,7 +69,7 @@ pub fn create_router_metrics(globals: Globals) -> Router {
         .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
         .layer(TraceLayer::new_for_http())
         .layer(middleware::from_fn_with_state(
-            globals.clone(),
+            state.clone(),
             routes::util::audit_log_middleware,
         ))
         .layer(CatchPanicLayer::new())

@@ -1,12 +1,10 @@
-use std::sync::Arc;
-
 use axum::{extract::State, response::IntoResponse};
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use prometheus::{Encoder, TextEncoder};
 
+use crate::prelude::*;
 use crate::{
-    Result, ServerState,
     metrics::{
         CHANNEL_COUNT_BROADCAST, CHANNEL_COUNT_CALENDAR, CHANNEL_COUNT_DM, CHANNEL_COUNT_GDM,
         CHANNEL_COUNT_TEXT, CHANNEL_COUNT_THREAD_PRIVATE, CHANNEL_COUNT_THREAD_PUBLIC,
@@ -18,10 +16,7 @@ use crate::{
     types::{Permission, SERVER_ROOM_ID},
 };
 
-pub async fn get_metrics(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-) -> Result<impl IntoResponse> {
+pub async fn get_metrics(auth: Auth, State(s): State<Globals>) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let mut perms = s
         .services()
@@ -32,7 +27,8 @@ pub async fn get_metrics(
     perms.needs(Permission::ServerMetrics);
     perms.check()?;
 
-    let metrics = s.data().get_metrics().await?;
+    let mut data = s.begin_read().await?;
+    let metrics = data.get_metrics().await?;
 
     USER_COUNT_TOTAL.set(metrics.user_count_total);
     USER_COUNT_GUEST.set(metrics.user_count_guest);

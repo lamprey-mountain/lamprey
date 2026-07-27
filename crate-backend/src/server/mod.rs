@@ -5,25 +5,10 @@ use tracing::{info, warn};
 
 use crate::{
     prelude::*,
-    server::{
-        globals::{Globals, GlobalsOwned},
-        http::{create_router_api, serve_transport},
-    },
+    server::http::{create_router_api, serve_transport},
 };
 
-pub mod blobs {
-    // TODO: opendal::Operator wrapper?
-    // TODO: move to kerosene_services
-
-    pub type Blobs = opendal::Operator;
-}
-
-pub mod globals {
-    // TEMP: reexport
-    pub use kerosene_services::globals::{Globals, GlobalsOwned};
-}
-
-pub mod http;
+mod http;
 
 pub struct Server {
     globals: GlobalsOwned,
@@ -50,7 +35,7 @@ impl Server {
         self.globals.handle()
     }
 
-    /// start a server
+    /// start the server
     pub async fn serve(&mut self) -> Result<()> {
         info!("starting server");
 
@@ -76,9 +61,9 @@ impl Server {
             warn!("no components enabled for any listeners");
         }
 
-        // while let Some(res) = set.join_next().await {
-        //     res.unwrap()?;
-        // }
+        while let Some(res) = self.listeners.join_next().await {
+            res.unwrap()?;
+        }
 
         Ok(())
     }

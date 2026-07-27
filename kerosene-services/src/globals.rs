@@ -15,6 +15,9 @@ use tracing::info;
 
 pub mod messaging;
 
+// TEMP: compat
+pub mod server_state;
+
 /// owned handle for the server's global state
 #[derive(Clone)]
 pub struct GlobalsOwned {
@@ -212,5 +215,23 @@ impl Globals {
     // TEMP: i should write a wrapper for opendal
     pub fn blobs(&self) -> &opendal::Operator {
         &self.inner.blobs
+    }
+
+    pub fn to_server_state(&self) -> server_state::ServerState {
+        use crate::globals::server_state::{ServerState, ServerStateInner};
+        use tokio::runtime::Handle as TokioHandle;
+
+        let services = self.services();
+        let inner = Arc::new(ServerStateInner {
+            tokio: TokioHandle::current(),
+            config: (*self.inner.config).clone(),
+            database: self.temp_database_compat(),
+            services: Arc::downgrade(&services),
+            blobs: self.inner.blobs.clone(),
+            jetstream: None,
+            messaging: self.inner.messaging.clone(),
+            globals: self.clone(),
+        });
+        ServerState { inner, services }
     }
 }

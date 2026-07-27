@@ -2,6 +2,7 @@
 
 use axum::{Json, extract::State, response::IntoResponse};
 use common::v1::types::federation::WellKnown;
+use kerosene_services::globals::server_state::ServerState;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::prelude::*;
@@ -54,7 +55,7 @@ mod webhook;
 pub mod metrics;
 pub mod util;
 
-fn routes_v1(s: Globals) -> OpenApiRouter<Globals> {
+fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .merge(ack::routes())
         .merge(admin::routes())
@@ -110,7 +111,7 @@ pub async fn well_known(State(s): State<Globals>) -> Result<impl IntoResponse> {
     }))
 }
 
-pub fn routes(s: Globals) -> OpenApiRouter<Globals> {
+pub fn routes(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
     // TODO: lamprey_backend_rest::router()
     OpenApiRouter::new().nest("/v1", routes_v1(s))
 }

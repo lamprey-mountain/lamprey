@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc};
+use std::str::FromStr;
 
 use axum::{
     body::to_bytes,
@@ -15,15 +15,15 @@ use common::v1::types::{
 use headers::Host;
 use lamprey_script::engine::ExecutionEvent;
 
-use crate::{Error, Result, ServerState};
+use crate::prelude::*;
 
 pub async fn script_http(
     TypedHeader(host): TypedHeader<Host>,
-    State(state): State<Arc<ServerState>>,
+    State(globals): State<Globals>,
     req: Request,
     next: Next,
 ) -> Result<Response> {
-    let Some(suffix) = &state.config.scripts.suffix else {
+    let Some(suffix) = &globals.config().scripts.suffix else {
         return Ok(next.run(req).await);
     };
 
@@ -35,7 +35,7 @@ pub async fn script_http(
         return Ok(next.run(req).await);
     };
 
-    let mut data = state.data();
+    let mut data = globals.begin_read().await?;
     let script = data
         .script_get(script_id)
         .await?
@@ -47,7 +47,7 @@ pub async fn script_http(
         .map_err(|e| Error::Internal(format!("Failed to read body: {}", e)))?;
     let req_for_script = Request::from_parts(parts, body_bytes);
 
-    let srv = state.services();
+    let srv = globals.services();
     let redex_version_id = script.latest_version.version_id;
     let mut handle = srv
         .scripts
