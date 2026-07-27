@@ -48,17 +48,21 @@ export const MemberListProvider = (props: ParentProps) => {
 		);
 		if (channelIdMatch) {
 			const id = channelIdMatch[2];
+			const channel = store.channels.cache.get(id);
 			memberListCtxLog.debug("location changed, channel match", {
 				id,
+				channel,
 				currentSubscription,
 			});
 			if (currentSubscription !== id) {
 				currentSubscription = id;
-				memberListCtxLog.info("subscribing to thread member list", {
-					thread_id: id,
-					ranges: [[0, 199]],
-				});
-				store.threadMembers.subscribeList(id, [[0, 199]]);
+				if (channel && channel.type !== "Dm" && channel.type !== "Gdm") {
+					memberListCtxLog.info("subscribing to thread member list", {
+						thread_id: id,
+						ranges: [[0, 199]],
+					});
+					store.threadMembers.subscribeList(id, [[0, 199]]);
+				}
 			}
 			return;
 		}

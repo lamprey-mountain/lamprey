@@ -2,7 +2,7 @@ import { ReactiveMap } from "@solid-primitives/map";
 import { createVirtualizer } from "@tanstack/solid-virtual";
 import type { MemberListGroup, RoomMember, User } from "sdk";
 import { createMemo, createSignal, For, Show } from "solid-js";
-import { useRoles, useRoomMembers, useUsers } from "@/api";
+import { useChannels, useRoles, useRoomMembers, useUsers } from "@/api";
 import type { MemberListItem } from "@/api/services/MemberListService";
 import { AvatarWithStatus } from "@/components/shared/User";
 import { useMemberListContext } from "@/contexts/memberlist.tsx";
@@ -26,6 +26,7 @@ export const MemberList = (props: MemberListProps) => {
 	const roles2 = useRoles();
 	const roomMembers2 = useRoomMembers();
 	const users2 = useUsers();
+	const channels2 = useChannels();
 	const memberLists = useMemberListContext();
 	const list = () => memberLists.get(props.id);
 	const [collapsedGroups, setCollapsedGroups] = createSignal(
@@ -37,6 +38,48 @@ export const MemberList = (props: MemberListProps) => {
 		| { type: "member"; item: MemberListItem };
 
 	const rows = createMemo(() => {
+		if (props.type === "thread") {
+			const channel = channels2.cache.get(props.threadId);
+			if (channel) {
+				const isDm = channel.type === "Dm" || channel.type === "Gdm";
+				if (isDm && channel.recipients) {
+					const onlineItems: MemberListItem[] = [];
+					const offlineItems: MemberListItem[] = [];
+					for (const u of channel.recipients) {
+						const user = users2.cache.get(u.id) ?? u;
+						const item: MemberListItem = {
+							user,
+							room_member: null,
+							thread_member: null,
+						};
+						if (user.presence.status === "Offline") {
+							offlineItems.push(item);
+						} else {
+							onlineItems.push(item);
+						}
+					}
+
+					const rows: Row[] = [];
+					if (onlineItems.length > 0) {
+						rows.push({
+							type: "group",
+							group: { id: "Online", count: onlineItems.length },
+						});
+						for (const item of onlineItems) rows.push({ type: "member", item });
+					}
+					if (offlineItems.length > 0) {
+						rows.push({
+							type: "group",
+							group: { id: "Offline", count: offlineItems.length },
+						});
+						for (const item of offlineItems)
+							rows.push({ type: "member", item });
+					}
+					return rows;
+				}
+			}
+		}
+
 		const l = list();
 		if (!l) return [];
 		const rows: Row[] = [];
