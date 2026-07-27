@@ -582,6 +582,7 @@ impl ServiceRooms {
         )
         .await?;
         data.room_set_owner(room_id, creator_id).await?;
+        data.commit().await?;
         room.owner_id = Some(creator_id);
 
         self.globals
@@ -607,9 +608,8 @@ impl ServiceRooms {
         }
 
         // reload room to get updated welcome_channel_id and other stuff set by apply_to_room
-        let mut room = data.room_get(room_id).await?;
+        let mut room = self.globals.begin_read().await?.room_get(room_id).await?;
         room.owner_id = Some(creator_id);
-        data.commit().await?;
 
         let broadcast = Broadcast::sync(MessageSync::RoomCreate { room: room.clone() })
             .with_option_nonce(nonce);
