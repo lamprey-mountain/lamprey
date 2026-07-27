@@ -7,9 +7,15 @@ use lamprey::v1::types::error::SyncErrorCode;
 // TEMP: reexport?
 pub use lamprey_backend_core::Error;
 
+// NOTE: maybe use Error directly?
 #[derive(Debug, thiserror::Error)]
 pub enum SyncError {
+    #[error("{0}")]
+    Api(SyncErrorCode),
     // TODO: more exact errors for sync
+    // transport closed
+    // internal server error (for subscriptions, initial ready state)
+    // full api error
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,7 +31,7 @@ pub enum ConnectionErrorSeverity {
     // separate "can't reconnect at all" severity for stuff like eg. logouts?
 }
 
-fn severity(err: &Error) -> ConnectionErrorSeverity {
+pub fn severity(err: &Error) -> ConnectionErrorSeverity {
     use ConnectionErrorSeverity::*;
     match err {
         Error::SyncError(c) => match c {
@@ -42,3 +48,10 @@ fn severity(err: &Error) -> ConnectionErrorSeverity {
         _ => Fatal,
     }
 }
+
+// NOTE: if i use Error directly, implement this method on it?
+// impl SyncError {
+//     pub fn severity(&self) -> ConnectionErrorSeverity {
+//         todo!()
+//     }
+// }
