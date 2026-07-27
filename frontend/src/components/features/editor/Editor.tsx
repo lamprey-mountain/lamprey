@@ -1,3 +1,4 @@
+import { Parser } from "@lamprey/markdown";
 import {
 	chainCommands,
 	deleteSelection,
@@ -12,7 +13,6 @@ import { DOMParser } from "prosemirror-model";
 import { type Command, EditorState, TextSelection } from "prosemirror-state";
 import type { AutocompleteContext } from "@/contexts/autocomplete.tsx";
 import type { FormattingToolbarContextT } from "@/contexts/formatting-toolbar.tsx";
-import { md } from "@/lib/markdown";
 import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
 import { createPastePlugin, createSubmitPlugin } from "./core-plugins.ts";
 import {
@@ -77,9 +77,13 @@ export const createEditor = (opts: EditorProps): Editor => {
 
 	const createState = () => {
 		let doc;
+
+		// FIXME: handle wasm not loaded yet
 		if (opts.initialContent) {
 			const div = document.createElement("div");
-			div.innerHTML = md.parser(md.lexer(opts.initialContent()));
+			const parser = new Parser();
+			const parsed = parser.parse(opts.initialContent());
+			div.innerHTML = parsed.toHTML();
 			doc = DOMParser.fromSchema(schema).parse(div);
 		}
 

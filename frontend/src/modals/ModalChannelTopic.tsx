@@ -1,9 +1,9 @@
+import { Show } from "solid-js";
 import { useChannels } from "@/api";
 import icClose from "@/assets/x.png"; // TODO: random icons
 import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown";
 import { useModals } from "@/contexts/modal";
-import { md } from "@/lib/markdown";
 import { Modal } from "./mod";
 
 interface ModalChannelTopicProps {
@@ -31,10 +31,9 @@ export const ModalChannelTopic = (props: ModalChannelTopicProps) => {
 						<Icon src={icClose} color={null} />
 					</button>
 				</header>
-				<Markdown
-					content={channel()?.description ?? ""}
-					class="channel-topic"
-				/>
+				<Show when={channel()?.description}>
+					{(desc) => <Markdown class="channel-topic" content={desc()} />}
+				</Show>
 			</div>
 		</Modal>
 	);

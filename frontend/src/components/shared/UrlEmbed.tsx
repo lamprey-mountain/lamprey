@@ -1,7 +1,7 @@
 import sanitizeHtml from "sanitize-html";
 import type { Embed } from "sdk";
 import { Show, type VoidProps } from "solid-js";
-import { md } from "@/lib/markdown";
+import { parserResource } from "@/lib/markdown";
 import { ImageView } from "@/media/mod";
 
 type EmbedProps = {
@@ -15,13 +15,15 @@ const sanitizeHtmlOptions: sanitizeHtml.IOptions = {
 };
 
 export const EmbedView = (props: VoidProps<EmbedProps>) => {
+	// TODO: attempt to autodetect if this is html or markdown
 	const description = () => {
+		const md = parserResource();
+		if (!md) return null;
+
 		const d = props.embed.description;
 		if (!d) return null;
-		return sanitizeHtml(
-			md.parse(d ?? "") as string,
-			sanitizeHtmlOptions,
-		).trim();
+
+		return sanitizeHtml(md.parse(d).toHTML(), sanitizeHtmlOptions).trim();
 	};
 
 	return (
@@ -46,8 +48,10 @@ export const EmbedView = (props: VoidProps<EmbedProps>) => {
 							</span>
 						</Show>
 					</header>
-					<Show when={props.embed.description}>
-						<p class="description markdown" innerHTML={description() ?? ""}></p>
+					<Show when={description()}>
+						{(desc) => (
+							<div class="description markdown" innerHTML={desc()}></div>
+						)}
 					</Show>
 				</div>
 			</Show>

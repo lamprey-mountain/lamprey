@@ -16,9 +16,9 @@ import {
 	useMessages,
 	useRoomMembers,
 } from "@/api";
+import { Markdown } from "@/atoms/Markdown.tsx";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useChannel } from "@/contexts/mod";
-import { md } from "@/lib/markdown";
 import type { ChannelT } from "@/types";
 import { logger } from "@/utils/logger";
 import type { ChatProps } from "./Chat";
@@ -453,10 +453,9 @@ export const TimelineItem2 = (props: {
 							<h1>{props.channel.name}</h1>
 							<p>
 								This is the start of {props.channel.name}.{" "}
-								<span
-									class="markdown"
-									innerHTML={md(props.channel.description ?? "") as string}
-								></span>
+								<Show when={props.channel.description}>
+									{(desc) => <Markdown content={desc()} />}
+								</Show>
 							</p>
 						</header>
 					</div>

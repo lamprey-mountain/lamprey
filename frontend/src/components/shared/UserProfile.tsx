@@ -10,10 +10,10 @@ import {
 } from "solid-js";
 import type { Channel, PreferencesUser } from "ts-sdk";
 import { useApi } from "@/api";
+import { Markdown } from "@/atoms/Markdown.tsx";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useMenu } from "@/contexts/menu";
 import { usePermissions } from "@/hooks/usePermissions";
-import { md } from "@/lib/markdown";
 import { getThumbFromId } from "@/media/util";
 import { Copyable } from "@/utils/general";
 import { AvatarWithStatus, EditRoles, type UserProps } from "./User";
@@ -191,13 +191,12 @@ export function UserProfile(props: UserProps) {
 				</div>
 
 				<Show when={props.user.description}>
-					<div class="description">
-						<h3 class="dim">About Me</h3>
-						<div
-							class="markdown"
-							innerHTML={md(props.user.description ?? "") as string}
-						></div>
-					</div>
+					{(desc) => (
+						<div class="description">
+							<h3 class="dim">About Me</h3>
+							<Markdown content={desc()} />
+						</div>
+					)}
 				</Show>
 
 				<Show when={room_member()}>

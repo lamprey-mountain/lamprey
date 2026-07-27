@@ -3,12 +3,12 @@ import { type Channel, getTimestampFromUUID } from "sdk";
 import { createMemo, For, Show } from "solid-js";
 import { useChannels } from "@/api";
 import { useCtx } from "@/app/context";
+import { Markdown } from "@/atoms/Markdown.tsx";
 import { Time } from "@/atoms/Time";
 import { MemberList } from "@/components/shared/MemberList";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
 import { usePermissions } from "@/hooks/usePermissions";
-import { md } from "@/lib/markdown";
 import type { RoomT } from "@/types";
 import { ChannelIcon } from "./User.tsx";
 
@@ -163,10 +163,9 @@ export const RoomHome = (props: { room: RoomT }) => {
 			<div style="display:flex">
 				<div style="flex:1">
 					<h2>{props.room.name}</h2>
-					<p
-						class="markdown"
-						innerHTML={md(props.room.description ?? "") as string}
-					></p>
+					<Show when={props.room.description}>
+						{(desc) => <Markdown content={desc()} />}
+					</Show>
 				</div>
 				<div style="display:flex;flex-direction:column;gap:4px">
 					<button
@@ -265,10 +264,9 @@ export const RoomHome = (props: { room: RoomT }) => {
 														/>
 													</div>
 													<Show when={thread.description}>
-														<div
-															class="description markdown"
-															innerHTML={md(thread.description ?? "") as string}
-														></div>
+														{(desc) => (
+															<Markdown class="description" content={desc()} />
+														)}
 													</Show>
 												</button>
 											</header>

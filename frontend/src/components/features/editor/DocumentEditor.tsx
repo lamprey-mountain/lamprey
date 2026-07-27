@@ -22,7 +22,7 @@ import * as Y from "yjs";
 import { useApi, useChannels } from "@/api";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
-import { md } from "@/lib/markdown";
+import { parser as markdownParser } from "@/lib/markdown";
 import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
 import { createPastePlugin, createSubmitPlugin } from "./core-plugins.ts";
 import {
@@ -81,7 +81,7 @@ export const createEditor = (
 	setDiffMarks: (marks: DiffMark[]) => void;
 	createReadonlyState: (
 		content: string,
-	) => import("prosemirror-state").EditorState;
+	) => Promise<import("prosemirror-state").EditorState>;
 	createReadonlyStateFromHtml: (
 		html: string,
 	) => import("prosemirror-state").EditorState;
@@ -153,12 +153,11 @@ export const createEditor = (
 		const type = ydoc.get("doc", Y.XmlFragment);
 		const mapping = initProseMirrorDoc(type, schema).mapping;
 
-		let doc;
-		if (opts.initialContent) {
-			const div = document.createElement("div");
-			div.innerHTML = md.parser(md.lexer(opts.initialContent));
-			doc = DOMParser.fromSchema(schema).parse(div);
-		}
+		// NOTE: opts.initialContent isn't supported here
+		// PERF: surely there's a better way than with DOMParser
+		const doc = DOMParser.fromSchema(schema).parse(
+			document.createElement("div"),
+		);
 
 		let selection;
 		if (doc && opts.initialSelection) {
@@ -229,7 +228,7 @@ export const createEditor = (
 		nodeViews: createEditorNodeViews(),
 	});
 
-	const subscribe = (channelId: string, branchId: string) => {
+	const subscribe = async (channelId: string, branchId: string) => {
 		// don't resubscribe if nothing changed
 		if (currentChannelId() === channelId && currentBranchId() === branchId) {
 			return;
@@ -266,11 +265,12 @@ export const createEditor = (
 	};
 
 	// Create a plain state without Yjs sync (for viewing historical revisions)
-	const createReadonlyState = (content: string) => {
+	const createReadonlyState = async (content: string) => {
 		let doc;
 		if (content) {
 			const div = document.createElement("div");
-			const html = md.parser(md.lexer(content));
+			const md = await markdownParser;
+			const html = md.parse(content).toHTML();
 			div.innerHTML = html;
 			doc = DOMParser.fromSchema(schema).parse(div);
 		}

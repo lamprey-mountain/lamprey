@@ -4,7 +4,7 @@ import {
 	Slice,
 } from "prosemirror-model";
 import type { EditorView } from "prosemirror-view";
-import { md } from "@/lib/markdown";
+import { parser as markdownParser } from "@/lib/markdown";
 import htmlTemplate from "./html-template.html?raw";
 
 /**
@@ -60,14 +60,14 @@ export function exportAsMarkdown(view: EditorView, filename: string) {
 	downloadFile(markdown, filename, "text/markdown");
 }
 
-export function exportAsHtml(
+export async function exportAsHtml(
 	view: EditorView,
 	filename: string,
 	title: string,
 ) {
 	const markdown = serializeToMarkdown(view.state.doc);
-	const tokens = md.lexer(markdown);
-	const htmlContent = md.parser(tokens);
+	const md = await markdownParser;
+	const htmlContent = md.parse(markdown).toHTML();
 	const fullHtml = generateHtmlDocument(title, htmlContent);
 	downloadFile(fullHtml, filename, "text/html");
 }

@@ -10,6 +10,7 @@ import icPin from "@/assets/pin.png";
 import icThreads from "@/assets/threads.png";
 import icCancel from "@/assets/x.png";
 import { Icon } from "@/atoms/Icon";
+import { Markdown } from "@/atoms/Markdown.tsx";
 import { createTooltip } from "@/atoms/Tooltip";
 import { SearchInput } from "@/components/features/search/SearchInput";
 import { ChannelIcon } from "@/components/shared/User";
@@ -18,7 +19,6 @@ import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useMenu } from "@/contexts/menu.tsx";
 import { useModals } from "@/contexts/modal.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
-import { md } from "@/lib/markdown";
 
 type ChatHeaderProps = {
 	channel: Channel;
@@ -239,7 +239,6 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 				<div>{"  -  "}</div>
 				<div
 					class="topic"
-					innerHTML={md(props.channel.description ?? "") as string}
 					onClick={() => {
 						// TODO: extract into function
 						if (props.channel.description) {
@@ -262,7 +261,11 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 						});
 					}}
 					ref={topicTooltip.content}
-				></div>
+				>
+					<Show when={props.channel.description}>
+						{(desc) => <Markdown content={desc()} />}
+					</Show>
+				</div>
 			</Show>
 			<div class="spacer"></div>
 			{/* TODO: tooltips */}

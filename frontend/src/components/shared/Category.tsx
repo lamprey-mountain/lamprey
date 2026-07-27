@@ -4,6 +4,7 @@ import { type Channel, getTimestampFromUUID } from "sdk";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { uuidv7 } from "uuidv7";
 import { useChannels } from "@/api";
+import { Markdown } from "@/atoms/Markdown.tsx";
 import { Time } from "@/atoms/Time";
 import { RenderUploadItem } from "@/components/features/chat/Input.tsx";
 import { createEditor } from "@/components/features/editor/Editor.tsx";
@@ -16,7 +17,6 @@ import { useUploads } from "@/contexts/uploads.tsx";
 import { useMessageSubmit } from "@/hooks/useMessageSubmit.ts";
 import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
-import { md } from "@/lib/markdown";
 
 export const Category = (props: { channel: Channel }) => {
 	const channels2 = useChannels();
@@ -57,10 +57,9 @@ export const Category = (props: { channel: Channel }) => {
 			<div style="display:flex">
 				<div style="flex:1">
 					<h2>{props.channel.name}</h2>
-					<p
-						class="markdown"
-						innerHTML={md(props.channel.description ?? "") as string}
-					></p>
+					<Show when={props.channel.description}>
+						{(desc) => <Markdown content={desc()} />}
+					</Show>
 				</div>
 				<div style="display:flex;flex-direction:column;gap:4px">
 					<A
@@ -156,10 +155,9 @@ export const Category = (props: { channel: Channel }) => {
 										/>
 									</div>
 									<Show when={thread.description}>
-										<div
-											class="description markdown"
-											innerHTML={md(thread.description ?? "") as string}
-										></div>
+										{(desc) => (
+											<Markdown class="description" content={desc()} />
+										)}
 									</Show>
 								</button>
 							</article>

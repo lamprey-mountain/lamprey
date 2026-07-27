@@ -6,13 +6,13 @@ import { createStore } from "solid-js/store";
 import type { PresenceActivity, UserStatus } from "ts-sdk";
 import { useApi } from "@/api";
 import { Icon } from "@/atoms/Icon";
+import { Markdown } from "@/atoms/Markdown.tsx";
 import { getStatusPath } from "@/avatar/UserAvatar";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useMenu } from "@/contexts/menu";
 import { useModals } from "@/contexts/modal";
 import { useUserPopout } from "@/contexts/user-popout";
 import { usePermissions } from "@/hooks/usePermissions";
-import { md } from "@/lib/markdown";
 import { getThumbFromId } from "@/media/util";
 import { icCheck, icCopy, icEdit } from "@/utils/icons";
 import { AvatarWithStatus, EditRoles, type UserProps } from "./User";
@@ -203,13 +203,12 @@ export function UserProfileEdit(props: UserProps) {
 
 				<div class="body">
 					<Show when={props.user.description}>
-						<div class="description">
-							<h3 class="dim">About Me</h3>
-							<div
-								class="markdown"
-								innerHTML={md(props.user.description ?? "") as string}
-							></div>
-						</div>
+						{(desc) => (
+							<div class="description">
+								<h3 class="dim">About Me</h3>
+								<Markdown content={desc()} />
+							</div>
+						)}
 					</Show>
 
 					<Show when={room_member()}>

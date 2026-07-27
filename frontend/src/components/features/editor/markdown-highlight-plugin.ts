@@ -1,79 +1,61 @@
-import type { Token, Tokens } from "marked";
+import {
+	type DecorationKind,
+	type Parsed as Markdown,
+	Parser as MarkdownParser,
+} from "@lamprey/markdown";
+import type Hljs from "highlight.js";
 import { type EditorState, Plugin, PluginKey } from "prosemirror-state";
 import {
 	Decoration,
 	type DecorationAttrs,
 	DecorationSet,
 } from "prosemirror-view";
-import { md } from "@/lib/markdown";
+import { loaded as mdLoaded } from "@/lib/markdown";
 
-let hljs: typeof import("highlight.js").default | null = null;
+let markdown: Markdown;
+
+let hljs: typeof Hljs | null = null;
 import("highlight.js").then((m) => {
 	hljs = m.default;
 });
 
-const SYN = { class: "syn" };
-
-type DecorationDef = {
-	start: number;
-	end: number;
-	attrs: DecorationAttrs;
-	options?: { inclusiveStart?: boolean; inclusiveEnd?: boolean };
-};
-
-/**
- * Logic to calculate the syntax delimiter offset (e.g., length of "**")
- */
-function getOffset(token: Token): number {
-	const offsets: Record<string, number> = {
-		strong: 2,
-		spoiler: 2,
-		em: 1,
-		codespan: 1,
-	};
-	if (token.type === "list_item") {
-		return token.raw.match(/^(\s*([-*+]|\d+\.)\s+)/)?.[1].length ?? 0;
-	}
-	return offsets[token.type] ?? 0;
-}
-
-/**
- * Strategy for handling complex syntax highlighting via highlight.js
- */
+// TODO: wire this into calculateDecorations
 function getHighlightDecorations(
 	content: string,
 	lang: string,
-	offset: number,
-): DecorationDef[] {
-	const decos: DecorationDef[] = [];
-	if (!hljs) return decos;
+	baseOffset: number, // text offset where `content` starts
+): Decoration[] {
+	if (!hljs) return [];
 
+	const decos: Decoration[] = [];
 	try {
 		const highlighted = hljs.highlight(content, {
 			language: lang || "plaintext",
 		});
-		let currentPos = offset;
 
+		let pos = baseOffset;
 		const walk = (node: unknown) => {
 			if (typeof node === "string") {
-				currentPos += node.length;
+				pos += node.length;
+				return;
+			}
+
+			const n = node as { scope?: string; children?: unknown[] };
+			if (n.scope) {
+				const start = pos;
+				(n.children || []).forEach(walk);
+				decos.push(
+					Decoration.inline(start, pos, {
+						class: `hljs-${n.scope.replace(/\./g, " hljs-")}`,
+					}),
+				);
 			} else {
-				const nodeObj = node as { scope?: string; children?: unknown[] };
-				if (nodeObj.scope) {
-					const start = currentPos;
-					(nodeObj.children || []).forEach(walk);
-					decos.push({
-						attrs: { class: `hljs-${nodeObj.scope.replace(/\./g, " hljs-")}` },
-						start,
-						end: currentPos,
-					});
-				} else if (nodeObj.children) {
-					nodeObj.children.forEach(walk);
-				}
+				(n.children || []).forEach(walk);
 			}
 		};
 
 		// highlighted structure varies by hljs version
+		// HACK: use something else instead of highlight.js that supports manual highlighting?
 		const root =
 			(highlighted as any)._emitter?.root || (highlighted as any).value;
 		if (root?.children) {
@@ -82,189 +64,90 @@ function getHighlightDecorations(
 	} catch (_e) {
 		// ignore highlight errors
 	}
+
 	return decos;
 }
 
-/**
- * Map of token types to decoration generators
- */
-const DECORATION_STRATEGIES: Record<string, (token: Token) => DecorationDef[]> =
-	{
-		heading: (token) => {
-			const t = token as Tokens.Heading;
-			return [{ attrs: SYN, start: 0, end: t.depth }];
-		},
-
-		em: (token) => {
-			const t = token as Tokens.Em;
-			return [
-				{ attrs: SYN, start: 0, end: 1 },
-				{ attrs: { nodeName: "em" }, start: 1, end: t.raw.length - 1 },
-				{ attrs: SYN, start: t.raw.length - 1, end: t.raw.length },
-			];
-		},
-
-		strong: (token) => {
-			const t = token as Tokens.Strong;
-			return [
-				{ attrs: SYN, start: 0, end: 2 },
-				{ attrs: { nodeName: "b" }, start: 2, end: t.raw.length - 2 },
-				{ attrs: SYN, start: t.raw.length - 2, end: t.raw.length },
-			];
-		},
-
-		spoiler: (token) => {
-			const t = token as Tokens.Text;
-			return [
-				{ attrs: SYN, start: 0, end: 2 },
-				{
-					attrs: { class: "spoiler-preview" },
-					start: 2,
-					end: t.raw.length - 2,
-				},
-				{ attrs: SYN, start: t.raw.length - 2, end: t.raw.length },
-			];
-		},
-
-		link: (token) => {
-			const t = token as Tokens.Link;
-			if (t.raw === t.href) {
-				return [{ attrs: { class: "link" }, start: 0, end: t.text.length }];
-			}
-			return [
-				{ attrs: SYN, start: 0, end: 1 },
-				{ attrs: SYN, start: t.text.length + 1, end: t.text.length + 3 },
-				{
-					attrs: { class: "link" },
-					start: t.text.length + 3,
-					end: t.raw.length - 1,
-				},
-				{ attrs: SYN, start: t.raw.length - 1, end: t.raw.length },
-			];
-		},
-
-		code: (token) => {
-			const t = token as Tokens.Code;
-			const decos: DecorationDef[] = [];
-			const isFenced = t.raw.startsWith("```") || t.raw.startsWith("~~~");
-
-			if (isFenced) {
-				const match = t.raw.match(/^([`~]{3,})([a-z-]*)/i);
-				const fenceLen = match?.[1].length ?? 3;
-				const langLen = match?.[2].length ?? 0;
-				const firstNewline = t.raw.indexOf("\n");
-
-				decos.push({ attrs: SYN, start: 0, end: fenceLen });
-				decos.push({
-					attrs: { class: "syn-code-lang" },
-					start: fenceLen,
-					end: fenceLen + langLen,
-				});
-
-				if (firstNewline !== -1) {
-					const lastNewline = t.raw.lastIndexOf("\n");
-					const hasClosing =
-						lastNewline > firstNewline &&
-						t.raw.slice(lastNewline).trim().startsWith(t.raw[0].repeat(3));
-					const contentEnd = hasClosing ? lastNewline : t.raw.length;
-
-					decos.push(
-						...getHighlightDecorations(
-							t.raw.slice(firstNewline + 1, contentEnd),
-							t.lang || "",
-							firstNewline + 1,
-						),
-					);
-
-					if (hasClosing) {
-						decos.push({
-							attrs: SYN,
-							start: lastNewline + 1,
-							end: t.raw.length,
-						});
-					}
-				}
-			}
-
-			return decos;
-		},
-
-		blockquote: (token) => {
-			const t = token as Tokens.Blockquote;
-			const decos: DecorationDef[] = [];
-			let pos = 0;
-			for (const line of t.raw.split("\n")) {
-				const m = line.match(/^(\s*>+)/);
-				if (m) {
-					decos.push({ attrs: SYN, start: pos, end: pos + m[1].length });
-				}
-				pos += line.length + 1;
-			}
-			return decos;
-		},
-
-		list_item: (token) => {
-			const t = token as Tokens.ListItem;
-			const m = t.raw.match(/^(\s*([-*+]|\d+\.)\s+)/);
-			return m ? [{ attrs: SYN, start: 0, end: m[1].length }] : [];
-		},
-	};
-
-function isListToken(token: Token): token is Tokens.List {
-	return "items" in token;
+function getAttrs(kind: DecorationKind): DecorationAttrs {
+	switch (kind) {
+		case "Syntax":
+			return { class: "syn" };
+		case "Emphasis":
+			return { nodeName: "em" };
+		case "Strong":
+			return { nodeName: "b" };
+		case "Code":
+			return { nodeName: "code" };
+		case "Spoiler":
+			return { class: "spoiler-preview" };
+		case "Strikethrough":
+			return { nodeName: "s" };
+		case "Link":
+			return { class: "link" };
+		default:
+			return {};
+	}
 }
 
-function mapDecorations(token: Token): {
-	len: number;
-	decorations: DecorationDef[];
-} {
-	const decorations = DECORATION_STRATEGIES[token.type]?.(token) ?? [];
+type Segment = { docPos: number; textPos: number; length: number };
 
-	if ("tokens" in token && token.tokens && token.type !== "blockquote") {
-		decorations.push(
-			...reduceDecorations(token.tokens, getOffset(token)).decorations,
-		);
-	}
-	if (isListToken(token) && token.items) {
-		decorations.push(...reduceDecorations(token.items, 0).decorations);
-	}
-
-	return { decorations, len: token.raw.length };
+/** get serialized text from the editor, along with a list of offsets */
+function buildTextAndSegments(state: EditorState) {
+	let text = "";
+	const segments: Segment[] = [];
+	state.doc.descendants((node, pos) => {
+		if (node.isText && node.text) {
+			segments.push({
+				docPos: pos,
+				textPos: text.length,
+				length: node.text.length,
+			});
+			text += node.text;
+			return false;
+		}
+		if (node.isBlock && !node.isTextblock) return true; // skip non-leaf containers
+		if (node.isBlock) {
+			segments.push({ docPos: pos, textPos: text.length, length: 1 });
+			text += "\n"; // block boundary
+		}
+		return true;
+	});
+	return { text, segments };
 }
 
-function reduceDecorations(tokens: Token[], startPos = 0) {
-	return tokens.reduce(
-		(acc, token) => {
-			const { decorations, len } = mapDecorations(token);
-			const mapped = decorations.map((d) => ({
-				...d,
-				start: d.start + acc.pos,
-				end: d.end + acc.pos,
-			}));
-			return {
-				pos: acc.pos + len,
-				decorations: [...acc.decorations, ...mapped],
-			};
-		},
-		{ pos: startPos, decorations: [] as DecorationDef[] },
-	);
+/** find the mapped document position for an offset */
+function toDocPos(offset: number, segments: Segment[]): number {
+	// binary search: find segment containing offset
+	let lo = 0,
+		hi = segments.length - 1;
+	while (lo < hi) {
+		const mid = (lo + hi + 1) >> 1;
+		if (segments[mid].textPos <= offset) lo = mid;
+		else hi = mid - 1;
+	}
+	const seg = segments[lo];
+	return seg.docPos + Math.min(offset - seg.textPos, seg.length);
 }
 
 function calculateDecorations(state: EditorState): DecorationSet {
-	const decorations: Decoration[] = [];
+	if (!markdown) return DecorationSet.empty;
 
-	state.doc.descendants((node, pos) => {
-		if (node.isText && node.text) {
-			const tokens = md.lexer(node.text);
-			const { decorations: decoDefs } = reduceDecorations(tokens, pos);
-			for (const d of decoDefs) {
-				decorations.push(Decoration.inline(d.start, d.end, d.attrs, d.options));
-			}
-			return false;
-		}
-	});
+	const { text, segments } = buildTextAndSegments(state);
+	markdown.edit(0, markdown.sourceLength, text);
 
-	return DecorationSet.create(state.doc, decorations);
+	const decos = markdown
+		.decorations()
+		.map((d) =>
+			Decoration.inline(
+				toDocPos(d.span.start, segments),
+				toDocPos(d.span.end, segments),
+				getAttrs(d.kind),
+			),
+		);
+
+	// TODO: find codeblocks, use hljs to calculate decorations
+
+	return DecorationSet.create(state.doc, decos);
 }
 
 /**
@@ -292,18 +175,23 @@ export function createMarkdownHighlightPlugin() {
 				};
 			},
 			apply(tr, prev, _oldState, newState) {
-				// Map old decorations through the transaction
-				const mapped = prev.decorations.map(tr.mapping, tr.doc);
-
-				// Only recalculate if document content changed
-				if (tr.docChanged) {
-					// Calculate decorations for the new document
-					const newDecorations = calculateDecorations(newState);
-					return { decorations: newDecorations };
+				if (tr.docChanged || tr.getMeta(markdownHighlightKey) === "reload") {
+					return { decorations: calculateDecorations(newState) };
 				}
 
-				return { decorations: mapped };
+				return { decorations: prev.decorations.map(tr.mapping, tr.doc) };
 			},
+		},
+		view(view) {
+			mdLoaded.then(() => {
+				if (view.isDestroyed) return;
+				const parser = new MarkdownParser();
+				markdown = parser.empty();
+
+				view.dispatch(view.state.tr.setMeta(markdownHighlightKey, "reload"));
+			});
+
+			return {};
 		},
 		props: {
 			decorations(state) {
@@ -311,12 +199,4 @@ export function createMarkdownHighlightPlugin() {
 			},
 		},
 	});
-}
-
-/**
- * Get the current decoration set from the plugin state
- */
-export function getMarkdownDecorations(state: EditorState): DecorationSet {
-	const pluginState = markdownHighlightKey.getState(state);
-	return pluginState?.decorations ?? DecorationSet.empty;
 }

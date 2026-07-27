@@ -14,6 +14,7 @@ import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
 import { useApi, useChannels } from "@/api";
 import { useCtx } from "@/app/context";
+import { Markdown } from "@/atoms/Markdown";
 import { Resizable } from "@/atoms/Resizable";
 import { Time } from "@/atoms/Time";
 import { Document } from "@/components/features/editor/Document";
@@ -21,7 +22,6 @@ import { ChannelContext, createInitialChannelState } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
 import { usePermissions } from "@/hooks/usePermissions";
-import { md } from "@/lib/markdown";
 import { ChannelIcon } from "./User";
 
 export const Wiki = (props: { channel: Channel }) => {
@@ -381,10 +381,9 @@ export const Wiki = (props: { channel: Channel }) => {
 													/>
 												</div>
 												<Show when={doc.description}>
-													<div
-														class="description markdown"
-														innerHTML={md(doc.description ?? "") as string}
-													></div>
+													{(desc) => (
+														<Markdown class="description" content={desc()} />
+													)}
 												</Show>
 											</div>
 										</header>

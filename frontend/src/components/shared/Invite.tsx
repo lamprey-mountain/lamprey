@@ -3,7 +3,7 @@ import type { InviteTarget } from "sdk";
 import { createEffect, Show } from "solid-js";
 import { useInvites } from "@/api";
 import { useCtx } from "@/app/context";
-import { md } from "@/lib/markdown";
+import { Markdown } from "@/atoms/Markdown.tsx";
 import { getThumbFromId } from "@/media/util";
 
 const Title = (props: { title?: string }) => {
@@ -155,10 +155,7 @@ export const RouteInviteInner = (props: { code: string }) => {
 										{name()}
 									</div>
 									<Show when={target()?.type === "Room"}>
-										<div
-											class="markdown"
-											innerHTML={md(roomDescription()) as string}
-										></div>
+										<Markdown content={roomDescription()} class="markdown" />
 										<div class="dim">
 											{roomMemberCount()} members, {roomOnlineCount()} online
 										</div>

@@ -1,6 +1,5 @@
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { diffWords } from "diff";
-import type { Tokens } from "marked";
 import { DOMParser, type Node as PMNode } from "prosemirror-model";
 import { TextSelection } from "prosemirror-state";
 import type { Channel, DocumentBranch, HistoryPagination } from "sdk";
@@ -41,7 +40,7 @@ import { useChannel } from "@/contexts/channel.tsx";
 import { useDocument } from "@/contexts/document.tsx";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal.tsx";
-import { md } from "@/lib/markdown";
+import { Parser } from "@/lib/markdown";
 import { createEditor } from "./DocumentEditor.tsx";
 import type { DiffMark } from "./diff-plugin.ts";
 import {
@@ -1053,10 +1052,10 @@ const DocumentMain = (
 
 			// Safely call createReadonlyState depending on what is exported by Editor
 			const newHtml = serdocToHtml(newSerdoc);
-			const readonlyState =
-				typeof (ed as any).createReadonlyStateFromHtml === "function"
-					? (ed as any).createReadonlyStateFromHtml(newHtml)
-					: ed.createReadonlyState(newHtml);
+			const readonlyState = await (typeof (ed as any)
+				.createReadonlyStateFromHtml === "function"
+				? (ed as any).createReadonlyStateFromHtml(newHtml)
+				: ed.createReadonlyState(newHtml));
 
 			ed.setState(readonlyState);
 			ed.setDiffMarks(marks);
@@ -1149,24 +1148,13 @@ const DocumentMain = (
 			markdown.length,
 		);
 		const result: { level: number; text: string }[] = [];
-		const tokens = md.lexer(markdown);
-		console.log("[TOC] tokens:", tokens.length);
 
-		for (const token of tokens) {
-			console.log("[TOC] token type:", token.type);
-			if (token.type === "heading") {
-				const heading = token as Tokens.Heading;
-				const text =
-					heading.tokens
-						?.map((t) => (t.type === "text" ? t.text : ""))
-						.join("")
-						.trim() ?? heading.text.trim();
-				console.log("[TOC] found heading:", heading.depth, text);
-				if (text) {
-					result.push({ level: heading.depth, text });
-				}
-			}
+		// FIXME: handle wasm not loaded yet
+		const md = new Parser();
+		for (const h of md.parse(markdown).headers()) {
+			result.push({ level: h.level, text: h.text });
 		}
+
 		console.log("[TOC] result:", result);
 		return result;
 	};

@@ -443,6 +443,10 @@
 		color: $link-500;
 	}
 
+	& s {
+		text-decoration-color: oklch(from $fg-200 l c h / .7);
+	}
+
 	& .code-block {
 		background-color: $bg-200;
 		font-family: var(--font-mono);
