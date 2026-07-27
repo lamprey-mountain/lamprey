@@ -17,6 +17,7 @@ import {
 	useRoomMembers,
 } from "@/api";
 import { Markdown } from "@/atoms/Markdown.tsx";
+import { Avatar } from "@/avatar/UserAvatar";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useChannel } from "@/contexts/mod";
 import type { ChannelT } from "@/types";
@@ -448,17 +449,7 @@ export const TimelineItem2 = (props: {
 					)}
 				</Match>
 				<Match when={props.item.type === "info"}>
-					<div class="timeline-header">
-						<header>
-							<h1>{props.channel.name}</h1>
-							<p>
-								This is the start of {props.channel.name}.{" "}
-								<Show when={props.channel.description}>
-									{(desc) => <Markdown content={desc()} />}
-								</Show>
-							</p>
-						</header>
-					</div>
+					<TimelineHeader channel={props.channel} />
 				</Match>
 				<Match when={props.item.type === "divider" && props.item}>
 					{(item) => (
@@ -496,5 +487,55 @@ export const TimelineItem2 = (props: {
 				</Match>
 			</Switch>
 		</li>
+	);
+};
+
+const TimelineHeader = (props: { channel: ChannelT }) => {
+	const me = useCurrentUser();
+
+	const isDm = () => props.channel.type === "Dm";
+
+	const other = createMemo(() => {
+		if (!isDm()) return null;
+		const other = props.channel.recipients?.find((a) => a.id !== me()?.id);
+		if (!other) return null;
+		return other;
+	});
+
+	return (
+		<div class="timeline-header">
+			<header>
+				<Switch>
+					<Match when={other()}>
+						{(recipient) => (
+							<>
+								<Avatar user={recipient()} />
+								<h1>{recipient().name}</h1>
+								<p>
+									This is the start of your direct message history with{" "}
+									<b>{recipient().name}</b>.
+								</p>
+							</>
+						)}
+					</Match>
+					<Match when={isDm()}>
+						<h1>unknown user</h1>
+						<p>
+							This is the start of your direct message history with{" "}
+							<span class="unknown">unknown user</span>.
+						</p>
+					</Match>
+					<Match when={true}>
+						<h1>{props.channel.name}</h1>
+						<p>
+							This is the start of {props.channel.name}.{" "}
+							<Show when={props.channel.description}>
+								{(desc) => <Markdown content={desc()} />}
+							</Show>
+						</p>
+					</Match>
+				</Switch>
+			</header>
+		</div>
 	);
 };

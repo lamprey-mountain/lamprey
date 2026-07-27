@@ -147,6 +147,14 @@
 	margin-top: 32px;
 	margin-bottom: 16px;
 	/* box-shadow: 0 2px 8px $bg-150; */ // NOTE: this was used with the old sticky header system
+
+	& .avatar {
+		margin-bottom: 4px;
+	}
+
+	& .unknown {
+		color: $fg-400;
+	}
 }
 
 .timeline-divider {
