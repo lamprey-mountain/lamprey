@@ -7,8 +7,8 @@ import {
 	type Transaction,
 } from "prosemirror-state";
 import { liftTarget } from "prosemirror-transform";
-import { serializeToMarkdown } from "./export-utils.ts";
 import { schema } from "./schema.ts";
+import { serializeToMarkdown } from "./serializer.ts";
 
 interface LineBounds {
 	start: number;

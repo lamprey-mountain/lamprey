@@ -81,7 +81,7 @@ const AvatarWithTooltip = (props: {
 };
 
 export const DocumentHistory = (props: DocumentHistoryProps) => {
-	const api2 = useApi();
+	const api = useApi();
 	const [, setCh] = useChannel()!;
 	const [history, setHistory] = createSignal<HistoryPagination | null>(null);
 	const [loading, setLoading] = createSignal(false);
@@ -91,7 +91,7 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 		setLoading(true);
 		setError(null);
 		try {
-			const data = await api2.documents.history(
+			const data = await api.documents.history(
 				props.channel.id,
 				props.branchId,
 				{

@@ -171,3 +171,11 @@ export const useModals = (): ModalsContextType => {
 	}
 	return context;
 };
+
+// export type ModalsContext2Type = ModalsController & {
+// 	modals: Modal[];
+// };
+
+// export const useModals2 = (): ModalsContext2Type  => {
+// 	// TODO
+// };

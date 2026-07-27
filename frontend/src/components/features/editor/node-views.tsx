@@ -1,4 +1,5 @@
 import type { Node } from "prosemirror-model";
+import type { NodeView, NodeViewConstructor } from "prosemirror-view";
 import { getOwner, runWithOwner, type VoidComponent } from "solid-js";
 import { render } from "solid-js/web";
 import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
@@ -12,7 +13,7 @@ export const createNodeViews = () => {
 		propsFn: (node: Node) => T,
 		Component: VoidComponent<T>,
 	) =>
-		(node: Node) => {
+		(node: Node): NodeView => {
 			const dom = document.createElement("span");
 			dom.classList.add("node-view-wrapper");
 
@@ -29,10 +30,11 @@ export const createNodeViews = () => {
 			return {
 				dom,
 				update: (newNode: Node) => {
-					// Update props when the node changes
 					currentProps = propsFn(newNode);
+					return true;
 					// Note: We don't re-render here to avoid creating new computations.
 					// The component will re-render when its parent re-renders.
+					// TODO: verify above
 				},
 				destroy: () => dispose(),
 			};
@@ -42,7 +44,7 @@ export const createNodeViews = () => {
 export const createEditorNodeViews = () => {
 	const nv = createNodeViews();
 
-	return () => ({
+	return (): Record<string, NodeViewConstructor> => ({
 		mention: nv(
 			(n) => ({
 				id: n.attrs.user,

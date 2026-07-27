@@ -1,5 +1,110 @@
 @use "./util.scss" as *;
 
+.wiki-channel {
+	grid-area: main;
+	display: flex;
+	padding: 0;
+	align-items: stretch;
+	justify-content: stretch;
+	overflow: hidden;
+
+	& > .list {
+		padding: 1rem;
+		display: flex;
+		flex-direction: column;
+		overflow-y: auto;
+		height: 100%;
+
+		.sort-view-container {
+			.sort-view-button {
+				border-radius: 4px;
+				display: flex;
+				align-items: center;
+				gap: 8px;
+
+				& .icon2 {
+					rotate: 90deg;
+					/* transition: rotate 200ms; */
+				}
+
+				&.selected {
+					background-color: $bg-400;
+
+					& .icon2 {
+						rotate: 270deg;
+					}
+				}
+			}
+		}
+	}
+
+	.create-document {
+		@include truncate;
+	}
+}
+
+.document-sorting {
+	display: flex;
+	background-color: $bg-150;
+	border: solid 1px $sep-500;
+	box-shadow: 2px 2px 8px $bg-100;
+	min-width: 128px;
+	padding: 4px;
+
+	.header {
+		margin: 2px 4px;
+		margin-left: 24px;
+		color: $fg-600;
+	}
+
+	.column {
+		min-width: 128px;
+	}
+
+	.button {
+		display: flex;
+		gap: 4px;
+		align-items: center;
+		padding: 2px 4px;
+		border-radius: 2px;
+		width: 100%;
+		border: none;
+		color: $fg-500;
+		background: none;
+
+		.icon2 {
+			visibility: hidden;
+		}
+
+		&:hover,
+		&:focus-visible {
+			color: $fg-100;
+			background: #fff1;
+
+			.icon2 {
+				visibility: visible;
+			}
+		}
+
+		&.selected {
+			color: $fg-200;
+
+			.icon2 {
+				visibility: visible;
+				background-color: $link-500;
+			}
+		}
+	}
+
+	&.forum2-comment-sorting .button {
+		align-items: start;
+
+		.icon2 {
+			margin-top: 2px;
+		}
+	}
+}
+
 .document-header {
 	display: flex;
 	align-items: center;
@@ -75,18 +180,17 @@
 	}
 }
 
-.document {
+.document-wrapper {
 	grid-area: main;
 	background-color: $bg-200;
 	display: flex;
-	flex-direction: column;
 	overflow-y: auto;
 	position: relative;
+}
 
-	& > div > main {
-		flex: 1;
-		padding: 8px;
-	}
+.document-main {
+	flex: 1;
+	padding: 8px;
 
 	.document-presence-cursor {
 		position: absolute;
@@ -112,7 +216,7 @@
 		background-color: $bg-150;
 		box-shadow: 2px 2px 4px oklch(var(--color-bg1) / 0.5);
 		border: solid $sep-300 1px;
-		min-height: 100%;
+		/* min-height: 100%; */
 		max-width: 850px;
 		margin: 8px auto;
 		padding: 16px;
@@ -121,14 +225,9 @@
 			color: $fg-600;
 		}
 	}
-
-	.icon-button {
-		display: grid;
-		place-items: center;
-		height: 24px;
-		width: 24px;
-	}
 }
+
+// ==== OLD STYLES BELOW ====
 
 .document-menu {
 	display: flex;

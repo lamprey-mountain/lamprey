@@ -13,7 +13,7 @@ import { createEffect, onCleanup, onMount } from "solid-js";
 import { pastePluginKey, submitPluginKey } from "./core-plugins.ts";
 import { schema as defaultSchema } from "./schema";
 
-const placeholderPluginKey = new PluginKey<string>("placeholder");
+export const placeholderPluginKey = new PluginKey<string>("placeholder");
 
 export function createPlaceholderPlugin() {
 	return new Plugin<string>({
@@ -33,8 +33,8 @@ export function createPlaceholderPlugin() {
 				const isEmpty = !state.doc.firstChild?.content.size;
 				if (!isEmpty) return DecorationSet.empty;
 
-				const widget = Decoration.widget(1, () => {
-					const span = document.createElement("span");
+				const widget = Decoration.widget(0, () => {
+					const span = document.createElement("div");
 					span.className = "placeholder";
 					span.textContent = text;
 					return span;

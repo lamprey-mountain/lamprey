@@ -15,15 +15,15 @@ import { useCtx } from "@/app/context";
 import icX from "@/assets/x-1.png";
 import { Icon } from "@/atoms/Icon";
 import { Resizable } from "@/atoms/Resizable.tsx";
-import { Avatar } from "@/avatar/UserAvatar";
+import { Document } from "@/components/document/Document.tsx";
+import { DocumentHistory } from "@/components/document/DocumentHistory";
+import { Wiki } from "@/components/document/Wiki";
 import { ChannelSettings } from "@/components/features/channel_settings/index";
 import { ChatMain } from "@/components/features/chat/Chat.tsx";
 import { ChatHeader } from "@/components/features/chat/ChatHeader.tsx";
 import { PinnedMessages } from "@/components/features/chat/PinnedMessages.tsx";
 import { SearchResults } from "@/components/features/chat/SearchResults.tsx";
 import { ThreadMembers } from "@/components/features/chat/Thread.tsx";
-import { Document } from "@/components/features/editor/Document.tsx";
-import { DocumentHistory } from "@/components/features/editor/DocumentHistory.tsx";
 import { Forum } from "@/components/features/forum/Forum";
 import {
 	Forum2,
@@ -46,18 +46,12 @@ import { RoomHeader } from "@/components/shared/RoomHeader";
 import { RoomNav } from "@/components/shared/RoomNav";
 import { UserPage } from "@/components/shared/UserPage";
 import { UserTray } from "@/components/shared/UserTray";
-import { Wiki } from "@/components/shared/Wiki";
 import {
 	ChannelContext,
 	createInitialChannelState,
 	useChannel,
 } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
-import {
-	createInitialDocumentState,
-	DocumentContext,
-	useDocument,
-} from "@/contexts/document.tsx";
 import {
 	createInitialRoomState,
 	RoomContext,
@@ -232,19 +226,6 @@ const ThreadChatSidebar = (props: { thread_id: string }) => {
 		return ctx.channel_contexts.get(channelId)!;
 	};
 
-	const getOrCreateDocumentContext = () => {
-		const channelId = props.thread_id;
-		if (!channelId) return null;
-
-		if (!ctx.document_contexts.has(channelId)) {
-			const store = createStore(createInitialDocumentState(channelId));
-			ctx.document_contexts.set(channelId, store);
-		}
-
-		return ctx.document_contexts.get(channelId)!;
-	};
-
-	const documentCtx = createMemo(() => getOrCreateDocumentContext());
 	const channelCtx = createMemo(() => getOrCreateChannelContext());
 
 	const onClose = () => {
@@ -257,25 +238,22 @@ const ThreadChatSidebar = (props: { thread_id: string }) => {
 				{(t) => (
 					<Show when={channelCtx()}>
 						{(cc) => (
-							<Show when={documentCtx()}>
-								{(dc) => (
-									<ChannelContext.Provider value={cc()}>
-										<DocumentContext.Provider value={dc()}>
-											<button type="button" class="close" onClick={onClose}>
-												<Icon src={icX} />
-											</button>
-											<Switch>
-												<Match when={t().type === "ThreadForum2"}>
-													<Forum2Thread channel={t()} />
-												</Match>
-												<Match when={true}>
-													<ChatMain channel={t()} />
-												</Match>
-											</Switch>
-										</DocumentContext.Provider>
-									</ChannelContext.Provider>
-								)}
-							</Show>
+							<ChannelContext.Provider value={cc()}>
+								<button type="button" class="close" onClick={onClose}>
+									<Icon src={icX} />
+								</button>
+								<Switch>
+									<Match when={t().type === "Document"}>
+										<Document channel={t()} />
+									</Match>
+									<Match when={t().type === "ThreadForum2"}>
+										<Forum2Thread channel={t()} />
+									</Match>
+									<Match when={true}>
+										<ChatMain channel={t()} />
+									</Match>
+								</Switch>
+							</ChannelContext.Provider>
 						)}
 					</Show>
 				)}
@@ -292,8 +270,8 @@ const ChannelSidebar = (props: {
 }) => {
 	const ctx = useCtx();
 	const [ch] = useChannel()!;
-	const [doc] = useDocument()!;
-	const branchId = doc.branchId;
+	// const [doc] = useDocument()!;
+	// const branchId = doc.branchId;
 	const search = () => ch.search;
 	const showMembers = () =>
 		props.channel.type !== "Voice" &&
@@ -305,6 +283,8 @@ const ChannelSidebar = (props: {
 	const showHistory = () =>
 		props.channel.type === "Document" && ch.history_view;
 	const showThreadChatSidebar = () => ch.thread_chat_sidebar_thread_id;
+
+	// TODO: make document sidebar and thread sidebar use different resizable storage keys
 
 	return (
 		<Switch>
@@ -320,9 +300,10 @@ const ChannelSidebar = (props: {
 			</Match>
 			<Match when={showHistory()}>
 				<Resizable storageKey="document-history-width" initialWidth={320}>
+					{/* FIXME: branch id for DocumentHistory */}
 					<DocumentHistory
 						channel={props.channel}
-						branchId={branchId}
+						branchId={props.channel.id}
 						isOpen={ch.history_view}
 						selectedSeq={props.selectedSeq}
 						onSelectChangeset={props.onSelectChangeset}
@@ -386,22 +367,9 @@ export const RouteChannel = (
 		return ctx.channel_contexts.get(channelId)!;
 	};
 
-	// TODO: don't create document context if the channel isnt a document
-	const getOrCreateDocumentContext = () => {
-		const channelId = p.params.channel_id;
-		if (!channelId) return null;
-
-		if (!ctx.document_contexts.has(channelId)) {
-			const store = createStore(createInitialDocumentState(channelId));
-			ctx.document_contexts.set(channelId, store);
-		}
-
-		return ctx.document_contexts.get(channelId)!;
-	};
-
-	const documentCtx = createMemo(() => getOrCreateDocumentContext());
 	const channelCtx = createMemo(() => getOrCreateChannelContext());
 
+	// TODO: remove
 	const [selectedSeq, setSelectedSeq] = createSignal<ChangesetSelection | null>(
 		null,
 	);
@@ -448,78 +416,67 @@ export const RouteChannel = (
 	return (
 		<Show when={channelCtx()} fallback={<div>Loading channel...</div>}>
 			{(cc) => (
-				<Show when={documentCtx()}>
-					{(dc) => (
-						<ChannelContext.Provider value={cc()}>
-							<DocumentContext.Provider value={dc()}>
-								<Title title={title()} />
-								<Show when={channel()}>
-									{(ch) => (
-										<>
-											<Switch>
-												<Match when={ch().type === "Voice"}>
-													<Voice channel={ch()} />
-												</Match>
-												<Match
-													when={
-														ch().type === "Text" ||
-														ch().type === "Dm" ||
-														ch().type === "Gdm" ||
-														ch().type === "Announcement" ||
-														ch().type === "ThreadPublic" ||
-														ch().type === "ThreadPrivate"
-													}
-												>
-													<ChatHeader channel={ch()} />
-													<ChatMain channel={ch()} />
-												</Match>
-												<Match when={ch().type === "Document"}>
-													<Document
-														channel={ch()}
-														selectedSeq={selectedSeq()}
-														onSelectChangeset={setSelectedSeq}
-														hoverSeq={hoverSeq()}
-														onHoverChangeset={setHoverSeq}
-													/>
-												</Match>
-												<Match when={ch().type === "Wiki"}>
-													<Wiki channel={ch()} />
-												</Match>
-												<Match when={ch().type === "Forum"}>
-													<ChatHeader channel={ch()} />
-													<Forum channel={ch()} />
-												</Match>
-												<Match when={ch().type === "Forum2"}>
-													<ChatHeader channel={ch()} />
-													<Forum2 channel={ch()} />
-												</Match>
-												<Match when={ch().type === "ThreadForum2"}>
-													<ChatHeader channel={ch()} />
-													<Forum2ThreadPage channel={ch()} />
-												</Match>
-												<Match when={ch().type === "Calendar"}>
-													<Calendar channel={ch()} />
-												</Match>
-												<Match when={ch().type === "Scripts"}>
-													<Scripts channel={ch()} />
-												</Match>
-												<Match when={ch().type === "Category"}>
-													<Category channel={ch()} />
-												</Match>
-											</Switch>
-											<ChannelSidebar
-												channel={ch()}
-												selectedSeq={selectedSeq()}
-												onSelectChangeset={setSelectedSeq}
-												onHoverChangeset={setHoverSeq}
-											/>
-										</>
-									)}
-								</Show>
-							</DocumentContext.Provider>
-						</ChannelContext.Provider>
-					)}
-				</Show>
+				<ChannelContext.Provider value={cc()}>
+					<Title title={title()} />
+					<Show when={channel()}>
+						{(ch) => (
+							<>
+								<Switch>
+									<Match when={ch().type === "Voice"}>
+										<Voice channel={ch()} />
+									</Match>
+									<Match
+										when={
+											ch().type === "Text" ||
+											ch().type === "Dm" ||
+											ch().type === "Gdm" ||
+											ch().type === "Announcement" ||
+											ch().type === "ThreadPublic" ||
+											ch().type === "ThreadPrivate"
+										}
+									>
+										<ChatHeader channel={ch()} />
+										<ChatMain channel={ch()} />
+									</Match>
+									<Match when={ch().type === "Document"}>
+										<Document channel={ch()} />
+									</Match>
+									<Match when={ch().type === "Wiki"}>
+										<ChatHeader channel={ch()} />
+										<Wiki channel={ch()} />
+									</Match>
+									<Match when={ch().type === "Forum"}>
+										<ChatHeader channel={ch()} />
+										<Forum channel={ch()} />
+									</Match>
+									<Match when={ch().type === "Forum2"}>
+										<ChatHeader channel={ch()} />
+										<Forum2 channel={ch()} />
+									</Match>
+									<Match when={ch().type === "ThreadForum2"}>
+										<ChatHeader channel={ch()} />
+										<Forum2ThreadPage channel={ch()} />
+									</Match>
+									<Match when={ch().type === "Calendar"}>
+										<Calendar channel={ch()} />
+									</Match>
+									<Match when={ch().type === "Scripts"}>
+										<Scripts channel={ch()} />
+									</Match>
+									<Match when={ch().type === "Category"}>
+										<Category channel={ch()} />
+									</Match>
+								</Switch>
+								<ChannelSidebar
+									channel={ch()}
+									selectedSeq={selectedSeq()}
+									onSelectChangeset={setSelectedSeq}
+									onHoverChangeset={setHoverSeq}
+								/>
+							</>
+						)}
+					</Show>
+				</ChannelContext.Provider>
 			)}
 		</Show>
 	);

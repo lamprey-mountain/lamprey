@@ -8,12 +8,16 @@ import { ChannelIcon } from "@/avatar/ChannelIcon";
 import { useChannel } from "@/contexts/mod";
 import type { ChannelT } from "@/types";
 
-export type ThreadCardProps = {
+export type DocumentCardProps = {
 	thread: ChannelT;
 	openInSidebar: boolean;
 };
 
-export const ThreadCard = (props: ThreadCardProps) => {
+// TODO: don't show message count, last message timestamp
+// TODO: show when the document was last edited
+// TODO: show people who edited (and/or are currently editing?) the document
+
+export const DocumentCard = (props: DocumentCardProps) => {
 	const nav = useNavigate();
 	const [_ch, chUpdate] = useChannel();
 	const ctx = useCtx();

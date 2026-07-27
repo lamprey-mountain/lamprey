@@ -1,10 +1,10 @@
-import type { Node } from "prosemirror-model";
+import type { Fragment, Node } from "prosemirror-model";
 
 /**
  * Serializes a ProseMirror document to markdown format,
  * converting mention nodes back to their <@uuid> syntax.
  */
-export function serializeToMarkdown(doc: Node): string {
+export function serializeToMarkdown(doc: Node | Fragment): string {
 	console.log("DOC", doc);
 	let result = "";
 

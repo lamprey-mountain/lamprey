@@ -1,59 +1,7 @@
-import {
-	type Fragment,
-	Node as ProsemirrorNode,
-	Slice,
-} from "prosemirror-model";
 import type { EditorView } from "prosemirror-view";
 import { parser as markdownParser } from "@/lib/markdown";
+import { serializeToMarkdown } from "../features/editor/serializer";
 import htmlTemplate from "./html-template.html?raw";
-
-/**
- * Converts a ProseMirror Document, Fragment, or Slice into a Markdown string.
- */
-export function serializeToMarkdown(
-	input: ProsemirrorNode | Fragment | Slice,
-): string {
-	// 1. Extract the fragment (the actual list of nodes)
-	let fragment: Fragment;
-	if (input instanceof Slice) {
-		fragment = input.content;
-	} else if (input instanceof ProsemirrorNode) {
-		fragment = input.content;
-	} else {
-		fragment = input;
-	}
-
-	let markdown = "";
-
-	fragment.forEach((node) => {
-		switch (node.type.name) {
-			case "blockquote": {
-				// every line should start with a "> "
-				node.forEach((child) => {
-					const lines = child.textContent.split("\n");
-					lines.forEach((line) => {
-						const cleanLine = line.trimStart().startsWith(">")
-							? line.trimStart().slice(1).trimStart()
-							: line;
-						markdown += `> ${cleanLine}\n`;
-					});
-				});
-				markdown += "\n";
-				break;
-			}
-
-			default: {
-				if (node.isInline) {
-					markdown += node.textContent;
-				} else {
-					markdown += `${node.textContent}\n\n`;
-				}
-			}
-		}
-	});
-
-	return markdown.trim();
-}
 
 export function exportAsMarkdown(view: EditorView, filename: string) {
 	const markdown = serializeToMarkdown(view.state.doc);

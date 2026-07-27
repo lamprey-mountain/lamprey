@@ -328,18 +328,20 @@ export const Forum2 = (props: { channel: Channel }) => {
 					</For>
 				</ul>
 
-				<h3 class="dim" style="margin-top:16px;">
-					older threads
-				</h3>
-				<ul>
-					<For each={threads().archived}>
-						{(thread) => (
-							<li>
-								<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
-							</li>
-						)}
-					</For>
-				</ul>
+				<Show when={threads().archived.length}>
+					<h3 class="dim" style="margin-top:16px;">
+						older threads
+					</h3>
+					<ul>
+						<For each={threads().archived}>
+							{(thread) => (
+								<li>
+									<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
+								</li>
+							)}
+						</For>
+					</ul>
+				</Show>
 
 				<div ref={setBottom}></div>
 			</div>

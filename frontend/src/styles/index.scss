@@ -121,45 +121,43 @@
 	border-radius: 4px;
 	max-width: 800px;
 
-	& > header {
-		& > .top,
-		& > .bottom {
-			display: flex;
-			width: 100%;
-			background: none;
-			border: none;
-			text-align: left;
-			font: inherit;
-			color: inherit;
-			padding: 4px 8px;
-			cursor: pointer;
+	& > .top,
+	& > .bottom {
+		display: flex;
+		width: 100%;
+		background: none;
+		border: none;
+		text-align: left;
+		font: inherit;
+		color: inherit;
+		padding: 4px 8px;
+		cursor: pointer;
+	}
+
+	& > .top {
+		align-items: center;
+		gap: 8px;
+
+		& > .spacer {
+			@include truncate;
+			flex: 1;
 		}
 
-		& > .top {
-			align-items: center;
-			gap: 8px;
+		& > .time {
+			color: $fg-500;
+		}
+	}
 
-			& > .spacer {
-				@include truncate;
-				flex: 1;
-			}
+	& > .bottom {
+		flex-direction: column;
 
-			& > .time {
-				color: $fg-500;
-			}
+		.dim {
+			font-size: 0.8rem;
+			color: $fg-500;
 		}
 
-		& > .bottom {
-			flex-direction: column;
-
-			.dim {
-				font-size: 0.8rem;
-				color: $fg-500;
-			}
-
-			.description {
-				margin-top: 8px;
-			}
+		.description {
+			margin-top: 8px;
 		}
 	}
 

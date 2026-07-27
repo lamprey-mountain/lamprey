@@ -57,8 +57,25 @@ import { default as icMembers } from "@/assets/members.png";
 
 export { default as icChevron } from "@/assets/chevron.png";
 export { default as icCollapse } from "@/assets/collapse.png";
+export { default as icDelete } from "@/assets/delete.png";
 export { default as icDm } from "@/assets/dm.png";
+export {
+	default as icBranchDefault,
+	default as icBranchPrivate,
+	default as icBranchNew,
+	default as icBranchFork,
+	default as icBranch,
+	default as icMergeFull,
+	default as icMergeCherrypick,
+	default as icRename,
+	default as icSync,
+} from "@/assets/edit.png";
 export { default as icExpand } from "@/assets/expand.png";
+export { default as icFormatBold } from "@/assets/format-bold.png";
+export { default as icFormatCode } from "@/assets/format-code.png";
+export { default as icFormatItalic } from "@/assets/format-italic.png";
+export { default as icFormatStrikethrough } from "@/assets/format-strikethrough.png";
+export { default as icFormatUrl } from "@/assets/format-url.png";
 export { default as icFullscreen } from "@/assets/fullscreen.png";
 export { default as icFullscreent } from "@/assets/fullscreent.png";
 export { default as icMenu } from "@/assets/menu.png";
@@ -70,4 +87,5 @@ export { default as icVolumeLow } from "@/assets/volume-low.png";
 export { default as icVolumeMax } from "@/assets/volume-max.png";
 export { default as icVolumeMedium } from "@/assets/volume-medium.png";
 export { default as icVolumeMute } from "@/assets/volume-mute.png";
+
 export { icMembers, icMembers as icUser };
