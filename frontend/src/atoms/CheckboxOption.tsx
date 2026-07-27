@@ -8,7 +8,7 @@ type CheckboxOptionProps = {
 	seed: string;
 	class?: string;
 	disabled?: boolean;
-	style?: JSX.CSSProperties;
+	style?: JSX.CSSProperties | string;
 };
 
 export const CheckboxOption = (props: ParentProps<CheckboxOptionProps>) => {

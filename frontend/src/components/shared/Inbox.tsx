@@ -7,6 +7,12 @@ import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { Checkbox } from "@/atoms/icons";
 import { Time } from "@/atoms/Time";
 import { MessageView } from "@/components/features/chat/Message.tsx";
+import { MessageToolbarProvider } from "../features/chat/message-toolbar-context";
+
+// TODO: skeletons for inbox items
+// TODO: render other notification items besides messages
+// TODO: refactor styles
+// TODO: better caching, update inbox as sync messages are received, don't refetch when marking messages as read/unread
 
 export const Inbox = () => {
 	const inbox2 = useInbox();
@@ -51,81 +57,85 @@ export const Inbox = () => {
 
 	return (
 		<div class="inbox">
-			<header>
-				<h2>inbox</h2>
-				<div class="spacer" />
-				<div class="filters">
-					<CheckboxOption
-						id="inbox-include-read"
-						checked={params().include_read}
-						onChange={(checked) =>
-							setParams({
-								...params(),
-								include_read: checked,
-							})
-						}
-						seed="inbox-include-read"
-					>
-						<Checkbox
+			<MessageToolbarProvider>
+				<header>
+					<h2>inbox</h2>
+					<div class="spacer" />
+					<div class="filters">
+						<CheckboxOption
+							id="inbox-include-read"
 							checked={params().include_read}
+							onChange={(checked) =>
+								setParams({
+									...params(),
+									include_read: checked,
+								})
+							}
 							seed="inbox-include-read"
-						/>
-						<span>include read</span>
-					</CheckboxOption>
-				</div>
-			</header>
-			<div style="margin:8px;margin-bottom:0;margin-left: 16px;height:1rem;display:flex;align-items:center">
-				<CheckboxOption
-					id="inbox-select-all"
-					checked={false}
-					onChange={(checked) => {
-						if (checked) {
-							setSelected(inboxItems()?.items.map((i) => i.id) ?? []);
-						} else {
-							setSelected([]);
-						}
-					}}
-					seed="inbox-select-all"
-				>
-					<Checkbox checked={false} seed="inbox-select-all" />
-					<span>select all</span>
-				</CheckboxOption>
-				<Show when={selected().length > 0}>
-					<div style="margin-left: 8px">
-						<span>{selected().length} selected</span>
-						<button
-							type="button"
-							class="button"
-							onClick={handleMarkSelectedRead}
 						>
-							Mark as read
-						</button>
-						<button
-							type="button"
-							class="button"
-							onClick={handleMarkSelectedUnread}
-						>
-							Mark as unread
-						</button>
-					</div>
-				</Show>
-			</div>
-			<div class="inner">
-				<Show when={!inboxItems.loading} fallback={<div>loading...</div>}>
-					<For each={inboxItems()?.items} fallback={<div>no entries</div>}>
-						{(it) => (
-							<NotificationItem
-								notification={it}
-								allData={inboxItems()}
-								selected={selected().includes(it.id)}
-								onSelect={toggleSelection}
-								refetch={inboxResult.refetch}
-								include_read={params().include_read}
+							<Checkbox
+								checked={params().include_read}
+								seed="inbox-include-read"
 							/>
-						)}
-					</For>
-				</Show>
-			</div>
+							<span>include read</span>
+						</CheckboxOption>
+					</div>
+				</header>
+				<div style="margin:8px;margin-bottom:0;margin-left: 16px;height:1rem;display:flex;align-items:center">
+					<CheckboxOption
+						id="inbox-select-all"
+						// TODO: checked=true when all items are selected
+						checked={false}
+						onChange={(checked) => {
+							if (checked) {
+								setSelected(inboxItems()?.items.map((i) => i.id) ?? []);
+							} else {
+								setSelected([]);
+							}
+						}}
+						seed="inbox-select-all"
+					>
+						<Checkbox checked={false} seed="inbox-select-all" />
+						<span>select all</span>
+					</CheckboxOption>
+					<div style="flex:1"></div>
+					<Show when={selected().length > 0}>
+						<div style="margin-left: 8px;display:flex;align-items:center">
+							<span>{selected().length} selected</span>
+							<button
+								type="button"
+								class="button"
+								onClick={handleMarkSelectedRead}
+							>
+								Mark as read
+							</button>
+							<button
+								type="button"
+								class="button"
+								onClick={handleMarkSelectedUnread}
+							>
+								Mark as unread
+							</button>
+						</div>
+					</Show>
+				</div>
+				<div class="inner">
+					<Show when={!inboxItems.loading} fallback={<div>loading...</div>}>
+						<For each={inboxItems()?.items} fallback={<div>no entries</div>}>
+							{(it) => (
+								<NotificationItem
+									notification={it}
+									allData={inboxItems()}
+									selected={selected().includes(it.id)}
+									onSelect={toggleSelection}
+									refetch={inboxResult.refetch}
+									include_read={params().include_read}
+								/>
+							)}
+						</For>
+					</Show>
+				</div>
+			</MessageToolbarProvider>
 		</div>
 	);
 };

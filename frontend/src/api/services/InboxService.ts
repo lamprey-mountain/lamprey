@@ -41,6 +41,7 @@ export class InboxService extends BaseService<Notification> {
 		throw new Error("Use useList() to fetch inbox notifications");
 	}
 
+	// TODO: use PaginatedList instead of InboxListResult
 	useList(params: () => InboxListParams): InboxListResult {
 		const [resource, { refetch }] = createResource(
 			() => [params(), this.store.session()] as const,
@@ -83,7 +84,7 @@ export class InboxService extends BaseService<Notification> {
 				}
 
 				return {
-					items: data.notifications,
+					items: data.notifications.toReversed(),
 					total: data.total,
 					has_more: data.has_more,
 					channels: data.channels,
