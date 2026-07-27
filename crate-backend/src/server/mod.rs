@@ -5,7 +5,7 @@ use tracing::{info, warn};
 
 use crate::{
     prelude::*,
-    server::http::{create_router_api, serve_transport},
+    server::http::{create_router_api, create_router_metrics, serve_transport},
 };
 
 mod http;
@@ -46,7 +46,7 @@ impl Server {
             for c in &l.components {
                 let component_router = match c {
                     ListenComponent::Api => create_router_api(self.globals()),
-                    ListenComponent::Metrics => todo!(),
+                    ListenComponent::Metrics => create_router_metrics(self.globals()),
                 };
                 router = router.merge(component_router);
             }

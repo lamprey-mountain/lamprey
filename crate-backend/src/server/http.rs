@@ -33,7 +33,7 @@ mod util;
 /// create an axum router for the api
 pub fn create_router_api(globals: Globals) -> Router {
     let state = Arc::new(globals.to_server_state());
-    let (router, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+    let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest("/api", routes::routes(state.clone()).fallback(api_fallback))
         .route("/metrics", get(routes::metrics::get_metrics))
         .route("/.well-known/lamprey-mountain", get(routes::well_known))
@@ -86,7 +86,18 @@ pub fn create_router_api(globals: Globals) -> Router {
 
 /// create an axum router for metrics
 pub fn create_router_metrics(globals: Globals) -> Router {
-    todo!()
+    let state = Arc::new(globals.to_server_state());
+    Router::new()
+        .route("/metrics", get(routes::metrics::get_metrics))
+        .with_state(state)
+        // NOTE: what layers do i actually need here?
+        .layer(util::cors())
+        .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
+        .layer(TraceLayer::new_for_http())
+        .layer(CatchPanicLayer::new())
+        .layer(PropagateHeaderLayer::new(HeaderName::from_static(
+            "x-trace-id",
+        )))
 }
 
 /// create an axum router for the media server
