@@ -5,6 +5,7 @@ export type IconProps = {
 	src: string;
 	alt?: string;
 	color?: string | null;
+	class?: string;
 };
 
 const DEFAULT_ICON_COLOR = colors.fg400;
@@ -12,7 +13,7 @@ const DEFAULT_ICON_COLOR = colors.fg400;
 export const Icon = (props: VoidProps<IconProps>) => {
 	return (
 		<div
-			class="icon2"
+			class={`icon2 ${props.class ?? ""}`}
 			role="img"
 			aria-label={props.alt}
 			style={{

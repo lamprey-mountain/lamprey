@@ -8,7 +8,6 @@ import {
 	type JSX,
 	onCleanup,
 	onMount,
-	type ParentProps,
 	Show,
 } from "solid-js";
 import { Portal } from "solid-js/web";
@@ -16,8 +15,11 @@ import type { DocumentBranch } from "ts-sdk";
 import { useApi, useDocumentBranches, useUsers } from "@/api";
 import { useCtx } from "@/app/context";
 import { Icon } from "@/atoms/Icon";
-import { timeAgo } from "@/atoms/Time";
+import { Search } from "@/atoms/Search";
+import { Time, timeAgo } from "@/atoms/Time";
+import { createTooltip } from "@/atoms/Tooltip";
 import { useChannel, useModals } from "@/contexts/mod";
+import { flags } from "@/lib/flags";
 import type { ChannelT } from "@/types";
 import {
 	icBranch,
@@ -25,6 +27,7 @@ import {
 	icBranchFork,
 	icBranchNew,
 	icBranchPrivate,
+	icComments,
 	icDelete,
 	icFormatBold,
 	icFormatCode,
@@ -36,6 +39,8 @@ import {
 	icMergeFull,
 	icRename,
 	icSync,
+	icTableOfContents,
+	icThread,
 } from "@/utils/icons";
 import { useDocument } from "./context";
 import { exportAsHtml, exportAsMarkdown, generateFilename } from "./export";
@@ -84,7 +89,7 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 	});
 
 	const currentBranch = createMemo(() => {
-		return branches.cache.get(doc.branchId);
+		return branches.cache.get(doc.branchId());
 	});
 
 	// Default branch: the one with default === true
@@ -97,6 +102,7 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 	});
 
 	// Resolve the default branch ID (fall back to channel id if not yet loaded)
+	// NOTE: default branch id will be different from the channel id soon
 	const defaultBranchId = createMemo(() => {
 		const db = defaultBranch();
 		return db?.id ?? props.channel.id;
@@ -113,7 +119,7 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 				name: "untitled branch",
 				private: false,
 			});
-			update("branchId", branch.id);
+			doc.setBranchId(branch.id);
 		} catch (e) {
 			console.error("Failed to create new branch:", e);
 		}
@@ -126,7 +132,7 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 				name: "untitled private branch",
 				private: true,
 			});
-			update("branchId", branch.id);
+			doc.setBranchId(branch.id);
 		} catch (e) {
 			console.error("Failed to create new private branch:", e);
 		}
@@ -183,8 +189,8 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 
 	const handleMergeFull = async () => {
 		try {
-			await api.documents.merge(props.channel.id, doc.branchId);
-			update("branchId", defaultBranchId());
+			await api.documents.merge(props.channel.id, doc.branchId());
+			doc.setBranchId(defaultBranchId());
 		} catch (e) {
 			console.error("Failed to merge branch:", e);
 		}
@@ -216,7 +222,7 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 				if (confirmed) {
 					try {
 						await api.documentBranches.close(props.channel.id, branch.id);
-						update("branchId", defaultBranchId());
+						doc.setBranchId(defaultBranchId());
 					} catch (e) {
 						console.error("Failed to delete branch:", e);
 					}
@@ -227,7 +233,7 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 
 	const handleSyncBranch = async () => {
 		try {
-			await api.documentBranches.sync(props.channel.id, doc.branchId);
+			await api.documentBranches.sync(props.channel.id, doc.branchId());
 		} catch (e) {
 			console.error("Failed to sync branch:", e);
 		}
@@ -240,8 +246,21 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 		"refactor/intro",
 	];
 
+	const showMembers = () =>
+		flags.has("room_member_list") &&
+		ctx.preferences().frontend.showMembers !== false;
+
+	// TODO: make threadTooltip and tocTooltip also say "Show"/"Hide" instead of "Toggle"
+	// TODO: port membersTooltip to ChatHeader
+	const tocTooltip = createTooltip({ tip: () => "Toggle table of contents" });
+	const commentsTooltip = createTooltip({ tip: () => "View comments" });
+	const threadTooltip = createTooltip({ tip: () => "Toggle chat" });
+	const membersTooltip = createTooltip({
+		tip: () => (showMembers() ? "Hide members" : "Show members"),
+	});
+
 	return (
-		<header class="document-header">
+		<header class="document-header chat-header">
 			<div class="menu-group">
 				<MenubarItem
 					button={
@@ -250,24 +269,19 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 					}
 				>
 					{(close) => (
-						<menu
-							class="branch-menu document-menu"
-							onClick={(e) => e.stopPropagation()}
-						>
-							<input
-								type="text"
+						<>
+							<Search
 								placeholder="filter branches..."
-								style="margin:4px 8px;padding:2px 4px;border-radius:2px"
+								onInput={(input) => setFilterText(input)}
 								ref={(el) => queueMicrotask(() => el.focus())}
-								onInput={(e) => setFilterText(e.currentTarget.value)}
 							/>
 							<ul>
 								{/* Default branch */}
 								<li
 									class="default"
-									classList={{ selected: doc.branchId === defaultBranchId() }}
+									classList={{ selected: doc.branchId() === defaultBranchId() }}
 									onClick={() => {
-										update("branchId", defaultBranchId());
+										doc.setBranchId(defaultBranchId());
 										close();
 									}}
 								>
@@ -295,10 +309,10 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 													type="button"
 													class="button"
 													onClick={() => {
-														update("branchId", branch.id);
+														doc.setBranchId(branch.id);
 														close();
 													}}
-													classList={{ selected: doc.branchId === branch.id }}
+													classList={{ selected: doc.branchId() === branch.id }}
 												>
 													<Icon
 														src={branch.private ? icBranchPrivate : icBranch}
@@ -379,16 +393,13 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 									</button>
 								</li>
 							</ul>
-						</menu>
+						</>
 					)}
 				</MenubarItem>
 				<Show when={currentBranch()?.parent_id}>
 					<MenubarItem button="branch">
 						{(close) => (
-							<menu
-								class="branch-action-menu document-menu"
-								onClick={(e) => e.stopPropagation()}
-							>
+							<>
 								<ul>
 									<li>
 										<button
@@ -498,7 +509,7 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 										)}
 									</For>
 								</ul>
-							</menu>
+							</>
 						)}
 					</MenubarItem>
 				</Show>
@@ -660,8 +671,39 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 			</div>
 
 			<div style="flex:1"></div>
-			<menu class="right">
-				<button type="button" onClick={toggleMembers} title="Show members">
+			<menu class="menu right">
+				<button
+					type="button"
+					onClick={() => {
+						/* TODO */
+					}}
+					ref={tocTooltip.content}
+				>
+					<Icon src={icTableOfContents} />
+				</button>
+				<button
+					type="button"
+					onClick={() => {
+						// TODO: copy ChatHeader ctx.setThreadsView
+					}}
+					ref={commentsTooltip.content}
+				>
+					<Icon src={icComments} />
+				</button>
+				<button
+					type="button"
+					onClick={() => {
+						/* TODO */
+					}}
+					ref={threadTooltip.content}
+				>
+					<Icon src={icThread} />
+				</button>
+				<button
+					type="button"
+					onClick={toggleMembers}
+					ref={membersTooltip.content}
+				>
 					<Icon src={icMembers} />
 				</button>
 			</menu>
@@ -686,7 +728,14 @@ const MenubarItem = (props: MenubarItemProps) => {
 	});
 
 	onMount(() => {
-		const close = () => setOpen(false);
+		const close = (e: MouseEvent) => {
+			const target = e.target as HTMLElement;
+			const m = menuRef();
+			const b = buttonRef();
+			if (m?.contains(target) || b?.contains(target)) return;
+			setOpen(false);
+		};
+
 		window.addEventListener("click", close);
 		onCleanup(() => window.removeEventListener("click", close));
 	});
@@ -697,10 +746,7 @@ const MenubarItem = (props: MenubarItemProps) => {
 				type="button"
 				class="button"
 				ref={setButtonRef}
-				onClick={(e) => {
-					e.stopPropagation();
-					setOpen(!open());
-				}}
+				onClick={() => setOpen(!open())}
 				classList={{ active: open() }}
 			>
 				{props.button}
@@ -716,7 +762,6 @@ const MenubarItem = (props: MenubarItemProps) => {
 							left: `${pos.x ?? 0}px`,
 							"z-index": 100,
 						}}
-						onClick={(e) => e.stopPropagation()}
 					>
 						{props.children(() => setOpen(false))}
 					</menu>

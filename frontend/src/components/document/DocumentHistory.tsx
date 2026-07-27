@@ -4,19 +4,10 @@ import { useApi } from "@/api";
 import { Time } from "@/atoms/Time.tsx";
 import { Avatar } from "@/avatar/UserAvatar.tsx";
 import { useChannel } from "@/contexts/channel.tsx";
-
-type ChangesetSelection = {
-	start_seq: number;
-	end_seq: number;
-};
+import { useDocument } from "./context";
 
 type DocumentHistoryProps = {
 	channel: Channel;
-	branchId: string;
-	isOpen: boolean;
-	onSelectChangeset: (changeset: ChangesetSelection | null) => void;
-	onHoverChangeset: (changeset: ChangesetSelection | null) => void;
-	selectedSeq: ChangesetSelection | null;
 };
 
 const AvatarWithTooltip = (props: {
@@ -86,6 +77,7 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 	const [history, setHistory] = createSignal<HistoryPagination | null>(null);
 	const [loading, setLoading] = createSignal(false);
 	const [error, setError] = createSignal<string | null>(null);
+	const doc = useDocument();
 
 	const loadHistory = async () => {
 		setLoading(true);
@@ -93,7 +85,7 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 		try {
 			const data = await api.documents.history(
 				props.channel.id,
-				props.branchId,
+				doc.branchId(),
 				{
 					limit: 50,
 					by_author: false,
@@ -114,14 +106,11 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 	createEffect(
 		on(
 			() => ({
-				isOpen: props.isOpen,
-				branchId: props.branchId,
+				branchId: doc.branchId(),
 				channelId: props.channel.id,
 			}),
 			() => {
-				if (props.isOpen) {
 					loadHistory();
-				}
 			},
 		),
 	);
@@ -148,30 +137,30 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 				<Show when={!loading() && !error() && history()}>
 					<div
 						class="history-list"
-						onMouseLeave={() => props.onHoverChangeset(null)}
+						onMouseLeave={() => doc.setHoverSeq(null)}
 					>
 						<For each={history()?.changesets}>
 							{(changeset) => {
 								const isSelected =
-									props.selectedSeq !== null &&
-									props.selectedSeq.start_seq === changeset.start_seq &&
-									props.selectedSeq.end_seq === changeset.end_seq;
+									doc.selectedSeq() !== null &&
+									doc.selectedSeq()!.start_seq === changeset.start_seq &&
+									doc.selectedSeq()!.end_seq === changeset.end_seq;
 								return (
 									<div
 										class="history-item"
 										classList={{ selected: isSelected }}
 										onClick={() => {
 											if (isSelected) {
-												props.onSelectChangeset(null);
+												doc.setSelectedSeq(null);
 											} else {
-												props.onSelectChangeset({
+												doc.setSelectedSeq({
 													start_seq: changeset.start_seq,
 													end_seq: changeset.end_seq,
 												});
 											}
 										}}
 										onMouseEnter={() =>
-											props.onHoverChangeset({
+											doc.setHoverSeq({
 												start_seq: changeset.start_seq,
 												end_seq: changeset.end_seq,
 											})

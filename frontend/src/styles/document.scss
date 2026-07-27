@@ -10,10 +10,16 @@
 
 	& > .list {
 		padding: 1rem;
+		flex: 1;
 		display: flex;
 		flex-direction: column;
 		overflow-y: auto;
 		height: 100%;
+
+		// TODO: more specific class
+		.search {
+			flex: 1;
+		}
 
 		.sort-view-container {
 			.sort-view-button {
@@ -123,18 +129,6 @@
 
 		& button {
 			border: none;
-
-			&.selected {
-				background: $bg-150;
-			}
-
-			&:hover {
-				background: $bg-200;
-			}
-
-			&.selected:hover {
-				background: $bg-100;
-			}
 		}
 	}
 
@@ -227,7 +221,92 @@
 	}
 }
 
-// ==== OLD STYLES BELOW ====
+.document-aside {
+	/* float: left; */
+	/* overflow-y: auto; */
+	min-width: 200px;
+	max-width: 300px;
+	/* position: sticky; */
+	/* top: 0; */
+
+	.document-revert {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		padding: 8px 12px;
+		background: oklch(var(--color-warn) / 0.05);
+		border: solid $warn-500 1px;
+		margin: 8px;
+		border-radius: 4px;
+
+		& > h3 {
+			color: $fg-200;
+			font-size: 0.9rem;
+		}
+
+		& > .actions {
+			display: flex;
+			gap: 8px;
+			margin-left: auto;
+
+			& > .button {
+				display: flex;
+				align-items: center;
+
+				& > .chevron {
+					margin-left: 4px;
+					background: $fg-600;
+				}
+
+				&.link {
+					color: $fg-400;
+
+					// keep border even though its transparent so everything is aligned
+					border: solid transparent 1px;
+
+					&:hover {
+						color: $fg-200;
+						background: none;
+					}
+				}
+			}
+		}
+	}
+
+	.document-toc {
+		background: $bg-150;
+		border: solid $sep-300 1px;
+		border-radius: 4px;
+		padding: 8px 12px;
+		margin: 8px;
+		box-shadow: 2px 2px 4px oklch(var(--color-bg1) / 0.5);
+
+		& > .label {
+			margin: 0 0 8px 0;
+			font-weight: bold;
+		}
+
+		.heading {
+			@include truncate;
+			cursor: pointer;
+			color: $link-500;
+			font-size: 0.85rem;
+			padding: 2px 4px;
+			border-radius: 2px;
+			margin-left: calc((var(--level) - 1) * 12px);
+
+			.untitled {
+				color: oklch(from $link-500 calc(l - .2) calc(c - .05) h);
+			}
+
+			&:hover {
+				background: $bg-200;
+				text-decoration: underline;
+				text-decoration-color: oklch(from $link-500 calc(l - .2) c h);
+			}
+		}
+	}
+}
 
 .document-menu {
 	display: flex;
@@ -238,6 +317,16 @@
 	padding: 4px 0;
 	box-shadow: 0 2px 8px $bg-100;
 
+	.search {
+		margin: 4px 8px;
+		padding: 2px 4px;
+		border-radius: 2px;
+	}
+}
+
+// ==== OLD STYLES BELOW ====
+
+.document-menu {
 	& > ul,
 	& > ul {
 		display: flex;
@@ -279,10 +368,6 @@
 			background: #fff1;
 		}
 	}
-}
-
-.restore-menu {
-	/* Same styles as document-menu, positioned at bottom-end */
 }
 
 .document-history {
@@ -392,91 +477,6 @@
 
 		&:hover {
 			background: $bg-300;
-		}
-	}
-}
-
-.document-left-rail {
-	float: left;
-	overflow-y: auto;
-	min-width: 200px;
-	max-width: 300px;
-	position: sticky;
-	top: 0;
-}
-
-.diff-view-message {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	padding: 8px 12px;
-	background: oklch(var(--color-warn) / 0.05);
-	border: solid $warn-500 1px;
-	margin: 8px;
-	border-radius: 4px;
-
-	.diff-view-info {
-		color: $fg-200;
-		font-size: 0.9rem;
-	}
-
-	.diff-view-actions {
-		display: flex;
-		gap: 8px;
-		margin-left: auto;
-
-		button {
-			padding: 4px 8px;
-			background: $bg-150;
-
-			&.linkstyled {
-				background: none;
-
-				// keep border even though its transparent so everything is aligned
-				border: solid transparent 1px;
-
-				&:hover {
-					text-decoration: underline;
-				}
-			}
-		}
-	}
-}
-
-.document-toc {
-	background: $bg-150;
-	border: solid $sep-300 1px;
-	border-radius: 4px;
-	padding: 8px 12px;
-	margin: 8px;
-	box-shadow: 2px 2px 4px oklch(var(--color-bg1) / 0.5);
-
-	h4 {
-		margin: 0 0 8px 0;
-		font-size: 0.85rem;
-		font-weight: bold;
-		color: $fg-500;
-	}
-
-	ul {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 1px;
-
-		li {
-			@include truncate;
-			cursor: pointer;
-			color: $link-500;
-			font-size: 0.85rem;
-			padding: 2px 4px;
-			border-radius: 2px;
-
-			&:hover {
-				background: $bg-200;
-			}
 		}
 	}
 }

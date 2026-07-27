@@ -61,6 +61,7 @@ import { flags } from "@/lib/flags";
 import type { RoomT } from "@/types";
 import type { ChannelSearch } from "@/types/chat";
 import { icUser } from "@/utils/icons";
+import { DocumentProvider } from "@/components/document/context";
 
 export { RouteAuthorize } from "@/components/shared/Oauth";
 
@@ -264,14 +265,9 @@ const ThreadChatSidebar = (props: { thread_id: string }) => {
 
 const ChannelSidebar = (props: {
 	channel: Channel;
-	selectedSeq: ChangesetSelection | null;
-	onSelectChangeset: (changeset: ChangesetSelection | null) => void;
-	onHoverChangeset: (changeset: ChangesetSelection | null) => void;
 }) => {
 	const ctx = useCtx();
 	const [ch] = useChannel()!;
-	// const [doc] = useDocument()!;
-	// const branchId = doc.branchId;
 	const search = () => ch.search;
 	const showMembers = () =>
 		props.channel.type !== "Voice" &&
@@ -300,14 +296,8 @@ const ChannelSidebar = (props: {
 			</Match>
 			<Match when={showHistory()}>
 				<Resizable storageKey="document-history-width" initialWidth={320}>
-					{/* FIXME: branch id for DocumentHistory */}
 					<DocumentHistory
 						channel={props.channel}
-						branchId={props.channel.id}
-						isOpen={ch.history_view}
-						selectedSeq={props.selectedSeq}
-						onSelectChangeset={props.onSelectChangeset}
-						onHoverChangeset={props.onHoverChangeset}
 					/>
 				</Resizable>
 			</Match>
@@ -439,7 +429,10 @@ export const RouteChannel = (
 										<ChatMain channel={ch()} />
 									</Match>
 									<Match when={ch().type === "Document"}>
-										<Document channel={ch()} />
+										<DocumentProvider initialBranchId={ch().id}>
+											<Document channel={ch()} />
+											<ChannelSidebar channel={ch()} />
+										</DocumentProvider>
 									</Match>
 									<Match when={ch().type === "Wiki"}>
 										<ChatHeader channel={ch()} />
@@ -467,12 +460,11 @@ export const RouteChannel = (
 										<Category channel={ch()} />
 									</Match>
 								</Switch>
-								<ChannelSidebar
-									channel={ch()}
-									selectedSeq={selectedSeq()}
-									onSelectChangeset={setSelectedSeq}
-									onHoverChangeset={setHoverSeq}
-								/>
+								<Show when={ch().type !== "Document"}>
+									<ChannelSidebar
+										channel={ch()}
+									/>
+								</Show>
 							</>
 						)}
 					</Show>

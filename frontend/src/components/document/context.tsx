@@ -2,11 +2,15 @@ import {
 	createGlobalEmitter,
 	type GlobalEmitter,
 } from "@solid-primitives/event-bus";
-import type { EditorState } from "prosemirror-state";
-import { createContext, type ParentProps, useContext } from "solid-js";
-import type * as Y from "yjs";
-import type { ChannelT } from "@/types";
-import type { ChangesetSelection } from "./types";
+import {
+	type Accessor,
+	createContext,
+	createSignal,
+	type ParentProps,
+	type Setter,
+	useContext,
+} from "solid-js";
+import type { ChangesetSelection, HeaderItem } from "./types";
 
 export type DocumentController = {
 	events: GlobalEmitter<DocumentEvents>;
@@ -14,15 +18,16 @@ export type DocumentController = {
 };
 
 export type DocumentEvents = {
+	// ...?
+};
+
+export type DocumentCommands = {
 	/** history changeset selected */
 	selectChangeset: ChangesetSelection;
 
 	/** history changeset hovered over */
 	hoverChangeset: ChangesetSelection;
-};
 
-export type DocumentCommands = {
-	// TODO
 	// scroll to heading
 	// apply formatting
 	// dispatch editor transaction
@@ -33,42 +38,51 @@ export type DocumentCommands = {
 	// exportHtml: void;
 };
 
+// TODO: restore scroll position per document
 export type DocumentState = {
-	// channel: ChannelT;
-	// branchId: string;
-	// selectedSeq: ChangesetSelection | null;
-	// hoverSeq: ChangesetSelection | null;
+	// mode: DocumentMode;
 
-	// /** currently focused branch */
-	// branchId: string;
-
-	// /** per-branch data */
-	// branches: Record<string, DocumentBranchState>;
+	branchId: Accessor<string>;
+	setBranchId: Setter<string>;
+	selectedSeq: Accessor<ChangesetSelection | null>;
+	setSelectedSeq: Setter<ChangesetSelection | null>;
+	hoverSeq: Accessor<ChangesetSelection | null>;
+	setHoverSeq: Setter<ChangesetSelection | null>;
+	headings: Accessor<HeaderItem[]>;
+	setHeadings: Setter<HeaderItem[]>;
 
 	controller: DocumentController;
 	events: GlobalEmitter<DocumentEvents>;
 	commands: GlobalEmitter<DocumentCommands>;
 };
 
-// export type DocumentBranchState = {
-// 	doc: Y.Doc;
-// 	editorState: EditorState;
-// 	scrollTop: number;
-// };
-
 export const DocumentContext = createContext<DocumentState>();
 
 export type DocumentProviderProps = ParentProps & {
-	// channel: ChannelT;
+	initialBranchId: string;
 };
 
 export const DocumentProvider = (props: DocumentProviderProps) => {
 	const controller = createDocumentController();
+	const [headings, setHeadings] = createSignal<HeaderItem[]>([]);
+	const [branchId, setBranchId] = createSignal(props.initialBranchId);
+	const [selectedSeq, setSelectedSeq] = createSignal<ChangesetSelection | null>(
+		null,
+	);
+	const [hoverSeq, setHoverSeq] = createSignal<ChangesetSelection | null>(null);
 
 	const state: DocumentState = {
+		selectedSeq,
+		setSelectedSeq,
+		hoverSeq,
+		setHoverSeq,
+		branchId,
+		setBranchId,
 		controller,
 		commands: controller.commands,
 		events: controller.events,
+		headings,
+		setHeadings,
 	};
 
 	return (

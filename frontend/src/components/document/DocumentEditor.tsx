@@ -1,3 +1,4 @@
+import type { Parser as MarkdownParser } from "@lamprey/markdown";
 import {
 	chainCommands,
 	deleteSelection,
@@ -22,6 +23,7 @@ import * as Y from "yjs";
 import { useApi } from "@/api";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
+import { parser as markdownParser } from "@/lib/markdown";
 import { createAutocompletePlugin } from "../features/editor/autocomplete-plugin";
 import {
 	createPastePlugin,
@@ -53,6 +55,9 @@ import { createToolbarPlugin } from "../features/editor/toolbar-plugin";
 import { useDocument } from "./context";
 
 const domParser = DOMParser.fromSchema(schema);
+
+let md: MarkdownParser;
+markdownParser.then((p) => (md = p));
 
 export type DocumentEditorProps = {
 	channelId: string;
@@ -107,8 +112,6 @@ export const DocumentEditor = (props: DocumentEditorProps) => {
 
 	const type = ydoc.get("doc", Y.XmlFragment);
 	const mapping = initProseMirrorDoc(type, schema).mapping;
-
-	// doc.commands.on("", ...);
 
 	// TODO: use this?
 	const [diffMarks, setDiffMarks] = createSignal([]);
@@ -206,7 +209,14 @@ export const DocumentEditor = (props: DocumentEditorProps) => {
 			dispatchTransaction(tr) {
 				const newState = view.state.apply(tr);
 				view.updateState(newState);
+
 				// TODO: dispatch onChange?
+
+				if (md) {
+					// PERF: reuse parsed
+					const parsed = md.parse(newState.doc.textContent);
+					doc.setHeadings(parsed.headers());
+				}
 			},
 		});
 

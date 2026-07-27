@@ -55,10 +55,13 @@ export { icCheck1 as icCheck, icCheck1, icCheck2, icCheck3, icCheck4 };
 
 import { default as icMembers } from "@/assets/members.png";
 
+// TODO: dedicated icon?
+export { default as icTableOfContents } from "@/assets/channel-wiki-1.png";
 export { default as icChevron } from "@/assets/chevron.png";
 export { default as icCollapse } from "@/assets/collapse.png";
 export { default as icDelete } from "@/assets/delete.png";
-export { default as icDm } from "@/assets/dm.png";
+// TODO: dedicated icon?
+export { default as icDm, default as icComments } from "@/assets/dm.png";
 export {
 	default as icBranchDefault,
 	default as icBranchPrivate,
@@ -87,5 +90,4 @@ export { default as icVolumeLow } from "@/assets/volume-low.png";
 export { default as icVolumeMax } from "@/assets/volume-max.png";
 export { default as icVolumeMedium } from "@/assets/volume-medium.png";
 export { default as icVolumeMute } from "@/assets/volume-mute.png";
-
 export { icMembers, icMembers as icUser };
