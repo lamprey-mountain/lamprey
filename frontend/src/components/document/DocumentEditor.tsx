@@ -229,7 +229,11 @@ export const DocumentEditor = (props: DocumentEditorProps) => {
 			},
 		});
 
-		onCleanup(() => view.destroy());
+		doc.setEditor(view);
+		onCleanup(() => {
+			view.destroy();
+			doc.setEditor(null);
+		});
 
 		// disable submit on enter
 		view.dispatch(

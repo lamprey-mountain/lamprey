@@ -2,6 +2,7 @@ import {
 	createGlobalEmitter,
 	type GlobalEmitter,
 } from "@solid-primitives/event-bus";
+import type { EditorView } from "prosemirror-view";
 import {
 	type Accessor,
 	createContext,
@@ -54,6 +55,8 @@ export type DocumentState = {
 	setHeadings: Setter<HeaderItem[]>;
 	tocOpen: Accessor<boolean>;
 	setTocOpen: Setter<boolean>;
+	editor: Accessor<EditorView | null>;
+	setEditor: Setter<EditorView | null>;
 
 	controller: DocumentController;
 	events: GlobalEmitter<DocumentEvents>;
@@ -75,6 +78,7 @@ export const DocumentProvider = (props: DocumentProviderProps) => {
 	);
 	const [hoverSeq, setHoverSeq] = createSignal<ChangesetSelection | null>(null);
 	const [tocOpen, setTocOpen] = createSignal(true);
+	const [editor, setEditor] = createSignal<EditorView | null>(null);
 
 	const state: DocumentState = {
 		selectedSeq,
@@ -90,6 +94,8 @@ export const DocumentProvider = (props: DocumentProviderProps) => {
 		setHeadings,
 		tocOpen,
 		setTocOpen,
+		editor,
+		setEditor,
 	};
 
 	return (

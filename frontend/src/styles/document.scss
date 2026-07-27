@@ -129,6 +129,12 @@
 
 		& button {
 			border: none;
+			display: grid;
+			place-items: center;
+
+			&:active > .icon2 {
+				translate: 0 1px;
+			}
 		}
 	}
 

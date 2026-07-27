@@ -139,7 +139,7 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 	};
 
 	const applyFormat = (wrap: string) => {
-		const view = props.editor?.().view;
+		const view = doc.editor();
 		if (!view) return;
 
 		const { from, to } = view.state.selection;
@@ -166,22 +166,21 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 	};
 
 	const openLinkModal = () => {
-		if (props.editor) {
-			modalCtl.open({ type: "link", editor: props.editor().view });
+		const view = doc.editor();
+		if (view) {
+			modalCtl.open({ type: "link", editor: view });
 		}
 	};
 
 	const handleExportMarkdown = () => {
-		const editor = props.editor();
-		const view = editor?.view;
+		const view = doc.editor();
 		if (!view) return;
 		const filename = generateFilename(props.channel.name, "md");
 		exportAsMarkdown(view, filename);
 	};
 
 	const handleExportHtml = () => {
-		const editor = props.editor();
-		const view = editor?.view;
+		const view = doc.editor();
 		if (!view) return;
 		const filename = generateFilename(props.channel.name, "html");
 		exportAsHtml(view, filename, props.channel.name);
@@ -527,9 +526,8 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 			<div class="menu-group">
 				<button
 					type="button"
-					class="icon-button"
-					onClick={(e) => {
-						e.stopPropagation();
+					class="button"
+					onClick={() => {
 						applyFormat("**");
 					}}
 				>
@@ -537,9 +535,8 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 				</button>
 				<button
 					type="button"
-					class="icon-button"
-					onClick={(e) => {
-						e.stopPropagation();
+					class="button"
+					onClick={() => {
 						applyFormat("*");
 					}}
 				>
@@ -547,9 +544,8 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 				</button>
 				<button
 					type="button"
-					class="icon-button"
-					onClick={(e) => {
-						e.stopPropagation();
+					class="button"
+					onClick={() => {
 						applyFormat("~~");
 					}}
 				>
@@ -557,9 +553,8 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 				</button>
 				<button
 					type="button"
-					class="icon-button"
-					onClick={(e) => {
-						e.stopPropagation();
+					class="button"
+					onClick={() => {
 						applyFormat("`");
 					}}
 				>
@@ -567,9 +562,8 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 				</button>
 				<button
 					type="button"
-					class="icon-button"
-					onClick={(e) => {
-						e.stopPropagation();
+					class="button"
+					onClick={() => {
 						openLinkModal();
 					}}
 				>
