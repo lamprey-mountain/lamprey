@@ -165,8 +165,10 @@ impl Source {
 
     /// apply an edit
     pub fn edit(&mut self, delete: Span, insert: &str) {
-        self.0
-            .replace_range(delete.start as usize..delete.end as usize, insert);
+        self.0.replace_range(
+            delete.start as usize..(delete.end as usize).min(self.0.len()),
+            insert,
+        );
     }
 }
 
