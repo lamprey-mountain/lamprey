@@ -10,6 +10,7 @@ import {
 import { useReactions } from "@/api";
 import { useCtx } from "@/app/context";
 import icReactionAdd from "@/assets/reaction-add.png";
+import { Icon } from "@/atoms/Icon";
 import { createTooltip } from "@/atoms/Tooltip.tsx";
 import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { getEmojiHex } from "@/lib/emoji";
@@ -125,16 +126,17 @@ export const Reactions = (props: ReactionsProps) => {
 					);
 				}}
 			</For>
-			<button type="button" class="add-reaction" ref={addEl as any}>
-				<img
-					class="icon"
-					classList={{ show: showPicker() }}
-					onClick={(e) => {
-						e.stopPropagation();
-						setShowPicker(!showPicker());
-					}}
-					src={icReactionAdd}
-				/>
+			<button
+				type="button"
+				class="button icon-button add-reaction"
+				classList={{ show: showPicker() }}
+				ref={addEl!}
+				onClick={(e) => {
+					e.stopPropagation();
+					setShowPicker(!showPicker());
+				}}
+			>
+				<Icon src={icReactionAdd} />
 			</button>
 		</div>
 	);

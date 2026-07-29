@@ -2254,6 +2254,11 @@ body.resizing {
 	.key {
 		display: contents;
 	}
+
+	& > .add-reaction {
+		height: auto;
+		width: 24px;
+	}
 }
 
 .upload-item {
@@ -3650,14 +3655,6 @@ input[type="color"] {
 			flex: 1;
 		}
 	}
-}
-
-.add-reaction {
-	border: none;
-	background: none;
-	display: flex;
-	align-items: center;
-	justify-content: center;
 }
 
 .filters {
