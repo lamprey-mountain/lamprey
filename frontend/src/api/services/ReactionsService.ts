@@ -197,6 +197,7 @@ export class ReactionsService extends BaseService<never> {
 			msg.reactions = [];
 		}
 
-		this.store.messages.handleMessageUpdate(msg);
+		// PERF: don't clone
+		this.store.messages.handleMessageUpdate(structuredClone(msg));
 	}
 }
