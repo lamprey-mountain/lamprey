@@ -171,38 +171,36 @@ impl PermissionsCalculator {
         // admins have full permissions
         if !bits.has(Permission::Admin) {
             if let Some(channel) = channel {
-                // only calculate channel permissions if the channel exists in cache
-                // (channels not in cache have no overwrites)
-                if let Some(cached_channel) = data.channels.get(&channel.id) {
-                    self.calculate_channel_permissions2(
-                        &mut bits,
-                        &mut channel_locked,
-                        &mut timed_out,
-                        cached_channel,
-                        member,
-                    );
+                // PERF: don't clone
+                let cached_channel = channel.clone().into();
+                self.calculate_channel_permissions2(
+                    &mut bits,
+                    &mut channel_locked,
+                    &mut timed_out,
+                    &cached_channel,
+                    member,
+                );
 
-                    // private thread logic
-                    if cached_channel.inner.ty == ChannelType::ThreadPrivate {
-                        if !bits.has(Permission::ThreadManage) {
-                            let thread = data.threads.get(&channel.id);
-                            let is_member = if let Some(thread) = thread {
-                                thread.members.contains_key(&user_id)
-                            } else {
-                                // TODO: fetch thread from db
-                                // self.state.acquire_data().await?;
-                                false
-                            };
+                // private thread logic
+                if cached_channel.inner.ty == ChannelType::ThreadPrivate {
+                    if !bits.has(Permission::ThreadManage) {
+                        let thread = data.threads.get(&channel.id);
+                        let is_member = if let Some(thread) = thread {
+                            thread.members.contains_key(&user_id)
+                        } else {
+                            // TODO: fetch thread from db
+                            // self.state.acquire_data().await?;
+                            false
+                        };
 
-                            if !is_member {
-                                return Ok(self.build_permissions2(
-                                    PermissionBits::default(),
-                                    rank,
-                                    Some(channel),
-                                    channel_locked,
-                                    MemberState::Lurker,
-                                ));
-                            }
+                        if !is_member {
+                            return Ok(self.build_permissions2(
+                                PermissionBits::default(),
+                                rank,
+                                Some(channel),
+                                channel_locked,
+                                MemberState::Lurker,
+                            ));
                         }
                     }
                 }
@@ -255,9 +253,12 @@ impl PermissionsCalculator {
             None => ResourceContext::Room(self.room_id),
         };
 
-        let visible = match member_state {
-            MemberState::Lurker => self.public,
-            MemberState::Joined { .. } => true,
+        let visible = match channel {
+            Some(_) => bits.has(Permission::Admin) || bits.has(Permission::ChannelView),
+            None => match member_state {
+                MemberState::Lurker => self.public,
+                MemberState::Joined { .. } => true,
+            },
         };
 
         Permissions2 {

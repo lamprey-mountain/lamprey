@@ -302,18 +302,6 @@ impl RoomActor {
                 if channel.room_id != Some(self.room_id) {
                     return Ok(());
                 }
-                let mut overwrites = ImMap::new();
-                for ow in &channel.permission_overwrites {
-                    overwrites.insert(
-                        ow.id,
-                        CachedPermissionOverwrite {
-                            id: ow.id,
-                            ty: ow.ty,
-                            allow: PermissionBits::from(&ow.allow),
-                            deny: PermissionBits::from(&ow.deny),
-                        },
-                    );
-                }
                 if channel.is_thread() {
                     snapshot_data.threads.insert(
                         channel.id,
@@ -323,30 +311,14 @@ impl RoomActor {
                         },
                     );
                 } else {
-                    snapshot_data.channels.insert(
-                        channel.id,
-                        super::CachedChannel {
-                            inner: *channel.clone(),
-                            overwrites,
-                        },
-                    );
+                    snapshot_data
+                        .channels
+                        .insert(channel.id, (*channel.clone()).into());
                 }
             }
             MessageSync::ChannelUpdate { channel } => {
                 if channel.room_id != Some(self.room_id) {
                     return Ok(());
-                }
-                let mut overwrites = ImMap::new();
-                for ow in &channel.permission_overwrites {
-                    overwrites.insert(
-                        ow.id,
-                        CachedPermissionOverwrite {
-                            id: ow.id,
-                            ty: ow.ty,
-                            allow: PermissionBits::from(&ow.allow),
-                            deny: PermissionBits::from(&ow.deny),
-                        },
-                    );
                 }
                 if channel.is_thread() {
                     if channel.is_removed() {
@@ -366,13 +338,9 @@ impl RoomActor {
                 } else if channel.is_removed() {
                     snapshot_data.channels.remove(&channel.id);
                 } else {
-                    snapshot_data.channels.insert(
-                        channel.id,
-                        super::CachedChannel {
-                            inner: *channel.clone(),
-                            overwrites,
-                        },
-                    );
+                    snapshot_data
+                        .channels
+                        .insert(channel.id, (*channel.clone()).into());
                 }
             }
             MessageSync::RoleCreate { role } => {

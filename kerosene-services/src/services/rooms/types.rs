@@ -267,3 +267,25 @@ impl RoomSnapshot {
             .collect()
     }
 }
+
+impl From<Channel> for CachedChannel {
+    fn from(channel: Channel) -> Self {
+        let mut overwrites = ImMap::new();
+        for ow in &channel.permission_overwrites {
+            overwrites.insert(
+                ow.id,
+                CachedPermissionOverwrite {
+                    id: ow.id,
+                    ty: ow.ty,
+                    allow: PermissionBits::from(&ow.allow),
+                    deny: PermissionBits::from(&ow.deny),
+                },
+            );
+        }
+
+        CachedChannel {
+            overwrites,
+            inner: channel,
+        }
+    }
+}
