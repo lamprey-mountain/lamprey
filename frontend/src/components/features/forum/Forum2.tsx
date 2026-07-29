@@ -439,11 +439,13 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		return buildNodes(children);
 	});
 
-	const collapseTooltip = createTooltip({ tip: () => "Collapse Replies" });
-	const expandTooltip = createTooltip({ tip: () => "Expand All" });
-	const sortTooltip = createTooltip({ tip: () => "Sort Comments" });
-
 	const collapsed = new ReactiveSet<string>();
+	const isCollapsedEmpty = () => collapsed.size === 0;
+
+	const collapseTooltip = createTooltip({
+		tip: () => (isCollapsedEmpty() ? "Collapse Replies" : "Expand Replies"),
+	});
+	const sortTooltip = createTooltip({ tip: () => "Sort Comments" });
 
 	const expandAll = () => {
 		collapsed.clear();
@@ -708,17 +710,9 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 								type="button"
 								class="button icon-button"
 								ref={collapseTooltip.content}
-								onClick={collapseAll}
+								onClick={isCollapsedEmpty() ? collapseAll : expandAll}
 							>
-								<Icon src={icCollapse} />
-							</button>
-							<button
-								type="button"
-								class="button icon-button"
-								ref={expandTooltip.content}
-								onClick={expandAll}
-							>
-								<Icon src={icExpand} />
+								<Icon src={isCollapsedEmpty() ? icCollapse : icExpand} />
 							</button>
 							<button
 								type="button"
