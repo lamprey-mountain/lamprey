@@ -39,6 +39,10 @@
 				&:focus-within {
 					border: solid 1px $link-500;
 				}
+
+				& > .ProseMirror {
+					min-height: 3lh;
+				}
 			}
 		}
 
