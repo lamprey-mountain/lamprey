@@ -62,6 +62,11 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 											type: "Forum",
 											description: "thread only channel",
 										},
+										{
+											label: "forum2 channel",
+											type: "Forum2",
+											description: "tree style comments forum",
+										},
 									]
 								: []),
 							...(flags.has("channel_calendar")
@@ -92,7 +97,7 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 										{
 											label: "scripts channel",
 											type: "Scripts",
-											description: "what the fuck is this",
+											description: "experimental arbitrary scripts",
 										},
 									]
 								: []),
