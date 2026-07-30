@@ -266,6 +266,23 @@ impl RoomSnapshot {
             })
             .collect()
     }
+
+    /// get a permission calculator for this room
+    pub fn permissions(self: &Arc<Self>, state: Globals) -> Option<PermissionsCalculator> {
+        let data = self.get_data()?;
+        Some(PermissionsCalculator {
+            state: state.clone(),
+            room_id: data.room.id,
+            owner_id: data.room.owner_id,
+            public: data.room.public,
+            room: Arc::clone(&self),
+        })
+    }
+}
+
+impl RoomData {
+    // TODO: rename to RoomLoaded or similar
+    // TODO: move impls here
 }
 
 impl From<Channel> for CachedChannel {

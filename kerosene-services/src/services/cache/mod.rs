@@ -6,8 +6,8 @@ use std::time::Duration;
 use crate::{globals::messaging::Broadcast, prelude::*};
 
 use common::v1::types::{
-    ChannelId, InviteTarget, InviteTargetId, MessageSync, Permission, Room, RoomId, RoomMember,
-    SERVER_ROOM_ID, User, UserId,
+    ChannelId, ChannelType, InviteTarget, InviteTargetId, MessageSync, Permission, Room, RoomId,
+    RoomMember, SERVER_ROOM_ID, User, UserId,
     emoji::{EmojiCustom, EmojiOwner},
     ids::EmojiId,
     preferences::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
@@ -464,6 +464,9 @@ impl ServiceCache {
             let cached_room = snapshot
                 .get_data()
                 .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)))?;
+            let perm_calc = snapshot
+                .permissions(self.state.clone())
+                .expect("room should always be loaded");
 
             if let Some(member) = member {
                 room_members.push(member);
@@ -479,6 +482,17 @@ impl ServiceCache {
 
             for thread in cached_room.threads.values() {
                 let thread_inner = &thread.thread;
+
+                if thread_inner.ty == ChannelType::ThreadPrivate {
+                    let perms = perm_calc
+                        .query2(Some(user_id), Some(&thread_inner))
+                        .expect("room should always be loaded");
+
+                    if !perms.visible {
+                        continue;
+                    }
+                }
+
                 if thread_inner.archived_at.is_none() {
                     all_threads.push(thread_inner.clone());
                 }
