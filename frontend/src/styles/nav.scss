@@ -113,21 +113,39 @@
 	.category-header {
 		display: flex;
 		align-items: center;
-		padding: 4px 8px 4px 16px;
+		padding: 0 8px 2px 16px;
+		margin-top: 12px;
 		cursor: pointer;
-		position: relative;
-		font-weight: bold;
-		font-size: 0.85rem;
-		color: $fg-400;
+		font-size: 0.80rem;
+		color: $fg-500;
 
 		@include drop-target-styles;
 
 		.category-toggle {
 			margin-right: 4px;
+			display: flex;
+			align-items: center;
+			rotate: 90deg;
+			transition: rotate 100ms;
+
+			& > .icon2 {
+				background-color: $fg-600;
+				height: 8px;
+				width: 8px;
+			}
+
+			&.collapsed {
+				rotate: 0deg;
+			}
 		}
 
+		&:hover,
 		&:focus-visible {
 			color: $fg-100;
+
+			& > .category-toggle > .icon2 {
+				background-color: $fg-100;
+			}
 		}
 	}
 

@@ -502,8 +502,13 @@ export const ChannelNav = (props: { room_id?: string }) => {
 											});
 										}}
 									>
-										<span class="category-toggle">
-											{collapsedCategories().has(cat().id) ? "▶" : "▼"}
+										<span
+											class="category-toggle"
+											classList={{
+												collapsed: collapsedCategories().has(cat().id),
+											}}
+										>
+											<Icon src={icChevron} />
 										</span>
 										<span class="category-name">{cat().name}</span>
 									</div>
