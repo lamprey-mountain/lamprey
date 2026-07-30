@@ -268,260 +268,242 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 					}
 				>
 					{(close) => (
-						<>
-							<Search
-								placeholder="filter branches..."
-								onInput={(input) => setFilterText(input)}
-								ref={(el) => queueMicrotask(() => el.focus())}
-							/>
-							<ul>
-								{/* Default branch */}
-								<li
-									class="default"
-									classList={{ selected: doc.branchId() === defaultBranchId() }}
-									onClick={() => {
-										doc.setBranchId(defaultBranchId());
-										close();
-									}}
-								>
-									<button type="button" class="button">
-										<Icon src={icBranchDefault} />
-										<div class="info">
-											<div>default</div>
-											<div class="dim">the main/master/default branch</div>
-										</div>
-									</button>
-								</li>
-								<For each={filteredBranches()}>
-									{(branch) => {
-										const creator = users.cache.get(branch.creator_id);
-										// TODO: use data attributes
-										const stateColor =
-											branch.state === "Active"
-												? "color: $color-green"
-												: branch.state === "Closed"
-													? "color: $color-warn"
-													: "color: $color-fg-500";
-										return (
-											<li classList={{ private: branch.private }}>
-												<button
-													type="button"
-													class="button"
-													onClick={() => {
-														doc.setBranchId(branch.id);
-														close();
-													}}
-													classList={{ selected: doc.branchId() === branch.id }}
-												>
-													<Icon
-														src={branch.private ? icBranchPrivate : icBranch}
-													/>
-													<div class="info">
-														<div>
-															{branch.name || "unnamed"}
-															{branch.private && (
-																<span class="dim"> (private)</span>
-															)}
-														</div>
-														<div class="dim" style={stateColor}>
-															{branch.state.toLowerCase()}
-															{creator && (
-																<>
-																	{" "}
-																	· created by{" "}
-																	<b>
-																		{creator.relationship.petname ||
-																			creator.name}
-																	</b>
-																</>
-															)}
-															{branch.created_at && (
-																<> · {timeAgo(new Date(branch.created_at))}</>
-															)}
-														</div>
-													</div>
-												</button>
-											</li>
-										);
-									}}
-								</For>
-								<li class="separator"></li>
-								<li class="new">
-									<button
-										type="button"
-										class="button"
+						<div style="display:flex">
+							<div class="document-branch-list">
+								<Search
+									placeholder="filter branches..."
+									onInput={(input) => setFilterText(input)}
+									ref={(el) => queueMicrotask(() => el.focus())}
+								/>
+								<ul>
+									{/* Default branch */}
+									<li
+										class="default"
+										classList={{
+											selected: doc.branchId() === defaultBranchId(),
+										}}
 										onClick={() => {
-											handleNewBranch();
+											doc.setBranchId(defaultBranchId());
 											close();
 										}}
 									>
-										<Icon src={icBranchNew} />
-										<div class="info">
-											<div>new</div>
-											<div class="dim">create a new branch</div>
-										</div>
-									</button>
-								</li>
-								<li class="new">
-									<button type="button" class="button">
-										<Icon src={icBranchFork} />
-										<div class="info">
-											<div>new from changes</div>
-											<div class="dim">
-												create a new branch from existing changes
+										<button type="button" class="button">
+											<Icon src={icBranchDefault} />
+											<div class="info">
+												<div>default</div>
+												<div class="dim">the main/master/default branch</div>
 											</div>
-										</div>
-									</button>
-								</li>
-								<li class="new">
-									<button
-										type="button"
-										class="button"
-										onClick={() => {
-											handleNewPrivateBranch();
-											close();
+										</button>
+									</li>
+									<For each={filteredBranches()}>
+										{(branch) => {
+											const creator = users.cache.get(branch.creator_id);
+											// TODO: use data attributes
+											const stateColor =
+												branch.state === "Active"
+													? "color: $color-green"
+													: branch.state === "Closed"
+														? "color: $color-warn"
+														: "color: $color-fg-500";
+											return (
+												<li classList={{ private: branch.private }}>
+													<button
+														type="button"
+														class="button"
+														onClick={() => {
+															doc.setBranchId(branch.id);
+															close();
+														}}
+														classList={{
+															selected: doc.branchId() === branch.id,
+														}}
+													>
+														<Icon
+															src={branch.private ? icBranchPrivate : icBranch}
+														/>
+														<div class="info">
+															<div>
+																{branch.name || "unnamed"}
+																{branch.private && (
+																	<span class="dim"> (private)</span>
+																)}
+															</div>
+															<div class="dim" style={stateColor}>
+																{branch.state.toLowerCase()}
+																{creator && (
+																	<>
+																		{" "}
+																		· created by{" "}
+																		<b>
+																			{creator.relationship.petname ||
+																				creator.name}
+																		</b>
+																	</>
+																)}
+																{branch.created_at && (
+																	<> · {timeAgo(new Date(branch.created_at))}</>
+																)}
+															</div>
+														</div>
+													</button>
+												</li>
+											);
 										}}
-									>
-										<Icon src={icBranchFork} />
-										<div class="info">
-											<div>new private</div>
-											<div class="dim">
-												create a new private branch only visible to you
+									</For>
+									<li class="separator"></li>
+									<li class="new">
+										<button
+											type="button"
+											class="button"
+											onClick={() => {
+												handleNewBranch();
+												close();
+											}}
+										>
+											<Icon src={icBranchNew} />
+											<div class="info">
+												<div>New branch</div>
+												<div class="dim">Create a new branch</div>
 											</div>
-										</div>
-									</button>
-								</li>
-							</ul>
-						</>
+										</button>
+									</li>
+									<li class="new">
+										<button
+											type="button"
+											class="button"
+											onClick={() => {
+												handleNewPrivateBranch();
+												close();
+											}}
+										>
+											<Icon src={icBranchFork} />
+											<div class="info">
+												<div>New private branch</div>
+												<div class="dim">
+													Create a new private branch only visible to you
+												</div>
+											</div>
+										</button>
+									</li>
+								</ul>
+							</div>
+							<Show when={currentBranch()?.parent_id}>
+								<div class="document-branch-actions">
+									<h3 class="dim header">actions</h3>
+									<ul>
+										<li>
+											<button
+												type="button"
+												class="button"
+												onClick={() => {
+													handleSyncBranch();
+													close();
+												}}
+											>
+												<Icon src={icSync} />
+												<div class="info">
+													<div>sync</div>
+													<div class="dim">pull changes from parent</div>
+												</div>
+											</button>
+										</li>
+										<li>
+											<button
+												type="button"
+												class="button"
+												onClick={() => {
+													handleMergeFull();
+													close();
+												}}
+											>
+												<Icon src={icMergeFull} />
+												<div class="info">
+													<div>merge</div>
+													<div class="dim">fully merge all changes</div>
+												</div>
+											</button>
+										</li>
+										<li>
+											<button type="button" class="button">
+												<Icon src={icMergeCherrypick} />
+												<div class="info">
+													<div>cherry pick</div>
+													<div class="dim">merge specific changes</div>
+												</div>
+											</button>
+										</li>
+										<li>
+											<button
+												type="button"
+												class="button"
+												onClick={() => {
+													handleDeleteBranch();
+													close();
+												}}
+											>
+												<Icon src={icDelete} />
+												<div class="info">
+													<div style="color: $color-warn">delete</div>
+													<div class="dim">permanently remove this branch</div>
+												</div>
+											</button>
+										</li>
+									</ul>
+									<h3 class="dim header" style="margin-top: 8px;">
+										rename branch
+									</h3>
+									<ul>
+										<li>
+											<button
+												type="button"
+												class="button"
+												onClick={() => {
+													handleRenameBranch();
+													close();
+												}}
+											>
+												<Icon src={icRename} />
+												<div class="info">
+													<div>rename</div>
+													<div class="dim">change the name of this branch</div>
+												</div>
+											</button>
+										</li>
+										<For each={suggestedRenames}>
+											{(name) => (
+												<li>
+													<button
+														type="button"
+														class="button"
+														onClick={() => {
+															const branch = currentBranch();
+															if (branch) {
+																api.documentBranches.update(
+																	props.channel.id,
+																	branch.id,
+																	{
+																		name,
+																	},
+																);
+															}
+															close();
+														}}
+													>
+														<Icon src={icRename} />
+														<div class="info">
+															<div>{name}</div>
+															<div class="dim">use suggested branch name</div>
+														</div>
+													</button>
+												</li>
+											)}
+										</For>
+									</ul>
+								</div>
+							</Show>
+						</div>
 					)}
 				</MenubarItem>
-				<Show when={currentBranch()?.parent_id}>
-					<MenubarItem button="branch">
-						{(close) => (
-							<>
-								<ul>
-									<li>
-										<button
-											type="button"
-											class="button"
-											onClick={() => {
-												handleRenameBranch();
-												close();
-											}}
-										>
-											<Icon src={icRename} />
-											<div class="info">
-												<div>rename</div>
-												<div class="dim">change the name of this branch</div>
-											</div>
-										</button>
-									</li>
-									<li>
-										<button
-											type="button"
-											class="button"
-											onClick={() => {
-												handleSyncBranch();
-												close();
-											}}
-										>
-											<Icon src={icSync} />
-											<div class="info">
-												<div>sync</div>
-												<div class="dim">pull changes from parent</div>
-											</div>
-										</button>
-									</li>
-									<li>
-										<button
-											type="button"
-											class="button"
-											onClick={() => {
-												handleMergeFull();
-												close();
-											}}
-										>
-											<Icon src={icMergeFull} />
-											<div class="info">
-												<div>merge</div>
-												<div class="dim">fully merge all changes</div>
-											</div>
-										</button>
-									</li>
-									<li>
-										<button type="button" class="button">
-											<Icon src={icMergeCherrypick} />
-											<div class="info">
-												<div>cherry pick</div>
-												<div class="dim">merge specific changes</div>
-											</div>
-										</button>
-									</li>
-									<li>
-										<button
-											type="button"
-											class="button"
-											onClick={() => {
-												handleDeleteBranch();
-												close();
-											}}
-										>
-											<Icon src={icDelete} />
-											<div class="info">
-												<div style="color: $color-warn">delete</div>
-												<div class="dim">permanently remove this branch</div>
-											</div>
-										</button>
-									</li>
-									<li class="separator"></li>
-									<li
-										class="header"
-										style="padding: 4px 12px; font-weight: bold; font-size: 0.8em; opacity: 0.7"
-									>
-										suggested renames
-									</li>
-									<For each={suggestedRenames}>
-										{(name) => (
-											<li>
-												<button
-													type="button"
-													class="button"
-													onClick={() => {
-														const branch = currentBranch();
-														if (branch) {
-															api.documentBranches.update(
-																props.channel.id,
-																branch.id,
-																{
-																	name,
-																},
-															);
-														}
-														close();
-													}}
-												>
-													<div class="info">
-														<div>{name}</div>
-													</div>
-												</button>
-											</li>
-										)}
-									</For>
-								</ul>
-							</>
-						)}
-					</MenubarItem>
-				</Show>
-				<button
-					type="button"
-					class="button"
-					onClick={(e) => {
-						e.stopPropagation();
-						toggleHistory();
-					}}
-				>
-					history
-				</button>
 			</div>
 			<div class="menu-group">
 				<button
@@ -619,6 +601,16 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 				</MenubarItem>
 			</div>
 			<div class="menu-group">
+				<button
+					type="button"
+					class="button"
+					onClick={(e) => {
+						e.stopPropagation();
+						toggleHistory();
+					}}
+				>
+					history
+				</button>
 				<MenubarItem button="export">
 					{(close) => (
 						<ul>

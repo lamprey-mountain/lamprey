@@ -330,17 +330,30 @@
 	}
 }
 
-// ==== OLD STYLES BELOW ====
-
 .document-menu {
-	& > ul,
-	& > ul {
+	.document-branch-list {
+		border-right: solid $sep-300 1px;
+
+		input {
+			background: $bg-100;
+		}
+	}
+
+	.document-branch-actions {
+		background: $bg-100;
+	}
+
+	.header {
+		padding: 4px 8px;
+		font-weight: bold;
+	}
+
+	ul {
 		display: flex;
 		flex-direction: column;
 	}
 
-	& > ul > li,
-	& > ul > li {
+	ul > li {
 		cursor: pointer;
 		display: flex;
 		flex-direction: column;
@@ -350,7 +363,7 @@
 			margin: 4px 0;
 		}
 
-		& > button {
+		& > .button {
 			display: flex;
 			background: none;
 			border: none;
@@ -370,11 +383,13 @@
 			}
 		}
 
-		&:hover > button {
+		&:hover > .button {
 			background: #fff1;
 		}
 	}
 }
+
+// ==== OLD STYLES BELOW ====
 
 .document-history {
 	width: 100%;
