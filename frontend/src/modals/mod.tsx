@@ -8,6 +8,7 @@ import { ModalBan } from "./ModalBan.tsx";
 import { ModalCameraPreview } from "./ModalCameraPreview.tsx";
 import { ModalChannelCreate } from "./ModalChannelCreate";
 import { ModalChannelTopic } from "./ModalChannelTopic.tsx";
+import { ModalEmojiUpload } from "./ModalEmojiUpload.tsx";
 import { ModalExportData } from "./ModalExportData.tsx";
 import { ModalInviteCreate } from "./ModalInviteCreate.tsx";
 import { ModalKick } from "./ModalKick.tsx";
@@ -180,6 +181,12 @@ function isRoomCreateOrJoin(
 	return modal.type === "room_create_or_join";
 }
 
+function isEmojiUpload(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "emoji_upload" }> {
+	return modal.type === "emoji_upload";
+}
+
 export function getModal(modal: ModalType) {
 	const api2 = useApi();
 	if (isAlert(modal)) {
@@ -289,6 +296,10 @@ export function getModal(modal: ModalType) {
 				onInvite={modal.onInvite}
 			/>
 		);
+	}
+
+	if (isEmojiUpload(modal)) {
+		return <ModalEmojiUpload room_id={modal.room_id} media={modal.media} />;
 	}
 }
 

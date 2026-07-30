@@ -634,22 +634,6 @@
 		display: flex;
 		gap: 6px;
 		justify-content: end;
-
-		// TODO: replace the below with design sysetm in design.scss
-		button,
-		input[type="submit"] {
-			padding: 2px 4px;
-			border: solid $sep-500 1px;
-		}
-
-		button.danger {
-			border: solid #e8374f 1px;
-			background: #ba2f42;
-
-			&:hover {
-				background: color.adjust(#ba2f42, $lightness: -10%);
-			}
-		}
 	}
 }
 
@@ -3993,6 +3977,81 @@ img.custom-emoji {
 	/* align-items: center; */
 	/* margin-bottom: 0.5rem; */
 	/* } */
+}
+
+.room-settings-emoji {
+	& > .header {
+		display: flex;
+		gap: 8px;
+
+		& > .search {
+			flex: 1;
+		}
+	}
+
+	& > .create {
+		padding: 8px 0;
+		border: solid $sep-500 1px;
+	}
+
+	& > .emojis {
+		margin: 4px -4px;
+
+		& > .item {
+			display: flex;
+			padding: 4px;
+			gap: 4px;
+			align-items: center;
+			border-radius: 4px;
+
+			& > .emoji {
+				height: 32px;
+				width: 32px;
+			}
+
+			& > .name {
+				padding: 2px 4px;
+				border-radius: 2px;
+				border: solid transparent 1px;
+				color: $fg-400;
+
+				&:hover {
+					color: $fg-100;
+					background: $bg-100;
+					border-color: $sep-500;
+				}
+			}
+
+			& > .name-input {
+				field-sizing: content;
+			}
+
+			& > .menu {
+				visibility: hidden;
+			}
+
+			&:hover {
+				background: $bg-150;
+
+				.menu {
+					visibility: visible;
+				}
+			}
+		}
+	}
+}
+
+.modal-emoji-upload {
+	.main {
+		display: flex;
+		gap: 8px;
+		margin-top: 8px;
+	}
+
+	.emoji {
+		height: 64px;
+		width: 64px;
+	}
 }
 
 button.link {
