@@ -21,6 +21,7 @@ import { ModalPrivacy } from "./ModalPrivacy.tsx";
 import { ModalReactions } from "./ModalReactions.tsx";
 import { ModalRoomCreateOrJoin } from "./ModalRoomCreateOrJoin";
 import { ModalTagEditor } from "./ModalTagEditor.tsx";
+import { ModalThreadCreate } from "./ModalThreadCreate.tsx";
 import { ModalTimeout } from "./ModalTimeout.tsx";
 
 export const Modal = (
@@ -187,6 +188,12 @@ function isEmojiUpload(
 	return modal.type === "emoji_upload";
 }
 
+function isThreadCreate(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "thread_create" }> {
+	return modal.type === "thread_create";
+}
+
 export function getModal(modal: ModalType) {
 	const api2 = useApi();
 	if (isAlert(modal)) {
@@ -300,6 +307,15 @@ export function getModal(modal: ModalType) {
 
 	if (isEmojiUpload(modal)) {
 		return <ModalEmojiUpload room_id={modal.room_id} media={modal.media} />;
+	}
+
+	if (isThreadCreate(modal)) {
+		return (
+			<ModalThreadCreate
+				room_id={modal.room_id}
+				channel_id={modal.channel_id}
+			/>
+		);
 	}
 }
 

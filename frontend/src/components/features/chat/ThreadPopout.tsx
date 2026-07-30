@@ -19,7 +19,9 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 	const threads2 = useThreads();
 	const channels2 = useChannels();
 	const ctx = useCtx();
-	const navigate = useNavigate();
+	const [, modalctl] = useModals();
+	const nav = useNavigate();
+
 	const [search, setSearch] = createSignal("");
 	const [debouncedSearch, setDebouncedSearch] = createSignal("");
 	const prefsService = usePreferences();
@@ -155,25 +157,19 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 		sortedThreads().notJoined.length === 0 &&
 		sortedThreads().archived.length === 0;
 
-	const [, modalctl] = useModals();
-	const nav = useNavigate();
 	const onCreateThread = () => {
 		const channel_id = props.channel_id;
 		const channel = channels2.cache.get(channel_id)!;
 		ctx.setThreadsView(null);
-		modalctl.prompt("name?", async (name) => {
-			if (!name) return;
-			const chan = await channels2.create(channel.room_id!, {
-				name,
-				parent_id: channel_id,
-				type: "ThreadPublic" as any,
-			} as any);
-			nav(`/channel/${chan.id}`);
+		modalctl.open({
+			type: "thread_create",
+			room_id: channel.room_id!,
+			channel_id,
 		});
 	};
 
 	const onThreadClick = (thread: Channel) => {
-		navigate(`/thread/${thread.id}`);
+		nav(`/thread/${thread.id}`);
 		ctx.setThreadsView(null);
 	};
 

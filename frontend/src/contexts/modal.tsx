@@ -113,6 +113,11 @@ export type Modal =
 			type: "emoji_upload";
 			room_id: string;
 			media: Media;
+	  }
+	| {
+			type: "thread_create";
+			room_id: string;
+			channel_id: string;
 	  };
 
 export type ModalsController = {
